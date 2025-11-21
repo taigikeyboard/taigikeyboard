@@ -1,0 +1,136 @@
+
+package com.siansiansu.taigikeyboard.ime.media
+
+import android.annotation.SuppressLint
+import android.util.Log
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.*
+import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.InputView
+import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyData
+import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyboardView
+import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
+import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import com.siansiansu.taigikeyboard.ime.text.key.KeyType
+import kotlinx.coroutines.*
+import java.util.*
+
+class MediaInputManager private constructor() : CoroutineScope by MainScope(),
+    TaigiKeyboard.EventListener {
+
+    private val taigikeyboard = TaigiKeyboard.getInstance()
+
+    private var osTimer: Timer? = null
+    private var emojiKeyboardView: ViewFlipper? = null
+
+    var mediaViewGroup: LinearLayout? = null
+
+    companion object {
+        private var instance: MediaInputManager? = null
+
+        @Synchronized
+        fun getInstance(): MediaInputManager {
+            if (instance == null) {
+                instance = MediaInputManager()
+            }
+            return instance!!
+        }
+    }
+
+    /**
+     * Called when a new input view has been registered. Used to initialize all media-relevant
+     * views and layouts.
+     * TODO: evaluate if the view initializing process can be optimized.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onRegisterInputView(inputView: InputView) {
+        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onRegisterInputView(inputView)")
+
+        launch(Dispatchers.Default) {
+            mediaViewGroup = inputView.findViewById(R.id.media_input)
+            emojiKeyboardView = inputView.findViewById(R.id.media_input_view_flipper)
+
+            // Init bottom buttons
+            inputView.findViewById<Button>(R.id.media_input_switch_to_text_input_button)
+                .setOnTouchListener { view, event -> onBottomButtonEvent(view, event) }
+            inputView.findViewById<ImageButton>(R.id.media_input_backspace_button)
+                .setOnTouchListener { view, event -> onBottomButtonEvent(view, event) }
+
+            try {
+                // 直接建立並加入 EmojiKeyboardView
+                val emojiView = EmojiKeyboardView(taigikeyboard.context)
+                withContext(Dispatchers.Main) {
+                    val layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                    emojiKeyboardView?.addView(emojiView, layoutParams)
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) Log.e(this::class.simpleName, "Error initializing media input views", e)
+            }
+        }
+    }
+
+    /**
+     * Clean-up of resources and stopping all coroutines.
+     */
+    override fun onDestroy() {
+        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
+
+        cancel()
+        instance = null
+    }
+
+    /**
+     * Handles clicks on the bottom buttons.
+     */
+    private fun onBottomButtonEvent(view: View, event: MotionEvent?): Boolean {
+        event ?: return false
+        val data = when (view.id) {
+            R.id.media_input_switch_to_text_input_button -> {
+                KeyData(KeyCode.SWITCH_TO_TEXT_CONTEXT)
+            }
+            R.id.media_input_backspace_button -> {
+                KeyData(KeyCode.DELETE, type = KeyType.ENTER_EDITING)
+            }
+            else -> null
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                taigikeyboard.keyPressVibrate(view)
+                taigikeyboard.keyPressSound(data)
+                if (data?.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
+                    osTimer = Timer()
+                    osTimer?.scheduleAtFixedRate(object : TimerTask() {
+                        override fun run() {
+                            taigikeyboard.textInputManager.sendKeyPress(data)
+                        }
+                    }, 500, 50)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                osTimer?.cancel()
+                osTimer = null
+                if (event.actionMasked != MotionEvent.ACTION_CANCEL && data != null) {
+                    taigikeyboard.textInputManager.sendKeyPress(data)
+                }
+            }
+        }
+        // MUST return false here so the background selector for showing a transparent bg works
+        return false
+    }
+
+    /**
+     * Sends a given [emojiKeyData] to the current input editor.
+     */
+    fun sendEmojiKeyPress(emojiKeyData: EmojiKeyData) {
+        val ic = taigikeyboard.currentInputConnection
+        ic?.finishComposingText()
+        ic?.commitText(emojiKeyData.getCodePointsAsString(), 1)
+    }
+}

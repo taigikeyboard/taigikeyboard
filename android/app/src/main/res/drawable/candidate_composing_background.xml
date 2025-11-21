@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 組字候選詞按鈕背景：預設狀態顯示淡灰色背景，提示這是當前組字 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下狀態：與其他候選詞相同的按壓背景 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?semiTransparentColor" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- 聚焦狀態：與其他候選詞相同的按壓背景 -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?semiTransparentColor" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- 預設狀態：淡灰色背景 + 圓角（區分當前組字） -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?semiTransparentColor" /><!-- Black @ 12.5% opacity -->
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>

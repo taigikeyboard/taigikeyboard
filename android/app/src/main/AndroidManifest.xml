@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Permission needed to vibrate if the user has key press vibration enabled -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- Permission needed for WebView to access internet -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Permission needed for In-App Purchases -->
+    <uses-permission android:name="com.android.vending.BILLING"/>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/SettingsTheme">
+
+        <!-- IME service -->
+        <service
+            android:name="com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:configChanges="uiMode"
+            android:exported="true">
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method"/>
+
+            <intent-filter>
+                <action android:name="android.view.InputMethod"/>
+            </intent-filter>
+        </service>
+
+        <!-- Onboarding Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.onboarding.OnboardingActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/SettingsTheme"
+            android:exported="false"/>
+
+        <!-- Settings Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/settings__title"
+            android:launchMode="singleTask"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/SettingsTheme"
+            android:exported="true"/>
+
+        <!-- Using an activity alias to disable/enable the app icon in the launcher -->
+        <activity-alias
+            android:name="com.siansiansu.taigikeyboard.SettingsLauncherAlias"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Copyright Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.CopyrightActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/copyright__title"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Contact Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.ContactActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/home__resource__contact"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/ContactActivityTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Website Introduction Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.WebsiteIntroActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/ContactActivityTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Keyboard Settings Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.KeyboardSettingsActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/keyboard_settings__title"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="true"/>
+
+        <!-- Sponsorship Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.sponsorship.SponsorshipActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/home__resource__sponsorship"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+    </application>
+
+</manifest>

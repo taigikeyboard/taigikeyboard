@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overlay 控制按鈕背景：支援 pressed 和 activated 狀態並帶圓角 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下狀態：顯示高對比背景 + 圓角 -->
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?overlay_button_bgColorPressed" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- 聚焦狀態：顯示高對比背景 + 圓角 -->
+    <item android:state_focused="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?overlay_button_bgColorPressed" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- 啟用狀態：顯示高對比背景 + 圓角 (用於 translate 按鍵) -->
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="?overlay_button_bgColorPressed" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+
+    <!-- 預設狀態：透明背景 + 圓角 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+</selector>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/text_input"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- 主要鍵盤視圖：Smartbar + 鍵盤 -->
+    <LinearLayout
+        android:id="@+id/text_input_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include layout="@layout/smartbar" />
+
+        <!-- KeyboardViews will be inserted in ViewFlipper below dynamically -->
+        <ViewFlipper
+            android:id="@+id/text_input_view_flipper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:measureAllChildren="false">
+
+            <LinearLayout
+                android:id="@+id/keyboard_preview"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                tools:ignore="UselessParent">
+
+                <!-- TODO: make a good looking keyboard preview -->
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:text="Loading keyboard, please wait..."/>
+
+            </LinearLayout>
+
+        </ViewFlipper>
+
+    </LinearLayout>
+
+    <!-- 候選詞展開 Overlay：從 Smartbar 下方開始，向下覆蓋鍵盤 -->
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView
+        android:id="@+id/candidate_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="top"
+        android:elevation="8dp"
+        android:visibility="gone" />
+
+</FrameLayout>

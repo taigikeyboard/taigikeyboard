@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/modern_surface_primary"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/modern_surface_primary"
+        android:elevation="0dp"
+        android:fitsSystemWindows="true"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/modern_surface_primary"
+            app:titleTextColor="@color/modern_text_primary"
+            app:navigationIconTint="@color/modern_text_primary" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="20dp"
+            android:paddingBottom="32dp">
+
+            <!-- Input Mode Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/input_mode_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <!-- Input Mode Header (移除 icon，更簡潔) -->
+                    <TextView
+                        android:id="@+id/section_title_input_mode"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:text="@string/keyboard_settings__input_mode"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <!-- Input Mode Segmented Button -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/input_mode_toggle_group"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:checkedButton="@id/button_poj_mode">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_poj_mode"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/keyboard_settings__poj_mode"
+                            app:backgroundTint="@color/segmented_button_background"
+                            android:textColor="@color/segmented_button_text"
+                            app:strokeColor="@color/modern_accent" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_tl_mode"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/keyboard_settings__tl_mode"
+                            app:backgroundTint="@color/segmented_button_background"
+                            android:textColor="@color/segmented_button_text"
+                            app:strokeColor="@color/modern_accent" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Hanji Settings Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/hanji_settings_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_show_hanji" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_output_both_scripts" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Basic Settings Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/basic_settings_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_auto_capitalization" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_auto_space" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_show_hyphen" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_custom_font" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_phah_taigi_layout" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Double Tap Section -->
+            <TextView
+                android:id="@+id/section_title_double_tap"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/keyboard_settings__double_tap_combination"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/modern_text_primary"
+                android:paddingHorizontal="4dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/double_tap_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_double_tap_oo" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_double_tap_nn" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action Buttons Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/action_buttons_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include layout="@layout/settings_action_item"
+                        android:id="@+id/action_clear_cache" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_action_item"
+                        android:id="@+id/action_reset_settings" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/smartbar"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/smartbar_height"
+    android:background="?smartbar_bgColor">
+
+    <!-- TODO: 暫時停用展開收合功能
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+        android:id="@+id/quick_action_toggle"
+        style="@style/SmartbarQuickAction.Toggle"
+        android:contentDescription="@string/smartbar__quick_action_toggle__alt"
+        android:src="@drawable/ic_keyboard_arrow_right" />
+    -->
+
+    <!-- 候選詞容器：支援左右滑動 -->
+    <LinearLayout
+        android:id="@+id/candidates_container"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <HorizontalScrollView
+            android:id="@+id/candidate_scroll_view"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:fadeScrollbars="true">
+
+            <!-- 候選詞容器：動態生成按鈕，支援最多 100 個候選詞 -->
+            <LinearLayout
+                android:id="@+id/candidates"
+                style="@style/SmartbarContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent">
+                <!-- 候選詞按鈕將由 SmartbarManager 動態新增 -->
+            </LinearLayout>
+
+        </HorizontalScrollView>
+
+        <!-- 垂直分隔線：使用負的 start margin 讓它向左移動，與候選詞重疊 -->
+        <View
+            android:id="@+id/candidate_divider"
+            android:layout_width="1dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="-40dp"
+            android:layout_marginEnd="0dp"
+            android:background="?android:attr/dividerVertical" />
+
+        <!-- 展開/收合候選詞區塊的按鈕 -->
+        <ImageButton
+            android:id="@+id/expand_toggle_button"
+            android:layout_width="48dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="4dp"
+            android:background="?smartbar_bgColor"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:contentDescription="@string/smartbar__expand_toggle__alt"
+            android:padding="2dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_keyboard_arrow_down"
+            android:tint="?android:textColor" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/quick_actions"
+        style="@style/SmartbarContainer"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:visibility="gone">
+
+        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+            android:id="@+id/quick_action_open_settings"
+            style="@style/SmartbarQuickAction"
+            android:contentDescription="@string/smartbar__quick_action__open_settings"
+            android:src="@drawable/ic_settings" />
+
+        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+            android:id="@+id/quick_action_switch_to_clipboard"
+            style="@style/SmartbarQuickAction"
+            android:contentDescription="@string/smartbar__quick_action__switch_to_clipboard"
+            android:src="@drawable/ic_clipboard" />
+
+        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+            android:id="@+id/quick_action_switch_to_media_context"
+            style="@style/SmartbarQuickAction"
+            android:contentDescription="@string/smartbar__quick_action__switch_to_media_context"
+            android:src="@drawable/ic_sentiment_satisfied" />
+
+    </LinearLayout>
+
+    <!-- TODO: integrate a KeyboardView instead of hardcoding these buttons -->
+    <LinearLayout
+        android:id="@+id/number_row"
+        style="@style/SmartbarContainer"
+        android:visibility="gone"
+        tools:ignore="HardcodedText">
+
+        <Button
+            android:id="@+id/number_row_1"
+            style="@style/SmartbarCandidate"
+            android:text="1" />
+
+        <Button
+            android:id="@+id/number_row_2"
+            style="@style/SmartbarCandidate"
+            android:text="2" />
+
+        <Button
+            android:id="@+id/number_row_3"
+            style="@style/SmartbarCandidate"
+            android:text="3" />
+
+        <Button
+            android:id="@+id/number_row_4"
+            style="@style/SmartbarCandidate"
+            android:text="4" />
+
+        <Button
+            android:id="@+id/number_row_5"
+            style="@style/SmartbarCandidate"
+            android:text="5" />
+
+        <Button
+            android:id="@+id/number_row_6"
+            style="@style/SmartbarCandidate"
+            android:text="6" />
+
+        <Button
+            android:id="@+id/number_row_7"
+            style="@style/SmartbarCandidate"
+            android:text="7" />
+
+        <Button
+            android:id="@+id/number_row_8"
+            style="@style/SmartbarCandidate"
+            android:text="8" />
+
+        <Button
+            android:id="@+id/number_row_9"
+            style="@style/SmartbarCandidate"
+            android:text="9" />
+
+        <Button
+            android:id="@+id/number_row_0"
+            style="@style/SmartbarCandidate"
+            android:text="0" />
+
+    </LinearLayout>
+
+    <!-- Placeholder on the right which reserves the space for a second button -->
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_margin="@dimen/smartbar_button_margin"
+        android:clickable="false"
+        android:visibility="gone" />
+
+</com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView>

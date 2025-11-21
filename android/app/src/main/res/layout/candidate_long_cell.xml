@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 候選詞長詞 cell：用於顯示超過 12 個字元的長候選詞 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="start|center_vertical"
+    android:minHeight="58dp"
+    android:paddingVertical="7dp"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:background="@drawable/candidate_grid_cell_background"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- 主要文字：羅馬字或漢字（依設定決定） -->
+    <TextView
+        android:id="@+id/cell_primary_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/SmartbarCandidate"
+        android:textSize="22sp"
+        android:textColor="?android:attr/textColorPrimary"
+        android:maxLines="2"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="12sp"
+        android:autoSizeMaxTextSize="20sp"
+        android:autoSizeStepGranularity="1sp"
+        android:gravity="start" />
+
+    <!-- 副標題文字：漢字或羅馬字（依設定決定） -->
+    <TextView
+        android:id="@+id/cell_subtitle_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textSize="17sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:maxLines="2"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="10sp"
+        android:autoSizeMaxTextSize="17sp"
+        android:autoSizeStepGranularity="1sp"
+        android:gravity="start" />
+
+</LinearLayout>

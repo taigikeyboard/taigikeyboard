@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.siansiansu.taigikeyboard.ime.core.InputView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/taigikeyboard"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/inner_input_view_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="?keyboard_bgColor"
+        android:baselineAligned="false">
+
+        <ViewFlipper
+            android:id="@+id/main_view_flipper"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:measureAllChildren="false">
+
+            <include layout="@layout/text_input_layout" />
+
+            <include layout="@layout/media_input_layout" />
+
+            <include layout="@layout/clipboard_input_layout" />
+
+        </ViewFlipper>
+
+    </LinearLayout>
+
+</com.siansiansu.taigikeyboard.ime.core.InputView>

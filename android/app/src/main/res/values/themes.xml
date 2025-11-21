@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="KeyboardTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="android:navigationBarColor" tools:targetApi="o_mr1">@android:color/transparent</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="android:colorControlNormal">#8A000000</item><!-- Black, semi transparent -->
+        <item name="android:textColor">#000000</item><!-- Black -->
+        <item name="semiTransparentColor">#20000000</item><!-- Black, semi transparent -->
+
+        <item name="key_bgColor">#FBF9F5</item><!-- Warm White -->
+        <item name="key_bgColorPressed">#E0E0E0</item><!-- Gray 300 -->
+        <item name="key_bgColorActive">#BDBDBD</item><!-- Gray 400, for translate button active state -->
+        <item name="key_fgColor">?android:textColor</item>
+        <item name="key_enter_fgColor">#FFFFFF</item><!-- White -->
+
+        <item name="key_popup_bgColor">#EEEEEE</item><!-- Gray 200 -->
+        <item name="key_popup_fgColor">?android:textColor</item>
+
+        <item name="key_popup_extended_bgColor">@android:color/transparent</item>
+        <item name="key_popup_extended_bgColorActive">#BDBDBD</item><!-- Gray 400 -->
+        <item name="key_popup_extended_shadowColor">#CDCACACA</item>
+
+        <item name="keyboard_bgColor">#E0E0E0</item><!-- Gray 300 -->
+
+        <item name="emoji_key_bgColor">?keyboard_bgColor</item>
+        <item name="emoji_key_bgColorPressed">?key_popup_extended_bgColorActive</item>
+        <item name="emoji_key_fgColor">#757575</item><!-- Gray 600 -->
+
+        <item name="smartbar_bgColor">?keyboard_bgColor</item>
+        <item name="smartbar_fgColor">?android:textColor</item>
+        <item name="smartbar_button_bgColor">?key_bgColor</item>
+        <item name="smartbar_button_bgColorPressed">?key_bgColorPressed</item>
+        <item name="smartbar_button_fgColor">?key_fgColor</item>
+        <item name="smartbar_candidate_fgColor">?android:textColor</item>
+        <item name="smartbar_candidate_subtitle_fgColor">#6D6D73</item><!-- Gray, for subtitle text -->
+
+        <item name="overlay_button_bgColorPressed">#40000000</item><!-- Black, 25% opacity -->
+    </style>
+
+    <style name="SettingsToolbarTheme" parent="ThemeOverlay.AppCompat.DayNight.ActionBar">
+        <item name="android:textColorPrimary">@color/toolbarForegroundColor</item>
+        <item name="android:drawableTint">@color/toolbarForegroundColor</item>
+    </style>
+
+    <style name="SettingsTheme" parent="Theme.Material3.Light.NoActionBar">
+        <!-- Material 3 Color System -->
+        <item name="colorPrimary">@color/modern_accent</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorPrimaryContainer">@color/modern_surface_secondary</item>
+        <item name="colorOnPrimaryContainer">@color/modern_text_primary</item>
+
+        <item name="colorSecondary">@color/modern_accent_secondary</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+        <item name="colorSecondaryContainer">@color/modern_surface_secondary</item>
+        <item name="colorOnSecondaryContainer">@color/modern_text_primary</item>
+
+        <item name="colorTertiary">@color/modern_icon_green</item>
+        <item name="colorOnTertiary">@android:color/white</item>
+
+        <item name="colorSurface">@color/modern_surface_primary</item>
+        <item name="colorOnSurface">@color/modern_text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/modern_text_secondary</item>
+        <item name="colorSurfaceContainerHighest">@color/modern_surface_secondary</item>
+        <item name="colorOutline">@color/modern_text_secondary</item>
+
+        <item name="colorError">@color/modern_icon_red</item>
+        <item name="colorOnError">@android:color/white</item>
+
+        <!-- Legacy color support -->
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/modern_accent</item>
+        <item name="colorSuccess">@color/colorSuccess</item>
+        <item name="textColorSuccess">@color/textColorSuccess</item>
+        <item name="colorWarning">@color/colorWarning</item>
+        <item name="textColorWarning">@color/textColorWarning</item>
+        <item name="textColorError">@android:color/white</item>
+
+        <!-- Window and background colors -->
+        <item name="android:windowBackground">@color/modern_surface_primary</item>
+        <item name="android:colorBackground">@color/modern_surface_primary</item>
+        <item name="android:navigationBarColor">@color/navigationBarColor</item>
+
+        <!-- Material 3 Shape System -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.Corner.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.Corner.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.Corner.Large</item>
+
+        <!-- System bars -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <style name="ContactActivityTheme" parent="SettingsTheme">
+    </style>
+
+</resources>

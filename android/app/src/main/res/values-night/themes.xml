@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        KeyboardTheme Dark Mode - 鍵盤專用深色主題
+        保留此主題以支援鍵盤的深色模式
+    -->
+    <style name="KeyboardTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+
+        <item name="android:navigationBarColor" tools:targetApi="o_mr1">@android:color/transparent</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+        <item name="android:colorControlNormal">#B3FFFFFF</item><!-- White, semi transparent -->
+        <item name="android:textColor">#FFFFFF</item><!-- White -->
+        <item name="semiTransparentColor">#20FFFFFF</item><!-- White, semi transparent -->
+
+        <item name="key_bgColor">#424242</item><!-- Gray 800 -->
+        <item name="key_bgColorPressed">#616161</item><!-- Gray 700 -->
+        <item name="key_bgColorActive">#757575</item><!-- Gray 600, for translate button active state -->
+        <item name="key_fgColor">?android:textColor</item>
+        <item name="key_enter_fgColor">#FFFFFF</item><!-- White -->
+
+        <item name="key_popup_bgColor">#757575</item><!-- Gray 600 -->
+        <item name="key_popup_fgColor">?android:textColor</item>
+
+        <item name="key_popup_extended_bgColor">@android:color/transparent</item>
+        <item name="key_popup_extended_bgColorActive">#BDBDBD</item><!-- Gray 400 -->
+        <item name="key_popup_extended_shadowColor">#CD353535</item>
+
+        <item name="keyboard_bgColor">#212121</item><!-- Gray 900 -->
+
+        <item name="emoji_key_bgColor">?keyboard_bgColor</item>
+        <item name="emoji_key_bgColorPressed">?key_popup_extended_bgColorActive</item>
+        <item name="emoji_key_fgColor">#BDBDBD</item><!-- Gray 400 -->
+
+        <item name="smartbar_bgColor">?keyboard_bgColor</item>
+        <item name="smartbar_fgColor">?android:textColor</item>
+        <item name="smartbar_button_bgColor">?key_bgColor</item>
+        <item name="smartbar_button_bgColorPressed">?key_bgColorPressed</item>
+        <item name="smartbar_button_fgColor">?key_fgColor</item>
+        <item name="smartbar_candidate_fgColor">?android:textColor</item>
+        <item name="smartbar_candidate_subtitle_fgColor">#FFFFFF</item><!-- White, for subtitle text in dark mode -->
+
+        <item name="overlay_button_bgColorPressed">#40FFFFFF</item><!-- White, 25% opacity -->
+    </style>
+
+    <!--
+        App 不再使用 Dark Mode
+        已移除 SettingsTheme 的 night variant，App 將強制使用 Light Mode
+        SPY×FAMILY 復古主題僅使用 Light Mode
+    -->
+
+</resources>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        App Dark Mode Colors - 目前未啟用
+        SPY×FAMILY 復古主題目前僅支援 Light Mode
+        以下配色保留供未來可能使用
+    -->
+
+    <!-- 保留鍵盤相關的 Dark Mode 顏色（鍵盤仍然支援 Dark Mode） -->
+    <color name="cardViewBackgroundColor">#404040</color>
+    <color name="toolbarForegroundColor">#FFFFFF</color>
+    <color name="windowBackground">#303030</color>
+
+    <!-- Modern Theme Colors (Dark Mode) - SPY×FAMILY Theme - 未啟用 -->
+    <!--
+    <color name="modern_surface_primary">#2B3B54</color>
+    <color name="modern_surface_secondary">#363E51</color>
+    <color name="modern_accent">#a8c0b5</color>
+    <color name="modern_accent_secondary">#a8666b</color>
+    <color name="modern_text_primary">#EBEBF5</color>
+    <color name="modern_text_secondary">#AEAEB2</color>
+
+    <color name="modern_icon_red">#a8666b</color>
+    <color name="modern_icon_blue">#a8c0b5</color>
+    <color name="modern_icon_yellow">#fcc9c4</color>
+    <color name="modern_icon_green">#a8c0b5</color>
+
+    <color name="modern_surface_elevated">#363E51</color>
+    <color name="modern_surface_card">#363E51</color>
+    <color name="modern_surface_container">#2B3B54</color>
+    <color name="modern_neutral_container">#2B3B54</color>
+
+    <color name="modern_success_container">#1B3A1E</color>
+    <color name="modern_success">#a8c0b5</color>
+    <color name="modern_warning_container">#3D2E1F</color>
+    <color name="modern_warning">#fcc9c4</color>
+
+    <color name="modern_accent_container">#1Aa8c0b5</color>
+    <color name="modern_accent_surface">#0Da8c0b5</color>
+    <color name="modern_warning_surface">#26fcc9c4</color>
+
+    <color name="spyfamily_warm_pink">#fcc9c4</color>
+    <color name="spyfamily_card_stroke">#33AEAEB2</color>
+    -->
+</resources>

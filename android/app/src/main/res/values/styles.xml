@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <style name="SmartbarCandidate">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">3dp</item>
+        <item name="android:background">@drawable/candidate_button_background</item>
+        <item name="android:stateListAnimator">@animator/candidate_button_scale</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">23sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+
+    <style name="SmartbarContainer">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:orientation">horizontal</item>
+    </style>
+
+    <style name="SmartbarDivider">
+        <item name="android:layout_width">1dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">0</item>
+        <item name="android:layout_marginTop">@dimen/smartbar_button_margin</item>
+        <item name="android:layout_marginBottom">@dimen/smartbar_button_margin</item>
+        <item name="android:background">?semiTransparentColor</item>
+    </style>
+
+    <style name="SmartbarQuickAction">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:background">@drawable/quick_action_button_background</item>
+        <item name="android:padding">6dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:tint">?smartbar_button_fgColor</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="SmartbarQuickAction.Toggle">
+        <item name="android:layout_weight">0</item>
+        <item name="android:autoMirrored">true</item>
+    </style>
+
+    <style name="SettingsCardView" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">16dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="contentPadding">8dp</item>
+        <item name="cardBackgroundColor">@color/cardViewBackgroundColor</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">0dp</item>
+    </style>
+    <style name="SettingsCardView.Clickable">
+        <item name="android:foreground">?selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+    <style name="SettingsCardView.Clickable.Success">
+        <item name="cardBackgroundColor">?colorSuccess</item>
+    </style>
+    <style name="SettingsCardView.Clickable.Warning">
+        <item name="cardBackgroundColor">?colorWarning</item>
+    </style>
+    <style name="SettingsCardView.Clickable.Error">
+        <item name="cardBackgroundColor">?colorError</item>
+    </style>
+
+    <!-- Modern Home Screen Styles - SPY×FAMILY Retro Theme -->
+    <style name="ModernCard" parent="Widget.Material3.CardView.Filled">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">20dp</item>
+        <item name="android:layout_marginEnd">20dp</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="cardBackgroundColor">@color/modern_surface_card</item>
+        <item name="cardCornerRadius">10dp</item><!-- 復古方正圓角 -->
+        <item name="cardElevation">0dp</item><!-- 無陰影扁平設計 -->
+        <item name="strokeWidth">1dp</item><!-- 復古邊框 -->
+        <item name="strokeColor">@color/spyfamily_card_stroke</item>
+    </style>
+
+    <style name="ModernNavigationItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">24dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:paddingTop">20dp</item>
+        <item name="android:paddingBottom">20dp</item>
+        <item name="android:background">?selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:minHeight">68dp</item>
+    </style>
+
+    <style name="ModernIconCircle">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:padding">10dp</item>
+    </style>
+
+    <style name="ModernTitleText">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/modern_text_primary</item>
+    </style>
+
+    <style name="ModernDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginStart">28dp</item>
+        <item name="android:background">@drawable/retro_dotted_divider</item>
+        <item name="android:alpha">0.3</item>
+        <item name="android:layerType">software</item><!-- 虛線渲染需要 -->
+    </style>
+
+</resources>

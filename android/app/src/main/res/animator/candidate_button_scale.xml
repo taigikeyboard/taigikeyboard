@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 候選詞按鈕按下時的縮放動畫：模擬 iOS scaleEffect(0.95) -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 按下狀態：縮小到 0.95 倍 -->
+    <item android:state_pressed="true">
+        <set>
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="scaleX"
+                android:valueTo="0.95"
+                android:valueType="floatType"
+                android:interpolator="@android:anim/decelerate_interpolator" />
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="scaleY"
+                android:valueTo="0.95"
+                android:valueType="floatType"
+                android:interpolator="@android:anim/decelerate_interpolator" />
+        </set>
+    </item>
+
+    <!-- 預設狀態：恢復原始大小 -->
+    <item>
+        <set>
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="scaleX"
+                android:valueTo="1.0"
+                android:valueType="floatType"
+                android:interpolator="@android:anim/decelerate_interpolator" />
+            <objectAnimator
+                android:duration="100"
+                android:propertyName="scaleY"
+                android:valueTo="1.0"
+                android:valueType="floatType"
+                android:interpolator="@android:anim/decelerate_interpolator" />
+        </set>
+    </item>
+</selector>

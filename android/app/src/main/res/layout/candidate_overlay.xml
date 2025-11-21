@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 候選詞展開 Overlay 主容器 -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 候選詞網格滾動容器 -->
+    <ScrollView
+        android:id="@+id/overlay_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?smartbar_bgColor"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="true"
+        android:paddingTop="6dp"
+        android:paddingBottom="8dp"
+        android:paddingEnd="68dp"
+        android:clipToPadding="false">
+
+        <!-- 候選詞網格容器：動態生成行 -->
+        <LinearLayout
+            android:id="@+id/overlay_grid_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </ScrollView>
+
+    <!-- 右側控制按鈕區域 -->
+    <LinearLayout
+        android:id="@+id/overlay_controls"
+        android:layout_width="60dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end|top"
+        android:orientation="vertical"
+        android:paddingTop="6dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="8dp"
+        android:background="?smartbar_bgColor">
+
+        <!-- 收合按鈕 -->
+        <ImageButton
+            android:id="@+id/overlay_collapse_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/overlay_button_background"
+            android:contentDescription="@string/smartbar__expand_toggle__alt"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_keyboard_arrow_up"
+            android:tint="?android:attr/textColorPrimary" />
+
+        <!-- 分頁與翻譯按鈕容器 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <!-- 上一頁按鈕 -->
+            <ImageButton
+                android:id="@+id/overlay_page_up_button"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginBottom="3dp"
+                android:background="@drawable/overlay_button_background"
+                android:contentDescription="@string/overlay__page_up"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_arrow_triangle_up"
+                android:tint="?android:attr/textColorPrimary" />
+
+            <!-- 下一頁按鈕 -->
+            <ImageButton
+                android:id="@+id/overlay_page_down_button"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginBottom="3dp"
+                android:layout_marginTop="13dp"
+                android:background="@drawable/overlay_button_background"
+                android:contentDescription="@string/overlay__page_down"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_arrow_triangle_down"
+                android:tint="?android:attr/textColorPrimary" />
+
+            <!-- 翻譯切換按鈕 -->
+            <ImageButton
+                android:id="@+id/overlay_translate_button"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginTop="22dp"
+                android:background="@drawable/overlay_button_background"
+                android:contentDescription="@string/overlay__translate_toggle"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_translate"
+                android:tint="?android:attr/textColorPrimary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 控制區域左側分隔線 -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="60dp"
+        android:layout_marginBottom="8dp"
+        android:background="?android:attr/dividerVertical"
+        android:alpha="0.5" />
+
+</merge>

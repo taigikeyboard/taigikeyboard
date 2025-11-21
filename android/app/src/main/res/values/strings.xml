@@ -1,0 +1,109 @@
+<resources>
+    <string name="app_name">Tâi-gí Khí-pôaⁿ</string>
+
+    <string name="taigikeyboard__repo_url" translatable="false">https://github.com/siansiansu/TaigiKeyboard</string>
+    <string name="taigikeyboard__privacy_policy_url" translatable="false">https://github.com/siansiansu/TaigiKeyboard</string>
+
+    <string name="key__phone_pause">Pause</string>
+    <string name="key__phone_wait">Wait</string>
+    <string name="key__view_characters">ABC</string>
+    <string name="key__view_numeric">1 2\n3 4</string>
+    <string name="key__view_phone">123</string>
+    <string name="key__view_phone2">* #</string>
+    <string name="key__view_symbols">\?123</string>
+    <string name="key__view_symbols2">=\\&lt;</string>
+
+    <string name="key_popup__threedots_alt">Three-dot icon. If visible, indicates that more letters can be used if longer pressed.</string>
+
+    <!-- Emoji strings -->
+    <string name="emoji__category__smileys_emotion">Smileys &amp; Emotions</string>
+    <string name="emoji__category__people_body">People &amp; Body</string>
+    <string name="emoji__category__animals_nature">Animals &amp; Nature</string>
+    <string name="emoji__category__food_drink">Food &amp; Drink</string>
+    <string name="emoji__category__travel_places">Travel &amp; Places</string>
+    <string name="emoji__category__activities">Activities</string>
+    <string name="emoji__category__objects">Objects</string>
+    <string name="emoji__category__symbols">Symbols</string>
+    <string name="emoji__category__flags">Flags</string>
+
+    <!-- Smartbar strings -->
+    <string name="smartbar__expand_toggle__alt">展開或收合候選詞列表</string>
+    <string name="smartbar__quick_action__open_settings">Open settings.</string>
+    <string name="smartbar__quick_action__switch_to_media_context">Switch to media input view.</string>
+    <string name="smartbar__quick_action__switch_to_clipboard">Switch to clipboard view.</string>
+
+    <!-- Overlay strings -->
+    <string name="overlay__page_up">上一頁</string>
+    <string name="overlay__page_down">下一頁</string>
+    <string name="overlay__translate_toggle">切換翻譯</string>
+
+    <!-- Settings UI strings -->
+    <string name="settings__title">設定</string>
+    <string name="settings__menu">More options</string>
+    <string name="settings__menu_about">About</string>
+    <string name="settings__menu_help">Help &amp; feedback</string>
+    <string name="settings__navigation__home">Home</string>
+    <string name="settings__navigation__keyboard">Keyboard</string>
+    <string name="settings__navigation__looknfeel">Look &amp; feel</string>
+    <string name="settings__navigation__advanced">Advanced</string>
+
+    <!-- Home Screen strings - Hanzi (Default) -->
+    <string name="home__app_title">台語齒盤</string>
+
+    <!-- Navigation Section -->
+    <string name="home__nav__setup_guide">啟用方法</string>
+    <string name="home__nav__keyboard_settings">齒盤設定</string>
+    <string name="home__nav__copyright">版權聲明</string>
+
+    <!-- Resources Section -->
+    <string name="home__resource__sponsorship">贊助支持</string>
+    <string name="home__resource__contact">意見回饋</string>
+    <string name="home__resource__rate">為阮評分</string>
+    <string name="home__resource__share">推薦予朋友</string>
+
+    <!-- Footer Section -->
+    <string name="home__footer__tagline">寫予每一个堅持講台語 ê 台灣人</string>
+    <string name="home__footer__copyright">© 2025 Bîn-hiân</string>
+
+    <!-- Share content -->
+    <string name="home__share__title">台語齒盤 - 台語輸入法</string>
+    <string name="home__share__url">https://www.taigikeyboard.tw/</string>
+
+    <!-- Copyright Screen - AndroidManifest only -->
+    <string name="copyright__title">版權聲明</string>
+
+    <!-- Keyboard Settings strings -->
+    <string name="keyboard_settings__title">齒盤設定</string>
+    <string name="keyboard_settings__input_mode">輸入模式</string>
+    <string name="keyboard_settings__poj_mode">白話字 (POJ)</string>
+    <string name="keyboard_settings__tl_mode">台羅 (TL)</string>
+    <string name="keyboard_settings__show_hanji">顯示漢字</string>
+    <string name="keyboard_settings__auto_tone_conversion">自動聲調轉換</string>
+    <string name="keyboard_settings__auto_capitalization">自動大寫</string>
+    <string name="keyboard_settings__show_hyphen_key">顯示連字號按鍵</string>
+    <string name="keyboard_settings__show_emoji_key">顯示表情符號按鍵</string>
+    <string name="keyboard_settings__custom_font">自訂字體</string>
+    <string name="keyboard_settings__phah_taigi_layout">拍台語佈局</string>
+    <string name="keyboard_settings__double_tap_combination">雙擊組合</string>
+    <string name="keyboard_settings__double_tap_oo">雙擊 OO → Ó͘</string>
+    <string name="keyboard_settings__double_tap_nn">雙擊 NN → ⁿ</string>
+    <string name="keyboard_settings__clear_cache">清除快取</string>
+    <string name="keyboard_settings__reset_settings">重置設定</string>
+    <string name="keyboard_settings__clear_cache_message">將清除使用者詞頻資料庫</string>
+    <string name="keyboard_settings__reset_settings_message">將重置所有設定為預設值</string>
+    <string name="keyboard_settings__cancel">取消</string>
+    <string name="keyboard_settings__confirm">確認</string>
+
+    <!-- Content Descriptions for Accessibility -->
+    <string name="content_desc__icon_keyboard">鍵盤圖示</string>
+    <string name="content_desc__icon_numbers">數字圖示</string>
+    <string name="content_desc__icon_font">字體圖示</string>
+    <string name="content_desc__icon_delete">刪除圖示</string>
+    <string name="content_desc__icon_minus">減少圖示</string>
+    <string name="content_desc__icon_refresh">重新整理圖示</string>
+    <string name="content_desc__icon_settings">設定圖示</string>
+    <string name="content_desc__icon_arrow_forward">前往圖示</string>
+    <string name="content_desc__icon_share">分享圖示</string>
+    <string name="content_desc__icon_email">電子郵件圖示</string>
+
+</resources>
