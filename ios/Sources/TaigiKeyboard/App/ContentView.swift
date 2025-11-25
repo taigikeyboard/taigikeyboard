@@ -3,10 +3,7 @@ import KeyboardKit
 
 struct ContentView: View {
     @State private var showSettings = false
-    @State private var showContact = false
     @State private var showCopyright = false
-    @State private var showSponsorship = false
-    @State private var showUserGuide = false
     @Binding var initialShowSettings: Bool
     @ObservedObject var viewModel: OnboardingViewModel
 
@@ -27,20 +24,15 @@ struct ContentView: View {
                                 // Card 1: Navigation (啟用方法 + 鍵盤設定 + 操作說明)
                                 NavigationCardView(
                                     viewModel: viewModel,
-                                    showSettings: $showSettings,
-                                    showUserGuide: $showUserGuide
+                                    showSettings: $showSettings
                                 )
                                 .themedCard()
 
-                                // Card 2: Sponsorship (贊助支持)
-                                SponsorshipCardView(showSponsorship: $showSponsorship)
+                                // Card 2: Resources (意見回饋 + 評分 + 分享)
+                                ResourcesCardView()
                                 .themedCard()
 
-                                // Card 3: Resources (意見回饋 + 評分 + 分享)
-                                ResourcesCardView(showContact: $showContact)
-                                .themedCard()
-
-                                // Card 4: Copyright (版權聲明)
+                                // Card 3: Copyright (版權聲明)
                                 CopyrightCardView(showCopyright: $showCopyright)
                                 .themedCard()
                             }
@@ -59,17 +51,8 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
-            .sheet(isPresented: $showContact) {
-                ContactView()
-            }
             .sheet(isPresented: $showCopyright) {
                 CopyrightView()
-            }
-            .sheet(isPresented: $showSponsorship) {
-                SponsorshipView()
-            }
-            .sheet(isPresented: $showUserGuide) {
-                UserGuideView()
             }
         }
         .navigationViewStyle(.stack)

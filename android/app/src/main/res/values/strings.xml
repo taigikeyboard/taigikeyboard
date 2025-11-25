@@ -56,7 +56,6 @@
     <string name="home__nav__copyright">版權聲明</string>
 
     <!-- Resources Section -->
-    <string name="home__resource__sponsorship">贊助支持</string>
     <string name="home__resource__contact">意見回饋</string>
     <string name="home__resource__rate">為阮評分</string>
     <string name="home__resource__share">推薦予朋友</string>

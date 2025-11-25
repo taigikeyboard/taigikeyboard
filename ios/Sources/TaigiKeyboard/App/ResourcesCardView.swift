@@ -1,24 +1,24 @@
 import SwiftUI
 
 struct ResourcesCardView: View {
-    @Binding var showContact: Bool
     @State private var isPressed: [Bool] = [false, false, false]
     @State private var showShareSheet = false
 
     private let appStoreURL = "https://www.taigikeyboard.tw/"
     private let appStoreReviewURL = "https://apps.apple.com/app/id6751871806?action=write-review"
+    private let contactFormURL = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
 
     var body: some View {
         VStack(spacing: 0) {
-            // Contact Us
+            // Contact Us - 使用系統瀏覽器開啟 Google Forms
             ListCardView(
                 stripColor: Color.Theme.accent,
                 title: AppTexts.contactUs,
                 isPressed: isPressed[0],
                 isLast: false,
                 action: {
-                    withAnimation(ThemeAnimation.smooth) {
-                        showContact = true
+                    if let url = URL(string: contactFormURL) {
+                        UIApplication.shared.open(url)
                     }
                 }
             )

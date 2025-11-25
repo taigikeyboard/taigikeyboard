@@ -54,8 +54,6 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             languageManager.getText(AppTexts.copyrightNotice)
 
         // Update resource items
-        binding.root.findViewById<TextView>(R.id.resource_sponsorship_title)?.text =
-            languageManager.getText(AppTexts.sponsorship)
         binding.root.findViewById<TextView>(R.id.resource_contact_title)?.text =
             languageManager.getText(AppTexts.contactUs)
         binding.root.findViewById<TextView>(R.id.resource_rate_title)?.text =
@@ -88,9 +86,10 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             }
         }
 
-        // Website Introduction
+        // Website Introduction - 使用系統預設瀏覽器開啟
         binding.root.findViewById<View>(R.id.nav_item_website_intro)?.setOnClickListener {
-            Intent(context, WebsiteIntroActivity::class.java).apply {
+            val websiteUrl = "https://www.taigikeyboard.tw/"
+            Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl)).apply {
                 startActivity(this)
             }
         }
@@ -104,16 +103,10 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
     }
 
     private fun setupResourceItems() {
-        // Sponsorship
-        binding.root.findViewById<View>(R.id.resource_item_sponsorship)?.setOnClickListener {
-            Intent(context, com.siansiansu.taigikeyboard.sponsorship.SponsorshipActivity::class.java).apply {
-                startActivity(this)
-            }
-        }
-
-        // Contact / Feedback
+        // Contact / Feedback - 使用系統預設瀏覽器開啟 Google Forms
         binding.root.findViewById<View>(R.id.resource_item_contact)?.setOnClickListener {
-            Intent(context, ContactActivity::class.java).apply {
+            val contactFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
+            Intent(Intent.ACTION_VIEW, Uri.parse(contactFormUrl)).apply {
                 startActivity(this)
             }
         }

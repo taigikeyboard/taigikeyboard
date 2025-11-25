@@ -166,12 +166,6 @@ object AppTexts {
         tl = "Pán-khuân sing-bîng"
     )
 
-    val sponsorship = LocalizedText(
-        hanji = "贊助支持",
-        poj = "Chàn-chō͘ chi-chhî",
-        tl = "Tsàn-tsōo tsi-tshî"
-    )
-
     val contactUs = LocalizedText(
         hanji = "意見回饋",
         poj = "Ì-kiàn hôe-kūi",
@@ -425,91 +419,6 @@ object AppTexts {
         hanji = "CC BY-NC-SA 3.0 TW",
         poj = "CC BY-NC-SA 3.0 TW",
         tl = "CC BY-NC-SA 3.0 TW"
-    )
-
-    // Sponsorship 贊助頁面文字
-    val sponsorTitle = LocalizedText(
-        hanji = "支持台語齒盤的運作",
-        poj = "Chi-chhî Tâi-gí khí-pôaⁿ ê ūn-chok",
-        tl = "Tsi-tshî Tâi-gí Khí-puânn ê ūn-tsok"
-    )
-
-    val sponsorSubtitle = LocalizedText(
-        hanji = "每一份支持，攏是台語傳承 ê 力量",
-        poj = "Muí chi̍t hūn chi-chhî, lóng sī Tâi-gí thoân-sêng ê le̍k-liōng",
-        tl = "Muí tsi̍t hūn tsi-tshî, lóng sī Tâi-gí thuân-sîng ê li̍k-liōng"
-    )
-
-    val aboutApp = LocalizedText(
-        hanji = "贊助承諾",
-        poj = "Chàn-chō͘ sêng-lo̍k",
-        tl = "Tsàn-tsōo sîng-lo̍k"
-    )
-
-    val oneTimeSponsor = LocalizedText(
-        hanji = "贊助選項",
-        poj = "Chàn-chō͘ Soán-hāng",
-        tl = "Tsàn-tsōo Suán-hāng"
-    )
-
-    val coffeeTier = LocalizedText(
-        hanji = "請一杯咖啡",
-        poj = "Chhiáⁿ chi̍t poe ka-pi",
-        tl = "Tshiánn tsi̍t pue ka-pi"
-    )
-
-    val mealTier = LocalizedText(
-        hanji = "請一頓飯",
-        poj = "Chhiáⁿ chi̍t tǹg pn̄ng",
-        tl = "Tshiánn tsi̍t tǹg pn̄ng"
-    )
-
-    val premiumTier = LocalizedText(
-        hanji = "台語英雄贊助！",
-        poj = "Tâi-gí eng-hiông chàn-chō͘!",
-        tl = "Tâi-gí ing-hiông tsàn-tsōo!"
-    )
-
-    val futurePlan1 = LocalizedText(
-        hanji = "按你 ê 意見，予輸入法愈來愈好用",
-        poj = "Àn lí ê ì-kiàn, hō͘ su-ji̍p-hoat lú-lâi-lú hó-iōng",
-        tl = "Àn lí ê ì-kiàn, hōo su-ji̍p-huat lú-lâi-lú hó-iōng"
-    )
-
-    val futurePlan2 = LocalizedText(
-        hanji = "定期升級維護 APP，修理資安破空",
-        poj = "Tēng-kî seng-kip ûi-hō͘ APP, siu-lí chu-an phòa-khang",
-        tl = "Tīng-kî sing-kip uî-hōo APP, siu-lí tsu-an phuà-khang"
-    )
-
-    val futurePlan3 = LocalizedText(
-        hanji = "定期增加詞庫量，維護詞庫品質",
-        poj = "Tēng-kî cheng-ka sû-khò͘ liōng, ûi-hō͘ sû-khò͘ phín-chit",
-        tl = "Tīng-kî tsing-ka sû-khòo liōng, uî-hōo sû-khòo phín-tsit"
-    )
-
-    val futurePlan4 = LocalizedText(
-        hanji = "支持台語教育、公益使用，袂收費、袂做付費功能、嘛袂囥廣告",
-        poj = "Chi-chhî Tâi-gí kàu-io̍k, kong-ek sú-iōng. Bōe siu-huì, bōe chò hù-huì kong-lêng, mā bōe khǹg kóng-kò",
-        tl = "Tsi-tshî Tâi-gí kàu-io̍k, kong-ik sú-iōng. Buē siu-huì, buē tsò hù-huì kong-lîng, mā buē khǹg kóng-kò"
-    )
-
-    val thankYouMessage = LocalizedText(
-        hanji = "感謝您 ê 支持！",
-        poj = "Kám-siā lín ê chi-chhî!",
-        tl = "Kám-siā lín ê tsi-tshî!"
-    )
-
-    val purchaseFailed = LocalizedText(
-        hanji = "購買失敗",
-        poj = "Bé sit-pāi",
-        tl = "Bé sit-pāi"
-    )
-
-    val alreadySponsored = LocalizedText(
-        hanji = "已贊助",
-        poj = "Í chàn-chō͘",
-        tl = "Í tsàn-tsōo"
     )
 
     // Clipboard timestamp texts

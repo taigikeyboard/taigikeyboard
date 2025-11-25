@@ -3,7 +3,6 @@ import SwiftUI
 struct NavigationCardView: View {
     @ObservedObject var viewModel: OnboardingViewModel
     @Binding var showSettings: Bool
-    @Binding var showUserGuide: Bool
     @State private var isPressed: [Bool] = [false, false, false]
 
     var body: some View {
@@ -40,15 +39,15 @@ struct NavigationCardView: View {
                 isPressed[1] = pressed
             }
 
-            // User Guide
+            // User Guide - 使用系統瀏覽器開啟
             ListCardView(
                 stripColor: Color.Theme.accent,
                 title: AppTexts.userGuide,
                 isPressed: isPressed[2],
                 isLast: true,
                 action: {
-                    withAnimation(ThemeAnimation.smooth) {
-                        showUserGuide = true
+                    if let url = URL(string: "https://www.taigikeyboard.tw/") {
+                        UIApplication.shared.open(url)
                     }
                 }
             )

@@ -33,22 +33,6 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Sponsorship Section (單獨區塊) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/sponsorship_card"
-            style="@style/ModernCard">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <include layout="@layout/home_resource_item_sponsorship" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- Resources Section -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/resources_card"
