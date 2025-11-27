@@ -1,3 +1,4 @@
+import ISEmojiView
 import KeyboardKit
 import OSLog
 import SwiftUI
@@ -14,10 +15,6 @@ class EmojiService: NSObject {
 
     weak var delegate: EmojiServiceDelegate?
     private var emojiView: EmojiView?
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "EmojiService",
-    )
 
     override init() {
         super.init()
@@ -47,7 +44,6 @@ class EmojiService: NSObject {
 
     func getEmojiKeyboardView() -> AnyView {
         guard let emojiView else {
-            logger.warning("[WARN] EmojiView not available")
             return AnyView(EmptyView())
         }
         return AnyView(EmojiViewRepresentable(emojiView: emojiView))

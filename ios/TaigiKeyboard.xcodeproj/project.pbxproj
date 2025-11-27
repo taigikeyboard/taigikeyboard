@@ -87,13 +87,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		2A1FCE0E2EAFD083009F2800 /* Exceptions for "Emojis" folder in "TaigiKeyboardExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				EmojiService.swift.backup,
-			);
-			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
-		};
 		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -161,9 +154,6 @@
 		};
 		2A2882ED2EAF0D7D00AE3C75 /* Emojis */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2A1FCE0E2EAFD083009F2800 /* Exceptions for "Emojis" folder in "TaigiKeyboardExtension" target */,
-			);
 			name = Emojis;
 			path = Sources/TaigiKeyboard/Emojis;
 			sourceTree = "<group>";
@@ -669,7 +659,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -701,7 +691,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.9.0;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
