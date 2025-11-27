@@ -107,7 +107,7 @@ class SharedSettings {
 
     var isCustomFontEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.customFontEnabled) as? Bool ?? false
+            userDefaults.object(forKey: Keys.customFontEnabled) as? Bool ?? true
         }
         set {
             userDefaults.set(newValue, forKey: Keys.customFontEnabled)
@@ -134,7 +134,7 @@ class SharedSettings {
 
     var isAutoSpaceEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.autoSpaceEnabled) as? Bool ?? true
+            userDefaults.object(forKey: Keys.autoSpaceEnabled) as? Bool ?? false
         }
         set {
             userDefaults.set(newValue, forKey: Keys.autoSpaceEnabled)
@@ -143,7 +143,7 @@ class SharedSettings {
 
     var phahTaigiLayoutEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.phahTaigiLayoutEnabled) as? Bool ?? false
+            userDefaults.object(forKey: Keys.phahTaigiLayoutEnabled) as? Bool ?? true
         }
         set {
             userDefaults.set(newValue, forKey: Keys.phahTaigiLayoutEnabled)
@@ -167,10 +167,10 @@ class SharedSettings {
         showHyphenKey = false
         isTranslateSwapped = false
         outputBothScripts = false
-        isCustomFontEnabled = false
+        isCustomFontEnabled = true
         isAutoCapitalizationEnabled = true
-        isAutoSpaceEnabled = true
-        phahTaigiLayoutEnabled = false
+        isAutoSpaceEnabled = false
+        phahTaigiLayoutEnabled = true
     }
 }
 

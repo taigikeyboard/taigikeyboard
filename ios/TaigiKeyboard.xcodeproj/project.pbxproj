@@ -205,12 +205,6 @@
 			path = Sources/TaigiKeyboard/Settings;
 			sourceTree = "<group>";
 		};
-		2A2883222EAF0DEF00AE3C75 /* Sponsorship */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Sponsorship;
-			path = Sources/TaigiKeyboard/Sponsorship;
-			sourceTree = "<group>";
-		};
 		2A2883262EAF0E0400AE3C75 /* Styling */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Styling;
@@ -292,7 +286,6 @@
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
-				2A2883222EAF0DEF00AE3C75 /* Sponsorship */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
 				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
@@ -328,7 +321,6 @@
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28830F2EAF0DCF00AE3C75 /* Onboarding */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
-				2A2883222EAF0DEF00AE3C75 /* Sponsorship */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				F3B59AE82EC8FD0900CD5052 /* UserGuide */,

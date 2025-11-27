@@ -285,7 +285,7 @@ class PrefHelper(
     var autoSpaceEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.AUTO_SPACE_ENABLED] ?: true
+                prefs[PreferenceKeys.AUTO_SPACE_ENABLED] ?: false
             }.first()
         }
         set(value) {
@@ -299,7 +299,7 @@ class PrefHelper(
     var customFontEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] ?: false
+                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] ?: true
             }.first()
         }
         set(value) {
@@ -313,7 +313,7 @@ class PrefHelper(
     var phahTaigiLayoutEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: false
+                prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: true
             }.first()
         }
         set(value) {
@@ -428,11 +428,11 @@ class PrefHelper(
                 prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] =
                     sharedPrefs.getBoolean("taigi__auto_capitalization_enabled", true)
                 prefs[PreferenceKeys.AUTO_SPACE_ENABLED] =
-                    sharedPrefs.getBoolean("taigi__auto_space_enabled", true)
+                    sharedPrefs.getBoolean("taigi__auto_space_enabled", false)
                 prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] =
-                    sharedPrefs.getBoolean("taigi__custom_font_enabled", false)
+                    sharedPrefs.getBoolean("taigi__custom_font_enabled", true)
                 prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] =
-                    sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", false)
+                    sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", true)
 
                 // Looknfeel settings
                 prefs[PreferenceKeys.HEIGHT_FACTOR] =
@@ -496,9 +496,9 @@ class PrefHelper(
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true
-            prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = true
-            prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = false
-            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
+            prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
+            prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = true
+            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = true
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
             prefs[PreferenceKeys.SUGGESTION_ENABLED] = true
