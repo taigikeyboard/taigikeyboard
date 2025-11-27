@@ -9,7 +9,6 @@ struct NavigationCardView: View {
         VStack(spacing: 0) {
             // Setup Guide
             ListCardView(
-                stripColor: Color.Theme.accent,
                 title: AppTexts.setupGuide,
                 isPressed: isPressed[0],
                 isLast: false,
@@ -25,7 +24,6 @@ struct NavigationCardView: View {
 
             // Keyboard Settings
             ListCardView(
-                stripColor: Color.Theme.accentSecondary,
                 title: AppTexts.keyboardSettings,
                 isPressed: isPressed[1],
                 isLast: false,
@@ -41,7 +39,6 @@ struct NavigationCardView: View {
 
             // User Guide - 使用系統瀏覽器開啟
             ListCardView(
-                stripColor: Color.Theme.accent,
                 title: AppTexts.userGuide,
                 isPressed: isPressed[2],
                 isLast: true,

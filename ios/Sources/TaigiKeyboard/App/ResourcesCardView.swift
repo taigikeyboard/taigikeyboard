@@ -10,7 +10,6 @@ struct ResourcesCardView: View {
         VStack(spacing: 0) {
             // Contact Us - 使用系統瀏覽器開啟 Google Forms
             ListCardView(
-                stripColor: Color.Theme.accent,
                 title: AppTexts.contactUs,
                 isPressed: isPressed[0],
                 isLast: false,
@@ -26,7 +25,6 @@ struct ResourcesCardView: View {
 
             // Rate Us
             ListCardView(
-                stripColor: Color.Theme.accentTertiary,
                 title: AppTexts.rateUs,
                 isPressed: isPressed[1],
                 isLast: true,

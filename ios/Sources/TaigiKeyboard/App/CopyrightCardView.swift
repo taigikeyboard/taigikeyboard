@@ -6,7 +6,6 @@ struct CopyrightCardView: View {
 
     var body: some View {
         ListCardView(
-            stripColor: Color.Theme.accentTertiary,
             title: AppTexts.copyrightNotice,
             isPressed: isPressed,
             isLast: true,
