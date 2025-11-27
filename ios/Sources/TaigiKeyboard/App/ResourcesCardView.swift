@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct ResourcesCardView: View {
-    @State private var isPressed: [Bool] = [false, false, false]
-    @State private var showShareSheet = false
+    @State private var isPressed: [Bool] = [false, false]
 
-    private let appStoreURL = "https://www.taigikeyboard.tw/"
     private let appStoreReviewURL = "https://apps.apple.com/app/id6751871806?action=write-review"
     private let contactFormURL = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
 
@@ -31,7 +29,7 @@ struct ResourcesCardView: View {
                 stripColor: Color.Theme.accentTertiary,
                 title: AppTexts.rateUs,
                 isPressed: isPressed[1],
-                isLast: false,
+                isLast: true,
                 action: {
                     if let url = URL(string: appStoreReviewURL) {
                         UIApplication.shared.open(url)
@@ -41,28 +39,6 @@ struct ResourcesCardView: View {
             .pressableCardGesture(isPressed: isPressed[1]) { pressed in
                 isPressed[1] = pressed
             }
-
-            // Share to Friends
-            ListCardView(
-                stripColor: Color.Theme.accent,
-                title: AppTexts.shareToFriends,
-                isPressed: isPressed[2],
-                isLast: true,
-                action: {
-                    withAnimation(ThemeAnimation.smooth) {
-                        showShareSheet = true
-                    }
-                }
-            )
-            .pressableCardGesture(isPressed: isPressed[2]) { pressed in
-                isPressed[2] = pressed
-            }
-        }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: [
-                "台語齒盤 - 台語輸入法",
-                URL(string: appStoreURL)!,
-            ])
         }
     }
 }

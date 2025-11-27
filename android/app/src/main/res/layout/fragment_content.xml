@@ -46,8 +46,6 @@
                 <include layout="@layout/home_resource_item_contact" />
                 <View style="@style/ModernDivider" />
                 <include layout="@layout/home_resource_item_rate" />
-                <View style="@style/ModernDivider" />
-                <include layout="@layout/home_resource_item_share" />
 
             </LinearLayout>
 

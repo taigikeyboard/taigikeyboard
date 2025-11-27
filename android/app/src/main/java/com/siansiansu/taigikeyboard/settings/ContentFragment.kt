@@ -58,8 +58,6 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             languageManager.getText(AppTexts.contactUs)
         binding.root.findViewById<TextView>(R.id.resource_rate_title)?.text =
             languageManager.getText(AppTexts.rateUs)
-        binding.root.findViewById<TextView>(R.id.resource_share_title)?.text =
-            languageManager.getText(AppTexts.shareToFriends)
     }
 
     private fun setupNavigationItems() {
@@ -128,16 +126,6 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
                     startActivity(this)
                 }
             }
-        }
-
-        // Share
-        binding.root.findViewById<View>(R.id.resource_item_share)?.setOnClickListener {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.home__share__title))
-                putExtra(Intent.EXTRA_TEXT, "${getString(R.string.home__share__title)}\n${getString(R.string.home__share__url)}")
-            }
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.home__resource__share)))
         }
     }
 }

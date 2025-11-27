@@ -81,7 +81,6 @@ enum AppTexts {
     static var setupGuide: LocalizedText { AppInfoTexts.setupGuide }
     static var setupInfoMessage: LocalizedText { AppInfoTexts.setupInfoMessage }
     static var rateUs: LocalizedText { AppInfoTexts.rateUs }
-    static var shareToFriends: LocalizedText { AppInfoTexts.shareToFriends }
     static var contactUs: LocalizedText { AppInfoTexts.contactUs }
     static var userGuide: LocalizedText { AppInfoTexts.userGuide }
     static var guidePreviousPage: LocalizedText { AppInfoTexts.guidePreviousPage }
