@@ -4,7 +4,7 @@ struct FooterView: View {
     var body: some View {
         VStack(spacing: 20) {
             RoundedRectangle(cornerRadius: 3)
-                .fill(Color.Theme.accentTertiary)
+                .fill(Color.Theme.accent)
                 .frame(width: 48, height: 6)
                 .padding(.top, 8)
 
