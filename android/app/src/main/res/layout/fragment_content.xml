@@ -91,6 +91,16 @@
                 android:gravity="center"
                 android:alpha="0.7" />
 
+            <TextView
+                android:id="@+id/footer_version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="10sp"
+                android:textColor="@color/modern_text_secondary"
+                android:gravity="center"
+                android:alpha="0.5" />
+
         </LinearLayout>
 
     </LinearLayout>

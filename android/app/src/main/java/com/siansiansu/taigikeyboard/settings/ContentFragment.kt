@@ -13,6 +13,7 @@ import android.widget.Toast
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.FragmentContentBinding
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.util.AppVersionUtils
 
 class ContentFragment : SettingsMainActivity.SettingsFragment() {
     private lateinit var binding: FragmentContentBinding
@@ -29,6 +30,7 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
         setupNavigationItems()
         setupResourceItems()
         observeLanguageChanges()
+        setupFooterVersion()
 
         // Ensure initial display is correct
         updateAllTexts()
@@ -126,6 +128,14 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
                     startActivity(this)
                 }
             }
+        }
+    }
+
+    private fun setupFooterVersion() {
+        // 設定版號顯示
+        binding.root.findViewById<TextView>(R.id.footer_version)?.apply {
+            val version = AppVersionUtils.getRawVersionName(requireContext())
+            text = "v$version"
         }
     }
 }
