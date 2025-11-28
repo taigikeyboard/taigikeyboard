@@ -680,7 +680,18 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             KeyCode.SWITCH_TO_CLIPBOARD_CONTEXT -> taigikeyboard.setActiveInput(R.id.clipboard_input)
             KeyCode.VIEW_CHARACTERS -> setActiveKeyboardMode(KeyboardMode.CHARACTERS)
             KeyCode.VIEW_NUMERIC -> setActiveKeyboardMode(KeyboardMode.NUMERIC)
-            KeyCode.VIEW_NUMERIC_ADVANCED -> setActiveKeyboardMode(KeyboardMode.NUMERIC_ADVANCED)
+            KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                // 在 symbol 鍵盤中，根據 isTranslateSwapped 狀態決定行為
+                if (taigikeyboard.prefs.isTranslateSwapped && activeKeyboardMode == KeyboardMode.SYMBOLS) {
+                    // 輸入「、」符號
+                    ic?.beginBatchEdit()
+                    ic?.commitText("、", 1)
+                    ic?.endBatchEdit()
+                } else {
+                    // 預設行為：切換到數字鍵盤
+                    setActiveKeyboardMode(KeyboardMode.NUMERIC_ADVANCED)
+                }
+            }
             KeyCode.VIEW_PHONE -> setActiveKeyboardMode(KeyboardMode.PHONE)
             KeyCode.VIEW_PHONE2 -> setActiveKeyboardMode(KeyboardMode.PHONE2)
             KeyCode.VIEW_SYMBOLS -> setActiveKeyboardMode(KeyboardMode.SYMBOLS)

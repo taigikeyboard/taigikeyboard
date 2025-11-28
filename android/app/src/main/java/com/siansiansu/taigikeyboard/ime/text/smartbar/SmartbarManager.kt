@@ -470,8 +470,11 @@ class SmartbarManager private constructor() :
         // 背景更新其他鍵盤模式，確保下次切換時使用正確的標點
         textInputManager.reloadAllLayoutsInBackground()
 
-        // 只重繪 TRANSLATE 按鍵，避免刷新整個鍵盤（效能優化）
-        textInputManager.invalidateKeysByCode(com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE)
+        // 只重繪 TRANSLATE 和 VIEW_NUMERIC_ADVANCED 按鍵，避免刷新整個鍵盤（效能優化）
+        textInputManager.invalidateKeysByCode(
+            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE,
+            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED
+        )
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped")

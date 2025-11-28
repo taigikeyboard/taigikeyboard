@@ -530,10 +530,20 @@ class KeyView(
                     label = resources.getString(R.string.key__view_characters)
                     drawable = null
                 }
-                KeyCode.VIEW_NUMERIC,
-                KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                KeyCode.VIEW_NUMERIC -> {
                     label = resources.getString(R.string.key__view_numeric)
                     drawable = null
+                }
+                KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                    // 在 symbol 鍵盤中，根據 isTranslateSwapped 狀態決定顯示內容
+                    val isTranslateSwapped = com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+                    if (isTranslateSwapped && keyboardView.computedLayout?.mode == KeyboardMode.SYMBOLS) {
+                        label = "、"
+                        drawable = null
+                    } else {
+                        label = resources.getString(R.string.key__view_numeric)
+                        drawable = null
+                    }
                 }
                 KeyCode.VIEW_PHONE -> {
                     label = resources.getString(R.string.key__view_phone)
@@ -662,9 +672,17 @@ class KeyView(
                 data.code == KeyCode.ENTER && label.isNotEmpty() -> {
                     resources.getDimension(R.dimen.key_enter_confirm_textSize)
                 }
+                // VIEW_NUMERIC_ADVANCED: 根據顯示內容決定字體大小
+                data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                    // 如果顯示「、」符號，使用一般按鍵大小；否則使用數字鍵大小
+                    if (label == "、") {
+                        resources.getDimension(R.dimen.key_textSize)
+                    } else {
+                        resources.getDimension(R.dimen.key_numeric_textSize)
+                    }
+                }
                 // 數字鍵和空白鍵
                 data.code == KeyCode.VIEW_NUMERIC ||
-                data.code == KeyCode.VIEW_NUMERIC_ADVANCED ||
                 data.code == KeyCode.SPACE -> {
                     resources.getDimension(R.dimen.key_numeric_textSize)
                 }
