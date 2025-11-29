@@ -42,16 +42,8 @@ struct SettingsView: View {
             VStack(spacing: 24) {
                 inputModeSection
 
-                SettingsSection(titleContent: AppTexts.inputSettings) {
-                    inputSettingsSection
-                }
-
-                SettingsSection(titleContent: AppTexts.layoutSettings) {
-                    layoutSettingsSection
-                }
-
-                SettingsSection(titleContent: AppTexts.doubleTapCombination) {
-                    doubleTapSection
+                SettingsSection {
+                    settingsSection
                 }
 
                 SettingsSection {
@@ -109,7 +101,7 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var inputSettingsSection: some View {
+    private var settingsSection: some View {
         // 注意：outputBothScripts 依賴 showHanjiMode，預設為開啟狀態
         SettingsToggleItem(
             titleContent: AppTexts.outputBothScripts,
@@ -132,19 +124,14 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.autoSpace,
             isOn: $autoSpaceEnabled,
-            isLast: true,
             onChange: { newValue in
                 settings.isAutoSpaceEnabled = newValue
             }
         )
-    }
 
-    @ViewBuilder
-    private var layoutSettingsSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.customFont,
             isOn: $customFontEnabled,
-            isFirst: true,
             onChange: { newValue in
                 settings.isCustomFontEnabled = newValue
                 languageManager.updateDisplayLanguage()
@@ -154,19 +141,14 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.phahTaigiLayout,
             isOn: $phahTaigiLayoutEnabled,
-            isLast: true,
             onChange: { newValue in
                 settings.phahTaigiLayoutEnabled = newValue
             }
         )
-    }
 
-    @ViewBuilder
-    private var doubleTapSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.doubleTapOO,
             isOn: $enableDoubleTapOO,
-            isFirst: true,
             onChange: { newValue in
                 settings.enableDoubleTapOO = newValue
             }

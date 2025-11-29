@@ -61,9 +61,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
 
         // Update section titles
         binding.sectionTitleInputMode.text = languageManager.getText(AppTexts.inputMode)
-        binding.sectionTitleInputSettings.text = languageManager.getText(AppTexts.inputSettings)
-        binding.sectionTitleLayoutSettings.text = languageManager.getText(AppTexts.layoutSettings)
-        binding.sectionTitleDoubleTap.text = languageManager.getText(AppTexts.doubleTapCombination)
 
         updateToggleItemText(binding.toggleOutputBothScripts.root, AppTexts.outputBothScripts)
         updateToggleItemText(binding.toggleAutoCapitalization.root, AppTexts.autoCapitalization)
@@ -90,7 +87,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     private fun setupViews() {
         setupInputModeSection()
         setupBasicSettingsSection()
-        setupDoubleTapSection()
         setupActionButtonsSection()
     }
 
@@ -122,11 +118,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBasicSettingsSection() {
-        setupInputSettingsSection()
-        setupLayoutSettingsSection()
-    }
-
-    private fun setupInputSettingsSection() {
         // Output Both Scripts (漢羅攏出)
         // showHanjiMode 固定為 true，因此此功能永遠可用
         setupToggleItem(
@@ -157,9 +148,7 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         ) { isChecked ->
             prefs.autoSpaceEnabled = isChecked
         }
-    }
 
-    private fun setupLayoutSettingsSection() {
         // Custom Font
         setupToggleItem(
             binding.toggleCustomFont.root,
@@ -177,9 +166,7 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         ) { isChecked ->
             prefs.phahTaigiLayoutEnabled = isChecked
         }
-    }
 
-    private fun setupDoubleTapSection() {
         // Double Tap OO
         setupToggleItem(
             binding.toggleDoubleTapOo.root,
