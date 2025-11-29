@@ -3,7 +3,7 @@ import SwiftUI
 struct NavigationCardView: View {
     @ObservedObject var viewModel: OnboardingViewModel
     @Binding var showSettings: Bool
-    @State private var isPressed: [Bool] = [false, false, false]
+    @State private var isPressed: [Bool] = [false, false]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,7 +26,7 @@ struct NavigationCardView: View {
             ListCardView(
                 title: AppTexts.keyboardSettings,
                 isPressed: isPressed[1],
-                isLast: false,
+                isLast: true,
                 action: {
                     withAnimation(ThemeAnimation.smooth) {
                         showSettings = true
@@ -35,21 +35,6 @@ struct NavigationCardView: View {
             )
             .pressableCardGesture(isPressed: isPressed[1]) { pressed in
                 isPressed[1] = pressed
-            }
-
-            // User Guide - 使用系統瀏覽器開啟
-            ListCardView(
-                title: AppTexts.userGuide,
-                isPressed: isPressed[2],
-                isLast: true,
-                action: {
-                    if let url = URL(string: "https://www.taigikeyboard.tw/") {
-                        UIApplication.shared.open(url)
-                    }
-                }
-            )
-            .pressableCardGesture(isPressed: isPressed[2]) { pressed in
-                isPressed[2] = pressed
             }
         }
     }

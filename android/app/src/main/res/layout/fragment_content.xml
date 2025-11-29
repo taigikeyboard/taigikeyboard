@@ -26,8 +26,6 @@
                 <include layout="@layout/home_navigation_item_setup" />
                 <View style="@style/ModernDivider" />
                 <include layout="@layout/home_navigation_item_settings" />
-                <View style="@style/ModernDivider" />
-                <include layout="@layout/home_navigation_item_website_intro" />
 
             </LinearLayout>
 
@@ -44,6 +42,8 @@
                 android:orientation="vertical">
 
                 <include layout="@layout/home_resource_item_contact" />
+                <View style="@style/ModernDivider" />
+                <include layout="@layout/home_navigation_item_website_intro" />
                 <View style="@style/ModernDivider" />
                 <include layout="@layout/home_resource_item_rate" />
 

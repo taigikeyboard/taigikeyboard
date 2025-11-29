@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct ResourcesCardView: View {
-    @State private var isPressed: [Bool] = [false, false]
+    @State private var isPressed: [Bool] = [false, false, false]
 
     private let appStoreReviewURL = "https://apps.apple.com/app/id6751871806?action=write-review"
     private let contactFormURL = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
+    private let websiteURL = "https://www.taigikeyboard.tw/"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,10 +24,25 @@ struct ResourcesCardView: View {
                 isPressed[0] = pressed
             }
 
+            // Website Intro - 使用系統瀏覽器開啟
+            ListCardView(
+                title: AppTexts.userGuide,
+                isPressed: isPressed[1],
+                isLast: false,
+                action: {
+                    if let url = URL(string: websiteURL) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            )
+            .pressableCardGesture(isPressed: isPressed[1]) { pressed in
+                isPressed[1] = pressed
+            }
+
             // Rate Us
             ListCardView(
                 title: AppTexts.rateUs,
-                isPressed: isPressed[1],
+                isPressed: isPressed[2],
                 isLast: true,
                 action: {
                     if let url = URL(string: appStoreReviewURL) {
@@ -34,8 +50,8 @@ struct ResourcesCardView: View {
                     }
                 }
             )
-            .pressableCardGesture(isPressed: isPressed[1]) { pressed in
-                isPressed[1] = pressed
+            .pressableCardGesture(isPressed: isPressed[2]) { pressed in
+                isPressed[2] = pressed
             }
         }
     }
