@@ -30,16 +30,6 @@ class ButtonFontProvider {
             )
         }
 
-        // 自訂字體關閉時，只對 CJK Extension 字元使用自訂字體
-        if case let .character(char) = action,
-           KeyboardModels.Fonts.containsCJKExtension(char) {
-            return KeyboardFont.custom(
-                KeyboardModels.Fonts.extensionFontName,
-                size: fontSize,
-                weight: standardFont.weight ?? .regular
-            )
-        }
-
         // 其他情況使用標準字體
         return standardFont
     }

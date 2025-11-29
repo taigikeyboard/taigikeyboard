@@ -64,7 +64,7 @@ struct CandidateView: View {
                     onSettingsTap()
                 }) {
                     Image(systemName: "gearshape.fill")
-                        .font(KeyboardModels.Fonts.globalFont(for: "⚙", size: 18))
+                        .font(KeyboardModels.Fonts.globalFont(size: 18))
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                         .scaleEffect(1.2)
                         .frame(width: 42, height: CandidateViewModels.UI.height)
@@ -133,7 +133,7 @@ struct CandidateView: View {
                     expandState.toggle()
                 }) {
                     Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
-                        .font(KeyboardModels.Fonts.globalFont(for: "🔍", size: 18)) // 使用全域字型
+                        .font(KeyboardModels.Fonts.globalFont(size: 18)) // 使用全域字型
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                         .scaleEffect(1.2) // 增加縮放從 1.1 到 1.2
                         .frame(width: 42, height: CandidateViewModels.UI.height) // 增加寬度從 36 到 42
@@ -277,7 +277,6 @@ extension CandidateView {
                 HStack(alignment: .bottom, spacing: CandidateViewModels.Spacing.small) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            for: displayTitle,
                             size: CandidateViewModels.UI.primaryFontSize
                         ))
                         .fontWeight(.regular)
@@ -287,7 +286,6 @@ extension CandidateView {
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
                             .font(KeyboardModels.Fonts.globalFont(
-                                for: subtitle,
                                 size: CandidateViewModels.UI.secondaryFontSize
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)

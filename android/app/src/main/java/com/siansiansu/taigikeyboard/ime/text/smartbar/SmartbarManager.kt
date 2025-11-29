@@ -415,10 +415,8 @@ class SmartbarManager private constructor() :
 
             button.text = displayText
 
-            // 設定字體：根據漢字是否包含 CJK Extension 字元決定
-            // customFontEnabled = false 時，只對 CJK Extension 字元使用自訂字體
+            // 設定字體：根據 customFontEnabled 決定
             button.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                text = word.hanzi ?: "",
                 customFontEnabled = prefs.customFontEnabled,
                 context = taigikeyboard.context
             )

@@ -402,15 +402,13 @@ class CandidateOverlayView : FrameLayout {
             }
         }
 
-        // 設定字體：根據 customFontEnabled 和文字內容決定
+        // 設定字體：根據 customFontEnabled 決定
         val customFontEnabled = prefs.customFontEnabled
         primaryText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            text = primaryText.text.toString(),
             customFontEnabled = customFontEnabled,
             context = context
         )
         subtitleText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            text = subtitleText.text.toString(),
             customFontEnabled = customFontEnabled,
             context = context
         )
