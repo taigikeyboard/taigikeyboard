@@ -183,20 +183,6 @@ class PrefHelper(
             }
         }
 
-    var showHanjiMode: Boolean
-        get() = runBlocking {
-            dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.SHOW_HANJI_MODE] ?: true
-            }.first()
-        }
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SHOW_HANJI_MODE] = value
-                }
-            }
-        }
-
     var isTranslateSwapped: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
@@ -347,15 +333,6 @@ class PrefHelper(
         }
 
     /**
-     * Observes showHanjiMode changes as a Flow.
-     * Emits true/false whenever the value changes in DataStore.
-     */
-    fun observeShowHanjiMode(): Flow<Boolean> =
-        dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.SHOW_HANJI_MODE] ?: true
-        }
-
-    /**
      * Observes phahTaigiLayoutEnabled changes as a Flow.
      * Emits true/false whenever the value changes in DataStore.
      */
@@ -403,8 +380,6 @@ class PrefHelper(
                     sharedPrefs.getString("keyboard__subtypes", "") ?: ""
                 prefs[PreferenceKeys.INPUT_MODE] =
                     sharedPrefs.getString("keyboard__input_mode", "tl") ?: "tl"
-                prefs[PreferenceKeys.SHOW_HANJI_MODE] =
-                    sharedPrefs.getBoolean("keyboard__show_hanji_mode", true)
 
                 // Taigi-specific settings
                 prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] =
@@ -475,7 +450,6 @@ class PrefHelper(
             prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] = -1
             prefs[PreferenceKeys.SUBTYPES] = ""
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
-            prefs[PreferenceKeys.SHOW_HANJI_MODE] = true
             prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = false
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true

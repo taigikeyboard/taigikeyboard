@@ -404,10 +404,7 @@ struct ExpandedCandidateGridCell: View {
     }
 
     private var displayTitle: String {
-        if !showHanjiMode {
-            return suggestion.text
-        }
-
+        // showHanjiMode 固定為 true
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
             return subtitle
         } else {
@@ -416,10 +413,7 @@ struct ExpandedCandidateGridCell: View {
     }
 
     private var displaySubtitle: String? {
-        if !showHanjiMode {
-            return nil
-        }
-
+        // showHanjiMode 固定為 true，永遠顯示副標題
         if isTranslateSwapped {
             return suggestion.text
         } else {
@@ -427,14 +421,11 @@ struct ExpandedCandidateGridCell: View {
         }
     }
 
-    private var showHanjiMode: Bool {
-        SharedSettings.shared.showHanjiMode
-    }
-
     var body: some View {
         Button(action: {
             let suggestionToHandle: Autocomplete.Suggestion
-            if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+            // showHanjiMode 固定為 true
+            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 let originalTextLength = suggestion.text.count
                 let newTextLength = subtitle.count
                 let additionalDeleteCount = max(0, originalTextLength - newTextLength)
@@ -531,10 +522,7 @@ struct ExpandedCandidateLongCell: View {
     }
 
     private var displayTitle: String {
-        if !showHanjiMode {
-            return suggestion.text
-        }
-
+        // showHanjiMode 固定為 true
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
             return subtitle
         } else {
@@ -543,10 +531,7 @@ struct ExpandedCandidateLongCell: View {
     }
 
     private var displaySubtitle: String? {
-        if !showHanjiMode {
-            return nil
-        }
-
+        // showHanjiMode 固定為 true，永遠顯示副標題
         if isTranslateSwapped {
             return suggestion.text
         } else {
@@ -554,14 +539,11 @@ struct ExpandedCandidateLongCell: View {
         }
     }
 
-    private var showHanjiMode: Bool {
-        SharedSettings.shared.showHanjiMode
-    }
-
     var body: some View {
         Button(action: {
             let suggestionToHandle: Autocomplete.Suggestion
-            if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+            // showHanjiMode 固定為 true
+            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 let originalTextLength = suggestion.text.count
                 let newTextLength = subtitle.count
                 let additionalDeleteCount = max(0, originalTextLength - newTextLength)

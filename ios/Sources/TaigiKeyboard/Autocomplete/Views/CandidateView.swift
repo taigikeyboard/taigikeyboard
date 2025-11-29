@@ -232,18 +232,10 @@ extension CandidateView {
             return style.itemStyle.cornerRadius ?? 8
         }
 
-        /// 是否顯示漢字模式
-        private var showHanjiMode: Bool {
-            SharedSettings.shared.showHanjiMode
-        }
-
         /// 計算要顯示的主要文字
-        /// 根據漢字模式和交換設定決定顯示內容
+        /// 根據交換設定決定顯示內容
+        /// showHanjiMode 固定為 true
         private var displayTitle: String {
-            if !showHanjiMode {
-                return suggestion.text
-            }
-
             if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             } else {
@@ -252,12 +244,8 @@ extension CandidateView {
         }
 
         /// 計算要顯示的副標題文字
-        /// 只在漢字模式下顯示
+        /// showHanjiMode 固定為 true，永遠顯示副標題
         private var displaySubtitle: String? {
-            if !showHanjiMode {
-                return nil
-            }
-
             if isTranslateSwapped {
                 return suggestion.text
             } else {
@@ -268,7 +256,8 @@ extension CandidateView {
         var body: some View {
             Button(action: {
                 let suggestionToHandle: Autocomplete.Suggestion
-                if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+                // showHanjiMode 固定為 true
+                if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                     let originalTextLength = suggestion.text.count
                     let newTextLength = subtitle.count
                     let additionalDeleteCount = max(0, originalTextLength - newTextLength)

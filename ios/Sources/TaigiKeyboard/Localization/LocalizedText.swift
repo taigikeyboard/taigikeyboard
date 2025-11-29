@@ -38,16 +38,8 @@ class LanguageManager: ObservableObject {
 
     /// 根據使用者設定更新顯示語言
     func updateDisplayLanguage() {
-        let settings = SharedSettings.shared
-
-        let inputModeValue = settings.inputMode.rawValue
-        let showHanji = settings.showHanjiMode
-
-        let newLanguage: DisplayLanguage = if showHanji {
-            .hanji
-        } else {
-            inputModeValue == "poj" ? .poj : .tl
-        }
+        // showHanjiMode 固定為 true，因此永遠使用漢字顯示
+        let newLanguage: DisplayLanguage = .hanji
 
         if newLanguage != currentDisplayLanguage {
             currentDisplayLanguage = newLanguage

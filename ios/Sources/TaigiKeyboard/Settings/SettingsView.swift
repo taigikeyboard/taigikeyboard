@@ -5,7 +5,6 @@ import UIKit
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedInputMode: InputMode = .tl
-    @State private var showHanjiMode = true
 
     private let settings = SharedSettings.shared
 
@@ -27,7 +26,6 @@ struct SettingsView: View {
         _selectedInputMode = State(initialValue: InputMode(rawValue: settings.inputMode.rawValue) ?? InputMode.tl)
         _autoCapitalizationEnabled = State(initialValue: settings.isAutoCapitalizationEnabled)
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
-        _showHanjiMode = State(initialValue: settings.showHanjiMode)
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
         _phahTaigiLayoutEnabled = State(initialValue: settings.phahTaigiLayoutEnabled)
@@ -112,26 +110,17 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var hanjiSettingsSection: some View {
-        SettingsToggleItem(
-            titleContent: AppTexts.showHanji,
-            isOn: $showHanjiMode,
-            isFirst: true,
-            onChange: { newValue in
-                settings.showHanjiMode = newValue
-                languageManager.updateDisplayLanguage()
-            }
-        )
-
+        // 注意：outputBothScripts 依賴 showHanjiMode，預設為開啟狀態
         SettingsToggleItem(
             titleContent: AppTexts.outputBothScripts,
             isOn: $outputBothScripts,
+            isFirst: true,
             isLast: true,
             onChange: { newValue in
                 settings.outputBothScripts = newValue
             }
         )
-        .disabled(!showHanjiMode)
-        .opacity(showHanjiMode ? 1.0 : 0.4)
+        // showHanjiMode 預設為 true，因此 outputBothScripts 永遠可用
     }
 
     @ViewBuilder
@@ -227,7 +216,6 @@ struct SettingsView: View {
         selectedInputMode = settings.inputMode
         autoCapitalizationEnabled = settings.isAutoCapitalizationEnabled
         autoSpaceEnabled = settings.isAutoSpaceEnabled
-        showHanjiMode = settings.showHanjiMode
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
         phahTaigiLayoutEnabled = settings.phahTaigiLayoutEnabled

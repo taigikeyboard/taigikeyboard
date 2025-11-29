@@ -26,12 +26,6 @@ enum KeyboardTexts {
         tl: "Tâi-lô"
     )
 
-    static let showHanji = LocalizedText(
-        hanji: "使用漢字",
-        poj: "Sú-iōng hàn-jī",
-        tl: "Sú-iōng hàn-jī"
-    )
-
     static let autoCapitalization = LocalizedText(
         hanji: "自動大寫",
         poj: "Chū-tōng tōa-siá",

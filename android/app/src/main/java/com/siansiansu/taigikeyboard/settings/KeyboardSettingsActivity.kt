@@ -65,7 +65,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         binding.sectionTitleLayoutSettings.text = languageManager.getText(AppTexts.layoutSettings)
         binding.sectionTitleDoubleTap.text = languageManager.getText(AppTexts.doubleTapCombination)
 
-        updateToggleItemText(binding.toggleShowHanji.root, AppTexts.showHanji)
         updateToggleItemText(binding.toggleOutputBothScripts.root, AppTexts.outputBothScripts)
         updateToggleItemText(binding.toggleAutoCapitalization.root, AppTexts.autoCapitalization)
         updateToggleItemText(binding.toggleAutoSpace.root, AppTexts.autoSpace)
@@ -123,19 +122,8 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBasicSettingsSection() {
-        // Show Hanji
-        setupToggleItem(
-            binding.toggleShowHanji.root,
-            AppTexts.showHanji,
-            prefs.showHanjiMode
-        ) { isChecked ->
-            prefs.showHanjiMode = isChecked
-            // 更新 outputBothScripts 的啟用狀態
-            updateOutputBothScriptsState(isChecked)
-            // Language updates automatically via Flow
-        }
-
         // Output Both Scripts (漢羅攏出)
+        // showHanjiMode 固定為 true，因此此功能永遠可用
         setupToggleItem(
             binding.toggleOutputBothScripts.root,
             AppTexts.outputBothScripts,
@@ -144,8 +132,8 @@ class KeyboardSettingsActivity : AppCompatActivity() {
             prefs.outputBothScripts = isChecked
         }
 
-        // 初始化 outputBothScripts 的啟用狀態
-        updateOutputBothScriptsState(prefs.showHanjiMode)
+        // 初始化 outputBothScripts 的啟用狀態（showHanjiMode 固定為 true）
+        updateOutputBothScriptsState(true)
 
         // Auto Capitalization
         setupToggleItem(

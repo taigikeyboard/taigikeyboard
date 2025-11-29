@@ -424,8 +424,9 @@ class KeyView(
 
                     if (isComposing) {
                         // 組字模式：只顯示「確定」文字
+                        // showHanjiMode 固定為 true
                         val displayLanguage = when {
-                            keyboardView.prefs.showHanjiMode && keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
+                            keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
                             keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
                             else -> DisplayLanguage.TL
                         }

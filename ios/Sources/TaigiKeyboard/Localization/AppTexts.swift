@@ -8,7 +8,6 @@ enum AppTexts {
     static var inputMode: LocalizedText { KeyboardTexts.inputMode }
     static var pojMode: LocalizedText { KeyboardTexts.pojMode }
     static var tlMode: LocalizedText { KeyboardTexts.tlMode }
-    static var showHanji: LocalizedText { KeyboardTexts.showHanji }
     static var autoCapitalization: LocalizedText { KeyboardTexts.autoCapitalization }
     static var autoSpace: LocalizedText { KeyboardTexts.autoSpace }
     static var inputSettings: LocalizedText { KeyboardTexts.inputSettings }

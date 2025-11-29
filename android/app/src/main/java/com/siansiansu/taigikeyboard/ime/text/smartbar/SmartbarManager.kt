@@ -76,18 +76,20 @@ class SmartbarManager private constructor() :
             // 取得組字管理器
             val composingManager = taigikeyboard.textInputManager.getComposingManager()
 
-            // 根據 showHanjiMode、isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+            // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+            // showHanjiMode 固定為 true
             val textToCommit = when {
                 // 漢羅攏出模式
-                cachedOutputBothScripts && prefs.showHanjiMode && !selectedWord.hanzi.isNullOrEmpty() -> {
+                cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
                     if (cachedIsTranslateSwapped) {
                         "${selectedWord.hanzi} (${selectedWord.roman})"
                     } else {
                         "${selectedWord.roman} (${selectedWord.hanzi})"
                     }
                 }
-                // 原有邏輯
-                prefs.showHanjiMode && cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
+                // 翻譯交換模式：顯示漢字
+                cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
+                // 預設顯示羅馬字
                 else -> selectedWord.roman
             }
 
@@ -335,15 +337,12 @@ class SmartbarManager private constructor() :
                 setOnLongClickListener(candidateViewOnLongClickListener)
             }
 
-            // 顯示格式：根據 showHanjiMode 和 isTranslateSwapped 決定顯示內容
+            // 顯示格式：根據 isTranslateSwapped 決定顯示內容
+            // showHanjiMode 固定為 true
             // 規則：
-            // 1. showHanjiMode = false: 只顯示羅馬字 (無 subtitle)
-            // 2. showHanjiMode = true && isTranslateSwapped = false: title = 羅馬字, subtitle = 漢字
-            // 3. showHanjiMode = true && isTranslateSwapped = true: title = 漢字, subtitle = 羅馬字
+            // 1. isTranslateSwapped = false: title = 羅馬字, subtitle = 漢字
+            // 2. isTranslateSwapped = true: title = 漢字, subtitle = 羅馬字
             val displayText: CharSequence = when {
-                // 不顯示漢字模式：只顯示羅馬字
-                !prefs.showHanjiMode -> word.roman
-
                 // 沒有漢字：只顯示羅馬字
                 word.hanzi.isNullOrEmpty() -> word.roman
 
@@ -597,18 +596,20 @@ class SmartbarManager private constructor() :
         // 取得組字管理器
         val composingManager = taigikeyboard.textInputManager.getComposingManager()
 
-        // 根據 showHanjiMode、isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+        // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+        // showHanjiMode 固定為 true
         val textToCommit = when {
             // 漢羅攏出模式
-            cachedOutputBothScripts && prefs.showHanjiMode && !word.hanzi.isNullOrEmpty() -> {
+            cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
                 if (cachedIsTranslateSwapped) {
                     "${word.hanzi} (${word.roman})"
                 } else {
                     "${word.roman} (${word.hanzi})"
                 }
             }
-            // 原有邏輯
-            prefs.showHanjiMode && cachedIsTranslateSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
+            // 翻譯交換模式：顯示漢字
+            cachedIsTranslateSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
+            // 預設顯示羅馬字
             else -> word.roman
         }
 

@@ -30,7 +30,6 @@ class SharedSettings {
 
     private enum Keys {
         static let inputMode = "inputMode"
-        static let showHanjiMode = "showHanjiMode"
         static let enableDoubleTapOO = "enableDoubleTapOO"
         static let enableDoubleTapNN = "enableDoubleTapNN"
         static let isTranslateSwapped = "isTranslateSwapped"
@@ -55,15 +54,6 @@ class SharedSettings {
         }
         set {
             userDefaults.set(newValue.rawValue, forKey: Keys.inputMode)
-        }
-    }
-
-    var showHanjiMode: Bool {
-        get {
-            userDefaults.object(forKey: Keys.showHanjiMode) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.showHanjiMode)
         }
     }
 
@@ -151,7 +141,6 @@ class SharedSettings {
 
     func resetToDefaults() {
         inputMode = .tl
-        showHanjiMode = true
         enableDoubleTapOO = true
         enableDoubleTapNN = true
         isTranslateSwapped = false

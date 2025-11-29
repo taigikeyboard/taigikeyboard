@@ -9,8 +9,8 @@ extension ActionHandler {
     func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
         if composingManager.isComposing {
             // 判斷 suggestion 是否已被 CandidateView 交換
-            // CandidateView 在 showHanjiMode && isTranslateSwapped 時會交換 text/subtitle
-            let wasSwapped = settings.showHanjiMode && settings.isTranslateSwapped
+            // showHanjiMode 固定為 true，CandidateView 在 isTranslateSwapped 時會交換 text/subtitle
+            let wasSwapped = settings.isTranslateSwapped
 
             // 取得真正的羅馬字與漢字
             let roman: String
@@ -27,19 +27,20 @@ extension ActionHandler {
             }
 
             // 決定輸出文字
+            // showHanjiMode 固定為 true
             let textToCommit: String
-            if settings.outputBothScripts && settings.showHanjiMode && hanzi != nil && !hanzi!.isEmpty {
+            if settings.outputBothScripts && hanzi != nil && !hanzi!.isEmpty {
                 // 漢羅做伙出模式
                 if settings.isTranslateSwapped {
                     textToCommit = "\(hanzi!) (\(roman))"
                 } else {
                     textToCommit = "\(roman) (\(hanzi!))"
                 }
-            } else if settings.showHanjiMode && settings.isTranslateSwapped && hanzi != nil && !hanzi!.isEmpty {
-                // 原有漢字模式
+            } else if settings.isTranslateSwapped && hanzi != nil && !hanzi!.isEmpty {
+                // 漢字模式
                 textToCommit = hanzi!
             } else {
-                // 原有羅馬字模式
+                // 羅馬字模式
                 textToCommit = roman
             }
 

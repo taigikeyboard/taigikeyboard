@@ -134,12 +134,6 @@
                     android:orientation="vertical">
 
                     <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_show_hanji" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
-
-                    <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_output_both_scripts" />
 
                 </LinearLayout>
