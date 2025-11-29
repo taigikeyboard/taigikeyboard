@@ -116,9 +116,9 @@
                 android:paddingTop="8dp"
                 android:paddingBottom="16dp" />
 
-            <!-- Hanji Settings Section -->
+            <!-- Input Settings Section -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/hanji_settings_card"
+                android:id="@+id/input_settings_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
@@ -135,6 +135,18 @@
 
                     <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_output_both_scripts" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_auto_capitalization" />
+
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_auto_space" />
 
                 </LinearLayout>
 
@@ -153,9 +165,9 @@
                 android:paddingTop="8dp"
                 android:paddingBottom="16dp" />
 
-            <!-- Basic Settings Section -->
+            <!-- Layout Settings Section -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/basic_settings_card"
+                android:id="@+id/layout_settings_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
@@ -169,18 +181,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
-                    <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_auto_capitalization" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
-
-                    <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_auto_space" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
 
                     <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_custom_font" />

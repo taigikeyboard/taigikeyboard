@@ -122,6 +122,11 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBasicSettingsSection() {
+        setupInputSettingsSection()
+        setupLayoutSettingsSection()
+    }
+
+    private fun setupInputSettingsSection() {
         // Output Both Scripts (漢羅攏出)
         // showHanjiMode 固定為 true，因此此功能永遠可用
         setupToggleItem(
@@ -152,7 +157,9 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         ) { isChecked ->
             prefs.autoSpaceEnabled = isChecked
         }
+    }
 
+    private fun setupLayoutSettingsSection() {
         // Custom Font
         setupToggleItem(
             binding.toggleCustomFont.root,

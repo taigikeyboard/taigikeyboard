@@ -43,11 +43,11 @@ struct SettingsView: View {
                 inputModeSection
 
                 SettingsSection(titleContent: AppTexts.inputSettings) {
-                    hanjiSettingsSection
+                    inputSettingsSection
                 }
 
                 SettingsSection(titleContent: AppTexts.layoutSettings) {
-                    basicSettingsSection
+                    layoutSettingsSection
                 }
 
                 SettingsSection(titleContent: AppTexts.doubleTapCombination) {
@@ -109,26 +109,21 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var hanjiSettingsSection: some View {
+    private var inputSettingsSection: some View {
         // 注意：outputBothScripts 依賴 showHanjiMode，預設為開啟狀態
         SettingsToggleItem(
             titleContent: AppTexts.outputBothScripts,
             isOn: $outputBothScripts,
             isFirst: true,
-            isLast: true,
             onChange: { newValue in
                 settings.outputBothScripts = newValue
             }
         )
         // showHanjiMode 預設為 true，因此 outputBothScripts 永遠可用
-    }
 
-    @ViewBuilder
-    private var basicSettingsSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.autoCapitalization,
             isOn: $autoCapitalizationEnabled,
-            isFirst: true,
             onChange: { newValue in
                 settings.isAutoCapitalizationEnabled = newValue
             }
@@ -137,14 +132,19 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.autoSpace,
             isOn: $autoSpaceEnabled,
+            isLast: true,
             onChange: { newValue in
                 settings.isAutoSpaceEnabled = newValue
             }
         )
+    }
 
+    @ViewBuilder
+    private var layoutSettingsSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.customFont,
             isOn: $customFontEnabled,
+            isFirst: true,
             onChange: { newValue in
                 settings.isCustomFontEnabled = newValue
                 languageManager.updateDisplayLanguage()
