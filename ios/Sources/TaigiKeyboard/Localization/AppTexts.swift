@@ -11,10 +11,11 @@ enum AppTexts {
     static var showHanji: LocalizedText { KeyboardTexts.showHanji }
     static var autoCapitalization: LocalizedText { KeyboardTexts.autoCapitalization }
     static var autoSpace: LocalizedText { KeyboardTexts.autoSpace }
+    static var inputSettings: LocalizedText { KeyboardTexts.inputSettings }
+    static var layoutSettings: LocalizedText { KeyboardTexts.layoutSettings }
     static var doubleTapCombination: LocalizedText { KeyboardTexts.doubleTapCombination }
     static var doubleTapOO: LocalizedText { KeyboardTexts.doubleTapOO }
     static var doubleTapNN: LocalizedText { KeyboardTexts.doubleTapNN }
-    static var showHyphenKey: LocalizedText { KeyboardTexts.showHyphenKey }
     static var phahTaigiLayout: LocalizedText { KeyboardTexts.phahTaigiLayout }
     static var customFont: LocalizedText { KeyboardTexts.customFont }
     static var outputBothScripts: LocalizedText { KeyboardTexts.outputBothScripts }

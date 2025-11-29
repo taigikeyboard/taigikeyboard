@@ -103,6 +103,19 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Input Settings Section Title -->
+            <TextView
+                android:id="@+id/section_title_input_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/keyboard_settings__input_settings"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/modern_text_primary"
+                android:paddingHorizontal="4dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp" />
+
             <!-- Hanji Settings Section -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/hanji_settings_card"
@@ -133,6 +146,19 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Layout Settings Section Title -->
+            <TextView
+                android:id="@+id/section_title_layout_settings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/keyboard_settings__layout_settings"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/modern_text_primary"
+                android:paddingHorizontal="4dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="16dp" />
+
             <!-- Basic Settings Section -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/basic_settings_card"
@@ -158,12 +184,6 @@
 
                     <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_auto_space" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
-
-                    <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_show_hyphen" />
 
                     <View style="@style/ModernDivider"
                         android:layout_marginStart="60dp" />

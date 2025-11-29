@@ -13,7 +13,6 @@ struct SettingsView: View {
     @State private var autoSpaceEnabled: Bool
     @State private var enableDoubleTapOO: Bool
     @State private var enableDoubleTapNN: Bool
-    @State private var showHyphenKey: Bool
     @State private var phahTaigiLayoutEnabled: Bool
     @State private var customFontEnabled: Bool
     @State private var outputBothScripts: Bool
@@ -31,7 +30,6 @@ struct SettingsView: View {
         _showHanjiMode = State(initialValue: settings.showHanjiMode)
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
-        _showHyphenKey = State(initialValue: settings.showHyphenKey)
         _phahTaigiLayoutEnabled = State(initialValue: settings.phahTaigiLayoutEnabled)
         _customFontEnabled = State(initialValue: settings.isCustomFontEnabled)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
@@ -46,11 +44,11 @@ struct SettingsView: View {
             VStack(spacing: 24) {
                 inputModeSection
 
-                SettingsSection {
+                SettingsSection(titleContent: AppTexts.inputSettings) {
                     hanjiSettingsSection
                 }
 
-                SettingsSection {
+                SettingsSection(titleContent: AppTexts.layoutSettings) {
                     basicSettingsSection
                 }
 
@@ -156,14 +154,6 @@ struct SettingsView: View {
         )
 
         SettingsToggleItem(
-            titleContent: AppTexts.showHyphenKey,
-            isOn: $showHyphenKey,
-            onChange: { newValue in
-                settings.showHyphenKey = newValue
-            }
-        )
-
-        SettingsToggleItem(
             titleContent: AppTexts.customFont,
             isOn: $customFontEnabled,
             onChange: { newValue in
@@ -240,7 +230,6 @@ struct SettingsView: View {
         showHanjiMode = settings.showHanjiMode
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
-        showHyphenKey = settings.showHyphenKey
         phahTaigiLayoutEnabled = settings.phahTaigiLayoutEnabled
         customFontEnabled = settings.isCustomFontEnabled
         outputBothScripts = settings.outputBothScripts

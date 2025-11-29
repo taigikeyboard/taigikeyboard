@@ -61,13 +61,14 @@ class KeyboardSettingsActivity : AppCompatActivity() {
 
         // Update section titles
         binding.sectionTitleInputMode.text = languageManager.getText(AppTexts.inputMode)
+        binding.sectionTitleInputSettings.text = languageManager.getText(AppTexts.inputSettings)
+        binding.sectionTitleLayoutSettings.text = languageManager.getText(AppTexts.layoutSettings)
         binding.sectionTitleDoubleTap.text = languageManager.getText(AppTexts.doubleTapCombination)
 
         updateToggleItemText(binding.toggleShowHanji.root, AppTexts.showHanji)
         updateToggleItemText(binding.toggleOutputBothScripts.root, AppTexts.outputBothScripts)
         updateToggleItemText(binding.toggleAutoCapitalization.root, AppTexts.autoCapitalization)
         updateToggleItemText(binding.toggleAutoSpace.root, AppTexts.autoSpace)
-        updateToggleItemText(binding.toggleShowHyphen.root, AppTexts.showHyphenKey)
         updateToggleItemText(binding.toggleCustomFont.root, AppTexts.customFont)
         updateToggleItemText(binding.togglePhahTaigiLayout.root, AppTexts.phahTaigiLayout)
         updateToggleItemText(binding.toggleDoubleTapOo.root, AppTexts.doubleTapOO)
@@ -162,15 +163,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
             prefs.autoSpaceEnabled
         ) { isChecked ->
             prefs.autoSpaceEnabled = isChecked
-        }
-
-        // Show Hyphen Key
-        setupToggleItem(
-            binding.toggleShowHyphen.root,
-            AppTexts.showHyphenKey,
-            prefs.showHyphenKey
-        ) { isChecked ->
-            prefs.showHyphenKey = isChecked
         }
 
         // Custom Font

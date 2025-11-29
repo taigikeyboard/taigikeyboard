@@ -63,6 +63,18 @@ object AppTexts {
         tl = "Tsū-tōng khang-pe̍h"
     )
 
+    val inputSettings = LocalizedText(
+        hanji = "拍字設定",
+        poj = "Phah-jī siat-tēng",
+        tl = "Phah-jī siat-tīng"
+    )
+
+    val layoutSettings = LocalizedText(
+        hanji = "佈局設定",
+        poj = "Pò͘-kio̍k siat-tēng",
+        tl = "Pòo-kio̍k siat-tīng"
+    )
+
     val doubleTapCombination = LocalizedText(
         hanji = "連紲拍 (限白話字)",
         poj = "Liân-sòa phah (hān Pe̍h-ōe-jī)",
@@ -79,12 +91,6 @@ object AppTexts {
         hanji = "連紲拍 nn → ⁿ",
         poj = "Liân-sòa phah nn → ⁿ",
         tl = "Liân-suà phah nn → ⁿ"
-    )
-
-    val showHyphenKey = LocalizedText(
-        hanji = "連字符揤鈕",
-        poj = "Liân-jī-hû chhi̍h-liú",
-        tl = "Liân-jī-hû tshi̍h-liú"
     )
 
     val customFont = LocalizedText(

@@ -197,20 +197,6 @@ class PrefHelper(
             }
         }
 
-    var showHyphenKey: Boolean
-        get() = runBlocking {
-            dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.SHOW_HYPHEN_KEY] ?: false
-            }.first()
-        }
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SHOW_HYPHEN_KEY] = value
-                }
-            }
-        }
-
     var isTranslateSwapped: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
@@ -490,7 +476,6 @@ class PrefHelper(
             prefs[PreferenceKeys.SUBTYPES] = ""
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
             prefs[PreferenceKeys.SHOW_HANJI_MODE] = true
-            prefs[PreferenceKeys.SHOW_HYPHEN_KEY] = false
             prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = false
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true

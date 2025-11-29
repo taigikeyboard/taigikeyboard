@@ -33,7 +33,6 @@ class SharedSettings {
         static let showHanjiMode = "showHanjiMode"
         static let enableDoubleTapOO = "enableDoubleTapOO"
         static let enableDoubleTapNN = "enableDoubleTapNN"
-        static let showHyphenKey = "showHyphenKey"
         static let isTranslateSwapped = "isTranslateSwapped"
         static let outputBothScripts = "outputBothScripts"
         static let customFontEnabled = "customFontEnabled"
@@ -83,15 +82,6 @@ class SharedSettings {
         }
         set {
             userDefaults.set(newValue, forKey: Keys.enableDoubleTapNN)
-        }
-    }
-
-    var showHyphenKey: Bool {
-        get {
-            userDefaults.object(forKey: Keys.showHyphenKey) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.showHyphenKey)
         }
     }
 
@@ -164,7 +154,6 @@ class SharedSettings {
         showHanjiMode = true
         enableDoubleTapOO = true
         enableDoubleTapNN = true
-        showHyphenKey = false
         isTranslateSwapped = false
         outputBothScripts = false
         isCustomFontEnabled = true

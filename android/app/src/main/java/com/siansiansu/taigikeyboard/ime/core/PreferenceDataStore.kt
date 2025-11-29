@@ -37,7 +37,6 @@ object PreferenceKeys {
     val SUBTYPES = stringPreferencesKey("keyboard__subtypes")
     val INPUT_MODE = stringPreferencesKey("keyboard__input_mode")
     val SHOW_HANJI_MODE = booleanPreferencesKey("keyboard__show_hanji_mode")
-    val SHOW_HYPHEN_KEY = booleanPreferencesKey("keyboard__show_hyphen_key")
     val IS_TRANSLATE_SWAPPED = booleanPreferencesKey("keyboard__is_translate_swapped")
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
     val PHAH_TAIGI_LAYOUT_ENABLED = booleanPreferencesKey("keyboard__phah_taigi_layout_enabled")

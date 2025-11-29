@@ -44,6 +44,18 @@ enum KeyboardTexts {
         tl: "Tsū-tōng khang-pe̍h"
     )
 
+    static let inputSettings = LocalizedText(
+        hanji: "拍字設定",
+        poj: "Phah-jī siat-tēng",
+        tl: "Phah-jī siat-tīng"
+    )
+
+    static let layoutSettings = LocalizedText(
+        hanji: "佈局設定",
+        poj: "Pò͘-kio̍k siat-tēng",
+        tl: "Pòo-kio̍k siat-tīng"
+    )
+
     static let doubleTapCombination = LocalizedText(
         hanji: "連紲拍字 (限白話字)",
         poj: "Liân-sòa phah-jī (hān Pe̍h-ōe-jī)",
@@ -60,12 +72,6 @@ enum KeyboardTexts {
         hanji: "連紲拍 nn → ⁿ",
         poj: "Liân-sòa phah nn → ⁿ",
         tl: "Liân-suà phah nn → ⁿ"
-    )
-
-    static let showHyphenKey = LocalizedText(
-        hanji: "連字符揤鈕",
-        poj: "Liân-jī-hû chhi̍h-liú",
-        tl: "Liân-jī-hû tshi̍h-liú"
     )
 
     static let phahTaigiLayout = LocalizedText(

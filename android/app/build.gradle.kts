@@ -14,8 +14,8 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 190
-        versionName = "1.9.0"
+        versionCode = 330
+        versionName = "3.3.0"
 
         ndk {
             debugSymbolLevel = "FULL"

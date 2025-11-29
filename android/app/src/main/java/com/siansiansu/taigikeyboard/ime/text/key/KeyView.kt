@@ -120,16 +120,6 @@ class KeyView(
 
         // 初始化時更新按鍵內容
         updateKeyContent()
-
-        // 控制連字符按鍵的可見性（僅針對 CHARACTERS 鍵盤）
-        // phahTaigi 佈局的連字符按鍵應該永遠可見
-        if (data.code == 45 && keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS) {
-            val isPhahTaigiLayout = keyboardView.computedLayout?.name?.contains("phah_taigi") == true
-            if (!isPhahTaigiLayout) {
-                val prefs = PrefHelper(context)
-                visibility = if (prefs.showHyphenKey) View.VISIBLE else View.GONE
-            }
-        }
     }
 
     /**

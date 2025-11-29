@@ -50,9 +50,9 @@ struct BottomRowBuilder {
         row.append(item(.space, width: .available))
     }
 
-    /// 連字符鍵 - 根據設定顯示
+    /// 連字符鍵 - 在非 phahTaigi 佈局時顯示
     private func addHyphenKeyIfNeeded(to row: inout [KeyboardLayout.Item]) {
-        guard settings.showHyphenKey && !settings.phahTaigiLayoutEnabled else { return }
+        guard !settings.phahTaigiLayoutEnabled else { return }
         row.append(item(.character("-"), width: .input))
     }
 

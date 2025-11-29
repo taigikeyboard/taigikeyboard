@@ -76,6 +76,8 @@
     <string name="keyboard_settings__input_mode">輸入模式</string>
     <string name="keyboard_settings__poj_mode">白話字 (POJ)</string>
     <string name="keyboard_settings__tl_mode">台羅 (TL)</string>
+    <string name="keyboard_settings__input_settings">拍字設定</string>
+    <string name="keyboard_settings__layout_settings">佈局設定</string>
     <string name="keyboard_settings__show_hanji">顯示漢字</string>
     <string name="keyboard_settings__auto_tone_conversion">自動聲調轉換</string>
     <string name="keyboard_settings__auto_capitalization">自動大寫</string>
