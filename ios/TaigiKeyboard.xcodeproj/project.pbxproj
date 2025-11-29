@@ -789,8 +789,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/taigikeyboard/ISEmojiView";
 			requirement = {
-				branch = master;
-				kind = branch;
+				kind = exactVersion;
+				version = 9.3.6;
 			};
 		};
 		F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */ = {
