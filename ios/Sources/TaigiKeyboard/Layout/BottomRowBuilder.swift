@@ -13,6 +13,7 @@ struct BottomRowBuilder {
         addLanguageKey(to: &row, context: context)
         addNumericKey(to: &row, context: context)
         addLocaleKeyIfNeeded(to: &row, context: context)
+        addCommaKeyIfNeeded(to: &row)
         addEmojiKey(to: &row, context: context)
         addSpaceKey(to: &row)
         addHyphenKeyIfNeeded(to: &row)
@@ -48,6 +49,12 @@ struct BottomRowBuilder {
     /// 空白鍵
     private func addSpaceKey(to row: inout [KeyboardLayout.Item]) {
         row.append(item(.space, width: .available))
+    }
+
+    /// 逗號鍵 - 在非 phahTaigi 佈局時顯示
+    private func addCommaKeyIfNeeded(to row: inout [KeyboardLayout.Item]) {
+        guard !settings.phahTaigiLayoutEnabled else { return }
+        row.append(item(.character(","), width: .input))
     }
 
     /// 連字符鍵 - 在非 phahTaigi 佈局時顯示

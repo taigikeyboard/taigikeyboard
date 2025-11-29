@@ -19,11 +19,11 @@ enum LayoutConstants {
 
     /// Return 按鍵寬度
     enum ReturnButton {
-        /// 直向模式寬度比例（佔螢幕寬度 25%）
-        static let portrait: CGFloat = 0.25
+        /// 直向模式寬度比例（佔螢幕寬度 15%）
+        static let portrait: CGFloat = 0.15
 
-        /// 橫向模式寬度比例（佔螢幕寬度 19.5%）
-        static let landscape: CGFloat = 0.195
+        /// 橫向模式寬度比例（佔螢幕寬度 9.5%）
+        static let landscape: CGFloat = 0.095
     }
 
     // MARK: - Letter Rows (字母列)
