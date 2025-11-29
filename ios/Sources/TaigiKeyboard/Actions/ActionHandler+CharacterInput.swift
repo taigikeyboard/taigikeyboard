@@ -94,11 +94,15 @@ extension ActionHandler {
     /// - Returns: 是否已處理該動作
     func handleReturnAction() -> Bool {
         if composingManager.isComposing {
-            // 使用 KeyboardKit 標準方式：直接檢查 AutocompleteContext
-            let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
-
-            // 確認當前選中的候選詞（如果有選中的話）
-            _ = composingManager.confirmSelectedCandidate(availableSuggestions: suggestions)
+            // 檢查當前選中的候選詞索引
+            if composingManager.selectedCandidateIndex == 0 {
+                // 選中第 0 個候選詞（組字文字），直接確認組字
+                composingManager.commitComposition()
+            } else {
+                // 選中其他候選詞，確認選中的候選詞
+                let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
+                _ = composingManager.confirmSelectedCandidate(availableSuggestions: suggestions)
+            }
 
             // 羅馬字模式：確認候選詞後自動加空白
             if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
