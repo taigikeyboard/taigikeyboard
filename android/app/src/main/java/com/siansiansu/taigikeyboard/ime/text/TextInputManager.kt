@@ -552,11 +552,16 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
         // 如果正在台語組字，確認組字
         if (composingManager?.isComposing() == true) {
+            // 在確認之前先取得組字文字（確認後會清空）
+            val committedText = composingManager?.getComposingText() ?: ""
             composingManager?.commitComposition(ic)
 
-            // 羅馬字模式：確認候選詞後自動加空白
+            // 羅馬字模式：確認候選詞後自動加空白（字尾非連字符時）
             if (taigikeyboard.prefs.autoSpaceEnabled && !taigikeyboard.prefs.isTranslateSwapped) {
-                ic.commitText(" ", 1)
+                // 檢查字尾是否為連字符
+                if (!committedText.endsWith("-")) {
+                    ic.commitText(" ", 1)
+                }
             }
 
             smartbarManager.clearCandidates()

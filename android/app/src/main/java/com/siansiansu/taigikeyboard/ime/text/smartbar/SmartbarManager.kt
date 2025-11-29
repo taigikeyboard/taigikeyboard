@@ -96,9 +96,12 @@ class SmartbarManager private constructor() :
             // 選擇候選詞（使用 ComposingManager 處理狀態清除）
             composingManager?.selectSuggestion(textToCommit, ic)
 
-            // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白
+            // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
             if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-                ic.commitText(" ", 1)
+                // 檢查字尾是否為連字符
+                if (!textToCommit.endsWith("-")) {
+                    ic.commitText(" ", 1)
+                }
             }
 
             // 記錄使用頻率（非同步）
@@ -614,9 +617,12 @@ class SmartbarManager private constructor() :
         // 選擇候選詞（使用 ComposingManager 處理狀態清除）
         composingManager?.selectSuggestion(textToCommit, ic)
 
-        // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白
+        // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
         if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-            ic.commitText(" ", 1)
+            // 檢查字尾是否為連字符
+            if (!textToCommit.endsWith("-")) {
+                ic.commitText(" ", 1)
+            }
         }
 
         // 記錄使用頻率（非同步）

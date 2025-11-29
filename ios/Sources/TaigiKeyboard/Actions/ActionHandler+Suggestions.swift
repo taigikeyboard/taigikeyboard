@@ -58,9 +58,12 @@ extension ActionHandler {
                 UserFrequencyService.recordUsage(for: displayText)
             }
 
-            // 羅馬字模式或漢羅做伙出模式：選擇候選詞後自動加空白
+            // 羅馬字模式或漢羅做伙出模式：選擇候選詞後自動加空白（字尾非連字符時）
             if settings.isAutoSpaceEnabled && (!settings.isTranslateSwapped || settings.outputBothScripts) {
-                keyboardContext.textDocumentProxy.insertText(" ")
+                // 檢查字尾是否為連字符
+                if !textToCommit.hasSuffix("-") {
+                    keyboardContext.textDocumentProxy.insertText(" ")
+                }
             }
 
             // 注意：resetAutocomplete 已經在 selectSuggestion 中處理

@@ -94,6 +94,9 @@ extension ActionHandler {
     /// - Returns: 是否已處理該動作
     func handleReturnAction() -> Bool {
         if composingManager.isComposing {
+            // 在確認之前先取得組字文字（確認後會清空）
+            let committedText = composingManager.composingText
+
             // 檢查當前選中的候選詞索引
             if composingManager.selectedCandidateIndex == 0 {
                 // 選中第 0 個候選詞（組字文字），直接確認組字
@@ -104,9 +107,12 @@ extension ActionHandler {
                 _ = composingManager.confirmSelectedCandidate(availableSuggestions: suggestions)
             }
 
-            // 羅馬字模式：確認候選詞後自動加空白
+            // 羅馬字模式：確認候選詞後自動加空白（字尾非連字符時）
             if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
-                keyboardContext.textDocumentProxy.insertText(" ")
+                // 檢查字尾是否為連字符
+                if !committedText.hasSuffix("-") {
+                    keyboardContext.textDocumentProxy.insertText(" ")
+                }
             }
 
             return true
