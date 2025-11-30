@@ -50,6 +50,8 @@ class KeyView(
         set(value) {
             if (field != value) {
                 field = value
+                // 同步 View 的 pressed state，讓 selector 的 state_pressed 能正確觸發
+                isPressed = value
                 updateKeyPressedBackground()
                 invalidate()
             }
@@ -113,7 +115,11 @@ class KeyView(
         }
         setPadding(0, 0, 0, 0)
 
-        background = getDrawable(context, R.drawable.shape_rect_rounded)
+        // 根據按鍵類型設定對應的背景 selector
+        background = when (data.code) {
+            KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+            else -> getDrawable(context, R.drawable.key_background_selector)
+        }
         elevation = 0.0f
 
         updateKeyPressedBackground()
@@ -355,28 +361,24 @@ class KeyView(
     }
 
     /**
-     * Updates the background depending on [isKeyPressed] and [data].
+     * Updates the background depending on [data].
      * 當 translate 按鍵處於 swapped 狀態時，顯示啟用的背景色
+     *
+     * 注意：一般按鍵的按下效果（pressed state）已由 selector 處理，
+     * 此函式只處理特殊狀態（例如 translate swapped）
      *
      * 優化：只在狀態改變時調用，不在 onDraw 中重複執行
      */
     private fun updateKeyPressedBackground() {
-        if (data.code == KeyCode.ENTER) {
-            setBackgroundTintColor(
-                this, R.attr.colorPrimary
-            )
-        } else {
-            // 檢查是否為 translate 按鍵且處於 swapped 狀態
-            // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
-            val isTranslateSwapped = data.code == KeyCode.TRANSLATE &&
-                com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+        // 檢查是否為 translate 按鍵且處於 swapped 狀態
+        // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
+        val isTranslateSwapped = data.code == KeyCode.TRANSLATE &&
+            com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
 
-            setBackgroundTintColor(
-                this, when {
-                    isTranslateSwapped -> R.attr.key_bgColorActive
-                    else -> R.attr.key_bgColor
-                }
-            )
+        // 只有 translate 按鍵在 swapped 狀態時需要特殊處理
+        // 其他按鍵（包括 ENTER、DELETE）的觸擊效果由 selector 自動處理
+        if (isTranslateSwapped) {
+            setBackgroundTintColor(this, R.attr.key_bgColorActive)
         }
     }
 
