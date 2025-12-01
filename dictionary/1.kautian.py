@@ -68,6 +68,91 @@ class KautianProcessor(BaseProcessor):
 
         return list(set(results))
 
+    def extract_pronunciation_mappings(self, df):
+        """從語音差異表中提取漢字與各地發音變體的映射關係
+
+        Returns:
+            dict[str, dict]: {漢字: {原始TL: [變體TL列表]}}
+        """
+        pronunciation_mappings = {}
+        region_columns = [
+            '鹿港偏泉腔', '三峽偏泉腔', '臺北偏泉腔', '宜蘭偏漳腔',
+            '臺南混合腔', '高雄混合腔', '金門偏泉腔', '馬公偏泉腔',
+            '新竹偏泉腔', '臺中偏漳腔'
+        ]
+
+        for _, row in df.iterrows():
+            hanzi = str(row.get('漢字', '')).strip()
+            if not hanzi or hanzi == 'nan':
+                continue
+
+            all_variants = set()
+            for col in region_columns:
+                value = str(row.get(col, '')).strip()
+                if value and value != 'nan':
+                    for v in value.split(','):
+                        v = v.strip()
+                        if v:
+                            all_variants.add(v)
+
+            if all_variants:
+                pronunciation_mappings[hanzi] = list(all_variants)
+
+        return pronunciation_mappings
+
+    def generate_pronunciation_variant_records(self, original_records, pronunciation_mappings):
+        """根據語音差異映射表，為原始記錄生成發音變體記錄"""
+        variant_records = []
+
+        for record in original_records:
+            hanzi = record.get('hanzi', '')
+            tl = record.get('tl', '')
+
+            if not hanzi or not tl:
+                continue
+
+            hanzi_chars = list(hanzi)
+            tl_syllables = tl.split('-')
+
+            if len(hanzi_chars) != len(tl_syllables):
+                continue
+
+            variant_tl_sets = [set() for _ in tl_syllables]
+
+            for i, char in enumerate(hanzi_chars):
+                if char in pronunciation_mappings:
+                    for variant in pronunciation_mappings[char]:
+                        variant_tl_sets[i].add(variant)
+
+            if not any(variant_tl_sets):
+                continue
+
+            from itertools import product
+
+            options_per_position = []
+            for i, syllable in enumerate(tl_syllables):
+                if variant_tl_sets[i]:
+                    options_per_position.append(list(variant_tl_sets[i]))
+                else:
+                    options_per_position.append([syllable])
+
+            for combo in product(*options_per_position):
+                new_tl = '-'.join(combo)
+                if new_tl != tl:
+                    new_poj = self.convert_to_poj(new_tl)
+                    tl_no_tone = self.remove_tones(new_tl)
+                    poj_no_tone = self.remove_tones(new_poj)
+
+                    variant_record = record.copy()
+                    variant_record['tl'] = new_tl.lower()
+                    variant_record['poj'] = new_poj.lower()
+                    variant_record['tl_no_tone'] = tl_no_tone.lower()
+                    variant_record['poj_no_tone'] = poj_no_tone.lower()
+                    variant_record['is_variant'] = True
+                    variant_records.append(variant_record)
+
+        return variant_records
+
     def process_row(self, row):
         """處理單筆資料列，將台羅轉換為白話字並生成多種變體記錄"""
         results = []
@@ -177,10 +262,10 @@ def main():
     input_file = Path('raw/kautian.ods')
     output_file = Path('csv/kautian.csv')
 
-    sheets_to_read = ["詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓", "異用字"]
+    sheets_to_read = ["詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓", "異用字", "語音差異"]
     all_rows = []
     variant_mappings = {}
-
+    pronunciation_mappings = {}
 
     import pandas as pd
 
@@ -189,8 +274,12 @@ def main():
             variant_df = pd.read_excel(excel_file, sheet_name="異用字")
             variant_mappings = processor.extract_variant_mappings(variant_df)
 
+        if "語音差異" in excel_file.sheet_names:
+            pronunciation_df = pd.read_excel(excel_file, sheet_name="語音差異")
+            pronunciation_mappings = processor.extract_pronunciation_mappings(pronunciation_df)
+
         for sheet_name in sheets_to_read:
-            if sheet_name == "異用字":
+            if sheet_name in ["異用字", "語音差異"]:
                 continue
 
             if sheet_name not in excel_file.sheet_names:
@@ -210,6 +299,10 @@ def main():
             if variant_mappings:
                 variant_records = processor.generate_variant_records(sheet_records, variant_mappings)
                 all_rows.extend(variant_records)
+
+            if pronunciation_mappings:
+                pronunciation_records = processor.generate_pronunciation_variant_records(sheet_records, pronunciation_mappings)
+                all_rows.extend(pronunciation_records)
 
     # 去重
     unique_rows = processor.deduplicate(all_rows)

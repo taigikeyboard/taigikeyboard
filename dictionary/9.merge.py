@@ -78,8 +78,8 @@ def merge_dictionaries():
     # 寫入合併後的檔案
     logger.info(f"正在寫入合併檔案: {output_file}")
     with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['tl', 'poj', 'hanzi', 'tl_no_tone', 'poj_no_tone', 'syllable_count', 'source']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        fieldnames = ['tl', 'poj', 'hanzi', 'tl_no_tone', 'poj_no_tone', 'syllable_count', 'source', 'is_variant']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
         writer.writeheader()
         writer.writerows(standard_rows)
 

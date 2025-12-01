@@ -99,7 +99,7 @@ def generate_variants():
         source = row.get('source', '')
 
         # 建立唯一鍵用於去重
-        def add_row_if_unique(tl_val, poj_val, hanzi_val, tl_nt_val, poj_nt_val, syllable_val, source_val):
+        def add_row_if_unique(tl_val, poj_val, hanzi_val, tl_nt_val, poj_nt_val, syllable_val, source_val, is_variant_val='False'):
             key = (tl_val, poj_val, hanzi_val, tl_nt_val, poj_nt_val)
             if key not in seen_keys:
                 seen_keys.add(key)
@@ -110,13 +110,17 @@ def generate_variants():
                     'tl_no_tone': tl_nt_val,
                     'poj_no_tone': poj_nt_val,
                     'syllable_count': syllable_val,
-                    'source': source_val
+                    'source': source_val,
+                    'is_variant': is_variant_val
                 })
                 return True
             return False
 
+        # 取得 is_variant 欄位（來自上游，預設 False）
+        is_variant = row.get('is_variant', 'False')
+
         # 1. 加入原始資料
-        add_row_if_unique(tl, poj, hanzi, tl_no_tone, poj_no_tone, syllable_count, source)
+        add_row_if_unique(tl, poj, hanzi, tl_no_tone, poj_no_tone, syllable_count, source, is_variant)
 
         # 2. 檢查 POJ 是否包含 n-n 形式，產生鼻化音變體
         if re.search(r'[Nn]-[Nn]', poj):
@@ -124,7 +128,7 @@ def generate_variants():
             poj_no_tone_nasal = convert_nn_to_nasal(poj_no_tone)
 
             # 注意：tl 和 poj 保持原樣，只有 poj_no_tone 轉換
-            if add_row_if_unique(tl, poj, hanzi, tl_no_tone, poj_no_tone_nasal, syllable_count, source):
+            if add_row_if_unique(tl, poj, hanzi, tl_no_tone, poj_no_tone_nasal, syllable_count, source, is_variant):
                 nn_variants_added += 1
                 logger.info(f"[n-n→ⁿ] poj_no_tone: {poj_no_tone} → {poj_no_tone_nasal}")
 
@@ -137,14 +141,15 @@ def generate_variants():
             tl_nt_variant = tl_first_letters if tl_first_letters else tl_no_tone
             poj_nt_variant = poj_first_letters if poj_first_letters else poj_no_tone
 
-            if add_row_if_unique(tl, poj, hanzi, tl_nt_variant, poj_nt_variant, syllable_count, source):
+            if add_row_if_unique(tl, poj, hanzi, tl_nt_variant, poj_nt_variant, syllable_count, source, is_variant):
                 first_letter_variants_added += 1
                 logger.info(f"[首字母] tl_no_tone: {tl_no_tone} → {tl_nt_variant}, poj_no_tone: {poj_no_tone} → {poj_nt_variant}")
 
     # 寫入檔案
     logger.info(f"\n正在寫入 {output_file}...")
+    output_fieldnames = ['tl', 'poj', 'hanzi', 'tl_no_tone', 'poj_no_tone', 'syllable_count', 'source', 'is_variant']
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=output_fieldnames)
         writer.writeheader()
         writer.writerows(all_rows)
 
