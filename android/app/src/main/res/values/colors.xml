@@ -20,16 +20,16 @@
     <!-- Modern Theme Colors (Light Mode) - SPY×FAMILY Theme -->
     <color name="modern_surface_primary">#f5f0e8</color><!-- Light Beige Background -->
     <color name="modern_surface_secondary">#E6F2F2F7</color><!-- 90% opacity -->
-    <color name="modern_accent">#8da99b</color><!-- Teal Gray Green -->
+    <color name="modern_accent">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="modern_accent_secondary">#610a10</color><!-- Deep Red -->
     <color name="modern_text_primary">#2c2827</color><!-- Dark Brown Gray -->
     <color name="modern_text_secondary">#57675c</color><!-- Deep Teal Gray -->
 
     <!-- Modern Theme - Icon Colors - SPY×FAMILY Theme -->
     <color name="modern_icon_red">#610a10</color><!-- Deep Red -->
-    <color name="modern_icon_blue">#8da99b</color><!-- Teal Gray Green -->
+    <color name="modern_icon_blue">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="modern_icon_yellow">#fab3ad</color><!-- Warm Pink -->
-    <color name="modern_icon_green">#8da99b</color><!-- Teal Gray Green -->
+    <color name="modern_icon_green">#6e8a7d</color><!-- Teal Gray Green -->
 
     <!-- Modern Theme - Shadow -->
     <color name="modern_shadow_light">#0A000000</color><!-- 4% -->
@@ -37,8 +37,8 @@
     <color name="modern_shadow_heavy">#1F000000</color><!-- 12% -->
 
     <!-- Copyright Page Accent Colors - SPY×FAMILY Theme -->
-    <color name="copyright_accent_green">#8da99b</color><!-- Teal Gray Green -->
-    <color name="copyright_accent_blue">#8da99b</color><!-- Teal Gray Green -->
+    <color name="copyright_accent_green">#6e8a7d</color><!-- Teal Gray Green -->
+    <color name="copyright_accent_blue">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="copyright_accent_purple">#610a10</color><!-- Deep Red -->
     <color name="copyright_accent_orange">#fab3ad</color><!-- Warm Pink -->
 
@@ -58,13 +58,13 @@
 
     <!-- Modern Theme - State Colors - SPY×FAMILY Theme -->
     <color name="modern_success_container">#E8F5E9</color><!-- Light Green Background -->
-    <color name="modern_success">#8da99b</color><!-- Teal Gray Green -->
+    <color name="modern_success">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="modern_warning_container">#FFF8F0</color><!-- Light Orange Background -->
     <color name="modern_warning">#fab3ad</color><!-- Warm Pink -->
 
     <!-- Modern Theme - Alpha Colors (Translucent) - SPY×FAMILY Theme -->
-    <color name="modern_accent_container">#1A8da99b</color><!-- Teal @ 10% opacity -->
-    <color name="modern_accent_surface">#0D8da99b</color><!-- Teal @ 5% opacity -->
+    <color name="modern_accent_container">#1A6e8a7d</color><!-- Teal @ 10% opacity -->
+    <color name="modern_accent_surface">#0D6e8a7d</color><!-- Teal @ 5% opacity -->
     <color name="modern_warning_surface">#26fab3ad</color><!-- Pink @ 15% opacity -->
 
     <!-- SPY×FAMILY Specific Colors -->

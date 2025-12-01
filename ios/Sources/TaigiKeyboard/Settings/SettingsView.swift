@@ -5,7 +5,6 @@ import UIKit
 struct SettingsView: View {
     @Environment(\.dismiss) var dismiss
     @State private var selectedInputMode: InputMode = .tl
-    @State private var showHanjiMode = true
 
     private let settings = SharedSettings.shared
 
@@ -13,7 +12,6 @@ struct SettingsView: View {
     @State private var autoSpaceEnabled: Bool
     @State private var enableDoubleTapOO: Bool
     @State private var enableDoubleTapNN: Bool
-    @State private var showHyphenKey: Bool
     @State private var phahTaigiLayoutEnabled: Bool
     @State private var customFontEnabled: Bool
     @State private var outputBothScripts: Bool
@@ -28,10 +26,8 @@ struct SettingsView: View {
         _selectedInputMode = State(initialValue: InputMode(rawValue: settings.inputMode.rawValue) ?? InputMode.tl)
         _autoCapitalizationEnabled = State(initialValue: settings.isAutoCapitalizationEnabled)
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
-        _showHanjiMode = State(initialValue: settings.showHanjiMode)
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
-        _showHyphenKey = State(initialValue: settings.showHyphenKey)
         _phahTaigiLayoutEnabled = State(initialValue: settings.phahTaigiLayoutEnabled)
         _customFontEnabled = State(initialValue: settings.isCustomFontEnabled)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
@@ -47,15 +43,7 @@ struct SettingsView: View {
                 inputModeSection
 
                 SettingsSection {
-                    hanjiSettingsSection
-                }
-
-                SettingsSection {
-                    basicSettingsSection
-                }
-
-                SettingsSection(titleContent: AppTexts.doubleTapCombination) {
-                    doubleTapSection
+                    settingsSection
                 }
 
                 SettingsSection {
@@ -113,35 +101,21 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
-    private var hanjiSettingsSection: some View {
-        SettingsToggleItem(
-            titleContent: AppTexts.showHanji,
-            isOn: $showHanjiMode,
-            isFirst: true,
-            onChange: { newValue in
-                settings.showHanjiMode = newValue
-                languageManager.updateDisplayLanguage()
-            }
-        )
-
+    private var settingsSection: some View {
+        // 注意：outputBothScripts 依賴 showHanjiMode，預設為開啟狀態
         SettingsToggleItem(
             titleContent: AppTexts.outputBothScripts,
             isOn: $outputBothScripts,
-            isLast: true,
+            isFirst: true,
             onChange: { newValue in
                 settings.outputBothScripts = newValue
             }
         )
-        .disabled(!showHanjiMode)
-        .opacity(showHanjiMode ? 1.0 : 0.4)
-    }
+        // showHanjiMode 預設為 true，因此 outputBothScripts 永遠可用
 
-    @ViewBuilder
-    private var basicSettingsSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.autoCapitalization,
             isOn: $autoCapitalizationEnabled,
-            isFirst: true,
             onChange: { newValue in
                 settings.isAutoCapitalizationEnabled = newValue
             }
@@ -152,14 +126,6 @@ struct SettingsView: View {
             isOn: $autoSpaceEnabled,
             onChange: { newValue in
                 settings.isAutoSpaceEnabled = newValue
-            }
-        )
-
-        SettingsToggleItem(
-            titleContent: AppTexts.showHyphenKey,
-            isOn: $showHyphenKey,
-            onChange: { newValue in
-                settings.showHyphenKey = newValue
             }
         )
 
@@ -175,19 +141,14 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.phahTaigiLayout,
             isOn: $phahTaigiLayoutEnabled,
-            isLast: true,
             onChange: { newValue in
                 settings.phahTaigiLayoutEnabled = newValue
             }
         )
-    }
 
-    @ViewBuilder
-    private var doubleTapSection: some View {
         SettingsToggleItem(
             titleContent: AppTexts.doubleTapOO,
             isOn: $enableDoubleTapOO,
-            isFirst: true,
             onChange: { newValue in
                 settings.enableDoubleTapOO = newValue
             }
@@ -237,10 +198,8 @@ struct SettingsView: View {
         selectedInputMode = settings.inputMode
         autoCapitalizationEnabled = settings.isAutoCapitalizationEnabled
         autoSpaceEnabled = settings.isAutoSpaceEnabled
-        showHanjiMode = settings.showHanjiMode
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
-        showHyphenKey = settings.showHyphenKey
         phahTaigiLayoutEnabled = settings.phahTaigiLayoutEnabled
         customFontEnabled = settings.isCustomFontEnabled
         outputBothScripts = settings.outputBothScripts

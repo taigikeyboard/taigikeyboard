@@ -50,6 +50,8 @@ class KeyView(
         set(value) {
             if (field != value) {
                 field = value
+                // 同步 View 的 pressed state，讓 selector 的 state_pressed 能正確觸發
+                isPressed = value
                 updateKeyPressedBackground()
                 invalidate()
             }
@@ -113,23 +115,17 @@ class KeyView(
         }
         setPadding(0, 0, 0, 0)
 
-        background = getDrawable(context, R.drawable.shape_rect_rounded)
+        // 根據按鍵類型設定對應的背景 selector
+        background = when (data.code) {
+            KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+            else -> getDrawable(context, R.drawable.key_background_selector)
+        }
         elevation = 0.0f
 
         updateKeyPressedBackground()
 
         // 初始化時更新按鍵內容
         updateKeyContent()
-
-        // 控制連字符按鍵的可見性（僅針對 CHARACTERS 鍵盤）
-        // phahTaigi 佈局的連字符按鍵應該永遠可見
-        if (data.code == 45 && keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS) {
-            val isPhahTaigiLayout = keyboardView.computedLayout?.name?.contains("phah_taigi") == true
-            if (!isPhahTaigiLayout) {
-                val prefs = PrefHelper(context)
-                visibility = if (prefs.showHyphenKey) View.VISIBLE else View.GONE
-            }
-        }
     }
 
     /**
@@ -365,28 +361,24 @@ class KeyView(
     }
 
     /**
-     * Updates the background depending on [isKeyPressed] and [data].
+     * Updates the background depending on [data].
      * 當 translate 按鍵處於 swapped 狀態時，顯示啟用的背景色
+     *
+     * 注意：一般按鍵的按下效果（pressed state）已由 selector 處理，
+     * 此函式只處理特殊狀態（例如 translate swapped）
      *
      * 優化：只在狀態改變時調用，不在 onDraw 中重複執行
      */
     private fun updateKeyPressedBackground() {
-        if (data.code == KeyCode.ENTER) {
-            setBackgroundTintColor(
-                this, R.attr.colorPrimary
-            )
-        } else {
-            // 檢查是否為 translate 按鍵且處於 swapped 狀態
-            // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
-            val isTranslateSwapped = data.code == KeyCode.TRANSLATE &&
-                com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+        // 檢查是否為 translate 按鍵且處於 swapped 狀態
+        // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
+        val isTranslateSwapped = data.code == KeyCode.TRANSLATE &&
+            com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
 
-            setBackgroundTintColor(
-                this, when {
-                    isTranslateSwapped -> R.attr.key_bgColorActive
-                    else -> R.attr.key_bgColor
-                }
-            )
+        // 只有 translate 按鍵在 swapped 狀態時需要特殊處理
+        // 其他按鍵（包括 ENTER、DELETE）的觸擊效果由 selector 自動處理
+        if (isTranslateSwapped) {
+            setBackgroundTintColor(this, R.attr.key_bgColorActive)
         }
     }
 
@@ -434,8 +426,9 @@ class KeyView(
 
                     if (isComposing) {
                         // 組字模式：只顯示「確定」文字
+                        // showHanjiMode 固定為 true
                         val displayLanguage = when {
-                            keyboardView.prefs.showHanjiMode && keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
+                            keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
                             keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
                             else -> DisplayLanguage.TL
                         }
@@ -530,10 +523,20 @@ class KeyView(
                     label = resources.getString(R.string.key__view_characters)
                     drawable = null
                 }
-                KeyCode.VIEW_NUMERIC,
-                KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                KeyCode.VIEW_NUMERIC -> {
                     label = resources.getString(R.string.key__view_numeric)
                     drawable = null
+                }
+                KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                    // 在 symbol 鍵盤中，根據 isTranslateSwapped 狀態決定顯示內容
+                    val isTranslateSwapped = com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+                    if (isTranslateSwapped && keyboardView.computedLayout?.mode == KeyboardMode.SYMBOLS) {
+                        label = "、"
+                        drawable = null
+                    } else {
+                        label = resources.getString(R.string.key__view_numeric)
+                        drawable = null
+                    }
                 }
                 KeyCode.VIEW_PHONE -> {
                     label = resources.getString(R.string.key__view_phone)
@@ -662,9 +665,17 @@ class KeyView(
                 data.code == KeyCode.ENTER && label.isNotEmpty() -> {
                     resources.getDimension(R.dimen.key_enter_confirm_textSize)
                 }
+                // VIEW_NUMERIC_ADVANCED: 根據顯示內容決定字體大小
+                data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                    // 如果顯示「、」符號，使用一般按鍵大小；否則使用數字鍵大小
+                    if (label == "、") {
+                        resources.getDimension(R.dimen.key_textSize)
+                    } else {
+                        resources.getDimension(R.dimen.key_numeric_textSize)
+                    }
+                }
                 // 數字鍵和空白鍵
                 data.code == KeyCode.VIEW_NUMERIC ||
-                data.code == KeyCode.VIEW_NUMERIC_ADVANCED ||
                 data.code == KeyCode.SPACE -> {
                     resources.getDimension(R.dimen.key_numeric_textSize)
                 }
@@ -674,9 +685,8 @@ class KeyView(
                 }
             }
 
-            // 根據設定和文字內容設定字體
+            // 根據設定設定字體
             sharedLabelPaint.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                text = label,
                 customFontEnabled = keyboardView.prefs.customFontEnabled,
                 context = context
             )

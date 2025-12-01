@@ -38,46 +38,12 @@ enum KeyboardModels {
 
         static let keyboardButtonFontSize: CGFloat = 22
 
-        // CJK Extension 系列 Unicode 範圍
-        private static let cjkExtensionRanges: [ClosedRange<UInt32>] = [
-            0x3400 ... 0x4DBF, // CJK Extension A
-            0x20000 ... 0x2A6DF, // CJK Extension B
-            0x2A700 ... 0x2B73F, // CJK Extension C
-            0x2B740 ... 0x2B81F, // CJK Extension D
-            0x2B820 ... 0x2CEAF, // CJK Extension E
-            0x2CEB0 ... 0x2EBEF, // CJK Extension F
-            0x30000 ... 0x3134F, // CJK Extension G
-        ]
-
-        static func containsCJKExtension(_ text: String) -> Bool {
-            text.unicodeScalars.contains { scalar in
-                cjkExtensionRanges.contains { range in
-                    range.contains(scalar.value)
-                }
-            }
-        }
-
-        static func smartFont(for text: String, size: CGFloat) -> Font {
-            // 只對 CJK Extension 字元使用自訂字體
-            if containsCJKExtension(text) {
-                return Font.custom(extensionFontName, size: size)
-            } else {
-                return Font.system(size: size)
-            }
-        }
-
-        static func globalFont(for text: String, size: CGFloat) -> Font {
+        static func globalFont(size: CGFloat) -> Font {
             let useCustomFont = SharedSettings.shared.isCustomFontEnabled
-
-            if useCustomFont {
-                return Font.custom(extensionFontName, size: size)
-            } else if containsCJKExtension(text) {
-                return Font.custom(extensionFontName, size: size)
-            } else {
-                return Font.system(size: size)
-            }
+            return useCustomFont
+                ? Font.custom(extensionFontName, size: size)
+                : Font.system(size: size)
         }
-
     }
 }
 

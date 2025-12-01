@@ -13,6 +13,7 @@ import android.widget.Toast
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.FragmentContentBinding
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.util.AppVersionUtils
 
 class ContentFragment : SettingsMainActivity.SettingsFragment() {
     private lateinit var binding: FragmentContentBinding
@@ -29,6 +30,7 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
         setupNavigationItems()
         setupResourceItems()
         observeLanguageChanges()
+        setupFooterVersion()
 
         // Ensure initial display is correct
         updateAllTexts()
@@ -54,14 +56,10 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             languageManager.getText(AppTexts.copyrightNotice)
 
         // Update resource items
-        binding.root.findViewById<TextView>(R.id.resource_sponsorship_title)?.text =
-            languageManager.getText(AppTexts.sponsorship)
         binding.root.findViewById<TextView>(R.id.resource_contact_title)?.text =
             languageManager.getText(AppTexts.contactUs)
         binding.root.findViewById<TextView>(R.id.resource_rate_title)?.text =
             languageManager.getText(AppTexts.rateUs)
-        binding.root.findViewById<TextView>(R.id.resource_share_title)?.text =
-            languageManager.getText(AppTexts.shareToFriends)
     }
 
     private fun setupNavigationItems() {
@@ -88,9 +86,10 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             }
         }
 
-        // Website Introduction
+        // Website Introduction - 使用系統預設瀏覽器開啟
         binding.root.findViewById<View>(R.id.nav_item_website_intro)?.setOnClickListener {
-            Intent(context, WebsiteIntroActivity::class.java).apply {
+            val websiteUrl = "https://www.taigikeyboard.tw/"
+            Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl)).apply {
                 startActivity(this)
             }
         }
@@ -104,16 +103,10 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
     }
 
     private fun setupResourceItems() {
-        // Sponsorship
-        binding.root.findViewById<View>(R.id.resource_item_sponsorship)?.setOnClickListener {
-            Intent(context, com.siansiansu.taigikeyboard.sponsorship.SponsorshipActivity::class.java).apply {
-                startActivity(this)
-            }
-        }
-
-        // Contact / Feedback
+        // Contact / Feedback - 使用系統預設瀏覽器開啟 Google Forms
         binding.root.findViewById<View>(R.id.resource_item_contact)?.setOnClickListener {
-            Intent(context, ContactActivity::class.java).apply {
+            val contactFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
+            Intent(Intent.ACTION_VIEW, Uri.parse(contactFormUrl)).apply {
                 startActivity(this)
             }
         }
@@ -136,15 +129,13 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
                 }
             }
         }
+    }
 
-        // Share
-        binding.root.findViewById<View>(R.id.resource_item_share)?.setOnClickListener {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.home__share__title))
-                putExtra(Intent.EXTRA_TEXT, "${getString(R.string.home__share__title)}\n${getString(R.string.home__share__url)}")
-            }
-            startActivity(Intent.createChooser(shareIntent, getString(R.string.home__resource__share)))
+    private fun setupFooterVersion() {
+        // 設定版號顯示
+        binding.root.findViewById<TextView>(R.id.footer_version)?.apply {
+            val version = AppVersionUtils.getRawVersionName(requireContext())
+            text = "v$version"
         }
     }
 }

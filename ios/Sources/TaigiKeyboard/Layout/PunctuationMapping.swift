@@ -35,9 +35,9 @@ enum PunctuationMapping {
     private static let numericMap: [String: String] = [
         ",": "，",
         ".": "。",
-        "?": "、",
-        "!": "？",
-        "’": "！",
+        "?": "？",
+        "!": "！",
+        "’": "、",
 
         "”": "」",
         "@": "「",

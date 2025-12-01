@@ -13,7 +13,6 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
  * - 根據組字文字搜尋候選詞
  * - 判斷輸入類型（漢字、帶聲調羅馬字、無聲調羅馬字）
  * - 整合使用者頻率排序
- * - showHanjiMode 關閉時對羅馬字去重
  */
 class TaigiAutocompleteService(
     private val context: Context,
@@ -56,14 +55,7 @@ class TaigiAutocompleteService(
                 context = context
             )
 
-            // 當 showHanjiMode = false 時，對羅馬字進行去重
-            // 參考 iOS: AutocompleteService.swift:262-268
-            val dedupedWords = if (!prefs.showHanjiMode) {
-                deduplicateRomanWords(words)
-            } else {
-                words
-            }
-
+            // showHanjiMode 固定為 true，直接使用搜尋結果
             // 在第 0 個位置插入當前組字文字候選詞
             // 參考 iOS: AutocompleteService.swift:99-101
             val composingTextWord = createComposingTextWord(composingText)
@@ -71,7 +63,7 @@ class TaigiAutocompleteService(
             // TODO: 整合 UserFrequencyService 排序
             buildList {
                 add(composingTextWord)
-                addAll(dedupedWords)
+                addAll(words)
             }
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {

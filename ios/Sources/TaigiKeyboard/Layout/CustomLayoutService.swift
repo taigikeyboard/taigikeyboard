@@ -12,13 +12,15 @@ class CustomLayoutService: KeyboardLayout.StandardLayoutService {
         if context.keyboardType == .numeric {
             let layout = super.keyboardLayout(for: context)
             let modifiedLayout = addTranslateButtonToNumericLayout(to: layout, context: context)
-            return applyFullWidthConversion(to: modifiedLayout, context: context)
+            let adjustedLayout = adjustReturnButtonWidth(to: modifiedLayout, context: context)
+            return applyFullWidthConversion(to: adjustedLayout, context: context)
         }
 
         // Apply full-width conversion to symbolic keyboard
         if context.keyboardType == .symbolic {
             let layout = super.keyboardLayout(for: context)
-            return applyFullWidthConversion(to: layout, context: context)
+            let adjustedLayout = adjustReturnButtonWidth(to: layout, context: context)
+            return applyFullWidthConversion(to: adjustedLayout, context: context)
         }
 
         return super.keyboardLayout(for: context)
@@ -73,6 +75,33 @@ class CustomLayoutService: KeyboardLayout.StandardLayoutService {
     }
 
     // MARK: - Post-Processing
+
+    /// 調整 Return 按鍵寬度，使其與 alphabetic 鍵盤一致
+    private func adjustReturnButtonWidth(to layout: KeyboardLayout, context: KeyboardContext) -> KeyboardLayout {
+        let isPortrait = context.interfaceOrientation.isPortrait
+        let returnWidth: CGFloat = isPortrait ? LayoutConstants.ReturnButton.portrait
+                                               : LayoutConstants.ReturnButton.landscape
+
+        let adjustedRows = layout.itemRows.map { row in
+            row.map { item in
+                // 找到 Return 按鍵並調整寬度
+                if case .primary(.return) = item.action {
+                    return KeyboardLayout.Item(
+                        action: item.action,
+                        size: KeyboardLayout.ItemSize(
+                            width: .percentage(returnWidth),
+                            height: item.size.height
+                        ),
+                        edgeInsets: item.edgeInsets
+                    )
+                } else {
+                    return item
+                }
+            }
+        }
+
+        return KeyboardLayout(itemRows: adjustedRows)
+    }
 
     /// 當 isTranslateSwapped = true 時，將半形標點符號轉換為全形
     private func applyFullWidthConversion(to layout: KeyboardLayout, context: KeyboardContext) -> KeyboardLayout {

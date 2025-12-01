@@ -372,21 +372,15 @@ class CandidateOverlayView : FrameLayout {
 
     /**
      * 綁定 cell 內容
-     * 根據 showHanjiMode 和 isTranslateSwapped 決定顯示內容
+     * 根據 isTranslateSwapped 決定顯示內容
+     * showHanjiMode 固定為 true
      */
     private fun bindCellContent(word: TaigiWord, primaryText: TextView, subtitleText: TextView) {
-        val showHanjiMode = prefs.showHanjiMode
         // 使用 SmartbarManager 的快取值，避免 DataStore 非同步寫入造成的 race condition
         val smartbarManager = SmartbarManager.getInstance()
         val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
 
         when {
-            // 不顯示漢字模式：只顯示羅馬字
-            !showHanjiMode -> {
-                primaryText.text = word.roman
-                subtitleText.visibility = View.GONE
-            }
-
             // 沒有漢字：只顯示羅馬字
             word.hanzi.isNullOrEmpty() -> {
                 primaryText.text = word.roman
@@ -408,15 +402,13 @@ class CandidateOverlayView : FrameLayout {
             }
         }
 
-        // 設定字體：根據 customFontEnabled 和文字內容決定
+        // 設定字體：根據 customFontEnabled 決定
         val customFontEnabled = prefs.customFontEnabled
         primaryText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            text = primaryText.text.toString(),
             customFontEnabled = customFontEnabled,
             context = context
         )
         subtitleText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            text = subtitleText.text.toString(),
             customFontEnabled = customFontEnabled,
             context = context
         )

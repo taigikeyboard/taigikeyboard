@@ -56,7 +56,6 @@
     <string name="home__nav__copyright">版權聲明</string>
 
     <!-- Resources Section -->
-    <string name="home__resource__sponsorship">贊助支持</string>
     <string name="home__resource__contact">意見回饋</string>
     <string name="home__resource__rate">為阮評分</string>
     <string name="home__resource__share">推薦予朋友</string>
@@ -77,6 +76,8 @@
     <string name="keyboard_settings__input_mode">輸入模式</string>
     <string name="keyboard_settings__poj_mode">白話字 (POJ)</string>
     <string name="keyboard_settings__tl_mode">台羅 (TL)</string>
+    <string name="keyboard_settings__input_settings">拍字設定</string>
+    <string name="keyboard_settings__layout_settings">佈局設定</string>
     <string name="keyboard_settings__show_hanji">顯示漢字</string>
     <string name="keyboard_settings__auto_tone_conversion">自動聲調轉換</string>
     <string name="keyboard_settings__auto_capitalization">自動大寫</string>

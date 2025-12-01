@@ -54,9 +54,9 @@ enum AppInfoTexts {
     )
 
     static let userGuide = LocalizedText(
-        hanji: "網站介紹",
-        poj: "Bāng-chām kài-siāu",
-        tl: "Bāng-tsām kài-siāu"
+        hanji: "網站紹介",
+        poj: "Bāng-chām siāu-kài",
+        tl: "Bāng-tsām siāu-kài"
     )
 
     // MARK: - 引導頁面導航

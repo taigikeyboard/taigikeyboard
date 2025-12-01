@@ -26,24 +26,6 @@
                 <include layout="@layout/home_navigation_item_setup" />
                 <View style="@style/ModernDivider" />
                 <include layout="@layout/home_navigation_item_settings" />
-                <View style="@style/ModernDivider" />
-                <include layout="@layout/home_navigation_item_website_intro" />
-
-            </LinearLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Sponsorship Section (單獨區塊) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/sponsorship_card"
-            style="@style/ModernCard">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <include layout="@layout/home_resource_item_sponsorship" />
 
             </LinearLayout>
 
@@ -61,9 +43,9 @@
 
                 <include layout="@layout/home_resource_item_contact" />
                 <View style="@style/ModernDivider" />
-                <include layout="@layout/home_resource_item_rate" />
+                <include layout="@layout/home_navigation_item_website_intro" />
                 <View style="@style/ModernDivider" />
-                <include layout="@layout/home_resource_item_share" />
+                <include layout="@layout/home_resource_item_rate" />
 
             </LinearLayout>
 
@@ -108,6 +90,16 @@
                 android:textColor="@color/modern_text_secondary"
                 android:gravity="center"
                 android:alpha="0.7" />
+
+            <TextView
+                android:id="@+id/footer_version"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="10sp"
+                android:textColor="@color/modern_text_secondary"
+                android:gravity="center"
+                android:alpha="0.5" />
 
         </LinearLayout>
 

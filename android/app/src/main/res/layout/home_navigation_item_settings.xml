@@ -3,14 +3,8 @@
     android:id="@+id/nav_item_settings"
     style="@style/ModernNavigationItem"
     android:orientation="horizontal"
-    android:gravity="center_vertical">
-
-    <!-- 左側復古色條 -->
-    <View
-        android:layout_width="4dp"
-        android:layout_height="match_parent"
-        android:layout_marginEnd="20dp"
-        android:background="@color/spyfamily_warm_pink" />
+    android:gravity="center_vertical"
+    android:paddingStart="24dp">
 
     <TextView
         android:id="@+id/nav_settings_title"

@@ -314,11 +314,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             )
         }
 
-        // 當 showHanjiMode = false 時，對羅馬字進行去重
-        if !SharedSettings.shared.showHanjiMode {
-            return deduplicateRomanSuggestions(suggestions)
-        }
-
+        // showHanjiMode 固定為 true，直接返回候選詞
         return suggestions
     }
 

@@ -64,7 +64,7 @@ struct CandidateView: View {
                     onSettingsTap()
                 }) {
                     Image(systemName: "gearshape.fill")
-                        .font(KeyboardModels.Fonts.globalFont(for: "⚙", size: 18))
+                        .font(KeyboardModels.Fonts.globalFont(size: 18))
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                         .scaleEffect(1.2)
                         .frame(width: 42, height: CandidateViewModels.UI.height)
@@ -133,7 +133,7 @@ struct CandidateView: View {
                     expandState.toggle()
                 }) {
                     Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
-                        .font(KeyboardModels.Fonts.globalFont(for: "🔍", size: 18)) // 使用全域字型
+                        .font(KeyboardModels.Fonts.globalFont(size: 18)) // 使用全域字型
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                         .scaleEffect(1.2) // 增加縮放從 1.1 到 1.2
                         .frame(width: 42, height: CandidateViewModels.UI.height) // 增加寬度從 36 到 42
@@ -232,18 +232,10 @@ extension CandidateView {
             return style.itemStyle.cornerRadius ?? 8
         }
 
-        /// 是否顯示漢字模式
-        private var showHanjiMode: Bool {
-            SharedSettings.shared.showHanjiMode
-        }
-
         /// 計算要顯示的主要文字
-        /// 根據漢字模式和交換設定決定顯示內容
+        /// 根據交換設定決定顯示內容
+        /// showHanjiMode 固定為 true
         private var displayTitle: String {
-            if !showHanjiMode {
-                return suggestion.text
-            }
-
             if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             } else {
@@ -252,12 +244,8 @@ extension CandidateView {
         }
 
         /// 計算要顯示的副標題文字
-        /// 只在漢字模式下顯示
+        /// showHanjiMode 固定為 true，永遠顯示副標題
         private var displaySubtitle: String? {
-            if !showHanjiMode {
-                return nil
-            }
-
             if isTranslateSwapped {
                 return suggestion.text
             } else {
@@ -268,7 +256,8 @@ extension CandidateView {
         var body: some View {
             Button(action: {
                 let suggestionToHandle: Autocomplete.Suggestion
-                if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+                // showHanjiMode 固定為 true
+                if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                     let originalTextLength = suggestion.text.count
                     let newTextLength = subtitle.count
                     let additionalDeleteCount = max(0, originalTextLength - newTextLength)
@@ -288,7 +277,6 @@ extension CandidateView {
                 HStack(alignment: .bottom, spacing: CandidateViewModels.Spacing.small) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            for: displayTitle,
                             size: CandidateViewModels.UI.primaryFontSize
                         ))
                         .fontWeight(.regular)
@@ -298,7 +286,6 @@ extension CandidateView {
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
                             .font(KeyboardModels.Fonts.globalFont(
-                                for: subtitle,
                                 size: CandidateViewModels.UI.secondaryFontSize
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)

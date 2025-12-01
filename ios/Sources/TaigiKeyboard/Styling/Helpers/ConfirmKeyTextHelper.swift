@@ -8,8 +8,8 @@ struct ConfirmKeyTextHelper {
     static func getConfirmKeyText() -> String {
         let settings = SharedSettings.shared
 
-        // 只有在顯示漢字模式且翻譯交換時才顯示漢字
-        if settings.showHanjiMode && settings.isTranslateSwapped {
+        // showHanjiMode 固定為 true，只檢查翻譯交換設定
+        if settings.isTranslateSwapped {
             return AppTexts.confirmKey.hanji
         }
 

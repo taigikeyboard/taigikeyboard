@@ -14,8 +14,8 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 164
-        versionName = "1.0.5"
+        versionCode = 330
+        versionName = "3.3.0"
 
         ndk {
             debugSymbolLevel = "FULL"
@@ -123,7 +123,4 @@ dependencies {
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
-
-    // Google Play Billing
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
 }

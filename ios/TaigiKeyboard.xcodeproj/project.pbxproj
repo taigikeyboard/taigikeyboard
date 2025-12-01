@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2A3B2A9E2ED81EB500317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9D2ED81EB500317D6D /* ISEmojiView */; };
+		2A3B2AA02ED81ECB00317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */; };
 		F3264F8C2E523BCF002E99A4 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3264F8B2E523BCF002E99A4 /* KeyboardKit */; };
 		F32651AB2E5247FA002E99A4 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F32651AA2E5247FA002E99A4 /* KeyboardKit */; };
 		F32651AE2E524AA8002E99A4 /* TaigiKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -85,13 +87,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		2A1FCE0E2EAFD083009F2800 /* Exceptions for "Emojis" folder in "TaigiKeyboardExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				EmojiService.swift.backup,
-			);
-			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
-		};
 		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -159,9 +154,6 @@
 		};
 		2A2882ED2EAF0D7D00AE3C75 /* Emojis */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2A1FCE0E2EAFD083009F2800 /* Exceptions for "Emojis" folder in "TaigiKeyboardExtension" target */,
-			);
 			name = Emojis;
 			path = Sources/TaigiKeyboard/Emojis;
 			sourceTree = "<group>";
@@ -203,12 +195,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Settings;
 			path = Sources/TaigiKeyboard/Settings;
-			sourceTree = "<group>";
-		};
-		2A2883222EAF0DEF00AE3C75 /* Sponsorship */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Sponsorship;
-			path = Sources/TaigiKeyboard/Sponsorship;
 			sourceTree = "<group>";
 		};
 		2A2883262EAF0E0400AE3C75 /* Styling */ = {
@@ -258,6 +244,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2A3B2A9E2ED81EB500317D6D /* ISEmojiView in Frameworks */,
 				F3264F8C2E523BCF002E99A4 /* KeyboardKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -266,6 +253,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2A3B2AA02ED81ECB00317D6D /* ISEmojiView in Frameworks */,
 				F32651AB2E5247FA002E99A4 /* KeyboardKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -292,7 +280,6 @@
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
-				2A2883222EAF0DEF00AE3C75 /* Sponsorship */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
 				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
@@ -328,7 +315,6 @@
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28830F2EAF0DCF00AE3C75 /* Onboarding */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
-				2A2883222EAF0DEF00AE3C75 /* Sponsorship */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				F3B59AE82EC8FD0900CD5052 /* UserGuide */,
@@ -336,6 +322,7 @@
 			name = TaigiKeyboard;
 			packageProductDependencies = (
 				F3264F8B2E523BCF002E99A4 /* KeyboardKit */,
+				2A3B2A9D2ED81EB500317D6D /* ISEmojiView */,
 			);
 			productName = POJKeyboard;
 			productReference = F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */;
@@ -372,6 +359,7 @@
 			name = TaigiKeyboardExtension;
 			packageProductDependencies = (
 				F32651AA2E5247FA002E99A4 /* KeyboardKit */,
+				2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */,
 			);
 			productName = POJKeyboardExtension;
 			productReference = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */;
@@ -467,6 +455,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */,
+				2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F3026C0A2E2DFEA8002F7E94;
@@ -670,7 +659,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.2;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -702,7 +691,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.2;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -727,7 +716,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -753,7 +742,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.2;
+				MARKETING_VERSION = 3.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -796,6 +785,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/taigikeyboard/ISEmojiView";
+			requirement = {
+				kind = exactVersion;
+				version = 9.3.6;
+			};
+		};
 		F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/KeyboardKit/KeyboardKit.git";
@@ -807,6 +804,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		2A3B2A9D2ED81EB500317D6D /* ISEmojiView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */;
+			productName = ISEmojiView;
+		};
+		2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */;
+			productName = ISEmojiView;
+		};
 		F3264F8B2E523BCF002E99A4 /* KeyboardKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */;

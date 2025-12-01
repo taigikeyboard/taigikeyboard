@@ -76,27 +76,32 @@ class SmartbarManager private constructor() :
             // 取得組字管理器
             val composingManager = taigikeyboard.textInputManager.getComposingManager()
 
-            // 根據 showHanjiMode、isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+            // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+            // showHanjiMode 固定為 true
             val textToCommit = when {
                 // 漢羅攏出模式
-                cachedOutputBothScripts && prefs.showHanjiMode && !selectedWord.hanzi.isNullOrEmpty() -> {
+                cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
                     if (cachedIsTranslateSwapped) {
                         "${selectedWord.hanzi} (${selectedWord.roman})"
                     } else {
                         "${selectedWord.roman} (${selectedWord.hanzi})"
                     }
                 }
-                // 原有邏輯
-                prefs.showHanjiMode && cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
+                // 翻譯交換模式：顯示漢字
+                cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
+                // 預設顯示羅馬字
                 else -> selectedWord.roman
             }
 
             // 選擇候選詞（使用 ComposingManager 處理狀態清除）
             composingManager?.selectSuggestion(textToCommit, ic)
 
-            // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白
+            // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
             if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-                ic.commitText(" ", 1)
+                // 檢查字尾是否為連字符
+                if (!textToCommit.endsWith("-")) {
+                    ic.commitText(" ", 1)
+                }
             }
 
             // 記錄使用頻率（非同步）
@@ -335,15 +340,12 @@ class SmartbarManager private constructor() :
                 setOnLongClickListener(candidateViewOnLongClickListener)
             }
 
-            // 顯示格式：根據 showHanjiMode 和 isTranslateSwapped 決定顯示內容
+            // 顯示格式：根據 isTranslateSwapped 決定顯示內容
+            // showHanjiMode 固定為 true
             // 規則：
-            // 1. showHanjiMode = false: 只顯示羅馬字 (無 subtitle)
-            // 2. showHanjiMode = true && isTranslateSwapped = false: title = 羅馬字, subtitle = 漢字
-            // 3. showHanjiMode = true && isTranslateSwapped = true: title = 漢字, subtitle = 羅馬字
+            // 1. isTranslateSwapped = false: title = 羅馬字, subtitle = 漢字
+            // 2. isTranslateSwapped = true: title = 漢字, subtitle = 羅馬字
             val displayText: CharSequence = when {
-                // 不顯示漢字模式：只顯示羅馬字
-                !prefs.showHanjiMode -> word.roman
-
                 // 沒有漢字：只顯示羅馬字
                 word.hanzi.isNullOrEmpty() -> word.roman
 
@@ -416,10 +418,8 @@ class SmartbarManager private constructor() :
 
             button.text = displayText
 
-            // 設定字體：根據漢字是否包含 CJK Extension 字元決定
-            // customFontEnabled = false 時，只對 CJK Extension 字元使用自訂字體
+            // 設定字體：根據 customFontEnabled 決定
             button.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                text = word.hanzi ?: "",
                 customFontEnabled = prefs.customFontEnabled,
                 context = taigikeyboard.context
             )
@@ -470,8 +470,11 @@ class SmartbarManager private constructor() :
         // 背景更新其他鍵盤模式，確保下次切換時使用正確的標點
         textInputManager.reloadAllLayoutsInBackground()
 
-        // 只重繪 TRANSLATE 按鍵，避免刷新整個鍵盤（效能優化）
-        textInputManager.invalidateKeysByCode(com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE)
+        // 只重繪 TRANSLATE 和 VIEW_NUMERIC_ADVANCED 按鍵，避免刷新整個鍵盤（效能優化）
+        textInputManager.invalidateKeysByCode(
+            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE,
+            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED
+        )
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[TRANSLATE] isTranslateSwapped 切換為: $cachedIsTranslateSwapped")
@@ -594,27 +597,32 @@ class SmartbarManager private constructor() :
         // 取得組字管理器
         val composingManager = taigikeyboard.textInputManager.getComposingManager()
 
-        // 根據 showHanjiMode、isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+        // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+        // showHanjiMode 固定為 true
         val textToCommit = when {
             // 漢羅攏出模式
-            cachedOutputBothScripts && prefs.showHanjiMode && !word.hanzi.isNullOrEmpty() -> {
+            cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
                 if (cachedIsTranslateSwapped) {
                     "${word.hanzi} (${word.roman})"
                 } else {
                     "${word.roman} (${word.hanzi})"
                 }
             }
-            // 原有邏輯
-            prefs.showHanjiMode && cachedIsTranslateSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
+            // 翻譯交換模式：顯示漢字
+            cachedIsTranslateSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
+            // 預設顯示羅馬字
             else -> word.roman
         }
 
         // 選擇候選詞（使用 ComposingManager 處理狀態清除）
         composingManager?.selectSuggestion(textToCommit, ic)
 
-        // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白
+        // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
         if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-            ic.commitText(" ", 1)
+            // 檢查字尾是否為連字符
+            if (!textToCommit.endsWith("-")) {
+                ic.commitText(" ", 1)
+            }
         }
 
         // 記錄使用頻率（非同步）

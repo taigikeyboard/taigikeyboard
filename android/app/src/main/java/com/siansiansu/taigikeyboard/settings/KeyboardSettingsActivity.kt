@@ -61,13 +61,10 @@ class KeyboardSettingsActivity : AppCompatActivity() {
 
         // Update section titles
         binding.sectionTitleInputMode.text = languageManager.getText(AppTexts.inputMode)
-        binding.sectionTitleDoubleTap.text = languageManager.getText(AppTexts.doubleTapCombination)
 
-        updateToggleItemText(binding.toggleShowHanji.root, AppTexts.showHanji)
         updateToggleItemText(binding.toggleOutputBothScripts.root, AppTexts.outputBothScripts)
         updateToggleItemText(binding.toggleAutoCapitalization.root, AppTexts.autoCapitalization)
         updateToggleItemText(binding.toggleAutoSpace.root, AppTexts.autoSpace)
-        updateToggleItemText(binding.toggleShowHyphen.root, AppTexts.showHyphenKey)
         updateToggleItemText(binding.toggleCustomFont.root, AppTexts.customFont)
         updateToggleItemText(binding.togglePhahTaigiLayout.root, AppTexts.phahTaigiLayout)
         updateToggleItemText(binding.toggleDoubleTapOo.root, AppTexts.doubleTapOO)
@@ -90,7 +87,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     private fun setupViews() {
         setupInputModeSection()
         setupBasicSettingsSection()
-        setupDoubleTapSection()
         setupActionButtonsSection()
     }
 
@@ -122,19 +118,8 @@ class KeyboardSettingsActivity : AppCompatActivity() {
     }
 
     private fun setupBasicSettingsSection() {
-        // Show Hanji
-        setupToggleItem(
-            binding.toggleShowHanji.root,
-            AppTexts.showHanji,
-            prefs.showHanjiMode
-        ) { isChecked ->
-            prefs.showHanjiMode = isChecked
-            // 更新 outputBothScripts 的啟用狀態
-            updateOutputBothScriptsState(isChecked)
-            // Language updates automatically via Flow
-        }
-
         // Output Both Scripts (漢羅攏出)
+        // showHanjiMode 固定為 true，因此此功能永遠可用
         setupToggleItem(
             binding.toggleOutputBothScripts.root,
             AppTexts.outputBothScripts,
@@ -143,8 +128,8 @@ class KeyboardSettingsActivity : AppCompatActivity() {
             prefs.outputBothScripts = isChecked
         }
 
-        // 初始化 outputBothScripts 的啟用狀態
-        updateOutputBothScriptsState(prefs.showHanjiMode)
+        // 初始化 outputBothScripts 的啟用狀態（showHanjiMode 固定為 true）
+        updateOutputBothScriptsState(true)
 
         // Auto Capitalization
         setupToggleItem(
@@ -164,15 +149,6 @@ class KeyboardSettingsActivity : AppCompatActivity() {
             prefs.autoSpaceEnabled = isChecked
         }
 
-        // Show Hyphen Key
-        setupToggleItem(
-            binding.toggleShowHyphen.root,
-            AppTexts.showHyphenKey,
-            prefs.showHyphenKey
-        ) { isChecked ->
-            prefs.showHyphenKey = isChecked
-        }
-
         // Custom Font
         setupToggleItem(
             binding.toggleCustomFont.root,
@@ -190,9 +166,7 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         ) { isChecked ->
             prefs.phahTaigiLayoutEnabled = isChecked
         }
-    }
 
-    private fun setupDoubleTapSection() {
         // Double Tap OO
         setupToggleItem(
             binding.toggleDoubleTapOo.root,

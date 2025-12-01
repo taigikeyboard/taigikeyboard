@@ -6,7 +6,7 @@ extension Color {
         static let surfacePrimary = Color(red: 0.961, green: 0.941, blue: 0.910) // #f5f0e8 溫暖米色背景
         static let surfaceSecondary = Color(red: 0.984, green: 0.976, blue: 0.961) // #FBF9F5 卡片背景（溫暖白色）
 
-        static let accent = Color(red: 0.553, green: 0.663, blue: 0.608) // #8da99b Loid's Teal Gray
+        static let accent = Color(red: 0.431, green: 0.541, blue: 0.490) // #6e8a7d Loid's Teal Gray
         static let accentSecondary = Color(red: 0.380, green: 0.039, blue: 0.063) // #610a10 Yor's Deep Red
         static let accentTertiary = Color(red: 0.980, green: 0.702, blue: 0.678) // #fab3ad Anya's Warm Pink
 

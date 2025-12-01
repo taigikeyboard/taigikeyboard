@@ -30,10 +30,8 @@ class SharedSettings {
 
     private enum Keys {
         static let inputMode = "inputMode"
-        static let showHanjiMode = "showHanjiMode"
         static let enableDoubleTapOO = "enableDoubleTapOO"
         static let enableDoubleTapNN = "enableDoubleTapNN"
-        static let showHyphenKey = "showHyphenKey"
         static let isTranslateSwapped = "isTranslateSwapped"
         static let outputBothScripts = "outputBothScripts"
         static let customFontEnabled = "customFontEnabled"
@@ -59,15 +57,6 @@ class SharedSettings {
         }
     }
 
-    var showHanjiMode: Bool {
-        get {
-            userDefaults.object(forKey: Keys.showHanjiMode) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.showHanjiMode)
-        }
-    }
-
     var enableDoubleTapOO: Bool {
         get {
             userDefaults.object(forKey: Keys.enableDoubleTapOO) as? Bool ?? true
@@ -86,15 +75,6 @@ class SharedSettings {
         }
     }
 
-    var showHyphenKey: Bool {
-        get {
-            userDefaults.object(forKey: Keys.showHyphenKey) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.showHyphenKey)
-        }
-    }
-
     var isTranslateSwapped: Bool {
         get {
             userDefaults.object(forKey: Keys.isTranslateSwapped) as? Bool ?? false
@@ -107,7 +87,7 @@ class SharedSettings {
 
     var isCustomFontEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.customFontEnabled) as? Bool ?? false
+            userDefaults.object(forKey: Keys.customFontEnabled) as? Bool ?? true
         }
         set {
             userDefaults.set(newValue, forKey: Keys.customFontEnabled)
@@ -134,7 +114,7 @@ class SharedSettings {
 
     var isAutoSpaceEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.autoSpaceEnabled) as? Bool ?? true
+            userDefaults.object(forKey: Keys.autoSpaceEnabled) as? Bool ?? false
         }
         set {
             userDefaults.set(newValue, forKey: Keys.autoSpaceEnabled)
@@ -143,7 +123,7 @@ class SharedSettings {
 
     var phahTaigiLayoutEnabled: Bool {
         get {
-            userDefaults.object(forKey: Keys.phahTaigiLayoutEnabled) as? Bool ?? false
+            userDefaults.object(forKey: Keys.phahTaigiLayoutEnabled) as? Bool ?? true
         }
         set {
             userDefaults.set(newValue, forKey: Keys.phahTaigiLayoutEnabled)
@@ -161,16 +141,14 @@ class SharedSettings {
 
     func resetToDefaults() {
         inputMode = .tl
-        showHanjiMode = true
         enableDoubleTapOO = true
         enableDoubleTapNN = true
-        showHyphenKey = false
         isTranslateSwapped = false
         outputBothScripts = false
-        isCustomFontEnabled = false
+        isCustomFontEnabled = true
         isAutoCapitalizationEnabled = true
-        isAutoSpaceEnabled = true
-        phahTaigiLayoutEnabled = false
+        isAutoSpaceEnabled = false
+        phahTaigiLayoutEnabled = true
     }
 }
 

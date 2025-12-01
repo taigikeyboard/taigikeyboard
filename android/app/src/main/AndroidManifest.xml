@@ -2,15 +2,6 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Permission needed to vibrate if the user has key press vibration enabled -->
-    <uses-permission android:name="android.permission.VIBRATE"/>
-
-    <!-- Permission needed for WebView to access internet -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-
-    <!-- Permission needed for In-App Purchases -->
-    <uses-permission android:name="com.android.vending.BILLING"/>
-
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -79,25 +70,6 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Contact Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.settings.ContactActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/home__resource__contact"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/ContactActivityTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="false"/>
-
-        <!-- Website Introduction Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.settings.WebsiteIntroActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/ContactActivityTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="false"/>
-
         <!-- Keyboard Settings Activity -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.KeyboardSettingsActivity"
@@ -107,16 +79,6 @@
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="true"/>
-
-        <!-- Sponsorship Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.sponsorship.SponsorshipActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/home__resource__sponsorship"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/Theme.Material3.DayNight.NoActionBar"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="false"/>
 
     </application>
 

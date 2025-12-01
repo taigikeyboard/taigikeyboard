@@ -112,3 +112,5 @@ ENV/
 
 # === Claude Code ===
 .claude/settings.local.json
+
+references

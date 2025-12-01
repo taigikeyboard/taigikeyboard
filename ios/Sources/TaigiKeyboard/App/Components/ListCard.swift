@@ -33,7 +33,6 @@ extension View {
 // MARK: - List Card View
 
 struct ListCardView: View {
-    let stripColor: Color
     let title: LocalizedText
     let isPressed: Bool
     let isLast: Bool
@@ -41,43 +40,27 @@ struct ListCardView: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 0) {
-                // Left color strip with padding
-                HStack(spacing: 0) {
-                    Spacer()
-                        .frame(width: 16)
+            HStack(spacing: 16) {
+                LocalizedTextView(title)
+                    .font(Font.Theme.headline)
+                    .foregroundColor(Color.Theme.textPrimary)
 
-                    Rectangle()
-                        .fill(stripColor)
-                        .frame(width: 4, height: 28)
+                Spacer()
 
-                    Spacer()
-                        .frame(width: 20)
-                }
-
-                // Content area
-                HStack(spacing: 16) {
-                    LocalizedTextView(title)
-                        .font(Font.Theme.headline)
-                        .foregroundColor(Color.Theme.textPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Color.Theme.textSecondary)
-                        .opacity(0.5)
-                        .offset(x: isPressed ? 2 : 0)
-                        .animation(ThemeAnimation.smooth, value: isPressed)
-                }
-                .padding(.trailing, 24)
-                .padding(.vertical, 20)
-                .background(
-                    Rectangle()
-                        .fill(isPressed ? stripColor.opacity(0.05) : Color.clear)
-                        .animation(ThemeAnimation.quick, value: isPressed)
-                )
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.Theme.textSecondary)
+                    .opacity(0.5)
+                    .offset(x: isPressed ? 2 : 0)
+                    .animation(ThemeAnimation.smooth, value: isPressed)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 20)
+            .background(
+                Rectangle()
+                    .fill(isPressed ? Color.Theme.textSecondary.opacity(0.05) : Color.clear)
+                    .animation(ThemeAnimation.quick, value: isPressed)
+            )
             .overlay(
                 // Separator line for non-last items
                 VStack {

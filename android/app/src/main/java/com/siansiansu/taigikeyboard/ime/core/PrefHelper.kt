@@ -183,34 +183,6 @@ class PrefHelper(
             }
         }
 
-    var showHanjiMode: Boolean
-        get() = runBlocking {
-            dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.SHOW_HANJI_MODE] ?: true
-            }.first()
-        }
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SHOW_HANJI_MODE] = value
-                }
-            }
-        }
-
-    var showHyphenKey: Boolean
-        get() = runBlocking {
-            dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.SHOW_HYPHEN_KEY] ?: false
-            }.first()
-        }
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SHOW_HYPHEN_KEY] = value
-                }
-            }
-        }
-
     var isTranslateSwapped: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
@@ -285,7 +257,7 @@ class PrefHelper(
     var autoSpaceEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.AUTO_SPACE_ENABLED] ?: true
+                prefs[PreferenceKeys.AUTO_SPACE_ENABLED] ?: false
             }.first()
         }
         set(value) {
@@ -299,7 +271,7 @@ class PrefHelper(
     var customFontEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] ?: false
+                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] ?: true
             }.first()
         }
         set(value) {
@@ -313,7 +285,7 @@ class PrefHelper(
     var phahTaigiLayoutEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: false
+                prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: true
             }.first()
         }
         set(value) {
@@ -358,15 +330,6 @@ class PrefHelper(
     fun observeInputMode(): Flow<String> =
         dataStore.data.map { prefs ->
             prefs[PreferenceKeys.INPUT_MODE] ?: "tl"
-        }
-
-    /**
-     * Observes showHanjiMode changes as a Flow.
-     * Emits true/false whenever the value changes in DataStore.
-     */
-    fun observeShowHanjiMode(): Flow<Boolean> =
-        dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.SHOW_HANJI_MODE] ?: true
         }
 
     /**
@@ -417,8 +380,6 @@ class PrefHelper(
                     sharedPrefs.getString("keyboard__subtypes", "") ?: ""
                 prefs[PreferenceKeys.INPUT_MODE] =
                     sharedPrefs.getString("keyboard__input_mode", "tl") ?: "tl"
-                prefs[PreferenceKeys.SHOW_HANJI_MODE] =
-                    sharedPrefs.getBoolean("keyboard__show_hanji_mode", true)
 
                 // Taigi-specific settings
                 prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] =
@@ -428,11 +389,11 @@ class PrefHelper(
                 prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] =
                     sharedPrefs.getBoolean("taigi__auto_capitalization_enabled", true)
                 prefs[PreferenceKeys.AUTO_SPACE_ENABLED] =
-                    sharedPrefs.getBoolean("taigi__auto_space_enabled", true)
+                    sharedPrefs.getBoolean("taigi__auto_space_enabled", false)
                 prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] =
-                    sharedPrefs.getBoolean("taigi__custom_font_enabled", false)
+                    sharedPrefs.getBoolean("taigi__custom_font_enabled", true)
                 prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] =
-                    sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", false)
+                    sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", true)
 
                 // Looknfeel settings
                 prefs[PreferenceKeys.HEIGHT_FACTOR] =
@@ -489,16 +450,14 @@ class PrefHelper(
             prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] = -1
             prefs[PreferenceKeys.SUBTYPES] = ""
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
-            prefs[PreferenceKeys.SHOW_HANJI_MODE] = true
-            prefs[PreferenceKeys.SHOW_HYPHEN_KEY] = false
             prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = false
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true
-            prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = true
-            prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = false
-            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
+            prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
+            prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = true
+            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = true
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
             prefs[PreferenceKeys.SUGGESTION_ENABLED] = true

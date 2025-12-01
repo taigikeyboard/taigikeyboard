@@ -209,7 +209,7 @@ struct ExpandedCandidateOverlay: View {
                         onCollapse()
                     }) {
                         Image(systemName: "chevron.up")
-                            .font(KeyboardModels.Fonts.globalFont(for: "▶", size: 20))
+                            .font(KeyboardModels.Fonts.globalFont(size: 20))
                             .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                             .frame(width: 60, height: 56, alignment: .center)
                             .background(Color.clear)
@@ -224,7 +224,7 @@ struct ExpandedCandidateOverlay: View {
                             }
                         }) {
                             Image(systemName: "arrowtriangle.up.fill")
-                                .font(KeyboardModels.Fonts.globalFont(for: "▶", size: 20))
+                                .font(KeyboardModels.Fonts.globalFont(size: 20))
                                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                                 .frame(width: 45, height: 45, alignment: .center)
                                 .background(upButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
@@ -245,7 +245,7 @@ struct ExpandedCandidateOverlay: View {
                             }
                         }) {
                             Image(systemName: "arrowtriangle.down.fill")
-                                .font(KeyboardModels.Fonts.globalFont(for: "▶", size: 20))
+                                .font(KeyboardModels.Fonts.globalFont(size: 20))
                                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                                 .frame(width: 45, height: 45, alignment: .center)
                                 .background(downButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
@@ -264,7 +264,7 @@ struct ExpandedCandidateOverlay: View {
                             onTranslateToggle()
                         }) {
                             Image(systemName: "translate")
-                                .font(KeyboardModels.Fonts.globalFont(for: "▶", size: 20))
+                                .font(KeyboardModels.Fonts.globalFont(size: 20))
                                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                                 .frame(width: 45, height: 45, alignment: .center)
                                 .background(translateButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
@@ -404,10 +404,7 @@ struct ExpandedCandidateGridCell: View {
     }
 
     private var displayTitle: String {
-        if !showHanjiMode {
-            return suggestion.text
-        }
-
+        // showHanjiMode 固定為 true
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
             return subtitle
         } else {
@@ -416,10 +413,7 @@ struct ExpandedCandidateGridCell: View {
     }
 
     private var displaySubtitle: String? {
-        if !showHanjiMode {
-            return nil
-        }
-
+        // showHanjiMode 固定為 true，永遠顯示副標題
         if isTranslateSwapped {
             return suggestion.text
         } else {
@@ -427,14 +421,11 @@ struct ExpandedCandidateGridCell: View {
         }
     }
 
-    private var showHanjiMode: Bool {
-        SharedSettings.shared.showHanjiMode
-    }
-
     var body: some View {
         Button(action: {
             let suggestionToHandle: Autocomplete.Suggestion
-            if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+            // showHanjiMode 固定為 true
+            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 let originalTextLength = suggestion.text.count
                 let newTextLength = subtitle.count
                 let additionalDeleteCount = max(0, originalTextLength - newTextLength)
@@ -454,7 +445,6 @@ struct ExpandedCandidateGridCell: View {
             VStack(alignment: .center, spacing: 2) {
                 Text(displayTitle)
                     .font(KeyboardModels.Fonts.globalFont(
-                        for: displayTitle,
                         size: CandidateViewModels.UI.primaryFontSize
                     ))
                     .fontWeight(.regular)
@@ -466,7 +456,6 @@ struct ExpandedCandidateGridCell: View {
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                     Text(subtitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            for: subtitle,
                             size: CandidateViewModels.UI.secondaryFontSize
                         ))
                         .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
@@ -475,7 +464,7 @@ struct ExpandedCandidateGridCell: View {
                         .truncationMode(.tail)
                 } else {
                     Text(" ")
-                        .font(KeyboardModels.Fonts.globalFont(for: "", size: CandidateViewModels.UI.secondaryFontSize))
+                        .font(KeyboardModels.Fonts.globalFont(size: CandidateViewModels.UI.secondaryFontSize))
                         .opacity(0)
                 }
             }
@@ -531,10 +520,7 @@ struct ExpandedCandidateLongCell: View {
     }
 
     private var displayTitle: String {
-        if !showHanjiMode {
-            return suggestion.text
-        }
-
+        // showHanjiMode 固定為 true
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
             return subtitle
         } else {
@@ -543,10 +529,7 @@ struct ExpandedCandidateLongCell: View {
     }
 
     private var displaySubtitle: String? {
-        if !showHanjiMode {
-            return nil
-        }
-
+        // showHanjiMode 固定為 true，永遠顯示副標題
         if isTranslateSwapped {
             return suggestion.text
         } else {
@@ -554,14 +537,11 @@ struct ExpandedCandidateLongCell: View {
         }
     }
 
-    private var showHanjiMode: Bool {
-        SharedSettings.shared.showHanjiMode
-    }
-
     var body: some View {
         Button(action: {
             let suggestionToHandle: Autocomplete.Suggestion
-            if showHanjiMode, isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+            // showHanjiMode 固定為 true
+            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 let originalTextLength = suggestion.text.count
                 let newTextLength = subtitle.count
                 let additionalDeleteCount = max(0, originalTextLength - newTextLength)
@@ -582,7 +562,6 @@ struct ExpandedCandidateLongCell: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            for: displayTitle,
                             size: 20
                         ))
                         .fontWeight(.regular)
@@ -594,7 +573,6 @@ struct ExpandedCandidateLongCell: View {
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
                             .font(KeyboardModels.Fonts.globalFont(
-                                for: subtitle,
                                 size: 14
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)

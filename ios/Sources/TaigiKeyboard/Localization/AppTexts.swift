@@ -8,13 +8,13 @@ enum AppTexts {
     static var inputMode: LocalizedText { KeyboardTexts.inputMode }
     static var pojMode: LocalizedText { KeyboardTexts.pojMode }
     static var tlMode: LocalizedText { KeyboardTexts.tlMode }
-    static var showHanji: LocalizedText { KeyboardTexts.showHanji }
     static var autoCapitalization: LocalizedText { KeyboardTexts.autoCapitalization }
     static var autoSpace: LocalizedText { KeyboardTexts.autoSpace }
+    static var inputSettings: LocalizedText { KeyboardTexts.inputSettings }
+    static var layoutSettings: LocalizedText { KeyboardTexts.layoutSettings }
     static var doubleTapCombination: LocalizedText { KeyboardTexts.doubleTapCombination }
     static var doubleTapOO: LocalizedText { KeyboardTexts.doubleTapOO }
     static var doubleTapNN: LocalizedText { KeyboardTexts.doubleTapNN }
-    static var showHyphenKey: LocalizedText { KeyboardTexts.showHyphenKey }
     static var phahTaigiLayout: LocalizedText { KeyboardTexts.phahTaigiLayout }
     static var customFont: LocalizedText { KeyboardTexts.customFont }
     static var outputBothScripts: LocalizedText { KeyboardTexts.outputBothScripts }
@@ -49,29 +49,6 @@ enum AppTexts {
     static var onboardingStep2AddKeyboard: LocalizedText { OnboardingTexts.onboardingStep2AddKeyboard }
     static var onboardingStep3FullAccess: LocalizedText { OnboardingTexts.onboardingStep3FullAccess }
 
-    // MARK: - SponsorshipTexts
-    static var sponsorship: LocalizedText { SponsorshipTexts.sponsorship }
-    static var sponsorTitle: LocalizedText { SponsorshipTexts.sponsorTitle }
-    static var sponsorSubtitle: LocalizedText { SponsorshipTexts.sponsorSubtitle }
-    static var aboutApp: LocalizedText { SponsorshipTexts.aboutApp }
-    static var coffeeTier: LocalizedText { SponsorshipTexts.coffeeTier }
-    static var mealTier: LocalizedText { SponsorshipTexts.mealTier }
-    static var premiumTier: LocalizedText { SponsorshipTexts.premiumTier }
-    static var thankYouMessage: LocalizedText { SponsorshipTexts.thankYouMessage }
-    static var alreadySponsored: LocalizedText { SponsorshipTexts.alreadySponsored }
-    static var purchaseFailed: LocalizedText { SponsorshipTexts.purchaseFailed }
-    static var unknownError: LocalizedText { SponsorshipTexts.unknownError }
-    static var productNotFound: LocalizedText { SponsorshipTexts.productNotFound }
-    static var loadingProductsFailed: LocalizedText { SponsorshipTexts.loadingProductsFailed }
-    static var purchasePending: LocalizedText { SponsorshipTexts.purchasePending }
-    static var oneTimeSponsor: LocalizedText { SponsorshipTexts.oneTimeSponsor }
-    static var customAmount: LocalizedText { SponsorshipTexts.customAmount }
-    static var priceLoadFailed: LocalizedText { SponsorshipTexts.priceLoadFailed }
-    static var futurePlan1: LocalizedText { SponsorshipTexts.futurePlan1 }
-    static var futurePlan2: LocalizedText { SponsorshipTexts.futurePlan2 }
-    static var futurePlan3: LocalizedText { SponsorshipTexts.futurePlan3 }
-    static var futurePlan4: LocalizedText { SponsorshipTexts.futurePlan4 }
-
     // MARK: - CopyrightTexts
     static var copyrightNotice: LocalizedText { CopyrightTexts.copyrightNotice }
     static var viewLicense: LocalizedText { CopyrightTexts.viewLicense }
@@ -104,7 +81,6 @@ enum AppTexts {
     static var setupGuide: LocalizedText { AppInfoTexts.setupGuide }
     static var setupInfoMessage: LocalizedText { AppInfoTexts.setupInfoMessage }
     static var rateUs: LocalizedText { AppInfoTexts.rateUs }
-    static var shareToFriends: LocalizedText { AppInfoTexts.shareToFriends }
     static var contactUs: LocalizedText { AppInfoTexts.contactUs }
     static var userGuide: LocalizedText { AppInfoTexts.userGuide }
     static var guidePreviousPage: LocalizedText { AppInfoTexts.guidePreviousPage }
