@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.Dispatchers
@@ -63,8 +64,12 @@ object LexiconService {
         val column = getColumn(inputType, inputMode)
         val searchText = input.lowercase()
 
+        // 讀取異用字搜尋設定
+        val prefs = PrefHelper(context)
+        val includeVariants = prefs.variantSearchEnabled
+
         try {
-            val words = query(db, column, searchText, inputMode, limit)
+            val words = query(db, column, searchText, inputMode, limit, includeVariants)
             val processedWords = words.map { word ->
                 val processedHanzi = if (word.hanzi != null && startsWithRomanLetter(word.hanzi)) {
                     capitalize(word.hanzi, originalInput, inputMode)
@@ -194,15 +199,17 @@ object LexiconService {
 
     /**
      * Execute query on database
+     * @param includeVariants 是否包含異用字
      */
     private fun query(
         db: SQLiteDatabase,
         column: String,
         input: String,
         inputMode: InputMode,
-        limit: Int
+        limit: Int,
+        includeVariants: Boolean
     ): List<TaigiWord> {
-        val sql = buildSQL(column, inputMode)
+        val sql = buildSQL(column, inputMode, includeVariants)
         val normalizedInput = input.replace("-", "")
         val normalizedPattern = "$normalizedInput%"
         val originalPattern = "$input%"
@@ -217,10 +224,14 @@ object LexiconService {
 
     /**
      * Build SQL query string
+     * @param includeVariants 是否包含異用字（true: 搜尋全部, false: 只搜尋原始詞）
      */
-    private fun buildSQL(column: String, inputMode: InputMode): String {
+    private fun buildSQL(column: String, inputMode: InputMode, includeVariants: Boolean): String {
         val romanColumn = if (inputMode == InputMode.POJ) Column.POJ else Column.TL
         val maxSyllableCount = 3
+
+        // 異用字過濾條件：關閉時只搜尋 is_variant = 0
+        val variantCondition = if (includeVariants) "" else "AND is_variant = 0"
 
         return """
             SELECT id, $romanColumn, ${Column.HANZI}, syllable_count
@@ -228,6 +239,7 @@ object LexiconService {
             WHERE (REPLACE($column, '-', '') LIKE ?
                OR $column LIKE ?)
                AND syllable_count <= $maxSyllableCount
+               $variantCondition
             ORDER BY
                 CASE
                     WHEN $column = ? THEN 0

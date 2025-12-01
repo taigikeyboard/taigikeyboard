@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var phahTaigiLayoutEnabled: Bool
     @State private var customFontEnabled: Bool
     @State private var outputBothScripts: Bool
+    @State private var variantSearchEnabled: Bool
     @State private var showClearCacheAlert = false
     @State private var showResetSettingsAlert = false
 
@@ -31,6 +32,7 @@ struct SettingsView: View {
         _phahTaigiLayoutEnabled = State(initialValue: settings.phahTaigiLayoutEnabled)
         _customFontEnabled = State(initialValue: settings.isCustomFontEnabled)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
+        _variantSearchEnabled = State(initialValue: settings.variantSearchEnabled)
 
         LanguageManager.shared.updateDisplayLanguage()
     }
@@ -157,9 +159,17 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.doubleTapNN,
             isOn: $enableDoubleTapNN,
-            isLast: true,
             onChange: { newValue in
                 settings.enableDoubleTapNN = newValue
+            }
+        )
+
+        SettingsToggleItem(
+            titleContent: AppTexts.variantSearch,
+            isOn: $variantSearchEnabled,
+            isLast: true,
+            onChange: { newValue in
+                settings.variantSearchEnabled = newValue
             }
         )
     }
@@ -203,6 +213,7 @@ struct SettingsView: View {
         phahTaigiLayoutEnabled = settings.phahTaigiLayoutEnabled
         customFontEnabled = settings.isCustomFontEnabled
         outputBothScripts = settings.outputBothScripts
+        variantSearchEnabled = settings.variantSearchEnabled
 
         languageManager.updateDisplayLanguage()
 

@@ -87,7 +87,10 @@ final class DictionaryRepository: @unchecked Sendable {
         inputMode: InputMode,
         limit: Int
     ) throws -> [TaigiWord] {
-        let sql = buildSQL(column: column, inputMode: inputMode)
+        // 讀取異用字搜尋設定
+        let includeVariants = SharedSettings.shared.variantSearchEnabled
+
+        let sql = buildSQL(column: column, inputMode: inputMode, includeVariants: includeVariants)
         let stmt = try prepareStatement(db: db, sql: sql)
         defer { sqlite3_finalize(stmt) }
 
@@ -95,9 +98,14 @@ final class DictionaryRepository: @unchecked Sendable {
         return try extract(from: stmt, limit: limit)
     }
 
-    private func buildSQL(column: Column, inputMode: InputMode) -> String {
+    /// 建構 SQL 查詢字串
+    /// - Parameter includeVariants: 是否包含異用字（true: 搜尋全部, false: 只搜尋原始詞）
+    private func buildSQL(column: Column, inputMode: InputMode, includeVariants: Bool) -> String {
         let romanColumn = inputMode == .poj ? "poj" : "tl"
         let maxSyllableCount = 3
+
+        // 異用字過濾條件：關閉時只搜尋 is_variant = 0
+        let variantCondition = includeVariants ? "" : "AND is_variant = 0"
 
         return """
             SELECT id, \(romanColumn), hanzi, syllable_count
@@ -105,6 +113,7 @@ final class DictionaryRepository: @unchecked Sendable {
             WHERE (REPLACE(\(column.rawValue), '-', '') LIKE ?
                OR \(column.rawValue) LIKE ?)
                AND syllable_count <= \(maxSyllableCount)
+               \(variantCondition)
             ORDER BY
                 CASE
                     WHEN \(column.rawValue) = ? THEN 0

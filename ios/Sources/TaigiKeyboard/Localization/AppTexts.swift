@@ -18,6 +18,7 @@ enum AppTexts {
     static var phahTaigiLayout: LocalizedText { KeyboardTexts.phahTaigiLayout }
     static var customFont: LocalizedText { KeyboardTexts.customFont }
     static var outputBothScripts: LocalizedText { KeyboardTexts.outputBothScripts }
+    static var variantSearch: LocalizedText { KeyboardTexts.variantSearch }
 
     // MARK: - ActionTexts
     static var done: LocalizedText { ActionTexts.done }

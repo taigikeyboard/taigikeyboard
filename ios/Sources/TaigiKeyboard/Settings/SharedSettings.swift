@@ -39,6 +39,7 @@ class SharedSettings {
         static let autoCapitalizationEnabled = "autoCapitalizationEnabled"
         static let autoSpaceEnabled = "autoSpaceEnabled"
         static let phahTaigiLayoutEnabled = "phahTaigiLayoutEnabled"
+        static let variantSearchEnabled = "variantSearchEnabled"
     }
 
     static let shared = SharedSettings()
@@ -139,6 +140,16 @@ class SharedSettings {
         }
     }
 
+    // 異用字搜尋：關閉時只搜尋原始詞，開啟時搜尋全部（含異用字）
+    var variantSearchEnabled: Bool {
+        get {
+            userDefaults.object(forKey: Keys.variantSearchEnabled) as? Bool ?? false
+        }
+        set {
+            userDefaults.set(newValue, forKey: Keys.variantSearchEnabled)
+        }
+    }
+
     func resetToDefaults() {
         inputMode = .tl
         enableDoubleTapOO = true
@@ -149,6 +160,7 @@ class SharedSettings {
         isAutoCapitalizationEnabled = true
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
+        variantSearchEnabled = false
     }
 }
 

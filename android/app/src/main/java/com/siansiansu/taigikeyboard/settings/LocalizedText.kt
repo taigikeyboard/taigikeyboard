@@ -105,6 +105,12 @@ object AppTexts {
         tl = "PhahTaigi khí-puânn"
     )
 
+    val variantSearch = LocalizedText(
+        hanji = "異用字",
+        poj = "Ī-iōng-jī",
+        tl = "Ī-iōng-jī"
+    )
+
     val clearCache = LocalizedText(
         hanji = "清除資料",
         poj = "Chheng-tû chu-liāu",

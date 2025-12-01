@@ -159,6 +159,12 @@
                     <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_double_tap_nn" />
 
+                    <View style="@style/ModernDivider"
+                        android:layout_marginStart="60dp" />
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_variant_search" />
+
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
