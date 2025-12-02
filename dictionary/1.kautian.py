@@ -19,55 +19,6 @@ class KautianProcessor(BaseProcessor):
         ku = Ku(roman)
         return ku.POJ().hanlo
 
-    def extract_variant_mappings(self, df):
-        """從異用字表中提取漢字與異用字的映射關係"""
-        variant_mappings = {}
-        for _, row in df.iterrows():
-            original = str(row["漢字"]).strip()
-            variant = str(row["異用字"]).strip()
-
-            if original and variant and original != variant:
-                if original not in variant_mappings:
-                    variant_mappings[original] = []
-                if variant not in variant_mappings[original]:
-                    variant_mappings[original].append(variant)
-
-        return variant_mappings
-
-    def generate_variant_records(self, original_records, variant_mappings):
-        """根據異用字映射表，為原始記錄生成異用字變體記錄"""
-        variant_records = []
-
-        for record in original_records:
-            hanzi = record.get('hanzi', '')
-            if not hanzi:
-                continue
-
-            modified_hanzi_list = self.generate_variant_text(hanzi, variant_mappings)
-
-            for modified_hanzi in modified_hanzi_list:
-                if modified_hanzi != hanzi:
-                    variant_record = record.copy()
-                    variant_record['hanzi'] = modified_hanzi
-                    variant_record['is_variant'] = True
-                    variant_records.append(variant_record)
-
-        return variant_records
-
-    def generate_variant_text(self, text, variant_mappings):
-        """將文字中包含的原始詞替換為異用字，生成所有可能的變體組合"""
-        results = [text]
-
-        for original, variants in variant_mappings.items():
-            if original in text:
-                new_results = []
-                for result in results:
-                    for variant in variants:
-                        new_results.append(result.replace(original, variant))
-                results.extend(new_results)
-
-        return list(set(results))
-
     def extract_pronunciation_mappings(self, df):
         """從語音差異表中提取漢字與各地發音變體的映射關係
 
@@ -148,7 +99,7 @@ class KautianProcessor(BaseProcessor):
                     variant_record['poj'] = new_poj.lower()
                     variant_record['tl_no_tone'] = tl_no_tone.lower()
                     variant_record['poj_no_tone'] = poj_no_tone.lower()
-                    variant_record['is_variant'] = True
+                    variant_record['is_variant'] = False  # 語音差異不是異用字，不受異用字開關影響
                     variant_records.append(variant_record)
 
         return variant_records
@@ -262,24 +213,19 @@ def main():
     input_file = Path('raw/kautian.ods')
     output_file = Path('csv/kautian.csv')
 
-    sheets_to_read = ["詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓", "異用字", "語音差異"]
+    sheets_to_read = ["詞目", "又唸作", "合音唸作", "俗唸作", "詞彙比較", "名", "姓", "語音差異"]
     all_rows = []
-    variant_mappings = {}
     pronunciation_mappings = {}
 
     import pandas as pd
 
     with pd.ExcelFile(input_file, engine='odf') as excel_file:
-        if "異用字" in excel_file.sheet_names:
-            variant_df = pd.read_excel(excel_file, sheet_name="異用字")
-            variant_mappings = processor.extract_variant_mappings(variant_df)
-
         if "語音差異" in excel_file.sheet_names:
             pronunciation_df = pd.read_excel(excel_file, sheet_name="語音差異")
             pronunciation_mappings = processor.extract_pronunciation_mappings(pronunciation_df)
 
         for sheet_name in sheets_to_read:
-            if sheet_name in ["異用字", "語音差異"]:
+            if sheet_name == "語音差異":
                 continue
 
             if sheet_name not in excel_file.sheet_names:
@@ -295,10 +241,6 @@ def main():
 
 
             all_rows.extend(sheet_records)
-
-            if variant_mappings:
-                variant_records = processor.generate_variant_records(sheet_records, variant_mappings)
-                all_rows.extend(variant_records)
 
             if pronunciation_mappings:
                 pronunciation_records = processor.generate_pronunciation_variant_records(sheet_records, pronunciation_mappings)

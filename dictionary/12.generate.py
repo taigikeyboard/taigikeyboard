@@ -6,6 +6,47 @@ import logging
 import re
 from pathlib import Path
 
+import pandas as pd
+
+
+def extract_variant_mappings(ods_file):
+    """從 kautian.ods 的異用字表中提取漢字與異用字的映射關係"""
+    variant_mappings = {}
+
+    with pd.ExcelFile(ods_file, engine='odf') as excel_file:
+        if "異用字" not in excel_file.sheet_names:
+            return variant_mappings
+
+        df = pd.read_excel(excel_file, sheet_name="異用字")
+
+        for _, row in df.iterrows():
+            original = str(row.get("漢字", "")).strip()
+            variant = str(row.get("異用字", "")).strip()
+
+            if original and variant and original != "nan" and variant != "nan" and original != variant:
+                if original not in variant_mappings:
+                    variant_mappings[original] = []
+                if variant not in variant_mappings[original]:
+                    variant_mappings[original].append(variant)
+
+    return variant_mappings
+
+
+def generate_variant_text(text, variant_mappings):
+    """將文字中包含的原始詞替換為異用字，生成所有可能的變體組合"""
+    results = [text]
+
+    for original, variants in variant_mappings.items():
+        if original in text:
+            new_results = []
+            for result in results:
+                for variant in variants:
+                    new_results.append(result.replace(original, variant))
+            results.extend(new_results)
+
+    return list(set(results))
+
+
 def convert_nn_to_nasal(text):
     """將 n-n 轉換為 ⁿ（處理大小寫）"""
     # 處理小寫 n-n
@@ -50,7 +91,7 @@ def extract_first_letters(syllable_string):
     return ''.join(result_parts)
 
 def generate_variants():
-    """產生變體：將 n-n 轉 ⁿ 和提取首字母的變體"""
+    """產生變體：異用字、n-n 轉 ⁿ、提取首字母"""
 
     # 設定 logging 寫入檔案
     logging.basicConfig(
@@ -65,6 +106,12 @@ def generate_variants():
     # 輸入輸出檔案
     input_file = Path('csv/clean.csv')
     output_file = Path('csv/dictionary.csv')
+    variant_source = Path('raw/kautian.ods')
+
+    # 讀取異用字映射表
+    logger.info(f"正在讀取異用字表 {variant_source}...")
+    variant_mappings = extract_variant_mappings(variant_source)
+    logger.info(f"  讀取 {len(variant_mappings)} 組異用字映射")
 
     # 讀取資料
     logger.info(f"正在讀取 {input_file}...")
@@ -84,6 +131,7 @@ def generate_variants():
     seen_keys = set()
 
     # 統計
+    character_variants_added = 0
     nn_variants_added = 0
     first_letter_variants_added = 0
     duplicates_skipped = 0
@@ -122,7 +170,16 @@ def generate_variants():
         # 1. 加入原始資料
         add_row_if_unique(tl, poj, hanzi, tl_no_tone, poj_no_tone, syllable_count, source, is_variant)
 
-        # 2. 檢查 POJ 是否包含 n-n 形式，產生鼻化音變體
+        # 2. 異用字變體（只對漢字進行替換）
+        if hanzi and variant_mappings:
+            variant_hanzis = generate_variant_text(hanzi, variant_mappings)
+            for variant_hanzi in variant_hanzis:
+                if variant_hanzi != hanzi:
+                    if add_row_if_unique(tl, poj, variant_hanzi, tl_no_tone, poj_no_tone, syllable_count, source, 'True'):
+                        character_variants_added += 1
+                        logger.info(f"[異用字] {hanzi} → {variant_hanzi}")
+
+        # 3. 檢查 POJ 是否包含 n-n 形式，產生鼻化音變體
         if re.search(r'[Nn]-[Nn]', poj):
             # 生成額外的鼻化音版本
             poj_no_tone_nasal = convert_nn_to_nasal(poj_no_tone)
@@ -132,7 +189,7 @@ def generate_variants():
                 nn_variants_added += 1
                 logger.info(f"[n-n→ⁿ] poj_no_tone: {poj_no_tone} → {poj_no_tone_nasal}")
 
-        # 3. 提取首字母（針對兩個以上音節）
+        # 4. 提取首字母（針對兩個以上音節）
         poj_first_letters = extract_first_letters(poj_no_tone)
         tl_first_letters = extract_first_letters(tl_no_tone)
 
@@ -158,6 +215,7 @@ def generate_variants():
     logger.info("變體產生統計")
     logger.info("="*40)
     logger.info(f"原始資料:           {len(original_rows):,} 筆")
+    logger.info(f"異用字變體:         {character_variants_added:,} 筆")
     logger.info(f"n-n→ⁿ 變體:          {nn_variants_added:,} 筆")
     logger.info(f"首字母變體:         {first_letter_variants_added:,} 筆")
     logger.info(f"重複略過:           {duplicates_skipped:,} 筆")
