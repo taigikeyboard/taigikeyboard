@@ -56,4 +56,7 @@ object PreferenceKeys {
 
     // Onboarding settings
     val HAS_SEEN_ONBOARDING = booleanPreferencesKey("onboarding__has_seen")
+
+    // 詞典搜尋設定
+    val VARIANT_SEARCH_ENABLED = booleanPreferencesKey("dictionary__variant_search_enabled")
 }

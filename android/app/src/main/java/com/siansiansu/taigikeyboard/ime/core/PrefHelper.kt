@@ -297,6 +297,22 @@ class PrefHelper(
             }
         }
 
+    // 詞典搜尋設定
+    // 異用字搜尋：關閉時只搜尋原始詞，開啟時搜尋全部（含異用字）
+    var variantSearchEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] ?: false
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] = value
+                }
+            }
+        }
+
     // Onboarding settings
     var hasSeenOnboarding: Boolean
         get() = runBlocking {
@@ -461,6 +477,7 @@ class PrefHelper(
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
             prefs[PreferenceKeys.SUGGESTION_ENABLED] = true
+            prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] = false
 
             if (BuildConfig.DEBUG) {
                 Log.d("PrefHelper", "All preferences reset to defaults")

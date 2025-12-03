@@ -69,6 +69,7 @@ class KeyboardSettingsActivity : AppCompatActivity() {
         updateToggleItemText(binding.togglePhahTaigiLayout.root, AppTexts.phahTaigiLayout)
         updateToggleItemText(binding.toggleDoubleTapOo.root, AppTexts.doubleTapOO)
         updateToggleItemText(binding.toggleDoubleTapNn.root, AppTexts.doubleTapNN)
+        updateToggleItemText(binding.toggleVariantSearch.root, AppTexts.variantSearch)
 
         updateActionItemText(binding.actionClearCache.root, AppTexts.clearCache)
         updateActionItemText(binding.actionResetSettings.root, AppTexts.resetSettings)
@@ -183,6 +184,15 @@ class KeyboardSettingsActivity : AppCompatActivity() {
             prefs.enableDoubleTapNN
         ) { isChecked ->
             prefs.enableDoubleTapNN = isChecked
+        }
+
+        // 異用字搜尋
+        setupToggleItem(
+            binding.toggleVariantSearch.root,
+            AppTexts.variantSearch,
+            prefs.variantSearchEnabled
+        ) { isChecked ->
+            prefs.variantSearchEnabled = isChecked
         }
     }
 

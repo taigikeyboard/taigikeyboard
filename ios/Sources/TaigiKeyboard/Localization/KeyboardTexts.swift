@@ -85,4 +85,10 @@ enum KeyboardTexts {
         poj: "Koat-hō phiau-chù",
         tl: "Kuat-hō phiau-tsù"
     )
+
+    static let variantSearch = LocalizedText(
+        hanji: "異用字",
+        poj: "Ī-iōng-jī",
+        tl: "Ī-iōng-jī"
+    )
 }
