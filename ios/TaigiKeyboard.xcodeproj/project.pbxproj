@@ -87,6 +87,13 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
+		2A20022A2EE1737100021D8F /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				KeyboardModels.swift,
+			);
+			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
+		};
 		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -116,6 +123,7 @@
 		2A2882BA2EAF0CE100AE3C75 /* _Keyboard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				2A20022A2EE1737100021D8F /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */,
 				2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */,
 			);
 			name = _Keyboard;
@@ -138,12 +146,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Callouts;
 			path = Sources/TaigiKeyboard/Callouts;
-			sourceTree = "<group>";
-		};
-		2A2882E72EAF0D4E00AE3C75 /* Contact */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Contact;
-			path = Sources/TaigiKeyboard/Contact;
 			sourceTree = "<group>";
 		};
 		2A2882EA2EAF0D6500AE3C75 /* Copyright */ = {
@@ -231,12 +233,6 @@
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
 		};
-		F3B59AE82EC8FD0900CD5052 /* UserGuide */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = UserGuide;
-			path = Sources/TaigiKeyboard/UserGuide;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -269,7 +265,6 @@
 				2A4FAF492EAF137B006E37A8 /* App */,
 				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
-				2A2882E72EAF0D4E00AE3C75 /* Contact */,
 				2A2882EA2EAF0D6500AE3C75 /* Copyright */,
 				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
@@ -284,7 +279,6 @@
 				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
 				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
-				F3B59AE82EC8FD0900CD5052 /* UserGuide */,
 			);
 			sourceTree = "<group>";
 		};
@@ -309,7 +303,6 @@
 				F32651B02E524AA8002E99A4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				2A2882E72EAF0D4E00AE3C75 /* Contact */,
 				2A2882EA2EAF0D6500AE3C75 /* Copyright */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
@@ -317,7 +310,7 @@
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2A4FAF492EAF137B006E37A8 /* App */,
-				F3B59AE82EC8FD0900CD5052 /* UserGuide */,
+				F35436232E5C43680004DFAB /* Resources/Fonts */,
 			);
 			name = TaigiKeyboard;
 			packageProductDependencies = (

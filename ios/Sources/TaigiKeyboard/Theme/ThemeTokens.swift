@@ -17,16 +17,41 @@ extension Color {
     }
 }
 
-/// 主題字型系統
+/// 主題字型系統（靜態版本，用於不需要動態更新的場景）
 extension Font {
     enum Theme {
-        static let heroTitle = Font.system(size: 34, weight: .bold, design: .rounded)
-        static let title = Font.system(size: 24, weight: .semibold, design: .rounded)
-        static let headline = Font.system(size: 18, weight: .semibold, design: .default)
-        static let body = Font.system(size: 16, weight: .regular, design: .default)
-        static let caption = Font.system(size: 14, weight: .medium, design: .default)
-        static let footnote = Font.system(size: 12, weight: .regular, design: .default)
+        static var heroTitle: Font { FontManager.shared.font(size: 34) }
+        static var title: Font { FontManager.shared.font(size: 24) }
+        static var headline: Font { FontManager.shared.font(size: 18) }
+        static var body: Font { FontManager.shared.font(size: 16) }
+        static var caption: Font { FontManager.shared.font(size: 14) }
+        static var footnote: Font { FontManager.shared.font(size: 12) }
     }
+}
+
+/// 動態主題字體 Modifier（會響應字體設定變化）
+struct ThemeFontModifier: ViewModifier {
+    @ObservedObject private var fontManager = FontManager.shared
+    let size: CGFloat
+
+    func body(content: Content) -> some View {
+        content.font(fontManager.font(size: size))
+    }
+}
+
+extension View {
+    /// 套用動態主題字體（會響應字體設定變化）
+    func themeFont(size: CGFloat) -> some View {
+        modifier(ThemeFontModifier(size: size))
+    }
+
+    /// 預設主題字體大小
+    func themeFontHeroTitle() -> some View { themeFont(size: 34) }
+    func themeFontTitle() -> some View { themeFont(size: 24) }
+    func themeFontHeadline() -> some View { themeFont(size: 18) }
+    func themeFontBody() -> some View { themeFont(size: 16) }
+    func themeFontCaption() -> some View { themeFont(size: 14) }
+    func themeFontFootnote() -> some View { themeFont(size: 12) }
 }
 
 /// 主題動畫系統

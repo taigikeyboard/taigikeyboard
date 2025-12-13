@@ -1,0 +1,69 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-RelWithDebInfo-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.6.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"name" : "RelWithDebInfo",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "taigi_trie",
+					"targetIndexes" : 
+					[
+						0,
+						1
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "marisa::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-marisa-RelWithDebInfo-bcdf21f8462b0402a307.json",
+					"name" : "marisa",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "taigi_trie::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-taigi_trie-RelWithDebInfo-b009d31ab3d9f5fd9a53.json",
+					"name" : "taigi_trie",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/armeabi-v7a",
+		"source" : "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}

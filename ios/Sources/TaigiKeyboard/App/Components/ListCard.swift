@@ -42,7 +42,7 @@ struct ListCardView: View {
         Button(action: action) {
             HStack(spacing: 16) {
                 LocalizedTextView(title)
-                    .font(Font.Theme.headline)
+                    .themeFontHeadline()
                     .foregroundColor(Color.Theme.textPrimary)
 
                 Spacer()

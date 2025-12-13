@@ -55,7 +55,7 @@ struct OnboardingView: View {
                     if currentPage < 2 {
                         Button(action: onComplete) {
                             LocalizedTextView(AppTexts.onboardingSkip)
-                                .font(Font.Theme.body)
+                                .themeFontBody()
                                 .foregroundColor(Color.Theme.textSecondary)
                                 .padding()
                         }

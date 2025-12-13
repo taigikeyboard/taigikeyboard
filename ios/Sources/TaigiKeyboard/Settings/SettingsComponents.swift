@@ -14,7 +14,7 @@ struct SettingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             if let titleContent {
                 LocalizedTextView(titleContent)
-                    .font(Font.Theme.headline)
+                    .themeFontHeadline()
                     .foregroundColor(Color.Theme.textPrimary)
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
@@ -54,7 +54,7 @@ struct SettingsToggleItem: View {
     var body: some View {
         HStack(spacing: 16) {
             LocalizedTextView(titleContent)
-                .font(Font.Theme.body)
+                .themeFontBody()
                 .foregroundColor(Color.Theme.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -114,7 +114,7 @@ struct SettingsActionButton: View {
         Button(action: action) {
             HStack(spacing: 16) {
                 LocalizedTextView(titleContent)
-                    .font(Font.Theme.body)
+                    .themeFontBody()
                     .foregroundColor(Color.Theme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 

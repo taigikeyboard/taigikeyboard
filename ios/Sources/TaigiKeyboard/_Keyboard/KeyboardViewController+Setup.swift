@@ -113,16 +113,23 @@ extension KeyboardViewController {
 
     /// 建立 Callout 樣式
     func createCalloutStyle() -> Callouts.CalloutStyle {
-        let useCustomFont = SharedSettings.shared.isCustomFontEnabled
-        let fontName = KeyboardModels.Fonts.extensionFontName
+        let fontType = SharedSettings.shared.fontType
 
-        if useCustomFont {
+        switch fontType {
+        case .system:
+            return Callouts.CalloutStyle.standard
+        case .openHuninn:
+            let fontName = KeyboardModels.Fonts.openHuninnFontName
             return Callouts.CalloutStyle(
                 actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
                 inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light)
             )
-        } else {
-            return Callouts.CalloutStyle.standard
+        case .iansui:
+            let fontName = KeyboardModels.Fonts.iansuiFontName
+            return Callouts.CalloutStyle(
+                actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
+                inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light)
+            )
         }
     }
 }

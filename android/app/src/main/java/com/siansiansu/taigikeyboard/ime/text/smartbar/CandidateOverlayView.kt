@@ -402,14 +402,14 @@ class CandidateOverlayView : FrameLayout {
             }
         }
 
-        // 設定字體：根據 customFontEnabled 決定
-        val customFontEnabled = prefs.customFontEnabled
-        primaryText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            customFontEnabled = customFontEnabled,
+        // 設定字體：根據 fontType 決定
+        val fontType = prefs.fontType
+        primaryText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+            fontType = fontType,
             context = context
         )
-        subtitleText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-            customFontEnabled = customFontEnabled,
+        subtitleText.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+            fontType = fontType,
             context = context
         )
     }

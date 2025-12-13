@@ -78,9 +78,9 @@ enum CopyrightTexts {
         tl: "CC BY 4.0"
     )
 
-    // MARK: - Open 粉圓字型
+    // MARK: - 粉圓字型
     static let openFontTitle = LocalizedText(
-        hanji: "Open 粉圓",
+        hanji: "粉圓",
         poj: "Open Hún-îⁿ",
         tl: "Open Hún-înn"
     )

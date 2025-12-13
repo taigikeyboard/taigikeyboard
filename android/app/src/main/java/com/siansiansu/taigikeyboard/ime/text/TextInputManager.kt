@@ -816,10 +816,13 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      */
     private suspend fun updateTaigiCandidates() {
         val manager = composingManager ?: return
-        val composingText = manager.getComposingText() ?: run {
+
+        // 取得原始輸入（用於 Trie 搜尋）和顯示文字（用於 UI）
+        val rawInput = manager.getRawInput() ?: run {
             smartbarManager.clearCandidates()
             return
         }
+        val displayText = manager.getComposingText() ?: rawInput
 
         // 使用 TaigiAutocompleteService 搜尋候選詞
         val inputMode = taigikeyboard.prefs.inputMode.let {
@@ -835,7 +838,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             inputMode
         )
 
-        val suggestions = autocompleteService.getSuggestions(composingText)
+        val suggestions = autocompleteService.getSuggestions(rawInput, displayText)
 
         // 更新 SmartbarManager
         withContext(Dispatchers.Main) {

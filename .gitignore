@@ -50,7 +50,6 @@ $RECYCLE.BIN/
 
 # === Android / Gradle ===
 .gradle
-**/build/
 !gradle/wrapper/gradle-wrapper.jar
 .gradletasknamecache
 local.properties

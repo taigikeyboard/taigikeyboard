@@ -15,12 +15,12 @@ struct CopyrightPageView: View {
                 VStack(spacing: 24) {
                     VStack(spacing: 12) {
                         LocalizedTextView(page.title)
-                            .font(Font.Theme.title)
+                            .themeFontTitle()
                             .foregroundColor(Color.Theme.textPrimary)
                             .multilineTextAlignment(.center)
 
                         LocalizedTextView(page.description)
-                            .font(Font.Theme.body)
+                            .themeFontBody()
                             .foregroundColor(Color.Theme.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(2)
@@ -35,7 +35,7 @@ struct CopyrightPageView: View {
                 // License Info Card
                 VStack(alignment: .leading, spacing: 20) {
                     LocalizedTextView(page.licenseDescription)
-                        .font(Font.Theme.headline)
+                        .themeFontHeadline()
                         .foregroundColor(Color.Theme.textPrimary)
 
                     Rectangle()
@@ -120,7 +120,7 @@ struct CopyrightPageView: View {
                 .animation(ThemeAnimation.bouncy, value: isPressed)
 
                 LocalizedTextView(text)
-                    .font(Font.Theme.body)
+                    .themeFontBody()
                     .foregroundColor(Color.Theme.textPrimary)
 
                 Spacer()

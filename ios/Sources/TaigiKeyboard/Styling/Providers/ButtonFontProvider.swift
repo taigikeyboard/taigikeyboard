@@ -19,19 +19,24 @@ class ButtonFontProvider {
         // 獲取標準字體作為基礎
         let standardFont = standardService.buttonKeyboardFont(for: action)
         let fontSize = getFontSize(from: standardFont, for: action)
-        let useCustomFont = SharedSettings.shared.isCustomFontEnabled
+        let fontType = SharedSettings.shared.fontType
 
-        // 如果啟用自訂字體，對所有按鍵使用自訂字體
-        if useCustomFont {
+        switch fontType {
+        case .system:
+            return standardFont
+        case .openHuninn:
             return KeyboardFont.custom(
-                KeyboardModels.Fonts.extensionFontName,
+                KeyboardModels.Fonts.openHuninnFontName,
+                size: fontSize,
+                weight: standardFont.weight ?? .regular
+            )
+        case .iansui:
+            return KeyboardFont.custom(
+                KeyboardModels.Fonts.iansuiFontName,
                 size: fontSize,
                 weight: standardFont.weight ?? .regular
             )
         }
-
-        // 其他情況使用標準字體
-        return standardFont
     }
 
     /// 從 KeyboardFont 中提取字體大小

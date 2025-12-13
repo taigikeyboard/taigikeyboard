@@ -1,7 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
-import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
@@ -17,6 +16,12 @@ import java.io.FileOutputStream
 
 /**
  * Service for querying Taigi dictionary database
+ *
+ * 查詢流程：
+ * 1. 使用 Trie 前綴匹配取得候選 rowid
+ * 2. 使用 SQLite 批次查詢完整資料
+ * 3. 按 frequency 排序
+ *
  * Thread-safe singleton with lazy initialization
  */
 object LexiconService {
@@ -28,15 +33,28 @@ object LexiconService {
 
     // Column names
     private object Column {
+        const val ID = "id"
         const val HANZI = "hanzi"
         const val POJ = "poj"
-        const val POJ_NO_TONE = "poj_no_tone"
         const val TL = "tl"
-        const val TL_NO_TONE = "tl_no_tone"
+        const val FREQUENCY = "frequency"
+        const val KAUTIAN = "kautian"      // 教育部臺灣台語常用詞辭典
+        const val TAIGITV = "taigitv"      // 台語新詞辭庫
+        const val ITAIGI = "itaigi"        // iTaigi 華台對照典
+        const val SITBUT = "sitbut"        // 台灣植物名彙
+        const val TAIHOA = "taihoa"        // 台華線頂對照典
+        const val TAIJIT = "taijit"        // 台日大辭典
+        const val KUNGGE = "kungge"        // 台語工藝詞庫
     }
 
     /**
      * Search for words in the dictionary
+     *
+     * 使用 Trie + SQLite 混合查詢：
+     * 1. Trie 前綴匹配取得 rowid
+     * 2. SQLite 批次查詢完整資料
+     * 3. 按 frequency 排序
+     *
      * @param input Search query string (preprocessed, may be lowercased for search)
      * @param originalInput Original user input (preserves case for capitalization)
      * @param inputType Type of input (hanzi, roman with/without tone)
@@ -61,15 +79,25 @@ object LexiconService {
 
         val db = database ?: throw DictionaryError.DatabaseNotAvailable
 
-        val column = getColumn(inputType, inputMode)
-        val searchText = input.lowercase()
-
-        // 讀取異用字搜尋設定
+        // 讀取搜尋設定
         val prefs = PrefHelper(context)
-        val includeVariants = prefs.variantSearchEnabled
+        val enabledDicts = EnabledDictionaries(
+            kautian = prefs.moeDictEnabled,
+            taigitv = prefs.newwordDictEnabled,
+            itaigi = prefs.itaigiDictEnabled,
+            sitbut = prefs.sitbutDictEnabled,
+            taihoa = prefs.taihoaDictEnabled,
+            taijit = prefs.taijitDictEnabled,
+            kungge = prefs.kunggeDictEnabled
+        )
 
         try {
-            val words = query(db, column, searchText, inputMode, limit, includeVariants)
+            // 使用 Trie + SQLite 查詢
+            val words = searchWithTrie(
+                db, input, inputMode, limit, enabledDicts
+            )
+
+            // 處理大小寫
             val processedWords = words.map { word ->
                 val processedHanzi = if (word.hanzi != null && startsWithRomanLetter(word.hanzi)) {
                     capitalize(word.hanzi, originalInput, inputMode)
@@ -84,7 +112,8 @@ object LexiconService {
             }
 
             val uniqueWords = removeDuplicates(processedWords)
-            applyUserFrequencySort(uniqueWords)
+            val normalizedInput = InputNormalizer.normalize(input, inputMode)
+            applyScoredSort(uniqueWords, normalizedInput)
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[SEARCH] Query failed", e)
@@ -94,7 +123,196 @@ object LexiconService {
     }
 
     /**
-     * Ensure database is initialized (lazy initialization with concurrency safety)
+     * 辭典開關設定
+     */
+    private data class EnabledDictionaries(
+        val kautian: Boolean,   // 教育部臺灣台語常用詞辭典
+        val taigitv: Boolean,   // 台語新詞辭庫
+        val itaigi: Boolean,    // iTaigi 華台對照典
+        val sitbut: Boolean,    // 台灣植物名彙
+        val taihoa: Boolean,    // 台華線頂對照典
+        val taijit: Boolean,    // 台日大辭典
+        val kungge: Boolean     // 台語工藝詞庫
+    ) {
+        /** 是否全部關閉 */
+        fun allDisabled(): Boolean =
+            !kautian && !taigitv && !itaigi && !sitbut && !taihoa && !taijit && !kungge
+
+        /** 是否全部開啟 */
+        fun allEnabled(): Boolean =
+            kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge
+    }
+
+    /**
+     * 使用 Trie 完全匹配 + 前綴匹配 + SQLite 批次查詢
+     *
+     * 注意：MARISA-trie 的 predictive_search 按字典序遍歷，短 key 會排在後面。
+     * 為確保完全匹配的結果不被 limit 截斷，需先用 lookup 取得完全匹配的 rowid。
+     */
+    private fun searchWithTrie(
+        db: SQLiteDatabase,
+        input: String,
+        inputMode: InputMode,
+        limit: Int,
+        enabledDicts: EnabledDictionaries
+    ): List<TaigiWord> {
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[SEARCH] input='$input', mode=$inputMode, limit=$limit")
+        }
+
+        // 正規化輸入（小寫、去連字符、調符轉數字）
+        val normalizedInput = InputNormalizer.normalize(input, inputMode)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NORMALIZE] '$input' -> '$normalizedInput'")
+        }
+
+        if (normalizedInput.isEmpty()) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NORMALIZE] Empty after normalization, returning empty")
+            }
+            return emptyList()
+        }
+
+        // Trie 查詢（根據 InputMode 加前綴）
+        val triePrefix = if (inputMode == InputMode.TL) "tl:" else "poj:"
+        val trieKey = triePrefix + normalizedInput
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[TRIE] trieKey='$trieKey', TrieService.isReady=${TrieService.isReady()}, keyCount=${TrieService.getKeyCount()}")
+        }
+
+        // 1. 完全匹配（確保短詞不被遺漏）
+        val exactRowIds = TrieService.lookup(trieKey)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[TRIE] lookup('$trieKey') -> ${exactRowIds.size} exact matches: ${exactRowIds.take(5).toList()}")
+        }
+
+        // 2. 前綴搜尋（取較多結果以供後續過濾和排序）
+        val trieLimit = limit * 3
+        val prefixRowIds = TrieService.prefixSearch(trieKey, trieLimit)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[TRIE] prefixSearch('$trieKey', $trieLimit) -> ${prefixRowIds.size} prefix matches: ${prefixRowIds.take(5).toList()}")
+        }
+
+        // 3. 合併去重（後續會按 frequency 排序，順序不重要）
+        val allRowIds = (exactRowIds.toList() + prefixRowIds.toList()).distinct()
+
+        if (allRowIds.isEmpty()) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[TRIE] No results for: $trieKey")
+            }
+            return emptyList()
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[TRIE] Total ${allRowIds.size} unique rowIds")
+        }
+
+        // SQLite 批次查詢
+        val sqlResults = queryByIds(db, allRowIds, inputMode, limit, enabledDicts)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[SQL] queryByIds returned ${sqlResults.size} words")
+            sqlResults.take(3).forEach { word ->
+                Log.d(TAG, "[SQL]   - ${word.roman} / ${word.hanzi ?: "(no hanzi)"}")
+            }
+        }
+
+        return sqlResults
+    }
+
+    /**
+     * 依 rowid 批次查詢 SQLite
+     *
+     * @param enabledDicts 各辭典開關設定
+     */
+    private fun queryByIds(
+        db: SQLiteDatabase,
+        ids: List<Int>,
+        inputMode: InputMode,
+        limit: Int,
+        enabledDicts: EnabledDictionaries
+    ): List<TaigiWord> {
+        if (ids.isEmpty()) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[SQL] queryByIds: ids is empty")
+            }
+            return emptyList()
+        }
+
+        // 全部關閉時不顯示任何結果
+        if (enabledDicts.allDisabled()) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[SQL] queryByIds: all dicts disabled")
+            }
+            return emptyList()
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[SQL] queryByIds: ${ids.size} ids, enabledDicts=$enabledDicts")
+        }
+
+        val romanColumn = if (inputMode == InputMode.POJ) Column.POJ else Column.TL
+
+        // 建立 IN 查詢（分批處理避免 SQL 太長）
+        val batchSize = 500
+        val results = mutableListOf<TaigiWord>()
+
+        for (batch in ids.chunked(batchSize)) {
+            val placeholders = batch.joinToString(",") { "?" }
+
+            // 建立過濾條件：使用 OR 邏輯，只要符合任一開啟的辭典即可
+            val dictConditions = mutableListOf<String>()
+            if (enabledDicts.kautian) dictConditions.add("${Column.KAUTIAN} = 1")
+            if (enabledDicts.taigitv) dictConditions.add("${Column.TAIGITV} = 1")
+            if (enabledDicts.itaigi) dictConditions.add("${Column.ITAIGI} = 1")
+            if (enabledDicts.sitbut) dictConditions.add("${Column.SITBUT} = 1")
+            if (enabledDicts.taihoa) dictConditions.add("${Column.TAIHOA} = 1")
+            if (enabledDicts.taijit) dictConditions.add("${Column.TAIJIT} = 1")
+            if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
+
+            // 全部開啟時不加過濾條件
+            val whereCondition = if (enabledDicts.allEnabled()) {
+                ""
+            } else {
+                "AND (" + dictConditions.joinToString(" OR ") + ")"
+            }
+
+            val sql = """
+                SELECT ${Column.ID}, $romanColumn, ${Column.HANZI}, ${Column.FREQUENCY}
+                FROM dictionary
+                WHERE ${Column.ID} IN ($placeholders)
+                $whereCondition
+                ORDER BY ${Column.FREQUENCY} DESC
+            """.trimIndent()
+
+            val args = batch.map { it.toString() }.toTypedArray()
+            val cursor = db.rawQuery(sql, args)
+
+            cursor.use {
+                while (it.moveToNext()) {
+                    val id = it.getInt(0)
+                    val roman = it.getString(1) ?: ""
+                    val hanziText = it.getString(2)
+                    val hanzi = if (hanziText.isNullOrEmpty()) null else hanziText
+                    val frequency = it.getInt(3)
+
+                    results.add(TaigiWord(id, roman, hanzi, frequency))
+                }
+            }
+        }
+
+        // 按 frequency 排序並限制結果數
+        return results
+            .sortedByDescending { it.lengthScore ?: 0 }
+            .take(limit)
+    }
+
+    /**
+     * Ensure database and trie are initialized (lazy initialization with concurrency safety)
      */
     private suspend fun ensureInitialized(context: Context) {
         if (isInitialized) return
@@ -103,14 +321,22 @@ object LexiconService {
             if (isInitialized) return
 
             try {
+                // 初始化 SQLite
                 connect(context)
+
+                // 初始化 Trie
+                val trieLoaded = TrieService.init(context)
+                if (!trieLoaded) {
+                    Log.w(TAG, "[INIT] Trie initialization failed, will use fallback")
+                }
+
                 isInitialized = true
                 if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[INIT] Database initialized successfully")
+                    Log.i(TAG, "[INIT] Database initialized, Trie keys=${TrieService.getKeyCount()}")
                 }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[INIT] Database initialization failed", e)
+                    Log.e(TAG, "[INIT] Initialization failed", e)
                 }
                 throw e
             }
@@ -198,98 +424,6 @@ object LexiconService {
     }
 
     /**
-     * Execute query on database
-     * @param includeVariants 是否包含異用字
-     */
-    private fun query(
-        db: SQLiteDatabase,
-        column: String,
-        input: String,
-        inputMode: InputMode,
-        limit: Int,
-        includeVariants: Boolean
-    ): List<TaigiWord> {
-        val sql = buildSQL(column, inputMode, includeVariants)
-        val normalizedInput = input.replace("-", "")
-        val normalizedPattern = "$normalizedInput%"
-        val originalPattern = "$input%"
-
-        val cursor = db.rawQuery(
-            sql,
-            arrayOf(normalizedPattern, originalPattern, input, originalPattern, limit.toString())
-        )
-
-        return cursor.use { extract(it, limit) }
-    }
-
-    /**
-     * Build SQL query string
-     * @param includeVariants 是否包含異用字（true: 搜尋全部, false: 只搜尋原始詞）
-     */
-    private fun buildSQL(column: String, inputMode: InputMode, includeVariants: Boolean): String {
-        val romanColumn = if (inputMode == InputMode.POJ) Column.POJ else Column.TL
-        val maxSyllableCount = 3
-
-        // 異用字過濾條件：關閉時只搜尋 is_variant = 0
-        val variantCondition = if (includeVariants) "" else "AND is_variant = 0"
-
-        return """
-            SELECT id, $romanColumn, ${Column.HANZI}, syllable_count
-            FROM dictionary
-            WHERE (REPLACE($column, '-', '') LIKE ?
-               OR $column LIKE ?)
-               AND syllable_count <= $maxSyllableCount
-               $variantCondition
-            ORDER BY
-                CASE
-                    WHEN $column = ? THEN 0
-                    WHEN $column LIKE ? THEN 1
-                    ELSE 2
-                END,
-                LENGTH($romanColumn) ASC,
-                $romanColumn ASC
-            LIMIT ?;
-        """.trimIndent()
-    }
-
-    /**
-     * Extract results from cursor
-     */
-    private fun extract(cursor: Cursor, limit: Int): List<TaigiWord> {
-        val results = mutableListOf<TaigiWord>()
-
-        while (cursor.moveToNext() && results.size < limit) {
-            val id = cursor.getInt(0)
-            val roman = cursor.getString(1) ?: ""
-            val hanziText = cursor.getString(2)
-            val hanzi = if (hanziText.isNullOrEmpty()) null else hanziText
-            val lengthScore = cursor.getInt(3)
-
-            results.add(
-                TaigiWord(
-                    id = id,
-                    roman = roman,
-                    hanzi = hanzi,
-                    lengthScore = lengthScore
-                )
-            )
-        }
-
-        return results
-    }
-
-    /**
-     * Get column name based on input type and mode
-     */
-    private fun getColumn(inputType: InputType, inputMode: InputMode): String {
-        return when (inputType) {
-            is InputType.Hanzi -> Column.HANZI
-            is InputType.RomanWithTone -> if (inputMode == InputMode.POJ) Column.POJ else Column.TL
-            is InputType.RomanWithoutTone -> if (inputMode == InputMode.POJ) Column.POJ_NO_TONE else Column.TL_NO_TONE
-        }
-    }
-
-    /**
      * 根據原始輸入的大小寫，調整候選詞的首字元大小寫
      *
      * 參考 iOS 實作：taigi-keyboard-ios/Sources/Extension/LexiconService.swift:147-176
@@ -357,39 +491,68 @@ object LexiconService {
     }
 
     /**
-     * 根據使用者頻率重新排序候選詞
+     * 計算候選詞排序分數
      *
-     * 排序規則（依優先順序）：
-     * 1. 使用頻率（降序）：常用詞優先
-     * 2. 詞彙長度（升序）：短詞優先
-     * 3. 羅馬字（升序）：字母順序
+     * 分數公式：exactBonus + 10000 - candidateLength * 100 + min(userFreq, 50) * 10 + baseFreq / 100
+     * - exactBonus: 完全匹配加分（roman 完全等於輸入）
+     * - 長度優先：短詞排前面
+     * - userFreq: 使用者頻率（上限 50）
+     * - baseFreq: 詞庫基礎頻率（權重較低）
      *
-     * @param words 原始候選詞列表
+     * @param word 候選詞
+     * @param normalizedInput 正規化後的輸入
+     * @param userFreq 使用者頻率
+     * @return 排序分數（越高越優先）
+     */
+    private fun calculateScore(word: TaigiWord, normalizedInput: String, userFreq: Int): Int {
+        // 候選詞長度（去除連字符）
+        val candidateRoman = word.roman.replace("-", "").lowercase()
+        val candidateLength = candidateRoman.length
+
+        // 完全匹配加分
+        val exactBonus = if (candidateRoman == normalizedInput) 500 else 0
+
+        // 長度懲罰：越長分數越低
+        val lengthScore = 10000 - candidateLength * 100
+
+        // 使用者頻率（上限 50）
+        val cappedUserFreq = minOf(userFreq, 50)
+
+        // 詞庫頻率
+        val baseFreq = (word.lengthScore ?: 0) / 10
+
+        return exactBonus + lengthScore + cappedUserFreq * 10 + baseFreq
+    }
+
+    /**
+     * 根據分數排序候選詞
+     *
+     * @param words 候選詞列表
+     * @param normalizedInput 正規化後的輸入
      * @return 排序後的候選詞列表
      */
-    private suspend fun applyUserFrequencySort(words: List<TaigiWord>): List<TaigiWord> {
+    private suspend fun applyScoredSort(words: List<TaigiWord>, normalizedInput: String): List<TaigiWord> {
         return withContext(Dispatchers.IO) {
             try {
-                // 收集所有候選詞的 displayText 並查詢頻率
-                val frequencies = mutableMapOf<String, Int>()
+                // 查詢使用者頻率
+                val userFrequencies = mutableMapOf<String, Int>()
                 words.forEach { word ->
                     val text = word.displayText
-                    if (!frequencies.containsKey(text)) {
-                        frequencies[text] = UserFrequencyService.getFrequency(text)
+                    if (!userFrequencies.containsKey(text)) {
+                        userFrequencies[text] = UserFrequencyService.getFrequency(text)
                     }
                 }
 
-                // 多條件排序
-                words.sortedWith(
-                    compareByDescending<TaigiWord> { frequencies[it.displayText] ?: 0 } // 1. 頻率降序
-                        .thenBy { it.roman.length }                                      // 2. 長度升序
-                        .thenBy { it.roman }                                             // 3. 羅馬字升序
-                )
+                // 按分數排序
+                words.sortedByDescending { word ->
+                    val userFreq = userFrequencies[word.displayText] ?: 0
+                    calculateScore(word, normalizedInput, userFreq)
+                }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
-                    Log.w(TAG, "[SORT] User frequency sort failed, using original order", e)
+                    Log.w(TAG, "[SORT] Scored sort failed, using original order", e)
                 }
-                words // 發生錯誤時返回原始順序
+                words
             }
         }
     }

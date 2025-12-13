@@ -14,11 +14,28 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 332
-        versionName = "3.3.2"
+        versionCode = 333
+        versionName = "3.3.3"
 
         ndk {
             debugSymbolLevel = "FULL"
+            // 支援的 CPU 架構
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
+
+        // CMake 設定
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+            }
+        }
+    }
+
+    // Native build 設定
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 
@@ -123,4 +140,7 @@ dependencies {
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
+    // JUnit 單元測試
+    testImplementation("junit:junit:4.13.2")
 }

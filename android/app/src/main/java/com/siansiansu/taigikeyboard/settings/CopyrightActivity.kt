@@ -7,13 +7,16 @@ import androidx.appcompat.widget.Toolbar
 import androidx.viewpager2.widget.ViewPager2
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.ActivityCopyrightBinding
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.model.CopyrightDataSource
+import com.siansiansu.taigikeyboard.util.FontUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
 class CopyrightActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCopyrightBinding
     private lateinit var pagerAdapter: CopyrightPagerAdapter
     private lateinit var languageManager: LanguageManager
+    private lateinit var prefs: PrefHelper
     private val copyrightPages = CopyrightDataSource.copyrightPages
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,6 +24,7 @@ class CopyrightActivity : AppCompatActivity() {
         binding = ActivityCopyrightBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        prefs = PrefHelper(this)
         languageManager = LanguageManager.getInstance(this)
 
         // 設定 Edge-to-Edge 顯示模式
@@ -30,6 +34,7 @@ class CopyrightActivity : AppCompatActivity() {
         setupViewPager()
         setupNavigation()
         observeLanguageChanges()
+        applyCustomFont()
     }
 
     private fun setupToolbar() {
@@ -47,7 +52,7 @@ class CopyrightActivity : AppCompatActivity() {
     }
 
     private fun setupViewPager() {
-        pagerAdapter = CopyrightPagerAdapter(this, copyrightPages, languageManager)
+        pagerAdapter = CopyrightPagerAdapter(this, copyrightPages, languageManager, prefs)
         binding.viewPager.adapter = pagerAdapter
 
         binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
@@ -125,5 +130,17 @@ class CopyrightActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    /**
+     * 套用自訂字體到所有 UI 元件
+     */
+    private fun applyCustomFont() {
+        val typeface = FontUtils.getTypefaceByType(prefs.fontType, this)
+
+        // Page indicator and navigation buttons
+        binding.pageIndicator.typeface = typeface
+        binding.prevButton.typeface = typeface
+        binding.nextButton.typeface = typeface
     }
 }

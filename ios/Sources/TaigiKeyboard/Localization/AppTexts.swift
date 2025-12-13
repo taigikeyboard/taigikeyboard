@@ -17,6 +17,10 @@ enum AppTexts {
     static var doubleTapNN: LocalizedText { KeyboardTexts.doubleTapNN }
     static var phahTaigiLayout: LocalizedText { KeyboardTexts.phahTaigiLayout }
     static var customFont: LocalizedText { KeyboardTexts.customFont }
+    static var fontSystemDefault: LocalizedText { KeyboardTexts.fontSystemDefault }
+    static var fontOpenHuninn: LocalizedText { KeyboardTexts.fontOpenHuninn }
+    static var fontIansui: LocalizedText { KeyboardTexts.fontIansui }
+    static var fontSystemWarning: LocalizedText { KeyboardTexts.fontSystemWarning }
     static var outputBothScripts: LocalizedText { KeyboardTexts.outputBothScripts }
     static var variantSearch: LocalizedText { KeyboardTexts.variantSearch }
 
@@ -81,6 +85,9 @@ enum AppTexts {
     static var copyright: LocalizedText { AppInfoTexts.copyright }
     static var setupGuide: LocalizedText { AppInfoTexts.setupGuide }
     static var setupInfoMessage: LocalizedText { AppInfoTexts.setupInfoMessage }
+    static var dictionarySettings: LocalizedText { AppInfoTexts.dictionarySettings }
+    static var customDictionary: LocalizedText { AppInfoTexts.customDictionary }
+    static var comingSoon: LocalizedText { AppInfoTexts.comingSoon }
     static var rateUs: LocalizedText { AppInfoTexts.rateUs }
     static var contactUs: LocalizedText { AppInfoTexts.contactUs }
     static var userGuide: LocalizedText { AppInfoTexts.userGuide }

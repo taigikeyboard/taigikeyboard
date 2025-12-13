@@ -9,9 +9,11 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.settings.AppTexts
 import com.siansiansu.taigikeyboard.settings.LanguageManager
 import com.siansiansu.taigikeyboard.settings.setLocalizedText
+import com.siansiansu.taigikeyboard.util.FontUtils
 import kotlinx.coroutines.launch
 
 /**
@@ -20,6 +22,7 @@ import kotlinx.coroutines.launch
 class CompletedFragment : Fragment() {
 
     private lateinit var languageManager: LanguageManager
+    private lateinit var prefs: PrefHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -32,6 +35,7 @@ class CompletedFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        prefs = PrefHelper(requireContext())
         languageManager = LanguageManager.getInstance(requireContext())
 
         // 設定標題、訊息和按鈕文字
@@ -42,6 +46,12 @@ class CompletedFragment : Fragment() {
         titleTextView.setLocalizedText(AppTexts.onboardingCompletedTitle, languageManager, viewLifecycleOwner)
         messageTextView.setLocalizedText(AppTexts.onboardingCompletedMessage, languageManager, viewLifecycleOwner)
         btnGetStarted.setLocalizedText(AppTexts.onboardingGetStarted, languageManager, viewLifecycleOwner)
+
+        // 套用自訂字體
+        val typeface = FontUtils.getTypefaceByType(prefs.fontType, requireContext())
+        titleTextView.typeface = typeface
+        messageTextView.typeface = typeface
+        btnGetStarted.typeface = typeface
 
         btnGetStarted.setOnClickListener {
             // 使用 lifecycleScope 確保 suspend function 正確執行

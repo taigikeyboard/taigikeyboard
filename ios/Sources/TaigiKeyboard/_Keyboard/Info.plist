@@ -35,6 +35,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>jf-openhuninn-2.1.ttf</string>
+		<string>Iansui-Regular.ttf</string>
 	</array>
 </dict>
 </plist>

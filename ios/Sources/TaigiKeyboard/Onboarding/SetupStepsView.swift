@@ -38,7 +38,7 @@ struct StepRow: View {
                     .frame(width: 20)
 
                 LocalizedTextView(text)
-                    .font(Font.Theme.body)
+                    .themeFontBody()
                     .foregroundColor(Color.Theme.textPrimary)
             }
 

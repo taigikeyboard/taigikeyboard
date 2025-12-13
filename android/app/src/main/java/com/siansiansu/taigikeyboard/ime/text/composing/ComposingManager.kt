@@ -12,11 +12,17 @@ import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
  * - 聲調數字轉換
  * - 字元組合轉換（oo → o͘, nn → ⁿ）
  * - 與 InputConnection 同步組字狀態
+ *
+ * 維護兩個狀態：
+ * - rawInput: 原始輸入（保留數字聲調，用於 Trie 搜尋）
+ * - composingText: 顯示文字（聲調已轉換，用於 UI 顯示和輸出）
  */
 class ComposingManager(
     private val inputMode: ToneConverterModels.InputMode
 ) {
-    // 組字狀態
+    // 原始輸入（保留數字聲調，用於 Trie 搜尋）
+    private var rawInput: String = ""
+    // 顯示文字（聲調已轉換，用於 UI 顯示）
     private var composingText: String = ""
     private var isComposing: Boolean = false
 
@@ -32,6 +38,7 @@ class ComposingManager(
         if (isComposing) {
             ic.finishComposingText()
         }
+        rawInput = char
         composingText = char
         isComposing = true
         selectedCandidateIndex = 0
@@ -50,13 +57,16 @@ class ComposingManager(
 
         selectedCandidateIndex = 0
 
-        // 計算新文字
-        var newText = composingText + char
+        // 更新 rawInput（只做字元組合，不做聲調轉換）
+        var newRawInput = rawInput + char
+        newRawInput = checkCharacterCombinationForRaw(newRawInput, char) ?: newRawInput
+        rawInput = newRawInput
 
-        // 檢查字元組合轉換（oo → o͘, nn → ⁿ）
+        // 更新 composingText（做完整轉換，含聲調）
+        var newText = composingText + char
         newText = checkCharacterCombination(newText, char) ?: newText
 
-        // 檢查聲調轉換
+        // 檢查聲調轉換（只套用到 composingText）
         if (char.toIntOrNull() != null) {
             val toneNumber = char.toInt()
             if (toneNumber in 2..9 && toneNumber != 4) {
@@ -83,16 +93,19 @@ class ComposingManager(
             return false
         }
 
-        // 嘗試聲調還原
+        // 嘗試聲調還原（composingText）
         val restoredText = attemptToneRestoration()
         if (restoredText != null) {
             composingText = restoredText
+            // rawInput 刪除最後一個字元（聲調數字）
+            rawInput = rawInput.dropLast(1)
             updateComposingText(ic)
             return true
         }
 
-        // 一般字元刪除
+        // 一般字元刪除（兩個狀態同步刪除）
         composingText = composingText.dropLast(1)
+        rawInput = rawInput.dropLast(1)
 
         if (composingText.isEmpty()) {
             // 清空組字區（直接刪除組字文字）
@@ -114,6 +127,7 @@ class ComposingManager(
         }
 
         // 清除內部狀態
+        rawInput = ""
         composingText = ""
         isComposing = false
         selectedCandidateIndex = 0
@@ -131,6 +145,7 @@ class ComposingManager(
         }
 
         // 清除內部狀態
+        rawInput = ""
         composingText = ""
         isComposing = false
         selectedCandidateIndex = 0
@@ -171,16 +186,24 @@ class ComposingManager(
         if (isComposing) {
             ic.finishComposingText()
         }
+        rawInput = ""
         composingText = ""
         isComposing = false
         selectedCandidateIndex = 0
     }
 
     /**
-     * 取得當前組字文字
+     * 取得當前組字文字（用於 UI 顯示）
      */
     fun getComposingText(): String? {
         return if (isComposing) composingText else null
+    }
+
+    /**
+     * 取得原始輸入（用於 Trie 搜尋）
+     */
+    fun getRawInput(): String? {
+        return if (isComposing) rawInput else null
     }
 
     /**
@@ -193,6 +216,17 @@ class ComposingManager(
      */
     private fun updateComposingText(ic: InputConnection) {
         ic.setComposingText(composingText, 1)
+    }
+
+    /**
+     * 檢查字元組合轉換（用於 rawInput，保留 ASCII 格式）
+     * POJ: oo 保持 oo, nn 保持 nn
+     * TL: 不做轉換
+     */
+    private fun checkCharacterCombinationForRaw(currentText: String, input: String): String? {
+        // rawInput 不做字元組合轉換，保留原始 ASCII
+        // 這樣 Trie 搜尋時可以直接用 "goa2" 格式
+        return null
     }
 
     /**

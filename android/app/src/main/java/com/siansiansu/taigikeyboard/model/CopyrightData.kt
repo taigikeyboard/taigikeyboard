@@ -22,6 +22,7 @@ data class CopyrightButton(
 
 object CopyrightDataSource {
     val copyrightPages = listOf(
+        // 字體
         CopyrightPage(
             id = 0,
             title = com.siansiansu.taigikeyboard.settings.AppTexts.openFontTitle,
@@ -44,6 +45,28 @@ object CopyrightDataSource {
         ),
         CopyrightPage(
             id = 1,
+            title = com.siansiansu.taigikeyboard.settings.AppTexts.iansuiFontTitle,
+            description = com.siansiansu.taigikeyboard.settings.AppTexts.iansuiFontCopyright,
+            iconResId = android.R.drawable.ic_menu_edit,
+            accentColorResId = R.color.copyright_accent_green,
+            license = com.siansiansu.taigikeyboard.settings.AppTexts.silOpenFontLicense11,
+            buttons = listOf(
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_info_details,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
+                    url = "https://openfontlicense.org/"
+                ),
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_view,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
+                    url = "https://github.com/ButTaiwan/iansui"
+                )
+            )
+        ),
+        // 辭典
+        // 1. 教育部臺灣台語常用詞辭典
+        CopyrightPage(
+            id = 2,
             title = com.siansiansu.taigikeyboard.settings.AppTexts.moeDict,
             description = com.siansiansu.taigikeyboard.settings.AppTexts.moeCopyright,
             iconResId = android.R.drawable.ic_menu_info_details,
@@ -62,8 +85,9 @@ object CopyrightDataSource {
                 )
             )
         ),
+        // 2. 台語新詞辭庫
         CopyrightPage(
-            id = 2,
+            id = 3,
             title = com.siansiansu.taigikeyboard.settings.AppTexts.newwordDict,
             description = com.siansiansu.taigikeyboard.settings.AppTexts.newwordCopyright,
             iconResId = android.R.drawable.ic_menu_add,
@@ -82,8 +106,30 @@ object CopyrightDataSource {
                 )
             )
         ),
+        // 3. 台語工藝詞庫
         CopyrightPage(
-            id = 3,
+            id = 4,
+            title = com.siansiansu.taigikeyboard.settings.AppTexts.kunggeDict,
+            description = com.siansiansu.taigikeyboard.settings.AppTexts.kunggeCopyright,
+            iconResId = android.R.drawable.ic_menu_compass,
+            accentColorResId = R.color.copyright_accent_orange,
+            license = com.siansiansu.taigikeyboard.settings.AppTexts.ccByNcLicense,
+            buttons = listOf(
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_info_details,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
+                    url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant"
+                ),
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_view,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
+                    url = "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
+                )
+            )
+        ),
+        // 4. iTaigi 華台對照典
+        CopyrightPage(
+            id = 5,
             title = com.siansiansu.taigikeyboard.settings.AppTexts.iTaigiDict,
             description = com.siansiansu.taigikeyboard.settings.AppTexts.iTaigiCopyright,
             iconResId = android.R.drawable.ic_menu_mapmode,
@@ -102,41 +148,7 @@ object CopyrightDataSource {
                 )
             )
         ),
-        CopyrightPage(
-            id = 4,
-            title = com.siansiansu.taigikeyboard.settings.AppTexts.taiwanPlantDict,
-            description = com.siansiansu.taigikeyboard.settings.AppTexts.taiwanPlantCopyright,
-            iconResId = android.R.drawable.ic_menu_sort_by_size,
-            accentColorResId = R.color.copyright_accent_green,
-            license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
-            buttons = listOf(
-                CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
-                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
-                    url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
-                ),
-                CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
-                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
-                    url = "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
-                )
-            )
-        ),
-        CopyrightPage(
-            id = 5,
-            title = com.siansiansu.taigikeyboard.settings.AppTexts.taiHuaDict,
-            description = com.siansiansu.taigikeyboard.settings.AppTexts.taiHuaCopyright,
-            iconResId = android.R.drawable.ic_menu_sort_alphabetically,
-            accentColorResId = R.color.copyright_accent_blue,
-            license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
-            buttons = listOf(
-                CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
-                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
-                    url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
-                )
-            )
-        ),
+        // 5. 台日大辭典
         CopyrightPage(
             id = 6,
             title = com.siansiansu.taigikeyboard.settings.AppTexts.taiwanJapanDict,
@@ -154,6 +166,43 @@ object CopyrightDataSource {
                     iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "http://taigi.fhl.net/dict/"
+                )
+            )
+        ),
+        // 6. 台華線頂對照典
+        CopyrightPage(
+            id = 7,
+            title = com.siansiansu.taigikeyboard.settings.AppTexts.taiHuaDict,
+            description = com.siansiansu.taigikeyboard.settings.AppTexts.taiHuaCopyright,
+            iconResId = android.R.drawable.ic_menu_sort_alphabetically,
+            accentColorResId = R.color.copyright_accent_blue,
+            license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
+            buttons = listOf(
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_info_details,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
+                    url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+                )
+            )
+        ),
+        // 7. 台灣植物名彙
+        CopyrightPage(
+            id = 8,
+            title = com.siansiansu.taigikeyboard.settings.AppTexts.taiwanPlantDict,
+            description = com.siansiansu.taigikeyboard.settings.AppTexts.taiwanPlantCopyright,
+            iconResId = android.R.drawable.ic_menu_sort_by_size,
+            accentColorResId = R.color.copyright_accent_green,
+            license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
+            buttons = listOf(
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_info_details,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
+                    url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+                ),
+                CopyrightButton(
+                    iconResId = android.R.drawable.ic_menu_view,
+                    text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
+                    url = "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
                 )
             )
         )

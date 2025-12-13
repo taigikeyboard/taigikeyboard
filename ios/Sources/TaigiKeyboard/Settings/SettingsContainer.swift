@@ -50,7 +50,7 @@ struct SettingsCloseButton: View {
     var body: some View {
         Button(action: action) {
             Text(LanguageManager.shared.text(AppTexts.done))
-                .font(Font.Theme.body)
+                .themeFontBody()
                 .foregroundColor(Color.Theme.accent)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

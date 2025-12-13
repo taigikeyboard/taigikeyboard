@@ -13,13 +13,13 @@ struct SettingsView: View {
     @State private var enableDoubleTapOO: Bool
     @State private var enableDoubleTapNN: Bool
     @State private var phahTaigiLayoutEnabled: Bool
-    @State private var customFontEnabled: Bool
+    @State private var selectedFontType: FontType
     @State private var outputBothScripts: Bool
-    @State private var variantSearchEnabled: Bool
     @State private var showClearCacheAlert = false
     @State private var showResetSettingsAlert = false
 
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var fontManager = FontManager.shared
 
     init() {
         let settings = SharedSettings.shared
@@ -30,9 +30,8 @@ struct SettingsView: View {
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
         _phahTaigiLayoutEnabled = State(initialValue: settings.phahTaigiLayoutEnabled)
-        _customFontEnabled = State(initialValue: settings.isCustomFontEnabled)
+        _selectedFontType = State(initialValue: settings.fontType)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
-        _variantSearchEnabled = State(initialValue: settings.variantSearchEnabled)
 
         LanguageManager.shared.updateDisplayLanguage()
     }
@@ -43,6 +42,8 @@ struct SettingsView: View {
         ) {
             VStack(spacing: 24) {
                 inputModeSection
+
+                fontTypeSection
 
                 SettingsSection {
                     settingsSection
@@ -76,7 +77,7 @@ struct SettingsView: View {
         VStack(spacing: 20) {
             HStack {
                 LocalizedTextView(AppTexts.inputMode)
-                    .font(Font.Theme.headline)
+                    .themeFontHeadline()
                     .foregroundColor(Color.Theme.textPrimary)
 
                 Spacer()
@@ -87,14 +88,46 @@ struct SettingsView: View {
                 LocalizedTextView(AppTexts.tlMode).tag(InputMode.tl)
             }
             .pickerStyle(SegmentedPickerStyle())
+            .id("inputMode-\(fontManager.currentFontType)")
             .onAppear {
-                UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.Theme.accent)
-                UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
-                UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.black], for: .normal)
+                updateSegmentedControlAppearance()
+            }
+            .onChange(of: fontManager.currentFontType) { _, _ in
+                updateSegmentedControlAppearance()
             }
             .onChange(of: selectedInputMode) { _, newValue in
                 settings.inputMode = InputMode(rawValue: newValue.rawValue) ?? InputMode.poj
                 languageManager.updateDisplayLanguage()
+            }
+        }
+        .padding(.vertical, 24)
+        .padding(.horizontal, 24)
+        .themedCard()
+    }
+
+    @ViewBuilder
+    private var fontTypeSection: some View {
+        VStack(spacing: 20) {
+            HStack {
+                LocalizedTextView(AppTexts.customFont)
+                    .themeFontHeadline()
+                    .foregroundColor(Color.Theme.textPrimary)
+
+                Spacer()
+            }
+
+            Picker("", selection: $selectedFontType) {
+                LocalizedTextView(AppTexts.fontSystemDefault).tag(FontType.system)
+                LocalizedTextView(AppTexts.fontOpenHuninn).tag(FontType.openHuninn)
+                LocalizedTextView(AppTexts.fontIansui).tag(FontType.iansui)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .id("fontType-\(fontManager.currentFontType)")
+            .onAppear {
+                updateSegmentedControlAppearance()
+            }
+            .onChange(of: selectedFontType) { _, newValue in
+                fontManager.updateFontType(newValue)
             }
         }
         .padding(.vertical, 24)
@@ -132,15 +165,6 @@ struct SettingsView: View {
         )
 
         SettingsToggleItem(
-            titleContent: AppTexts.customFont,
-            isOn: $customFontEnabled,
-            onChange: { newValue in
-                settings.isCustomFontEnabled = newValue
-                languageManager.updateDisplayLanguage()
-            }
-        )
-
-        SettingsToggleItem(
             titleContent: AppTexts.phahTaigiLayout,
             isOn: $phahTaigiLayoutEnabled,
             onChange: { newValue in
@@ -159,17 +183,9 @@ struct SettingsView: View {
         SettingsToggleItem(
             titleContent: AppTexts.doubleTapNN,
             isOn: $enableDoubleTapNN,
-            onChange: { newValue in
-                settings.enableDoubleTapNN = newValue
-            }
-        )
-
-        SettingsToggleItem(
-            titleContent: AppTexts.variantSearch,
-            isOn: $variantSearchEnabled,
             isLast: true,
             onChange: { newValue in
-                settings.variantSearchEnabled = newValue
+                settings.enableDoubleTapNN = newValue
             }
         )
     }
@@ -211,14 +227,28 @@ struct SettingsView: View {
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
         phahTaigiLayoutEnabled = settings.phahTaigiLayoutEnabled
-        customFontEnabled = settings.isCustomFontEnabled
+        selectedFontType = settings.fontType
         outputBothScripts = settings.outputBothScripts
-        variantSearchEnabled = settings.variantSearchEnabled
 
         languageManager.updateDisplayLanguage()
+        fontManager.reloadFontType()
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
+    }
+
+    /// 更新 SegmentedControl 的外觀（包含字體）
+    private func updateSegmentedControlAppearance() {
+        let font = KeyboardModels.Fonts.uiFont(for: fontManager.currentFontType, size: 13)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.Theme.accent)
+        UISegmentedControl.appearance().setTitleTextAttributes([
+            .foregroundColor: UIColor.white,
+            .font: font
+        ], for: .selected)
+        UISegmentedControl.appearance().setTitleTextAttributes([
+            .foregroundColor: UIColor.black,
+            .font: font
+        ], for: .normal)
     }
 }
 

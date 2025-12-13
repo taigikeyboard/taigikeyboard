@@ -17,7 +17,7 @@ struct SetupKeyboardPage: View {
                     SetupStepsView()
 
                     LocalizedTextView(AppTexts.setupInfoMessage)
-                        .font(Font.Theme.caption)
+                        .themeFontCaption()
                         .foregroundColor(Color.Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)

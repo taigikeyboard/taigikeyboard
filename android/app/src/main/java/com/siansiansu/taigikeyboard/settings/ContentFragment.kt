@@ -14,6 +14,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.FragmentContentBinding
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
+import com.siansiansu.taigikeyboard.util.FontUtils
 
 class ContentFragment : SettingsMainActivity.SettingsFragment() {
     private lateinit var binding: FragmentContentBinding
@@ -34,6 +35,7 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
 
         // Ensure initial display is correct
         updateAllTexts()
+        applyCustomFont()
 
         return binding.root
     }
@@ -50,6 +52,8 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             languageManager.getText(AppTexts.setupGuide)
         binding.root.findViewById<TextView>(R.id.nav_settings_title)?.text =
             languageManager.getText(AppTexts.keyboardSettings)
+        binding.root.findViewById<TextView>(R.id.nav_dictionary_title)?.text =
+            languageManager.getText(AppTexts.dictionarySettings)
         binding.root.findViewById<TextView>(R.id.nav_website_intro_title)?.text =
             languageManager.getText(AppTexts.websiteIntro)
         binding.root.findViewById<TextView>(R.id.nav_copyright_title)?.text =
@@ -86,7 +90,14 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
             }
         }
 
-        // Website Introduction - 使用系統預設瀏覽器開啟
+        // Dictionary Settings
+        binding.root.findViewById<View>(R.id.nav_item_dictionary)?.setOnClickListener {
+            Intent(context, DictionarySettingsActivity::class.java).apply {
+                startActivity(this)
+            }
+        }
+
+        // Website Introduction - 使用系統瀏覽器開啟
         binding.root.findViewById<View>(R.id.nav_item_website_intro)?.setOnClickListener {
             val websiteUrl = "https://www.taigikeyboard.tw/"
             Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl)).apply {
@@ -103,7 +114,7 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
     }
 
     private fun setupResourceItems() {
-        // Contact / Feedback - 使用系統預設瀏覽器開啟 Google Forms
+        // Contact / Feedback - 使用系統瀏覽器開啟 Google Forms
         binding.root.findViewById<View>(R.id.resource_item_contact)?.setOnClickListener {
             val contactFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
             Intent(Intent.ACTION_VIEW, Uri.parse(contactFormUrl)).apply {
@@ -131,11 +142,38 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 從其他頁面返回時重新套用字型
+        applyCustomFont()
+    }
+
     private fun setupFooterVersion() {
         // 設定版號顯示
         binding.root.findViewById<TextView>(R.id.footer_version)?.apply {
             val version = AppVersionUtils.getRawVersionName(requireContext())
             text = "v$version"
         }
+    }
+
+    /**
+     * 套用自訂字體到所有 TextView
+     */
+    private fun applyCustomFont() {
+        val typeface = FontUtils.getTypefaceByType(prefs.fontType, requireContext())
+
+        // Navigation items
+        binding.root.findViewById<TextView>(R.id.nav_setup_title)?.typeface = typeface
+        binding.root.findViewById<TextView>(R.id.nav_settings_title)?.typeface = typeface
+        binding.root.findViewById<TextView>(R.id.nav_dictionary_title)?.typeface = typeface
+        binding.root.findViewById<TextView>(R.id.nav_website_intro_title)?.typeface = typeface
+        binding.root.findViewById<TextView>(R.id.nav_copyright_title)?.typeface = typeface
+
+        // Resource items
+        binding.root.findViewById<TextView>(R.id.resource_contact_title)?.typeface = typeface
+        binding.root.findViewById<TextView>(R.id.resource_rate_title)?.typeface = typeface
+
+        // Footer
+        binding.root.findViewById<TextView>(R.id.footer_version)?.typeface = typeface
     }
 }

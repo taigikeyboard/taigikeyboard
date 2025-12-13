@@ -23,12 +23,12 @@ struct OnboardingPageContainer<BottomContent: View>: View {
 
                     VStack(spacing: 16) {
                         LocalizedTextView(title)
-                            .font(Font.Theme.title)
+                            .themeFontTitle()
                             .foregroundColor(Color.Theme.textPrimary)
                             .multilineTextAlignment(.center)
 
                         LocalizedTextView(message)
-                            .font(Font.Theme.body)
+                            .themeFontBody()
                             .foregroundColor(Color.Theme.textSecondary)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)

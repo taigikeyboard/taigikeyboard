@@ -45,7 +45,7 @@ object PreferenceKeys {
     val ENABLE_DOUBLE_TAP_NN = booleanPreferencesKey("taigi__enable_double_tap_nn")
     val AUTO_CAPITALIZATION_ENABLED = booleanPreferencesKey("taigi__auto_capitalization_enabled")
     val AUTO_SPACE_ENABLED = booleanPreferencesKey("taigi__auto_space_enabled")
-    val CUSTOM_FONT_ENABLED = booleanPreferencesKey("taigi__custom_font_enabled")
+    val FONT_TYPE = stringPreferencesKey("taigi__font_type")
 
     // Looknfeel settings
     val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
@@ -57,6 +57,12 @@ object PreferenceKeys {
     // Onboarding settings
     val HAS_SEEN_ONBOARDING = booleanPreferencesKey("onboarding__has_seen")
 
-    // 詞典搜尋設定
-    val VARIANT_SEARCH_ENABLED = booleanPreferencesKey("dictionary__variant_search_enabled")
+    // 詞庫開關設定
+    val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
+    val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")
+    val ITAIGI_DICT_ENABLED = booleanPreferencesKey("dictionary__itaigi_dict_enabled")
+    val SITBUT_DICT_ENABLED = booleanPreferencesKey("dictionary__sitbut_dict_enabled")
+    val TAIHOA_DICT_ENABLED = booleanPreferencesKey("dictionary__taihoa_dict_enabled")
+    val TAIJIT_DICT_ENABLED = booleanPreferencesKey("dictionary__taijit_dict_enabled")
+    val KUNGGE_DICT_ENABLED = booleanPreferencesKey("dictionary__kungge_dict_enabled")
 }

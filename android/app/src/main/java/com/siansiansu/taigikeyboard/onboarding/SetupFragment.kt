@@ -10,10 +10,12 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.settings.AppTexts
 import com.siansiansu.taigikeyboard.settings.LanguageManager
 import com.siansiansu.taigikeyboard.settings.setLocalizedText
+import com.siansiansu.taigikeyboard.util.FontUtils
 
 /**
  * Onboarding 設定頁面
@@ -22,6 +24,7 @@ import com.siansiansu.taigikeyboard.settings.setLocalizedText
 class SetupFragment : Fragment() {
 
     private lateinit var languageManager: LanguageManager
+    private lateinit var prefs: PrefHelper
     private lateinit var btnGoToSettings: Button
     private lateinit var privacyMessageTextView: TextView
 
@@ -36,6 +39,7 @@ class SetupFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        prefs = PrefHelper(requireContext())
         languageManager = LanguageManager.getInstance(requireContext())
 
         // 初始化 views
@@ -47,6 +51,12 @@ class SetupFragment : Fragment() {
         titleTextView.setLocalizedText(AppTexts.onboardingAddKeyboardTitle, languageManager, viewLifecycleOwner)
         privacyMessageTextView.setLocalizedText(AppTexts.setupInfoMessage, languageManager, viewLifecycleOwner)
         btnGoToSettings.setLocalizedText(AppTexts.onboardingGoToSettings, languageManager, viewLifecycleOwner)
+
+        // 套用自訂字體
+        val typeface = FontUtils.getTypefaceByType(prefs.fontType, requireContext())
+        titleTextView.typeface = typeface
+        privacyMessageTextView.typeface = typeface
+        btnGoToSettings.typeface = typeface
 
         btnGoToSettings.setOnClickListener {
             Intent(Settings.ACTION_INPUT_METHOD_SETTINGS).apply {

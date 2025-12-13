@@ -52,7 +52,7 @@ struct CompletedPageContent: View {
             bottomContent: {
                 VStack(spacing: 24) {
                     LocalizedTextView(AppTexts.onboardingCompletedMessage)
-                        .font(Font.Theme.body)
+                        .themeFontBody()
                         .foregroundColor(Color.Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)

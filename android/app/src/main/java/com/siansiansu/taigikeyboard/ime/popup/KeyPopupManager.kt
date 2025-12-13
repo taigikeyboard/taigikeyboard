@@ -111,10 +111,10 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
                     val computedLetter = keyView.getComputedLetter(keyView.data.popup[k])
                     textView.text = computedLetter
 
-                    // 設定字體：根據 customFontEnabled 決定
+                    // 設定字體：根據 fontType 決定
                     val prefs = com.siansiansu.taigikeyboard.ime.core.PrefHelper(keyView.context)
-                    textView.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                        customFontEnabled = prefs.customFontEnabled,
+                    textView.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+                        fontType = prefs.fontType,
                         context = keyView.context
                     )
                 }

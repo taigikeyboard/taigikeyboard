@@ -1,0 +1,13 @@
+# ninja log v5
+0	410	1765558563020354608	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/mapper.cc.o	f413297383ea1e73
+0	445	1765558563054951969	CMakeFiles/marisa.dir/marisa-src/lib/marisa/keyset.cc.o	eaefc75c3b8a8cc7
+1	488	1765558563098112515	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/writer.cc.o	5f0abc94a418f869
+1	503	1765558563113111348	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/reader.cc.o	4963029c36476b06
+2	515	1765558563125027064	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/vector/bit-vector.cc.o	c497540994ca237d
+3	545	1765558563154900772	CMakeFiles/taigi_trie.dir/trie_jni.cpp.o	65bc14741c220159
+0	556	1765558563166363573	CMakeFiles/marisa.dir/marisa-src/lib/marisa/trie.cc.o	1fa1c26b9772b2c9
+0	557	1765558563167382820	CMakeFiles/marisa.dir/marisa-src/lib/marisa/agent.cc.o	bf07f82a41c7fadd
+0	670	1765558563280340462	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/trie/tail.cc.o	ad14d07d63a4e58b
+1	1097	1765558563705656851	CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/trie/louds-trie.cc.o	4bbba0de1d7da9db
+1097	1122	1765558563735591000	libmarisa.a	eefab872c61b9904
+1122	1155	1765558563766098223	/Users/alexsu/Workspace/taigikeyboard/android/app/build/intermediates/cxx/RelWithDebInfo/11384s2h/obj/armeabi-v7a/libtaigi_trie.so	b5b0eb5d8f21c9c8

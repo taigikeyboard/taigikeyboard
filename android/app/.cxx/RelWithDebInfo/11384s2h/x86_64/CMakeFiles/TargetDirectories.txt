@@ -1,0 +1,4 @@
+/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/x86_64/CMakeFiles/marisa.dir
+/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/x86_64/CMakeFiles/taigi_trie.dir
+/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/x86_64/CMakeFiles/edit_cache.dir
+/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/x86_64/CMakeFiles/rebuild_cache.dir

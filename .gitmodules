@@ -1,0 +1,3 @@
+[submodule "android/app/src/main/cpp/marisa-src"]
+	path = android/app/src/main/cpp/marisa-src
+	url = https://github.com/s-yata/marisa-trie.git

@@ -53,6 +53,7 @@
     <!-- Navigation Section -->
     <string name="home__nav__setup_guide">啟用方法</string>
     <string name="home__nav__keyboard_settings">齒盤設定</string>
+    <string name="home__nav__dictionary_settings">詞庫管理</string>
     <string name="home__nav__copyright">版權聲明</string>
 
     <!-- Resources Section -->
@@ -70,6 +71,9 @@
 
     <!-- Copyright Screen - AndroidManifest only -->
     <string name="copyright__title">版權聲明</string>
+
+    <!-- Dictionary Settings strings -->
+    <string name="dictionary_settings__title">詞庫管理</string>
 
     <!-- Keyboard Settings strings -->
     <string name="keyboard_settings__title">齒盤設定</string>

@@ -10,57 +10,56 @@ import com.siansiansu.taigikeyboard.R
  *
  * 提供自訂字體載入功能
  * 對應 iOS 版本 KeyboardModels.Fonts
+ *
+ * 注意：ResourcesCompat.getFont() 內建快取機制，
+ * 因此這裡不需要額外實作快取
  */
 object FontUtils {
 
     /**
-     * 自訂字體名稱：jf-openhuninn-2.1
+     * 字型類型
      */
-    private const val CUSTOM_FONT_NAME = "jf-openhuninn-2.1"
-
-    /**
-     * 快取的自訂字體 Typeface
-     */
-    private var customTypeface: Typeface? = null
-
-    /**
-     * 取得自訂字體 Typeface
-     *
-     * @param context Android Context
-     * @return 自訂字體 Typeface，如果載入失敗則回傳預設字體
-     */
-    fun getCustomTypeface(context: Context): Typeface {
-        if (customTypeface == null) {
-            customTypeface = try {
-                ResourcesCompat.getFont(context, R.font.jf_openhuninn)
-            } catch (e: Exception) {
-                // 如果載入失敗，使用預設字體
-                Typeface.DEFAULT
-            }
-        }
-        return customTypeface ?: Typeface.DEFAULT
+    enum class FontType(val value: String) {
+        SYSTEM("system"),
+        OPEN_HUNINN("openHuninn"),
+        IANSUI("iansui")
     }
 
     /**
-     * 根據設定取得適當的字體
-     * 對應 iOS 版本的 buttonKeyboardFont(for action:) 邏輯
-     *
-     * @param customFontEnabled 是否啟用自訂字體（來自 toggleCustomFont 設定）
-     * @param context Android Context
-     * @return 適當的 Typeface
+     * 取得 粉圓字體 Typeface
      */
-    fun getKeyFont(customFontEnabled: Boolean, context: Context): Typeface {
-        return if (customFontEnabled) {
-            getCustomTypeface(context)
-        } else {
+    fun getOpenHuninnTypeface(context: Context): Typeface {
+        return try {
+            ResourcesCompat.getFont(context, R.font.jf_openhuninn) ?: Typeface.DEFAULT
+        } catch (e: Exception) {
             Typeface.DEFAULT
         }
     }
 
     /**
-     * 清除快取的字體（用於測試或記憶體管理）
+     * 取得芫荽字體 Typeface
      */
-    fun clearCache() {
-        customTypeface = null
+    fun getIansuiTypeface(context: Context): Typeface {
+        return try {
+            ResourcesCompat.getFont(context, R.font.iansui_regular) ?: Typeface.DEFAULT
+        } catch (e: Exception) {
+            Typeface.DEFAULT
+        }
+    }
+
+    /**
+     * 根據字型類型取得適當的字體
+     *
+     * @param fontType 字型類型 (system, openHuninn, iansui)
+     * @param context Android Context
+     * @return 適當的 Typeface
+     */
+    fun getTypefaceByType(fontType: String, context: Context): Typeface {
+        return when (fontType) {
+            FontType.SYSTEM.value -> Typeface.DEFAULT
+            FontType.OPEN_HUNINN.value -> getOpenHuninnTypeface(context)
+            FontType.IANSUI.value -> getIansuiTypeface(context)
+            else -> getOpenHuninnTypeface(context) // 預設為 粉圓
+        }
     }
 }

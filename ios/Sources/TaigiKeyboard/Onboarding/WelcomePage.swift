@@ -13,7 +13,7 @@ struct WelcomePage: View {
             bottomContent: {
                 VStack(spacing: 24) {
                     LocalizedTextView(AppTexts.onboardingWelcomeMessage)
-                        .font(Font.Theme.body)
+                        .themeFontBody()
                         .foregroundColor(Color.Theme.textSecondary)
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)

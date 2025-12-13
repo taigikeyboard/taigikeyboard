@@ -27,47 +27,53 @@ class TaigiAutocompleteService(
     /**
      * 搜尋候選詞
      *
-     * @param composingText 組字文字（保留原始大小寫）
+     * @param rawInput 原始輸入（保留數字聲調，用於 Trie 搜尋）
+     * @param displayText 顯示文字（聲調已轉換，用於候選詞位置 0 顯示）
      * @return 候選詞列表（第 0 個位置為當前組字文字，第 1 個位置開始為建議候選詞）
      *         參考 iOS: AutocompleteService.swift:69-101
      */
-    suspend fun getSuggestions(composingText: String): List<TaigiWord> {
-        if (composingText.isEmpty()) {
+    suspend fun getSuggestions(rawInput: String, displayText: String): List<TaigiWord> {
+        if (rawInput.isEmpty()) {
             return emptyList()
         }
 
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[INPUT] rawInput='$rawInput', displayText='$displayText', mode=$inputMode")
+        }
+
         return try {
-            // 保留原始輸入（含大小寫）用於候選詞首字元大小寫判斷
-            val originalInput = composingText
+            // 判斷輸入類型（用 rawInput 判斷，因為它保留數字聲調）
+            val inputType = determineInputType(rawInput)
 
-            // 前處理：聲調轉換
-            val preprocessedText = ToneConverter.convertToToneMarks(composingText, inputMode)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[INPUT] inputType=$inputType")
+            }
 
-            // 判斷輸入類型
-            val inputType = determineInputType(preprocessedText)
-
-            // 搜尋詞典（使用預設 limit = DictionaryConstants.DEFAULT_SEARCH_LIMIT = 100）
+            // 搜尋系統詞典
             val words = LexiconService.search(
-                input = preprocessedText,
-                originalInput = originalInput,
+                input = rawInput,
+                originalInput = rawInput,
                 inputType = inputType,
                 inputMode = inputMode,
                 context = context
             )
 
-            // showHanjiMode 固定為 true，直接使用搜尋結果
-            // 在第 0 個位置插入當前組字文字候選詞
-            // 參考 iOS: AutocompleteService.swift:99-101
-            val composingTextWord = createComposingTextWord(composingText)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[RESULT] LexiconService returned ${words.size} words")
+            }
 
-            // TODO: 整合 UserFrequencyService 排序
+            // 在第 0 個位置插入當前組字文字候選詞（用 displayText 顯示）
+            // 參考 iOS: AutocompleteService.swift:99-101
+            val composingTextWord = createComposingTextWord(displayText)
+
+            // 候選詞排序：composingText → 系統詞庫
             buildList {
                 add(composingTextWord)
                 addAll(words)
             }
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
-                Log.e(TAG, "getSuggestions failed for: $composingText", e)
+                Log.e(TAG, "[ERROR] getSuggestions failed for: $rawInput", e)
             }
             emptyList()
         }
@@ -120,7 +126,17 @@ class TaigiAutocompleteService(
         return when {
             containsHanzi(text) -> InputType.Hanzi
             containsToneMarks(text) -> InputType.RomanWithTone
+            containsNumericTone(text) -> InputType.RomanWithTone
             else -> InputType.RomanWithoutTone
+        }
+    }
+
+    /**
+     * 檢查是否包含數字聲調（2-9，排除 4）
+     */
+    private fun containsNumericTone(text: String): Boolean {
+        return text.any { char ->
+            char.isDigit() && char != '1' && char != '4' && char != '0'
         }
     }
 

@@ -12,12 +12,15 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.model.CopyrightPage
+import com.siansiansu.taigikeyboard.util.FontUtils
 
 class CopyrightPagerAdapter(
     private val context: Context,
     private val pages: List<CopyrightPage>,
-    private val languageManager: LanguageManager
+    private val languageManager: LanguageManager,
+    private val prefs: PrefHelper
 ) : RecyclerView.Adapter<CopyrightPagerAdapter.PageViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageViewHolder {
@@ -45,6 +48,14 @@ class CopyrightPagerAdapter(
             // 取得主題綠色（用於按鈕 icon）
             val themeGreenColor = ContextCompat.getColor(context, R.color.modern_accent)
 
+            // 套用自訂字體
+            val typeface = FontUtils.getTypefaceByType(prefs.fontType, context)
+            title.typeface = typeface
+            entryCount.typeface = typeface
+            description.typeface = typeface
+            licenseDescription.typeface = typeface
+            acknowledgment.typeface = typeface
+
             // Set title
             title.text = languageManager.getText(page.title)
 
@@ -69,6 +80,7 @@ class CopyrightPagerAdapter(
                 buttonIcon.setImageResource(button.iconResId)
                 buttonIcon.setColorFilter(themeGreenColor)
                 buttonText.text = languageManager.getText(button.text)
+                buttonText.typeface = typeface
 
                 buttonContainer.setOnClickListener {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(button.url))

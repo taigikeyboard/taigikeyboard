@@ -686,8 +686,8 @@ class KeyView(
             }
 
             // 根據設定設定字體
-            sharedLabelPaint.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                customFontEnabled = keyboardView.prefs.customFontEnabled,
+            sharedLabelPaint.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+                fontType = keyboardView.prefs.fontType,
                 context = context
             )
 

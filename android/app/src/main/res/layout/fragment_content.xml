@@ -26,6 +26,8 @@
                 <include layout="@layout/home_navigation_item_setup" />
                 <View style="@style/ModernDivider" />
                 <include layout="@layout/home_navigation_item_settings" />
+                <View style="@style/ModernDivider" />
+                <include layout="@layout/home_navigation_item_dictionary" />
 
             </LinearLayout>
 

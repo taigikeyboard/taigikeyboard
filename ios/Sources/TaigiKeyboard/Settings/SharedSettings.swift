@@ -34,7 +34,7 @@ class SharedSettings {
         static let enableDoubleTapNN = "enableDoubleTapNN"
         static let isTranslateSwapped = "isTranslateSwapped"
         static let outputBothScripts = "outputBothScripts"
-        static let customFontEnabled = "customFontEnabled"
+        static let fontType = "fontType"
         static let fullAccessEnabled = "fullAccessEnabled"
         static let autoCapitalizationEnabled = "autoCapitalizationEnabled"
         static let autoSpaceEnabled = "autoSpaceEnabled"
@@ -86,12 +86,13 @@ class SharedSettings {
         }
     }
 
-    var isCustomFontEnabled: Bool {
+    var fontType: FontType {
         get {
-            userDefaults.object(forKey: Keys.customFontEnabled) as? Bool ?? true
+            let rawValue = userDefaults.string(forKey: Keys.fontType) ?? FontType.openHuninn.rawValue
+            return FontType(rawValue: rawValue) ?? .openHuninn
         }
         set {
-            userDefaults.set(newValue, forKey: Keys.customFontEnabled)
+            userDefaults.set(newValue.rawValue, forKey: Keys.fontType)
         }
     }
 
@@ -156,7 +157,7 @@ class SharedSettings {
         enableDoubleTapNN = true
         isTranslateSwapped = false
         outputBothScripts = false
-        isCustomFontEnabled = true
+        fontType = .openHuninn
         isAutoCapitalizationEnabled = true
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
@@ -172,5 +173,55 @@ extension SharedSettings {
         // KeyboardKit 會根據此設定自動處理，不需要手動強制重置 keyboardCase
         // 保留手動 shift (.uppercased) 和 caps lock (.capsLocked) 的狀態
         context.settings.isAutocapitalizationEnabled = isAutoCapitalizationEnabled
+    }
+}
+
+// MARK: - Font Manager
+
+import SwiftUI
+
+/// 字體管理器（負責根據設定切換顯示字體）
+class FontManager: ObservableObject {
+    static let shared = FontManager()
+
+    @Published var currentFontType: FontType
+
+    private init() {
+        currentFontType = SharedSettings.shared.fontType
+    }
+
+    /// 更新字體類型
+    func updateFontType(_ fontType: FontType) {
+        SharedSettings.shared.fontType = fontType
+        currentFontType = fontType
+    }
+
+    /// 重新載入字體設定（從 UserDefaults）
+    func reloadFontType() {
+        currentFontType = SharedSettings.shared.fontType
+    }
+
+    /// 取得指定大小的字體
+    func font(size: CGFloat) -> Font {
+        KeyboardModels.Fonts.font(for: currentFontType, size: size)
+    }
+}
+
+// MARK: - View Extension for Font Environment
+
+extension View {
+    /// 套用全域字體環境
+    func withFontEnvironment() -> some View {
+        modifier(FontEnvironmentModifier())
+    }
+}
+
+/// 字體環境 Modifier
+struct FontEnvironmentModifier: ViewModifier {
+    @ObservedObject private var fontManager = FontManager.shared
+
+    func body(content: Content) -> some View {
+        content
+            .environmentObject(fontManager)
     }
 }

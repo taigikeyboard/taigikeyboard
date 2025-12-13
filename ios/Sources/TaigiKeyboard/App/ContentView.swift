@@ -3,6 +3,7 @@ import KeyboardKit
 
 struct ContentView: View {
     @State private var showSettings = false
+    @State private var showDictionarySettings = false
     @State private var showCopyright = false
     @Binding var initialShowSettings: Bool
     @ObservedObject var viewModel: OnboardingViewModel
@@ -21,10 +22,11 @@ struct ContentView: View {
                                 .frame(height: max(80, geometry.safeAreaInsets.top + 64))
 
                             VStack(spacing: 16) {
-                                // Card 1: Navigation (啟用方法 + 鍵盤設定 + 操作說明)
+                                // Card 1: Navigation (啟用方法 + 齒盤設定 + 詞庫管理)
                                 NavigationCardView(
                                     viewModel: viewModel,
-                                    showSettings: $showSettings
+                                    showSettings: $showSettings,
+                                    showDictionarySettings: $showDictionarySettings
                                 )
                                 .themedCard()
 
@@ -50,6 +52,9 @@ struct ContentView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .sheet(isPresented: $showDictionarySettings) {
+                DictionarySettingsView()
             }
             .sheet(isPresented: $showCopyright) {
                 CopyrightView()

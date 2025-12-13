@@ -80,6 +80,16 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="true"/>
 
+        <!-- Dictionary Settings Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.DictionarySettingsActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/dictionary_settings__title"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
     </application>
 
 </manifest>

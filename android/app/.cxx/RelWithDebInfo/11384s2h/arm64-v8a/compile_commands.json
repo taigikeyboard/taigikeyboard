@@ -1,0 +1,52 @@
+[
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/agent.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/agent.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/agent.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/keyset.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/keyset.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/keyset.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/trie.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/trie.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/trie.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/mapper.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/mapper.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/mapper.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/reader.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/reader.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/reader.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/io/writer.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/writer.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/io/writer.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/trie/louds-trie.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/trie/louds-trie.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/trie/louds-trie.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/trie/tail.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/trie/tail.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/trie/tail.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/marisa.dir/marisa-src/lib/marisa/grimoire/vector/bit-vector.cc.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/vector/bit-vector.cc",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib/marisa/grimoire/vector/bit-vector.cc"
+},
+{
+  "directory": "/Users/alexsu/Workspace/taigikeyboard/android/app/.cxx/RelWithDebInfo/11384s2h/arm64-v8a",
+  "command": "/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++ --target=aarch64-none-linux-android28 --sysroot=/Users/alexsu/Library/Android/sdk/ndk/27.0.12077973/toolchains/llvm/prebuilt/darwin-x86_64/sysroot -Dtaigi_trie_EXPORTS -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/include -I/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/marisa-src/lib -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -std=c++17 -O2 -g -DNDEBUG -fPIC -std=c++17 -o CMakeFiles/taigi_trie.dir/trie_jni.cpp.o -c /Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/trie_jni.cpp",
+  "file": "/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/cpp/trie_jni.cpp"
+}
+]

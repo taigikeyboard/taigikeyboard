@@ -94,9 +94,33 @@ object AppTexts {
     )
 
     val customFont = LocalizedText(
-        hanji = "Open 粉圓字骨",
-        poj = "Open hún-îⁿ jī-kut",
-        tl = "Open hún-înn jī-kut"
+        hanji = "字骨設定",
+        poj = "Jī-hêng siat-tēng",
+        tl = "Jī-hîng siat-tīng"
+    )
+
+    val fontSystemDefault = LocalizedText(
+        hanji = "系統",
+        poj = "Hē-thóng ī-siat",
+        tl = "Hē-thóng ī-siat"
+    )
+
+    val fontOpenHuninn = LocalizedText(
+        hanji = "粉圓",
+        poj = "Open Hún-îⁿ",
+        tl = "Open Hún-înn"
+    )
+
+    val fontIansui = LocalizedText(
+        hanji = "芫荽",
+        poj = "Iân-sui",
+        tl = "Iân-sui"
+    )
+
+    val fontSystemWarning = LocalizedText(
+        hanji = "使用系統字型可能會有豆腐字",
+        poj = "Sú-iōng hē-thóng jī-hêng khó-lêng ē ū tāu-hū-jī",
+        tl = "Sú-iōng hē-thóng jī-hîng khó-lîng ē ū tāu-hū-jī"
     )
 
     val phahTaigiLayout = LocalizedText(
@@ -105,14 +129,8 @@ object AppTexts {
         tl = "PhahTaigi khí-puânn"
     )
 
-    val variantSearch = LocalizedText(
-        hanji = "異用字",
-        poj = "Ī-iōng-jī",
-        tl = "Ī-iōng-jī"
-    )
-
     val clearCache = LocalizedText(
-        hanji = "清除資料",
+        hanji = "清除常用詞紀錄",
         poj = "Chheng-tû chu-liāu",
         tl = "Tshing-tû tsu-liāu"
     )
@@ -178,6 +196,97 @@ object AppTexts {
         tl = "Pán-khuân sing-bîng"
     )
 
+    // 詞庫管理
+    val dictionarySettings = LocalizedText(
+        hanji = "詞庫管理",
+        poj = "Sû-khò͘ siat-tēng",
+        tl = "Sû-khòo siat-tīng"
+    )
+
+    val customDictionary = LocalizedText(
+        hanji = "自訂詞庫",
+        poj = "Chū-tēng sû-khò͘",
+        tl = "Tsū-tīng sû-khòo"
+    )
+
+    val addWord = LocalizedText(
+        hanji = "新增詞條",
+        poj = "Sin-cheng sû-tiâu",
+        tl = "Sin-tsing sû-tiâu"
+    )
+
+    val editWord = LocalizedText(
+        hanji = "編輯詞條",
+        poj = "Pian-chi̍p sû-tiâu",
+        tl = "Pian-tsi̍p sû-tiâu"
+    )
+
+    val deleteWord = LocalizedText(
+        hanji = "刪除詞條",
+        poj = "Thâi-tû sû-tiâu",
+        tl = "Thâi-tû sû-tiâu"
+    )
+
+    val inputKey = LocalizedText(
+        hanji = "Lô-má-jī",
+        poj = "Su-ji̍p",
+        tl = "Su-ji̍p"
+    )
+
+    val outputValue = LocalizedText(
+        hanji = "漢字/漢羅",
+        poj = "Su-chhut",
+        tl = "Su-tshut"
+    )
+
+    val duplicateError = LocalizedText(
+        hanji = "這組詞條已經存在",
+        poj = "Chit cho͘ sû-tiâu í-keng chûn-chāi",
+        tl = "Tsit tsoo sû-tiâu í-king tsûn-tsāi"
+    )
+
+    val maxLimitError = LocalizedText(
+        hanji = "已達上限 200 筆",
+        poj = "Í ta̍t siōng-hān 200 pit",
+        tl = "Í ta̍t siōng-hān 200 pit"
+    )
+
+    val emptyFieldError = LocalizedText(
+        hanji = "請輸入內容",
+        poj = "Chhiáⁿ su-ji̍p lōe-iông",
+        tl = "Tshiánn su-ji̍p luē-iông"
+    )
+
+    val deleteConfirmMessage = LocalizedText(
+        hanji = "敢欲刪除這筆詞條？",
+        poj = "Kám beh thâi-tû chit pit sû-tiâu?",
+        tl = "Kám beh thâi-tû tsit pit sû-tiâu?"
+    )
+
+    val delete = LocalizedText(
+        hanji = "刪除",
+        poj = "Thâi-tû",
+        tl = "Thâi-tû"
+    )
+
+    val save = LocalizedText(
+        hanji = "儲存",
+        poj = "Thú-chûn",
+        tl = "Thú-tsûn"
+    )
+
+    val noCustomWords = LocalizedText(
+        hanji = "無自訂詞條",
+        poj = "Bô chū-tēng sû-tiâu",
+        tl = "Bô tsū-tīng sû-tiâu"
+    )
+
+    val comingSoon = LocalizedText(
+        hanji = "當 leh 開發",
+        poj = "Kèng-chhiáⁿ kî-thāi",
+        tl = "Kìng-tshiánn kî-thāi"
+    )
+
     val contactUs = LocalizedText(
         hanji = "意見回饋",
         poj = "Ì-kiàn hôe-kūi",
@@ -222,13 +331,13 @@ object AppTexts {
     )
 
     val onboardingAddKeyboardTitle = LocalizedText(
-        hanji = "增加台語齒盤",
+        hanji = "加添台語齒盤",
         poj = "Cheng-ka Tâi-gí Khí-pôaⁿ",
         tl = "Tsing-ka Tâi-gí Khí-puânn"
     )
 
     val setupInfoMessage = LocalizedText(
-        hanji = "「允准完整取用」予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂收集你 ê 資料。",
+        hanji = "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。",
         poj = "'Ín-chún oân-chéng chhú-iōng' sī hō͘ khí-pôaⁿ ē-tàng bat lí chhi̍h ê tōng-chok, chiâⁿ-chò lí phah ê jī. Chhiáⁿ hòng-sim, APP bōe siu-chi̍p lí ê chu-liāu.",
         tl = "'Ín-tsún uân-tsíng tshú-iōng' sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok, tsiânn-tsò lí phah ê jī. Tshián hòng-sim, APP buē siu-tsi̍p lí ê tsu-liāu."
     )
@@ -308,7 +417,7 @@ object AppTexts {
 
     // Open Font
     val openFontTitle = LocalizedText(
-        hanji = "Open 粉圓",
+        hanji = "粉圓",
         poj = "Open Hún-îⁿ",
         tl = "Open Hún-înn"
     )
@@ -325,9 +434,28 @@ object AppTexts {
         tl = "SIL Open Font License"
     )
 
+    // Iansui Font (芫荽)
+    val iansuiFontTitle = LocalizedText(
+        hanji = "芫荽",
+        poj = "Iân-sui",
+        tl = "Iân-sui"
+    )
+
+    val iansuiFontCopyright = LocalizedText(
+        hanji = "© ButTaiwan",
+        poj = "© ButTaiwan",
+        tl = "© ButTaiwan"
+    )
+
+    val silOpenFontLicense11 = LocalizedText(
+        hanji = "SIL Open Font License 1.1",
+        poj = "SIL Open Font License 1.1",
+        tl = "SIL Open Font License 1.1"
+    )
+
     // MOE Dictionary
     val moeDict = LocalizedText(
-        hanji = "教育部臺灣台語常用詞辭典",
+        hanji = "台語常用詞辭典 - 教育部",
         poj = "Kàu-io̍k-pō͘ Tâi-oân Tâi-gí Siông-iōng-sû Sû-tián",
         tl = "Kàu-io̍k-pōo Tâi-uân Tâi-gí Siông-iōng-sû Sû-tián"
     )
@@ -346,13 +474,13 @@ object AppTexts {
 
     // iTaigi Dictionary
     val iTaigiDict = LocalizedText(
-        hanji = "2016+ iTaigi華台對照典",
-        poj = "2016+ iTaigi Huâ-tâi tùi-chiàu-tián",
-        tl = "2016+ iTaigi Huâ-tâi tuì-tsiàu-tián"
+        hanji = "iTaigi愛台語 - 群眾台語辭典",
+        poj = "iTaigi Huâ-tâi tùi-chiàu-tián",
+        tl = "iTaigi Huâ-tâi tuì-tsiàu-tián"
     )
 
     val iTaigiCopyright = LocalizedText(
-        hanji = "© iTaigi",
+        hanji = "© iTaigi愛台語",
         poj = "© iTaigi",
         tl = "© iTaigi"
     )
@@ -365,7 +493,7 @@ object AppTexts {
 
     // Newword Dictionary
     val newwordDict = LocalizedText(
-        hanji = "台語新詞辭庫",
+        hanji = "台語新詞辭庫 - 公視台語台",
         poj = "Tâi-gí Sin-sû Sû-khò͘",
         tl = "Tâi-gí Sin-sû Sû-khòo"
     )
@@ -384,9 +512,9 @@ object AppTexts {
 
     // Taiwan Plant Dictionary
     val taiwanPlantDict = LocalizedText(
-        hanji = "1928 台灣植物名彙",
-        poj = "1928 Tâi-oân Si̍t-bu̍t Miâ-hūi",
-        tl = "1928 Tâi-uân Si̍t-bu̍t Miâ-huī"
+        hanji = "台灣植物名彙",
+        poj = "Tâi-oân Si̍t-bu̍t Miâ-hūi",
+        tl = "Tâi-uân Si̍t-bu̍t Miâ-huī"
     )
 
     val taiwanPlantCopyright = LocalizedText(
@@ -403,9 +531,9 @@ object AppTexts {
 
     // Tai-Hua Dictionary
     val taiHuaDict = LocalizedText(
-        hanji = "2002+ 台華線頂對照典",
-        poj = "2002+ Tâi-hôa Sòaⁿ-téng Tùi-chiàu-tián",
-        tl = "2002+ Tâi-huâ Suànn-tíng Tuì-tsiàu-tián"
+        hanji = "台華線頂對照典",
+        poj = "Tâi-hôa Sòaⁿ-téng Tùi-chiàu-tián",
+        tl = "Tâi-huâ Suànn-tíng Tuì-tsiàu-tián"
     )
 
     val taiHuaCopyright = LocalizedText(
@@ -416,9 +544,9 @@ object AppTexts {
 
     // Taiwan-Japan Dictionary
     val taiwanJapanDict = LocalizedText(
-        hanji = "1932 台日大辭典(台譯版)",
-        poj = "1932 Tâi-ji̍t Tāi-sû-tián (Tâi-e̍k-pán)",
-        tl = "1932 Tâi-ji̍t Tāi-sû-tián (Tâi-i̍k-pán)"
+        hanji = "台日大辭典",
+        poj = "Tâi-ji̍t Tāi-sû-tián (Tâi-e̍k-pán)",
+        tl = "Tâi-ji̍t Tāi-sû-tián (Tâi-i̍k-pán)"
     )
 
     val taiwanJapanCopyright = LocalizedText(
@@ -431,6 +559,25 @@ object AppTexts {
         hanji = "CC BY-NC-SA 3.0 TW",
         poj = "CC BY-NC-SA 3.0 TW",
         tl = "CC BY-NC-SA 3.0 TW"
+    )
+
+    // Kungge Dictionary (台語工藝詞庫)
+    val kunggeDict = LocalizedText(
+        hanji = "台語工藝詞庫 - 工藝中心",
+        poj = "2019 Tâi-gí Kang-gē Sû-khò͘",
+        tl = "2019 Tâi-gí Kang-gē Sû-khòo"
+    )
+
+    val kunggeCopyright = LocalizedText(
+        hanji = "© 國立臺灣工藝研究發展中心",
+        poj = "© Kok-li̍p Tâi-oân Kang-gē Gián-kiù Hoat-tián Tiong-sim",
+        tl = "© Kok-li̍p Tâi-uân Kang-gē Gián-kiù Huat-tián Tiong-sim"
+    )
+
+    val ccByNcLicense = LocalizedText(
+        hanji = "CC BY-NC",
+        poj = "CC BY-NC",
+        tl = "CC BY-NC"
     )
 
     // Clipboard timestamp texts

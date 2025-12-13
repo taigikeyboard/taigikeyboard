@@ -143,9 +143,9 @@ class SmartbarManager private constructor() :
                 taigikeyboard.setActiveInput(R.id.clipboard_input)
             }
             R.id.quick_action_open_settings -> {
-                // 開啟鍵盤設定頁面
+                // 開啟 APP 主畫面
                 taigikeyboard.requestHideSelf(0)
-                val intent = android.content.Intent(taigikeyboard.context, com.siansiansu.taigikeyboard.settings.KeyboardSettingsActivity::class.java)
+                val intent = android.content.Intent(taigikeyboard.context, com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java)
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
                               android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
                               android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -418,9 +418,9 @@ class SmartbarManager private constructor() :
 
             button.text = displayText
 
-            // 設定字體：根據 customFontEnabled 決定
-            button.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getKeyFont(
-                customFontEnabled = prefs.customFontEnabled,
+            // 設定字體：根據 fontType 決定
+            button.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+                fontType = prefs.fontType,
                 context = taigikeyboard.context
             )
 

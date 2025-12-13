@@ -75,9 +75,33 @@ enum KeyboardTexts {
     )
 
     static let customFont = LocalizedText(
-        hanji: "Open 粉圓字骨",
-        poj: "Open hún-îⁿ jī-kut",
-        tl: "Open hún-înn jī-kut"
+        hanji: "字骨設定",
+        poj: "Jī-hêng siat-tēng",
+        tl: "Jī-hîng siat-tīng"
+    )
+
+    static let fontSystemDefault = LocalizedText(
+        hanji: "系統",
+        poj: "Hē-thóng ī-siat",
+        tl: "Hē-thóng ī-siat"
+    )
+
+    static let fontOpenHuninn = LocalizedText(
+        hanji: "粉圓",
+        poj: "Open Hún-îⁿ",
+        tl: "Open Hún-înn"
+    )
+
+    static let fontIansui = LocalizedText(
+        hanji: "芫荽",
+        poj: "Iân-sui",
+        tl: "Iân-sui"
+    )
+
+    static let fontSystemWarning = LocalizedText(
+        hanji: "使用系統字型可能會有豆腐字",
+        poj: "Sú-iōng hē-thóng jī-hêng khó-lêng ē ū tāu-hū-jī",
+        tl: "Sú-iōng hē-thóng jī-hîng khó-lîng ē ū tāu-hū-jī"
     )
 
     static let outputBothScripts = LocalizedText(

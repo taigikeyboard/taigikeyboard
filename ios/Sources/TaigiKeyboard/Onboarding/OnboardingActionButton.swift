@@ -10,7 +10,7 @@ struct OnboardingActionButton: View {
     var body: some View {
         Button(action: action) {
             LocalizedTextView(text)
-                .font(Font.Theme.headline)
+                .themeFontHeadline()
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)

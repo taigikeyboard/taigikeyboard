@@ -34,6 +34,25 @@ enum AppInfoTexts {
         tl: "'Ín-tsún uân-tsíng tshú-iōng' sī hōo khí-puânn ē-tàng bat lí tshi̍h ê tōng-tsok, tsiânn-tsò lí phah ê jī. Tshián hòng-sim, APP buē siu-tsi̍p lí ê tsu-liāu."
     )
 
+    // MARK: - 詞庫管理
+    static let dictionarySettings = LocalizedText(
+        hanji: "詞庫管理",
+        poj: "Sû-khò͘ siat-tēng",
+        tl: "Sû-khòo siat-tīng"
+    )
+
+    static let customDictionary = LocalizedText(
+        hanji: "自訂詞庫",
+        poj: "Chū-tēng sû-khò͘",
+        tl: "Tsū-tīng sû-khòo"
+    )
+
+    static let comingSoon = LocalizedText(
+        hanji: "敬請期待",
+        poj: "Kèng-chhiáⁿ kî-thāi",
+        tl: "Kìng-tshiánn kî-thāi"
+    )
+
     // MARK: - 互動選項
     static let rateUs = LocalizedText(
         hanji: "為阮評分",

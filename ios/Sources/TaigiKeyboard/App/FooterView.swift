@@ -10,7 +10,7 @@ struct FooterView: View {
 
             VStack(spacing: 8) {
                 LocalizedTextView(AppTexts.copyright)
-                    .font(Font.Theme.footnote)
+                    .themeFontFootnote()
                     .foregroundColor(Color.Theme.textSecondary.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .opacity(0.8)

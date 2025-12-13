@@ -71,6 +71,7 @@
                         android:id="@+id/input_mode_toggle_group"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:saveEnabled="false"
                         app:singleSelection="true"
                         app:selectionRequired="true"
                         app:checkedButton="@id/button_poj_mode">
@@ -93,6 +94,80 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/keyboard_settings__tl_mode"
+                            app:backgroundTint="@color/segmented_button_background"
+                            android:textColor="@color/segmented_button_text"
+                            app:strokeColor="@color/modern_accent" />
+
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Font Type Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/font_type_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <!-- Font Type Header -->
+                    <TextView
+                        android:id="@+id/section_title_font_type"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <!-- Font Type Segmented Button -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/font_type_toggle_group"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:saveEnabled="false"
+                        app:singleSelection="true"
+                        app:selectionRequired="true"
+                        app:checkedButton="@id/button_font_open_huninn">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_font_system"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            app:backgroundTint="@color/segmented_button_background"
+                            android:textColor="@color/segmented_button_text"
+                            app:strokeColor="@color/modern_accent" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_font_open_huninn"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            app:backgroundTint="@color/segmented_button_background"
+                            android:textColor="@color/segmented_button_text"
+                            app:strokeColor="@color/modern_accent" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/button_font_iansui"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             app:backgroundTint="@color/segmented_button_background"
                             android:textColor="@color/segmented_button_text"
                             app:strokeColor="@color/modern_accent" />
@@ -139,12 +214,6 @@
                         android:layout_marginStart="60dp" />
 
                     <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_custom_font" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
-
-                    <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_phah_taigi_layout" />
 
                     <View style="@style/ModernDivider"
@@ -158,12 +227,6 @@
 
                     <include layout="@layout/settings_toggle_item"
                         android:id="@+id/toggle_double_tap_nn" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
-
-                    <include layout="@layout/settings_toggle_item"
-                        android:id="@+id/toggle_variant_search" />
 
                 </LinearLayout>
 
@@ -184,12 +247,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
-
-                    <include layout="@layout/settings_action_item"
-                        android:id="@+id/action_clear_cache" />
-
-                    <View style="@style/ModernDivider"
-                        android:layout_marginStart="60dp" />
 
                     <include layout="@layout/settings_action_item"
                         android:id="@+id/action_reset_settings" />

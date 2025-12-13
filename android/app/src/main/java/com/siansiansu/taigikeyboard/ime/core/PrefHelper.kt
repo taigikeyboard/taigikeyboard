@@ -268,16 +268,16 @@ class PrefHelper(
             }
         }
 
-    var customFontEnabled: Boolean
+    var fontType: String
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] ?: true
+                prefs[PreferenceKeys.FONT_TYPE] ?: "openHuninn"
             }.first()
         }
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = value
+                    prefs[PreferenceKeys.FONT_TYPE] = value
                 }
             }
         }
@@ -297,18 +297,108 @@ class PrefHelper(
             }
         }
 
-    // 詞典搜尋設定
-    // 異用字搜尋：關閉時只搜尋原始詞，開啟時搜尋全部（含異用字）
-    var variantSearchEnabled: Boolean
+    // 詞庫開關設定
+    // 教育部臺灣台語常用詞辭典（kautian）
+    var moeDictEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] ?: false
+                prefs[PreferenceKeys.MOE_DICT_ENABLED] ?: true
             }.first()
         }
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] = value
+                    prefs[PreferenceKeys.MOE_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 台語新詞辭庫（taigitv）
+    var newwordDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.NEWWORD_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.NEWWORD_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // iTaigi 華台對照典（itaigi）
+    var itaigiDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.ITAIGI_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.ITAIGI_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 台灣植物名彙（sitbut）
+    var sitbutDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.SITBUT_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.SITBUT_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 台華線頂對照典（taihoa）
+    var taihoaDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.TAIHOA_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.TAIHOA_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 台日大辭典（taijit）
+    var taijitDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.TAIJIT_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.TAIJIT_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 台語工藝詞庫（kungge）
+    var kunggeDictEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.KUNGGE_DICT_ENABLED] ?: true
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.KUNGGE_DICT_ENABLED] = value
                 }
             }
         }
@@ -406,8 +496,7 @@ class PrefHelper(
                     sharedPrefs.getBoolean("taigi__auto_capitalization_enabled", true)
                 prefs[PreferenceKeys.AUTO_SPACE_ENABLED] =
                     sharedPrefs.getBoolean("taigi__auto_space_enabled", false)
-                prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] =
-                    sharedPrefs.getBoolean("taigi__custom_font_enabled", true)
+                prefs[PreferenceKeys.FONT_TYPE] = "openHuninn"
                 prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] =
                     sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", true)
 
@@ -472,12 +561,11 @@ class PrefHelper(
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true
             prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
-            prefs[PreferenceKeys.CUSTOM_FONT_ENABLED] = true
+            prefs[PreferenceKeys.FONT_TYPE] = "openHuninn"
             prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = true
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
             prefs[PreferenceKeys.SUGGESTION_ENABLED] = true
-            prefs[PreferenceKeys.VARIANT_SEARCH_ENABLED] = false
 
             if (BuildConfig.DEBUG) {
                 Log.d("PrefHelper", "All preferences reset to defaults")

@@ -11,6 +11,7 @@ struct TaigiKeyboardApp: App {
         WindowGroup {
             AppRootView(keyboardStatus: keyboardStatus)
                 .withLanguageEnvironment()
+                .withFontEnvironment()
         }
     }
 }
