@@ -62,24 +62,29 @@ object InputNormalizer {
      * 正規化單一音節
      *
      * 步驟：
-     * 1. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
-     * 2. 提取聲調標記，轉為數字
-     * 3. 組合：音節 + 聲調數字
+     * 1. 移除聲調 1 和 4（視為無聲調）
+     * 2. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
+     * 3. 提取聲調標記，轉為數字
+     * 4. 組合：音節 + 聲調數字
      *
      * 注意：不做 POJ→TL 轉換，因為 Trie 使用前綴區分（tl:/poj:）
      */
     private fun normalizeSyllable(syllable: String): String {
         if (syllable.isEmpty()) return ""
 
+        // 移除聲調 1 和 4（視為無聲調）
+        // 例如：gua1 → gua, gua12 → gua2, gua42 → gua2
+        val withoutTone1And4 = syllable.replace("1", "").replace("4", "")
+
         // 檢查是否已有數字聲調（如 ho2）
-        val existingTone = syllable.lastOrNull()?.takeIf { it.isDigit() }
+        val existingTone = withoutTone1And4.lastOrNull()?.takeIf { it.isDigit() }
         if (existingTone != null) {
             // 已有數字聲調，直接返回
-            return syllable
+            return withoutTone1And4
         }
 
-        // NFD 分解
-        val nfd = Normalizer.normalize(syllable, Normalizer.Form.NFD)
+        // NFD 分解（使用移除 1/4 後的字串）
+        val nfd = Normalizer.normalize(withoutTone1And4, Normalizer.Form.NFD)
 
         // 提取聲調標記
         var toneNumber = ""

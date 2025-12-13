@@ -71,6 +71,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     private var isTextSelected: Boolean = false
 
     companion object {
+        private const val TAG = "TextInputManager"
         private var instance: TextInputManager? = null
 
         @Synchronized
@@ -525,11 +526,19 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
         // 優先檢查台語組字管理器
         if (composingManager?.deleteBackward(ic) == true) {
+            if (BuildConfig.DEBUG) {
+                val rawInput = composingManager?.getRawInput()
+                val composingText = composingManager?.getComposingText()
+                Log.d(TAG, "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'")
+            }
             // 更新候選詞
             launch {
                 updateTaigiCandidates()
             }
             return
+        }
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DELETE] deleteBackward=false or composingManager=null")
         }
 
         // 一般退格處理
@@ -815,14 +824,22 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      * 更新台語候選詞
      */
     private suspend fun updateTaigiCandidates() {
-        val manager = composingManager ?: return
+        val manager = composingManager ?: run {
+            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] composingManager=null, skip")
+            return
+        }
 
         // 取得原始輸入（用於 Trie 搜尋）和顯示文字（用於 UI）
         val rawInput = manager.getRawInput() ?: run {
+            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=null, clearCandidates")
             smartbarManager.clearCandidates()
             return
         }
         val displayText = manager.getComposingText() ?: rawInput
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'")
+        }
 
         // 使用 TaigiAutocompleteService 搜尋候選詞
         val inputMode = taigikeyboard.prefs.inputMode.let {
@@ -839,6 +856,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         )
 
         val suggestions = autocompleteService.getSuggestions(rawInput, displayText)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[CANDIDATES] found ${suggestions.size} suggestions")
+        }
 
         // 更新 SmartbarManager
         withContext(Dispatchers.Main) {

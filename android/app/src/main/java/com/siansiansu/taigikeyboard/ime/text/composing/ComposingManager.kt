@@ -67,9 +67,10 @@ class ComposingManager(
         newText = checkCharacterCombination(newText, char) ?: newText
 
         // 檢查聲調轉換（只套用到 composingText）
+        // 聲調 1 和 4 視為無聲調，移除數字但不加調號
         if (char.toIntOrNull() != null) {
             val toneNumber = char.toInt()
-            if (toneNumber in 2..9 && toneNumber != 4) {
+            if (toneNumber in 1..9) {
                 newText = applyToneConversion(newText, toneNumber) ?: newText
             }
         }
@@ -104,8 +105,12 @@ class ComposingManager(
         }
 
         // 一般字元刪除（兩個狀態同步刪除）
+        val lastChar = composingText.lastOrNull()
+        // ⁿ 對應 rawInput 的 nn（2 個字元）
+        val rawDeleteCount = if (lastChar == 'ⁿ') 2 else 1
+
         composingText = composingText.dropLast(1)
-        rawInput = rawInput.dropLast(1)
+        rawInput = rawInput.dropLast(rawDeleteCount)
 
         if (composingText.isEmpty()) {
             // 清空組字區（直接刪除組字文字）
@@ -270,9 +275,10 @@ class ComposingManager(
 
     /**
      * 應用聲調轉換
+     * 聲調 1 和 4 視為無聲調，移除數字但不加調號
      */
     private fun applyToneConversion(currentText: String, toneNumber: Int): String? {
-        if (toneNumber !in 2..9 || currentText.isEmpty()) {
+        if (toneNumber !in 1..9 || currentText.isEmpty()) {
             return null
         }
 
