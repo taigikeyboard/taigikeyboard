@@ -1,1 +1,0 @@
-/Users/alexsu/Workspace/taigikeyboard/android/app/build/intermediates/cxx/RelWithDebInfo/11384s2h/obj/arm64-v8a

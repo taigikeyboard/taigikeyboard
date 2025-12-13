@@ -53,6 +53,7 @@ $RECYCLE.BIN/
 !gradle/wrapper/gradle-wrapper.jar
 .gradletasknamecache
 local.properties
+android/app/.cxx
 **/release/
 **/debug/
 *.aab
