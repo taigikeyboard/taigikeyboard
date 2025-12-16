@@ -75,29 +75,33 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         }
 
         do {
-            let searchText: String
-
-            if let composingManager,
-               composingManager.isComposing, !composingManager.composingText.isEmpty
-            {
-                searchText = composingManager.composingText
-            } else {
+            // 取得 rawInput（搜尋用）和 composingText（顯示用）
+            guard let composingManager,
+                  composingManager.isComposing,
+                  !composingManager.rawInput.isEmpty
+            else {
                 // 沒有組字狀態時不顯示候選詞
                 return Autocomplete.ServiceResult(inputText: text, suggestions: [])
             }
 
-            let inputMode = settings.inputMode
-            let preprocessedText = ToneConverter.convertToToneMarks(searchText, mode: inputMode)
-            let inputType = determineInputType(preprocessedText)
+            let rawInput = composingManager.rawInput           // 搜尋用（如 gua2）
+            let displayText = composingManager.composingText   // 顯示用（如 guá）
 
-            let words = try await lexiconService.search(for: preprocessedText, inputType: inputType, inputMode: inputMode, limit: 100)
+            logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput, privacy: .public)' display='\(displayText, privacy: .public)'")
+
+            let inputMode = settings.inputMode
+            // 使用 rawInput 判斷（因為 displayText 可能已移除聲調數字，如 soo1 → soo）
+            let inputType = determineInputType(rawInput)
+
+            // 使用 rawInput 搜尋（已經是數字聲調格式，不需要再轉換）
+            let words = try await lexiconService.search(for: rawInput, inputType: inputType, inputMode: inputMode, limit: 100)
 
             // 根據使用者實際輸入的大小寫模式轉換候選詞
-            let casePattern = determineCasePattern(from: searchText)
+            let casePattern = determineCasePattern(from: displayText)
             var suggestions = convertToSuggestions(words, casePattern: casePattern)
 
-            // 在第 0 個位置插入當前組字文字候選詞
-            let composingTextSuggestion = createComposingTextSuggestion(searchText)
+            // 在第 0 個位置插入當前組字文字候選詞（使用顯示文字）
+            let composingTextSuggestion = createComposingTextSuggestion(displayText)
             suggestions.insert(composingTextSuggestion, at: 0)
 
             let result = Autocomplete.ServiceResult(inputText: text, suggestions: suggestions)
@@ -166,7 +170,22 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             return .romanWithTone
         }
 
+        // 檢查數字聲調（如 gua2, soo1）
+        if containsNumericTone(text) {
+            return .romanWithTone
+        }
+
         return .romanWithoutTone
+    }
+
+    /// 檢查文字是否包含數字聲調（2, 3, 5, 6, 7, 8, 9）
+    /// 排除 1, 4, 0：1 和 4 是無調號聲調，0 是無效輸入
+    /// - Parameter text: 待檢查的文字
+    /// - Returns: 是否包含數字聲調
+    private func containsNumericTone(_ text: String) -> Bool {
+        text.contains { char in
+            char.isNumber && char != "1" && char != "4" && char != "0"
+        }
     }
 
     /// 檢查文字是否包含漢字

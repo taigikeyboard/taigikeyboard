@@ -48,7 +48,7 @@ enum AppInfoTexts {
     )
 
     static let comingSoon = LocalizedText(
-        hanji: "敬請期待",
+        hanji: "當 leh 開發",
         poj: "Kèng-chhiáⁿ kî-thāi",
         tl: "Kìng-tshiánn kî-thāi"
     )

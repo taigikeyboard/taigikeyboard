@@ -142,30 +142,91 @@ object UserFrequencyService {
     }
 
     /**
+     * 使用者頻率資料（包含頻率和最後使用時間）
+     */
+    data class FrequencyData(
+        val count: Int,
+        val lastUsedMillis: Long  // Unix timestamp in milliseconds
+    )
+
+    /**
      * 取得詞彙使用頻率
      */
     suspend fun getFrequency(word: String): Int = withContext(Dispatchers.IO) {
+        getFrequencyData(word).count
+    }
+
+    /**
+     * 取得詞彙使用頻率資料（包含頻率和最後使用時間）
+     */
+    suspend fun getFrequencyData(word: String): FrequencyData = withContext(Dispatchers.IO) {
         try {
             initialize()
-            val db = dbHelper?.readableDatabase ?: return@withContext 0
+            val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData(0, 0)
 
             val cursor = db.rawQuery(
-                "SELECT ${Table.COUNT} FROM ${Table.NAME} WHERE ${Table.WORD} = ?",
+                """
+                SELECT ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                FROM ${Table.NAME}
+                WHERE ${Table.WORD} = ?
+                """.trimIndent(),
                 arrayOf(word)
             )
 
             cursor.use {
                 if (it.moveToFirst()) {
-                    return@withContext it.getInt(0)
+                    val count = it.getInt(0)
+                    val lastUsedMillis = it.getLong(1)
+                    return@withContext FrequencyData(count, lastUsedMillis)
                 }
             }
 
-            0
+            FrequencyData(0, 0)
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[QUERY] Failed to get frequency for: $word", e)
+                Log.e(TAG, "[QUERY] Failed to get frequency data for: $word", e)
             }
-            0
+            FrequencyData(0, 0)
+        }
+    }
+
+    /**
+     * 批次取得多個詞彙的頻率資料
+     */
+    suspend fun getFrequencyDataBatch(words: List<String>): Map<String, FrequencyData> = withContext(Dispatchers.IO) {
+        if (words.isEmpty()) return@withContext emptyMap()
+
+        try {
+            initialize()
+            val db = dbHelper?.readableDatabase ?: return@withContext emptyMap()
+
+            val result = mutableMapOf<String, FrequencyData>()
+            val placeholders = words.joinToString(",") { "?" }
+
+            val cursor = db.rawQuery(
+                """
+                SELECT ${Table.WORD}, ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                FROM ${Table.NAME}
+                WHERE ${Table.WORD} IN ($placeholders)
+                """.trimIndent(),
+                words.toTypedArray()
+            )
+
+            cursor.use {
+                while (it.moveToNext()) {
+                    val word = it.getString(0)
+                    val count = it.getInt(1)
+                    val lastUsedMillis = it.getLong(2)
+                    result[word] = FrequencyData(count, lastUsedMillis)
+                }
+            }
+
+            result
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[QUERY] Failed to get frequency data batch", e)
+            }
+            emptyMap()
         }
     }
 

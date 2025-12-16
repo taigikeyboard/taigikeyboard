@@ -11,6 +11,7 @@ class LexiconService: @unchecked Sendable {
 
     private let repository: DictionaryRepository
     private let userFrequencyService: UserFrequencyService
+    private let trieService: TrieService
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
         category: "LexiconService"
@@ -20,10 +21,29 @@ class LexiconService: @unchecked Sendable {
 
     init(
         repository: DictionaryRepository = .shared,
-        userFrequencyService: UserFrequencyService = .shared
+        userFrequencyService: UserFrequencyService = .shared,
+        trieService: TrieService = .shared
     ) {
         self.repository = repository
         self.userFrequencyService = userFrequencyService
+        self.trieService = trieService
+
+        // 初始化 Trie
+        initializeTrie()
+    }
+
+    // MARK: - Private Methods
+
+    /// 初始化 Trie（背景執行）
+    private func initializeTrie() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let success = self?.trieService.initialize() ?? false
+            if success {
+                self?.logger.info("[INIT] Trie initialized successfully")
+            } else {
+                self?.logger.warning("[INIT] Trie initialization failed, using fallback")
+            }
+        }
     }
 
     // MARK: - Public API
@@ -67,19 +87,23 @@ class LexiconService: @unchecked Sendable {
         // 去重
         let uniqueWords = TextProcessor.removeDuplicates(processedWords)
 
-        // 收集頻率並排序
+        // 收集頻率資料並排序
         guard userFrequencyService.isConnected() else {
             return uniqueWords
         }
 
-        let frequencies = TextProcessor.collectFrequencies(
-            for: uniqueWords,
-            using: { [weak userFrequencyService] word in
-                userFrequencyService?.getFrequency(for: word) ?? 0
-            }
-        )
+        // 批次查詢使用者頻率資料（包含 count 和 lastUsed）
+        let wordTexts = uniqueWords.compactMap(\.displayText)
+        let frequencyDataMap = userFrequencyService.getFrequencyDataBatch(for: wordTexts)
 
-        let sortedWords = TextProcessor.sortByFrequency(uniqueWords, frequencies: frequencies)
+        // 正規化輸入用於完全匹配判斷（與 Android 一致）
+        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+
+        let sortedWords = TextProcessor.sortByScore(
+            uniqueWords,
+            normalizedInput: normalizedInput,
+            frequencyDataMap: frequencyDataMap
+        )
         return sortedWords
     }
 

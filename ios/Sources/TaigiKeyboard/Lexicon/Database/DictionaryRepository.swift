@@ -9,11 +9,63 @@ final class DictionaryRepository: @unchecked Sendable {
     // MARK: - Column Definition
 
     private enum Column: String {
-        case hanzi
         case pojRoman = "poj"
-        case pojNoTone = "poj_no_tone"
         case tlRoman = "tl"
-        case tlNoTone = "tl_no_tone"
+    }
+
+    // MARK: - 詞庫開關設定
+
+    /// 詞庫開關設定結構
+    private struct EnabledDictionaries {
+        let kautian: Bool   // 教育部臺灣台語常用詞辭典
+        let taigitv: Bool   // 台語新詞辭庫
+        let kungge: Bool    // 台語工藝詞庫
+        let itaigi: Bool    // iTaigi 華台對照典
+        let taijit: Bool    // 台日大辭典
+        let taihoa: Bool    // 台華線頂對照典
+        let sitbut: Bool    // 台灣植物名彙
+
+        /// 從 SharedSettings 讀取設定
+        static func fromSettings() -> EnabledDictionaries {
+            let settings = SharedSettings.shared
+            return EnabledDictionaries(
+                kautian: settings.moeDictEnabled,
+                taigitv: settings.newwordDictEnabled,
+                kungge: settings.kunggeDictEnabled,
+                itaigi: settings.iTaigiDictEnabled,
+                taijit: settings.taiwanJapanDictEnabled,
+                taihoa: settings.taiHuaDictEnabled,
+                sitbut: settings.taiwanPlantDictEnabled
+            )
+        }
+
+        /// 是否全部關閉
+        var allDisabled: Bool {
+            !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut
+        }
+
+        /// 是否全部開啟
+        var allEnabled: Bool {
+            kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut
+        }
+
+        /// 建構 SQL WHERE 條件（使用 OR 邏輯）
+        func buildWhereCondition() -> String {
+            // 全部開啟時不加過濾條件
+            if allEnabled { return "" }
+
+            var conditions: [String] = []
+            if kautian { conditions.append("kautian = 1") }
+            if taigitv { conditions.append("taigitv = 1") }
+            if kungge { conditions.append("kungge = 1") }
+            if itaigi { conditions.append("itaigi = 1") }
+            if taijit { conditions.append("taijit = 1") }
+            if taihoa { conditions.append("taihoa = 1") }
+            if sitbut { conditions.append("sitbut = 1") }
+
+            guard !conditions.isEmpty else { return "" }
+            return "AND (" + conditions.joined(separator: " OR ") + ")"
+        }
     }
 
     // MARK: - Properties
@@ -21,6 +73,7 @@ final class DictionaryRepository: @unchecked Sendable {
     static let shared = DictionaryRepository()
 
     private let connectionManager: SQLiteConnectionManager
+    private let trieService: TrieService
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
         category: "DictionaryRepository"
@@ -28,12 +81,16 @@ final class DictionaryRepository: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    init(connectionManager: SQLiteConnectionManager? = nil) {
+    init(
+        connectionManager: SQLiteConnectionManager? = nil,
+        trieService: TrieService = .shared
+    ) {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
             databasePath: Self.getDatabasePath,
             queueLabel: "com.taigikeyboard.dictionary",
             loggerCategory: "DictionaryRepository"
         )
+        self.trieService = trieService
     }
 
     // MARK: - Database Path
@@ -51,7 +108,9 @@ final class DictionaryRepository: @unchecked Sendable {
 
     // MARK: - Query Methods
 
-    /// 查詢詞典
+    /// 查詢詞典（使用 Trie 搜尋）
+    ///
+    /// - Throws: DictionaryError.trieNotLoaded 如果 Trie 未載入
     func query(
         for input: String,
         inputType: InputType,
@@ -64,133 +123,158 @@ final class DictionaryRepository: @unchecked Sendable {
 
         try await connectionManager.ensureInitialized()
 
-        let column = getColumn(for: inputType, inputMode: inputMode)
-        let searchText = input.lowercased()
+        // 確認 Trie 已載入
+        guard trieService.isReady else {
+            logger.error("[QUERY] Trie not loaded")
+            throw DictionaryError.trieNotLoaded
+        }
 
+        // 漢字輸入暫不支援
+        guard inputType != .hanzi else {
+            logger.warning("[QUERY] Hanzi input not supported")
+            return []
+        }
+
+        return try await queryWithTrie(
+            input: input,
+            inputMode: inputMode,
+            limit: limit
+        )
+    }
+
+    // MARK: - Trie Query
+
+    /// 使用 Trie 查詢詞典
+    ///
+    /// 流程：
+    /// 1. 正規化輸入（調符→數字、小寫、去連字符）
+    /// 2. Trie 完全匹配 + 前綴搜尋取得 rowid
+    /// 3. SQLite 批次查詢完整資料
+    private func queryWithTrie(
+        input: String,
+        inputMode: InputMode,
+        limit: Int
+    ) async throws -> [TaigiWord] {
+        // 正規化輸入
+        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+
+        logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
+
+        guard !normalizedInput.isEmpty else {
+            return []
+        }
+
+        // 加上 Trie 前綴（poj: 或 tl:）
+        let triePrefix = inputMode == .tl ? "tl:" : "poj:"
+        let trieKey = triePrefix + normalizedInput
+
+        logger.debug("[TRIE] trieKey='\(trieKey, privacy: .public)'")
+
+        // 1. 完全匹配（確保短詞不被遺漏）
+        let exactRowIds = trieService.lookup(trieKey)
+
+        logger.debug("[TRIE] exactRowIds=\(exactRowIds.count)")
+
+        // 2. 前綴搜尋（取較多結果以供後續排序）
+        let trieLimit = limit * 3
+        let prefixRowIds = trieService.prefixSearch(trieKey, limit: trieLimit)
+
+        logger.debug("[TRIE] prefixRowIds=\(prefixRowIds.count)")
+
+        // 3. 合併去重
+        let allRowIds = Array(Set(exactRowIds + prefixRowIds))
+
+        logger.debug("[TRIE] allRowIds=\(allRowIds.count)")
+
+        guard !allRowIds.isEmpty else {
+            return []
+        }
+
+        // SQLite 批次查詢
         return try await connectionManager.execute { db in
-            try self.performQuery(
+            try self.queryByIds(
                 db: db,
-                column: column,
-                input: searchText,
+                ids: allRowIds,
                 inputMode: inputMode,
                 limit: limit
             )
         }
     }
 
-    // MARK: - Private Query Implementation
-
-    private func performQuery(
+    /// 依 rowid 批次查詢 SQLite
+    private func queryByIds(
         db: OpaquePointer,
-        column: Column,
-        input: String,
+        ids: [Int],
         inputMode: InputMode,
         limit: Int
     ) throws -> [TaigiWord] {
-        // 讀取異用字搜尋設定
-        let includeVariants = SharedSettings.shared.variantSearchEnabled
+        guard !ids.isEmpty else { return [] }
 
-        let sql = buildSQL(column: column, inputMode: inputMode, includeVariants: includeVariants)
-        let stmt = try prepareStatement(db: db, sql: sql)
-        defer { sqlite3_finalize(stmt) }
+        // 讀取詞庫開關設定
+        let enabledDicts = EnabledDictionaries.fromSettings()
 
-        try bindParameters(stmt: stmt, column: column, input: input, limit: limit)
-        return try extract(from: stmt, limit: limit)
-    }
+        // 全部關閉時不顯示任何結果
+        if enabledDicts.allDisabled { return [] }
 
-    /// 建構 SQL 查詢字串
-    /// - Parameter includeVariants: 是否包含異用字（true: 搜尋全部, false: 只搜尋原始詞）
-    private func buildSQL(column: Column, inputMode: InputMode, includeVariants: Bool) -> String {
-        let romanColumn = inputMode == .poj ? "poj" : "tl"
-        let maxSyllableCount = 3
+        let romanColumn = inputMode == .poj ? Column.pojRoman.rawValue : Column.tlRoman.rawValue
+        let dictCondition = enabledDicts.buildWhereCondition()
 
-        // 異用字過濾條件：關閉時只搜尋 is_variant = 0
-        let variantCondition = includeVariants ? "" : "AND is_variant = 0"
-
-        return """
-            SELECT id, \(romanColumn), hanzi, syllable_count
-            FROM dictionary
-            WHERE (REPLACE(\(column.rawValue), '-', '') LIKE ?
-               OR \(column.rawValue) LIKE ?)
-               AND syllable_count <= \(maxSyllableCount)
-               \(variantCondition)
-            ORDER BY
-                CASE
-                    WHEN \(column.rawValue) = ? THEN 0
-                    WHEN \(column.rawValue) LIKE ? THEN 1
-                    ELSE 2
-                END,
-                LENGTH(\(romanColumn)) ASC,
-                \(romanColumn) ASC
-            LIMIT ?;
-        """
-    }
-
-    private func prepareStatement(db: OpaquePointer, sql: String) throws -> OpaquePointer {
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed("Query prep failed: \(errorMsg)")
-        }
-
-        guard let statement = stmt else {
-            throw DictionaryError.queryPreparationFailed("Statement is nil")
-        }
-        return statement
-    }
-
-    private func bindParameters(
-        stmt: OpaquePointer,
-        column _: Column,
-        input: String,
-        limit: Int
-    ) throws {
-        let normalizedInput = input.replacingOccurrences(of: "-", with: "")
-        let normalizedPattern = "\(normalizedInput)%"
-        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-
-        sqlite3_bind_text(stmt, 1, normalizedPattern, -1, TRANSIENT)
-        sqlite3_bind_text(stmt, 2, normalizedPattern, -1, TRANSIENT)
-        sqlite3_bind_text(stmt, 3, normalizedInput, -1, TRANSIENT)
-        sqlite3_bind_text(stmt, 4, normalizedPattern, -1, TRANSIENT)
-        sqlite3_bind_int(stmt, 5, Int32(limit))
-    }
-
-    private func extract(from stmt: OpaquePointer, limit: Int) throws -> [TaigiWord] {
+        // 分批查詢（避免 SQL 太長）
+        let batchSize = 500
         var allResults: [TaigiWord] = []
-        allResults.reserveCapacity(limit)
 
-        while sqlite3_step(stmt) == SQLITE_ROW, allResults.count < limit {
-            let id = Int(sqlite3_column_int(stmt, 0))
-            let roman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-            let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
-            let hanzi = hanziText?.isEmpty == false ? hanziText : nil
-            let lengthScore = Int(sqlite3_column_int(stmt, 3))
+        // 手動分批處理
+        var startIndex = 0
+        while startIndex < ids.count {
+            let endIndex = min(startIndex + batchSize, ids.count)
+            let batch = Array(ids[startIndex..<endIndex])
+            startIndex = endIndex
+            let placeholders = batch.map { _ in "?" }.joined(separator: ",")
 
-            let word = TaigiWord(
-                id: id,
-                roman: roman,
-                hanzi: hanzi,
-                lengthScore: lengthScore
-            )
+            let sql = """
+                SELECT id, \(romanColumn), hanzi, frequency
+                FROM dictionary
+                WHERE id IN (\(placeholders))
+                \(dictCondition)
+                ORDER BY frequency DESC
+                LIMIT ?
+            """
 
-            allResults.append(word)
+            var stmt: OpaquePointer?
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                let errorMsg = String(cString: sqlite3_errmsg(db))
+                throw DictionaryError.queryPreparationFailed("Query prep failed: \(errorMsg)")
+            }
+            defer { sqlite3_finalize(stmt) }
+
+            // 綁定參數
+            for (index, id) in batch.enumerated() {
+                sqlite3_bind_int(stmt, Int32(index + 1), Int32(id))
+            }
+            sqlite3_bind_int(stmt, Int32(batch.count + 1), Int32(limit))
+
+            // 提取結果
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                let id = Int(sqlite3_column_int(stmt, 0))
+                let roman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+                let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
+                let hanzi = hanziText?.isEmpty == false ? hanziText : nil
+                let frequency = Int(sqlite3_column_int(stmt, 3))
+
+                allResults.append(TaigiWord(
+                    id: id,
+                    roman: roman,
+                    hanzi: hanzi,
+                    lengthScore: frequency
+                ))
+            }
         }
 
+        // 按 frequency 排序並限制結果數
         return allResults
-    }
-
-    // MARK: - Helper Methods
-
-    private func getColumn(for inputType: InputType, inputMode: InputMode) -> Column {
-        switch inputType {
-        case .hanzi:
-            .hanzi
-        case .romanWithTone:
-            inputMode == .poj ? .pojRoman : .tlRoman
-        case .romanWithoutTone:
-            inputMode == .poj ? .pojNoTone : .tlNoTone
-        }
+            .sorted { ($0.lengthScore ?? 0) > ($1.lengthScore ?? 0) }
+            .prefix(limit)
+            .map { $0 }
     }
 
     // MARK: - Connection Status

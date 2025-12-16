@@ -8,6 +8,8 @@ extension ActionHandler {
     /// - Parameter char: 輸入的字元
     /// - Returns: 是否已處理該動作
     func handleCharacterInput(_ char: String) -> Bool {
+        logger.debug("[INPUT] char='\(char, privacy: .public)'")
+
         guard !char.isEmpty else {
             return false
         }

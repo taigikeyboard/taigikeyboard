@@ -7,6 +7,7 @@ enum DictionaryError: LocalizedError {
     case databaseConnectionFailed(String)
     case queryExecutionFailed(String)
     case queryPreparationFailed(String)
+    case trieNotLoaded
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ enum DictionaryError: LocalizedError {
             "Failed to execute query: \(message)"
         case let .queryPreparationFailed(message):
             "Failed to prepare query: \(message)"
+        case .trieNotLoaded:
+            "Trie index not loaded"
         }
     }
 }

@@ -226,25 +226,38 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
+    /// 使用者頻率資料（包含頻率和最後使用時間）
+    struct FrequencyData {
+        let count: Int
+        let lastUsedMillis: Int64  // Unix timestamp in milliseconds
+
+        static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
+    }
+
     /// 取得詞彙使用次數
     func getCount(for word: String) -> Int {
-        guard connectionManager.isConnected() else { return 0 }
+        getFrequencyData(for: word).count
+    }
+
+    /// 取得詞彙使用頻率資料（包含頻率和最後使用時間）
+    func getFrequencyData(for word: String) -> FrequencyData {
+        guard connectionManager.isConnected() else { return .empty }
 
         do {
             return try connectionManager.executeSync { db in
-                try self.queryCount(db: db, word: word)
+                try self.queryFrequencyData(db: db, word: word)
             }
         } catch {
-            return 0
+            return .empty
         }
     }
 
-    private func queryCount(db: OpaquePointer, word: String) throws -> Int {
-        let sql = "SELECT count FROM user_frequency WHERE word = ?;"
+    private func queryFrequencyData(db: OpaquePointer, word: String) throws -> FrequencyData {
+        let sql = "SELECT count, strftime('%s', last_used) * 1000 FROM user_frequency WHERE word = ?;"
         var stmt: OpaquePointer?
 
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            return 0
+            return .empty
         }
 
         defer { sqlite3_finalize(stmt) }
@@ -253,10 +266,56 @@ final class UserFrequencyRepository: @unchecked Sendable {
         sqlite3_bind_text(stmt, 1, word, -1, TRANSIENT)
 
         if sqlite3_step(stmt) == SQLITE_ROW {
-            return Int(sqlite3_column_int(stmt, 0))
+            let count = Int(sqlite3_column_int(stmt, 0))
+            let lastUsedMillis = sqlite3_column_int64(stmt, 1)
+            return FrequencyData(count: count, lastUsedMillis: lastUsedMillis)
         }
 
-        return 0
+        return .empty
+    }
+
+    /// 批次取得多個詞彙的頻率資料
+    func getFrequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
+        guard connectionManager.isConnected(), !words.isEmpty else { return [:] }
+
+        do {
+            return try connectionManager.executeSync { db in
+                try self.queryFrequencyDataBatch(db: db, words: words)
+            }
+        } catch {
+            return [:]
+        }
+    }
+
+    private func queryFrequencyDataBatch(db: OpaquePointer, words: [String]) throws -> [String: FrequencyData] {
+        let placeholders = words.map { _ in "?" }.joined(separator: ",")
+        let sql = """
+            SELECT word, count, strftime('%s', last_used) * 1000
+            FROM user_frequency
+            WHERE word IN (\(placeholders));
+        """
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            return [:]
+        }
+
+        defer { sqlite3_finalize(stmt) }
+
+        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        for (index, word) in words.enumerated() {
+            sqlite3_bind_text(stmt, Int32(index + 1), word, -1, TRANSIENT)
+        }
+
+        var result: [String: FrequencyData] = [:]
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let word = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
+            let count = Int(sqlite3_column_int(stmt, 1))
+            let lastUsedMillis = sqlite3_column_int64(stmt, 2)
+            result[word] = FrequencyData(count: count, lastUsedMillis: lastUsedMillis)
+        }
+
+        return result
     }
 
     /// 取得使用次數最多的詞彙

@@ -29,13 +29,13 @@ enum ActionTexts {
 
     // MARK: - 資料管理
     static let clearCache = LocalizedText(
-        hanji: "清除資料",
+        hanji: "挕掉捷用詞紀錄",
         poj: "Chheng-tû chu-liāu",
         tl: "Tshing-tû tsu-liāu"
     )
 
     static let clearCacheMessage = LocalizedText(
-        hanji: "這个動作會清除所有捷用詞 ê 記錄。敢欲繼續？",
+        hanji: "這个動作會挕掉所有捷用詞 ê 記錄。敢欲繼續？",
         poj: "Che ē tōng-chok ē chheng-tû só͘-ū chia̍p-iōng-sû ê kì-lo̍k. Kám beh kè-sio̍k?",
         tl: "Tse ē tōng-tsok ē tshing-tû sóo-ū tsia̍p-iōng-sû ê kì-lo̍k. Kám beh kè-sio̍k?"
     )

@@ -23,7 +23,7 @@ enum CopyrightTexts {
 
     // MARK: - 教育部臺灣台語常用詞辭典
     static let moeDict = LocalizedText(
-        hanji: "教育部臺灣台語常用詞辭典",
+        hanji: "台語常用詞辭典 - 教育部",
         poj: "Kàu-io̍k-pō͘ Tâi-oân Tâi-gí Siông-iōng-sû Sû-tián",
         tl: "Kàu-io̍k-pōo Tâi-uân Tâi-gí Siông-iōng-sû Sû-tián"
     )
@@ -42,13 +42,13 @@ enum CopyrightTexts {
 
     // MARK: - iTaigi 華台辭典
     static let iTaigiDict = LocalizedText(
-        hanji: "2016+ iTaigi華台對照典",
-        poj: "2016+ iTaigi Huâ-tâi tùi-chiàu-tián",
-        tl: "2016+ iTaigi Huâ-tâi tuì-tsiàu-tián"
+        hanji: "iTaigi愛台語 - 群眾台語辭典",
+        poj: "iTaigi Huâ-tâi tùi-chiàu-tián",
+        tl: "iTaigi Huâ-tâi tuì-tsiàu-tián"
     )
 
     static let iTaigiCopyright = LocalizedText(
-        hanji: "© iTaigi",
+        hanji: "© iTaigi愛台語",
         poj: "© iTaigi",
         tl: "© iTaigi"
     )
@@ -61,7 +61,7 @@ enum CopyrightTexts {
 
     // MARK: - 台語新詞辭庫
     static let newwordDict = LocalizedText(
-        hanji: "台語新詞辭庫",
+        hanji: "台語新詞辭庫 - 公視台語台",
         poj: "Tâi-gí Sin-sû Sû-khò͘",
         tl: "Tâi-gí Sin-sû Sû-khòo"
     )
@@ -85,6 +85,25 @@ enum CopyrightTexts {
         tl: "Open Hún-înn"
     )
 
+    // MARK: - 芫荽字型
+    static let iansuiFontTitle = LocalizedText(
+        hanji: "芫荽",
+        poj: "Iân-sui",
+        tl: "Iân-sui"
+    )
+
+    static let iansuiFontCopyright = LocalizedText(
+        hanji: "© ButTaiwan",
+        poj: "© ButTaiwan",
+        tl: "© ButTaiwan"
+    )
+
+    static let silOpenFontLicense11 = LocalizedText(
+        hanji: "SIL Open Font License 1.1",
+        poj: "SIL Open Font License 1.1",
+        tl: "SIL Open Font License 1.1"
+    )
+
     static let openFontCopyright = LocalizedText(
         hanji: "© justfont",
         poj: "© justfont",
@@ -97,11 +116,11 @@ enum CopyrightTexts {
         tl: "SIL Open Font License"
     )
 
-    // MARK: - 1928 台灣植物名彙
+    // MARK: - 台灣植物名彙
     static let taiwanPlantDict = LocalizedText(
-        hanji: "1928 台灣植物名彙",
-        poj: "1928 Tâi-oân Si̍t-bu̍t Miâ-hūi",
-        tl: "1928 Tâi-uân Si̍t-bu̍t Miâ-huī"
+        hanji: "台灣植物名彙",
+        poj: "Tâi-oân Si̍t-bu̍t Miâ-hūi",
+        tl: "Tâi-uân Si̍t-bu̍t Miâ-huī"
     )
 
     static let taiwanPlantCopyright = LocalizedText(
@@ -116,11 +135,11 @@ enum CopyrightTexts {
         tl: "CC BY-SA 4.0"
     )
 
-    // MARK: - 2002+ 台華線頂對照典
+    // MARK: - 台華線頂對照典
     static let taiHuaDict = LocalizedText(
-        hanji: "2002+ 台華線頂對照典",
-        poj: "2002+ Tâi-hôa Sòaⁿ-téng Tùi-chiàu-tián",
-        tl: "2002+ Tâi-huâ Suànn-tíng Tuì-tsiàu-tián"
+        hanji: "台華線頂對照典",
+        poj: "Tâi-hôa Sòaⁿ-téng Tùi-chiàu-tián",
+        tl: "Tâi-huâ Suànn-tíng Tuì-tsiàu-tián"
     )
 
     static let taiHuaCopyright = LocalizedText(
@@ -129,11 +148,30 @@ enum CopyrightTexts {
         tl: "© Tēnn Liông-uí"
     )
 
-    // MARK: - 1932 台日大辭典(台譯版)
+    // MARK: - 台日大辭典
     static let taiwanJapanDict = LocalizedText(
-        hanji: "1932 台日大辭典(台譯版)",
-        poj: "1932 Tâi-ji̍t Tāi-sû-tián (Tâi-e̍k-pán)",
-        tl: "1932 Tâi-ji̍t Tāi-sû-tián (Tâi-i̍k-pán)"
+        hanji: "台日大辭典",
+        poj: "Tâi-ji̍t Tāi-sû-tián",
+        tl: "Tâi-ji̍t Tāi-sû-tián"
+    )
+
+    // MARK: - 台語工藝詞庫
+    static let kunggeDict = LocalizedText(
+        hanji: "台語工藝詞庫 - 工藝中心",
+        poj: "Tâi-gí Kang-gē Sû-khò͘",
+        tl: "Tâi-gí Kang-gē Sû-khòo"
+    )
+
+    static let kunggeCopyright = LocalizedText(
+        hanji: "© 國立臺灣工藝研究發展中心",
+        poj: "© Kok-li̍p Tâi-oân Kang-gē Gián-kiù Hoat-tián Tiong-sim",
+        tl: "© Kok-li̍p Tâi-uân Kang-gē Gián-kiù Huat-tián Tiong-sim"
+    )
+
+    static let ccByNcLicense = LocalizedText(
+        hanji: "CC BY-NC 4.0",
+        poj: "CC BY-NC 4.0",
+        tl: "CC BY-NC 4.0"
     )
 
     static let taiwanJapanCopyright = LocalizedText(

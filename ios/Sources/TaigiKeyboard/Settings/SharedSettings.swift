@@ -39,7 +39,14 @@ class SharedSettings {
         static let autoCapitalizationEnabled = "autoCapitalizationEnabled"
         static let autoSpaceEnabled = "autoSpaceEnabled"
         static let phahTaigiLayoutEnabled = "phahTaigiLayoutEnabled"
-        static let variantSearchEnabled = "variantSearchEnabled"
+        // 詞庫開關
+        static let moeDictEnabled = "moeDictEnabled"
+        static let newwordDictEnabled = "newwordDictEnabled"
+        static let kunggeDictEnabled = "kunggeDictEnabled"
+        static let iTaigiDictEnabled = "iTaigiDictEnabled"
+        static let taiwanJapanDictEnabled = "taiwanJapanDictEnabled"
+        static let taiHuaDictEnabled = "taiHuaDictEnabled"
+        static let taiwanPlantDictEnabled = "taiwanPlantDictEnabled"
     }
 
     static let shared = SharedSettings()
@@ -141,14 +148,41 @@ class SharedSettings {
         }
     }
 
-    // 異用字搜尋：關閉時只搜尋原始詞，開啟時搜尋全部（含異用字）
-    var variantSearchEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.variantSearchEnabled) as? Bool ?? false
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.variantSearchEnabled)
-        }
+    // MARK: - 詞庫開關設定
+
+    var moeDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.moeDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.moeDictEnabled) }
+    }
+
+    var newwordDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.newwordDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.newwordDictEnabled) }
+    }
+
+    var kunggeDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.kunggeDictEnabled) }
+    }
+
+    var iTaigiDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.iTaigiDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.iTaigiDictEnabled) }
+    }
+
+    var taiwanJapanDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.taiwanJapanDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.taiwanJapanDictEnabled) }
+    }
+
+    var taiHuaDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.taiHuaDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.taiHuaDictEnabled) }
+    }
+
+    var taiwanPlantDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.taiwanPlantDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.taiwanPlantDictEnabled) }
     }
 
     func resetToDefaults() {
@@ -161,7 +195,14 @@ class SharedSettings {
         isAutoCapitalizationEnabled = true
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
-        variantSearchEnabled = false
+        // 詞庫開關預設全部開啟
+        moeDictEnabled = true
+        newwordDictEnabled = true
+        kunggeDictEnabled = true
+        iTaigiDictEnabled = true
+        taiwanJapanDictEnabled = true
+        taiHuaDictEnabled = true
+        taiwanPlantDictEnabled = true
     }
 }
 

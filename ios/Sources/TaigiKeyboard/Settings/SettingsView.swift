@@ -15,7 +15,6 @@ struct SettingsView: View {
     @State private var phahTaigiLayoutEnabled: Bool
     @State private var selectedFontType: FontType
     @State private var outputBothScripts: Bool
-    @State private var showClearCacheAlert = false
     @State private var showResetSettingsAlert = false
 
     @StateObject private var languageManager = LanguageManager.shared
@@ -53,14 +52,6 @@ struct SettingsView: View {
                     actionButtonsSection
                 }
             }
-        }
-        .alert(languageManager.text(AppTexts.clearCache), isPresented: $showClearCacheAlert) {
-            Button(languageManager.text(AppTexts.cancel), role: .cancel) {}
-            Button(languageManager.text(AppTexts.clear), role: .destructive) {
-                clearUserFrequencyDatabase()
-            }
-        } message: {
-            Text(languageManager.text(AppTexts.clearCacheMessage))
         }
         .alert(languageManager.text(AppTexts.resetSettings), isPresented: $showResetSettingsAlert) {
             Button(languageManager.text(AppTexts.cancel), role: .cancel) {}
@@ -193,25 +184,11 @@ struct SettingsView: View {
     @ViewBuilder
     private var actionButtonsSection: some View {
         SettingsActionButton(
-            titleContent: AppTexts.clearCache,
-            isFirst: true,
-            action: { showClearCacheAlert = true }
-        )
-
-        SettingsActionButton(
             titleContent: AppTexts.resetSettings,
+            isFirst: true,
             isLast: true,
             action: { showResetSettingsAlert = true }
         )
-    }
-
-    private func clearUserFrequencyDatabase() {
-        do {
-            try UserFrequencyService.deleteUserDatabase()
-
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-        } catch {}
     }
 
     private func resetAllSettings() {

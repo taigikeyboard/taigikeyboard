@@ -493,35 +493,47 @@ object LexiconService {
     /**
      * 計算候選詞排序分數
      *
-     * 分數公式：exactBonus + 10000 - candidateLength * 100 + min(userFreq, 50) * 10 + baseFreq / 100
-     * - exactBonus: 完全匹配加分（roman 完全等於輸入）
-     * - 長度優先：短詞排前面
-     * - userFreq: 使用者頻率（上限 50）
-     * - baseFreq: 詞庫基礎頻率（權重較低）
+     * 簡化公式（v3）：
+     * score = userFreqScore + recencyBonus + exactBonus + baseFreqScore
+     *
+     * 設計理念：
+     * - userFreqScore 主導排序（穩定性優先）
+     * - recencyBonus 和 exactBonus 只做微調（不會讓低頻詞超過高頻詞）
+     * - 移除長度懲罰（讓使用者行為決定排序）
      *
      * @param word 候選詞
      * @param normalizedInput 正規化後的輸入
-     * @param userFreq 使用者頻率
+     * @param frequencyData 使用者頻率資料（包含 count 和 lastUsedMillis）
      * @return 排序分數（越高越優先）
      */
-    private fun calculateScore(word: TaigiWord, normalizedInput: String, userFreq: Int): Int {
-        // 候選詞長度（去除連字符）
+    private fun calculateScore(
+        word: TaigiWord,
+        normalizedInput: String,
+        frequencyData: UserFrequencyService.FrequencyData
+    ): Int {
         val candidateRoman = word.roman.replace("-", "").lowercase()
-        val candidateLength = candidateRoman.length
 
-        // 完全匹配加分
-        val exactBonus = if (candidateRoman == normalizedInput) 500 else 0
+        // 使用者頻率（主導因素，上限 100，max 10000）
+        val cappedUserFreq = minOf(frequencyData.count, 100)
+        val userFreqScore = cappedUserFreq * 100
 
-        // 長度懲罰：越長分數越低
-        val lengthScore = 10000 - candidateLength * 100
+        // Recency 加分（微調，最近 1 小時內用過 +200）
+        val currentTime = System.currentTimeMillis()
+        val oneHourMillis = 60 * 60 * 1000L
+        val recencyBonus = if (frequencyData.lastUsedMillis > 0 &&
+            (currentTime - frequencyData.lastUsedMillis) < oneHourMillis) {
+            200
+        } else {
+            0
+        }
 
-        // 使用者頻率（上限 50）
-        val cappedUserFreq = minOf(userFreq, 50)
+        // 完全匹配加分（微調，+100）
+        val exactBonus = if (candidateRoman == normalizedInput) 100 else 0
 
-        // 詞庫頻率
-        val baseFreq = (word.lengthScore ?: 0) / 10
+        // 詞庫頻率（新詞 fallback，約 0-100）
+        val baseFreqScore = (word.lengthScore ?: 0) / 10
 
-        return exactBonus + lengthScore + cappedUserFreq * 10 + baseFreq
+        return userFreqScore + recencyBonus + exactBonus + baseFreqScore
     }
 
     /**
@@ -534,19 +546,15 @@ object LexiconService {
     private suspend fun applyScoredSort(words: List<TaigiWord>, normalizedInput: String): List<TaigiWord> {
         return withContext(Dispatchers.IO) {
             try {
-                // 查詢使用者頻率
-                val userFrequencies = mutableMapOf<String, Int>()
-                words.forEach { word ->
-                    val text = word.displayText
-                    if (!userFrequencies.containsKey(text)) {
-                        userFrequencies[text] = UserFrequencyService.getFrequency(text)
-                    }
-                }
+                // 批次查詢使用者頻率資料
+                val wordTexts = words.map { it.displayText }.distinct()
+                val frequencyDataMap = UserFrequencyService.getFrequencyDataBatch(wordTexts)
 
                 // 按分數排序
                 words.sortedByDescending { word ->
-                    val userFreq = userFrequencies[word.displayText] ?: 0
-                    calculateScore(word, normalizedInput, userFreq)
+                    val freqData = frequencyDataMap[word.displayText]
+                        ?: UserFrequencyService.FrequencyData(0, 0)
+                    calculateScore(word, normalizedInput, freqData)
                 }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {

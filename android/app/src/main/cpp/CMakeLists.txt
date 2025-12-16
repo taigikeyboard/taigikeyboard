@@ -7,8 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 支援 16 KB page size（Google Play 2025/11 起要求）
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,max-page-size=16384")
 
-# MARISA-trie source files
-set(MARISA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/marisa-src)
+# MARISA-trie source files（位於專案根目錄 libs/）
+set(MARISA_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../libs/marisa-trie)
 
 # MARISA library sources
 set(MARISA_SOURCES

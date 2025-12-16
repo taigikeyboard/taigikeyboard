@@ -1,0 +1,19 @@
+# === iOS / Xcode ===
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+DerivedData/
+*.moved-aside
+*.xcuserstate
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# === Swift Package Manager ===
+.build/
+Packages/
+Package.resolved
+
+# === CocoaPods ===
+Pods/

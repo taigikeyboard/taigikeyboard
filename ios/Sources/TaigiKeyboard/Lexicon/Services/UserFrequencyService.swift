@@ -21,6 +21,10 @@ final class UserFrequencyService: @unchecked Sendable {
         self.repository = repository
     }
 
+    // MARK: - Type Alias
+
+    typealias FrequencyData = UserFrequencyRepository.FrequencyData
+
     // MARK: - Public API
 
     /// 記錄詞彙使用
@@ -31,6 +35,16 @@ final class UserFrequencyService: @unchecked Sendable {
     /// 取得詞彙使用頻率
     static func getFrequency(for word: String) -> Int {
         shared.getFrequency(for: word)
+    }
+
+    /// 取得詞彙使用頻率資料（包含頻率和最後使用時間）
+    static func getFrequencyData(for word: String) -> FrequencyData {
+        shared.getFrequencyData(for: word)
+    }
+
+    /// 批次取得多個詞彙的頻率資料
+    static func getFrequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
+        shared.getFrequencyDataBatch(for: words)
     }
 
     /// 檢查是否已連接
@@ -53,6 +67,14 @@ final class UserFrequencyService: @unchecked Sendable {
 
     func getFrequency(for word: String) -> Int {
         repository.getCount(for: word)
+    }
+
+    func getFrequencyData(for word: String) -> FrequencyData {
+        repository.getFrequencyData(for: word)
+    }
+
+    func getFrequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
+        repository.getFrequencyDataBatch(for: words)
     }
 
     func getTopWords(limit: Int = 100) -> [(word: String, count: Int)] {

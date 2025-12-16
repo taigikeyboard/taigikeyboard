@@ -129,11 +129,15 @@ class KeyboardViewController: KeyboardInputViewController {
 
     // MARK: - Autocomplete
 
-    /// 覆寫 autocompleteText 屬性，優先使用組字中的文字
+    /// 覆寫 autocompleteText 屬性，優先使用 rawInput（搜尋用）
+    /// 必須使用 rawInput 而非 composingText，因為：
+    /// - rawInput 包含聲調數字（如 "Soo1"），用於 Trie 搜尋
+    /// - composingText 是顯示文字（如 "Soo"），聲調 1/4 不加調號
+    /// - KeyboardKit 根據此值變化決定是否觸發 autocomplete
     override var autocompleteText: String? {
-        // 如果正在組字中，使用組字文字作為自動完成的輸入
+        // 如果正在組字中，使用 rawInput 作為自動完成的輸入
         if let handler = actionHandler, handler.composingManager.isComposing {
-            return handler.composingManager.composingText
+            return handler.composingManager.rawInput
         }
         // 否則使用 KeyboardKit 的預設邏輯
         return super.autocompleteText

@@ -7,6 +7,7 @@ struct CopyrightView: View {
     @Environment(\.openURL) private var openURL
 
     private let copyrightPages: [CopyrightPage] = [
+        // 字體
         CopyrightPage(
             id: 0,
             title: AppTexts.openFontTitle,
@@ -28,6 +29,26 @@ struct CopyrightView: View {
         ),
         CopyrightPage(
             id: 1,
+            title: AppTexts.iansuiFontTitle,
+            description: AppTexts.iansuiFontCopyright,
+            accentColor: Color.Theme.accent,
+            licenseDescription: AppTexts.silOpenFontLicense11,
+            buttons: [
+                CopyrightButton(
+                    icon: "doc.text",
+                    text: AppTexts.viewLicense,
+                    url: "https://openfontlicense.org/"
+                ),
+                CopyrightButton(
+                    icon: "safari",
+                    text: AppTexts.viewWebsite,
+                    url: "https://github.com/ButTaiwan/iansui"
+                )
+            ]
+        ),
+        // 辭典
+        CopyrightPage(
+            id: 2,
             title: AppTexts.moeDict,
             description: AppTexts.moeCopyright,
             accentColor: Color.Theme.accent,
@@ -46,7 +67,7 @@ struct CopyrightView: View {
             ]
         ),
         CopyrightPage(
-            id: 2,
+            id: 3,
             title: AppTexts.newwordDict,
             description: AppTexts.newwordCopyright,
             accentColor: Color.Theme.accent,
@@ -65,7 +86,26 @@ struct CopyrightView: View {
             ]
         ),
         CopyrightPage(
-            id: 3,
+            id: 4,
+            title: AppTexts.kunggeDict,
+            description: AppTexts.kunggeCopyright,
+            accentColor: Color.Theme.accent,
+            licenseDescription: AppTexts.ccByNcLicense,
+            buttons: [
+                CopyrightButton(
+                    icon: "doc.text",
+                    text: AppTexts.viewLicense,
+                    url: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant"
+                ),
+                CopyrightButton(
+                    icon: "safari",
+                    text: AppTexts.viewWebsite,
+                    url: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
+                )
+            ]
+        ),
+        CopyrightPage(
+            id: 5,
             title: AppTexts.iTaigiDict,
             description: AppTexts.iTaigiCopyright,
             accentColor: Color.Theme.accent,
@@ -80,39 +120,6 @@ struct CopyrightView: View {
                     icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://itaigi.tw/"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 4,
-            title: AppTexts.taiwanPlantDict,
-            description: AppTexts.taiwanPlantCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccBySA4License,
-            buttons: [
-                CopyrightButton(
-                    icon: "doc.text",
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
-                ),
-                CopyrightButton(
-                    icon: "safari",
-                    text: AppTexts.viewWebsite,
-                    url: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 5,
-            title: AppTexts.taiHuaDict,
-            description: AppTexts.taiHuaCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccBySA4License,
-            buttons: [
-                CopyrightButton(
-                    icon: "doc.text",
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
                 )
             ]
         ),
@@ -132,6 +139,39 @@ struct CopyrightView: View {
                     icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "http://taigi.fhl.net/dict/"
+                )
+            ]
+        ),
+        CopyrightPage(
+            id: 7,
+            title: AppTexts.taiHuaDict,
+            description: AppTexts.taiHuaCopyright,
+            accentColor: Color.Theme.accent,
+            licenseDescription: AppTexts.ccBySA4License,
+            buttons: [
+                CopyrightButton(
+                    icon: "doc.text",
+                    text: AppTexts.viewLicense,
+                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+                )
+            ]
+        ),
+        CopyrightPage(
+            id: 8,
+            title: AppTexts.taiwanPlantDict,
+            description: AppTexts.taiwanPlantCopyright,
+            accentColor: Color.Theme.accent,
+            licenseDescription: AppTexts.ccBySA4License,
+            buttons: [
+                CopyrightButton(
+                    icon: "doc.text",
+                    text: AppTexts.viewLicense,
+                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+                ),
+                CopyrightButton(
+                    icon: "safari",
+                    text: AppTexts.viewWebsite,
+                    url: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
                 )
             ]
         )

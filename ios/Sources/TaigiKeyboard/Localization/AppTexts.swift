@@ -22,7 +22,6 @@ enum AppTexts {
     static var fontIansui: LocalizedText { KeyboardTexts.fontIansui }
     static var fontSystemWarning: LocalizedText { KeyboardTexts.fontSystemWarning }
     static var outputBothScripts: LocalizedText { KeyboardTexts.outputBothScripts }
-    static var variantSearch: LocalizedText { KeyboardTexts.variantSearch }
 
     // MARK: - ActionTexts
     static var done: LocalizedText { ActionTexts.done }
@@ -78,6 +77,12 @@ enum AppTexts {
     static var taiwanJapanDict: LocalizedText { CopyrightTexts.taiwanJapanDict }
     static var taiwanJapanCopyright: LocalizedText { CopyrightTexts.taiwanJapanCopyright }
     static var ccByNcSA3License: LocalizedText { CopyrightTexts.ccByNcSA3License }
+    static var iansuiFontTitle: LocalizedText { CopyrightTexts.iansuiFontTitle }
+    static var iansuiFontCopyright: LocalizedText { CopyrightTexts.iansuiFontCopyright }
+    static var silOpenFontLicense11: LocalizedText { CopyrightTexts.silOpenFontLicense11 }
+    static var kunggeDict: LocalizedText { CopyrightTexts.kunggeDict }
+    static var kunggeCopyright: LocalizedText { CopyrightTexts.kunggeCopyright }
+    static var ccByNcLicense: LocalizedText { CopyrightTexts.ccByNcLicense }
 
     // MARK: - AppInfoTexts
     static var appTitle: LocalizedText { AppInfoTexts.appTitle }

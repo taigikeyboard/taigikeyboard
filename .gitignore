@@ -48,49 +48,6 @@ $RECYCLE.BIN/
 !.idea/codeStyles/
 !.idea/inspectionProfiles/
 
-# === Android / Gradle ===
-.gradle
-!gradle/wrapper/gradle-wrapper.jar
-.gradletasknamecache
-local.properties
-android/app/.cxx
-**/release/
-**/debug/
-*.aab
-*.apk
-
-# === Kotlin/Java ===
-*.class
-*.log
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-hs_err_pid*
-
-# === iOS / Xcode ===
-xcuserdata/
-*.xcscmblueprint
-*.xccheckout
-DerivedData/
-*.moved-aside
-*.xcuserstate
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# === Swift Package Manager ===
-.build/
-Packages/
-Package.resolved
-
-# === CocoaPods ===
-Pods/
-
 # === Python ===
 __pycache__/
 *.py[codz]

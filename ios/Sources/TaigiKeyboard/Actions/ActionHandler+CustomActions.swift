@@ -27,10 +27,10 @@ extension ActionHandler {
         }
     }
 
-    /// 開啟主應用程式的設定頁面
-    /// 使用 URL Scheme 跳轉到設定
+    /// 開啟主應用程式
+    /// 使用 URL Scheme 跳轉到 App 主畫面
     func openMainAppSettings() {
-        guard let url = URL(string: "taigikeyboard://settings") else {
+        guard let url = URL(string: "taigikeyboard://") else {
             return
         }
 

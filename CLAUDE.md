@@ -14,20 +14,19 @@
 
 ```
 taigikeyboard/
-├── android/     # Android 版本 (Kotlin + FlorisBoard)
-├── ios/         # iOS 版本 (Swift + KeyboardKit)
-└── CLAUDE.md    # 本檔案
+├── android/ # Android 版本 (Kotlin + FlorisBoard)
+├── ios/ # iOS 版本 (Swift + KeyboardKit)
+└── CLAUDE.md # 本檔案
 ```
+
+
 
 ## 核心開發原則
 
-### 必須遵守的規則
-
-1. **不擅自實作** - 任何功能實作前必須先與使用者確認
-2. **不擅自建立檔案** - 建立新檔案前必須獲得使用者同意
-3. **不 over-design** - 保持簡單直接的解決方案
-4. **不隨便移除功能** - 移除任何功能前必須與使用者確認
-5. **遵循 YAGNI 原則** - 只實作當前需要的功能
+1. **不擅自實作或建立檔案** - 任何功能或檔案變更前必須先與使用者確認
+2. **不隨意移除功能** - 移除任何功能前必須與使用者確認
+3. **遵循 YAGNI 原則** - 只實作當前需要的功能，保持簡單直接
+4. **程式碼註解使用台灣華語**
 
 ## 溝通原則
 
@@ -40,45 +39,53 @@ taigikeyboard/
 
 # iOS 專案指引
 
-## 編譯與測試
-
-```bash
-cd ios
-xcodebuild -project TaigiKeyboard.xcodeproj \
-  -scheme TaigiKeyboard \
-  -configuration Debug \
-  -destination 'id=00008101-001A30D62E60001E' \
-  build
-```
-
 ## KeyboardKit 開發規則
 
 - **實作前必須先查閱 KeyboardKit 官方文檔**
 - 官方文檔：https://keyboardkit.github.io/KeyboardKitDocs/
 - 原始碼：`/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-*/SourcePackages/checkouts/KeyboardKit/`
 
-## iOS 記憶體管理
-
-### 關鍵規則
+## 記憶體管理
 
 1. **SwiftUI View 與 Controller 分離** - View 不可直接持有 Controller
 2. **setupKeyboardView 安全模式** - 忽略 controller 參數，使用 `self.state` 和 `self.services`
 3. **Service 類別的 Delegate** - 必須使用 `weak` reference
-4. **任何記憶體相關修改必須特別說明風險**
+4. **任何記憶體相關修改必須特別說明風險`
 
 ---
 
-# Android 專案指引
+# Claude Code 任務指引
 
-## 編譯與測試
+## 身份
+- 你是一名資深 Mobile (iOS/Android) 工程師，專案為 Custom Keyboard
 
-```bash
-cd android
-./gradlew assembleDebug
-```
+## 任務要求
+- 覆述問題確認認知一致
+- 擬訂修復計劃，不實作修復
+- 回答簡潔、重點明確，不需情緒化表達
+- 不執行編譯或測試；修復不得影響現有功能
+- 思考過程用英文，最終回覆用繁體中文
 
-## 安裝到裝置
+## 指令替代
+- find → fd
+- grep → rg
 
-```bash
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
+## 專案輔助
+- 參考 spec/files.md 了解專案結構
+- iOS 新增檔案需使用者手動增加 target
+
+## 設計原則
+
+### Android / Kotlin
+- 遵循 Kotlin、Android、Jetpack 官方最佳實踐
+- 參考官方文件：[Creating Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)
+- 符合 Android Keyboard Design Guideline
+- 遵循 KeyboardKit 最佳實踐
+
+### iOS / Swift
+- 遵循 SwiftUI / UIKit 官方最佳實踐
+
+### 通用
+- 遵循 GitHub 開源慣例
+- 不隨意移除功能或建立檔案，需先與使用者確認
+- 不需要 build 測試

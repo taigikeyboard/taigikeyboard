@@ -28,7 +28,7 @@ enum OnboardingTexts {
     )
 
     static let onboardingCompletedMessage = LocalizedText(
-        hanji: "佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤",
+        hanji: "重開你目前使用 ê APP，予 APP 載入新 ê 齒盤清單。閣來，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤",
         poj: "Tī ē-tàng phah-jī ê só͘-chāi, chhi̍h-tiâu tē-kiû tô͘-sī chhiat khì Tâi-gí khí-pôaⁿ",
         tl: "Tī ē-tàng phah-jī ê sóo-tsāi, tshi̍h-tiâu tē-kiû tôo-sī tshiat khì Tâi-gí Khí-puânn"
     )

@@ -1,9 +1,16 @@
 import Foundation
 import KeyboardKit
+import OSLog
 
 /// 處理台語鍵盤所有按鍵動作的處理器
 /// 繼承自 KeyboardKit 的標準動作處理器，加入台語特定的處理邏輯
 public class ActionHandler: KeyboardAction.StandardActionHandler {
+    /// 日誌記錄器
+    let logger = Logger(
+        subsystem: "com.siansiansu.taigikeyboard",
+        category: "ActionHandler"
+    )
+
     /// 共用設定管理器
     let settings = SharedSettings.shared
 
