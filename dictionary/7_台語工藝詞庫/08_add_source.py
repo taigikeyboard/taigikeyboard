@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.logging_utils import setup_logging, log_header
 
 INPUT_FILE = "data/08_abbrev/kungge.csv"
-OUTPUT_DIR = "data"
+OUTPUT_DIR = "data/09_source"
 OUTPUT_FILE = "kungge.csv"
 SCRIPT_NAME = "08_add_source"
 

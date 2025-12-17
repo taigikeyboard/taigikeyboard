@@ -10,7 +10,7 @@ enum CopyrightTexts {
     )
 
     static let viewLicense = LocalizedText(
-        hanji: "查看授權條款",
+        hanji: "授權條款",
         poj: "Chhâ-khòaⁿ siū-khoân tiâu-khoán",
         tl: "Tshâ-khuànn siū-khuân tiâu-khuán"
     )

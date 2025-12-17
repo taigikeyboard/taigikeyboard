@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.logging_utils import setup_logging, log_header
 
 INPUT_FILE = "data/11_abbrev/kautian.csv"
-OUTPUT_DIR = "data"
+OUTPUT_DIR = "data/12_source"
 OUTPUT_FILE = "kautian.csv"
 SCRIPT_NAME = "11_add_source"
 

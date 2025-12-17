@@ -328,11 +328,11 @@ class PrefHelper(
             }
         }
 
-    // iTaigi 華台對照典（itaigi）
+    // iTaigi 華台對照典（itaigi）- 預設關閉
     var itaigiDictEnabled: Boolean
         get() = runBlocking {
             dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.ITAIGI_DICT_ENABLED] ?: true
+                prefs[PreferenceKeys.ITAIGI_DICT_ENABLED] ?: false
             }.first()
         }
         set(value) {
@@ -399,6 +399,21 @@ class PrefHelper(
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.KUNGGE_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // 異用字開關（預設關閉）
+    var variantEnabled: Boolean
+        get() = runBlocking {
+            dataStore.data.map { prefs ->
+                prefs[PreferenceKeys.VARIANT_DICT_ENABLED] ?: false
+            }.first()
+        }
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.VARIANT_DICT_ENABLED] = value
                 }
             }
         }

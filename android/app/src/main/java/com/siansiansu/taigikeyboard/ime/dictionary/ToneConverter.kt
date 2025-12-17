@@ -89,9 +89,12 @@ object ToneConverter {
     private fun convertPOJSyllable(syllable: String): String {
         val (baseForm, toneNumber) = extractToneNumber(syllable)
 
-        // Tones 0, 1, 4 don't need tone marks
-        if (toneNumber == 0 || toneNumber == 1 || toneNumber == 4) {
+        // 聲調 0 無標記，聲調 1/4 保留數字顯示
+        if (toneNumber == 0) {
             return baseForm
+        }
+        if (toneNumber == 1 || toneNumber == 4) {
+            return "$baseForm$toneNumber"
         }
 
         val vowelRange = findVowelRange(baseForm, InputMode.POJ) ?: return syllable
@@ -120,9 +123,12 @@ object ToneConverter {
     private fun convertTLSyllable(syllable: String): String {
         val (baseForm, toneNumber) = extractToneNumber(syllable)
 
-        // Tones 0, 1, 4 don't need tone marks
-        if (toneNumber == 0 || toneNumber == 1 || toneNumber == 4) {
+        // 聲調 0 無標記，聲調 1/4 保留數字顯示
+        if (toneNumber == 0) {
             return baseForm
+        }
+        if (toneNumber == 1 || toneNumber == 4) {
+            return "$baseForm$toneNumber"
         }
 
         val vowelRange = findVowelRange(baseForm, InputMode.TL) ?: return syllable

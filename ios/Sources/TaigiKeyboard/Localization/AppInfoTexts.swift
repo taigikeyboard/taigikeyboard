@@ -53,6 +53,13 @@ enum AppInfoTexts {
         tl: "Kìng-tshiánn kî-thāi"
     )
 
+    // 異用字開關
+    static let variantDictionary = LocalizedText(
+        hanji: "異用字",
+        poj: "Ī-iōng-jī",
+        tl: "Ī-iōng-jī"
+    )
+
     // MARK: - 互動選項
     static let rateUs = LocalizedText(
         hanji: "為阮評分",

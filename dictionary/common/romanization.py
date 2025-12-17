@@ -57,8 +57,13 @@ def to_numeric_tone(roman: str, ascii_only: bool = False) -> str:
     processed = []
     for syllable in syllables:
         if syllable and not syllable[-1].isdigit():
-            # 無聲調的音節，標記為聲調 1
-            syllable = syllable + "1"
+            # 無聲調的音節，根據韻尾判斷聲調
+            # 入聲韻尾 (-p, -t, -k, -h) → 聲調 4（陰入）
+            # 其餘 → 聲調 1（陰平）
+            if syllable[-1] in "ptkh":
+                syllable = syllable + "4"
+            else:
+                syllable = syllable + "1"
         processed.append(syllable)
 
     return "".join(processed)

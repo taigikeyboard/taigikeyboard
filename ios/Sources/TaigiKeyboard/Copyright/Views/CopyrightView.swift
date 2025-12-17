@@ -16,12 +16,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.silOpenFontLicense,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://openfontlicense.org/"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://justfont.com/huninn/"
                 )
@@ -35,12 +33,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.silOpenFontLicense11,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://openfontlicense.org/"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://github.com/ButTaiwan/iansui"
                 )
@@ -55,12 +51,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccLicense,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by-nd/3.0/tw/"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://sutian.moe.edu.tw/"
                 )
@@ -74,12 +68,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccBy4License,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://www.taigitv.org.tw/taigi-words"
                 )
@@ -93,12 +85,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccByNcLicense,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
                 )
@@ -112,12 +102,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.cc0License,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/public-domain/cc0/"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://itaigi.tw/"
                 )
@@ -131,12 +119,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccByNcSA3License,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "http://taigi.fhl.net/dict/"
                 )
@@ -150,7 +136,6 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccBySA4License,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
                 )
@@ -164,12 +149,10 @@ struct CopyrightView: View {
             licenseDescription: AppTexts.ccBySA4License,
             buttons: [
                 CopyrightButton(
-                    icon: "doc.text",
                     text: AppTexts.viewLicense,
                     url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
                 ),
                 CopyrightButton(
-                    icon: "safari",
                     text: AppTexts.viewWebsite,
                     url: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
                 )

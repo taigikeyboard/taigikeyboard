@@ -11,15 +11,6 @@
     android:paddingVertical="14dp"
     android:minHeight="48dp">
 
-    <ImageView
-        android:id="@+id/button_icon"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/icon_circle_background"
-        android:padding="8dp"
-        android:src="@drawable/ic_article" />
-
     <TextView
         android:id="@+id/button_text"
         android:layout_width="0dp"

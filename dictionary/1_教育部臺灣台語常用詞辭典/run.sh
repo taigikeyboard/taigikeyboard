@@ -20,6 +20,7 @@ scripts=(
     "09_add_notone.py"
     "10_add_abbrev.py"
     "11_add_source.py"
+    "12_add_variants.py"
 )
 
 for script in "${scripts[@]}"; do

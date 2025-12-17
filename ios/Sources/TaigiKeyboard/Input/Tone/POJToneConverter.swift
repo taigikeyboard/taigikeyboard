@@ -23,9 +23,12 @@ enum POJToneConverter {
             return syllable
         }
 
-        // 聲調 0, 1, 4 不標記
-        if toneNumber == 0 || toneNumber == 1 || toneNumber == 4 {
+        // 聲調 0 無標記，聲調 1/4 保留數字顯示
+        if toneNumber == 0 {
             return baseForm
+        }
+        if toneNumber == 1 || toneNumber == 4 {
+            return "\(baseForm)\(toneNumber)"
         }
 
         guard let vowelRange = VowelAnalyzer.findPOJVowelRange(in: baseForm) else {

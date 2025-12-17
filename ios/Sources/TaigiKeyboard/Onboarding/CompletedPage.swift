@@ -47,7 +47,7 @@ struct CompletedPageContent: View {
     var body: some View {
         OnboardingPageContainer(
             iconName: "checkmark.circle.fill",
-            iconColor: Color.green,
+            iconColor: Color.Theme.accent,
             title: AppTexts.onboardingCompletedTitle,
             bottomContent: {
                 VStack(spacing: 24) {

@@ -50,6 +50,7 @@ CREATE TABLE dictionary (
     tl TEXT NOT NULL,
     poj TEXT NOT NULL,
     frequency INTEGER,
+    is_variant INTEGER DEFAULT 0,
     kautian INTEGER DEFAULT 0,
     taigitv INTEGER DEFAULT 0,
     itaigi INTEGER DEFAULT 0,
@@ -73,11 +74,12 @@ sqlite3 "$DB_FILE" << EOF
 .import ${DICTIONARY_CSV} temp_import
 
 INSERT OR IGNORE INTO dictionary (
-    hanzi, tl, poj, frequency, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge
+    hanzi, tl, poj, frequency, is_variant, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge
 )
 SELECT
     CASE WHEN hanzi = '' OR hanzi IS NULL THEN NULL ELSE hanzi END,
     tl, poj, frequency,
+    CASE WHEN is_variant = 'True' THEN 1 ELSE 0 END,
     CASE WHEN kautian = 'True' THEN 1 ELSE 0 END,
     CASE WHEN taigitv = 'True' THEN 1 ELSE 0 END,
     CASE WHEN itaigi = 'True' THEN 1 ELSE 0 END,

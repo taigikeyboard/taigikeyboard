@@ -6,7 +6,6 @@ import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -45,8 +44,6 @@ class CopyrightPagerAdapter(
         private val acknowledgment: TextView = itemView.findViewById(R.id.acknowledgment)
 
         fun bind(page: CopyrightPage) {
-            // 取得主題綠色（用於按鈕 icon）
-            val themeGreenColor = ContextCompat.getColor(context, R.color.modern_accent)
 
             // 套用自訂字體
             val typeface = FontUtils.getTypefaceByType(prefs.fontType, context)
@@ -73,12 +70,9 @@ class CopyrightPagerAdapter(
                 val buttonView = LayoutInflater.from(context)
                     .inflate(R.layout.copyright_action_button, buttonsContainer, false)
 
-                val buttonIcon = buttonView.findViewById<ImageView>(R.id.button_icon)
                 val buttonText = buttonView.findViewById<TextView>(R.id.button_text)
                 val buttonContainer = buttonView.findViewById<LinearLayout>(R.id.action_button_container)
 
-                buttonIcon.setImageResource(button.iconResId)
-                buttonIcon.setColorFilter(themeGreenColor)
                 buttonText.text = languageManager.getText(button.text)
                 buttonText.typeface = typeface
 
@@ -91,14 +85,11 @@ class CopyrightPagerAdapter(
 
                 // Add divider between buttons
                 if (index < page.buttons.size - 1) {
-                    val dividerMargin = (52 * context.resources.displayMetrics.density).toInt()
                     val divider = View(context).apply {
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.MATCH_PARENT,
                             1
-                        ).apply {
-                            marginStart = dividerMargin
-                        }
+                        )
                         setBackgroundColor(
                             ContextCompat.getColor(
                                 context,

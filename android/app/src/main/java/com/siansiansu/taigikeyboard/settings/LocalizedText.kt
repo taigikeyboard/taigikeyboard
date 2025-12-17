@@ -287,6 +287,13 @@ object AppTexts {
         tl = "Kìng-tshiánn kî-thāi"
     )
 
+    // 異用字開關
+    val variantDictionary = LocalizedText(
+        hanji = "異用字",
+        poj = "Ī-iōng-jī",
+        tl = "Ī-iōng-jī"
+    )
+
     val contactUs = LocalizedText(
         hanji = "意見回饋",
         poj = "Ì-kiàn hôe-kūi",
@@ -404,7 +411,7 @@ object AppTexts {
     )
 
     val viewLicense = LocalizedText(
-        hanji = "查看授權條款",
+        hanji = "授權條款",
         poj = "Chhâ-khòaⁿ siū-khoân tiâu-khoán",
         tl = "Tshâ-khuànn siū-khuân tiâu-khuán"
     )

@@ -104,6 +104,30 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- 異用字開關 Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/variant_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/spyfamily_card_stroke"
+                app:cardBackgroundColor="@color/modern_surface_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <include layout="@layout/settings_toggle_item"
+                        android:id="@+id/toggle_variant" />
+
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <!-- 自訂詞庫 Section -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/custom_dictionary_card"

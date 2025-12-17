@@ -93,6 +93,7 @@ enum AppTexts {
     static var dictionarySettings: LocalizedText { AppInfoTexts.dictionarySettings }
     static var customDictionary: LocalizedText { AppInfoTexts.customDictionary }
     static var comingSoon: LocalizedText { AppInfoTexts.comingSoon }
+    static var variantDictionary: LocalizedText { AppInfoTexts.variantDictionary }
     static var rateUs: LocalizedText { AppInfoTexts.rateUs }
     static var contactUs: LocalizedText { AppInfoTexts.contactUs }
     static var userGuide: LocalizedText { AppInfoTexts.userGuide }

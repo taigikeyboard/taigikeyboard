@@ -24,6 +24,7 @@ final class DictionaryRepository: @unchecked Sendable {
         let taijit: Bool    // 台日大辭典
         let taihoa: Bool    // 台華線頂對照典
         let sitbut: Bool    // 台灣植物名彙
+        let variant: Bool   // 異用字
 
         /// 從 SharedSettings 讀取設定
         static func fromSettings() -> EnabledDictionaries {
@@ -35,7 +36,8 @@ final class DictionaryRepository: @unchecked Sendable {
                 itaigi: settings.iTaigiDictEnabled,
                 taijit: settings.taiwanJapanDictEnabled,
                 taihoa: settings.taiHuaDictEnabled,
-                sitbut: settings.taiwanPlantDictEnabled
+                sitbut: settings.taiwanPlantDictEnabled,
+                variant: settings.variantEnabled
             )
         }
 
@@ -51,8 +53,15 @@ final class DictionaryRepository: @unchecked Sendable {
 
         /// 建構 SQL WHERE 條件（使用 OR 邏輯）
         func buildWhereCondition() -> String {
-            // 全部開啟時不加過濾條件
-            if allEnabled { return "" }
+            var result = ""
+
+            // 異用字過濾：關閉時只顯示非異用字
+            if !variant {
+                result += "AND is_variant = 0 "
+            }
+
+            // 全部開啟時不加詞庫過濾條件
+            if allEnabled { return result }
 
             var conditions: [String] = []
             if kautian { conditions.append("kautian = 1") }
@@ -63,8 +72,11 @@ final class DictionaryRepository: @unchecked Sendable {
             if taihoa { conditions.append("taihoa = 1") }
             if sitbut { conditions.append("sitbut = 1") }
 
-            guard !conditions.isEmpty else { return "" }
-            return "AND (" + conditions.joined(separator: " OR ") + ")"
+            if !conditions.isEmpty {
+                result += "AND (" + conditions.joined(separator: " OR ") + ")"
+            }
+
+            return result
         }
     }
 

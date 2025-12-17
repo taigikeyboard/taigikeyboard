@@ -49,7 +49,6 @@ struct CopyrightPageView: View {
                             let pressedIndex = page.id * 2 + buttonIndex
 
                             actionButton(
-                                icon: button.icon,
                                 iconColor: page.accentColor,
                                 text: button.text,
                                 isPressed: isPressed.indices.contains(pressedIndex) ? isPressed[pressedIndex] : false,
@@ -81,7 +80,6 @@ struct CopyrightPageView: View {
                                 Rectangle()
                                     .fill(Color.Theme.textSecondary.opacity(0.1))
                                     .frame(height: 0.5)
-                                    .padding(.leading, 52)
                             }
                         }
                     }
@@ -98,7 +96,6 @@ struct CopyrightPageView: View {
     }
 
     private func actionButton(
-        icon: String,
         iconColor: Color,
         text: LocalizedText,
         isPressed: Bool,
@@ -106,19 +103,6 @@ struct CopyrightPageView: View {
     ) -> some View {
         Button(action: action) {
             HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(iconColor.opacity(0.08))
-                        .frame(width: 36, height: 36)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(iconColor)
-                }
-                .frame(width: 36, height: 36)
-                .scaleEffect(isPressed ? 0.92 : 1.0)
-                .animation(ThemeAnimation.bouncy, value: isPressed)
-
                 LocalizedTextView(text)
                     .themeFontBody()
                     .foregroundColor(Color.Theme.textPrimary)

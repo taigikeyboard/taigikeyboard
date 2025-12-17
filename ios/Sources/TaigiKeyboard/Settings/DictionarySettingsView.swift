@@ -16,6 +16,7 @@ struct DictionarySettingsView: View {
     @State private var taiwanJapanDictEnabled: Bool
     @State private var taiHuaDictEnabled: Bool
     @State private var taiwanPlantDictEnabled: Bool
+    @State private var variantEnabled: Bool
 
     // 清除資料 Alert
     @State private var showClearCacheAlert = false
@@ -29,6 +30,7 @@ struct DictionarySettingsView: View {
         _taiwanJapanDictEnabled = State(initialValue: settings.taiwanJapanDictEnabled)
         _taiHuaDictEnabled = State(initialValue: settings.taiHuaDictEnabled)
         _taiwanPlantDictEnabled = State(initialValue: settings.taiwanPlantDictEnabled)
+        _variantEnabled = State(initialValue: settings.variantEnabled)
     }
 
     var body: some View {
@@ -39,6 +41,11 @@ struct DictionarySettingsView: View {
                 // 詞庫列表
                 SettingsSection {
                     dictionaryToggles
+                }
+
+                // 異用字開關
+                SettingsSection {
+                    variantToggle
                 }
 
                 // 自訂詞庫區塊
@@ -128,6 +135,21 @@ struct DictionarySettingsView: View {
             isLast: true,
             onChange: { newValue in
                 settings.taiwanPlantDictEnabled = newValue
+            }
+        )
+    }
+
+    // MARK: - 異用字開關
+
+    @ViewBuilder
+    private var variantToggle: some View {
+        SettingsToggleItem(
+            titleContent: AppTexts.variantDictionary,
+            isOn: $variantEnabled,
+            isFirst: true,
+            isLast: true,
+            onChange: { newValue in
+                settings.variantEnabled = newValue
             }
         )
     }

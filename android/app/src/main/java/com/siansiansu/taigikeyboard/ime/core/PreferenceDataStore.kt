@@ -65,4 +65,6 @@ object PreferenceKeys {
     val TAIHOA_DICT_ENABLED = booleanPreferencesKey("dictionary__taihoa_dict_enabled")
     val TAIJIT_DICT_ENABLED = booleanPreferencesKey("dictionary__taijit_dict_enabled")
     val KUNGGE_DICT_ENABLED = booleanPreferencesKey("dictionary__kungge_dict_enabled")
+    // 異用字開關
+    val VARIANT_DICT_ENABLED = booleanPreferencesKey("dictionary__variant_enabled")
 }

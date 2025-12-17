@@ -93,10 +93,9 @@ enum InputNormalizer {
     ///
     /// 步驟：
     /// 1. 轉換 POJ 鼻音符號 ⁿ → nn
-    /// 2. 移除聲調 4（陰入由韻尾區分），保留聲調 1（用於搜尋無聲調詞彙）
-    /// 3. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
-    /// 4. 提取聲調標記，轉為數字
-    /// 5. 組合：音節 + 聲調數字
+    /// 2. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
+    /// 3. 提取聲調標記，轉為數字
+    /// 4. 組合：音節 + 聲調數字
     ///
     /// 注意：不做 POJ→TL 拼法轉換（如 ch→ts），因為 Trie 使用前綴區分（tl:/poj:）
     private static func normalizeSyllable(_ syllable: String) -> String {
@@ -105,20 +104,14 @@ enum InputNormalizer {
         // 轉換 POJ 鼻音符號 ⁿ (U+207F) → nn
         let withNasalConverted = syllable.replacingOccurrences(of: "\u{207F}", with: "nn")
 
-        // 移除聲調 4（陰入，由入聲韻尾區分）
-        // 聲調 1 保留（用於搜尋無聲調詞彙）
-        // 例如：gua4 → gua, gua42 → gua2, gua1 → gua1
-        let withoutTone4 = withNasalConverted
-            .replacingOccurrences(of: "4", with: "")
-
         // 檢查是否已有數字聲調（如 ho2）
-        if let lastChar = withoutTone4.last, lastChar.isNumber {
+        if let lastChar = withNasalConverted.last, lastChar.isNumber {
             // 已有數字聲調，直接返回
-            return withoutTone4
+            return withNasalConverted
         }
 
         // NFD 分解
-        let nfd = withoutTone4.decomposedStringWithCanonicalMapping
+        let nfd = withNasalConverted.decomposedStringWithCanonicalMapping
 
         // 轉換 POJ o͘：把 U+0358 (COMBINING DOT ABOVE RIGHT) 替換成 o
         // 需在 NFD 分解後處理，因為 ó͘ 分解後是 o + ́ + ͘

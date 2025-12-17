@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.logging_utils import setup_logging, log_header
 
 INPUT_FILE = "data/09_abbrev/taijit.csv"
-OUTPUT_DIR = "data"
+OUTPUT_DIR = "data/10_source"
 OUTPUT_FILE = "taijit.csv"
 SCRIPT_NAME = "09_add_source"
 

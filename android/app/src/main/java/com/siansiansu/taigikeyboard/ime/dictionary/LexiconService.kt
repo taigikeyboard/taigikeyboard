@@ -88,7 +88,8 @@ object LexiconService {
             sitbut = prefs.sitbutDictEnabled,
             taihoa = prefs.taihoaDictEnabled,
             taijit = prefs.taijitDictEnabled,
-            kungge = prefs.kunggeDictEnabled
+            kungge = prefs.kunggeDictEnabled,
+            variant = prefs.variantEnabled
         )
 
         try {
@@ -132,7 +133,8 @@ object LexiconService {
         val sitbut: Boolean,    // 台灣植物名彙
         val taihoa: Boolean,    // 台華線頂對照典
         val taijit: Boolean,    // 台日大辭典
-        val kungge: Boolean     // 台語工藝詞庫
+        val kungge: Boolean,    // 台語工藝詞庫
+        val variant: Boolean    // 異用字
     ) {
         /** 是否全部關閉 */
         fun allDisabled(): Boolean =
@@ -264,6 +266,9 @@ object LexiconService {
         for (batch in ids.chunked(batchSize)) {
             val placeholders = batch.joinToString(",") { "?" }
 
+            // 異用字過濾：關閉時只顯示非異用字
+            val variantCondition = if (!enabledDicts.variant) "AND is_variant = 0 " else ""
+
             // 建立過濾條件：使用 OR 邏輯，只要符合任一開啟的辭典即可
             val dictConditions = mutableListOf<String>()
             if (enabledDicts.kautian) dictConditions.add("${Column.KAUTIAN} = 1")
@@ -274,12 +279,15 @@ object LexiconService {
             if (enabledDicts.taijit) dictConditions.add("${Column.TAIJIT} = 1")
             if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
 
-            // 全部開啟時不加過濾條件
-            val whereCondition = if (enabledDicts.allEnabled()) {
+            // 全部開啟時不加詞庫過濾條件
+            val dictWhereCondition = if (enabledDicts.allEnabled()) {
                 ""
             } else {
                 "AND (" + dictConditions.joinToString(" OR ") + ")"
             }
+
+            // 合併所有過濾條件
+            val whereCondition = variantCondition + dictWhereCondition
 
             val sql = """
                 SELECT ${Column.ID}, $romanColumn, ${Column.HANZI}, ${Column.FREQUENCY}

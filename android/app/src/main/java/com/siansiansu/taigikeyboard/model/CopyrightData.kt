@@ -15,7 +15,6 @@ data class CopyrightPage(
 )
 
 data class CopyrightButton(
-    val iconResId: Int,
     val text: LocalizedText,
     val url: String
 )
@@ -32,12 +31,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.silOpenFontLicense,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://openfontlicense.org/"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://justfont.com/huninn/"
                 )
@@ -52,12 +49,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.silOpenFontLicense11,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://openfontlicense.org/"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://github.com/ButTaiwan/iansui"
                 )
@@ -74,12 +69,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccLicense,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by-nd/3.0/tw/"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://sutian.moe.edu.tw/"
                 )
@@ -95,12 +88,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBy4License,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by/4.0/deed.zh-hant"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://www.taigitv.org.tw/taigi-words"
                 )
@@ -116,12 +107,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccByNcLicense,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
                 )
@@ -137,12 +126,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.cc0License,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/public-domain/cc0/"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://itaigi.tw/"
                 )
@@ -158,12 +145,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccByNcSA3License,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "http://taigi.fhl.net/dict/"
                 )
@@ -179,7 +164,6 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
                 )
@@ -195,12 +179,10 @@ object CopyrightDataSource {
             license = com.siansiansu.taigikeyboard.settings.AppTexts.ccBySA4License,
             buttons = listOf(
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_info_details,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewLicense,
                     url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
                 ),
                 CopyrightButton(
-                    iconResId = android.R.drawable.ic_menu_view,
                     text = com.siansiansu.taigikeyboard.settings.AppTexts.viewWebsite,
                     url = "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
                 )

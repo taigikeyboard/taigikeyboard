@@ -47,6 +47,8 @@ class SharedSettings {
         static let taiwanJapanDictEnabled = "taiwanJapanDictEnabled"
         static let taiHuaDictEnabled = "taiHuaDictEnabled"
         static let taiwanPlantDictEnabled = "taiwanPlantDictEnabled"
+        // 異用字開關
+        static let variantEnabled = "variantEnabled"
     }
 
     static let shared = SharedSettings()
@@ -166,7 +168,7 @@ class SharedSettings {
     }
 
     var iTaigiDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.iTaigiDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.iTaigiDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.iTaigiDictEnabled) }
     }
 
@@ -185,6 +187,12 @@ class SharedSettings {
         set { userDefaults.set(newValue, forKey: Keys.taiwanPlantDictEnabled) }
     }
 
+    // 異用字開關（預設關閉）
+    var variantEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.variantEnabled) as? Bool ?? false }
+        set { userDefaults.set(newValue, forKey: Keys.variantEnabled) }
+    }
+
     func resetToDefaults() {
         inputMode = .tl
         enableDoubleTapOO = true
@@ -195,14 +203,15 @@ class SharedSettings {
         isAutoCapitalizationEnabled = true
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
-        // 詞庫開關預設全部開啟
+        // 詞庫開關預設（iTaigi 預設關閉）
         moeDictEnabled = true
         newwordDictEnabled = true
         kunggeDictEnabled = true
-        iTaigiDictEnabled = true
+        iTaigiDictEnabled = false
         taiwanJapanDictEnabled = true
         taiHuaDictEnabled = true
         taiwanPlantDictEnabled = true
+        variantEnabled = false
     }
 }
 

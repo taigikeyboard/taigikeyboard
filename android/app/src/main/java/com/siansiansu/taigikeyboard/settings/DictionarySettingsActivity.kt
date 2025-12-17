@@ -70,6 +70,9 @@ class DictionarySettingsActivity : AppCompatActivity() {
         updateToggleItemText(binding.toggleTaiwanJapanDict.root, AppTexts.taiwanJapanDict)
         updateToggleItemText(binding.toggleKunggeDict.root, AppTexts.kunggeDict)
 
+        // 更新異用字 Toggle 文字
+        updateToggleItemText(binding.toggleVariant.root, AppTexts.variantDictionary)
+
         // 更新自訂詞庫區塊文字
         binding.sectionTitleCustomDictionary.text = languageManager.getText(AppTexts.customDictionary)
         binding.textEmptyState.text = languageManager.getText(AppTexts.comingSoon)
@@ -90,6 +93,7 @@ class DictionarySettingsActivity : AppCompatActivity() {
 
     private fun setupViews() {
         setupDictionaryToggles()
+        setupVariantToggle()
     }
 
     /**
@@ -213,6 +217,19 @@ class DictionarySettingsActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * 設定異用字 Toggle 開關
+     */
+    private fun setupVariantToggle() {
+        setupToggleItem(
+            binding.toggleVariant.root,
+            AppTexts.variantDictionary,
+            prefs.variantEnabled
+        ) { isChecked ->
+            prefs.variantEnabled = isChecked
+        }
+    }
+
     private fun setupToggleItem(
         itemRoot: View,
         localizedText: LocalizedText,
@@ -253,6 +270,9 @@ class DictionarySettingsActivity : AppCompatActivity() {
         applyFontToToggleItem(binding.toggleTaiHuaDict.root, typeface)
         applyFontToToggleItem(binding.toggleTaiwanJapanDict.root, typeface)
         applyFontToToggleItem(binding.toggleKunggeDict.root, typeface)
+
+        // 異用字 Toggle
+        applyFontToToggleItem(binding.toggleVariant.root, typeface)
 
         // 清除資料按鈕
         applyFontToActionItem(binding.actionClearCache.root, typeface)

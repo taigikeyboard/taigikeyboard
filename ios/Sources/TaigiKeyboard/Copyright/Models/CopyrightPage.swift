@@ -12,7 +12,6 @@ struct CopyrightPage: Identifiable {
 
 /// 版權頁面按鈕資料
 struct CopyrightButton {
-    let icon: String
     let text: LocalizedText
     let url: String
 }
