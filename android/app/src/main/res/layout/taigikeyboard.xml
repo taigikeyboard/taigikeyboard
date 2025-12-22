@@ -24,8 +24,6 @@
 
             <include layout="@layout/media_input_layout" />
 
-            <include layout="@layout/clipboard_input_layout" />
-
         </ViewFlipper>
 
     </LinearLayout>

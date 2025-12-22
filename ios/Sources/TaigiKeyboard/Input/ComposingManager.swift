@@ -192,9 +192,9 @@ public class ComposingManager: ObservableObject {
     }
 
     /// 選擇候選詞（替換 markedText 並確認提交）
+    /// 對齊 Android ComposingManager.selectSuggestion：直接使用候選詞文字
     public func selectSuggestion(_ suggestion: Autocomplete.Suggestion) {
         guard isComposing else { return }
-
 
         // 直接清除 markedText（不提交）並插入候選詞
         if let proxy = keyboardViewController?.textDocumentProxy {
@@ -202,22 +202,8 @@ public class ComposingManager: ObservableObject {
             proxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
             proxy.unmarkText()
 
-            // 檢測並保留連字符前綴
-            let hyphenPrefix = extractHyphenPrefix(from: composingText)
-            let suggestionWithoutHyphens = suggestion.text.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-
-            let textToInsert: String
-            if suggestionWithoutHyphens.isEmpty {
-                // 候選詞本身是純連字符,直接使用候選詞
-                textToInsert = suggestion.text
-            } else {
-                // 候選詞包含實際內容,保留前綴
-                textToInsert = hyphenPrefix + suggestion.text
-            }
-
-            // 插入候選詞文字（包含前綴）
-            proxy.insertText(textToInsert)
-
+            // 直接使用候選詞文字，對齊 Android 行為
+            proxy.insertText(suggestion.text)
         }
 
         // 更新狀態為 idle
@@ -231,19 +217,6 @@ public class ComposingManager: ObservableObject {
         // 明確清空 AutocompleteContext 的候選詞（使用 reset 方法）
         keyboardViewController?.state.autocompleteContext.reset()
 
-    }
-
-    /// 提取連字符前綴
-    private func extractHyphenPrefix(from text: String) -> String {
-        var prefix = ""
-        for char in text {
-            if char == "-" {
-                prefix.append(char)
-            } else {
-                break
-            }
-        }
-        return prefix
     }
 
     /// 移動到下一個候選詞（空白鍵功能）

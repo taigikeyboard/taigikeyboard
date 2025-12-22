@@ -1,4 +1,9 @@
-# Trie 實作
+# Trie 索引與 Lexicon 查詢
+
+> **功能代號**: `Trie`, `Lexicon`
+> **關鍵字**: `Trie`, `MARISA`, `Lexicon`, `InputNormalizer`, `TrieService`, `LexiconService`
+
+---
 
 ## 架構
 

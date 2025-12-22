@@ -61,6 +61,8 @@
     <color name="modern_success">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="modern_warning_container">#FFF8F0</color><!-- Light Orange Background -->
     <color name="modern_warning">#fab3ad</color><!-- Warm Pink -->
+    <color name="modern_error">#B00020</color><!-- Error Red -->
+    <color name="modern_on_accent">#FFFFFF</color><!-- White text on accent -->
 
     <!-- Modern Theme - Alpha Colors (Translucent) - SPY×FAMILY Theme -->
     <color name="modern_accent_container">#1A6e8a7d</color><!-- Teal @ 10% opacity -->

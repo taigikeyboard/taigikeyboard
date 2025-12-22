@@ -15,12 +15,14 @@ object DictionaryConstants {
  * @property roman Romanized form with tone marks (POJ or TL)
  * @property hanzi Chinese characters representation (nullable)
  * @property lengthScore 詞庫頻率（frequency），用於排序。值越大代表越常用。
+ * @property delimiter 分隔符（NextWord 用，羅馬字模式輸出時使用："-" 或 " "）
  */
 data class TaigiWord(
     val id: Int,
     val roman: String,
     val hanzi: String?,
-    val lengthScore: Int?
+    val lengthScore: Int?,
+    val delimiter: String? = null
 ) {
     /**
      * Display text prioritizes hanzi over roman

@@ -48,6 +48,9 @@ class CandidateOverlayView : FrameLayout {
     private var suggestions: List<TaigiWord> = emptyList()
     private val prefs: PrefHelper by lazy { PrefHelper(TaigiKeyboard.getInstance().context) }
 
+    // 點擊保護：防止展開按鈕的點擊事件傳播到 cell
+    private var isClickEnabled: Boolean = true
+
     // 回調
     var onCollapse: (() -> Unit)? = null
     var onSuggestionSelected: ((TaigiWord, Int) -> Unit)? = null
@@ -99,6 +102,12 @@ class CandidateOverlayView : FrameLayout {
      * @param keyboardHeight 鍵盤總高度（用於限制 overlay 高度）
      */
     fun show(suggestions: List<TaigiWord>, keyboardHeight: Int) {
+        // 點擊保護：立刻禁用，防止展開按鈕的點擊事件傳播到 cell
+        isClickEnabled = false
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[SHOW] show() called, isVisible=$isVisible, suggestions=${suggestions.size}")
+        }
         if (isVisible) return
 
         this.suggestions = suggestions
@@ -129,6 +138,9 @@ class CandidateOverlayView : FrameLayout {
         visibility = VISIBLE
         isVisible = true
 
+        // 點擊保護：150ms 後解除
+        postDelayed({ isClickEnabled = true }, 150)
+
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[SHOW] Overlay shown with ${suggestions.size} suggestions, height=$keyboardHeight")
         }
@@ -138,6 +150,12 @@ class CandidateOverlayView : FrameLayout {
      * 隱藏 overlay
      */
     fun hide() {
+        if (BuildConfig.DEBUG) {
+            val stackTrace = Thread.currentThread().stackTrace
+            val caller = stackTrace.getOrNull(3)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: "unknown"
+            val caller2 = stackTrace.getOrNull(4)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: ""
+            Log.d(TAG, "[HIDE] hide() called from: $caller <- $caller2, isVisible=$isVisible")
+        }
         if (!isVisible) return
 
         // 直接隱藏，不使用動畫
@@ -336,8 +354,9 @@ class CandidateOverlayView : FrameLayout {
         // 根據設定決定顯示內容
         bindCellContent(item.word, primaryText, subtitleText)
 
-        // 設定點擊事件
+        // 設定點擊事件（含點擊保護）
         cellView.setOnClickListener {
+            if (!isClickEnabled) return@setOnClickListener
             onSuggestionSelected?.invoke(item.word, item.originalIndex)
             hide()
         }
@@ -361,8 +380,9 @@ class CandidateOverlayView : FrameLayout {
         // 根據設定決定顯示內容
         bindCellContent(item.word, primaryText, subtitleText)
 
-        // 設定點擊事件
+        // 設定點擊事件（含點擊保護）
         cellView.setOnClickListener {
+            if (!isClickEnabled) return@setOnClickListener
             onSuggestionSelected?.invoke(item.word, item.originalIndex)
             hide()
         }

@@ -4,7 +4,13 @@ import KeyboardKit
 class SharedSettings {
     let userDefaults: UserDefaults
 
-    private static let appGroupId = "group.com.siansiansu.TaigiKeyboard"
+    static let appGroupId = "group.com.siansiansu.TaigiKeyboard"
+
+    /// 取得 App Group 共用資料夾路徑
+    /// Main App 和 Keyboard Extension 都可存取
+    static func getSharedContainerURL() -> URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
+    }
 
     private static var _sharedUserDefaults: UserDefaults?
 

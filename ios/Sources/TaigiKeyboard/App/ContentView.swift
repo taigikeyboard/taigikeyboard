@@ -5,6 +5,9 @@ struct ContentView: View {
     @State private var showSettings = false
     @State private var showDictionarySettings = false
     @State private var showCopyright = false
+    #if DEBUG
+    @State private var showDebug = false
+    #endif
     @Binding var initialShowSettings: Bool
     @ObservedObject var viewModel: OnboardingViewModel
 
@@ -37,6 +40,12 @@ struct ContentView: View {
                                 // Card 3: Copyright (版權聲明)
                                 CopyrightCardView(showCopyright: $showCopyright)
                                 .themedCard()
+
+                                // Card 4: Debug Zone (僅 DEBUG 模式)
+                                #if DEBUG
+                                DebugCardView(showDebug: $showDebug)
+                                .themedCard()
+                                #endif
                             }
                             .padding(.horizontal, 20)
                             .frame(maxWidth: max(0, min(geometry.size.width - 40, 500)))
@@ -59,6 +68,11 @@ struct ContentView: View {
             .sheet(isPresented: $showCopyright) {
                 CopyrightView()
             }
+            #if DEBUG
+            .sheet(isPresented: $showDebug) {
+                DebugView()
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
         .onChange(of: initialShowSettings) { _, newValue in

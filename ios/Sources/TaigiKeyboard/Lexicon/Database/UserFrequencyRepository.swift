@@ -41,19 +41,16 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Database Path
 
     private static func getDatabasePath() throws -> String {
-        guard let appSupportURL = FileManager.default.urls(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask
-        ).first else {
+        guard let containerURL = SharedSettings.getSharedContainerURL() else {
             throw DictionaryError.databaseNotFound
         }
 
         try FileManager.default.createDirectory(
-            at: appSupportURL,
+            at: containerURL,
             withIntermediateDirectories: true
         )
 
-        let databaseURL = appSupportURL.appendingPathComponent("user_frequency.db")
+        let databaseURL = containerURL.appendingPathComponent("user_frequency.db")
         return databaseURL.path
     }
 
@@ -324,6 +321,18 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         do {
             return try connectionManager.executeSync { db in
+                try self.queryTopWords(db: db, limit: limit)
+            }
+        } catch {
+            return []
+        }
+    }
+
+    /// 取得使用次數最多的詞彙（async 版本，確保初始化）
+    func getTopWordsAsync(limit: Int = 100) async -> [(word: String, count: Int)] {
+        do {
+            try await ensureInitialized()
+            return try await connectionManager.execute { db in
                 try self.queryTopWords(db: db, limit: limit)
             }
         } catch {

@@ -1,4 +1,9 @@
-# Taigi Keyboard - SPY×FAMILY Theme Design
+# Theme 主題設計
+
+> **功能代號**: `Theme`
+> **關鍵字**: `Theme`, `主題`, `樣式`, `SPY×FAMILY`, `配色`
+
+---
 
 ## 設計理念
 

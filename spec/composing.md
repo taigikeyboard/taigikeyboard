@@ -1,4 +1,9 @@
-# 雙狀態組字模型
+# Composing 組字管理
+
+> **功能代號**: `Composing`
+> **關鍵字**: `Composing`, `rawInput`, `composingText`, `組字`, `ComposingManager`
+
+---
 
 ## 概述
 

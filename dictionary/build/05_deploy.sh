@@ -2,7 +2,9 @@
 #
 # 複製辭典檔案到 Android 和 iOS 專案
 #
-# 輸入：output/dictionary.db, output/dictionary.trie
+# 輸入：
+#   - output/dictionary.db (包含 word_association 表)
+#   - output/dictionary.trie
 # 輸出：
 #   - android/app/src/main/assets/
 #   - ios/Resources/Dictionaries/
@@ -65,3 +67,4 @@ echo "  - dictionary.trie ($(du -h "$TRIE_FILE" | cut -f1))"
 
 echo ""
 echo "[INFO] Done!"
+echo "[NOTE] word_association table is now embedded in dictionary.db"

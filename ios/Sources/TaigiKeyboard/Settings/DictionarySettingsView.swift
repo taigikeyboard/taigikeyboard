@@ -180,10 +180,13 @@ struct DictionarySettingsView: View {
         )
     }
 
-    /// 清除使用者頻率資料庫
+    /// 清除使用者學習資料（詞頻 + 詞關聯）
     private func clearUserFrequencyDatabase() {
         do {
+            // 刪除 User Frequency
             try UserFrequencyService.deleteUserDatabase()
+            // 刪除 User Association（比照 Android）
+            try NextWordService.deleteUserDatabase()
 
             let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
             impactFeedback.impactOccurred()

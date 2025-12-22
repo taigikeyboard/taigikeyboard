@@ -1,4 +1,9 @@
-# 詞頻與排序
+# UserFrequency 詞頻與排序
+
+> **功能代號**: `UserFrequency`
+> **關鍵字**: `sort`, `排序`, `UserFrequency`, `詞頻`, `calculateScore`, `FrequencyData`
+
+---
 
 ## 概述
 

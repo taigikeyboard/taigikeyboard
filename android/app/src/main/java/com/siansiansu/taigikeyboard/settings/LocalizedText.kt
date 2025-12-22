@@ -587,29 +587,4 @@ object AppTexts {
         tl = "CC BY-NC"
     )
 
-    // Clipboard timestamp texts
-    val justNow = LocalizedText(
-        hanji = "拄仔",
-        poj = "tú-á",
-        tl = "tú-á"
-    )
-
-    val minutesAgo = LocalizedText(
-        hanji = "分鐘前",
-        poj = "hun-cheng chêng",
-        tl = "hun-tsing tsîng"
-    )
-
-    val hoursAgo = LocalizedText(
-        hanji = "點鐘前",
-        poj = "tiám-cheng chêng",
-        tl = "tiám-tsing tsîng"
-    )
-
-    val daysAgo = LocalizedText(
-        hanji = "幾工前",
-        poj = "kuí kang chêng",
-        tl = "kuí kang tsîng"
-    )
-
 }

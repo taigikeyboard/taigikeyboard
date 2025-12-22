@@ -71,7 +71,8 @@ SELECT
     CASE WHEN poj_notone = '' OR poj_notone IS NULL THEN NULL ELSE poj_notone END,
     CASE WHEN poj_abbrev = '' OR poj_abbrev IS NULL THEN NULL ELSE poj_abbrev END
 FROM temp_import
-WHERE tl_num IS NOT NULL AND tl_num != '';
+WHERE tl_num IS NOT NULL AND tl_num != ''
+  AND (LENGTH(tl_num) - LENGTH(REPLACE(tl_num, '-', '')) + 1) <= 3;
 
 DROP TABLE temp_import;
 

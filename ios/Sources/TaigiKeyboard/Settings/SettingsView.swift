@@ -194,8 +194,14 @@ struct SettingsView: View {
     private func resetAllSettings() {
         settings.resetToDefaults()
 
+        // 清除使用者詞頻資料
         do {
             try UserFrequencyService.deleteUserDatabase()
+        } catch {}
+
+        // 清除 NextWord 使用者關聯資料
+        do {
+            try NextWordService.deleteUserDatabase()
         } catch {}
 
         selectedInputMode = settings.inputMode

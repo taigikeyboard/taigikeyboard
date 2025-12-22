@@ -90,6 +90,14 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
+        <!-- Debug Activity (DEBUG only) -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.DebugActivity"
+            android:label="Debug Zone"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
     </application>
 
 </manifest>

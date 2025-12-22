@@ -69,6 +69,23 @@
 
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Debug Zone (只在 DEBUG 模式顯示) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/debug_card"
+            style="@style/ModernCard"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <include layout="@layout/home_navigation_item_debug" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Footer Section -->
         <LinearLayout
             android:layout_width="match_parent"

@@ -1,123 +1,218 @@
-# 台語鍵盤 - 檔案索引
+# 檔案索引與命名規則
+
+> **關鍵字**: `files`, `naming`, `structure`, `對應表`
 
 ---
 
-## iOS (`ios/Sources/TaigiKeyboard/`)
+## 命名規則
 
-### 核心
-- `_Keyboard/KeyboardViewController.swift` - Keyboard Extension 主入口
-- `_Keyboard/TaigiKeyboardView.swift` - 鍵盤 SwiftUI View
+### 功能模組命名
 
-### 輸入與組字 (`Input/`)
-- `ComposingManager.swift` - 組字狀態管理（rawInput + composingText）
-- `KeyboardContext+Composing.swift` - KeyboardKit Context 擴充
-- `Tone/*.swift` - 聲調轉換（POJ/TL 調符 ↔ 數字）
+| 功能代號 | 說明 | iOS 目錄 | Android 目錄 |
+|----------|------|----------|--------------|
+| **Composing** | 組字管理 | `Input/` | `ime/text/composing/` |
+| **Autocomplete** | 自動完成 | `Autocomplete/` | `ime/text/composing/` |
+| **Lexicon** | 字典查詢 | `Lexicon/` | `ime/dictionary/` |
+| **Trie** | Trie 索引 | `Lexicon/Trie/` | `ime/dictionary/` |
+| **Tone** | 聲調處理 | `Input/Tone/` | `ime/dictionary/` |
+| **UserFrequency** | 使用者頻率 | `Lexicon/` | `ime/text/composing/` |
+| **NextWord** | 下一詞預測 | `Lexicon/` | `ime/dictionary/` |
+| **Smartbar** | 候選詞列 | `Autocomplete/Views/` | `ime/text/smartbar/` |
+| **Settings** | 設定 | `Settings/` | `settings/` |
+| **Theme** | 主題 | `Theme/` | `ui/theme/` |
 
-### 字典查詢 (`Lexicon/`)
-- `Services/LexiconService.swift` - 候選詞搜尋入口
-- `Services/UserFrequencyService.swift` - 使用者頻率記錄
-- `Database/DictionaryRepository.swift` - Trie + SQLite 查詢
-- `Database/SQLiteConnectionManager.swift` - SQLite 連線管理
-- `Trie/TrieService.swift` - MARISA-trie Swift 封裝
-- `Trie/InputNormalizer.swift` - 輸入正規化（調符→數字）
-- `Models/TaigiWord.swift` - 詞彙資料模型
+### 檔案命名慣例
 
-### 自動完成 (`Autocomplete/`)
-- `Services/AutocompleteService.swift` - KeyboardKit 自動完成整合
-- `Views/CandidateView.swift` - 候選詞視圖
-
-### 設定 (`Settings/`)
-- `SharedSettings.swift` - App Group 設定（POJ/TL 模式、詞庫開關）
-- `DictionarySettingsView.swift` - 詞庫管理 UI（七大詞庫開關、清除資料）
-- `SettingsView.swift` - 齒盤設定 UI
-
-### 資源 (`Resources/`)
-- `dictionary.db` - SQLite 字典
-- `dictionary.trie` - MARISA-trie 索引
+| 類型 | iOS 慣例 | Android 慣例 | 範例 |
+|------|----------|--------------|------|
+| Service | `XxxService.swift` | `XxxService.kt` | `LexiconService` |
+| Repository | `XxxRepository.swift` | （內建於 Service） | `UserFrequencyRepository` |
+| Manager | `XxxManager.swift` | `XxxManager.kt` | `ComposingManager` |
+| Models | `XxxModels.swift` | `XxxModels.kt` | `DictionaryModels` |
+| View | `XxxView.swift` | `XxxView.kt` | `CandidateView` |
+| Constants | `XxxConstants.swift` | （內建於相關檔案） | `LexiconConstants` |
 
 ---
 
-## Android (`android/app/src/main/java/.../taigikeyboard/`)
+## 跨平台檔案對應表
 
-### 核心 (`ime/core/`)
-- `TaigiKeyboard.kt` - IME 主服務
-- `PrefHelper.kt` - 偏好設定 (DataStore)
-- `PreferenceDataStore.kt` - DataStore 封裝
+### 核心模組
 
-### 文字輸入 (`ime/text/`)
-- `TextInputManager.kt` - 文字輸入管理（按鍵處理、候選詞更新）
-- `composing/ComposingManager.kt` - 組字狀態（rawInput + composingText 雙狀態）
-- `composing/TaigiAutocompleteService.kt` - 候選詞搜尋入口
-- `composing/UserFrequencyService.kt` - 使用者頻率記錄
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **IME 主入口** | `_Keyboard/KeyboardViewController.swift` | `ime/core/TaigiKeyboard.kt` |
+| **鍵盤 View** | `_Keyboard/TaigiKeyboardView.swift` | `ime/text/keyboard/KeyboardView.kt` |
+| **偏好設定** | `Settings/SharedSettings.swift` | `ime/core/PrefHelper.kt` |
 
-### 字典查詢 (`ime/dictionary/`)
-- `LexiconService.kt` - Trie + SQLite 混合查詢
-- `TrieService.kt` - MARISA-trie JNI 封裝
-- `InputNormalizer.kt` - 輸入正規化（調符→數字）
-- `ToneConverter.kt` - 聲調轉換（數字→調符）
-- `ToneConverterModels.kt` - 聲調映射表
-- `DictionaryModels.kt` - 詞彙資料模型
+### Composing 組字
 
-### 智慧列 (`ime/text/smartbar/`)
-- `SmartbarManager.kt` - 候選詞顯示與選擇
-- `SmartbarView.kt` - UI 容器
-- `CandidateOverlayView.kt` - 候選詞浮層
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **組字管理** | `Input/ComposingManager.swift` | `ime/text/composing/ComposingManager.kt` |
+| **Context 擴充** | `Input/KeyboardContext+Composing.swift` | — |
 
-### 按鍵系統 (`ime/text/key/`, `ime/text/keyboard/`, `ime/text/layout/`)
-- `key/KeyCode.kt` - 按鍵代碼
-- `key/KeyView.kt` - 按鍵視圖
-- `layout/LayoutManager.kt` - 佈局載入
+### Autocomplete 自動完成
 
-### 設定 (`settings/`)
-- `DictionarySettingsActivity.kt` - 詞庫管理（七大詞庫開關、清除資料）
-- `KeyboardSettingsActivity.kt` - 齒盤設定
-- `SettingsMainActivity.kt` - 設定主頁
-- `LanguageManager.kt` - 多語言管理
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **自動完成服務** | `Autocomplete/Services/AutocompleteService.swift` | `ime/text/composing/TaigiAutocompleteService.kt` |
+| **候選詞 View** | `Autocomplete/Views/CandidateView.swift` | `ime/text/smartbar/SmartbarManager.kt` |
+| **展開浮層** | `Autocomplete/Views/ExpandedCandidateOverlay.swift` | `ime/text/smartbar/CandidateOverlayView.kt` |
 
-### 資源 (`assets/`)
-- `dictionary.db` - SQLite 字典
-- `dictionary.trie` - MARISA-trie 索引
-- `ime/text/characters/qwerty_{poj,tl}.json` - 鍵盤佈局
+### Lexicon 字典查詢
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **字典服務** | `Lexicon/Services/LexiconService.swift` | `ime/dictionary/LexiconService.kt` |
+| **SQLite 連線** | `Lexicon/Database/SQLiteConnectionManager.swift` | （內建於 LexiconService） |
+| **字典 Repository** | `Lexicon/Database/DictionaryRepository.swift` | （內建於 LexiconService） |
+| **詞彙模型** | `Lexicon/Models/TaigiWord.swift` | `ime/dictionary/DictionaryModels.kt` |
+| **輸入類型** | `Lexicon/Models/InputType.swift` | （內建於 TaigiAutocompleteService） |
+| **錯誤定義** | `Lexicon/Models/DictionaryError.swift` | — |
+| **常數定義** | `Lexicon/Models/LexiconConstants.swift` | — |
+
+### Trie 索引
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **Trie 服務** | `Lexicon/Trie/TrieService.swift` | `ime/dictionary/TrieService.kt` |
+| **輸入正規化** | `Lexicon/Trie/InputNormalizer.swift` | `ime/dictionary/InputNormalizer.kt` |
+| **JNI 封裝** | — | `cpp/trie_jni.cpp` |
+
+### Tone 聲調
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **聲調轉換** | `Input/Tone/ToneConverter.swift` | `ime/dictionary/ToneConverter.kt` |
+| **POJ 轉換** | `Input/Tone/POJToneConverter.swift` | （內建於 ToneConverter） |
+| **TL 轉換** | `Input/Tone/TLToneConverter.swift` | （內建於 ToneConverter） |
+| **調符映射** | `Input/Tone/ToneMappings.swift` | `ime/dictionary/ToneConverterModels.kt` |
+| **聲調還原** | `Input/Tone/ToneRestoration.swift` | （內建於 ToneConverter） |
+| **母音分析** | `Input/Tone/VowelAnalyzer.swift` | — |
+| **工具函數** | `Input/Tone/ToneUtilities.swift` | `ime/dictionary/ToneCharacterUtils.kt` |
+
+### UserFrequency 使用者頻率
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **頻率服務** | `Lexicon/Services/UserFrequencyService.swift` | `ime/text/composing/UserFrequencyService.kt` |
+| **頻率 Repository** | `Lexicon/Database/UserFrequencyRepository.swift` | （內建於 UserFrequencyService） |
+
+### NextWord 下一詞預測（規劃中）
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **預測服務** | `Lexicon/Services/NextWordService.swift` | `ime/dictionary/NextWordService.kt` |
+| **關聯 Repository** | `Lexicon/Database/WordAssociationRepository.swift` | （內建於 NextWordService） |
+
+### Settings 設定
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **設定主頁** | `Settings/SettingsView.swift` | `settings/SettingsMainActivity.kt` |
+| **詞庫設定** | `Settings/DictionarySettingsView.swift` | `settings/DictionarySettingsActivity.kt` |
+| **鍵盤設定** | — | `settings/KeyboardSettingsActivity.kt` |
+
+### Theme 主題
+
+| 功能 | iOS 檔案 | Android 檔案 |
+|------|----------|--------------|
+| **主題定義** | `Theme/ThemeTokens.swift` | `ui/theme/Theme.kt` |
+| **按鍵樣式** | `Theme/ButtonStyles.swift` | — |
+
+---
+
+## 目錄結構
+
+### iOS (`ios/Sources/TaigiKeyboard/`)
+
+```
+TaigiKeyboard/
+├── _Keyboard/           # IME 主入口
+├── Actions/             # 動作處理（ActionHandler）
+├── App/                 # 主 App UI
+├── Autocomplete/        # 自動完成
+│   ├── Models/
+│   ├── Services/
+│   └── Views/
+├── Callouts/            # 長按選單
+├── Copyright/           # 版權資訊
+├── Emojis/              # Emoji 服務
+├── Input/               # 輸入與組字
+│   └── Tone/            # 聲調處理
+├── Layout/              # 鍵盤佈局
+├── Lexicon/             # 字典查詢
+│   ├── Database/        # SQLite 存取
+│   ├── Models/          # 資料模型
+│   ├── Services/        # 服務層
+│   ├── Trie/            # Trie 相關
+│   └── Utils/           # 工具函數
+├── Localization/        # 多語言
+├── Onboarding/          # 引導流程
+├── Settings/            # 設定
+├── Styling/             # 樣式
+└── Theme/               # 主題
+```
+
+### Android (`android/app/src/main/java/.../taigikeyboard/`)
+
+```
+taigikeyboard/
+├── ime/                 # IME 相關
+│   ├── core/            # 核心（TaigiKeyboard, PrefHelper）
+│   ├── dictionary/      # 字典（Lexicon, Trie, Tone）
+│   ├── text/            # 文字輸入
+│   │   ├── composing/   # 組字（Composing, Autocomplete, UserFrequency）
+│   │   ├── smartbar/    # 候選詞列
+│   │   ├── key/         # 按鍵
+│   │   ├── keyboard/    # 鍵盤
+│   │   └── layout/      # 佈局
+│   ├── clipboard/       # 剪貼簿
+│   ├── media/           # 媒體（Emoji）
+│   ├── popup/           # 彈出視窗
+│   └── lifecycle/       # 生命週期
+├── settings/            # 設定
+├── onboarding/          # 引導流程
+├── ui/                  # UI（Theme）
+├── util/                # 工具函數
+└── model/               # 共用模型
+```
 
 ---
 
 ## 資料流
 
 ```
-輸入 → ComposingManager (rawInput/composingText)
-         ↓
-     TaigiAutocompleteService.getSuggestions(rawInput, displayText)
-         ↓
-     LexiconService.search() → InputNormalizer → TrieService → SQLite
-         ↓
-     SmartbarManager.updateCandidates()
+使用者輸入
+    ↓
+ComposingManager (rawInput / composingText)
+    ↓
+AutocompleteService.getSuggestions(rawInput, displayText)
+    ↓
+LexiconService.search()
+    ↓
+InputNormalizer.normalize() → TrieService.prefixSearch() → SQLite
+    ↓
+UserFrequencyService.getFrequencyDataBatch() → 排序
+    ↓
+Smartbar / CandidateView 更新
+    ↓
+使用者選擇候選詞
+    ↓
+UserFrequencyService.recordUsage()
+    ↓
+（NextWord）NextWordService.predict() → 顯示關聯詞
 ```
 
 ---
 
-## 跨平台檔案對應
+## 相關 Spec
 
-| 功能 | iOS | Android |
-|------|-----|---------|
-| **IME 主入口** | `KeyboardViewController.swift` | `TaigiKeyboard.kt` |
-| **組字管理** | `ComposingManager.swift` | `ComposingManager.kt` |
-| **自動完成** | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
-| **詞典查詢** | `LexiconService.swift` | `LexiconService.kt` |
-| **Trie 服務** | `TrieService.swift` | `TrieService.kt` |
-| **輸入正規化** | `InputNormalizer.swift` | `InputNormalizer.kt` |
-| **聲調轉換** | `ToneConverter.swift` | `ToneConverter.kt` |
-| **使用者頻率** | `UserFrequencyService.swift` | `UserFrequencyService.kt` |
-| **SQLite 查詢** | `DictionaryRepository.swift` | `LexiconService.kt` |
-| **設定儲存** | `SharedSettings.swift` | `PrefHelper.kt` |
-| **詞庫管理 UI** | `DictionarySettingsView.swift` | `DictionarySettingsActivity.kt` |
-| **齒盤設定 UI** | `SettingsView.swift` | `KeyboardSettingsActivity.kt` |
-| **候選詞視圖** | `CandidateView.swift` | `SmartbarView.kt` |
-
----
-
-## 關鍵設計
-
-1. **雙狀態組字**：`rawInput`（Trie 搜尋用）、`composingText`（UI 顯示用）
-2. **Trie + SQLite**：Trie 前綴匹配取 rowid → SQLite 批次查詢
-3. **聲調處理**：輸入數字即時轉調符顯示，搜尋用原始數字
-4. **詞庫開關**：七大詞庫（教育部、新詞、工藝、iTaigi、台日、台華、植物）可獨立啟用/停用
+| Spec | 對應功能模組 |
+|------|--------------|
+| `composing.md` | Composing |
+| `autocomplete.md` | Autocomplete |
+| `sort.md` | UserFrequency, Lexicon |
+| `trie.md` | Trie, Lexicon |
+| `tone.md` | Tone |
+| `prediction.md` | NextWord |

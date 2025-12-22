@@ -38,8 +38,6 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
     private var activeKeyboardMode: KeyboardMode? = null
     private val keyboardViews = EnumMap<KeyboardMode, KeyboardView>(KeyboardMode::class.java)
-    // CLIPBOARD 功能暫時移除
-    // private var clipboardView: ClipboardView? = null
     private val osHandler = Handler(Looper.getMainLooper())
     private var textViewFlipper: ViewFlipper? = null
     var textViewGroup: android.view.ViewGroup? = null
@@ -133,20 +131,6 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                     measureAndUpdateKeyboardHeight()
                 }
             }
-
-            // CLIPBOARD 功能暫時移除
-            // withContext(Dispatchers.Main) {
-            //     clipboardView = ClipboardView(taigikeyboard.context).apply {
-            //         onPasteListener = { text ->
-            //             pasteText(text)
-            //             setActiveKeyboardMode(KeyboardMode.CHARACTERS)
-            //         }
-            //         onBackClickListener = {
-            //             setActiveKeyboardMode(KeyboardMode.CHARACTERS)
-            //         }
-            //     }
-            //     textViewFlipper?.addView(clipboardView)
-            // }
 
             val activeKeyboardMode = getActiveKeyboardMode()
             addKeyboardView(activeKeyboardMode)
@@ -551,6 +535,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             )
         )
         ic.endBatchEdit()
+
+        // NextWord: 退格後根據剩餘文字重新預測
+        val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
+        smartbarManager.handleBackspaceForNextWord(textBeforeCursor)
     }
 
     /**
@@ -573,7 +561,17 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 }
             }
 
-            smartbarManager.clearCandidates()
+            // 羅馬字模式（isTranslateSwapped=false）：記錄羅馬字到 NextWord
+            // 漢字模式（isTranslateSwapped=true）：不記錄，因為組字不會產生漢字
+            if (!taigikeyboard.prefs.isTranslateSwapped && committedText.isNotEmpty()) {
+                smartbarManager.handleNextWordPrediction(
+                    displayText = committedText,
+                    committedText = committedText,
+                    roman = committedText
+                )
+            } else {
+                smartbarManager.clearCandidates()
+            }
             return
         }
 
@@ -640,9 +638,17 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
         // 如果正在台語組字，確認組字 + 插入空白
         if (composingManager?.isComposing() == true) {
+            // 在確認之前先取得組字文字
+            val committedText = composingManager?.getComposingText() ?: ""
             composingManager?.commitComposition(ic)
             ic.commitText(" ", 1)
             smartbarManager.clearCandidates()
+
+            // 更新 lastSelectedWord，讓後續輸入可以建立關聯
+            // （空白本身不觸發 NextWord 預測，但記錄已輸出的文字）
+            if (committedText.isNotEmpty()) {
+                smartbarManager.updateLastSelectedWord(committedText)
+            }
             return
         }
 
@@ -691,7 +697,6 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
             KeyCode.SWITCH_TO_MEDIA_CONTEXT -> taigikeyboard.setActiveInput(R.id.media_input)
             KeyCode.SWITCH_TO_TEXT_CONTEXT -> taigikeyboard.setActiveInput(R.id.text_input)
-            KeyCode.SWITCH_TO_CLIPBOARD_CONTEXT -> taigikeyboard.setActiveInput(R.id.clipboard_input)
             KeyCode.VIEW_CHARACTERS -> setActiveKeyboardMode(KeyboardMode.CHARACTERS)
             KeyCode.VIEW_NUMERIC -> setActiveKeyboardMode(KeyboardMode.NUMERIC)
             KeyCode.VIEW_NUMERIC_ADVANCED -> {
@@ -810,13 +815,27 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 manager.appendCharacter(char, ic)
             }
+            // 更新候選詞
+            launch {
+                updateTaigiCandidates()
+            }
         } else {
-            manager.startComposing(char, ic)
-        }
-
-        // 更新候選詞
-        launch {
-            updateTaigiCandidates()
+            // 非組字模式：檢查是否正在顯示 NextWord 候選詞
+            if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
+                // NextWord 模式下輸入 "-"：直接輸出，保留 NextWord 候選詞
+                // 用戶可以繼續點選 NextWord，或輸入其他字開始組字
+                ic.commitText("-", 1)
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[INPUT] '-' committed in NextWord mode, keeping suggestions")
+                }
+            } else {
+                // 開始新組字（包含 "-" 開頭的組字）
+                manager.startComposing(char, ic)
+                // 更新候選詞
+                launch {
+                    updateTaigiCandidates()
+                }
+            }
         }
     }
 
@@ -824,6 +843,13 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      * 更新台語候選詞
      */
     private suspend fun updateTaigiCandidates() {
+        // DEBUG: 追蹤調用來源
+        if (BuildConfig.DEBUG) {
+            val stackTrace = Thread.currentThread().stackTrace
+            val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
+            Log.d(TAG, "[DEBUG] updateTaigiCandidates() called from: $caller")
+        }
+
         val manager = composingManager ?: run {
             if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] composingManager=null, skip")
             return

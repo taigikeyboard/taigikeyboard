@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.FragmentContentBinding
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -30,6 +31,7 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
 
         setupNavigationItems()
         setupResourceItems()
+        setupDebugZone()
         observeLanguageChanges()
         setupFooterVersion()
 
@@ -38,6 +40,21 @@ class ContentFragment : SettingsMainActivity.SettingsFragment() {
         applyCustomFont()
 
         return binding.root
+    }
+
+    private fun setupDebugZone() {
+        // 只在 DEBUG 模式顯示
+        val debugCard = binding.root.findViewById<View>(R.id.debug_card)
+        if (BuildConfig.DEBUG) {
+            debugCard?.visibility = View.VISIBLE
+            binding.root.findViewById<View>(R.id.nav_item_debug)?.setOnClickListener {
+                Intent(context, DebugActivity::class.java).apply {
+                    startActivity(this)
+                }
+            }
+        } else {
+            debugCard?.visibility = View.GONE
+        }
     }
 
     private fun observeLanguageChanges() {

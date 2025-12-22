@@ -32,7 +32,6 @@ import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
-import com.siansiansu.taigikeyboard.ime.clipboard.ClipboardManager
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
@@ -61,8 +60,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     val textInputManager: TextInputManager
     val mediaInputManager: MediaInputManager
-    lateinit var clipboardManager: ClipboardManager
-        private set
 
     private val navbarManager = NavigationBarManager()
 
@@ -174,9 +171,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
 
-        // Initialize clipboard manager
-        clipboardManager = ClipboardManager.getInstance(this)
-
         // Initialize user frequency service
         UserFrequencyService.init(this)
 
@@ -257,31 +251,11 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         textInputManager.onCreateInputView()
         mediaInputManager.onCreateInputView()
 
-        // 設定剪貼簿 Compose View
-        setupClipboardView()
-
         // 更新導覽列顏色以配合鍵盤主題
         // InputMethodService 需要使用 getWindow().getWindow() 來取得真正的 Window 物件
         getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
 
         return inputView
-    }
-
-    /**
-     * 設定剪貼簿 Compose View
-     */
-    private fun setupClipboardView() {
-        val clipboardComposeView = inputView?.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.clipboard_compose_view)
-        clipboardComposeView?.setContent {
-            androidx.compose.material3.MaterialTheme {
-                com.siansiansu.taigikeyboard.ime.clipboard.ClipboardInputView(
-                    onBackClick = { setActiveInput(R.id.text_input) },
-                    onBackspaceClick = {
-                        textInputManager.sendKeyPress(KeyData(KeyCode.DELETE))
-                    }
-                )
-            }
-        }
     }
 
     fun registerInputView(inputView: InputView) {
@@ -297,7 +271,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
         osHandler.removeCallbacksAndMessages(null)
-        clipboardManager.cleanup()
         LexiconService.close()
         taigikeyboardInstance = null
 
@@ -561,10 +534,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             R.id.media_input -> {
                 inputView?.mainViewFlipper?.displayedChild =
                     inputView?.mainViewFlipper?.indexOfChild(mediaInputManager.mediaViewGroup) ?: 0
-            }
-            R.id.clipboard_input -> {
-                // 剪貼簿 View 是第三個子項目（index = 2）
-                inputView?.mainViewFlipper?.displayedChild = 2
             }
         }
     }

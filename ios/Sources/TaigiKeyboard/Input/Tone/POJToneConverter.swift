@@ -50,9 +50,9 @@ enum POJToneConverter {
 
     /// 從音節中提取聲調數字
     /// - Parameter syllable: 音節字串
-    /// - Returns: (基本形式, 聲調數字)，若無數字則聲調為 1
+    /// - Returns: (基本形式, 聲調數字)，若無數字則聲調為 0（不處理）
     static func extractToneNumber(from syllable: String) -> (baseForm: String, tone: Int)? {
-        guard !syllable.isEmpty else { return (syllable, 1) }
+        guard !syllable.isEmpty else { return (syllable, 0) }
 
         // 只接受最後一個字符為數字
         let lastChar = syllable.last!
@@ -61,8 +61,8 @@ enum POJToneConverter {
             return (baseForm, tone)
         }
 
-        // 若末尾不是數字，視為第一聲（無聲調標記）
-        return (syllable, 1)
+        // 若末尾不是數字，返回 tone=0（不處理，保留原樣）
+        return (syllable, 0)
     }
 
     /// 預處理 POJ 輸入

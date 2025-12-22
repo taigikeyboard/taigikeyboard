@@ -147,6 +147,23 @@ class KeyboardViewController: KeyboardInputViewController {
         super.performAutocomplete()
     }
 
+    // MARK: - Text Input Change
+
+    /// 監聽輸入框切換（textDocumentProxy 變化）
+    override func textDidChange(_ textInput: UITextInput?) {
+        super.textDidChange(textInput)
+
+        // 重置 NextWord 上下文（切換輸入框時）
+        if let handler = services.actionHandler as? ActionHandler {
+            handler.resetNextWordContext()
+
+            // 如果正在顯示 NextWord，清除候選詞
+            if handler.isShowingNextWord {
+                state.autocompleteContext.reset()
+            }
+        }
+    }
+
     // MARK: - Actions
 
     @objc func toggleTranslateSwap() {

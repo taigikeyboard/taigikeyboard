@@ -267,6 +267,67 @@ object UserFrequencyService {
     }
 
     /**
+     * 取得所有詞彙頻率（Debug 用）
+     */
+    suspend fun getAllFrequencies(context: Context): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
+        try {
+            if (appContext == null) {
+                appContext = context.applicationContext
+            }
+            initialize()
+            val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
+
+            val cursor = db.rawQuery(
+                """
+                SELECT ${Table.WORD}, ${Table.COUNT}
+                FROM ${Table.NAME}
+                ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                """.trimIndent(),
+                null
+            )
+
+            val results = mutableListOf<Pair<String, Int>>()
+            cursor.use {
+                while (it.moveToNext()) {
+                    val word = it.getString(0)
+                    val count = it.getInt(1)
+                    results.add(word to count)
+                }
+            }
+
+            results
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[QUERY] Failed to get all frequencies", e)
+            }
+            emptyList()
+        }
+    }
+
+    /**
+     * 清除所有頻率資料（Debug 用）
+     */
+    suspend fun clearAllFrequencies(context: Context) = withContext(Dispatchers.IO) {
+        try {
+            if (appContext == null) {
+                appContext = context.applicationContext
+            }
+            initialize()
+            val db = dbHelper?.writableDatabase ?: return@withContext
+
+            db.execSQL("DELETE FROM ${Table.NAME}")
+
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[CLEAR] All frequencies cleared")
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[CLEAR] Failed to clear frequencies", e)
+            }
+        }
+    }
+
+    /**
      * 刪除資料庫
      */
     suspend fun deleteDatabase() = withContext(Dispatchers.IO) {

@@ -73,7 +73,7 @@
     <LinearLayout
         android:id="@+id/quick_actions"
         style="@style/SmartbarContainer"
-        android:gravity="center"
+        android:gravity="start|center_vertical"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:visibility="gone">
@@ -83,18 +83,6 @@
             style="@style/SmartbarQuickAction"
             android:contentDescription="@string/smartbar__quick_action__open_settings"
             android:src="@drawable/ic_settings" />
-
-        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-            android:id="@+id/quick_action_switch_to_clipboard"
-            style="@style/SmartbarQuickAction"
-            android:contentDescription="@string/smartbar__quick_action__switch_to_clipboard"
-            android:src="@drawable/ic_clipboard" />
-
-        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-            android:id="@+id/quick_action_switch_to_media_context"
-            style="@style/SmartbarQuickAction"
-            android:contentDescription="@string/smartbar__quick_action__switch_to_media_context"
-            android:src="@drawable/ic_sentiment_satisfied" />
 
     </LinearLayout>
 

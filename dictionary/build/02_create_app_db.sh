@@ -88,7 +88,8 @@ SELECT
     CASE WHEN taijit = 'True' THEN 1 ELSE 0 END,
     CASE WHEN kungge = 'True' THEN 1 ELSE 0 END
 FROM temp_import
-WHERE tl IS NOT NULL AND tl != '';
+WHERE tl IS NOT NULL AND tl != ''
+  AND (LENGTH(tl) - LENGTH(REPLACE(tl, '-', '')) + 1) <= 3;
 
 DROP TABLE temp_import;
 

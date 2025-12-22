@@ -1,5 +1,9 @@
 # Debug Log 規範
 
+> **關鍵字**: `log`, `debug`, `除錯`, `Logcat`
+
+---
+
 ## 格式
 
 ```kotlin

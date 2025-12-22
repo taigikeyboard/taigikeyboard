@@ -76,33 +76,29 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # 載入異用字對照表
-    variants_map, is_variant_set = load_variants_map(VARIANTS_FILE, logger)
+    variants_map, _ = load_variants_map(VARIANTS_FILE, logger)
 
     # 載入辭典資料
     df = pd.read_csv(INPUT_FILE)
     total_count = len(df)
     logger.info(f"Loaded dictionary: {total_count} records")
 
-    # 標記原本資料的 is_variant
-    # - 如果 (hanzi, tl) 在 is_variant_set 中（即原本資料的 hanzi 是異用字）→ True
-    # - 否則 → False
-    original_variant_count = 0
-
-    def check_is_variant(row):
-        nonlocal original_variant_count
+    # 建立原始辭典的 (hanzi, tl) 集合，用於判斷變體是否已存在於主條目
+    original_entries = set()
+    for _, row in df.iterrows():
         hanzi = str(row["hanzi"]).strip()
         tl = str(row["tl"]).strip().lower()
-        if (hanzi, tl) in is_variant_set:
-            original_variant_count += 1
-            return True
-        return False
+        original_entries.add((hanzi, tl))
+    logger.info(f"Original entries set: {len(original_entries)} unique (hanzi, tl) pairs")
 
-    df["is_variant"] = df.apply(check_is_variant, axis=1)
-    logger.info(f"Original records marked as variant: {original_variant_count}")
+    # 原始辭典資料一律為 is_variant=False（它們都是主條目）
+    df["is_variant"] = False
 
     # 生成變體資料（從正字複製並替換 hanzi 為 variant）
+    # 但如果 (variant, tl) 已存在於原始辭典，則跳過（該字本身是主條目，非異用字）
     new_rows = []
     matched_count = 0
+    skipped_count = 0
 
     for _, row in df.iterrows():
         hanzi = str(row["hanzi"]).strip()
@@ -112,6 +108,10 @@ def main():
         if key in variants_map:
             matched_count += 1
             for variant in variants_map[key]:
+                # 檢查 (variant, tl) 是否已存在於原始辭典
+                if (variant, tl) in original_entries:
+                    skipped_count += 1
+                    continue
                 # 複製原本的資料，替換 hanzi 為 variant
                 new_row = row.copy()
                 new_row["hanzi"] = variant
@@ -119,6 +119,7 @@ def main():
                 new_rows.append(new_row)
 
     logger.info(f"Matched (hanzi, tl) pairs for generation: {matched_count}")
+    logger.info(f"Skipped (variant already in original): {skipped_count}")
     logger.info(f"Generated variant records: {len(new_rows)}")
 
     # 合併原本資料與新生成的變體

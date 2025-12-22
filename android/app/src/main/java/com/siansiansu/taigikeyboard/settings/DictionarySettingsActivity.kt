@@ -10,6 +10,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.databinding.ActivityDictionarySettingsBinding
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.util.FontUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
@@ -136,12 +137,18 @@ class DictionarySettingsActivity : AppCompatActivity() {
     }
 
     /**
-     * 清除使用者頻率資料庫
+     * 清除使用者學習資料
+     * - UserFrequencyService: 使用者頻率（常用詞排序）
+     * - NextWordService: 使用者關聯（下一詞預測）
      */
     private fun clearUserFrequencyDatabase() {
         lifecycleScope.launch {
             try {
+                // 清除常用詞頻率
                 UserFrequencyService.deleteDatabase()
+
+                // 清除 NextWord 使用者關聯
+                NextWordService.clearAllAssociations(this@DictionarySettingsActivity)
             } catch (e: Exception) {
                 // 錯誤處理：清除失敗不影響 UI 運作
                 e.printStackTrace()

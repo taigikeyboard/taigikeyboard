@@ -1,4 +1,9 @@
-# 自動完成服務 (AutocompleteService)
+# Autocomplete 自動完成
+
+> **功能代號**: `Autocomplete`
+> **關鍵字**: `Autocomplete`, `候選詞`, `getSuggestions`, `AutocompleteService`
+
+---
 
 ## 概述
 

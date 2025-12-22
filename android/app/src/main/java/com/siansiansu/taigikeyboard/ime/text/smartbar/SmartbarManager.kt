@@ -19,6 +19,7 @@ import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,10 +65,36 @@ class SmartbarManager private constructor() :
     private var cachedIsTranslateSwapped: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
 
+    // NextWord 相關狀態
+    private var lastSelectedWord: String? = null
+    private var lastSelectionTime: Long = 0
+    private var isShowingNextWord: Boolean = false
+
+    /**
+     * 檢查目前是否正在顯示 NextWord 候選詞
+     */
+    fun isShowingNextWordCandidates(): Boolean = isShowingNextWord
+
     private val candidateViewOnClickListener = View.OnClickListener { v ->
+        // DEBUG: 追蹤點擊事件
+        if (BuildConfig.DEBUG) {
+            val isNextWord = currentSuggestions.firstOrNull()?.id?.let { it < 0 } ?: false
+            Log.d(TAG, "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${currentSuggestions.size}")
+        }
+
         val button = v as Button
-        val candidatesContainer = smartbarView?.candidatesView ?: return@OnClickListener
+        val candidatesContainer = smartbarView?.candidatesView
+        if (candidatesContainer == null) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[CLICK] candidatesContainer is null, returning")
+            }
+            return@OnClickListener
+        }
         val buttonIndex = candidatesContainer.indexOfChild(button)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[CLICK] buttonIndex=$buttonIndex, suggestionsSize=${currentSuggestions.size}")
+        }
 
         if (buttonIndex >= 0 && buttonIndex < currentSuggestions.size) {
             val selectedWord = currentSuggestions[buttonIndex]
@@ -75,6 +102,9 @@ class SmartbarManager private constructor() :
 
             // 取得組字管理器
             val composingManager = taigikeyboard.textInputManager.getComposingManager()
+
+            // 判斷是否為 NextWord 候選詞（id < 0）
+            val isNextWordPrediction = selectedWord.id < 0
 
             // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
             // showHanjiMode 固定為 true
@@ -87,18 +117,34 @@ class SmartbarManager private constructor() :
                         "${selectedWord.roman} (${selectedWord.hanzi})"
                     }
                 }
-                // 翻譯交換模式：顯示漢字
+                // 翻譯交換模式（漢字模式）：直接顯示漢字
                 cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
-                // 預設顯示羅馬字
+                // 預設顯示羅馬字（一般候選詞和 NextWord 候選詞皆同）
                 else -> selectedWord.roman
             }
 
-            // 選擇候選詞（使用 ComposingManager 處理狀態清除）
-            composingManager?.selectSuggestion(textToCommit, ic)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'")
+                Log.d(TAG, "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, outputBothScripts=$cachedOutputBothScripts")
+                Log.d(TAG, "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction")
+            }
 
-            // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
+            if (isNextWordPrediction) {
+                // NextWord 候選詞：直接 commitText（此時沒有 composing text）
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic")
+                }
+                val result = ic.commitText(textToCommit, 1)
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[NEXTWORD-CLICK] AFTER commitText: result=$result")
+                }
+            } else {
+                // 一般候選詞：使用 ComposingManager 處理狀態清除
+                composingManager?.selectSuggestion(textToCommit, ic)
+            }
+
+            // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
             if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-                // 檢查字尾是否為連字符
                 if (!textToCommit.endsWith("-")) {
                     ic.commitText(" ", 1)
                 }
@@ -109,7 +155,250 @@ class SmartbarManager private constructor() :
                 UserFrequencyService.recordUsage(selectedWord.displayText)
             }
 
-            // 清除候選詞顯示
+            // NextWord: 處理上下文和預測
+            handleNextWordPrediction(
+                displayText = selectedWord.displayText,
+                committedText = textToCommit,
+                roman = selectedWord.roman
+            )
+        }
+    }
+
+    /**
+     * 處理 NextWord 預測
+     *
+     * @param displayText 選中詞的顯示文字（用於預測查詢）
+     * @param committedText 實際提交的文字（用於判斷是否重置上下文）
+     * @param roman 選中詞的羅馬字（TL 或 POJ，依 inputMode 決定）
+     */
+    fun handleNextWordPrediction(displayText: String, committedText: String, roman: String) {
+        val currentTime = System.currentTimeMillis()
+
+        // 檢查是否需要重置上下文
+        val shouldReset = when {
+            // 選中的文字以句末標點結尾
+            committedText.lastOrNull() in SENTENCE_END_PUNCTUATION -> true
+            // 超過 30 秒無操作
+            lastSelectionTime > 0 && (currentTime - lastSelectionTime) > CONTEXT_TIMEOUT_MS -> true
+            else -> false
+        }
+
+        if (shouldReset) {
+            lastSelectedWord = null
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD] Context reset")
+            }
+        }
+
+        // 判斷是否應該記錄關聯（有前一詞且在間隔時間內）
+        val shouldRecordAssociation = lastSelectedWord != null &&
+            (currentTime - lastSelectionTime) < ASSOCIATION_TIMEOUT_MS
+
+        // 拆分複合詞（如 tshit-niû → [tshit, niû]）
+        val parts = splitCompoundWord(displayText)
+        val romanParts = splitCompoundWord(roman)
+
+        // 捕獲當前的 lastSelectedWord（避免在 coroutine 內被修改）
+        val prevWord = lastSelectedWord
+
+        scope.launch {
+            val useTl = (prefs.inputMode == "tl")
+
+            // 單層關聯記錄（前一詞 → 當前詞）
+            // 範例：lastSelectedWord = 早安, currentWord = 你好
+            // 記錄：早安 → 你好
+            if (shouldRecordAssociation && prevWord != null) {
+                // 跳過雜訊：如果當前詞是標點符號或數字，不記錄關聯
+                if (!isNoise(displayText)) {
+                    val nextTl = if (useTl) roman else ""
+                    val nextPoj = if (!useTl) roman else ""
+
+                    NextWordService.recordAssociation(
+                        prev = prevWord,
+                        nextHanzi = displayText,
+                        nextTl = nextTl,
+                        nextPoj = nextPoj,
+                        context = taigikeyboard.context
+                    )
+
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[NEXTWORD] Record: '$prevWord' → '$displayText'")
+                    }
+                } else if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[NEXTWORD] Skip noise: '$displayText'")
+                }
+            }
+
+            // 記錄複合詞內部的關聯（如 tshit → niû）
+            // 複合詞內部固定使用 "-" 分隔
+            for (i in 0 until parts.size - 1) {
+                val prevPart = parts[i]
+                val nextPart = parts[i + 1]
+                val nextRoman = romanParts.getOrNull(i + 1) ?: ""
+                val nextTl = if (useTl) nextRoman else ""
+                val nextPoj = if (!useTl) nextRoman else ""
+
+                NextWordService.recordAssociation(
+                    prev = prevPart,
+                    nextHanzi = nextPart,
+                    nextTl = nextTl,
+                    nextPoj = nextPoj,
+                    delimiter = "-",  // 複合詞內部固定用 "-"
+                    context = taigikeyboard.context
+                )
+
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart' (delimiter='-')")
+                }
+            }
+
+            // 查詢下一詞預測（使用完整詞）
+            // NextWordService 內部會：
+            // - 字典查詢：用最後一字（字元層級）
+            // - 使用者查詢：用完整詞（詞層級）
+            val predictions = NextWordService.predict(
+                word = displayText,
+                context = taigikeyboard.context
+            )
+
+            // 更新候選詞顯示
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                if (predictions.isNotEmpty()) {
+                    updateCandidatesWithPredictions(predictions)
+                } else {
+                    clearCandidates()
+                }
+            }
+        }
+
+        // 更新上下文（雜訊不更新 lastSelectedWord）
+        if (!isNoise(displayText)) {
+            lastSelectedWord = displayText
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD] lastSelectedWord updated: '$displayText'")
+            }
+        } else if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NEXTWORD] Skip updating lastSelectedWord for noise: '$displayText'")
+        }
+        lastSelectionTime = currentTime
+    }
+
+    /**
+     * 拆分複合詞
+     *
+     * 將包含 "-" 的複合詞拆分為多個部分
+     * 例如：tshit-niû → [tshit, niû]
+     *       tshit-niû-á → [tshit, niû, á]
+     *       tshit → [tshit]（無 "-" 則返回原詞）
+     *
+     * @param word 要拆分的詞
+     * @return 拆分後的部分列表
+     */
+    private fun splitCompoundWord(word: String): List<String> {
+        if (word.isEmpty()) return emptyList()
+        return word.split("-").filter { it.isNotEmpty() }
+    }
+
+    /**
+     * 更新 lastSelectedWord（不觸發 NextWord 預測）
+     *
+     * 用於空白鍵確認組字時，記錄已輸出的文字，
+     * 讓後續輸入可以建立關聯
+     *
+     * @param word 已輸出的文字
+     */
+    fun updateLastSelectedWord(word: String) {
+        if (word.isEmpty()) return
+
+        // 拆分複合詞
+        val parts = splitCompoundWord(word)
+
+        // 記錄複合詞內部的關聯（如 tshit → niû）
+        // 複合詞內部固定使用 "-" 分隔
+        if (parts.size > 1) {
+            val useTl = (prefs.inputMode == "tl")
+
+            scope.launch {
+                for (i in 0 until parts.size - 1) {
+                    val prevPart = parts[i]
+                    val nextPart = parts[i + 1]
+                    // 空白確認時沒有羅馬字資訊，只記錄漢字關聯
+                    val nextTl = if (useTl) nextPart else ""
+                    val nextPoj = if (!useTl) nextPart else ""
+
+                    NextWordService.recordAssociation(
+                        prev = prevPart,
+                        nextHanzi = nextPart,
+                        nextTl = nextTl,
+                        nextPoj = nextPoj,
+                        delimiter = "-",  // 複合詞內部固定用 "-"
+                        context = taigikeyboard.context
+                    )
+
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[NEXTWORD] Record compound (space): '$prevPart' → '$nextPart' (delimiter='-')")
+                    }
+                }
+            }
+        }
+
+        // 更新上下文（雜訊不更新 lastSelectedWord）
+        if (!isNoise(word)) {
+            lastSelectedWord = word
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: '$word'")
+            }
+        } else if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: skip noise '$word'")
+        }
+        lastSelectionTime = System.currentTimeMillis()
+    }
+
+    /**
+     * 使用預測結果更新候選詞顯示
+     *
+     * @param predictions 預測結果列表（包含漢字和羅馬字）
+     */
+    private fun updateCandidatesWithPredictions(predictions: List<NextWordService.Prediction>) {
+        // 根據 inputMode 選擇羅馬字（TL 或 POJ）
+        val useTl = (prefs.inputMode == "tl")
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NEXTWORD] updateCandidatesWithPredictions: ${predictions.size} predictions, useTl=$useTl, isTranslateSwapped=$cachedIsTranslateSwapped")
+        }
+
+        // 將預測結果轉換為 TaigiWord
+        // 若用戶選擇羅馬字輸出模式，過濾掉沒有羅馬字的候選詞
+        val words = predictions.mapIndexedNotNull { index, prediction ->
+            val roman = if (useTl) prediction.tl else prediction.poj
+
+            // 羅馬字模式下，若無羅馬字則跳過
+            if (!cachedIsTranslateSwapped && roman.isEmpty()) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[NEXTWORD] Filtered out '${prediction.hanzi}' (no roman, isTranslateSwapped=$cachedIsTranslateSwapped)")
+                }
+                return@mapIndexedNotNull null
+            }
+
+            TaigiWord(
+                id = -index - 1,  // 負數 ID 表示預測結果
+                roman = roman,
+                hanzi = prediction.hanzi,
+                lengthScore = prediction.score.toInt(),  // Double → Int（時間衰減後的分數）
+                delimiter = prediction.delimiter  // 傳入分隔符
+            )
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NEXTWORD] After filter: ${words.size} words")
+            words.forEachIndexed { index, word ->
+                Log.d(TAG, "[NEXTWORD] Word[$index]: hanzi='${word.hanzi}', roman='${word.roman}', score=${word.lengthScore}")
+            }
+        }
+
+        if (words.isNotEmpty()) {
+            updateCandidates(words)
+        } else {
             clearCandidates()
         }
     }
@@ -134,14 +423,6 @@ class SmartbarManager private constructor() :
     }
     private val quickActionOnClickListener = View.OnClickListener { v ->
         when (v.id) {
-            R.id.quick_action_switch_to_media_context -> {
-                activeContainerId = getPreferredContainerId()
-                taigikeyboard.setActiveInput(R.id.media_input)
-            }
-            R.id.quick_action_switch_to_clipboard -> {
-                activeContainerId = getPreferredContainerId()
-                taigikeyboard.setActiveInput(R.id.clipboard_input)
-            }
             R.id.quick_action_open_settings -> {
                 // 開啟 APP 主畫面
                 taigikeyboard.requestHideSelf(0)
@@ -165,6 +446,38 @@ class SmartbarManager private constructor() :
     companion object {
         private const val TAG = "SmartbarManager"
         private var instance: SmartbarManager? = null
+
+        // NextWord 常數
+        private const val ASSOCIATION_TIMEOUT_MS = 10000L  // 連續選詞間隔閾值（10 秒）
+        private const val CONTEXT_TIMEOUT_MS = 30_000L   // 上下文超時（30 秒）
+        private val SENTENCE_END_PUNCTUATION = setOf('。', '！', '？', '.', '!', '?')  // 句末標點
+
+        // 雜訊字元（不作為 context 記錄）
+        // 包含：標點符號、空白、數字
+        private val NOISE_CHARS = setOf(
+            // 句末標點
+            '。', '！', '？', '.', '!', '?',
+            // 其他標點
+            '，', ',', '、', '；', ';', '：', ':',
+            '「', '」', '『', '』', '"', '"', '\'',
+            '（', '）', '(', ')', '【', '】', '[', ']', '{', '}',
+            '—', '–', '-', '～', '~', '…', '·',
+            // 空白
+            ' ', '　',
+            // 數字
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        )
+
+        /**
+         * 判斷是否為雜訊（不應作為 context）
+         * - 純標點符號
+         * - 純數字
+         * - 純空白
+         */
+        private fun isNoise(word: String): Boolean {
+            if (word.isEmpty()) return true
+            return word.all { it in NOISE_CHARS }
+        }
 
         @Synchronized
         fun getInstance(): SmartbarManager {
@@ -234,6 +547,10 @@ class SmartbarManager private constructor() :
     fun onStartInputView(keyboardMode: KeyboardMode, isComposingEnabled: Boolean) {
         this.isComposingEnabled = isComposingEnabled
 
+        // 重置 NextWord 上下文（切換輸入框）
+        lastSelectedWord = null
+        lastSelectionTime = 0
+
         // 初始化快取
         cachedIsTranslateSwapped = prefs.isTranslateSwapped
         cachedOutputBothScripts = prefs.outputBothScripts
@@ -273,9 +590,16 @@ class SmartbarManager private constructor() :
             return
         }
 
+        // DEBUG: 追蹤候選詞更新
+        val isNextWord = suggestions.firstOrNull()?.id?.let { it < 0 } ?: false
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'")
+        }
+
         // 儲存當前候選詞
         currentSuggestions = suggestions
         hasCandidates = true
+        isShowingNextWord = isNextWord
 
         // 切換到候選詞視圖
         if (activeContainerId != R.id.candidates_container) {
@@ -304,8 +628,10 @@ class SmartbarManager private constructor() :
                 setTextAppearance(R.style.SmartbarCandidate)
                 // 套用背景與動畫
                 // 第 0 個候選詞（當前組字）使用不同的背景，預設狀態有淡灰色提示
+                // NextWord 候選詞（id < 0）不需要組字背景，全部使用一般背景
+                val isNextWordCandidate = word.id < 0
                 setBackgroundResource(
-                    if (i == 0) R.drawable.candidate_composing_background
+                    if (i == 0 && !isNextWordCandidate) R.drawable.candidate_composing_background
                     else R.drawable.candidate_button_background
                 )
                 stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(
@@ -427,6 +753,11 @@ class SmartbarManager private constructor() :
             candidatesContainer.addView(button)
         }
 
+        // DEBUG: 確認按鈕建立完成
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DEBUG] updateCandidates completed: buttonCount=${candidatesContainer.childCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}")
+        }
+
         // 更新展開按鈕可見性
         updateExpandButtonVisibility()
     }
@@ -485,8 +816,16 @@ class SmartbarManager private constructor() :
      * 清除候選詞顯示
      */
     fun clearCandidates() {
+        // DEBUG: 追蹤調用來源
+        if (BuildConfig.DEBUG) {
+            val stackTrace = Thread.currentThread().stackTrace
+            val caller = stackTrace.getOrNull(3)?.methodName ?: "unknown"
+            Log.d(TAG, "[DEBUG] clearCandidates() called from: $caller, hadCandidates=$hasCandidates")
+        }
+
         currentSuggestions = emptyList()
         hasCandidates = false
+        isShowingNextWord = false
 
         // 重置候選詞列滑動位置
         smartbarView?.resetCandidateScrollPosition()
@@ -505,6 +844,57 @@ class SmartbarManager private constructor() :
         // 收合展開視圖（如果已展開）
         if (isExpanded) {
             collapseCandidateView()
+        }
+    }
+
+    /**
+     * 處理退格鍵的 NextWord 預測
+     *
+     * 退格刪除文字後，根據剩餘文字的最後一個字重新預測下一詞。
+     * 若文字已清空，則清除 NextWord 候選詞。
+     *
+     * @param textBeforeCursor 游標前的文字（退格後）
+     */
+    fun handleBackspaceForNextWord(textBeforeCursor: String) {
+        // 移除空白和標點符號，取得有效文字
+        val trimmedText = textBeforeCursor.trimEnd()
+
+        if (trimmedText.isEmpty()) {
+            // 文字已清空，清除 NextWord 候選詞並重置上下文
+            clearCandidates()
+            lastSelectedWord = null
+            lastSelectionTime = 0
+
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD] Backspace: text empty, cleared predictions")
+            }
+            return
+        }
+
+        // 取得最後一個字進行預測
+        val lastChar = trimmedText.last().toString()
+
+        scope.launch {
+            val predictions = NextWordService.predict(
+                word = lastChar,
+                context = taigikeyboard.context
+            )
+
+            kotlinx.coroutines.withContext(Dispatchers.Main) {
+                if (predictions.isNotEmpty()) {
+                    updateCandidatesWithPredictions(predictions)
+                } else {
+                    clearCandidates()
+                }
+            }
+        }
+
+        // 更新上下文（但不記錄關聯，因為是退格操作）
+        lastSelectedWord = lastChar
+        lastSelectionTime = System.currentTimeMillis()
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[NEXTWORD] Backspace: re-predict from '$lastChar'")
         }
     }
 
@@ -597,6 +987,9 @@ class SmartbarManager private constructor() :
         // 取得組字管理器
         val composingManager = taigikeyboard.textInputManager.getComposingManager()
 
+        // 判斷是否為 NextWord 候選詞（id < 0）
+        val isNextWordPrediction = word.id < 0
+
         // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
         // showHanjiMode 固定為 true
         val textToCommit = when {
@@ -608,18 +1001,25 @@ class SmartbarManager private constructor() :
                     "${word.roman} (${word.hanzi})"
                 }
             }
-            // 翻譯交換模式：顯示漢字
+            // 翻譯交換模式（漢字模式）：直接顯示漢字
             cachedIsTranslateSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
-            // 預設顯示羅馬字
+            // 預設顯示羅馬字（一般候選詞和 NextWord 候選詞皆同）
             else -> word.roman
         }
 
-        // 選擇候選詞（使用 ComposingManager 處理狀態清除）
-        composingManager?.selectSuggestion(textToCommit, ic)
+        if (isNextWordPrediction) {
+            // NextWord 候選詞：直接 commitText（此時沒有 composing text）
+            ic.commitText(textToCommit, 1)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[OVERLAY] NextWord commitText: '$textToCommit'")
+            }
+        } else {
+            // 一般候選詞：使用 ComposingManager 處理狀態清除
+            composingManager?.selectSuggestion(textToCommit, ic)
+        }
 
-        // 羅馬字模式或漢羅攏出模式：選擇候選詞後自動加空白（字尾非連字符時）
+        // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
         if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-            // 檢查字尾是否為連字符
             if (!textToCommit.endsWith("-")) {
                 ic.commitText(" ", 1)
             }
@@ -630,8 +1030,12 @@ class SmartbarManager private constructor() :
             UserFrequencyService.recordUsage(word.displayText)
         }
 
-        // 清除候選詞顯示
-        clearCandidates()
+        // NextWord: 處理上下文和預測
+        handleNextWordPrediction(
+            displayText = word.displayText,
+            committedText = textToCommit,
+            roman = word.roman
+        )
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[OVERLAY] Selected suggestion: ${word.displayText} at index $index")
@@ -648,6 +1052,17 @@ class SmartbarManager private constructor() :
 
     private fun updateActiveContainerVisibility() {
         val smartbarView = smartbarView ?: return
+
+        // DEBUG: 追蹤容器可見性變化
+        if (BuildConfig.DEBUG) {
+            val containerName = when (activeContainerId) {
+                R.id.quick_actions -> "quick_actions"
+                R.id.number_row -> "number_row"
+                R.id.candidates_container -> "candidates_container"
+                else -> "unknown($activeContainerId)"
+            }
+            Log.d(TAG, "[DEBUG] updateActiveContainerVisibility: $containerName")
+        }
 
         when (activeContainerId) {
             R.id.quick_actions -> {

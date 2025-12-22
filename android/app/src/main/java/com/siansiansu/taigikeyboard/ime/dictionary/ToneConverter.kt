@@ -150,10 +150,10 @@ object ToneConverter {
 
     /**
      * Extract tone number from syllable
-     * @return Pair of (baseForm, toneNumber)
+     * @return Pair of (baseForm, toneNumber), tone=0 if no digit found (no processing needed)
      */
     fun extractToneNumber(syllable: String): Pair<String, Int> {
-        if (syllable.isEmpty()) return Pair(syllable, 1)
+        if (syllable.isEmpty()) return Pair(syllable, 0)
 
         val lastChar = syllable.last()
         if (lastChar.isDigit()) {
@@ -164,8 +164,8 @@ object ToneConverter {
             }
         }
 
-        // No tone number found, default to tone 1
-        return Pair(syllable, 1)
+        // No tone number found, return tone=0 (no processing, keep as-is)
+        return Pair(syllable, 0)
     }
 
     /**

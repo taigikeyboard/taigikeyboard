@@ -29,8 +29,6 @@
     <!-- Smartbar strings -->
     <string name="smartbar__expand_toggle__alt">展開或收合候選詞列表</string>
     <string name="smartbar__quick_action__open_settings">Open settings.</string>
-    <string name="smartbar__quick_action__switch_to_media_context">Switch to media input view.</string>
-    <string name="smartbar__quick_action__switch_to_clipboard">Switch to clipboard view.</string>
 
     <!-- Overlay strings -->
     <string name="overlay__page_up">上一頁</string>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nav_item_debug"
+    style="@style/ModernNavigationItem"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="24dp">
+
+    <TextView
+        android:id="@+id/nav_debug_title"
+        style="@style/ModernTitleText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Debug Zone"
+        android:textColor="@color/modern_accent" />
+
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/ic_arrow_forward"
+        android:contentDescription="@string/content_desc__icon_arrow_forward"
+        android:tint="@color/modern_accent"
+        android:alpha="0.7" />
+
+</LinearLayout>

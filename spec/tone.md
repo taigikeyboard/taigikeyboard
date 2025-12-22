@@ -1,4 +1,9 @@
-# 聲調處理
+# Tone 聲調處理
+
+> **功能代號**: `Tone`
+> **關鍵字**: `Tone`, `聲調`, `調符`, `ToneConverter`, `ToneMappings`
+
+---
 
 ## 概述
 

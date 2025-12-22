@@ -3,11 +3,13 @@
 # 辭典建置主腳本
 #
 # 執行順序：
-#   1. merge_csv       - 合併各詞庫 CSV
-#   2. create_app_db   - 建立 App 使用的 SQLite 資料庫
-#   3. create_trie_db  - 建立 Trie 建置用的 SQLite 資料庫
-#   4. create_trie     - 建立 MARISA-trie
-#   5. deploy          - 複製到 Android 專案
+#   1. merge_csv            - 合併各詞庫 CSV
+#   2. create_app_db        - 建立 App 使用的 SQLite 資料庫
+#   3. generate_association - 產生 NextWord 詞彙關聯（加入 dictionary.db）
+#   4. create_trie_db       - 建立 Trie 建置用的 SQLite 資料庫
+#   5. create_trie          - 建立 MARISA-trie
+#   6. generate_tests       - 產生 Android/iOS 測試檔案
+#   7. deploy               - 複製到 Android 專案
 #
 # 用法：
 #   ./build.sh          # 完整建置（不含 deploy）
@@ -50,31 +52,44 @@ do_clean() {
 
 # Step 1: Merge CSV
 do_merge_csv() {
-    print_step "Step 1/5: Merging dictionaries..."
+    print_step "Step 1/7: Merging dictionaries..."
     python3 "$BUILD_DIR/01_merge_csv.py"
 }
 
 # Step 2: Create App DB
 do_create_app_db() {
-    print_step "Step 2/5: Creating App SQLite database..."
+    print_step "Step 2/7: Creating App SQLite database..."
     bash "$BUILD_DIR/02_create_app_db.sh"
 }
 
-# Step 3: Create Trie DB
+# Step 3: Generate Association
+do_generate_association() {
+    print_step "Step 3/7: Generating NextWord associations..."
+    python3 "$BUILD_DIR/08_generate_association.py"
+}
+
+# Step 4: Create Trie DB
 do_create_trie_db() {
-    print_step "Step 3/5: Creating Trie SQLite database..."
+    print_step "Step 4/7: Creating Trie SQLite database..."
     bash "$BUILD_DIR/03_create_trie_db.sh"
 }
 
-# Step 4: Create Trie
+# Step 5: Create Trie
 do_create_trie() {
-    print_step "Step 4/5: Creating MARISA-trie..."
+    print_step "Step 5/7: Creating MARISA-trie..."
     python3 "$BUILD_DIR/04_create_trie.py"
 }
 
-# Step 5: Deploy
+# Step 6: Generate Tests
+do_generate_tests() {
+    print_step "Step 6/7: Generating test files..."
+    python3 "$BUILD_DIR/06_generate_android_test.py"
+    python3 "$BUILD_DIR/07_generate_ios_test.py"
+}
+
+# Step 7: Deploy
 do_deploy() {
-    print_step "Step 5/5: Deploying to Android..."
+    print_step "Step 7/7: Deploying to Android..."
     bash "$BUILD_DIR/05_deploy.sh"
 }
 
@@ -82,8 +97,10 @@ do_deploy() {
 do_build() {
     do_merge_csv
     do_create_app_db
+    do_generate_association
     do_create_trie_db
     do_create_trie
+    do_generate_tests
 }
 
 # 顯示用法
