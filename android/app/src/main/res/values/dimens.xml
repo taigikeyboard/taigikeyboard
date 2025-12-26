@@ -28,4 +28,9 @@
     <dimen name="smartbar_button_padding">6dp</dimen>
 
     <dimen name="button_divider_margin">52dp</dimen>
+    <dimen name="card_margin">16dp</dimen>
+    <dimen name="card_corner_radius">12dp</dimen>
+
+    <!-- Bottom Navigation - Material Design 3 建議 80dp -->
+    <dimen name="bottom_nav_height">80dp</dimen>
 </resources>

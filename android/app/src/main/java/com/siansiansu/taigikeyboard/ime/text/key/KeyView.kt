@@ -24,8 +24,8 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.util.getColorFromAttr
 import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
-import com.siansiansu.taigikeyboard.settings.AppTexts
-import com.siansiansu.taigikeyboard.settings.DisplayLanguage
+import com.siansiansu.taigikeyboard.localization.DisplayLanguage
+import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import java.util.*
 
 @SuppressLint("ViewConstructor")
@@ -432,7 +432,7 @@ class KeyView(
                             keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
                             else -> DisplayLanguage.TL
                         }
-                        label = AppTexts.confirm.text(displayLanguage)
+                        label = Tab4Texts.confirmKey.text(displayLanguage)
                         drawable = null
                     } else {
                         // 非組字模式：只顯示圖示

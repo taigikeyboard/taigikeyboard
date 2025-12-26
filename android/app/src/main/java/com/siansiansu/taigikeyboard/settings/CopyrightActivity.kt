@@ -1,124 +1,157 @@
 package com.siansiansu.taigikeyboard.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.MenuItem
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.viewpager2.widget.ViewPager2
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.databinding.ActivityCopyrightBinding
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.localization.LanguageManager
+import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightDataSource
+import com.siansiansu.taigikeyboard.model.CopyrightPage
 import com.siansiansu.taigikeyboard.util.FontUtils
+import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class CopyrightActivity : AppCompatActivity() {
-    private lateinit var binding: ActivityCopyrightBinding
-    private lateinit var pagerAdapter: CopyrightPagerAdapter
     private lateinit var languageManager: LanguageManager
     private lateinit var prefs: PrefHelper
     private val copyrightPages = CopyrightDataSource.copyrightPages
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityCopyrightBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
         prefs = PrefHelper(this)
         languageManager = LanguageManager.getInstance(this)
+
+        // 套用字體 Theme（必須在 setContentView 之前）
+        ThemeUtils.applyFontTheme(this, prefs)
+
+        setContentView(R.layout.activity_copyright)
 
         // 設定 Edge-to-Edge 顯示模式
         setupEdgeToEdge()
 
         setupToolbar()
-        setupViewPager()
-        setupNavigation()
+        setupCopyrightCards()
         observeLanguageChanges()
-        applyCustomFont()
     }
 
     private fun setupToolbar() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
         supportActionBar?.apply {
-            title = languageManager.getText(AppTexts.copyrightTitle)
+            title = languageManager.text(Tab1Texts.copyrightNotice)
             setDisplayHomeAsUpEnabled(true)
         }
 
-        // Set title text color to match home screen app title
         toolbar.setTitleTextColor(
-            androidx.core.content.ContextCompat.getColor(this, R.color.modern_text_primary)
+            ContextCompat.getColor(this, R.color.modern_text_primary)
         )
     }
 
-    private fun setupViewPager() {
-        pagerAdapter = CopyrightPagerAdapter(this, copyrightPages, languageManager, prefs)
-        binding.viewPager.adapter = pagerAdapter
+    private fun setupCopyrightCards() {
+        val container = findViewById<LinearLayout>(R.id.copyright_container)
+        container.removeAllViews()
 
-        binding.viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                updateUI(position)
-            }
-        })
+        val typeface = FontUtils.getTypefaceByType(prefs.fontType, this)
 
-        // Initialize UI for first page
-        updateUI(0)
-    }
-
-    private fun setupNavigation() {
-        binding.prevButton.setOnClickListener {
-            val currentItem = binding.viewPager.currentItem
-            if (currentItem > 0) {
-                binding.viewPager.currentItem = currentItem - 1
-            }
-        }
-
-        binding.nextButton.setOnClickListener {
-            val currentItem = binding.viewPager.currentItem
-            if (currentItem < copyrightPages.size - 1) {
-                binding.viewPager.currentItem = currentItem + 1
-            } else {
-                finish()
-            }
+        copyrightPages.forEach { page ->
+            val cardView = createCopyrightCard(page, typeface)
+            container.addView(cardView)
         }
     }
 
-    private fun updateUI(position: Int) {
-        val isLastPage = position == copyrightPages.size - 1
+    private fun createCopyrightCard(
+        page: CopyrightPage,
+        typeface: android.graphics.Typeface
+    ): View {
+        val cardView = LayoutInflater.from(this)
+            .inflate(R.layout.copyright_card_item, null)
 
-        // Update page indicator
-        binding.pageIndicator.text = "${position + 1} / ${copyrightPages.size}"
+        val card = cardView.findViewById<CardView>(R.id.card)
+        val title = cardView.findViewById<TextView>(R.id.title)
+        val description = cardView.findViewById<TextView>(R.id.description)
+        val license = cardView.findViewById<TextView>(R.id.license)
+        val buttonsContainer = cardView.findViewById<LinearLayout>(R.id.buttons_container)
 
-        // Update progress bar
-        val progress = ((position + 1) * 100) / copyrightPages.size
-        binding.progressBar.progress = progress
+        // 套用字體
+        title.typeface = typeface
+        description.typeface = typeface
+        license.typeface = typeface
 
-        // Update prev button state
-        binding.prevButton.isEnabled = position > 0
-        binding.prevButton.alpha = if (position > 0) 1.0f else 0.5f
-        binding.prevButton.text = languageManager.getText(AppTexts.guidePreviousPage)
+        // 設定內容
+        title.text = languageManager.text(page.title)
+        description.text = languageManager.text(page.description)
+        license.text = languageManager.text(page.license)
 
-        // Update next button text and state
-        if (isLastPage) {
-            binding.nextButton.text = languageManager.getText(AppTexts.done)
-            binding.nextButton.setIconResource(android.R.drawable.ic_menu_close_clear_cancel)
-        } else {
-            binding.nextButton.text = languageManager.getText(AppTexts.guideNextPage)
-            binding.nextButton.setIconResource(android.R.drawable.ic_media_next)
+        // 設定按鈕
+        buttonsContainer.removeAllViews()
+        page.buttons.forEachIndexed { index, button ->
+            val buttonView = LayoutInflater.from(this)
+                .inflate(R.layout.copyright_action_button, buttonsContainer, false)
+
+            val buttonText = buttonView.findViewById<TextView>(R.id.button_text)
+            val buttonContainer = buttonView.findViewById<LinearLayout>(R.id.action_button_container)
+
+            buttonText.text = languageManager.text(button.text)
+            buttonText.typeface = typeface
+
+            buttonContainer.setOnClickListener {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(button.url))
+                startActivity(intent)
+            }
+
+            buttonsContainer.addView(buttonView)
+
+            // 添加分隔線
+            if (index < page.buttons.size - 1) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    )
+                    setBackgroundColor(
+                        ContextCompat.getColor(
+                            this@CopyrightActivity,
+                            R.color.modern_shadow_light
+                        )
+                    )
+                }
+                buttonsContainer.addView(divider)
+            }
         }
+
+        // 設定卡片邊距
+        val layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            bottomMargin = resources.getDimensionPixelSize(R.dimen.card_margin)
+        }
+        cardView.layoutParams = layoutParams
+
+        return cardView
     }
 
     private fun observeLanguageChanges() {
-        languageManager.currentDisplayLanguage.observe(this) {
-            // Update toolbar title
-            supportActionBar?.title = languageManager.getText(AppTexts.copyrightTitle)
-
-            // Update button texts
-            updateUI(binding.viewPager.currentItem)
-
-            // Notify adapter to refresh all pages
-            pagerAdapter.notifyDataSetChanged()
+        lifecycleScope.launch {
+            languageManager.currentLanguageFlow.collectLatest {
+                supportActionBar?.title = languageManager.text(Tab1Texts.copyrightNotice)
+                setupCopyrightCards()
+            }
         }
     }
 
@@ -130,17 +163,5 @@ class CopyrightActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    /**
-     * 套用自訂字體到所有 UI 元件
-     */
-    private fun applyCustomFont() {
-        val typeface = FontUtils.getTypefaceByType(prefs.fontType, this)
-
-        // Page indicator and navigation buttons
-        binding.pageIndicator.typeface = typeface
-        binding.prevButton.typeface = typeface
-        binding.nextButton.typeface = typeface
     }
 }

@@ -1,9 +1,8 @@
 import SwiftUI
 import UIKit
 
-/// 詞庫管理頁面視圖
+/// 詞庫管理頁面視圖（透過 NavigationLink 使用）
 struct DictionarySettingsView: View {
-    @Environment(\.dismiss) var dismiss
     @StateObject private var languageManager = LanguageManager.shared
 
     private let settings = SharedSettings.shared
@@ -34,9 +33,7 @@ struct DictionarySettingsView: View {
     }
 
     var body: some View {
-        SettingsPageView(
-            onDismiss: { dismiss() }
-        ) {
+        ScrollView {
             VStack(spacing: 24) {
                 // 詞庫列表
                 SettingsSection {
@@ -49,7 +46,7 @@ struct DictionarySettingsView: View {
                 }
 
                 // 自訂詞庫區塊
-                SettingsSection(titleContent: AppTexts.customDictionary) {
+                SettingsSection(titleContent: Tab3Texts.customDictionary) {
                     customDictionaryPlaceholder
                 }
 
@@ -58,14 +55,19 @@ struct DictionarySettingsView: View {
                     actionButtonsSection
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
         }
-        .alert(languageManager.text(AppTexts.clearCache), isPresented: $showClearCacheAlert) {
-            Button(languageManager.text(AppTexts.cancel), role: .cancel) {}
-            Button(languageManager.text(AppTexts.clear), role: .destructive) {
+        .background(Color.Theme.surfacePrimary)
+        .navigationTitle(languageManager.text(Tab3Texts.dictionarySettings))
+        .navigationBarTitleDisplayMode(.large)
+        .alert(languageManager.text(Tab3Texts.clearCache), isPresented: $showClearCacheAlert) {
+            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
+            Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
                 clearUserFrequencyDatabase()
             }
         } message: {
-            Text(languageManager.text(AppTexts.clearCacheMessage))
+            Text(languageManager.text(Tab3Texts.clearCacheMessage))
         }
     }
 
@@ -75,7 +77,7 @@ struct DictionarySettingsView: View {
     private var dictionaryToggles: some View {
         // 1. 教育部臺灣台語常用詞辭典
         SettingsToggleItem(
-            titleContent: CopyrightTexts.moeDict,
+            titleContent: Tab3Texts.moeDict,
             isOn: $moeDictEnabled,
             isFirst: true,
             onChange: { newValue in
@@ -85,7 +87,7 @@ struct DictionarySettingsView: View {
 
         // 2. 台語新詞辭庫
         SettingsToggleItem(
-            titleContent: CopyrightTexts.newwordDict,
+            titleContent: Tab3Texts.newwordDict,
             isOn: $newwordDictEnabled,
             onChange: { newValue in
                 settings.newwordDictEnabled = newValue
@@ -94,7 +96,7 @@ struct DictionarySettingsView: View {
 
         // 3. 台語工藝詞庫
         SettingsToggleItem(
-            titleContent: CopyrightTexts.kunggeDict,
+            titleContent: Tab3Texts.kunggeDict,
             isOn: $kunggeDictEnabled,
             onChange: { newValue in
                 settings.kunggeDictEnabled = newValue
@@ -103,7 +105,7 @@ struct DictionarySettingsView: View {
 
         // 4. iTaigi 華台對照典
         SettingsToggleItem(
-            titleContent: CopyrightTexts.iTaigiDict,
+            titleContent: Tab3Texts.iTaigiDict,
             isOn: $iTaigiDictEnabled,
             onChange: { newValue in
                 settings.iTaigiDictEnabled = newValue
@@ -112,7 +114,7 @@ struct DictionarySettingsView: View {
 
         // 5. 台日大辭典
         SettingsToggleItem(
-            titleContent: CopyrightTexts.taiwanJapanDict,
+            titleContent: Tab3Texts.taiwanJapanDict,
             isOn: $taiwanJapanDictEnabled,
             onChange: { newValue in
                 settings.taiwanJapanDictEnabled = newValue
@@ -121,7 +123,7 @@ struct DictionarySettingsView: View {
 
         // 6. 台華線頂對照典
         SettingsToggleItem(
-            titleContent: CopyrightTexts.taiHuaDict,
+            titleContent: Tab3Texts.taiHuaDict,
             isOn: $taiHuaDictEnabled,
             onChange: { newValue in
                 settings.taiHuaDictEnabled = newValue
@@ -130,7 +132,7 @@ struct DictionarySettingsView: View {
 
         // 7. 台灣植物名彙
         SettingsToggleItem(
-            titleContent: CopyrightTexts.taiwanPlantDict,
+            titleContent: Tab3Texts.taiwanPlantDict,
             isOn: $taiwanPlantDictEnabled,
             isLast: true,
             onChange: { newValue in
@@ -144,7 +146,7 @@ struct DictionarySettingsView: View {
     @ViewBuilder
     private var variantToggle: some View {
         SettingsToggleItem(
-            titleContent: AppTexts.variantDictionary,
+            titleContent: Tab3Texts.variantDictionary,
             isOn: $variantEnabled,
             isFirst: true,
             isLast: true,
@@ -159,7 +161,7 @@ struct DictionarySettingsView: View {
     @ViewBuilder
     private var customDictionaryPlaceholder: some View {
         HStack {
-            LocalizedTextView(AppTexts.comingSoon)
+            LocalizedTextView(Tab3Texts.comingSoon)
                 .themeFontBody()
                 .foregroundColor(Color.Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -173,7 +175,7 @@ struct DictionarySettingsView: View {
     @ViewBuilder
     private var actionButtonsSection: some View {
         SettingsActionButton(
-            titleContent: AppTexts.clearCache,
+            titleContent: Tab3Texts.clearCache,
             isFirst: true,
             isLast: true,
             action: { showClearCacheAlert = true }

@@ -1,233 +1,199 @@
 import SwiftUI
 
-/// 版權聲明視圖
+/// 版權聲明視圖（單頁滾動式，風格與 Tab1 一致）
+/// 每個項目為獨立區塊，參考 azooKey Acknowledgements 設計
 struct CopyrightView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var currentPage = 0
     @Environment(\.openURL) private var openURL
-
-    private let copyrightPages: [CopyrightPage] = [
-        // 字體
-        CopyrightPage(
-            id: 0,
-            title: AppTexts.openFontTitle,
-            description: AppTexts.openFontCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.silOpenFontLicense,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://openfontlicense.org/"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://justfont.com/huninn/"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 1,
-            title: AppTexts.iansuiFontTitle,
-            description: AppTexts.iansuiFontCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.silOpenFontLicense11,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://openfontlicense.org/"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://github.com/ButTaiwan/iansui"
-                )
-            ]
-        ),
-        // 辭典
-        CopyrightPage(
-            id: 2,
-            title: AppTexts.moeDict,
-            description: AppTexts.moeCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccLicense,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-nd/3.0/tw/"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://sutian.moe.edu.tw/"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 3,
-            title: AppTexts.newwordDict,
-            description: AppTexts.newwordCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccBy4License,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://www.taigitv.org.tw/taigi-words"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 4,
-            title: AppTexts.kunggeDict,
-            description: AppTexts.kunggeCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccByNcLicense,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 5,
-            title: AppTexts.iTaigiDict,
-            description: AppTexts.iTaigiCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.cc0License,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/public-domain/cc0/"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://itaigi.tw/"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 6,
-            title: AppTexts.taiwanJapanDict,
-            description: AppTexts.taiwanJapanCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccByNcSA3License,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "http://taigi.fhl.net/dict/"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 7,
-            title: AppTexts.taiHuaDict,
-            description: AppTexts.taiHuaCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccBySA4License,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
-                )
-            ]
-        ),
-        CopyrightPage(
-            id: 8,
-            title: AppTexts.taiwanPlantDict,
-            description: AppTexts.taiwanPlantCopyright,
-            accentColor: Color.Theme.accent,
-            licenseDescription: AppTexts.ccBySA4License,
-            buttons: [
-                CopyrightButton(
-                    text: AppTexts.viewLicense,
-                    url: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
-                ),
-                CopyrightButton(
-                    text: AppTexts.viewWebsite,
-                    url: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
-                )
-            ]
-        )
-    ]
-
-    @State private var isPressed: [Bool]
-
-    init() {
-        let totalButtons = copyrightPages.reduce(0) { $0 + $1.buttons.count }
-        _isPressed = State(initialValue: Array(repeating: false, count: totalButtons))
-    }
+    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 0) {
-                CopyrightHeader(
-                    currentPage: $currentPage,
-                    totalPages: copyrightPages.count,
-                    onDismiss: { dismiss() }
+        ScrollView {
+            VStack(spacing: 32) {
+                // 粉圓體
+                CopyrightCard(
+                    title: Tab1Texts.openFontTitle,
+                    description: Tab1Texts.openFontCopyright,
+                    license: Tab1Texts.silOpenFontLicense,
+                    licenseURL: "https://openfontlicense.org/",
+                    websiteURL: "https://justfont.com/huninn/"
                 )
-                .padding(.top, geometry.safeAreaInsets.top)
 
-                ZStack {
-                    ForEach(copyrightPages.indices, id: \.self) { index in
-                        CopyrightPageView(
-                            page: copyrightPages[index],
-                            isActive: index == currentPage,
-                            geometry: geometry,
-                            isPressed: $isPressed,
-                            openURL: openURL
-                        )
-                        .opacity(index == currentPage ? 1 : 0)
-                        .scaleEffect(index == currentPage ? 1 : 0.97)
-                        .animation(
-                            .spring(response: 0.7, dampingFraction: 0.85),
-                            value: currentPage
-                        )
-                    }
+                // 芫荽體
+                CopyrightCard(
+                    title: Tab1Texts.iansuiFontTitle,
+                    description: Tab1Texts.iansuiFontCopyright,
+                    license: Tab1Texts.silOpenFontLicense11,
+                    licenseURL: "https://openfontlicense.org/",
+                    websiteURL: "https://github.com/ButTaiwan/iansui"
+                )
+
+                // 教育部臺灣閩南語常用詞辭典
+                CopyrightCard(
+                    title: Tab1Texts.moeDict,
+                    description: Tab1Texts.moeCopyright,
+                    license: Tab1Texts.ccLicense,
+                    licenseURL: "https://creativecommons.org/licenses/by-nd/3.0/tw/",
+                    websiteURL: "https://sutian.moe.edu.tw/"
+                )
+
+                // 新詞辭典
+                CopyrightCard(
+                    title: Tab1Texts.newwordDict,
+                    description: Tab1Texts.newwordCopyright,
+                    license: Tab1Texts.ccBy4License,
+                    licenseURL: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
+                    websiteURL: "https://www.taigitv.org.tw/taigi-words"
+                )
+
+                // 工藝辭典
+                CopyrightCard(
+                    title: Tab1Texts.kunggeDict,
+                    description: Tab1Texts.kunggeCopyright,
+                    license: Tab1Texts.ccByNcLicense,
+                    licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
+                    websiteURL: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"
+                )
+
+                // iTaigi
+                CopyrightCard(
+                    title: Tab1Texts.iTaigiDict,
+                    description: Tab1Texts.iTaigiCopyright,
+                    license: Tab1Texts.cc0License,
+                    licenseURL: "https://creativecommons.org/public-domain/cc0/",
+                    websiteURL: "https://itaigi.tw/"
+                )
+
+                // 台日大辭典
+                CopyrightCard(
+                    title: Tab1Texts.taiwanJapanDict,
+                    description: Tab1Texts.taiwanJapanCopyright,
+                    license: Tab1Texts.ccByNcSA3License,
+                    licenseURL: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
+                    websiteURL: "http://taigi.fhl.net/dict/"
+                )
+
+                // 台華辭典
+                CopyrightCard(
+                    title: Tab1Texts.taiHuaDict,
+                    description: Tab1Texts.taiHuaCopyright,
+                    license: Tab1Texts.ccBySA4License,
+                    licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
+                    websiteURL: nil
+                )
+
+                // 台灣植物辭典
+                CopyrightCard(
+                    title: Tab1Texts.taiwanPlantDict,
+                    description: Tab1Texts.taiwanPlantCopyright,
+                    license: Tab1Texts.ccBySA4License,
+                    licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
+                    websiteURL: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
+                )
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 24)
+            .padding(.bottom, 40)
+        }
+        .background(Color.Theme.surfacePrimary)
+        .navigationTitle(languageManager.text(Tab1Texts.copyrightNotice))
+        .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - Copyright Card
+
+private struct CopyrightCard: View {
+    let title: LocalizedText
+    let description: LocalizedText
+    let license: LocalizedText
+    let licenseURL: String
+    let websiteURL: String?
+
+    @StateObject private var languageManager = LanguageManager.shared
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 標題區塊
+            VStack(alignment: .leading, spacing: 8) {
+                // 標題（較大字體，參考 azooKey .font(.title)）
+                LocalizedTextView(title)
+                    .themeFontTitle()
+                    .foregroundColor(Color.Theme.textPrimary)
+
+                // 說明
+                LocalizedTextView(description)
+                    .themeFontBody()
+                    .foregroundColor(Color.Theme.textSecondary)
+
+                // 授權
+                LocalizedTextView(license)
+                    .themeFontCaption()
+                    .foregroundColor(Color.Theme.textSecondary)
+                    .italic()
+            }
+            .padding(20)
+
+            Divider()
+                .background(Color.Theme.cardStroke)
+
+            // 授權條款連結
+            Button(action: {
+                if let url = URL(string: licenseURL) {
+                    openURL(url)
                 }
-                .gesture(
-                    DragGesture()
-                        .onEnded { value in
-                            let threshold: CGFloat = 50
-                            if value.translation.width > threshold, currentPage > 0 {
-                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                    currentPage -= 1
-                                }
-                            } else if value.translation.width < -threshold, currentPage < copyrightPages.count - 1 {
-                                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                                    currentPage += 1
-                                }
-                            }
-                        }
-                )
-
-                CopyrightBottomNavigation(
-                    currentPage: $currentPage,
-                    totalPages: copyrightPages.count,
-                    onDismiss: { dismiss() }
-                )
+            }) {
+                HStack {
+                    Text(languageManager.text(Tab1Texts.viewLicense))
+                        .themeFontBody()
+                        .foregroundColor(Color.Theme.textPrimary)
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.Theme.textSecondary)
+                }
                 .padding(.horizontal, 20)
-                .padding(.bottom, max(20, geometry.safeAreaInsets.bottom))
+                .padding(.vertical, 14)
+            }
+
+            // 官方網站連結（有分隔線）
+            if let websiteURL = websiteURL, let url = URL(string: websiteURL) {
+                Divider()
+                    .background(Color.Theme.cardStroke)
+                    .padding(.leading, 20)
+
+                Button(action: {
+                    openURL(url)
+                }) {
+                    HStack {
+                        Text(languageManager.text(Tab1Texts.viewWebsite))
+                            .themeFontBody()
+                            .foregroundColor(Color.Theme.textPrimary)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color.Theme.textSecondary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color.Theme.surfacePrimary
-                .ignoresSafeArea()
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.Theme.surfaceSecondary)
         )
-        .navigationBarHidden(true)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.Theme.cardStroke, lineWidth: 1)
+        )
     }
 }
 
 #Preview {
-    CopyrightView()
-        .withLanguageEnvironment()
+    NavigationStack {
+        CopyrightView()
+    }
+    .withLanguageEnvironment()
 }

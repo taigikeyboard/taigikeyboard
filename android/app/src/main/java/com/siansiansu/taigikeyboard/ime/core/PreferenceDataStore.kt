@@ -54,7 +54,7 @@ object PreferenceKeys {
     // Suggestion settings
     val SUGGESTION_ENABLED = booleanPreferencesKey("suggestion__enabled")
 
-    // Onboarding settings
+    // Legacy: 已不再使用，改為基於鍵盤啟用狀態判斷
     val HAS_SEEN_ONBOARDING = booleanPreferencesKey("onboarding__has_seen")
 
     // 詞庫開關設定

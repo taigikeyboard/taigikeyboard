@@ -12,10 +12,17 @@ object ToneConverter {
      * Convert input with tone numbers to tone marks
      * @param input Input string with tone numbers
      * @param mode POJ or TL mode
+     * @param enableDoubleTapOO Whether to convert oo → o͘
+     * @param enableDoubleTapNN Whether to convert nn → ⁿ
      * @return String with tone marks applied
      */
-    fun convertToToneMarks(input: String, mode: InputMode): String {
-        val preprocessed = preprocess(input, mode)
+    fun convertToToneMarks(
+        input: String,
+        mode: InputMode,
+        enableDoubleTapOO: Boolean = true,
+        enableDoubleTapNN: Boolean = true
+    ): String {
+        val preprocessed = preprocess(input, mode, enableDoubleTapOO, enableDoubleTapNN)
 
         return when (mode) {
             InputMode.POJ -> convertPOJ(preprocessed)
@@ -26,20 +33,26 @@ object ToneConverter {
     /**
      * Preprocess input for special character conversions
      */
-    private fun preprocess(input: String, mode: InputMode): String {
+    private fun preprocess(
+        input: String,
+        mode: InputMode,
+        enableDoubleTapOO: Boolean,
+        enableDoubleTapNN: Boolean
+    ): String {
         var result = input
 
         if (mode == InputMode.POJ) {
-            // TODO: Add settings support for enableDoubleTapOO and enableDoubleTapNN
-            // For now, enable these conversions by default
-
             // Convert oo → o͘
-            result = result.replace("oo", "o͘")
-            result = result.replace("Oo", "O͘")
-            result = result.replace("OO", "O͘")
+            if (enableDoubleTapOO) {
+                result = result.replace("oo", "o͘")
+                result = result.replace("Oo", "O͘")
+                result = result.replace("OO", "O͘")
+            }
 
             // Convert nn → ⁿ (only in POJ mode)
-            result = convertNN(result)
+            if (enableDoubleTapNN) {
+                result = convertNN(result)
+            }
         }
 
         return result

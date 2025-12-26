@@ -418,31 +418,6 @@ class PrefHelper(
             }
         }
 
-    // Onboarding settings
-    var hasSeenOnboarding: Boolean
-        get() = runBlocking {
-            dataStore.data.map { prefs ->
-                prefs[PreferenceKeys.HAS_SEEN_ONBOARDING] ?: false
-            }.first()
-        }
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.HAS_SEEN_ONBOARDING] = value
-                }
-            }
-        }
-
-    /**
-     * 設定已完成 onboarding（suspend 版本）
-     * 確保寫入完成後再繼續執行
-     */
-    suspend fun setHasSeenOnboarding(value: Boolean) {
-        dataStore.edit { prefs ->
-            prefs[PreferenceKeys.HAS_SEEN_ONBOARDING] = value
-        }
-    }
-
     // Flow-based API for reactive observations
     /**
      * Observes input mode changes as a Flow.
@@ -546,14 +521,13 @@ class PrefHelper(
 
     /**
      * 重置所有設定為預設值
-     * 保留內部設定（版本資訊、onboarding 狀態）
+     * 保留內部設定（版本資訊）
      */
     suspend fun resetToDefaults() {
         dataStore.edit { prefs ->
             // 保存需要保留的值
             val versionOnInstall = prefs[PreferenceKeys.VERSION_ON_INSTALL]
             val versionLastUse = prefs[PreferenceKeys.VERSION_LAST_USE]
-            val hasSeenOnboarding = prefs[PreferenceKeys.HAS_SEEN_ONBOARDING]
 
             // 清除所有偏好設定
             prefs.clear()
@@ -561,7 +535,6 @@ class PrefHelper(
             // 恢復需要保留的值
             versionOnInstall?.let { prefs[PreferenceKeys.VERSION_ON_INSTALL] = it }
             versionLastUse?.let { prefs[PreferenceKeys.VERSION_LAST_USE] = it }
-            hasSeenOnboarding?.let { prefs[PreferenceKeys.HAS_SEEN_ONBOARDING] = it }
 
             // 設定預設值（明確寫入，確保一致性）
             prefs[PreferenceKeys.SETTINGS_THEME] = "auto"

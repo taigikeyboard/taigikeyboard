@@ -100,4 +100,21 @@
     <style name="ContactActivityTheme" parent="SettingsTheme">
     </style>
 
+    <!-- 字體主題：系統預設 -->
+    <style name="SettingsTheme.FontSystem" parent="SettingsTheme">
+        <!-- 使用系統預設字體，不需要額外設定 -->
+    </style>
+
+    <!-- 字體主題：粉圓 -->
+    <style name="SettingsTheme.FontOpenHuninn" parent="SettingsTheme">
+        <item name="android:fontFamily">@font/jf_openhuninn</item>
+        <item name="fontFamily">@font/jf_openhuninn</item>
+    </style>
+
+    <!-- 字體主題：芫荽 -->
+    <style name="SettingsTheme.FontIansui" parent="SettingsTheme">
+        <item name="android:fontFamily">@font/iansui_regular</item>
+        <item name="fontFamily">@font/iansui_regular</item>
+    </style>
+
 </resources>

@@ -1,85 +1,62 @@
 import SwiftUI
 import KeyboardKit
 
+/// 主 APP 內容視圖
+/// 使用 TabView 架構，包含 4 個主要 Tab
 struct ContentView: View {
-    @State private var showSettings = false
-    @State private var showDictionarySettings = false
-    @State private var showCopyright = false
-    #if DEBUG
-    @State private var showDebug = false
-    #endif
-    @Binding var initialShowSettings: Bool
-    @ObservedObject var viewModel: OnboardingViewModel
+    @State private var selectedTab: TabType = .home
+    @ObservedObject var viewModel: SetupGuideViewModel
+    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
-        NavigationView {
-            GeometryReader { geometry in
-                ZStack {
-                    Color.Theme.surfacePrimary
-                        .ignoresSafeArea()
-
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            // Top spacing (matches Android layout)
-                            Spacer()
-                                .frame(height: max(80, geometry.safeAreaInsets.top + 64))
-
-                            VStack(spacing: 16) {
-                                // Card 1: Navigation (啟用方法 + 齒盤設定 + 詞庫管理)
-                                NavigationCardView(
-                                    viewModel: viewModel,
-                                    showSettings: $showSettings,
-                                    showDictionarySettings: $showDictionarySettings
-                                )
-                                .themedCard()
-
-                                // Card 2: Resources (意見回饋 + 評分 + 分享)
-                                ResourcesCardView()
-                                .themedCard()
-
-                                // Card 3: Copyright (版權聲明)
-                                CopyrightCardView(showCopyright: $showCopyright)
-                                .themedCard()
-
-                                // Card 4: Debug Zone (僅 DEBUG 模式)
-                                #if DEBUG
-                                DebugCardView(showDebug: $showDebug)
-                                .themedCard()
-                                #endif
-                            }
-                            .padding(.horizontal, 20)
-                            .frame(maxWidth: max(0, min(geometry.size.width - 40, 500)))
-                            .frame(maxWidth: .infinity)
-
-                            FooterView()
-                                .padding(.top, 48)
-                                .padding(.bottom, max(20, geometry.safeAreaInsets.bottom + 20))
-                        }
+        TabView(selection: $selectedTab) {
+            // Tab1: 頭頁
+            Tab1(viewModel: viewModel)
+                .tabItem {
+                    Label {
+                        Text(languageManager.text(TabType.home.title))
+                    } icon: {
+                        Image(systemName: TabType.home.icon)
                     }
                 }
-            }
-            .navigationBarHidden(true)
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
-            .sheet(isPresented: $showDictionarySettings) {
-                DictionarySettingsView()
-            }
-            .sheet(isPresented: $showCopyright) {
-                CopyrightView()
-            }
-            #if DEBUG
-            .sheet(isPresented: $showDebug) {
-                DebugView()
-            }
-            #endif
+                .tag(TabType.home)
+
+            // Tab2: 佈局
+            Tab2()
+                .tabItem {
+                    Label {
+                        Text(languageManager.text(TabType.layout.title))
+                    } icon: {
+                        Image(systemName: TabType.layout.icon)
+                    }
+                }
+                .tag(TabType.layout)
+
+            // Tab3: 詞庫
+            Tab3()
+                .tabItem {
+                    Label {
+                        Text(languageManager.text(TabType.dictionary.title))
+                    } icon: {
+                        Image(systemName: TabType.dictionary.icon)
+                    }
+                }
+                .tag(TabType.dictionary)
+
+            // Tab4: 設定
+            Tab4()
+                .tabItem {
+                    Label {
+                        Text(languageManager.text(TabType.settings.title))
+                    } icon: {
+                        Image(systemName: TabType.settings.icon)
+                    }
+                }
+                .tag(TabType.settings)
         }
-        .navigationViewStyle(.stack)
-        .onChange(of: initialShowSettings) { _, newValue in
-            if newValue {
-                showSettings = true
-                initialShowSettings = false
-            }
+        .tint(Color.Theme.accent)
+        .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
+            selectedTab = .settings
         }
     }
 }
@@ -88,11 +65,8 @@ struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         let bundleId = (Bundle.main.bundleIdentifier ?? "com.siansiansu.TaigiKeyboard") + ".TaigiKeyboardExtension"
         let keyboardStatus = KeyboardStatusContext(bundleId: bundleId)
-        let viewModel = OnboardingViewModel(keyboardStatus: keyboardStatus)
+        let viewModel = SetupGuideViewModel(keyboardStatus: keyboardStatus)
 
-        ContentView(
-            initialShowSettings: .constant(false),
-            viewModel: viewModel
-        )
+        ContentView(viewModel: viewModel)
     }
 }

@@ -266,6 +266,12 @@
 			path = "../libs/marisa-trie/lib/marisa";
 			sourceTree = SOURCE_ROOT;
 		};
+		F3D580792EFDB333008E5E54 /* SetupGuide */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = SetupGuide;
+			path = Sources/TaigiKeyboard/SetupGuide;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -300,9 +306,6 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
-				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
-				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
-				F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */,
 				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A4FAF492EAF137B006E37A8 /* App */,
@@ -320,8 +323,12 @@
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
+				F3D580792EFDB333008E5E54 /* SetupGuide */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
+				F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */,
+				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
 				F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */,
+				F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 			);
 			sourceTree = "<group>";
@@ -357,6 +364,7 @@
 				2AAC89292EF9196A00C954D7 /* Debug */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
+				F3D580792EFDB333008E5E54 /* SetupGuide */,
 			);
 			name = TaigiKeyboard;
 			packageProductDependencies = (
@@ -752,7 +760,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.3.7;
+				MARKETING_VERSION = 3.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -790,7 +798,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.3.7;
+				MARKETING_VERSION = 3.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -821,7 +829,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.3.7;
+				MARKETING_VERSION = 3.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -853,7 +861,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.3.7;
+				MARKETING_VERSION = 3.3.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

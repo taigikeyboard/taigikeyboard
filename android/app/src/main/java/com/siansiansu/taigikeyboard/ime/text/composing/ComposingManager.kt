@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 
@@ -18,7 +19,8 @@ import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
  * - composingText: 顯示文字（聲調已轉換，用於 UI 顯示和輸出）
  */
 class ComposingManager(
-    private val inputMode: ToneConverterModels.InputMode
+    private val inputMode: ToneConverterModels.InputMode,
+    private val prefs: PrefHelper
 ) {
     // 原始輸入（保留數字聲調，用於 Trie 搜尋）
     private var rawInput: String = ""
@@ -236,13 +238,14 @@ class ComposingManager(
 
     /**
      * 檢查字元組合轉換（oo → o͘, nn → ⁿ）
+     * 每次呼叫時即時讀取設定，確保設定變更立即生效（與 iOS 一致）
      */
     private fun checkCharacterCombination(currentText: String, input: String): String? {
         // POJ 模式：檢查 oo → o͘
         if (inputMode == ToneConverterModels.InputMode.POJ) {
             if (input.lowercase() == "o" && currentText.length >= 2) {
                 val beforeLast = currentText.dropLast(1)
-                if (beforeLast.lastOrNull()?.lowercaseChar() == 'o') {
+                if (beforeLast.lastOrNull()?.lowercaseChar() == 'o' && prefs.enableDoubleTapOO) {
                     val wasUppercase = beforeLast.lastOrNull()?.isUpperCase() == true
                     val replacement = if (wasUppercase) "O͘" else "o͘"
                     return beforeLast.dropLast(1) + replacement
@@ -253,6 +256,7 @@ class ComposingManager(
         // POJ 模式：檢查 nn → ⁿ（台羅模式保持 nn）
         if (inputMode == ToneConverterModels.InputMode.POJ &&
             input.lowercase() == "n" &&
+            prefs.enableDoubleTapNN &&
             currentText.length >= 3) {
 
             val lastThree = currentText.takeLast(3)
@@ -276,13 +280,19 @@ class ComposingManager(
     /**
      * 應用聲調轉換
      * 聲調 1 和 4 視為無聲調，移除數字但不加調號
+     * 每次呼叫時即時讀取設定，確保設定變更立即生效（與 iOS 一致）
      */
     private fun applyToneConversion(currentText: String, toneNumber: Int): String? {
         if (toneNumber !in 1..9 || currentText.isEmpty()) {
             return null
         }
 
-        val converted = ToneConverter.convertToToneMarks(currentText, inputMode)
+        val converted = ToneConverter.convertToToneMarks(
+            currentText,
+            inputMode,
+            prefs.enableDoubleTapOO,
+            prefs.enableDoubleTapNN
+        )
         return if (converted != currentText) converted else null
     }
 

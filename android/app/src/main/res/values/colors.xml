@@ -19,7 +19,7 @@
 
     <!-- Modern Theme Colors (Light Mode) - SPY×FAMILY Theme -->
     <color name="modern_surface_primary">#f5f0e8</color><!-- Light Beige Background -->
-    <color name="modern_surface_secondary">#E6F2F2F7</color><!-- 90% opacity -->
+    <color name="modern_surface_secondary">#fbf9f5</color><!-- Warm White - 與 iOS 一致 -->
     <color name="modern_accent">#6e8a7d</color><!-- Teal Gray Green -->
     <color name="modern_accent_secondary">#610a10</color><!-- Deep Red -->
     <color name="modern_text_primary">#2c2827</color><!-- Dark Brown Gray -->
@@ -42,13 +42,13 @@
     <color name="copyright_accent_purple">#610a10</color><!-- Deep Red -->
     <color name="copyright_accent_orange">#fab3ad</color><!-- Warm Pink -->
 
-    <!-- Onboarding Status Colors -->
-    <color name="onboarding_status_complete">#E8F5E9</color><!-- Light Green -->
-    <color name="onboarding_status_incomplete">#F5F5F5</color><!-- Light Gray -->
+    <!-- Setup Guide Status Colors -->
+    <color name="setup_status_complete">#E8F5E9</color><!-- Light Green -->
+    <color name="setup_status_incomplete">#F5F5F5</color><!-- Light Gray -->
 
-    <!-- Onboarding Privacy Info Card Colors -->
-    <color name="onboarding_info_background">#FFF8F0</color><!-- Light Orange Background -->
-    <color name="onboarding_info_icon">#FF9800</color><!-- Orange Icon -->
+    <!-- Setup Guide Privacy Info Card Colors -->
+    <color name="setup_info_background">#FFF8F0</color><!-- Light Orange Background -->
+    <color name="setup_info_icon">#FF9800</color><!-- Orange Icon -->
 
     <!-- Modern Theme - Surface Variations -->
     <color name="modern_surface_elevated">#FBF9F5</color><!-- Warm White -->

@@ -109,9 +109,10 @@
 
 | 功能 | iOS 檔案 | Android 檔案 |
 |------|----------|--------------|
-| **設定主頁** | `Settings/SettingsView.swift` | `settings/SettingsMainActivity.kt` |
-| **詞庫設定** | `Settings/DictionarySettingsView.swift` | `settings/DictionarySettingsActivity.kt` |
+| **設定主頁** | `App/Tabs/SettingsTab.swift` | `settings/SettingsMainActivity.kt` |
+| **詞庫設定** | `App/Tabs/DictionaryTab.swift` | `settings/DictionarySettingsActivity.kt` |
 | **鍵盤設定** | — | `settings/KeyboardSettingsActivity.kt` |
+| **共用設定** | `Settings/SharedSettings.swift` | `ime/core/PrefHelper.kt` |
 
 ### Theme 主題
 
@@ -119,6 +120,33 @@
 |------|----------|--------------|
 | **主題定義** | `Theme/ThemeTokens.swift` | `ui/theme/Theme.kt` |
 | **按鍵樣式** | `Theme/ButtonStyles.swift` | — |
+
+### App 主 APP UI（iOS）
+
+| 功能 | iOS 檔案 |
+|------|----------|
+| **App 入口** | `App/TaigiKeyboardApp.swift` |
+| **Tab 容器** | `App/ContentView.swift` |
+| **Tab 類型定義** | `App/Tabs/TabType.swift` |
+| **Tab1 頭頁** | `App/Tabs/HomeTab.swift` |
+| **Tab2 佈局** | `App/Tabs/LayoutTab.swift` |
+| **Tab3 詞庫** | `App/Tabs/DictionaryTab.swift` |
+| **Tab4 設定** | `App/Tabs/SettingsTab.swift` |
+| **版權聲明** | `Copyright/Views/CopyrightView.swift` |
+| **Onboarding** | `Onboarding/OnboardingView.swift` |
+
+### Localization 本地化（iOS）
+
+| 功能 | iOS 檔案 |
+|------|----------|
+| **核心結構** | `Localization/LocalizedText.swift` |
+| **Tab 標題** | `Localization/TabTexts.swift` |
+| **App 資訊** | `Localization/AppInfoTexts.swift` |
+| **操作文字** | `Localization/ActionTexts.swift` |
+| **鍵盤文字** | `Localization/KeyboardTexts.swift` |
+| **引導文字** | `Localization/OnboardingTexts.swift` |
+| **版權文字** | `Localization/CopyrightTexts.swift` |
+| **頁面專用** | 各 Tab 檔案內的 `XxxTexts` enum |
 
 ---
 
@@ -131,12 +159,24 @@ TaigiKeyboard/
 ├── _Keyboard/           # IME 主入口
 ├── Actions/             # 動作處理（ActionHandler）
 ├── App/                 # 主 App UI
+│   ├── Assets/          # 圖片資源（Assets.xcassets）
+│   ├── Components/      # 共用元件（ImageSlideshowView 等）
+│   ├── Tabs/            # Tab 頁面
+│   │   ├── TabType.swift
+│   │   ├── HomeTab.swift      # Tab1 頭頁
+│   │   ├── LayoutTab.swift    # Tab2 佈局
+│   │   ├── DictionaryTab.swift # Tab3 詞庫
+│   │   └── SettingsTab.swift  # Tab4 設定
+│   ├── ContentView.swift      # Tab 容器
+│   └── TaigiKeyboardApp.swift # App 入口
 ├── Autocomplete/        # 自動完成
 │   ├── Models/
 │   ├── Services/
 │   └── Views/
 ├── Callouts/            # 長按選單
 ├── Copyright/           # 版權資訊
+│   └── Views/           # CopyrightView
+├── Debug/               # Debug 模式（#if DEBUG）
 ├── Emojis/              # Emoji 服務
 ├── Input/               # 輸入與組字
 │   └── Tone/            # 聲調處理
@@ -147,11 +187,11 @@ TaigiKeyboard/
 │   ├── Services/        # 服務層
 │   ├── Trie/            # Trie 相關
 │   └── Utils/           # 工具函數
-├── Localization/        # 多語言
-├── Onboarding/          # 引導流程
-├── Settings/            # 設定
+├── Localization/        # 多語言（LocalizedText, XxxTexts）
+├── Onboarding/          # 引導流程（OnboardingView）
+├── Settings/            # 共用設定（SharedSettings）
 ├── Styling/             # 樣式
-└── Theme/               # 主題
+└── Theme/               # 主題（ThemeTokens）
 ```
 
 ### Android (`android/app/src/main/java/.../taigikeyboard/`)
@@ -177,6 +217,26 @@ taigikeyboard/
 ├── util/                # 工具函數
 └── model/               # 共用模型
 ```
+
+---
+
+### iOS Assets (`App/Assets/Assets.xcassets/`)
+
+```
+Assets.xcassets/
+├── AccentColor.colorset/
+├── AppIcon.appiconset/
+├── layout_standard_preview.imageset/    # Tab2 佈局預覽
+├── layout_phahtaigi_preview.imageset/   # Tab2 佈局預覽
+├── setup_step1.imageset/                # Onboarding 截圖
+├── setup_step2.imageset/                # Onboarding 截圖
+├── nextword_1.imageset/                 # 新功能截圖
+├── nextword_2.imageset/
+├── nextword_3.imageset/
+└── faq_tone_handling.imageset/          # FAQ 截圖
+```
+
+**命名規範**：所有圖片檔案必須加上 `@3x` 後綴（如 `setup_step1@3x.png`）
 
 ---
 
@@ -215,4 +275,8 @@ UserFrequencyService.recordUsage()
 | `sort.md` | UserFrequency, Lexicon |
 | `trie.md` | Trie, Lexicon |
 | `tone.md` | Tone |
-| `prediction.md` | NextWord |
+| `nextword.md` | NextWord |
+| `app-ui.md` | 主 APP UI 設計規範 |
+| `todo.md` | 待辦事項與變更記錄 |
+| `azookey-ui.md` | azooKey UI 參考 |
+| `theme.md` | 主題設計 |

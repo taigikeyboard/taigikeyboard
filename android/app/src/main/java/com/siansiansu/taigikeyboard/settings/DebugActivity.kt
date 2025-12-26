@@ -6,6 +6,8 @@ import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.siansiansu.taigikeyboard.databinding.ActivityDebugBinding
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
 /**
@@ -23,6 +25,12 @@ class DebugActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val prefs = PrefHelper(this)
+
+        // 套用字體 Theme（必須在 setContentView 之前）
+        ThemeUtils.applyFontTheme(this, prefs)
+
         binding = ActivityDebugBinding.inflate(layoutInflater)
         setContentView(binding.root)
 

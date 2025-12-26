@@ -18,7 +18,7 @@
         android:layout_weight="1"
         android:text="Button Text"
         android:textColor="@color/modern_text_primary"
-        android:textSize="16sp" />
+        android:textSize="17sp" />
 
     <ImageView
         android:layout_width="16dp"

@@ -359,6 +359,7 @@ class CandidateOverlayView : FrameLayout {
             if (!isClickEnabled) return@setOnClickListener
             onSuggestionSelected?.invoke(item.word, item.originalIndex)
             hide()
+            onCollapse?.invoke()  // 同步更新 SmartbarManager 的展開狀態
         }
 
         return cellView
@@ -385,6 +386,7 @@ class CandidateOverlayView : FrameLayout {
             if (!isClickEnabled) return@setOnClickListener
             onSuggestionSelected?.invoke(item.word, item.originalIndex)
             hide()
+            onCollapse?.invoke()  // 同步更新 SmartbarManager 的展開狀態
         }
 
         return cellView

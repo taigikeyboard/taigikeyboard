@@ -67,7 +67,7 @@
                     android:lineSpacingExtra="2dp"
                     android:text="Description"
                     android:textColor="@color/modern_text_secondary"
-                    android:textSize="16sp" />
+                    android:textSize="17sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -97,7 +97,7 @@
                     android:layout_marginBottom="20dp"
                     android:text="License Description"
                     android:textColor="@color/modern_text_primary"
-                    android:textSize="16sp"
+                    android:textSize="17sp"
                     android:textStyle="bold" />
 
                 <!-- Divider -->

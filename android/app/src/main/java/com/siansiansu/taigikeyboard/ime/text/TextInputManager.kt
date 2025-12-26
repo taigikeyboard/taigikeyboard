@@ -216,7 +216,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                     else -> ToneConverterModels.InputMode.POJ
                 }
             }
-            composingManager = ComposingManager(inputMode)
+            composingManager = ComposingManager(
+                inputMode = inputMode,
+                prefs = taigikeyboard.prefs
+            )
         } else {
             composingManager = null
         }

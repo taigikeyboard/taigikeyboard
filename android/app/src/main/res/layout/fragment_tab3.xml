@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/modern_surface_primary"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="40dp">
+
+        <!-- 頁面標題 -->
+        <TextView
+            android:id="@+id/text_tab_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/modern_text_primary"
+            android:layout_marginBottom="24dp"
+            tools:text="詞庫" />
+
+        <!-- 詞庫列表卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/spyfamily_card_stroke">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- 1. 教育部辭典 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_moe"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__moe"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_moe"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 2. 新詞辭庫 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_newword"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__newword"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_newword"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 3. 工藝詞庫 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_kungge"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__kungge"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_kungge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 4. iTaigi -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_itaigi"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__itaigi"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_itaigi"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 5. 台日大辭典 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_taiwan_japan"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__taiwan_japan"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_taiwan_japan"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 6. 台華線頂對照典 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_tai_hua"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__tai_hua"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_tai_hua"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View style="@style/ModernDivider" />
+
+                <!-- 7. 台灣植物名彙 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="20dp"
+                    android:paddingVertical="12dp"
+                    android:minHeight="48dp"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/text_dict_taiwan_plant"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/dict__taiwan_plant"
+                        android:textSize="16sp"
+                        android:textColor="@color/modern_text_primary" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_taiwan_plant"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 異用字卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/spyfamily_card_stroke">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp"
+                android:minHeight="48dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_dict_variant"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/dict__variant"
+                    android:textSize="16sp"
+                    android:textColor="@color/modern_text_primary" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_variant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 自訂詞庫 Section Header -->
+        <TextView
+            android:id="@+id/text_dict_custom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/dict__custom"
+            android:textSize="16sp"
+            android:textColor="@color/modern_text_secondary"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 自訂詞庫卡片 (Coming Soon) -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/spyfamily_card_stroke">
+
+            <TextView
+                android:id="@+id/text_dict_coming_soon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="24dp"
+                android:text="@string/dict__coming_soon"
+                android:textSize="16sp"
+                android:textColor="@color/modern_text_secondary"
+                android:gravity="center" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 清除資料卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/spyfamily_card_stroke">
+
+            <LinearLayout
+                android:id="@+id/row_clear_cache"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp"
+                android:paddingVertical="12dp"
+                android:minHeight="48dp"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_clear_cache"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/dict__clear_cache"
+                    android:textSize="16sp"
+                    android:textColor="@color/modern_accent_secondary" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+
+</ScrollView>

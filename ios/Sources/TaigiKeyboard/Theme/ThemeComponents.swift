@@ -55,8 +55,8 @@ struct CloseButton: View {
     }
 }
 
-/// 引導流程背景（含漸層裝飾圓圈）
-struct OnboardingBackground: View {
+/// Setup Guide 背景（含漸層裝飾圓圈，與 Android activity_setup_guide.xml 對應）
+struct SetupGuideBackground: View {
     var body: some View {
         ZStack {
             Color.Theme.surfacePrimary

@@ -1,45 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-        App Dark Mode Colors - 目前未啟用
-        SPY×FAMILY 復古主題目前僅支援 Light Mode
-        以下配色保留供未來可能使用
-    -->
+    <!-- App Dark Mode Colors - 與 iOS 設計一致 -->
 
-    <!-- 保留鍵盤相關的 Dark Mode 顏色（鍵盤仍然支援 Dark Mode） -->
-    <color name="cardViewBackgroundColor">#404040</color>
+    <!-- Basic Dark Colors -->
+    <color name="cardViewBackgroundColor">#2c2c2e</color>
     <color name="toolbarForegroundColor">#FFFFFF</color>
-    <color name="windowBackground">#303030</color>
+    <color name="windowBackground">#1c1c1e</color>
 
-    <!-- Modern Theme Colors (Dark Mode) - SPY×FAMILY Theme - 未啟用 -->
-    <!--
-    <color name="modern_surface_primary">#2B3B54</color>
-    <color name="modern_surface_secondary">#363E51</color>
-    <color name="modern_accent">#a8c0b5</color>
-    <color name="modern_accent_secondary">#a8666b</color>
-    <color name="modern_text_primary">#EBEBF5</color>
-    <color name="modern_text_secondary">#AEAEB2</color>
+    <!-- Modern Theme Colors (Dark Mode) -->
+    <color name="modern_surface_primary">#1c1c1e</color>
+    <color name="modern_surface_secondary">#2c2c2e</color><!-- 與 iOS 一致 -->
+    <color name="modern_accent">#8ba697</color>
+    <color name="modern_accent_secondary">#d95959</color>
+    <color name="modern_text_primary">#ffffff</color>
+    <color name="modern_text_secondary">#8e8e93</color>
 
-    <color name="modern_icon_red">#a8666b</color>
-    <color name="modern_icon_blue">#a8c0b5</color>
+    <!-- Modern Theme - Icon Colors (Dark Mode) -->
+    <color name="modern_icon_red">#d95959</color>
+    <color name="modern_icon_blue">#8ba697</color>
     <color name="modern_icon_yellow">#fcc9c4</color>
-    <color name="modern_icon_green">#a8c0b5</color>
+    <color name="modern_icon_green">#8ba697</color>
 
-    <color name="modern_surface_elevated">#363E51</color>
-    <color name="modern_surface_card">#363E51</color>
-    <color name="modern_surface_container">#2B3B54</color>
-    <color name="modern_neutral_container">#2B3B54</color>
+    <!-- Modern Theme - Shadow (Dark Mode) -->
+    <color name="modern_shadow_light">#0AFFFFFF</color>
+    <color name="modern_shadow_medium">#14FFFFFF</color>
+    <color name="modern_shadow_heavy">#1FFFFFFF</color>
 
+    <!-- Copyright Page Accent Colors (Dark Mode) -->
+    <color name="copyright_accent_green">#8ba697</color>
+    <color name="copyright_accent_blue">#8ba697</color>
+    <color name="copyright_accent_purple">#d95959</color>
+    <color name="copyright_accent_orange">#fcc9c4</color>
+
+    <!-- Setup Guide Status Colors (Dark Mode) -->
+    <color name="setup_status_complete">#1B3A1E</color>
+    <color name="setup_status_incomplete">#2c2c2e</color>
+
+    <!-- Setup Guide Privacy Info Card Colors (Dark Mode) -->
+    <color name="setup_info_background">#3D2E1F</color>
+    <color name="setup_info_icon">#FF9800</color>
+
+    <!-- Modern Theme - Surface Variations (Dark Mode) -->
+    <color name="modern_surface_elevated">#2c2c2e</color>
+    <color name="modern_surface_card">#2c2c2e</color>
+    <color name="modern_surface_container">#1c1c1e</color>
+    <color name="modern_neutral_container">#1c1c1e</color>
+
+    <!-- Modern Theme - State Colors (Dark Mode) -->
     <color name="modern_success_container">#1B3A1E</color>
-    <color name="modern_success">#a8c0b5</color>
+    <color name="modern_success">#8ba697</color>
     <color name="modern_warning_container">#3D2E1F</color>
     <color name="modern_warning">#fcc9c4</color>
+    <color name="modern_error">#CF6679</color>
+    <color name="modern_on_accent">#FFFFFF</color>
 
-    <color name="modern_accent_container">#1Aa8c0b5</color>
-    <color name="modern_accent_surface">#0Da8c0b5</color>
+    <!-- Modern Theme - Alpha Colors (Dark Mode) -->
+    <color name="modern_accent_container">#1A8ba697</color>
+    <color name="modern_accent_surface">#0D8ba697</color>
     <color name="modern_warning_surface">#26fcc9c4</color>
 
+    <!-- SPY×FAMILY Specific Colors (Dark Mode) -->
     <color name="spyfamily_warm_pink">#fcc9c4</color>
-    <color name="spyfamily_card_stroke">#33AEAEB2</color>
-    -->
+    <color name="spyfamily_card_stroke">#338e8e93</color>
 </resources>

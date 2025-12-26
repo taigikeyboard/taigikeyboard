@@ -26,15 +26,6 @@
             </intent-filter>
         </service>
 
-        <!-- Onboarding Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.onboarding.OnboardingActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/app_name"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/SettingsTheme"
-            android:exported="false"/>
-
         <!-- Settings Activity -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
@@ -70,30 +61,24 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Keyboard Settings Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.settings.KeyboardSettingsActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/keyboard_settings__title"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/SettingsTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="true"/>
-
-        <!-- Dictionary Settings Activity -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.settings.DictionarySettingsActivity"
-            android:icon="@mipmap/ic_launcher"
-            android:label="@string/dictionary_settings__title"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/SettingsTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="false"/>
-
         <!-- Debug Activity (DEBUG only) -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.DebugActivity"
             android:label="Debug Zone"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Detail Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.DetailActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Setup Guide Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.SetupGuideActivity"
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>

@@ -1,59 +1,30 @@
 import Foundation
+import SwiftUI
 
-/// 顯示語言選項
-enum DisplayLanguage: Equatable {
-    case hanji
-    case poj
-    case tl
-}
-
-/// 多語系文字結構（漢字、白話字、台羅）
+/// 本地化文字結構（簡化版：僅支援漢字）
 struct LocalizedText {
     let hanji: String
-    let poj: String
-    let tl: String
 
-    /// 根據語言設定取得對應文字
-    func text(for language: DisplayLanguage) -> String {
-        switch language {
-        case .hanji:
-            hanji
-        case .poj:
-            poj
-        case .tl:
-            tl
-        }
+    init(hanji: String) {
+        self.hanji = hanji
+    }
+
+    /// 便利初始化（直接傳入字串）
+    init(_ text: String) {
+        self.hanji = text
     }
 }
 
-/// 語言管理器（負責根據設定切換顯示語言）
+/// 語言管理器（簡化版）
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
 
-    @Published var currentDisplayLanguage: DisplayLanguage = .hanji
-
-    private init() {
-        updateDisplayLanguage()
-    }
-
-    /// 根據使用者設定更新顯示語言
-    func updateDisplayLanguage() {
-        // showHanjiMode 固定為 true，因此永遠使用漢字顯示
-        let newLanguage: DisplayLanguage = .hanji
-
-        if newLanguage != currentDisplayLanguage {
-            currentDisplayLanguage = newLanguage
-
-            NotificationCenter.default.post(name: .languageDidChange, object: nil)
-        }
-    }
+    private init() {}
 
     func text(_ localizedText: LocalizedText) -> String {
-        localizedText.text(for: currentDisplayLanguage)
+        localizedText.hanji
     }
 }
-
-import SwiftUI
 
 extension View {
     func withLanguageEnvironment() -> some View {
