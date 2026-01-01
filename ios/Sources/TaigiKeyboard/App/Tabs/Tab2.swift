@@ -1,168 +1,190 @@
 import SwiftUI
 
-/// Tab2: 佈局
-/// 內容：鍵盤佈局選擇（標準 / PhahTaigi）
-/// 主題風格：與 Tab1 一致
-/// 排版參考：azooKey ThemeTab（水平列表式）
+/// 佈局 Tab
+///
+/// 鍵盤佈局選擇，支援 PhahTaigi、標準 QWERTY 和 Flick 聲調佈局。
 struct Tab2: View {
     @StateObject private var languageManager = LanguageManager.shared
-    @State private var phahTaigiLayoutEnabled: Bool
+    @State private var selectedLayout: KeyboardLayoutType
     @Namespace private var namespace
 
     private let settings = SharedSettings.shared
 
     init() {
-        _phahTaigiLayoutEnabled = State(initialValue: SharedSettings.shared.phahTaigiLayoutEnabled)
+        _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 32) {
-                    // 佈局選擇區塊
-                    layoutSelectionSection
+            Form {
+                Section {
+                    // PhahTaigi 佈局
+                    LayoutOptionCard(
+                        title: languageManager.text(Tab2Texts.phahTaigiLayout),
+                        previewImageName: "layout_phahtaigi_preview",
+                        isSelected: selectedLayout == .phahTaigi,
+                        namespace: namespace,
+                        checkmarkId: "layout_checkmark",
+                        action: {
+                            selectLayout(.phahTaigi)
+                        }
+                    )
+
+                    // 標準 QWERTY 佈局
+                    LayoutOptionCard(
+                        title: languageManager.text(Tab2Texts.standardLayout),
+                        previewImageName: "layout_standard_preview",
+                        isSelected: selectedLayout == .qwerty,
+                        namespace: namespace,
+                        checkmarkId: "layout_checkmark",
+                        action: {
+                            selectLayout(.qwerty)
+                        }
+                    )
+
+                    #if DEBUG
+                    // 台灣注音（方音符號）佈局（開發中，僅 Debug 模式顯示）
+                    LayoutOptionCard(
+                        title: languageManager.text(Tab2Texts.tpsLayout),
+                        subtitle: languageManager.text(Tab2Texts.tpsLayoutDescription),
+                        previewImageName: "layout_tps_preview",
+                        isSelected: selectedLayout == .tps,
+                        namespace: namespace,
+                        checkmarkId: "layout_checkmark",
+                        action: {
+                            selectLayout(.tps)
+                        }
+                    )
+                    #endif
+
+                    #if DEBUG
+                    // Flick 聲調佈局（開發中，僅 Debug 模式顯示）
+                    LayoutOptionCard(
+                        title: languageManager.text(Tab2Texts.flickLayout),
+                        subtitle: languageManager.text(Tab2Texts.flickLayoutDescription),
+                        previewImageName: "layout_flick_preview",
+                        isSelected: selectedLayout == .flick,
+                        namespace: namespace,
+                        checkmarkId: "layout_checkmark",
+                        action: {
+                            selectLayout(.flick)
+                        }
+                    )
+                    #endif
+                } header: {
+                    Text(languageManager.text(Tab2Texts.layoutDescription))
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 40)
             }
-            .background(Color.Theme.surfacePrimary)
             .navigationTitle(languageManager.text(Tab2Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
         }
     }
 
-    // MARK: - 佈局選擇區塊
-
-    @ViewBuilder
-    private var layoutSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // 說明文字
-            LocalizedTextView(Tab2Texts.layoutDescription)
-                .themeFontBody()
-                .foregroundColor(Color.Theme.textSecondary)
-
-            // 佈局選項卡片
-            VStack(spacing: 0) {
-                // PhahTaigi 佈局（預設）
-                LayoutOptionRow(
-                    title: Tab2Texts.phahTaigiLayout,
-                    previewImageName: "layout_phahtaigi_preview",
-                    isSelected: phahTaigiLayoutEnabled,
-                    namespace: namespace,
-                    checkmarkId: "layout_checkmark",
-                    isLast: false,
-                    action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            phahTaigiLayoutEnabled = true
-                            settings.phahTaigiLayoutEnabled = true
-                        }
-                    }
-                )
-
-                // 標準佈局
-                LayoutOptionRow(
-                    title: Tab2Texts.standardLayout,
-                    previewImageName: "layout_standard_preview",
-                    isSelected: !phahTaigiLayoutEnabled,
-                    namespace: namespace,
-                    checkmarkId: "layout_checkmark",
-                    isLast: true,
-                    action: {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            phahTaigiLayoutEnabled = false
-                            settings.phahTaigiLayoutEnabled = false
-                        }
-                    }
-                )
-            }
-            .themedCard()
+    private func selectLayout(_ layout: KeyboardLayoutType) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            selectedLayout = layout
+            settings.keyboardLayoutType = layout
         }
     }
 }
 
-// MARK: - 佈局選項列（水平排列，參考 azooKey）
+// MARK: - 佈局選項卡片（參考 azooKey ThemeTab）
 
-private struct LayoutOptionRow: View {
-    let title: LocalizedText
+private struct LayoutOptionCard: View {
+    let title: String
+    var subtitle: String? = nil
     let previewImageName: String
     let isSelected: Bool
     let namespace: Namespace.ID
     let checkmarkId: String
-    let isLast: Bool
     let action: () -> Void
 
-    /// 預覽圖尺寸（符合 Apple HIG，足夠辨識鍵盤佈局）
-    private let previewWidth: CGFloat = 180
-    private let previewHeight: CGFloat = 120
+    /// 預覽圖縮放比例
+    private let previewScale: CGFloat = 0.9
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 0) {
-                HStack(spacing: 16) {
-                    // 左側：預覽圖
-                    ZStack {
-                        previewImage
-                            .frame(width: previewWidth, height: previewHeight)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.Theme.cardStroke, lineWidth: 1)
-                            )
+            ZStack {
+                // 預覽圖（縮小並維持原圖比例）
+                previewImage
+                    .scaleEffect(previewScale)
 
-                        // 選中時的遮罩與勾選
-                        if isSelected {
-                            Color.black.opacity(0.3)
-                                .frame(width: previewWidth, height: previewHeight)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                // 選中時的遮罩
+                if isSelected {
+                    Color.black.opacity(0.3)
+                }
 
-                            Circle()
-                                .fill(Color.Theme.accent)
-                                .frame(width: 36, height: 36)
-                                .overlay(
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundColor(.white)
-                                )
-                                .matchedGeometryEffect(id: checkmarkId, in: namespace)
+                // 勾選圓圈（置中）
+                if isSelected {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 60, height: 60)
+                        .overlay(
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.white)
+                        )
+                        .matchedGeometryEffect(id: checkmarkId, in: namespace)
+                }
+
+                // 標題（底部，毛玻璃背景）
+                VStack {
+                    Spacer()
+                    VStack(spacing: 2) {
+                        Text(title)
+                            .font(.caption)
+                            .bold()
+                            .foregroundColor(.secondary)
+                        if let subtitle = subtitle {
+                            Text(subtitle)
+                                .font(.caption2)
+                                .foregroundColor(.secondary.opacity(0.8))
                         }
                     }
-
-                    // 右側：標題（置中於剩餘空間）
-                    LocalizedTextView(title)
-                        .themeFontBody()
-                        .foregroundColor(Color.Theme.textPrimary)
-                        .frame(maxWidth: .infinity)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-                // 分隔線（非最後一項時顯示）
-                if !isLast {
-                    Divider()
-                        .background(Color.Theme.cardStroke)
-                        .padding(.leading, 16)
+                    .padding(8)
+                    .background(
+                        Capsule()
+                            .fill(.regularMaterial)
+                            .shadow(radius: 1.5)
+                    )
+                    .padding(.bottom, 8)
                 }
             }
         }
         .buttonStyle(.plain)
+        .padding(.vertical, 4)
     }
 
-    /// 預覽圖（嘗試載入圖片，否則顯示 Placeholder）
+    /// 預覽圖（維持原圖比例）
     @ViewBuilder
     private var previewImage: some View {
         if let uiImage = UIImage(named: previewImageName) {
             Image(uiImage: uiImage)
                 .resizable()
-                .aspectRatio(contentMode: .fill)
+                .aspectRatio(contentMode: .fit)
         } else {
             Rectangle()
-                .fill(Color.Theme.surfaceSecondary)
+                .fill(Color(.tertiarySystemBackground))
+                .aspectRatio(16/9, contentMode: .fit)
                 .overlay(
-                    Image(systemName: "keyboard")
-                        .font(.system(size: 20))
-                        .foregroundColor(Color.Theme.textSecondary)
+                    VStack(spacing: 8) {
+                        Image(systemName: keyboardIconName)
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary)
+                        Text(title)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 )
+        }
+    }
+
+    /// 根據標題選擇對應的圖示
+    private var keyboardIconName: String {
+        if title.contains("Flick") {
+            return "hand.draw"
+        } else {
+            return "keyboard"
         }
     }
 }

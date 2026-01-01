@@ -13,7 +13,7 @@ struct DebugAssociationView: View {
             // 搜尋框
             HStack {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(Color.Theme.textSecondary)
+                    .foregroundColor(.secondary)
                 TextField("Search", text: $searchText)
                     .textFieldStyle(.plain)
                     .onChange(of: searchText) { _, newValue in
@@ -22,12 +22,12 @@ struct DebugAssociationView: View {
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(Color.Theme.textSecondary)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
             .padding(12)
-            .background(Color.Theme.surfaceSecondary)
+            .background(Color(.secondarySystemBackground))
             .cornerRadius(10)
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -36,7 +36,7 @@ struct DebugAssociationView: View {
             HStack {
                 Text("Total: \(filteredData.count) / \(allData.count) entries")
                     .font(.caption)
-                    .foregroundColor(Color.Theme.textSecondary)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Button(action: { showClearAlert = true }) {
                     Text("Clear All")
@@ -55,7 +55,7 @@ struct DebugAssociationView: View {
             } else if filteredData.isEmpty {
                 Spacer()
                 Text("No data")
-                    .foregroundColor(Color.Theme.textSecondary)
+                    .foregroundColor(.secondary)
                 Spacer()
             } else {
                 List {
@@ -63,25 +63,22 @@ struct DebugAssociationView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text("\(item.prevWord) → \(item.nextWord)")
-                                    .foregroundColor(Color.Theme.textPrimary)
                                 Spacer()
                                 Text("\(item.count)")
-                                    .foregroundColor(Color.Theme.textSecondary)
+                                    .foregroundColor(.secondary)
                                     .font(.callout)
                             }
                             if !item.nextTl.isEmpty || !item.nextPoj.isEmpty {
                                 Text("TL: \(item.nextTl) / POJ: \(item.nextPoj)")
                                     .font(.caption)
-                                    .foregroundColor(Color.Theme.textSecondary)
+                                    .foregroundColor(.secondary)
                             }
                         }
-                        .listRowBackground(Color.Theme.surfacePrimary)
                     }
                 }
                 .listStyle(.plain)
             }
         }
-        .background(Color.Theme.surfacePrimary)
         .onAppear {
             loadData()
         }

@@ -1,11 +1,18 @@
 import SwiftUI
 import KeyboardKit
 
+/// 台語鍵盤 App 進入點
 @main
 struct TaigiKeyboardApp: App {
     @StateObject private var keyboardStatus = KeyboardStatusContext(
         bundleId: (Bundle.main.bundleIdentifier ?? "com.siansiansu.TaigiKeyboard") + ".TaigiKeyboardExtension"
     )
+
+    init() {
+        // 設定 KeyboardKit 使用 App Group 持久化設定
+        // 必須在任何 @AppStorage 存取之前呼叫
+        KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -16,6 +23,9 @@ struct TaigiKeyboardApp: App {
     }
 }
 
+/// App 根視圖
+///
+/// 管理 Deep Link 和設定引導流程。
 struct AppRootView: View {
     @ObservedObject var keyboardStatus: KeyboardStatusContext
     @StateObject private var viewModel: SetupGuideViewModel
@@ -60,8 +70,9 @@ struct AppRootView: View {
     }
 }
 
-// MARK: - Deep Link 通知
+// MARK: - 通知名稱
 
 extension Notification.Name {
+    /// 切換到設定 Tab
     static let switchToSettingsTab = Notification.Name("switchToSettingsTab")
 }

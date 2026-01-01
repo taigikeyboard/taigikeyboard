@@ -1,6 +1,8 @@
 import Foundation
 
-/// 聲調還原器 - 負責將聲調標記還原為基本字母（用於 Backspace）
+/// 聲調還原器
+///
+/// 將聲調標記還原為基本字母，用於 Backspace 刪除操作。
 enum ToneRestoration {
 
     /// 嘗試還原文字中的聲調標記

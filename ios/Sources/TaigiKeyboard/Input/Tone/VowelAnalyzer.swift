@@ -1,9 +1,11 @@
 import Foundation
 
-/// 元音範圍分析器 - 負責找出音節中需要標記聲調的元音位置
+/// 元音範圍分析器
+///
+/// 找出音節中需要標記聲調的元音位置，支援 POJ 和 TL 模式。
 enum VowelAnalyzer {
 
-    // MARK: - Public Interface
+    // MARK: - 公開介面
 
     /// 找出 POJ 音節中的元音範圍
     /// - Parameter syllable: 音節字串
@@ -70,7 +72,7 @@ enum VowelAnalyzer {
         return nil
     }
 
-    // MARK: - Private Helpers
+    // MARK: - 私有輔助方法
 
     /// 找出最後一個元音的範圍
     private static func findLastVowel(in text: String) -> Range<String.Index>? {

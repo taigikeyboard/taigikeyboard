@@ -1,75 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#4CAF50</color><!-- Green 500 -->
-    <color name="colorPrimaryDark">#388E3C</color><!-- Green 700 -->
-    <color name="colorAccent">#FF9800</color><!-- Orange 500 -->
-    <color name="colorAccentDark">#F57C00</color><!-- Orange 700 -->
+    <!-- 基礎系統色彩（保留給可能的舊代碼引用） -->
+    <color name="colorPrimary">#4CAF50</color>
+    <color name="colorPrimaryDark">#388E3C</color>
+    <color name="colorAccent">#FF9800</color>
 
-    <color name="colorSuccess">@color/colorPrimary</color><!-- Green 500 -->
-    <color name="textColorSuccess">#FFFFFF</color><!-- White -->
-    <color name="colorWarning">#FFFF00</color><!-- Yellow A200 -->
-    <color name="textColorWarning">#000000</color><!-- Black -->
-    <color name="colorError">#B00020</color><!-- Red 1000? -->
-    <color name="textColorError">#FFFFFF</color><!-- White -->
+    <!-- Kotlin 程式碼引用的色彩（使用 Material 3 標準色） -->
+    <color name="copyright_accent_green">#4CAF50</color>
+    <color name="copyright_accent_blue">#2196F3</color>
+    <color name="copyright_accent_purple">#9C27B0</color>
+    <color name="copyright_accent_orange">#FF9800</color>
 
-    <color name="cardViewBackgroundColor">#FBF9F5</color><!-- Warm White -->
-    <color name="navigationBarColor">#000000</color><!-- Black -->
-    <color name="toolbarForegroundColor">#000000</color><!-- Black -->
-    <color name="windowBackground">#FAFAFA</color><!-- Gray 50 -->
+    <color name="modern_accent">#6750A4</color>
+    <color name="modern_text_primary">#1C1B1F</color>
+    <color name="modern_text_secondary">#49454F</color>
+    <color name="modern_surface_secondary">#F5F5F5</color>
+    <color name="modern_shadow_light">#1F000000</color>
 
-    <!-- Modern Theme Colors (Light Mode) - SPY×FAMILY Theme -->
-    <color name="modern_surface_primary">#f5f0e8</color><!-- Light Beige Background -->
-    <color name="modern_surface_secondary">#fbf9f5</color><!-- Warm White - 與 iOS 一致 -->
-    <color name="modern_accent">#6e8a7d</color><!-- Teal Gray Green -->
-    <color name="modern_accent_secondary">#610a10</color><!-- Deep Red -->
-    <color name="modern_text_primary">#2c2827</color><!-- Dark Brown Gray -->
-    <color name="modern_text_secondary">#57675c</color><!-- Deep Teal Gray -->
-
-    <!-- Modern Theme - Icon Colors - SPY×FAMILY Theme -->
-    <color name="modern_icon_red">#610a10</color><!-- Deep Red -->
-    <color name="modern_icon_blue">#6e8a7d</color><!-- Teal Gray Green -->
-    <color name="modern_icon_yellow">#fab3ad</color><!-- Warm Pink -->
-    <color name="modern_icon_green">#6e8a7d</color><!-- Teal Gray Green -->
-
-    <!-- Modern Theme - Shadow -->
-    <color name="modern_shadow_light">#0A000000</color><!-- 4% -->
-    <color name="modern_shadow_medium">#14000000</color><!-- 8% -->
-    <color name="modern_shadow_heavy">#1F000000</color><!-- 12% -->
-
-    <!-- Copyright Page Accent Colors - SPY×FAMILY Theme -->
-    <color name="copyright_accent_green">#6e8a7d</color><!-- Teal Gray Green -->
-    <color name="copyright_accent_blue">#6e8a7d</color><!-- Teal Gray Green -->
-    <color name="copyright_accent_purple">#610a10</color><!-- Deep Red -->
-    <color name="copyright_accent_orange">#fab3ad</color><!-- Warm Pink -->
-
-    <!-- Setup Guide Status Colors -->
-    <color name="setup_status_complete">#E8F5E9</color><!-- Light Green -->
-    <color name="setup_status_incomplete">#F5F5F5</color><!-- Light Gray -->
-
-    <!-- Setup Guide Privacy Info Card Colors -->
-    <color name="setup_info_background">#FFF8F0</color><!-- Light Orange Background -->
-    <color name="setup_info_icon">#FF9800</color><!-- Orange Icon -->
-
-    <!-- Modern Theme - Surface Variations -->
-    <color name="modern_surface_elevated">#FBF9F5</color><!-- Warm White -->
-    <color name="modern_surface_card">#FBF9F5</color><!-- Card Background Warm White -->
-    <color name="modern_surface_container">#F5F5F7</color><!-- Light Gray Container -->
-    <color name="modern_neutral_container">#F5F5F7</color><!-- Neutral Gray Container -->
-
-    <!-- Modern Theme - State Colors - SPY×FAMILY Theme -->
-    <color name="modern_success_container">#E8F5E9</color><!-- Light Green Background -->
-    <color name="modern_success">#6e8a7d</color><!-- Teal Gray Green -->
-    <color name="modern_warning_container">#FFF8F0</color><!-- Light Orange Background -->
-    <color name="modern_warning">#fab3ad</color><!-- Warm Pink -->
-    <color name="modern_error">#B00020</color><!-- Error Red -->
-    <color name="modern_on_accent">#FFFFFF</color><!-- White text on accent -->
-
-    <!-- Modern Theme - Alpha Colors (Translucent) - SPY×FAMILY Theme -->
-    <color name="modern_accent_container">#1A6e8a7d</color><!-- Teal @ 10% opacity -->
-    <color name="modern_accent_surface">#0D6e8a7d</color><!-- Teal @ 5% opacity -->
-    <color name="modern_warning_surface">#26fab3ad</color><!-- Pink @ 15% opacity -->
-
-    <!-- SPY×FAMILY Specific Colors -->
-    <color name="spyfamily_warm_pink">#fab3ad</color><!-- Anya's Warm Pink -->
-    <color name="spyfamily_card_stroke">#3357675c</color><!-- Card Border @ 20% opacity -->
+    <!-- Tab2 佈局選項膠囊背景（模擬毛玻璃效果） -->
+    <color name="layout_capsule_background">#E6FFFFFF</color>
 </resources>

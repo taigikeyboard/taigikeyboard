@@ -25,9 +25,6 @@ class EmojiKeyboardView : FrameLayout {
     private val mainScope = MainScope()
     private var composeView: ComposeView? = null
 
-    // 歷史記錄管理器
-    private lateinit var historyManager: EmojiHistoryManager
-
     // 膚色偏好管理器
     private lateinit var preferencesManager: EmojiPreferences
 
@@ -45,7 +42,6 @@ class EmojiKeyboardView : FrameLayout {
         super.onAttachedToWindow()
 
         // 初始化管理器
-        historyManager = EmojiHistoryManager(context)
         preferencesManager = EmojiPreferences(context)
 
         // 建立 ComposeView（會自動從 view tree 找到 LifecycleOwner）
@@ -68,22 +64,17 @@ class EmojiKeyboardView : FrameLayout {
             // 資料載入完成後設定 Compose content
             composeView?.setContent {
                 TaigiKeyboardTheme {
-                    // 觀察歷史記錄與膚色偏好
-                    val emojiHistory by historyManager.getHistory().collectAsState(initial = EmojiHistory())
+                    // 觀察膚色偏好
                     val preferredSkinTone by preferencesManager.getPreferredSkinTone().collectAsState(
                         initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT
                     )
 
                     EmojiPaletteView(
                         fullEmojiMappings = layouts,
-                        emojiHistory = emojiHistory,
                         preferredSkinTone = preferredSkinTone,
                         onEmojiClick = { emojiKeyData ->
-                            // 點擊 emoji 時送出文字並記錄到歷史
+                            // 點擊 emoji 時送出文字
                             taigikeyboard.mediaInputManager.sendEmojiKeyPress(emojiKeyData)
-                            mainScope.launch {
-                                historyManager.markEmojiUsed(emojiKeyData.getCodePointsAsString())
-                            }
                         },
                         onSkinToneSelected = { skinTone ->
                             // 記錄使用者選擇的膚色偏好

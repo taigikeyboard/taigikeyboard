@@ -1,132 +1,94 @@
 import KeyboardKit
-import SwiftUI
+import OSLog
 
-class CustomLayoutService: KeyboardLayout.StandardLayoutService {
-    override func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
-        // Use custom layout for alphabetic and webSearch modes
-        if context.keyboardType == .alphabetic || context.keyboardType == .webSearch {
-            return createFullCustomLayout(for: context)
-        }
+#if DEBUG
+private let layoutLogger = Logger(
+    subsystem: LexiconConstants.Logging.subsystem,
+    category: "CustomLayoutService"
+)
+#endif
 
-        // Add translate button to numeric keyboard and apply full-width conversion
-        if context.keyboardType == .numeric {
-            let layout = super.keyboardLayout(for: context)
-            let modifiedLayout = addTranslateButtonToNumericLayout(to: layout, context: context)
-            let adjustedLayout = adjustReturnButtonWidth(to: modifiedLayout, context: context)
-            return applyFullWidthConversion(to: adjustedLayout, context: context)
-        }
+/// KeyboardKit 10 相容的 Layout Service
+///
+/// 根據鍵盤類型、設定、裝置選擇對應的佈局，
+/// 並透過 LayoutConverter 轉換為 KeyboardLayout。
+class CustomLayoutService {
 
-        // Apply full-width conversion to symbolic keyboard
-        if context.keyboardType == .symbolic {
-            let layout = super.keyboardLayout(for: context)
-            let adjustedLayout = adjustReturnButtonWidth(to: layout, context: context)
-            return applyFullWidthConversion(to: adjustedLayout, context: context)
-        }
+    /// 根據 context 建構鍵盤 layout
+    func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
+        let config = KeyboardLayout.DeviceConfiguration.standard(for: context)
+        let converter = LayoutConverter(context: context, config: config)
+        let keyDefs = selectLayout(for: context)
 
-        return super.keyboardLayout(for: context)
+        #if DEBUG
+        layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType)) rows=\(keyDefs.count)")
+        #endif
+
+        return converter.convert(keyDefs)
     }
 
-    // MARK: - Custom Layout
+    // MARK: - Private
 
-    private func createFullCustomLayout(for context: KeyboardContext) -> KeyboardLayout {
-        let deviceConfig = DeviceConfiguration(context: context)
+    /// 根據 keyboardType、設定、裝置選擇對應的佈局
+    private func selectLayout(for context: KeyboardContext) -> [[KeyDef]] {
         let settings = SharedSettings.shared
-        let config = KeyboardLayout.DeviceConfiguration.standard(for: context)
+        let needsGlobe = needsGlobeKey(for: context)
 
-        let alphabeticBuilder = AlphabeticLayoutBuilder(config: config)
-        let bottomRowBuilder = BottomRowBuilder(
-            deviceConfig: deviceConfig,
-            settings: settings,
-            config: config
-        )
-
-        var rows = alphabeticBuilder.buildLayout(context: context).itemRows
-        rows.append(bottomRowBuilder.buildBottomRow(context: context))
-
-        let layout = KeyboardLayout(itemRows: rows)
-
-        // Apply full-width conversion for alphabetic layout
-        return applyFullWidthConversion(to: layout, context: context)
+        switch context.keyboardType {
+        case .alphabetic:
+            return selectAlphabeticLayout(settings: settings, needsGlobe: needsGlobe)
+        case .numeric:
+            return needsGlobe ? TaigiLayouts.Numeric.withGlobe : TaigiLayouts.Numeric.iPhone
+        case .symbolic:
+            return needsGlobe ? TaigiLayouts.Symbolic.withGlobe : TaigiLayouts.Symbolic.iPhone
+        default:
+            return TaigiLayouts.Alphabetic.qwerty_TL_iPhone
+        }
     }
 
-    // MARK: - Numeric Layout
-
-    /// 在數字鍵盤的底部列空白鍵右側插入 translate 按鍵
-    private func addTranslateButtonToNumericLayout(
-        to layout: KeyboardLayout,
-        context: KeyboardContext
-    ) -> KeyboardLayout {
-        var rows = layout.itemRows
-        let bottomRowIndex = rows.count - 1
-
-        guard bottomRowIndex >= 0 else { return layout }
-
-        // 建立 translate 按鍵 item
-        let config = KeyboardLayout.DeviceConfiguration.standard(for: context)
-        let translateItem = KeyboardAction.custom(named: "translate").standardLayoutItem(
-            for: config,
-            width: .input
-        )
-
-        // 在空白鍵後插入
-        rows.insert(translateItem, after: .space, inRow: bottomRowIndex)
-
-        return KeyboardLayout(itemRows: rows)
+    /// 判斷是否需要 globe 鍵（iPhone SE 或 iPad）
+    private func needsGlobeKey(for context: KeyboardContext) -> Bool {
+        let device = DeviceConfiguration(context: context)
+        return device.isIPad || device.isSmallIPhone
     }
 
-    // MARK: - Post-Processing
-
-    /// 調整 Return 按鍵寬度，使其與 alphabetic 鍵盤一致
-    private func adjustReturnButtonWidth(to layout: KeyboardLayout, context: KeyboardContext) -> KeyboardLayout {
-        let isPortrait = context.interfaceOrientation.isPortrait
-        let returnWidth: CGFloat = isPortrait ? LayoutConstants.ReturnButton.portrait
-                                               : LayoutConstants.ReturnButton.landscape
-
-        let adjustedRows = layout.itemRows.map { row in
-            row.map { item in
-                // 找到 Return 按鍵並調整寬度
-                if case .primary(.return) = item.action {
-                    return KeyboardLayout.Item(
-                        action: item.action,
-                        size: KeyboardLayout.ItemSize(
-                            width: .percentage(returnWidth),
-                            height: item.size.height
-                        ),
-                        edgeInsets: item.edgeInsets
-                    )
-                } else {
-                    return item
-                }
-            }
+    /// 選擇 Alphabetic 鍵盤佈局
+    private func selectAlphabeticLayout(
+        settings: SharedSettings,
+        needsGlobe: Bool
+    ) -> [[KeyDef]] {
+        // English 模式（Apple 標準英文鍵盤）
+        if settings.inputMode == .english {
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.qwerty_English_withGlobe
+                : TaigiLayouts.Alphabetic.qwerty_English_iPhone
         }
 
-        return KeyboardLayout(itemRows: adjustedRows)
-    }
+        // 根據 keyboardLayoutType 選擇佈局
+        switch settings.keyboardLayoutType {
+        case .tps:
+            // 台灣注音（方音符號）佈局
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.tps_withGlobe
+                : TaigiLayouts.Alphabetic.tps_iPhone
 
-    /// 當 isTranslateSwapped = true 時，將半形標點符號轉換為全形
-    private func applyFullWidthConversion(to layout: KeyboardLayout, context: KeyboardContext) -> KeyboardLayout {
-        guard context.isTranslateSwapped else { return layout }
+        case .phahTaigi:
+            // PhahTaigi 佈局
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.phahTaigi_withGlobe
+                : TaigiLayouts.Alphabetic.phahTaigi_iPhone
 
-        let convertedRows = layout.itemRows.map { row in
-            row.map { item in
-                // 轉換符號
-                if case let .character(char) = item.action,
-                   let fullWidthChar = PunctuationMapping.fullWidthCharacter(
-                       for: char,
-                       keyboardType: context.keyboardType
-                   )
-                {
-                    return KeyboardLayout.Item(
-                        action: .character(fullWidthChar),
-                        size: item.size,
-                        edgeInsets: item.edgeInsets
-                    )
-                } else {
-                    return item
-                }
+        case .qwerty, .flick:
+            // QWERTY 佈局（根據 inputMode 選擇 POJ 或 TL）
+            if settings.inputMode == .poj {
+                return needsGlobe
+                    ? TaigiLayouts.Alphabetic.qwerty_POJ_withGlobe
+                    : TaigiLayouts.Alphabetic.qwerty_POJ_iPhone
             }
+            // TL 模式（預設）
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.qwerty_TL_withGlobe
+                : TaigiLayouts.Alphabetic.qwerty_TL_iPhone
         }
-
-        return KeyboardLayout(itemRows: convertedRows)
     }
 }

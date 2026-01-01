@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/modern_surface_primary"
+    android:background="?attr/colorSurface"
     android:fillViewport="true">
 
     <LinearLayout
@@ -23,191 +23,219 @@
             android:layout_height="wrap_content"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@color/modern_text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="24dp"
             tools:text="齒佈" />
 
-        <!-- 說明文字 -->
+        <!-- 說明文字（Section Header） -->
         <TextView
             android:id="@+id/text_layout_description"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/layout__description"
-            android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
-            android:layout_marginBottom="8dp" />
+            android:textSize="14sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textAllCaps="true"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="16dp" />
 
-        <!-- 佈局選項卡片 -->
+        <!-- 佈局選項卡片容器 -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:clickable="false"
             android:focusable="false"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:divider="@drawable/divider_horizontal"
+                android:showDividers="middle">
 
-                <!-- PhahTaigi 佈局 -->
-                <LinearLayout
+                <!-- PhahTaigi 佈局選項 -->
+                <FrameLayout
                     android:id="@+id/row_layout_phahtaigi"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="12dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
                     android:descendantFocusability="blocksDescendants"
-                    android:gravity="center_vertical">
+                    android:padding="12dp">
 
-                    <!-- 預覽圖容器 -->
+                    <!-- 預覽圖卡片 -->
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="180dp"
-                        android:layout_height="120dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="210dp"
                         android:clickable="false"
                         android:focusable="false"
-                        app:cardCornerRadius="8dp"
+                        android:focusableInTouchMode="false"
+                        app:cardCornerRadius="12dp"
                         app:cardElevation="0dp"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/spyfamily_card_stroke"
-                        app:cardBackgroundColor="@color/modern_surface_secondary">
+                        app:strokeWidth="0dp"
+                        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
-                        <!-- 預覽圖 -->
-                        <ImageView
-                            android:id="@+id/preview_phahtaigi"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/layout_phahtaigi_preview" />
-
-                        <!-- 選中遮罩 -->
-                        <View
-                            android:id="@+id/overlay_phahtaigi"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="#4D000000"
-                            android:visibility="gone" />
-
-                        <!-- 選中勾選 -->
                         <FrameLayout
-                            android:id="@+id/checkmark_phahtaigi"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:layout_gravity="center"
-                            android:background="@drawable/circle_accent"
-                            android:visibility="gone">
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
 
+                            <!-- 預覽圖 -->
                             <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
+                                android:id="@+id/preview_phahtaigi"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/layout_phahtaigi_preview" />
+
+                            <!-- 選中遮罩 -->
+                            <View
+                                android:id="@+id/overlay_phahtaigi"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#4D000000"
+                                android:visibility="gone" />
+
+                            <!-- 選中勾選圓圈 -->
+                            <FrameLayout
+                                android:id="@+id/checkmark_phahtaigi"
+                                android:layout_width="60dp"
+                                android:layout_height="60dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_done"
-                                app:tint="@android:color/white" />
+                                android:background="@drawable/circle_accent"
+                                android:visibility="gone">
+
+                                <ImageView
+                                    android:layout_width="28dp"
+                                    android:layout_height="28dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_done"
+                                    app:tint="@android:color/white" />
+
+                            </FrameLayout>
+
+                            <!-- 標題膠囊（底部） -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom|center_horizontal"
+                                android:layout_marginBottom="8dp"
+                                app:cardCornerRadius="16dp"
+                                app:cardElevation="2dp"
+                                app:cardBackgroundColor="@color/layout_capsule_background">
+
+                                <TextView
+                                    android:id="@+id/text_layout_phahtaigi"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:paddingHorizontal="12dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/layout__phahtaigi"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                            </com.google.android.material.card.MaterialCardView>
 
                         </FrameLayout>
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- 標題 -->
-                    <TextView
-                        android:id="@+id/text_layout_phahtaigi"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:text="@string/layout__phahtaigi"
-                        android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary"
-                        android:gravity="center" />
+                </FrameLayout>
 
-                </LinearLayout>
-
-                <View style="@style/ModernDivider"
-                    android:layout_marginStart="16dp" />
-
-                <!-- 標準佈局 -->
-                <LinearLayout
+                <!-- 標準佈局選項 -->
+                <FrameLayout
                     android:id="@+id/row_layout_standard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="12dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true"
                     android:descendantFocusability="blocksDescendants"
-                    android:gravity="center_vertical">
+                    android:padding="12dp">
 
-                    <!-- 預覽圖容器 -->
+                    <!-- 預覽圖卡片 -->
                     <com.google.android.material.card.MaterialCardView
-                        android:layout_width="180dp"
-                        android:layout_height="120dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="210dp"
                         android:clickable="false"
                         android:focusable="false"
-                        app:cardCornerRadius="8dp"
+                        android:focusableInTouchMode="false"
+                        app:cardCornerRadius="12dp"
                         app:cardElevation="0dp"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/spyfamily_card_stroke"
-                        app:cardBackgroundColor="@color/modern_surface_secondary">
+                        app:strokeWidth="0dp"
+                        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh">
 
-                        <!-- 預覽圖 -->
-                        <ImageView
-                            android:id="@+id/preview_standard"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:scaleType="centerCrop"
-                            android:src="@drawable/layout_standard_preview" />
-
-                        <!-- 選中遮罩 -->
-                        <View
-                            android:id="@+id/overlay_standard"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="#4D000000"
-                            android:visibility="gone" />
-
-                        <!-- 選中勾選 -->
                         <FrameLayout
-                            android:id="@+id/checkmark_standard"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            android:layout_gravity="center"
-                            android:background="@drawable/circle_accent"
-                            android:visibility="gone">
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
 
+                            <!-- 預覽圖 -->
                             <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
+                                android:id="@+id/preview_standard"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/layout_standard_preview" />
+
+                            <!-- 選中遮罩 -->
+                            <View
+                                android:id="@+id/overlay_standard"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="#4D000000"
+                                android:visibility="gone" />
+
+                            <!-- 選中勾選圓圈 -->
+                            <FrameLayout
+                                android:id="@+id/checkmark_standard"
+                                android:layout_width="60dp"
+                                android:layout_height="60dp"
                                 android:layout_gravity="center"
-                                android:src="@drawable/ic_done"
-                                app:tint="@android:color/white" />
+                                android:background="@drawable/circle_accent"
+                                android:visibility="gone">
+
+                                <ImageView
+                                    android:layout_width="28dp"
+                                    android:layout_height="28dp"
+                                    android:layout_gravity="center"
+                                    android:src="@drawable/ic_done"
+                                    app:tint="@android:color/white" />
+
+                            </FrameLayout>
+
+                            <!-- 標題膠囊（底部） -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom|center_horizontal"
+                                android:layout_marginBottom="8dp"
+                                app:cardCornerRadius="16dp"
+                                app:cardElevation="2dp"
+                                app:cardBackgroundColor="@color/layout_capsule_background">
+
+                                <TextView
+                                    android:id="@+id/text_layout_standard"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:paddingHorizontal="12dp"
+                                    android:paddingVertical="6dp"
+                                    android:text="@string/layout__standard"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                            </com.google.android.material.card.MaterialCardView>
 
                         </FrameLayout>
 
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- 標題 -->
-                    <TextView
-                        android:id="@+id/text_layout_standard"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="16dp"
-                        android:text="@string/layout__standard"
-                        android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary"
-                        android:gravity="center" />
-
-                </LinearLayout>
+                </FrameLayout>
 
             </LinearLayout>
 

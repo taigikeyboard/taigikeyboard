@@ -13,9 +13,31 @@
 
 import os
 import random
+import unicodedata
 import pandas as pd
 
 SAMPLE_SIZE = 300
+
+# 聲調組合標記（用於判斷是否有調符）
+TONE_MARKS = {
+    '\u0301',  # ́ COMBINING ACUTE ACCENT (2)
+    '\u0300',  # ̀ COMBINING GRAVE ACCENT (3)
+    '\u0302',  # ̂ COMBINING CIRCUMFLEX ACCENT (5)
+    '\u030C',  # ̌ COMBINING CARON (6)
+    '\u0304',  # ̄ COMBINING MACRON (7)
+    '\u030D',  # ̍ COMBINING VERTICAL LINE ABOVE (8)
+    '\u0306',  # ̆ COMBINING BREVE (POJ 9)
+    '\u030B',  # ̋ COMBINING DOUBLE ACUTE ACCENT (TL 9)
+}
+
+
+def has_tone_marks(s: str) -> bool:
+    """檢查字串是否包含聲調標記"""
+    if pd.isna(s):
+        return False
+    # NFD 分解後檢查是否有聲調組合標記
+    nfd = unicodedata.normalize('NFD', str(s))
+    return any(c in TONE_MARKS for c in nfd)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(SCRIPT_DIR)
@@ -67,12 +89,12 @@ def main():
         tl_num = escape_kotlin_string(row["tl_num"])
         poj_num = escape_kotlin_string(row["poj_num"])
 
-        # tl -> tl_num
-        if tl and tl_num:
+        # tl -> tl_num（只測試有調符的輸入）
+        if tl and tl_num and has_tone_marks(row["tl"]):
             tl_cases.append(f'            "{tl}" to "{tl_num}",')
 
-        # poj -> poj_num
-        if poj and poj_num:
+        # poj -> poj_num（只測試有調符的輸入）
+        if poj and poj_num and has_tone_marks(row["poj"]):
             poj_cases.append(f'            "{poj}" to "{poj_num}",')
 
     # 去重

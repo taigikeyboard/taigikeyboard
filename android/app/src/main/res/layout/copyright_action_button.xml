@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/action_button_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -17,12 +18,12 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:text="Button Text"
-        android:textColor="@color/modern_text_primary"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="17sp" />
 
     <ImageView
         android:layout_width="16dp"
         android:layout_height="16dp"
         android:src="@drawable/ic_open_in_new"
-        android:tint="@color/modern_accent" />
+        app:tint="?attr/colorPrimary" />
 </LinearLayout>

@@ -3,7 +3,8 @@ import OSLog
 import SwiftUI
 
 /// 候選詞列視圖
-/// 顯示自動完成建議的水平滾動列表
+///
+/// 顯示自動完成建議的水平滾動列表。
 struct CandidateView: View {
     /// 候選詞建議列表
     let suggestions: [Autocomplete.Suggestion]
@@ -19,10 +20,16 @@ struct CandidateView: View {
     let onTranslateToggle: () -> Void
     /// 點擊設定按鈕的回調
     let onSettingsTap: () -> Void
+    /// 當前輸入模式
+    let currentInputMode: InputMode
+    /// 切換輸入模式的回調
+    let onInputModeChange: (InputMode) -> Void
+    /// 英文模式的 KeyboardKit 預設候選詞視圖（可選）
+    let englishAutocompleteView: AnyView?
     /// 展開狀態（從環境物件取得）
     @EnvironmentObject private var expandState: CandidateExpandState
 
-    // MARK: - 樣式環境變數
+    // MARK: - 環境變數
     /// 候選詞視圖樣式
     @Environment(\.candidateViewStyle) private var style
     /// 系統顏色模式（淺色/深色）
@@ -35,9 +42,9 @@ struct CandidateView: View {
         )
     #endif
 
-    /// 是否顯示展開按鈕
+    /// 是否顯示展開按鈕（英文模式不顯示）
     private var shouldShowExpandButton: Bool {
-        !suggestions.isEmpty
+        !suggestions.isEmpty && currentInputMode != .english
     }
 
     /// iOS 版本兼容的候選詞列上邊距
@@ -59,7 +66,7 @@ struct CandidateView: View {
     private var candidateBarView: some View {
         HStack(spacing: 0) {
             if suggestions.isEmpty {
-                // 候選詞為空時顯示齒輪按鈕
+                // 候選詞為空時顯示齒輪按鈕和輸入模式切換按鈕
                 Button(action: {
                     onSettingsTap()
                 }) {
@@ -75,49 +82,61 @@ struct CandidateView: View {
                 .accessibilityLabel("設定")
                 .accessibilityHint("點擊以開啟鍵盤設定")
 
+                // 輸入模式切換按鈕
+                inputModeSwitcher
+                    .offset(y: 7)
+
                 Spacer()
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    ScrollViewReader { proxy in
-                        LazyHStack(spacing: CandidateViewModels.UI.buttonSpacing) {
-                            // 限制最大顯示數量以優化效能
-                            let displaySuggestions = Array(
-                                suggestions.prefix(CandidateViewModels.UI.maxDisplayCount),
-                            )
-                            ForEach(
-                                Array(displaySuggestions.enumerated()),
-                                id: \.offset,
-                            ) { index, suggestion in
-                                CandidateButtonView(
-                                    suggestion: suggestion,
-                                    isTranslateSwapped: isTranslateSwapped,
-                                    isSelected: selectedCandidateIndex == index,
-                                    onTap: onSuggestionTap,
+                // 有候選詞時的顯示區域
+                if currentInputMode == .english, let englishView = englishAutocompleteView {
+                    // 英文模式：使用 KeyboardKit 預設候選詞視圖
+                    englishView
+                        .frame(maxHeight: .infinity)
+                } else {
+                    // 台語模式：使用自定義候選詞列表
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        ScrollViewReader { proxy in
+                            LazyHStack(spacing: CandidateViewModels.UI.buttonSpacing) {
+                                // 限制最大顯示數量以優化效能
+                                let displaySuggestions = Array(
+                                    suggestions.prefix(CandidateViewModels.UI.maxDisplayCount),
                                 )
-                                .id("candidate_\(index)")  // 為每個候選詞設定 ID，用於自動滾動
-                            }
-                        }
-                        .padding(.horizontal, CandidateViewModels.Spacing.small)
-                        .onChange(of: selectedCandidateIndex) { oldIndex, newIndex in
-                            // 當選中索引改變時，自動滾動到對應的候選詞
-                            #if DEBUG
-                            print("[SCROLL] selectedCandidateIndex 變更為: \(newIndex)")
-                            #endif
-                            if newIndex >= 0 {
-                                // iOS 版本兼容性：舊版本使用較短動畫時間
-                                let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
-                                withAnimation(.easeInOut(duration: animationDuration)) {
-                                    proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
+                                ForEach(
+                                    Array(displaySuggestions.enumerated()),
+                                    id: \.offset,
+                                ) { index, suggestion in
+                                    CandidateButtonView(
+                                        suggestion: suggestion,
+                                        isTranslateSwapped: isTranslateSwapped,
+                                        isSelected: selectedCandidateIndex == index,
+                                        onTap: onSuggestionTap,
+                                    )
+                                    .id("candidate_\(index)")  // 為每個候選詞設定 ID，用於自動滾動
                                 }
+                            }
+                            .padding(.horizontal, CandidateViewModels.Spacing.small)
+                            .onChange(of: selectedCandidateIndex) { oldIndex, newIndex in
+                                // 當選中索引改變時，自動滾動到對應的候選詞
                                 #if DEBUG
-                                print("[SCROLL] 滾動到候選詞索引: \(newIndex)")
+                                logger.debug("[SCROLL] selectedCandidateIndex 變更為: \(newIndex)")
                                 #endif
+                                if newIndex >= 0 {
+                                    // iOS 版本兼容性：舊版本使用較短動畫時間
+                                    let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
+                                    withAnimation(.easeInOut(duration: animationDuration)) {
+                                        proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
+                                    }
+                                    #if DEBUG
+                                    logger.debug("[SCROLL] 滾動到候選詞索引: \(newIndex)")
+                                    #endif
+                                }
                             }
                         }
                     }
+                    .scrollDisabled(false)
+                    .frame(maxHeight: .infinity)
                 }
-                .scrollDisabled(false)
-                .frame(maxHeight: .infinity)
             }
 
             if shouldShowExpandButton {
@@ -150,7 +169,42 @@ struct CandidateView: View {
         .offset(y: topOffset) // iOS 版本兼容的上邊距設定
     }
 
-    // MARK: - 樣式解析器
+    // MARK: - 輸入模式切換
+
+    /// 輸入模式切換按鈕組
+    private var inputModeSwitcher: some View {
+        HStack(spacing: 4) {
+            inputModeButton(mode: .poj, label: "POJ")
+            inputModeButton(mode: .tl, label: "TL")
+            inputModeButton(mode: .english, label: "En")
+        }
+        .padding(.horizontal, 8)
+    }
+
+    /// 單個輸入模式按鈕
+    private func inputModeButton(mode: InputMode, label: String) -> some View {
+        let isSelected = currentInputMode == mode
+        return Button(action: {
+            onInputModeChange(mode)
+        }) {
+            Text(label)
+                .font(KeyboardModels.Fonts.globalFont(size: 14))
+                .fontWeight(isSelected ? .semibold : .regular)
+                .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(isSelected ? Color.accentColor : Color.clear)
+                )
+                .animation(nil, value: isSelected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(label) 輸入模式")
+        .accessibilityHint(isSelected ? "目前選擇" : "點擊切換至 \(label) 模式")
+    }
+
+    // MARK: - 樣式
 
     /// 解析實際的背景色
     /// 支援 iOS 26 的 Liquid Glass 透明效果
@@ -200,84 +254,44 @@ extension CandidateView {
 
     /// 單個候選詞按鈕視圖
     private struct CandidateButtonView: View {
-        /// 候選詞資料
         let suggestion: Autocomplete.Suggestion
-        /// 是否交換漢字與羅馬字顯示
         let isTranslateSwapped: Bool
-        /// 是否為當前選中項
         let isSelected: Bool
-        /// 點擊回調
         let onTap: (Autocomplete.Suggestion) -> Void
 
         @State private var isPressed: Bool = false
         @Environment(\.colorScheme) private var colorScheme
         @Environment(\.candidateViewStyle) private var style
 
+        private var displayTitle: String {
+            CandidateCellHelper.displayTitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+        }
+
+        private var displaySubtitle: String? {
+            CandidateCellHelper.displaySubtitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+        }
+
         private var backgroundColor: Color {
-            return style.itemStyle.resolvedBackgroundColor(
+            style.itemStyle.resolvedBackgroundColor(
                 for: colorScheme,
                 isSelected: isSelected,
                 isPressed: isPressed,
-                isLiquidGlassEnabled: isLiquidGlassEnabled
+                isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
             )
         }
 
-        private var isLiquidGlassEnabled: Bool {
-            // 從 TaigiKeyboardView 的樣式推斷 Liquid Glass 狀態
-            return style.itemStyle.cornerRadius == 9
-        }
-
         private var cornerRadius: CGFloat {
-            // 暫時使用固定值，之後在 TaigiKeyboardView 中根據 KeyboardContext 設定
-            return style.itemStyle.cornerRadius ?? 8
-        }
-
-        /// 計算要顯示的主要文字
-        /// 根據交換設定決定顯示內容
-        /// showHanjiMode 固定為 true
-        private var displayTitle: String {
-            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-                return subtitle
-            } else {
-                return suggestion.text
-            }
-        }
-
-        /// 計算要顯示的副標題文字
-        /// showHanjiMode 固定為 true，永遠顯示副標題
-        private var displaySubtitle: String? {
-            if isTranslateSwapped {
-                return suggestion.text
-            } else {
-                return suggestion.subtitle
-            }
+            style.itemStyle.cornerRadius ?? 8
         }
 
         var body: some View {
             Button(action: {
-                let suggestionToHandle: Autocomplete.Suggestion
-                // showHanjiMode 固定為 true
-                if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-                    let originalTextLength = suggestion.text.count
-                    let newTextLength = subtitle.count
-                    let additionalDeleteCount = max(0, originalTextLength - newTextLength)
-
-                    suggestionToHandle = Autocomplete.Suggestion(
-                        text: subtitle,
-                        title: subtitle,
-                        subtitle: suggestion.text,
-                        additionalDeleteCount: additionalDeleteCount,
-                        additionalInfo: suggestion.additionalInfo
-                    )
-                } else {
-                    suggestionToHandle = suggestion
-                }
-                onTap(suggestionToHandle)
+                onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
             }) {
                 HStack(alignment: .bottom, spacing: CandidateViewModels.Spacing.small) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            size: CandidateViewModels.UI.primaryFontSize
+                            size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped)
                         ))
                         .fontWeight(.regular)
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
@@ -286,7 +300,7 @@ extension CandidateView {
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
                             .font(KeyboardModels.Fonts.globalFont(
-                                size: CandidateViewModels.UI.secondaryFontSize
+                                size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped)
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                             .lineLimit(1)

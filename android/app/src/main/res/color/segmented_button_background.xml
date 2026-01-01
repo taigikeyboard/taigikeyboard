@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- 選中狀態 -->
-    <item android:color="@color/modern_accent" android:state_checked="true" />
+    <item android:color="?attr/colorPrimary" android:state_checked="true" />
     <!-- 未選中狀態 -->
     <item android:color="@android:color/transparent" />
 </selector>

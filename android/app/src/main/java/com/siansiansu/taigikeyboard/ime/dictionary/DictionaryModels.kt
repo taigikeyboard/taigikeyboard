@@ -5,7 +5,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  */
 object DictionaryConstants {
     const val DATABASE_NAME = "dictionary.db"
-    const val DEFAULT_SEARCH_LIMIT = 100
+    const val DEFAULT_SEARCH_LIMIT = 75
     const val SUBSYSTEM = "com.siansiansu.taigikeyboard"
 }
 

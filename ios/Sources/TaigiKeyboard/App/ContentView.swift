@@ -1,8 +1,9 @@
 import SwiftUI
 import KeyboardKit
 
-/// 主 APP 內容視圖
-/// 使用 TabView 架構，包含 4 個主要 Tab
+/// 主內容視圖
+///
+/// 使用 TabView 架構，包含頭頁、佈局、詞庫、設定四個 Tab。
 struct ContentView: View {
     @State private var selectedTab: TabType = .home
     @ObservedObject var viewModel: SetupGuideViewModel
@@ -54,7 +55,6 @@ struct ContentView: View {
                 }
                 .tag(TabType.settings)
         }
-        .tint(Color.Theme.accent)
         .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
             selectedTab = .settings
         }

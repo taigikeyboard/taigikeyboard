@@ -1,6 +1,8 @@
 import Foundation
 
-/// POJ (白話字) 模式聲調轉換器
+/// POJ 聲調轉換器
+///
+/// 白話字模式的聲調轉換，處理數字聲調標記轉換。
 enum POJToneConverter {
 
     /// 轉換 POJ 輸入為聲調標記

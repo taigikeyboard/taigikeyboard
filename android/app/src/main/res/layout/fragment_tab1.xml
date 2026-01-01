@@ -1,57 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="@color/modern_surface_primary">
+    android:background="?attr/colorSurface"
+    android:fillViewport="true">
 
-    <!-- Header Title: 固定在頂部 -->
-    <TextView
-        android:id="@+id/header_title"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/app_header_title"
-        android:textSize="24sp"
-        android:textColor="@color/modern_accent"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:paddingVertical="16dp"
-        android:background="@color/modern_surface_primary" />
+        android:orientation="vertical"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="40dp">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <!-- 頁面標題 -->
+        <TextView
+            android:id="@+id/header_title"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="40dp">
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorOnSurface"
+            android:layout_marginBottom="24dp" />
 
             <!-- Section 1: 啟用鍵盤區塊 -->
         <TextView
+            android:id="@+id/section_setup_keyboard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home__section__setup_keyboard"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:id="@+id/row_setup_guide"
@@ -66,23 +57,23 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@drawable/keyboard_24"
-                    app:tint="@color/modern_accent"
+                    app:tint="?attr/colorPrimary"
                     android:contentDescription="@string/content_desc__icon_keyboard" />
 
                 <TextView
+                    android:id="@+id/text_setup_guide"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginStart="12dp"
-                    android:text="@string/home__setup__title"
                     android:textSize="16sp"
-                    android:textColor="@color/modern_text_primary" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
-                    app:tint="@color/modern_text_secondary"
+                    app:tint="?attr/colorOnSurfaceVariant"
                     android:contentDescription="@string/content_desc__icon_arrow_forward" />
 
             </LinearLayout>
@@ -91,22 +82,22 @@
 
         <!-- Section 2: 新功能資訊 -->
         <TextView
+            android:id="@+id/section_new_features"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home__section__new_features"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -127,7 +118,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/lightbulb_24"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -136,13 +127,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__feature__next_word"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -150,7 +141,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 功能 2: 異用字開關 -->
                 <LinearLayout
@@ -166,7 +157,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/switches_24"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -175,13 +166,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__feature__variant"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -189,7 +180,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 功能 3: 詞庫管理 -->
                 <LinearLayout
@@ -205,7 +196,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/dictionary_24"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -214,13 +205,91 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__feature__custom_font"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <!-- 功能 4: 拍字記持詞庫 -->
+                <LinearLayout
+                    android:id="@+id/row_feature_4"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_person_storage"
+                        app:tint="?attr/colorPrimary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/home__feature__user_dict"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="?attr/colorOutlineVariant" />
+
+                <!-- 功能 5: 3段式大小寫切換 -->
+                <LinearLayout
+                    android:id="@+id/row_feature_5"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_text_format"
+                        app:tint="?attr/colorPrimary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/home__feature__case_switch"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -230,22 +299,22 @@
 
         <!-- Section 3: 處理中的問題 -->
         <TextView
+            android:id="@+id/section_known_issues"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home__section__known_issues"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -279,13 +348,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__issue__1"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -293,7 +362,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- Issue 2 -->
                 <LinearLayout
@@ -322,13 +391,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__issue__2"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -336,7 +405,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- Issue 3 -->
                 <LinearLayout
@@ -365,99 +434,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__issue__3"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
-
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
-
-                <!-- Issue 4 -->
-                <LinearLayout
-                    android:id="@+id/row_issue_4"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:text="4"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:background="@drawable/circle_accent" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:text="@string/home__issue__4"
-                        android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
-
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
-
-                <!-- Issue 5 -->
-                <LinearLayout
-                    android:id="@+id/row_issue_5"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
-                        android:text="5"
-                        android:textSize="14sp"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:background="@drawable/circle_accent" />
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="12dp"
-                        android:text="@string/home__issue__5"
-                        android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
-
-                    <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -467,22 +450,22 @@
 
         <!-- Section 4: 預計新功能 -->
         <TextView
+            android:id="@+id/section_upcoming_features"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home__section__upcoming_features"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -516,13 +499,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__upcoming__1"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -530,7 +513,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- Upcoming 2 -->
                 <LinearLayout
@@ -559,13 +542,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__upcoming__2"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -573,7 +556,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- Upcoming 3 -->
                 <LinearLayout
@@ -602,13 +585,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__upcoming__3"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -621,11 +604,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="32dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -646,22 +629,22 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_globe"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
+                        android:id="@+id/text_user_guide"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
-                        android:text="@string/home__resource__website"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="12dp"
                         android:layout_height="12dp"
                         android:src="@drawable/ic_external_link"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -669,7 +652,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 隱私權政策 -->
                 <LinearLayout
@@ -685,22 +668,22 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_privacy"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
+                        android:id="@+id/text_privacy_policy"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
-                        android:text="@string/home__resource__privacy"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="12dp"
                         android:layout_height="12dp"
                         android:src="@drawable/ic_external_link"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -708,7 +691,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 為阮評分 -->
                 <LinearLayout
@@ -724,22 +707,22 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_star"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
+                        android:id="@+id/text_rate_us"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
-                        android:text="@string/home__resource__rate"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="12dp"
                         android:layout_height="12dp"
                         android:src="@drawable/ic_external_link"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -747,7 +730,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 版權聲明 -->
                 <LinearLayout
@@ -763,22 +746,23 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_document"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
+                        android:id="@+id/text_copyright"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:text="@string/home__nav__copyright"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -786,7 +770,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 問題回報 -->
                 <LinearLayout
@@ -802,7 +786,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_email"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -811,13 +795,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__resource__contact"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -825,7 +809,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 版本紀錄 -->
                 <LinearLayout
@@ -841,7 +825,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_history"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -850,13 +834,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__resource__version_history"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -864,7 +848,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- 當前版本 -->
                 <LinearLayout
@@ -878,7 +862,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_info"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -887,14 +871,14 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__resource__version"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:id="@+id/text_version"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_secondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -904,21 +888,21 @@
 
         <!-- Section 6: 常見問題 -->
         <TextView
+            android:id="@+id/section_faq"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home__section__faq"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -939,7 +923,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/keyboard_24"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -948,13 +932,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__faq__1_question"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -962,7 +946,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- FAQ 2 -->
                 <LinearLayout
@@ -978,7 +962,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_email"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -987,13 +971,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__faq__2_question"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -1001,7 +985,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
-                    android:background="@color/modern_shadow_light" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <!-- FAQ 3 -->
                 <LinearLayout
@@ -1017,7 +1001,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_numbers"
-                        app:tint="@color/modern_accent" />
+                        app:tint="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -1026,13 +1010,13 @@
                         android:layout_marginStart="12dp"
                         android:text="@string/home__faq__3_question"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <ImageView
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:src="@drawable/ic_chevron_right"
-                        app:tint="@color/modern_text_secondary" />
+                        app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
 
@@ -1040,8 +1024,6 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+    </LinearLayout>
 
-    </ScrollView>
-
-</LinearLayout>
+</ScrollView>

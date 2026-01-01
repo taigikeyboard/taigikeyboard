@@ -14,7 +14,7 @@ enum Tab1Texts {
     // MARK: - 區塊標題
 
     static let setupKeyboard = LocalizedText(hanji: "齒盤愛拍開才會當使用")
-    static let newFeatures = LocalizedText(hanji: "最近做 ê 新功能")
+    static let newFeatures = LocalizedText(hanji: "功能解說")
     static let knownIssues = LocalizedText(hanji: "當 leh 修理 ê 問題")
     static let upcomingFeatures = LocalizedText(hanji: "未來安排欲做 ê 功能")
     static let faq = LocalizedText(hanji: "捷問 ê 問題")
@@ -34,61 +34,60 @@ enum Tab1Texts {
     static let setupGuideStartSetup = LocalizedText(hanji: "啟用齒盤")
     static let setupGuideStep1Settings = LocalizedText(hanji: "點揤「齒盤」")
     static let setupGuideStep2AddKeyboard = LocalizedText(hanji: "點揤「增加齒盤」、「允准完整取用」")
-    static let setupGuideStep3FullAccess = LocalizedText(hanji: "點揤「允准完整取用」")
 
     // MARK: - 新功能
 
-    static let featureNextWord = LocalizedText(hanji: "連紲建議詞")
-    static let featureVariant = LocalizedText(hanji: "異用字開關")
-    static let featureCustomFont = LocalizedText(hanji: "詞庫管理")
 
+    static let featureNextWord = LocalizedText(hanji: "連紲建議詞")
     static let featureNextWordParagraphs: [LocalizedText] = [
-        LocalizedText(hanji: "拍字會連紲建議，譬如講拍「皮」這个字，齒盤會出現連紲適合 ê 詞：「皮」 -> 「蛋 」、「皮」 -> 「鞋」，毋免去想 2 个以上 ê 音節按怎拍。"),
+        LocalizedText(hanji: "拍字會連紲建議，譬如講拍「天」這个字，齒盤會出現連紲適合 ê 詞：「天」 ⭢ 「烏 」 ⭢ 「烏」 ⭢ 「欲」⭢ 「落」 ⭢ 「雨」，毋免去想 2 个以上 ê 音節按怎拍。"),
         LocalizedText(hanji: "詞庫無 ê 字，若拍過 1 改，後擺著會自動出現佇「連紲建議詞」，譬如拍「我想欲食飯」，以後著會記起來。"),
-        LocalizedText(hanji: "拍羅馬字時，空格縫佮連劃 '-'，愛家己處理，若「連紲建議」揤傷緊，袂記得揤連劃，羅馬字著會黏做伙，「自動空白」開關若有切開，羅馬字著會使連紲拍，毋免家己加空格縫。")
+        LocalizedText(hanji: "拍字時空格縫佮連劃 '-' 愛家己揤，若「連紲建議」揤傷緊，袂記得揤連劃，羅馬字著會黏做伙，「自動空白」開關若有切開，羅馬字著會使連紲拍，毋免家己加空格縫。")
     ]
 
+    static let featureVariant = LocalizedText(hanji: "異用字開關")
     static let featureVariantParagraphs: [LocalizedText] = [
         LocalizedText(hanji: "依據教典 ê 資料標示台語異用字，譬如：「人」->「儂」、「生」->「青」，這个開關預設是關起來。"),
         LocalizedText(hanji: "因為教典異用字 ê 資料有欠，所以可能會落勾無標示著，若拄著這个情形著愛家己主動加字入去，請回報問題予我知。")
     ]
+    static let featureVariantDictLink = LocalizedText(hanji: "揤遮到教典網站掠辭典資料")
 
-    static let goToDictionarySettings = LocalizedText(hanji: "來去「詞庫」頁面調整")
-
+    static let featureCustomFont = LocalizedText(hanji: "詞庫管理")
     static let featureCustomFontParagraphs: [LocalizedText] = [
         LocalizedText(hanji: "佇「詞庫」頁面會使選拍字使用 ê 詞庫，無仝詞庫收錄 ê 字有依家己 ê 特色，愛會記得調整。"),
         LocalizedText(hanji: "「台語常用詞辭典」、「台語新詞題庫」、「台語工藝詞庫」較倚教典標準，若欲比賽建議開這 3 个著好，「iTaigi 愛台語」內底 ê 詞較有爭議，預設關起來。"),
         LocalizedText(hanji: "辭典 ê 詞是半自動、半人工校對誠厚工，若有問題請回報問題予我知。")
     ]
 
+    static let featureUserDict = LocalizedText(hanji: "拍字記持詞庫")
+    static let featureUserDictParagraphs: [LocalizedText] = [
+        LocalizedText(hanji: "台語齒盤有特別設計 1 个拍字記持詞庫，本身無分白話字佮台羅，拍過 ê 字攏會記起來，若較捷拍著會出現佇頭前，若愈久無拍，著會沓沓仔排佇後壁。"),
+        LocalizedText(hanji: "「拍字記持詞庫」是專門予「連紲建議詞」使用。佇白話字模式，台羅辭典會自動關起來，「連紲建議詞」就袂出現台羅辭典 ê 詞。但是「拍字記持詞庫」白話字佮台羅攏會顯示。"),
+        LocalizedText(hanji: "捷用詞出現頻率是用「拍過幾改」和「偌久無拍」決定 ê，若感覺字攏無出現，咱會當討論看算式 ê 權重按怎調整。")
+    ]
+
+    static let featureCaseSwitch = LocalizedText(hanji: "3段式大小寫切換")
+    static let featureCaseSwitchParagraphs: [LocalizedText] = [
+        LocalizedText(hanji: "一般 ê 情況第 1 个字會自動大寫，shift 揤鈕會反烏，但是若「自動開關」有關起來，著愛家己揤 shift 揤鈕，第 1 個字才會變大寫。"),
+        LocalizedText(hanji: "「自動大寫」開關關起來是小寫模式，拍出來 ê 字攏是小寫。"),
+        LocalizedText(hanji: "連紲揤 Shift 鍵 2 改是 Caps Lock 模式，shift 揤鈕是烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏會變大寫，閣揤 1 改才會改轉來小寫。"),
+        LocalizedText(hanji: "若連紲切換符號齒盤，大小寫有時陣會 sio͘h-to͘h，咱先試驗看覓，若問題誠嚴重，閣來排時間修理。")
+    ]
+
     // MARK: - 處理中的問題
 
-    static let issue1 = LocalizedText(hanji: "自動大寫開關無一定有作用")
+    static let issue1 = LocalizedText(hanji: "齒盤 ê 字小可仔閘到")
     static let issue1Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "「自動大寫」若關起來，愛重開齒盤較有效。"),
-        LocalizedText(hanji: "自動大寫關起來矣，有時陣猶是會大寫，譬論講「拍字+＠」後壁就會變大寫（頭前無拍字袂變）。")
-    ]
-
-    static let issue2 = LocalizedText(hanji: "標點符號無夠用")
-    static let issue2Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "目前齒盤 ê 標點符號無夠用，希望有「...」、「『』」、「【】」。"),
-        LocalizedText(hanji: "這馬 iOS ê 預設羅馬字引號是右引號，但是佇起頭 ê 時陣應該是左引號，希望未來會使親像 Android 按呢手動揀，抑是親像 iOS 英文輸入法 ê 自動偵測"),
-        LocalizedText(hanji: "iPad 頂頭半形全形攏揣無「，。」（iPhone 頂頭有）"),
-        LocalizedText(hanji: "有 ê 符號毋免用全形。")
-    ]
-
-    static let issue3 = LocalizedText(hanji: "齒盤 ê 字小可仔閘到")
-    static let issue3Paragraphs: [LocalizedText] = [
         LocalizedText(hanji: "有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到，iOS 無這个問題。")
     ]
 
-    static let issue4 = LocalizedText(hanji: "詞庫有欠字")
-    static let issue4Paragraphs: [LocalizedText] = [
+    static let issue2 = LocalizedText(hanji: "詞庫有欠字")
+    static let issue2Paragraphs: [LocalizedText] = [
         LocalizedText(hanji: "揣無 bàng-gà 這个字。")
     ]
 
-    static let issue5 = LocalizedText(hanji: "聲調轉換有 ê 字有問題")
-    static let issue5Paragraphs: [LocalizedText] = [
+    static let issue3 = LocalizedText(hanji: "聲調轉換有 ê 字有問題")
+    static let issue3Paragraphs: [LocalizedText] = [
         LocalizedText(hanji: "1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去 閣紲落去拍 2 (Tâigí）台語的選項閣走出來。"),
         LocalizedText(hanji: "拍 kan-na 會變 kaⁿa")
     ]
@@ -123,13 +122,13 @@ enum Tab1Texts {
 
     static let faq2Question = LocalizedText(hanji: "回報 ê 問題無消息")
     static let faq2Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "因為這个 App 干焦我 1 個人 leh 做，可能無小心會落勾，koh 回報 1 遍，抑是直接聯絡我問無要緊。")
+        LocalizedText(hanji: "可能無小心會落勾，koh 回報 1 遍，抑是直接聯絡我問無要緊。")
     ]
 
-    static let faq3Question = LocalizedText(hanji: "按怎拍聲調 1, 4")
+    static let faq3Question = LocalizedText(hanji: "按怎拍聲調 1、4")
     static let faq3Paragraphs: [LocalizedText] = [
         LocalizedText(hanji: "拍聲調 1，會正確出現無聲調符號 ê 字，袂和其他 ê 字濫做伙，拍尾溜是 -p, -t, -k, -h ê 字加聲調 4，會正確出現無聲調符號 ê 字。"),
-        LocalizedText(hanji: "雖然是無聲調標號，但是佇拍字 ê 所在有數字 1, 4 點注，若欲直接拍無聲調無欲選字，毋免加數字，拍了後揤 Enter 著會使。")
+        LocalizedText(hanji: "雖然是無聲調標號，但是佇拍字 ê 所在有數字 1、4 點注，若欲直接拍無聲調無欲選字，毋免加數字，拍了後揤 Enter 著會使。")
     ]
 
     static let goToSetupGuide = LocalizedText(hanji: "揤遮去看「啟用方法」")
@@ -144,7 +143,7 @@ enum Tab1Texts {
 
     // MARK: - 問題回報
 
-    static let feedbackDescription = LocalizedText(hanji: "無論是使用拄著 ê 問題、感覺好用 ê 所在，抑是會當改進 ê 建議，攏歡迎寫落來！影片會使直接寄批去 info@taigikeyboard.tw")
+    static let feedbackDescription = LocalizedText(hanji: "無論是使用拄著 ê 問題、感覺好用 ê 所在，抑是會當改進 ê 建議，攏歡迎寫落來！影片、圖會使直接寄批去 info@taigikeyboard.tw")
     static let goToGoogleForm = LocalizedText(hanji: "揤遮去 Google 表單")
     static let emailContact = LocalizedText(hanji: "台語齒盤是 1 人團隊，目前由我 1 个人塌錢開發佮維護，因為有你 ê 贊助，予我有氣力繼續行落去，咱做伙為著台語打拼。")
     static let supportUs = LocalizedText(hanji: "支持台語齒盤")
@@ -155,16 +154,31 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.0", "2025/12/31", [
+            LocalizedText(hanji: "Adjusted the four-syllable input limit."),
+            LocalizedText(hanji: "Fixed an issue where o͘ did not trigger candidate search."),
+        ]),
+        ("3.3.9", "2025/12/30", [
+            LocalizedText(hanji: "Added an English keyboard."),
+            LocalizedText(hanji: "Added explanations for 'Typing History Dictionary' and 'Capitalization Toggle.'"),
+            LocalizedText(hanji: "Added more symbols to the punctuation keyboard."),
+            LocalizedText(hanji: "Added quick toggle shortcuts to the candidate bar."),
+            LocalizedText(hanji: "Adopted Apple’s default UI components."),
+            LocalizedText(hanji: "Fixed an issue where candidates did not appear when typing tone 1 or 4 directly."),
+            LocalizedText(hanji: "Fixed an issue where capitalization was not working correctly."),
+            LocalizedText(hanji: "Fixed inconsistent font sizing across different iPhone models."),
+            LocalizedText(hanji: "Refactored the codebase for better cleanliness and maintainability."),
+            LocalizedText(hanji: "Updated the app logo."),
+            LocalizedText(hanji: "Upgraded KeyboardKit to v10."),
+        ]),
         ("3.3.8", "2025/12/25", [
-            LocalizedText(hanji: "1. [Android][iOS] 翻新 App 畫面，予 App 會使囥較清楚 ê 說明。"),
-            LocalizedText(hanji: "2. [Android] 修理連紲拍開關無作用 ê 問題。"),
-            LocalizedText(hanji: "3. [Android] 修理候選詞清單收合愛揤 2 改 ê 問題。")
+            LocalizedText(hanji: "Refreshed the app interface and improved in-app explanations for better clarity.")
         ])
     ]
 
     // MARK: - 版權聲明
 
-    static let copyrightNotice = LocalizedText(hanji: "版權聲明")
+    static let copyrightNotice = LocalizedText(hanji: "致謝")
     static let viewLicense = LocalizedText(hanji: "授權條款")
     static let viewWebsite = LocalizedText(hanji: "官方網站")
 

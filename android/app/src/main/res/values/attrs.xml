@@ -37,14 +37,6 @@
         <attr name="overlay_button_bgColorPressed" format="color" />
     </declare-styleable>
 
-    <declare-styleable name="SettingsTheme">
-        <attr name="colorSuccess" format="reference|color"/>
-        <attr name="textColorSuccess" format="reference|color"/>
-        <attr name="colorWarning" format="reference|color"/>
-        <attr name="textColorWarning" format="reference|color"/>
-        <attr name="textColorError" format="reference|color"/>
-    </declare-styleable>
-
     <attr name="colorPrimary" format="color"/>
     <attr name="colorPrimaryDark" format="color"/>
     <attr name="colorAccent" format="color"/>

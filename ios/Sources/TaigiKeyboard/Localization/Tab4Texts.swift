@@ -13,13 +13,13 @@ enum Tab4Texts {
 
     static let cancel = LocalizedText(hanji: "取消")
     static let reset = LocalizedText(hanji: "恢復")
-    static let confirmKey = LocalizedText(hanji: "選")
 
     // MARK: - 輸入模式
 
     static let inputMode = LocalizedText(hanji: "輸入模式")
     static let pojMode = LocalizedText(hanji: "白話字")
     static let tlMode = LocalizedText(hanji: "台羅")
+    static let englishMode = LocalizedText(hanji: "英文")
 
     // MARK: - 字體設定
 

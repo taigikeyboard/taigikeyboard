@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 單個候選詞項目 layout，用於 RecyclerView -->
+<Button
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/candidate_button"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="@drawable/candidate_button_background"
+    android:minWidth="64dp"
+    android:minHeight="48dp"
+    android:textAllCaps="false"
+    android:textSize="16sp"
+    android:gravity="center"
+    tools:text="候選詞" />

@@ -2,6 +2,8 @@
 package com.siansiansu.taigikeyboard.ime.text.layout
 
 import android.content.Context
+import android.util.Log
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
@@ -19,6 +21,9 @@ class LayoutManager(
     private val context: Context,
     private val prefs: PrefHelper
 ) {
+    companion object {
+        private const val TAG = "LayoutManager"
+    }
 
     /**
      * Loads the layout for the specified type and name.
@@ -33,7 +38,7 @@ class LayoutManager(
         val rawJsonData: String = try {
             context.assets.open("ime/text/$type/$name.json").bufferedReader().use { it.readText() }
         } catch (e: Exception) {
-            android.util.Log.e("LayoutManager", "Failed to load layout $type/$name", e)
+            if (BuildConfig.DEBUG) Log.e(TAG, "[LAYOUT] Failed to load layout $type/$name", e)
             null
         } ?: return null
         val moshi = Moshi.Builder()
@@ -44,20 +49,26 @@ class LayoutManager(
             .build()
         val layoutAdapter = moshi.adapter(LayoutData::class.java)
         val layoutData = layoutAdapter.fromJson(rawJsonData)
-        if (layoutData != null && name?.contains("phah_taigi") == true) {
-            android.util.Log.d("LayoutManager", "Loaded phahTaigi layout: ${layoutData.name}, rows=${layoutData.arrangement.size}")
+        if (BuildConfig.DEBUG && layoutData != null && name?.contains("phah_taigi") == true) {
+            Log.d(TAG, "[LAYOUT] Loaded phahTaigi layout: ${layoutData.name}, rows=${layoutData.arrangement.size}")
             layoutData.arrangement.forEachIndexed { rowIndex, row ->
-                android.util.Log.d("LayoutManager", "  Row $rowIndex: ${row.size} keys - ${row.map { it.label }.joinToString(" ")}")
+                Log.d(TAG, "[LAYOUT]   Row $rowIndex: ${row.size} keys - ${row.map { it.label }.joinToString(" ")}")
             }
         }
         return layoutData
     }
 
     private fun loadExtendedPopups(subtype: Subtype): Map<String, List<KeyData>> {
+        val inputMode = prefs.inputMode
+
+        // English mode：不載入台語 popup
+        if (inputMode == "english") {
+            return mapOf()
+        }
+
         val lang = subtype.locale.language
 
         // 檢查是否為台語佈局並載入對應的聲調 popup
-        val inputMode = prefs.inputMode
         val taigiMap = when {
             // 根據 inputMode 載入對應的台語 popup
             lang == "nan" || subtype.layout == "qwerty_poj" || subtype.layout == "qwerty_tl" -> {
@@ -229,26 +240,30 @@ class LayoutManager(
 
         when (keyboardMode) {
             KeyboardMode.CHARACTERS -> {
-                // 選擇佈局：優先檢查 phahTaigiLayoutEnabled
-                val layoutName = if (prefs.phahTaigiLayoutEnabled) {
-                    // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
-                    val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
-                    "qwerty_phah_taigi_$suffix"
-                } else {
-                    // 原有邏輯：根據 inputMode 選擇 poj/tl
-                    when (prefs.inputMode) {
-                        "poj" -> "qwerty_poj"
-                        "tl" -> "qwerty_tl"
-                        else -> "qwerty_poj"
+                // 選擇佈局：English mode > phahTaigi > POJ/TL
+                val layoutName = when {
+                    prefs.inputMode == "english" -> "qwerty_english"
+                    prefs.phahTaigiLayoutEnabled -> {
+                        // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
+                        val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
+                        "qwerty_phah_taigi_$suffix"
+                    }
+                    else -> {
+                        // 原有邏輯：根據 inputMode 選擇 poj/tl
+                        when (prefs.inputMode) {
+                            "poj" -> "qwerty_poj"
+                            "tl" -> "qwerty_tl"
+                            else -> "qwerty_poj"
+                        }
                     }
                 }
-                android.util.Log.d("LayoutManager", "Loading layout: $layoutName (phahTaigi=${prefs.phahTaigiLayoutEnabled}, isTranslateSwapped=$isTranslateSwapped)")
+                if (BuildConfig.DEBUG) Log.d(TAG, "[LAYOUT] Loading layout: $layoutName (inputMode=${prefs.inputMode}, phahTaigi=${prefs.phahTaigiLayoutEnabled}, isTranslateSwapped=$isTranslateSwapped)")
                 main = LTN(LayoutType.CHARACTERS, layoutName)
-                // phahTaigi 使用專用的 modifier（移除底部 "-" 按鍵）
-                val modifierName = if (prefs.phahTaigiLayoutEnabled) {
-                    "phah_taigi_$modSuffix"
-                } else {
-                    "default_$modSuffix"
+                // 根據模式選擇 modifier
+                val modifierName = when {
+                    prefs.inputMode == "english" -> "english"
+                    prefs.phahTaigiLayoutEnabled -> "phah_taigi_$modSuffix"
+                    else -> "default_$modSuffix"
                 }
                 modifier = LTN(LayoutType.CHARACTERS_MOD, modifierName)
                 extension = LTN(LayoutType.EXTENSION, "number_row")
@@ -268,7 +283,7 @@ class LayoutManager(
             KeyboardMode.SYMBOLS -> {
                 main = LTN(LayoutType.SYMBOLS, "western_$symbolsSuffix")
                 modifier = LTN(LayoutType.SYMBOLS_MOD, "default_$modSuffix")
-                extension = LTN(LayoutType.EXTENSION, "number_row")
+                // 不需要 number_row extension，因為 symbols layout 已經包含數字列
             }
             KeyboardMode.SYMBOLS2 -> {
                 main = LTN(LayoutType.SYMBOLS2, "western_$symbolsSuffix")

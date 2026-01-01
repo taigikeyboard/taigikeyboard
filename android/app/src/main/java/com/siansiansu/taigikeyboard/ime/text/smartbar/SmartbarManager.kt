@@ -1,16 +1,13 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.graphics.Color
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.core.view.children
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -20,6 +17,8 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
+import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +44,7 @@ class SmartbarManager private constructor() :
     var candidateOverlayView: CandidateOverlayView? = null
         private set
 
-    var activeContainerId: Int = R.id.candidates
+    var activeContainerId: Int = R.id.quick_actions
         set(value) { field = value; updateActiveContainerVisibility() }
 
     // 用於記錄使用者頻率的 Coroutine Scope
@@ -70,98 +69,107 @@ class SmartbarManager private constructor() :
     private var lastSelectionTime: Long = 0
     private var isShowingNextWord: Boolean = false
 
+    // RecyclerView Adapter
+    private var candidateAdapter: CandidateAdapter? = null
+
     /**
      * 檢查目前是否正在顯示 NextWord 候選詞
      */
     fun isShowingNextWordCandidates(): Boolean = isShowingNextWord
 
-    private val candidateViewOnClickListener = View.OnClickListener { v ->
+    /**
+     * 處理候選詞點擊事件（由 CandidateAdapter 呼叫）
+     */
+    private fun handleCandidateClick(selectedWord: TaigiWord, index: Int) {
         // DEBUG: 追蹤點擊事件
         if (BuildConfig.DEBUG) {
             val isNextWord = currentSuggestions.firstOrNull()?.id?.let { it < 0 } ?: false
             Log.d(TAG, "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${currentSuggestions.size}")
+            Log.d(TAG, "[CLICK] index=$index, suggestionsSize=${currentSuggestions.size}")
         }
 
-        val button = v as Button
-        val candidatesContainer = smartbarView?.candidatesView
-        if (candidatesContainer == null) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[CLICK] candidatesContainer is null, returning")
+        val ic = taigikeyboard.currentInputConnection ?: return
+
+        // 取得組字管理器
+        val composingManager = taigikeyboard.textInputManager.getComposingManager()
+
+        // 判斷候選詞類型
+        val isEnglishSuggestion = selectedWord.id <= -100  // 英文建議 id <= -100
+        val isNextWordPrediction = selectedWord.id < 0 && !isEnglishSuggestion  // NextWord id: -1 to -99
+
+        // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
+        // showHanjiMode 固定為 true
+        val textToCommit = when {
+            // 英文建議：直接使用 roman
+            isEnglishSuggestion -> selectedWord.roman
+            // 漢羅攏出模式
+            cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
+                if (cachedIsTranslateSwapped) {
+                    "${selectedWord.hanzi} (${selectedWord.roman})"
+                } else {
+                    "${selectedWord.roman} (${selectedWord.hanzi})"
+                }
             }
-            return@OnClickListener
+            // 翻譯交換模式（漢字模式）：直接顯示漢字
+            cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
+            // 預設顯示羅馬字（一般候選詞和 NextWord 候選詞皆同）
+            else -> selectedWord.roman
         }
-        val buttonIndex = candidatesContainer.indexOfChild(button)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[CLICK] buttonIndex=$buttonIndex, suggestionsSize=${currentSuggestions.size}")
+            Log.d(TAG, "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'")
+            Log.d(TAG, "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, outputBothScripts=$cachedOutputBothScripts")
+            Log.d(TAG, "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion")
         }
 
-        if (buttonIndex >= 0 && buttonIndex < currentSuggestions.size) {
-            val selectedWord = currentSuggestions[buttonIndex]
-            val ic = taigikeyboard.currentInputConnection ?: return@OnClickListener
+        if (isEnglishSuggestion) {
+            // 英文建議：替換當前單字
+            val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
+            val currentWord = extractCurrentWord(textBeforeCursor)
 
-            // 取得組字管理器
-            val composingManager = taigikeyboard.textInputManager.getComposingManager()
-
-            // 判斷是否為 NextWord 候選詞（id < 0）
-            val isNextWordPrediction = selectedWord.id < 0
-
-            // 根據 isTranslateSwapped 和 outputBothScripts 決定要輸出的文字
-            // showHanjiMode 固定為 true
-            val textToCommit = when {
-                // 漢羅攏出模式
-                cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
-                    if (cachedIsTranslateSwapped) {
-                        "${selectedWord.hanzi} (${selectedWord.roman})"
-                    } else {
-                        "${selectedWord.roman} (${selectedWord.hanzi})"
-                    }
-                }
-                // 翻譯交換模式（漢字模式）：直接顯示漢字
-                cachedIsTranslateSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
-                // 預設顯示羅馬字（一般候選詞和 NextWord 候選詞皆同）
-                else -> selectedWord.roman
+            if (currentWord.isNotEmpty()) {
+                // 刪除當前單字
+                ic.deleteSurroundingText(currentWord.length, 0)
             }
+            // 插入建議
+            ic.commitText(textToCommit, 1)
+            clearCandidates()
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'")
-                Log.d(TAG, "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, outputBothScripts=$cachedOutputBothScripts")
-                Log.d(TAG, "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction")
+                Log.d(TAG, "[ENGLISH-CLICK] Replaced '$currentWord' with '$textToCommit'")
             }
-
-            if (isNextWordPrediction) {
-                // NextWord 候選詞：直接 commitText（此時沒有 composing text）
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic")
-                }
-                val result = ic.commitText(textToCommit, 1)
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD-CLICK] AFTER commitText: result=$result")
-                }
-            } else {
-                // 一般候選詞：使用 ComposingManager 處理狀態清除
-                composingManager?.selectSuggestion(textToCommit, ic)
+        } else if (isNextWordPrediction) {
+            // NextWord 候選詞：直接 commitText（此時沒有 composing text）
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic")
             }
-
-            // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
-            if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
-                if (!textToCommit.endsWith("-")) {
-                    ic.commitText(" ", 1)
-                }
+            val result = ic.commitText(textToCommit, 1)
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[NEXTWORD-CLICK] AFTER commitText: result=$result")
             }
-
-            // 記錄使用頻率（非同步）
-            scope.launch {
-                UserFrequencyService.recordUsage(selectedWord.displayText)
-            }
-
-            // NextWord: 處理上下文和預測
-            handleNextWordPrediction(
-                displayText = selectedWord.displayText,
-                committedText = textToCommit,
-                roman = selectedWord.roman
-            )
+        } else {
+            // 一般候選詞：使用 ComposingManager 處理狀態清除
+            composingManager?.selectSuggestion(textToCommit, ic)
         }
+
+        // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
+        if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
+            if (!textToCommit.endsWith("-")) {
+                ic.commitText(" ", 1)
+            }
+        }
+
+        // 記錄使用頻率（非同步）
+        scope.launch {
+            UserFrequencyService.recordUsage(selectedWord.displayText)
+        }
+
+        // NextWord: 處理上下文和預測
+        handleNextWordPrediction(
+            displayText = selectedWord.displayText,
+            committedText = textToCommit,
+            roman = selectedWord.roman
+        )
     }
 
     /**
@@ -402,9 +410,6 @@ class SmartbarManager private constructor() :
             clearCandidates()
         }
     }
-    private val candidateViewOnLongClickListener = View.OnLongClickListener { v ->
-        true
-    }
     private val numberRowButtonOnClickListener = View.OnClickListener { v ->
         val keyData = when (v.id) {
             R.id.number_row_0 -> KeyData(48, "0")
@@ -479,6 +484,24 @@ class SmartbarManager private constructor() :
             return word.all { it in NOISE_CHARS }
         }
 
+        /**
+         * 從文字中提取當前單字（最後一個空白或標點後的文字）
+         * 用於英文自動補全的單字替換
+         */
+        private fun extractCurrentWord(text: String): String {
+            val trimmed = text.trimEnd()
+            if (trimmed.isEmpty()) return ""
+
+            // 找到最後一個空白或標點
+            val lastSeparatorIndex = trimmed.indexOfLast { it.isWhitespace() || it in ".,!?;:" }
+
+            return if (lastSeparatorIndex >= 0) {
+                trimmed.substring(lastSeparatorIndex + 1)
+            } else {
+                trimmed
+            }
+        }
+
         @Synchronized
         fun getInstance(): SmartbarManager {
             if (instance == null) {
@@ -507,12 +530,135 @@ class SmartbarManager private constructor() :
                 numberRowButton.setOnClickListener(numberRowButtonOnClickListener)
             }
         }
-        // 候選詞按鈕事件監聽器將在動態建立按鈕時註冊
+
+        // 初始化 RecyclerView 和 Adapter
+        setupCandidateRecyclerView(smartbarView)
 
         // 展開收合按鈕點擊事件
         smartbarView.expandToggleButton?.setOnClickListener {
             toggleExpandState()
         }
+
+        // 輸入模式切換按鈕點擊事件
+        setupInputModeSwitcher(smartbarView)
+
+        // 英文三欄式候選詞點擊事件
+        setupEnglishCandidates(smartbarView)
+    }
+
+    /**
+     * 設置候選詞 RecyclerView
+     */
+    private fun setupCandidateRecyclerView(smartbarView: SmartbarView) {
+        val recyclerView = smartbarView.candidatesRecyclerView ?: return
+
+        // 建立水平 LayoutManager
+        val layoutManager = LinearLayoutManager(
+            taigikeyboard.context,
+            LinearLayoutManager.HORIZONTAL,
+            false
+        )
+        recyclerView.layoutManager = layoutManager
+
+        // 建立 Adapter
+        candidateAdapter = CandidateAdapter(
+            context = taigikeyboard.context,
+            isTranslateSwapped = { cachedIsTranslateSwapped },
+            fontType = { prefs.fontType },
+            onCandidateClick = { word, index ->
+                handleCandidateClick(word, index)
+            }
+        )
+
+        recyclerView.adapter = candidateAdapter
+
+        // 設定 RecyclerView 的 ItemAnimator 為 null，避免更新時的動畫延遲
+        recyclerView.itemAnimator = null
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[RECYCLER] RecyclerView and Adapter initialized")
+        }
+    }
+
+    /**
+     * 設置英文三欄式候選詞按鈕
+     */
+    private fun setupEnglishCandidates(smartbarView: SmartbarView) {
+        smartbarView.englishCandidate1?.setOnClickListener {
+            handleEnglishCandidateClick(0)
+        }
+        smartbarView.englishCandidate2?.setOnClickListener {
+            handleEnglishCandidateClick(1)
+        }
+        smartbarView.englishCandidate3?.setOnClickListener {
+            handleEnglishCandidateClick(2)
+        }
+    }
+
+    /**
+     * 處理英文候選詞點擊
+     */
+    private fun handleEnglishCandidateClick(index: Int) {
+        if (index >= currentSuggestions.size) return
+
+        val selectedWord = currentSuggestions[index]
+        val ic = taigikeyboard.currentInputConnection ?: return
+
+        // 英文建議：替換當前單字
+        val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
+        val currentWord = extractCurrentWord(textBeforeCursor)
+
+        if (currentWord.isNotEmpty()) {
+            // 刪除當前單字
+            ic.deleteSurroundingText(currentWord.length, 0)
+        }
+        // 插入建議
+        ic.commitText(selectedWord.roman, 1)
+
+        // 清除候選詞
+        clearCandidates()
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[ENGLISH-CLICK] Replaced '$currentWord' with '${selectedWord.roman}'")
+        }
+    }
+
+    /**
+     * 設置輸入模式切換按鈕
+     */
+    private fun setupInputModeSwitcher(smartbarView: SmartbarView) {
+        smartbarView.buttonModePoj?.setOnClickListener {
+            setInputMode("poj")
+        }
+        smartbarView.buttonModeTl?.setOnClickListener {
+            setInputMode("tl")
+        }
+        smartbarView.buttonModeEn?.setOnClickListener {
+            setInputMode("english")
+        }
+
+        // 初始化按鈕狀態
+        updateInputModeSwitcherState()
+    }
+
+    /**
+     * 設定輸入模式並立即更新 UI
+     */
+    private fun setInputMode(mode: String) {
+        prefs.inputMode = mode
+        // 直接用傳入的值更新 UI，避免 DataStore 非同步寫入延遲
+        updateInputModeSwitcherState(mode)
+    }
+
+    /**
+     * 更新輸入模式切換按鈕的選中狀態
+     * @param currentMode 當前模式，若為 null 則從 prefs 讀取
+     */
+    private fun updateInputModeSwitcherState(currentMode: String? = null) {
+        val mode = currentMode ?: prefs.inputMode
+        smartbarView?.buttonModePoj?.isSelected = (mode == "poj")
+        smartbarView?.buttonModeTl?.isSelected = (mode == "tl")
+        smartbarView?.buttonModeEn?.isSelected = (mode == "english")
     }
 
     /**
@@ -563,12 +709,13 @@ class SmartbarManager private constructor() :
             }
             else -> {
                 smartbarView?.visibility = View.VISIBLE
-                // 初始狀態：顯示 quick actions（預設狀態）
+                // 初始狀態：顯示輸入模式切換按鈕（預設狀態）
                 // 候選詞會在組字時由 updateCandidates() 自動切換顯示
                 activeContainerId = when {
                     isComposingEnabled && hasCandidates -> R.id.candidates_container
-                    else -> R.id.quick_actions  // 預設顯示 quick actions
+                    else -> R.id.quick_actions  // 預設顯示 quick_actions（含 settings + 模式切換）
                 }
+                updateInputModeSwitcherState()
             }
         }
     }
@@ -579,11 +726,11 @@ class SmartbarManager private constructor() :
 
     /**
      * 更新候選詞顯示
-     * 每次清空並重新建立按鈕，確保樣式一致
+     * 使用 RecyclerView + ListAdapter 實現高效差異更新
      */
     fun updateCandidates(suggestions: List<TaigiWord>) {
         val view = smartbarView ?: return
-        val candidatesContainer = view.candidatesView ?: return
+        val adapter = candidateAdapter ?: return
 
         if (suggestions.isEmpty()) {
             clearCandidates()
@@ -596,8 +743,30 @@ class SmartbarManager private constructor() :
             Log.d(TAG, "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'")
         }
 
-        // 儲存當前候選詞
-        currentSuggestions = suggestions
+        // 取得大小寫狀態和組字文字，用於候選詞大小寫轉換
+        val (caps, capsLock) = textInputManager.getCapsState()
+        val composingText = textInputManager.getComposingManager()?.getComposingText() ?: ""
+        val inputMode = when (prefs.inputMode) {
+            "poj" -> ToneConverterModels.InputMode.POJ
+            "tl" -> ToneConverterModels.InputMode.TL
+            else -> ToneConverterModels.InputMode.POJ
+        }
+
+        // 應用大小寫轉換
+        val transformedSuggestions = SuggestionCaseTransformer.transform(
+            suggestions = suggestions,
+            composingText = composingText,
+            caps = caps,
+            capsLock = capsLock,
+            inputMode = inputMode
+        )
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'")
+        }
+
+        // 儲存當前候選詞（使用轉換後的版本）
+        currentSuggestions = transformedSuggestions
         hasCandidates = true
         isShowingNextWord = isNextWord
 
@@ -606,156 +775,21 @@ class SmartbarManager private constructor() :
             activeContainerId = R.id.candidates_container
         }
 
-        // 重置候選詞列滑動位置（回到起點）
-        view.resetCandidateScrollPosition()
+        // 設定文字大小（根據 Smartbar 高度計算）
+        val res = taigikeyboard.context.resources
+        val smartbarHeight = view.height.takeIf { it > 0 }
+            ?: res.getDimension(R.dimen.smartbar_height).toInt()
+        adapter.setTextSize(smartbarHeight)
 
-        // 清空所有舊按鈕
-        candidatesContainer.removeAllViews()
-
-        // 計算共用數值
-        val margin = taigikeyboard.context.resources.getDimensionPixelSize(
-            R.dimen.smartbar_button_margin
-        )
-        val padding = taigikeyboard.context.resources.getDimensionPixelSize(
-            R.dimen.smartbar_button_padding
-        )
-        val reducedVerticalPadding = padding / 2  // 減少上下 padding 至 50%
-
-        // 為每個候選詞建立新按鈕
-        suggestions.forEachIndexed { i, word ->
-            val button = Button(taigikeyboard.context).apply {
-                // 套用 SmartbarCandidate 樣式（文字樣式）
-                setTextAppearance(R.style.SmartbarCandidate)
-                // 套用背景與動畫
-                // 第 0 個候選詞（當前組字）使用不同的背景，預設狀態有淡灰色提示
-                // NextWord 候選詞（id < 0）不需要組字背景，全部使用一般背景
-                val isNextWordCandidate = word.id < 0
-                setBackgroundResource(
-                    if (i == 0 && !isNextWordCandidate) R.drawable.candidate_composing_background
-                    else R.drawable.candidate_button_background
-                )
-                stateListAnimator = android.animation.AnimatorInflater.loadStateListAnimator(
-                    taigikeyboard.context,
-                    R.animator.candidate_button_scale
-                )
-                // 確保不全部大寫
-                isAllCaps = false
-
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT
-                ).apply {
-                    // 增加水平間距，垂直間距增加以避免 button 接觸候選詞列上下邊緣
-                    val horizontalSpacing = margin * 5  // 5dp（從 3dp 增加，讓候選詞不擠在一起）
-                    val verticalSpacing = margin * 6  // 6dp（從 4dp 增加到 6dp）
-                    setMargins(horizontalSpacing, verticalSpacing, horizontalSpacing, verticalSpacing)
-                }
-                // 設定按鈕尺寸限制
-                // minWidth: 64dp（維持預設值，確保按鈕易於點擊）
-                // minHeight: 48dp（符合 Android 觸控目標最小尺寸）
-                val density = taigikeyboard.context.resources.displayMetrics.density
-                val minButtonWidth = (64 * density).toInt()
-                val minButtonHeight = (48 * density).toInt()
-
-                minWidth = minButtonWidth
-                minimumWidth = minButtonWidth
-                minHeight = minButtonHeight
-                minimumHeight = minButtonHeight
-                setPadding(padding, reducedVerticalPadding, padding, reducedVerticalPadding)
-                setOnClickListener(candidateViewOnClickListener)
-                setOnLongClickListener(candidateViewOnLongClickListener)
-            }
-
-            // 顯示格式：根據 isTranslateSwapped 決定顯示內容
-            // showHanjiMode 固定為 true
-            // 規則：
-            // 1. isTranslateSwapped = false: title = 羅馬字, subtitle = 漢字
-            // 2. isTranslateSwapped = true: title = 漢字, subtitle = 羅馬字
-            val displayText: CharSequence = when {
-                // 沒有漢字：只顯示羅馬字
-                word.hanzi.isNullOrEmpty() -> word.roman
-
-                // 翻譯交換模式：漢字為主 (title)，羅馬字為副 (subtitle)
-                cachedIsTranslateSwapped -> {
-                    SpannableStringBuilder().apply {
-                        // 漢字（title - 主要文字）
-                        append(word.hanzi)
-                        append(" ")
-
-                        // 羅馬字（subtitle - 副標題，縮小至 70% 且使用較淡的顏色）
-                        val subtitleStart = length
-                        append(word.roman)
-
-                        // 設定字體大小為主文字的 70%
-                        setSpan(
-                            RelativeSizeSpan(0.70f),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-
-                        // 從主題取得 subtitle 顏色
-                        val subtitleColor = com.siansiansu.taigikeyboard.util.getColorFromAttr(
-                            taigikeyboard.context,
-                            com.siansiansu.taigikeyboard.R.attr.smartbar_candidate_subtitle_fgColor
-                        )
-                        setSpan(
-                            ForegroundColorSpan(subtitleColor),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
-                }
-
-                // 預設模式：羅馬字為主 (title)，漢字為副 (subtitle)
-                else -> {
-                    SpannableStringBuilder().apply {
-                        // 羅馬字（title - 主要文字）
-                        append(word.roman)
-                        append(" ")
-
-                        // 漢字（subtitle - 副標題，縮小至 70% 且使用較淡的顏色）
-                        val subtitleStart = length
-                        append(word.hanzi)
-
-                        // 設定字體大小為主文字的 70%
-                        setSpan(
-                            RelativeSizeSpan(0.70f),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-
-                        // 從主題取得 subtitle 顏色
-                        val subtitleColor = com.siansiansu.taigikeyboard.util.getColorFromAttr(
-                            taigikeyboard.context,
-                            com.siansiansu.taigikeyboard.R.attr.smartbar_candidate_subtitle_fgColor
-                        )
-                        setSpan(
-                            ForegroundColorSpan(subtitleColor),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
-                }
-            }
-
-            button.text = displayText
-
-            // 設定字體：根據 fontType 決定
-            button.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
-                fontType = prefs.fontType,
-                context = taigikeyboard.context
-            )
-
-            candidatesContainer.addView(button)
+        // 使用 submitList 更新資料（DiffUtil 會計算差異，只更新變化的項目）
+        adapter.submitList(transformedSuggestions) {
+            // 資料更新完成後，重置滑動位置
+            view.resetCandidateScrollPosition()
         }
 
-        // DEBUG: 確認按鈕建立完成
+        // DEBUG: 確認更新完成
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DEBUG] updateCandidates completed: buttonCount=${candidatesContainer.childCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}")
+            Log.d(TAG, "[DEBUG] updateCandidates completed: itemCount=${adapter.itemCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}")
         }
 
         // 更新展開按鈕可見性
@@ -786,6 +820,9 @@ class SmartbarManager private constructor() :
         // 重新渲染當前候選詞以套用新的顯示順序
         if (currentSuggestions.isNotEmpty()) {
             updateCandidates(currentSuggestions)
+
+            // 強制 RecyclerView 重新綁定所有項目（DiffUtil 不會偵測 isTranslateSwapped 變化）
+            candidateAdapter?.notifyDataSetChanged()
 
             // 如果 overlay 正在顯示，也要更新 overlay 中的候選詞
             // 展開視圖只顯示建議候選詞（跳過第 0 個組字文字候選詞）
@@ -830,12 +867,14 @@ class SmartbarManager private constructor() :
         // 重置候選詞列滑動位置
         smartbarView?.resetCandidateScrollPosition()
 
-        // 清空候選詞容器
-        smartbarView?.candidatesView?.removeAllViews()
+        // 清空 RecyclerView 資料
+        candidateAdapter?.submitList(emptyList())
 
-        // 候選詞清空後，切換至 quick actions
-        if (activeContainerId == R.id.candidates_container) {
+        // 候選詞清空後，切換至 quick_actions
+        if (activeContainerId == R.id.candidates_container ||
+            activeContainerId == R.id.english_candidates_container) {
             activeContainerId = R.id.quick_actions
+            updateInputModeSwitcherState()
         }
 
         // 隱藏展開按鈕
@@ -1059,6 +1098,7 @@ class SmartbarManager private constructor() :
                 R.id.quick_actions -> "quick_actions"
                 R.id.number_row -> "number_row"
                 R.id.candidates_container -> "candidates_container"
+                R.id.english_candidates_container -> "english_candidates_container"
                 else -> "unknown($activeContainerId)"
             }
             Log.d(TAG, "[DEBUG] updateActiveContainerVisibility: $containerName")
@@ -1067,24 +1107,84 @@ class SmartbarManager private constructor() :
         when (activeContainerId) {
             R.id.quick_actions -> {
                 smartbarView.candidatesContainer?.visibility = View.GONE
+                smartbarView.englishCandidatesContainer?.visibility = View.GONE
                 smartbarView.numberRowView?.visibility = View.GONE
                 smartbarView.quickActionsView?.visibility = View.VISIBLE
             }
             R.id.number_row -> {
                 smartbarView.candidatesContainer?.visibility = View.GONE
+                smartbarView.englishCandidatesContainer?.visibility = View.GONE
                 smartbarView.numberRowView?.visibility = View.VISIBLE
                 smartbarView.quickActionsView?.visibility = View.GONE
             }
             R.id.candidates_container -> {
                 smartbarView.candidatesContainer?.visibility = View.VISIBLE
+                smartbarView.englishCandidatesContainer?.visibility = View.GONE
+                smartbarView.numberRowView?.visibility = View.GONE
+                smartbarView.quickActionsView?.visibility = View.GONE
+            }
+            R.id.english_candidates_container -> {
+                smartbarView.candidatesContainer?.visibility = View.GONE
+                smartbarView.englishCandidatesContainer?.visibility = View.VISIBLE
                 smartbarView.numberRowView?.visibility = View.GONE
                 smartbarView.quickActionsView?.visibility = View.GONE
             }
             else -> {
                 smartbarView.candidatesContainer?.visibility = View.GONE
+                smartbarView.englishCandidatesContainer?.visibility = View.GONE
                 smartbarView.numberRowView?.visibility = View.GONE
                 smartbarView.quickActionsView?.visibility = View.GONE
             }
+        }
+    }
+
+    /**
+     * 更新英文三欄式候選詞顯示
+     */
+    fun updateEnglishCandidates(suggestions: List<TaigiWord>) {
+        val view = smartbarView ?: return
+
+        if (suggestions.isEmpty()) {
+            clearCandidates()
+            return
+        }
+
+        // 儲存當前候選詞（限制最多 3 個）
+        currentSuggestions = suggestions.take(3)
+        hasCandidates = true
+        isShowingNextWord = false
+
+        // 切換到英文候選詞視圖
+        if (activeContainerId != R.id.english_candidates_container) {
+            activeContainerId = R.id.english_candidates_container
+        }
+
+        // 動態計算英文候選詞文字大小：Smartbar 高度 × 比例（英文略小）
+        val res = taigikeyboard.context.resources
+        val smartbarHeight = view.height.takeIf { it > 0 }
+            ?: res.getDimension(R.dimen.smartbar_height).toInt()
+        val englishTextSizePx = smartbarHeight * 0.36f
+        val englishTextSizeSp = englishTextSizePx / res.displayMetrics.scaledDensity
+
+        // 更新三個按鈕的文字
+        view.englishCandidate1?.apply {
+            textSize = englishTextSizeSp
+            text = currentSuggestions.getOrNull(0)?.roman ?: ""
+            visibility = if (currentSuggestions.isNotEmpty()) View.VISIBLE else View.INVISIBLE
+        }
+        view.englishCandidate2?.apply {
+            textSize = englishTextSizeSp
+            text = currentSuggestions.getOrNull(1)?.roman ?: ""
+            visibility = if (currentSuggestions.size > 1) View.VISIBLE else View.INVISIBLE
+        }
+        view.englishCandidate3?.apply {
+            textSize = englishTextSizeSp
+            text = currentSuggestions.getOrNull(2)?.roman ?: ""
+            visibility = if (currentSuggestions.size > 2) View.VISIBLE else View.INVISIBLE
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[ENGLISH] Updated 3-column candidates: ${currentSuggestions.map { it.roman }}")
         }
     }
 }

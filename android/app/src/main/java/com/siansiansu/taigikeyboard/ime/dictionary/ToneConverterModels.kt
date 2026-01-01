@@ -187,6 +187,20 @@ object ToneConverterModels {
     )
 
     /**
+     * POJ uppercase to lowercase tone letter mapping (auto-generated)
+     */
+    val pojUppercaseToLowercaseMapping: Map<String, String> by lazy {
+        pojLowercaseToUppercaseMapping.entries.associate { (k, v) -> v to k }
+    }
+
+    /**
+     * TL uppercase to lowercase tone letter mapping (auto-generated)
+     */
+    val tlUppercaseToLowercaseMapping: Map<String, String> by lazy {
+        tlLowercaseToUppercaseMapping.entries.associate { (k, v) -> v to k }
+    }
+
+    /**
      * Convert tone letter to uppercase based on input mode
      */
     fun uppercaseToneLetter(char: String, mode: InputMode): String {
@@ -195,6 +209,17 @@ object ToneConverterModels {
             InputMode.TL -> tlLowercaseToUppercaseMapping
         }
         return mapping[char] ?: char.uppercase()
+    }
+
+    /**
+     * Convert tone letter to lowercase based on input mode
+     */
+    fun lowercaseToneLetter(char: String, mode: InputMode): String {
+        val mapping = when (mode) {
+            InputMode.POJ -> pojUppercaseToLowercaseMapping
+            InputMode.TL -> tlUppercaseToLowercaseMapping
+        }
+        return mapping[char] ?: char.lowercase()
     }
 
     /**

@@ -1,31 +1,23 @@
-//
-//  KeyboardContext+Translate.swift
-//  TaigiKeyboard
-//
-//  Created by Claude Code on 2025-08-30.
-//
-
 import KeyboardKit
 import SwiftUI
 
-// MARK: - KeyboardContext Extension for Translate State
-
+/// KeyboardContext 翻譯狀態擴展
+///
+/// 提供漢字／羅馬字顯示模式切換功能。
 public extension KeyboardContext {
-    /// Whether the translate display is swapped (hanzi ↔ roman)
+
+    /// 是否為漢字優先模式（true = 漢字, false = 羅馬字）
     var isTranslateSwapped: Bool {
-        get {
-            SharedSettings.shared.isTranslateSwapped
-        }
+        get { SharedSettings.shared.isTranslateSwapped }
         set {
             SharedSettings.shared.isTranslateSwapped = newValue
-            // 手動觸發 SwiftUI 更新
             DispatchQueue.main.async {
                 self.objectWillChange.send()
             }
         }
     }
 
-    /// Toggle the translate display mode
+    /// 切換顯示模式
     func toggleTranslateSwapped() {
         isTranslateSwapped.toggle()
     }

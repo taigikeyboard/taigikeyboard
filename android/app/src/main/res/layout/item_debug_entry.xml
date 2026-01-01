@@ -20,7 +20,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
 
         <TextView
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:textSize="12sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
 
     </LinearLayout>
@@ -43,6 +43,6 @@
         android:paddingVertical="4dp"
         android:background="@drawable/badge_background"
         android:textSize="12sp"
-        android:textColor="@color/modern_on_accent" />
+        android:textColor="?attr/colorOnPrimary" />
 
 </LinearLayout>

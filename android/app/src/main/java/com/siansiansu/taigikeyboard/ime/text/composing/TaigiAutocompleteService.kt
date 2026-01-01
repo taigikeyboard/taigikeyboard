@@ -43,13 +43,16 @@ class TaigiAutocompleteService(
 
         return try {
             // 判斷輸入類型（用 rawInput 判斷，因為它保留數字聲調）
+            val determineStart = System.currentTimeMillis()
             val inputType = determineInputType(rawInput)
 
             if (BuildConfig.DEBUG) {
+                Log.d("PERF", "[3-a] determineInputType: ${System.currentTimeMillis() - determineStart}ms")
                 Log.d(TAG, "[INPUT] inputType=$inputType")
             }
 
             // 搜尋系統詞典
+            val searchStart = System.currentTimeMillis()
             val words = LexiconService.search(
                 input = rawInput,
                 originalInput = rawInput,
@@ -57,20 +60,25 @@ class TaigiAutocompleteService(
                 inputMode = inputMode,
                 context = context
             )
-
             if (BuildConfig.DEBUG) {
+                Log.d("PERF", "[3-b] LexiconService.search call: ${System.currentTimeMillis() - searchStart}ms")
                 Log.d(TAG, "[RESULT] LexiconService returned ${words.size} words")
             }
 
             // 在第 0 個位置插入當前組字文字候選詞（用 displayText 顯示）
             // 參考 iOS: AutocompleteService.swift:99-101
+            val buildStart = System.currentTimeMillis()
             val composingTextWord = createComposingTextWord(displayText)
 
             // 候選詞排序：composingText → 系統詞庫
-            buildList {
+            val result = buildList {
                 add(composingTextWord)
                 addAll(words)
             }
+            if (BuildConfig.DEBUG) {
+                Log.d("PERF", "[3-c] buildList: ${System.currentTimeMillis() - buildStart}ms")
+            }
+            result
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[ERROR] getSuggestions failed for: $rawInput", e)

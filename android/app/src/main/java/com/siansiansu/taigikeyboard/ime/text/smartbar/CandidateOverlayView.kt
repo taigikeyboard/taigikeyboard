@@ -1,8 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.util.AttributeSet
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
@@ -77,6 +79,9 @@ class CandidateOverlayView : FrameLayout {
         pageUpButton = findViewById(R.id.overlay_page_up_button)
         pageDownButton = findViewById(R.id.overlay_page_down_button)
         translateButton = findViewById(R.id.overlay_translate_button)
+
+        // 根據主題設定圖示 tint
+        applyIconTint()
 
         // 設定點擊監聽器
         collapseButton?.setOnClickListener {
@@ -531,6 +536,20 @@ class CandidateOverlayView : FrameLayout {
         val smartbarManager = SmartbarManager.getInstance()
         val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
         translateButton?.isActivated = isTranslateSwapped
+    }
+
+    /**
+     * 根據鍵盤主題設定所有按鈕圖示的 tint
+     */
+    private fun applyIconTint() {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(R.attr.smartbar_fgColor, typedValue, true)
+        val tintColor = ColorStateList.valueOf(typedValue.data)
+
+        collapseButton?.imageTintList = tintColor
+        pageUpButton?.imageTintList = tintColor
+        pageDownButton?.imageTintList = tintColor
+        translateButton?.imageTintList = tintColor
     }
 
     /**

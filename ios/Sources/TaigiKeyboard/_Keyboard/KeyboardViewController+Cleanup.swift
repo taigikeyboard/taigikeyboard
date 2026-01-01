@@ -12,6 +12,9 @@ extension KeyboardViewController {
 
         isCleanedUp = true
 
+        // 移除設定監聽器
+        removeSettingsObserver()
+
         // 清理輸入狀態
         cleanupInputState()
 
@@ -30,7 +33,6 @@ extension KeyboardViewController {
             handler.keyboardViewController = nil
         }
         actionHandler = nil
-        services.spaceDragGestureHandler.action = { _ in }
     }
 
     /// 清理所有輸入相關狀態，確保鍵盤重新啟動時是乾淨的

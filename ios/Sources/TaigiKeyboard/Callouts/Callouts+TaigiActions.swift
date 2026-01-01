@@ -26,39 +26,3 @@ public extension Callouts {
         return toneMap[char]?.map { .character($0) }
     }
 }
-
-// MARK: - Service Implementation
-
-/// Taigi callout service for KeyboardKit integration
-/// Provides tone variation callouts for POJ and TL input modes
-class TaigiCalloutService: CalloutService {
-    static let shared = TaigiCalloutService()
-
-    private init() {}
-
-    /// Returns callout actions for the given keyboard action
-    /// - Parameter action: The keyboard action to get callouts for
-    /// - Returns: Array of keyboard actions to show in callout
-    func calloutActions(for action: KeyboardAction) -> [KeyboardAction] {
-        Callouts.taigiToneActions(.init(action: action)) ?? []
-    }
-
-    /// Handles feedback when callout selection changes
-    /// Protocol compliance - delegates to KeyboardKit for system haptic settings
-    func triggerFeedbackForSelectionChange() {
-        // Let KeyboardKit handle feedback according to system settings
-    }
-}
-
-// MARK: - Backward Compatibility
-
-/// Legacy name for TaigiCalloutService
-/// Maintained for backward compatibility with existing code
-typealias CustomCalloutService = TaigiCalloutService
-
-/// Legacy builder for backward compatibility
-/// Use Callouts.taigiToneActions directly in new code
-enum CustomCalloutActions {
-    /// Direct builder function - delegates to Callouts.taigiToneActions
-    static let directBuilder: Callouts.ActionsBuilder = Callouts.taigiToneActions
-}

@@ -1,5 +1,3 @@
-import Foundation
-
 /// 輸入類型
 enum InputType {
     case romanWithoutTone // "goa" → 搜尋 poj_no_tone/tl_no_tone

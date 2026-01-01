@@ -89,7 +89,7 @@ SELECT
     CASE WHEN kungge = 'True' THEN 1 ELSE 0 END
 FROM temp_import
 WHERE tl IS NOT NULL AND tl != ''
-  AND (LENGTH(tl) - LENGTH(REPLACE(tl, '-', '')) + 1) <= 3;
+  AND (LENGTH(tl) - LENGTH(REPLACE(tl, '-', '')) + 1) <= 4;
 
 DROP TABLE temp_import;
 

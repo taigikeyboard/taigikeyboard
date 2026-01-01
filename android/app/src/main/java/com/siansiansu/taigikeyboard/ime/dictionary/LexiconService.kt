@@ -71,11 +71,14 @@ object LexiconService {
         limit: Int = DictionaryConstants.DEFAULT_SEARCH_LIMIT,
         context: Context
     ): List<TaigiWord> = withContext(Dispatchers.IO) {
+        val searchStart = System.currentTimeMillis()
         if (input.isEmpty()) {
             return@withContext emptyList()
         }
 
+        val initStart = System.currentTimeMillis()
         ensureInitialized(context)
+        if (BuildConfig.DEBUG) Log.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
 
         val db = database ?: throw DictionaryError.DatabaseNotAvailable
 
@@ -94,11 +97,14 @@ object LexiconService {
 
         try {
             // 使用 Trie + SQLite 查詢
+            val trieStart = System.currentTimeMillis()
             val words = searchWithTrie(
                 db, input, inputMode, limit, enabledDicts
             )
+            if (BuildConfig.DEBUG) Log.d("PERF", "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms")
 
             // 處理大小寫
+            val caseStart = System.currentTimeMillis()
             val processedWords = words.map { word ->
                 val processedHanzi = if (word.hanzi != null && startsWithRomanLetter(word.hanzi)) {
                     capitalize(word.hanzi, originalInput, inputMode)
@@ -111,10 +117,17 @@ object LexiconService {
                     hanzi = processedHanzi
                 )
             }
+            if (BuildConfig.DEBUG) Log.d("PERF", "[3c] capitalize: ${System.currentTimeMillis() - caseStart}ms")
 
+            val sortStart = System.currentTimeMillis()
             val uniqueWords = removeDuplicates(processedWords)
             val normalizedInput = InputNormalizer.normalize(input, inputMode)
-            applyScoredSort(uniqueWords, normalizedInput)
+            val result = applyScoredSort(uniqueWords, normalizedInput)
+            if (BuildConfig.DEBUG) {
+                Log.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
+                Log.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
+            }
+            result
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[SEARCH] Query failed", e)

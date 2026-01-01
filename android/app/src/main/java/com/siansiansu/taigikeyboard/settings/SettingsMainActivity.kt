@@ -22,7 +22,6 @@ import com.siansiansu.taigikeyboard.ime.core.SubtypeManager
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import com.siansiansu.taigikeyboard.util.PackageManagerUtils
-import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
 private const val PREF_RES_ID = "PREF_RES_ID"
@@ -50,9 +49,6 @@ class SettingsMainActivity : AppCompatActivity(),
 
         prefs = PrefHelper(this)
         prefs.initDefaultPreferences()
-
-        // 套用字體 Theme（必須在 setContentView 之前）
-        ThemeUtils.applyFontTheme(this, prefs)
 
         // 檢查鍵盤是否已啟用，若未啟用則顯示設定引導（與 iOS 一致）
         val isKeyboardEnabled = TaigiKeyboard.checkIfImeIsEnabled(this)

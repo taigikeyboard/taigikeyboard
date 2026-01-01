@@ -4,28 +4,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/modern_surface_primary">
+    android:background="?attr/colorSurface">
 
     <!-- Toolbar -->
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@color/modern_surface_primary"
+        android:background="?attr/colorSurface"
         app:title="Debug Zone"
-        app:titleTextColor="@color/modern_text_primary"
+        app:titleTextColor="?attr/colorOnSurface"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="@color/modern_text_primary" />
+        app:navigationIconTint="?attr/colorOnSurface" />
 
     <!-- Tab Layout -->
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/modern_surface_primary"
-        app:tabTextColor="@color/modern_text_secondary"
-        app:tabSelectedTextColor="@color/modern_accent"
-        app:tabIndicatorColor="@color/modern_accent"
+        android:background="?attr/colorSurface"
+        app:tabTextColor="?attr/colorOnSurfaceVariant"
+        app:tabSelectedTextColor="?attr/colorPrimary"
+        app:tabIndicatorColor="?attr/colorPrimary"
         app:tabMode="fixed"
         app:tabGravity="fill" />
 

@@ -96,8 +96,10 @@ class LexiconService: @unchecked Sendable {
         let wordTexts = uniqueWords.compactMap(\.displayText)
         let frequencyDataMap = userFrequencyService.getFrequencyDataBatch(for: wordTexts)
 
-        // 正規化輸入用於完全匹配判斷（與 Android 一致）
-        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+        // 正規化輸入用於完全匹配判斷（包含調符或 POJ 特殊字符時需要轉換）
+        let normalizedInput = InputNormalizer.needsNormalization(input)
+            ? InputNormalizer.normalize(input, mode: inputMode)
+            : input.lowercased().replacingOccurrences(of: "-", with: "")
 
         let sortedWords = TextProcessor.sortByScore(
             uniqueWords,

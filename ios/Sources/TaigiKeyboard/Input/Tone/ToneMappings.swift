@@ -1,9 +1,11 @@
 import Foundation
 
-/// 聲調映射表 - 純資料結構
+/// 聲調映射表
+///
+/// 定義 POJ 和 TL 模式的聲調字母對應關係。
 enum ToneMappings {
 
-    // MARK: - POJ Mappings
+    // MARK: - POJ 映射表
 
     /// POJ 模式：聲調字母還原為基本字母
     static let pojToneToBase: [String: String] = [
@@ -134,7 +136,7 @@ enum ToneMappings {
         "ḿ": "Ḿ", "m̀": "M̀", "m̂": "M̂", "m̌": "M̌", "m̄": "M̄", "m̍": "M̍", "m̋": "M̋"
     ]
 
-    // MARK: - TL Mappings
+    // MARK: - TL 映射表
 
     /// TL 模式：聲調字母還原為基本字母
     static let tlToneToBase: [String: String] = [
@@ -264,4 +266,24 @@ enum ToneMappings {
         // m
         "ḿ": "Ḿ", "m̀": "M̀", "m̂": "M̂", "m̌": "M̌", "m̄": "M̄", "m̍": "M̍", "m̋": "M̋"
     ]
+
+    // MARK: - 反向對照表（大寫轉小寫）
+
+    /// POJ 模式：大寫到小寫聲調字母
+    static let pojUppercaseToLowercase: [String: String] = {
+        var result: [String: String] = [:]
+        for (lower, upper) in pojLowercaseToUppercase {
+            result[upper] = lower
+        }
+        return result
+    }()
+
+    /// TL 模式：大寫到小寫聲調字母
+    static let tlUppercaseToLowercase: [String: String] = {
+        var result: [String: String] = [:]
+        for (lower, upper) in tlLowercaseToUppercase {
+            result[upper] = lower
+        }
+        return result
+    }()
 }

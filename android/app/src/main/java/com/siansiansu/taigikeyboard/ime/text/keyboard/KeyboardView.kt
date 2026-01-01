@@ -7,12 +7,14 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.core.view.children
 import com.google.android.flexbox.FlexboxLayout
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -22,6 +24,10 @@ import com.siansiansu.taigikeyboard.ime.text.layout.ComputedLayoutData
 import com.siansiansu.taigikeyboard.util.getColorFromAttr
 
 class KeyboardView : LinearLayout {
+    companion object {
+        private const val TAG = "KeyboardView"
+    }
+
     private var activeKeyView: KeyView? = null
     private var activePointerId: Int? = null
     private var activeX: Float = 0.0f
@@ -30,7 +36,7 @@ class KeyboardView : LinearLayout {
     private var colorDrawable: ColorDrawable
     var computedLayout: ComputedLayoutData? = null
         set(v) {
-            android.util.Log.d("KeyboardView", "computedLayout setter called: name=${v?.name}, mode=${v?.mode}")
+            if (BuildConfig.DEBUG) Log.d(TAG, "[LAYOUT] computedLayout setter called: name=${v?.name}, mode=${v?.mode}")
             field = v
             buildLayout()
         }
@@ -59,8 +65,8 @@ class KeyboardView : LinearLayout {
     private fun buildLayout() {
         destroyLayout()
         val computedLayout = computedLayout ?: return
-        if (computedLayout.name.contains("phah_taigi")) {
-            android.util.Log.d("KeyboardView", "Building phahTaigi layout: ${computedLayout.name}")
+        if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi")) {
+            Log.d(TAG, "[LAYOUT] Building phahTaigi layout: ${computedLayout.name}")
         }
         for ((rowIndex, row) in computedLayout.arrangement.withIndex()) {
             val rowView = KeyboardRowView(context)
@@ -68,19 +74,19 @@ class KeyboardView : LinearLayout {
                 val keyView = KeyView(this, key)
                 keyView.taigikeyboard = taigikeyboard
                 rowView.addView(keyView)
-                if (computedLayout.name.contains("phah_taigi") && rowIndex == 2 && keyIndex >= 8) {
-                    android.util.Log.d("KeyboardView", "    Row $rowIndex Key $keyIndex: label='${key.label}' code=${key.code} type=${key.type} variation=${key.variation}")
+                if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi") && rowIndex == 2 && keyIndex >= 8) {
+                    Log.d(TAG, "[LAYOUT]     Row $rowIndex Key $keyIndex: label='${key.label}' code=${key.code} type=${key.type} variation=${key.variation}")
                 }
             }
-            if (computedLayout.name.contains("phah_taigi")) {
-                android.util.Log.d("KeyboardView", "  Row $rowIndex: added ${row.size} KeyViews to rowView (childCount=${rowView.childCount})")
+            if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi")) {
+                Log.d(TAG, "[LAYOUT]   Row $rowIndex: added ${row.size} KeyViews to rowView (childCount=${rowView.childCount})")
                 if (rowIndex == 2) {
                     post {
-                        android.util.Log.d("KeyboardView", "  Row $rowIndex after layout: rowView width=${rowView.width}, childCount=${rowView.childCount}")
+                        Log.d(TAG, "[LAYOUT]   Row $rowIndex after layout: rowView width=${rowView.width}, childCount=${rowView.childCount}")
                         for (i in 0 until rowView.childCount) {
                             val child = rowView.getChildAt(i)
                             if (child is KeyView && child.data.label == "-") {
-                                android.util.Log.d("KeyboardView", "    Hyphen KeyView: visibility=${child.visibility}, width=${child.width}, left=${child.left}, right=${child.right}, isShown=${child.isShown}")
+                                Log.d(TAG, "[LAYOUT]     Hyphen KeyView: visibility=${child.visibility}, width=${child.width}, left=${child.left}, right=${child.right}, isShown=${child.isShown}")
                             }
                         }
                     }

@@ -2,14 +2,15 @@ import Foundation
 import KeyboardKit
 import OSLog
 
-/// 台語鍵盤自動完成服務
-/// 專門處理台語羅馬字與漢字的候選詞搜尋
-/// 支援多種輸入類型：純羅馬字、帶聲調羅馬字、漢字
+/// 自動完成服務
+///
+/// 處理台語羅馬字與漢字的候選詞搜尋，支援多種輸入類型。
 class AutocompleteService: KeyboardKit.AutocompleteService {
-    // MARK: - KeyboardKit 協議要求的屬性
+
+    // MARK: - KeyboardKit 協議屬性
     var locale: Locale = .current
 
-    // MARK: - 學習功能相關屬性（台語鍵盤不使用）
+    // MARK: - 學習功能屬性（未使用）
     /// 是否支援忽略詞彙功能（台語鍵盤不使用此功能）
     var canIgnoreWords: Bool { false }
 
@@ -22,7 +23,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// 學習的詞彙列表（台語鍵盤不使用此功能）
     var learnedWords: [String] = []
 
-    // MARK: - 學習功能相關方法（台語鍵盤不實作）
+    // MARK: - 學習功能方法（未實作）
     /// 檢查是否已忽略指定詞彙（台語鍵盤不使用）
     func hasIgnoredWord(_: String) -> Bool { false }
 
@@ -41,7 +42,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// 停止學習指定詞彙（台語鍵盤不實作）
     func unlearnWord(_: String) {}
 
-    // MARK: - 核心服務屬性
+    // MARK: - 核心屬性
     /// 詞典搜尋服務
     private let lexiconService = LexiconService.shared
 
@@ -69,9 +70,9 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// 第 0 個候選詞永遠是當前的組字文字，第 1 個位置開始才是建議的候選詞
     /// - Parameter text: 輸入文字
     /// - Returns: 候選詞搜尋結果
-    func autocomplete(_ text: String) async throws -> Autocomplete.ServiceResult {
+    func autocomplete(_ text: String) async throws -> Autocomplete.Result {
         guard !text.isEmpty else {
-            return Autocomplete.ServiceResult(inputText: text, suggestions: [])
+            return Autocomplete.Result(inputText: text, suggestions: [])
         }
 
         do {
@@ -81,7 +82,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                   !composingManager.rawInput.isEmpty
             else {
                 // 沒有組字狀態時不顯示候選詞
-                return Autocomplete.ServiceResult(inputText: text, suggestions: [])
+                return Autocomplete.Result(inputText: text, suggestions: [])
             }
 
             let rawInput = composingManager.rawInput           // 搜尋用（如 gua2）
@@ -96,23 +97,22 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             // 使用 rawInput 搜尋（已經是數字聲調格式，不需要再轉換）
             let words = try await lexiconService.search(for: rawInput, inputType: inputType, inputMode: inputMode, limit: 100)
 
-            // 根據使用者實際輸入的大小寫模式轉換候選詞
-            let casePattern = determineCasePattern(from: displayText)
-            var suggestions = convertToSuggestions(words, casePattern: casePattern)
+            // 將詞彙轉換為候選詞（不做大小寫轉換，由 SuggestionCaseTransformer 在 View 層處理）
+            var suggestions = convertToSuggestions(words)
 
             // 在第 0 個位置插入當前組字文字候選詞（使用顯示文字）
             let composingTextSuggestion = createComposingTextSuggestion(displayText)
             suggestions.insert(composingTextSuggestion, at: 0)
 
-            let result = Autocomplete.ServiceResult(inputText: text, suggestions: suggestions)
+            let result = Autocomplete.Result(inputText: text, suggestions: suggestions)
             return result
         } catch {
             logger.error("Autocomplete failed for text '\(text)': \(error.localizedDescription)")
-            return Autocomplete.ServiceResult(inputText: text, suggestions: [])
+            return Autocomplete.Result(inputText: text, suggestions: [])
         }
     }
 
-    // MARK: - 私有輔助方法
+    // MARK: - 私有方法
 
     /// 建立當前組字文字的候選詞物件
     /// 這個候選詞會被放在候選詞列的第 0 個位置，顯示使用者目前正在輸入的內容
@@ -125,37 +125,6 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             subtitle: nil,
             additionalInfo: ["isComposingText": "true"]
         )
-    }
-
-    /// 大小寫模式
-    private enum CasePattern {
-        case lowercase      // 全小寫
-        case capitalized    // 首字母大寫
-        case uppercase      // 全大寫
-    }
-
-    /// 判斷輸入文字的大小寫模式
-    /// - Parameter text: 輸入文字
-    /// - Returns: 大小寫模式
-    private func determineCasePattern(from text: String) -> CasePattern {
-        let letters = text.filter { $0.isLetter && ("a"..."z").contains($0.lowercased()) }
-        guard !letters.isEmpty else { return .lowercase }
-
-        let uppercaseCount = letters.filter { $0.isUppercase }.count
-        let totalCount = letters.count
-
-        // 首字母大寫（第一個字母大寫，包含單一大寫字母）
-        if uppercaseCount == 1 && letters.first?.isUppercase == true {
-            return .capitalized
-        }
-
-        // 全大寫（至少兩個字母且全部大寫）
-        if uppercaseCount == totalCount && totalCount >= 2 {
-            return .uppercase
-        }
-
-        // 其他情況視為小寫
-        return .lowercase
     }
 
     /// 判斷輸入文字的類型
@@ -209,118 +178,16 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         }
     }
 
-    /// 從完整文字中提取當前詞彙
-    /// - Parameter fullText: 完整輸入文字
-    /// - Returns: 當前詞彙
-    private func extractCurrentWord(from fullText: String) -> String {
-        guard !fullText.isEmpty else { return "" }
-
-        let currentWord = extractTaigiCurrentWord(from: fullText)
-
-        return currentWord.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    /// 提取台語當前詞彙（處理羅馬字與漢字混合情況）
-    /// - Parameter text: 輸入文字
-    /// - Returns: 台語當前詞彙
-    private func extractTaigiCurrentWord(from text: String) -> String {
-        guard !text.isEmpty else { return "" }
-
-        var currentWord = ""
-        var hasFoundRomanChar = false
-
-        for char in text.reversed() {
-            if isSeparatorCharacter(char) {
-                break
-            }
-
-            if isRomanCharacter(char) {
-                currentWord = String(char) + currentWord
-                hasFoundRomanChar = true
-                continue
-            }
-
-            if isHanziCharacter(char) {
-                if hasFoundRomanChar {
-                    break
-                }
-                currentWord = String(char) + currentWord
-                continue
-            }
-
-            break
-        }
-
-        return currentWord
-    }
-
-    /// 判斷字元是否為分隔符
-    /// - Parameter char: 待檢查的字元
-    /// - Returns: 是否為分隔符
-    private func isSeparatorCharacter(_ char: Character) -> Bool {
-        if char.isWhitespace || char.isNewline {
-            return true
-        }
-
-        if char == "-" {
-            return false
-        }
-
-        if let scalar = char.unicodeScalars.first {
-            return CharacterSet.punctuationCharacters.contains(scalar)
-        }
-
-        return false
-    }
-
-    /// 判斷字元是否為漢字
-    /// - Parameter char: 待檢查的字元
-    /// - Returns: 是否為漢字
-    private func isHanziCharacter(_ char: Character) -> Bool {
-        ToneUtilities.isHanzi(String(char))
-    }
-
-    /// 判斷字元是否為羅馬字符（包含字母、數字、聲調符號）
-    /// - Parameter char: 待檢查的字元
-    /// - Returns: 是否為羅馬字符
-    private func isRomanCharacter(_ char: Character) -> Bool {
-        let charString = String(char)
-
-        if isHanziCharacter(char) {
-            return false
-        }
-
-        if char.isLetter {
-            return true
-        }
-
-        if char.isNumber {
-            return true
-        }
-
-        if char == "-" {
-            return true
-        }
-
-        let pojToneChars = Set(ToneMappings.pojToneToBase.keys)
-        let tlToneChars = Set(ToneMappings.tlToneToBase.keys)
-
-        if pojToneChars.contains(charString) || tlToneChars.contains(charString) {
-            return true
-        }
-
-        return false
-    }
-
     /// 將台語詞彙轉換為 KeyboardKit 候選詞格式
-    /// - Parameters:
-    ///   - words: 台語詞彙列表
-    ///   - casePattern: 大小寫模式
+    ///
+    /// 不做大小寫轉換，保持詞典原始格式（小寫）。
+    /// 大小寫轉換由 SuggestionCaseTransformer 在 View 層處理。
+    ///
+    /// - Parameter words: 台語詞彙列表
     /// - Returns: KeyboardKit 候選詞列表
-    private func convertToSuggestions(_ words: [TaigiWord], casePattern: CasePattern) -> [Autocomplete.Suggestion] {
+    private func convertToSuggestions(_ words: [TaigiWord]) -> [Autocomplete.Suggestion] {
         let suggestions = words.compactMap { word -> Autocomplete.Suggestion? in
-            // 根據使用者輸入的大小寫模式調整候選詞
-            let romanText = applyCaseTransform(to: word.roman, pattern: casePattern)
+            let romanText = word.roman
             let hanziText = word.hanzi ?? ""
 
             guard !romanText.isEmpty else { return nil }
@@ -333,71 +200,6 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             )
         }
 
-        // showHanjiMode 固定為 true，直接返回候選詞
         return suggestions
-    }
-
-    /// 對候選詞按羅馬字進行去重，保留第一個出現的
-    /// 注意：第 0 個候選詞（組字文字）會被自動保留，因為它永遠是第一個
-    /// - Parameter suggestions: 原始候選詞列表
-    /// - Returns: 去重後的候選詞列表
-    private func deduplicateRomanSuggestions(_ suggestions: [Autocomplete.Suggestion]) -> [Autocomplete.Suggestion] {
-        var seenRoman = Set<String>()
-        var result: [Autocomplete.Suggestion] = []
-
-        for suggestion in suggestions {
-            let romanText = suggestion.title
-            if !seenRoman.contains(romanText) {
-                seenRoman.insert(romanText)
-                result.append(suggestion)
-            }
-        }
-
-        return result
-    }
-
-    /// 根據大小寫模式轉換文字
-    /// - Parameters:
-    ///   - text: 原始文字
-    ///   - pattern: 大小寫模式
-    /// - Returns: 轉換後的文字
-    private func applyCaseTransform(to text: String, pattern: CasePattern) -> String {
-        switch pattern {
-        case .lowercase:
-            // 全小寫
-            return text.map { char in
-                if ("A"..."Z").contains(char) {
-                    return char.lowercased()
-                }
-                return String(char)
-            }.joined()
-
-        case .capitalized:
-            // 首字母大寫
-            var result = ""
-            var isFirstLetter = true
-            for char in text {
-                if ("a"..."z").contains(char) || ("A"..."Z").contains(char) {
-                    if isFirstLetter {
-                        result += char.uppercased()
-                        isFirstLetter = false
-                    } else {
-                        result += char.lowercased()
-                    }
-                } else {
-                    result += String(char)
-                }
-            }
-            return result
-
-        case .uppercase:
-            // 全大寫
-            return text.map { char in
-                if ("a"..."z").contains(char) {
-                    return char.uppercased()
-                }
-                return String(char)
-            }.joined()
-        }
     }
 }

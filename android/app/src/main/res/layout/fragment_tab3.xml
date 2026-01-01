@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/modern_surface_primary"
+    android:background="?attr/colorSurface"
     android:fillViewport="true">
 
     <LinearLayout
@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@color/modern_text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="24dp"
             tools:text="詞庫" />
 
@@ -32,11 +32,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -60,7 +60,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__moe"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_moe"
@@ -88,7 +88,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__newword"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_newword"
@@ -116,7 +116,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__kungge"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_kungge"
@@ -144,7 +144,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__itaigi"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_itaigi"
@@ -172,7 +172,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__taiwan_japan"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_taiwan_japan"
@@ -200,7 +200,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__tai_hua"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_tai_hua"
@@ -228,7 +228,7 @@
                         android:layout_weight="1"
                         android:text="@string/dict__taiwan_plant"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_taiwan_plant"
@@ -246,11 +246,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -268,7 +268,7 @@
                     android:layout_weight="1"
                     android:text="@string/dict__variant"
                     android:textSize="16sp"
-                    android:textColor="@color/modern_text_primary" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_variant"
@@ -286,7 +286,7 @@
             android:layout_height="wrap_content"
             android:text="@string/dict__custom"
             android:textSize="16sp"
-            android:textColor="@color/modern_text_secondary"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginBottom="8dp" />
 
         <!-- 自訂詞庫卡片 (Coming Soon) -->
@@ -294,11 +294,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <TextView
                 android:id="@+id/text_dict_coming_soon"
@@ -307,7 +307,7 @@
                 android:padding="24dp"
                 android:text="@string/dict__coming_soon"
                 android:textSize="16sp"
-                android:textColor="@color/modern_text_secondary"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:gravity="center" />
 
         </com.google.android.material.card.MaterialCardView>
@@ -316,11 +316,11 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/modern_surface_card"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke">
+            app:strokeColor="?attr/colorOutline">
 
             <LinearLayout
                 android:id="@+id/row_clear_cache"
@@ -340,7 +340,7 @@
                     android:layout_weight="1"
                     android:text="@string/dict__clear_cache"
                     android:textSize="16sp"
-                    android:textColor="@color/modern_accent_secondary" />
+                    android:textColor="?attr/colorError" />
 
             </LinearLayout>
 

@@ -6,11 +6,14 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.util.Log
 import androidx.core.graphics.PaintCompat
+import com.siansiansu.taigikeyboard.BuildConfig
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.lang.Exception
 import java.util.*
+
+private const val TAG = "EmojiLayoutData"
 
 // CLDR 格式的分類標記
 private const val CATEGORY_START            = "["
@@ -70,7 +73,7 @@ fun parseRawEmojiSpecsFile(
                 ec = try {
                     EmojiCategory.valueOf(categoryId.uppercase(Locale.ENGLISH))
                 } catch (e: Exception) {
-                    Log.w("EmojiLayoutDataMap", "Unknown category: $categoryId")
+                    if (BuildConfig.DEBUG) Log.w(TAG, "[PARSE] Unknown category: $categoryId")
                     null
                 }
                 continue
@@ -130,13 +133,13 @@ fun parseRawEmojiSpecsFile(
         }
         commitEmojiEditorList()
     } catch (e: IOException) {
-        Log.e("EmojiLayoutDataMap", "parseRawEmojiSpecsFile(): $e")
+        if (BuildConfig.DEBUG) Log.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
     } finally {
         if (reader != null) {
             try {
                 reader.close()
             } catch (e: IOException) {
-                Log.e("EmojiLayoutDataMap", "parseRawEmojiSpecsFile(): $e")
+                if (BuildConfig.DEBUG) Log.e(TAG, "[PARSE] parseRawEmojiSpecsFile(): $e")
             }
         }
     }

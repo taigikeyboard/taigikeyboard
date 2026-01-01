@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import android.util.Log
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import java.text.Normalizer
 
@@ -17,6 +19,8 @@ import java.text.Normalizer
  */
 object InputNormalizer {
 
+    private const val TAG = "InputNormalizer"
+
     // 調符 → 聲調數字（參考 KeSi）
     private val TONE_MARK_TO_NUMBER = mapOf(
         '\u0301' to "2",  // ́ COMBINING ACUTE ACCENT
@@ -28,6 +32,12 @@ object InputNormalizer {
         '\u0306' to "9",  // ̆ COMBINING BREVE (POJ)
         '\u030B' to "9",  // ̋ COMBINING DOUBLE ACUTE ACCENT (TL)
     )
+
+    /**
+     * 入聲韻尾（-p, -t, -k, -h）
+     * 無調符且以這些結尾的音節為第 4 聲
+     */
+    private val CHECKED_ENDINGS = setOf('p', 't', 'k', 'h')
 
     /**
      * 正規化輸入為 Trie 查詢格式（TL 數字聲調）
@@ -48,14 +58,25 @@ object InputNormalizer {
         // 轉小寫
         val lowercased = input.lowercase()
 
+        // 判斷是否需要補上預設聲調（1 或 4）
+        // 只有當輸入包含調符時，才對無調符音節補上預設聲調
+        // 避免對不完整輸入（如單字母 "g"）錯誤加上聲調
+        val shouldAddDefaultTones = hasToneMarks(lowercased)
+
         // 以連字符分割音節，逐音節處理
         val syllables = lowercased.split("-")
         val result = syllables.map { syllable ->
-            normalizeSyllable(syllable)
+            normalizeSyllable(syllable, addDefaultTone = shouldAddDefaultTones)
         }
 
         // 合併（不含連字符）
-        return result.joinToString("")
+        val normalized = result.joinToString("")
+
+        if (BuildConfig.DEBUG && input != normalized) {
+            Log.d(TAG, "[NORMALIZE] input='$input' -> '$normalized'")
+        }
+
+        return normalized
     }
 
     /**
@@ -64,12 +85,17 @@ object InputNormalizer {
      * 步驟：
      * 1. 轉換 POJ 鼻音符號 ⁿ → nn
      * 2. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
-     * 3. 提取聲調標記，轉為數字
-     * 4. 組合：音節 + 聲調數字
+     * 3. 轉換 POJ o͘（U+0358）→ oo
+     * 4. 提取聲調標記，轉為數字
+     * 5. 無調符時根據韻尾判斷聲調 1 或 4（僅當 addDefaultTone = true）
+     * 6. 組合：音節 + 聲調數字
+     *
+     * @param syllable 音節字串
+     * @param addDefaultTone 是否對無調符音節補上預設聲調（1 或 4）
      *
      * 注意：不做 POJ→TL 拼法轉換（如 ch→ts），因為 Trie 使用前綴區分（tl:/poj:）
      */
-    private fun normalizeSyllable(syllable: String): String {
+    private fun normalizeSyllable(syllable: String, addDefaultTone: Boolean): String {
         if (syllable.isEmpty()) return ""
 
         // 轉換 POJ 鼻音符號 ⁿ (U+207F) → nn
@@ -85,16 +111,34 @@ object InputNormalizer {
         // NFD 分解
         val nfd = Normalizer.normalize(withNasalConverted, Normalizer.Form.NFD)
 
+        // 轉換 POJ o͘：把 U+0358 (COMBINING DOT ABOVE RIGHT) 替換成 o
+        // 需在 NFD 分解後處理，因為 ó͘ 分解後是 o + ́ + ͘
+        val withOoConverted = nfd.replace("\u0358", "o")
+
         // 提取聲調標記
         var toneNumber = ""
         val withoutTone = StringBuilder()
 
-        for (char in nfd) {
+        for (char in withOoConverted) {
             val tone = TONE_MARK_TO_NUMBER[char]
             if (tone != null) {
                 toneNumber = tone  // 取最後一個聲調標記
             } else {
                 withoutTone.append(char)
+            }
+        }
+
+        // 無調符時根據韻尾判斷聲調（僅當 addDefaultTone = true）
+        if (addDefaultTone && toneNumber.isEmpty()) {
+            val lastChar = withoutTone.lastOrNull()
+            if (lastChar != null) {
+                toneNumber = if (lastChar in CHECKED_ENDINGS) {
+                    // 入聲韻尾（-p, -t, -k, -h）→ 第 4 聲
+                    "4"
+                } else {
+                    // 開音節 → 第 1 聲
+                    "1"
+                }
             }
         }
 

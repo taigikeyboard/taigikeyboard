@@ -22,7 +22,6 @@ import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.LocalizedText
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,9 +40,6 @@ class DetailActivity : AppCompatActivity() {
 
         prefs = PrefHelper(this)
         languageManager = LanguageManager.getInstance(this)
-
-        // 套用字體 Theme（必須在 setContentView 之前）
-        ThemeUtils.applyFontTheme(this, prefs)
 
         setContentView(R.layout.activity_detail)
 
@@ -126,17 +122,16 @@ class DetailActivity : AppCompatActivity() {
                     }
                     isFirstCard = false
 
-                    // 異用字、字體設定：在第 1 段後插入導覽到詞庫管理的項目
-                    if ((key == "feature_variant_detail" || key == "feature_custom_font_detail") && index == 0) {
+                    // 異用字開關：在第 1 段後插入教育部辭典外部連結
+                    if (key == "feature_variant_detail" && index == 0) {
                         addSpacer(container)
-                        val navRow = createNavigationRow(
-                            languageManager.text(Tab1Texts.goToDictionarySettings),
+                        val linkRow = createExternalLinkRow(
+                            languageManager.text(Tab1Texts.featureVariantDictLink),
                             typeface,
-                            R.drawable.dictionary_24
-                        ) {
-                            navigateToDictionarySettings()
-                        }
-                        container.addView(navRow)
+                            R.drawable.ic_open_in_new,
+                            "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/"
+                        )
+                        container.addView(linkRow)
                         isFirstCard = false
                     }
 
@@ -180,6 +175,61 @@ class DetailActivity : AppCompatActivity() {
                         val imageCard = createImageCard(R.drawable.faq_tone_handling)
                         container.addView(imageCard)
                         isFirstCard = false
+                    }
+
+                    // 拍字記持詞庫：在第 2 段後插入截圖
+                    if (key == "feature_user_dict_detail" && index == 1) {
+                        addSpacer(container)
+                        val imageCard = createImageCard(R.drawable.feature_userdict)
+                        container.addView(imageCard)
+                        isFirstCard = false
+                    }
+
+                    // 大小寫切換：每段後插入對應截圖
+                    if (key == "feature_case_switch_detail") {
+                        when (index) {
+                            0 -> {
+                                // shift 圖片輪播
+                                addSpacer(container)
+                                val slideshow = ImageSlideshowView(this@DetailActivity).apply {
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.WRAP_CONTENT
+                                    )
+                                    setImages(listOf(
+                                        R.drawable.case_shift_1,
+                                        R.drawable.case_shift_2
+                                    ), intervalMs = 1500L)
+                                }
+                                val slideshowCard = CardView(this@DetailActivity).apply {
+                                    layoutParams = LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.WRAP_CONTENT
+                                    )
+                                    radius = resources.getDimension(R.dimen.card_corner_radius)
+                                    cardElevation = 0f
+                                    setCardBackgroundColor(getColor(R.color.modern_surface_secondary))
+                                    addView(slideshow)
+                                }
+                                container.addView(slideshowCard)
+                                isFirstCard = false
+                            }
+                            1 -> {
+                                // lowercase 圖片
+                                addSpacer(container)
+                                val imageCard = createImageCard(R.drawable.case_lowercase)
+                                container.addView(imageCard)
+                                isFirstCard = false
+                            }
+                            2 -> {
+                                // capslock 圖片
+                                addSpacer(container)
+                                val imageCard = createImageCard(R.drawable.case_capslock)
+                                container.addView(imageCard)
+                                isFirstCard = false
+                            }
+                            // index 3 無圖片（警告文字）
+                        }
                     }
                 }
             } else {
@@ -696,13 +746,13 @@ class DetailActivity : AppCompatActivity() {
             "feature_next_word" -> Tab1Texts.featureNextWord
             "feature_variant" -> Tab1Texts.featureVariant
             "feature_custom_font" -> Tab1Texts.featureCustomFont
+            "feature_user_dict" -> Tab1Texts.featureUserDict
+            "feature_case_switch" -> Tab1Texts.featureCaseSwitch
 
             // 處理中問題
             "issue_1" -> Tab1Texts.issue1
             "issue_2" -> Tab1Texts.issue2
             "issue_3" -> Tab1Texts.issue3
-            "issue_4" -> Tab1Texts.issue4
-            "issue_5" -> Tab1Texts.issue5
 
             // 預計新功能
             "upcoming_1" -> Tab1Texts.upcoming1
@@ -735,13 +785,13 @@ class DetailActivity : AppCompatActivity() {
             "feature_next_word_detail" -> Tab1Texts.featureNextWordParagraphs
             "feature_variant_detail" -> Tab1Texts.featureVariantParagraphs
             "feature_custom_font_detail" -> Tab1Texts.featureCustomFontParagraphs
+            "feature_user_dict_detail" -> Tab1Texts.featureUserDictParagraphs
+            "feature_case_switch_detail" -> Tab1Texts.featureCaseSwitchParagraphs
 
             // 處理中問題段落
             "issue_1_detail" -> Tab1Texts.issue1Paragraphs
             "issue_2_detail" -> Tab1Texts.issue2Paragraphs
             "issue_3_detail" -> Tab1Texts.issue3Paragraphs
-            "issue_4_detail" -> Tab1Texts.issue4Paragraphs
-            "issue_5_detail" -> Tab1Texts.issue5Paragraphs
 
             // 預計新功能段落
             "upcoming_1_detail" -> Tab1Texts.upcoming1Paragraphs

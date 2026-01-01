@@ -1,5 +1,3 @@
-import Foundation
-
 /// 詞典相關常數配置
 enum LexiconConstants {
     enum Database {

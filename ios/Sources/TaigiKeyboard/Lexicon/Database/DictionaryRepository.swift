@@ -167,8 +167,10 @@ final class DictionaryRepository: @unchecked Sendable {
         inputMode: InputMode,
         limit: Int
     ) async throws -> [TaigiWord] {
-        // 正規化輸入
-        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+        // 正規化輸入（包含調符或 POJ 特殊字符時需要轉換）
+        let normalizedInput = InputNormalizer.needsNormalization(input)
+            ? InputNormalizer.normalize(input, mode: inputMode)
+            : input.lowercased().replacingOccurrences(of: "-", with: "")
 
         logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
 

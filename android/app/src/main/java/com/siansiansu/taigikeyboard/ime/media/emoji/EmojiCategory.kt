@@ -12,11 +12,9 @@ import androidx.compose.material.icons.filled.EmojiObjects
 import androidx.compose.material.icons.filled.EmojiPeople
 import androidx.compose.material.icons.filled.EmojiSymbols
 import androidx.compose.material.icons.filled.EmojiTransportation
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class EmojiCategory {
-    RECENTLY_USED,
     SMILEYS_EMOTION,
     PEOPLE_BODY,
     ANIMALS_NATURE,
@@ -36,7 +34,6 @@ enum class EmojiCategory {
      */
     fun icon(): ImageVector {
         return when (this) {
-            RECENTLY_USED -> Icons.Default.Schedule
             SMILEYS_EMOTION -> Icons.Default.EmojiEmotions
             PEOPLE_BODY -> Icons.Default.EmojiPeople
             ANIMALS_NATURE -> Icons.Default.EmojiNature

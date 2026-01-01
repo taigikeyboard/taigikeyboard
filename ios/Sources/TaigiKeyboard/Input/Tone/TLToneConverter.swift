@@ -1,6 +1,8 @@
 import Foundation
 
-/// TL (台羅) 模式聲調轉換器
+/// TL 聲調轉換器
+///
+/// 台羅模式的聲調轉換，處理數字聲調標記轉換。
 enum TLToneConverter {
 
     /// 轉換 TL 輸入為聲調標記

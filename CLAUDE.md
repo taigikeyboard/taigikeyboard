@@ -41,9 +41,10 @@ taigikeyboard/
 
 ## KeyboardKit 開發規則
 
-- **實作前必須先查閱 KeyboardKit 官方文檔**
-- 官方文檔：https://keyboardkit.github.io/KeyboardKitDocs/
-- 原始碼：`/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-*/SourcePackages/checkouts/KeyboardKit/`
+- **實作前必須先查閱 KeyboardKit 文檔**
+- **KeyboardKit 10 以後改為閉源**，不可直接查看原始碼
+- 本地文檔：`./references/KeyboardKit-Documentation/`
+- 線上文檔：https://keyboardkit.github.io/KeyboardKitDocs/
 
 ## 記憶體管理
 

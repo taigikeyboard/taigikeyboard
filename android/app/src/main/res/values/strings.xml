@@ -72,7 +72,7 @@
 
     <!-- Share content -->
     <string name="home__share__title">台語齒盤 - 台語輸入法</string>
-    <string name="home__share__url">https://www.taigikeyboard.tw/</string>
+    <string name="home__share__url">https://taigikeyboard.tw/</string>
 
     <!-- Copyright Screen - AndroidManifest only -->
     <string name="copyright__title">版權聲明</string>
@@ -106,7 +106,7 @@
 
     <!-- Tab1: 頭頁 Section Headers -->
     <string name="home__section__setup_keyboard">齒盤愛拍開才會當使用</string>
-    <string name="home__section__new_features">最近做 ê 新功能</string>
+    <string name="home__section__new_features">功能解說</string>
     <string name="home__section__known_issues">當 leh 修理 ê 問題</string>
     <string name="home__section__upcoming_features">未來安排欲做 ê 功能</string>
     <string name="home__section__faq">捷問 ê 問題</string>
@@ -129,18 +129,16 @@
     <string name="home__feature__custom_font">詞庫管理</string>
     <string name="home__feature__custom_font_detail">佇「詞庫」頁面會使選拍字使用 ê 詞庫，無仝詞庫收錄 ê 字有依家己 ê 特色，愛會記得調整。</string>
     <string name="home__feature__go_to_dictionary">來去「詞庫」頁面調整</string>
+    <string name="home__feature__user_dict">拍字記持詞庫</string>
+    <string name="home__feature__case_switch">3段式大小寫切換</string>
 
     <!-- Tab1: 處理中的問題 -->
-    <string name="home__issue__1">自動大寫開關無一定有作用</string>
-    <string name="home__issue__1_detail">自動大寫關起來，愛重開齒盤較有效。自動大寫關起來矣，有時陣猶是會大寫。</string>
-    <string name="home__issue__2">標點符號無夠用</string>
-    <string name="home__issue__2_detail">目前齒盤 ê 標點符號無夠用，希望有「...」、「『』」、「【】」。</string>
-    <string name="home__issue__3">齒盤 ê 字小可仔閘到</string>
-    <string name="home__issue__3_detail">有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到。</string>
-    <string name="home__issue__4">詞庫有欠字</string>
-    <string name="home__issue__4_detail">揣無 bàng-gà 這个字。</string>
-    <string name="home__issue__5">聲調轉換有 ê 字有問題</string>
-    <string name="home__issue__5_detail">1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去。</string>
+    <string name="home__issue__1">齒盤 ê 字小可仔閘到</string>
+    <string name="home__issue__1_detail">有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到。</string>
+    <string name="home__issue__2">詞庫有欠字</string>
+    <string name="home__issue__2_detail">揣無 bàng-gà 這个字。</string>
+    <string name="home__issue__3">聲調轉換有 ê 字有問題</string>
+    <string name="home__issue__3_detail">1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去。</string>
 
     <!-- Tab1: 預計新功能 -->
     <string name="home__upcoming__1">支持其他齒佈</string>
@@ -188,6 +186,7 @@
     <string name="settings__input_mode">輸入模式</string>
     <string name="settings__poj_mode">白話字</string>
     <string name="settings__tl_mode">台羅</string>
+    <string name="settings__english_mode">英文</string>
     <string name="settings__custom_font">字骨設定</string>
     <string name="settings__font_system">系統</string>
     <string name="settings__font_open_huninn">粉圓</string>

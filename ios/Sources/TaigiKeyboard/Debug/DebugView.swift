@@ -33,14 +33,12 @@ struct DebugView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .background(Color.Theme.surfacePrimary)
             .navigationTitle("Debug Zone")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .foregroundColor(Color.Theme.textPrimary)
                     }
                 }
             }

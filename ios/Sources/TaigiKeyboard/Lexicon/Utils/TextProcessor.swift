@@ -1,4 +1,5 @@
 import Foundation
+import KeyboardKit
 
 /// 文字處理工具
 /// 提供詞彙文字處理相關的靜態方法
@@ -8,34 +9,17 @@ enum TextProcessor {
 
     /// 根據輸入文字的大小寫狀態，處理目標文字的大小寫
     static func capitalize(_ text: String, basedOn input: String) -> String {
-        // 檢查設定是否啟用自動大寫
-        guard SharedSettings.shared.isAutoCapitalizationEnabled else {
-            return text
-        }
+        // 從 KeyboardKit 的持久化設定讀取
+        let isAutoCap = KeyboardSettings.store.bool(
+            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
+        )
 
-        guard !input.isEmpty, !text.isEmpty else {
-            return text
-        }
-
-        let firstChar = input.first!
-        let isUpper = firstChar.isUppercase
-
-        guard isUpper else {
-            return text
-        }
-
-        let textFirst = text.first!
-
-        if textFirst.isLetter {
-            // 使用聲調字母大寫轉換，根據輸入模式選擇映射表
-            let inputMode = SharedSettings.shared.inputMode
-            let first = ToneUtilities.uppercaseToneLetter(String(textFirst), mode: inputMode)
-            let rest = String(text.dropFirst())
-
-            return first + rest
-        } else {
-            return text
-        }
+        return CaseTransformationService.capitalizeCandidate(
+            text,
+            basedOn: input,
+            isAutoCapitalizationEnabled: isAutoCap,
+            inputMode: SharedSettings.shared.inputMode
+        )
     }
 
     /// 判斷文字是否以羅馬字母開頭

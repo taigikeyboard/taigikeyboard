@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// 主 APP Tab 類型定義
+/// Tab 類型
+///
+/// 定義主 App 的四個 Tab：頭頁、佈局、詞庫、設定。
 enum TabType: Int, CaseIterable, Hashable {
     case home = 0       // 頭頁
     case layout = 1     // 佈局

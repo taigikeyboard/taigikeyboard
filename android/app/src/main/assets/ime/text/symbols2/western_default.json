@@ -4,66 +4,49 @@
   "direction": "ltr",
   "arrangement": [
     [
-      { "code":  126, "label": "~", "popup": [] },
-      { "code":   96, "label": "`", "popup": [] },
-      { "code":  124, "label": "|", "popup": [] },
-      { "code": 8226, "label": "•", "popup": [
-        { "code": 9827, "label": "♣" },
-        { "code": 9824, "label": "♠" },
-        { "code": 9834, "label": "♪" },
-        { "code": 9829, "label": "♥" },
-        { "code": 9830, "label": "♦" }
-      ] },
-      { "code": 8730, "label": "√", "popup": [] },
-      { "code":  960, "label": "π", "popup": [
-        { "code":  937, "label": "Ω" },
-        { "code":  928, "label": "Π" },
-        { "code":  956, "label": "μ" }
-      ] },
-      { "code":  247, "label": "÷", "popup": [] },
-      { "code":  215, "label": "×", "popup": [] },
-      { "code":  182, "label": "¶", "popup": [
-        { "code":  167, "label": "§" }
-      ] },
-      { "code": 8710, "label": "∆", "popup": [] }
-    ], [
-      { "code":  163, "label": "£", "popup": [] },
-      { "code":  162, "label": "¢", "popup": [] },
+      { "code": 12308, "label": "〔", "popup": [] },
+      { "code": 12309, "label": "〕", "popup": [] },
+      { "code": 123, "label": "{", "popup": [] },
+      { "code": 125, "label": "}", "popup": [] },
+      { "code": 171, "label": "«", "popup": [] },
+      { "code": 187, "label": "»", "popup": [] },
+      { "code": 60, "label": "<", "popup": [] },
+      { "code": 62, "label": ">", "popup": [] },
+      { "code": 94, "label": "^", "popup": [] },
+      { "code": 8251, "label": "※", "popup": [] }
+    ],
+    [
+      { "code": 12296, "label": "〈", "popup": [] },
+      { "code": 12297, "label": "〉", "popup": [] },
+      { "code": 12298, "label": "《", "popup": [] },
+      { "code": 12299, "label": "》", "popup": [] },
+      { "code": 124, "label": "|", "popup": [] },
+      { "code": 126, "label": "~", "popup": [] },
+      { "code": 92, "label": "\\", "popup": [] },
+      { "code": 47, "label": "/", "popup": [] },
+      { "code": 95, "label": "_", "popup": [] },
+      { "code": 61, "label": "=", "popup": [] }
+    ],
+    [
       { "code": 8364, "label": "€", "popup": [] },
-      { "code":  165, "label": "¥", "popup": [] },
-      { "code":   94, "label": "^", "popup": [
-        { "code": 8592, "label": "←" },
-        { "code": 8593, "label": "↑" },
-        { "code": 8595, "label": "↓" },
-        { "code": 8594, "label": "→" }
-      ] },
-      { "code":  176, "label": "°", "popup": [
-        { "code": 8242, "label": "′" },
-        { "code": 8243, "label": "″" }
-      ] },
-      { "code":   61, "label": "=", "popup": [
-        { "code": 8734, "label": "∞" },
-        { "code": 8800, "label": "≠" },
-        { "code": 8776, "label": "≈" }
-      ] },
-      { "code":  123, "label": "{", "popup": [
-        { "code":   40, "label": "(" }
-      ] },
-      { "code":  125, "label": "}", "popup": [
-        { "code":   41, "label": ")" }
-      ] },
-      { "code":   92, "label": "\\", "popup": [] }
-    ], [
-      { "code":   37, "label": "%", "popup": [
-        { "code": 8240, "label": "‰" },
-        { "code": 8453, "label": "℅" }
-      ] },
-      { "code":  169, "label": "©", "popup": [] },
-      { "code":  174, "label": "®", "popup": [] },
+      { "code": 163, "label": "£", "popup": [] },
+      { "code": 165, "label": "¥", "popup": [] },
+      { "code": 162, "label": "¢", "popup": [] },
+      { "code": 8226, "label": "•", "popup": [] },
+      { "code": 176, "label": "°", "popup": [] },
+      { "code": 169, "label": "©", "popup": [] },
+      { "code": 174, "label": "®", "popup": [] },
       { "code": 8482, "label": "™", "popup": [] },
-      { "code": 10003, "label": "✓", "popup": [] },
-      { "code":   91, "label": "[", "popup": [] },
-      { "code":   93, "label": "]", "popup": [] }
+      { "code": 8451, "label": "℃", "popup": [] }
+    ],
+    [
+      { "code": 177, "label": "±", "popup": [] },
+      { "code": 215, "label": "×", "popup": [] },
+      { "code": 247, "label": "÷", "popup": [] },
+      { "code": 8800, "label": "≠", "popup": [] },
+      { "code": 8776, "label": "≈", "popup": [] },
+      { "code": 8734, "label": "∞", "popup": [] },
+      { "code": 8730, "label": "√", "popup": [] }
     ]
   ]
 }

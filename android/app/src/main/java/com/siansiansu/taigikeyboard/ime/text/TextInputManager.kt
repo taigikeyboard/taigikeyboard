@@ -49,16 +49,26 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     // 台語組字管理器
     private var composingManager: ComposingManager? = null
 
+    // 英文自動補全服務
+    private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
+
     /**
      * 取得台語組字管理器（供 SmartbarManager 使用）
      */
     fun getComposingManager(): ComposingManager? = composingManager
 
     // Caps/Space related properties
+    // 這些狀態需要被 SmartbarManager 讀取，用於候選詞大小寫轉換
     var caps: Boolean = false
         private set
     var capsLock: Boolean = false
         private set
+
+    /**
+     * 取得當前大小寫狀態（供 SmartbarManager 使用）
+     * @return Pair(caps, capsLock)
+     */
+    fun getCapsState(): Pair<Boolean, Boolean> = Pair(caps, capsLock)
     private var cursorCapsMode: CapsMode = CapsMode.NONE
     private var editorCapsMode: CapsMode = CapsMode.NONE
     private var hasCapsRecentlyChanged: Boolean = false
@@ -68,8 +78,13 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     private var isComposingEnabled: Boolean = false
     private var isTextSelected: Boolean = false
 
+    // 候選詞更新 Job（用於取消機制）
+    private var candidateUpdateJob: Job? = null
+    private var englishCandidateUpdateJob: Job? = null
+
     companion object {
         private const val TAG = "TextInputManager"
+        private const val CANDIDATE_DEBOUNCE_MS = 50L  // Debounce 延遲時間（毫秒）
         private var instance: TextInputManager? = null
 
         @Synchronized
@@ -151,9 +166,20 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     override fun onDestroy() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
+        // 取消候選詞更新 Job
+        candidateUpdateJob?.cancel()
+        candidateUpdateJob = null
+        englishCandidateUpdateJob?.cancel()
+        englishCandidateUpdateJob = null
+
         cancel()
         osHandler.removeCallbacksAndMessages(null)
         smartbarManager.onDestroy()
+
+        // 關閉英文自動補全服務
+        englishAutocompleteService?.close()
+        englishAutocompleteService = null
+
         instance = null
     }
 
@@ -234,6 +260,12 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      * Handle stuff when finishing to interact with a input editor.
      */
     override fun onFinishInputView(finishingInput: Boolean) {
+        // 取消進行中的候選詞更新
+        candidateUpdateJob?.cancel()
+        candidateUpdateJob = null
+        englishCandidateUpdateJob?.cancel()
+        englishCandidateUpdateJob = null
+
         smartbarManager.onFinishInputView()
     }
 
@@ -518,10 +550,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 val composingText = composingManager?.getComposingText()
                 Log.d(TAG, "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'")
             }
-            // 更新候選詞
-            launch {
-                updateTaigiCandidates()
-            }
+            // 更新候選詞（使用 debounce 機制）
+            updateTaigiCandidatesDebounced()
             return
         }
         if (BuildConfig.DEBUG) {
@@ -539,6 +569,12 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         )
         ic.endBatchEdit()
 
+        // English mode: 退格後更新英文候選詞
+        if (taigikeyboard.prefs.inputMode == "english") {
+            updateEnglishCandidatesDebounced()
+            return
+        }
+
         // NextWord: 退格後根據剩餘文字重新預測
         val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
         smartbarManager.handleBackspaceForNextWord(textBeforeCursor)
@@ -550,13 +586,43 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     private fun handleEnter() {
         val ic = taigikeyboard.currentInputConnection ?: return
 
-        // 如果正在台語組字，確認組字
+        // 如果正在台語組字，先確認組字
         if (composingManager?.isComposing() == true) {
             // 在確認之前先取得組字文字（確認後會清空）
             val committedText = composingManager?.getComposingText() ?: ""
             composingManager?.commitComposition(ic)
 
-            // 羅馬字模式：確認候選詞後自動加空白（字尾非連字符時）
+            // 清除候選詞
+            smartbarManager.clearCandidates()
+
+            // 檢查是否有 IME action（如搜尋、傳送等）
+            val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
+            val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
+
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[ENTER] composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction")
+            }
+
+            // 如果有特定的 IME action，執行該 action（不加空白）
+            if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION == 0 &&
+                maskedAction in listOf(
+                    EditorInfo.IME_ACTION_DONE,
+                    EditorInfo.IME_ACTION_GO,
+                    EditorInfo.IME_ACTION_NEXT,
+                    EditorInfo.IME_ACTION_PREVIOUS,
+                    EditorInfo.IME_ACTION_SEARCH,
+                    EditorInfo.IME_ACTION_SEND
+                )
+            ) {
+                // 執行 IME action（如搜尋）- 傳入 maskedAction 而非完整 imeOptions
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[ENTER] performing action: $maskedAction")
+                }
+                ic.performEditorAction(maskedAction)
+                return
+            }
+
+            // 沒有特定 IME action 時：羅馬字模式加空白
             if (taigikeyboard.prefs.autoSpaceEnabled && !taigikeyboard.prefs.isTranslateSwapped) {
                 // 檢查字尾是否為連字符
                 if (!committedText.endsWith("-")) {
@@ -572,43 +638,43 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                     committedText = committedText,
                     roman = committedText
                 )
-            } else {
-                smartbarManager.clearCandidates()
             }
             return
         }
 
-        ic.beginBatchEdit()
+        // 參考 FlorisBoard: 不使用 beginBatchEdit/endBatchEdit
         resetComposingText()
-        val action = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
-        if (action and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
-            ic.sendKeyEvent(
-                KeyEvent(
-                    KeyEvent.ACTION_DOWN,
-                    KeyEvent.KEYCODE_ENTER
-                )
-            )
+        val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
+        val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[ENTER] non-composing mode, imeOptions=$imeOptions, maskedAction=$maskedAction")
+        }
+
+        // 參考 FlorisBoard handleEnter() 邏輯
+        if (imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
+            // flagNoEnterAction: 發送換行
+            ic.commitText("\n", 1)
         } else {
-            when (action and EditorInfo.IME_MASK_ACTION) {
+            when (maskedAction) {
                 EditorInfo.IME_ACTION_DONE,
                 EditorInfo.IME_ACTION_GO,
                 EditorInfo.IME_ACTION_NEXT,
                 EditorInfo.IME_ACTION_PREVIOUS,
                 EditorInfo.IME_ACTION_SEARCH,
                 EditorInfo.IME_ACTION_SEND -> {
-                    ic.performEditorAction(action)
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[ENTER] performing action: $maskedAction")
+                    }
+                    // 直接執行 IME action，不發送 KeyEvent
+                    ic.performEditorAction(maskedAction)
                 }
                 else -> {
-                    ic.sendKeyEvent(
-                        KeyEvent(
-                            KeyEvent.ACTION_DOWN,
-                            KeyEvent.KEYCODE_ENTER
-                        )
-                    )
+                    // 其他情況：發送換行
+                    ic.commitText("\n", 1)
                 }
             }
         }
-        ic.endBatchEdit()
     }
 
     /**
@@ -638,6 +704,13 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      */
     private fun handleSpace() {
         val ic = taigikeyboard.currentInputConnection ?: return
+
+        // English mode: 直接輸出空白，清除候選詞
+        if (taigikeyboard.prefs.inputMode == "english") {
+            ic.commitText(" ", 1)
+            smartbarManager.clearCandidates()
+            return
+        }
 
         // 如果正在台語組字，確認組字 + 插入空白
         if (composingManager?.isComposing() == true) {
@@ -784,8 +857,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
      * 處理台語字元輸入
      */
     private fun handleTaigiInput(keyData: KeyData) {
+        val inputStart = System.currentTimeMillis()
         val ic = taigikeyboard.currentInputConnection ?: return
-        val manager = composingManager ?: return
 
         val baseText = if (keyData.label.isNotEmpty() &&
             keyData.label != keyData.code.toChar().toString()) {
@@ -795,11 +868,32 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         }
 
         // 決定字元大小寫：尊重當前 caps 狀態（包含自動大寫與手動 shift）
-        val char = if (caps) {
-            baseText.uppercase(Locale.getDefault())
-        } else {
-            baseText.lowercase(Locale.getDefault())
+        // 使用對照表正確轉換聲調字母（如 á → Á）
+        val inputMode = when (taigikeyboard.prefs.inputMode) {
+            "poj" -> ToneConverterModels.InputMode.POJ
+            "tl" -> ToneConverterModels.InputMode.TL
+            else -> ToneConverterModels.InputMode.POJ
         }
+        val char = if (caps) {
+            ToneConverterModels.uppercaseToneLetter(baseText, inputMode)
+        } else {
+            ToneConverterModels.lowercaseToneLetter(baseText, inputMode)
+        }
+
+        // English mode：直接輸出字元，不進入組字邏輯
+        if (taigikeyboard.prefs.inputMode == "english") {
+            ic.commitText(char, 1)
+            // 處理單次 Shift 復位（Caps Lock 除外）
+            if (caps && !capsLock) {
+                caps = false
+                updateCapsState()
+            }
+            // 更新英文候選詞（使用 debounce 機制）
+            updateEnglishCandidatesDebounced()
+            return
+        }
+
+        val manager = composingManager ?: return
 
         // 檢查是否為標點符號（除了連字符）
         if (isPunctuationExceptHyphen(char)) {
@@ -818,10 +912,9 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 manager.appendCharacter(char, ic)
             }
-            // 更新候選詞
-            launch {
-                updateTaigiCandidates()
-            }
+            // 更新候選詞（使用 debounce 機制）
+            Log.d("PERF", "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms")
+            updateTaigiCandidatesDebounced()
         } else {
             // 非組字模式：檢查是否正在顯示 NextWord 候選詞
             if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
@@ -834,11 +927,55 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 // 開始新組字（包含 "-" 開頭的組字）
                 manager.startComposing(char, ic)
-                // 更新候選詞
-                launch {
-                    updateTaigiCandidates()
-                }
+                // 更新候選詞（使用 debounce 機制）
+                Log.d("PERF", "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms")
+                updateTaigiCandidatesDebounced()
             }
+        }
+    }
+
+    /**
+     * 帶 debounce 和取消機制的台語候選詞更新
+     * - 取消前一個未完成的更新任務
+     * - 等待 debounce 時間後才執行搜尋
+     * - 避免快速連續輸入時的 Race Condition
+     */
+    private fun updateTaigiCandidatesDebounced() {
+        candidateUpdateJob?.cancel()
+
+        candidateUpdateJob = launch {
+            delay(CANDIDATE_DEBOUNCE_MS)
+
+            if (!isActive) return@launch
+
+            val candidateStart = System.currentTimeMillis()
+            updateTaigiCandidates()
+
+            if (BuildConfig.DEBUG) {
+                Log.d("PERF", "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms")
+            }
+        }
+    }
+
+    /**
+     * 帶 debounce 和取消機制的英文候選詞更新
+     */
+    private fun updateEnglishCandidatesDebounced() {
+        if (BuildConfig.DEBUG) {
+            Log.d("ENSPELL", "[1] updateEnglishCandidatesDebounced() called")
+        }
+
+        englishCandidateUpdateJob?.cancel()
+
+        englishCandidateUpdateJob = launch {
+            delay(CANDIDATE_DEBOUNCE_MS)
+
+            if (!isActive) return@launch
+
+            if (BuildConfig.DEBUG) {
+                Log.d("ENSPELL", "[2] After debounce, calling updateEnglishCandidates()")
+            }
+            updateEnglishCandidates()
         }
     }
 
@@ -879,41 +1016,141 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
         }
 
+        val serviceStart = System.currentTimeMillis()
         val autocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
             taigikeyboard.context,
             inputMode
         )
+        Log.d("PERF", "[2] TaigiAutocompleteService init: ${System.currentTimeMillis() - serviceStart}ms")
 
+        val searchStart = System.currentTimeMillis()
         val suggestions = autocompleteService.getSuggestions(rawInput, displayText)
+        Log.d("PERF", "[3] getSuggestions (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms")
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[CANDIDATES] found ${suggestions.size} suggestions")
         }
 
         // 更新 SmartbarManager
+        val uiStart = System.currentTimeMillis()
         withContext(Dispatchers.Main) {
             smartbarManager.updateCandidates(suggestions)
+            Log.d("PERF", "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms")
+        }
+    }
+
+    /**
+     * 更新英文候選詞
+     *
+     * 使用 EnglishAutocompleteService 取得拼字建議
+     * 只在 English mode 下呼叫
+     */
+    private suspend fun updateEnglishCandidates() {
+        if (BuildConfig.DEBUG) {
+            Log.d("ENSPELL", "[3] updateEnglishCandidates() called")
+        }
+
+        val ic = taigikeyboard.currentInputConnection ?: run {
+            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] inputConnection is null")
+            return
+        }
+
+        // 取得游標前的文字
+        val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
+
+        if (textBeforeCursor.isEmpty()) {
+            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] textBeforeCursor is empty")
+            smartbarManager.clearCandidates()
+            return
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d("ENSPELL", "[3] textBeforeCursor='$textBeforeCursor'")
+        }
+
+        // 初始化服務（懶載入）
+        if (englishAutocompleteService == null) {
+            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] Creating EnglishAutocompleteService...")
+            englishAutocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService(taigikeyboard.context)
+        }
+
+        val service = englishAutocompleteService ?: run {
+            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] service is null after creation")
+            return
+        }
+
+        try {
+            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[5] Calling getSuggestions()...")
+            val startTime = System.currentTimeMillis()
+            val suggestions = service.getSuggestions(textBeforeCursor)
+            val elapsed = System.currentTimeMillis() - startTime
+
+            if (BuildConfig.DEBUG) {
+                Log.d("ENSPELL", "[6] getSuggestions() returned ${suggestions.size} suggestions in ${elapsed}ms")
+                suggestions.forEachIndexed { i, s -> Log.d("ENSPELL", "[6]   [$i] ${s.text}") }
+            }
+
+            // 轉換為 TaigiWord 格式（複用現有 SmartbarManager）
+            val words = suggestions.mapIndexed { index, suggestion ->
+                com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord(
+                    id = -100 - index,  // 負數 ID 表示英文建議
+                    roman = suggestion.text,
+                    hanzi = null,
+                    lengthScore = null
+                )
+            }
+
+            withContext(Dispatchers.Main) {
+                if (words.isNotEmpty()) {
+                    // 使用英文三欄式候選詞佈局
+                    smartbarManager.updateEnglishCandidates(words)
+                } else {
+                    smartbarManager.clearCandidates()
+                }
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e("ENSPELL", "[ERROR] Failed to get suggestions", e)
+            }
+            withContext(Dispatchers.Main) {
+                smartbarManager.clearCandidates()
+            }
         }
     }
 
     /**
      * 檢查字元是否為標點符號（除了連字符）
      * 包含半形符號、全形符號及特殊符號
+     * 與 iOS isPunctuationExceptHyphen() 同步
      */
     private fun isPunctuationExceptHyphen(char: String): Boolean {
         // 半形 ASCII 符號
         val halfwidthSymbols = ".,!?;:()[]{}\"'`~@#\$%^&*+=<>/\\|_"
 
         // 中文標點符號
-        val chinesePunctuation = "、。，！？；：（）「」『』《》【】〈〉…"
+        val chinesePunctuation = "、。，！？；：（）「」『』《》【】〈〉〔〕｛｝…⋯"
+
+        // Curly quotes（與 iOS 同步）
+        val curlyQuotes = "\u201C\u201D\u2018\u2019"  // " " ' '
+
+        // 特殊符號
+        val specialSymbols = "—«»※"
+
+        // 貨幣符號
+        val currencySymbols = "€£¥¢$"
+
+        // 其他符號
+        val otherSymbols = "•·°©®™℃"
+
+        // 數學符號
+        val mathSymbols = "±×÷≠≈∞√"
 
         // 全形符號
         val fullwidthSymbols = "＠＃＄＿＆－＋／＊～｀｜＾＝｛｝＼％［］"
 
-        // 特殊符號（數學、貨幣、商標等）
-        val specialSymbols = "•√π÷×¶∆£¢€¥°©®™✓"
-
-        val allSymbols = halfwidthSymbols + chinesePunctuation + fullwidthSymbols + specialSymbols
+        val allSymbols = halfwidthSymbols + chinesePunctuation + curlyQuotes +
+                         specialSymbols + currencySymbols + otherSymbols +
+                         mathSymbols + fullwidthSymbols
         return allSymbols.contains(char)
     }
 

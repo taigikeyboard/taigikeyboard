@@ -2,8 +2,9 @@ import KeyboardKit
 import OSLog
 import SwiftUI
 
-/// 展開的候選詞覆蓋層視圖
-/// 以網格形式顯示更多候選詞
+/// 展開候選詞覆蓋層
+///
+/// 以網格形式顯示更多候選詞選項。
 struct ExpandedCandidateOverlay: View {
 
     /// 所有候選詞建議
@@ -348,8 +349,9 @@ struct ExpandedCandidateOverlay: View {
     }
 }
 
-/// 固定欄位分隔線視圖
-/// 用於展開視圖右側的控制按鈕區域
+/// 固定欄位分隔線
+///
+/// 展開視圖右側的控制按鈕區域分隔線。
 struct FixedColumnDivider: View {
     var body: some View {
         GeometryReader { geometry in
@@ -373,13 +375,11 @@ struct FixedColumnDivider: View {
 }
 
 
-/// 展開視圖中的網格單元格
-/// 用於顯示一般長度的候選詞
+/// 展開視圖網格單元格
+///
+/// 顯示一般長度的候選詞。
 struct ExpandedCandidateGridCell: View {
-
-    /// 候選詞資料
     let suggestion: Autocomplete.Suggestion
-    /// 文字長度（用於版面配置）
     let textLength: Int
     let isTranslateSwapped: Bool
     let isSelected: Bool
@@ -389,63 +389,31 @@ struct ExpandedCandidateGridCell: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateViewStyle) private var style
 
-    private var backgroundColor: Color {
-        return style.itemStyle.resolvedBackgroundColor(
-            for: colorScheme,
-            isSelected: isSelected,
-            isPressed: isPressed,
-            isLiquidGlassEnabled: isLiquidGlassEnabled
-        )
-    }
-
-    private var isLiquidGlassEnabled: Bool {
-        // 從 TaigiKeyboardView 的樣式推斷 Liquid Glass 狀態
-        return style.itemStyle.cornerRadius == 9
-    }
-
     private var displayTitle: String {
-        // showHanjiMode 固定為 true
-        if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-            return subtitle
-        } else {
-            return suggestion.text
-        }
+        CandidateCellHelper.displayTitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
     }
 
     private var displaySubtitle: String? {
-        // showHanjiMode 固定為 true，永遠顯示副標題
-        if isTranslateSwapped {
-            return suggestion.text
-        } else {
-            return suggestion.subtitle
-        }
+        CandidateCellHelper.displaySubtitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+    }
+
+    private var backgroundColor: Color {
+        style.itemStyle.resolvedBackgroundColor(
+            for: colorScheme,
+            isSelected: isSelected,
+            isPressed: isPressed,
+            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
+        )
     }
 
     var body: some View {
         Button(action: {
-            let suggestionToHandle: Autocomplete.Suggestion
-            // showHanjiMode 固定為 true
-            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-                let originalTextLength = suggestion.text.count
-                let newTextLength = subtitle.count
-                let additionalDeleteCount = max(0, originalTextLength - newTextLength)
-
-                suggestionToHandle = Autocomplete.Suggestion(
-                    text: subtitle,
-                    title: subtitle,
-                    subtitle: suggestion.text,
-                    additionalDeleteCount: additionalDeleteCount,
-                    additionalInfo: suggestion.additionalInfo
-                )
-            } else {
-                suggestionToHandle = suggestion
-            }
-            onTap(suggestionToHandle)
+            onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
         }) {
             VStack(alignment: .center, spacing: 2) {
                 Text(displayTitle)
                     .font(KeyboardModels.Fonts.globalFont(
-                        size: CandidateViewModels.UI.primaryFontSize
+                        size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped)
                     ))
                     .fontWeight(.regular)
                     .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
@@ -456,7 +424,7 @@ struct ExpandedCandidateGridCell: View {
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                     Text(subtitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            size: CandidateViewModels.UI.secondaryFontSize
+                            size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped)
                         ))
                         .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                         .lineLimit(1)
@@ -486,17 +454,14 @@ struct ExpandedCandidateGridCell: View {
             }
         }, perform: {})
         .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
-        .accessibilityHint("點擊以選擇此候選詞")
     }
 }
 
-/// 展開視圖中的長詞單元格
-/// 用於顯示超過 12 個字元的長候選詞
+/// 展開視圖長詞單元格
+///
+/// 顯示超過 12 個字元的長候選詞。
 struct ExpandedCandidateLongCell: View {
-
-    /// 候選詞資料
     let suggestion: Autocomplete.Suggestion
-    /// 是否交換漢字與羅馬字顯示
     let isTranslateSwapped: Bool
     let isSelected: Bool
     let onTap: (Autocomplete.Suggestion) -> Void
@@ -505,64 +470,32 @@ struct ExpandedCandidateLongCell: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateViewStyle) private var style
 
-    private var backgroundColor: Color {
-        return style.itemStyle.resolvedBackgroundColor(
-            for: colorScheme,
-            isSelected: isSelected,
-            isPressed: isPressed,
-            isLiquidGlassEnabled: isLiquidGlassEnabled
-        )
-    }
-
-    private var isLiquidGlassEnabled: Bool {
-        // 從 TaigiKeyboardView 的樣式推斷 Liquid Glass 狀態
-        return style.itemStyle.cornerRadius == 9
-    }
-
     private var displayTitle: String {
-        // showHanjiMode 固定為 true
-        if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-            return subtitle
-        } else {
-            return suggestion.text
-        }
+        CandidateCellHelper.displayTitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
     }
 
     private var displaySubtitle: String? {
-        // showHanjiMode 固定為 true，永遠顯示副標題
-        if isTranslateSwapped {
-            return suggestion.text
-        } else {
-            return suggestion.subtitle
-        }
+        CandidateCellHelper.displaySubtitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+    }
+
+    private var backgroundColor: Color {
+        style.itemStyle.resolvedBackgroundColor(
+            for: colorScheme,
+            isSelected: isSelected,
+            isPressed: isPressed,
+            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
+        )
     }
 
     var body: some View {
         Button(action: {
-            let suggestionToHandle: Autocomplete.Suggestion
-            // showHanjiMode 固定為 true
-            if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-                let originalTextLength = suggestion.text.count
-                let newTextLength = subtitle.count
-                let additionalDeleteCount = max(0, originalTextLength - newTextLength)
-
-                suggestionToHandle = Autocomplete.Suggestion(
-                    text: subtitle,
-                    title: subtitle,
-                    subtitle: suggestion.text,
-                    additionalDeleteCount: additionalDeleteCount,
-                    additionalInfo: suggestion.additionalInfo
-                )
-            } else {
-                suggestionToHandle = suggestion
-            }
-            onTap(suggestionToHandle)
+            onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
         }) {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
-                            size: 20
+                            size: CandidateCellHelper.longCellTitleFontSize(isTranslateSwapped: isTranslateSwapped)
                         ))
                         .fontWeight(.regular)
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
@@ -573,10 +506,10 @@ struct ExpandedCandidateLongCell: View {
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
                             .font(KeyboardModels.Fonts.globalFont(
-                                size: 14
+                                size: CandidateCellHelper.longCellSubtitleFontSize(isTranslateSwapped: isTranslateSwapped)
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
-                            .lineLimit(2) // ✅ 長詞副標題允許多行
+                            .lineLimit(2)
                             .minimumScaleFactor(0.7)
                             .truncationMode(.tail)
                     }
@@ -602,6 +535,5 @@ struct ExpandedCandidateLongCell: View {
             }
         }, perform: {})
         .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
-        .accessibilityHint("點擊以選擇此長詞候選詞")
     }
 }

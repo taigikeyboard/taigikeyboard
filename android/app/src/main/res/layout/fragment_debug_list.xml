@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/modern_surface_primary">
+    android:background="?attr/colorSurface">
 
     <!-- Stats Header -->
     <LinearLayout
@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:background="@color/modern_surface_secondary">
+        android:background="?attr/colorSurfaceContainerHighest">
 
         <TextView
             android:id="@+id/stats_count"
@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textSize="14sp"
-            android:textColor="@color/modern_text_secondary" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <Button
             android:id="@+id/btn_clear"
@@ -28,7 +28,7 @@
             android:layout_height="36dp"
             android:text="Clear All"
             android:textSize="12sp"
-            android:backgroundTint="@color/modern_error"
+            android:backgroundTint="?attr/colorError"
             style="@style/Widget.Material3.Button.TonalButton" />
 
     </LinearLayout>
@@ -47,7 +47,7 @@
         android:imeOptions="actionSearch"
         android:drawableStart="@drawable/ic_search"
         android:drawablePadding="8dp"
-        android:drawableTint="@color/modern_text_secondary" />
+        android:drawableTint="?attr/colorOnSurfaceVariant" />
 
     <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
@@ -67,7 +67,7 @@
         android:gravity="center"
         android:text="No data"
         android:textSize="16sp"
-        android:textColor="@color/modern_text_secondary"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:visibility="gone" />
 
 </LinearLayout>

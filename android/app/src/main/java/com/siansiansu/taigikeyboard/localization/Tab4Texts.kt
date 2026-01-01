@@ -15,13 +15,14 @@ object Tab4Texts {
 
     val cancel = LocalizedText(hanji = "取消")
     val reset = LocalizedText(hanji = "恢復")
-    val confirmKey = LocalizedText(hanji = "選")
+    val confirmKey = LocalizedText(hanji = "選", poj = "soán", tl = "suán")
 
     // MARK: - 輸入模式
 
     val inputMode = LocalizedText(hanji = "輸入模式")
     val pojMode = LocalizedText(hanji = "白話字")
     val tlMode = LocalizedText(hanji = "台羅")
+    val englishMode = LocalizedText(hanji = "英文")
 
     // MARK: - 字體設定
 

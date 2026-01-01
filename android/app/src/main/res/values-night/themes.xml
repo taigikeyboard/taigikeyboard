@@ -48,9 +48,8 @@
     </style>
 
     <!--
-        App 不再使用 Dark Mode
-        已移除 SettingsTheme 的 night variant，App 將強制使用 Light Mode
-        SPY×FAMILY 復古主題僅使用 Light Mode
+        SettingsTheme 使用 Material3.DayNight，自動處理深淺模式
+        不需要在此處定義 night variant
     -->
 
 </resources>

@@ -73,7 +73,6 @@ private val VariantsTriangleShapeRtl = GenericShape { size, _ ->
  * Emoji 面板主 Composable
  *
  * @param fullEmojiMappings 所有分類的 emoji 資料
- * @param emojiHistory emoji 歷史記錄
  * @param preferredSkinTone 使用者偏好的膚色設定
  * @param onEmojiClick Emoji 點擊回調
  * @param onSkinToneSelected 膚色選擇回調
@@ -82,32 +81,13 @@ private val VariantsTriangleShapeRtl = GenericShape { size, _ ->
 @Composable
 fun EmojiPaletteView(
     fullEmojiMappings: EmojiLayoutDataMap,
-    emojiHistory: EmojiHistory,
     preferredSkinTone: com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone,
     onEmojiClick: (EmojiKeyData) -> Unit,
     onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var activeCategory by remember { mutableStateOf(EmojiCategory.RECENTLY_USED) }
+    var activeCategory by remember { mutableStateOf(EmojiCategory.SMILEYS_EMOTION) }
     val scope = rememberCoroutineScope()
-
-    // 使用 lazy 延遲建立映射表，只在需要時才初始化（RECENTLY_USED 分類）
-    val emojiStringToSetMap = remember(fullEmojiMappings) {
-        lazy {
-            buildMap<String, EmojiSet> {
-                for ((_, emojiSets) in fullEmojiMappings) {
-                    for (emojiSet in emojiSets) {
-                        // 加入基礎 emoji
-                        put(emojiSet.base().getCodePointsAsString(), emojiSet)
-                        // 加入所有變體
-                        for (variation in emojiSet.variations()) {
-                            put(variation.getCodePointsAsString(), emojiSet)
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     Column(modifier = modifier) {
         val pagerState = rememberPagerState(pageCount = { EmojiCategoryValues.size })
@@ -137,13 +117,9 @@ fun EmojiPaletteView(
 
             val category = EmojiCategoryValues[page]
 
-            // 根據分類決定顯示內容，分離歷史相關依賴
-            val emojiList = remember(category, emojiHistory) {
-                if (category == EmojiCategory.RECENTLY_USED) {
-                    convertHistoryToEmojiSets(emojiHistory, emojiStringToSetMap.value)
-                } else {
-                    fullEmojiMappings[category] ?: emptyList()
-                }
+            // 根據分類取得 emoji 資料
+            val emojiList = remember(category, fullEmojiMappings) {
+                fullEmojiMappings[category] ?: emptyList()
             }
 
             // 使用 key() 包裹確保 Compose 正確追蹤和複用
@@ -351,25 +327,6 @@ private fun EmojiVariationsPopup(
                 }
             }
         }
-    }
-}
-
-/**
- * 從歷史記錄轉換為 EmojiSet 列表
- * 用於 RECENTLY_USED 分類顯示
- *
- * 優化：使用預建立的 Map 快速查找，時間複雜度 O(n)
- */
-private fun convertHistoryToEmojiSets(
-    history: EmojiHistory,
-    emojiStringToSetMap: Map<String, EmojiSet>
-): List<EmojiSet> {
-    val allEmojis = history.getAllEmojis()
-    if (allEmojis.isEmpty()) return emptyList()
-
-    // 使用 Map 快速查找並保持歷史順序
-    return allEmojis.mapNotNull { emojiString ->
-        emojiStringToSetMap[emojiString]
     }
 }
 

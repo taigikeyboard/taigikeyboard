@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import android.util.Log
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 
 /**
@@ -7,6 +9,8 @@ import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
  * Converts number notation (e.g., "goa2") to tone marks (e.g., "góa")
  */
 object ToneConverter {
+
+    private const val TAG = "ToneConverter"
 
     /**
      * Convert input with tone numbers to tone marks
@@ -24,10 +28,16 @@ object ToneConverter {
     ): String {
         val preprocessed = preprocess(input, mode, enableDoubleTapOO, enableDoubleTapNN)
 
-        return when (mode) {
+        val result = when (mode) {
             InputMode.POJ -> convertPOJ(preprocessed)
             InputMode.TL -> convertTL(preprocessed)
         }
+
+        if (BuildConfig.DEBUG && input != result) {
+            Log.d(TAG, "[TONE] input='$input' mode=$mode -> '$result'")
+        }
+
+        return result
     }
 
     /**

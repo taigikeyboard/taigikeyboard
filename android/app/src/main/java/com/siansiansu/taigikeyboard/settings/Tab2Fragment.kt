@@ -1,9 +1,12 @@
 package com.siansiansu.taigikeyboard.settings
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.OvershootInterpolator
 import android.widget.TextView
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.localization.LanguageManager
@@ -50,27 +53,83 @@ class Tab2Fragment : SettingsMainActivity.BaseSettingsFragment() {
             selectLayout(phahTaigi = false)
         }
 
-        // 更新初始狀態
-        updateLayoutSelectionUI(prefs.phahTaigiLayoutEnabled)
+        // 更新初始狀態（不帶動畫）
+        updateLayoutSelectionUI(prefs.phahTaigiLayoutEnabled, animate = false)
     }
 
     private fun selectLayout(phahTaigi: Boolean) {
-        prefs.phahTaigiLayoutEnabled = phahTaigi
-        updateLayoutSelectionUI(phahTaigi)
+        val previousValue = prefs.phahTaigiLayoutEnabled
+        if (previousValue != phahTaigi) {
+            prefs.phahTaigiLayoutEnabled = phahTaigi
+            updateLayoutSelectionUI(phahTaigi, animate = true)
+        }
     }
 
-    private fun updateLayoutSelectionUI(phahTaigiEnabled: Boolean) {
-        // 更新 PhahTaigi 選項的視覺狀態
+    private fun updateLayoutSelectionUI(phahTaigiEnabled: Boolean, animate: Boolean) {
         if (phahTaigiEnabled) {
-            overlayPhahTaigi?.visibility = View.VISIBLE
-            checkmarkPhahTaigi?.visibility = View.VISIBLE
-            overlayStandard?.visibility = View.GONE
-            checkmarkStandard?.visibility = View.GONE
+            // 顯示 PhahTaigi 選中狀態
+            showSelection(overlayPhahTaigi, checkmarkPhahTaigi, animate)
+            hideSelection(overlayStandard, checkmarkStandard, animate)
         } else {
-            overlayPhahTaigi?.visibility = View.GONE
-            checkmarkPhahTaigi?.visibility = View.GONE
-            overlayStandard?.visibility = View.VISIBLE
-            checkmarkStandard?.visibility = View.VISIBLE
+            // 顯示標準佈局選中狀態
+            hideSelection(overlayPhahTaigi, checkmarkPhahTaigi, animate)
+            showSelection(overlayStandard, checkmarkStandard, animate)
+        }
+    }
+
+    private fun showSelection(overlay: View?, checkmark: View?, animate: Boolean) {
+        overlay?.visibility = View.VISIBLE
+        checkmark?.visibility = View.VISIBLE
+
+        if (animate && checkmark != null) {
+            // 彈跳動畫效果（類似 iOS matchedGeometryEffect）
+            checkmark.scaleX = 0f
+            checkmark.scaleY = 0f
+            checkmark.alpha = 0f
+
+            val scaleX = ObjectAnimator.ofFloat(checkmark, View.SCALE_X, 0f, 1f)
+            val scaleY = ObjectAnimator.ofFloat(checkmark, View.SCALE_Y, 0f, 1f)
+            val alpha = ObjectAnimator.ofFloat(checkmark, View.ALPHA, 0f, 1f)
+
+            AnimatorSet().apply {
+                playTogether(scaleX, scaleY, alpha)
+                duration = 200
+                interpolator = OvershootInterpolator(1.5f)
+                start()
+            }
+        }
+
+        if (animate && overlay != null) {
+            overlay.alpha = 0f
+            overlay.animate()
+                .alpha(1f)
+                .setDuration(150)
+                .start()
+        }
+    }
+
+    private fun hideSelection(overlay: View?, checkmark: View?, animate: Boolean) {
+        if (animate) {
+            checkmark?.animate()
+                ?.scaleX(0f)
+                ?.scaleY(0f)
+                ?.alpha(0f)
+                ?.setDuration(150)
+                ?.withEndAction {
+                    checkmark.visibility = View.GONE
+                }
+                ?.start()
+
+            overlay?.animate()
+                ?.alpha(0f)
+                ?.setDuration(150)
+                ?.withEndAction {
+                    overlay.visibility = View.GONE
+                }
+                ?.start()
+        } else {
+            overlay?.visibility = View.GONE
+            checkmark?.visibility = View.GONE
         }
     }
 

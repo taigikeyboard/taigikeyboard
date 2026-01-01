@@ -8,12 +8,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.localization.LanguageManager
+import com.siansiansu.taigikeyboard.localization.Tab1Texts
 
 /**
  * Tab1: 頭頁
  * 內容：啟用方法、新功能、處理中問題、預計新功能、資源連結、FAQ
  */
 class Tab1Fragment : SettingsMainActivity.BaseSettingsFragment() {
+
+    private lateinit var languageManager: LanguageManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -26,8 +30,45 @@ class Tab1Fragment : SettingsMainActivity.BaseSettingsFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        languageManager = LanguageManager.getInstance(requireContext())
+
         setupVersionInfo(view)
+        setupLocalizedTexts(view)
         setupClickListeners(view)
+    }
+
+    private fun setupLocalizedTexts(view: View) {
+        // 頁面標題
+        view.findViewById<TextView>(R.id.header_title).text =
+            languageManager.text(Tab1Texts.appHeaderTitle)
+
+        // 區塊標題
+        view.findViewById<TextView>(R.id.section_setup_keyboard).text =
+            languageManager.text(Tab1Texts.setupKeyboard)
+        view.findViewById<TextView>(R.id.section_new_features).text =
+            languageManager.text(Tab1Texts.newFeatures)
+        view.findViewById<TextView>(R.id.section_known_issues).text =
+            languageManager.text(Tab1Texts.knownIssues)
+        view.findViewById<TextView>(R.id.section_upcoming_features).text =
+            languageManager.text(Tab1Texts.upcomingFeatures)
+        view.findViewById<TextView>(R.id.section_faq).text =
+            languageManager.text(Tab1Texts.faq)
+
+        // 啟用方法
+        view.findViewById<TextView>(R.id.text_setup_guide).text =
+            languageManager.text(Tab1Texts.setupGuide)
+
+        // 資源連結
+        view.findViewById<TextView>(R.id.text_user_guide).text =
+            languageManager.text(Tab1Texts.userGuide)
+        view.findViewById<TextView>(R.id.text_privacy_policy).text =
+            languageManager.text(Tab1Texts.privacyPolicy)
+        view.findViewById<TextView>(R.id.text_rate_us).text =
+            languageManager.text(Tab1Texts.rateUs)
+
+        // 版權聲明
+        view.findViewById<TextView>(R.id.text_copyright).text =
+            languageManager.text(Tab1Texts.copyrightNotice)
     }
 
     private fun setupVersionInfo(view: View) {
@@ -70,6 +111,20 @@ class Tab1Fragment : SettingsMainActivity.BaseSettingsFragment() {
                 contentKeys = arrayOf("feature_custom_font_detail")
             )
         }
+        view.findViewById<View>(R.id.row_feature_4).setOnClickListener {
+            openDetailActivity(
+                titleKey = "feature_user_dict",
+                contentType = "feature",
+                contentKeys = arrayOf("feature_user_dict_detail")
+            )
+        }
+        view.findViewById<View>(R.id.row_feature_5).setOnClickListener {
+            openDetailActivity(
+                titleKey = "feature_case_switch",
+                contentType = "feature",
+                contentKeys = arrayOf("feature_case_switch_detail")
+            )
+        }
 
         // 處理中的問題
         view.findViewById<View>(R.id.row_issue_1).setOnClickListener {
@@ -91,20 +146,6 @@ class Tab1Fragment : SettingsMainActivity.BaseSettingsFragment() {
                 titleKey = "issue_3",
                 contentType = "issue",
                 contentKeys = arrayOf("issue_3_detail")
-            )
-        }
-        view.findViewById<View>(R.id.row_issue_4).setOnClickListener {
-            openDetailActivity(
-                titleKey = "issue_4",
-                contentType = "issue",
-                contentKeys = arrayOf("issue_4_detail")
-            )
-        }
-        view.findViewById<View>(R.id.row_issue_5).setOnClickListener {
-            openDetailActivity(
-                titleKey = "issue_5",
-                contentType = "issue",
-                contentKeys = arrayOf("issue_5_detail")
             )
         }
 

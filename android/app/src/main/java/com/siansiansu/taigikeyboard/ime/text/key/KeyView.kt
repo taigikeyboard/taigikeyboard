@@ -26,7 +26,8 @@ import com.siansiansu.taigikeyboard.util.getColorFromAttr
 import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
 import com.siansiansu.taigikeyboard.localization.DisplayLanguage
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
-import java.util.*
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import java.util.Locale
 
 @SuppressLint("ViewConstructor")
 class KeyView(
@@ -57,7 +58,6 @@ class KeyView(
             }
         }
     private var osHandler: Handler? = null
-    private var osTimer: Timer? = null
     private var shouldBlockNextKeyCode: Boolean = false
 
     private var drawable: Drawable? = null
@@ -135,6 +135,7 @@ class KeyView(
      * @return The generated label.
      */
     fun getComputedLetter(keyData: KeyData = data): String {
+        // TLD 使用標準大小寫（英文字母）
         if (keyData.code == KeyCode.URI_COMPONENT_TLD) {
             return when (taigikeyboard?.textInputManager?.caps) {
                 true -> keyData.label.uppercase(Locale.getDefault())
@@ -149,9 +150,18 @@ class KeyView(
         } else {
             keyData.code.toChar().toString()
         }
-        return when {
-            taigikeyboard?.textInputManager?.caps ?: false -> baseLabel.uppercase(Locale.getDefault())
-            else -> baseLabel
+
+        // 使用對照表正確轉換聲調字母（如 á → Á）
+        val inputMode = when (taigikeyboard?.prefs?.inputMode) {
+            "poj" -> ToneConverterModels.InputMode.POJ
+            "tl" -> ToneConverterModels.InputMode.TL
+            else -> ToneConverterModels.InputMode.POJ
+        }
+
+        return if (taigikeyboard?.textInputManager?.caps == true) {
+            ToneConverterModels.uppercaseToneLetter(baseLabel, inputMode)
+        } else {
+            ToneConverterModels.lowercaseToneLetter(baseLabel, inputMode)
         }
     }
 
@@ -195,22 +205,23 @@ class KeyView(
                 isKeyPressed = true
                 taigikeyboard?.keyPressVibrate(this)
                 taigikeyboard?.keyPressSound(data)
-                if (data.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
-                    osTimer = Timer()
-                    osTimer?.scheduleAtFixedRate(object : TimerTask() {
-                        override fun run() {
-                            taigikeyboard?.textInputManager?.sendKeyPress(data)
-                            if (!isKeyPressed) {
-                                osTimer?.cancel()
-                                osTimer = null
-                            }
-                        }
-                    }, 500, 50)
-                }
-                val delayMillis = keyboardView.prefs.longPressDelay
+                // 確保 Handler 在使用前初始化
                 if (osHandler == null) {
                     osHandler = Handler(Looper.getMainLooper())
                 }
+                if (data.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
+                    // 使用 Handler 替代 Timer，確保回調在主執行緒執行
+                    val repeatDelete = object : Runnable {
+                        override fun run() {
+                            if (isKeyPressed) {
+                                taigikeyboard?.textInputManager?.sendKeyPress(data)
+                                osHandler?.postDelayed(this, 50)
+                            }
+                        }
+                    }
+                    osHandler?.postDelayed(repeatDelete, 500)
+                }
+                val delayMillis = keyboardView.prefs.longPressDelay
                 osHandler?.postDelayed({
                     if (data.popup.isNotEmpty()) {
                         keyboardView.popupManager.extend(this)
@@ -259,8 +270,6 @@ class KeyView(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isKeyPressed = false
                 osHandler?.removeCallbacksAndMessages(null)
-                osTimer?.cancel()
-                osTimer = null
                 val retData = keyboardView.popupManager.getActiveKeyData(this)
                 keyboardView.popupManager.hide()
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && !shouldBlockNextKeyCode && retData != null) {
@@ -656,33 +665,23 @@ class KeyView(
         val label = label
         if (label != null) {
             // 使用共享的 Paint 物件，設定當前按鍵的屬性
+            // 動態計算文字大小：基於按鍵高度 × 比例，自適應不同螢幕尺寸
+            val baseTextSize = measuredHeight * 0.42f
             sharedLabelPaint.textSize = when {
-                // ?123 按鍵使用專屬字體大小
-                data.code == KeyCode.VIEW_SYMBOLS -> {
-                    resources.getDimension(R.dimen.key_symbols_textSize)
-                }
+                // ?123 按鍵使用較小字體
+                data.code == KeyCode.VIEW_SYMBOLS -> baseTextSize * 0.80f
                 // Enter 鍵組字模式的「確定」文字使用較小字體
-                data.code == KeyCode.ENTER && label.isNotEmpty() -> {
-                    resources.getDimension(R.dimen.key_enter_confirm_textSize)
-                }
+                data.code == KeyCode.ENTER && label.isNotEmpty() -> baseTextSize * 0.85f
                 // VIEW_NUMERIC_ADVANCED: 根據顯示內容決定字體大小
                 data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
                     // 如果顯示「、」符號，使用一般按鍵大小；否則使用數字鍵大小
-                    if (label == "、") {
-                        resources.getDimension(R.dimen.key_textSize)
-                    } else {
-                        resources.getDimension(R.dimen.key_numeric_textSize)
-                    }
+                    if (label == "、") baseTextSize else baseTextSize * 0.55f
                 }
                 // 數字鍵和空白鍵
                 data.code == KeyCode.VIEW_NUMERIC ||
-                data.code == KeyCode.SPACE -> {
-                    resources.getDimension(R.dimen.key_numeric_textSize)
-                }
+                data.code == KeyCode.SPACE -> baseTextSize * 0.55f
                 // 一般按鍵
-                else -> {
-                    resources.getDimension(R.dimen.key_textSize)
-                }
+                else -> baseTextSize
             }
 
             // 根據設定設定字體

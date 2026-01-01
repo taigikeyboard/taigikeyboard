@@ -1,8 +1,9 @@
 import SwiftUI
 import UIKit
 
-/// Tab3: 詞庫
-/// 內容：詞庫管理（整合自 DictionarySettingsView）
+/// 詞庫 Tab
+///
+/// 管理詞庫開關和清除使用者學習資料。
 struct Tab3: View {
     @StateObject private var languageManager = LanguageManager.shared
 
@@ -35,32 +36,68 @@ struct Tab3: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    // 詞庫列表
-                    SettingsSection {
-                        dictionaryToggles
-                    }
+            Form {
+                // 詞庫列表
+                Section {
+                    Toggle(languageManager.text(Tab3Texts.moeDict), isOn: $moeDictEnabled)
+                        .onChange(of: moeDictEnabled) { _, newValue in
+                            settings.moeDictEnabled = newValue
+                        }
 
-                    // 異用字開關
-                    SettingsSection {
-                        variantToggle
-                    }
+                    Toggle(languageManager.text(Tab3Texts.newwordDict), isOn: $newwordDictEnabled)
+                        .onChange(of: newwordDictEnabled) { _, newValue in
+                            settings.newwordDictEnabled = newValue
+                        }
 
-                    // 自訂詞庫區塊
-                    SettingsSection(titleContent: Tab3Texts.customDictionary) {
-                        customDictionaryPlaceholder
-                    }
+                    Toggle(languageManager.text(Tab3Texts.kunggeDict), isOn: $kunggeDictEnabled)
+                        .onChange(of: kunggeDictEnabled) { _, newValue in
+                            settings.kunggeDictEnabled = newValue
+                        }
 
-                    // 清除資料區塊
-                    SettingsSection {
-                        actionButtonsSection
+                    Toggle(languageManager.text(Tab3Texts.iTaigiDict), isOn: $iTaigiDictEnabled)
+                        .onChange(of: iTaigiDictEnabled) { _, newValue in
+                            settings.iTaigiDictEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab3Texts.taiwanJapanDict), isOn: $taiwanJapanDictEnabled)
+                        .onChange(of: taiwanJapanDictEnabled) { _, newValue in
+                            settings.taiwanJapanDictEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab3Texts.taiHuaDict), isOn: $taiHuaDictEnabled)
+                        .onChange(of: taiHuaDictEnabled) { _, newValue in
+                            settings.taiHuaDictEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab3Texts.taiwanPlantDict), isOn: $taiwanPlantDictEnabled)
+                        .onChange(of: taiwanPlantDictEnabled) { _, newValue in
+                            settings.taiwanPlantDictEnabled = newValue
+                        }
+                }
+
+                // 異用字開關
+                Section {
+                    Toggle(languageManager.text(Tab3Texts.variantDictionary), isOn: $variantEnabled)
+                        .onChange(of: variantEnabled) { _, newValue in
+                            settings.variantEnabled = newValue
+                        }
+                }
+
+                // 自訂詞庫區塊
+                Section(languageManager.text(Tab3Texts.customDictionary)) {
+                    Text(languageManager.text(Tab3Texts.comingSoon))
+                        .foregroundColor(.secondary)
+                }
+
+                // 清除資料區塊
+                Section {
+                    Button(role: .destructive) {
+                        showClearCacheAlert = true
+                    } label: {
+                        Text(languageManager.text(Tab3Texts.clearCache))
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
             }
-            .background(Color.Theme.surfacePrimary)
             .navigationTitle(languageManager.text(Tab3Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
         }
@@ -72,117 +109,6 @@ struct Tab3: View {
         } message: {
             Text(languageManager.text(Tab3Texts.clearCacheMessage))
         }
-    }
-
-    // MARK: - 詞庫開關列表
-
-    @ViewBuilder
-    private var dictionaryToggles: some View {
-        // 1. 教育部臺灣台語常用詞辭典
-        SettingsToggleItem(
-            titleContent: Tab3Texts.moeDict,
-            isOn: $moeDictEnabled,
-            isFirst: true,
-            onChange: { newValue in
-                settings.moeDictEnabled = newValue
-            }
-        )
-
-        // 2. 台語新詞辭庫
-        SettingsToggleItem(
-            titleContent: Tab3Texts.newwordDict,
-            isOn: $newwordDictEnabled,
-            onChange: { newValue in
-                settings.newwordDictEnabled = newValue
-            }
-        )
-
-        // 3. 台語工藝詞庫
-        SettingsToggleItem(
-            titleContent: Tab3Texts.kunggeDict,
-            isOn: $kunggeDictEnabled,
-            onChange: { newValue in
-                settings.kunggeDictEnabled = newValue
-            }
-        )
-
-        // 4. iTaigi 華台對照典
-        SettingsToggleItem(
-            titleContent: Tab3Texts.iTaigiDict,
-            isOn: $iTaigiDictEnabled,
-            onChange: { newValue in
-                settings.iTaigiDictEnabled = newValue
-            }
-        )
-
-        // 5. 台日大辭典
-        SettingsToggleItem(
-            titleContent: Tab3Texts.taiwanJapanDict,
-            isOn: $taiwanJapanDictEnabled,
-            onChange: { newValue in
-                settings.taiwanJapanDictEnabled = newValue
-            }
-        )
-
-        // 6. 台華線頂對照典
-        SettingsToggleItem(
-            titleContent: Tab3Texts.taiHuaDict,
-            isOn: $taiHuaDictEnabled,
-            onChange: { newValue in
-                settings.taiHuaDictEnabled = newValue
-            }
-        )
-
-        // 7. 台灣植物名彙
-        SettingsToggleItem(
-            titleContent: Tab3Texts.taiwanPlantDict,
-            isOn: $taiwanPlantDictEnabled,
-            isLast: true,
-            onChange: { newValue in
-                settings.taiwanPlantDictEnabled = newValue
-            }
-        )
-    }
-
-    // MARK: - 異用字開關
-
-    @ViewBuilder
-    private var variantToggle: some View {
-        SettingsToggleItem(
-            titleContent: Tab3Texts.variantDictionary,
-            isOn: $variantEnabled,
-            isFirst: true,
-            isLast: true,
-            onChange: { newValue in
-                settings.variantEnabled = newValue
-            }
-        )
-    }
-
-    // MARK: - 自訂詞庫區塊
-
-    @ViewBuilder
-    private var customDictionaryPlaceholder: some View {
-        HStack {
-            LocalizedTextView(Tab3Texts.comingSoon)
-                .themeFontBody()
-                .foregroundColor(Color.Theme.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .center)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 24)
-    }
-
-    // MARK: - 清除資料區塊
-
-    @ViewBuilder
-    private var actionButtonsSection: some View {
-        SettingsActionButton(
-            titleContent: Tab3Texts.clearCache,
-            isFirst: true,
-            isLast: true,
-            action: { showClearCacheAlert = true }
-        )
     }
 
     /// 清除使用者學習資料（詞頻 + 詞關聯）

@@ -20,7 +20,6 @@ import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightDataSource
 import com.siansiansu.taigikeyboard.model.CopyrightPage
 import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -35,9 +34,6 @@ class CopyrightActivity : AppCompatActivity() {
 
         prefs = PrefHelper(this)
         languageManager = LanguageManager.getInstance(this)
-
-        // 套用字體 Theme（必須在 setContentView 之前）
-        ThemeUtils.applyFontTheme(this, prefs)
 
         setContentView(R.layout.activity_copyright)
 

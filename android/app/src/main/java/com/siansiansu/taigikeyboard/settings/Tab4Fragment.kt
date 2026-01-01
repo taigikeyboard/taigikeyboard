@@ -54,6 +54,7 @@ class Tab4Fragment : SettingsMainActivity.BaseSettingsFragment() {
         // 設定初始狀態
         when (prefs.inputMode) {
             "poj" -> toggleGroup.check(R.id.button_poj_mode)
+            "english" -> toggleGroup.check(R.id.button_english_mode)
             else -> toggleGroup.check(R.id.button_tl_mode)
         }
 
@@ -62,6 +63,7 @@ class Tab4Fragment : SettingsMainActivity.BaseSettingsFragment() {
                 when (checkedId) {
                     R.id.button_poj_mode -> prefs.inputMode = "poj"
                     R.id.button_tl_mode -> prefs.inputMode = "tl"
+                    R.id.button_english_mode -> prefs.inputMode = "english"
                 }
             }
         }
@@ -204,6 +206,8 @@ class Tab4Fragment : SettingsMainActivity.BaseSettingsFragment() {
             languageManager.text(Tab4Texts.pojMode)
         view.findViewById<MaterialButton>(R.id.button_tl_mode)?.text =
             languageManager.text(Tab4Texts.tlMode)
+        view.findViewById<MaterialButton>(R.id.button_english_mode)?.text =
+            languageManager.text(Tab4Texts.englishMode)
 
         // 字體設定
         view.findViewById<TextView>(R.id.text_custom_font)?.text =

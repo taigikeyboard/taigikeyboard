@@ -1,6 +1,14 @@
 import Foundation
 import KeyboardKit
 
+/// 鍵盤佈局類型
+enum KeyboardLayoutType: String, CaseIterable {
+    case phahTaigi = "phahTaigi"  // PhahTaigi 佈局
+    case qwerty = "qwerty"        // 標準 QWERTY 佈局
+    case flick = "flick"          // Flick 聲調佈局
+    case tps = "tps"              // 台灣注音（方音符號）佈局
+}
+
 class SharedSettings {
     let userDefaults: UserDefaults
 
@@ -42,9 +50,9 @@ class SharedSettings {
         static let outputBothScripts = "outputBothScripts"
         static let fontType = "fontType"
         static let fullAccessEnabled = "fullAccessEnabled"
-        static let autoCapitalizationEnabled = "autoCapitalizationEnabled"
         static let autoSpaceEnabled = "autoSpaceEnabled"
         static let phahTaigiLayoutEnabled = "phahTaigiLayoutEnabled"
+        static let keyboardLayoutType = "keyboardLayoutType"
         // 詞庫開關
         static let moeDictEnabled = "moeDictEnabled"
         static let newwordDictEnabled = "newwordDictEnabled"
@@ -120,14 +128,8 @@ class SharedSettings {
         }
     }
 
-    var isAutoCapitalizationEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.autoCapitalizationEnabled) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.autoCapitalizationEnabled)
-        }
-    }
+    // isAutoCapitalizationEnabled 已移至 KeyboardKit 的 KeyboardSettings
+    // 使用 state.keyboardContext.settings.isAutocapitalizationEnabled 存取
 
     var isAutoSpaceEnabled: Bool {
         get {
@@ -144,6 +146,19 @@ class SharedSettings {
         }
         set {
             userDefaults.set(newValue, forKey: Keys.phahTaigiLayoutEnabled)
+        }
+    }
+
+    /// 鍵盤佈局類型
+    var keyboardLayoutType: KeyboardLayoutType {
+        get {
+            let rawValue = userDefaults.string(forKey: Keys.keyboardLayoutType) ?? KeyboardLayoutType.phahTaigi.rawValue
+            return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
+            // 同步舊的 phahTaigiLayoutEnabled 設定（向後相容）
+            phahTaigiLayoutEnabled = (newValue == .phahTaigi)
         }
     }
 
@@ -206,9 +221,9 @@ class SharedSettings {
         isTranslateSwapped = false
         outputBothScripts = false
         fontType = .openHuninn
-        isAutoCapitalizationEnabled = true
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
+        keyboardLayoutType = .phahTaigi
         // 詞庫開關預設（iTaigi 預設關閉）
         moeDictEnabled = true
         newwordDictEnabled = true
@@ -218,17 +233,30 @@ class SharedSettings {
         taiHuaDictEnabled = true
         taiwanPlantDictEnabled = true
         variantEnabled = false
+
+        // 重設 KeyboardKit 設定
+        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
     }
 }
 
-extension SharedSettings {
-    func syncToKeyboardContext(_ context: KeyboardKit.KeyboardContext) {
-        context.settings.spaceLongPressBehavior = .moveInputCursor
+import OSLog
 
-        // 同步自動大寫設定
-        // KeyboardKit 會根據此設定自動處理，不需要手動強制重置 keyboardCase
-        // 保留手動 shift (.uppercased) 和 caps lock (.capsLocked) 的狀態
-        context.settings.isAutocapitalizationEnabled = isAutoCapitalizationEnabled
+private let settingsLogger = Logger(
+    subsystem: LexiconConstants.Logging.subsystem,
+    category: "SharedSettings"
+)
+
+extension SharedSettings {
+    /// 同步台語鍵盤專屬設定到 KeyboardContext
+    ///
+    /// 注意：isAutocapitalizationEnabled 由 KeyboardKit 自動管理，
+    /// 透過 KeyboardSettings.setupStore() 使用 App Group 持久化。
+    func syncToKeyboardContext(_ context: KeyboardKit.KeyboardContext) {
+        // KeyboardKit 10: 設定空白鍵長按行為
+        context.settings.spacebarLongPressBehavior = .moveInputCursor
+
+        // 自動大寫設定由 KeyboardKit 的 KeyboardSettings 自動管理
+        // 不需要手動同步，KeyboardKit 會自動讀取持久化的值
     }
 }
 

@@ -1,93 +1,89 @@
 # Tone 聲調處理
 
-> **功能代號**: `Tone`
-> **關鍵字**: `Tone`, `聲調`, `調符`, `ToneConverter`, `ToneMappings`
+> **類型**: 功能
+> **關鍵字**: `Tone`, `ToneConverter`, `ToneMappings`, `ToneRestoration`
+> **相關**: composing.md
 
 ---
 
-## 概述
+## 重點摘要
 
-台語有 8 個聲調，其中聲調 1（陰平）和 4（陰入）在傳統標記中不加調號。本鍵盤以數字形式顯示聲調 1 和 4，方便使用者辨識。
+- 台語 8 聲調，聲調 1/4 不加調號
+- 輸入數字聲調，顯示轉為調符（除 1/4）
+- 支援 POJ 和 TL 兩種羅馬字系統
 
 ---
 
 ## 聲調對照表
 
-| 聲調 | 調號 | 顯示範例 | 說明 |
-|------|------|----------|------|
+| 聲調 | 調號 | 範例 | 說明 |
+|------|------|------|------|
 | 1 | (無) | `gua1` | 陰平，顯示數字 |
 | 2 | ́ (acute) | `guá` | 陰上 |
 | 3 | ̀ (grave) | `guà` | 陰去 |
-| 4 | (無) | `at4` | 陰入，顯示數字，韻尾 -p/-t/-k/-h |
+| 4 | (無) | `at4` | 陰入，顯示數字 |
 | 5 | ̂ (circumflex) | `guâ` | 陽平 |
-| 6 | ̌ (caron) | `guǎ` | 陽上 |
+| 6 | ̌ (caron) | `guǎ` | 陽上（少用） |
 | 7 | ̄ (macron) | `guā` | 陽去 |
-| 8 | ̍ (vertical line) | `gua̍` | 陽入 |
-| 9 | ̆ / ̋ | `guă` / `gua̋` | 輕聲（POJ/TL） |
+| 8 | ̍ (vertical) | `gua̍t` | 陽入 |
+| 9 | ̆ / ̋ | `guă` | 輕聲 |
 
 ---
 
 ## 核心邏輯
 
-### 1. 詞庫生成（`to_numeric_tone`）
-
-無調號音節根據韻尾自動補上聲調：
-
-```python
-if syllable[-1] in "ptkh":
-    syllable = syllable + "4"  # 入聲韻尾 → 陰入
-else:
-    syllable = syllable + "1"  # 其餘 → 陰平
-```
-
-### 2. 輸入顯示（`ToneConverter`）
+### 1. 輸入顯示（ToneConverter）
 
 | 輸入 | rawInput | composingText |
 |------|----------|---------------|
 | `gua1` | `gua1` | `gua1` |
-| `at4` | `at4` | `at4` |
 | `gua2` | `gua2` | `guá` |
+| `at4` | `at4` | `at4` |
 
-聲調 1/4 保留數字顯示，其餘轉為調符。
+### 2. 詞庫生成（to_numeric_tone）
 
-### 3. 搜尋正規化（`InputNormalizer`）
+```python
+# 無調號音節根據韻尾補聲調
+if syllable[-1] in "ptkh":
+    syllable += "4"  # 入聲
+else:
+    syllable += "1"  # 陰平
+```
 
-所有聲調數字保留，直接用於 Trie 搜尋：
+### 3. 聲調還原（ToneRestoration）
 
-| rawInput | 正規化結果 |
-|----------|------------|
-| `gua1` | `gua1` |
-| `at4` | `at4` |
-| `gua2` | `gua2` |
+刪除時需還原調符為基本字元：
+- `guá` → `gua`
+- `hó͘` → `ho͘` (POJ)
 
 ---
 
-## 相關檔案
+## POJ vs TL 差異
 
-| 層面 | Android | iOS |
-|------|---------|-----|
-| 顯示轉換 | `ToneConverter.kt` | `POJToneConverter.swift` / `TLToneConverter.swift` |
-| 搜尋正規化 | `InputNormalizer.kt` | `InputNormalizer.swift` |
-| 詞庫生成 | `dictionary/common/romanization.py` | - |
+| 項目 | POJ | TL |
+|------|-----|-----|
+| 母音 oo | `o͘` (U+006F+U+0358) | `oo` |
+| 鼻化 | `ⁿ` (U+207F) | `nn` |
+| 聲調 8 | `o̍` | `o̍` |
+
+---
+
+## 平台對照
+
+| 項目 | iOS | Android |
+|------|-----|---------|
+| 轉換器 | `POJToneConverter.swift`, `TLToneConverter.swift` | `ToneConverter.kt` |
+| 映射表 | `ToneMappings.swift` | `ToneConverterModels.kt` |
+| 還原 | `ToneRestoration.swift` | 內建於 ToneConverter |
+| 工具 | `ToneUtilities.swift` | `ToneCharacterUtils.kt` |
 
 ---
 
 ## 測試案例
 
-### 顯示
-
-| 輸入 | 顯示 (POJ/TL) |
-|------|---------------|
-| `gua1` | `gua1` |
-| `at4` | `at4` |
-| `gua2` | `guá` |
-| `hoo2` (POJ) | `hó͘` |
-| `hoo2` (TL) | `hóo` |
-
-### 搜尋
-
-| 輸入 | 正規化 | 匹配詞庫 |
-|------|--------|----------|
-| `gua1` | `gua1` | `gua1...` |
-| `at4` | `at4` | `at4...` |
-| `gua2` | `gua2` | `gua2...` |
+| 輸入 | POJ 顯示 | TL 顯示 |
+|------|----------|---------|
+| `gua1` | `gua1` | `gua1` |
+| `gua2` | `guá` | `guá` |
+| `hoo2` | `hó͘` | `hóo` |
+| `phiann` | `phiaⁿ` | `phiann` |

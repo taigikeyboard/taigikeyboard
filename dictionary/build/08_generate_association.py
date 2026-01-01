@@ -36,7 +36,7 @@ SCRIPT_NAME = "08_generate_association"
 
 # 字數限制
 MIN_WORD_LEN = 2
-MAX_WORD_LEN = 5  # NextWord 用 ≤5 字，比前綴搜尋 (≤3 字) 更寬
+MAX_WORD_LEN = 5  # NextWord 用 ≤5 字，比前綴搜尋 (≤4 字) 更寬
 
 # 詞庫來源欄位
 SOURCE_COLUMNS = ["kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit", "kungge"]

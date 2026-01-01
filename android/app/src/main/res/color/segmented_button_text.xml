@@ -3,5 +3,5 @@
     <!-- 選中狀態 -->
     <item android:color="@android:color/white" android:state_checked="true" />
     <!-- 未選中狀態 -->
-    <item android:color="@color/modern_text_primary" />
+    <item android:color="?attr/colorOnSurface" />
 </selector>

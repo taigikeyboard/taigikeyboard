@@ -16,15 +16,17 @@ import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyboardView
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.*
-import java.util.*
 
 class MediaInputManager private constructor() : CoroutineScope by MainScope(),
     TaigiKeyboard.EventListener {
 
     private val taigikeyboard = TaigiKeyboard.getInstance()
 
-    private var osTimer: Timer? = null
+    private var osHandler: Handler? = null
+    private var isDeletePressed: Boolean = false
     private var emojiKeyboardView: ViewFlipper? = null
 
     var mediaViewGroup: LinearLayout? = null
@@ -105,17 +107,25 @@ class MediaInputManager private constructor() : CoroutineScope by MainScope(),
                 taigikeyboard.keyPressVibrate(view)
                 taigikeyboard.keyPressSound(data)
                 if (data?.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
-                    osTimer = Timer()
-                    osTimer?.scheduleAtFixedRate(object : TimerTask() {
+                    isDeletePressed = true
+                    if (osHandler == null) {
+                        osHandler = Handler(Looper.getMainLooper())
+                    }
+                    // 使用 Handler 替代 Timer，確保回調在主執行緒執行
+                    val repeatDelete = object : Runnable {
                         override fun run() {
-                            taigikeyboard.textInputManager.sendKeyPress(data)
+                            if (isDeletePressed) {
+                                taigikeyboard.textInputManager.sendKeyPress(data)
+                                osHandler?.postDelayed(this, 50)
+                            }
                         }
-                    }, 500, 50)
+                    }
+                    osHandler?.postDelayed(repeatDelete, 500)
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                osTimer?.cancel()
-                osTimer = null
+                isDeletePressed = false
+                osHandler?.removeCallbacksAndMessages(null)
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && data != null) {
                     taigikeyboard.textInputManager.sendKeyPress(data)
                 }

@@ -1,6 +1,8 @@
 import Foundation
 
-/// 聲調相關工具方法
+/// 聲調工具
+///
+/// 提供聲調字母大小寫轉換和漢字判斷等輔助功能。
 enum ToneUtilities {
 
     /// 聲調字母大寫轉換
@@ -13,6 +15,18 @@ enum ToneUtilities {
             ToneMappings.pojLowercaseToUppercase :
             ToneMappings.tlLowercaseToUppercase
         return mapping[char] ?? char.uppercased()
+    }
+
+    /// 聲調字母小寫轉換
+    /// - Parameters:
+    ///   - char: 要轉換的字元
+    ///   - mode: 輸入模式（POJ/TL）
+    /// - Returns: 小寫後的字元，如果不是聲調字母則使用標準轉換
+    static func lowercaseToneLetter(_ char: String, mode: InputMode) -> String {
+        let mapping = mode == .poj ?
+            ToneMappings.pojUppercaseToLowercase :
+            ToneMappings.tlUppercaseToLowercase
+        return mapping[char] ?? char.lowercased()
     }
 
     /// 判斷字串是否包含漢字

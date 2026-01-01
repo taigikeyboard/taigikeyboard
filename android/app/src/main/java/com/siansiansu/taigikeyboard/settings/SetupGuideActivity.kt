@@ -18,7 +18,6 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
-import com.siansiansu.taigikeyboard.util.ThemeUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
 /**
@@ -52,9 +51,6 @@ class SetupGuideActivity : AppCompatActivity() {
         prefs = PrefHelper(this)
         languageManager = LanguageManager.getInstance(this)
         isFullScreen = intent.getBooleanExtra(EXTRA_IS_FULL_SCREEN, false)
-
-        // 套用字體 Theme（必須在 setContentView 之前）
-        ThemeUtils.applyFontTheme(this, prefs)
 
         setContentView(R.layout.activity_setup_guide)
 
@@ -98,8 +94,8 @@ class SetupGuideActivity : AppCompatActivity() {
 
         // 設定文字
         setupDescription.text = languageManager.text(Tab1Texts.setupGuideDescription)
-        step1Title.text = languageManager.text(Tab1Texts.setupGuideStep1)
-        step2Title.text = languageManager.text(Tab1Texts.setupGuideStep2)
+        step1Title.text = languageManager.text(Tab1Texts.setupGuideStep1Settings)
+        step2Title.text = languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard)
         completedMessage.text = languageManager.text(Tab1Texts.setupGuideCompletedMessage)
         btnGoToSettings.text = languageManager.text(Tab1Texts.setupGuideGoToSettings)
         privacyMessage.text = languageManager.text(Tab1Texts.setupInfoMessage)

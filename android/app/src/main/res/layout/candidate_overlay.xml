@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 候選詞展開 Overlay 主容器 -->
-<merge xmlns:android="http://schemas.android.com/apk/res/android">
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <!-- 候選詞網格滾動容器 -->
     <ScrollView
@@ -46,7 +47,7 @@
             android:padding="12dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_keyboard_arrow_up"
-            android:tint="?android:attr/textColorPrimary" />
+            app:tint="?smartbar_fgColor" />
 
         <!-- 分頁與翻譯按鈕容器 -->
         <LinearLayout
@@ -67,7 +68,7 @@
                 android:padding="10dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_arrow_triangle_up"
-                android:tint="?android:attr/textColorPrimary" />
+                app:tint="?smartbar_fgColor" />
 
             <!-- 下一頁按鈕 -->
             <ImageButton
@@ -81,7 +82,7 @@
                 android:padding="10dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_arrow_triangle_down"
-                android:tint="?android:attr/textColorPrimary" />
+                app:tint="?smartbar_fgColor" />
 
             <!-- 翻譯切換按鈕 -->
             <ImageButton
@@ -94,7 +95,7 @@
                 android:padding="10dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_translate"
-                android:tint="?android:attr/textColorPrimary" />
+                app:tint="?smartbar_fgColor" />
 
         </LinearLayout>
 

@@ -1,11 +1,26 @@
 import Foundation
 
-/// Helper for determining confirm key text based on settings
+/// 確認鍵文字輔助工具
+///
+/// 組字模式時，Enter 按鍵顯示的確認文字。
+/// 根據 isTranslateSwapped 和 inputMode 顯示不同文字：
+/// - isTranslateSwapped = true → "選"
+/// - isTranslateSwapped = false, inputMode = .poj → "soán"
+/// - isTranslateSwapped = false, inputMode = .tl → "suán"
 struct ConfirmKeyTextHelper {
 
-    /// Get the appropriate text for the confirm/return key
-    /// - Returns: The text to display on the confirm key
     static func getConfirmKeyText() -> String {
-        return Tab4Texts.confirmKey.hanji
+        let settings = SharedSettings.shared
+
+        if settings.isTranslateSwapped {
+            return "選"
+        }
+
+        switch settings.inputMode {
+        case .poj:
+            return "soán"
+        case .tl, .english:
+            return "suán"
+        }
     }
 }

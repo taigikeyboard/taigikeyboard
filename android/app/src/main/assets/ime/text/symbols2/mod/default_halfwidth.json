@@ -9,10 +9,9 @@
       { "code":   -5, "label": "delete", "type": "enter_editing" }
     ], [
       { "code": -201, "label": "view_characters", "type": "system_gui" },
-      { "code":   60, "label": "<", "popup": [] },
       { "code": -205, "label": "view_numeric_advanced", "type": "system_gui" },
       { "code":   32, "label": " ", "popup": [] },
-      { "code":   62, "label": ">", "popup": [] },
+      { "code": -230, "label": "", "type": "function" },
       { "code":   10, "label": "enter", "type": "enter_editing" }
     ]
   ]

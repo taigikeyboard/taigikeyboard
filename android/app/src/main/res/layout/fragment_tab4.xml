@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/modern_surface_primary"
+    android:background="?attr/colorSurface"
     android:fillViewport="true">
 
     <LinearLayout
@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@color/modern_text_primary"
+            android:textColor="?attr/colorOnSurface"
             android:layout_marginBottom="24dp"
             tools:text="設定" />
 
@@ -36,8 +36,8 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke"
-            app:cardBackgroundColor="@color/modern_surface_card">
+            app:strokeColor="?attr/colorOutline"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -52,7 +52,7 @@
                     android:text="@string/settings__input_mode"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/modern_text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="20dp" />
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
@@ -73,7 +73,7 @@
                         android:text="@string/settings__poj_mode"
                         app:backgroundTint="@color/segmented_button_background"
                         android:textColor="@color/segmented_button_text"
-                        app:strokeColor="@color/modern_accent" />
+                        app:strokeColor="?attr/colorPrimary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_tl_mode"
@@ -84,7 +84,18 @@
                         android:text="@string/settings__tl_mode"
                         app:backgroundTint="@color/segmented_button_background"
                         android:textColor="@color/segmented_button_text"
-                        app:strokeColor="@color/modern_accent" />
+                        app:strokeColor="?attr/colorPrimary" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/button_english_mode"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings__english_mode"
+                        app:backgroundTint="@color/segmented_button_background"
+                        android:textColor="@color/segmented_button_text"
+                        app:strokeColor="?attr/colorPrimary" />
 
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -101,8 +112,8 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke"
-            app:cardBackgroundColor="@color/modern_surface_card">
+            app:strokeColor="?attr/colorOutline"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -117,7 +128,7 @@
                     android:text="@string/settings__custom_font"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@color/modern_text_primary"
+                    android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="20dp" />
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
@@ -138,7 +149,7 @@
                         android:text="@string/settings__font_system"
                         app:backgroundTint="@color/segmented_button_background"
                         android:textColor="@color/segmented_button_text"
-                        app:strokeColor="@color/modern_accent" />
+                        app:strokeColor="?attr/colorPrimary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_font_huninn"
@@ -149,7 +160,7 @@
                         android:text="@string/settings__font_open_huninn"
                         app:backgroundTint="@color/segmented_button_background"
                         android:textColor="@color/segmented_button_text"
-                        app:strokeColor="@color/modern_accent" />
+                        app:strokeColor="?attr/colorPrimary" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_font_iansui"
@@ -160,7 +171,7 @@
                         android:text="@string/settings__font_iansui"
                         app:backgroundTint="@color/segmented_button_background"
                         android:textColor="@color/segmented_button_text"
-                        app:strokeColor="@color/modern_accent" />
+                        app:strokeColor="?attr/colorPrimary" />
 
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -177,8 +188,8 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke"
-            app:cardBackgroundColor="@color/modern_surface_card">
+            app:strokeColor="?attr/colorOutline"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -202,7 +213,7 @@
                         android:layout_weight="1"
                         android:text="@string/settings__output_both_scripts"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_output_both"
@@ -232,7 +243,7 @@
                         android:layout_weight="1"
                         android:text="@string/settings__auto_capitalization"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_auto_cap"
@@ -262,7 +273,7 @@
                         android:layout_weight="1"
                         android:text="@string/settings__auto_space"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_auto_space"
@@ -292,7 +303,7 @@
                         android:layout_weight="1"
                         android:text="@string/settings__double_tap_oo"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_double_oo"
@@ -322,7 +333,7 @@
                         android:layout_weight="1"
                         android:text="@string/settings__double_tap_nn"
                         android:textSize="16sp"
-                        android:textColor="@color/modern_text_primary" />
+                        android:textColor="?attr/colorOnSurface" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_double_nn"
@@ -344,8 +355,8 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke"
-            app:cardBackgroundColor="@color/modern_surface_card">
+            app:strokeColor="?attr/colorOutline"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
             <LinearLayout
                 android:id="@+id/row_reset_settings"
@@ -365,7 +376,7 @@
                     android:layout_weight="1"
                     android:text="@string/settings__reset_settings"
                     android:textSize="16sp"
-                    android:textColor="@color/modern_accent_secondary" />
+                    android:textColor="?attr/colorError" />
 
             </LinearLayout>
 
@@ -381,8 +392,8 @@
             app:cardCornerRadius="10dp"
             app:cardElevation="0dp"
             app:strokeWidth="1dp"
-            app:strokeColor="@color/spyfamily_card_stroke"
-            app:cardBackgroundColor="@color/modern_surface_card">
+            app:strokeColor="?attr/colorOutline"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
             <LinearLayout
                 android:id="@+id/row_debug_zone"
@@ -402,13 +413,13 @@
                     android:layout_weight="1"
                     android:text="@string/settings__debug_zone"
                     android:textSize="16sp"
-                    android:textColor="@color/modern_text_primary" />
+                    android:textColor="?attr/colorOnSurface" />
 
                 <ImageView
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:src="@drawable/ic_chevron_right"
-                    app:tint="@color/modern_text_secondary" />
+                    app:tint="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
 

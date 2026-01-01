@@ -1,9 +1,12 @@
 import KeyboardKit
 import SwiftUI
 
-// MARK: - CandidateView Style System
+/// 候選詞視圖樣式系統
+///
+/// 定義候選詞視圖的樣式配置，支援 iOS 26 Liquid Glass 效果。
 
-/// 台語鍵盤候選詞視圖的樣式系統，參考 KeyboardKit 的設計模式
+// MARK: - 樣式定義
+
 extension CandidateView {
 
     /// 候選詞視圖的樣式配置，支援 iOS 26 Liquid Glass 效果
@@ -160,7 +163,7 @@ extension CandidateView {
     }
 }
 
-// MARK: - Standard Styles
+// MARK: - 標準樣式
 
 extension CandidateView.Style {
 
@@ -203,7 +206,7 @@ extension CandidateView.ButtonStyle {
     }
 }
 
-// MARK: - Style Environment
+// MARK: - 環境鍵
 
 /// CandidateView 樣式的環境鍵
 private struct CandidateViewStyleKey: EnvironmentKey {
@@ -230,7 +233,7 @@ extension View {
     }
 }
 
-// MARK: - Style Utilities
+// MARK: - 樣式工具
 
 extension CandidateView.Style {
 

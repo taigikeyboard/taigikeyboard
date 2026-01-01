@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="@color/modern_accent" android:state_checked="true" />
-    <item android:color="@color/modern_text_secondary" />
+    <!-- 使用 Material 3 主題屬性 -->
+    <item android:color="?attr/colorPrimary" android:state_checked="true" />
+    <item android:color="?attr/colorOnSurfaceVariant" />
 </selector>

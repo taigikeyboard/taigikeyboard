@@ -12,10 +12,15 @@ object LocaleUtils {
         return when {
             string.contains(DELIMITER) -> {
                 val lc = string.split(DELIMITER)
-                Locale(lc[0], lc[1])
+                Locale.Builder()
+                    .setLanguage(lc[0])
+                    .setRegion(lc[1])
+                    .build()
             }
             else -> {
-                Locale(string)
+                Locale.Builder()
+                    .setLanguage(string)
+                    .build()
             }
         }
     }

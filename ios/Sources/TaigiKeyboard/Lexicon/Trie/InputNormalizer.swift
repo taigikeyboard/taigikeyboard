@@ -1,14 +1,23 @@
 import Foundation
+import OSLog
+
+#if DEBUG
+private let normalizerLogger = Logger(
+    subsystem: LexiconConstants.Logging.subsystem,
+    category: "InputNormalizer"
+)
+#endif
 
 /// 輸入正規化工具
 ///
 /// 將使用者輸入統一轉換為 TL 數字聲調格式：
+/// - TPS 方音（ㄉㄧㄠˊ）→ tiau5
 /// - POJ 調符（hó）→ hoo2
 /// - TL 調符（hóo）→ hoo2
 /// - POJ 數字（ho2）→ hoo2
 /// - TL 數字（hoo2）→ hoo2
 ///
-/// 處理步驟：分割音節 → 逐音節處理（調符轉數字）→ 合併
+/// 處理步驟：TPS 轉換 → 分割音節 → 逐音節處理（調符轉數字）→ 合併
 enum InputNormalizer {
 
     // MARK: - Tone Mappings
@@ -31,6 +40,7 @@ enum InputNormalizer {
     /// 正規化輸入為 Trie 查詢格式（TL 數字聲調）
     ///
     /// 支援任何輸入格式：
+    /// - TPS 方音（ㄉㄧㄠˊ）→ tiau5
     /// - POJ 調符（hó-bô）→ hoo2boo5
     /// - TL 調符（hóo-bôo）→ hoo2boo5
     /// - POJ 數字（ho2-bo5）→ hoo2boo5
@@ -43,17 +53,36 @@ enum InputNormalizer {
     static func normalize(_ input: String, mode: InputMode) -> String {
         guard !input.isEmpty else { return "" }
 
+        // 檢測並轉換 TPS（台灣方音符號）
+        // TPS 輸入會直接轉換為 TL 數字聲調格式
+        let processedInput = TPSConverter.containsTPS(input)
+            ? TPSConverter.toTL(input)
+            : input
+
         // 轉小寫
-        let lowercased = input.lowercased()
+        let lowercased = processedInput.lowercased()
+
+        // 判斷是否需要補上預設聲調（1 或 4）
+        // 只有當輸入包含調符時，才對無調符音節補上預設聲調
+        // 避免對不完整輸入（如單字母 "g"）錯誤加上聲調
+        let shouldAddDefaultTones = hasToneMarks(lowercased)
 
         // 以連字符分割音節，逐音節處理
         let syllables = lowercased.split(separator: "-", omittingEmptySubsequences: false)
         let result = syllables.map { syllable in
-            normalizeSyllable(String(syllable))
+            normalizeSyllable(String(syllable), addDefaultTone: shouldAddDefaultTones)
         }
 
         // 合併（不含連字符）
-        return result.joined()
+        let normalized = result.joined()
+
+        #if DEBUG
+        if input != normalized {
+            normalizerLogger.debug("[NORMALIZE] input='\(input)' -> '\(normalized)'")
+        }
+        #endif
+
+        return normalized
     }
 
     /// 移除輸入中的所有聲調（調符和數字）
@@ -87,7 +116,29 @@ enum InputNormalizer {
         input.contains { $0.isNumber }
     }
 
+    /// 檢查輸入是否需要正規化
+    ///
+    /// 包含以下情況需要正規化：
+    /// - TPS 方音符號（ㄅㄆㄇ 等）
+    /// - 聲調符號（́ ̀ ̂ 等）
+    /// - POJ 特殊字符（o͘ 使用 U+0358 COMBINING DOT ABOVE RIGHT）
+    static func needsNormalization(_ input: String) -> Bool {
+        // 檢查是否包含 TPS
+        if TPSConverter.containsTPS(input) {
+            return true
+        }
+        // 檢查是否包含調符或 POJ 特殊字符
+        let nfd = input.decomposedStringWithCanonicalMapping
+        return nfd.unicodeScalars.contains { scalar in
+            toneMarkToNumber[scalar] != nil || scalar == "\u{0358}"
+        }
+    }
+
     // MARK: - Private Methods
+
+    /// 入聲韻尾（-p, -t, -k, -h）
+    /// 無調符且以這些結尾的音節為第 4 聲
+    private static let checkedEndings: Set<Character> = ["p", "t", "k", "h"]
 
     /// 正規化單一音節
     ///
@@ -95,10 +146,15 @@ enum InputNormalizer {
     /// 1. 轉換 POJ 鼻音符號 ⁿ → nn
     /// 2. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
     /// 3. 提取聲調標記，轉為數字
-    /// 4. 組合：音節 + 聲調數字
+    /// 4. 無調符時根據韻尾判斷聲調 1 或 4（僅當 addDefaultTone = true）
+    /// 5. 組合：音節 + 聲調數字
+    ///
+    /// - Parameters:
+    ///   - syllable: 音節字串
+    ///   - addDefaultTone: 是否對無調符音節補上預設聲調（1 或 4）
     ///
     /// 注意：不做 POJ→TL 拼法轉換（如 ch→ts），因為 Trie 使用前綴區分（tl:/poj:）
-    private static func normalizeSyllable(_ syllable: String) -> String {
+    private static func normalizeSyllable(_ syllable: String, addDefaultTone: Bool) -> String {
         guard !syllable.isEmpty else { return "" }
 
         // 轉換 POJ 鼻音符號 ⁿ (U+207F) → nn
@@ -126,6 +182,17 @@ enum InputNormalizer {
                 toneNumber = tone  // 取最後一個聲調標記
             } else {
                 withoutTone.append(String(scalar))
+            }
+        }
+
+        // 無調符時根據韻尾判斷聲調（僅當 addDefaultTone = true）
+        if addDefaultTone, toneNumber.isEmpty, let lastChar = withoutTone.last {
+            if checkedEndings.contains(lastChar) {
+                // 入聲韻尾（-p, -t, -k, -h）→ 第 4 聲
+                toneNumber = "4"
+            } else {
+                // 開音節 → 第 1 聲
+                toneNumber = "1"
             }
         }
 

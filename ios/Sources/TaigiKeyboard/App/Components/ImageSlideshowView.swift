@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// 靜態圖片輪播元件（參考 azookey）
+/// 圖片輪播元件
+///
+/// 自動循環播放圖片，用於設定引導頁面。
 struct ImageSlideshowView: View {
     let imageNames: [String]
     let interval: TimeInterval

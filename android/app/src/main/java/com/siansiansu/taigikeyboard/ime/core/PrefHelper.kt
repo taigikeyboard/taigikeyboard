@@ -19,6 +19,10 @@ import kotlinx.coroutines.runBlocking
 class PrefHelper(
     private val context: Context
 ) {
+    companion object {
+        private const val TAG = "PrefHelper"
+    }
+
     private val dataStore = context.preferencesDataStore
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -292,7 +296,7 @@ class PrefHelper(
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = value
-                    android.util.Log.d("PrefHelper", "PhahTaigiLayoutEnabled set to: $value")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "[PREF] PhahTaigiLayoutEnabled set to: $value")
                 }
             }
         }

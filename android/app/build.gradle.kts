@@ -1,21 +1,26 @@
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.0.21"
-    id("com.google.devtools.ksp") version "2.0.21-1.0.28"
 }
+
+// 產生日期字串 (yyyyMMdd)
+val buildDate: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
 
 android {
     namespace = "com.siansiansu.taigikeyboard"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 338
-        versionName = "3.3.8"
+        versionCode = 339
+        versionName = "3.3.9"
 
         ndk {
             debugSymbolLevel = "FULL"
@@ -76,6 +81,12 @@ android {
     }
 }
 
+// 設定輸出檔名：TaigiKeyboard-{versionName}-{yyyyMMdd}
+// 例如：TaigiKeyboard-3.3.9-20251231-release.aab
+base {
+    archivesName.set("TaigiKeyboard-${android.defaultConfig.versionName}-$buildDate")
+}
+
 // Task 用於顯示目前的 versionCode（用於驗證）
 tasks.register("printVersionCode") {
     doLast {
@@ -91,18 +102,18 @@ tasks.register("printVersionCode") {
 dependencies {
     // AndroidX 核心
     implementation("androidx.appcompat:appcompat:1.7.1")
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("com.google.android.material:material:1.13.0")
-    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.activity:activity-ktx:1.12.2")
 
     // Lifecycle（Compose 需要）
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
     // Compose BOM（統一版本管理）
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    val composeBom = platform("androidx.compose:compose-bom:2025.12.01")
     implementation(composeBom)
 
     // Compose 核心元件
@@ -110,7 +121,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.activity:activity-compose:1.12.2")
     implementation("androidx.compose.material:material-icons-extended")
 
     // Compose 偵錯工具
@@ -123,23 +134,14 @@ dependencies {
     implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-    // Room Database
-    val roomVersion = "2.6.1"
-    implementation("androidx.room:room-runtime:$roomVersion")
-    implementation("androidx.room:room-ktx:$roomVersion")
-    ksp("androidx.room:room-compiler:$roomVersion")
-
-    // Compose LiveData 整合
-    implementation("androidx.compose.runtime:runtime-livedata")
+    implementation("androidx.datastore:datastore-preferences:1.2.0")
 
     // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
