@@ -6,9 +6,13 @@
 輸入：output/trie.db
 輸出：output/dictionary.trie
 
-Key 格式（前綴區分）：
-- TL：tl:tl_num, tl:tl_notone, tl:tl_abbrev
-- POJ：poj:poj_num, poj:poj_notone, poj:poj_abbrev
+Key 格式（前綴式）：
+- tl:<tl_num>：TL 數字聲調（如 tl:hoo2-se3）
+- tl:<tl_notone>：TL 去調（如 tl:hoo-se）
+- poj:<poj_num>：POJ 數字聲調（如 poj:ho2-se3）
+- poj:<poj_notone>：POJ 去調（如 poj:ho-se）
+- tl:<tl_abbrev>：TL 縮寫（如 tl:hs）
+- poj:<poj_abbrev>：POJ 縮寫（如 poj:hs）
 
 Value：SQLite rowid（對應 dictionary.db 的 id）
 """
@@ -74,34 +78,35 @@ def main():
     logger.info(f"Loaded {len(rows)} records from database")
     logger.info(f"Columns: {list(columns)}")
 
-    # 建立 key-value pairs（前綴區分 TL/POJ）
+    # 建立 key-value pairs（前綴式）
+    TL_PREFIX = "tl:"
+    POJ_PREFIX = "poj:"
+
     pairs = []
     seen_keys = set()
+
+    def add_pair(key, rowid):
+        pair_key = (key, rowid)
+        if pair_key not in seen_keys:
+            seen_keys.add(pair_key)
+            pairs.append((key, (rowid,)))
 
     for row in rows:
         rowid = row["id"]
 
-        # TL keys（tl: 前綴）
+        # TL keys (tl: prefix)
         for col in ["tl_num", "tl_notone", "tl_abbrev"]:
             if col in columns:
                 val = row[col]
                 if val:
-                    key = f"tl:{val}"
-                    pair_key = (key, rowid)
-                    if pair_key not in seen_keys:
-                        seen_keys.add(pair_key)
-                        pairs.append((key, (rowid,)))
+                    add_pair(TL_PREFIX + val, rowid)
 
-        # POJ keys（poj: 前綴）
+        # POJ keys (poj: prefix)
         for col in ["poj_num", "poj_notone", "poj_abbrev"]:
             if col in columns:
                 val = row[col]
                 if val:
-                    key = f"poj:{val}"
-                    pair_key = (key, rowid)
-                    if pair_key not in seen_keys:
-                        seen_keys.add(pair_key)
-                        pairs.append((key, (rowid,)))
+                    add_pair(POJ_PREFIX + val, rowid)
 
     logger.info(f"Generated {len(pairs)} key-value pairs")
 
@@ -119,7 +124,7 @@ def main():
 
     # 測試查詢
     logger.info(f"\n  [test queries]")
-    test_keys = ["tl:gua", "tl:gua2", "poj:goa", "poj:goa2", "tl:gh", "poj:gh"]
+    test_keys = ["tl:gua", "tl:gua2", "poj:goa", "poj:goa2", "tl:gh"]
     for key in test_keys:
         if key in trie:
             results = trie[key]

@@ -89,7 +89,7 @@ struct DebugFrequencyView: View {
         isLoading = true
         Task {
             // 使用 async 版本確保資料庫初始化
-            let data = await UserFrequencyRepository.shared.getTopWordsAsync(limit: 10000)
+            let data = await UserFrequencyRepository.shared.topWordsAsync(limit: 10000)
             await MainActor.run {
                 allData = data
                 filteredData = data

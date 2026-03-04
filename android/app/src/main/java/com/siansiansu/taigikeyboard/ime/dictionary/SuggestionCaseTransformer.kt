@@ -46,18 +46,21 @@ object SuggestionCaseTransformer {
             return word
         }
 
-        // 組字文字候選詞（index = 0，roman = composingText）不需轉換
+        // 組字文字候選詞（id == 0）不需轉換
         // 因為它已經是使用者輸入的文字
-        if (word.roman == composingText) {
+        // 使用 id 標記而非字串比較，避免誤匹配同名辭典詞（aligned with iOS flag-based approach）
+        if (word.id == 0) {
             return word
         }
 
-        val transformedRoman = transformText(
-            originalText = word.roman,
-            composingText = composingText,
-            caps = caps,
-            capsLock = capsLock,
-            inputMode = inputMode
+        val transformedRoman = ToneUtilities.adjustNasalMarkerCase(
+            transformText(
+                originalText = word.roman,
+                composingText = composingText,
+                caps = caps,
+                capsLock = capsLock,
+                inputMode = inputMode
+            )
         )
 
         return word.copy(roman = transformedRoman)
@@ -181,9 +184,9 @@ object SuggestionCaseTransformer {
             if (char.isLetter() && sourceLetters.isNotEmpty()) {
                 val sourceChar = sourceLetters.removeAt(0)
                 if (sourceChar.isUpperCase()) {
-                    result.append(ToneConverterModels.uppercaseToneLetter(char.toString(), inputMode))
+                    result.append(ToneUtilities.uppercaseToneLetter(char.toString(), inputMode))
                 } else {
-                    result.append(ToneConverterModels.lowercaseToneLetter(char.toString(), inputMode))
+                    result.append(ToneUtilities.lowercaseToneLetter(char.toString(), inputMode))
                 }
             } else {
                 result.append(char)
@@ -206,10 +209,10 @@ object SuggestionCaseTransformer {
         for (char in text) {
             if (char.isLetter()) {
                 if (isFirstLetter) {
-                    result.append(ToneConverterModels.uppercaseToneLetter(char.toString(), inputMode))
+                    result.append(ToneUtilities.uppercaseToneLetter(char.toString(), inputMode))
                     isFirstLetter = false
                 } else {
-                    result.append(ToneConverterModels.lowercaseToneLetter(char.toString(), inputMode))
+                    result.append(ToneUtilities.lowercaseToneLetter(char.toString(), inputMode))
                 }
             } else {
                 result.append(char)
@@ -224,7 +227,7 @@ object SuggestionCaseTransformer {
      */
     private fun toUppercase(text: String, inputMode: ToneConverterModels.InputMode): String {
         return text.map { char ->
-            ToneConverterModels.uppercaseToneLetter(char.toString(), inputMode)
+            ToneUtilities.uppercaseToneLetter(char.toString(), inputMode)
         }.joinToString("")
     }
 
@@ -233,7 +236,7 @@ object SuggestionCaseTransformer {
      */
     private fun toLowercase(text: String, inputMode: ToneConverterModels.InputMode): String {
         return text.map { char ->
-            ToneConverterModels.lowercaseToneLetter(char.toString(), inputMode)
+            ToneUtilities.lowercaseToneLetter(char.toString(), inputMode)
         }.joinToString("")
     }
 }

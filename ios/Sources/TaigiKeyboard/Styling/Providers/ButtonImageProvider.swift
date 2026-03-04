@@ -17,6 +17,9 @@ class ButtonImageProvider {
         switch action {
         case .nextKeyboard:
             return Image(systemName: "globe")
+        case .primary(.return):
+            // Show newline icon when not composing; nil lets ButtonTextProvider show confirmation text
+            return keyboardContext.isComposingText ? nil : Image(systemName: "arrow.turn.down.left")
         case .settings:
             return Image(systemName: "gearshape.fill")
         case let .custom(name):

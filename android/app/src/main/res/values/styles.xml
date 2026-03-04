@@ -72,6 +72,20 @@
 
     <style name="SmartbarModeButton" parent="SmartbarActionButton.Text" />
 
+    <!-- Compact toolbar icon button (denser spacing for toolbar row) -->
+    <style name="SmartbarToolbarIcon" parent="SmartbarActionButton.Icon">
+        <item name="android:layout_width">36dp</item>
+        <item name="android:layout_marginHorizontal">2dp</item>
+        <item name="android:padding">6dp</item>
+    </style>
+
+    <!-- Compact toolbar mode button (denser spacing for toolbar row) -->
+    <style name="SmartbarToolbarMode" parent="SmartbarActionButton.Text">
+        <item name="android:minWidth">40dp</item>
+        <item name="android:paddingHorizontal">8dp</item>
+        <item name="android:layout_marginHorizontal">2dp</item>
+    </style>
+
     <!-- 英文三欄式候選詞樣式 -->
     <style name="SmartbarEnglishCandidate">
         <item name="android:layout_width">0dp</item>

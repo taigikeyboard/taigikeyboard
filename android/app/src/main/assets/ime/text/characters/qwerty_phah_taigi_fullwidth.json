@@ -26,8 +26,8 @@
       { "code":   108, "label": "l" },
       { "code":    45, "label": "-" }
     ], [
-      { "code": 12290, "label": "。" },
       { "code": 65292, "label": "，" },
+      { "code": 12290, "label": "。" },
       { "code":    99, "label": "c" },
       { "code":   118, "label": "v" },
       { "code":    98, "label": "b" },

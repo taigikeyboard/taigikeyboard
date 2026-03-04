@@ -3,7 +3,7 @@ import KeyboardKit
 
 /// 頭頁 Tab
 ///
-/// 顯示啟用方法、新功能、已知問題、網站紹介、FAQ。
+/// 顯示啟用方法、新功能、網站紹介、FAQ。
 struct Tab1: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @StateObject private var languageManager = LanguageManager.shared
@@ -30,46 +30,11 @@ struct Tab1: View {
                         NavigationLink {
                             FeatureDetailView(feature: feature)
                         } label: {
-                            Label(languageManager.text(feature.title), systemImage: feature.icon)
-                        }
-                    }
-                }
-
-                // 處理中的問題
-                Section(languageManager.text(Tab1Texts.knownIssues)) {
-                    ForEach(IssueType.allCases, id: \.self) { issue in
-                        NavigationLink {
-                            IssueDetailView(issue: issue)
-                        } label: {
-                            HStack(spacing: 12) {
-                                Text("\(issue.number)")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .frame(width: 20, height: 20)
-                                    .background(Color.accentColor)
-                                    .clipShape(Circle())
-
-                                Text(languageManager.text(issue.title))
-                            }
-                        }
-                    }
-                }
-
-                // 預計新功能
-                Section(languageManager.text(Tab1Texts.upcomingFeatures)) {
-                    ForEach(UpcomingType.allCases, id: \.self) { upcoming in
-                        NavigationLink {
-                            UpcomingDetailView(upcoming: upcoming)
-                        } label: {
-                            HStack(spacing: 12) {
-                                Text("\(upcoming.number)")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .frame(width: 20, height: 20)
-                                    .background(Color.accentColor)
-                                    .clipShape(Circle())
-
-                                Text(languageManager.text(upcoming.title))
+                            Label {
+                                Text(languageManager.text(feature.title))
+                            } icon: {
+                                Image(systemName: feature.icon)
+                                    .foregroundStyle(.orange)
                             }
                         }
                     }

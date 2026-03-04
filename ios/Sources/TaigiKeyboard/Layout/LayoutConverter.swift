@@ -1,11 +1,12 @@
 import KeyboardKit
+import UIKit
 
-/// 將 KeyDef 佈局轉換為 KeyboardKit 的 KeyboardLayout
+/// Converts KeyDef layout to KeyboardKit's KeyboardLayout
 struct LayoutConverter {
     let context: KeyboardContext
     let config: KeyboardLayout.DeviceConfiguration
 
-    /// 將 [[KeyDef]] 轉換為 KeyboardLayout
+    /// Converts [[KeyDef]] to KeyboardLayout
     func convert(_ keyDefs: [[KeyDef]]) -> KeyboardLayout {
         let itemRows = keyDefs.map { row in
             row.map { keyDef in
@@ -23,11 +24,11 @@ struct LayoutConverter {
         return action.standardLayoutItem(for: config, width: width)
     }
 
-    /// 將 KeyDef 轉換為 KeyboardAction
+    /// Converts KeyDef to KeyboardAction
     private func keyDefToAction(_ keyDef: KeyDef) -> KeyboardAction {
         switch keyDef {
         case .char(let char, let fullWidth):
-            // 根據 isTranslateSwapped 決定使用半形或全形
+            // Use half-width or full-width based on isTranslateSwapped
             let actualChar = context.isTranslateSwapped ? (fullWidth ?? char) : char
             return .character(actualChar)
 
@@ -63,9 +64,11 @@ struct LayoutConverter {
         }
     }
 
-    /// 決定按鍵寬度
+    /// Determines key width
     private func widthFor(_ keyDef: KeyDef) -> KeyboardLayout.ItemWidth? {
-        let isPortrait = context.interfaceOrientation.isPortrait
+        // Use UIKit native API for orientation (KeyboardKit 10 no longer provides interfaceOrientation)
+        let screenBounds = UIScreen.main.bounds
+        let isPortrait = screenBounds.height > screenBounds.width
 
         switch keyDef {
         case .shift, .backspace:
@@ -90,7 +93,7 @@ struct LayoutConverter {
             return .input
 
         case .char:
-            return nil  // 使用預設 input 寬度
+            return nil  // Use default input width
         }
     }
 }

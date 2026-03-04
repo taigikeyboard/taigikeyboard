@@ -34,12 +34,14 @@ INPUT_FILES = [
     ("5_台華線頂對照典/data/taihoa.csv", "taihoa"),
     ("6_台日大辭典/data/taijit.csv", "taijit"),
     ("7_台語工藝詞庫/data/kungge.csv", "kungge"),
+    ("13_學科術語辭典/data/stti.csv", "stti"),
+    ("14_齒盤補充辭典/data/khpoo.csv", "khpoo"),
 ]
 OUTPUT_DIR = "output"
 OUTPUT_FILE = "dictionary.csv"
 SCRIPT_NAME = "01_merge_csv"
 
-SOURCE_COLUMNS = ["kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit", "kungge"]
+SOURCE_COLUMNS = ["kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit", "kungge", "stti", "khpoo"]
 
 
 def main():
@@ -70,6 +72,7 @@ def main():
     logger.info(f"\n  Total before merge: {len(merged_df)} records")
 
     # 去重複：相同 (hanzi, tl) 合併來源欄位
+    # dropna=False: 保留 hanzi 為空（NaN）的詞條（台語常見純羅馬字詞）
     agg_dict = {}
     for col in merged_df.columns:
         if col in ["hanzi", "tl"]:
@@ -80,7 +83,7 @@ def main():
             agg_dict[col] = "max"
         else:
             agg_dict[col] = "first"
-    result_df = merged_df.groupby(["hanzi", "tl"], as_index=False).agg(agg_dict)
+    result_df = merged_df.groupby(["hanzi", "tl"], as_index=False, dropna=False).agg(agg_dict)
 
     # 排序：依 frequency 降序
     result_df = result_df.sort_values(

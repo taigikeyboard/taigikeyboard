@@ -32,19 +32,3 @@ extension View {
     }
 }
 
-struct LocalizedTextView: View {
-    let text: LocalizedText
-    @ObservedObject private var languageManager = LanguageManager.shared
-
-    init(_ text: LocalizedText) {
-        self.text = text
-    }
-
-    var body: some View {
-        Text(languageManager.text(text))
-    }
-}
-
-extension Notification.Name {
-    static let languageDidChange = Notification.Name("languageDidChange")
-}

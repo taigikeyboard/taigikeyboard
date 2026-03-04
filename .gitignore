@@ -71,3 +71,4 @@ ENV/
 .claude/settings.local.json
 
 references
+!spec/references

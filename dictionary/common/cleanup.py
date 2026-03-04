@@ -9,12 +9,12 @@
 4. 剔除俚語（漢字含全形標點符號）
 5. 剔除含非法字符的 TL（使用 KeSi kam_haphuat 驗證）
 6. 剔除無效的 hanzi（含 '.'、連續空格、'?'、Tab、大括號、單獨括號）
-7. 移除空白列
+6.5. 清空包含羅馬字的 hanzi（含拉丁字母或台語聲調符號，保留該筆資料）
+7. 移除 tl 為空的列（保留 hanzi 為空的詞條，因為台語常見純羅馬字詞）
 8. 移除過長詞條（使用 KeSi thianji() 計算音節數，預設 4+ 音節）
 9. 正規化羅馬字（空格轉連字符、轉小寫）
 10. 去重複（hanzi + tl）
-11. 若 hanzi 為空且 tl 已有對應漢字版本，則刪除該筆
-12. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
+11. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
 """
 
 import re
@@ -159,14 +159,49 @@ def is_valid_hanzi(text):
     return True
 
 
-def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES):
+def contains_roman_in_hanzi(text):
+    """
+    檢查 hanzi 欄位是否包含羅馬字（拉丁字母或台語聲調符號）
+
+    包含以下任一情況視為含羅馬字：
+    - 基本拉丁字母 a-zA-Z
+    - 台語羅馬字調號（如 ā, á, ǎ, à, ē, é, ě, è, ō, ó, ǒ, ò, m̄, ń 等）
+
+    忽略：
+    - 空值
+    - 連字符號 '-'
+    """
+    if pd.isna(text):
+        return False
+    text = str(text).strip()
+    if text == "":
+        return False
+
+    # 移除連字符號後檢查
+    text_without_hyphen = text.replace('-', '')
+
+    # 檢查是否包含基本拉丁字母 a-zA-Z
+    if re.search(r'[a-zA-Z]', text_without_hyphen):
+        return True
+
+    # 檢查是否包含台語羅馬字常見的帶調號字母
+    # POJ/TL 調號：ā á ǎ à ē é ě è ī í ǐ ì ō ó ǒ ò ū ú ǔ ù m̄ ḿ m̌ m̀ n̄ ń ň ǹ o͘ 等
+    roman_tone_pattern = r'[āáǎàaⁿēéěèeⁿīíǐìiⁿōóǒòoⁿūúǔùuⁿm̄ḿm̌m̀n̄ńňǹṁṅⁿ]'
+    if re.search(roman_tone_pattern, text_without_hyphen):
+        return True
+
+    return False
+
+
+def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False):
     """
     執行完整的資料清理流程
 
     Args:
         df: DataFrame（需有 hanzi, tl 欄位）
         logger: Logger 實例（可選）
-        max_syllables: 最大音節數，超過則移除（預設 3）
+        max_syllables: 最大音節數，超過則移除（預設 5）
+        check_roman_in_hanzi: 是否檢查並清空 hanzi 欄位中的羅馬字（預設 False）
 
     Returns:
         清理後的 DataFrame
@@ -210,9 +245,17 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES):
         logger.info(f"  Removed invalid hanzi (dot or consecutive spaces): {invalid_hanzi_count}")
     df = df[valid_hanzi_mask]
 
-    # 7. 移除空白列
+    # 6.5. 清空包含羅馬字的 hanzi（但保留該筆資料）
+    if check_roman_in_hanzi:
+        roman_mask = df["hanzi"].apply(contains_roman_in_hanzi)
+        roman_in_hanzi_count = roman_mask.sum()
+        if roman_in_hanzi_count > 0:
+            df.loc[roman_mask, "hanzi"] = ""
+            if logger:
+                logger.info(f"  Cleared hanzi containing roman letters: {roman_in_hanzi_count}")
+
+    # 7. 移除空白列（只檢查 tl，保留 hanzi 為空的詞條）
     df = df[df["tl"].str.strip() != ""]
-    df = df[df["hanzi"].str.strip() != ""]
 
     # 8. 移除過長詞條
     before_long = len(df)
@@ -232,21 +275,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES):
     if removed > 0 and logger:
         logger.info(f"  Removed duplicates (hanzi+tl): {removed}")
 
-    # 11. 若 hanzi 為空，檢查 tl 是否重複（保留有漢字的，刪除無漢字的重複項）
-    before_empty_hanzi = len(df)
-    # 找出所有 tl 值
-    all_tl_values = set(df["tl"])
-    # 找出有漢字的 tl 值
-    has_hanzi_tl = set(df[df["hanzi"].str.strip() != ""]["tl"])
-    # 對於 hanzi 為空的資料，若其 tl 已有對應的漢字版本，則刪除
-    empty_hanzi_duplicate_mask = (df["hanzi"].str.strip() == "") & (df["tl"].isin(has_hanzi_tl))
-    empty_hanzi_removed = empty_hanzi_duplicate_mask.sum()
-    if empty_hanzi_removed > 0:
-        df = df[~empty_hanzi_duplicate_mask]
-        if logger:
-            logger.info(f"  Removed empty hanzi duplicates: {empty_hanzi_removed}")
-
-    # 12. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
+    # 11. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
     hanlo_matched_mask = df.apply(lambda row: is_hanlo_matched(row["hanzi"], row["tl"]), axis=1)
     hanlo_mismatch_count = (~hanlo_matched_mask).sum()
     if hanlo_mismatch_count > 0 and logger:

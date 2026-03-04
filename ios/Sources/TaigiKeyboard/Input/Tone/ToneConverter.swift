@@ -8,44 +8,81 @@ private let toneLogger = Logger(
 )
 #endif
 
-/// 聲調轉換器
+/// Tone converter
 ///
-/// 協調 POJ 和 TL 模式的聲調轉換，提供統一介面。
+/// Coordinates POJ and TL tone conversion through TaigiPhonetics engine.
+/// POJ preprocessing (oo→o͘, nn→ⁿ) is handled here since it depends on SharedSettings.
 enum ToneConverter {
 
-    /// 轉換輸入為聲調標記
+    /// Convert input to tone marks
     /// - Parameters:
-    ///   - input: 輸入字串（可包含多個音節）
-    ///   - mode: 輸入模式（POJ/TL）
-    /// - Returns: 轉換後的字串
+    ///   - input: Input string (may contain multiple hyphen-separated syllables)
+    ///   - mode: Input mode (POJ/TL)
+    /// - Returns: Converted string
     static func convertToToneMarks(_ input: String, mode: InputMode) -> String {
         let result: String
         switch mode {
         case .poj:
-            let preprocessed = POJToneConverter.preprocess(input)
-            result = POJToneConverter.convert(preprocessed)
+            let preprocessed = preprocessPojInput(input)
+            result = TaigiPhonetics.convertToToneMarks(preprocessed, mode: .poj)
         case .tl:
-            result = TLToneConverter.convert(input)
+            result = TaigiPhonetics.convertToToneMarks(input, mode: .tl)
         case .english:
-            // 英文模式不需要聲調轉換
             result = input
         }
 
+        let adjusted = ToneUtilities.adjustNasalMarkerCase(result)
+
         #if DEBUG
-        if input != result {
-            toneLogger.debug("[TONE] input='\(input)' mode=\(String(describing: mode)) -> '\(result)'")
+        if input != adjusted {
+            toneLogger.debug("[TONE] input='\(input, privacy: .public)' mode=\(String(describing: mode), privacy: .public) -> '\(adjusted, privacy: .public)'")
         }
         #endif
+
+        return adjusted
+    }
+
+    // MARK: - POJ Preprocessing (moved from POJToneConverter)
+
+    /// Preprocess POJ input based on user settings (oo→o͘, nn→ⁿ)
+    private static func preprocessPojInput(_ input: String) -> String {
+        var result = input
+        let settings = SharedSettings.shared
+
+        if settings.enableDoubleTapOO {
+            result = result.replacingOccurrences(of: "oo", with: "o͘")
+            result = result.replacingOccurrences(of: "Oo", with: "O͘")
+            result = result.replacingOccurrences(of: "OO", with: "O͘")
+        }
+
+        if settings.enableDoubleTapNN {
+            result = convertNasalDoubleN(result)
+        }
 
         return result
     }
 
-    /// 還原聲調標記為基本字母
-    /// - Parameters:
-    ///   - text: 要還原的文字
-    ///   - mode: 輸入模式（POJ/TL）
-    /// - Returns: 還原後的文字，若無法還原則回傳 nil
-    static func restoreTone(_ text: String, mode: InputMode) -> String? {
-        ToneRestoration.restore(text, mode: mode)
+    /// Convert "nn" sequences after vowels to nasal marker "ⁿ"
+    private static func convertNasalDoubleN(_ input: String) -> String {
+        let vowels = "aeiouAEIOU"
+        var result = ""
+        let chars = Array(input)
+        var i = 0
+
+        while i < chars.count {
+            if i + 2 < chars.count,
+               vowels.contains(chars[i]),
+               String(chars[i + 1]).lowercased() == "n",
+               String(chars[i + 2]).lowercased() == "n"
+            {
+                result += String(chars[i]) + "ⁿ"
+                i += 3
+            } else {
+                result += String(chars[i])
+                i += 1
+            }
+        }
+
+        return result
     }
 }

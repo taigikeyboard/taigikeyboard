@@ -226,7 +226,8 @@ class LayoutManager(
     private fun computeLayoutFor(
         keyboardMode: KeyboardMode,
         subtype: Subtype,
-        overrideIsTranslateSwapped: Boolean? = null
+        overrideIsTranslateSwapped: Boolean? = null,
+        overrideInputMode: String? = null
     ): ComputedLayoutData {
         var main: LTN? = null
         var modifier: LTN? = null
@@ -235,33 +236,66 @@ class LayoutManager(
         // 根據 isTranslateSwapped 決定使用半形或全形標點的佈局
         // 優先使用傳入的 override 值，避免 DataStore 非同步讀取導致的時序問題
         val isTranslateSwapped = overrideIsTranslateSwapped ?: prefs.isTranslateSwapped
+        val inputMode = overrideInputMode ?: prefs.inputMode
         val modSuffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
         val symbolsSuffix = if (isTranslateSwapped) "fullwidth" else "default"
 
         when (keyboardMode) {
             KeyboardMode.CHARACTERS -> {
-                // 選擇佈局：English mode > phahTaigi > POJ/TL
+                // 選擇佈局：English mode > keyboardLayoutType
                 val layoutName = when {
-                    prefs.inputMode == "english" -> "qwerty_english"
-                    prefs.phahTaigiLayoutEnabled -> {
-                        // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
-                        val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
-                        "qwerty_phah_taigi_$suffix"
-                    }
-                    else -> {
-                        // 原有邏輯：根據 inputMode 選擇 poj/tl
-                        when (prefs.inputMode) {
-                            "poj" -> "qwerty_poj"
-                            "tl" -> "qwerty_tl"
-                            else -> "qwerty_poj"
+                    inputMode == "english" -> "qwerty_english"
+                    else -> when (prefs.keyboardLayoutType) {
+                        "phahTaigi" -> {
+                            // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
+                            val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
+                            "qwerty_phah_taigi_$suffix"
+                        }
+                        "moe1" -> {
+                            val suffix = if (isTranslateSwapped) "_fullwidth" else ""
+                            when (inputMode) {
+                                "poj" -> "qwerty_moe1_poj$suffix"
+                                else -> "qwerty_moe1$suffix"
+                            }
+                        }
+                        "moe2" -> {
+                            val suffix = if (isTranslateSwapped) "_fullwidth" else ""
+                            when (inputMode) {
+                                "poj" -> "qwerty_moe2_poj$suffix"
+                                else -> "qwerty_moe2$suffix"
+                            }
+                        }
+                        "qwerty" -> {
+                            // 原有邏輯：根據 inputMode 選擇 poj/tl
+                            when (inputMode) {
+                                "poj" -> "qwerty_poj"
+                                "tl" -> "qwerty_tl"
+                                else -> "qwerty_tl"
+                            }
+                        }
+                        else -> {
+                            // 向後相容：使用舊的 phahTaigiLayoutEnabled
+                            if (prefs.phahTaigiLayoutEnabled) {
+                                val suffix = if (isTranslateSwapped) "fullwidth" else "halfwidth"
+                                "qwerty_phah_taigi_$suffix"
+                            } else {
+                                when (inputMode) {
+                                    "poj" -> "qwerty_poj"
+                                    "tl" -> "qwerty_tl"
+                                    else -> "qwerty_tl"
+                                }
+                            }
                         }
                     }
                 }
-                if (BuildConfig.DEBUG) Log.d(TAG, "[LAYOUT] Loading layout: $layoutName (inputMode=${prefs.inputMode}, phahTaigi=${prefs.phahTaigiLayoutEnabled}, isTranslateSwapped=$isTranslateSwapped)")
+                if (BuildConfig.DEBUG) Log.d(TAG, "[LAYOUT] Loading layout: $layoutName (inputMode=$inputMode, layoutType=${prefs.keyboardLayoutType}, isTranslateSwapped=$isTranslateSwapped)")
                 main = LTN(LayoutType.CHARACTERS, layoutName)
                 // 根據模式選擇 modifier
                 val modifierName = when {
-                    prefs.inputMode == "english" -> "english"
+                    inputMode == "english" -> "english"
+                    prefs.keyboardLayoutType == "phahTaigi" -> "phah_taigi_$modSuffix"
+                    prefs.keyboardLayoutType == "moe1" -> "moe1_$modSuffix"
+                    prefs.keyboardLayoutType == "moe2" -> "moe2_$modSuffix"
                     prefs.phahTaigiLayoutEnabled -> "phah_taigi_$modSuffix"
                     else -> "default_$modSuffix"
                 }
@@ -312,5 +346,22 @@ class LayoutManager(
         overrideIsTranslateSwapped: Boolean? = null
     ): ComputedLayoutData {
         return computeLayoutFor(keyboardMode, subtype, overrideIsTranslateSwapped)
+    }
+
+    /**
+     * Fetches a layout for preview mode, always using Taigi mode (never English).
+     * This matches iOS KeyboardPreviewPanel behavior.
+     */
+    fun fetchComputedLayoutForPreview(
+        keyboardMode: KeyboardMode,
+        subtype: Subtype
+    ): ComputedLayoutData {
+        // Force Taigi mode — if user's inputMode is "english", override to "tl"
+        val previewInputMode = if (prefs.inputMode == "english") "tl" else prefs.inputMode
+        return computeLayoutFor(
+            keyboardMode, subtype,
+            overrideIsTranslateSwapped = false,
+            overrideInputMode = previewInputMode
+        )
     }
 }

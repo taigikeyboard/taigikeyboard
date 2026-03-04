@@ -48,7 +48,7 @@ class KeyboardViewController: KeyboardInputViewController {
         #endif
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
         #if DEBUG
-            logger.info("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
+            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
         #endif
     }
 
@@ -59,14 +59,14 @@ class KeyboardViewController: KeyboardInputViewController {
         #endif
         super.init(coder: coder)
         #if DEBUG
-            logger.info("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
+            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
         #endif
     }
 
     deinit {
         #if DEBUG
             Self.instanceCount -= 1
-            logger.info("[MEMORY] KeyboardViewController #\(self.instanceId) deinit (remaining: \(Self.instanceCount))")
+            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) deinit (remaining: \(Self.instanceCount))")
         #endif
         performCleanup()
     }
@@ -108,15 +108,7 @@ class KeyboardViewController: KeyboardInputViewController {
                 return AnyView(EmptyView())
             }
 
-            let layoutType = SharedSettings.shared.keyboardLayoutType
-
-            // 根據佈局類型選擇不同的鍵盤視圖
-            switch layoutType {
-            case .flick:
-                return AnyView(keyboardController.createFlickKeyboardView(controller: controller))
-            case .phahTaigi, .qwerty, .tps:
-                return AnyView(keyboardController.createQwertyKeyboardView(controller: controller))
-            }
+            return AnyView(keyboardController.createQwertyKeyboardView(controller: controller))
         }
     }
 
@@ -140,45 +132,6 @@ class KeyboardViewController: KeyboardInputViewController {
             },
             onTranslateToggle: { [unowned self] in
                 self.toggleTranslateSwap()
-            }
-        )
-    }
-
-    /// 建立 Flick 鍵盤視圖
-    private func createFlickKeyboardView(controller: KeyboardInputViewController) -> some View {
-        let actionHandler = controller.services.actionHandler as! ActionHandler
-
-        return TaigiFlickKeyboardView(
-            services: controller.services,
-            autocompleteContext: controller.state.autocompleteContext,
-            keyboardContext: controller.state.keyboardContext,
-            composingManager: actionHandler.composingManager,
-            onSuggestionTap: { [unowned controller] suggestion in
-                controller.services.actionHandler.handle(suggestion)
-            },
-            onTranslateToggle: { [unowned self] in
-                self.toggleTranslateSwap()
-            },
-            onTextInput: { [unowned actionHandler] text in
-                actionHandler.handleFlickInput(text)
-            },
-            onDelete: { [unowned controller] in
-                controller.services.actionHandler.handle(.backspace)
-            },
-            onSpace: { [unowned controller] in
-                controller.services.actionHandler.handle(.space)
-            },
-            onReturn: { [unowned controller] in
-                controller.services.actionHandler.handle(.primary(.return))
-            },
-            onGlobe: { [unowned self] in
-                self.services.actionHandler.handle(.nextKeyboard)
-            },
-            onSwitchToQwerty: { [unowned self] in
-                // 切換回 QWERTY 佈局
-                SharedSettings.shared.keyboardLayoutType = .phahTaigi
-                // 觸發鍵盤視圖重建
-                self.viewWillSetupKeyboardView()
             }
         )
     }
@@ -239,6 +192,11 @@ class KeyboardViewController: KeyboardInputViewController {
 
         #if DEBUG
         logger.debug("[CASE][textDidChangeAsync] isAutoCap=\(isAutoCap, privacy: .public) keyboardCase=\(String(describing: self.state.keyboardContext.keyboardCase), privacy: .public)")
+
+        // DEBUG: NextWord trace - textDidChangeAsync state
+        if let handler = actionHandler {
+            logger.debug("[NEXTWORD][textDidChangeAsync] isShowingNextWord=\(handler.isShowingNextWord, privacy: .public) isComposing=\(handler.composingManager.isComposing, privacy: .public) rawInput='\(handler.composingManager.rawInput, privacy: .public)'")
+        }
         #endif
 
         if isAutoCap {

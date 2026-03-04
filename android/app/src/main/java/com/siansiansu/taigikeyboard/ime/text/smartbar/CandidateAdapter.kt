@@ -44,12 +44,33 @@ class CandidateAdapter(
     // 動態計算的文字大小
     private var candidateTextSizeSp: Float = 16f
 
+    // Candidate text size scale factor (from appearance settings)
+    private var textSizeScale: Float = 1.0f
+
+    // Custom candidate text color override (null = use theme default)
+    private var customTextColor: Int? = null
+
     /**
      * 設定候選詞文字大小（根據 Smartbar 高度計算）
      */
     fun setTextSize(smartbarHeight: Int) {
-        val candidateTextSizePx = smartbarHeight * 0.42f
-        candidateTextSizeSp = candidateTextSizePx / context.resources.displayMetrics.scaledDensity
+        val candidateTextSizePx = smartbarHeight * 0.46f * textSizeScale
+        val scaledDensity = context.resources.displayMetrics.density * context.resources.configuration.fontScale
+        candidateTextSizeSp = candidateTextSizePx / scaledDensity
+    }
+
+    /**
+     * Set candidate text size scale factor from appearance settings.
+     */
+    fun setTextSizeScale(scale: Float) {
+        textSizeScale = scale
+    }
+
+    /**
+     * Set custom candidate text color from appearance settings (null = theme default).
+     */
+    fun setCustomTextColor(color: Int?) {
+        customTextColor = color
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CandidateViewHolder {
@@ -109,6 +130,9 @@ class CandidateAdapter(
                 }
                 typeface = cachedTypeface
 
+                // Apply custom text color if set
+                customTextColor?.let { setTextColor(it) }
+
                 // 設定點擊事件
                 setOnClickListener {
                     onCandidateClick(word, position)
@@ -120,6 +144,7 @@ class CandidateAdapter(
          * 建立顯示文字（主標題 + 副標題）
          */
         private fun buildDisplayText(word: TaigiWord, isSwapped: Boolean): CharSequence {
+            val effectiveSubtitleColor = customTextColor ?: subtitleColor
             return when {
                 // 沒有漢字：只顯示羅馬字
                 word.hanzi.isNullOrEmpty() -> word.roman
@@ -138,7 +163,7 @@ class CandidateAdapter(
                             Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                         )
                         setSpan(
-                            ForegroundColorSpan(subtitleColor),
+                            ForegroundColorSpan(effectiveSubtitleColor),
                             subtitleStart,
                             length,
                             Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -160,7 +185,7 @@ class CandidateAdapter(
                             Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
                         )
                         setSpan(
-                            ForegroundColorSpan(subtitleColor),
+                            ForegroundColorSpan(effectiveSubtitleColor),
                             subtitleStart,
                             length,
                             Spannable.SPAN_EXCLUSIVE_EXCLUSIVE

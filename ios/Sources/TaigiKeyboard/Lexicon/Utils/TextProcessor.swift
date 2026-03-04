@@ -1,9 +1,25 @@
 import Foundation
 import KeyboardKit
 
-/// 文字處理工具
-/// 提供詞彙文字處理相關的靜態方法
-enum TextProcessor {
+/// Candidate processing utilities
+///
+/// Provides capitalization, deduplication, scoring, and text classification.
+enum CandidateProcessor {
+
+    // MARK: - Text Classification
+
+    /// Check if a string contains Hanzi characters
+    static func isHanzi(_ input: String) -> Bool {
+        input.contains { char in
+            guard let scalar = char.unicodeScalars.first else { return false }
+            return (0x4E00 ... 0x9FFF).contains(scalar.value)
+                || (0x3400 ... 0x4DBF).contains(scalar.value)
+                || (0x20000 ... 0x2A6DF).contains(scalar.value)
+                || (0x2A700 ... 0x2B73F).contains(scalar.value)
+                || (0x2B740 ... 0x2B81F).contains(scalar.value)
+                || (0x2B820 ... 0x2CEAF).contains(scalar.value)
+        }
+    }
 
     // MARK: - Capitalization
 
@@ -14,7 +30,7 @@ enum TextProcessor {
             forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
         )
 
-        return CaseTransformationService.capitalizeCandidate(
+        return CaseTransformer.capitalizeCandidate(
             text,
             basedOn: input,
             isAutoCapitalizationEnabled: isAutoCap,
@@ -52,13 +68,13 @@ enum TextProcessor {
 
     /// 計算候選詞排序分數
     ///
-    /// 簡化公式（v3，與 Android 一致）：
-    /// `userFreqScore + recencyBonus + exactBonus + baseFreqScore`
+    /// 公式（v4，與 Android 一致）：
+    /// `userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore`
     ///
     /// 設計理念：
     /// - userFreqScore 主導排序（穩定性優先）
+    /// - closenessBonus 讓長度較接近輸入的候選詞排序較前（cold-start 主要因素）
     /// - recencyBonus 和 exactBonus 只做微調（不會讓低頻詞超過高頻詞）
-    /// - 移除長度懲罰（讓使用者行為決定排序）
     ///
     /// - Parameters:
     ///   - word: 候選詞
@@ -70,9 +86,9 @@ enum TextProcessor {
         normalizedInput: String,
         frequencyData: UserFrequencyService.FrequencyData
     ) -> Int {
-        let candidateRoman = word.roman
-            .replacingOccurrences(of: "-", with: "")
-            .lowercased()
+        // Normalize both sides to base form (no tones, no hyphens) for comparison
+        let candidateBase = romanToBase(word.roman)
+        let inputBase = inputToBase(normalizedInput)
 
         // 使用者頻率（主導因素，上限 100，max 10000）
         let cappedUserFreq = min(frequencyData.count, 100)
@@ -90,12 +106,44 @@ enum TextProcessor {
         }
 
         // 完全匹配加分（微調，+100）
-        let exactBonus = (candidateRoman == normalizedInput) ? 100 : 0
+        let exactBonus = (candidateBase == inputBase) ? 100 : 0
+
+        // Match closeness bonus (0-500): reward candidates whose length matches input
+        let inputLen = max(inputBase.count, 1)
+        let candidateLen = max(candidateBase.count, 1)
+        let matchRatio = Double(min(inputLen, candidateLen)) / Double(max(inputLen, candidateLen))
+        let closenessBonus = Int(matchRatio * 500)
 
         // 詞庫頻率（新詞 fallback，約 0-100）
         let baseFreqScore = (word.lengthScore ?? 0) / 10
 
-        return userFreqScore + recencyBonus + exactBonus + baseFreqScore
+        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore
+    }
+
+    // MARK: - Base Form Helpers
+
+    /// Strip roman to base form for matching (no tones, no hyphens, lowercase)
+    /// "tāi-tsì" → "taitsi", "tai5-tsi3" → "taitsi"
+    private static func romanToBase(_ roman: String) -> String {
+        let noHyphens = roman.replacingOccurrences(of: "-", with: "")
+        let withNasal = noHyphens
+            .replacingOccurrences(of: "\u{207F}", with: "nn")
+            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
+        let nfd = withNasal.decomposedStringWithCanonicalMapping
+        let withOo = nfd.replacingOccurrences(of: "\u{0358}", with: "o")
+        // Strip combining marks (tone diacritics) and tone digits
+        let stripped = withOo.unicodeScalars.filter {
+            $0.properties.generalCategory != .nonspacingMark
+        }
+        return String(String.UnicodeScalarView(stripped))
+            .filter { !$0.isNumber }
+            .lowercased()
+    }
+
+    /// Strip tone digits from normalized input
+    /// "tai5tsi3" → "taitsi", "taitsi" → "taitsi"
+    private static func inputToBase(_ normalizedInput: String) -> String {
+        normalizedInput.filter { !$0.isNumber }.lowercased()
     }
 
     /// 根據分數排序詞彙（與 Android 一致）
@@ -120,43 +168,5 @@ enum TextProcessor {
         }
     }
 
-    /// 根據使用者頻率排序詞彙（舊版，保留向後相容）
-    @available(*, deprecated, message: "Use sortByScore with frequencyDataMap instead")
-    static func sortByScore(
-        _ words: [TaigiWord],
-        normalizedInput: String,
-        frequencies: [String: Int]
-    ) -> [TaigiWord] {
-        // 轉換為 FrequencyData（無 lastUsed）
-        let frequencyDataMap = frequencies.mapValues {
-            UserFrequencyService.FrequencyData(count: $0, lastUsedMillis: 0)
-        }
-        return sortByScore(words, normalizedInput: normalizedInput, frequencyDataMap: frequencyDataMap)
-    }
 
-    /// 根據使用者頻率排序詞彙（舊版，保留向後相容）
-    @available(*, deprecated, message: "Use sortByScore instead for consistency with Android")
-    static func sortByFrequency(
-        _ words: [TaigiWord],
-        frequencies: [String: Int]
-    ) -> [TaigiWord] {
-        sortByScore(words, normalizedInput: "", frequencies: frequencies)
-    }
-
-    /// 收集詞彙的使用頻率
-    /// - Parameters:
-    ///   - words: 詞彙陣列
-    ///   - getFrequency: 取得詞彙頻率的閉包
-    /// - Returns: 詞彙頻率字典
-    static func collectFrequencies(
-        for words: [TaigiWord],
-        using getFrequency: (String) -> Int
-    ) -> [String: Int] {
-        let wordTexts = words.compactMap(\.displayText)
-        return wordTexts.reduce(into: [:]) { dict, word in
-            if dict[word] == nil {
-                dict[word] = getFrequency(word)
-            }
-        }
-    }
 }

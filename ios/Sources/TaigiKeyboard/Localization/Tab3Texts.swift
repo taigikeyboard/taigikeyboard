@@ -30,16 +30,16 @@ enum Tab3Texts {
     // MARK: - 詞庫名稱
 
     // 教育部臺灣台語常用詞辭典
-    static let moeDict = LocalizedText(hanji: "台語常用詞辭典 - 教育部")
+    static let moeDict = LocalizedText(hanji: "台語常用詞辭典")
 
     // 台語新詞辭庫
-    static let newwordDict = LocalizedText(hanji: "台語新詞辭庫 - 公視台語台")
+    static let newwordDict = LocalizedText(hanji: "台語新詞辭庫")
 
     // 台語工藝詞庫
-    static let kunggeDict = LocalizedText(hanji: "台語工藝詞庫 - 工藝中心")
+    static let kunggeDict = LocalizedText(hanji: "台語工藝辭庫")
 
     // iTaigi 華台辭典
-    static let iTaigiDict = LocalizedText(hanji: "iTaigi愛台語 - 群眾台語辭典")
+    static let iTaigiDict = LocalizedText(hanji: "iTaigi愛台語")
 
     // 台日大辭典
     static let taiwanJapanDict = LocalizedText(hanji: "台日大辭典")
@@ -49,4 +49,10 @@ enum Tab3Texts {
 
     // 台灣植物名彙
     static let taiwanPlantDict = LocalizedText(hanji: "台灣植物名彙")
+
+    // 學科術語辭典
+    static let sttiDict = LocalizedText(hanji: "學科術語辭庫")
+
+    // 腔口補充辭典
+    static let khpooDict = LocalizedText(hanji: "腔口補充辭典")
 }

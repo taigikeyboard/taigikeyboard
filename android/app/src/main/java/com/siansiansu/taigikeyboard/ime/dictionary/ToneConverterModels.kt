@@ -13,7 +13,10 @@ object ToneConverterModels {
         POJ,
 
         /** Tâi-lô (台羅) */
-        TL
+        TL,
+
+        /** English passthrough */
+        ENGLISH
     }
 
     /**
@@ -201,39 +204,21 @@ object ToneConverterModels {
     }
 
     /**
-     * Convert tone letter to uppercase based on input mode
-     */
-    fun uppercaseToneLetter(char: String, mode: InputMode): String {
-        val mapping = when (mode) {
-            InputMode.POJ -> pojLowercaseToUppercaseMapping
-            InputMode.TL -> tlLowercaseToUppercaseMapping
-        }
-        return mapping[char] ?: char.uppercase()
-    }
-
-    /**
-     * Convert tone letter to lowercase based on input mode
-     */
-    fun lowercaseToneLetter(char: String, mode: InputMode): String {
-        val mapping = when (mode) {
-            InputMode.POJ -> pojUppercaseToLowercaseMapping
-            InputMode.TL -> tlUppercaseToLowercaseMapping
-        }
-        return mapping[char] ?: char.lowercase()
-    }
-
-    /**
      * Check if the input contains Chinese characters (Hanzi)
      */
     fun isHanzi(input: String): Boolean {
-        return input.any { char ->
-            val codePoint = char.code
-            codePoint in 0x4E00..0x9FFF ||  // CJK Unified Ideographs
-            codePoint in 0x3400..0x4DBF ||  // CJK Extension A
-            codePoint in 0x20000..0x2A6DF || // CJK Extension B
-            codePoint in 0x2A700..0x2B73F || // CJK Extension C
-            codePoint in 0x2B740..0x2B81F || // CJK Extension D
-            codePoint in 0x2B820..0x2CEAF    // CJK Extension E
+        var i = 0
+        while (i < input.length) {
+            val codePoint = Character.codePointAt(input, i)
+            if (codePoint in 0x4E00..0x9FFF ||  // CJK Unified Ideographs
+                codePoint in 0x3400..0x4DBF ||  // CJK Extension A
+                codePoint in 0x20000..0x2A6DF || // CJK Extension B
+                codePoint in 0x2A700..0x2B73F || // CJK Extension C
+                codePoint in 0x2B740..0x2B81F || // CJK Extension D
+                codePoint in 0x2B820..0x2CEAF    // CJK Extension E
+            ) return true
+            i += Character.charCount(codePoint)
         }
+        return false
     }
 }

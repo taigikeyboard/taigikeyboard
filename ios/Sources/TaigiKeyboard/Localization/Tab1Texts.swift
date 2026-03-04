@@ -15,8 +15,6 @@ enum Tab1Texts {
 
     static let setupKeyboard = LocalizedText(hanji: "齒盤愛拍開才會當使用")
     static let newFeatures = LocalizedText(hanji: "功能解說")
-    static let knownIssues = LocalizedText(hanji: "當 leh 修理 ê 問題")
-    static let upcomingFeatures = LocalizedText(hanji: "未來安排欲做 ê 功能")
     static let faq = LocalizedText(hanji: "捷問 ê 問題")
 
     // MARK: - 啟用方法
@@ -68,47 +66,10 @@ enum Tab1Texts {
 
     static let featureCaseSwitch = LocalizedText(hanji: "3段式大小寫切換")
     static let featureCaseSwitchParagraphs: [LocalizedText] = [
-        LocalizedText(hanji: "一般 ê 情況第 1 个字會自動大寫，shift 揤鈕會反烏，但是若「自動開關」有關起來，著愛家己揤 shift 揤鈕，第 1 個字才會變大寫。"),
-        LocalizedText(hanji: "「自動大寫」開關關起來是小寫模式，拍出來 ê 字攏是小寫。"),
-        LocalizedText(hanji: "連紲揤 Shift 鍵 2 改是 Caps Lock 模式，shift 揤鈕是烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏會變大寫，閣揤 1 改才會改轉來小寫。"),
+        LocalizedText(hanji: "一般 ê 情況第 1 个字會自動大本字，shift 揤鈕會反烏，但是若「自動大本字」有關起來，著愛家己揤 shift 揤鈕，第 1 個字才會變大本字。"),
+        LocalizedText(hanji: "「自動大本字」開關關起來是小寫模式，拍出來 ê 字攏是小寫。"),
+        LocalizedText(hanji: "連紲揤 Shift 鍵 2 改是 Caps Lock 模式，shift 揤鈕是烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏會變大本字，閣揤 1 改才會改轉來小寫。"),
         LocalizedText(hanji: "若連紲切換符號齒盤，大小寫有時陣會 sio͘h-to͘h，咱先試驗看覓，若問題誠嚴重，閣來排時間修理。")
-    ]
-
-    // MARK: - 處理中的問題
-
-    static let issue1 = LocalizedText(hanji: "齒盤 ê 字小可仔閘到")
-    static let issue1Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到，iOS 無這个問題。")
-    ]
-
-    static let issue2 = LocalizedText(hanji: "詞庫有欠字")
-    static let issue2Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "揣無 bàng-gà 這个字。")
-    ]
-
-    static let issue3 = LocalizedText(hanji: "聲調轉換有 ê 字有問題")
-    static let issue3Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去 閣紲落去拍 2 (Tâigí）台語的選項閣走出來。"),
-        LocalizedText(hanji: "拍 kan-na 會變 kaⁿa")
-    ]
-
-    // MARK: - 預計新功能
-
-    static let upcoming1 = LocalizedText(hanji: "支持其他齒佈")
-    static let upcoming1Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "這馬干焦有「Lohankha 齒佈」、「PhahTaigi 齒佈」，未來計畫有其他無仝 ê 齒佈通選。"),
-        LocalizedText(hanji: "拍 p -> ph, 拍 t -> th。")
-    ]
-
-    static let upcoming2 = LocalizedText(hanji: "自訂詞庫匯入匯出")
-    static let upcoming2Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "佇手機仔加字。"),
-        LocalizedText(hanji: "匯出/匯入家己 ê 詞庫。")
-    ]
-
-    static let upcoming3 = LocalizedText(hanji: "連紲拍字")
-    static let upcoming3Paragraphs: [LocalizedText] = [
-        LocalizedText(hanji: "直接拍 goa2siunn7behtsiah8png7 會變 -> 「góa siūⁿ beh chia̍h pn̄g」抑是變成「我想欲食飯」")
     ]
 
     // MARK: - FAQ
@@ -154,6 +115,18 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.1", "2026/02/26", [
+            LocalizedText(hanji: "Added tone diacritic hints above number keys."),
+            LocalizedText(hanji: "Added punctuation hints on MOE1/MOE2 layout keys."),
+            LocalizedText(hanji: "Added MOE Layout 1 and MOE Layout 2 keyboards."),
+            LocalizedText(hanji: "Added TPS (方音符號) keyboard layout."),
+            LocalizedText(hanji: "Added keyboard appearance customization settings."),
+            LocalizedText(hanji: "Added in-keyboard layout selection panel."),
+            LocalizedText(hanji: "Added STTI (學科術語辭典) dictionary source."),
+            LocalizedText(hanji: "Added phrase learning for continuous word selections."),
+            LocalizedText(hanji: "Improved continuous typing with word-grouped display."),
+            LocalizedText(hanji: "Fixed POJ and TL input mode separation."),
+        ]),
         ("3.4.0", "2025/12/31", [
             LocalizedText(hanji: "Adjusted the four-syllable input limit."),
             LocalizedText(hanji: "Fixed an issue where o͘ did not trigger candidate search."),
@@ -225,4 +198,13 @@ enum Tab1Texts {
     static let kunggeDict = LocalizedText(hanji: "台語工藝詞庫 - 工藝中心")
     static let kunggeCopyright = LocalizedText(hanji: "© 國立臺灣工藝研究發展中心")
     static let ccByNcLicense = LocalizedText(hanji: "CC BY-NC 4.0")
+
+    // 學科術語辭典
+    static let sttiDict = LocalizedText(hanji: "學科術語辭典 - 教育部")
+    static let sttiCopyright = LocalizedText(hanji: "© 教育部")
+    static let ogdlTaiwanLicense = LocalizedText(hanji: "OGDL-Taiwan-1.0")
+
+    // 腔口補充辭典
+    static let accentDict = LocalizedText(hanji: "腔口補充辭典")
+    static let accentDictCredit = LocalizedText(hanji: "「實齋」整理、提供")
 }

@@ -20,6 +20,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app does not use the microphone. This key is required by a linked framework.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>line</string>

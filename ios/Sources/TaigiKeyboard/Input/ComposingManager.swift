@@ -3,20 +3,25 @@ import KeyboardKit
 import OSLog
 import SwiftUI
 
-/// 組字管理器
+/// Composing manager
 ///
-/// 管理台語輸入的組字狀態，維護兩個狀態：
-/// - `rawInput`: 原始輸入（保留數字聲調，用於 Trie 搜尋）
-/// - `composingText`: 顯示文字（聲調已轉換，用於 UI 顯示和輸出）
+/// Manages Taigi input composing state with rawInput as single source of truth.
+/// - `rawInput`: Original keystrokes (e.g. "gua2") — used for Trie search
+/// - `composingText`: Derived display text (e.g. "guá") — computed via ToneConverter on every state change
 public class ComposingManager: ObservableObject {
 
-    // MARK: - 屬性
+    // MARK: - Properties
 
-    private let logger = Logger(subsystem: "com.siansiansu.taigikeyboard", category: "ComposingManager")
+    #if DEBUG
+    private let logger = Logger(
+        subsystem: LexiconConstants.Logging.subsystem,
+        category: "ComposingManager"
+    )
+    #endif
 
     private enum ComposingState {
         case idle
-        case composing(raw: String, display: String)
+        case composing(raw: String)
     }
 
     private var state: ComposingState = .idle {
@@ -29,7 +34,6 @@ public class ComposingManager: ObservableObject {
     @Published public var suggestions: [Autocomplete.Suggestion] = []
     @Published public var selectedCandidateIndex: Int = 0
 
-    private var composingStartLength: Int = 0
     private weak var keyboardContext: KeyboardContext?
     private weak var keyboardViewController: KeyboardViewController?
 
@@ -52,9 +56,8 @@ public class ComposingManager: ObservableObject {
     // MARK: - 組字操作
 
     public func startComposing(with text: String) {
-        composingStartLength = text.count
         selectedCandidateIndex = 0
-        updateComposingState(.composing(raw: text, display: text))
+        updateComposingState(.composing(raw: text))
     }
 
     public func appendCharacter(_ char: String) {
@@ -65,22 +68,7 @@ public class ComposingManager: ObservableObject {
 
         selectedCandidateIndex = 0
         let newRawInput = rawInput + char
-        var finalDisplayText = composingText + char
-
-        // 字符組合轉換（oo → o͘, nn → ⁿ）
-        if let transformedText = checkCharacterCombination(currentText: finalDisplayText, input: char) {
-            finalDisplayText = transformedText
-        }
-
-        // 聲調轉換（1-9）
-        if let number = Int(char), (1...9).contains(number) {
-            if let toneConvertedText = applyToneConversion(currentText: finalDisplayText, toneNumber: number) {
-                finalDisplayText = toneConvertedText
-            }
-        }
-
-        logger.debug("[COMPOSING] char='\(char, privacy: .public)' rawInput='\(newRawInput, privacy: .public)' display='\(finalDisplayText, privacy: .public)'")
-        updateComposingState(.composing(raw: newRawInput, display: finalDisplayText))
+        updateComposingState(.composing(raw: newRawInput))
     }
 
     public func appendHyphen() {
@@ -88,28 +76,16 @@ public class ComposingManager: ObservableObject {
     }
 
     public func deleteBackward() {
-        guard isComposing, !composingText.isEmpty else { return }
+        guard isComposing, !rawInput.isEmpty else { return }
 
-        // 先嘗試聲調還原
-        if let restoredText = attemptToneRestoration() {
-            let newRawInput = String(rawInput.dropLast())
-            updateComposingState(.composing(raw: newRawInput, display: restoredText))
-            return
-        }
-
-        // 一般字符刪除（ⁿ 對應 rawInput 的 nn）
-        let lastChar = composingText.last
-        let rawDeleteCount = (lastChar == "ⁿ") ? 2 : 1
-        let newDisplayText = String(composingText.dropLast())
-        let newRawInput = String(rawInput.dropLast(rawDeleteCount))
-
-        if newDisplayText.isEmpty {
+        let newRawInput = String(rawInput.dropLast())
+        if newRawInput.isEmpty {
             updateComposingState(.idle)
             selectedCandidateIndex = -1
             suggestions = []
             keyboardViewController?.deleteBackwardManually()
         } else {
-            updateComposingState(.composing(raw: newRawInput, display: newDisplayText))
+            updateComposingState(.composing(raw: newRawInput))
         }
     }
 
@@ -141,18 +117,6 @@ public class ComposingManager: ObservableObject {
         keyboardViewController?.state.autocompleteContext.reset()
     }
 
-    /// 移動到下一個候選詞（循環：0 → 1 → ... → N → 0）
-    public func moveToNextCandidate(availableSuggestions: [Autocomplete.Suggestion]) -> Bool {
-        guard isComposing, !availableSuggestions.isEmpty else { return false }
-
-        if selectedCandidateIndex >= availableSuggestions.count - 1 {
-            selectedCandidateIndex = 0
-        } else {
-            selectedCandidateIndex += 1
-        }
-        return true
-    }
-
     public func confirmSelectedCandidate(availableSuggestions: [Autocomplete.Suggestion]) -> Bool {
         guard isComposing,
               selectedCandidateIndex >= 0,
@@ -162,80 +126,65 @@ public class ComposingManager: ObservableObject {
         return true
     }
 
-    // MARK: - 字符轉換
+    // MARK: - Display Derivation
 
-    /// 檢查字符組合轉換（oo → o͘, nn → ⁿ）
-    /// - Parameter currentText: 當前組字文字
-    /// - Parameter input: 新輸入的字符
-    /// - Returns: 轉換後的新文字，如果無轉換則回傳 nil
-    private func checkCharacterCombination(currentText: String, input: String) -> String? {
-        let settings = SharedSettings.shared
+    /// Derive display text from raw input
+    ///
+    /// Segments continuous input into syllables, groups into words via dictionary lookup,
+    /// converts each to tone-marked form, joins within words with hyphens and between
+    /// words with spaces. Explicit user hyphens (trailing `-`) are preserved as-is.
+    private func deriveDisplay(from raw: String) -> String {
+        guard !raw.isEmpty else { return "" }
 
-        // POJ 模式：檢查 oo → o͘ 轉換
-        if inputMode == .poj {
-            if input.lowercased() == "o", currentText.count >= 2 {
-                let previousChar = String(currentText.dropLast())
-                if previousChar.lowercased().hasSuffix("o"), settings.enableDoubleTapOO {
-                    // 保持原始大小寫
-                    let wasUppercase = currentText.dropLast().last?.isUppercase == true
-                    let replacement = wasUppercase ? "O͘" : "o͘"
+        let prefix = LexiconConstants.TriePrefix.prefix(for: inputMode)
+        let checker: SyllableSegmenter.WordPrefixChecker = { key in
+            !TrieService.shared.prefixSearch(prefix + key, limit: 1).isEmpty
+        }
+        let syllables = SyllableSegmenter.segment(raw, wordPrefixChecker: checker, mode: inputMode)
+        let groups = SyllableSegmenter.groupIntoWords(syllables, wordPrefixChecker: checker)
 
-                    // 返回轉換後的新文字
-                    let newText = String(currentText.dropLast(2)) + replacement
-                    return newText
+        #if DEBUG
+        logger.debug("[DISPLAY] raw='\(raw, privacy: .public)' syllables=\(syllables, privacy: .public) groups=\(groups.map { $0.joined(separator: "+") }, privacy: .public)")
+        #endif
+
+        // Convert each group: tone-convert syllables, join within group with "-",
+        // join groups with " ". Explicit hyphens (trailing "-") are preserved.
+        var wordDisplays: [String] = []
+        for group in groups {
+            var parts: [String] = []
+            for syllable in group {
+                guard !syllable.isEmpty else { continue }
+                if syllable.hasSuffix("-") {
+                    let base = String(syllable.dropLast())
+                    parts.append(ToneConverter.convertToToneMarks(base, mode: inputMode) + "-")
+                } else {
+                    parts.append(ToneConverter.convertToToneMarks(syllable, mode: inputMode))
                 }
             }
-        }
-
-        // 只在 POJ 模式支援：檢查 nn → ⁿ 轉換（鼻化音）
-        // 台羅（TL）模式保持 nn 不變
-        if inputMode == .poj, input.lowercased() == "n", settings.enableDoubleTapNN, currentText.count >= 3 {
-            let lastTwoChars = String(currentText.suffix(3).dropLast()) // 排除剛加入的 n
-            if lastTwoChars.count >= 2 {
-                let secondLastChar = lastTwoChars.last!
-                let thirdLastChar = lastTwoChars.dropLast().last!
-
-                // 檢查是否為「元音 + n」的模式
-                if String(secondLastChar).lowercased() == "n" {
-                    let vowels = "aeiouAEIOU"
-                    if vowels.contains(thirdLastChar) {
-                        // 返回轉換後的新文字
-                        let vowelWithNasal = String(thirdLastChar) + "ⁿ"
-                        let newText = String(currentText.dropLast(3)) + vowelWithNasal
-                        return newText
-                    }
+            // Join parts with "-", but skip separator after explicit-hyphen parts
+            var groupDisplay = ""
+            for (j, part) in parts.enumerated() {
+                if j > 0 && !parts[j - 1].hasSuffix("-") {
+                    groupDisplay += "-"
                 }
+                groupDisplay += part
             }
+            wordDisplays.append(groupDisplay)
         }
 
-        return nil
-    }
-
-    /// 應用聲調轉換
-    /// - Parameter currentText: 當前組字文字
-    /// - Parameter toneNumber: 聲調數字
-    /// - Returns: 轉換後的文字，如果無轉換則回傳 nil
-    private func applyToneConversion(currentText: String, toneNumber: Int) -> String? {
-        // 安全檢查：只處理有效聲調數字（1-9）
-        // 聲調 1 和 4 會由 ToneConverter 移除數字但不加調號
-        guard (1 ... 9).contains(toneNumber) else {
-            return nil
+        // Join word groups, but not after explicit-hyphen-ending groups
+        var display = ""
+        for (i, word) in wordDisplays.enumerated() {
+            if i > 0 && !wordDisplays[i - 1].hasSuffix("-") {
+                display += " "
+            }
+            display += word
         }
+        #if DEBUG
+        logger.debug("[DISPLAY] result='\(display, privacy: .public)'")
+        #endif
 
-        // 確保組字文字不為空
-        guard !currentText.isEmpty else {
-            return nil
-        }
-
-        // 使用 ToneConverter 轉換
-        let converted = ToneConverter.convertToToneMarks(currentText, mode: inputMode)
-
-        // 如果轉換成功（結果不同）
-        if converted != currentText {
-            return converted
-        }
-
-        return nil
+        return display
     }
 
     /// 清除所有狀態（用於鍵盤重置）
@@ -245,20 +194,19 @@ public class ComposingManager: ObservableObject {
         suggestions = []
     }
 
-    /// 同步狀態到屬性
+    /// Sync state enum to published properties
     private func syncStateToProperties() {
         switch state {
         case .idle:
             isComposing = false
             composingText = ""
             rawInput = ""
-            composingStartLength = 0
 
-        case .composing(let raw, let display):
+        case .composing(let raw):
             isComposing = true
             rawInput = raw
-            composingText = display
-            keyboardViewController?.setMarkedText(display)
+            composingText = deriveDisplay(from: raw)
+            keyboardViewController?.setMarkedText(composingText)
         }
 
         keyboardContext?.isComposingText = isComposing
@@ -275,12 +223,5 @@ public class ComposingManager: ObservableObject {
         case .composing:
             keyboardViewController?.performAutocomplete()
         }
-    }
-
-    /// 嘗試聲調還原
-    /// - Returns: 還原後的文字，如果無法還原則回傳 nil
-    private func attemptToneRestoration() -> String? {
-        guard !composingText.isEmpty else { return nil }
-        return ToneConverter.restoreTone(composingText, mode: inputMode)
     }
 }

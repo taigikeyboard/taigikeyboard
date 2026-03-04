@@ -1,0 +1,57 @@
+{
+  "type": "characters",
+  "name": "qwerty_moe1_poj_fullwidth",
+  "direction": "ltr",
+  "arrangement": [
+    [
+      { "code":   42, "label": "*" },
+      { "code": 65311, "label": "？" },
+      { "code":  101, "label": "e" },
+      { "code":  114, "label": "r" },
+      { "code":  116, "label": "t" },
+      { "code":  121, "label": "y" },
+      { "code":  117, "label": "u" },
+      { "code":  105, "label": "i" },
+      { "code":  111, "label": "o" },
+      { "code":  112, "label": "p" }
+    ], [
+      { "code":   97, "label": "a" },
+      { "code":  115, "label": "s" },
+      { "code":  100, "label": "d" },
+      { "code":  102, "label": "f" },
+      { "code":  103, "label": "g" },
+      { "code":  104, "label": "h" },
+      { "code":  106, "label": "j" },
+      { "code":  107, "label": "k" },
+      { "code":  108, "label": "l" },
+      { "code":   45, "label": "-", "popup": [
+        { "code":   45, "label": "-" },
+        { "code":   95, "label": "_" },
+        { "code":  126, "label": "~" },
+        { "code":   39, "label": "'" },
+        { "code":   94, "label": "^" },
+        { "code":   64, "label": "@" },
+        { "code":   35, "label": "#" },
+        { "code":   34, "label": "\"" }
+      ] }
+    ], [
+      { "code": 65292, "label": "，", "popup": [
+        { "code": 65292, "label": "，" },
+        { "code": 12289, "label": "、" },
+        { "code": 65307, "label": "；" },
+        { "code": 65306, "label": "：" }
+      ] },
+      { "code": 12290, "label": "。", "popup": [
+        { "code": 12290, "label": "。" },
+        { "code": 65281, "label": "！" },
+        { "code": 65311, "label": "？" },
+        { "code":  8230, "label": "…" }
+      ] },
+      { "code":   99, "label": "c" },
+      { "code":  118, "label": "v" },
+      { "code":   98, "label": "b" },
+      { "code":  110, "label": "n" },
+      { "code":  109, "label": "m" }
+    ]
+  ]
+}

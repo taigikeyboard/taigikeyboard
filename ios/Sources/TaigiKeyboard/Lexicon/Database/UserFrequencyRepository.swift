@@ -6,6 +6,14 @@ import SQLite3
 /// 負責使用者詞頻資料的存取與管理
 final class UserFrequencyRepository: @unchecked Sendable {
 
+    // MARK: - Constants
+
+    private enum Constants {
+        static let maxEntries = 20_000
+        static let pruneCheckInterval = 100
+        static let pruneBatchSize = 2_000
+    }
+
     // MARK: - Properties
 
     static let shared = UserFrequencyRepository()
@@ -18,6 +26,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     private var isTablesCreated = false
     private var tableCreationTask: Task<Void, Error>?
+    private var recordCounter = 0
 
     // MARK: - Test Data
 
@@ -193,8 +202,14 @@ final class UserFrequencyRepository: @unchecked Sendable {
             try await connectionManager.execute { db in
                 try self.insertOrUpdateWord(db: db, word: word)
             }
+
+            recordCounter += 1
+            if recordCounter >= Constants.pruneCheckInterval {
+                recordCounter = 0
+                await pruneOldEntries()
+            }
         } catch {
-            logger.error("[RECORD] Failed to record usage for: \(word)")
+            logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
         }
     }
 
@@ -219,7 +234,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         sqlite3_bind_text(stmt, 1, word, -1, TRANSIENT)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
-            logger.error("[RECORD] Failed to record usage for: \(word)")
+            logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
         }
     }
 
@@ -232,12 +247,12 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// 取得詞彙使用次數
-    func getCount(for word: String) -> Int {
-        getFrequencyData(for: word).count
+    func count(for word: String) -> Int {
+        frequencyData(for: word).count
     }
 
     /// 取得詞彙使用頻率資料（包含頻率和最後使用時間）
-    func getFrequencyData(for word: String) -> FrequencyData {
+    func frequencyData(for word: String) -> FrequencyData {
         guard connectionManager.isConnected() else { return .empty }
 
         do {
@@ -272,7 +287,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// 批次取得多個詞彙的頻率資料
-    func getFrequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
+    func frequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
         guard connectionManager.isConnected(), !words.isEmpty else { return [:] }
 
         do {
@@ -316,7 +331,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// 取得使用次數最多的詞彙
-    func getTopWords(limit: Int = 100) -> [(word: String, count: Int)] {
+    func topWords(limit: Int = 100) -> [(word: String, count: Int)] {
         guard connectionManager.isConnected() else { return [] }
 
         do {
@@ -329,7 +344,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// 取得使用次數最多的詞彙（async 版本，確保初始化）
-    func getTopWordsAsync(limit: Int = 100) async -> [(word: String, count: Int)] {
+    func topWordsAsync(limit: Int = 100) async -> [(word: String, count: Int)] {
         do {
             try await ensureInitialized()
             return try await connectionManager.execute { db in
@@ -365,6 +380,49 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
 
         return results
+    }
+
+    // MARK: - Pruning
+
+    /// Prune least-used entries when exceeding capacity
+    private func pruneOldEntries() async {
+        do {
+            let currentCount = try await connectionManager.execute { db -> Int in
+                var stmt: OpaquePointer?
+                defer { sqlite3_finalize(stmt) }
+                guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM user_frequency", -1, &stmt, nil) == SQLITE_OK else {
+                    return 0
+                }
+                return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+            }
+
+            guard currentCount > Constants.maxEntries else { return }
+
+            let deleteCount = min(
+                Constants.pruneBatchSize,
+                currentCount - Constants.maxEntries + Constants.pruneBatchSize
+            )
+
+            try await connectionManager.execute { db in
+                let sql = """
+                    DELETE FROM user_frequency
+                    WHERE id IN (
+                        SELECT id FROM user_frequency
+                        ORDER BY count ASC, last_used ASC
+                        LIMIT ?
+                    )
+                """
+                var stmt: OpaquePointer?
+                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+                defer { sqlite3_finalize(stmt) }
+                sqlite3_bind_int(stmt, 1, Int32(deleteCount))
+                sqlite3_step(stmt)
+            }
+
+            logger.info("[PRUNE] Deleted \(deleteCount) frequency entries (was \(currentCount))")
+        } catch {
+            logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - Database Management
@@ -423,7 +481,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
                 if sqlite3_step(stmt) != SQLITE_DONE {
                     let errorMsg = String(cString: sqlite3_errmsg(db))
-                    self.logger.error("[TEST] Failed to insert test data for '\(word)': \(errorMsg)")
+                    self.logger.error("[TEST] Failed to insert test data for '\(word, privacy: .public)': \(errorMsg, privacy: .public)")
                     sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
                     throw DictionaryError.queryExecutionFailed("Failed to insert test data")
                 }

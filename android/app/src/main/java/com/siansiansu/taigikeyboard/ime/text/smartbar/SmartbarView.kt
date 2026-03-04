@@ -39,8 +39,6 @@ class SmartbarView : LinearLayout {
     // 其他容器
     var numberRowView: LinearLayout? = null
         private set
-    var quickActionsView: LinearLayout? = null
-        private set
 
     // 英文三欄式候選詞容器
     var englishCandidatesContainer: LinearLayout? = null
@@ -52,12 +50,12 @@ class SmartbarView : LinearLayout {
     var englishCandidate3: Button? = null
         private set
 
-    // 模式切換按鈕
-    var buttonModePoj: Button? = null
+    // Toolbar views
+    var toolbarContainer: LinearLayout? = null
         private set
-    var buttonModeTl: Button? = null
+    var toolbarToggleButton: ImageButton? = null
         private set
-    var buttonModeEn: Button? = null
+    var toolbarGlobeButton: ImageButton? = null
         private set
 
     constructor(context: Context) : this(context, null)
@@ -82,7 +80,6 @@ class SmartbarView : LinearLayout {
 
         // 其他視圖
         numberRowView = findViewById(R.id.number_row)
-        quickActionsView = findViewById(R.id.quick_actions)
 
         // 英文三欄式候選詞
         englishCandidatesContainer = findViewById(R.id.english_candidates_container)
@@ -90,12 +87,21 @@ class SmartbarView : LinearLayout {
         englishCandidate2 = findViewById(R.id.english_candidate_2)
         englishCandidate3 = findViewById(R.id.english_candidate_3)
 
-        // 模式切換按鈕
-        buttonModePoj = findViewById(R.id.button_mode_poj)
-        buttonModeTl = findViewById(R.id.button_mode_tl)
-        buttonModeEn = findViewById(R.id.button_mode_en)
+        // Toolbar views
+        toolbarContainer = findViewById(R.id.toolbar_container)
+        toolbarToggleButton = findViewById(R.id.toolbar_toggle_button)
+        toolbarGlobeButton = findViewById(R.id.toolbar_globe_button)
 
         smartbarManager.registerSmartbarView(this)
+    }
+
+    /**
+     * Apply custom candidate background color from appearance settings.
+     */
+    fun applyCustomBackgroundColor(color: Int?) {
+        if (color != null) {
+            candidatesContainer?.setBackgroundColor(color)
+        }
     }
 
     /**

@@ -113,12 +113,6 @@ final class TrieService: @unchecked Sendable {
         return []
     }
 
-    /// 取得 trie 中的 key 數量
-    var keyCount: Int {
-        guard isInitialized else { return 0 }
-        return Int(trie_get_key_count())
-    }
-
     /// 檢查是否已初始化
     var isReady: Bool {
         isInitialized && trie_is_loaded()

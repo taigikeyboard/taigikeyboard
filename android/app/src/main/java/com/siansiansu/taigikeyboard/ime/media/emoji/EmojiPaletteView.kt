@@ -23,9 +23,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -160,16 +159,16 @@ private fun EmojiCategoriesTabRow(
 ) {
     val selectedTabIndex = EmojiCategoryValues.indexOf(activeCategory)
 
-    TabRow(
+    PrimaryTabRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp),
         selectedTabIndex = selectedTabIndex,
         containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
         contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-        indicator = { tabPositions ->
+        indicator = {
             TabRowDefaults.PrimaryIndicator(
-                modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                modifier = Modifier.tabIndicatorOffset(selectedTabIndex, matchContentSize = false),
                 height = 4.dp,
                 color = Color(0xFF4CAF50)  // florisboard 綠色 (76, 175, 80)
             )

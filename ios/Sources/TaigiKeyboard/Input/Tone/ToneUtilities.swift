@@ -1,46 +1,54 @@
 import Foundation
 
-/// 聲調工具
+/// Tone utilities
 ///
-/// 提供聲調字母大小寫轉換和漢字判斷等輔助功能。
+/// Provides tone letter case conversion for POJ/TL special characters.
 enum ToneUtilities {
 
-    /// 聲調字母大寫轉換
+    /// Uppercase a tone letter. Swift's built-in uppercased() handles combining marks correctly.
     /// - Parameters:
-    ///   - char: 要轉換的字元
-    ///   - mode: 輸入模式（POJ/TL）
-    /// - Returns: 大寫後的字元，如果不是聲調字母則使用標準轉換
+    ///   - char: Character to convert
+    ///   - mode: Input mode (POJ/TL)
+    /// - Returns: Uppercased character
     static func uppercaseToneLetter(_ char: String, mode: InputMode) -> String {
-        let mapping = mode == .poj ?
-            ToneMappings.pojLowercaseToUppercase :
-            ToneMappings.tlLowercaseToUppercase
-        return mapping[char] ?? char.uppercased()
+        if char == "\u{207F}" { return "\u{1D3A}" }  // ⁿ → ᴺ
+        return char.uppercased()
     }
 
-    /// 聲調字母小寫轉換
+    /// Lowercase a tone letter. Swift's built-in lowercased() handles combining marks correctly.
     /// - Parameters:
-    ///   - char: 要轉換的字元
-    ///   - mode: 輸入模式（POJ/TL）
-    /// - Returns: 小寫後的字元，如果不是聲調字母則使用標準轉換
+    ///   - char: Character to convert
+    ///   - mode: Input mode (POJ/TL)
+    /// - Returns: Lowercased character
     static func lowercaseToneLetter(_ char: String, mode: InputMode) -> String {
-        let mapping = mode == .poj ?
-            ToneMappings.pojUppercaseToLowercase :
-            ToneMappings.tlUppercaseToLowercase
-        return mapping[char] ?? char.lowercased()
+        if char == "\u{1D3A}" { return "\u{207F}" }  // ᴺ → ⁿ
+        return char.lowercased()
     }
 
-    /// 判斷字串是否包含漢字
-    /// - Parameter input: 要判斷的字串
-    /// - Returns: 是否包含漢字
-    static func isHanzi(_ input: String) -> Bool {
-        input.contains { char in
-            guard let scalar = char.unicodeScalars.first else { return false }
-            return (0x4E00 ... 0x9FFF).contains(scalar.value) // CJK Unified Ideographs
-                || (0x3400 ... 0x4DBF).contains(scalar.value) // CJK Extension A
-                || (0x20000 ... 0x2A6DF).contains(scalar.value) // CJK Extension B
-                || (0x2A700 ... 0x2B73F).contains(scalar.value) // CJK Extension C
-                || (0x2B740 ... 0x2B81F).contains(scalar.value) // CJK Extension D
-                || (0x2B820 ... 0x2CEAF).contains(scalar.value) // CJK Extension E
+    /// Adjust nasal marker (ⁿ/ᴺ) case to match the preceding letter's case.
+    /// Rule: ⁿ follows lowercase letters, ᴺ follows uppercase letters.
+    ///
+    /// Swift caveat: `.isUppercase` returns `true` for both ⁿ and ᴺ,
+    /// so we use explicit codepoint checks to identify nasal markers.
+    static func adjustNasalMarkerCase(_ text: String) -> String {
+        let nasalLower: Character = "\u{207F}"  // ⁿ
+        let nasalUpper: Character = "\u{1D3A}"  // ᴺ
+
+        var result = ""
+        var lastLetterIsUppercase = false
+
+        for char in text {
+            if char == nasalLower || char == nasalUpper {
+                result.append(lastLetterIsUppercase ? nasalUpper : nasalLower)
+            } else {
+                if char.isLetter {
+                    lastLetterIsUppercase = char.isUppercase
+                }
+                result.append(char)
+            }
         }
+
+        return result
     }
+
 }

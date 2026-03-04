@@ -16,12 +16,15 @@ class CustomLayoutService {
 
     /// 根據 context 建構鍵盤 layout
     func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
-        let config = KeyboardLayout.DeviceConfiguration.standard(for: context)
+        var config = KeyboardLayout.DeviceConfiguration.standard(for: context)
+        let settings = SharedSettings.shared
+        config.rowHeight *= (0.87 * settings.keyHeightScale)
+        config.buttonCornerRadius = settings.keyCornerRadius
         let converter = LayoutConverter(context: context, config: config)
         let keyDefs = selectLayout(for: context)
 
         #if DEBUG
-        layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType)) rows=\(keyDefs.count)")
+        layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType), privacy: .public) rows=\(keyDefs.count)")
         #endif
 
         return converter.convert(keyDefs)
@@ -67,7 +70,7 @@ class CustomLayoutService {
         // 根據 keyboardLayoutType 選擇佈局
         switch settings.keyboardLayoutType {
         case .tps:
-            // 台灣注音（方音符號）佈局
+            // 方音符號佈局
             return needsGlobe
                 ? TaigiLayouts.Alphabetic.tps_withGlobe
                 : TaigiLayouts.Alphabetic.tps_iPhone
@@ -78,7 +81,29 @@ class CustomLayoutService {
                 ? TaigiLayouts.Alphabetic.phahTaigi_withGlobe
                 : TaigiLayouts.Alphabetic.phahTaigi_iPhone
 
-        case .qwerty, .flick:
+        case .moe1:
+            // 教育部輸入法佈局1（根據 inputMode 選擇 TL 或 POJ）
+            if settings.inputMode == .poj {
+                return needsGlobe
+                    ? TaigiLayouts.Alphabetic.moe1_POJ_withGlobe
+                    : TaigiLayouts.Alphabetic.moe1_POJ_iPhone
+            }
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.moe1_TL_withGlobe
+                : TaigiLayouts.Alphabetic.moe1_TL_iPhone
+
+        case .moe2:
+            // 教育部輸入法佈局2（根據 inputMode 選擇 TL 或 POJ）
+            if settings.inputMode == .poj {
+                return needsGlobe
+                    ? TaigiLayouts.Alphabetic.moe2_POJ_withGlobe
+                    : TaigiLayouts.Alphabetic.moe2_POJ_iPhone
+            }
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.moe2_TL_withGlobe
+                : TaigiLayouts.Alphabetic.moe2_TL_iPhone
+
+        case .qwerty:
             // QWERTY 佈局（根據 inputMode 選擇 POJ 或 TL）
             if settings.inputMode == .poj {
                 return needsGlobe

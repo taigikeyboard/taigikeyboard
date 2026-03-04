@@ -8,7 +8,6 @@
 #   3. generate_association - 產生 NextWord 詞彙關聯（加入 dictionary.db）
 #   4. create_trie_db       - 建立 Trie 建置用的 SQLite 資料庫
 #   5. create_trie          - 建立 MARISA-trie
-#   6. generate_tests       - 產生 Android/iOS 測試檔案
 #   7. deploy               - 複製到 Android 專案
 #
 # 用法：
@@ -65,7 +64,7 @@ do_create_app_db() {
 # Step 3: Generate Association
 do_generate_association() {
     print_step "Step 3/7: Generating NextWord associations..."
-    python3 "$BUILD_DIR/08_generate_association.py"
+    python3 "$BUILD_DIR/05_generate_association.py"
 }
 
 # Step 4: Create Trie DB
@@ -80,17 +79,10 @@ do_create_trie() {
     python3 "$BUILD_DIR/04_create_trie.py"
 }
 
-# Step 6: Generate Tests
-do_generate_tests() {
-    print_step "Step 6/7: Generating test files..."
-    python3 "$BUILD_DIR/06_generate_android_test.py"
-    python3 "$BUILD_DIR/07_generate_ios_test.py"
-}
-
 # Step 7: Deploy
 do_deploy() {
     print_step "Step 7/7: Deploying to Android..."
-    bash "$BUILD_DIR/05_deploy.sh"
+    bash "$BUILD_DIR/06_deploy.sh"
 }
 
 # 完整建置（不含 deploy）
@@ -100,7 +92,6 @@ do_build() {
     do_generate_association
     do_create_trie_db
     do_create_trie
-    do_generate_tests
 }
 
 # 顯示用法

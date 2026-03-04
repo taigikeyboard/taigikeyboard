@@ -1,48 +1,57 @@
-
 package com.siansiansu.taigikeyboard.settings
 
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
-import android.view.View
-import android.view.ViewGroup
-import android.widget.FrameLayout
+import android.widget.Toast
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updateLayoutParams
-import androidx.fragment.app.Fragment
-import androidx.preference.PreferenceFragmentCompat
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.PreferenceManager
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.SubtypeManager
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
+import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
+import com.siansiansu.taigikeyboard.localization.LanguageManager
+import com.siansiansu.taigikeyboard.localization.Tab3Texts
+import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.ui.settings.DictionarySettingsScreen
+import com.siansiansu.taigikeyboard.ui.settings.HomeScreen
+import com.siansiansu.taigikeyboard.ui.settings.InputSettingsScreen
+import com.siansiansu.taigikeyboard.ui.settings.LayoutScreen
+import com.siansiansu.taigikeyboard.ui.settings.MainSettingsScreen
+import com.siansiansu.taigikeyboard.ui.settings.TabItem
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import com.siansiansu.taigikeyboard.util.PackageManagerUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
-
-private const val PREF_RES_ID = "PREF_RES_ID"
+import kotlinx.coroutines.launch
 
 class SettingsMainActivity : AppCompatActivity(),
     SharedPreferences.OnSharedPreferenceChangeListener {
 
     companion object {
         const val EXTRA_START_TAB = "extra_start_tab"
+
+        // Tab indices
+        private const val TAB_HOME = 0
+        private const val TAB_LAYOUT = 1
+        private const val TAB_DICTIONARY = 2
+        private const val TAB_SETTINGS = 3
     }
 
     lateinit var prefs: PrefHelper
     lateinit var subtypeManager: SubtypeManager
 
-    private lateinit var bottomNavigation: BottomNavigationView
-
-    // 緩存 Fragment 實例
-    private val tab1Fragment by lazy { Tab1Fragment.newInstance() }
-    private val tab2Fragment by lazy { Tab2Fragment.newInstance() }
-    private val tab3Fragment by lazy { Tab3Fragment.newInstance() }
-    private val tab4Fragment by lazy { Tab4Fragment.newInstance() }
+    private var resetCounter by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,12 +59,9 @@ class SettingsMainActivity : AppCompatActivity(),
         prefs = PrefHelper(this)
         prefs.initDefaultPreferences()
 
-        // 檢查鍵盤是否已啟用，若未啟用則顯示設定引導（與 iOS 一致）
-        val isKeyboardEnabled = TaigiKeyboard.checkIfImeIsEnabled(this)
-        if (!isKeyboardEnabled) {
-            val intent = SetupGuideActivity.createIntent(this, isFullScreen = true)
-            startActivity(intent)
-            // 不 finish()，讓用戶完成設定後返回
+        // Check if keyboard is enabled; show setup guide if not
+        if (!TaigiKeyboard.checkIfImeIsEnabled(this)) {
+            startActivity(SetupGuideActivity.createIntent(this, isFullScreen = true))
         }
 
         subtypeManager = SubtypeManager(this, prefs)
@@ -68,76 +74,142 @@ class SettingsMainActivity : AppCompatActivity(),
         }
         AppCompatDelegate.setDefaultNightMode(mode)
 
-        setContentView(R.layout.activity_main_tabs)
-
-        // 設定 Edge-to-Edge 顯示模式
         setupEdgeToEdge()
 
         AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
 
-        // 設定底部導航
-        setupBottomNavigation()
+        val languageManager = LanguageManager.getInstance(this)
+        val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME)
 
-        // 載入預設 Fragment（頭頁）
-        if (savedInstanceState == null) {
-            val startTab = intent.getIntExtra(EXTRA_START_TAB, R.id.nav_home)
-            if (startTab == R.id.nav_home) {
-                loadFragment(tab1Fragment)
-            } else {
-                handleStartTab(intent)
+        val versionName = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+        } catch (e: Exception) {
+            "1.0"
+        }
+
+        setContent {
+            TaigiKeyboardTheme {
+                MainSettingsScreen(
+                    tabs = listOf(
+                        TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
+                        TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
+                        TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
+                        TabItem(R.drawable.ic_settings, getString(R.string.tab_settings))
+                    ),
+                    initialTab = initialTab
+                ) { selectedTab ->
+                    when (selectedTab) {
+                        TAB_HOME -> HomeScreen(
+                            languageManager = languageManager,
+                            versionName = versionName,
+                            onSetupGuide = {
+                                startActivity(Intent(this, SetupGuideActivity::class.java))
+                            },
+                            onFeatureClick = { titleKey, contentType, contentKeys ->
+                                openDetailActivity(titleKey, contentType, contentKeys)
+                            },
+                            onUrlClick = ::openUrl,
+                            onCopyright = {
+                                startActivity(Intent(this, CopyrightActivity::class.java))
+                            },
+                            onFeedback = {
+                                openDetailActivity(
+                                    "contact_us", "feedback",
+                                    arrayOf("feedback_description", "feedback_email")
+                                )
+                            },
+                            onVersionHistory = {
+                                openDetailActivity("version_history", "version", emptyArray())
+                            },
+                            onFaqClick = { titleKey, contentKeys ->
+                                openDetailActivity(titleKey, "faq", contentKeys)
+                            }
+                        )
+
+                        TAB_LAYOUT -> LayoutScreen(
+                            languageManager = languageManager,
+                            prefs = prefs,
+                            onAppearanceSettings = {
+                                startActivity(
+                                    Intent(this, AppearanceSettingsActivity::class.java)
+                                )
+                            }
+                        )
+
+                        TAB_DICTIONARY -> DictionarySettingsScreen(
+                            languageManager = languageManager,
+                            prefs = prefs,
+                            onClearCache = ::clearUserFrequencyDatabase
+                        )
+
+                        TAB_SETTINGS -> InputSettingsScreen(
+                            languageManager = languageManager,
+                            prefs = prefs,
+                            onResetSettings = ::resetAllSettings,
+                            onNavigateToDebug = {
+                                startActivity(Intent(this, DebugActivity::class.java))
+                            },
+                            isDebugBuild = BuildConfig.DEBUG,
+                            resetCounter = resetCounter
+                        )
+                    }
+                }
             }
         }
     }
 
-    private fun setupBottomNavigation() {
-        bottomNavigation = findViewById(R.id.bottom_navigation)
-        val fragmentContainer = findViewById<FrameLayout>(R.id.fragment_container)
+    private fun openDetailActivity(
+        titleKey: String,
+        contentType: String,
+        contentKeys: Array<String>
+    ) {
+        startActivity(
+            DetailActivity.createIntent(this, titleKey, contentType, contentKeys)
+        )
+    }
 
-        // 處理系統導航列的 insets，避免 BottomNavigationView 被遮住
-        ViewCompat.setOnApplyWindowInsetsListener(bottomNavigation) { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-
-            // 使用 margin 而非 padding，避免影響內部 label 顯示
-            view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = insets.bottom
-            }
-
-            // 同時更新 fragment_container 的 bottom margin
-            val bottomNavHeight = resources.getDimensionPixelSize(R.dimen.bottom_nav_height)
-            fragmentContainer.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                bottomMargin = bottomNavHeight + insets.bottom
-            }
-
-            windowInsets
+    private fun openUrl(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: Exception) {
+            // Handle exception
         }
+    }
 
-        bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> {
-                    loadFragment(tab1Fragment)
-                    true
-                }
-                R.id.nav_layout -> {
-                    loadFragment(tab2Fragment)
-                    true
-                }
-                R.id.nav_dictionary -> {
-                    loadFragment(tab3Fragment)
-                    true
-                }
-                R.id.nav_settings -> {
-                    loadFragment(tab4Fragment)
-                    true
-                }
-                else -> false
+    private fun clearUserFrequencyDatabase() {
+        val languageManager = LanguageManager.getInstance(this)
+        lifecycleScope.launch {
+            try {
+                UserFrequencyService.deleteDatabase()
+                NextWordService.clearAllAssociations(this@SettingsMainActivity)
+                Toast.makeText(
+                    this@SettingsMainActivity,
+                    languageManager.text(Tab3Texts.clearCacheSuccess),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (_: Exception) {
+                // Handle exception silently
             }
         }
     }
 
-    private fun loadFragment(fragment: Fragment) {
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment)
-            .commit()
+    private fun resetAllSettings() {
+        val languageManager = LanguageManager.getInstance(this)
+        lifecycleScope.launch {
+            try {
+                prefs.resetToDefaults()
+                UserFrequencyService.deleteDatabase()
+                NextWordService.clearAllAssociations(this@SettingsMainActivity)
+                resetCounter++
+                Toast.makeText(
+                    this@SettingsMainActivity,
+                    languageManager.text(Tab4Texts.resetSuccess),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (_: Exception) {
+                // Handle exception silently
+            }
+        }
     }
 
     override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
@@ -157,31 +229,7 @@ class SettingsMainActivity : AppCompatActivity(),
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleStartTab(intent)
-    }
-
-    private fun handleStartTab(intent: Intent) {
-        val startTab = intent.getIntExtra(EXTRA_START_TAB, -1)
-        if (startTab != -1) {
-            when (startTab) {
-                R.id.nav_dictionary -> {
-                    loadFragment(tab3Fragment)
-                    bottomNavigation.selectedItemId = R.id.nav_dictionary
-                }
-                R.id.nav_home -> {
-                    loadFragment(tab1Fragment)
-                    bottomNavigation.selectedItemId = R.id.nav_home
-                }
-                R.id.nav_layout -> {
-                    loadFragment(tab2Fragment)
-                    bottomNavigation.selectedItemId = R.id.nav_layout
-                }
-                R.id.nav_settings -> {
-                    loadFragment(tab4Fragment)
-                    bottomNavigation.selectedItemId = R.id.nav_settings
-                }
-            }
-        }
+        // Note: tab switching via intent is handled by Compose's rememberSaveable
     }
 
     override fun onResume() {
@@ -204,34 +252,4 @@ class SettingsMainActivity : AppCompatActivity(),
         super.onDestroy()
     }
 
-    abstract class BaseSettingsFragment : Fragment() {
-        // 使用 lazy 延遲初始化，避免在 Activity 屬性初始化前存取
-        protected val settingsMainActivity: SettingsMainActivity by lazy {
-            requireActivity() as SettingsMainActivity
-        }
-
-        protected val prefs: PrefHelper by lazy {
-            settingsMainActivity.prefs
-        }
-
-        protected val subtypeManager: SubtypeManager by lazy {
-            settingsMainActivity.subtypeManager
-        }
-    }
-
-    class PrefFragment : PreferenceFragmentCompat() {
-        companion object {
-            fun createFromResource(prefResId: Int): PrefFragment {
-                val args = Bundle()
-                args.putInt(PREF_RES_ID, prefResId)
-                val fragment = PrefFragment()
-                fragment.arguments = args
-                return fragment
-            }
-        }
-
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            setPreferencesFromResource(arguments?.getInt(PREF_RES_ID) ?: 0, rootKey)
-        }
-    }
 }

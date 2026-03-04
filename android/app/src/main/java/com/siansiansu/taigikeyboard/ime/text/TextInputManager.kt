@@ -28,6 +28,7 @@ import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import kotlinx.coroutines.*
 import java.util.*
 
@@ -51,6 +52,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
     // 英文自動補全服務
     private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
+
+    // Cached TaigiAutocompleteService — reused across keystrokes, recreated only when inputMode changes
+    private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService? = null
+    private var cachedInputMode: ToneConverterModels.InputMode? = null
 
     /**
      * 取得台語組字管理器（供 SmartbarManager 使用）
@@ -81,10 +86,13 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     // 候選詞更新 Job（用於取消機制）
     private var candidateUpdateJob: Job? = null
     private var englishCandidateUpdateJob: Job? = null
+    // Display derivation Job (runs deriveDisplay off main thread)
+    private var displayDerivationJob: Job? = null
 
     companion object {
         private const val TAG = "TextInputManager"
         private const val CANDIDATE_DEBOUNCE_MS = 50L  // Debounce 延遲時間（毫秒）
+        private val DOUBLE_SPACE_PERIOD_REGEX = """[.!?‽\s][\s]""".toRegex()
         private var instance: TextInputManager? = null
 
         @Synchronized
@@ -125,6 +133,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
     /**
      * Sets up the newly registered input view.
+     * Only builds the active keyboard mode; other modes are built on-demand.
      */
     override fun onRegisterInputView(inputView: InputView) {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onRegisterInputView(inputView)")
@@ -140,6 +149,12 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 )
                 smartbarManager.registerCandidateOverlayView(overlayView)
 
+                // Register LayoutSelectionOverlayView
+                val layoutOverlay = inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.LayoutSelectionOverlayView>(
+                    R.id.layout_selection_overlay
+                )
+                smartbarManager.registerLayoutSelectionOverlayView(layoutOverlay)
+
                 // 測量鍵盤高度並通知 SmartbarManager
                 // 使用 post 確保在 layout 完成後測量
                 textViewGroup?.post {
@@ -150,12 +165,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             val activeKeyboardMode = getActiveKeyboardMode()
             addKeyboardView(activeKeyboardMode)
             withContext(Dispatchers.Main) {
-                setActiveKeyboardMode(activeKeyboardMode)
-            }
-            for (mode in KeyboardMode.values()) {
-                if (mode != activeKeyboardMode) {
-                    addKeyboardView(mode)
-                }
+                switchToKeyboardView(activeKeyboardMode)
             }
         }
     }
@@ -171,6 +181,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         candidateUpdateJob = null
         englishCandidateUpdateJob?.cancel()
         englishCandidateUpdateJob = null
+        displayDerivationJob?.cancel()
+        displayDerivationJob = null
 
         cancel()
         osHandler.removeCallbacksAndMessages(null)
@@ -179,6 +191,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         // 關閉英文自動補全服務
         englishAutocompleteService?.close()
         englishAutocompleteService = null
+
+        // Clear cached TaigiAutocompleteService
+        taigiAutocompleteService = null
+        cachedInputMode = null
 
         instance = null
     }
@@ -244,7 +260,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
             composingManager = ComposingManager(
                 inputMode = inputMode,
-                prefs = taigikeyboard.prefs
+                enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO,
+                enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN,
             )
         } else {
             composingManager = null
@@ -265,6 +282,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         candidateUpdateJob = null
         englishCandidateUpdateJob?.cancel()
         englishCandidateUpdateJob = null
+        displayDerivationJob?.cancel()
+        displayDerivationJob = null
 
         smartbarManager.onFinishInputView()
     }
@@ -317,6 +336,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
     /**
      * Sets [activeKeyboardMode] and updates the [SmartbarManager.activeContainerId].
+     * Builds the KeyboardView on-demand if it hasn't been created yet.
      */
     private fun setActiveKeyboardMode(mode: KeyboardMode) {
         // CLIPBOARD 功能暫時移除，切換到 CHARACTERS 模式
@@ -326,18 +346,36 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             mode
         }
 
+        if (keyboardViews.containsKey(actualMode)) {
+            switchToKeyboardView(actualMode)
+        } else {
+            // Build on-demand: keep current view visible while loading
+            activeKeyboardMode = actualMode
+            launch(Dispatchers.Default) {
+                addKeyboardView(actualMode)
+                withContext(Dispatchers.Main) {
+                    switchToKeyboardView(actualMode)
+                }
+            }
+        }
+    }
+
+    /**
+     * Switches the ViewFlipper to show the specified keyboard mode.
+     */
+    private fun switchToKeyboardView(mode: KeyboardMode) {
         textViewFlipper?.displayedChild =
-            textViewFlipper?.indexOfChild(keyboardViews[actualMode]) ?: 0
-        keyboardViews[actualMode]?.updateVisibility()
-        keyboardViews[actualMode]?.requestLayout()
-        keyboardViews[actualMode]?.requestLayoutAllKeys()
+            textViewFlipper?.indexOfChild(keyboardViews[mode]) ?: 0
+        keyboardViews[mode]?.updateVisibility()
+        keyboardViews[mode]?.requestLayout()
+        keyboardViews[mode]?.requestLayoutAllKeys()
 
         // 鍵盤切換後重新測量高度（使用 post 確保 layout 完成）
         textViewGroup?.post {
             measureAndUpdateKeyboardHeight()
         }
 
-        activeKeyboardMode = actualMode
+        activeKeyboardMode = mode
         smartbarManager.activeContainerId = smartbarManager.getPreferredContainerId()
     }
 
@@ -362,6 +400,18 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     override fun onInputModeChanged(newInputMode: String) {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onInputModeChanged($newInputMode)")
 
+        // Sync composingManager.inputMode so segmentation uses the correct trie
+        val newMode = when (newInputMode) {
+            "poj" -> ToneConverterModels.InputMode.POJ
+            "tl" -> ToneConverterModels.InputMode.TL
+            else -> ToneConverterModels.InputMode.POJ
+        }
+        composingManager?.let { manager ->
+            manager.inputMode = newMode
+            manager.enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO
+            manager.enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN
+        }
+
         launch {
             val keyboardView = keyboardViews[KeyboardMode.CHARACTERS]
             keyboardView?.computedLayout = withContext(Dispatchers.IO) {
@@ -371,34 +421,15 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         }
     }
 
-    override fun onPhahTaigiLayoutChanged(enabled: Boolean) {
-        Log.i(this::class.simpleName, "onPhahTaigiLayoutChanged($enabled) - Reloading CHARACTERS layout")
+    override fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
+        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onKeyboardLayoutTypeChanged($newLayoutType)")
 
         launch {
-            // 等待 keyboardViews 初始化
-            var retryCount = 0
-            while (keyboardViews[KeyboardMode.CHARACTERS] == null && retryCount < 10) {
-                Log.d(this::class.simpleName, "Waiting for keyboardView initialization... retry=$retryCount")
-                kotlinx.coroutines.delay(100)
-                retryCount++
-            }
-
-            val keyboardView = keyboardViews[KeyboardMode.CHARACTERS]
-            Log.d(this::class.simpleName, "keyboardView for CHARACTERS: $keyboardView")
-
-            if (keyboardView == null) {
-                Log.e(this::class.simpleName, "ERROR: keyboardView is still null after retries! Cannot reload layout")
-                return@launch
-            }
-
-            val newLayout = withContext(Dispatchers.IO) {
+            val keyboardView = keyboardViews[KeyboardMode.CHARACTERS] ?: return@launch
+            keyboardView.computedLayout = withContext(Dispatchers.IO) {
                 layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, taigikeyboard.activeSubtype)
             }
-            Log.d(this::class.simpleName, "Fetched new layout: ${newLayout.name}")
-
-            keyboardView.computedLayout = newLayout
             keyboardView.updateVisibility()
-            Log.i(this::class.simpleName, "Layout reloaded after phahTaigiLayoutChanged")
         }
     }
 
@@ -550,6 +581,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 val composingText = composingManager?.getComposingText()
                 Log.d(TAG, "[DELETE] deleteBackward=true, rawInput='$rawInput', composingText='$composingText'")
             }
+            scheduleDisplayDerivation()
             // 更新候選詞（使用 debounce 機制）
             updateTaigiCandidatesDebounced()
             return
@@ -588,8 +620,9 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
         // 如果正在台語組字，先確認組字
         if (composingManager?.isComposing() == true) {
-            // 在確認之前先取得組字文字（確認後會清空）
+            // Capture rawInput and composingText before commitComposition clears them
             val committedText = composingManager?.getComposingText() ?: ""
+            val capturedRawInput = composingManager?.getRawInput() ?: ""
             composingManager?.commitComposition(ic)
 
             // 清除候選詞
@@ -623,7 +656,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
 
             // 沒有特定 IME action 時：羅馬字模式加空白
-            if (taigikeyboard.prefs.autoSpaceEnabled && !taigikeyboard.prefs.isTranslateSwapped) {
+            if (taigikeyboard.prefs.isAutoSpaceEnabled && !taigikeyboard.prefs.isTranslateSwapped) {
                 // 檢查字尾是否為連字符
                 if (!committedText.endsWith("-")) {
                     ic.commitText(" ", 1)
@@ -636,7 +669,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 smartbarManager.handleNextWordPrediction(
                     displayText = committedText,
                     committedText = committedText,
-                    roman = committedText
+                    roman = committedText,
+                    rawInput = capturedRawInput
                 )
             }
             return
@@ -714,16 +748,21 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
         // 如果正在台語組字，確認組字 + 插入空白
         if (composingManager?.isComposing() == true) {
-            // 在確認之前先取得組字文字
+            // Capture rawInput and composingText before commitComposition clears them
             val committedText = composingManager?.getComposingText() ?: ""
+            val capturedRawInput = composingManager?.getRawInput() ?: ""
             composingManager?.commitComposition(ic)
             ic.commitText(" ", 1)
             smartbarManager.clearCandidates()
 
-            // 更新 lastSelectedWord，讓後續輸入可以建立關聯
-            // （空白本身不觸發 NextWord 預測，但記錄已輸出的文字）
+            // Feed phrase buffer with captured rawInput, then update NextWord context
             if (committedText.isNotEmpty()) {
-                smartbarManager.updateLastSelectedWord(committedText)
+                smartbarManager.handleNextWordPrediction(
+                    displayText = committedText,
+                    committedText = committedText,
+                    roman = committedText,
+                    rawInput = capturedRawInput
+                )
             }
             return
         }
@@ -732,7 +771,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             if (hasSpaceRecentlyPressed) {
                 osHandler.removeCallbacksAndMessages(null)
                 val text = ic.getTextBeforeCursor(2, 0) ?: ""
-                if (text.length == 2 && !text.matches("""[.!?‽\s][\s]""".toRegex())) {
+                if (text.length == 2 && !text.matches(DOUBLE_SPACE_PERIOD_REGEX)) {
                     ic.deleteSurroundingText(1, 0)
                     ic.commitText(".", 1)
                 }
@@ -826,6 +865,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                                 // TLD 輸入前需確認台語組字
                                 if (composingManager?.isComposing() == true) {
                                     composingManager?.commitComposition(ic)
+                                    smartbarManager.clearCandidates()
                                 }
                                 val tld = when (caps) {
                                     true -> keyData.label.uppercase(Locale.getDefault())
@@ -874,10 +914,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             "tl" -> ToneConverterModels.InputMode.TL
             else -> ToneConverterModels.InputMode.POJ
         }
-        val char = if (caps) {
-            ToneConverterModels.uppercaseToneLetter(baseText, inputMode)
-        } else {
-            ToneConverterModels.lowercaseToneLetter(baseText, inputMode)
+        val char = when {
+            capsLock -> ToneUtilities.fullUppercaseToneLetter(baseText, inputMode)
+            caps -> ToneUtilities.uppercaseToneLetter(baseText, inputMode)
+            else -> ToneUtilities.lowercaseToneLetter(baseText, inputMode)
         }
 
         // English mode：直接輸出字元，不進入組字邏輯
@@ -912,8 +952,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 manager.appendCharacter(char, ic)
             }
+            smartbarManager.collapseToolbarIfOpen()
+            scheduleDisplayDerivation()
             // 更新候選詞（使用 debounce 機制）
-            Log.d("PERF", "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms")
+            if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms")
             updateTaigiCandidatesDebounced()
         } else {
             // 非組字模式：檢查是否正在顯示 NextWord 候選詞
@@ -927,8 +969,10 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 // 開始新組字（包含 "-" 開頭的組字）
                 manager.startComposing(char, ic)
+                smartbarManager.collapseToolbarIfOpen()
+                scheduleDisplayDerivation()
                 // 更新候選詞（使用 debounce 機制）
-                Log.d("PERF", "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms")
+                if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms")
                 updateTaigiCandidatesDebounced()
             }
         }
@@ -953,6 +997,28 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
 
             if (BuildConfig.DEBUG) {
                 Log.d("PERF", "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms")
+            }
+        }
+    }
+
+    /**
+     * Schedule display derivation (segmentation + tone conversion) off the main thread.
+     * Cancels any pending derivation. The derived display is applied on the main thread
+     * once computation completes. A stale-input check prevents applying outdated results.
+     */
+    private fun scheduleDisplayDerivation() {
+        displayDerivationJob?.cancel()
+        val manager = composingManager ?: return
+        val raw = manager.getRawInput() ?: return
+
+        displayDerivationJob = launch {
+            val derived = withContext(Dispatchers.Default) {
+                manager.deriveDisplay(raw)
+            }
+            // Back on Main thread — apply only if input hasn't changed
+            val ic = taigikeyboard.currentInputConnection ?: return@launch
+            if (manager.isComposing() && manager.getRawInput() == raw) {
+                manager.applyDerivedDisplay(derived, ic)
             }
         }
     }
@@ -1007,7 +1073,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             Log.d(TAG, "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'")
         }
 
-        // 使用 TaigiAutocompleteService 搜尋候選詞
+        // Reuse TaigiAutocompleteService — only recreate when inputMode changes
         val inputMode = taigikeyboard.prefs.inputMode.let {
             when (it) {
                 "poj" -> ToneConverterModels.InputMode.POJ
@@ -1016,16 +1082,18 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
         }
 
-        val serviceStart = System.currentTimeMillis()
-        val autocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
-            taigikeyboard.context,
-            inputMode
-        )
-        Log.d("PERF", "[2] TaigiAutocompleteService init: ${System.currentTimeMillis() - serviceStart}ms")
+        if (taigiAutocompleteService == null || cachedInputMode != inputMode) {
+            cachedInputMode = inputMode
+            taigiAutocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
+                taigikeyboard.context,
+                inputMode,
+                prefs = taigikeyboard.prefs
+            )
+        }
 
         val searchStart = System.currentTimeMillis()
-        val suggestions = autocompleteService.getSuggestions(rawInput, displayText)
-        Log.d("PERF", "[3] getSuggestions (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms")
+        val suggestions = taigiAutocompleteService!!.autocomplete(rawInput, displayText, smartbarManager.getLastSelectedWord())
+        if (BuildConfig.DEBUG) Log.d("PERF", "[3] autocomplete (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms")
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[CANDIDATES] found ${suggestions.size} suggestions")
@@ -1035,7 +1103,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         val uiStart = System.currentTimeMillis()
         withContext(Dispatchers.Main) {
             smartbarManager.updateCandidates(suggestions)
-            Log.d("PERF", "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms")
+            if (BuildConfig.DEBUG) Log.d("PERF", "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms")
         }
     }
 

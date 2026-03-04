@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Smartbar 按鈕統一背景：支援 pressed/selected 狀態，圓角 8dp -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 選中狀態 -->
+    <!-- 選中狀態：Gboard-style blue -->
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <solid android:color="?attr/colorControlHighlight" />
+            <solid android:color="?attr/key_enter_bgColor" />
             <corners android:radius="8dp" />
         </shape>
     </item>

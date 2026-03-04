@@ -1,9 +1,10 @@
 import KeyboardKit
 import Foundation
 
-/// 按鈕字型提供者
+/// Button font provider
 ///
-/// 根據使用者設定的字型類型（系統/粉圓/芫荽）回傳對應的 KeyboardFont。
+/// Returns the appropriate KeyboardFont based on user's font setting
+/// (System / jf open 粉圓 / 芫荽 Iansui).
 class ButtonFontProvider {
 
     private let keyboardContext: KeyboardContext
@@ -12,9 +13,10 @@ class ButtonFontProvider {
         self.keyboardContext = keyboardContext
     }
 
-    /// 取得按鍵對應的字型
+    /// Returns the font for the given keyboard action
     func buttonKeyboardFont(for action: KeyboardAction) -> KeyboardFont {
-        let fontSize = action.standardButtonFontSize(for: keyboardContext)
+        let baseFontSize = action.standardButtonFontSize(for: keyboardContext)
+        let fontSize = adjustedFontSize(for: action, baseFontSize: baseFontSize)
         let fontType = SharedSettings.shared.fontType
 
         switch fontType {
@@ -33,5 +35,24 @@ class ButtonFontProvider {
                 weight: .regular
             )
         }
+    }
+
+    /// Adjusts font size based on layout type and user scale
+    private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
+        let userScale = SharedSettings.shared.keyFontSizeScale
+
+        guard case .character(let char) = action else {
+            return baseFontSize * userScale
+        }
+
+        let layoutType = SharedSettings.shared.keyboardLayoutType
+        if layoutType == .moe2, SharedSettings.shared.inputMode != .english {
+            // Only shrink 3-char keys (tsh/chh) to fit within key width
+            if char.count >= 3 {
+                return baseFontSize * 0.75 * userScale
+            }
+        }
+
+        return baseFontSize * userScale
     }
 }

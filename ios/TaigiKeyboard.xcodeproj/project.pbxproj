@@ -95,13 +95,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		2A20022A2EE1737100021D8F /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				KeyboardModels.swift,
-			);
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
 		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -110,13 +103,11 @@
 			);
 			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
 		};
-		2A8F06392EB351E700FDB5DE /* Exceptions for "Input" folder in "TaigiKeyboard" target */ = {
+		2A28832C2EAF0E2C00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				CaseTransformationService.swift,
-				Tone/ToneMappings.swift,
-				Tone/ToneUtilities.swift,
-				TPSConverter.swift,
+				"/Localized: InfoPlist.strings",
+				Info.plist,
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
@@ -154,7 +145,7 @@
 		2A2882BA2EAF0CE100AE3C75 /* _Keyboard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2A20022A2EE1737100021D8F /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */,
+				2A28832C2EAF0E2C00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */,
 				2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */,
 			);
 			name = _Keyboard;
@@ -187,9 +178,6 @@
 		};
 		2A2882F42EAF0D8F00AE3C75 /* Input */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				2A8F06392EB351E700FDB5DE /* Exceptions for "Input" folder in "TaigiKeyboard" target */,
-			);
 			name = Input;
 			path = Sources/TaigiKeyboard/Input;
 			sourceTree = "<group>";
@@ -361,9 +349,17 @@
 				F32651B02E524AA8002E99A4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
+				2A2882C02EAF0D0500AE3C75 /* Actions */,
+				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
+				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
+				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
+				2A2882F42EAF0D8F00AE3C75 /* Input */,
+				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
+				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				2AAC89292EF9196A00C954D7 /* Debug */,
@@ -764,7 +760,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.0;
+				MARKETING_VERSION = 3.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -802,7 +798,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.0;
+				MARKETING_VERSION = 3.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -833,7 +829,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.0;
+				MARKETING_VERSION = 3.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -865,7 +861,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.0;
+				MARKETING_VERSION = 3.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -966,8 +962,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/taigikeyboard/ISEmojiView";
 			requirement = {
-				kind = exactVersion;
-				version = 9.3.6;
+				branch = master;
+				kind = branch;
 			};
 		};
 		F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */ = {

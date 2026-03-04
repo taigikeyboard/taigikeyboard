@@ -3,7 +3,7 @@
     <string name="app_header_title">Android 台語齒盤</string>
 
     <string name="taigikeyboard__repo_url" translatable="false">https://github.com/siansiansu/TaigiKeyboard</string>
-    <string name="taigikeyboard__privacy_policy_url" translatable="false">https://github.com/siansiansu/TaigiKeyboard</string>
+    <string name="taigikeyboard__privacy_policy_url" translatable="false">https://taigikeyboard.tw/privacypolicy.html</string>
 
     <string name="key__phone_pause">Pause</string>
     <string name="key__phone_wait">Wait</string>
@@ -215,7 +215,7 @@
 
     <!-- URLs -->
     <string name="url_website" translatable="false">https://www.taigikeyboard.tw/</string>
-    <string name="url_privacy" translatable="false">https://taigikeyboard.tw/privacypolicy</string>
+    <string name="url_privacy" translatable="false">https://taigikeyboard.tw/privacypolicy.html</string>
     <string name="url_rate" translatable="false">https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard</string>
     <string name="url_google_form" translatable="false">https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header</string>
     <string name="url_support" translatable="false">https://portaly.cc/siansiansu/support</string>

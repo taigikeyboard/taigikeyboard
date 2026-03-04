@@ -2,14 +2,14 @@ import KeyboardKit
 import XCTest
 @testable import TaigiKeyboard
 
-/// CaseTransformationService 測試
-final class CaseTransformationServiceTests: XCTestCase {
+/// CaseTransformer 測試
+final class CaseTransformerTests: XCTestCase {
 
     // MARK: - transformForInput Tests
 
     /// 測試大寫狀態下的一般字母轉換
     func testTransformForInput_uppercased_normalLetter() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "a",
             keyboardCase: .uppercased,
             isAutoCapitalizationEnabled: true,
@@ -20,7 +20,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試小寫狀態下的一般字母轉換
     func testTransformForInput_lowercased_normalLetter() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "A",
             keyboardCase: .lowercased,
             isAutoCapitalizationEnabled: true,
@@ -31,7 +31,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試 Caps Lock 狀態下的轉換
     func testTransformForInput_capsLocked_normalLetter() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "a",
             keyboardCase: .capsLocked,
             isAutoCapitalizationEnabled: true,
@@ -42,7 +42,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試 POJ 模式下聲調字母的大寫轉換
     func testTransformForInput_uppercased_toneLetter_POJ() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "á",
             keyboardCase: .uppercased,
             isAutoCapitalizationEnabled: true,
@@ -53,7 +53,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試 POJ 模式下聲調字母的小寫轉換
     func testTransformForInput_lowercased_toneLetter_POJ() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "Á",
             keyboardCase: .lowercased,
             isAutoCapitalizationEnabled: true,
@@ -64,7 +64,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試 TL 模式下聲調字母的大寫轉換
     func testTransformForInput_uppercased_toneLetter_TL() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "ê",
             keyboardCase: .uppercased,
             isAutoCapitalizationEnabled: true,
@@ -75,7 +75,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試 TL 模式下聲調字母的小寫轉換
     func testTransformForInput_lowercased_toneLetter_TL() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "Ê",
             keyboardCase: .lowercased,
             isAutoCapitalizationEnabled: true,
@@ -88,7 +88,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試自動大寫關閉時，小寫狀態保持小寫
     func testTransformForInput_autoCapOff_lowercased() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "a",
             keyboardCase: .lowercased,
             isAutoCapitalizationEnabled: false,
@@ -99,7 +99,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試自動大寫關閉時，手動 Shift 仍可大寫
     func testTransformForInput_autoCapOff_manualShift() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "a",
             keyboardCase: .uppercased,
             isAutoCapitalizationEnabled: false,
@@ -110,7 +110,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試自動大寫關閉時，Caps Lock 仍可大寫
     func testTransformForInput_autoCapOff_capsLock() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "a",
             keyboardCase: .capsLocked,
             isAutoCapitalizationEnabled: false,
@@ -121,7 +121,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試自動大寫關閉時，手動 Shift 可轉換聲調字母
     func testTransformForInput_autoCapOff_manualShift_toneLetter() {
-        let result = CaseTransformationService.transformForInput(
+        let result = CaseTransformer.transformForInput(
             "ô",
             keyboardCase: .uppercased,
             isAutoCapitalizationEnabled: false,
@@ -134,7 +134,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試候選詞首字母大寫
     func testCapitalizeCandidate_inputUppercase() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "tâi-gí",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: true,
@@ -145,7 +145,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試候選詞保持小寫（輸入為小寫）
     func testCapitalizeCandidate_inputLowercase() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "tâi-gí",
             basedOn: "tai",
             isAutoCapitalizationEnabled: true,
@@ -156,7 +156,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試自動大寫關閉時候選詞不變
     func testCapitalizeCandidate_autoCapOff() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "tâi-gí",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: false,
@@ -167,7 +167,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試空輸入時候選詞不變
     func testCapitalizeCandidate_emptyInput() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "tâi-gí",
             basedOn: "",
             isAutoCapitalizationEnabled: true,
@@ -178,7 +178,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試空候選詞返回空字串
     func testCapitalizeCandidate_emptyText() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: true,
@@ -189,7 +189,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試候選詞首字為聲調字母時的大寫轉換
     func testCapitalizeCandidate_toneLetterFirst() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "ô-pêh-sai",
             basedOn: "O",
             isAutoCapitalizationEnabled: true,
@@ -200,7 +200,7 @@ final class CaseTransformationServiceTests: XCTestCase {
 
     /// 測試候選詞首字為非字母時不變
     func testCapitalizeCandidate_nonLetterFirst() {
-        let result = CaseTransformationService.capitalizeCandidate(
+        let result = CaseTransformer.capitalizeCandidate(
             "123abc",
             basedOn: "A",
             isAutoCapitalizationEnabled: true,
@@ -231,7 +231,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
@@ -261,7 +261,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .lowercased,
                 isAutoCapitalizationEnabled: true,
@@ -283,7 +283,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
@@ -303,7 +303,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .lowercased,
                 isAutoCapitalizationEnabled: true,
@@ -322,7 +322,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
@@ -339,7 +339,7 @@ final class CaseTransformationServiceTests: XCTestCase {
         ]
 
         for (input, expected) in testCases {
-            let result = CaseTransformationService.transformForInput(
+            let result = CaseTransformer.transformForInput(
                 input,
                 keyboardCase: .lowercased,
                 isAutoCapitalizationEnabled: true,

@@ -56,7 +56,7 @@ data class Subtype(
 
 data class DefaultSubtype(
     var id: Int,
-    @Json(name = "languageTag")
+    @param:Json(name = "languageTag")
     var locale: Locale,
     var preferredLayout: String
 )

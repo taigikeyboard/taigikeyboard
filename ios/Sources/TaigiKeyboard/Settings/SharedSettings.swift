@@ -1,12 +1,55 @@
 import Foundation
 import KeyboardKit
+import SwiftUI
+
+// MARK: - Codable Color
+
+/// A color value that persists a single static RGBA to UserDefaults.
+///
+/// This deliberately stores one color for both light and dark modes.
+/// When no custom color is set (`KeyboardColorSettings` field is `nil`),
+/// the keyboard falls back to KeyboardKit's dynamic adaptive colors.
+struct CodableColor: Codable, Equatable {
+    let red: Double
+    let green: Double
+    let blue: Double
+    let alpha: Double
+
+    var color: Color {
+        Color(red: red, green: green, blue: blue, opacity: alpha)
+    }
+
+    init(_ color: Color) {
+        let uiColor = UIColor(color)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        self.red = Double(r)
+        self.green = Double(g)
+        self.blue = Double(b)
+        self.alpha = Double(a)
+    }
+}
+
+// MARK: - Keyboard Color Settings
+
+struct KeyboardColorSettings: Codable, Equatable {
+    var backgroundColor: CodableColor?
+    var keyTextColor: CodableColor?
+    var normalKeyFillColor: CodableColor?
+    var specialKeyFillColor: CodableColor?
+    var candidateTextColor: CodableColor?
+    var candidateBackgroundColor: CodableColor?
+
+    static let `default` = KeyboardColorSettings()
+}
 
 /// 鍵盤佈局類型
 enum KeyboardLayoutType: String, CaseIterable {
     case phahTaigi = "phahTaigi"  // PhahTaigi 佈局
     case qwerty = "qwerty"        // 標準 QWERTY 佈局
-    case flick = "flick"          // Flick 聲調佈局
-    case tps = "tps"              // 台灣注音（方音符號）佈局
+    case tps = "tps"              // 方音符號佈局
+    case moe1 = "moe1"            // 教育部輸入法佈局1
+    case moe2 = "moe2"            // 教育部輸入法佈局2
 }
 
 class SharedSettings {
@@ -61,8 +104,17 @@ class SharedSettings {
         static let taiwanJapanDictEnabled = "taiwanJapanDictEnabled"
         static let taiHuaDictEnabled = "taiHuaDictEnabled"
         static let taiwanPlantDictEnabled = "taiwanPlantDictEnabled"
+        static let sttiDictEnabled = "sttiDictEnabled"
+        static let khpooDictEnabled = "khpooDictEnabled"
         // 異用字開關
         static let variantEnabled = "variantEnabled"
+        // 外觀設定
+        static let keyHeightScale = "keyHeightScale"
+        static let colorSettings = "colorSettings"
+        static let keyFontSizeScale = "keyFontSizeScale"
+        static let candidateTextSizeScale = "candidateTextSizeScale"
+        static let keyCornerRadius = "keyCornerRadius"
+        static let keyBorderWidth = "keyBorderWidth"
     }
 
     static let shared = SharedSettings()
@@ -208,10 +260,61 @@ class SharedSettings {
         set { userDefaults.set(newValue, forKey: Keys.taiwanPlantDictEnabled) }
     }
 
+    var sttiDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.sttiDictEnabled) }
+    }
+
+    var khpooDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.khpooDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.khpooDictEnabled) }
+    }
+
     // 異用字開關（預設關閉）
     var variantEnabled: Bool {
         get { userDefaults.object(forKey: Keys.variantEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.variantEnabled) }
+    }
+
+    // MARK: - 外觀設定（scale factor, default 1.0）
+
+    var keyHeightScale: CGFloat {
+        get { userDefaults.object(forKey: Keys.keyHeightScale) as? Double ?? 1.0 }
+        set { userDefaults.set(newValue, forKey: Keys.keyHeightScale) }
+    }
+
+    var keyFontSizeScale: CGFloat {
+        get { userDefaults.object(forKey: Keys.keyFontSizeScale) as? Double ?? 1.0 }
+        set { userDefaults.set(newValue, forKey: Keys.keyFontSizeScale) }
+    }
+
+    var candidateTextSizeScale: CGFloat {
+        get { userDefaults.object(forKey: Keys.candidateTextSizeScale) as? Double ?? 1.0 }
+        set { userDefaults.set(newValue, forKey: Keys.candidateTextSizeScale) }
+    }
+
+    var keyCornerRadius: CGFloat {
+        get { userDefaults.object(forKey: Keys.keyCornerRadius) as? Double ?? 6.0 }
+        set { userDefaults.set(newValue, forKey: Keys.keyCornerRadius) }
+    }
+
+    var keyBorderWidth: CGFloat {
+        get { userDefaults.object(forKey: Keys.keyBorderWidth) as? Double ?? 0 }
+        set { userDefaults.set(newValue, forKey: Keys.keyBorderWidth) }
+    }
+
+    var colorSettings: KeyboardColorSettings {
+        get {
+            guard let data = userDefaults.data(forKey: Keys.colorSettings),
+                  let settings = try? JSONDecoder().decode(KeyboardColorSettings.self, from: data)
+            else { return .default }
+            return settings
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue) {
+                userDefaults.set(data, forKey: Keys.colorSettings)
+            }
+        }
     }
 
     func resetToDefaults() {
@@ -224,7 +327,7 @@ class SharedSettings {
         isAutoSpaceEnabled = false
         phahTaigiLayoutEnabled = true
         keyboardLayoutType = .phahTaigi
-        // 詞庫開關預設（iTaigi 預設關閉）
+        // 詞庫開關預設（iTaigi、台華線頂對照典 預設關閉）
         moeDictEnabled = true
         newwordDictEnabled = true
         kunggeDictEnabled = true
@@ -232,19 +335,21 @@ class SharedSettings {
         taiwanJapanDictEnabled = true
         taiHuaDictEnabled = true
         taiwanPlantDictEnabled = true
+        sttiDictEnabled = true
+        khpooDictEnabled = true
         variantEnabled = false
+        // 外觀設定
+        keyHeightScale = 1.0
+        keyFontSizeScale = 1.0
+        candidateTextSizeScale = 1.0
+        keyCornerRadius = 6.0
+        keyBorderWidth = 0
+        colorSettings = .default
 
         // 重設 KeyboardKit 設定
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
     }
 }
-
-import OSLog
-
-private let settingsLogger = Logger(
-    subsystem: LexiconConstants.Logging.subsystem,
-    category: "SharedSettings"
-)
 
 extension SharedSettings {
     /// 同步台語鍵盤專屬設定到 KeyboardContext
@@ -261,8 +366,6 @@ extension SharedSettings {
 }
 
 // MARK: - Font Manager
-
-import SwiftUI
 
 /// 字體管理器（負責根據設定切換顯示字體）
 class FontManager: ObservableObject {

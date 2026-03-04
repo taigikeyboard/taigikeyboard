@@ -68,8 +68,8 @@ struct DebugAssociationView: View {
                                     .foregroundColor(.secondary)
                                     .font(.callout)
                             }
-                            if !item.nextTl.isEmpty || !item.nextPoj.isEmpty {
-                                Text("TL: \(item.nextTl) / POJ: \(item.nextPoj)")
+                            if !item.nextTl.isEmpty {
+                                Text("TL: \(item.nextTl)")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -95,7 +95,7 @@ struct DebugAssociationView: View {
     private func loadData() {
         isLoading = true
         Task {
-            let data = await NextWordService.shared.getAllAssociations()
+            let data = await NextWordService.shared.allAssociations()
             await MainActor.run {
                 allData = data
                 filteredData = data
@@ -111,8 +111,7 @@ struct DebugAssociationView: View {
             filteredData = allData.filter { item in
                 item.prevWord.localizedCaseInsensitiveContains(query) ||
                 item.nextWord.localizedCaseInsensitiveContains(query) ||
-                item.nextTl.localizedCaseInsensitiveContains(query) ||
-                item.nextPoj.localizedCaseInsensitiveContains(query)
+                item.nextTl.localizedCaseInsensitiveContains(query)
             }
         }
     }

@@ -25,7 +25,7 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     df = pd.read_csv(INPUT_FILE)
-    df = cleanup_dataframe(df, logger=logger)
+    df = cleanup_dataframe(df, logger=logger, check_roman_in_hanzi=True)
 
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
     df.to_csv(output_path, index=False)

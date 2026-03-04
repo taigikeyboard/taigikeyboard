@@ -17,13 +17,16 @@ extension ActionHandler {
         if composingManager.isComposing || isNextWordPrediction {
             let wasSwapped = settings.isTranslateSwapped
 
+            // Capture rawInput BEFORE selectSuggestion clears it
+            let capturedRawInput = composingManager.rawInput
+
             // 解析羅馬字與漢字
             let roman: String
             let hanzi: String?
 
             if isNextWordPrediction {
                 hanzi = suggestion.additionalInfo["hanzi"]
-                roman = suggestion.additionalInfo["tl"] ?? suggestion.additionalInfo["poj"] ?? suggestion.text
+                roman = suggestion.additionalInfo["tl"] ?? suggestion.text
             } else if wasSwapped {
                 roman = suggestion.subtitle ?? suggestion.text
                 hanzi = suggestion.text
@@ -61,6 +64,10 @@ extension ActionHandler {
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
             UserFrequencyService.recordUsage(for: displayText)
 
+            // DEBUG: NextWord trace - suggestion selection parsing
+            logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text, privacy: .public)' subtitle='\(suggestion.subtitle ?? "nil", privacy: .public)' additionalInfo=\(suggestion.additionalInfo.description, privacy: .public)")
+            logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman, privacy: .public)' hanzi='\(hanzi ?? "nil", privacy: .public)' displayText='\(displayText, privacy: .public)'")
+
             // 羅馬字模式：自動加空白（字尾非連字符時）
             if settings.isAutoSpaceEnabled && (!settings.isTranslateSwapped || settings.outputBothScripts) {
                 if !textToCommit.hasSuffix("-") {
@@ -68,7 +75,12 @@ extension ActionHandler {
                 }
             }
 
-            handleNextWordPrediction(displayText: displayText, roman: roman)
+            handleNextWordPrediction(
+                displayText: displayText,
+                roman: roman,
+                hanzi: hanzi,
+                rawInput: capturedRawInput
+            )
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
         }
@@ -77,7 +89,10 @@ extension ActionHandler {
     // MARK: - NextWord 處理
 
     /// 選詞後觸發 NextWord 預測並記錄關聯
-    private func handleNextWordPrediction(displayText: String, roman: String) {
+    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil, rawInput: String = "") {
+        // DEBUG: NextWord trace - handleNextWordPrediction entry
+        logger.debug("[NEXTWORD][HANDLE] displayText='\(displayText, privacy: .public)' roman='\(roman, privacy: .public)' hanzi='\(hanzi ?? "nil", privacy: .public)' isNoise=\(self.isNoiseText(displayText), privacy: .public)")
+
         guard !isNoiseText(displayText) else {
             if isSentenceEndPunctuation(displayText) {
                 resetNextWordContext()
@@ -101,19 +116,17 @@ extension ActionHandler {
         triggerNextWordPrediction(for: displayText)
     }
 
-    private func splitCompoundWord(_ word: String) -> [String] {
+    func splitCompoundWord(_ word: String) -> [String] {
         guard !word.isEmpty else { return [] }
         return word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
     }
 
     /// 記錄複合詞內部關聯（如 tshit-niû → tshit, niû）
-    private func recordCompoundWordAssociations(displayText: String, roman: String) {
+    func recordCompoundWordAssociations(displayText: String, roman: String) {
         let parts = splitCompoundWord(displayText)
         let romanParts = splitCompoundWord(roman)
 
         guard parts.count > 1 else { return }
-
-        let useTl = (settings.inputMode == .tl)
 
         Task {
             for i in 0..<(parts.count - 1) {
@@ -124,15 +137,14 @@ extension ActionHandler {
                 await NextWordService.shared.recordAssociation(
                     prev: prevPart,
                     nextHanzi: nextPart,
-                    nextTl: useTl ? nextRoman : "",
-                    nextPoj: useTl ? "" : nextRoman
+                    nextTl: nextRoman
                 )
             }
         }
     }
 
     /// Enter 確認組字後觸發 NextWord 預測（僅羅馬字模式）
-    func handleEnterNextWordPrediction(committedText: String) {
+    func handleEnterNextWordPrediction(committedText: String, rawInput: String = "") {
         guard !settings.isTranslateSwapped, !committedText.isEmpty else { return }
         guard !isNoiseText(committedText) else { return }
 

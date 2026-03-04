@@ -27,7 +27,7 @@ class EnglishAutocompleteService(
     private val context: Context
 ) {
     companion object {
-        private const val MAX_SUGGESTIONS = 5
+        private const val MAX_SUGGESTIONS = 3
     }
 
     // SpellChecker Session（懶載入）
@@ -198,10 +198,10 @@ class EnglishAutocompleteService(
                     }
 
                     try {
-                        // 使用 getSuggestions 檢查單一詞彙
+                        // 使用 getSentenceSuggestions 檢查單一詞彙
                         val textInfo = TextInfo(word)
-                        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] Calling session.getSuggestions()...")
-                        session.getSuggestions(textInfo, MAX_SUGGESTIONS)
+                        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] Calling session.getSentenceSuggestions()...")
+                        session.getSentenceSuggestions(arrayOf(textInfo), MAX_SUGGESTIONS)
 
                         if (BuildConfig.DEBUG) {
                             Log.d("ENSPELL", "[SPELL-GET] getSuggestions() called, waiting for callback...")

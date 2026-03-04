@@ -1,193 +1,153 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import android.util.Log
+import com.siansiansu.taigikeyboard.BuildConfig
 import android.view.inputmethod.InputConnection
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
+import com.siansiansu.taigikeyboard.ime.dictionary.SyllableSegmenter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.dictionary.TrieService
+import com.siansiansu.taigikeyboard.ime.dictionary.WordPrefixChecker
 
 /**
- * 管理台語羅馬字組字狀態
+ * Manages Taigi input composing state with rawInput as single source of truth.
  *
- * 負責處理：
- * - 組字文字的追加與刪除
- * - 聲調數字轉換
- * - 字元組合轉換（oo → o͘, nn → ⁿ）
- * - 與 InputConnection 同步組字狀態
+ * - rawInput: Original keystrokes (e.g. "gua2") — used for Trie search
+ * - composingText: Derived display text (e.g. "guá") — computed via deriveDisplay() on every state change
  *
- * 維護兩個狀態：
- * - rawInput: 原始輸入（保留數字聲調，用於 Trie 搜尋）
- * - composingText: 顯示文字（聲調已轉換，用於 UI 顯示和輸出）
+ * Architecture (aligned with iOS):
+ * - rawInput is the single source of truth
+ * - composingText is derived from rawInput via deriveDisplay() (run off main thread)
+ * - deriveDisplay() does: segment → group into words → tone convert → join
+ * - On keystroke: rawInput shown immediately as temporary composing text,
+ *   then replaced with derived display once background computation completes
+ * - On commit (space/enter): deriveDisplay() runs synchronously as safety fallback
+ * - Backspace: simple rawInput.dropLast() + async recomputation
  */
 class ComposingManager(
-    private val inputMode: ToneConverterModels.InputMode,
-    private val prefs: PrefHelper
+    var inputMode: ToneConverterModels.InputMode,
+    var enableDoubleTapOO: Boolean = true,
+    var enableDoubleTapNN: Boolean = true,
 ) {
-    // 原始輸入（保留數字聲調，用於 Trie 搜尋）
+    // rawInput: single source of truth (original keystrokes, e.g. "gua2si7")
     private var rawInput: String = ""
-    // 顯示文字（聲調已轉換，用於 UI 顯示）
+    // composingText: derived display (tone-marked, e.g. "guá sī")
     private var composingText: String = ""
     private var isComposing: Boolean = false
+    // Whether composingText needs re-derivation (set true after rawInput changes)
+    private var displayDirty: Boolean = false
 
-    // 候選詞選擇相關
+    // Candidate selection (0 = first candidate by default, matching iOS)
     var selectedCandidateIndex: Int = 0
         private set
 
     /**
-     * 開始組字
+     * Start composing with initial character
      */
     fun startComposing(char: String, ic: InputConnection) {
-        // 確保清空舊的組字狀態
         if (isComposing) {
             ic.finishComposingText()
         }
         rawInput = char
-        composingText = char
+        composingText = rawInput
+        displayDirty = true
         isComposing = true
         selectedCandidateIndex = 0
         updateComposingText(ic)
     }
 
     /**
-     * 追加字元到組字
+     * Append character to composing
      */
     fun appendCharacter(char: String, ic: InputConnection) {
-
         if (!isComposing) {
             startComposing(char, ic)
             return
         }
 
         selectedCandidateIndex = 0
-
-        // 更新 rawInput（只做字元組合，不做聲調轉換）
-        var newRawInput = rawInput + char
-        newRawInput = checkCharacterCombinationForRaw(newRawInput, char) ?: newRawInput
-        rawInput = newRawInput
-
-        // 更新 composingText（做完整轉換，含聲調）
-        var newText = composingText + char
-        newText = checkCharacterCombination(newText, char) ?: newText
-
-        // 檢查聲調轉換（只套用到 composingText）
-        // 聲調 1 和 4 視為無聲調，移除數字但不加調號
-        if (char.toIntOrNull() != null) {
-            val toneNumber = char.toInt()
-            if (toneNumber in 1..9) {
-                newText = applyToneConversion(newText, toneNumber) ?: newText
-            }
-        }
-
-        composingText = newText
+        rawInput += char
+        composingText = rawInput
+        displayDirty = true
         updateComposingText(ic)
     }
 
     /**
-     * 追加連字符號
+     * Append hyphen
      */
     fun appendHyphen(ic: InputConnection) {
         appendCharacter("-", ic)
     }
 
     /**
-     * 刪除組字的最後一個字元
+     * Delete last character (simple rawInput.dropLast + full recomputation)
      */
     fun deleteBackward(ic: InputConnection): Boolean {
-        if (!isComposing || composingText.isEmpty()) {
+        if (!isComposing || rawInput.isEmpty()) {
             return false
         }
 
-        // 嘗試聲調還原（composingText）
-        val restoredText = attemptToneRestoration()
-        if (restoredText != null) {
-            composingText = restoredText
-            // rawInput 刪除最後一個字元（聲調數字）
-            rawInput = rawInput.dropLast(1)
-            updateComposingText(ic)
-            return true
-        }
+        rawInput = rawInput.dropLast(1)
 
-        // 一般字元刪除（兩個狀態同步刪除）
-        val lastChar = composingText.lastOrNull()
-        // ⁿ 對應 rawInput 的 nn（2 個字元）
-        val rawDeleteCount = if (lastChar == 'ⁿ') 2 else 1
-
-        composingText = composingText.dropLast(1)
-        rawInput = rawInput.dropLast(rawDeleteCount)
-
-        if (composingText.isEmpty()) {
-            // 清空組字區（直接刪除組字文字）
+        if (rawInput.isEmpty()) {
             ic.setComposingText("", 1)
             reset(ic)
+            // Delete the preceding committed character (matching iOS deleteBackwardManually)
+            ic.deleteSurroundingText(1, 0)
             return true
         }
 
+        composingText = rawInput
+        displayDirty = true
         updateComposingText(ic)
         return true
     }
 
     /**
-     * 確認組字（提交文字）
+     * Commit composition (finalize composing text)
      */
     fun commitComposition(ic: InputConnection) {
-        if (!isComposing || composingText.isEmpty()) {
+        if (!isComposing || rawInput.isEmpty()) {
             return
         }
 
-        // 清除內部狀態
+        // Ensure display is fully derived before committing to the editor.
+        // This is a synchronous fallback for the rare case where the async
+        // derivation hasn't completed yet (e.g. very fast typing then space/enter).
+        if (displayDirty) {
+            composingText = deriveDisplay(rawInput)
+            updateComposingText(ic)
+        }
+
         rawInput = ""
         composingText = ""
         isComposing = false
-        selectedCandidateIndex = 0
-
-        // finishComposingText() 會將當前 composing text 提交到輸入框
+        displayDirty = false
+        selectedCandidateIndex = -1
         ic.finishComposingText()
     }
 
     /**
-     * 選擇候選詞
+     * Select a suggestion candidate
      */
     fun selectSuggestion(suggestion: String, ic: InputConnection) {
         if (!isComposing) {
             return
         }
 
-        // 清除內部狀態
         rawInput = ""
         composingText = ""
         isComposing = false
-        selectedCandidateIndex = 0
+        displayDirty = false
+        selectedCandidateIndex = -1
 
-        // 先設定組字文字，再確認提交
         ic.setComposingText(suggestion, 1)
         ic.finishComposingText()
     }
 
     /**
-     * 移動到下一個候選詞（空白鍵循環選擇）
-     */
-    fun moveToNextCandidate(totalCandidates: Int): Boolean {
-        if (!isComposing || totalCandidates == 0) {
-            return false
-        }
-
-        selectedCandidateIndex = (selectedCandidateIndex + 1) % totalCandidates
-        return true
-    }
-
-    /**
-     * 確認當前選中的候選詞
-     */
-    fun confirmSelectedCandidate(candidates: List<String>, ic: InputConnection): Boolean {
-        if (!isComposing || selectedCandidateIndex >= candidates.size) {
-            return false
-        }
-
-        selectSuggestion(candidates[selectedCandidateIndex], ic)
-        return true
-    }
-
-    /**
-     * 重置組字狀態
+     * Reset all composing state
      */
     fun reset(ic: InputConnection) {
         if (isComposing) {
@@ -196,152 +156,114 @@ class ComposingManager(
         rawInput = ""
         composingText = ""
         isComposing = false
-        selectedCandidateIndex = 0
+        displayDirty = false
+        selectedCandidateIndex = -1
     }
 
     /**
-     * 取得當前組字文字（用於 UI 顯示）
+     * Get current composing text (for UI display)
      */
     fun getComposingText(): String? {
         return if (isComposing) composingText else null
     }
 
     /**
-     * 取得原始輸入（用於 Trie 搜尋）
+     * Get raw input (for Trie search)
      */
     fun getRawInput(): String? {
         return if (isComposing) rawInput else null
     }
 
     /**
-     * 是否正在組字
+     * Whether currently composing
      */
     fun isComposing(): Boolean = isComposing
 
+    // MARK: - Display Derivation
+
     /**
-     * 更新 InputConnection 的組字文字
+     * Apply a pre-computed derived display text to composing state and InputConnection.
+     * Called from TextInputManager after background display derivation completes.
+     */
+    internal fun applyDerivedDisplay(derivedText: String, ic: InputConnection) {
+        if (!isComposing) return
+        composingText = derivedText
+        displayDirty = false
+        updateComposingText(ic)
+    }
+
+    /**
+     * Derive display text from raw input.
+     *
+     * Segments continuous input into syllables, groups into words via dictionary lookup,
+     * converts each to tone-marked form, joins within words with hyphens and between
+     * words with spaces. Explicit user hyphens (trailing "-") are preserved as-is.
+     *
+     * Aligned with iOS ComposingManager.deriveDisplay().
+     */
+    internal fun deriveDisplay(raw: String): String {
+        if (raw.isEmpty()) return ""
+
+        // Create checker inline (matching iOS ComposingManager.deriveDisplay)
+        val prefix = DictionaryConstants.triePrefix(inputMode)
+        val checker: WordPrefixChecker? = if (TrieService.isReady) {
+            { key -> TrieService.prefixSearch(prefix + key, 1).isNotEmpty() }
+        } else null
+        val syllables = SyllableSegmenter.segment(raw, wordPrefixChecker = checker, mode = inputMode)
+        val groups = SyllableSegmenter.groupIntoWords(syllables, checker)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DISPLAY] raw='$raw' syllables=$syllables groups=${groups.map { it.joinToString("+") }}")
+        }
+
+        // Convert each group: tone-convert syllables, join within group with "-",
+        // join groups with " ". Explicit hyphens (trailing "-") are preserved.
+        val wordDisplays = mutableListOf<String>()
+        for (group in groups) {
+            val parts = mutableListOf<String>()
+            for (syllable in group) {
+                if (syllable.isEmpty()) continue
+                if (syllable.endsWith("-")) {
+                    val base = syllable.dropLast(1)
+                    parts.add(ToneConverter.convertToToneMarks(base, inputMode, enableDoubleTapOO, enableDoubleTapNN) + "-")
+                } else {
+                    parts.add(ToneConverter.convertToToneMarks(syllable, inputMode, enableDoubleTapOO, enableDoubleTapNN))
+                }
+            }
+            // Join parts with "-", but skip separator after explicit-hyphen parts
+            val groupDisplay = StringBuilder()
+            for ((j, part) in parts.withIndex()) {
+                if (j > 0 && !parts[j - 1].endsWith("-")) {
+                    groupDisplay.append("-")
+                }
+                groupDisplay.append(part)
+            }
+            wordDisplays.add(groupDisplay.toString())
+        }
+
+        // Join word groups, but not after explicit-hyphen-ending groups
+        val display = StringBuilder()
+        for ((i, word) in wordDisplays.withIndex()) {
+            if (i > 0 && !wordDisplays[i - 1].endsWith("-")) {
+                display.append(" ")
+            }
+            display.append(word)
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[DISPLAY] result='$display'")
+        }
+        return display.toString()
+    }
+
+    /**
+     * Update InputConnection composing text
      */
     private fun updateComposingText(ic: InputConnection) {
         ic.setComposingText(composingText, 1)
     }
 
-    /**
-     * 檢查字元組合轉換（用於 rawInput，保留 ASCII 格式）
-     * POJ: oo 保持 oo, nn 保持 nn
-     * TL: 不做轉換
-     */
-    private fun checkCharacterCombinationForRaw(currentText: String, input: String): String? {
-        // rawInput 不做字元組合轉換，保留原始 ASCII
-        // 這樣 Trie 搜尋時可以直接用 "goa2" 格式
-        return null
-    }
-
-    /**
-     * 檢查字元組合轉換（oo → o͘, nn → ⁿ）
-     * 每次呼叫時即時讀取設定，確保設定變更立即生效（與 iOS 一致）
-     */
-    private fun checkCharacterCombination(currentText: String, input: String): String? {
-        // POJ 模式：檢查 oo → o͘
-        if (inputMode == ToneConverterModels.InputMode.POJ) {
-            if (input.lowercase() == "o" && currentText.length >= 2) {
-                val beforeLast = currentText.dropLast(1)
-                if (beforeLast.lastOrNull()?.lowercaseChar() == 'o' && prefs.enableDoubleTapOO) {
-                    val wasUppercase = beforeLast.lastOrNull()?.isUpperCase() == true
-                    val replacement = if (wasUppercase) "O͘" else "o͘"
-                    return beforeLast.dropLast(1) + replacement
-                }
-            }
-        }
-
-        // POJ 模式：檢查 nn → ⁿ（台羅模式保持 nn）
-        if (inputMode == ToneConverterModels.InputMode.POJ &&
-            input.lowercase() == "n" &&
-            prefs.enableDoubleTapNN &&
-            currentText.length >= 3) {
-
-            val lastThree = currentText.takeLast(3)
-            if (lastThree.length >= 2) {
-                val secondLast = lastThree[lastThree.length - 2]
-                val thirdLast = if (lastThree.length >= 3) lastThree[lastThree.length - 3] else null
-
-                if (secondLast.lowercaseChar() == 'n' && thirdLast != null) {
-                    val vowels = "aeiouAEIOU"
-                    if (thirdLast in vowels) {
-                        val vowelWithNasal = "$thirdLast" + "ⁿ"
-                        return currentText.dropLast(3) + vowelWithNasal
-                    }
-                }
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * 應用聲調轉換
-     * 聲調 1 和 4 視為無聲調，移除數字但不加調號
-     * 每次呼叫時即時讀取設定，確保設定變更立即生效（與 iOS 一致）
-     */
-    private fun applyToneConversion(currentText: String, toneNumber: Int): String? {
-        if (toneNumber !in 1..9 || currentText.isEmpty()) {
-            return null
-        }
-
-        val converted = ToneConverter.convertToToneMarks(
-            currentText,
-            inputMode,
-            prefs.enableDoubleTapOO,
-            prefs.enableDoubleTapNN
-        )
-        return if (converted != currentText) converted else null
-    }
-
-    /**
-     * 嘗試聲調還原（刪除聲調符號時還原為基本字元）
-     *
-     * 支援兩種 Unicode 編碼：
-     * 1. Precomposed characters (單一字符): ń, ǹ, ň 等
-     * 2. Combining characters (基本字符 + 組合符號): n + ̂, n + ̄, n + ̍ 等
-     */
-    private fun attemptToneRestoration(): String? {
-        if (composingText.isEmpty()) {
-            return null
-        }
-
-        val toneMapping = when (inputMode) {
-            ToneConverterModels.InputMode.POJ -> ToneConverterModels.pojToneMapping
-            ToneConverterModels.InputMode.TL -> ToneConverterModels.tlToneMapping
-        }
-
-        // 從後往前搜尋聲調字元
-        // 優先檢查較長的組合（處理 combining characters）
-        var i = composingText.length - 1
-        while (i >= 0) {
-            // 嘗試 2 字元組合 (base + combining character)
-            // 例如: n̂ = 'n' + U+0302
-            if (i >= 1) {
-                val twoCharSeq = composingText.substring(i - 1, i + 1)
-                val baseChar = toneMapping[twoCharSeq]
-                if (baseChar != null) {
-                    val before = composingText.substring(0, i - 1)
-                    val after = composingText.substring(i + 1)
-                    return before + baseChar + after
-                }
-            }
-
-            // 嘗試 1 字元 (precomposed character)
-            // 例如: ń = U+0144
-            val oneChar = composingText[i].toString()
-            val baseChar = toneMapping[oneChar]
-            if (baseChar != null) {
-                val before = composingText.substring(0, i)
-                val after = composingText.substring(i + 1)
-                return before + baseChar + after
-            }
-
-            i--
-        }
-
-        return null
+    companion object {
+        private const val TAG = "ComposingManager"
     }
 }

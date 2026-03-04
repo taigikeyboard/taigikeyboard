@@ -17,8 +17,12 @@
         <item name="key_bgColor">#FBF9F5</item>
         <item name="key_bgColorPressed">#E0E0E0</item>
         <item name="key_bgColorActive">#BDBDBD</item>
+        <item name="key_function_bgColor">#D5D5D5</item>
+        <item name="key_function_bgColorPressed">#C8C8C8</item>
         <item name="key_fgColor">?android:textColor</item>
-        <item name="key_enter_fgColor">#FFFFFF</item>
+        <item name="key_enter_bgColor">#4285F4</item><!-- Google Blue -->
+        <item name="key_enter_bgColorPressed">#3367D6</item><!-- Google Blue (pressed) -->
+        <item name="key_enter_fgColor">#FFFFFF</item><!-- White on blue -->
 
         <item name="key_popup_bgColor">#EEEEEE</item>
         <item name="key_popup_fgColor">?android:textColor</item>

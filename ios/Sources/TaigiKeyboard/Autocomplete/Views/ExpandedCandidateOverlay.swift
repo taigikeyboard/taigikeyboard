@@ -301,8 +301,8 @@ struct ExpandedCandidateOverlay: View {
                     // iOS 26 Liquid Glass：使用 KeyboardKit 預設背景色（支援 dark mode）
                     Color.keyboardBackground
                 } else {
-                    // 非 Liquid Glass 模式使用原有背景和陰影
-                    Color.keyboardBackground
+                    // Use custom candidate background color if set, otherwise default
+                    (style.backgroundColor ?? Color.keyboardBackground)
                         .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: -2)
                 }
             }

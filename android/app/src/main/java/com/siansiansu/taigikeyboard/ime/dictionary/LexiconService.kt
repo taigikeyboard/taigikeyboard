@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.text.Normalizer
 
 /**
  * Service for querying Taigi dictionary database
@@ -45,6 +46,8 @@ object LexiconService {
         const val TAIHOA = "taihoa"        // 台華線頂對照典
         const val TAIJIT = "taijit"        // 台日大辭典
         const val KUNGGE = "kungge"        // 台語工藝詞庫
+        const val STTI = "stti"            // 學科術語辭典
+        const val KHPOO = "khpoo"          // 腔口補充辭典
     }
 
     /**
@@ -56,7 +59,6 @@ object LexiconService {
      * 3. 按 frequency 排序
      *
      * @param input Search query string (preprocessed, may be lowercased for search)
-     * @param originalInput Original user input (preserves case for capitalization)
      * @param inputType Type of input (hanzi, roman with/without tone)
      * @param inputMode POJ or TL mode
      * @param limit Maximum number of results
@@ -65,14 +67,19 @@ object LexiconService {
      */
     suspend fun search(
         input: String,
-        originalInput: String = input,
         inputType: InputType,
         inputMode: InputMode = InputMode.POJ,
         limit: Int = DictionaryConstants.DEFAULT_SEARCH_LIMIT,
-        context: Context
+        context: Context,
+        prefs: PrefHelper? = null
     ): List<TaigiWord> = withContext(Dispatchers.IO) {
         val searchStart = System.currentTimeMillis()
         if (input.isEmpty()) {
+            return@withContext emptyList()
+        }
+
+        // Hanzi input cannot be searched via trie (matching iOS guard)
+        if (inputType is InputType.Hanzi) {
             return@withContext emptyList()
         }
 
@@ -82,17 +89,19 @@ object LexiconService {
 
         val db = database ?: throw DictionaryError.DatabaseNotAvailable
 
-        // 讀取搜尋設定
-        val prefs = PrefHelper(context)
+        // 讀取搜尋設定（use provided PrefHelper to avoid runBlocking on new instance）
+        val p = prefs ?: PrefHelper(context)
         val enabledDicts = EnabledDictionaries(
-            kautian = prefs.moeDictEnabled,
-            taigitv = prefs.newwordDictEnabled,
-            itaigi = prefs.itaigiDictEnabled,
-            sitbut = prefs.sitbutDictEnabled,
-            taihoa = prefs.taihoaDictEnabled,
-            taijit = prefs.taijitDictEnabled,
-            kungge = prefs.kunggeDictEnabled,
-            variant = prefs.variantEnabled
+            kautian = p.moeDictEnabled,
+            taigitv = p.newwordDictEnabled,
+            itaigi = p.itaigiDictEnabled,
+            sitbut = p.taiwanPlantDictEnabled,
+            taihoa = p.taiHuaDictEnabled,
+            taijit = p.taiwanJapanDictEnabled,
+            kungge = p.kunggeDictEnabled,
+            stti = p.sttiDictEnabled,
+            khpoo = p.khpooDictEnabled,
+            variant = p.variantEnabled
         )
 
         try {
@@ -103,26 +112,12 @@ object LexiconService {
             )
             if (BuildConfig.DEBUG) Log.d("PERF", "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms")
 
-            // 處理大小寫
-            val caseStart = System.currentTimeMillis()
-            val processedWords = words.map { word ->
-                val processedHanzi = if (word.hanzi != null && startsWithRomanLetter(word.hanzi)) {
-                    capitalize(word.hanzi, originalInput, inputMode)
-                } else {
-                    word.hanzi
-                }
-
-                word.copy(
-                    roman = capitalize(word.roman, originalInput, inputMode),
-                    hanzi = processedHanzi
-                )
-            }
-            if (BuildConfig.DEBUG) Log.d("PERF", "[3c] capitalize: ${System.currentTimeMillis() - caseStart}ms")
+            // Capitalization deferred to SuggestionCaseTransformer (view layer, matching iOS)
 
             val sortStart = System.currentTimeMillis()
-            val uniqueWords = removeDuplicates(processedWords)
+            val uniqueWords = removeDuplicates(words)
             val normalizedInput = InputNormalizer.normalize(input, inputMode)
-            val result = applyScoredSort(uniqueWords, normalizedInput)
+            val result = sortByScore(uniqueWords, normalizedInput)
             if (BuildConfig.DEBUG) {
                 Log.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
                 Log.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
@@ -147,22 +142,29 @@ object LexiconService {
         val taihoa: Boolean,    // 台華線頂對照典
         val taijit: Boolean,    // 台日大辭典
         val kungge: Boolean,    // 台語工藝詞庫
+        val stti: Boolean,      // 學科術語辭典
+        val khpoo: Boolean,     // 腔口補充辭典
         val variant: Boolean    // 異用字
     ) {
         /** 是否全部關閉 */
         fun allDisabled(): Boolean =
-            !kautian && !taigitv && !itaigi && !sitbut && !taihoa && !taijit && !kungge
+            !kautian && !taigitv && !itaigi && !sitbut && !taihoa && !taijit && !kungge && !stti && !khpoo
 
         /** 是否全部開啟 */
         fun allEnabled(): Boolean =
-            kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge
+            kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
     }
 
     /**
-     * 使用 Trie 完全匹配 + 前綴匹配 + SQLite 批次查詢
+     * Search using Trie exact match + prefix match + SQLite batch query
      *
-     * 注意：MARISA-trie 的 predictive_search 按字典序遍歷，短 key 會排在後面。
-     * 為確保完全匹配的結果不被 limit 截斷，需先用 lookup 取得完全匹配的 rowid。
+     * Trie keys are prefixed by mode (tl:/poj:). Input stays in its
+     * native spelling; the prefix is prepended before querying.
+     * POJ display text is converted from TL at query result time.
+     *
+     * Note: MARISA-trie's predictive_search traverses in lexicographic order,
+     * so shorter keys may appear later. We use lookup first to ensure exact
+     * matches are not truncated by the limit.
      */
     private fun searchWithTrie(
         db: SQLiteDatabase,
@@ -175,11 +177,20 @@ object LexiconService {
             Log.d(TAG, "[SEARCH] input='$input', mode=$inputMode, limit=$limit")
         }
 
-        // 正規化輸入（小寫、去連字符、調符轉數字）
-        val normalizedInput = InputNormalizer.normalize(input, inputMode)
+        // Guard: trie must be loaded (match iOS DictionaryRepository.query guard)
+        if (!TrieService.isReady) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[SEARCH] Trie not loaded")
+            }
+            throw DictionaryError.TrieNotLoaded
+        }
+
+        // Build search key using segmenter for continuous input (match iOS flow)
+        val searchKey = InputNormalizer.buildSearchKey(input, inputMode)
+        val normalizedInput = InputNormalizer.normalize(searchKey, inputMode)
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NORMALIZE] '$input' -> '$normalizedInput'")
+            Log.d(TAG, "[NORMALIZE] '$input' -> '$searchKey' -> '$normalizedInput'")
         }
 
         if (normalizedInput.isEmpty()) {
@@ -189,12 +200,11 @@ object LexiconService {
             return emptyList()
         }
 
-        // Trie 查詢（根據 InputMode 加前綴）
-        val triePrefix = if (inputMode == InputMode.TL) "tl:" else "poj:"
-        val trieKey = triePrefix + normalizedInput
+        // Trie 查詢（使用 mode-prefixed key）
+        val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[TRIE] trieKey='$trieKey', TrieService.isReady=${TrieService.isReady()}, keyCount=${TrieService.getKeyCount()}")
+            Log.d(TAG, "[TRIE] trieKey='$trieKey', TrieService.isReady=${TrieService.isReady}, keyCount=${TrieService.getKeyCount()}")
         }
 
         // 1. 完全匹配（確保短詞不被遺漏）
@@ -270,7 +280,9 @@ object LexiconService {
             Log.d(TAG, "[SQL] queryByIds: ${ids.size} ids, enabledDicts=$enabledDicts")
         }
 
-        val romanColumn = if (inputMode == InputMode.POJ) Column.POJ else Column.TL
+        // Always query TL column (all Trie keys are in TL format)
+        // Convert to POJ at display time when needed
+        val romanColumn = Column.TL
 
         // 建立 IN 查詢（分批處理避免 SQL 太長）
         val batchSize = 500
@@ -291,6 +303,8 @@ object LexiconService {
             if (enabledDicts.taihoa) dictConditions.add("${Column.TAIHOA} = 1")
             if (enabledDicts.taijit) dictConditions.add("${Column.TAIJIT} = 1")
             if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
+            if (enabledDicts.stti) dictConditions.add("${Column.STTI} = 1")
+            if (enabledDicts.khpoo) dictConditions.add("${Column.KHPOO} = 1")
 
             // 全部開啟時不加詞庫過濾條件
             val dictWhereCondition = if (enabledDicts.allEnabled()) {
@@ -316,10 +330,17 @@ object LexiconService {
             cursor.use {
                 while (it.moveToNext()) {
                     val id = it.getInt(0)
-                    val roman = it.getString(1) ?: ""
+                    val tlRoman = it.getString(1) ?: ""
                     val hanziText = it.getString(2)
                     val hanzi = if (hanziText.isNullOrEmpty()) null else hanziText
                     val frequency = it.getInt(3)
+
+                    // Convert TL -> POJ for display in POJ mode
+                    val roman = if (inputMode == InputMode.POJ) {
+                        TaigiPhonetics.tlDisplayToPOJDisplay(tlRoman)
+                    } else {
+                        tlRoman
+                    }
 
                     results.add(TaigiWord(id, roman, hanzi, frequency))
                 }
@@ -445,49 +466,6 @@ object LexiconService {
     }
 
     /**
-     * 根據原始輸入的大小寫，調整候選詞的首字元大小寫
-     *
-     * 參考 iOS 實作：taigi-keyboard-ios/Sources/Extension/LexiconService.swift:147-176
-     *
-     * @param text 候選詞文字
-     * @param originalInput 原始使用者輸入（保留大小寫）
-     * @param inputMode POJ 或 TL 模式
-     * @return 調整大小寫後的候選詞
-     */
-    private fun capitalize(text: String, originalInput: String, inputMode: InputMode): String {
-        // TODO: 未來可以整合自動大寫設定檢查
-
-        if (originalInput.isEmpty() || text.isEmpty()) return text
-
-        // 檢查原始輸入的首字元是否大寫
-        val firstChar = originalInput.first()
-        val isInputUpperCase = firstChar.isUpperCase()
-
-        if (!isInputUpperCase) {
-            return text
-        }
-
-        // 檢查候選詞首字元是否為字母
-        val textFirst = text.first()
-        if (!textFirst.isLetter()) return text
-
-        // 使用聲調字母大寫轉換
-        val first = ToneConverterModels.uppercaseToneLetter(textFirst.toString(), inputMode)
-        val rest = text.drop(1)
-
-        val result = first + rest
-
-        return result
-    }
-
-    /**
-     * Check if text starts with a roman letter
-     */
-    private fun startsWithRomanLetter(text: String): Boolean {
-        return text.firstOrNull()?.isLetter() == true
-    }
-
-    /**
      * 移除重複的候選詞
      *
      * 使用 roman + hanzi 組合作為唯一性判斷依據，
@@ -514,13 +492,13 @@ object LexiconService {
     /**
      * 計算候選詞排序分數
      *
-     * 簡化公式（v3）：
-     * score = userFreqScore + recencyBonus + exactBonus + baseFreqScore
+     * 公式（v4）：
+     * score = userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore
      *
      * 設計理念：
      * - userFreqScore 主導排序（穩定性優先）
+     * - closenessBonus 讓長度較接近輸入的候選詞排序較前（cold-start 主要因素）
      * - recencyBonus 和 exactBonus 只做微調（不會讓低頻詞超過高頻詞）
-     * - 移除長度懲罰（讓使用者行為決定排序）
      *
      * @param word 候選詞
      * @param normalizedInput 正規化後的輸入
@@ -532,7 +510,9 @@ object LexiconService {
         normalizedInput: String,
         frequencyData: UserFrequencyService.FrequencyData
     ): Int {
-        val candidateRoman = word.roman.replace("-", "").lowercase()
+        // Normalize both sides to base form (no tones, no hyphens) for comparison
+        val candidateBase = romanToBase(word.roman)
+        val inputBase = inputToBase(normalizedInput)
 
         // 使用者頻率（主導因素，上限 100，max 10000）
         val cappedUserFreq = minOf(frequencyData.count, 100)
@@ -549,12 +529,41 @@ object LexiconService {
         }
 
         // 完全匹配加分（微調，+100）
-        val exactBonus = if (candidateRoman == normalizedInput) 100 else 0
+        val exactBonus = if (candidateBase == inputBase) 100 else 0
+
+        // Match closeness bonus (0-500): reward candidates whose length matches input
+        val inputLen = maxOf(inputBase.length, 1)
+        val candidateLen = maxOf(candidateBase.length, 1)
+        val matchRatio = minOf(inputLen, candidateLen).toDouble() / maxOf(inputLen, candidateLen).toDouble()
+        val closenessBonus = (matchRatio * 500).toInt()
 
         // 詞庫頻率（新詞 fallback，約 0-100）
         val baseFreqScore = (word.lengthScore ?: 0) / 10
 
-        return userFreqScore + recencyBonus + exactBonus + baseFreqScore
+        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore
+    }
+
+    /**
+     * Strip roman to base form for matching (no tones, no hyphens, lowercase)
+     * "tāi-tsì" → "taitsi", "tai5-tsi3" → "taitsi"
+     */
+    private fun romanToBase(roman: String): String {
+        val noHyphens = roman.replace("-", "")
+        val withNasal = noHyphens.replace("\u207F", "nn").replace("\u1D3A", "nn")
+        val nfd = Normalizer.normalize(withNasal, Normalizer.Form.NFD)
+        val withOo = nfd.replace("\u0358", "o")
+        // Strip combining marks (Unicode category Mn = NON_SPACING_MARK) and tone digits
+        return withOo.filter {
+            Character.getType(it) != Character.NON_SPACING_MARK.toInt()
+        }.filter { !it.isDigit() }.lowercase()
+    }
+
+    /**
+     * Strip tone digits from normalized input
+     * "tai5tsi3" → "taitsi", "taitsi" → "taitsi"
+     */
+    private fun inputToBase(normalizedInput: String): String {
+        return normalizedInput.filter { !it.isDigit() }.lowercase()
     }
 
     /**
@@ -564,12 +573,12 @@ object LexiconService {
      * @param normalizedInput 正規化後的輸入
      * @return 排序後的候選詞列表
      */
-    private suspend fun applyScoredSort(words: List<TaigiWord>, normalizedInput: String): List<TaigiWord> {
+    private suspend fun sortByScore(words: List<TaigiWord>, normalizedInput: String): List<TaigiWord> {
         return withContext(Dispatchers.IO) {
             try {
                 // 批次查詢使用者頻率資料
                 val wordTexts = words.map { it.displayText }.distinct()
-                val frequencyDataMap = UserFrequencyService.getFrequencyDataBatch(wordTexts)
+                val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
 
                 // 按分數排序
                 words.sortedByDescending { word ->
@@ -584,13 +593,6 @@ object LexiconService {
                 words
             }
         }
-    }
-
-    /**
-     * Check if database is connected
-     */
-    fun isConnected(): Boolean {
-        return database != null && database?.isOpen == true
     }
 
     /**

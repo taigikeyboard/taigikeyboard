@@ -23,6 +23,7 @@ object ToneCharacterUtils {
         val mapping = when (mode) {
             InputMode.POJ -> ToneConverterModels.pojNumberToToneMapping
             InputMode.TL -> ToneConverterModels.tlNumberToToneMapping
+            InputMode.ENGLISH -> return emptyList()
         }
 
         return TONE_ORDER.mapNotNull { tone ->
@@ -38,6 +39,7 @@ object ToneCharacterUtils {
         return when (mode) {
             InputMode.POJ -> listOf("a", "e", "i", "o", "o͘", "u", "n", "m")
             InputMode.TL -> listOf("a", "e", "i", "o", "oo", "u", "n", "m")
+            InputMode.ENGLISH -> emptyList()
         }
     }
 

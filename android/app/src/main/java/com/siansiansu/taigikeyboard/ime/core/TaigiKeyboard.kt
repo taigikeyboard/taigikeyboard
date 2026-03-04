@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.*
-import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -93,23 +92,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             return isEnabled
         }
 
-        fun checkIfImeIsSelected(context: Context): Boolean {
-            return try {
-                val selectedImeId = Settings.Secure.getString(
-                    context.contentResolver,
-                    Settings.Secure.DEFAULT_INPUT_METHOD
-                )
-                if (BuildConfig.DEBUG) Log.i(TaigiKeyboard::class.simpleName, "Selected IME: $selectedImeId")
-                selectedImeId == IME_ID
-            } catch (e: SecurityException) {
-                // DEFAULT_INPUT_METHOD might be restricted in future Android versions
-                if (BuildConfig.DEBUG) {
-                    Log.e(TaigiKeyboard::class.simpleName, "SecurityException when checking selected IME", e)
-                }
-                false
-            }
-        }
-
         @Synchronized
         fun getInstance(): TaigiKeyboard {
             return taigikeyboardInstance!!
@@ -139,13 +121,12 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         prefs = PrefHelper(this)
+        prefs.warmUp()
 
         // Migrate from SharedPreferences to DataStore on first launch
         serviceScope.launch {
             prefs.migrateFromSharedPreferences()
         }
-
-        prefs.initDefaultPreferences()
         subtypeManager = SubtypeManager(this, prefs)
         activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
 
@@ -159,11 +140,13 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             }
         }
 
-        // Observe phahTaigiLayoutEnabled changes and reload keyboard layout
+        // Observe keyboardLayoutType changes and reload keyboard layout
         serviceScope.launch {
-            prefs.observePhahTaigiLayoutEnabled().collect { enabled ->
-                Log.d(this@TaigiKeyboard::class.simpleName, "PhahTaigiLayoutEnabled Flow collected: $enabled")
-                onPhahTaigiLayoutChanged(enabled)
+            prefs.observeKeyboardLayoutType().collect { newLayoutType ->
+                if (BuildConfig.DEBUG) {
+                    Log.d(this@TaigiKeyboard::class.simpleName, "KeyboardLayoutType changed to: $newLayoutType")
+                }
+                onKeyboardLayoutTypeChanged(newLayoutType)
             }
         }
 
@@ -520,9 +503,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         mediaInputManager.onInputModeChanged(newInputMode)
     }
 
-    private fun onPhahTaigiLayoutChanged(enabled: Boolean) {
-        textInputManager.onPhahTaigiLayoutChanged(enabled)
-        mediaInputManager.onPhahTaigiLayoutChanged(enabled)
+    private fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
+        textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
+        mediaInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
     }
 
     fun setActiveInput(type: Int) {
@@ -564,7 +547,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         fun onSubtypeChanged(newSubtype: Subtype) {}
         fun onInputModeChanged(newInputMode: String) {}
-        fun onPhahTaigiLayoutChanged(enabled: Boolean) {}
+        fun onKeyboardLayoutTypeChanged(newLayoutType: String) {}
     }
 
     /**
@@ -579,7 +562,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      *  define which locales are supported and which layout is preferred for that locale.
      */
     data class ImeConfig(
-        @Json(name = "package")
+        @param:Json(name = "package")
         val packageName: String,
         val characterLayouts: Map<String, String> = mapOf(),
         val defaultSubtypes: List<DefaultSubtype> = listOf()

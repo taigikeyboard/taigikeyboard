@@ -9,7 +9,7 @@ import KeyboardKit
 /// - 聲調字母的正確轉換（POJ/TL）
 ///
 /// 大小寫狀態完全由 KeyboardKit 管理，本服務只負責字元轉換。
-enum CaseTransformationService {
+enum CaseTransformer {
 
     // MARK: - Public API
 
@@ -81,12 +81,24 @@ enum CaseTransformationService {
         mode: InputMode
     ) -> String {
         switch targetCase {
-        case .uppercased, .capsLocked:
+        case .capsLocked:
+            // Caps Lock：全部大寫（如 "tsh" → "TSH"）
             return ToneUtilities.uppercaseToneLetter(char, mode: mode)
+        case .uppercased:
+            // 句首大寫：僅首字母大寫（如 "tsh" → "Tsh"）
+            return capitalizeFirstLetter(char, mode: mode)
         case .lowercased:
             return ToneUtilities.lowercaseToneLetter(char, mode: mode)
         @unknown default:
             return char.lowercased()
         }
+    }
+
+    /// 僅首字母大寫（支援聲調字母）
+    private static func capitalizeFirstLetter(_ char: String, mode: InputMode) -> String {
+        guard let first = char.first else { return char }
+        let firstUpper = ToneUtilities.uppercaseToneLetter(String(first), mode: mode)
+        let rest = String(char.dropFirst()).lowercased()
+        return firstUpper + rest
     }
 }

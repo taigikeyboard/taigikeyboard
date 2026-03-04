@@ -114,7 +114,8 @@
     { "code": 328, "label": "ň" },
     { "code": 110, "label": "n̄" },
     { "code": 110, "label": "n̍" },
-    { "code": 110, "label": "n̋" }
+    { "code": 110, "label": "n̋" },
+    { "code": 8319, "label": "ⁿ" }
   ],
   "N": [
     { "code": 323, "label": "Ń" },

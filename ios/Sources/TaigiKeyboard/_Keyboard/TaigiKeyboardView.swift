@@ -1,3 +1,4 @@
+import Combine
 import KeyboardKit
 import SwiftUI
 
@@ -13,9 +14,14 @@ struct TaigiKeyboardView: View {
 
     let onSuggestionTap: (Autocomplete.Suggestion) -> Void
     let onTranslateToggle: () -> Void
+    var initialInputMode: InputMode? = nil
 
     @StateObject private var expandState = CandidateExpandState()
     @State private var currentInputMode: InputMode = SharedSettings.shared.inputMode
+    @State private var colorSettings: KeyboardColorSettings = SharedSettings.shared.colorSettings
+    @State private var keyFontSizeScale: CGFloat = SharedSettings.shared.keyFontSizeScale
+    @State private var keyBorderWidth: CGFloat = SharedSettings.shared.keyBorderWidth
+    @State private var isLayoutPanelExpanded = false
 
     var body: some View {
         // 根據 keyboardCase 轉換候選詞大小寫
@@ -31,8 +37,13 @@ struct TaigiKeyboardView: View {
         // 響應式獲取選中狀態
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
 
-        // 根據 KeyboardContext 動態選擇候選詞樣式
-        let candidateStyle = CandidateView.Style.adaptive(for: keyboardContext)
+        // 根據 KeyboardContext 動態選擇候選詞樣式（含自訂候選詞背景色）
+        let candidateStyle = Self.candidateStyle(for: keyboardContext, colorSettings: colorSettings)
+
+        // Use Liquid Glass transparent pass-through only when enabled
+        // AND no custom background color is set by the user.
+        let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
+            && colorSettings.backgroundColor == nil
 
         // KeyboardKit 10: 使用 layout: 和 services: 參數
         KeyboardView(
@@ -43,10 +54,22 @@ struct TaigiKeyboardView: View {
                 TaigiButtonContent(
                     action: params.item.action,
                     keyboardContext: keyboardContext,
-                    standardContent: params.view
+                    standardContent: params.view,
+                    keyFontSizeScale: keyFontSizeScale
                 )
             },
-            buttonView: { $0.view },
+            buttonView: { params in
+                let borderWidth = self.keyBorderWidth
+                if borderWidth > 0, params.item.action != .none {
+                    params.view.overlay(
+                        RoundedRectangle(cornerRadius: SharedSettings.shared.keyCornerRadius)
+                            .strokeBorder(Color.black, lineWidth: borderWidth)
+                            .padding(params.item.edgeInsets)
+                    )
+                } else {
+                    params.view
+                }
+            },
             collapsedView: { $0.view },
             emojiKeyboard: { _ in
                 // KeyboardKit 10: ISEmojiView 需要明確設置高度
@@ -65,22 +88,61 @@ struct TaigiKeyboardView: View {
                     onSettingsTap: { [unowned services] in
                         services.actionHandler.handle(.settings)
                     },
+                    onLayoutTap: {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isLayoutPanelExpanded.toggle()
+                            if isLayoutPanelExpanded {
+                                expandState.collapse()
+                            }
+                        }
+                    },
+                    onEmojiTap: {
+                        keyboardContext.keyboardType = .emojis
+                    },
                     currentInputMode: currentInputMode,
                     onInputModeChange: { newMode in
                         currentInputMode = newMode
                         SharedSettings.shared.inputMode = newMode
                     },
-                    englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil
+                    englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
+                    isComposing: composingManager.isComposing
                 )
                 .environmentObject(expandState)
                 .candidateViewStyle(candidateStyle)
             },
         )
         .keyboardButtonStyle { params in
-            // 套用自訂字型
             var style = params.standardStyle()
             let fontProvider = ButtonFontProvider(keyboardContext: params.context)
             style.keyboardFont = fontProvider.buttonKeyboardFont(for: params.action)
+            style.cornerRadius = SharedSettings.shared.keyCornerRadius
+
+            // Apply custom colors from SharedSettings
+            let colors = self.colorSettings
+            if let textColor = colors.keyTextColor?.color {
+                style.foregroundColor = textColor
+            }
+            // Differentiate normal vs special key backgrounds.
+            // Set both backgroundColor and background to cover KK10 rendering:
+            // ButtonKey renders .background(style.background) on top of
+            // .background(style.backgroundColor), so we must set both to
+            // ensure the custom color shows regardless of which layer the
+            // standard style populates.
+            switch params.action {
+            case .backspace, .shift, .nextKeyboard, .keyboardType, .dismissKeyboard, .settings,
+                 .primary, .custom:
+                if let fill = colors.specialKeyFillColor?.color {
+                    style.backgroundColor = fill
+                    style.background = .color(fill)
+                }
+            case .character, .space:
+                if let fill = colors.normalKeyFillColor?.color {
+                    style.backgroundColor = fill
+                    style.background = .color(fill)
+                }
+            default:
+                break
+            }
             return style
         }
         .keyboardCalloutActions(Callouts.taigiToneActions)
@@ -102,9 +164,79 @@ struct TaigiKeyboardView: View {
             .offset(y: 2), // 稍微下移展開候選詞網格位置
             alignment: .topLeading,
         )
-        .background(
-            // iOS 26 Liquid Glass：使用極低透明度保持觸控功能，同時讓系統 Liquid Glass 透出
-            keyboardContext.isLiquidGlassEnabled ? Color.white.opacity(0.001) : Color.keyboardBackground
+        .overlay(
+            LayoutSelectionOverlay(
+                isExpanded: isLayoutPanelExpanded,
+                onDismiss: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isLayoutPanelExpanded = false
+                    }
+                }
+            )
+            .offset(y: CandidateViewModels.UI.height),
+            alignment: .topLeading,
         )
+        .onChange(of: expandState.isExpanded) { _, isExpanded in
+            if isExpanded {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isLayoutPanelExpanded = false
+                }
+            }
+        }
+        .keyboardToolbarStyle(
+            Keyboard.ToolbarStyle(
+                // Use Liquid Glass pass-through only when enabled AND
+                // no custom background color is set; otherwise clear
+                // so the external .background() color shows through.
+                backgroundColor: useLiquidGlassBg
+                    ? .white.opacity(0.001)
+                    : .clear
+            )
+        )
+        .keyboardViewStyle(
+            // Always make KK's internal background transparent so our
+            // external .background() controls the color consistently
+            // in both the keyboard extension and the preview panel.
+            KeyboardViewStyle(
+                background: useLiquidGlassBg
+                    ? .color(Color.white.opacity(0.001))
+                    : .color(.clear)
+            )
+        )
+        .background(
+            useLiquidGlassBg
+                ? Color.white.opacity(0.001)
+                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground)
+        )
+        .onAppear {
+            if let mode = initialInputMode {
+                currentInputMode = mode
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let latest = SharedSettings.shared.colorSettings
+            if colorSettings != latest {
+                colorSettings = latest
+            }
+            let latestScale = SharedSettings.shared.keyFontSizeScale
+            if keyFontSizeScale != latestScale {
+                keyFontSizeScale = latestScale
+            }
+            let latestBorderWidth = SharedSettings.shared.keyBorderWidth
+            if keyBorderWidth != latestBorderWidth {
+                keyBorderWidth = latestBorderWidth
+            }
+        }
+    }
+
+    private static func candidateStyle(
+        for context: KeyboardContext,
+        colorSettings: KeyboardColorSettings
+    ) -> CandidateView.Style {
+        var style = CandidateView.Style.adaptive(for: context)
+        if let bg = colorSettings.candidateBackgroundColor?.color {
+            style.backgroundColor = bg
+        }
+        return style
     }
 }

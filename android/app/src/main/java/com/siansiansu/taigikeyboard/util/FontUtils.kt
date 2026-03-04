@@ -2,9 +2,6 @@ package com.siansiansu.taigikeyboard.util
 
 import android.content.Context
 import android.graphics.Typeface
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
 import androidx.core.content.res.ResourcesCompat
 import com.siansiansu.taigikeyboard.R
 
@@ -66,25 +63,4 @@ object FontUtils {
         }
     }
 
-    /**
-     * 遞迴套用字體到 View 及其所有子 View
-     */
-    fun applyTypefaceRecursively(view: View, typeface: Typeface) {
-        if (view is TextView) {
-            view.typeface = typeface
-        }
-        if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                applyTypefaceRecursively(view.getChildAt(i), typeface)
-            }
-        }
-    }
-
-    /**
-     * 根據字型設定套用字體到 View
-     */
-    fun applyFontToView(view: View, fontType: String, context: Context) {
-        val typeface = getTypefaceByType(fontType, context)
-        applyTypefaceRecursively(view, typeface)
-    }
 }

@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.ColorDrawable
 import android.util.AttributeSet
 import android.util.Log
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -46,6 +47,37 @@ class KeyboardView : LinearLayout {
     var isPreviewMode: Boolean = false
     var popupManager = KeyPopupManager<KeyboardView, KeyView>(this)
     lateinit var prefs: PrefHelper
+
+    // Cached parsed color settings — avoids JSON parsing in onDraw/KeyView.onDraw
+    private var cachedColorSettingsJson: String = ""
+    var cachedColorSettings: com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings =
+        com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings()
+        private set
+
+    /** Returns the cached KeyboardColorSettings, re-parsing only when the JSON string changes. */
+    fun getColorSettings(): com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings {
+        val json = prefs.colorSettings
+        if (json != cachedColorSettingsJson) {
+            cachedColorSettingsJson = json
+            cachedColorSettings = com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings.fromJson(json)
+        }
+        return cachedColorSettings
+    }
+
+    // Cached typeface — avoids FontUtils.getTypefaceByType() call on every onDraw
+    private var cachedFontType: String = ""
+    var cachedTypeface: android.graphics.Typeface = android.graphics.Typeface.DEFAULT
+        private set
+
+    /** Returns the cached Typeface, re-resolving only when fontType changes. */
+    fun getTypeface(): android.graphics.Typeface {
+        val fontType = prefs.fontType
+        if (fontType != cachedFontType) {
+            cachedFontType = fontType
+            cachedTypeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(fontType, context)
+        }
+        return cachedTypeface
+    }
 
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
@@ -125,7 +157,7 @@ class KeyboardView : LinearLayout {
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         event ?: return false
         if (isPreviewMode) {
-            return false
+            return onPreviewTouchEvent(event)
         }
         val eventFloris = MotionEvent.obtainNoHistory(event)
         val pointerIndex = event.actionIndex
@@ -222,6 +254,29 @@ class KeyboardView : LinearLayout {
     }
 
     /**
+     * Simplified touch handler for preview mode: visual pressed state + haptic feedback only.
+     * No text input, no popups, no long press, no repeat.
+     */
+    private fun onPreviewTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                activeX = event.x
+                activeY = event.y
+                searchForActiveKeyView()
+                activeKeyView?.let {
+                    it.isPressed = true
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                activeKeyView?.isPressed = false
+                activeKeyView = null
+            }
+        }
+        return true
+    }
+
+    /**
      * Invalidates the current [activeKeyView] and sends a [MotionEvent.ACTION_CANCEL] to indicate
      * the loss of focus.
      */
@@ -257,7 +312,7 @@ class KeyboardView : LinearLayout {
         } * when (isPreviewMode) {
             true -> 0.90f
             else -> 1.00f
-        }
+        } * prefs.keyHeightScale
         desiredKeyHeight = (resources.getDimension(R.dimen.key_height) * keyHeightFactor).toInt()
         taigikeyboard?.textInputManager?.smartbarManager?.smartbarView?.setHeightFactor(keyHeightFactor)
 
@@ -348,6 +403,7 @@ class KeyboardView : LinearLayout {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        colorDrawable.color = getColorFromAttr(context, R.attr.keyboard_bgColor)
+        val customBgColor = getColorSettings().backgroundColor
+        colorDrawable.color = customBgColor ?: getColorFromAttr(context, R.attr.keyboard_bgColor)
     }
 }

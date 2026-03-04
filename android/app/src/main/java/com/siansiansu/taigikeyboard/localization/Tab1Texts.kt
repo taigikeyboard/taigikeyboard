@@ -2,10 +2,14 @@ package com.siansiansu.taigikeyboard.localization
 
 /**
  * Tab1 頭頁文字
- * 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、問題回報、版權聲明
+ * 包含：頭頁、啟用方法、新功能、FAQ、版本紀錄、問題回報、版權聲明
  * 對應 iOS Tab1Texts.swift
  */
 object Tab1Texts {
+
+    // MARK: - Tab 標題
+
+    val tabTitle = LocalizedText(hanji = "頭頁")
 
     // MARK: - 頁面標題
 
@@ -15,8 +19,6 @@ object Tab1Texts {
 
     val setupKeyboard = LocalizedText(hanji = "齒盤愛拍開才會當使用")
     val newFeatures = LocalizedText(hanji = "功能解說")
-    val knownIssues = LocalizedText(hanji = "當 leh 修理 ê 問題")
-    val upcomingFeatures = LocalizedText(hanji = "未來安排欲做 ê 功能")
     val faq = LocalizedText(hanji = "捷問 ê 問題")
 
     // MARK: - 啟用方法
@@ -25,6 +27,8 @@ object Tab1Texts {
     val setupGuideDescription = LocalizedText(hanji = "手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。")
     val setupInfoMessage = LocalizedText(hanji = "「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。")
     val setupBrandWarning = LocalizedText(hanji = "無仝牌子 ê 手機仔，設定 ê 方式可能會淡薄仔無仝款，毋過方式應該攏差不多。")
+
+    val setupGuideStartSetup = LocalizedText(hanji = "啟用齒盤")
 
     // MARK: - 設定引導步驟（全螢幕模式使用）
 
@@ -67,47 +71,10 @@ object Tab1Texts {
 
     val featureCaseSwitch = LocalizedText(hanji = "3段式大小寫切換")
     val featureCaseSwitchParagraphs = listOf(
-        LocalizedText(hanji = "一般 ê 情況第 1 个字會自動大寫，shift 揤鈕會反烏，但是若「自動開關」有關起來，著愛家己揤 shift 揤鈕，第 1 個字才會變大寫。"),
-        LocalizedText(hanji = "「自動大寫」開關關起來是小寫模式，拍出來 ê 字攏是小寫。"),
-        LocalizedText(hanji = "連紲揤 Shift 鍵 2 改是 Caps Lock 模式，shift 揤鈕是烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏會變大寫，閣揤 1 改才會改轉來小寫。"),
+        LocalizedText(hanji = "一般 ê 情況第 1 个字會自動大本字，shift 揤鈕會反烏，但是若「自動大本字」有關起來，著愛家己揤 shift 揤鈕，第 1 個字才會變大本字。"),
+        LocalizedText(hanji = "「自動大本字」開關關起來是小寫模式，拍出來 ê 字攏是小寫。"),
+        LocalizedText(hanji = "連紲揤 Shift 鍵 2 改是 Caps Lock 模式，shift 揤鈕是烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏會變大本字，閣揤 1 改才會改轉來小寫。"),
         LocalizedText(hanji = "若連紲切換符號齒盤，大小寫有時陣會 sio͘h-to͘h，咱先試驗看覓，若問題誠嚴重，閣來排時間修理。")
-    )
-
-    // MARK: - 處理中的問題
-
-    val issue1 = LocalizedText(hanji = "齒盤 ê 字小可仔閘到")
-    val issue1Paragraphs = listOf(
-        LocalizedText(hanji = "有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到，iOS 無這个問題。")
-    )
-
-    val issue2 = LocalizedText(hanji = "詞庫有欠字")
-    val issue2Paragraphs = listOf(
-        LocalizedText(hanji = "揣無 bàng-gà 這个字。")
-    )
-
-    val issue3 = LocalizedText(hanji = "聲調轉換有 ê 字有問題")
-    val issue3Paragraphs = listOf(
-        LocalizedText(hanji = "1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去 閣紲落去拍 2 (Tâigí）台語的選項閣走出來。"),
-        LocalizedText(hanji = "拍 kan-na 會變 kaⁿa")
-    )
-
-    // MARK: - 預計新功能
-
-    val upcoming1 = LocalizedText(hanji = "支持其他齒佈")
-    val upcoming1Paragraphs = listOf(
-        LocalizedText(hanji = "這馬干焦有「Lohankha 齒佈」、「PhahTaigi 齒佈」，未來計畫有其他無仝 ê 齒佈通選。"),
-        LocalizedText(hanji = "拍 p -> ph, 拍 t -> th。")
-    )
-
-    val upcoming2 = LocalizedText(hanji = "自訂詞庫匯入匯出")
-    val upcoming2Paragraphs = listOf(
-        LocalizedText(hanji = "佇手機仔加字。"),
-        LocalizedText(hanji = "匯出/匯入家己 ê 詞庫。")
-    )
-
-    val upcoming3 = LocalizedText(hanji = "連紲拍字")
-    val upcoming3Paragraphs = listOf(
-        LocalizedText(hanji = "直接拍 goa2siunn7behtsiah8png7 會變 -> 「góa siūⁿ beh chia̍h pn̄g」抑是變成「我想欲食飯」")
     )
 
     // MARK: - FAQ
@@ -159,24 +126,34 @@ object Tab1Texts {
     )
 
     val versionHistoryEntries = listOf(
-        VersionEntry("3.3.9", "2025/12/31", listOf(
+        VersionEntry("3.4.1", "2026/02/26", listOf(
+            LocalizedText(hanji = "Added tone diacritic hints above number keys."),
+            LocalizedText(hanji = "Added punctuation hints on MOE1/MOE2 layout keys."),
+            LocalizedText(hanji = "Added MOE Layout 1 and MOE Layout 2 keyboards."),
+            LocalizedText(hanji = "Added keyboard appearance customization settings."),
+            LocalizedText(hanji = "Added input mode label (POJ/TL/EN) on the space bar."),
+            LocalizedText(hanji = "Added STTI (學科術語辭典) dictionary source."),
+            LocalizedText(hanji = "Added phrase learning for continuous word selections."),
+            LocalizedText(hanji = "Improved keyboard typing performance."),
+            LocalizedText(hanji = "Fixed POJ and TL input mode separation."),
+        )),
+        VersionEntry("3.4.0", "2025/12/31", listOf(
+            LocalizedText(hanji = "Adjusted the four-syllable input limit."),
+            LocalizedText(hanji = "Fixed an issue where o͘ did not trigger candidate search."),
+        )),
+        VersionEntry("3.3.9", "2025/12/30", listOf(
             LocalizedText(hanji = "Added an English keyboard."),
-            LocalizedText(hanji = "Added explanations for 'Typing History Dictionary' and 'Capitalization Toggle'."),
+            LocalizedText(hanji = "Added explanations for ‘Typing History Dictionary’ and ‘Capitalization Toggle’."),
             LocalizedText(hanji = "Added more symbols to the punctuation keyboard."),
             LocalizedText(hanji = "Added quick toggle shortcuts to the candidate bar."),
-            LocalizedText(hanji = "Adjusted the four-syllable input limit."),
             LocalizedText(hanji = "Adopted Android’s default UI components."),
+            LocalizedText(hanji = "Fixed an issue where candidates did not appear when typing tone 1 or 4 directly."),
             LocalizedText(hanji = "Fixed an issue where capitalization was not working correctly."),
             LocalizedText(hanji = "Fixed inconsistent font sizing across different devices."),
-            LocalizedText(hanji = "Improved keyboard performance."),
             LocalizedText(hanji = "Refactored the codebase for better cleanliness and maintainability."),
-            LocalizedText(hanji = "Remove the recently used emoji section."),
-            LocalizedText(hanji = "Updated Gradle build dependencies."),
             LocalizedText(hanji = "Updated the app logo."),
         )),
         VersionEntry("3.3.8", "2025/12/25", listOf(
-            LocalizedText(hanji = "Fixed an issue where collapsing the candidate list required two taps."),
-            LocalizedText(hanji = "Fixed an issue where the continuous typing toggle was not working."),
             LocalizedText(hanji = "Refreshed the app interface and improved in-app explanations for better clarity."),
         ))
     )
@@ -230,4 +207,13 @@ object Tab1Texts {
     val kunggeDict = LocalizedText(hanji = "台語工藝詞庫 - 工藝中心")
     val kunggeCopyright = LocalizedText(hanji = "© 國立臺灣工藝研究發展中心")
     val ccByNcLicense = LocalizedText(hanji = "CC BY-NC 4.0")
+
+    // 學科術語辭典
+    val sttiDict = LocalizedText(hanji = "學科術語辭典 - 教育部")
+    val sttiCopyright = LocalizedText(hanji = "© 教育部")
+    val ogdlTaiwanLicense = LocalizedText(hanji = "OGDL-Taiwan-1.0")
+
+    // 腔口補充辭典
+    val accentDict = LocalizedText(hanji = "腔口補充辭典")
+    val accentDictCredit = LocalizedText(hanji = "「實齋」整理、提供")
 }

@@ -16,7 +16,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     // MARK: - 屬性
 
     let logger = Logger(
-        subsystem: "com.siansiansu.taigikeyboard",
+        subsystem: LexiconConstants.Logging.subsystem,
         category: "ActionHandler"
     )
 
@@ -220,8 +220,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     private func handleContextTimeout() {
         logger.debug("[NEXTWORD] Context timeout - resetting")
+        let wasShowingNextWord = isShowingNextWord
         resetNextWordContext()
-        if isShowingNextWord {
+        if wasShowingNextWord {
             DispatchQueue.main.async { [weak self] in
                 self?.keyboardController?.state.autocompleteContext.reset()
             }
@@ -241,7 +242,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         let punctuation = "。！？.!?，,、；;：:「」『』\"\"\u{2018}\u{2019}（）()【】[]{}—–-～~…·"
         if punctuation.contains(firstChar) { return true }
         if firstChar.isWhitespace { return true }
-        if text.allSatisfy({ $0.isNumber }) { return true }
+        if text.allSatisfy({ $0.isASCII && $0.isNumber }) { return true }
         return false
     }
 
@@ -264,43 +265,22 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
         lastSelectedWord = word
         lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
-        recordCompoundWordAssociationsForSpace(word: word)
+        recordCompoundWordAssociations(displayText: word, roman: word)
         startContextTimeoutTimer()
-    }
-
-    /// 記錄複合詞內部關聯（如 tshit-niû → tshit, niû）
-    private func recordCompoundWordAssociationsForSpace(word: String) {
-        let parts = word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
-
-        guard parts.count > 1 else { return }
-
-        let useTl = (settings.inputMode == .tl)
-
-        Task {
-            for i in 0..<(parts.count - 1) {
-                let prevPart = parts[i]
-                let nextPart = parts[i + 1]
-
-                // 空白確認時沒有羅馬字資訊，只記錄漢字關聯
-                let nextTl = useTl ? nextPart : ""
-                let nextPoj = useTl ? "" : nextPart
-
-                await NextWordService.shared.recordAssociation(
-                    prev: prevPart,
-                    nextHanzi: nextPart,
-                    nextTl: nextTl,
-                    nextPoj: nextPoj
-                )
-            }
-        }
     }
 
     // MARK: - NextWord 預測
 
     /// 根據指定詞彙觸發下一詞預測
     func triggerNextWordPrediction(for word: String) {
+        // DEBUG: NextWord trace - triggerNextWordPrediction entry
+        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word, privacy: .public)'")
+
         Task { @MainActor in
             let predictions = await NextWordService.shared.predict(word: word)
+
+            // DEBUG: NextWord trace - predictions returned
+            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word, privacy: .public)'")
 
             if predictions.isEmpty {
                 isShowingNextWord = false
@@ -310,11 +290,16 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
             // 轉換為候選詞格式（羅馬字模式下過濾無羅馬字的項目）
             let suggestions = predictions.compactMap { prediction -> Autocomplete.Suggestion? in
-                if !settings.isTranslateSwapped && prediction.tl.isEmpty && prediction.poj.isEmpty {
+                if !settings.isTranslateSwapped && prediction.tl.isEmpty {
+                    // DEBUG: NextWord trace - filtered out prediction with empty TL
+                    self.logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi, privacy: .public)' tl='\(prediction.tl, privacy: .public)' (TL empty in roman mode)")
                     return nil
                 }
 
-                let roman = prediction.tl.isEmpty ? prediction.poj : prediction.tl
+                // Convert TL -> POJ for display in POJ mode
+                let roman = settings.inputMode == .poj
+                    ? RomanizationConverter.tlToPOJ(prediction.tl)
+                    : prediction.tl
                 let text = roman.isEmpty ? prediction.hanzi : roman
                 let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
 
@@ -325,12 +310,14 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                     additionalInfo: [
                         "isNextWord": "true",
                         "hanzi": prediction.hanzi,
-                        "tl": prediction.tl,
-                        "poj": prediction.poj,
+                        "tl": roman,
                         "displayText": prediction.hanzi
                     ]
                 )
             }
+
+            // DEBUG: NextWord trace - after filter
+            self.logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
 
             if let controller = keyboardViewController {
                 if suggestions.isEmpty {
@@ -341,6 +328,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                     isShowingNextWord = true
                     startContextTimeoutTimer()
                 }
+                self.logger.debug("[NEXTWORD][TRIGGER] isShowingNextWord=\(self.isShowingNextWord)")
+            } else {
+                self.logger.debug("[NEXTWORD][TRIGGER] keyboardViewController is nil!")
             }
         }
     }

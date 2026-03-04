@@ -17,6 +17,8 @@ struct Tab3: View {
     @State private var taiwanJapanDictEnabled: Bool
     @State private var taiHuaDictEnabled: Bool
     @State private var taiwanPlantDictEnabled: Bool
+    @State private var sttiDictEnabled: Bool
+    @State private var khpooDictEnabled: Bool
     @State private var variantEnabled: Bool
 
     // 清除資料 Alert
@@ -31,6 +33,8 @@ struct Tab3: View {
         _taiwanJapanDictEnabled = State(initialValue: settings.taiwanJapanDictEnabled)
         _taiHuaDictEnabled = State(initialValue: settings.taiHuaDictEnabled)
         _taiwanPlantDictEnabled = State(initialValue: settings.taiwanPlantDictEnabled)
+        _sttiDictEnabled = State(initialValue: settings.sttiDictEnabled)
+        _khpooDictEnabled = State(initialValue: settings.khpooDictEnabled)
         _variantEnabled = State(initialValue: settings.variantEnabled)
     }
 
@@ -42,6 +46,11 @@ struct Tab3: View {
                     Toggle(languageManager.text(Tab3Texts.moeDict), isOn: $moeDictEnabled)
                         .onChange(of: moeDictEnabled) { _, newValue in
                             settings.moeDictEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab3Texts.sttiDict), isOn: $sttiDictEnabled)
+                        .onChange(of: sttiDictEnabled) { _, newValue in
+                            settings.sttiDictEnabled = newValue
                         }
 
                     Toggle(languageManager.text(Tab3Texts.newwordDict), isOn: $newwordDictEnabled)
@@ -72,6 +81,11 @@ struct Tab3: View {
                     Toggle(languageManager.text(Tab3Texts.taiwanPlantDict), isOn: $taiwanPlantDictEnabled)
                         .onChange(of: taiwanPlantDictEnabled) { _, newValue in
                             settings.taiwanPlantDictEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab3Texts.khpooDict), isOn: $khpooDictEnabled)
+                        .onChange(of: khpooDictEnabled) { _, newValue in
+                            settings.khpooDictEnabled = newValue
                         }
                 }
 

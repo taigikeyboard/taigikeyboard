@@ -88,6 +88,26 @@ struct CopyrightView: View {
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
                 websiteURL: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"
             )
+
+            // 學科術語辭典
+            CopyrightSection(
+                title: Tab1Texts.sttiDict,
+                description: Tab1Texts.sttiCopyright,
+                license: Tab1Texts.ogdlTaiwanLicense,
+                licenseURL: "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
+                websiteURL: "https://stti.moe.edu.tw/"
+            )
+
+            // 腔口補充辭典
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(languageManager.text(Tab1Texts.accentDict))
+                        .font(.headline)
+
+                    Text(languageManager.text(Tab1Texts.accentDictCredit))
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .navigationTitle(languageManager.text(Tab1Texts.copyrightNotice))
         .navigationBarTitleDisplayMode(.large)

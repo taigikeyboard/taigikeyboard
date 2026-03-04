@@ -61,17 +61,17 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Debug Activity (DEBUG only) -->
+        <!-- Detail Activity -->
         <activity
-            android:name="com.siansiansu.taigikeyboard.settings.DebugActivity"
-            android:label="Debug Zone"
+            android:name="com.siansiansu.taigikeyboard.settings.DetailActivity"
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Detail Activity -->
+        <!-- Appearance Settings Activity -->
         <activity
-            android:name="com.siansiansu.taigikeyboard.settings.DetailActivity"
+            android:name="com.siansiansu.taigikeyboard.settings.AppearanceSettingsActivity"
+            android:label="Appearance"
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>

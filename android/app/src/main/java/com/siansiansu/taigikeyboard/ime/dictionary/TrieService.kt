@@ -75,6 +75,7 @@ object TrieService {
             Log.w(TAG, "[SEARCH] Trie not initialized")
             return IntArray(0)
         }
+        if (prefix.isEmpty()) return IntArray(0)
 
         return try {
             nativePrefixSearch(prefix, limit)
@@ -87,16 +88,19 @@ object TrieService {
     /**
      * 完全匹配查詢
      * @param key 要查詢的 key
+     * @param maxResults 最大結果數（default 100, matching iOS）
      * @return 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
      */
-    fun lookup(key: String): IntArray {
+    fun lookup(key: String, maxResults: Int = 100): IntArray {
         if (!isInitialized) {
             Log.w(TAG, "[LOOKUP] Trie not initialized")
             return IntArray(0)
         }
+        if (key.isEmpty()) return IntArray(0)
 
         return try {
-            nativeLookup(key)
+            val results = nativeLookup(key)
+            if (results.size > maxResults) results.copyOf(maxResults) else results
         } catch (e: Exception) {
             Log.e(TAG, "[LOOKUP] Lookup failed", e)
             IntArray(0)
@@ -113,11 +117,12 @@ object TrieService {
     /**
      * 檢查是否已初始化
      */
-    fun isReady(): Boolean = isInitialized
+    val isReady: Boolean get() = isInitialized && nativeIsLoaded()
 
     /**
      * 釋放資源
      */
+    @Synchronized
     fun close() {
         if (isInitialized) {
             nativeClose()
@@ -169,5 +174,6 @@ object TrieService {
     private external fun nativePrefixSearch(prefix: String, limit: Int): IntArray
     private external fun nativeLookup(key: String): IntArray
     private external fun nativeGetKeyCount(): Int
+    private external fun nativeIsLoaded(): Boolean
     private external fun nativeClose()
 }

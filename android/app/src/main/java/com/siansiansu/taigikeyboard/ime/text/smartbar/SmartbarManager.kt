@@ -3,7 +3,6 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import android.util.Log
 import android.view.View
 import android.widget.Button
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import androidx.core.view.children
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -16,8 +15,10 @@ import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
+import com.siansiansu.taigikeyboard.ime.dictionary.InputNormalizer
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
@@ -43,9 +44,14 @@ class SmartbarManager private constructor() :
         private set
     var candidateOverlayView: CandidateOverlayView? = null
         private set
+    var layoutSelectionOverlayView: LayoutSelectionOverlayView? = null
+        private set
 
-    var activeContainerId: Int = R.id.quick_actions
-        set(value) { field = value; updateActiveContainerVisibility() }
+    // Skip updateActiveContainerVisibility() during animated transitions
+    private var isAnimatingContainerSwitch = false
+
+    var activeContainerId: Int = R.id.candidates_container
+        set(value) { field = value; if (!isAnimatingContainerSwitch) updateActiveContainerVisibility() }
 
     // 用於記錄使用者頻率的 Coroutine Scope
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -92,6 +98,9 @@ class SmartbarManager private constructor() :
 
         // 取得組字管理器
         val composingManager = taigikeyboard.textInputManager.getComposingManager()
+
+        // Capture rawInput before composing is cleared (for phrase learning)
+        val capturedRawInput = composingManager?.getRawInput() ?: ""
 
         // 判斷候選詞類型
         val isEnglishSuggestion = selectedWord.id <= -100  // 英文建議 id <= -100
@@ -152,14 +161,14 @@ class SmartbarManager private constructor() :
             composingManager?.selectSuggestion(textToCommit, ic)
         }
 
-        // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
-        if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
+        // 依照 isAutoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
+        if (prefs.isAutoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
             if (!textToCommit.endsWith("-")) {
                 ic.commitText(" ", 1)
             }
         }
 
-        // 記錄使用頻率（非同步）
+        // 記錄使用頻率
         scope.launch {
             UserFrequencyService.recordUsage(selectedWord.displayText)
         }
@@ -168,7 +177,9 @@ class SmartbarManager private constructor() :
         handleNextWordPrediction(
             displayText = selectedWord.displayText,
             committedText = textToCommit,
-            roman = selectedWord.roman
+            roman = selectedWord.roman,
+            hanzi = selectedWord.hanzi,
+            rawInput = capturedRawInput
         )
     }
 
@@ -178,8 +189,10 @@ class SmartbarManager private constructor() :
      * @param displayText 選中詞的顯示文字（用於預測查詢）
      * @param committedText 實際提交的文字（用於判斷是否重置上下文）
      * @param roman 選中詞的羅馬字（TL 或 POJ，依 inputMode 決定）
+     * @param hanzi 選中詞的漢字（nullable, only record phrase when non-null）
+     * @param rawInput Raw input before tone conversion (for phrase learning trigger key)
      */
-    fun handleNextWordPrediction(displayText: String, committedText: String, roman: String) {
+    fun handleNextWordPrediction(displayText: String, committedText: String, roman: String, hanzi: String? = null, rawInput: String = "") {
         val currentTime = System.currentTimeMillis()
 
         // 檢查是否需要重置上下文
@@ -219,13 +232,11 @@ class SmartbarManager private constructor() :
                 // 跳過雜訊：如果當前詞是標點符號或數字，不記錄關聯
                 if (!isNoise(displayText)) {
                     val nextTl = if (useTl) roman else ""
-                    val nextPoj = if (!useTl) roman else ""
 
                     NextWordService.recordAssociation(
                         prev = prevWord,
                         nextHanzi = displayText,
                         nextTl = nextTl,
-                        nextPoj = nextPoj,
                         context = taigikeyboard.context
                     )
 
@@ -238,25 +249,21 @@ class SmartbarManager private constructor() :
             }
 
             // 記錄複合詞內部的關聯（如 tshit → niû）
-            // 複合詞內部固定使用 "-" 分隔
             for (i in 0 until parts.size - 1) {
                 val prevPart = parts[i]
                 val nextPart = parts[i + 1]
                 val nextRoman = romanParts.getOrNull(i + 1) ?: ""
                 val nextTl = if (useTl) nextRoman else ""
-                val nextPoj = if (!useTl) nextRoman else ""
 
                 NextWordService.recordAssociation(
                     prev = prevPart,
                     nextHanzi = nextPart,
                     nextTl = nextTl,
-                    nextPoj = nextPoj,
-                    delimiter = "-",  // 複合詞內部固定用 "-"
                     context = taigikeyboard.context
                 )
 
                 if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart' (delimiter='-')")
+                    Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart'")
                 }
             }
 
@@ -266,7 +273,8 @@ class SmartbarManager private constructor() :
             // - 使用者查詢：用完整詞（詞層級）
             val predictions = NextWordService.predict(
                 word = displayText,
-                context = taigikeyboard.context
+                context = taigikeyboard.context,
+                prefs = taigikeyboard.prefs
             )
 
             // 更新候選詞顯示
@@ -308,6 +316,11 @@ class SmartbarManager private constructor() :
     }
 
     /**
+     * Get the last selected word (for context boost in autocomplete)
+     */
+    fun getLastSelectedWord(): String? = lastSelectedWord
+
+    /**
      * 更新 lastSelectedWord（不觸發 NextWord 預測）
      *
      * 用於空白鍵確認組字時，記錄已輸出的文字，
@@ -322,7 +335,6 @@ class SmartbarManager private constructor() :
         val parts = splitCompoundWord(word)
 
         // 記錄複合詞內部的關聯（如 tshit → niû）
-        // 複合詞內部固定使用 "-" 分隔
         if (parts.size > 1) {
             val useTl = (prefs.inputMode == "tl")
 
@@ -332,19 +344,16 @@ class SmartbarManager private constructor() :
                     val nextPart = parts[i + 1]
                     // 空白確認時沒有羅馬字資訊，只記錄漢字關聯
                     val nextTl = if (useTl) nextPart else ""
-                    val nextPoj = if (!useTl) nextPart else ""
 
                     NextWordService.recordAssociation(
                         prev = prevPart,
                         nextHanzi = nextPart,
                         nextTl = nextTl,
-                        nextPoj = nextPoj,
-                        delimiter = "-",  // 複合詞內部固定用 "-"
                         context = taigikeyboard.context
                     )
 
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[NEXTWORD] Record compound (space): '$prevPart' → '$nextPart' (delimiter='-')")
+                        Log.d(TAG, "[NEXTWORD] Record compound (space): '$prevPart' → '$nextPart'")
                     }
                 }
             }
@@ -378,7 +387,8 @@ class SmartbarManager private constructor() :
         // 將預測結果轉換為 TaigiWord
         // 若用戶選擇羅馬字輸出模式，過濾掉沒有羅馬字的候選詞
         val words = predictions.mapIndexedNotNull { index, prediction ->
-            val roman = if (useTl) prediction.tl else prediction.poj
+            // Convert TL to POJ at display time when in POJ mode
+            val roman = if (useTl) prediction.tl else TaigiPhonetics.tlDisplayToPOJDisplay(prediction.tl)
 
             // 羅馬字模式下，若無羅馬字則跳過
             if (!cachedIsTranslateSwapped && roman.isEmpty()) {
@@ -392,8 +402,7 @@ class SmartbarManager private constructor() :
                 id = -index - 1,  // 負數 ID 表示預測結果
                 roman = roman,
                 hanzi = prediction.hanzi,
-                lengthScore = prediction.score.toInt(),  // Double → Int（時間衰減後的分數）
-                delimiter = prediction.delimiter  // 傳入分隔符
+                lengthScore = prediction.score.toInt()  // Double → Int（時間衰減後的分數）
             )
         }
 
@@ -426,27 +435,6 @@ class SmartbarManager private constructor() :
         }
         taigikeyboard.textInputManager.sendKeyPress(keyData)
     }
-    private val quickActionOnClickListener = View.OnClickListener { v ->
-        when (v.id) {
-            R.id.quick_action_open_settings -> {
-                // 開啟 APP 主畫面
-                taigikeyboard.requestHideSelf(0)
-                val intent = android.content.Intent(taigikeyboard.context, com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                              android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                              android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-                taigikeyboard.context.startActivity(intent)
-            }
-            else -> return@OnClickListener
-        }
-    }
-    // TODO: 暫時停用展開收合功能
-    // private val quickActionToggleOnClickListener = View.OnClickListener {
-    //     activeContainerId = when (activeContainerId) {
-    //         R.id.quick_actions -> getPreferredContainerId()
-    //         else -> R.id.quick_actions
-    //     }
-    // }
 
     companion object {
         private const val TAG = "SmartbarManager"
@@ -516,14 +504,6 @@ class SmartbarManager private constructor() :
 
         this.smartbarView = smartbarView
 
-        // TODO: 暫時停用展開收合功能
-        // smartbarView.quickActionToggle?.setOnClickListener(quickActionToggleOnClickListener)
-        val quickActions = smartbarView.findViewById<LinearLayout>(R.id.quick_actions)
-        for (quickAction in quickActions.children) {
-            if (quickAction is ImageButton) {
-                quickAction.setOnClickListener(quickActionOnClickListener)
-            }
-        }
         val numberRow = smartbarView.findViewById<LinearLayout>(R.id.number_row)
         for (numberRowButton in numberRow.children) {
             if (numberRowButton is Button) {
@@ -539,8 +519,8 @@ class SmartbarManager private constructor() :
             toggleExpandState()
         }
 
-        // 輸入模式切換按鈕點擊事件
-        setupInputModeSwitcher(smartbarView)
+        // Toolbar toggle and actions
+        setupToolbar(smartbarView)
 
         // 英文三欄式候選詞點擊事件
         setupEnglishCandidates(smartbarView)
@@ -624,21 +604,14 @@ class SmartbarManager private constructor() :
     }
 
     /**
-     * 設置輸入模式切換按鈕
+     * Collapse toolbar if it's currently open (no-op otherwise).
+     * Called when the user starts typing so candidates become visible.
      */
-    private fun setupInputModeSwitcher(smartbarView: SmartbarView) {
-        smartbarView.buttonModePoj?.setOnClickListener {
-            setInputMode("poj")
+    fun collapseToolbarIfOpen() {
+        if (activeContainerId == R.id.toolbar_container) {
+            animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+            animateToggleRotation(45f, 0f)
         }
-        smartbarView.buttonModeTl?.setOnClickListener {
-            setInputMode("tl")
-        }
-        smartbarView.buttonModeEn?.setOnClickListener {
-            setInputMode("english")
-        }
-
-        // 初始化按鈕狀態
-        updateInputModeSwitcherState()
     }
 
     /**
@@ -648,17 +621,216 @@ class SmartbarManager private constructor() :
         prefs.inputMode = mode
         // 直接用傳入的值更新 UI，避免 DataStore 非同步寫入延遲
         updateInputModeSwitcherState(mode)
+        updateToolbarModeSwitcherState(mode)
+
+        // Auto-collapse toolbar after mode selection (restore previous container)
+        if (activeContainerId == R.id.toolbar_container) {
+            animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+            animateToggleRotation(45f, 0f)
+        }
     }
 
     /**
-     * 更新輸入模式切換按鈕的選中狀態
+     * 更新輸入模式切換按鈕的選中狀態（toolbar mode buttons）
      * @param currentMode 當前模式，若為 null 則從 prefs 讀取
      */
     private fun updateInputModeSwitcherState(currentMode: String? = null) {
         val mode = currentMode ?: prefs.inputMode
-        smartbarView?.buttonModePoj?.isSelected = (mode == "poj")
-        smartbarView?.buttonModeTl?.isSelected = (mode == "tl")
-        smartbarView?.buttonModeEn?.isSelected = (mode == "english")
+        updateToolbarModeSwitcherState(mode)
+    }
+
+    // Container ID to return to when closing toolbar
+    private var containerBeforeToolbar: Int = R.id.candidates_container
+
+    /**
+     * Set up toolbar toggle button and toolbar action buttons.
+     */
+    private fun setupToolbar(smartbarView: SmartbarView) {
+        // Toggle button: iOS-style + / × toggle with slide animation
+        smartbarView.toolbarToggleButton?.setOnClickListener {
+            // Hide layout overlay when toggling toolbar
+            layoutSelectionOverlayView?.hide()
+
+            if (activeContainerId == R.id.toolbar_container) {
+                // × → + : collapse toolbar, restore previous container
+                animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
+                animateToggleRotation(45f, 0f)
+            } else {
+                // + → × : expand toolbar
+                containerBeforeToolbar = activeContainerId
+                animateContainerSlide(activeContainerId, R.id.toolbar_container, expanding = true)
+                animateToggleRotation(0f, 45f)
+                updateToolbarModeSwitcherState()
+            }
+        }
+
+        // Layout switcher button
+        smartbarView.findViewById<View>(R.id.toolbar_layout_button)?.setOnClickListener {
+            showLayoutSelection()
+        }
+
+        // Emoji button
+        smartbarView.findViewById<View>(R.id.toolbar_emoji_button)?.setOnClickListener {
+            taigikeyboard.setActiveInput(R.id.media_input)
+            // Return to candidates when coming back from emoji
+            activeContainerId = getPreferredContainerId()
+            animateToggleRotation(45f, 0f)
+        }
+
+        // Globe button: open system IME picker
+        smartbarView.findViewById<View>(R.id.toolbar_globe_button)?.setOnClickListener {
+            val imm = taigikeyboard.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.showInputMethodPicker()
+        }
+
+        // Mode buttons in toolbar
+        smartbarView.findViewById<android.widget.Button>(R.id.toolbar_mode_poj)?.setOnClickListener {
+            setInputMode("poj")
+        }
+        smartbarView.findViewById<android.widget.Button>(R.id.toolbar_mode_tl)?.setOnClickListener {
+            setInputMode("tl")
+        }
+        smartbarView.findViewById<android.widget.Button>(R.id.toolbar_mode_en)?.setOnClickListener {
+            setInputMode("english")
+        }
+
+        // Settings button in toolbar
+        smartbarView.findViewById<View>(R.id.toolbar_settings_button)?.setOnClickListener {
+            taigikeyboard.requestHideSelf(0)
+            val intent = android.content.Intent(
+                taigikeyboard.context,
+                com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java
+            )
+            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                    android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+            taigikeyboard.context.startActivity(intent)
+        }
+    }
+
+    /**
+     * Animate the toolbar toggle button rotation (+ ↔ ×).
+     * Matches iOS 0.2s animation duration.
+     */
+    private fun animateToggleRotation(from: Float, to: Float) {
+        smartbarView?.toolbarToggleButton?.let { btn ->
+            android.animation.ObjectAnimator.ofFloat(btn, "rotation", from, to).apply {
+                duration = 200
+                interpolator = android.view.animation.PathInterpolator(0.42f, 0f, 0.58f, 1f)
+                start()
+            }
+        }
+    }
+
+    // Track active container slide animator to cancel on re-entry
+    private var containerSlideAnimator: android.animation.AnimatorSet? = null
+
+    /**
+     * Animated vertical slide transition between two containers.
+     * Matches iOS CandidateView transitions:
+     *   - Candidates: .transition(.move(edge: .top))  → exit up / enter from top
+     *   - Toolbar:    .transition(.move(edge: .bottom)) → exit down / enter from bottom
+     *
+     * @param fromId outgoing container resource ID
+     * @param toId incoming container resource ID
+     * @param expanding true = candidates↑ toolbar↑, false = toolbar↓ candidates↓
+     */
+    private fun animateContainerSlide(fromId: Int, toId: Int, expanding: Boolean) {
+        val view = smartbarView ?: return
+        val contentFrame = view.findViewById<View>(R.id.smartbar_content_frame) ?: return
+        val fromView = view.findViewById<View>(fromId) ?: return
+        val toView = view.findViewById<View>(toId) ?: return
+        val height = contentFrame.height.toFloat()
+
+        if (height <= 0f) {
+            fromView.visibility = View.GONE
+            toView.visibility = View.VISIBLE
+            activeContainerId = toId
+            return
+        }
+
+        containerSlideAnimator?.cancel()
+        isAnimatingContainerSwitch = true
+
+        val toStartY = if (expanding) height else -height
+        val fromTargetY = if (expanding) -height else height
+
+        // INVISIBLE triggers measure/layout so toView has valid dimensions
+        toView.translationY = toStartY
+        toView.visibility = View.INVISIBLE
+
+        // Wait for layout pass, then start animation
+        contentFrame.post {
+            toView.visibility = View.VISIBLE
+
+            val animator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 200
+                interpolator = android.view.animation.DecelerateInterpolator()
+                addUpdateListener { anim ->
+                    val f = anim.animatedFraction
+                    fromView.translationY = fromTargetY * f
+                    toView.translationY = toStartY * (1f - f)
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        fromView.visibility = View.GONE
+                        fromView.translationY = 0f
+                        toView.translationY = 0f
+                        activeContainerId = toId
+                        isAnimatingContainerSwitch = false
+                        containerSlideAnimator = null
+                    }
+                })
+            }
+
+            containerSlideAnimator = android.animation.AnimatorSet().apply {
+                play(animator)
+                start()
+            }
+        }
+    }
+
+    /**
+     * Update toolbar mode button selected states.
+     */
+    private fun updateToolbarModeSwitcherState(currentMode: String? = null) {
+        val mode = currentMode ?: prefs.inputMode
+        smartbarView?.findViewById<android.widget.Button>(R.id.toolbar_mode_poj)?.isSelected = (mode == "poj")
+        smartbarView?.findViewById<android.widget.Button>(R.id.toolbar_mode_tl)?.isSelected = (mode == "tl")
+        smartbarView?.findViewById<android.widget.Button>(R.id.toolbar_mode_en)?.isSelected = (mode == "english")
+    }
+
+    /**
+     * Show layout selection overlay (covers the keyboard area with preview cards).
+     */
+    private fun showLayoutSelection() {
+        val overlay = layoutSelectionOverlayView ?: return
+        if (overlay.isVisible()) {
+            // Toggle: if already visible, hide it
+            overlay.hide()
+            return
+        }
+        // Hide candidate overlay if visible
+        candidateOverlayView?.hide()
+        overlay.show(keyboardHeight)
+    }
+
+
+    /**
+     * Register layout selection overlay view.
+     */
+    fun registerLayoutSelectionOverlayView(overlayView: LayoutSelectionOverlayView) {
+        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerLayoutSelectionOverlayView(overlayView)")
+
+        this.layoutSelectionOverlayView = overlayView
+
+        overlayView.onLayoutSelected = { newLayoutType ->
+            // Directly trigger keyboard rebuild, bypassing DataStore Flow delay
+            textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
+            // Close layout selection grid and collapse toolbar after selection
+            layoutSelectionOverlayView?.hide()
+            collapseToolbarIfOpen()
+        }
     }
 
     /**
@@ -687,6 +859,7 @@ class SmartbarManager private constructor() :
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
         smartbarView = null
+        layoutSelectionOverlayView = null
         instance = null
     }
 
@@ -709,12 +882,11 @@ class SmartbarManager private constructor() :
             }
             else -> {
                 smartbarView?.visibility = View.VISIBLE
-                // 初始狀態：顯示輸入模式切換按鈕（預設狀態）
+                // Hide layout selection overlay when switching input fields
+                layoutSelectionOverlayView?.hide()
+                // 初始狀態：顯示候選詞容器
                 // 候選詞會在組字時由 updateCandidates() 自動切換顯示
-                activeContainerId = when {
-                    isComposingEnabled && hasCandidates -> R.id.candidates_container
-                    else -> R.id.quick_actions  // 預設顯示 quick_actions（含 settings + 模式切換）
-                }
+                activeContainerId = R.id.candidates_container
                 updateInputModeSwitcherState()
             }
         }
@@ -770,8 +942,9 @@ class SmartbarManager private constructor() :
         hasCandidates = true
         isShowingNextWord = isNextWord
 
-        // 切換到候選詞視圖
-        if (activeContainerId != R.id.candidates_container) {
+        // 切換到候選詞視圖（but don't force-switch from toolbar)
+        if (activeContainerId != R.id.candidates_container &&
+            activeContainerId != R.id.toolbar_container) {
             activeContainerId = R.id.candidates_container
         }
 
@@ -779,6 +952,11 @@ class SmartbarManager private constructor() :
         val res = taigikeyboard.context.resources
         val smartbarHeight = view.height.takeIf { it > 0 }
             ?: res.getDimension(R.dimen.smartbar_height).toInt()
+        adapter.setTextSizeScale(prefs.candidateTextSizeScale)
+        val colorSettings = com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
+            .fromJson(prefs.colorSettings)
+        adapter.setCustomTextColor(colorSettings.candidateTextColor)
+        view.applyCustomBackgroundColor(colorSettings.candidateBackgroundColor)
         adapter.setTextSize(smartbarHeight)
 
         // 使用 submitList 更新資料（DiffUtil 會計算差異，只更新變化的項目）
@@ -870,11 +1048,10 @@ class SmartbarManager private constructor() :
         // 清空 RecyclerView 資料
         candidateAdapter?.submitList(emptyList())
 
-        // 候選詞清空後，切換至 quick_actions
+        // 候選詞清空後，保持在 candidates_container（empty state shows [+] and empty space）
         if (activeContainerId == R.id.candidates_container ||
             activeContainerId == R.id.english_candidates_container) {
-            activeContainerId = R.id.quick_actions
-            updateInputModeSwitcherState()
+            activeContainerId = R.id.candidates_container
         }
 
         // 隱藏展開按鈕
@@ -916,7 +1093,8 @@ class SmartbarManager private constructor() :
         scope.launch {
             val predictions = NextWordService.predict(
                 word = lastChar,
-                context = taigikeyboard.context
+                context = taigikeyboard.context,
+                prefs = taigikeyboard.prefs
             )
 
             kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -998,6 +1176,9 @@ class SmartbarManager private constructor() :
             currentSuggestions
         }
 
+        // Hide layout selection overlay if visible
+        layoutSelectionOverlayView?.hide()
+
         // 顯示 overlay，傳入鍵盤高度
         overlay.show(suggestionsForOverlay, keyboardHeight)
     }
@@ -1057,14 +1238,14 @@ class SmartbarManager private constructor() :
             composingManager?.selectSuggestion(textToCommit, ic)
         }
 
-        // 依照 autoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
-        if (prefs.autoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
+        // 依照 isAutoSpaceEnabled 設定加空白（一般候選詞和 NextWord 候選詞皆適用）
+        if (prefs.isAutoSpaceEnabled && (!cachedIsTranslateSwapped || cachedOutputBothScripts)) {
             if (!textToCommit.endsWith("-")) {
                 ic.commitText(" ", 1)
             }
         }
 
-        // 記錄使用頻率（非同步）
+        // 記錄使用頻率
         scope.launch {
             UserFrequencyService.recordUsage(word.displayText)
         }
@@ -1083,58 +1264,50 @@ class SmartbarManager private constructor() :
 
 
     fun getPreferredContainerId(): Int {
-        return when {
-            hasCandidates -> R.id.candidates_container
-            else -> R.id.quick_actions
-        }
+        return R.id.candidates_container
     }
 
     private fun updateActiveContainerVisibility() {
         val smartbarView = smartbarView ?: return
 
-        // DEBUG: 追蹤容器可見性變化
         if (BuildConfig.DEBUG) {
             val containerName = when (activeContainerId) {
-                R.id.quick_actions -> "quick_actions"
                 R.id.number_row -> "number_row"
                 R.id.candidates_container -> "candidates_container"
                 R.id.english_candidates_container -> "english_candidates_container"
+                R.id.toolbar_container -> "toolbar_container"
                 else -> "unknown($activeContainerId)"
             }
             Log.d(TAG, "[DEBUG] updateActiveContainerVisibility: $containerName")
         }
 
+        val allContainers = listOf(
+            smartbarView.candidatesContainer,
+            smartbarView.englishCandidatesContainer,
+            smartbarView.numberRowView,
+            smartbarView.toolbarContainer
+        )
+
+        // Hide all, then show the active one
+        allContainers.forEach { it?.visibility = View.GONE }
+
         when (activeContainerId) {
-            R.id.quick_actions -> {
-                smartbarView.candidatesContainer?.visibility = View.GONE
-                smartbarView.englishCandidatesContainer?.visibility = View.GONE
-                smartbarView.numberRowView?.visibility = View.GONE
-                smartbarView.quickActionsView?.visibility = View.VISIBLE
-            }
-            R.id.number_row -> {
-                smartbarView.candidatesContainer?.visibility = View.GONE
-                smartbarView.englishCandidatesContainer?.visibility = View.GONE
-                smartbarView.numberRowView?.visibility = View.VISIBLE
-                smartbarView.quickActionsView?.visibility = View.GONE
-            }
-            R.id.candidates_container -> {
-                smartbarView.candidatesContainer?.visibility = View.VISIBLE
-                smartbarView.englishCandidatesContainer?.visibility = View.GONE
-                smartbarView.numberRowView?.visibility = View.GONE
-                smartbarView.quickActionsView?.visibility = View.GONE
-            }
-            R.id.english_candidates_container -> {
-                smartbarView.candidatesContainer?.visibility = View.GONE
-                smartbarView.englishCandidatesContainer?.visibility = View.VISIBLE
-                smartbarView.numberRowView?.visibility = View.GONE
-                smartbarView.quickActionsView?.visibility = View.GONE
-            }
-            else -> {
-                smartbarView.candidatesContainer?.visibility = View.GONE
-                smartbarView.englishCandidatesContainer?.visibility = View.GONE
-                smartbarView.numberRowView?.visibility = View.GONE
-                smartbarView.quickActionsView?.visibility = View.GONE
-            }
+            R.id.number_row -> smartbarView.numberRowView?.visibility = View.VISIBLE
+            R.id.candidates_container -> smartbarView.candidatesContainer?.visibility = View.VISIBLE
+            R.id.english_candidates_container -> smartbarView.englishCandidatesContainer?.visibility = View.VISIBLE
+            R.id.toolbar_container -> smartbarView.toolbarContainer?.visibility = View.VISIBLE
+        }
+
+        // Toggle button visibility: hide for number_row
+        smartbarView.toolbarToggleButton?.visibility = when (activeContainerId) {
+            R.id.number_row -> View.GONE
+            else -> View.VISIBLE
+        }
+
+        // Toggle rotation state (without animation, for state restoration)
+        smartbarView.toolbarToggleButton?.rotation = when (activeContainerId) {
+            R.id.toolbar_container -> 45f
+            else -> 0f
         }
     }
 
@@ -1164,7 +1337,8 @@ class SmartbarManager private constructor() :
         val smartbarHeight = view.height.takeIf { it > 0 }
             ?: res.getDimension(R.dimen.smartbar_height).toInt()
         val englishTextSizePx = smartbarHeight * 0.36f
-        val englishTextSizeSp = englishTextSizePx / res.displayMetrics.scaledDensity
+        val scaledDensity = res.displayMetrics.density * res.configuration.fontScale
+        val englishTextSizeSp = englishTextSizePx / scaledDensity
 
         // 更新三個按鈕的文字
         view.englishCandidate1?.apply {

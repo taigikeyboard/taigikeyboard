@@ -27,6 +27,7 @@ import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
 import com.siansiansu.taigikeyboard.localization.DisplayLanguage
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import java.util.Locale
 
 @SuppressLint("ViewConstructor")
@@ -44,6 +45,50 @@ class KeyView(
             isFakeBoldText = false
             textAlign = Paint.Align.CENTER
             typeface = Typeface.DEFAULT
+        }
+        // Shared Paint for tone hint diacritics on number keys
+        private val sharedHintPaint: Paint = Paint().apply {
+            alpha = 150
+            color = 0
+            isAntiAlias = true
+            isFakeBoldText = false
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.DEFAULT
+        }
+
+        // Tone number → standalone diacritic mapping (POJ and TL share all except tone 9)
+        private val toneHints = mapOf(
+            49 to "\u02CA",   // 1 → space (no mark), handled below
+            50 to "\u02CA",   // 2 → ˊ MODIFIER LETTER ACUTE ACCENT
+            51 to "\u02CB",   // 3 → ˋ MODIFIER LETTER GRAVE ACCENT
+            53 to "\u02C6",   // 5 → ˆ MODIFIER LETTER CIRCUMFLEX ACCENT
+            54 to "\u02C7",   // 6 → ˇ CARON
+            55 to "\u02C9",   // 7 → ˉ MODIFIER LETTER MACRON
+            56 to "\u02C8",   // 8 → ˈ MODIFIER LETTER VERTICAL LINE
+        )
+        // Keys with no tone mark — use space placeholder for consistent layout
+        private val noToneHintCodes = setOf(48, 49, 52)  // 0, 1, 4
+
+        /** Returns the tone hint diacritic for a number key, or null if not applicable. */
+        fun toneHintForCode(code: Int, inputMode: String?): String? {
+            if (code == 57) {
+                // Tone 9: POJ uses breve, TL uses double acute
+                return if (inputMode == "poj") "\u02D8" else "\u02BA"
+            }
+            if (noToneHintCodes.contains(code)) return " "
+            return toneHints[code]
+        }
+
+        // MOE1 layout: punctuation key hints
+        private val moe1Hints = mapOf(
+            45 to "@",    // - → @
+            44 to ":;",   // , (，) → :;
+            46 to "!?",   // . (。) → !?
+        )
+
+        /** Returns the hint for MOE1 punctuation keys, or null if not applicable. */
+        fun moe1HintForCode(code: Int): String? {
+            return moe1Hints[code]
         }
     }
 
@@ -116,13 +161,46 @@ class KeyView(
         setPadding(0, 0, 0, 0)
 
         // 根據按鍵類型設定對應的背景 selector
-        background = when (data.code) {
-            KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+        val isFunctionKey = data.type == KeyType.MODIFIER || data.type == KeyType.ENTER_EDITING
+                || data.code == KeyCode.DELETE || data.code == KeyCode.SHIFT
+                || data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.VIEW_NUMERIC_ADVANCED
+                || data.code == KeyCode.VIEW_SYMBOLS || data.code == KeyCode.VIEW_SYMBOLS2
+                || data.code == KeyCode.VIEW_CHARACTERS
+        background = when {
+            data.code == KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+            isFunctionKey -> getDrawable(context, R.drawable.key_function_background_selector)
             else -> getDrawable(context, R.drawable.key_background_selector)
+        }
+        // Apply corner radius and border width from appearance settings to background drawable
+        val radiusPx = keyboardView.prefs.keyCornerRadius * resources.displayMetrics.density
+        val borderWidthPx = (keyboardView.prefs.keyBorderWidth * resources.displayMetrics.density).toInt()
+        val borderColor = getColorFromAttr(context, R.attr.key_fgColor)
+        val bg = background
+        if (bg is android.graphics.drawable.StateListDrawable) {
+            for (i in 0 until bg.stateCount) {
+                val item = bg.getStateDrawable(i)
+                if (item is android.graphics.drawable.GradientDrawable) {
+                    item.cornerRadius = radiusPx
+                    if (borderWidthPx > 0) {
+                        item.setStroke(borderWidthPx, borderColor)
+                    }
+                }
+            }
         }
         elevation = 0.0f
 
-        updateKeyPressedBackground()
+        // Apply custom fill color if set in appearance settings
+        val colors = keyboardView.getColorSettings()
+        val isSpecialKey = isFunctionKey
+                || data.code == KeyCode.ENTER
+        val customFill = if (isSpecialKey) colors.specialKeyFillColor else colors.normalKeyFillColor
+        if (customFill != null) {
+            backgroundTintList = android.content.res.ColorStateList.valueOf(customFill)
+        }
+
+        if (!keyboardView.isPreviewMode) {
+            updateKeyPressedBackground()
+        }
 
         // 初始化時更新按鍵內容
         updateKeyContent()
@@ -151,6 +229,11 @@ class KeyView(
             keyData.code.toChar().toString()
         }
 
+        // Display override: "nn" key shows nasal marker ⁿ/ᴺ
+        if (baseLabel == "nn") {
+            return if (taigikeyboard?.textInputManager?.caps == true) "\u1D3A" else "\u207F"
+        }
+
         // 使用對照表正確轉換聲調字母（如 á → Á）
         val inputMode = when (taigikeyboard?.prefs?.inputMode) {
             "poj" -> ToneConverterModels.InputMode.POJ
@@ -158,10 +241,18 @@ class KeyView(
             else -> ToneConverterModels.InputMode.POJ
         }
 
-        return if (taigikeyboard?.textInputManager?.caps == true) {
-            ToneConverterModels.uppercaseToneLetter(baseLabel, inputMode)
-        } else {
-            ToneConverterModels.lowercaseToneLetter(baseLabel, inputMode)
+        return when {
+            taigikeyboard?.textInputManager?.capsLock == true -> {
+                // Caps Lock: fully uppercase ("tsh" → "TSH")
+                ToneUtilities.fullUppercaseToneLetter(baseLabel, inputMode)
+            }
+            taigikeyboard?.textInputManager?.caps == true -> {
+                // Sentence case: first letter only ("tsh" → "Tsh")
+                ToneUtilities.uppercaseToneLetter(baseLabel, inputMode)
+            }
+            else -> {
+                ToneUtilities.lowercaseToneLetter(baseLabel, inputMode)
+            }
         }
     }
 
@@ -366,7 +457,7 @@ class KeyView(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        outlineProvider = KeyViewOutline(w, h)
+        outlineProvider = KeyViewOutline(w, h, keyboardView.prefs.keyCornerRadius)
     }
 
     /**
@@ -421,52 +512,59 @@ class KeyView(
                     label = null
                 }
                 KeyCode.ENTER -> {
-                    // 檢查是否處於組字模式
-                    val isComposing = taigikeyboard?.textInputManager?.getComposingManager()?.isComposing() == true
-
-                    // 記錄狀態是否改變（在更新 cachedIsComposing 之前）
-                    val composingStateChanged = cachedIsComposing != isComposing
-
-                    // 只在狀態改變時更新
-                    if (composingStateChanged) {
-                        cachedIsComposing = isComposing
-                        needsRedraw = true
-                    }
-
-                    if (isComposing) {
-                        // 組字模式：只顯示「確定」文字
-                        // showHanjiMode 固定為 true
-                        val displayLanguage = when {
-                            keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
-                            keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
-                            else -> DisplayLanguage.TL
-                        }
-                        label = Tab4Texts.confirmKey.text(displayLanguage)
-                        drawable = null
-                    } else {
-                        // 非組字模式：只顯示圖示
+                    // Preview mode: always show return icon
+                    if (keyboardView.isPreviewMode) {
                         label = null
-                        val action = taigikeyboard?.currentInputEditorInfo?.imeOptions ?: 0
+                        drawable = getDrawable(context, R.drawable.ic_keyboard_return)
+                        drawableColor = getColorFromAttr(context, R.attr.key_enter_fgColor)
+                    } else {
+                        // 檢查是否處於組字模式
+                        val isComposing = taigikeyboard?.textInputManager?.getComposingManager()?.isComposing() == true
 
-                        // 需要更新 drawable 的條件：
-                        // 1. IME action 改變
-                        // 2. 從組字模式切回來（composingStateChanged && !isComposing）
-                        val needUpdateDrawable = (cachedImeAction != action) || (composingStateChanged && !isComposing)
-                        if (needUpdateDrawable) {
-                            cachedImeAction = action
-                            drawable = getDrawable(context, when (action and EditorInfo.IME_MASK_ACTION) {
-                                EditorInfo.IME_ACTION_DONE -> R.drawable.ic_done
-                                EditorInfo.IME_ACTION_GO -> R.drawable.ic_arrow_right_alt
-                                EditorInfo.IME_ACTION_NEXT -> R.drawable.ic_arrow_right_alt
-                                EditorInfo.IME_ACTION_NONE -> R.drawable.ic_keyboard_return
-                                EditorInfo.IME_ACTION_PREVIOUS -> R.drawable.ic_arrow_right_alt
-                                EditorInfo.IME_ACTION_SEARCH -> R.drawable.ic_search
-                                EditorInfo.IME_ACTION_SEND -> R.drawable.ic_send
-                                else -> R.drawable.ic_arrow_right_alt
-                            })
-                            drawableColor = getColorFromAttr(context, R.attr.key_enter_fgColor)
-                            if (action and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
-                                drawable = getDrawable(context, R.drawable.ic_keyboard_return)
+                        // 記錄狀態是否改變（在更新 cachedIsComposing 之前）
+                        val composingStateChanged = cachedIsComposing != isComposing
+
+                        // 只在狀態改變時更新
+                        if (composingStateChanged) {
+                            cachedIsComposing = isComposing
+                            needsRedraw = true
+                        }
+
+                        if (isComposing) {
+                            // 組字模式：只顯示「確定」文字
+                            // showHanjiMode 固定為 true
+                            val displayLanguage = when {
+                                keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
+                                keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
+                                else -> DisplayLanguage.TL
+                            }
+                            label = Tab4Texts.confirmKey.text(displayLanguage)
+                            drawable = null
+                        } else {
+                            // 非組字模式：只顯示圖示
+                            label = null
+                            val action = taigikeyboard?.currentInputEditorInfo?.imeOptions ?: 0
+
+                            // 需要更新 drawable 的條件：
+                            // 1. IME action 改變
+                            // 2. 從組字模式切回來（composingStateChanged && !isComposing）
+                            val needUpdateDrawable = (cachedImeAction != action) || (composingStateChanged && !isComposing)
+                            if (needUpdateDrawable) {
+                                cachedImeAction = action
+                                drawable = getDrawable(context, when (action and EditorInfo.IME_MASK_ACTION) {
+                                    EditorInfo.IME_ACTION_DONE -> R.drawable.ic_done
+                                    EditorInfo.IME_ACTION_GO -> R.drawable.ic_arrow_right_alt
+                                    EditorInfo.IME_ACTION_NEXT -> R.drawable.ic_arrow_right_alt
+                                    EditorInfo.IME_ACTION_NONE -> R.drawable.ic_keyboard_return
+                                    EditorInfo.IME_ACTION_PREVIOUS -> R.drawable.ic_arrow_right_alt
+                                    EditorInfo.IME_ACTION_SEARCH -> R.drawable.ic_search
+                                    EditorInfo.IME_ACTION_SEND -> R.drawable.ic_send
+                                    else -> R.drawable.ic_arrow_right_alt
+                                })
+                                drawableColor = getColorFromAttr(context, R.attr.key_enter_fgColor)
+                                if (action and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
+                                    drawable = getDrawable(context, R.drawable.ic_keyboard_return)
+                                }
                             }
                         }
                     }
@@ -512,9 +610,13 @@ class KeyView(
                             label = null
                         }
                         KeyboardMode.CHARACTERS -> {
-                            // 空白鍵不顯示文字
                             drawable = null
-                            label = null
+                            label = when (keyboardView.prefs.inputMode) {
+                                "poj" -> "POJ"
+                                "tl" -> "TL"
+                                "en" -> "EN"
+                                else -> null
+                            }
                         }
                         else -> {
                             drawable = null
@@ -613,11 +715,11 @@ class KeyView(
                     } else {
                         GONE
                     }
-                if (data.label == "-" && data.code == 45) {
+                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
                     android.util.Log.d("KeyView", "Hyphen key updateVisibility: variation=${data.variation}, keyVariation=$keyVariation, newVisibility=$newVisibility")
                 }
                 visibility = newVisibility
-                if (data.label == "-" && data.code == 45) {
+                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
                     android.util.Log.d("KeyView", "Hyphen key after set: visibility=$visibility, width=$width, height=$height, measuredWidth=$measuredWidth, isShown=$isShown")
                 }
                 updateTouchHitBox()
@@ -654,8 +756,14 @@ class KeyView(
                 marginV + drawablePadding,
                 measuredWidth - marginH - drawablePadding,
                 measuredHeight - marginV - drawablePadding)
+            // Apply custom key text color to icons (except ENTER which keeps its own color)
+            val effectiveDrawableColor = if (data.code != KeyCode.ENTER) {
+                keyboardView.getColorSettings().keyTextColor ?: drawableColor
+            } else {
+                drawableColor
+            }
             drawable.colorFilter = BlendModeColorFilterCompat.createBlendModeColorFilterCompat(
-                drawableColor,
+                effectiveDrawableColor,
                 BlendModeCompat.SRC_ATOP
             )
             drawable.draw(canvas)
@@ -664,37 +772,38 @@ class KeyView(
         // Draw label
         val label = label
         if (label != null) {
-            // 使用共享的 Paint 物件，設定當前按鍵的屬性
-            // 動態計算文字大小：基於按鍵高度 × 比例，自適應不同螢幕尺寸
-            val baseTextSize = measuredHeight * 0.42f
+            // Use shared Paint object, set properties for current key
+            // Dynamically calculate text size: based on key height × ratio, adapts to different screen sizes
+            val fontSizeScale = keyboardView.prefs.keyFontSizeScale
+            val baseTextSize = measuredHeight * 0.58f * fontSizeScale
             sharedLabelPaint.textSize = when {
-                // ?123 按鍵使用較小字體
+                // ?123 key uses smaller font
                 data.code == KeyCode.VIEW_SYMBOLS -> baseTextSize * 0.80f
-                // Enter 鍵組字模式的「確定」文字使用較小字體
+                // Enter key in composing mode uses smaller font for confirmation text
                 data.code == KeyCode.ENTER && label.isNotEmpty() -> baseTextSize * 0.85f
-                // VIEW_NUMERIC_ADVANCED: 根據顯示內容決定字體大小
+                // VIEW_NUMERIC_ADVANCED: determine font size based on display content
                 data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
-                    // 如果顯示「、」符號，使用一般按鍵大小；否則使用數字鍵大小
+                    // If showing "、" symbol, use normal key size; otherwise use number key size
                     if (label == "、") baseTextSize else baseTextSize * 0.55f
                 }
-                // 數字鍵和空白鍵
+                // Number key and space key
                 data.code == KeyCode.VIEW_NUMERIC ||
                 data.code == KeyCode.SPACE -> baseTextSize * 0.55f
-                // 一般按鍵
+                // MOE2 layout: only shrink 3+ char keys (tsh/chh) to fit within key width
+                data.type == KeyType.CHARACTER && keyboardView.prefs.keyboardLayoutType == "moe2" && label.length >= 3 -> baseTextSize * 0.75f
+                // Normal keys
                 else -> baseTextSize
             }
 
-            // 根據設定設定字體
-            sharedLabelPaint.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
-                fontType = keyboardView.prefs.fontType,
-                context = context
-            )
+            // Set typeface based on user settings (cached at KeyboardView level)
+            sharedLabelPaint.typeface = keyboardView.getTypeface()
 
-            // Enter 鍵使用專屬顏色，其他按鍵使用一般顏色
+            // Enter key always uses its dedicated color; other keys use custom color if set
+            val customKeyTextColor = keyboardView.getColorSettings().keyTextColor
             sharedLabelPaint.color = if (data.code == KeyCode.ENTER) {
                 getColorFromAttr(context, R.attr.key_enter_fgColor)
             } else {
-                getColorFromAttr(context, R.attr.key_fgColor)
+                customKeyTextColor ?: getColorFromAttr(context, R.attr.key_fgColor)
             }
 
             sharedLabelPaint.alpha = if (keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS &&
@@ -711,6 +820,30 @@ class KeyView(
             } else {
                 canvas.drawText(label, centerX, centerY, sharedLabelPaint)
             }
+
+            // Draw hint above keys (tone diacritics on number keys, punctuation hints on MOE1)
+            if (data.type == KeyType.CHARACTER &&
+                keyboardView.prefs.keyboardLayoutType != "tps") {
+                val layoutType = keyboardView.prefs.keyboardLayoutType
+                // Tone hints for number keys (all layouts except TPS)
+                val hint = toneHintForCode(data.code, keyboardView.prefs.inputMode)
+                // MOE1/MOE2 punctuation hints
+                    ?: if (layoutType == "moe1" || layoutType == "moe2") moe1HintForCode(data.code) else null
+
+                if (hint != null && hint != " ") {
+                    val isMoe1TextHint = (layoutType == "moe1" || layoutType == "moe2") && moe1HintForCode(data.code) != null
+                    sharedHintPaint.textSize = baseTextSize * if (isMoe1TextHint) 0.60f else 1.3f
+                    sharedHintPaint.color = sharedLabelPaint.color
+                    // MOE1 text hints: semi-transparent; tone diacritics: lighter
+                    sharedHintPaint.alpha = if (isMoe1TextHint) 150 else 100
+                    sharedHintPaint.typeface = Typeface.DEFAULT
+                    // MOE1 text hints: position above main label; tone diacritics: overlap center
+                    // Hyphen (-) has higher visual center than comma/period, so nudge its hint up
+                    val moe1HintFactor = if (data.code == 45) 0.35f else 0.40f
+                    val hintY = measuredHeight * if (isMoe1TextHint) moe1HintFactor else 0.66f
+                    canvas.drawText(hint, centerX, hintY, sharedHintPaint)
+                }
+            }
         }
     }
 
@@ -719,19 +852,19 @@ class KeyView(
      */
     private class KeyViewOutline(
         private val width: Int,
-        private val height: Int
+        private val height: Int,
+        private val cornerRadiusDp: Float = -1f
     ) : ViewOutlineProvider() {
 
         override fun getOutline(view: View?, outline: Outline?) {
             view ?: return
             outline ?: return
-            outline.setRoundRect(
-                0,
-                0,
-                width,
-                height,
+            val radius = if (cornerRadiusDp >= 0f) {
+                cornerRadiusDp * view.resources.displayMetrics.density
+            } else {
                 view.resources.getDimension(R.dimen.key_borderRadius)
-            )
+            }
+            outline.setRoundRect(0, 0, width, height, radius)
         }
     }
 }

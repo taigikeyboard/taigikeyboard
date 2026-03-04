@@ -6,13 +6,6 @@ import SQLite3
 /// 負責詞典資料的查詢與存取
 final class DictionaryRepository: @unchecked Sendable {
 
-    // MARK: - Column Definition
-
-    private enum Column: String {
-        case pojRoman = "poj"
-        case tlRoman = "tl"
-    }
-
     // MARK: - 詞庫開關設定
 
     /// 詞庫開關設定結構
@@ -24,6 +17,8 @@ final class DictionaryRepository: @unchecked Sendable {
         let taijit: Bool    // 台日大辭典
         let taihoa: Bool    // 台華線頂對照典
         let sitbut: Bool    // 台灣植物名彙
+        let stti: Bool      // 學科術語辭典
+        let khpoo: Bool     // 腔口補充辭典
         let variant: Bool   // 異用字
 
         /// 從 SharedSettings 讀取設定
@@ -37,18 +32,20 @@ final class DictionaryRepository: @unchecked Sendable {
                 taijit: settings.taiwanJapanDictEnabled,
                 taihoa: settings.taiHuaDictEnabled,
                 sitbut: settings.taiwanPlantDictEnabled,
+                stti: settings.sttiDictEnabled,
+                khpoo: settings.khpooDictEnabled,
                 variant: settings.variantEnabled
             )
         }
 
         /// 是否全部關閉
         var allDisabled: Bool {
-            !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut
+            !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut && !stti && !khpoo
         }
 
         /// 是否全部開啟
         var allEnabled: Bool {
-            kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut
+            kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut && stti && khpoo
         }
 
         /// 建構 SQL WHERE 條件（使用 OR 邏輯）
@@ -71,6 +68,8 @@ final class DictionaryRepository: @unchecked Sendable {
             if taijit { conditions.append("taijit = 1") }
             if taihoa { conditions.append("taihoa = 1") }
             if sitbut { conditions.append("sitbut = 1") }
+            if stti { conditions.append("stti = 1") }
+            if khpoo { conditions.append("khpoo = 1") }
 
             if !conditions.isEmpty {
                 result += "AND (" + conditions.joined(separator: " OR ") + ")"
@@ -168,9 +167,7 @@ final class DictionaryRepository: @unchecked Sendable {
         limit: Int
     ) async throws -> [TaigiWord] {
         // 正規化輸入（包含調符或 POJ 特殊字符時需要轉換）
-        let normalizedInput = InputNormalizer.needsNormalization(input)
-            ? InputNormalizer.normalize(input, mode: inputMode)
-            : input.lowercased().replacingOccurrences(of: "-", with: "")
+        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
 
         logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
 
@@ -178,27 +175,19 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        // 加上 Trie 前綴（poj: 或 tl:）
-        let triePrefix = inputMode == .tl ? "tl:" : "poj:"
-        let trieKey = triePrefix + normalizedInput
-
-        logger.debug("[TRIE] trieKey='\(trieKey, privacy: .public)'")
+        let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
 
         // 1. 完全匹配（確保短詞不被遺漏）
         let exactRowIds = trieService.lookup(trieKey)
-
-        logger.debug("[TRIE] exactRowIds=\(exactRowIds.count)")
 
         // 2. 前綴搜尋（取較多結果以供後續排序）
         let trieLimit = limit * 3
         let prefixRowIds = trieService.prefixSearch(trieKey, limit: trieLimit)
 
-        logger.debug("[TRIE] prefixRowIds=\(prefixRowIds.count)")
-
         // 3. 合併去重
         let allRowIds = Array(Set(exactRowIds + prefixRowIds))
 
-        logger.debug("[TRIE] allRowIds=\(allRowIds.count)")
+        logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
 
         guard !allRowIds.isEmpty else {
             return []
@@ -230,7 +219,6 @@ final class DictionaryRepository: @unchecked Sendable {
         // 全部關閉時不顯示任何結果
         if enabledDicts.allDisabled { return [] }
 
-        let romanColumn = inputMode == .poj ? Column.pojRoman.rawValue : Column.tlRoman.rawValue
         let dictCondition = enabledDicts.buildWhereCondition()
 
         // 分批查詢（避免 SQL 太長）
@@ -246,7 +234,7 @@ final class DictionaryRepository: @unchecked Sendable {
             let placeholders = batch.map { _ in "?" }.joined(separator: ",")
 
             let sql = """
-                SELECT id, \(romanColumn), hanzi, frequency
+                SELECT id, tl, hanzi, frequency
                 FROM dictionary
                 WHERE id IN (\(placeholders))
                 \(dictCondition)
@@ -270,10 +258,13 @@ final class DictionaryRepository: @unchecked Sendable {
             // 提取結果
             while sqlite3_step(stmt) == SQLITE_ROW {
                 let id = Int(sqlite3_column_int(stmt, 0))
-                let roman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+                let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
                 let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
                 let hanzi = hanziText?.isEmpty == false ? hanziText : nil
                 let frequency = Int(sqlite3_column_int(stmt, 3))
+
+                // Convert TL -> POJ for display in POJ mode
+                let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
 
                 allResults.append(TaigiWord(
                     id: id,

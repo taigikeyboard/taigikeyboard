@@ -19,8 +19,8 @@ extension ActionHandler {
             return false
         }
 
-        // 使用 CaseTransformationService 統一處理大小寫轉換
-        let processedChar = CaseTransformationService.transformForInput(
+        // 使用 CaseTransformer 統一處理大小寫轉換
+        let processedChar = CaseTransformer.transformForInput(
             char,
             keyboardCase: currentCase,
             isAutoCapitalizationEnabled: autoCap,
@@ -151,9 +151,9 @@ extension ActionHandler {
 
         if trimmedText.isEmpty {
             // 文字已清空，清除 NextWord 候選詞並重置上下文
+            let wasShowingNextWord = isShowingNextWord
             resetNextWordContext()
-            if isShowingNextWord {
-                isShowingNextWord = false
+            if wasShowingNextWord {
                 keyboardController?.state.autocompleteContext.reset()
             }
             return
@@ -170,49 +170,6 @@ extension ActionHandler {
         triggerNextWordPrediction(for: lastChar)
     }
 
-    // MARK: - Flick 輸入
-
-    /// 處理 Flick 鍵盤的文字輸入
-    ///
-    /// Flick 輸入的特點：
-    /// - 輸入的文字已經帶有調號（如 á, à, â 等）
-    /// - 不需要額外的大小寫轉換
-    /// - 直接進入組字邏輯
-    func handleFlickInput(_ text: String) {
-        guard !text.isEmpty else { return }
-
-        // 英文模式：直接插入
-        if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.insertText(text)
-            return
-        }
-
-        // 檢查是否為標點符號
-        if isPunctuationExceptHyphen(text) {
-            if composingManager.isComposing {
-                composingManager.commitComposition()
-            }
-            keyboardContext.textDocumentProxy.insertText(text)
-            return
-        }
-
-        // 台語模式：進入組字邏輯
-        if composingManager.isComposing {
-            // 逐字符加入組字
-            for char in text {
-                composingManager.appendCharacter(String(char))
-            }
-        } else {
-            // 清除 NextWord 狀態
-            if isShowingNextWord {
-                isShowingNextWord = false
-                keyboardController?.state.autocompleteContext.reset()
-            }
-            // 開始新組字
-            composingManager.startComposing(with: text)
-        }
-    }
-
     // MARK: - Return 鍵
 
     func handleReturnAction() -> Bool {
@@ -225,11 +182,13 @@ extension ActionHandler {
         // 以下為台語模式（POJ/TL）的邏輯
         if composingManager.isComposing {
             let committedText = composingManager.composingText
+            // Capture rawInput before commitComposition clears it
+            let capturedRawInput = composingManager.rawInput
 
             if composingManager.selectedCandidateIndex == 0 {
                 // 選中組字文字，直接確認
                 composingManager.commitComposition()
-                handleEnterNextWordPrediction(committedText: committedText)
+                handleEnterNextWordPrediction(committedText: committedText, rawInput: capturedRawInput)
             } else {
                 // 選中候選詞，確認該候選詞
                 let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []

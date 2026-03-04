@@ -23,6 +23,9 @@ object UserFrequencyService {
     private const val TAG = "UserFrequencyService"
     private const val DATABASE_NAME = "user_frequency.db"
     private const val DATABASE_VERSION = 1
+    private const val MAX_ENTRIES = 20_000
+    private const val PRUNE_CHECK_INTERVAL = 100
+    private const val PRUNE_BATCH_SIZE = 2_000
 
     // 表名稱與欄位
     private object Table {
@@ -44,6 +47,8 @@ object UserFrequencyService {
     private var dbHelper: DatabaseHelper? = null
     private val initMutex = Mutex()
     private var isInitialized = false
+    @Volatile
+    private var recordCounter = 0
 
     /**
      * 初始化服務（建議在 Application.onCreate 中呼叫）
@@ -134,9 +139,53 @@ object UserFrequencyService {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[RECORD] Recorded usage for: $word")
             }
+
+            recordCounter++
+            if (recordCounter >= PRUNE_CHECK_INTERVAL) {
+                recordCounter = 0
+                pruneOldEntries()
+            }
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[RECORD] Failed to record usage for: $word", e)
+            }
+        }
+    }
+
+    /**
+     * Prune least-used entries when exceeding capacity
+     */
+    private fun pruneOldEntries() {
+        try {
+            val db = dbHelper?.writableDatabase ?: return
+
+            val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
+            val currentCount = cursor.use {
+                if (it.moveToFirst()) it.getInt(0) else 0
+            }
+
+            if (currentCount <= MAX_ENTRIES) return
+
+            val deleteCount = minOf(PRUNE_BATCH_SIZE, currentCount - MAX_ENTRIES + PRUNE_BATCH_SIZE)
+
+            db.execSQL(
+                """
+                DELETE FROM ${Table.NAME}
+                WHERE ${Table.ID} IN (
+                    SELECT ${Table.ID} FROM ${Table.NAME}
+                    ORDER BY ${Table.COUNT} ASC, ${Table.LAST_USED} ASC
+                    LIMIT ?
+                )
+                """.trimIndent(),
+                arrayOf(deleteCount.toString())
+            )
+
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[PRUNE] Deleted $deleteCount frequency entries (was $currentCount)")
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[PRUNE] Failed to prune frequency entries", e)
             }
         }
     }
@@ -152,14 +201,14 @@ object UserFrequencyService {
     /**
      * 取得詞彙使用頻率
      */
-    suspend fun getFrequency(word: String): Int = withContext(Dispatchers.IO) {
-        getFrequencyData(word).count
+    suspend fun frequency(word: String): Int = withContext(Dispatchers.IO) {
+        frequencyData(word).count
     }
 
     /**
      * 取得詞彙使用頻率資料（包含頻率和最後使用時間）
      */
-    suspend fun getFrequencyData(word: String): FrequencyData = withContext(Dispatchers.IO) {
+    suspend fun frequencyData(word: String): FrequencyData = withContext(Dispatchers.IO) {
         try {
             initialize()
             val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData(0, 0)
@@ -193,7 +242,7 @@ object UserFrequencyService {
     /**
      * 批次取得多個詞彙的頻率資料
      */
-    suspend fun getFrequencyDataBatch(words: List<String>): Map<String, FrequencyData> = withContext(Dispatchers.IO) {
+    suspend fun frequencyDataBatch(words: List<String>): Map<String, FrequencyData> = withContext(Dispatchers.IO) {
         if (words.isEmpty()) return@withContext emptyMap()
 
         try {
@@ -233,7 +282,7 @@ object UserFrequencyService {
     /**
      * 取得最常用的詞彙
      */
-    suspend fun getTopWords(limit: Int = 100): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
+    suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
         try {
             initialize()
             val db = dbHelper?.readableDatabase ?: return@withContext emptyList()

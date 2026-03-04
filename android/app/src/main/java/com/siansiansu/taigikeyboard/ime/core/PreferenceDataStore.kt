@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -39,6 +40,7 @@ object PreferenceKeys {
     val IS_TRANSLATE_SWAPPED = booleanPreferencesKey("keyboard__is_translate_swapped")
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
     val PHAH_TAIGI_LAYOUT_ENABLED = booleanPreferencesKey("keyboard__phah_taigi_layout_enabled")
+    val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
 
     // Taigi-specific keys
     val ENABLE_DOUBLE_TAP_OO = booleanPreferencesKey("taigi__enable_double_tap_oo")
@@ -54,9 +56,6 @@ object PreferenceKeys {
     // Suggestion settings
     val SUGGESTION_ENABLED = booleanPreferencesKey("suggestion__enabled")
 
-    // Legacy: 已不再使用，改為基於鍵盤啟用狀態判斷
-    val HAS_SEEN_ONBOARDING = booleanPreferencesKey("onboarding__has_seen")
-
     // 詞庫開關設定
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")
@@ -65,6 +64,16 @@ object PreferenceKeys {
     val TAIHOA_DICT_ENABLED = booleanPreferencesKey("dictionary__taihoa_dict_enabled")
     val TAIJIT_DICT_ENABLED = booleanPreferencesKey("dictionary__taijit_dict_enabled")
     val KUNGGE_DICT_ENABLED = booleanPreferencesKey("dictionary__kungge_dict_enabled")
+    val STTI_DICT_ENABLED = booleanPreferencesKey("dictionary__stti_dict_enabled")
+    val KHPOO_DICT_ENABLED = booleanPreferencesKey("dictionary__khpoo_dict_enabled")
     // 異用字開關
     val VARIANT_DICT_ENABLED = booleanPreferencesKey("dictionary__variant_enabled")
+
+    // Appearance settings
+    val KEY_HEIGHT_SCALE = floatPreferencesKey("appearance__key_height_scale")
+    val KEY_FONT_SIZE_SCALE = floatPreferencesKey("appearance__key_font_size_scale")
+    val CANDIDATE_TEXT_SIZE_SCALE = floatPreferencesKey("appearance__candidate_text_size_scale")
+    val KEY_CORNER_RADIUS = floatPreferencesKey("appearance__key_corner_radius")
+    val KEY_BORDER_WIDTH = floatPreferencesKey("appearance__key_border_width")
+    val COLOR_SETTINGS = stringPreferencesKey("appearance__color_settings")
 }

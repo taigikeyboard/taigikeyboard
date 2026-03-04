@@ -48,7 +48,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
             let errorMsg = connection != nil
                 ? String(cString: sqlite3_errmsg(connection))
                 : "Unknown error"
-            logger.error("[INIT] Failed to open: \(errorMsg)")
+            logger.error("[INIT] Failed to open: \(errorMsg, privacy: .public)")
             sqlite3_close(connection)
             connection = nil
             throw DictionaryError.databaseConnectionFailed(errorMsg)
@@ -64,7 +64,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
 
         let configurations = [
-            "PRAGMA journal_mode=DELETE;",
+            "PRAGMA journal_mode=WAL;",
             "PRAGMA synchronous=NORMAL;",
             "PRAGMA cache_size=10000;",
             "PRAGMA temp_store=MEMORY;",
@@ -77,7 +77,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                 sqlite3_finalize(stmt)
             } else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
-                logger.warning("[CONFIG] Could not set pragma \(config): \(errorMsg)")
+                logger.warning("[CONFIG] Could not set pragma \(config, privacy: .public): \(errorMsg, privacy: .public)")
             }
         }
     }
@@ -140,7 +140,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                         self.isInitializing = false
                         self.initializationTask = nil
                     }
-                    logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription)")
+                    logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription, privacy: .public)")
                     throw error
                 }
             }
@@ -185,15 +185,6 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     func isConnected() -> Bool {
         guard isInitialized else { return false }
         return queue.sync { connection != nil }
-    }
-
-    /// 異步檢查是否已連接
-    func isConnectedAsync() async -> Bool {
-        await withCheckedContinuation { continuation in
-            queue.async { [weak self] in
-                continuation.resume(returning: self?.connection != nil)
-            }
-        }
     }
 
     // MARK: - Query Execution

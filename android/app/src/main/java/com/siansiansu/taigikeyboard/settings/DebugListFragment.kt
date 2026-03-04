@@ -119,11 +119,11 @@ class DebugListFragment : Fragment() {
     }
 
     private suspend fun loadAssociationData(): List<DebugEntry> {
-        return NextWordService.getAllAssociations(requireContext()).map { association ->
+        return NextWordService.allAssociations(requireContext()).map { association ->
             DebugEntry(
                 primary = "${association.prevWord} → ${association.nextWord}",
-                secondary = if (association.nextTl.isNotEmpty() || association.nextPoj.isNotEmpty()) {
-                    "TL: ${association.nextTl} / POJ: ${association.nextPoj}"
+                secondary = if (association.nextTl.isNotEmpty()) {
+                    "TL: ${association.nextTl}"
                 } else null,
                 count = association.count
             )

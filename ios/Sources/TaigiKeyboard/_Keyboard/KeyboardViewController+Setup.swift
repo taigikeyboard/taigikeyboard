@@ -88,9 +88,10 @@ extension KeyboardViewController {
             let autocompleteService = AutocompleteService()
             services.autocompleteService = autocompleteService
 
-            // 連接 AutocompleteService 和 ComposingManager
+            // 連接 AutocompleteService 和 ComposingManager / ActionHandler
             if let handler = actionHandler {
                 autocompleteService.setComposingManager(handler.composingManager)
+                autocompleteService.setActionHandler(handler)
             }
             setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(settings.inputMode.rawValue, privacy: .public)")
         }

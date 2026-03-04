@@ -30,10 +30,9 @@
 
                 <!-- TODO: make a good looking keyboard preview -->
 
-                <TextView
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:text="Loading keyboard, please wait..."/>
+                    android:layout_height="200dp"/>
 
             </LinearLayout>
 
@@ -44,6 +43,15 @@
     <!-- 候選詞展開 Overlay：從 Smartbar 下方開始，向下覆蓋鍵盤 -->
     <com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView
         android:id="@+id/candidate_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="top"
+        android:elevation="8dp"
+        android:visibility="gone" />
+
+    <!-- Layout selection overlay: covers keyboard with layout preview cards -->
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.LayoutSelectionOverlayView
+        android:id="@+id/layout_selection_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="top"

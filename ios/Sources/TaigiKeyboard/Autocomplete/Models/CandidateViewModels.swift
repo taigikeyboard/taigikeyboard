@@ -7,26 +7,37 @@ enum CandidateViewModels {
     enum UI {
         static let buttonSpacing: CGFloat = 14
         static let maxDisplayCount: Int = 100
-        static let height: CGFloat = 50 // 增加高度改善視覺比例
-
-        /// 主標題字體大小（根據螢幕尺寸自適應）
-        static var primaryFontSize: CGFloat {
-            switch ScreenSizeClass.current {
-            case .phoneCompact:  return 20
-            case .phoneRegular:  return 21
-            case .phoneLarge:    return 20  // 大螢幕稍小，視覺比例更協調
-            case .pad:           return 23
-            }
+        static let baseHeight: CGFloat = 50
+        /// Extra height to prevent bottom clipping from content offset
+        private static let bottomPadding: CGFloat = 6
+        static var height: CGFloat {
+            baseHeight * SharedSettings.shared.candidateTextSizeScale + bottomPadding
         }
 
-        /// 副標題字體大小（根據螢幕尺寸自適應）
-        static var secondaryFontSize: CGFloat {
-            switch ScreenSizeClass.current {
-            case .phoneCompact:  return 15
-            case .phoneRegular:  return 16
-            case .phoneLarge:    return 15
-            case .pad:           return 17
+        // Base font sizes before screen-size adaptation and user scale
+        static let basePrimaryFontSize: CGFloat = 20
+        static let baseSecondaryFontSize: CGFloat = 15
+
+        /// 主標題字體大小（根據螢幕尺寸自適應 + user scale）
+        static var primaryFontSize: CGFloat {
+            let base: CGFloat = switch ScreenSizeClass.current {
+            case .phoneCompact:  basePrimaryFontSize
+            case .phoneRegular:  21
+            case .phoneLarge:    basePrimaryFontSize
+            case .pad:           23
             }
+            return base * SharedSettings.shared.candidateTextSizeScale
+        }
+
+        /// 副標題字體大小（根據螢幕尺寸自適應 + user scale）
+        static var secondaryFontSize: CGFloat {
+            let base: CGFloat = switch ScreenSizeClass.current {
+            case .phoneCompact:  baseSecondaryFontSize
+            case .phoneRegular:  16
+            case .phoneLarge:    baseSecondaryFontSize
+            case .pad:           17
+            }
+            return base * SharedSettings.shared.candidateTextSizeScale
         }
 
         // MARK: - TPS 專用字體大小（方音符號較大，需縮小）
@@ -77,7 +88,16 @@ enum CandidateViewModels {
 
     enum Colors {
         static let separatorColor: Color = .init(.separator)
-        static let primaryTextColor: Color = .init(.label)
-        static let secondaryTextColor: Color = .init(.secondaryLabel) // 加深顏色提高可讀性
+
+        static var primaryTextColor: Color {
+            SharedSettings.shared.colorSettings.candidateTextColor?.color ?? Color(.label)
+        }
+
+        static var secondaryTextColor: Color {
+            if let custom = SharedSettings.shared.colorSettings.candidateTextColor?.color {
+                return custom.opacity(0.7)
+            }
+            return Color(.secondaryLabel)
+        }
     }
 }

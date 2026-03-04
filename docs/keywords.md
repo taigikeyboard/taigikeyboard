@@ -1,0 +1,152 @@
+# Keyword Mapping
+
+Standardized keyword mapping for core input method functionality and UI components.
+
+---
+
+## Core Input Method Keywords
+
+### 1. Composing (`engine/composing.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **rawInput** | Original keystrokes (e.g. `gua2`) — used for Trie search | `ComposingManager.rawInput` |
+| **composingText** | Derived display text (e.g. `guá`) — computed via ToneConverter | `ComposingManager.composingText` |
+| **ComposingState** | Dual-state model: `.idle` / `.composing(raw:)` | `ComposingManager.state` |
+| **commitComposition** | Finalize composing text and insert into text field | `ComposingManager.commitComposition()` |
+| **selectSuggestion** | Pick a candidate, clear composing state, insert text | `ComposingManager.selectSuggestion()` |
+| **markedText** | iOS inline composition display via `setMarkedText` | `KeyboardViewController.setMarkedText()` |
+
+### 2. Autocomplete (`engine/autocomplete.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **Suggestion** | A candidate word (text + title + subtitle + metadata) | `Autocomplete.Suggestion` |
+| **InputType** | Classification: `.hanzi` / `.romanWithTone` / `.romanWithoutTone` | `AutocompleteService.determineInputType()` |
+| **composingTextSuggestion** | Position 0 candidate — always the current composing text | `createComposingTextSuggestion()` |
+| **contextBoost** | Promote candidates matching bigram predictions from last selected word | `applyContextBoost()` |
+| **phraseSuggestion** | Learned phrase candidates inserted at position 1 | `queryPhraseSuggestions()` |
+| **searchKey** | Segmented + tone-filled key for Trie lookup | `buildSearchKey()` |
+
+### 3. Tone Engine (`engine/tone.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **numericTone** | Tone as digit suffix: 1-8 (1,4 = no diacritic) | `TaigiPhonetics.combiningToToneNum` |
+| **toneMarks** | Unicode diacritics: á(2), à(3), â(5), ā(7), a̍(8) | `ToneConverter.convertToToneMarks()` |
+| **tonePosition** | Vowel receiving the diacritic (TL vs POJ rules differ) | `TaigiPhonetics.placeTLToneMark / placePOJToneMark` |
+| **toneRestoration** | Re-apply tone after backspace deletes a diacritic | `ToneConverter.restoreTone()` |
+| **flickTone** | Swipe direction maps to tone: left(2), top(3), right(5), bottom(7), long-press(8) | `FlickDirection` |
+
+### 4. Dictionary & Trie (`engine/trie.md`, `engine/sort.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **MARISA Trie** | Compact prefix trie storing `key→rowid` mappings | `TrieService` |
+| **prefixSearch** | Find all entries matching a key prefix | `TrieService.prefixSearch()` |
+| **InputNormalizer** | Converts any input form to TL numeric tone format | `InputNormalizer.normalize()` |
+| **trieKey** | Normalized key format: lowercase, no hyphens, numeric tones (e.g. `gua2si7`) | `InputNormalizer` |
+| **scoringFormula** | `userFreqScore(×100) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | `calculateScore()` |
+| **userFrequency** | Per-word usage count, dominates ranking | `recordUsage()` |
+| **timeDecay** | Exponential decay with 1-week half-life for recency | `calculateWeight()` |
+
+### 5. Segmentation (`SyllableSegmenter`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **SyllableTrie** | Trie of valid TL+POJ syllables (initials × finals) | `SyllableSegmenter.trieRoot` |
+| **DAG** | Directed Acyclic Graph of valid syllable spans at each position | `edges[]` in `segmentContinuous()` |
+| **DPScoring** | Maximize sum of squared syllable lengths | `score[]` in `segmentContinuous()` |
+| **toneTerminator** | Tone digit (1-9) unambiguously ends a syllable | DAG edge with `j+1` |
+| **defaultTone** | Auto-added tone for non-final toneless syllables (1=open, 4=stop) | `buildSearchKey()` |
+| **fallback** | Single-char segment for unrecognized input | `fallbackScore` in DP |
+
+### 6. Next-Word Prediction (`engine/nextword.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **bigram** | Character-level prediction from dictionary data | `NextWordService.predict()` |
+| **userAssociation** | Word-level associations learned from user selections | `user_association` table |
+| **lastSelectedWord** | Context trigger for next-word prediction | `ActionHandler.lastSelectedWord` |
+| **phraseLearning** | Multi-word sequences learned from user input patterns | `NextWordService.queryPhrases()` |
+| **sentenceStart** | Special token `$` for beginning-of-sentence predictions | bigram table |
+
+### 7. Input Flow (`engine/flow.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **ActionHandler** | Central dispatcher for all keyboard actions | `ActionHandler` |
+| **characterInput** | Letter/digit keystroke → composing logic | `handleCharacterInput()` |
+| **spaceAction** | Commit composing + insert space | `handleSpaceAction()` |
+| **backspaceAction** | Delete within composing or text field | `handleBackspaceAction()` |
+| **returnAction** | Confirm selected candidate or commit composing | `handleReturnAction()` |
+| **performAutocomplete** | Trigger candidate search after composing state changes | `KeyboardViewController.performAutocomplete()` |
+
+---
+
+## UI Region Keywords
+
+### Region Map
+```
+┌─────────────────────────────────────┐
+│          CandidateBar               │  ← Smartbar / Candidate row
+├─────────────────────────────────────┤
+│  Q  W  E  R  T  Y  U  I  O  P      │  ← AlphaRow1
+│   A  S  D  F  G  H  J  K  L        │  ← AlphaRow2
+│  ⇧  Z  X  C  V  B  N  M  ⌫        │  ← AlphaRow3
+│  🌐 123  ,     Space     .  Enter   │  ← SystemRow
+└─────────────────────────────────────┘
+         ↑ Flick callout overlay
+         ↑ ExpandedCandidateOverlay (grid)
+```
+
+### UI Components
+| Keyword | Region | Description | Key Class |
+|---------|--------|-------------|-----------|
+| **CandidateBar** | Top strip | Horizontal scrolling candidate row | `CandidateView` |
+| **CandidateCell** | Inside CandidateBar | Individual candidate item (roman + hanzi) | `CandidateCell` |
+| **ExpandedOverlay** | Full-screen overlay | Grid view of all candidates | `ExpandedCandidateOverlay` |
+| **AlphaRow1-3** | Main area | Letter key rows | `TaigiLayouts` |
+| **SystemRow** | Bottom row | Globe, 123, comma, space, period, enter | `TaigiLayouts` |
+| **FlickCallout** | Overlay on key | 4-direction tone swipe indicator | `FlickKeyDef` |
+| **LongPressCallout** | Overlay on key | Tone 8 / special character popup | `Callouts+TaigiActions` |
+| **MarkedText** | Inline in text field | Underlined composing text | `setMarkedText()` |
+
+### App Screens (Main App, not keyboard extension)
+| Keyword | Tab | Description | Key View |
+|---------|-----|-------------|----------|
+| **HomeTab** | Tab 1 | Setup guide, feature overview | `ContentView` |
+| **LayoutTab** | Tab 2 | Keyboard layout preview & selection | `LayoutSettingsView` |
+| **DictionaryTab** | Tab 3 | Dictionary management | `DictionarySettingsView` |
+| **SettingsTab** | Tab 4 | Input mode, appearance, advanced settings | `SettingsView` |
+
+### Device Adaptation (`ui/device.md`)
+| Keyword | Definition |
+|---------|-----------|
+| **phoneCompact** | iPhone SE / small screens |
+| **phoneRegular** | Standard iPhone |
+| **phoneLarge** | iPhone Plus / Max |
+| **pad** | iPad |
+
+### Theme (`ui/theme.md`)
+| Keyword | Definition |
+|---------|-----------|
+| **ThemeTokens** | Design token system for colors, spacing, fonts |
+| **accentColor** | Primary highlight color (SPY×FAMILY retro flat aesthetic) |
+| **deviceFont** | Font size scaled by device classification |
+
+---
+
+## Cross-Reference: Spec File → Keywords
+
+| Spec File | Primary Keywords |
+|-----------|-----------------|
+| `engine/composing.md` | rawInput, composingText, ComposingState, markedText |
+| `engine/autocomplete.md` | Suggestion, InputType, composingTextSuggestion, contextBoost |
+| `engine/tone.md` | numericTone, toneMarks, tonePosition, toneRestoration |
+| `engine/trie.md` | MARISA Trie, prefixSearch, trieKey, InputNormalizer |
+| `engine/sort.md` | scoringFormula, userFrequency, timeDecay |
+| `engine/nextword.md` | bigram, userAssociation, phraseLearning, lastSelectedWord |
+| `engine/flow.md` | ActionHandler, characterInput, performAutocomplete |
+| `engine/segmentation.md` | SyllableSegmenter, DAG, DPScoring, onset atomicity, toneTerminator |
+| `engine/tps.md` | TPSConverter, containsTPS, toTL (Taiwanese Phonetic System) |
+| `ui/layout.md` | AlphaRow, SystemRow, TaigiLayouts, MOE layouts |
+| `ui/flick.md` | FlickCallout, FlickDirection, flickTone |
+| `ui/case.md` | KeyboardCase, CaseTransformer, autoCapitalization |
+| `ui/theme.md` | ThemeTokens, accentColor, deviceFont |
+| `ui/device.md` | phoneCompact/Regular/Large, pad |
+| `ui/app-ui.md` | HomeTab, LayoutTab, DictionaryTab, SettingsTab |
+| `file-structure.md` | Directory structure, file-to-service mapping |

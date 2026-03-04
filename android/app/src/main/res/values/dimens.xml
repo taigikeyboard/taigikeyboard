@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="key_width">33dp</dimen>
-    <dimen name="key_height">45dp</dimen>
+    <dimen name="key_height">42dp</dimen>
 
     <dimen name="key_marginH">2dp</dimen>
     <dimen name="key_marginV">5dp</dimen>

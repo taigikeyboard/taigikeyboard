@@ -1,26 +1,26 @@
-/// 台語鍵盤佈局定義
+/// Taigi keyboard layout definitions
 ///
-/// 所有鍵盤佈局都在此處完整定義，方便一眼看到全貌。
-/// 每個佈局都是 `[[KeyDef]]`，代表完整的鍵盤。
+/// All keyboard layouts are defined here for easy overview.
+/// Each layout is `[[KeyDef]]` representing a complete keyboard.
 ///
-/// 命名規則：
-/// - `_iPhone`: 無 globe 鍵（一般 iPhone）
-/// - `_withGlobe`: 有 globe 鍵在最左邊（iPhone SE、iPad）
+/// Naming conventions:
+/// - `_iPhone`: No globe key (standard iPhone)
+/// - `_withGlobe`: Globe key on the left (iPhone SE, iPad)
 ///
-/// 全形/半形對應：
-/// - 預設顯示半形（全羅文章用）
-/// - isTranslateSwapped = true 時顯示全形（漢羅文章用）
+/// Full-width/Half-width mapping:
+/// - Default shows half-width (for full romanization text)
+/// - When isTranslateSwapped = true, shows full-width (for Hàn-lô mixed text)
 enum TaigiLayouts {
 
     // ========================================
-    // MARK: - Alphabetic 鍵盤
+    // MARK: - Alphabetic Keyboards
     // ========================================
 
     enum Alphabetic {
 
-        // MARK: PhahTaigi 佈局
+        // MARK: PhahTaigi Layout
 
-        /// PhahTaigi - iPhone（無 globe）
+        /// PhahTaigi - iPhone (no globe key)
         static let phahTaigi_iPhone: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("!", fullWidth: "！"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -29,7 +29,7 @@ enum TaigiLayouts {
             [.numeric, .emoji, .space, .translate, .return]
         ]
 
-        /// PhahTaigi - iPhone SE / iPad（有 globe）
+        /// PhahTaigi - iPhone SE / iPad (with globe key)
         static let phahTaigi_withGlobe: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("!", fullWidth: "！"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -38,9 +38,9 @@ enum TaigiLayouts {
             [.numeric, .globe, .emoji, .space, .translate, .return]
         ]
 
-        // MARK: QWERTY 佈局（TL 模式）
+        // MARK: QWERTY Layout (TL mode)
 
-        /// QWERTY TL - iPhone（無 globe）
+        /// QWERTY TL - iPhone (no globe key)
         static let qwerty_TL_iPhone: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -49,7 +49,7 @@ enum TaigiLayouts {
             [.numeric, .emoji, .char(","), .space, .char("-"), .translate, .return]
         ]
 
-        /// QWERTY TL - iPhone SE / iPad（有 globe）
+        /// QWERTY TL - iPhone SE / iPad (with globe key)
         static let qwerty_TL_withGlobe: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -58,9 +58,9 @@ enum TaigiLayouts {
             [.numeric, .globe, .emoji, .char(","), .space, .char("-"), .translate, .return]
         ]
 
-        // MARK: QWERTY 佈局（POJ 模式）
+        // MARK: QWERTY Layout (POJ mode)
 
-        /// QWERTY POJ - iPhone（無 globe）
+        /// QWERTY POJ - iPhone (no globe key)
         static let qwerty_POJ_iPhone: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -69,7 +69,7 @@ enum TaigiLayouts {
             [.numeric, .emoji, .char(","), .space, .char("-"), .translate, .return]
         ]
 
-        /// QWERTY POJ - iPhone SE / iPad（有 globe）
+        /// QWERTY POJ - iPhone SE / iPad (with globe key)
         static let qwerty_POJ_withGlobe: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -78,10 +78,10 @@ enum TaigiLayouts {
             [.numeric, .globe, .emoji, .char(","), .space, .char("-"), .translate, .return]
         ]
 
-        // MARK: QWERTY 佈局（English 模式）
-        // Apple 標準英文鍵盤：4 列，無數字列
+        // MARK: QWERTY Layout (English mode)
+        // Apple standard English keyboard: 4 rows, no number row
 
-        /// QWERTY English - iPhone（無 globe）
+        /// QWERTY English - iPhone (no globe key)
         static let qwerty_English_iPhone: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -90,7 +90,7 @@ enum TaigiLayouts {
             [.numeric, .emoji, .space, .return]
         ]
 
-        /// QWERTY English - iPhone SE / iPad（有 globe）
+        /// QWERTY English - iPhone SE / iPad (with globe key)
         static let qwerty_English_withGlobe: [[KeyDef]] = [
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
@@ -99,184 +99,262 @@ enum TaigiLayouts {
             [.numeric, .globe, .emoji, .space, .return]
         ]
 
-        // MARK: TPS 佈局（台灣注音/方音符號）
+        // MARK: TPS Layout (Taiwanese Phonetic Symbols / 方音符號)
         //
-        // 佈局設計參考 images.png，基於 QWERTY 風格
-        // Row 1: 聲調符號 + 入聲韻尾
-        // Row 2: 聲母（雙唇、舌尖、舌根）
-        // Row 3: 聲母 + 基本韻母
-        // Row 4: 韻母 + 功能鍵
-        // Row 5: 功能列
+        // Row 1: Voiced initials + tones + nasalized vowels
+        // Row 2: Unaspirated stops + vowels + nasalized vowels
+        // Row 3: Aspirated stops + vowels + nasalized vowels
+        // Row 4: Nasals + affricates + vowels + punctuation + backspace
+        // Row 5: Function + consonants + space + vowels + enter
 
-        /// TPS - iPhone（無 globe）
+        /// TPS - iPhone (no globe key)
         static let tps_iPhone: [[KeyDef]] = [
-            // Row 1: ㄅ, ㄉ, ˇ, ˋ, ㄓ, ˊ, ˙, ㄚ, ㄞ, ㄢ (對應圖片第一列)
-            [.char("ㄅ"), .char("ㄉ"), .char("ˇ"), .char("ˋ"), .char("ㄓ"), .char("ˊ"), .char("˙"), .char("ㄚ"), .char("ㄞ"), .char("ㄢ")],
+            // Row 1: ㆠ, ˋ, ˪, ㆣ, ˊ, ˇ, ˫, ˙, ㆪ, ㆩ
+            [.char("ㆠ"), .char("ˋ"), .char("˪"), .char("ㆣ"), .char("ˊ"), .char("ˇ"), .char("˫"), .char("˙"), .char("ㆪ"), .char("ㆩ")],
 
-            // Row 2: ㄆ, ㄊ, ㄍ, ㄐ, ㄑ, ㄒ, ㄧ, ㄛ, ㄣ, ㄦ (對應圖片第二列)
-            [.char("ㄆ"), .char("ㄊ"), .char("ㄍ"), .char("ㄐ"), .char("ㄑ"), .char("ㄒ"), .char("ㄧ"), .char("ㄛ"), .char("ㄣ"), .char("ㄦ")],
+            // Row 2: ㄅ(ㆴ), ㄉ(ㆵ), ㄍ(ㆻ), ㄏ(ㆷ), ㄧ, ㄚ, ㄞ, ㄤ, ㆫ, ㆧ
+            [.char("ㄅ"), .char("ㄉ"), .char("ㄍ"), .char("ㄏ"), .char("ㄧ"), .char("ㄚ"), .char("ㄞ"), .char("ㄤ"), .char("ㆫ"), .char("ㆧ")],
 
-            // Row 3: ㄇ, ㄋ, ㄎ, ㄏ, ㄫ, ㄬ, ㄨ, ㄜ, ㄤ, ㄠ (對應圖片第三列)
-            [.char("ㄇ"), .char("ㄋ"), .char("ㄎ"), .char("ㄏ"), .char("ㄫ"), .char("ㄬ"), .char("ㄨ"), .char("ㄜ"), .char("ㄤ"), .char("ㄠ")],
+            // Row 3: ㄆ, ㄊ, ㄎ, ㄗ(ㄐ), ㄨ, ㄛ, ㄠ, ㆲ, ㆥ, ㆮ
+            [.char("ㄆ"), .char("ㄊ"), .char("ㄎ"), .char("ㄗ"), .char("ㄨ"), .char("ㄛ"), .char("ㄠ"), .char("ㆲ"), .char("ㆥ"), .char("ㆮ")],
 
-            // Row 4: ㄈ, ㄌ, ㄯ, ㄙ, ㄗ, ㄘ, ㄙ, ㄩ, ㄝ, ㄥ (對應圖片第四列)
-            // 註：圖片中 Z、X 位置使用了方音符號的變體，此處依視覺匹配
-            [.char("ㆠ"), .char("ㄌ"), .char("ㄯ"), .char("ㄒ"), .char("ㄗ"), .char("ㄘ"), .char("ㄙ"), .char("ㄩ"), .char("ㄝ"), .char("ㄥ")],
-            // Row 5: 功能列
+            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ，(。), backspace
+            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char("，"), .backspace],
+
+            // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), space, ㆨ, ㆤ(ㄝ), enter
+            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .space, .char("ㆨ"), .char("ㆤ"), .return]
+        ]
+
+        /// TPS - iPhone SE / iPad (with globe key)
+        static let tps_withGlobe: [[KeyDef]] = [
+            // Row 1: ㆠ, ˋ, ˪, ㆣ, ˊ, ˇ, ˫, ˙, ㆪ, ㆩ
+            [.char("ㆠ"), .char("ˋ"), .char("˪"), .char("ㆣ"), .char("ˊ"), .char("ˇ"), .char("˫"), .char("˙"), .char("ㆪ"), .char("ㆩ")],
+
+            // Row 2: ㄅ(ㆴ), ㄉ(ㆵ), ㄍ(ㆻ), ㄏ(ㆷ), ㄧ, ㄚ, ㄞ, ㄤ, ㆫ, ㆧ
+            [.char("ㄅ"), .char("ㄉ"), .char("ㄍ"), .char("ㄏ"), .char("ㄧ"), .char("ㄚ"), .char("ㄞ"), .char("ㄤ"), .char("ㆫ"), .char("ㆧ")],
+
+            // Row 3: ㄆ, ㄊ, ㄎ, ㄗ(ㄐ), ㄨ, ㄛ, ㄠ, ㆲ, ㆥ, ㆮ
+            [.char("ㄆ"), .char("ㄊ"), .char("ㄎ"), .char("ㄗ"), .char("ㄨ"), .char("ㄛ"), .char("ㄠ"), .char("ㆲ"), .char("ㆥ"), .char("ㆮ")],
+
+            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ，(。), backspace
+            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char("，"), .backspace],
+
+            // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), space, ㆨ, ㆤ(ㄝ), enter
+            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .space, .char("ㆨ"), .char("ㆤ"), .return]
+        ]
+
+        // MARK: MOE Layout 1 (教育部輸入法佈局1) - TL version
+
+        /// MOE1 TL - iPhone (no globe key)
+        static let moe1_TL_iPhone: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
+            [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
+            [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("("), .char(")"), .char("b"), .char("n"), .char("m"), .backspace],
             [.numeric, .emoji, .space, .translate, .return]
         ]
 
-        /// TPS - iPhone SE / iPad（有 globe）
-        static let tps_withGlobe: [[KeyDef]] = [
-            // Row 1: ㄅ, ㄉ, ˇ, ˋ, ㄓ, ˊ, ˙, ㄚ, ㄞ, ㄢ (對應圖片第一列)
-            [.char("ㄅ"), .char("ㄉ"), .char("ˇ"), .char("ˋ"), .char("ㄓ"), .char("ˊ"), .char("˙"), .char("ㄚ"), .char("ㄞ"), .char("ㄢ")],
-
-            // Row 2: ㄆ, ㄊ, ㄍ, ㄐ, ㄑ, ㄒ, ㄧ, ㄛ, ㄣ, ㄦ (對應圖片第二列)
-            [.char("ㄆ"), .char("ㄊ"), .char("ㄍ"), .char("ㄐ"), .char("ㄑ"), .char("ㄒ"), .char("ㄧ"), .char("ㄛ"), .char("ㄣ"), .char("ㄦ")],
-
-            // Row 3: ㄇ, ㄋ, ㄎ, ㄏ, ㄫ, ㄬ, ㄨ, ㄜ, ㄤ, ㄠ (對應圖片第三列)
-            [.char("ㄇ"), .char("ㄋ"), .char("ㄎ"), .char("ㄏ"), .char("ㄫ"), .char("ㄬ"), .char("ㄨ"), .char("ㄜ"), .char("ㄤ"), .char("ㄠ")],
-
-            // Row 4: ㄈ, ㄌ, ㄯ, ㄙ, ㄗ, ㄘ, ㄙ, ㄩ, ㄝ, ㄥ (對應圖片第四列)
-            // 註：圖片中 Z、X 位置使用了方音符號的變體，此處依視覺匹配
-            [.char("ㄈ"), .char("ㄌ"), .char("ㄯ"), .char("ㄒ"), .char("ㄗ"), .char("ㄘ"), .char("ㄙ"), .char("ㄩ"), .char("ㄝ"), .char("ㄥ")],
-
-            // Row 5: 功能列 (依照圖片底部配置)
+        /// MOE1 TL - iPhone SE / iPad (with globe key)
+        static let moe1_TL_withGlobe: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
+            [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
+            [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("("), .char(")"), .char("b"), .char("n"), .char("m"), .backspace],
             [.numeric, .globe, .emoji, .space, .translate, .return]
+        ]
+
+        // MARK: MOE Layout 1 (教育部輸入法佈局1) - POJ version
+
+        /// MOE1 POJ - iPhone (no globe key)
+        static let moe1_POJ_iPhone: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
+            [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
+            [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
+            [.numeric, .emoji, .space, .translate, .return]
+        ]
+
+        /// MOE1 POJ - iPhone SE / iPad (with globe key)
+        static let moe1_POJ_withGlobe: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
+            [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
+            [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
+            [.numeric, .globe, .emoji, .space, .translate, .return]
+        ]
+
+        // MARK: MOE Layout 2 (教育部輸入法佈局2) - TL version
+
+        /// MOE2 TL - iPhone (no globe key)
+        static let moe2_TL_iPhone: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ts"), .char("tsh"), .char("a"), .char("i"), .char("o"), .char("oo")],
+            [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
+            [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+        ]
+
+        /// MOE2 TL - iPhone SE / iPad (with globe key)
+        static let moe2_TL_withGlobe: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ts"), .char("tsh"), .char("a"), .char("i"), .char("o"), .char("oo")],
+            [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
+            [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+        ]
+
+        // MARK: MOE Layout 2 (教育部輸入法佈局2) - POJ version
+
+        /// MOE2 POJ - iPhone (no globe key)
+        static let moe2_POJ_iPhone: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ch"), .char("chh"), .char("a"), .char("i"), .char("o"), .char("o\u{0358}")],
+            [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
+            [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+        ]
+
+        /// MOE2 POJ - iPhone SE / iPad (with globe key)
+        static let moe2_POJ_withGlobe: [[KeyDef]] = [
+            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"), .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ch"), .char("chh"), .char("a"), .char("i"), .char("o"), .char("o\u{0358}")],
+            [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
+            [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
         ]
     }
 
     // ========================================
-    // MARK: - Numeric 鍵盤（常用符號）
+    // MARK: - Numeric Keyboard (Common Symbols)
     // ========================================
-    // 5 列設計：數字 + 基本標點 + 常用括號 + 功能列 + 底部列
+    // 5-row design: Numbers + Basic punctuation + Common brackets + Function row + Bottom row
 
     enum Numeric {
 
-        /// Numeric - iPhone（無 globe）
+        /// Numeric - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
-            // 第1列：數字
+            // Row 1: Numbers
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"),
              .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
 
-            // 第2列：引號和中文括號（半形用 curly quotes）
+            // Row 2: Quotation marks and CJK brackets (half-width uses curly quotes)
             [.char("\u{201C}", fullWidth: "「"), .char("\u{201D}", fullWidth: "」"),
              .char("\u{2018}", fullWidth: "『"), .char("\u{2019}", fullWidth: "』"),
              .char("（"), .char("）"),
              .char("【"), .char("】"),
              .char("["), .char("]")],
 
-            // 第3列：標點符號
+            // Row 3: Punctuation
             [.char(":", fullWidth: "："), .char(";", fullWidth: "；"),
              .char("'", fullWidth: "、"), .char("-"), .char("—"),
              .char("...", fullWidth: "⋯"),
              .char("$"), .char("%"), .char("#"), .char("&")],
 
-            // 第4列：最常用標點（手指自然位置）
+            // Row 4: Most common punctuation (natural finger position)
             [.symbolic,
              .char(".", fullWidth: "。"), .char(",", fullWidth: "，"),
              .char("?", fullWidth: "？"), .char("!", fullWidth: "！"),
              .char("*"), .char("+"), .char("@"), .backspace],
 
-            // 第5列：底部列
+            // Row 5: Bottom row
             [.alphabetic, .emoji, .space, .translate, .return]
         ]
 
-        /// Numeric - iPhone SE / iPad（有 globe）
+        /// Numeric - iPhone SE / iPad (with globe key)
         static let withGlobe: [[KeyDef]] = [
-            // 第1列：數字
+            // Row 1: Numbers
             [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"),
              .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
 
-            // 第2列：引號和中文括號（半形用 curly quotes）
+            // Row 2: Quotation marks and CJK brackets (half-width uses curly quotes)
             [.char("\u{201C}", fullWidth: "「"), .char("\u{201D}", fullWidth: "」"),
              .char("\u{2018}", fullWidth: "『"), .char("\u{2019}", fullWidth: "』"),
              .char("（"), .char("）"),
              .char("【"), .char("】"),
              .char("["), .char("]")],
 
-            // 第3列：標點符號
+            // Row 3: Punctuation
             [.char(":", fullWidth: "："), .char(";", fullWidth: "；"),
              .char("'", fullWidth: "、"), .char("-"), .char("—"),
              .char("...", fullWidth: "⋯"),
              .char("$"), .char("%"), .char("#"), .char("&")],
 
-            // 第4列：最常用標點（手指自然位置）
+            // Row 4: Most common punctuation (natural finger position)
             [.symbolic,
              .char(".", fullWidth: "。"), .char(",", fullWidth: "，"),
              .char("?", fullWidth: "？"), .char("!", fullWidth: "！"),
              .char("*"), .char("+"), .char("@"), .backspace],
 
-            // 第5列：底部列
+            // Row 5: Bottom row
             [.alphabetic, .globe, .emoji, .space, .translate, .return]
         ]
     }
 
     // ========================================
-    // MARK: - Symbolic 鍵盤（進階符號）
+    // MARK: - Symbolic Keyboard (Advanced Symbols)
     // ========================================
-    // 5 列設計：程式符號 + 貨幣符號 + 書名號 + 功能列 + 底部列
-    // 注意：不與 Numeric 重複
+    // 5-row design: Programming brackets + Currency + Book title marks + Function row + Bottom row
+    // Note: Does not overlap with Numeric keyboard
 
     enum Symbolic {
 
-        /// Symbolic - iPhone（無 globe）
+        /// Symbolic - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
-            // 第1列：程式括號（半形，｛｝有全形版本）
+            // Row 1: Programming brackets (half-width, ｛｝ have full-width versions)
             [.char("〔"), .char("〕"),
              .char("{", fullWidth: "｛"), .char("}", fullWidth: "｝"),
              .char("«"), .char("»"),
              .char("<"), .char(">"),
              .char("^"), .char("※")],
 
-            // 第2列：書名號（永遠全形）
+            // Row 2: Book title marks (always full-width)
             [.char("〈"), .char("〉"),
              .char("《"), .char("》"),
              .char("|"), .char("~"),
              .char("\\"), .char("/"),
              .char("_"), .char("=")],
 
-            // 第3列：貨幣和特殊符號
+            // Row 3: Currency and special symbols
             [.char("€"), .char("£"), .char("¥"), .char("¢"),
              .char("•", fullWidth: "·"), .char("°"),
              .char("©"), .char("®"), .char("™"), .char("℃")],
 
-            // 第4列：數學符號（手指自然位置）
+            // Row 4: Math symbols (natural finger position)
             [.numeric,
              .char("±"), .char("×"), .char("÷"),
              .char("≠"), .char("≈"), .char("∞"), .char("√"), .backspace],
 
-            // 第5列：底部列
+            // Row 5: Bottom row
             [.alphabetic, .emoji, .space, .translate, .return]
         ]
 
-        /// Symbolic - iPhone SE / iPad（有 globe）
+        /// Symbolic - iPhone SE / iPad (with globe key)
         static let withGlobe: [[KeyDef]] = [
-            // 第1列：程式括號（半形，｛｝有全形版本）
+            // Row 1: Programming brackets (half-width, ｛｝ have full-width versions)
             [.char("〔"), .char("〕"),
              .char("{", fullWidth: "｛"), .char("}", fullWidth: "｝"),
              .char("«"), .char("»"),
              .char("<"), .char(">"),
              .char("^"), .char("※")],
 
-            // 第2列：書名號（永遠全形）
+            // Row 2: Book title marks (always full-width)
             [.char("〈"), .char("〉"),
              .char("《"), .char("》"),
              .char("|"), .char("~"),
              .char("\\"), .char("/"),
              .char("_"), .char("=")],
 
-            // 第3列：貨幣和特殊符號
+            // Row 3: Currency and special symbols
             [.char("€"), .char("£"), .char("¥"), .char("¢"),
              .char("•", fullWidth: "·"), .char("°"),
              .char("©"), .char("®"), .char("™"), .char("℃")],
 
-            // 第4列：數學符號（手指自然位置）
+            // Row 4: Math symbols (natural finger position)
             [.numeric,
              .char("±"), .char("×"), .char("÷"),
              .char("≠"), .char("≈"), .char("∞"), .char("√"), .backspace],
 
-            // 第5列：底部列
+            // Row 5: Bottom row
             [.alphabetic, .globe, .emoji, .space, .translate, .return]
         ]
     }

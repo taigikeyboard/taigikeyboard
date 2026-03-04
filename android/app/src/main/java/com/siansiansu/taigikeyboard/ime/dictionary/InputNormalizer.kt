@@ -6,70 +6,65 @@ import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import java.text.Normalizer
 
 /**
- * 輸入正規化工具
+ * Input normalizer
  *
- * 將使用者輸入統一轉換為 TL 數字聲調格式：
- * - POJ 調符（hó）→ hoo2
- * - TL 調符（hóo）→ hoo2
- * - POJ 數字（ho2）→ hoo2
- * - TL 數字（hoo2）→ hoo2
- * - POJ 無聲調（choa）→ tsua
+ * Converts user input to numeric tone format (mode-native spelling):
+ * - POJ diacritics (hó) → ho2 (stays POJ)
+ * - TL diacritics (hóo) → hoo2
+ * - POJ numeric (ho2) → ho2 (stays POJ)
+ * - TL numeric (hoo2) → hoo2
  *
- * 處理步驟：分割音節 → 逐音節處理（調符轉數字、POJ→TL）→ 合併
+ * Output retains the input mode's spelling. The trie prefix (tl:/poj:)
+ * is added at the query boundary, not here.
+ *
+ * Pipeline: split syllables → per-syllable (diacritics→digits) → join
  */
 object InputNormalizer {
 
     private const val TAG = "InputNormalizer"
 
-    // 調符 → 聲調數字（參考 KeSi）
-    private val TONE_MARK_TO_NUMBER = mapOf(
-        '\u0301' to "2",  // ́ COMBINING ACUTE ACCENT
-        '\u0300' to "3",  // ̀ COMBINING GRAVE ACCENT
-        '\u0302' to "5",  // ̂ COMBINING CIRCUMFLEX ACCENT
-        '\u030C' to "6",  // ̌ COMBINING CARON
-        '\u0304' to "7",  // ̄ COMBINING MACRON
-        '\u030D' to "8",  // ̍ COMBINING VERTICAL LINE ABOVE
-        '\u0306' to "9",  // ̆ COMBINING BREVE (POJ)
-        '\u030B' to "9",  // ̋ COMBINING DOUBLE ACUTE ACCENT (TL)
-    )
+    // Derive tone mark map from TaigiPhonetics (single source of truth)
+    private val toneMarkToNumber: Map<Char, String> =
+        TaigiPhonetics.combiningToToneNum.mapKeys { (codePoint, _) -> codePoint.toChar() }
 
     /**
      * 入聲韻尾（-p, -t, -k, -h）
      * 無調符且以這些結尾的音節為第 4 聲
      */
-    private val CHECKED_ENDINGS = setOf('p', 't', 'k', 'h')
+    private val checkedEndings = setOf('p', 't', 'k', 'h')
 
     /**
-     * 正規化輸入為 Trie 查詢格式（TL 數字聲調）
+     * Normalize input to Trie query format (TL numeric tones)
      *
-     * 支援任何輸入格式：
-     * - POJ 調符（hó-bô）→ hoo2boo5
-     * - TL 調符（hóo-bôo）→ hoo2boo5
-     * - POJ 數字（ho2-bo5）→ hoo2boo5
-     * - TL 數字（hoo2-boo5）→ hoo2boo5
-     *
-     * @param input 使用者輸入
-     * @param mode POJ 或 TL 模式（目前未使用，POJ/TL 調符相同）
-     * @return 正規化後的字串（TL 格式、小寫、無連字符、數字聲調）
+     * @param input User input
+     * @param mode POJ or TL mode
+     * @return Normalized string (TL format, lowercase, no hyphens, numeric tones)
      */
     fun normalize(input: String, mode: InputMode): String {
         if (input.isEmpty()) return ""
 
-        // 轉小寫
         val lowercased = input.lowercase()
 
-        // 判斷是否需要補上預設聲調（1 或 4）
-        // 只有當輸入包含調符時，才對無調符音節補上預設聲調
-        // 避免對不完整輸入（如單字母 "g"）錯誤加上聲調
+        // Only add default tones when input contains diacritics
         val shouldAddDefaultTones = hasToneMarks(lowercased)
 
-        // 以連字符分割音節，逐音節處理
         val syllables = lowercased.split("-")
         val result = syllables.map { syllable ->
             normalizeSyllable(syllable, addDefaultTone = shouldAddDefaultTones)
         }
 
-        // 合併（不含連字符）
+        // Validate each syllable against the mode-appropriate trie (aligned with iOS)
+        if (mode != InputMode.ENGLISH) {
+            for (syllable in result) {
+                if (syllable.isEmpty()) continue
+                val base = if (syllable.last().isDigit()) syllable.dropLast(1) else syllable
+                if (base.isEmpty()) continue
+                if (!SyllableSegmenter.isValidPrefix(base, mode)) {
+                    return ""
+                }
+            }
+        }
+
         val normalized = result.joinToString("")
 
         if (BuildConfig.DEBUG && input != normalized) {
@@ -80,26 +75,23 @@ object InputNormalizer {
     }
 
     /**
-     * 正規化單一音節
+     * Normalize a single syllable: strip diacritics → numeric tone
      *
-     * 步驟：
-     * 1. 轉換 POJ 鼻音符號 ⁿ → nn
-     * 2. NFD 分解（將預組合字符分解為基礎字符 + 組合標記）
-     * 3. 轉換 POJ o͘（U+0358）→ oo
-     * 4. 提取聲調標記，轉為數字
-     * 5. 無調符時根據韻尾判斷聲調 1 或 4（僅當 addDefaultTone = true）
-     * 6. 組合：音節 + 聲調數字
+     * Steps:
+     * 1. Convert POJ nasal ⁿ → nn
+     * 2. NFD decompose
+     * 3. Convert POJ o͘ (U+0358) → oo
+     * 4. Extract combining tone mark → digit
+     * 5. Add default tone 1 or 4 based on checked endings (only when addDefaultTone = true)
+     * 6. Join: syllable + tone digit
      *
-     * @param syllable 音節字串
-     * @param addDefaultTone 是否對無調符音節補上預設聲調（1 或 4）
-     *
-     * 注意：不做 POJ→TL 拼法轉換（如 ch→ts），因為 Trie 使用前綴區分（tl:/poj:）
+     * Note: POJ→TL spelling conversion (ch→ts) is done in normalize(), not here.
      */
     private fun normalizeSyllable(syllable: String, addDefaultTone: Boolean): String {
         if (syllable.isEmpty()) return ""
 
-        // 轉換 POJ 鼻音符號 ⁿ (U+207F) → nn
-        val withNasalConverted = syllable.replace("\u207F", "nn")
+        // 轉換 POJ 鼻音符號 ⁿ (U+207F) / ᴺ (U+1D3A) → nn
+        val withNasalConverted = syllable.replace("\u207F", "nn").replace("\u1D3A", "nn")
 
         // 檢查是否已有數字聲調（如 ho2）
         val existingTone = withNasalConverted.lastOrNull()?.takeIf { it.isDigit() }
@@ -120,7 +112,7 @@ object InputNormalizer {
         val withoutTone = StringBuilder()
 
         for (char in withOoConverted) {
-            val tone = TONE_MARK_TO_NUMBER[char]
+            val tone = toneMarkToNumber[char]
             if (tone != null) {
                 toneNumber = tone  // 取最後一個聲調標記
             } else {
@@ -132,7 +124,7 @@ object InputNormalizer {
         if (addDefaultTone && toneNumber.isEmpty()) {
             val lastChar = withoutTone.lastOrNull()
             if (lastChar != null) {
-                toneNumber = if (lastChar in CHECKED_ENDINGS) {
+                toneNumber = if (lastChar in checkedEndings) {
                     // 入聲韻尾（-p, -t, -k, -h）→ 第 4 聲
                     "4"
                 } else {
@@ -147,47 +139,56 @@ object InputNormalizer {
     }
 
     /**
-     * 將 POJ 拼法轉換為 TL 拼法（單一音節）
+     * Build a search key from continuous input using SyllableSegmenter.
      *
-     * 注意：目前未使用，因 Trie 使用前綴區分（tl:/poj:）
-     * 保留供未來可能需要時使用
+     * For continuous input without hyphens (e.g., "gua2si7soo"), segments into
+     * valid syllables, adds default tones to non-final segments
+     * (tone 1 for open syllables, tone 4 for stop consonants), then joins
+     * without hyphens to match the trie key format.
      *
-     * 參考 KeSi tsuan_kongke()
-     * 轉換規則（順序重要）：
-     * - ch → ts
-     * - ou → oo
-     * - o͘ → oo
-     * - ⁿ → nn
-     * - oa → ua
-     * - oe → ue
-     * - eng → ing
-     * - ek → ik
-     * - oonn → onn（修正 ou→oo 後產生的錯誤）
+     * This enables autocomplete for continuous input like "guasisoo" ->
+     * segmented as ["gua", "si", "soo"] -> normalized as "gua1si1soo".
+     *
+     * For hyphenated input, falls back to the regular normalize() behavior.
+     *
+     * @param input Raw user input
+     * @param mode POJ or TL mode
+     * @return Normalized search key for trie prefix matching
      */
-    @Suppress("unused")
-    private fun pojToTl(syllable: String): String {
-        return syllable
-            .replace("ch", "ts")
-            .replace("ou", "oo")
-            .replace("o͘", "oo")
-            .replace("ⁿ", "nn")
-            .replace("oa", "ua")
-            .replace("oe", "ue")
-            .replace("eng", "ing")
-            .replace("ek", "ik")
-            .replace("oonn", "onn")
-    }
+    fun buildSearchKey(input: String, mode: InputMode): String {
+        if (input.isEmpty()) return ""
 
-    /**
-     * 移除輸入中的所有聲調（調符和數字）
-     *
-     * 用於生成無聲調查詢 key（TL 格式）
-     */
-    fun removeAllTones(input: String, mode: InputMode): String {
-        // 先正規化（調符→數字、POJ→TL）
-        val normalized = normalize(input, mode)
-        // 再移除數字
-        return normalized.replace(Regex("[0-9]"), "")
+        // Aligned with iOS AutocompleteService.buildSearchKey:
+        // - No lowercasing (preserve original case)
+        // - Segment raw input, strip trailing hyphens, add default tones
+        // - Join with "-" separator
+
+        val prefix = DictionaryConstants.triePrefix(mode)
+        val checker: WordPrefixChecker? = if (TrieService.isReady) {
+            { key -> TrieService.prefixSearch(prefix + key.lowercase(), 1).isNotEmpty() }
+        } else null
+        val segments = SyllableSegmenter.segment(input, wordPrefixChecker = checker, mode = mode)
+
+        // Single segment: return input unchanged (match iOS)
+        if (segments.size <= 1) return input
+
+        val hasTones = input.any { it.isDigit() }
+
+        val processed = segments.mapIndexed { index, seg ->
+            val base = if (seg.endsWith("-")) seg.dropLast(1) else seg
+            if (base.isEmpty()) return@mapIndexed ""
+
+            val isLast = index == segments.size - 1
+
+            // Add default tones to non-final segments only when input already has tone digits
+            if (hasTones && !isLast && !base.last().isDigit()) {
+                base + if (TaigiPhonetics.isStopTone(base)) "4" else "1"
+            } else {
+                base
+            }
+        }
+
+        return processed.joinToString("-")
     }
 
     /**
@@ -195,13 +196,7 @@ object InputNormalizer {
      */
     fun hasToneMarks(input: String): Boolean {
         val nfd = Normalizer.normalize(input, Normalizer.Form.NFD)
-        return nfd.any { it in TONE_MARK_TO_NUMBER }
+        return nfd.any { it in toneMarkToNumber }
     }
 
-    /**
-     * 檢查輸入是否包含數字聲調
-     */
-    fun hasNumericTones(input: String): Boolean {
-        return input.any { it.isDigit() }
-    }
 }

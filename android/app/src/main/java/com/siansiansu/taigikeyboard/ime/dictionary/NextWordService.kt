@@ -28,6 +28,7 @@ object NextWordService {
     private const val TAG = "NextWordService"
     private const val DICT_DB_NAME = "dictionary.db"
     private const val USER_DB_NAME = "user_association.db"
+    private const val DATABASE_VERSION = 3  // v3: UNIQUE(prev_word, next_word, next_tl)
     private const val DEFAULT_LIMIT = 30
 
     // 使用者來源權重（相對於字典來源）
@@ -38,6 +39,13 @@ object NextWordService {
     // 時間衰減參數（參考 RIME 的指數衰減公式）
     // 半衰期：168 小時（一週），超過一週的關聯權重減半
     private const val DECAY_HALF_LIFE_HOURS = 168.0
+
+    // Memory strength: ensures user entries rank above dict entries
+    // Matches iOS NextWordService scoring constants
+    private const val LEARNING_BONUS = 300.0
+    private const val HIGH_USAGE_DECAY_FLOOR = 0.95   // count >= 3: near-permanent retention
+    private const val LOW_USAGE_DECAY_FLOOR = 0.3     // count < 3: prevents full decay (~1 month visible)
+    private const val HIGH_USAGE_THRESHOLD = 3
 
     // 使用者關聯數量上限（防止資料庫無限增長）
     private const val MAX_USER_ASSOCIATIONS = 50_000
@@ -54,6 +62,8 @@ object NextWordService {
     private const val COL_TAIHOA = "taihoa"
     private const val COL_TAIJIT = "taijit"
     private const val COL_KUNGGE = "kungge"
+    private const val COL_STTI = "stti"
+    private const val COL_KHPOO = "khpoo"
 
     private var dictDatabase: SQLiteDatabase? = null
     private var userDatabase: SQLiteDatabase? = null
@@ -69,9 +79,7 @@ object NextWordService {
     data class Prediction(
         val hanzi: String,      // 預測的下一個字
         val tl: String,         // TL 羅馬字
-        val poj: String,        // POJ 羅馬字
-        val delimiter: String,  // 分隔符（羅馬字模式用："-" 或 " "）
-        val score: Double       // 排序分數（改為 Double 以支援時間衰減）
+        val score: Double       // 排序分數（Double 以支援時間衰減）
     )
 
     /**
@@ -97,6 +105,29 @@ object NextWordService {
     }
 
     /**
+     * Calculate user-layer score with decay floor + learning bonus
+     *
+     * Ensures user entries always rank above dict entries (learningBonus = 300).
+     * High-usage entries (count >= 3) get near-permanent retention via decay floor.
+     * Matches iOS NextWordService.calculateUserScore().
+     *
+     * @param count usage count
+     * @param lastUsedMs last used time in milliseconds
+     * @return weighted score
+     */
+    private fun calculateUserScore(count: Int, lastUsedMs: Long): Double {
+        val decay = calculateDecay(lastUsedMs)
+        val rawScore = count.toDouble() * USER_WEIGHT
+        val decayFloor = if (count >= HIGH_USAGE_THRESHOLD) {
+            HIGH_USAGE_DECAY_FLOOR
+        } else {
+            LOW_USAGE_DECAY_FLOOR
+        }
+        val effectiveDecay = maxOf(decayFloor, decay)
+        return rawScore * effectiveDecay + LEARNING_BONUS
+    }
+
+    /**
      * 預測下一個字
      *
      * 使用 Bigram 模型：取選中詞的「最後一字」查詢下一個字
@@ -110,7 +141,8 @@ object NextWordService {
     suspend fun predict(
         word: String,
         limit: Int = DEFAULT_LIMIT,
-        context: Context
+        context: Context,
+        prefs: PrefHelper? = null
     ): List<Prediction> = withContext(Dispatchers.IO) {
         if (word.isEmpty()) {
             return@withContext emptyList()
@@ -126,12 +158,12 @@ object NextWordService {
         // 1. 查詢字典關聯（Bigram：用最後一字查詢）
         dictDatabase?.let { db ->
             try {
-                // 建立詞庫過濾條件
-                val prefs = PrefHelper(context)
-                val dictWhereCondition = buildDictWhereCondition(prefs)
+                // 建立詞庫過濾條件（use provided PrefHelper to avoid runBlocking on new instance）
+                val p = prefs ?: PrefHelper(context)
+                val dictWhereCondition = buildDictWhereCondition(p)
 
                 val sql = """
-                    SELECT next_word, next_tl, next_poj, delimiter, count
+                    SELECT next_word, next_tl, count
                     FROM word_association
                     WHERE prev_word = ?
                     $dictWhereCondition
@@ -148,15 +180,12 @@ object NextWordService {
                     while (it.moveToNext()) {
                         val nextWord = it.getString(0) ?: continue
                         val nextTl = it.getString(1) ?: ""
-                        val nextPoj = it.getString(2) ?: ""
-                        val delimiter = it.getString(3) ?: "-"
-                        val count = it.getInt(4)
+                        val count = it.getInt(2)
 
-                        results[nextWord] = Prediction(
+                        val key = "${nextWord}\t${nextTl}"
+                        results[key] = Prediction(
                             hanzi = nextWord,
                             tl = nextTl,
-                            poj = nextPoj,
-                            delimiter = delimiter,
                             score = count.toDouble() * DICT_WEIGHT
                         )
                     }
@@ -174,7 +203,7 @@ object NextWordService {
         userDatabase?.let { db ->
             try {
                 val sql = """
-                    SELECT next_word, next_tl, next_poj, delimiter, count,
+                    SELECT next_word, next_tl, count,
                            strftime('%s', last_used) * 1000 AS last_used_ms
                     FROM user_association
                     WHERE prev_word = ?
@@ -192,36 +221,31 @@ object NextWordService {
                     while (it.moveToNext()) {
                         val nextWord = it.getString(0) ?: continue
                         val nextTl = it.getString(1) ?: ""
-                        val nextPoj = it.getString(2) ?: ""
-                        val delimiter = it.getString(3) ?: " "
-                        val count = it.getInt(4)
-                        val lastUsedMs = it.getLong(5)
+                        val count = it.getInt(2)
+                        val lastUsedMs = it.getLong(3)
                         userCount++
 
-                        // 計算時間衰減
-                        val decay = calculateDecay(lastUsedMs)
-                        val userScore = count.toDouble() * USER_WEIGHT * decay
+                        // Calculate score with learning bonus and decay floors
+                        val userScore = calculateUserScore(count, lastUsedMs)
 
                         if (BuildConfig.DEBUG) {
+                            val decay = calculateDecay(lastUsedMs)
                             Log.d(TAG, "[PREDICT] User found: '$word' -> '$nextWord' (count=$count, decay=%.3f, score=%.1f)".format(decay, userScore))
                         }
 
-                        val existing = results[nextWord]
+                        val key = "${nextWord}\t${nextTl}"
+                        val existing = results[key]
 
                         if (existing != null) {
-                            // 合併分數，使用使用者的羅馬字和分隔符（如果有）
-                            results[nextWord] = existing.copy(
+                            // Merge scores, prefer user's TL if available
+                            results[key] = existing.copy(
                                 tl = if (nextTl.isNotEmpty()) nextTl else existing.tl,
-                                poj = if (nextPoj.isNotEmpty()) nextPoj else existing.poj,
-                                delimiter = delimiter,  // 使用者的 delimiter 優先
                                 score = existing.score + userScore
                             )
                         } else {
-                            results[nextWord] = Prediction(
+                            results[key] = Prediction(
                                 hanzi = nextWord,
                                 tl = nextTl,
-                                poj = nextPoj,
-                                delimiter = delimiter,
                                 score = userScore
                             )
                         }
@@ -255,16 +279,12 @@ object NextWordService {
      * @param prev 前一個選中的詞
      * @param nextHanzi 當前選中的詞（漢字）
      * @param nextTl 當前選中的詞（TL）
-     * @param nextPoj 當前選中的詞（POJ）
-     * @param delimiter 分隔符（"-" 或 " "，羅馬字模式用）
      * @param context Android context
      */
     suspend fun recordAssociation(
         prev: String,
         nextHanzi: String,
         nextTl: String = "",
-        nextPoj: String = "",
-        delimiter: String = " ",
         context: Context
     ) = withContext(Dispatchers.IO) {
         if (prev.isEmpty() || nextHanzi.isEmpty()) {
@@ -278,20 +298,17 @@ object NextWordService {
         try {
             // INSERT OR UPDATE
             val sql = """
-                INSERT INTO user_association (prev_word, next_word, next_tl, next_poj, delimiter, count, last_used)
-                VALUES (?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-                ON CONFLICT(prev_word, next_word) DO UPDATE SET
+                INSERT INTO user_association (prev_word, next_word, next_tl, count, last_used)
+                VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
                     count = count + 1,
-                    next_tl = CASE WHEN ? != '' THEN ? ELSE next_tl END,
-                    next_poj = CASE WHEN ? != '' THEN ? ELSE next_poj END,
-                    delimiter = ?,
                     last_used = CURRENT_TIMESTAMP
             """.trimIndent()
 
-            db.execSQL(sql, arrayOf(prev, nextHanzi, nextTl, nextPoj, delimiter, nextTl, nextTl, nextPoj, nextPoj, delimiter))
+            db.execSQL(sql, arrayOf(prev, nextHanzi, nextTl))
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[RECORD] '$prev' -> '$nextHanzi' ($nextTl/$nextPoj, delimiter='$delimiter')")
+                Log.d(TAG, "[RECORD] '$prev' -> '$nextHanzi' (tl='$nextTl')")
             }
 
             // 定期檢查是否需要清理舊關聯
@@ -368,77 +385,167 @@ object NextWordService {
 
         userDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
 
+        val db = userDatabase ?: return
+
+        // Check and apply schema migrations
+        migrateUserDb(db)
+
         // 建立表格（如果不存在）
-        userDatabase?.execSQL("""
+        db.execSQL("""
             CREATE TABLE IF NOT EXISTS user_association (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 prev_word TEXT NOT NULL,
                 next_word TEXT NOT NULL,
-                next_tl TEXT,
-                next_poj TEXT,
-                delimiter TEXT DEFAULT ' ',
+                next_tl TEXT DEFAULT '',
                 count INTEGER DEFAULT 1,
                 last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(prev_word, next_word)
+                UNIQUE(prev_word, next_word, next_tl)
             )
         """)
 
-        userDatabase?.execSQL(
+        db.execSQL(
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)"
         )
 
-        // 遷移：為舊表加入 delimiter 欄位（如果不存在）
-        try {
-            userDatabase?.execSQL("ALTER TABLE user_association ADD COLUMN delimiter TEXT DEFAULT ' '")
-        } catch (e: Exception) {
-            // 欄位已存在，忽略錯誤
-        }
-
         // 設定 WAL 模式（支援讀寫併發）
         // PRAGMA 需要用 rawQuery 執行
-        userDatabase?.rawQuery("PRAGMA journal_mode=WAL;", null)?.close()
+        db.rawQuery("PRAGMA journal_mode=WAL;", null)?.close()
+    }
+
+    /**
+     * Migrate user_association.db schema to current DATABASE_VERSION.
+     *
+     * v2: Removed next_poj and delimiter columns (align with iOS schema).
+     * SQLite < 3.35 does not support DROP COLUMN, so we recreate the table
+     * and copy existing data.
+     */
+    private fun migrateUserDb(db: SQLiteDatabase) {
+        val cursor = db.rawQuery("PRAGMA user_version;", null)
+        val currentVersion = cursor.use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
+
+        if (currentVersion >= DATABASE_VERSION) return
+
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "[MIGRATE] user_association.db v$currentVersion -> v$DATABASE_VERSION")
+        }
+
+        // v0/v1 -> v2: remove next_poj and delimiter columns
+        if (currentVersion < 2) {
+            // Only migrate if old table actually exists with the old columns
+            val hasOldTable = try {
+                val ti = db.rawQuery(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
+                    null
+                )
+                val exists = ti.use { it.moveToFirst() }
+                exists
+            } catch (_: Exception) { false }
+
+            if (hasOldTable) {
+                try {
+                    db.beginTransaction()
+                    // Recreate table without next_poj and delimiter
+                    db.execSQL("ALTER TABLE user_association RENAME TO user_association_old")
+                    db.execSQL("""
+                        CREATE TABLE user_association (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            prev_word TEXT NOT NULL,
+                            next_word TEXT NOT NULL,
+                            next_tl TEXT DEFAULT '',
+                            count INTEGER DEFAULT 1,
+                            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            UNIQUE(prev_word, next_word, next_tl)
+                        )
+                    """)
+                    db.execSQL("""
+                        INSERT INTO user_association (prev_word, next_word, next_tl, count, last_used)
+                        SELECT prev_word, next_word, COALESCE(next_tl, ''), count, last_used
+                        FROM user_association_old
+                    """)
+                    db.execSQL("DROP TABLE user_association_old")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)")
+                    db.setTransactionSuccessful()
+                } catch (e: Exception) {
+                    if (BuildConfig.DEBUG) {
+                        Log.e(TAG, "[MIGRATE] Failed to migrate user_association", e)
+                    }
+                } finally {
+                    db.endTransaction()
+                }
+            }
+        }
+
+        // v2 -> v3: UNIQUE(prev_word, next_word) -> UNIQUE(prev_word, next_word, next_tl)
+        if (currentVersion in 2 until 3) {
+            val hasTable = try {
+                val ti = db.rawQuery(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
+                    null
+                )
+                ti.use { it.moveToFirst() }
+            } catch (_: Exception) { false }
+
+            if (hasTable) {
+                try {
+                    db.beginTransaction()
+                    db.execSQL("DROP TABLE user_association")
+                    db.execSQL("DROP INDEX IF EXISTS idx_user_prev_word")
+                    db.setTransactionSuccessful()
+                    if (BuildConfig.DEBUG) {
+                        Log.i(TAG, "[MIGRATE] Recreated user_association with UNIQUE(prev_word, next_word, next_tl)")
+                    }
+                } catch (e: Exception) {
+                    if (BuildConfig.DEBUG) {
+                        Log.e(TAG, "[MIGRATE] v2->v3 migration failed", e)
+                    }
+                } finally {
+                    db.endTransaction()
+                }
+            }
+        }
+
+        // Stamp the new version
+        db.execSQL("PRAGMA user_version = $DATABASE_VERSION;")
     }
 
     /**
      * 使用者關聯資料（Debug 用）
      */
-    data class Association(
+    data class AssociationEntry(
         val prevWord: String,
         val nextWord: String,
         val nextTl: String,
-        val nextPoj: String,
-        val delimiter: String,
         val count: Int
     )
 
     /**
      * 取得所有使用者關聯資料（Debug 用）
      */
-    suspend fun getAllAssociations(context: Context): List<Association> = withContext(Dispatchers.IO) {
+    suspend fun allAssociations(context: Context): List<AssociationEntry> = withContext(Dispatchers.IO) {
         try {
             ensureInitialized(context)
             val db = userDatabase ?: return@withContext emptyList()
 
             val cursor = db.rawQuery(
                 """
-                SELECT prev_word, next_word, next_tl, next_poj, delimiter, count
+                SELECT prev_word, next_word, next_tl, count
                 FROM user_association
                 ORDER BY count DESC, last_used DESC
                 """.trimIndent(),
                 null
             )
 
-            val results = mutableListOf<Association>()
+            val results = mutableListOf<AssociationEntry>()
             cursor.use {
                 while (it.moveToNext()) {
                     results.add(
-                        Association(
+                        AssociationEntry(
                             prevWord = it.getString(0) ?: "",
                             nextWord = it.getString(1) ?: "",
                             nextTl = it.getString(2) ?: "",
-                            nextPoj = it.getString(3) ?: "",
-                            delimiter = it.getString(4) ?: " ",
-                            count = it.getInt(5)
+                            count = it.getInt(3)
                         )
                     )
                 }
@@ -529,26 +636,6 @@ object NextWordService {
     }
 
     /**
-     * 取得目前使用者關聯數量
-     */
-    suspend fun getAssociationCount(context: Context): Int = withContext(Dispatchers.IO) {
-        try {
-            ensureInitialized(context)
-            val db = userDatabase ?: return@withContext 0
-
-            val cursor = db.rawQuery("SELECT COUNT(*) FROM user_association", null)
-            cursor.use {
-                if (it.moveToFirst()) it.getInt(0) else 0
-            }
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[COUNT] Failed to get association count", e)
-            }
-            0
-        }
-    }
-
-    /**
      * 建立詞庫過濾 WHERE 條件
      *
      * 使用 OR 邏輯：只要 Bigram 來自任一開啟的詞庫即可
@@ -560,15 +647,19 @@ object NextWordService {
         if (prefs.moeDictEnabled) conditions.add("$COL_KAUTIAN = 1")
         if (prefs.newwordDictEnabled) conditions.add("$COL_TAIGITV = 1")
         if (prefs.itaigiDictEnabled) conditions.add("$COL_ITAIGI = 1")
-        if (prefs.sitbutDictEnabled) conditions.add("$COL_SITBUT = 1")
-        if (prefs.taihoaDictEnabled) conditions.add("$COL_TAIHOA = 1")
-        if (prefs.taijitDictEnabled) conditions.add("$COL_TAIJIT = 1")
+        if (prefs.taiwanPlantDictEnabled) conditions.add("$COL_SITBUT = 1")
+        if (prefs.taiHuaDictEnabled) conditions.add("$COL_TAIHOA = 1")
+        if (prefs.taiwanJapanDictEnabled) conditions.add("$COL_TAIJIT = 1")
         if (prefs.kunggeDictEnabled) conditions.add("$COL_KUNGGE = 1")
+        if (prefs.sttiDictEnabled) conditions.add("$COL_STTI = 1")
+        if (prefs.khpooDictEnabled) conditions.add("$COL_KHPOO = 1")
 
         // 全部開啟時不加過濾條件
         val allEnabled = prefs.moeDictEnabled && prefs.newwordDictEnabled &&
-            prefs.itaigiDictEnabled && prefs.sitbutDictEnabled &&
-            prefs.taihoaDictEnabled && prefs.taijitDictEnabled && prefs.kunggeDictEnabled
+            prefs.itaigiDictEnabled && prefs.taiwanPlantDictEnabled &&
+            prefs.taiHuaDictEnabled && prefs.taiwanJapanDictEnabled &&
+            prefs.kunggeDictEnabled && prefs.sttiDictEnabled &&
+            prefs.khpooDictEnabled
 
         if (allEnabled) {
             return ""

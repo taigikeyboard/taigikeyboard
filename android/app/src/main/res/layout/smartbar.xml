@@ -6,198 +6,237 @@
     android:id="@+id/smartbar"
     android:layout_width="match_parent"
     android:layout_height="@dimen/smartbar_height"
-    android:background="?smartbar_bgColor">
+    android:background="?smartbar_bgColor"
+    android:clipChildren="true">
 
-    <!-- TODO: 暫時停用展開收合功能
+    <!-- Toolbar toggle button: top-level, always visible (except number_row / layout_selection) -->
     <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-        android:id="@+id/quick_action_toggle"
-        style="@style/SmartbarQuickAction.Toggle"
-        android:contentDescription="@string/smartbar__quick_action_toggle__alt"
-        android:src="@drawable/ic_keyboard_arrow_right" />
+        android:id="@+id/toolbar_toggle_button"
+        android:layout_width="36dp"
+        android:layout_height="match_parent"
+        android:layout_marginStart="2dp"
+        android:background="?smartbar_bgColor"
+        android:contentDescription="Toggle toolbar"
+        android:padding="6dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_add"
+        android:tint="?smartbar_fgColor" />
+
+    <!--
+        FrameLayout wrapper: allows content containers to overlap at full width
+        during slide transitions. Without this, the parent horizontal LinearLayout
+        would split width between two visible weighted children, breaking the animation.
     -->
-
-    <!-- 候選詞容器：使用 RecyclerView 支援高效滑動 -->
-    <LinearLayout
-        android:id="@+id/candidates_container"
+    <FrameLayout
+        android:id="@+id/smartbar_content_frame"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="horizontal"
-        android:visibility="gone">
+        android:clipChildren="true">
 
-        <!-- 候選詞 RecyclerView：水平滑動，自動重用 View -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/candidates_recycler_view"
-            android:layout_width="0dp"
+        <!-- Candidate container: RecyclerView with horizontal scrolling -->
+        <LinearLayout
+            android:id="@+id/candidates_container"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:scrollbars="none" />
+            android:orientation="horizontal"
+            android:visibility="gone">
 
-        <!-- 垂直分隔線：使用負的 start margin 讓它向左移動，與候選詞重疊 -->
-        <View
-            android:id="@+id/candidate_divider"
-            android:layout_width="1dp"
-            android:layout_height="32dp"
-            android:layout_gravity="center_vertical"
-            android:layout_marginStart="-40dp"
-            android:layout_marginEnd="0dp"
-            android:background="?android:attr/dividerVertical" />
+            <!-- Candidate RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/candidates_recycler_view"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:scrollbars="none" />
 
-        <!-- 展開/收合候選詞區塊的按鈕 -->
-        <ImageButton
-            android:id="@+id/expand_toggle_button"
-            android:layout_width="48dp"
+            <!-- Vertical divider -->
+            <View
+                android:id="@+id/candidate_divider"
+                android:layout_width="1dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center_vertical"
+                android:layout_marginStart="-40dp"
+                android:layout_marginEnd="0dp"
+                android:background="?android:attr/dividerVertical" />
+
+            <!-- Expand/collapse toggle -->
+            <ImageButton
+                android:id="@+id/expand_toggle_button"
+                android:layout_width="48dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="0dp"
+                android:layout_marginEnd="4dp"
+                android:background="?smartbar_bgColor"
+                android:foreground="?android:attr/selectableItemBackground"
+                android:contentDescription="@string/smartbar__expand_toggle__alt"
+                android:padding="2dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_keyboard_arrow_down"
+                app:tint="?smartbar_fgColor" />
+
+        </LinearLayout>
+
+        <!-- English mode 3-column candidate container -->
+        <LinearLayout
+            android:id="@+id/english_candidates_container"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_marginStart="0dp"
-            android:layout_marginEnd="4dp"
-            android:background="?smartbar_bgColor"
-            android:foreground="?android:attr/selectableItemBackground"
-            android:contentDescription="@string/smartbar__expand_toggle__alt"
-            android:padding="2dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_keyboard_arrow_down"
-            app:tint="?smartbar_fgColor" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="gone">
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/english_candidate_1"
+                style="@style/SmartbarEnglishCandidate"
+                android:text="" />
 
-    <!-- 英文模式三欄式候選詞容器 -->
-    <LinearLayout
-        android:id="@+id/english_candidates_container"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:visibility="gone">
+            <View
+                android:id="@+id/english_divider_1"
+                style="@style/SmartbarCandidateDivider" />
 
-        <!-- 候選詞 1 -->
-        <Button
-            android:id="@+id/english_candidate_1"
-            style="@style/SmartbarEnglishCandidate"
-            android:text="" />
+            <Button
+                android:id="@+id/english_candidate_2"
+                style="@style/SmartbarEnglishCandidate"
+                android:text="" />
 
-        <!-- 分隔線 1 -->
-        <View
-            android:id="@+id/english_divider_1"
-            style="@style/SmartbarCandidateDivider" />
+            <View
+                android:id="@+id/english_divider_2"
+                style="@style/SmartbarCandidateDivider" />
 
-        <!-- 候選詞 2 -->
-        <Button
-            android:id="@+id/english_candidate_2"
-            style="@style/SmartbarEnglishCandidate"
-            android:text="" />
+            <Button
+                android:id="@+id/english_candidate_3"
+                style="@style/SmartbarEnglishCandidate"
+                android:text="" />
 
-        <!-- 分隔線 2 -->
-        <View
-            android:id="@+id/english_divider_2"
-            style="@style/SmartbarCandidateDivider" />
+        </LinearLayout>
 
-        <!-- 候選詞 3 -->
-        <Button
-            android:id="@+id/english_candidate_3"
-            style="@style/SmartbarEnglishCandidate"
-            android:text="" />
+        <!-- Toolbar container: matches iOS [POJ TL En] [spacer] [globe] [emoji] [photo] [gear] -->
+        <LinearLayout
+            android:id="@+id/toolbar_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
 
-    </LinearLayout>
+            <!-- Input mode buttons (left-aligned) -->
+            <Button
+                android:id="@+id/toolbar_mode_poj"
+                style="@style/SmartbarToolbarMode"
+                android:text="POJ" />
 
-    <LinearLayout
-        android:id="@+id/quick_actions"
-        style="@style/SmartbarContainer"
-        android:gravity="start|center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:visibility="gone">
+            <Button
+                android:id="@+id/toolbar_mode_tl"
+                style="@style/SmartbarToolbarMode"
+                android:text="TL" />
 
-        <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-            android:id="@+id/quick_action_open_settings"
-            style="@style/SmartbarQuickAction"
-            android:contentDescription="@string/smartbar__quick_action__open_settings"
-            android:src="@drawable/ic_settings" />
+            <Button
+                android:id="@+id/toolbar_mode_en"
+                style="@style/SmartbarToolbarMode"
+                android:text="EN" />
 
-        <!-- 輸入模式切換按鈕：POJ / TL / En -->
-        <Button
-            android:id="@+id/button_mode_poj"
-            style="@style/SmartbarModeButton"
-            android:text="POJ" />
+            <!-- Spacer pushes action icons to right -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
-        <Button
-            android:id="@+id/button_mode_tl"
-            style="@style/SmartbarModeButton"
-            android:text="TL" />
+            <!-- Globe (system IME picker) -->
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+                android:id="@+id/toolbar_globe_button"
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Switch input method"
+                android:src="@drawable/ic_language" />
 
-        <Button
-            android:id="@+id/button_mode_en"
-            style="@style/SmartbarModeButton"
-            android:text="En" />
+            <!-- Emoji -->
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+                android:id="@+id/toolbar_emoji_button"
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Emoji"
+                android:src="@drawable/ic_sentiment_satisfied" />
 
-    </LinearLayout>
+            <!-- Layout selection (photo icon, matches iOS) -->
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+                android:id="@+id/toolbar_layout_button"
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Switch layout"
+                android:src="@drawable/ic_photo" />
 
-    <!-- TODO: integrate a KeyboardView instead of hardcoding these buttons -->
-    <LinearLayout
-        android:id="@+id/number_row"
-        style="@style/SmartbarContainer"
-        android:visibility="gone"
-        tools:ignore="HardcodedText">
+            <!-- Settings -->
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+                android:id="@+id/toolbar_settings_button"
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Settings"
+                android:src="@drawable/ic_settings" />
 
-        <Button
-            android:id="@+id/number_row_1"
-            style="@style/SmartbarCandidate"
-            android:text="1" />
+        </LinearLayout>
 
-        <Button
-            android:id="@+id/number_row_2"
-            style="@style/SmartbarCandidate"
-            android:text="2" />
+        <!-- TODO: integrate a KeyboardView instead of hardcoding these buttons -->
+        <LinearLayout
+            android:id="@+id/number_row"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:ignore="HardcodedText">
 
-        <Button
-            android:id="@+id/number_row_3"
-            style="@style/SmartbarCandidate"
-            android:text="3" />
+            <Button
+                android:id="@+id/number_row_1"
+                style="@style/SmartbarCandidate"
+                android:text="1" />
 
-        <Button
-            android:id="@+id/number_row_4"
-            style="@style/SmartbarCandidate"
-            android:text="4" />
+            <Button
+                android:id="@+id/number_row_2"
+                style="@style/SmartbarCandidate"
+                android:text="2" />
 
-        <Button
-            android:id="@+id/number_row_5"
-            style="@style/SmartbarCandidate"
-            android:text="5" />
+            <Button
+                android:id="@+id/number_row_3"
+                style="@style/SmartbarCandidate"
+                android:text="3" />
 
-        <Button
-            android:id="@+id/number_row_6"
-            style="@style/SmartbarCandidate"
-            android:text="6" />
+            <Button
+                android:id="@+id/number_row_4"
+                style="@style/SmartbarCandidate"
+                android:text="4" />
 
-        <Button
-            android:id="@+id/number_row_7"
-            style="@style/SmartbarCandidate"
-            android:text="7" />
+            <Button
+                android:id="@+id/number_row_5"
+                style="@style/SmartbarCandidate"
+                android:text="5" />
 
-        <Button
-            android:id="@+id/number_row_8"
-            style="@style/SmartbarCandidate"
-            android:text="8" />
+            <Button
+                android:id="@+id/number_row_6"
+                style="@style/SmartbarCandidate"
+                android:text="6" />
 
-        <Button
-            android:id="@+id/number_row_9"
-            style="@style/SmartbarCandidate"
-            android:text="9" />
+            <Button
+                android:id="@+id/number_row_7"
+                style="@style/SmartbarCandidate"
+                android:text="7" />
 
-        <Button
-            android:id="@+id/number_row_0"
-            style="@style/SmartbarCandidate"
-            android:text="0" />
+            <Button
+                android:id="@+id/number_row_8"
+                style="@style/SmartbarCandidate"
+                android:text="8" />
 
-    </LinearLayout>
+            <Button
+                android:id="@+id/number_row_9"
+                style="@style/SmartbarCandidate"
+                android:text="9" />
 
-    <!-- Placeholder on the right which reserves the space for a second button -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_margin="@dimen/smartbar_button_margin"
-        android:clickable="false"
-        android:visibility="gone" />
+            <Button
+                android:id="@+id/number_row_0"
+                style="@style/SmartbarCandidate"
+                android:text="0" />
+
+        </LinearLayout>
+
+    </FrameLayout>
 
 </com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView>

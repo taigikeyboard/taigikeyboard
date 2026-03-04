@@ -53,11 +53,13 @@ enum SuggestionCaseTransformer {
             return suggestion
         }
 
-        let transformedText = transformText(
-            originalText: suggestion.text,
-            composingText: composingText,
-            keyboardCase: keyboardCase,
-            inputMode: inputMode
+        let transformedText = ToneUtilities.adjustNasalMarkerCase(
+            transformText(
+                originalText: suggestion.text,
+                composingText: composingText,
+                keyboardCase: keyboardCase,
+                inputMode: inputMode
+            )
         )
 
         return Autocomplete.Suggestion(

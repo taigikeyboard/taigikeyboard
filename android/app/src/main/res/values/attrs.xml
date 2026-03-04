@@ -10,7 +10,11 @@
         <attr name="key_bgColor" format="color" />
         <attr name="key_bgColorPressed" format="color" />
         <attr name="key_bgColorActive" format="color" />
+        <attr name="key_function_bgColor" format="color" />
+        <attr name="key_function_bgColorPressed" format="color" />
         <attr name="key_fgColor" format="color" />
+        <attr name="key_enter_bgColor" format="color" />
+        <attr name="key_enter_bgColorPressed" format="color" />
         <attr name="key_enter_fgColor" format="color" />
 
         <attr name="key_popup_bgColor" format="color" />

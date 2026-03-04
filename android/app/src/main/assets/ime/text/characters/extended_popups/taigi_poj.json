@@ -114,7 +114,8 @@
     { "code": 328, "label": "ň" },
     { "code": 110, "label": "n̄" },
     { "code": 110, "label": "n̍" },
-    { "code": 110, "label": "n̋" }
+    { "code": 110, "label": "n̆" },
+    { "code": 8319, "label": "ⁿ" }
   ],
   "N": [
     { "code": 323, "label": "Ń" },
@@ -123,7 +124,7 @@
     { "code": 327, "label": "Ň" },
     { "code": 78, "label": "N̄" },
     { "code": 78, "label": "N̍" },
-    { "code": 78, "label": "N̋" }
+    { "code": 78, "label": "N̆" }
   ],
   "ng": [
     { "code": 324, "label": "ńg" },
@@ -132,7 +133,7 @@
     { "code": 328, "label": "ňg" },
     { "code": 110, "label": "n̄g" },
     { "code": 110, "label": "n̍g" },
-    { "code": 110, "label": "n̋g" }
+    { "code": 110, "label": "n̆g" }
   ],
   "Ng": [
     { "code": 323, "label": "Ńg" },
@@ -141,7 +142,7 @@
     { "code": 327, "label": "Ňg" },
     { "code": 78, "label": "N̄g" },
     { "code": 78, "label": "N̍g" },
-    { "code": 78, "label": "N̋g" }
+    { "code": 78, "label": "N̆g" }
   ],
   "m": [
     { "code": 7743, "label": "ḿ" },
@@ -150,7 +151,7 @@
     { "code": 109, "label": "m̌" },
     { "code": 109, "label": "m̄" },
     { "code": 109, "label": "m̍" },
-    { "code": 109, "label": "m̋" }
+    { "code": 109, "label": "m̆" }
   ],
   "M": [
     { "code": 7742, "label": "Ḿ" },
@@ -159,6 +160,6 @@
     { "code": 77, "label": "M̌" },
     { "code": 77, "label": "M̄" },
     { "code": 77, "label": "M̍" },
-    { "code": 77, "label": "M̋" }
+    { "code": 77, "label": "M̆" }
   ]
 }

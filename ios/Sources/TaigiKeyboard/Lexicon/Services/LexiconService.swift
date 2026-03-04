@@ -70,22 +70,22 @@ class LexiconService: @unchecked Sendable {
         // 處理文字大小寫
         let processedWords = words.map { word in
             let processedHanzi: String?
-            if let hanzi = word.hanzi, TextProcessor.startsWithRomanLetter(hanzi) {
-                processedHanzi = TextProcessor.capitalize(hanzi, basedOn: input)
+            if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
+                processedHanzi = CandidateProcessor.capitalize(hanzi, basedOn: input)
             } else {
                 processedHanzi = word.hanzi
             }
 
             return TaigiWord(
                 id: word.id,
-                roman: TextProcessor.capitalize(word.roman, basedOn: input),
+                roman: CandidateProcessor.capitalize(word.roman, basedOn: input),
                 hanzi: processedHanzi,
                 lengthScore: word.lengthScore
             )
         }
 
         // 去重
-        let uniqueWords = TextProcessor.removeDuplicates(processedWords)
+        let uniqueWords = CandidateProcessor.removeDuplicates(processedWords)
 
         // 收集頻率資料並排序
         guard userFrequencyService.isConnected() else {
@@ -94,14 +94,12 @@ class LexiconService: @unchecked Sendable {
 
         // 批次查詢使用者頻率資料（包含 count 和 lastUsed）
         let wordTexts = uniqueWords.compactMap(\.displayText)
-        let frequencyDataMap = userFrequencyService.getFrequencyDataBatch(for: wordTexts)
+        let frequencyDataMap = userFrequencyService.frequencyDataBatch(for: wordTexts)
 
         // 正規化輸入用於完全匹配判斷（包含調符或 POJ 特殊字符時需要轉換）
-        let normalizedInput = InputNormalizer.needsNormalization(input)
-            ? InputNormalizer.normalize(input, mode: inputMode)
-            : input.lowercased().replacingOccurrences(of: "-", with: "")
+        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
 
-        let sortedWords = TextProcessor.sortByScore(
+        let sortedWords = CandidateProcessor.sortByScore(
             uniqueWords,
             normalizedInput: normalizedInput,
             frequencyDataMap: frequencyDataMap

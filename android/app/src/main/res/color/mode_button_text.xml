@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 所有狀態：使用 smartbar 按鈕前景色 -->
+    <!-- 選中狀態：白色文字（搭配藍色背景） -->
+    <item android:state_selected="true" android:color="#FFFFFF" />
+    <!-- 預設狀態 -->
     <item android:color="?smartbar_button_fgColor" />
 </selector>

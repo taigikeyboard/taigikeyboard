@@ -4,7 +4,7 @@ import KeyboardKit
 
 /// 設定 Tab
 ///
-/// 鍵盤設定，包含輸入模式、字體、開關選項。
+/// 鍵盤設定，包含輸入模式、外觀設定、開關選項。
 struct Tab4: View {
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var fontManager = FontManager.shared
@@ -15,7 +15,6 @@ struct Tab4: View {
     @State private var autoSpaceEnabled: Bool
     @State private var enableDoubleTapOO: Bool
     @State private var enableDoubleTapNN: Bool
-    @State private var selectedFontType: FontType
     @State private var outputBothScripts: Bool
     @State private var showResetSettingsAlert = false
 
@@ -37,7 +36,6 @@ struct Tab4: View {
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
-        _selectedFontType = State(initialValue: settings.fontType)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
     }
 
@@ -45,28 +43,21 @@ struct Tab4: View {
         NavigationStack {
             Form {
                 // 輸入模式
-                Section(languageManager.text(Tab4Texts.inputMode)) {
-                    Picker("", selection: $selectedInputMode) {
-                        Text(languageManager.text(Tab4Texts.pojMode)).tag(InputMode.poj)
-                        Text(languageManager.text(Tab4Texts.tlMode)).tag(InputMode.tl)
-                        Text(languageManager.text(Tab4Texts.englishMode)).tag(InputMode.english)
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedInputMode) { _, newValue in
-                        settings.inputMode = newValue
-                    }
-                }
-
-                // 字體選擇
-                Section(languageManager.text(Tab4Texts.customFont)) {
-                    Picker("", selection: $selectedFontType) {
-                        Text(languageManager.text(Tab4Texts.fontSystemDefault)).tag(FontType.system)
-                        Text(languageManager.text(Tab4Texts.fontOpenHuninn)).tag(FontType.openHuninn)
-                        Text(languageManager.text(Tab4Texts.fontIansui)).tag(FontType.iansui)
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: selectedFontType) { _, newValue in
-                        fontManager.updateFontType(newValue)
+                Section {
+                    NavigationLink {
+                        InputModePickerView(
+                            selectedMode: $selectedInputMode,
+                            onChange: { newValue in
+                                settings.inputMode = newValue
+                            }
+                        )
+                    } label: {
+                        HStack {
+                            Text(languageManager.text(Tab4Texts.inputMode))
+                            Spacer()
+                            Text(inputModeDisplayName(selectedInputMode))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
 
@@ -137,6 +128,16 @@ struct Tab4: View {
         #endif
     }
 
+    // MARK: - Display Name Helpers
+
+    private func inputModeDisplayName(_ mode: InputMode) -> String {
+        switch mode {
+        case .poj: return languageManager.text(Tab4Texts.pojMode)
+        case .tl: return languageManager.text(Tab4Texts.tlMode)
+        case .english: return languageManager.text(Tab4Texts.englishMode)
+        }
+    }
+
     // MARK: - 功能函數
 
     private func resetAllSettings() {
@@ -158,7 +159,6 @@ struct Tab4: View {
         autoSpaceEnabled = settings.isAutoSpaceEnabled
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
-        selectedFontType = settings.fontType
         outputBothScripts = settings.outputBothScripts
 
         fontManager.reloadFontType()
@@ -167,3 +167,43 @@ struct Tab4: View {
         impactFeedback.impactOccurred()
     }
 }
+
+// MARK: - Input Mode Picker Subpage
+
+private struct InputModePickerView: View {
+    @StateObject private var languageManager = LanguageManager.shared
+    @Binding var selectedMode: InputMode
+    var onChange: (InputMode) -> Void
+
+    private let options: [(mode: InputMode, text: LocalizedText)] = [
+        (.poj, Tab4Texts.pojMode),
+        (.tl, Tab4Texts.tlMode),
+        (.english, Tab4Texts.englishMode)
+    ]
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(options, id: \.mode) { option in
+                    Button {
+                        selectedMode = option.mode
+                        onChange(option.mode)
+                    } label: {
+                        HStack {
+                            Text(languageManager.text(option.text))
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if selectedMode == option.mode {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(languageManager.text(Tab4Texts.inputMode))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+

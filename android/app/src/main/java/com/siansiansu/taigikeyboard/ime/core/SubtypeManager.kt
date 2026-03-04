@@ -6,7 +6,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.siansiansu.taigikeyboard.util.LocaleUtils
 import kotlinx.coroutines.*
-import java.util.*
+
 
 @Suppress("SameParameterValue")
 class SubtypeManager(
@@ -81,25 +81,6 @@ class SubtypeManager(
     }
 
     /**
-     * Creates a [Subtype] from the given [locale] and [layoutName] and adds it to the subtype
-     * list, if it does not exist.
-     *
-     * @param locale The locale of the subtype to be added.
-     * @param layoutName The layout name of the subtype to be added.
-     * @returns True if the subtype was added, false otherwise. A return value of false indicates
-     *  that the subtype already exists.
-     */
-    fun addSubtype(locale: Locale, layoutName: String): Boolean {
-        return addSubtype(
-            Subtype(
-                (locale.hashCode() + layoutName.hashCode()),
-                locale,
-                layoutName
-            )
-        )
-    }
-
-    /**
      * Gets the active subtype and returns it. If the activeSubtypeId points to a non-existent
      * subtype, this method tries to determine a new active subtype.
      *
@@ -137,24 +118,6 @@ class SubtypeManager(
         return null
     }
 
-
-    /**
-     * Modifies an existing subtype with the newly provided details. In order to determine which
-     * subtype should be updated, the id must be the same.
-     *
-     * @param subtypeToModify The subtype with the new details but same id.
-     */
-    fun modifySubtypeWithSameId(subtypeToModify: Subtype) {
-        val subtypeList = subtypes
-        for (subtype in subtypeList) {
-            if (subtype.id == subtypeToModify.id) {
-                subtype.locale = subtypeToModify.locale
-                subtype.layout = subtypeToModify.layout
-                break
-            }
-        }
-        subtypes = subtypeList
-    }
 
     /**
      * Removes a given [subtypeToRemove]. Nothing happens if the given [subtypeToRemove] does not

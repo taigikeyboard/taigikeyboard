@@ -1,12 +1,22 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+
 /**
  * Constants for dictionary operations
  */
 object DictionaryConstants {
     const val DATABASE_NAME = "dictionary.db"
-    const val DEFAULT_SEARCH_LIMIT = 75
+    const val DEFAULT_SEARCH_LIMIT = 100
     const val SUBSYSTEM = "com.siansiansu.taigikeyboard"
+
+    const val TRIE_PREFIX_TL = "tl:"
+    const val TRIE_PREFIX_POJ = "poj:"
+
+    fun triePrefix(mode: InputMode): String = when (mode) {
+        InputMode.POJ -> TRIE_PREFIX_POJ
+        else -> TRIE_PREFIX_TL
+    }
 }
 
 /**
@@ -15,14 +25,12 @@ object DictionaryConstants {
  * @property roman Romanized form with tone marks (POJ or TL)
  * @property hanzi Chinese characters representation (nullable)
  * @property lengthScore 詞庫頻率（frequency），用於排序。值越大代表越常用。
- * @property delimiter 分隔符（NextWord 用，羅馬字模式輸出時使用："-" 或 " "）
  */
 data class TaigiWord(
     val id: Int,
     val roman: String,
     val hanzi: String?,
-    val lengthScore: Int?,
-    val delimiter: String? = null
+    val lengthScore: Int?
 ) {
     /**
      * Display text prioritizes hanzi over roman
@@ -62,4 +70,8 @@ sealed class DictionaryError : Exception() {
     data class QueryExecutionFailed(override val message: String) : DictionaryError()
 
     data class QueryPreparationFailed(override val message: String) : DictionaryError()
+
+    object TrieNotLoaded : DictionaryError() {
+        override val message: String = "Trie index not loaded"
+    }
 }

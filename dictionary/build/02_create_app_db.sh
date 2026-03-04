@@ -48,7 +48,6 @@ CREATE TABLE dictionary (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hanzi TEXT,
     tl TEXT NOT NULL,
-    poj TEXT NOT NULL,
     frequency INTEGER,
     is_variant INTEGER DEFAULT 0,
     kautian INTEGER DEFAULT 0,
@@ -58,12 +57,13 @@ CREATE TABLE dictionary (
     taihoa INTEGER DEFAULT 0,
     taijit INTEGER DEFAULT 0,
     kungge INTEGER DEFAULT 0,
+    stti INTEGER DEFAULT 0,
+    khpoo INTEGER DEFAULT 0,
 
     UNIQUE(tl, hanzi)
 );
 
 CREATE INDEX idx_tl ON dictionary(tl);
-CREATE INDEX idx_poj ON dictionary(poj);
 CREATE INDEX idx_hanzi ON dictionary(hanzi);
 CREATE INDEX idx_frequency ON dictionary(frequency);
 
@@ -74,11 +74,11 @@ sqlite3 "$DB_FILE" << EOF
 .import ${DICTIONARY_CSV} temp_import
 
 INSERT OR IGNORE INTO dictionary (
-    hanzi, tl, poj, frequency, is_variant, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge
+    hanzi, tl, frequency, is_variant, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti, khpoo
 )
 SELECT
     CASE WHEN hanzi = '' OR hanzi IS NULL THEN NULL ELSE hanzi END,
-    tl, poj, frequency,
+    tl, frequency,
     CASE WHEN is_variant = 'True' THEN 1 ELSE 0 END,
     CASE WHEN kautian = 'True' THEN 1 ELSE 0 END,
     CASE WHEN taigitv = 'True' THEN 1 ELSE 0 END,
@@ -86,7 +86,9 @@ SELECT
     CASE WHEN sitbut = 'True' THEN 1 ELSE 0 END,
     CASE WHEN taihoa = 'True' THEN 1 ELSE 0 END,
     CASE WHEN taijit = 'True' THEN 1 ELSE 0 END,
-    CASE WHEN kungge = 'True' THEN 1 ELSE 0 END
+    CASE WHEN kungge = 'True' THEN 1 ELSE 0 END,
+    CASE WHEN stti = 'True' THEN 1 ELSE 0 END,
+    CASE WHEN khpoo = 'True' THEN 1 ELSE 0 END
 FROM temp_import
 WHERE tl IS NOT NULL AND tl != ''
   AND (LENGTH(tl) - LENGTH(REPLACE(tl, '-', '')) + 1) <= 4;

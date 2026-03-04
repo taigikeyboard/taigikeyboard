@@ -12,4 +12,16 @@ enum LexiconConstants {
     enum Search {
         static let defaultLimit = 100
     }
+
+    enum TriePrefix {
+        static let tl = "tl:"
+        static let poj = "poj:"
+
+        static func prefix(for mode: InputMode) -> String {
+            switch mode {
+            case .poj: return poj
+            case .tl, .english: return tl
+            }
+        }
+    }
 }

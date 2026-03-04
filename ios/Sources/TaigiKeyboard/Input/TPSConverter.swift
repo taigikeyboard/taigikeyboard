@@ -1,6 +1,6 @@
 import Foundation
 
-/// 台灣方音符號（TPS）轉換器
+/// 方音符號（TPS）轉換器
 ///
 /// 支援雙向轉換：
 /// - TPS → TL：用於 Trie 搜尋
@@ -19,6 +19,11 @@ enum TPSConverter {
         ("ㄐㄧ", "tsi"),
         ("ㄒㄧ", "si"),
         ("ㆢㄧ", "ji"),
+        // Standalone palatalized consonants (for nasalized vowel combinations like ㄐㆪ)
+        ("ㄐ", "ts"),
+        ("ㄑ", "tsh"),
+        ("ㄒ", "s"),
+        ("ㆢ", "j"),
         // 單聲母
         ("ㄅ", "p"),
         ("ㄆ", "ph"),
@@ -97,7 +102,9 @@ enum TPSConverter {
         ("ˋ", "2"),   // 第2聲
         ("˪", "3"),   // 第3聲
         ("ˊ", "5"),   // 第5聲
+        ("ˇ", "6"),   // 第6聲
         ("˫", "7"),   // 第7聲
+        ("ˆ", "9"),   // 第9聲
         // 第1聲無符號
     ]
 
@@ -224,7 +231,7 @@ enum TPSConverter {
     // MARK: - TL → TPS 轉換
 
     /// TL → TPS 聲母對照表（長的優先匹配）
-    private static let tlToTpsConsonants: [(tl: String, tps: String)] = [
+    private static let tlToTPSConsonants: [(tl: String, tps: String)] = [
         // 複合聲母（優先匹配）
         ("tshi", "ㄑㄧ"),
         ("tsi", "ㄐㄧ"),
@@ -251,7 +258,7 @@ enum TPSConverter {
     ]
 
     /// TL → TPS 韻母對照表（長的優先匹配）
-    private static let tlToTpsVowels: [(tl: String, tps: String)] = [
+    private static let tlToTPSVowels: [(tl: String, tps: String)] = [
         // 鼻化韻母（優先匹配）
         ("ainn", "ㆮ"),
         ("aunn", "ㆯ"),
@@ -283,16 +290,19 @@ enum TPSConverter {
     ]
 
     /// TL → TPS 聲調對照表
-    private static let tlToTpsTones: [(tl: String, tps: String)] = [
+    private static let tlToTPSTones: [(tl: String, tps: String)] = [
         ("2", "ˋ"),
         ("3", "˪"),
         ("5", "ˊ"),
+        ("6", "ˇ"),
         ("7", "˫"),
+        ("8", "\u{0307}"),  // Non-stop tone 8 (combining dot above)
+        ("9", "ˆ"),
         // 1, 4 無符號
     ]
 
     /// TL → TPS 入聲韻尾對照表
-    private static let tlToTpsCheckedTones: [(tl: String, tps: String)] = [
+    private static let tlToTPSCheckedTones: [(tl: String, tps: String)] = [
         ("p8", "ㆴ̇"),
         ("t8", "ㆵ̇"),
         ("k8", "ㆶ̇"),
@@ -319,124 +329,77 @@ enum TPSConverter {
         return result.joined(separator: " ")
     }
 
-    /// 將單一 TL 音節轉換為 TPS
+    /// Convert a single TL syllable to TPS.
+    ///
+    /// Separates consonant, vowel, and tone parts for correct post-processing:
+    /// - Standalone m/ng → syllabic form (ㄇ→ㆬ, ㄫ→ㆭ)
+    /// - Palatalized initial + ㄣㄣ → nasalized ㆪ (e.g. tsinn→ㄐㆪ)
     private static func convertSyllableToTPS(_ syllable: String) -> String {
         guard !syllable.isEmpty else { return "" }
 
         var remaining = syllable.lowercased()
-        var result = ""
+        var consonant = ""
+        var vowel = ""
+        var tone = ""
 
-        // 1. 先處理聲母
-        for (tl, tps) in tlToTpsConsonants {
+        // 1. Match consonant (longest match first, table is pre-sorted)
+        for (tl, tps) in tlToTPSConsonants {
             if remaining.hasPrefix(tl) {
-                // 特殊處理：tsi/tshi/si/ji 後面不能再接 i
-                if ["tsi", "tshi", "si", "ji"].contains(tl) {
-                    result += tps
-                    remaining.removeFirst(tl.count)
-                    break
-                }
-                result += tps
+                consonant = tps
                 remaining.removeFirst(tl.count)
                 break
             }
         }
 
-        // 2. 處理韻母（可能有多個韻母組合，如 iau）
-        var vowelMatched = true
-        while vowelMatched && !remaining.isEmpty {
-            vowelMatched = false
-
-            // 先檢查是否為入聲韻尾 + 聲調（如 p4, t8）
-            for (tl, _) in tlToTpsCheckedTones {
-                if remaining.hasSuffix(tl) {
-                    // 入聲韻尾在最後處理
-                    break
-                }
-            }
-
-            // 匹配韻母
-            for (tl, tps) in tlToTpsVowels {
-                // 避免匹配到入聲韻尾的輔音
-                let remainingWithoutTone = remaining.filter { !$0.isNumber }
-                if remainingWithoutTone.hasPrefix(tl) && !["p", "t", "k", "h"].contains(tl) {
-                    result += tps
-                    remaining.removeFirst(tl.count)
-                    vowelMatched = true
-                    break
-                } else if remaining.hasPrefix(tl) && !["p", "t", "k", "h", "m", "n"].contains(tl) {
-                    result += tps
-                    remaining.removeFirst(tl.count)
-                    vowelMatched = true
-                    break
-                }
-            }
-        }
-
-        // 3. 處理入聲韻尾 + 聲調（如 p4, t8, k4, h8）
-        for (tl, tps) in tlToTpsCheckedTones {
+        // 2. Extract checked tone suffix (p4/t4/k4/h4/p8/t8/k8/h8)
+        for (tl, tps) in tlToTPSCheckedTones {
             if remaining.hasSuffix(tl) {
                 remaining.removeLast(tl.count)
-                // 先處理剩餘的韻母
-                for (tlV, tpsV) in tlToTpsVowels {
-                    if remaining.hasPrefix(tlV) {
-                        result += tpsV
-                        remaining.removeFirst(tlV.count)
-                        break
-                    }
-                }
-                result += tps
-                return result
+                tone = tps
+                break
             }
         }
 
-        // 4. 處理一般聲調（1-9）
-        if let lastChar = remaining.last, lastChar.isNumber {
-            let tone = String(lastChar)
+        // 3. Extract general tone digit if no checked tone was found
+        if tone.isEmpty, let lastChar = remaining.last, lastChar.isNumber {
+            let toneDigit = String(lastChar)
             remaining.removeLast()
-
-            // 處理剩餘的韻母
-            while !remaining.isEmpty {
-                var matched = false
-                for (tl, tps) in tlToTpsVowels {
-                    if remaining.hasPrefix(tl) {
-                        result += tps
-                        remaining.removeFirst(tl.count)
-                        matched = true
-                        break
-                    }
-                }
-                if !matched {
-                    // 無法匹配，保留原字符
-                    result.append(remaining.removeFirst())
-                }
-            }
-
-            // 加上聲調符號
-            for (tlTone, tpsTone) in tlToTpsTones {
-                if tone == tlTone {
-                    result += tpsTone
+            for (tlTone, tpsTone) in tlToTPSTones {
+                if toneDigit == tlTone {
+                    tone = tpsTone
                     break
                 }
             }
-            // 1, 4 聲不加符號
-        } else {
-            // 無聲調數字，處理剩餘字符
-            while !remaining.isEmpty {
-                var matched = false
-                for (tl, tps) in tlToTpsVowels {
-                    if remaining.hasPrefix(tl) {
-                        result += tps
-                        remaining.removeFirst(tl.count)
-                        matched = true
-                        break
-                    }
+        }
+
+        // 4. Match vowels from remaining (greedy, longest match first)
+        while !remaining.isEmpty {
+            var matched = false
+            for (tl, tps) in tlToTPSVowels {
+                if remaining.hasPrefix(tl) && !["p", "t", "k", "h"].contains(tl) {
+                    vowel += tps
+                    remaining.removeFirst(tl.count)
+                    matched = true
+                    break
                 }
-                if !matched {
-                    result.append(remaining.removeFirst())
-                }
+            }
+            if !matched {
+                vowel.append(remaining.removeFirst())
             }
         }
 
-        return result
+        // 5. Post-processing: standalone m/ng → syllabic form
+        if vowel.isEmpty {
+            if consonant == "ㄇ" { consonant = ""; vowel = "ㆬ" }
+            else if consonant == "ㄫ" { consonant = ""; vowel = "ㆭ" }
+        }
+
+        // 6. Post-processing: palatalized initial + ㄣㄣ → nasalized ㆪ
+        if consonant.hasSuffix("ㄧ") && vowel == "ㄣㄣ" {
+            consonant = String(consonant.dropLast())
+            vowel = "ㆪ"
+        }
+
+        return consonant + vowel + tone
     }
 }

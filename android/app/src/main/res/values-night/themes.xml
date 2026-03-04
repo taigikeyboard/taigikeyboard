@@ -20,8 +20,12 @@
         <item name="key_bgColor">#424242</item><!-- Gray 800 -->
         <item name="key_bgColorPressed">#616161</item><!-- Gray 700 -->
         <item name="key_bgColorActive">#757575</item><!-- Gray 600, for translate button active state -->
+        <item name="key_function_bgColor">#1A1A1A</item>
+        <item name="key_function_bgColorPressed">#141414</item>
         <item name="key_fgColor">?android:textColor</item>
-        <item name="key_enter_fgColor">#FFFFFF</item><!-- White -->
+        <item name="key_enter_bgColor">#8AB4F8</item><!-- Google Blue (dark) -->
+        <item name="key_enter_bgColorPressed">#669DF6</item><!-- Google Blue (dark, pressed) -->
+        <item name="key_enter_fgColor">#202124</item><!-- Dark text on light blue -->
 
         <item name="key_popup_bgColor">#757575</item><!-- Gray 600 -->
         <item name="key_popup_fgColor">?android:textColor</item>

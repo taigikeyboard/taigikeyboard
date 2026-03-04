@@ -238,6 +238,17 @@ Java_com_siansiansu_taigikeyboard_ime_dictionary_TrieService_nativeGetKeyCount(
 }
 
 /**
+ * 檢查 trie 是否已載入
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_siansiansu_taigikeyboard_ime_dictionary_TrieService_nativeIsLoaded(
+    JNIEnv* /* env */,
+    jobject /* this */
+) {
+    return (g_trie != nullptr) ? JNI_TRUE : JNI_FALSE;
+}
+
+/**
  * 釋放 trie 資源
  */
 JNIEXPORT void JNICALL

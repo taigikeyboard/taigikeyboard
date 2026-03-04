@@ -1,92 +1,113 @@
 # CLAUDE.md
 
-此檔案提供給 **Claude Code (claude.ai/code)** 處理本專案程式碼時的指引。
+Guidelines for **Claude Code (claude.ai/code)** when working with this codebase.
 
-## 專案概述
+## Project Overview
 
-**台語鍵盤** - 跨平台台語輸入法
-- iOS: 使用 Swift 與 KeyboardKit 開發
-- Android: 基於 FlorisBoard 的 Kotlin 實作
-- 支援台語白話字（POJ/TL）與漢字輸入
-- 聲調變化與自動完成功能
+**Taigi Keyboard** - Cross-platform Taiwanese input method
+- iOS: Built with Swift and KeyboardKit
+- Android: Kotlin implementation based on FlorisBoard
+- Supports Taiwanese romanization (POJ/TL) and Hanji (漢字) input
+- Tone variation and autocomplete features
 
-## 專案結構
+## Project Structure
 
 ```
 taigikeyboard/
-├── android/ # Android 版本 (Kotlin + FlorisBoard)
-├── ios/ # iOS 版本 (Swift + KeyboardKit)
-└── CLAUDE.md # 本檔案
+├── android/        # Android version (Kotlin + FlorisBoard)
+├── ios/            # iOS version (Swift + KeyboardKit)
+├── docs/           # Technical specifications
+│   ├── engine/     # IME core logic (composing, tone, trie, autocomplete, sort, nextword, flow, tps)
+│   ├── ui/         # Presentation & layout (layout, flick, case, device, app-ui, theme)
+│   ├── references/ # External IME research (azookey, khiin, moe-taigi, rime)
+│   ├── keywords.md # Keyword glossary — start here
+│   └── README.md   # Full index
+└── CLAUDE.md       # This file
 ```
 
+## Core Development Principles
 
+1. **No unsolicited implementation** - Confirm with user before any feature or file changes
+2. **No arbitrary removal** - Confirm with user before removing any functionality
+3. **Follow YAGNI** - Only implement what's currently needed, keep it simple
 
-## 核心開發原則
+## Communication Guidelines
 
-1. **不擅自實作或建立檔案** - 任何功能或檔案變更前必須先與使用者確認
-2. **不隨意移除功能** - 移除任何功能前必須與使用者確認
-3. **遵循 YAGNI 原則** - 只實作當前需要的功能，保持簡單直接
-4. **程式碼註解使用台灣華語**
-
-## 溝通原則
-
-- 使用繁體中文回答
-- 回答簡潔直接
-- 遇到問題先分析，提供解決方案供使用者選擇
-- 修改前說明影響範圍
+- Think in English. Write code comments and responses in English
+- Use Taiwanese Mandarin only when necessary for proper nouns or clarification
+- Keep answers concise and direct
+- Analyze problems first, provide solution options for user to choose
+- Explain scope of impact before making changes
 
 ---
 
-# iOS 專案指引
+# iOS Project Guidelines
 
-## KeyboardKit 開發規則
+## KeyboardKit Development Rules
 
-- **實作前必須先查閱 KeyboardKit 文檔**
-- **KeyboardKit 10 以後改為閉源**，不可直接查看原始碼
-- 本地文檔：`./references/KeyboardKit-Documentation/`
-- 線上文檔：https://keyboardkit.github.io/KeyboardKitDocs/
+- **Must consult KeyboardKit documentation before implementation**
+- **KeyboardKit 10+ is closed-source** - cannot view source code directly
+- Local docs: `./references/KeyboardKit-Documentation/`
+- Online docs: https://keyboardkit.github.io/KeyboardKitDocs/
 
-## 記憶體管理
+## Memory Management
 
-1. **SwiftUI View 與 Controller 分離** - View 不可直接持有 Controller
-2. **setupKeyboardView 安全模式** - 忽略 controller 參數，使用 `self.state` 和 `self.services`
-3. **Service 類別的 Delegate** - 必須使用 `weak` reference
-4. **任何記憶體相關修改必須特別說明風險`
+1. **Separate SwiftUI View from Controller** - Views must not directly hold Controller references
+2. **setupKeyboardView safe mode** - Ignore controller parameter, use `self.state` and `self.services`
+3. **Service class Delegates** - Must use `weak` reference
+4. **Any memory-related changes must explicitly document risks**
+
+## Test Conventions
+
+- Tests must be simple, effective, and non-redundant — no duplicate coverage across files
+- All conversion-related tests (TPS, TL, POJ, tone marks) use `./references/taigi-converter` as canonical reference implementation
+- When tests fail, verify against reference behavior before changing production code
+- Assertion messages must be descriptive enough to copy-paste for debugging
+- Framework: XCTest; pattern: parametric arrays `[(input, expected)]` with loops + `XCTAssertEqual`
+- Naming: `test{Component}_{scenario}`
 
 ---
 
-# Claude Code 任務指引
+# Claude Code Task Guidelines
 
-## 身份
-- 你是一名資深 Mobile (iOS/Android) 工程師，專案為 Custom Keyboard
+## Role
+- You are a senior Mobile (iOS/Android) engineer working on a Custom Keyboard project
 
-## 任務要求
-- 覆述問題確認認知一致
-- 擬訂修復計劃，不實作修復
-- 回答簡潔、重點明確，不需情緒化表達
-- 不執行編譯或測試；修復不得影響現有功能
-- 思考過程用英文，最終回覆用繁體中文
+## Research Directive
+- When studying unfamiliar code or planning changes, read all related files thoroughly — understand data flow, edge cases, and dependencies before proposing solutions
+- Do not skim; trace the full call chain from entry point to final output
+- When asked to research, produce a written summary documenting findings
 
-## 指令替代
-- find → fd
-- grep → rg
+## Task Requirements
+- Restate the problem to confirm mutual understanding
+- Draft a fix plan without implementing
+- Keep responses concise and focused, no emotional expressions
+- Do not compile or test; fixes must not affect existing functionality
+- Think in English. Write code comments and responses in English. Use Taiwanese Mandarin only when necessary for proper nouns or clarification
 
-## 專案輔助
-- 參考 spec/files.md 了解專案結構
-- iOS 新增檔案需使用者手動增加 target
+## Project Assistance
+- Read `./docs/` folder to quickly understand implementation details, architecture, and keyword definitions
+  - `docs/keywords.md` — keyword glossary: term definitions mapped to classes/methods
+  - `docs/file-structure.md` — iOS/Android file mapping and directory structure
+  - `docs/engine/flow.md` — end-to-end input flow (ActionHandler dispatch)
+  - `docs/engine/` — core logic specs (composing, tone, trie, autocomplete, sort, nextword, tps)
+  - `docs/ui/` — presentation specs (layout, flick, case, device, app-ui, theme)
+  - `docs/references/` — external IME research (azookey, khiin, moe-taigi, rime)
+- `./references/` contains cloned external repos (azooKey, KeyboardKit-Documentation, etc.) — search here first when referencing external projects, no need for web search
+- iOS: New files require manual target addition by user
 
-## 設計原則
+## Design Principles
 
 ### Android / Kotlin
-- 遵循 Kotlin、Android、Jetpack 官方最佳實踐
-- 參考官方文件：[Creating Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)
-- 符合 Android Keyboard Design Guideline
-- 遵循 KeyboardKit 最佳實踐
+- Follow Kotlin, Android, Jetpack official best practices
+- Reference: [Creating Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)
+- Comply with Android Keyboard Design Guidelines
+- Follow KeyboardKit best practices
 
 ### iOS / Swift
-- 遵循 SwiftUI / UIKit 官方最佳實踐
+- Follow SwiftUI / UIKit official best practices
 
-### 通用
-- 遵循 GitHub 開源慣例
-- 不隨意移除功能或建立檔案，需先與使用者確認
-- 不需要 build 測試
+### General
+- Follow GitHub open-source conventions
+- Do not arbitrarily remove features or create files without user confirmation
+- No build testing required

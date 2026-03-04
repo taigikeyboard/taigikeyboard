@@ -20,14 +20,22 @@ struct CandidateView: View {
     let onTranslateToggle: () -> Void
     /// 點擊設定按鈕的回調
     let onSettingsTap: () -> Void
+    /// 點擊佈局選擇按鈕的回調
+    let onLayoutTap: () -> Void
+    /// 點擊 Emoji 按鈕的回調
+    let onEmojiTap: () -> Void
     /// 當前輸入模式
     let currentInputMode: InputMode
     /// 切換輸入模式的回調
     let onInputModeChange: (InputMode) -> Void
     /// 英文模式的 KeyboardKit 預設候選詞視圖（可選）
     let englishAutocompleteView: AnyView?
+    /// Whether the engine is currently composing (used to auto-collapse toolbar)
+    let isComposing: Bool
     /// 展開狀態（從環境物件取得）
     @EnvironmentObject private var expandState: CandidateExpandState
+    /// 工具快捷鍵（輸入模式切換）是否展開
+    @State private var isToolShortcutsExpanded = false
 
     // MARK: - 環境變數
     /// 候選詞視圖樣式
@@ -41,11 +49,6 @@ struct CandidateView: View {
             category: "CandidateView",
         )
     #endif
-
-    /// 是否顯示展開按鈕（英文模式不顯示）
-    private var shouldShowExpandButton: Bool {
-        !suggestions.isEmpty && currentInputMode != .english
-    }
 
     /// iOS 版本兼容的候選詞列上邊距
     /// iOS 26+ 使用較大負偏移，舊版本使用較小負偏移以避免顯示問題
@@ -62,111 +65,216 @@ struct CandidateView: View {
     }
 
     /// 候選詞列主視圖
-    /// 包含水平滾動的候選詞列表和展開/收合按鈕
+    /// Toggle 按鈕永遠顯示在左側，切換候選詞與工具快捷鍵（參考 KeyboardKit ToggleToolbar 模式）
     private var candidateBarView: some View {
         HStack(spacing: 0) {
-            if suggestions.isEmpty {
-                // 候選詞為空時顯示齒輪按鈕和輸入模式切換按鈕
-                Button(action: {
-                    onSettingsTap()
-                }) {
-                    Image(systemName: "gearshape.fill")
-                        .font(KeyboardModels.Fonts.globalFont(size: 18))
-                        .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                        .scaleEffect(1.2)
-                        .frame(width: 42, height: CandidateViewModels.UI.height)
-                        .contentShape(Rectangle())
+            // Toggle button always visible on the left
+            toolShortcutsToggleButton
+
+            // Tool shortcuts: slide up from bottom
+            if isToolShortcutsExpanded {
+                HStack(spacing: 0) {
+                    inputModeSwitcher
                         .offset(y: 7)
+                    Spacer()
+                    globeButton
+                    emojiButton
+                    layoutButton
+                    settingsButton
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("設定")
-                .accessibilityHint("點擊以開啟鍵盤設定")
+                .transition(.move(edge: .bottom))
+            }
 
-                // 輸入模式切換按鈕
-                inputModeSwitcher
-                    .offset(y: 7)
-
-                Spacer()
-            } else {
-                // 有候選詞時的顯示區域
-                if currentInputMode == .english, let englishView = englishAutocompleteView {
-                    // 英文模式：使用 KeyboardKit 預設候選詞視圖
-                    englishView
-                        .frame(maxHeight: .infinity)
-                } else {
-                    // 台語模式：使用自定義候選詞列表
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        ScrollViewReader { proxy in
-                            LazyHStack(spacing: CandidateViewModels.UI.buttonSpacing) {
-                                // 限制最大顯示數量以優化效能
-                                let displaySuggestions = Array(
-                                    suggestions.prefix(CandidateViewModels.UI.maxDisplayCount),
-                                )
-                                ForEach(
-                                    Array(displaySuggestions.enumerated()),
-                                    id: \.offset,
-                                ) { index, suggestion in
-                                    CandidateButtonView(
-                                        suggestion: suggestion,
-                                        isTranslateSwapped: isTranslateSwapped,
-                                        isSelected: selectedCandidateIndex == index,
-                                        onTap: onSuggestionTap,
+            // Candidate content: slide down from top
+            if !isToolShortcutsExpanded {
+                HStack(spacing: 0) {
+                    if suggestions.isEmpty {
+                        Spacer()
+                    } else if currentInputMode == .english, let englishView = englishAutocompleteView {
+                        // English mode: KeyboardKit default autocomplete
+                        englishView
+                            .frame(maxHeight: .infinity)
+                    } else {
+                        // Taigi mode: scrolling candidate list
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            ScrollViewReader { proxy in
+                                LazyHStack(spacing: CandidateViewModels.UI.buttonSpacing) {
+                                    let displaySuggestions = Array(
+                                        suggestions.prefix(CandidateViewModels.UI.maxDisplayCount),
                                     )
-                                    .id("candidate_\(index)")  // 為每個候選詞設定 ID，用於自動滾動
-                                }
-                            }
-                            .padding(.horizontal, CandidateViewModels.Spacing.small)
-                            .onChange(of: selectedCandidateIndex) { oldIndex, newIndex in
-                                // 當選中索引改變時，自動滾動到對應的候選詞
-                                #if DEBUG
-                                logger.debug("[SCROLL] selectedCandidateIndex 變更為: \(newIndex)")
-                                #endif
-                                if newIndex >= 0 {
-                                    // iOS 版本兼容性：舊版本使用較短動畫時間
-                                    let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
-                                    withAnimation(.easeInOut(duration: animationDuration)) {
-                                        proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
+                                    ForEach(
+                                        Array(displaySuggestions.enumerated()),
+                                        id: \.offset,
+                                    ) { index, suggestion in
+                                        CandidateButtonView(
+                                            suggestion: suggestion,
+                                            isTranslateSwapped: isTranslateSwapped,
+                                            isSelected: selectedCandidateIndex == index,
+                                            onTap: onSuggestionTap,
+                                        )
+                                        .id("candidate_\(index)")
                                     }
-                                    #if DEBUG
-                                    logger.debug("[SCROLL] 滾動到候選詞索引: \(newIndex)")
-                                    #endif
+                                }
+                                .padding(.horizontal, CandidateViewModels.Spacing.small)
+                                .onChange(of: selectedCandidateIndex) { oldIndex, newIndex in
+                                    if newIndex >= 0 {
+                                        #if DEBUG
+                                        logger.debug("[SCROLL] scrollTo candidate index: \(newIndex)")
+                                        #endif
+                                        let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
+                                        withAnimation(.easeInOut(duration: animationDuration)) {
+                                            proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
+                                        }
+                                    }
                                 }
                             }
                         }
+                        .scrollDisabled(false)
+                        .frame(maxHeight: .infinity)
+
+                        // Expand/collapse chevron for candidate grid
+                        candidateBarSeparator
+
+                        Spacer()
+                            .frame(width: 0)
+
+                        Button(action: {
+                            expandState.toggle()
+                        }) {
+                            Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
+                                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                                .scaleEffect(1.2)
+                                .frame(width: 42, height: CandidateViewModels.UI.height)
+                                .contentShape(Rectangle())
+                                .offset(y: 7)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(expandState.isExpanded ? "收合候選詞" : "展開候選詞")
+                        .accessibilityHint("點擊以\(expandState.isExpanded ? "收合" : "展開")更多候選詞選項")
                     }
-                    .scrollDisabled(false)
-                    .frame(maxHeight: .infinity)
                 }
-            }
-
-            if shouldShowExpandButton {
-                Rectangle()
-                    .fill(CandidateViewModels.Colors.separatorColor)
-                    .frame(width: 1.0, height: 32) // 固定高度，上下留空間
-                    .offset(y: 7) // 垂直分隔線往下移動 3pt
-
-                Spacer()
-                    .frame(width: 0) // 進一步減少分隔線和按鈕之間的間距，讓按鈕更往左移
-
-                Button(action: {
-                    expandState.toggle()
-                }) {
-                    Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
-                        .font(KeyboardModels.Fonts.globalFont(size: 18)) // 使用全域字型
-                        .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                        .scaleEffect(1.2) // 增加縮放從 1.1 到 1.2
-                        .frame(width: 42, height: CandidateViewModels.UI.height) // 增加寬度從 36 到 42
-                        .contentShape(Rectangle())
-                        .offset(y: 7) // 展開收合按鈕往下移動 3pt
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(expandState.isExpanded ? "收合候選詞" : "展開候選詞")
-                .accessibilityHint("點擊以\(expandState.isExpanded ? "收合" : "展開")更多候選詞選項")
+                .transition(.move(edge: .top))
             }
         }
         .frame(height: style.height)
         .background(resolvedBackgroundColor)
-        .offset(y: topOffset) // iOS 版本兼容的上邊距設定
+        .clipped()
+        .offset(y: topOffset)
+        .onChange(of: currentInputMode) { _, _ in
+            // Auto-collapse shortcuts when input mode changes
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isToolShortcutsExpanded = false
+            }
+        }
+        .onChange(of: isComposing) { _, newValue in
+            // Auto-collapse toolbar when user starts typing
+            if newValue && isToolShortcutsExpanded {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isToolShortcutsExpanded = false
+                }
+            }
+        }
+    }
+
+    // MARK: - 工具快捷鍵展開/收合
+
+    /// "+" 工具快捷鍵展開/收合按鈕（參考 KeyboardKit ToggleToolbar 模式）
+    /// Rotates 45° to form "×" when expanded.
+    private var toolShortcutsToggleButton: some View {
+        Button(action: {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isToolShortcutsExpanded.toggle()
+            }
+        }) {
+            Image(systemName: "plus")
+                .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .rotationEffect(.degrees(isToolShortcutsExpanded ? 45 : 0))
+                .animation(.easeInOut(duration: 0.2), value: isToolShortcutsExpanded)
+                .frame(width: 36, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isToolShortcutsExpanded ? "收合工具列" : "展開工具列")
+    }
+
+    /// Globe button for switching keyboards (tap: next keyboard, long-press: keyboard picker)
+    private var globeButton: some View {
+        Keyboard.NextKeyboardButton {
+            Image(systemName: "globe")
+                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .scaleEffect(1.2)
+                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .accessibilityLabel("切換鍵盤")
+        .accessibilityHint("點擊切換下一個鍵盤，長按選取鍵盤")
+    }
+
+    /// Emoji keyboard button
+    private var emojiButton: some View {
+        Button(action: {
+            onEmojiTap()
+        }) {
+            Image(systemName: "face.smiling")
+                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .scaleEffect(1.2)
+                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .buttonStyle(ToolShortcutButtonStyle())
+        .accessibilityLabel("Emoji")
+        .accessibilityHint("點擊以開啟 Emoji 鍵盤")
+    }
+
+    /// Layout selection button
+    private var layoutButton: some View {
+        Button(action: {
+            onLayoutTap()
+        }) {
+            Image(systemName: "photo")
+                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .scaleEffect(1.2)
+                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .buttonStyle(ToolShortcutButtonStyle())
+        .accessibilityLabel("佈局選擇")
+        .accessibilityHint("點擊以開啟佈局選擇面板")
+    }
+
+    /// Settings gear button
+    private var settingsButton: some View {
+        Button(action: {
+            onSettingsTap()
+        }) {
+            Image(systemName: "gearshape")
+                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .scaleEffect(1.2)
+                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .buttonStyle(ToolShortcutButtonStyle())
+        .accessibilityLabel("設定")
+        .accessibilityHint("點擊以開啟鍵盤設定")
+    }
+
+    /// Vertical separator line between candidate bar sections
+    private var candidateBarSeparator: some View {
+        Rectangle()
+            .fill(CandidateViewModels.Colors.separatorColor)
+            .frame(width: 1.0, height: 32)
+            .offset(y: 7)
     }
 
     // MARK: - 輸入模式切換
@@ -176,7 +284,7 @@ struct CandidateView: View {
         HStack(spacing: 4) {
             inputModeButton(mode: .poj, label: "POJ")
             inputModeButton(mode: .tl, label: "TL")
-            inputModeButton(mode: .english, label: "En")
+            inputModeButton(mode: .english, label: "EN")
         }
         .padding(.horizontal, 8)
     }
@@ -188,7 +296,7 @@ struct CandidateView: View {
             onInputModeChange(mode)
         }) {
             Text(label)
-                .font(KeyboardModels.Fonts.globalFont(size: 14))
+                .font(KeyboardModels.Fonts.globalFont(size: 16))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
                 .padding(.horizontal, 10)
@@ -232,7 +340,7 @@ extension CandidateView {
         guard !suggestions.isEmpty else { return Set<String>() }
 
         let frequencies = suggestions.map { suggestion in
-            (suggestion.text, UserFrequencyService.getFrequency(for: suggestion.text))
+            (suggestion.text, UserFrequencyService.frequency(for: suggestion.text))
         }
 
         let candidatesWithMinFreq = frequencies.filter { $0.1 >= 2 }
@@ -288,7 +396,7 @@ extension CandidateView {
             Button(action: {
                 onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
             }) {
-                HStack(alignment: .bottom, spacing: CandidateViewModels.Spacing.small) {
+                VStack(alignment: .center, spacing: 0) {
                     Text(displayTitle)
                         .font(KeyboardModels.Fonts.globalFont(
                             size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped)
@@ -323,6 +431,16 @@ extension CandidateView {
                     isPressed = pressing
                 }
             }, perform: {})
+        }
+    }
+
+    /// Tool shortcut button press style (scale + opacity feedback)
+    struct ToolShortcutButtonStyle: SwiftUI.ButtonStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .opacity(configuration.isPressed ? 0.5 : 1.0)
+                .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
+                .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
         }
     }
 }
