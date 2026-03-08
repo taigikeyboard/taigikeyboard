@@ -122,10 +122,11 @@ enum CandidateProcessor {
 
     // MARK: - Base Form Helpers
 
-    /// Strip roman to base form for matching (no tones, no hyphens, lowercase)
-    /// "tāi-tsì" → "taitsi", "tai5-tsi3" → "taitsi"
+    /// Strip roman to base form for matching (no tones, no hyphens/spaces, lowercase)
+    /// "tāi-tsì" → "taitsi", "m̄ bat" → "mbat"
     private static func romanToBase(_ roman: String) -> String {
         let noHyphens = roman.replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
         let withNasal = noHyphens
             .replacingOccurrences(of: "\u{207F}", with: "nn")
             .replacingOccurrences(of: "\u{1D3A}", with: "nn")

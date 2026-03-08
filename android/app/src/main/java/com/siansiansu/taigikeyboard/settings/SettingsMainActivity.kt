@@ -139,7 +139,10 @@ class SettingsMainActivity : AppCompatActivity(),
                         TAB_DICTIONARY -> DictionarySettingsScreen(
                             languageManager = languageManager,
                             prefs = prefs,
-                            onClearCache = ::clearUserFrequencyDatabase
+                            onClearCache = ::clearUserFrequencyDatabase,
+                            onCustomDictionary = {
+                                startActivity(CustomDictionaryActivity.createIntent(this))
+                            }
                         )
 
                         TAB_SETTINGS -> InputSettingsScreen(

@@ -361,7 +361,7 @@ class PrefHelper(
             }
         }
 
-    // 腔口補充辭典（khpoo）
+    // 腔口補充資料（khpoo）
     var khpooDictEnabled: Boolean
         get() = cached(PreferenceKeys.KHPOO_DICT_ENABLED, true)
         set(value) {

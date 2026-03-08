@@ -1,0 +1,4 @@
+module KeyboardKitDependencies {
+header "KeyboardKitDependencies-Swift.h"
+export *
+}

@@ -65,13 +65,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import com.siansiansu.taigikeyboard.util.FontUtils
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -1159,9 +1156,9 @@ private fun CandidatePreviewRow(
     val textColor = colorSettings.candidateTextColor?.let { Color(it) } ?: defaultTextColor
     val effectiveSubtitleColor = colorSettings.candidateTextColor?.let { Color(it) } ?: subtitleColor
 
-    // Text size: smartbarHeight(50dp) * 0.46 = 23sp, scaled by user preference
-    val baseSizeSp = 23.sp * candidateTextSizeScale
-    val subtitleSizeSp = baseSizeSp * 0.70f
+    // Text size: smartbarHeight(50dp) * 0.38 = 19sp, scaled by user preference
+    val titleSizeSp = 19.sp * candidateTextSizeScale
+    val subtitleSizeSp = titleSizeSp * 0.70f
 
     Row(
         modifier = Modifier
@@ -1181,7 +1178,7 @@ private fun CandidatePreviewRow(
             tint = iconTint
         )
 
-        // Candidate items (fill remaining space)
+        // Candidate items (fill remaining space, vertically stacked title+subtitle)
         Row(
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.Center,
@@ -1190,28 +1187,29 @@ private fun CandidatePreviewRow(
             sampleCandidates.forEachIndexed { index, candidate ->
                 // First candidate has composing background (matches candidate_composing_background)
                 val itemBg = if (index == 0) composingBgColor else Color.Transparent
-                Text(
-                    text = buildAnnotatedString {
-                        append(candidate.roman)
-                        append(" ")
-                        withStyle(
-                            SpanStyle(
-                                fontSize = subtitleSizeSp,
-                                color = effectiveSubtitleColor
-                            )
-                        ) {
-                            append(candidate.hanzi)
-                        }
-                    },
-                    fontSize = baseSizeSp,
-                    color = textColor,
-                    fontFamily = fontFamily,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center,
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .background(itemBg, RoundedCornerShape(8.dp))
                         .padding(horizontal = 6.dp, vertical = 3.dp)
-                )
+                ) {
+                    Text(
+                        text = candidate.roman,
+                        fontSize = titleSizeSp,
+                        color = textColor,
+                        fontFamily = fontFamily,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        text = candidate.hanzi,
+                        fontSize = subtitleSizeSp,
+                        color = effectiveSubtitleColor,
+                        fontFamily = fontFamily,
+                        maxLines = 1,
+                        textAlign = TextAlign.Center
+                    )
+                }
                 // Add spacing between items (matching margin * 5 = 5dp each side)
                 if (index < sampleCandidates.size - 1) {
                     Spacer(Modifier.width(10.dp))

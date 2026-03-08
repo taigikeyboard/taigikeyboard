@@ -28,11 +28,11 @@ def main():
     total_count = len(df)
     logger.info(f"Loaded {total_count} records")
 
-    # 如果 hanzi 等於 tl 或 poj，代表沒有漢字，設為空
-    no_hanzi_mask = (df["hanzi"] == df["tl"]) | (df["hanzi"] == df["poj"])
+    # 移除沒有漢字的詞條（hanzi 為空/NaN、等於 tl 或 poj）
+    no_hanzi_mask = df["hanzi"].isna() | (df["hanzi"] == "") | (df["hanzi"] == df["tl"]) | (df["hanzi"] == df["poj"])
     no_hanzi_count = no_hanzi_mask.sum()
-    df.loc[no_hanzi_mask, "hanzi"] = ""
-    logger.info(f"Records without hanzi: {no_hanzi_count}")
+    df = df[~no_hanzi_mask].reset_index(drop=True)
+    logger.info(f"Records without hanzi (dropped): {no_hanzi_count}")
 
     # 加入 sitbut 欄位
     df["sitbut"] = True

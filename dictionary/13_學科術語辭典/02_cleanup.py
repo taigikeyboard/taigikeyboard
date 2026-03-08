@@ -25,11 +25,16 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     df = pd.read_csv(INPUT_FILE)
-    df = cleanup_dataframe(df, logger=logger)
+    df, dropped_df = cleanup_dataframe(df, logger=logger)
 
     output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
     df.to_csv(output_path, index=False)
     logger.info(f"\nSaved: {output_path}")
+
+    if len(dropped_df) > 0:
+        drop_path = os.path.join(OUTPUT_DIR, "drop.csv")
+        dropped_df.to_csv(drop_path, index=False)
+        logger.info(f"Saved dropped: {drop_path} ({len(dropped_df)} records)")
 
 
 if __name__ == "__main__":

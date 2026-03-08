@@ -49,16 +49,27 @@ struct TaigiButtonContent<StandardContent: View>: View {
         // Priority 2: Custom text with custom font
         else if let text = textProvider.buttonText(for: action) {
             if let hint = textProvider.buttonHintText(for: action) {
-                VStack(spacing: -4) {
-                    Text(hint)
-                        .font(.system(size: textProvider.isTextHint(for: action) ? 10 : 20))
-                        .foregroundColor(keyTextColor.opacity(0.5))
-                        .frame(height: 10)
-                        .offset(y: textProvider.isTextHint(for: action) ? 2 : textProvider.hintOffsetY(for: action))
-                    Text(text)
-                        .font(fontProvider.buttonKeyboardFont(for: action).font)
+                if textProvider.isTPSHint(for: action) {
+                    // TPS layout: larger hint on top, smaller main text below
+                    VStack(spacing: -2) {
+                        Text(hint)
+                            .font(.system(size: 13))
+                        Text(text)
+                            .font(.system(size: 13))
+                    }
+                    .lineLimit(1)
+                } else {
+                    VStack(spacing: -4) {
+                        Text(hint)
+                            .font(.system(size: textProvider.isTextHint(for: action) ? 10 : 20))
+                            .foregroundColor(keyTextColor.opacity(0.5))
+                            .frame(height: 10)
+                            .offset(y: textProvider.isTextHint(for: action) ? 2 : textProvider.hintOffsetY(for: action))
+                        Text(text)
+                            .font(fontProvider.buttonKeyboardFont(for: action).font)
+                    }
+                    .lineLimit(1)
                 }
-                .lineLimit(1)
             } else {
                 Text(text)
                     .font(fontProvider.buttonKeyboardFont(for: action).font)

@@ -309,9 +309,6 @@ class KeyboardView : LinearLayout {
             "tall" -> 1.10f
             "extra_tall" -> 1.15f
             else -> 1.00f
-        } * when (isPreviewMode) {
-            true -> 0.90f
-            else -> 1.00f
         } * prefs.keyHeightScale
         desiredKeyHeight = (resources.getDimension(R.dimen.key_height) * keyHeightFactor).toInt()
         taigikeyboard?.textInputManager?.smartbarManager?.smartbarView?.setHeightFactor(keyHeightFactor)

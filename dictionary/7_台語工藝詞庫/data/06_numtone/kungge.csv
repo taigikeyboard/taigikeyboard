@@ -15,6 +15,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num
 貼,tah,300,tah,tah4,tah4
 敲,khà,200,khà,kha3,kha3
 疊,tha̍h,200,tha̍h,thah8,thah8
+設計,siat-kè,101,siat-kè,siat4ke3,siat4ke3
 鶴,ho̍h,100,ho̍h,hoh8,hoh8
 捏,liap,50,liap,liap4,liap4
 繞,liáu,50,liáu,liau2,liau2
@@ -42,7 +43,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 刻字,khik-jī,25,khek-jī,khik4ji7,khek4ji7
 刻花,khik-hue,25,khek-hoe,khik4hue1,khek4hoe1
 剪仔,tsián-á,25,chián-á,tsian2a2,chian2a2
-剪絨,tsián-jiông,25,chián-jiông,tsian2jiong5,chian2jiong5
 剪黏,tsián-liâm,25,chián-liâm,tsian2liam5,chian2liam5
 剾刀,khau-to,25,khau-to,khau1to1,khau1to1
 剾枋,khau-pang,25,khau-pang,khau1pang1,khau1pang1
@@ -106,10 +106,8 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 巧雕,khá-tiau,25,khá-tiau,kha2tiau1,kha2tiau1
 布枋,pòo-pang,25,pò͘-pang,poo3pang1,poo3pang1
 布碖,pòo-lún,25,pò͘-lún,poo3lun2,poo3lun2
-布袋,pòo-tē,25,pò͘-tē,poo3te7,poo3te7
 帶鋸,tuà-kù,25,tòa-kù,tua3ku3,toa3ku3
 帶騎,tài-khiâ,25,tài-khiâ,tai3khia5,tai3khia5
-帽仔,bō-á,25,bō-á,bo7a2,bo7a2
 平尺,phînn-tshioh,25,phîⁿ-chhioh,phinn5tshioh4,phinn5chhioh4
 平枋,pênn-pang,25,pêⁿ-pang,penn5pang1,penn5pang1
 幼破,iù-phuà,25,iù-phòa,iu3phua3,iu3phoa3
@@ -129,7 +127,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 戰甲,tsiàn-kah,25,chiàn-kah,tsian3kah4,chian3kah4
 扁擔,pún-tann,25,pún-taⁿ,pun2tann1,pun2tann1
 手包,tshiú-pau,25,chhiú-pau,tshiu2pau1,chhiu2pau1
-手指,tshiú-tsí,25,chhiú-chí,tshiu2tsi2,chhiu2chi2
 手裒,tshiú-pôo,25,chhiú-pô͘,tshiu2poo5,chhiu2poo5
 手銬,tshiú-khàu,25,chhiú-khàu,tshiu2khau3,chhiu2khau3
 托燈,thuh-ting,25,thuh-teng,thuh4ting1,thuh4teng1
@@ -166,11 +163,8 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 文肚,bûn-tōo,25,bûn-tō͘,bun5too7,bun5too7
 文袍,bûn-phâu,25,bûn-phâu,bun5phau5,bun5phau5
 文轎,bûn-kiō,25,bûn-kiō,bun5kio7,bun5kio7
-斧頭,póo-thâu,25,pó͘-thâu,poo2thau5,poo2thau5
 旗頭,kî-thâu,25,kî-thâu,ki5thau5,ki5thau5
-時鐘,sî-tsing,25,sî-cheng,si5tsing1,si5cheng1
 晟手,tshiânn-tshiú,25,chhiâⁿ-chhiú,tshiann5tshiu2,chhiann5chhiu2
-暗號,àm-hō,25,àm-hō,am3ho7,am3ho7
 月桃,ge̍h-thô,25,ge̍h-thô,geh8tho5,geh8tho5
 朝天,tiâu-thian,25,tiâu-thian,tiau5thian1,tiau5thian1
 木尺,bo̍k-tshioh,25,bo̍k-chhioh,bok8tshioh4,bok8chhioh4
@@ -178,7 +172,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 杜英,tōo-ing,25,tō͘-eng,too7ing1,too7eng1
 束冠,sok-kuan,25,sok-koan,sok4kuan1,sok4koan1
 松膠,siông-ka,25,siông-ka,siong5ka1,siong5ka1
-枇杷,gî-pê,25,gî-pê,gi5pe5,gi5pe5
 染料,ní-liāu,25,ní-liāu,ni2liau7,ni2liau7
 染桶,ní-tháng,25,ní-tháng,ni2thang2,ni2thang2
 染色,ní-tsik,25,ní-chek,ni2tsik4,ni2chek4
@@ -194,9 +187,7 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 棉布,mî-pòo,25,mî-pò͘,mi5poo3,mi5poo3
 棉線,mî-suànn,25,mî-sòaⁿ,mi5suann3,mi5soann3
 棕蓑,tsang-sui,25,chang-sui,tsang1sui1,chang1sui1
-椅條,í-liâu,25,í-liâu,i2liau5,i2liau5
 植眉,ti̍t-bâi,25,ti̍t-bâi,tit8bai5,tit8bai5
-楊梅,iûnn-muî,25,iûⁿ-mûi,iunn5mui5,iunn5mui5
 槐花,huâi-hue,25,hoâi-hoe,huai5hue1,hoai5hoe1
 樹木,tshiū-bo̍k,25,chhiū-bo̍k,tshiu7bok8,chhiu7bok8
 橫頭,huâinn-thâu,25,hoâiⁿ-thâu,huainn5thau5,hoainn5thau5
@@ -205,8 +196,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 武轎,bú-kiō,25,bú-kiō,bu2kio7,bu2kio7
 比仔,pí-á,25,pí-á,pi2a2,pi2a2
 毡仔,tsám-á,25,chám-á,tsam2a2,cham2a2
-水族,tsuí-tso̍k,25,chúi-cho̍k,tsui2tsok8,chui2chok8
-水晶,tsuí-tsinn,25,chúi-chiⁿ,tsui2tsinn1,chui2chinn1
 水油,tsuí-iû,25,chúi-iû,tsui2iu5,chui2iu5
 水波,tsuí-pho,25,chúi-pho,tsui2pho1,chui2pho1
 水秤,tsuí-tshìn,25,chúi-chhìn,tsui2tshin3,chui2chhin3
@@ -216,12 +205,10 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 油桶,iû-tháng,25,iû-tháng,iu5thang2,iu5thang2
 油燈,iû-ting,25,iû-teng,iu5ting1,iu5teng1
 洋漆,iûnn-tshat,25,iûⁿ-chhat,iunn5tshat4,iunn5chhat4
-洞簫,tōng-siau,25,tōng-siau,tong7siau1,tong7siau1
 浮花,phû-hue,25,phû-hoe,phu5hue1,phu5hoe1
 涼傘,niû-suànn,25,niû-sòaⁿ,niu5suann3,niu5soann3
 淋搪,lâm-thn̄g,25,lâm-thn̄g,lam5thng7,lam5thng7
 深刻,tshim-khik,25,chhim-khek,tshim1khik4,chhim1khek4
-湯匙,thng-sî,25,thng-sî,thng1si5,thng1si5
 滾桶,kún-tháng,25,kún-tháng,kun2thang2,kun2thang2
 滾花,kún-hue,25,kún-hoe,kun2hue1,kun2hoe1
 滾邊,kún-pinn,25,kún-piⁿ,kun2pinn1,kun2pinn1
@@ -231,33 +218,25 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 漆筅,tshat-tshíng,25,chhat-chhéng,tshat4tshing2,chhat4chheng2
 灌漿,kuàn-tsiunn,25,koàn-chiuⁿ,kuan3tsiunn1,koan3chiunn1
 火喙,hué-tshuì,25,hóe-chhùi,hue2tshui3,hoe2chhui3
-火炭,hué-thuànn,25,hóe-thòaⁿ,hue2thuann3,hoe2thoann3
 火焰,hué-iām,25,hóe-iām,hue2iam7,hoe2iam7
 火爐,hué-lôo,25,hóe-lô͘,hue2loo5,hoe2loo5
 火籠,hué-lang,25,hóe-lang,hue2lang1,hoe2lang1
 火銃,hué-tshìng,25,hóe-chhèng,hue2tshing3,hoe2chheng3
 炊仔,tshue-á,25,chhoe-á,tshue1a2,chhoe1a2
 炭枋,thuànn-pang,25,thòaⁿ-pang,thuann3pang1,thoann3pang1
-烏枋,oo-pang,25,o͘-pang,oo1pang1,oo1pang1
 烏漆,oo-tshat,25,o͘-chhat,oo1tshat4,oo1chhat4
-烘爐,hang-lôo,25,hang-lô͘,hang1loo5,hang1loo5
 煎匙,tsian-sî,25,chian-sî,tsian1si5,chian1si5
 煏蔥,piak-tshong,25,piak-chhong,piak4tshong1,piak4chhong1
 熟皮,si̍k-phuê,25,se̍k-phôe,sik8phue5,sek8phoe5
 燭台,tsik-tâi,25,chek-tâi,tsik4tai5,chek4tai5
-牌匾,pâi-pián,25,pâi-pián,pai5pian2,pai5pian2
 牛樟,gû-tsiunn,25,gû-chiuⁿ,gu5tsiunn1,gu5chiunn1
 牛角,gû-kak,25,gû-kak,gu5kak4,gu5kak4
-牡丹,bóo-tan,25,bó͘-tan,boo2tan1,boo2tan1
 獅頭,sai-thâu,25,sai-thâu,sai1thau5,sai1thau5
-玉蘭,gio̍k-lân,25,gio̍k-lân,giok8lan5,giok8lan5
-玫瑰,muî-kuì,25,mûi-kùi,mui5kui3,mui5kui3
 琥珀,hóo-phik,25,hó͘-phek,hoo2phik4,hoo2phek4
 瑪瑙,bé-ló,25,bé-ló,be2lo2,be2lo2
 璇石,suān-tsio̍h,25,soān-chio̍h,suan7tsioh8,soan7chioh8
 璇筆,suān-pit,25,soān-pit,suan7pit4,soan7pit4
 璇針,suān-tsiam,25,soān-chiam,suan7tsiam1,soan7chiam1
-甕仔,àng-á,25,àng-á,ang3a2,ang3a2
 生坯,tshenn-phue,25,chheⁿ-phoe,tshenn1phue1,chhenn1phoe1
 生漆,tshenn-tshat,25,chheⁿ-chhat,tshenn1tshat4,chhenn1chhat4
 生皮,tshenn-phuê,25,chheⁿ-phôe,tshenn1phue5,chhenn1phoe5
@@ -273,11 +252,7 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 皮仔,phuê-á,25,phôe-á,phue5a2,phoe5a2
 皮包,phuê-pau,25,phôe-pau,phue5pau1,phoe5pau1
 皮花,phuê-hue,25,phôe-hoe,phue5hue1,phoe5hoe1
-皮鞋,phuê-ê,25,phôe-ê,phue5e5,phoe5e5
 直支,ti̍t-ki,25,ti̍t-ki,tit8ki1,tit8ki1
-真珠,tsin-tsu,25,chin-chu,tsin1tsu1,chin1chu1
-石榴,tsio̍h-liû,25,chio̍h-liû,tsioh8liu5,chioh8liu5
-石獅,tsio̍h-sai,25,chio̍h-sai,tsioh8sai1,chioh8sai1
 石錘,tsio̍h-thuî,25,chio̍h-thûi,tsioh8thui5,chioh8thui5
 石鎖,tsio̍h-só,25,chio̍h-só,tsioh8so2,chioh8so2
 石鼓,tsio̍h-kóo,25,chio̍h-kó͘,tsioh8koo2,chioh8koo2
@@ -288,13 +263,10 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 硩二,teh-jī,25,teh-jī,teh4ji7,teh4ji7
 硬斜,ngē-tshiâ,25,ngē-chhiâ,nge7tshia5,nge7chhia5
 磅仔,pōng-á,25,pōng-á,pong7a2,pong7a2
-磅子,pōng-tsí,25,pōng-chí,pong7tsi2,pong7chi2
 磅戕,pōng-tshiâng,25,pōng-chhiâng,pong7tshiang5,pong7chhiang5
 磨台,buâ-tâi,25,bôa-tâi,bua5tai5,boa5tai5
 磨坩,buâ-khann,25,bôa-khaⁿ,bua5khann1,boa5khann1
 神椅,sîn-í,25,sîn-í,sin5i2,sin5i2
-秤仔,tshìn-á,25,chhìn-á,tshin3a2,chhin3a2
-秤錘,tshìn-thuî,25,chhìn-thûi,tshin3thui5,chhin3thui5
 穗花,sūi-hue,25,sūi-hoe,sui7hue1,sui7hoe1
 空透,khang-thàu,25,khang-thàu,khang1thau3,khang1thau3
 窯釘,iô-ting,25,iô-teng,io5ting1,io5teng1
@@ -317,13 +289,11 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 筆架,pit-kè,25,pit-kè,pit4ke3,pit4ke3
 筆桶,pit-tháng,25,pit-tháng,pit4thang2,pit4thang2
 筆筒,pit-tâng,25,pit-tâng,pit4tang5,pit4tang5
-算盤,sǹg-puânn,25,sǹg-pôaⁿ,sng3puann5,sng3poann5
 管頭,kóng-thâu,25,kóng-thâu,kong2thau5,kong2thau5
 箸籠,tī-lāng,25,tī-lāng,ti7lang7,ti7lang7
 簽仔,tshiam-á,25,chhiam-á,tshiam1a2,chhiam1a2
 籤筒,tshiam-tâng,25,chhiam-tâng,tshiam1tang5,chhiam1tang5
 米紙,bí-tsuá,25,bí-chóa,bi2tsua2,bi2choa2
-米酒,bí-tsiú,25,bí-chiú,bi2tsiu2,bi2chiu2
 粉筒,hún-tâng,25,hún-tâng,hun2tang5,hun2tang5
 粉面,hún-bīn,25,hún-bīn,hun2bin7,hun2bin7
 粗剾,tshoo-khau,25,chho͘-khau,tshoo1khau1,chhoo1khau1
@@ -331,7 +301,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 粗針,tshoo-tsiam,25,chho͘-chiam,tshoo1tsiam1,chhoo1chiam1
 粟耙,tshik-pê,25,chhek-pê,tshik4pe5,chhek4pe5
 粿印,kué-ìn,25,kóe-ìn,kue2in3,koe2in3
-糊仔,kôo-á,25,kô͘-á,koo5a2,koo5a2
 紅花,âng-hue,25,âng-hoe,ang5hue1,ang5hoe1
 紙喙,tsuá-tshuì,25,chóa-chhùi,tsua2tshui3,choa2chhui3
 紙尺,tsuá-tshioh,25,chóa-chhioh,tsua2tshioh4,choa2chhioh4
@@ -352,7 +321,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 繡規,siù-kui,25,siù-kui,siu3kui1,siu3kui1
 羊皮,iûnn-phuê,25,iûⁿ-phôe,iunn5phue5,iunn5phoe5
 翡翠,huí-tshuì,25,húi-chhùi,hui2tshui3,hui2chhui3
-翼股,si̍t-kóo,25,si̍t-kó͘,sit8koo2,sit8koo2
 老生,lāu-sing,25,lāu-seng,lau7sing1,lau7seng1
 耳鉤,hīnn-kau,25,hīⁿ-kau,hinn7kau1,hinn7kau1
 肖楠,siau-lâm,25,siau-lâm,siau1lam5,siau1lam5
@@ -366,27 +334,20 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 花心,hue-sim,25,hoe-sim,hue1sim1,hoe1sim1
 花板,hue-pán,25,hoe-pán,hue1pan2,hoe1pan2
 花鳥,hue-tsiáu,25,hoe-chiáu,hue1tsiau2,hoe1chiau2
-茄苳,ka-tang,25,ka-tang,ka1tang1,ka1tang1
-草鞋,tsháu-ê,25,chháu-ê,tshau2e5,chhau2e5
 荖安,láu-an,25,láu-an,lau2an1,lau2an1
 菘藍,siông-nâ,25,siông-nâ,siong5na5,siong5na5
-菜刀,tshài-to,25,chhài-to,tshai3to1,chhai3to1
 菜砧,tshài-tiam,25,chhài-tiam,tshai3tiam1,chhai3tiam1
-葫蘆,hôo-lôo,25,hô͘-lô͘,hoo5loo5,hoo5loo5
-葵扇,khuê-sìnn,25,khôe-sìⁿ,khue5sinn3,khoe5sinn3
 蒼布,tshong-pòo,25,chhong-pò͘,tshong1poo3,chhong1poo3
 蓮葉,liân-hio̍h,25,liân-hio̍h,lian5hioh8,lian5hioh8
 蓮蓬,liân-phōng,25,liân-phōng,lian5phong7,lian5phong7
 蓼藍,liau-nâ,25,liau-nâ,liau1na5,liau1na5
 蔥線,tshong-suànn,25,chhong-sòaⁿ,tshong1suann3,chhong1soann3
-薯榔,tsû-nn̂g,25,chû-nn̂g,tsu5nng5,chu5nng5
 藥鉸,io̍h-ka,25,io̍h-ka,ioh8ka1,ioh8ka1
 藩尺,huan-tshioh,25,hoan-chhioh,huan1tshioh4,hoan1chhioh4
 蘇式,soo-sik,25,so͘-sek,soo1sik4,soo1sek4
 蘇木,soo-bo̍k,25,so͘-bo̍k,soo1bok8,soo1bok8
 虎杖,hóo-tiōng,25,hó͘-tiōng,hoo2tiong7,hoo2tiong7
 虹仔,khîng-á,25,khêng-á,khing5a2,kheng5a2
-蝴蝶,ôo-tia̍p,25,ô͘-tia̍p,oo5tiap8,oo5tiap8
 衣脊,i-tsit,25,i-chit,i1tsit4,i1chit4
 裁紙,tshâi-tsuá,25,chhâi-chóa,tshai5tsua2,chhai5choa2
 補刀,póo-to,25,pó͘-to,poo2to1,poo2to1
@@ -396,7 +357,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 角尺,kak-tshioh,25,kak-chhioh,kak4tshioh4,kak4chhioh4
 角環,kak-khuân,25,kak-khoân,kak4khuan5,kak4khoan5
 角甪,kah-lut,25,kah-lut,kah4lut4,kah4lut4
-設計,siat-kè,25,siat-kè,siat4ke3,siat4ke3
 調脊,tiâu-tsit,25,tiâu-chit,tiau5tsit4,tiau5chit4
 豆器,tāu-khì,25,tāu-khì,tau7khi3,tau7khi3
 豬槽,ti-tsô,25,ti-chô,ti1tso5,ti1cho5
@@ -430,12 +390,10 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 針跤,tsiam-kha,25,chiam-kha,tsiam1kha1,chiam1kha1
 鉛模,iân-bôo,25,iân-bô͘,ian5boo5,ian5boo5
 鉛筆,iân-pit,25,iân-pit,ian5pit4,ian5pit4
-鉸刀,ka-to,25,ka-to,ka1to1,ka1to1
 鉸紙,ka-tsuá,25,ka-chóa,ka1tsua2,ka1choa2
 銅管,tâng-kóng,25,tâng-kóng,tang5kong2,tang5kong2
 銅針,tâng-tsiam,25,tâng-chiam,tang5tsiam1,tang5chiam1
 鋪面,phoo-bīn,25,pho͘-bīn,phoo1bin7,phoo1bin7
-鋸仔,kì-á,25,kì-á,ki3a2,ki3a2
 鋸弓,kì-king,25,kì-keng,ki3king1,ki3keng1
 鋸片,kì-phìnn,25,kì-phìⁿ,ki3phinn3,ki3phinn3
 鋼刀,kǹg-to,25,kǹg-to,kng3to1,kng3to1
@@ -451,7 +409,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 鐵槽,thih-tsô,25,thih-chô,thih4tso5,thih4cho5
 鐵砧,thih-tiam,25,thih-tiam,thih4tiam1,thih4tiam1
 鐵筆,thih-pit,25,thih-pit,thih4pit4,thih4pit4
-鐵線,thih-suànn,25,thih-sòaⁿ,thih4suann3,thih4soann3
 鑢仔,lē-á,25,lē-á,le7a2,le7a2
 鑽仔,tsǹg-á,25,chǹg-á,tsng3a2,chng3a2
 鑽尾,tsńg-bué,25,chńg-bóe,tsng2bue2,chng2boe2
@@ -464,7 +421,6 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 開面,khui-bīn,25,khui-bīn,khui1bin7,khui1bin7
 隔金,keh-kim,25,keh-kim,keh4kim1,keh4kim1
 隔間,keh-king,25,keh-keng,keh4king1,keh4keng1
-雞籠,ke-lang,25,ke-lang,ke1lang1,ke1lang1
 雲彩,hûn-tshái,25,hûn-chhái,hun5tshai2,hun5chhai2
 雲染,hûn-ní,25,hûn-ní,hun5ni2,hun5ni2
 電窯,tiān-iô,25,tiān-iô,tian7io5,tian7io5
@@ -478,19 +434,14 @@ khò-té,khò-té,25,khò-té,kho3te2,kho3te2
 風鼓,hong-kóo,25,hong-kó͘,hong1koo2,hong1koo2
 食漿,tsia̍h-tsiunn,25,chia̍h-chiuⁿ,tsiah8tsiunn1,chiah8chiunn1
 食色,tsia̍h-sik,25,chia̍h-sek,tsiah8sik4,chiah8sek4
-飯匙,pn̄g-sî,25,pn̄g-sî,png7si5,png7si5
 飯坩,pn̄g-khann,25,pn̄g-khaⁿ,png7khann1,png7khann1
 飯擔,pn̄g-tann,25,pn̄g-taⁿ,png7tann1,png7tann1
-飯篱,pn̄g-lē,25,pn̄g-lē,png7le7,png7le7
 餅模,piánn-bôo,25,piáⁿ-bô͘,piann2boo5,piann2boo5
 香爐,hiunn-lôo,25,hiuⁿ-lô͘,hiunn1loo5,hiunn1loo5
 香筒,hiunn-tâng,25,hiuⁿ-tâng,hiunn1tang5,hiunn1tang5
 馬椅,bé-í,25,bé-í,be2i2,be2i2
 鬚仔,tshiu-á,25,chhiu-á,tshiu1a2,chhiu1a2
 鳳眼,hōng-gán,25,hōng-gán,hong7gan2,hong7gan2
-鹿仔,lo̍k-á,25,lo̍k-á,lok8a2,lok8a2
-麒麟,kî-lîn,25,kî-lîn,ki5lin5,ki5lin5
-麻布,muâ-pòo,25,môa-pò͘,mua5poo3,moa5poo3
 黜底,thuh-té,25,thuh-té,thuh4te2,thuh4te2
 鼓椅,kóo-í,25,kó͘-í,koo2i2,koo2i2
 鼓槌,kóo-thuî,25,kó͘-thûi,koo2thui5,koo2thui5
@@ -575,7 +526,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 大木作,tuā-ba̍k-tsok,16,tōa-ba̍k-chok,tua7bak8tsok4,toa7bak8chok4
 大白釉,tuā-pe̍h-iu,16,tōa-pe̍h-iu,tua7peh8iu1,toa7peh8iu1
 大菁粉,tuā-tshinn-hún,16,tōa-chhiⁿ-hún,tua7tshinn1hun2,toa7chhinn1hun2
-太師椅,thài-su-í,16,thài-su-í,thai3su1i2,thai3su1i2
 太魯刀,thài-lù-to,16,thài-lù-to,thai3lu3to1,thai3lu3to1
 如意手,jû-ì-tshiú,16,jû-ì-chhiú,ju5i3tshiu2,ju5i3chhiu2
 如意花,jû-ì-hue,16,jû-ì-hoe,ju5i3hue1,ju5i3hoe1
@@ -601,7 +551,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 彎仔鋸,uan-á-kì,16,oan-á-kì,uan1a2ki3,oan1a2ki3
 戮空的,lak-khang-ê,16,lak-khang-ê,lak4khang1e5,lak4khang1e5
 扁鋏仔,pínn-giap-á,16,píⁿ-giap-á,pinn2giap4a2,pinn2giap4a2
-手巾仔,tshiú-kin-á,16,chhiú-kin-á,tshiu2kin1a2,chhiu2kin1a2
 手指圍,tshiú-tsí-uî,16,chhiú-chí-ûi,tshiu2tsi2ui5,chhiu2chi2ui5
 手指條,tshiú-tsí-tiâu,16,chhiú-chí-tiâu,tshiu2tsi2tiau5,chhiu2chi2tiau5
 手指通,tshiú-tsí-thong,16,chhiú-chí-thong,tshiu2tsi2thong1,chhiu2chi2thong1
@@ -624,11 +573,10 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 掰糊仔,pué-kôo-á,16,póe-kô͘-á,pue2koo5a2,poe2koo5a2
 描圖紙,biô-tôo-tsuá,16,biô-tô͘-chóa,bio5too5tsua2,bio5too5choa2
 搝厚薄,giú-kāu-po̍h,16,giú-kāu-po̍h,giu2kau7poh8,giu2kau7poh8
-摃槌仔,kòng-thuî-á,16,kòng-thûi-á,kong3thui5a2,kong3thui5a2
 撞璇仔,tōng-suān-á,16,tōng-soān-á,tong7suan7a2,tong7soan7a2
 擠浮線,tsik-phû-suànn,16,chek-phû-sòaⁿ,tsik4phu5suann3,chek4phu5soann3
 敆內裡,kap-lāi-lí,16,kap-lāi-lí,kap4lai7li2,kap4lai7li2
-敲薰屎,khà-hun-sái,16,khà-hun-sái,kha3hun1sai2,kha3hun1sai2
+敲薰屎,khà hun-sái,16,khà hun-sái,kha3hun1sai2,kha3hun1sai2
 文公尺,bûn-kong-tshioh,16,bûn-kong-chhioh,bun5kong1tshioh4,bun5kong1chhioh4
 文武甲,bûn-bú-kah,16,bûn-bú-kah,bun5bu2kah4,bun5bu2kah4
 文武跤,bûn-bú-kha,16,bûn-bú-kha,bun5bu2kha1,bun5bu2kha1
@@ -658,7 +606,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 梳妝台,se-tsong-tâi,16,se-chong-tâi,se1tsong1tai5,se1chong1tai5
 椅頭仔,í-thâu-á,16,í-thâu-á,i2thau5a2,i2thau5a2
 椅馬仔,í-bé-á,16,í-bé-á,i2be2a2,i2be2a2
-楓仔樹,png-á-tshiū,16,png-á-chhiū,png1a2tshiu7,png1a2chhiu7
 樟腦沙,tsiunn-ló-sua,16,chiuⁿ-ló-soa,tsiunn1lo2sua1,chiunn1lo2soa1
 樟腦油,tsiunn-ló-iû,16,chiuⁿ-ló-iû,tsiunn1lo2iu5,chiunn1lo2iu5
 樹奶模,tshiū-ni-bôo,16,chhiū-ni-bô͘,tshiu7ni1boo5,chhiu7ni1boo5
@@ -709,7 +656,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 瓜笠仔,kue-le̍h-á,16,koe-le̍h-á,kue1leh8a2,koe1leh8a2
 瓷仔枋,huî-á-pang,16,hûi-á-pang,hui5a2pang1,hui5a2pang1
 瓷仔車,huî-á-tshia,16,hûi-á-chhia,hui5a2tshia1,hui5a2chhia1
-番仔火,huan-á-hué,16,hoan-á-hóe,huan1a2hue2,hoan1a2hoe2
 畫板仔,uē-pán-á,16,ōe-pán-á,ue7pan2a2,oe7pan2a2
 畫活眼,uē-ua̍h-gán,16,ōe-oa̍h-gán,ue7uah8gan2,oe7oah8gan2
 畫石頭,uē-tsio̍h-thâu,16,ōe-chio̍h-thâu,ue7tsioh8thau5,oe7chioh8thau5
@@ -842,7 +788,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 鐵鎚仔,thih-thuî-á,16,thih-thûi-á,thih4thui5a2,thih4thui5a2
 鑢橋枋,lē-kiô-pang,16,lē-kiô-pang,le7kio5pang1,le7kio5pang1
 鑿仔檯,tsha̍k-á-tâi,16,chha̍k-á-tâi,tshak8a2tai5,chhak8a2tai5
-閘榫,tsa̍h--sún,16,cha̍h--sún,tsah8sun2,chah8sun2
 雕刻刀,tiau-khik-to,16,tiau-khek-to,tiau1khik4to1,tiau1khek4to1
 雕刻機,tiau-khik-ki,16,tiau-khek-ki,tiau1khik4ki1,tiau1khek4ki1
 雞卵面,ke-nn̄g-bīn,16,ke-nn̄g-bīn,ke1nng7bin7,ke1nng7bin7
@@ -864,7 +809,6 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 鯉魚嘴,tāi-hî-tshuî,16,tāi-hî-chhûi,tai7hi5tshui5,tai7hi5chhui5
 鯊魚刀,sua-hî-to,16,soa-hî-to,sua1hi5to1,soa1hi5to1
 鹽筒仔,iâm-tâng-á,16,iâm-tâng-á,iam5tang5a2,iam5tang5a2
-麥芽膏,be̍h-gê-ko,16,be̍h-gê-ko,beh8ge5ko1,beh8ge5ko1
 黃塗底,n̂g-thôo-té,16,n̂g-thô͘-té,ng5thoo5te2,ng5thoo5te2
 黃塗粉,n̂g-thôo-hún,16,n̂g-thô͘-hún,ng5thoo5hun2,ng5thoo5hun2
 黃豆粉,n̂g-tāu-hún,16,n̂g-tāu-hún,ng5tau7hun2,ng5tau7hun2
@@ -874,15 +818,15 @@ the̍h-hó-sì,the̍h-hó-sì,16,the̍h-hó-sì,theh8ho2si3,theh8ho2si3
 龍椅手,liông-í-tshiú,16,liông-í-chhiú,liong5i2tshiu2,liong5i2chhiu2
 龍眼葉,lîng-gíng-hio̍h,16,lêng-géng-hio̍h,ling5ging2hioh8,leng5geng2hioh8
 龜甲紋,ku-kah-bûn,16,ku-kah-bûn,ku1kah4bun5,ku1kah4bun5
-𥴊壺仔,kám-ôo-á,16,kám-ô͘-á,kam2oo5a2,kam2oo5a2
-hì-tah開關,hì-tah-khai-kuan,12,hì-tah-khai-koan,hi3tah4khai1kuan1,hi3tah4khai1koan1
+布袋,pòo-tē,15,pò͘-tē,poo3te7,poo3te7
+hì-tah開關,hì-tah khai-kuan,12,hì-tah khai-koan,hi3tah4khai1kuan1,hi3tah4khai1koan1
 khe金倒槽,khe-kim-tò-tsô,12,khe-kim-tò-chô,khe1kim1to3tso5,khe1kim1to3cho5
-phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1the2koe1pang1
+phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1the2koe1pang1
 一分丁線,tsi̍t-hun-ting-suànn,12,chi̍t-hun-teng-sòaⁿ,tsit8hun1ting1suann3,chit8hun1teng1soann3
 七分鑿仔,tshit-hun-tsha̍k-á,12,chhit-hun-chha̍k-á,tshit4hun1tshak8a2,chhit4hun1chhak8a2
 三分鑿仔,sann-hun-tsha̍k-á,12,saⁿ-hun-chha̍k-á,sann1hun1tshak8a2,sann1hun1chhak8a2
 三角刀仔,sann-kak-to-á,12,saⁿ-kak-to-á,sann1kak4to1a2,sann1kak4to1a2
-乾漆茶盤,kan-tshat-tê-puânn,12,kan-chhat-tê-pôaⁿ,kan1tshat4te5puann5,kan1chhat4te5poann5
+乾漆茶盤,kan-tshat tê-puânn,12,kan-chhat tê-pôaⁿ,kan1tshat4te5puann5,kan1chhat4te5poann5
 五分鑿仔,gōo-hun-tsha̍k-á,12,gō͘-hun-chha̍k-á,goo7hun1tshak8a2,goo7hun1chhak8a2
 便當篋仔,piān-tong-kheh-á,12,piān-tong-kheh-á,pian7tong1kheh4a2,pian7tong1kheh4a2
 修光鑿仔,siu-kng-tsha̍k-á,12,siu-kng-chha̍k-á,siu1kng1tshak8a2,siu1kng1chhak8a2
@@ -899,15 +843,15 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 原料槽仔,guân-liāu-tsô-á,12,goân-liāu-chô-á,guan5liau7tso5a2,goan5liau7cho5a2
 吊鏡片仔,tiò-kiànn-phìnn-á,12,tiò-kiàⁿ-phìⁿ-á,tio3kiann3phinn3a2,tio3kiann3phinn3a2
 四叉鋏仔,sì-tshe-giap-á,12,sì-chhe-giap-á,si3tshe1giap4a2,si3chhe1giap4a2
-四耳提壺,sì-hīnn-thê-ôo,12,sì-hīⁿ-thê-ô͘,si3hinn7the5oo5,si3hinn7the5oo5
+四耳提壺,sì-hīnn thê-ôo,12,sì-hīⁿ thê-ô͘,si3hinn7the5oo5,si3hinn7the5oo5
 塑膠桮刀,sok-ka-pue-to,12,sok-ka-poe-to,sok4ka1pue1to1,sok4ka1poe1to1
-壽字燭台,siū-jī-tsik-tâi,12,siū-jī-chek-tâi,siu7ji7tsik4tai5,siu7ji7chek4tai5
+壽字燭台,siū-jī tsik-tâi,12,siū-jī chek-tâi,siu7ji7tsik4tai5,siu7ji7chek4tai5
 大葉楠仔,tuā-hio̍h-lâm-á,12,tōa-hio̍h-lâm-á,tua7hioh8lam5a2,toa7hioh8lam5a2
 奶母車仔,ling-bó-tshia-á,12,leng-bó-chhia-á,ling1bo2tshia1a2,leng1bo2chhia1a2
 安金箔仔,an-kim-po̍h-á,12,an-kim-po̍h-á,an1kim1poh8a2,an1kim1poh8a2
 寸二桮仔,tshùn-jī-pue-a,12,chhùn-jī-poe-a,tshun3ji7pue1a1,chhun3ji7poe1a1
 尖喙剪仔,tsiam-tshuì-tsián-á,12,chiam-chhùi-chián-á,tsiam1tshui3tsian2a2,chiam1chhui3chian2a2
-屏風神椅,pîn-hong-sîn-í,12,pîn-hong-sîn-í,pin5hong1sin5i2,pin5hong1sin5i2
+屏風神椅,pîn-hong sîn-í,12,pîn-hong sîn-í,pin5hong1sin5i2,pin5hong1sin5i2
 工作桌仔,kang-tsok-toh-á,12,kang-chok-toh-á,kang1tsok4toh4a2,kang1chok4toh4a2
 年畫刻板,nî-uē-khik-pán,12,nî-ōe-khek-pán,ni5ue7khik4pan2,ni5oe7khek4pan2
 彩繪化色,tshái-uē-huà-sik,12,chhái-ōe-hòa-sek,tshai2ue7hua3sik4,chhai2oe7hoa3sek4
@@ -928,7 +872,7 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 水波山頭,tsuí-pho-suann-thâu,12,chúi-pho-soaⁿ-thâu,tsui2pho1suann1thau5,chui2pho1soann1thau5
 汽水籃仔,khì-tsuí-nâ-á,12,khì-chúi-nâ-á,khi3tsui2na5a2,khi3chui2na5a2
 海綿砂碖,hái-mî-sua-lún,12,hái-mî-soa-lún,hai2mi5sua1lun2,hai2mi5soa1lun2
-漆釉的筆,tshat-iu-ê-pit,12,chhat-iu-ê-pit,tshat4iu1e5pit4,chhat4iu1e5pit4
+漆釉的筆,tshat-iu ê pit,12,chhat-iu ê pit,tshat4iu1e5pit4,chhat4iu1e5pit4
 煙腸頭毛,ian-tshiâng-thâu-moo,12,ian-chhiâng-thâu-mo͘,ian1tshiang5thau5moo1,ian1chhiang5thau5moo1
 牛角掛屏,gû-kak-kuà-pîn,12,gû-kak-kòa-pîn,gu5kak4kua3pin5,gu5kak4koa3pin5
 牽線柴仔,khan-suànn-tshâ-á,12,khan-sòaⁿ-chhâ-á,khan1suann3tsha5a2,khan1soann3chha5a2
@@ -941,16 +885,16 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 生毛柿仔,senn-moo-khī-á,12,seⁿ-mo͘-khī-á,senn1moo1khi7a2,senn1moo1khi7a2
 生頭發尾,senn-thâu-huat-bué,12,seⁿ-thâu-hoat-bóe,senn1thau5huat4bue2,senn1thau5hoat4boe2
 畫布花仔,uē-pòo-hue-á,12,ōe-pò͘-hoe-á,ue7poo3hue1a2,oe7poo3hoe1a2
-白糊固定,pe̍h-kôo-kòo-tīng,12,pe̍h-kô͘-kò͘-tēng,peh8koo5koo3ting7,peh8koo5koo3teng7
+白糊固定,pe̍h-kôo kòo-tīng,12,pe̍h-kô͘ kò͘-tēng,peh8koo5koo3ting7,peh8koo5koo3teng7
 相思仔樹,siunn-si-á-tshiū,12,siuⁿ-si-á-chhiū,siunn1si1a2tshiu7,siunn1si1a2chhiu7
-石仔秤錘,tsio̍h-ê-tshìn-thuî,12,chio̍h-ê-chhìn-thûi,tsioh8e5tshin3thui5,chioh8e5chhin3thui5
-石仔香爐,tsio̍h-ê-hiunn-lôo,12,chio̍h-ê-hiuⁿ-lô͘,tsioh8e5hiunn1loo5,chioh8e5hiunn1loo5
+石仔秤錘,tsio̍h ê tshìn-thuî,12,chio̍h ê chhìn-thûi,tsioh8e5tshin3thui5,chioh8e5chhin3thui5
+石仔香爐,tsio̍h ê hiunn-lôo,12,chio̍h ê hiuⁿ-lô͘,tsioh8e5hiunn1loo5,chioh8e5hiunn1loo5
 石膏機仔,tsio̍h-ko-ki-á,12,chio̍h-ko-ki-á,tsioh8ko1ki1a2,chioh8ko1ki1a2
 福在眼前,hok-tsāi-gán-tsîng,12,hok-chāi-gán-chêng,hok4tsai7gan2tsing5,hok4chai7gan2cheng5
-竹仔屏風,tik-á-pîn-hong,12,tek-á-pîn-hong,tik4a2pin5hong1,tek4a2pin5hong1
+竹仔屏風,tik-á pîn-hong,12,tek-á pîn-hong,tik4a2pin5hong1,tek4a2pin5hong1
 竹仔枕頭,tik-á-tsím-thâu,12,tek-á-chím-thâu,tik4a2tsim2thau5,tek4a2chim2thau5
 竹管仔飯,tik-kóng-á-pn̄g,12,tek-kóng-á-pn̄g,tik4kong2a2png7,tek4kong2a2png7
-竹編花籃,tik-pinn-hue-nâ,12,tek-piⁿ-hoe-nâ,tik4pinn1hue1na5,tek4pinn1hoe1na5
+竹編花籃,tik-pinn hue-nâ,12,tek-piⁿ hoe-nâ,tik4pinn1hue1na5,tek4pinn1hoe1na5
 管頭鋏仔,kóng-thâu-giap-á,12,kóng-thâu-giap-á,kong2thau5giap4a2,kong2thau5giap4a2
 籤尾刀仔,tshiam-bué-to-á,12,chhiam-bóe-to-á,tshiam1bue2to1a2,chhiam1boe2to1a2
 粗胚鑿仔,tshoo-phue-tsha̍k-á,12,chho͘-phoe-chha̍k-á,tshoo1phue1tshak8a2,chhoo1phoe1chhak8a2
@@ -965,7 +909,7 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 脫胎漆器,thuat-thai-tshat-khì,12,thoat-thai-chhat-khì,thuat4thai1tshat4khi3,thoat4thai1chhat4khi3
 自動鉛筆,tsū-tōng-iân-pit,12,chū-tōng-iân-pit,tsu7tong7ian5pit4,chu7tong7ian5pit4
 臺灣杜鵑,tâi-uân-tōo-kuan,12,tâi-oân-tō͘-koan,tai5uan5too7kuan1,tai5oan5too7koan1
-臺灣松梧,tâi-uân-siông-ngôo,12,tâi-oân-siông-ngô͘,tai5uan5siong5ngoo5,tai5oan5siong5ngoo5
+臺灣松梧,tâi-uân siông-ngôo,12,tâi-oân siông-ngô͘,tai5uan5siong5ngoo5,tai5oan5siong5ngoo5
 臺灣玉仔,tâi-uân-gi̍k-á,12,tâi-oân-ge̍k-á,tai5uan5gik8a2,tai5oan5gek8a2
 臺灣赤楊,tâi-uân-tshik-iông,12,tâi-oân-chhek-iông,tai5uan5tshik4iong5,tai5oan5chhek4iong5
 臺灣鋸仔,tâi-uân-kù-á,12,tâi-oân-kù-á,tai5uan5ku3a2,tai5oan5ku3a2
@@ -973,13 +917,13 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 茶米黜仔,tê-bí-thuh-á,12,tê-bí-thuh-á,te5bi2thuh4a2,te5bi2thuh4a2
 草仔花窗,tshó-á-hue-thang,12,chhó-á-hoe-thang,tsho2a2hue1thang1,chho2a2hoe1thang1
 葫蘆鎚仔,hôo-lôo-thuî-á,12,hô͘-lô͘-thûi-á,hoo5loo5thui5a2,hoo5loo5thui5a2
-螭虎屈篆,tshi-hóo-khut-tuān,12,chhi-hó͘-khut-toān,tshi1hoo2khut4tuan7,chhi1hoo2khut4toan7
+螭虎屈篆,tshi-hóo khut-tuān,12,chhi-hó͘ khut-toān,tshi1hoo2khut4tuan7,chhi1hoo2khut4toan7
 豆腐角仔,tāu-hū-kak-á,12,tāu-hū-kak-á,tau7hu7kak4a2,tau7hu7kak4a2
 豬油甕仔,ti-iû-àng-á,12,ti-iû-àng-á,ti1iu5ang3a2,ti1iu5ang3a2
-越南松梧,ua̍t-lâm-siông-ngôo,12,oa̍t-lâm-siông-ngô͘,uat8lam5siong5ngoo5,oat8lam5siong5ngoo5
+越南松梧,ua̍t-lâm siông-ngôo,12,oa̍t-lâm siông-ngô͘,uat8lam5siong5ngoo5,oat8lam5siong5ngoo5
 辦桌湯盤,pān-toh-thng-puânn,12,pān-toh-thng-pôaⁿ,pan7toh4thng1puann5,pan7toh4thng1poann5
 連堵剾仔,liân-tóo-khau-á,12,liân-tó͘-khau-á,lian5too2khau1a2,lian5too2khau1a2
-連座硬身,liân-tsō-ngē-sin,12,liân-chō-ngē-sin,lian5tso7nge7sin1,lian5cho7nge7sin1
+連座硬身,liân-tsō ngē-sin,12,liân-chō ngē-sin,lian5tso7nge7sin1,lian5cho7nge7sin1
 連鏡批筒,liân-kiànn-phue-tháng,12,liân-kiàⁿ-phoe-tháng,lian5kiann3phue1thang2,lian5kiann3phoe1thang2
 選竹篾仔,suán-tik-bi̍h-á,12,soán-tek-bi̍h-á,suan2tik4bih8a2,soan2tek4bih8a2
 醬菜甕仔,tsiùnn-tshài-àng-á,12,chiùⁿ-chhài-àng-á,tsiunn3tshai3ang3a2,chiunn3chhai3ang3a2
@@ -996,56 +940,111 @@ phue體kue枋,phue-thé-kue-pang,12,phoe-thé-koe-pang,phue1the2kue1pang1,phoe1t
 電解機仔,tiān-kái-ki-á,12,tiān-kái-ki-á,tian7kai2ki1a2,tian7kai2ki1a2
 面桶架仔,bīn-tháng-kè-á,12,bīn-tháng-kè-á,bin7thang2ke3a2,bin7thang2ke3a2
 頭毛捋仔,thâu-moo-lua̍h-á,12,thâu-mo͘-loa̍h-á,thau5moo1luah8a2,thau5moo1loah8a2
-風調雨順,hong-tiâu-ú-sūn,12,hong-tiâu-ú-sūn,hong1tiau5u2sun7,hong1tiau5u2sun7
 食飯桌仔,tsia̍h-pn̄g-toh-á,12,chia̍h-pn̄g-toh-á,tsiah8png7toh4a2,chiah8png7toh4a2
 香港秤仔,hiong-káng-tshìn-á,12,hiong-káng-chhìn-á,hiong1kang2tshin3a2,hiong1kang2chhin3a2
 香蕉剾刀,kim-tsio-khau-to,12,kim-chio-khau-to,kim1tsio1khau1to1,kim1chio1khau1to1
 魚鱗片仔,hî-lân-phìnn-á,12,hî-lân-phìⁿ-á,hi5lan5phinn3a2,hi5lan5phinn3a2
-麻姑獻壽,mâ-koo-hiàn-siū,12,mâ-ko͘-hiàn-siū,ma5koo1hian3siu7,ma5koo1hian3siu7
+麻姑獻壽,mâ-koo hiàn-siū,12,mâ-ko͘ hiàn-siū,ma5koo1hian3siu7,ma5koo1hian3siu7
 黃金染料,n̂g-kim-ní-liāu,12,n̂g-kim-ní-liāu,ng5kim1ni2liau7,ng5kim1ni2liau7
 點火的,tiám-hué--ê,12,tiám-hóe--ê,tiam2hue2e5,tiam2hoe2e5
-三尺的花鐘,sann-tshioh-ê-hue-tsing,10,saⁿ-chhioh-ê-hoe-cheng,sann1tshioh4e5hue1tsing1,sann1chhioh4e5hoe1cheng1
+茄苳,ka-tang,11,ka-tang,ka1tang1,ka1tang1
+三尺的花鐘,sann-tshioh ê hue-tsing,10,saⁿ-chhioh ê hoe-cheng,sann1tshioh4e5hue1tsing1,sann1chhioh4e5hoe1cheng1
 三角溫度針,sann-kak-un-tōo-tsiam,10,saⁿ-kak-un-tō͘-chiam,sann1kak4un1too7tsiam1,sann1kak4un1too7chiam1
-五尺的花鐘,gōo-tshioh-ê-hue-tsing,10,gō͘-chhioh-ê-hoe-cheng,goo7tshioh4e5hue1tsing1,goo7chhioh4e5hoe1cheng1
-仿古的銅鼎,hóng-kóo-ê-tâng-tiánn,10,hóng-kó͘-ê-tâng-tiáⁿ,hong2koo2e5tang5tiann2,hong2koo2e5tang5tiann2
-切割的直尺,tshiat-kuah-ê-ti̍t-tshioh,10,chhiat-koah-ê-ti̍t-chhioh,tshiat4kuah4e5tit8tshioh4,chhiat4koah4e5tit8chhioh4
+五尺的花鐘,gōo-tshioh ê hue-tsing,10,gō͘-chhioh ê hoe-cheng,goo7tshioh4e5hue1tsing1,goo7chhioh4e5hoe1cheng1
+仿古的銅鼎,hóng-kóo ê tâng-tiánn,10,hóng-kó͘ ê tâng-tiáⁿ,hong2koo2e5tang5tiann2,hong2koo2e5tang5tiann2
+切割的直尺,tshiat-kuah ê ti̍t-tshioh,10,chhiat-koah ê ti̍t-chhioh,tshiat4kuah4e5tit8tshioh4,chhiat4koah4e5tit8chhioh4
 剪白鐵網剪,tsián-pe̍h-thih-bāng-tsián,10,chián-pe̍h-thih-bāng-chián,tsian2peh8thih4bang7tsian2,chian2peh8thih4bang7chian2
-割圓的器具,kuah-înn-ê-khì-kū,10,koah-îⁿ-ê-khì-kū,kuah4inn5e5khi3ku7,koah4inn5e5khi3ku7
+割圓的器具,kuah-înn ê khì-kū,10,koah-îⁿ ê khì-kū,kuah4inn5e5khi3ku7,koah4inn5e5khi3ku7
 厚葉石斑木,kāu-hio̍h-tsio̍h-pan-bo̍k,10,kāu-hio̍h-chio̍h-pan-bo̍k,kau7hioh8tsioh8pan1bok8,kau7hioh8chioh8pan1bok8
-古早的鎖頭,kóo-tsá-ê-só-thâu,10,kó͘-chá-ê-só-thâu,koo2tsa2e5so2thau5,koo2cha2e5so2thau5
-四角柱仔跤,sì-kak-thiāu-á-kha,10,sì-kak-thiāu-á-kha,si3kak4thiau7a2kha1,si3kak4thiau7a2kha1
-塗燒的螿蜍,thôo-sio-ê-tsiunn-tsî,10,thô͘-sio-ê-chiuⁿ-chî,thoo5sio1e5tsiunn1tsi5,thoo5sio1e5chiunn1chi5
-奇種茶米罐,kî-tsióng-tê-bí-kuàn,10,kî-chióng-tê-bí-koàn,ki5tsiong2te5bi2kuan3,ki5chiong2te5bi2koan3
-小型的籠床,sió-hîng-ê-lâng-sn̂g,10,sió-hêng-ê-lâng-sn̂g,sio2hing5e5lang5sng5,sio2heng5e5lang5sng5
+古早的鎖頭,kóo-tsá ê só-thâu,10,kó͘-chá ê só-thâu,koo2tsa2e5so2thau5,koo2cha2e5so2thau5
+四角柱仔跤,sì-kak thiāu-á-kha,10,sì-kak thiāu-á-kha,si3kak4thiau7a2kha1,si3kak4thiau7a2kha1
+塗燒的螿蜍,thôo sio ê tsiunn-tsî,10,thô͘ sio ê chiuⁿ-chî,thoo5sio1e5tsiunn1tsi5,thoo5sio1e5chiunn1chi5
+奇種茶米罐,kî-tsióng tê-bí-kuàn,10,kî-chióng tê-bí-koàn,ki5tsiong2te5bi2kuan3,ki5chiong2te5bi2koan3
+小型的籠床,sió-hîng ê lâng-sn̂g,10,sió-hêng ê lâng-sn̂g,sio2hing5e5lang5sng5,sio2heng5e5lang5sng5
 尪仔頭模仔,ang-á-thâu-bôo-á,10,ang-á-thâu-bô͘-á,ang1a2thau5boo5a2,ang1a2thau5boo5a2
-彎角柱仔跤,uan-kak-thiāu-á-kha,10,oan-kak-thiāu-á-kha,uan1kak4thiau7a2kha1,oan1kak4thiau7a2kha1
+帽仔,bō-á,10,bō-á,bo7a2,bo7a2
+彎角柱仔跤,uan-kak thiāu-á-kha,10,oan-kak thiāu-á-kha,uan1kak4thiau7a2kha1,oan1kak4thiau7a2kha1
 彩繪錦花仔,tshái-uē-gím-hue-á,10,chhái-ōe-gím-hoe-á,tshai2ue7gim2hue1a2,chhai2oe7gim2hoe1a2
-彩色的玻璃,tshái-sik-ê-po-lê,10,chhái-sek-ê-po-lê,tshai2sik4e5po1le5,chhai2sek4e5po1le5
-戰甲人字甲,tsiàn-kah-jîn-jī-kah,10,chiàn-kah-jîn-jī-kah,tsian3kah4jin5ji7kah4,chian3kah4jin5ji7kah4
-拍空的工具,phah-khang-ê-kang-kū,10,phah-khang-ê-kang-kū,phah4khang1e5kang1ku7,phah4khang1e5kang1ku7
-挑紗的戰甲,thiàu-se-ê-tsiàn-kah,10,thiàu-se-ê-chiàn-kah,thiau3se1e5tsian3kah4,thiau3se1e5chian3kah4
-捲紙的鐵筆,kńg-tsuá-ê-thih-pit,10,kńg-chóa-ê-thih-pit,kng2tsua2e5thih4pit4,kng2choa2e5thih4pit4
-晟手的二鏨,tshiânn-tshiú-ê-jī-tsām,10,chhiâⁿ-chhiú-ê-jī-chām,tshiann5tshiu2e5ji7tsam7,chhiann5chhiu2e5ji7cham7
-柴做的飯坩,tshâ-tsò-ê-pn̄g-khann,10,chhâ-chò-ê-pn̄g-khaⁿ,tsha5tso3e5png7khann1,chha5cho3e5png7khann1
-柴的敲槌仔,tshâ-ê-khà-thuî-á,10,chhâ-ê-khà-thûi-á,tsha5e5kha3thui5a2,chha5e5kha3thui5a2
-柴雕的劍獅,tshâ-tiau-ê-kiàm-sai,10,chhâ-tiau-ê-kiàm-sai,tsha5tiau1e5kiam3sai1,chha5tiau1e5kiam3sai1
-樟仔柴冊櫃,tsiunn-á-tshâ-tsheh-kuì,10,chiuⁿ-á-chhâ-chheh-kùi,tsiunn1a2tsha5tsheh4kui3,chiunn1a2chha5chheh4kui3
-泉州派牽線,tsuân-tsiu-phài-khan-suànn,10,choân-chiu-phài-khan-sòaⁿ,tsuan5tsiu1phai3khan1suann3,choan5chiu1phai3khan1soann3
-泡棉的膠帶,phàu-mî-ê-ka-tuà,10,phàu-mî-ê-ka-tòa,phau3mi5e5ka1tua3,phau3mi5e5ka1toa3
-火炭的熨斗,hué-thuànn-ê-ut-táu,10,hóe-thòaⁿ-ê-ut-táu,hue2thuann3e5ut4tau2,hoe2thoann3e5ut4tau2
-硩紙的鐵筆,teh-tsuá-ê-thih-pit,10,teh-chóa-ê-thih-pit,teh4tsua2e5thih4pit4,teh4choa2e5thih4pit4
-硩邊的軟墊,teh-pinn-ê-nńg-tiām,10,teh-piⁿ-ê-nńg-tiām,teh4pinn1e5nng2tiam7,teh4pinn1e5nng2tiam7
+彩色的玻璃,tshái-sik-ê po-lê,10,chhái-sek-ê po-lê,tshai2sik4e5po1le5,chhai2sek4e5po1le5
+戰甲人字甲,tsiàn-kah jîn-jī-kah,10,chiàn-kah jîn-jī-kah,tsian3kah4jin5ji7kah4,chian3kah4jin5ji7kah4
+手巾仔,tshiú-kin-á,10,chhiú-kin-á,tshiu2kin1a2,chhiu2kin1a2
+手指,tshiú-tsí,10,chhiú-chí,tshiu2tsi2,chhiu2chi2
+拍空的工具,phah-khang ê kang-kū,10,phah-khang ê kang-kū,phah4khang1e5kang1ku7,phah4khang1e5kang1ku7
+挑紗的戰甲,thiàu-se ê tsiàn-kah,10,thiàu-se ê chiàn-kah,thiau3se1e5tsian3kah4,thiau3se1e5chian3kah4
+捲紙的鐵筆,kńg-tsuá-ê thih-pit,10,kńg-chóa-ê thih-pit,kng2tsua2e5thih4pit4,kng2choa2e5thih4pit4
+摃槌仔,kòng-thuî-á,10,kòng-thûi-á,kong3thui5a2,kong3thui5a2
+斧頭,póo-thâu,10,pó͘-thâu,poo2thau5,poo2thau5
+時鐘,sî-tsing,10,sî-cheng,si5tsing1,si5cheng1
+晟手的二鏨,tshiânn-tshiú ê jī-tsām,10,chhiâⁿ-chhiú ê jī-chām,tshiann5tshiu2e5ji7tsam7,chhiann5chhiu2e5ji7cham7
+柴做的飯坩,tshâ tsò ê pn̄g-khann,10,chhâ chò ê pn̄g-khaⁿ,tsha5tso3e5png7khann1,chha5cho3e5png7khann1
+柴的敲槌仔,tshâ ê khà-thuî-á,10,chhâ ê khà-thûi-á,tsha5e5kha3thui5a2,chha5e5kha3thui5a2
+柴雕的劍獅,tshâ-tiau ê kiàm-sai,10,chhâ-tiau ê kiàm-sai,tsha5tiau1e5kiam3sai1,chha5tiau1e5kiam3sai1
+椅條,í-liâu,10,í-liâu,i2liau5,i2liau5
+楓仔樹,png-á-tshiū,10,png-á-chhiū,png1a2tshiu7,png1a2chhiu7
+樟仔柴冊櫃,tsiunn-á-tshâ tsheh-kuì,10,chiuⁿ-á-chhâ chheh-kùi,tsiunn1a2tsha5tsheh4kui3,chiunn1a2chha5chheh4kui3
+泉州派牽線,tsuân-tsiu-phài khan-suànn,10,choân-chiu-phài khan-sòaⁿ,tsuan5tsiu1phai3khan1suann3,choan5chiu1phai3khan1soann3
+泡棉的膠帶,phàu-mî ê ka-tuà,10,phàu-mî ê ka-tòa,phau3mi5e5ka1tua3,phau3mi5e5ka1toa3
+湯匙,thng-sî,10,thng-sî,thng1si5,thng1si5
+火炭的熨斗,hué-thuànn ê ut-táu,10,hóe-thòaⁿ ê ut-táu,hue2thuann3e5ut4tau2,hoe2thoann3e5ut4tau2
+烏枋,oo-pang,10,o͘-pang,oo1pang1,oo1pang1
+烘爐,hang-lôo,10,hang-lô͘,hang1loo5,hang1loo5
+玉蘭,gio̍k-lân,10,gio̍k-lân,giok8lan5,giok8lan5
+玫瑰,muî-kuì,10,mûi-kùi,mui5kui3,mui5kui3
+番仔火,huan-á-hué,10,hoan-á-hóe,huan1a2hue2,hoan1a2hoe2
+皮鞋,phuê-ê,10,phôe-ê,phue5e5,phoe5e5
+真珠,tsin-tsu,10,chin-chu,tsin1tsu1,chin1chu1
+硩紙的鐵筆,teh-tsuá-ê thih-pit,10,teh-chóa-ê thih-pit,teh4tsua2e5thih4pit4,teh4choa2e5thih4pit4
+硩邊的軟墊,teh-pinn ê nńg-tiām,10,teh-piⁿ ê nńg-tiām,teh4pinn1e5nng2tiam7,teh4pinn1e5nng2tiam7
 磨跳舞鍊仔,buâ-thiàu-bú-liān-á,10,bôa-thiàu-bú-liān-á,bua5thiau3bu2lian7a2,boa5thiau3bu2lian7a2
-神像設計圖,sîn-siōng-siat-kè-tôo,10,sîn-siōng-siat-kè-tô͘,sin5siong7siat4ke3too5,sin5siong7siat4ke3too5
-福州派粉線,hok-tsiu-phài-hún-suànn,10,hok-chiu-phài-hún-sòaⁿ,hok4tsiu1phai3hun2suann3,hok4chiu1phai3hun2soann3
-竹編的火籠,tik-pinn-ê-hué-lang,10,tek-piⁿ-ê-hóe-lang,tik4pinn1e5hue2lang1,tek4pinn1e5hoe2lang1
-竹編的飯擔,tik-pinn-ê-pn̄g-tànn,10,tek-piⁿ-ê-pn̄g-tàⁿ,tik4pinn1e5png7tann3,tek4pinn1e5png7tann3
+神像設計圖,sîn-siōng siat-kè-tôo,10,sîn-siōng siat-kè-tô͘,sin5siong7siat4ke3too5,sin5siong7siat4ke3too5
+福州派粉線,hok-tsiu-phài hún-suànn,10,hok-chiu-phài hún-sòaⁿ,hok4tsiu1phai3hun2suann3,hok4chiu1phai3hun2soann3
+秤仔,tshìn-á,10,chhìn-á,tshin3a2,chhin3a2
+竹編的火籠,tik-pinn-ê hué-lang,10,tek-piⁿ-ê hóe-lang,tik4pinn1e5hue2lang1,tek4pinn1e5hoe2lang1
+竹編的飯擔,tik-pinn ê pn̄g-tànn,10,tek-piⁿ ê pn̄g-tàⁿ,tik4pinn1e5png7tann3,tek4pinn1e5png7tann3
 簇柴灰架子,tshok-tshâ-hu-kè-á,10,chhok-chhâ-hu-kè-á,tshok4tsha5hu1ke3a2,chhok4chha5hu1ke3a2
-粗胚的大鏨,tshoo-phue-ê-tuā-tsām,10,chho͘-phoe-ê-tōa-chām,tshoo1phue1e5tua7tsam7,chhoo1phoe1e5toa7cham7
-粗胚的頓槌,tshoo-phue-ê-tǹg-thuî,10,chho͘-phoe-ê-tǹg-thûi,tshoo1phue1e5tng3thui5,chhoo1phoe1e5tng3thui5
-純銀的秤仔,sûn-gîn-ê-tshìn-á,10,sûn-gîn-ê-chhìn-á,sun5gin5e5tshin3a2,sun5gin5e5chhin3a2
-茄苳入石榴,ka-tang-ji̍p-tsio̍h-liû,10,ka-tang-ji̍p-chio̍h-liû,ka1tang1jip8tsioh8liu5,ka1tang1jip8chioh8liu5
-調味的架仔,tiâu-bī-ê-kè-á,10,tiâu-bī-ê-kè-á,tiau5bi7e5ke3a2,tiau5bi7e5ke3a2
-銅雕的祥獸,tâng-tiau-ê-siông-siù,10,tâng-tiau-ê-siông-siù,tang5tiau1e5siong5siu3,tang5tiau1e5siong5siu3
-鋸齒的剪刀,kì-khí-ê-ka-to,10,kì-khí-ê-ka-to,ki3khi2e5ka1to1,ki3khi2e5ka1to1
-鶯歌的箸籠,ing-ko-ê-tī-lāng,10,eng-ko-ê-tī-lāng,ing1ko1e5ti7lang7,eng1ko1e5ti7lang7
+粗胚的大鏨,tshoo-phue ê tuā-tsām,10,chho͘-phoe ê tōa-chām,tshoo1phue1e5tua7tsam7,chhoo1phoe1e5toa7cham7
+粗胚的頓槌,tshoo-phue ê tǹg-thuî,10,chho͘-phoe ê tǹg-thûi,tshoo1phue1e5tng3thui5,chhoo1phoe1e5tng3thui5
+純銀的秤仔,sûn-gîn-ê tshìn-á,10,sûn-gîn-ê chhìn-á,sun5gin5e5tshin3a2,sun5gin5e5chhin3a2
+茄苳入石榴,ka-tang ji̍p-tsio̍h-liû,10,ka-tang ji̍p-chio̍h-liû,ka1tang1jip8tsioh8liu5,ka1tang1jip8chioh8liu5
+草鞋,tsháu-ê,10,chháu-ê,tshau2e5,chhau2e5
+菜刀,tshài-to,10,chhài-to,tshai3to1,chhai3to1
+調味的架仔,tiâu-bī ê kè-á,10,tiâu-bī ê kè-á,tiau5bi7e5ke3a2,tiau5bi7e5ke3a2
+鉸刀,ka-to,10,ka-to,ka1to1,ka1to1
+銅雕的祥獸,tâng-tiau ê siông-siù,10,tâng-tiau ê siông-siù,tang5tiau1e5siong5siu3,tang5tiau1e5siong5siu3
+鋸仔,kì-á,10,kì-á,ki3a2,ki3a2
+鋸齒的剪刀,kì-khí ê ka-to,10,kì-khí ê ka-to,ki3khi2e5ka1to1,ki3khi2e5ka1to1
+鐵線,thih-suànn,10,thih-sòaⁿ,thih4suann3,thih4soann3
+鶯歌的箸籠,ing-ko ê tī-lāng,10,eng-ko ê tī-lāng,ing1ko1e5ti7lang7,eng1ko1e5ti7lang7
+枇杷,gî-pê,2,gî-pê,gi5pe5,gi5pe5
+楊梅,iûnn-muî,2,iûⁿ-mûi,iunn5mui5,iunn5mui5
+剪絨,tsián-jiông,1,chián-jiông,tsian2jiong5,chian2jiong5
+太師椅,thài-su-í,1,thài-su-í,thai3su1i2,thai3su1i2
+暗號,àm-hō,1,àm-hō,am3ho7,am3ho7
+水族,tsuí-tso̍k,1,chúi-cho̍k,tsui2tsok8,chui2chok8
+水晶,tsuí-tsinn,1,chúi-chiⁿ,tsui2tsinn1,chui2chinn1
+洞簫,tōng-siau,1,tōng-siau,tong7siau1,tong7siau1
+火炭,hué-thuànn,1,hóe-thòaⁿ,hue2thuann3,hoe2thoann3
+牌匾,pâi-pián,1,pâi-pián,pai5pian2,pai5pian2
+牡丹,bóo-tan,1,bó͘-tan,boo2tan1,boo2tan1
+甕仔,àng-á,1,àng-á,ang3a2,ang3a2
+石榴,tsio̍h-liû,1,chio̍h-liû,tsioh8liu5,chioh8liu5
+石獅,tsio̍h-sai,1,chio̍h-sai,tsioh8sai1,chioh8sai1
+磅子,pōng-tsí,1,pōng-chí,pong7tsi2,pong7chi2
+秤錘,tshìn-thuî,1,chhìn-thûi,tshin3thui5,chhin3thui5
+算盤,sǹg-puânn,1,sǹg-pôaⁿ,sng3puann5,sng3poann5
+米酒,bí-tsiú,1,bí-chiú,bi2tsiu2,bi2chiu2
+糊仔,kôo-á,1,kô͘-á,koo5a2,koo5a2
+翼股,si̍t-kóo,1,si̍t-kó͘,sit8koo2,sit8koo2
+葫蘆,hôo-lôo,1,hô͘-lô͘,hoo5loo5,hoo5loo5
+葵扇,khuê-sìnn,1,khôe-sìⁿ,khue5sinn3,khoe5sinn3
+薯榔,tsû-nn̂g,1,chû-nn̂g,tsu5nng5,chu5nng5
+蝴蝶,ôo-tia̍p,1,ô͘-tia̍p,oo5tiap8,oo5tiap8
+雞籠,ke-lang,1,ke-lang,ke1lang1,ke1lang1
+風調雨順,hong-tiâu-ú-sūn,1,hong-tiâu-ú-sūn,hong1tiau5u2sun7,hong1tiau5u2sun7
+飯匙,pn̄g-sî,1,pn̄g-sî,png7si5,png7si5
+飯篱,pn̄g-lē,1,pn̄g-lē,png7le7,png7le7
+鹿仔,lo̍k-á,1,lo̍k-á,lok8a2,lok8a2
+麒麟,kî-lîn,1,kî-lîn,ki5lin5,ki5lin5
+麥芽膏,be̍h-gê-ko,1,be̍h-gê-ko,beh8ge5ko1,beh8ge5ko1
+麻布,muâ-pòo,1,môa-pò͘,mua5poo3,moa5poo3
+𥴊壺仔,kám-ôo-á,1,kám-ô͘-á,kam2oo5a2,kam2oo5a2

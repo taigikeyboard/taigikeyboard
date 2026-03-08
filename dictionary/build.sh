@@ -79,6 +79,12 @@ do_create_trie() {
     python3 "$BUILD_DIR/04_create_trie.py"
 }
 
+# Step 6: Audit
+do_audit() {
+    print_step "Step 6/7: Running audit report..."
+    python3 "$BUILD_DIR/07_audit.py"
+}
+
 # Step 7: Deploy
 do_deploy() {
     print_step "Step 7/7: Deploying to Android..."
@@ -92,6 +98,7 @@ do_build() {
     do_generate_association
     do_create_trie_db
     do_create_trie
+    do_audit
 }
 
 # 顯示用法

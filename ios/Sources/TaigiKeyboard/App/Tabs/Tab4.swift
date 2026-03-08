@@ -17,6 +17,9 @@ struct Tab4: View {
     @State private var enableDoubleTapNN: Bool
     @State private var outputBothScripts: Bool
     @State private var showResetSettingsAlert = false
+    @State private var diagnosticCopied = false
+    @State private var diagnosticText = ""
+    @Environment(\.openURL) private var openURL
 
     // 使用 KeyboardKit 的持久化機制
     @AppStorage(
@@ -86,6 +89,46 @@ struct Tab4: View {
                         }
                 }
 
+                // 診斷資訊
+                Section(header: Text(languageManager.text(Tab4Texts.diagnosticSectionTitle))) {
+                    Button {
+                        let info = DiagnosticService.gather()
+                        UIPasteboard.general.string = info.formatted()
+                        diagnosticCopied = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            diagnosticCopied = false
+                        }
+                    } label: {
+                        Label(
+                            diagnosticCopied
+                                ? languageManager.text(Tab4Texts.diagnosticCopied)
+                                : languageManager.text(Tab4Texts.diagnosticCopy),
+                            systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc"
+                        )
+                    }
+
+                    ShareLink(
+                        item: diagnosticText,
+                        subject: Text("Taigi Keyboard Bug Report"),
+                        message: Text(diagnosticText)
+                    ) {
+                        Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        let info = DiagnosticService.gather()
+                        let subject = "Taigi Keyboard Bug Report (v\(info.appVersion))"
+                            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        let body = info.formatted()
+                            .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        if let url = URL(string: "mailto:info@taigikeyboard.tw?subject=\(subject)&body=\(body)") {
+                            openURL(url)
+                        }
+                    } label: {
+                        Label(languageManager.text(Tab4Texts.diagnosticEmail), systemImage: "envelope")
+                    }
+                }
+
                 // 重設按鈕
                 Section {
                     Button(role: .destructive) {
@@ -109,8 +152,8 @@ struct Tab4: View {
             .navigationTitle(languageManager.text(Tab4Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
-                // 同步 Keyboard Extension 更改的 inputMode
                 selectedInputMode = settings.inputMode
+                diagnosticText = DiagnosticService.gather().formatted()
             }
         }
         .alert(languageManager.text(Tab4Texts.resetSettings), isPresented: $showResetSettingsAlert) {

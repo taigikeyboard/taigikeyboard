@@ -448,6 +448,23 @@ final class UserFrequencyRepository: @unchecked Sendable {
         connectionManager.isConnected()
     }
 
+    /// Returns the total number of entries in the frequency table, or -1 if the DB is not open.
+    func totalCount() -> Int {
+        guard connectionManager.isConnected() else { return -1 }
+        do {
+            return try connectionManager.executeSync { db in
+                var stmt: OpaquePointer?
+                defer { sqlite3_finalize(stmt) }
+                guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM user_frequency;", -1, &stmt, nil) == SQLITE_OK else {
+                    return -1
+                }
+                return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : -1
+            }
+        } catch {
+            return -1
+        }
+    }
+
     // MARK: - Debug Methods
 
     #if DEBUG

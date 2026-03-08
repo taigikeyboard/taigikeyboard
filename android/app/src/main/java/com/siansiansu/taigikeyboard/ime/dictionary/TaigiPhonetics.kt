@@ -34,10 +34,10 @@ object TaigiPhonetics {
         "uai", "uaih", "uainn", "uainnh",
         "m", "mh", "ng", "ngh",
         "ioo", "iooh", "iai", "iaih",
-        "er", "erh", "erm", "ere", "ereh", "eng",
-        "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "ie",
+        "er", "erh", "erk", "erm", "ere", "ereh", "eng",
+        "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "iri", "ie",
         "or", "orh", "ior", "iorh",
-        "uang", "oi", "oih", "ee",
+        "uang", "oi", "oih", "ee", "eeh",
     )
 
     /** Tone number -> combining mark (NFD). Tones 1 and 4 have no mark. */
@@ -331,31 +331,60 @@ object TaigiPhonetics {
     }
 
     /** Convert TL display text (with diacritics) to POJ display text.
-     *  Splits by "-", for each syllable: strip tone -> parse -> toPOJ. */
+     *  Splits by "-" and " " (word boundary), for each syllable: strip tone -> parse -> toPOJ.
+     *  Preserves original separators (space = word boundary, hyphen = syllable boundary). */
     fun tlDisplayToPOJDisplay(text: String): String {
         if (text.isEmpty()) return ""
 
-        val syllables = text.split("-")
-        val converted = syllables.map { syllable ->
-            if (syllable.isEmpty()) return@map ""
-
-            val (bare, toneNum) = stripToneMark(syllable)
-            if (bare.isEmpty()) return@map syllable
-
-            val normalized = normalizeToTL(bare.lowercase())
-            val split = splitInitialFinal(normalized) ?: return@map syllable
-            val (initial, final_) = split
-
-            val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
-            val pojResult = toPOJ(initial = initial, final_ = final_, tone = tone)
-
-            // Restore case
-            if (syllable.first().isUpperCase()) {
-                pojResult.substring(0, 1).uppercase() + pojResult.substring(1)
+        // Split while preserving separators (space and hyphen)
+        val tokens = mutableListOf<Pair<String, String>>() // (text, separator)
+        val current = StringBuilder()
+        for (char in text) {
+            if (char == '-' || char == ' ') {
+                tokens.add(current.toString() to char.toString())
+                current.clear()
             } else {
-                pojResult
+                current.append(char)
             }
         }
-        return converted.joinToString("-")
+        tokens.add(current.toString() to "")
+
+        val result = StringBuilder()
+        for ((i, token) in tokens.withIndex()) {
+            val (s, separator) = token
+            if (s.isEmpty()) {
+                // Preserve separator (e.g., "--" for 輕聲)
+                if (i < tokens.size - 1 || separator.isNotEmpty()) {
+                    result.append(separator)
+                }
+                continue
+            }
+
+            val (bare, toneNum) = stripToneMark(s)
+            val converted = if (bare.isEmpty()) {
+                s
+            } else {
+                val normalized = normalizeToTL(bare.lowercase())
+                val split = splitInitialFinal(normalized)
+                if (split != null) {
+                    val (initial, final_) = split
+                    val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
+                    val pojResult = toPOJ(initial = initial, final_ = final_, tone = tone)
+                    if (s.first().isUpperCase()) {
+                        pojResult.substring(0, 1).uppercase() + pojResult.substring(1)
+                    } else {
+                        pojResult
+                    }
+                } else {
+                    s
+                }
+            }
+
+            result.append(converted)
+            if (separator.isNotEmpty()) {
+                result.append(separator)
+            }
+        }
+        return result.toString()
     }
 }

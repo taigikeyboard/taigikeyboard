@@ -167,7 +167,7 @@ object CopyrightDataSource {
                 )
             )
         ),
-        // 8. 腔口補充辭典
+        // 8. 腔口補充資料
         CopyrightPage(
             id = 9,
             title = Tab1Texts.accentDict,

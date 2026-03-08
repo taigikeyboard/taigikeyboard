@@ -32,6 +32,7 @@ import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import com.siansiansu.taigikeyboard.util.*
@@ -157,6 +158,12 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // Initialize user frequency service
         UserFrequencyService.init(this)
 
+        // Initialize custom dictionary service and seed defaults on first install
+        CustomDictionaryService.init(this)
+        serviceScope.launch {
+            CustomDictionaryService.seedDefaultEntryIfEmpty()
+        }
+
         super.onCreate()
         textInputManager.onCreate()
         mediaInputManager.onCreate()
@@ -204,11 +211,13 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
                 if (navBarHeight > 0) {
                     // 使用 padding 而不是 margin，讓背景可以延伸到導覽列區域
+                    // Slightly reduce padding so keyboard sits closer to nav bar
+                    val adjustedHeight = (navBarHeight * 0.90f).toInt()
                     innerContainer.setPadding(
                         innerContainer.paddingLeft,
                         innerContainer.paddingTop,
                         innerContainer.paddingRight,
-                        navBarHeight
+                        adjustedHeight
                     )
                     innerContainer.requestLayout()
 

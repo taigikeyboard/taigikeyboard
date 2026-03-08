@@ -41,8 +41,9 @@ object SuggestionCaseTransformer {
         capsLock: Boolean,
         inputMode: ToneConverterModels.InputMode
     ): TaigiWord {
-        // NextWord 候選詞（id < 0）不需轉換
-        if (word.id < 0) {
+        // NextWord / English suggestions (id < 0) skip case transform,
+        // but custom dictionary entries (id == -2) should be transformed
+        if (word.id < 0 && word.id != -2) {
             return word
         }
 

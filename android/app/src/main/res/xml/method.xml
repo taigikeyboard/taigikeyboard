@@ -3,4 +3,11 @@
     android:icon="@mipmap/ic_launcher"
     android:isDefault="false"
     android:settingsActivity="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-    android:supportsSwitchingToNextInputMethod="true"/>
+    android:supportsSwitchingToNextInputMethod="true">
+
+    <subtype
+        android:label="@string/app_name"
+        android:imeSubtypeLocale="nan_TW"
+        android:imeSubtypeMode="keyboard" />
+
+</input-method>

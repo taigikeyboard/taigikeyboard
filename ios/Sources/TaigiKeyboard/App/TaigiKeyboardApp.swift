@@ -12,6 +12,11 @@ struct TaigiKeyboardApp: App {
         // 設定 KeyboardKit 使用 App Group 持久化設定
         // 必須在任何 @AppStorage 存取之前呼叫
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
+
+        // Seed custom dictionary default entries on first install only
+        Task {
+            try? await CustomDictionaryService.shared.seedDefaultEntryIfEmpty()
+        }
     }
 
     var body: some Scene {

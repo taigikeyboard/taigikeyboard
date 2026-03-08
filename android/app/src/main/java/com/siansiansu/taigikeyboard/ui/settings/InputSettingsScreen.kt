@@ -22,17 +22,27 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import kotlinx.coroutines.launch
+import com.siansiansu.taigikeyboard.diagnostics.DiagnosticService
+import com.siansiansu.taigikeyboard.localization.DiagnosticTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -51,9 +61,10 @@ fun InputSettingsScreen(
     resetCounter: Int
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showResetDialog by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
-
     // Force recomposition when resetCounter changes (after settings reset)
     val currentInputMode = remember(resetCounter) { prefs.inputMode }
     val currentOutputBoth = remember(resetCounter) { prefs.outputBothScripts }
@@ -184,6 +195,63 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             doubleNN = it
                             prefs.enableDoubleTapNN = it
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Diagnostic info card
+                Text(
+                    text = languageManager.text(DiagnosticTexts.sectionTitle),
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
+                SettingsCard {
+                    ActionRow(
+                        label = languageManager.text(DiagnosticTexts.copy),
+                        onClick = {
+                            scope.launch {
+                                val info = DiagnosticService.gather(context)
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                clipboard.setPrimaryClip(
+                                    ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted())
+                                )
+                                Toast.makeText(context, languageManager.text(DiagnosticTexts.copied), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    ActionRow(
+                        label = languageManager.text(DiagnosticTexts.share),
+                        onClick = {
+                            scope.launch {
+                                val info = DiagnosticService.gather(context)
+                                val sendIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, info.formatted())
+                                    type = "text/plain"
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, null))
+                            }
+                        }
+                    )
+                    SettingsDivider()
+                    ActionRow(
+                        label = languageManager.text(DiagnosticTexts.email),
+                        onClick = {
+                            scope.launch {
+                                val info = DiagnosticService.gather(context)
+                                val subject = Uri.encode("Taigi Keyboard Bug Report (v${info.appVersion})")
+                                val body = Uri.encode(info.formatted())
+                                val uri = Uri.parse("mailto:info@taigikeyboard.tw?subject=$subject&body=$body")
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     )
                 }

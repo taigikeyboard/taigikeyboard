@@ -105,7 +105,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
             // Segment continuous input and normalize for Trie search
             let searchInput = buildSearchKey(from: rawInput)
-            let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, limit: 100)
+            let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, limit: 100, rawInput: rawInput)
 
             // Apply context boost: promote candidates matching bigram predictions from lastSelectedWord
             let contextBoostedWords = await applyContextBoost(words: words)

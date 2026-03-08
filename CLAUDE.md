@@ -30,6 +30,8 @@ taigikeyboard/
 1. **No unsolicited implementation** - Confirm with user before any feature or file changes
 2. **No arbitrary removal** - Confirm with user before removing any functionality
 3. **Follow YAGNI** - Only implement what's currently needed, keep it simple
+4. **No project config modification** - `.xcodeproj`, `.xcworkspace`, `.pbxproj`, `build.gradle`, and other project/build configuration files must be modified manually by the user. AI must never edit these files
+5. **Cross-platform alignment** - When porting logic between iOS and Android, align on **intended behavior** (what the user should see), not on **API calls**. iOS and Android have different platform semantics (e.g. marked text vs composing text). Always: (1) define the expected behavior first, (2) verify each platform's API achieves that behavior independently, (3) document in code comments when the same behavior requires different implementation per platform
 
 ## Communication Guidelines
 

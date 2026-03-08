@@ -35,6 +35,14 @@ enum Tab4Texts {
     static let resetSettingsMessage = LocalizedText(hanji: "這个動作會恢復所有設定，敢欲繼續？")
     static let resetSuccess = LocalizedText(hanji: "設定已恢復")
 
+    // MARK: - 裝置資訊
+
+    static let diagnosticSectionTitle = LocalizedText(hanji: "裝置資訊")
+    static let diagnosticCopy = LocalizedText(hanji: "Khó͘-phih 裝置資訊")
+    static let diagnosticCopied = LocalizedText(hanji: "已 khó͘-phih")
+    static let diagnosticShare = LocalizedText(hanji: "分享裝置資訊")
+    static let diagnosticEmail = LocalizedText(hanji: "Email 回報問題")
+
     // MARK: - Debug 模式
 
     #if DEBUG

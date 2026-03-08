@@ -115,6 +115,13 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.2", "2026/03/08", [
+            LocalizedText(hanji: "Added custom dictionary for adding your own words."),
+            LocalizedText(hanji: "Added diagnostic info for easier bug reporting."),
+            LocalizedText(hanji: "Fixed custom dictionary entries not appearing in search results."),
+            LocalizedText(hanji: "Fixed custom dictionary capitalization not matching other candidates."),
+            LocalizedText(hanji: "Fixed word-grouped POJ display conversion."),
+        ]),
         ("3.4.1", "2026/02/26", [
             LocalizedText(hanji: "Added tone diacritic hints above number keys."),
             LocalizedText(hanji: "Added punctuation hints on MOE1/MOE2 layout keys."),
@@ -204,7 +211,7 @@ enum Tab1Texts {
     static let sttiCopyright = LocalizedText(hanji: "© 教育部")
     static let ogdlTaiwanLicense = LocalizedText(hanji: "OGDL-Taiwan-1.0")
 
-    // 腔口補充辭典
-    static let accentDict = LocalizedText(hanji: "腔口補充辭典")
+    // 腔口補充資料
+    static let accentDict = LocalizedText(hanji: "腔口補充資料")
     static let accentDictCredit = LocalizedText(hanji: "「實齋」整理、提供")
 }

@@ -11,17 +11,20 @@
 - 5_台華線頂對照典/data/taihoa.csv
 - 6_台日大辭典/data/taijit.csv
 - 7_台語工藝詞庫/data/kungge.csv
+- Khiin 詞頻資料（補充不在其他詞庫中的詞條）
 
 輸出：
 - output/dictionary.csv
 """
 
+import csv
 import os
 import sys
 import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.logging_utils import setup_logging, log_header
+from common.frequency import load_frequency_map, get_frequency
 
 # 基準目錄（dictionary2/）
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,19 +74,34 @@ def main():
     merged_df = pd.concat(all_dfs, ignore_index=True)
     logger.info(f"\n  Total before merge: {len(merged_df)} records")
 
-    # 去重複：相同 (hanzi, tl) 合併來源欄位
-    # dropna=False: 保留 hanzi 為空（NaN）的詞條（台語常見純羅馬字詞）
+    # 建立正規化 key（空白→連字符）用於跨辭典去重
+    # 官方辭典 tl 可能含空白（如 "m̄ bat"），非官方辭典為連字符（如 "m̄-bat"）
+    # 去重時視為同一筆，但保留官方版本（含空白）的 tl
+    OFFICIAL_SOURCES = ["kautian", "taigitv", "kungge"]
+    merged_df["_tl_key"] = merged_df["tl"].str.replace(" ", "-", regex=False)
+    merged_df["_is_official"] = merged_df[OFFICIAL_SOURCES].any(axis=1)
+
+    # 排序：官方辭典排在前面，確保 groupby 的 "first" 取到官方版本
+    merged_df = merged_df.sort_values("_is_official", ascending=False, ignore_index=True)
+
+    # 去重複：相同 (hanzi, _tl_key) 合併來源欄位
+    # dropna=False: 確保 groupby 不會自動排除含 NaN 的列
     agg_dict = {}
     for col in merged_df.columns:
-        if col in ["hanzi", "tl"]:
+        if col in ["hanzi", "_tl_key"]:
             continue  # groupby key
+        elif col in ["_is_official"]:
+            continue  # temp column
         elif col in SOURCE_COLUMNS:
             agg_dict[col] = "any"
         elif col == "frequency":
             agg_dict[col] = "max"
         else:
             agg_dict[col] = "first"
-    result_df = merged_df.groupby(["hanzi", "tl"], as_index=False, dropna=False).agg(agg_dict)
+    result_df = merged_df.groupby(["hanzi", "_tl_key"], as_index=False, dropna=False).agg(agg_dict)
+
+    # 移除臨時欄位
+    result_df = result_df.drop(columns=["_tl_key"])
 
     # 排序：依 frequency 降序
     result_df = result_df.sort_values(
@@ -93,6 +111,18 @@ def main():
     )
 
     logger.info(f"  After dedup: {len(result_df)} records")
+
+    # 補入 Khiin 獨有的詞條（不屬於任何辭典來源）
+    khiin_new = _load_khiin_new_entries(result_df, BASE_DIR, logger)
+    if khiin_new is not None and len(khiin_new) > 0:
+        result_df = pd.concat([result_df, khiin_new], ignore_index=True)
+        # Re-sort
+        result_df = result_df.sort_values(
+            ["frequency", "hanzi", "tl"],
+            ascending=[False, True, True],
+            ignore_index=True
+        )
+        logger.info(f"  After Khiin supplement: {len(result_df)} records")
 
     # 統計來源
     logger.info(f"\n  [source statistics]")
@@ -115,6 +145,108 @@ def main():
         logger.info(f"    {row['hanzi']}: {row['tl']} ({row['frequency']}) [{', '.join(sources)}]")
 
     logger.info(f"\nSaved: {output_path}")
+
+
+def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: str, logger) -> pd.DataFrame:
+    """
+    載入 Khiin 詞頻資料中不在現有詞庫的詞條
+
+    這些詞條的所有 source column 都是 False，不會出現在 App 的辭典開關設定中。
+    """
+    from kesi import Ku
+    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.notone import remove_tone
+    from common.abbrev import extract_abbrev
+
+    freq_path = os.path.join(base_dir, "0_其他資料", "khiin_frequency.csv")
+    conv_path = os.path.join(base_dir, "0_其他資料", "khiin_conversions.csv")
+
+    if not os.path.exists(freq_path) or not os.path.exists(conv_path):
+        logger.warning("  [skip] Khiin frequency files not found")
+        return None
+
+    # Load frequency
+    freq = {}
+    with open(freq_path) as f:
+        for row in csv.DictReader(f):
+            freq[row["input"]] = int(row["freq"])
+
+    # Load all hanzi variants per input
+    all_hanzi = {}
+    with open(conv_path) as f:
+        for row in csv.DictReader(f):
+            inp = row["input"]
+            output = row["output"]
+            if any(
+                "\u4e00" <= c <= "\u9fff"
+                or "\u3400" <= c <= "\u4dbf"
+                or ord(c) > 0x20000
+                for c in output
+            ):
+                all_hanzi.setdefault(inp, set()).add(output)
+
+    # Build set of existing (hanzi, tl_normalized) pairs
+    # Normalize spaces to hyphens for comparison
+    existing_keys = set()
+    for _, row in existing_df.iterrows():
+        tl_key = str(row["tl"]).lower().replace(" ", "-")
+        existing_keys.add((str(row["hanzi"]), tl_key))
+
+    # Load frequency map for get_frequency
+    freq_map_path = os.path.join(base_dir, "0_其他資料", "char_freq_merged.txt")
+    freq_map = load_frequency_map(freq_map_path)
+
+    # Find new entries
+    new_rows = []
+    for inp, f in freq.items():
+        hanzi_set = all_hanzi.get(inp)
+        if not hanzi_set:
+            continue
+
+        try:
+            ku = Ku(inp)
+            tl = ku.TL().hanlo.lower().replace(" ", "-")
+            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+        except Exception:
+            continue
+
+        for hanzi in hanzi_set:
+            if (hanzi, tl) in existing_keys:
+                continue
+
+            try:
+                tl_num = to_numeric_tone(tl)
+                poj_num = to_numeric_tone(poj, ascii_only=True)
+            except Exception:
+                continue
+
+            frequency = get_frequency(hanzi, tl, freq_map)
+
+            tl_notone = remove_tone(tl_num)
+            poj_notone = remove_tone(poj_num)
+            tl_abbrev = extract_abbrev(tl)
+            poj_abbrev = extract_abbrev(poj)
+
+            new_rows.append({
+                "tl": tl,
+                "hanzi": hanzi,
+                "frequency": frequency,
+                "poj": poj,
+                "tl_num": tl_num,
+                "poj_num": poj_num,
+                "tl_notone": tl_notone,
+                "poj_notone": poj_notone,
+                "tl_abbrev": tl_abbrev,
+                "poj_abbrev": poj_abbrev,
+                "is_variant": False,
+                **{col: False for col in SOURCE_COLUMNS},
+            })
+            existing_keys.add((hanzi, tl))
+
+    if new_rows:
+        logger.info(f"  [khiin] Added {len(new_rows)} new entries from Khiin")
+
+    return pd.DataFrame(new_rows) if new_rows else None
 
 
 if __name__ == "__main__":

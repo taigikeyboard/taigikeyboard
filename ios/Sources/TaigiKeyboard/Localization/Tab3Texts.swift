@@ -18,8 +18,33 @@ enum Tab3Texts {
 
     static let dictionarySettings = LocalizedText(hanji: "詞庫管理")
     static let customDictionary = LocalizedText(hanji: "自訂詞庫")
-    static let comingSoon = LocalizedText(hanji: "當 leh 開發")
     static let variantDictionary = LocalizedText(hanji: "異用字")
+
+    // MARK: - 自訂詞庫
+
+    static let customDictEmpty = LocalizedText(hanji: "揤 + 符號加入自訂詞")
+    static let addEntry = LocalizedText(hanji: "增加詞")
+    static let editEntry = LocalizedText(hanji: "編輯詞")
+    static let save = LocalizedText(hanji: "儉起來")
+    static let ok = LocalizedText(hanji: "好")
+    static let romanLabel = LocalizedText(hanji: "拍字")
+    static let romanPlaceholder = LocalizedText(hanji: "範例：gâu-tsá")
+    static let hanziLabel = LocalizedText(hanji: "對應")
+    static let hanziPlaceholder = LocalizedText(hanji: "範例：𠢕早")
+    static let entriesCount = LocalizedText(hanji: "个")
+    static let deleteAll = LocalizedText(hanji: "刪除全部")
+    static let deleteAllMessage = LocalizedText(hanji: "敢確定欲刪除所有自訂詞？")
+
+    // MARK: - 匯入匯出
+
+    static let importCSV = LocalizedText(hanji: "匯入 CSV")
+    static let exportCSV = LocalizedText(hanji: "匯出 CSV")
+    static let exportSuccess = LocalizedText(hanji: "CSV 順利匯出")
+    static let importResult = LocalizedText(hanji: "匯入 %d 个成功，%d 个跳過")
+    static let invalidCSVFormat = LocalizedText(hanji: "檔案格式無正確，請使用 CSV 格式")
+    static let importExportTitle = LocalizedText(hanji: "匯入匯出")
+    static let importExportHelpTitle = LocalizedText(hanji: "匯入匯出說明")
+    static let importExportHelp = LocalizedText(hanji: "第 1 欄囥輸入 ê 詞 (羅馬字), 第 2 欄囥對應 (漢字/日文字)，若第 1 行有標題，會自動跳過。")
 
     // MARK: - 清除資料
 
@@ -53,6 +78,7 @@ enum Tab3Texts {
     // 學科術語辭典
     static let sttiDict = LocalizedText(hanji: "學科術語辭庫")
 
-    // 腔口補充辭典
-    static let khpooDict = LocalizedText(hanji: "腔口補充辭典")
+    // 腔口補充資料
+    static let khpooDict = LocalizedText(hanji: "腔口補充資料")
+
 }

@@ -312,7 +312,7 @@ class SmartbarManager private constructor() :
      */
     private fun splitCompoundWord(word: String): List<String> {
         if (word.isEmpty()) return emptyList()
-        return word.split("-").filter { it.isNotEmpty() }
+        return word.split("-", " ").filter { it.isNotEmpty() }
     }
 
     /**

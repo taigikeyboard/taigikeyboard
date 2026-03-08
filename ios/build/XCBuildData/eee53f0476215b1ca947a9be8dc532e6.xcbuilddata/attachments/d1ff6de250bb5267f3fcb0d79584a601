@@ -1,0 +1,16 @@
+{
+  "" : {
+    "const-values" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary.swiftconstvalues",
+    "dependencies" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary.d",
+    "diagnostics" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary.dia",
+    "emit-module-dependencies" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary-emit-module.dia",
+    "pch" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies-primary.swiftdeps"
+  },
+  "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/Dependencies/KeyboardKitDependencies/KeyboardKitDependencies.swift" : {
+    "index-unit-output-path" : "/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies.o",
+    "llvm-bc" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies.bc",
+    "object" : "/Users/alexsu/Library/Developer/Xcode/DerivedData/TaigiKeyboard-bfhjxqtrgzvhcoaztbgmhqedugky/SourcePackages/checkouts/KeyboardKit/build/KeyboardKit.build/Release-iphoneos/KeyboardKitDependencies.build/Objects-normal/arm64/KeyboardKitDependencies.o"
+  }
+}

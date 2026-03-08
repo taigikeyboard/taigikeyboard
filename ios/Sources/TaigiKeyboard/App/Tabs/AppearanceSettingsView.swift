@@ -194,23 +194,25 @@ struct AppearanceSettingsView: View {
         defaultValue: Double = 1.0,
         onChanged: @escaping (Double) -> Void
     ) -> some View {
-        HStack {
-            Text(label)
-                .fixedSize()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                Spacer()
+                if value.wrappedValue != defaultValue {
+                    Button {
+                        value.wrappedValue = defaultValue
+                        onChanged(defaultValue)
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             Slider(value: value, in: scaleRange, step: scaleStep)
                 .onChange(of: value.wrappedValue) { _, newValue in
                     onChanged(newValue)
                 }
-            if value.wrappedValue != defaultValue {
-                Button {
-                    value.wrappedValue = defaultValue
-                    onChanged(defaultValue)
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -218,23 +220,25 @@ struct AppearanceSettingsView: View {
 
     @ViewBuilder
     private func radiusSliderRow() -> some View {
-        HStack {
-            Text(languageManager.text(Tab2Texts.keyCornerRadius))
-                .fixedSize()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(languageManager.text(Tab2Texts.keyCornerRadius))
+                Spacer()
+                if keyCornerRadius != Self.defaultKeyCornerRadius {
+                    Button {
+                        keyCornerRadius = Self.defaultKeyCornerRadius
+                        settings.keyCornerRadius = Self.defaultKeyCornerRadius
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             Slider(value: $keyCornerRadius, in: radiusRange, step: radiusStep)
                 .onChange(of: keyCornerRadius) { _, newValue in
                     settings.keyCornerRadius = newValue
                 }
-            if keyCornerRadius != Self.defaultKeyCornerRadius {
-                Button {
-                    keyCornerRadius = Self.defaultKeyCornerRadius
-                    settings.keyCornerRadius = Self.defaultKeyCornerRadius
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -242,23 +246,25 @@ struct AppearanceSettingsView: View {
 
     @ViewBuilder
     private func borderWidthSliderRow() -> some View {
-        HStack {
-            Text(languageManager.text(Tab2Texts.keyBorderWidth))
-                .fixedSize()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(languageManager.text(Tab2Texts.keyBorderWidth))
+                Spacer()
+                if keyBorderWidth != Self.defaultKeyBorderWidth {
+                    Button {
+                        keyBorderWidth = Self.defaultKeyBorderWidth
+                        settings.keyBorderWidth = Self.defaultKeyBorderWidth
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             Slider(value: $keyBorderWidth, in: borderWidthRange, step: borderWidthStep)
                 .onChange(of: keyBorderWidth) { _, newValue in
                     settings.keyBorderWidth = newValue
                 }
-            if keyBorderWidth != Self.defaultKeyBorderWidth {
-                Button {
-                    keyBorderWidth = Self.defaultKeyBorderWidth
-                    settings.keyBorderWidth = Self.defaultKeyBorderWidth
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 

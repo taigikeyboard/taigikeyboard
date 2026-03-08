@@ -1,14 +1,11 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -40,9 +37,13 @@ class CandidateAdapter(
     private val subtitleColor: Int by lazy {
         getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor)
     }
+    private val primaryColor: Int by lazy {
+        getColorFromAttr(context, R.attr.smartbar_candidate_fgColor)
+    }
 
     // 動態計算的文字大小
-    private var candidateTextSizeSp: Float = 16f
+    private var titleTextSizeSp: Float = 16f
+    private var subtitleTextSizeSp: Float = 11f
 
     // Candidate text size scale factor (from appearance settings)
     private var textSizeScale: Float = 1.0f
@@ -54,9 +55,29 @@ class CandidateAdapter(
      * 設定候選詞文字大小（根據 Smartbar 高度計算）
      */
     fun setTextSize(smartbarHeight: Int) {
-        val candidateTextSizePx = smartbarHeight * 0.46f * textSizeScale
-        val scaledDensity = context.resources.displayMetrics.density * context.resources.configuration.fontScale
-        candidateTextSizeSp = candidateTextSizePx / scaledDensity
+        val density = context.resources.displayMetrics.density
+        val fontScale = context.resources.configuration.fontScale
+        val scaledDensity = density * fontScale
+
+        // Available height = smartbar minus vertical padding and margins
+        // Padding: (padding/3) top + (padding/3) bottom ≈ padding*2/3
+        // Margin: margin*2 top + margin*2 bottom = margin*4
+        val verticalPaddingPx = padding * 2 / 3
+        val verticalMarginPx = margin * 4
+        val subtitleGapPx = 2 * density  // ~2dp gap between title and subtitle
+        val availablePx = (smartbarHeight - verticalPaddingPx - verticalMarginPx - subtitleGapPx)
+            .coerceAtLeast(20f * density)
+
+        // Line height factor: with includeFontPadding=false, actual rendered
+        // height is ~1.15x font size (vs ~1.3x with default font padding)
+        val lineHeightFactor = 1.15f
+
+        // Partition: title 58%, subtitle 42%, then shrink by line height factor
+        val titlePx = availablePx * 0.58f * textSizeScale / lineHeightFactor
+        val subtitlePx = availablePx * 0.42f * textSizeScale / lineHeightFactor
+
+        titleTextSizeSp = (titlePx / scaledDensity).coerceIn(10f, 24f)
+        subtitleTextSizeSp = (subtitlePx / scaledDensity).coerceIn(8f, 17f)
     }
 
     /**
@@ -84,7 +105,9 @@ class CandidateAdapter(
     }
 
     inner class CandidateViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val button: Button = itemView.findViewById(R.id.candidate_button)
+        private val container: LinearLayout = itemView.findViewById(R.id.candidate_container)
+        private val titleView: TextView = itemView.findViewById(R.id.candidate_title)
+        private val subtitleView: TextView = itemView.findViewById(R.id.candidate_subtitle)
 
         // 快取的 Typeface（避免重複載入）
         private var cachedTypeface: android.graphics.Typeface? = null
@@ -94,104 +117,75 @@ class CandidateAdapter(
             val isSwapped = isTranslateSwapped()
             val currentFontType = fontType()
 
-            // 設定按鈕樣式
-            button.apply {
-                // 動態設定文字大小
-                textSize = candidateTextSizeSp
+            // 設定字體（快取以避免重複載入）
+            if (cachedFontType != currentFontType) {
+                cachedTypeface = FontUtils.getTypefaceByType(currentFontType, context)
+                cachedFontType = currentFontType
+            }
 
-                // 設定背景（第 0 個位置使用不同背景）
-                val isNextWordCandidate = word.id < 0
-                setBackgroundResource(
-                    if (position == 0 && !isNextWordCandidate) R.drawable.candidate_composing_background
-                    else R.drawable.candidate_button_background
-                )
+            // 設定背景（第 0 個位置使用不同背景）
+            val isNextWordCandidate = word.id < 0
+            container.setBackgroundResource(
+                if (position == 0 && !isNextWordCandidate) R.drawable.candidate_composing_background
+                else R.drawable.candidate_button_background
+            )
 
-                // 設定 padding 和 margin
-                val reducedVerticalPadding = padding / 2
-                setPadding(padding, reducedVerticalPadding, padding, reducedVerticalPadding)
+            // 設定 padding 和 margin
+            val reducedVerticalPadding = padding / 3
+            container.setPadding(padding, reducedVerticalPadding, padding, reducedVerticalPadding)
 
-                // 設定 margin
-                val lp = layoutParams as? RecyclerView.LayoutParams ?: RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                val horizontalSpacing = margin * 5
-                val verticalSpacing = margin * 6
-                lp.setMargins(horizontalSpacing, verticalSpacing, horizontalSpacing, verticalSpacing)
-                layoutParams = lp
+            val lp = container.layoutParams as? RecyclerView.LayoutParams ?: RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            val horizontalSpacing = margin * 5
+            val verticalSpacing = margin * 2
+            lp.setMargins(horizontalSpacing, verticalSpacing, horizontalSpacing, verticalSpacing)
+            container.layoutParams = lp
 
-                // 設定文字（使用 SpannableString 顯示主副標題）
-                text = buildDisplayText(word, isSwapped)
+            // Determine title and subtitle content
+            val titleText: String
+            val subtitleText: String?
 
-                // 設定字體（快取以避免重複載入）
-                if (cachedFontType != currentFontType) {
-                    cachedTypeface = FontUtils.getTypefaceByType(currentFontType, context)
-                    cachedFontType = currentFontType
+            when {
+                word.hanzi.isNullOrEmpty() -> {
+                    titleText = word.roman
+                    subtitleText = null
                 }
-                typeface = cachedTypeface
-
-                // Apply custom text color if set
-                customTextColor?.let { setTextColor(it) }
-
-                // 設定點擊事件
-                setOnClickListener {
-                    onCandidateClick(word, position)
+                isSwapped -> {
+                    titleText = word.hanzi
+                    subtitleText = word.roman
+                }
+                else -> {
+                    titleText = word.roman
+                    subtitleText = word.hanzi
                 }
             }
-        }
 
-        /**
-         * 建立顯示文字（主標題 + 副標題）
-         */
-        private fun buildDisplayText(word: TaigiWord, isSwapped: Boolean): CharSequence {
-            val effectiveSubtitleColor = customTextColor ?: subtitleColor
-            return when {
-                // 沒有漢字：只顯示羅馬字
-                word.hanzi.isNullOrEmpty() -> word.roman
+            // Title
+            titleView.apply {
+                text = titleText
+                textSize = titleTextSizeSp
+                typeface = cachedTypeface
+                setTextColor(customTextColor ?: primaryColor)
+            }
 
-                // 翻譯交換模式：漢字為主，羅馬字為副
-                isSwapped -> {
-                    SpannableStringBuilder().apply {
-                        append(word.hanzi)
-                        append(" ")
-                        val subtitleStart = length
-                        append(word.roman)
-                        setSpan(
-                            RelativeSizeSpan(0.70f),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        setSpan(
-                            ForegroundColorSpan(effectiveSubtitleColor),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
+            // Subtitle
+            if (subtitleText != null && subtitleText != titleText) {
+                subtitleView.apply {
+                    visibility = View.VISIBLE
+                    text = subtitleText
+                    textSize = subtitleTextSizeSp
+                    typeface = cachedTypeface
+                    setTextColor(customTextColor ?: subtitleColor)
                 }
+            } else {
+                subtitleView.visibility = View.GONE
+            }
 
-                // 預設模式：羅馬字為主，漢字為副
-                else -> {
-                    SpannableStringBuilder().apply {
-                        append(word.roman)
-                        append(" ")
-                        val subtitleStart = length
-                        append(word.hanzi)
-                        setSpan(
-                            RelativeSizeSpan(0.70f),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                        setSpan(
-                            ForegroundColorSpan(effectiveSubtitleColor),
-                            subtitleStart,
-                            length,
-                            Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                        )
-                    }
-                }
+            // 設定點擊事件
+            container.setOnClickListener {
+                onCandidateClick(word, position)
             }
         }
     }

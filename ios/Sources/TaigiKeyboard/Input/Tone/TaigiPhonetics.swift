@@ -44,10 +44,10 @@ enum TaigiPhonetics {
         "uai", "uaih", "uainn", "uainnh",
         "m", "mh", "ng", "ngh",
         "ioo", "iooh", "iai", "iaih",
-        "er", "erh", "erm", "ere", "ereh", "eng",
-        "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "ie",
+        "er", "erh", "erk", "erm", "ere", "ereh", "eng",
+        "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "iri", "ie",
         "or", "orh", "ior", "iorh",
-        "uang", "oi", "oih", "ee",
+        "uang", "oi", "oih", "ee", "eeh",
     ]
 
     /// Tone number -> combining mark (NFD). Tones 1 and 4 have no mark.
@@ -355,31 +355,60 @@ enum TaigiPhonetics {
     }
 
     /// Convert TL display text (with diacritics) to POJ display text.
-    /// Splits by "-", for each syllable: strip tone -> parse -> toPOJ.
+    /// Splits by "-" and " " (word boundary), for each syllable: strip tone -> parse -> toPOJ.
+    /// Preserves original separators (space = word boundary, hyphen = syllable boundary).
     static func tlDisplayToPOJDisplay(_ text: String) -> String {
         guard !text.isEmpty else { return "" }
 
-        let syllables = text.split(separator: "-", omittingEmptySubsequences: false)
-        let converted = syllables.map { syllable -> String in
-            let s = String(syllable)
-            guard !s.isEmpty else { return "" }
+        // Split while preserving separators (space and hyphen)
+        var tokens: [(text: String, separator: String)] = []
+        var current = ""
+        for char in text {
+            if char == "-" || char == " " {
+                tokens.append((text: current, separator: String(char)))
+                current = ""
+            } else {
+                current.append(char)
+            }
+        }
+        tokens.append((text: current, separator: ""))
+
+        var result = ""
+        for (i, token) in tokens.enumerated() {
+            let s = token.text
+            if s.isEmpty {
+                // Preserve separator (e.g., "--" for 輕聲)
+                if i < tokens.count - 1 || !token.separator.isEmpty {
+                    result += token.separator
+                }
+                continue
+            }
 
             let (bare, toneNum) = stripToneMark(s)
-            guard !bare.isEmpty else { return s }
-
-            let normalized = normalizeToTL(bare.lowercased())
-            guard let (initial, final) = splitInitialFinal(normalized) else { return s }
-
-            let tone = toneNum.isEmpty ? (isStopTone(final) ? "4" : "1") : toneNum
-            let pojResult = toPOJ(initial: initial, final: final, tone: tone)
-
-            // Restore case
-            if let first = s.first, first.isUppercase {
-                return pojResult.prefix(1).uppercased() + pojResult.dropFirst()
+            let converted: String
+            if bare.isEmpty {
+                converted = s
+            } else {
+                let normalized = normalizeToTL(bare.lowercased())
+                if let (initial, final) = splitInitialFinal(normalized) {
+                    let tone = toneNum.isEmpty ? (isStopTone(final) ? "4" : "1") : toneNum
+                    let pojResult = toPOJ(initial: initial, final: final, tone: tone)
+                    if let first = s.first, first.isUppercase {
+                        converted = pojResult.prefix(1).uppercased() + pojResult.dropFirst()
+                    } else {
+                        converted = pojResult
+                    }
+                } else {
+                    converted = s
+                }
             }
-            return pojResult
+
+            result += converted
+            if !token.separator.isEmpty {
+                result += token.separator
+            }
         }
-        return converted.joined(separator: "-")
+        return result
     }
 }
 

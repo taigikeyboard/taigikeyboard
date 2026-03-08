@@ -76,6 +76,13 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
+        <!-- Custom Dictionary Activity -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.CustomDictionaryActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
         <!-- Setup Guide Activity -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.SetupGuideActivity"

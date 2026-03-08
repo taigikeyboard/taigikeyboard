@@ -41,6 +41,13 @@ struct Tab3: View {
     var body: some View {
         NavigationStack {
             Form {
+                // 自訂詞庫區塊
+                Section {
+                    NavigationLink(destination: CustomDictionaryView()) {
+                        Text(languageManager.text(Tab3Texts.customDictionary))
+                    }
+                }
+
                 // 詞庫列表
                 Section {
                     Toggle(languageManager.text(Tab3Texts.moeDict), isOn: $moeDictEnabled)
@@ -95,12 +102,6 @@ struct Tab3: View {
                         .onChange(of: variantEnabled) { _, newValue in
                             settings.variantEnabled = newValue
                         }
-                }
-
-                // 自訂詞庫區塊
-                Section(languageManager.text(Tab3Texts.customDictionary)) {
-                    Text(languageManager.text(Tab3Texts.comingSoon))
-                        .foregroundColor(.secondary)
                 }
 
                 // 清除資料區塊

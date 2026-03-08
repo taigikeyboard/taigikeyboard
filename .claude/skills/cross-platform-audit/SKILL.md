@@ -120,6 +120,20 @@ Example of what to catch:
 | returns "" for invalid mode input            | returns segments without mode check    ❌   |
 ```
 
+**Platform API semantics check** — When both platforms call similarly-named APIs, verify they produce the **same observable behavior**. iOS and Android platform APIs with similar names can have different semantics. Flag cases where code was copied across platforms without accounting for this.
+
+Example of what to catch:
+```
+| Behavior: "remove composing text"         | iOS                              | Android                            |
+|-------------------------------------------|----------------------------------|------------------------------------|
+| API used                                  | setMarkedText("") + unmarkText() | setComposingText("", 1)            |
+| Effect on committed text                  | marked text is committed first   | composing region removed directly  |
+| Extra deleteBackward() needed?            | YES (to remove committed text)   | NO (text already gone)             |
+| ↳ Having deleteSurroundingText here       | correct                          | BUG — deletes extra character      |
+```
+
+For each matched function that touches platform text APIs (InputConnection, TextDocumentProxy, marked/composing text), explicitly verify: does the same sequence of API calls produce the same user-visible result on both platforms?
+
 **Algorithm and constants check**:
 - Are the algorithms equivalent?
 - Are edge cases handled the same way?
@@ -201,6 +215,7 @@ Categorize all findings from 3a–3e into:
 | **Section gap** | UI section/card exists on one platform but not the other | Tab1 FAQ section missing on Android |
 | **Order mismatch** | Same sections exist on both but in different display order | Tab1 sections ordered differently |
 | **Theme divergence** | Same design token but different values (color hex, font size, spacing) | Primary color `#3A7BD5` (iOS) vs `#2196F3` (Android) |
+| **API semantic mismatch** | Same API pattern copied across platforms but different platform semantics cause different behavior | `deleteSurroundingText` after clearing composing text deletes extra char on Android but not iOS |
 | **Structural difference** | Unavoidable platform difference (framework, lifecycle, etc.) | KeyboardKit vs FlorisBoard, SwiftUI vs Fragment/XML |
 
 For each finding, note:
@@ -236,6 +251,7 @@ Output a structured report with this format:
 | Redundancies      | N     |
 | Naming mismatches | N     |
 | Test gaps         | N     |
+| API semantic       | N     |
 | Structural (OK)   | N     |
 
 ### API Surface Comparison

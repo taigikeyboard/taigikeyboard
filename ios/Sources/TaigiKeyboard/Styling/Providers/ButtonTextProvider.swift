@@ -12,11 +12,24 @@ class ButtonTextProvider {
         self.keyboardContext = keyboardContext
     }
 
+    /// Returns true if the hint is a TPS callout hint (larger hint, smaller main text).
+    func isTPSHint(for action: KeyboardAction) -> Bool {
+        guard SharedSettings.shared.keyboardLayoutType == .tps,
+              case let .character(char) = action else { return false }
+        return Callouts.TPSCallouts.actions[char] != nil
+    }
+
     /// Returns true if the hint is a text hint (smaller font), false for standalone diacritics (larger font).
     func isTextHint(for action: KeyboardAction) -> Bool {
         let layoutType = SharedSettings.shared.keyboardLayoutType
-        guard layoutType == .moe1 || layoutType == .moe2,
-              case let .character(char) = action else { return false }
+        guard case let .character(char) = action else { return false }
+
+        // TPS layout: callout hints are text hints
+        if layoutType == .tps {
+            return Callouts.TPSCallouts.actions[char] != nil
+        }
+
+        guard layoutType == .moe1 || layoutType == .moe2 else { return false }
         return char == "-" || char == "," || char == "，" || char == "." || char == "。"
     }
 
@@ -34,9 +47,17 @@ class ButtonTextProvider {
 
     func buttonHintText(for action: KeyboardAction) -> String? {
         let layoutType = SharedSettings.shared.keyboardLayoutType
-        guard layoutType != .tps,
-              SharedSettings.shared.inputMode != .english,
-              case let .character(char) = action else { return nil }
+        guard case let .character(char) = action else { return nil }
+
+        // TPS layout: show first callout variant as hint
+        if layoutType == .tps {
+            if let actions = Callouts.TPSCallouts.actions[char] {
+                return actions.first
+            }
+            return nil
+        }
+
+        guard SharedSettings.shared.inputMode != .english else { return nil }
 
         // Tone hints for number keys (all layouts except TPS)
         switch char {

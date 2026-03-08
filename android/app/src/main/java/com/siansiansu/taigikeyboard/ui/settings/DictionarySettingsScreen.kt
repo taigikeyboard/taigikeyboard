@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,7 +36,8 @@ import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 fun DictionarySettingsScreen(
     languageManager: LanguageManager,
     prefs: PrefHelper,
-    onClearCache: () -> Unit
+    onClearCache: () -> Unit,
+    onCustomDictionary: () -> Unit
 ) {
     // Observe language changes for reactive text updates
     val language by languageManager.currentLanguageFlow.collectAsState()
@@ -66,6 +69,17 @@ fun DictionarySettingsScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 40.dp)
             ) {
+
+            // Custom dictionary card (at top)
+            SettingsCard {
+                ActionRow(
+                    label = languageManager.text(Tab3Texts.customDictionary),
+                    onClick = onCustomDictionary,
+                    trailingIcon = Icons.AutoMirrored.Filled.ArrowForward
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
 
             // Dictionary switches card
             SettingsCard {
@@ -114,27 +128,6 @@ fun DictionarySettingsScreen(
                     label = languageManager.text(Tab3Texts.variantDictionary),
                     checked = prefs.variantEnabled,
                     onCheckedChange = { prefs.variantEnabled = it }
-                )
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            // Custom dictionary section header
-            Text(
-                text = languageManager.text(Tab3Texts.customDictionary),
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Custom dictionary "coming soon" card
-            SettingsCard {
-                Text(
-                    text = languageManager.text(Tab3Texts.comingSoon),
-                    modifier = Modifier.padding(24.dp),
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

@@ -35,7 +35,7 @@ struct Tab2: View {
                             Text(languageManager.text(Tab2Texts.appearanceSettings))
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.caption)
+                                .font(KeyboardModels.Fonts.appFont(.caption))
                                 .foregroundColor(.secondary)
                         }
                         .padding()
@@ -79,7 +79,7 @@ struct Tab2: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(header)
-                .font(.subheadline)
+                .font(KeyboardModels.Fonts.appFont(.subheadline))
                 .fontWeight(.semibold)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)
@@ -139,7 +139,7 @@ private struct LayoutOptionCard: View {
                             .fill(Color.black.opacity(0.5))
 
                         Text(subtitle ?? "")
-                            .font(.footnote)
+                            .font(KeyboardModels.Fonts.appFont(.footnote))
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -154,7 +154,7 @@ private struct LayoutOptionCard: View {
                             .frame(width: 36, height: 36)
                             .overlay(
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .bold))
+                                    .font(KeyboardModels.Fonts.appFont(size: 16).bold())
                                     .foregroundColor(.white)
                             )
                     }
@@ -168,13 +168,13 @@ private struct LayoutOptionCard: View {
                 // Title label
                 VStack(spacing: 2) {
                     Text(title)
-                        .font(.caption)
+                        .font(KeyboardModels.Fonts.appFont(.caption))
                         .fontWeight(.semibold)
                         .foregroundColor(isDisabled ? .secondary : .primary)
                         .lineLimit(1)
                     if let subtitle = subtitle, !isDisabled {
                         Text(subtitle)
-                            .font(.caption2)
+                            .font(KeyboardModels.Fonts.appFont(.caption2))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -198,10 +198,10 @@ private struct LayoutOptionCard: View {
                 .overlay(
                     VStack(spacing: 6) {
                         Image(systemName: "keyboard")
-                            .font(.system(size: 28))
+                            .font(KeyboardModels.Fonts.appFont(size: 28))
                             .foregroundColor(.secondary)
                         Text(title)
-                            .font(.caption2)
+                            .font(KeyboardModels.Fonts.appFont(.caption2))
                             .foregroundColor(.secondary)
                     }
                 )

@@ -18,7 +18,7 @@ final class DictionaryRepository: @unchecked Sendable {
         let taihoa: Bool    // 台華線頂對照典
         let sitbut: Bool    // 台灣植物名彙
         let stti: Bool      // 學科術語辭典
-        let khpoo: Bool     // 腔口補充辭典
+        let khpoo: Bool     // 腔口補充資料
         let variant: Bool   // 異用字
 
         /// 從 SharedSettings 讀取設定

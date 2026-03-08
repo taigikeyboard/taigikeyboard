@@ -98,11 +98,11 @@ struct CopyrightView: View {
                 websiteURL: "https://stti.moe.edu.tw/"
             )
 
-            // 腔口補充辭典
+            // 腔口補充資料
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(languageManager.text(Tab1Texts.accentDict))
-                        .font(.headline)
+                        .font(KeyboardModels.Fonts.appFont(.headline))
 
                     Text(languageManager.text(Tab1Texts.accentDictCredit))
                         .foregroundColor(.secondary)
@@ -129,13 +129,13 @@ private struct CopyrightSection: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 Text(languageManager.text(title))
-                    .font(.headline)
+                    .font(KeyboardModels.Fonts.appFont(.headline))
 
                 Text(languageManager.text(description))
                     .foregroundColor(.secondary)
 
                 Text(languageManager.text(license))
-                    .font(.caption)
+                    .font(KeyboardModels.Fonts.appFont(.caption))
                     .foregroundColor(.secondary)
                     .italic()
             }

@@ -377,6 +377,17 @@ object UserFrequencyService {
     }
 
     /**
+     * Returns total entry count, or -1 if DB is not open.
+     */
+    fun totalCount(): Int {
+        return try {
+            val db = dbHelper?.readableDatabase ?: return -1
+            val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
+            cursor.use { if (it.moveToFirst()) it.getInt(0) else -1 }
+        } catch (_: Exception) { -1 }
+    }
+
+    /**
      * 刪除資料庫
      */
     suspend fun deleteDatabase() = withContext(Dispatchers.IO) {

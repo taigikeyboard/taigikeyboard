@@ -17,10 +17,10 @@ def remove_diacritics(char: str) -> str:
 
 def extract_abbrev(syllable_string: str) -> str:
     """
-    提取音節首字母縮寫（使用帶連字符的原始欄位）
+    提取音節首字母縮寫（使用帶連字符或空白的原始欄位）
 
     Args:
-        syllable_string: 以 - 分隔的音節字串（如 guá-sī）
+        syllable_string: 以 - 或空白分隔的音節字串（如 guá-sī 或 m̄ bat）
 
     Returns:
         所有音節的首字母組合（小寫、無聲調），若少於兩個音節則回傳空字串
@@ -28,12 +28,14 @@ def extract_abbrev(syllable_string: str) -> str:
     範例:
         "guá-sī" → "gs"
         "guá-tsá-goá" → "gtg"
+        "m̄ bat" → "mb"
         "á" → "" (單音節不產生縮寫)
     """
     if not syllable_string or pd.isna(syllable_string):
         return ""
 
-    syllables = str(syllable_string).split("-")
+    import re
+    syllables = re.split(r"[-\s]+", str(syllable_string))
     syllables = [s for s in syllables if s]
 
     if len(syllables) < 2:

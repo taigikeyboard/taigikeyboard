@@ -126,6 +126,15 @@ object Tab1Texts {
     )
 
     val versionHistoryEntries = listOf(
+        VersionEntry("3.4.2", "2026/03/08", listOf(
+            LocalizedText(hanji = "Added custom dictionary for adding your own words."),
+            LocalizedText(hanji = "Added diagnostic info for easier bug reporting."),
+            LocalizedText(hanji = "Changed app font to 粉圓 (jf-openhuninn)."),
+            LocalizedText(hanji = "Redesigned candidate display with title and subtitle."),
+            LocalizedText(hanji = "Fixed custom dictionary entries not appearing in search results."),
+            LocalizedText(hanji = "Fixed custom dictionary capitalization not matching other candidates."),
+            LocalizedText(hanji = "Fixed word-grouped POJ display conversion."),
+        )),
         VersionEntry("3.4.1", "2026/02/26", listOf(
             LocalizedText(hanji = "Added tone diacritic hints above number keys."),
             LocalizedText(hanji = "Added punctuation hints on MOE1/MOE2 layout keys."),
@@ -213,7 +222,7 @@ object Tab1Texts {
     val sttiCopyright = LocalizedText(hanji = "© 教育部")
     val ogdlTaiwanLicense = LocalizedText(hanji = "OGDL-Taiwan-1.0")
 
-    // 腔口補充辭典
-    val accentDict = LocalizedText(hanji = "腔口補充辭典")
+    // 腔口補充資料
+    val accentDict = LocalizedText(hanji = "腔口補充資料")
     val accentDictCredit = LocalizedText(hanji = "「實齋」整理、提供")
 }

@@ -71,12 +71,21 @@ def remove_ellipsis(text):
     return text.strip()
 
 
-def normalize_roman(text):
-    """正規化羅馬字：Unicode NFC 正規化、空格轉連字符、轉小寫"""
+def normalize_roman(text, preserve_spaces=False):
+    """
+    正規化羅馬字：Unicode NFC 正規化、轉小寫
+
+    Args:
+        text: 羅馬字
+        preserve_spaces: True=保留空白（官方辭典），False=空白轉連字符（非官方辭典）
+    """
     if pd.isna(text):
         return text
     text = normalize_taibun(str(text))  # Unicode NFC + 教育部造字碼轉換
-    return text.replace(" ", "-").replace("\u3000", "-").lower()
+    text = text.replace("\u3000", " " if preserve_spaces else "-")
+    if not preserve_spaces:
+        text = text.replace(" ", "-")
+    return text.lower()
 
 
 def is_proverb(hanzi):
@@ -193,7 +202,7 @@ def contains_roman_in_hanzi(text):
     return False
 
 
-def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False):
+def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, check_roman_in_hanzi=False, preserve_spaces=False):
     """
     執行完整的資料清理流程
 
@@ -202,11 +211,22 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
         logger: Logger 實例（可選）
         max_syllables: 最大音節數，超過則移除（預設 5）
         check_roman_in_hanzi: 是否檢查並清空 hanzi 欄位中的羅馬字（預設 False）
+        preserve_spaces: 是否保留空白作為詞界（官方辭典），預設 False
 
     Returns:
-        清理後的 DataFrame
+        (cleaned_df, dropped_df) - cleaned_df 為清理後的 DataFrame，
+        dropped_df 為被丟棄的列（含 drop_reason 欄位）
     """
     total_count = len(df)
+    dropped_parts = []
+
+    def collect_dropped(mask, reason):
+        """Collect rows that will be dropped, with a reason tag."""
+        dropped = df.loc[mask].copy()
+        if len(dropped) > 0:
+            dropped["drop_reason"] = reason
+            dropped_parts.append(dropped)
+
     if logger:
         logger.info(f"Loaded {total_count} records")
 
@@ -229,6 +249,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     proverb_count = proverb_mask.sum()
     if proverb_count > 0 and logger:
         logger.info(f"  Removed proverbs: {proverb_count}")
+    collect_dropped(proverb_mask, "proverb")
     df = df[~proverb_mask]
 
     # 5. 剔除含非法字符的 TL（日文、中文等）
@@ -236,6 +257,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     invalid_tl_count = (~valid_tl_mask).sum()
     if invalid_tl_count > 0 and logger:
         logger.info(f"  Removed invalid TL (non-roman chars): {invalid_tl_count}")
+    collect_dropped(~valid_tl_mask, "invalid_tl")
     df = df[valid_tl_mask]
 
     # 6. 剔除無效的 hanzi（含 '.' 或連續空格）
@@ -243,6 +265,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     invalid_hanzi_count = (~valid_hanzi_mask).sum()
     if invalid_hanzi_count > 0 and logger:
         logger.info(f"  Removed invalid hanzi (dot or consecutive spaces): {invalid_hanzi_count}")
+    collect_dropped(~valid_hanzi_mask, "invalid_hanzi")
     df = df[valid_hanzi_mask]
 
     # 6.5. 清空包含羅馬字的 hanzi（但保留該筆資料）
@@ -255,21 +278,27 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
                 logger.info(f"  Cleared hanzi containing roman letters: {roman_in_hanzi_count}")
 
     # 7. 移除空白列（只檢查 tl，保留 hanzi 為空的詞條）
-    df = df[df["tl"].str.strip() != ""]
+    empty_tl_mask = df["tl"].str.strip() == ""
+    collect_dropped(empty_tl_mask, "empty_tl")
+    df = df[~empty_tl_mask]
 
     # 8. 移除過長詞條
     before_long = len(df)
-    df = df[df["tl"].apply(count_syllables) <= max_syllables]
+    long_mask = df["tl"].apply(count_syllables) > max_syllables
+    collect_dropped(long_mask, f"too_long(>{max_syllables})")
+    df = df[~long_mask]
     long_removed = before_long - len(df)
     if long_removed > 0 and logger:
         logger.info(f"  Removed long entries ({max_syllables + 1}+ syllables): {long_removed}")
 
     # 9. 正規化羅馬字
-    df["tl"] = df["tl"].apply(normalize_roman)
+    df["tl"] = df["tl"].apply(lambda x: normalize_roman(x, preserve_spaces=preserve_spaces))
 
     # 10. 去重複（hanzi + tl）
     before_dedup = len(df)
-    df = df.drop_duplicates(subset=["hanzi", "tl"], keep="first")
+    dup_mask = df.duplicated(subset=["hanzi", "tl"], keep="first")
+    collect_dropped(dup_mask, "duplicate")
+    df = df[~dup_mask]
     after_dedup = len(df)
     removed = before_dedup - after_dedup
     if removed > 0 and logger:
@@ -280,9 +309,11 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     hanlo_mismatch_count = (~hanlo_matched_mask).sum()
     if hanlo_mismatch_count > 0 and logger:
         logger.info(f"  Removed hanlo mismatch (KeSi TuiBeTse): {hanlo_mismatch_count}")
+    collect_dropped(~hanlo_matched_mask, "hanlo_mismatch")
     df = df[hanlo_matched_mask]
 
     if logger:
         logger.info(f"  Final: {len(df)} records")
 
-    return df
+    dropped_df = pd.concat(dropped_parts, ignore_index=True) if dropped_parts else pd.DataFrame()
+    return df, dropped_df

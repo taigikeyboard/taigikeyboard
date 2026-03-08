@@ -93,8 +93,6 @@ class ComposingManager(
         if (rawInput.isEmpty()) {
             ic.setComposingText("", 1)
             reset(ic)
-            // Delete the preceding committed character (matching iOS deleteBackwardManually)
-            ic.deleteSurroundingText(1, 0)
             return true
         }
 

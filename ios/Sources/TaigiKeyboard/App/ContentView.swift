@@ -55,6 +55,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.settings)
         }
+        .environment(\.font, Font.custom(KeyboardModels.Fonts.openHuninnFontName, size: 17))
         .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
             selectedTab = .settings
         }

@@ -47,7 +47,7 @@ object LexiconService {
         const val TAIJIT = "taijit"        // 台日大辭典
         const val KUNGGE = "kungge"        // 台語工藝詞庫
         const val STTI = "stti"            // 學科術語辭典
-        const val KHPOO = "khpoo"          // 腔口補充辭典
+        const val KHPOO = "khpoo"          // 腔口補充資料
     }
 
     /**
@@ -105,6 +105,25 @@ object LexiconService {
         )
 
         try {
+            // Query custom dictionary by roman prefix (highest priority, matching iOS)
+            // Normalize input for notone matching (strip tones, digits, hyphens, spaces)
+            val customNotoneKey = CustomDictionaryService.generateNotone(input)
+            val customWords = try {
+                CustomDictionaryService.search(input, notonePrefix = customNotoneKey, limit = 20).also { entries ->
+                    if (BuildConfig.DEBUG) Log.d(TAG, "[SEARCH] customDict key='$input' notoneKey='$customNotoneKey' results=${entries.size}")
+                }.map { entry ->
+                    TaigiWord(
+                        id = -2,  // Custom dictionary marker (distinguishes from NextWord id < -2)
+                        roman = entry.roman,
+                        hanzi = entry.hanzi,
+                        lengthScore = null
+                    )
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
+                emptyList()
+            }
+
             // 使用 Trie + SQLite 查詢
             val trieStart = System.currentTimeMillis()
             val words = searchWithTrie(
@@ -112,10 +131,13 @@ object LexiconService {
             )
             if (BuildConfig.DEBUG) Log.d("PERF", "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms")
 
+            // Merge: custom words first, then system words (matching iOS)
+            val mergedWords = customWords + words
+
             // Capitalization deferred to SuggestionCaseTransformer (view layer, matching iOS)
 
             val sortStart = System.currentTimeMillis()
-            val uniqueWords = removeDuplicates(words)
+            val uniqueWords = removeDuplicates(mergedWords)
             val normalizedInput = InputNormalizer.normalize(input, inputMode)
             val result = sortByScore(uniqueWords, normalizedInput)
             if (BuildConfig.DEBUG) {
@@ -143,7 +165,7 @@ object LexiconService {
         val taijit: Boolean,    // 台日大辭典
         val kungge: Boolean,    // 台語工藝詞庫
         val stti: Boolean,      // 學科術語辭典
-        val khpoo: Boolean,     // 腔口補充辭典
+        val khpoo: Boolean,     // 腔口補充資料
         val variant: Boolean    // 異用字
     ) {
         /** 是否全部關閉 */
@@ -544,11 +566,11 @@ object LexiconService {
     }
 
     /**
-     * Strip roman to base form for matching (no tones, no hyphens, lowercase)
-     * "tāi-tsì" → "taitsi", "tai5-tsi3" → "taitsi"
+     * Strip roman to base form for matching (no tones, no hyphens/spaces, lowercase)
+     * "tāi-tsì" → "taitsi", "m̄ bat" → "mbat"
      */
     private fun romanToBase(roman: String): String {
-        val noHyphens = roman.replace("-", "")
+        val noHyphens = roman.replace("-", "").replace(" ", "")
         val withNasal = noHyphens.replace("\u207F", "nn").replace("\u1D3A", "nn")
         val nfd = Normalizer.normalize(withNasal, Normalizer.Form.NFD)
         val withOo = nfd.replace("\u0358", "o")
