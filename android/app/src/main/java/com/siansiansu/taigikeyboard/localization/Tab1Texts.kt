@@ -126,6 +126,9 @@ object Tab1Texts {
     )
 
     val versionHistoryEntries = listOf(
+        VersionEntry("3.4.4", "2026/03/09", listOf(
+            LocalizedText(hanji = "Fixed an issue where some words could not be found when typing."),
+        )),
         VersionEntry("3.4.2", "2026/03/08", listOf(
             LocalizedText(hanji = "Added custom dictionary for adding your own words."),
             LocalizedText(hanji = "Added diagnostic info for easier bug reporting."),

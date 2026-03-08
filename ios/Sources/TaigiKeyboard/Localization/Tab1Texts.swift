@@ -115,6 +115,9 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.4", "2026/03/09", [
+            LocalizedText(hanji: "Fixed an issue where some words could not be found when typing."),
+        ]),
         ("3.4.2", "2026/03/08", [
             LocalizedText(hanji: "Added custom dictionary for adding your own words."),
             LocalizedText(hanji: "Added diagnostic info for easier bug reporting."),
