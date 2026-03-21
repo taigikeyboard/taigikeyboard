@@ -13,6 +13,18 @@ struct TaigiKeyboardApp: App {
         // 必須在任何 @AppStorage 存取之前呼叫
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
 
+        // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithDefaultBackground()
+        let largeFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 34)
+            ?? .systemFont(ofSize: 34)
+        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 17)
+            ?? .systemFont(ofSize: 17)
+        navAppearance.largeTitleTextAttributes = [.font: largeFont]
+        navAppearance.titleTextAttributes = [.font: inlineFont]
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+
         // Seed custom dictionary default entries on first install only
         Task {
             try? await CustomDictionaryService.shared.seedDefaultEntryIfEmpty()

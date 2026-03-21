@@ -3,6 +3,7 @@ hanzi,tl,frequency
 掠,lia̍h,4324
 局,kio̍k,2245
 番,huan,2005
+箍,khoo,1764
 拖,thua,1704
 列,lia̍t,1678
 型,hîng,1100
@@ -21,20 +22,32 @@ lóo,lóo,50
 埋,tâi,50
 獒,ngôo,50
 艾,hiānn,50
+OK球,ok-kiû,25
 a-lé,a-lé,25
+a̋m-phái,a̋m-phái,25
 bat-tah,bat-tah,25
+bàn-tooh,bàn-tooh,25
 bàng-gà,bàng-gà,25
 bá-tah,bá-tah,25
 bé-khòng,bé-khòng,25
 bòo-lù,bòo-lù,25
+bóo-khuh,bóo-khuh,25
 há-khih,há-khih,25
 há-muh,há-muh,25
+hí-tooh,hí-tooh,25
+hò-sù,hò-sù,25
 hóo-tok,hóo-tok,25
 ió-gà,ió-gà,25
+khah-tah,khah-tah,25
+khai-tián,khai-tián,25
+khia̋n-sé,khia̋n-sé,25
 khiá-tsiah,khiá-tsiah,25
+khà-bah,khà-bah,25
+khà-buh,khà-buh,25
 khóo-pih,khóo-pih,25
 luī-lóo,luī-lóo,25
 lài-tooh,lài-tooh,25
+làng-nah,làng-nah,25
 lé-tooh,lé-tooh,25
 lòo-kerh,lòo-kerh,25
 lòo-suh,lòo-suh,25
@@ -49,19 +62,32 @@ phit-tsiah,phit-tsiah,25
 phi̋n-phóng,phi̋n-phóng,25
 phòng-phuh,phòng-phuh,25
 sa̋n-sín,sa̋n-sín,25
+siat-tooh,siat-tooh,25
 siàn-tah,siàn-tah,25
 siáu-uah,siáu-uah,25
 siò-tooh,siò-tooh,25
+siù-tooh,siù-tooh,25
 sà-tooh,sà-tooh,25
+sè-hù,sè-hù,25
+sìn-khah,sìn-khah,25
 thiàn-tòo,thiàn-tòo,25
+thá-guh,thá-guh,25
 tshì-sìr,tshì-sìr,25
 tshì-sù,tshì-sù,25
+tsit-puh,tsit-puh,25
 táng-lóo,táng-lóo,25
 tōo-né,tōo-né,25
 uá-hòo,uá-hòo,25
+è-sìr,è-sìr,25
+é-lah,é-lah,25
+òo-tah,òo-tah,25
+䆀球,bái-kiû,25
 䖙捒,the-sak,25
 一勝,it-sìng,25
-三殺,sann-sat,25
+一塊,tsi̍t-tè,25
+一軍,it-kun,25
+三塊,sann-tè,25
+三殺,sam-sat,25
 上壘,tsiūnn-luí,25
 上籃,tsiūnn-nâ,25
 下載,hā-tsài,25
@@ -71,12 +97,18 @@ uá-hòo,uá-hòo,25
 中子,tiong-lí,25
 中線,tiong-suànn,25
 中鋒,tiong-hong,25
+主審,tsú-sím,25
 乳液,jú-i̍k,25
 乳液,lú-i̍k,25
+二軍,jī-kun,25
+二軍,lī-kun,25
 人熊,lâng-hîm,25
 人陣,lâng-tīn,25
 介面,kài-bīn,25
 仙楂,sian-tsa,25
+代打,tāi-tánn,25
+代走,tāi-tsáu,25
+低球,kē-kiû,25
 侵蝕,tshim-si̍t,25
 俗麭,sio̍k-pháng,25
 保溼,pó-sip,25
@@ -84,11 +116,17 @@ uá-hòo,uá-hòo,25
 修容,siu-iông,25
 倒子,tò-jí,25
 倒子,tò-lí,25
+倒投,tò-tâu,25
+倒拍,tò-phah,25
+倒支,tò-ki,25
 倫敦,lûn-tun,25
 健力,kiān-li̍k,25
 健美,kiān-bí,25
+側投,tshik-tâu,25
+偷壘,thau-luí,25
 備份,pī-hūn,25
 傭兵,iông-ping,25
+傳球,thuân-kiû,25
 優格,iu-keh,25
 光面,kng-bīn,25
 入數,ji̍p-siàu,25
@@ -99,6 +137,7 @@ uá-hòo,uá-hòo,25
 全妝,tsuân-tsong,25
 全馬,tsuân-má,25
 全麥,tsuân-be̍h,25
+兩塊,nn̄g-tè,25
 八角,peh-kak,25
 八角,pueh-kak,25
 公論,kong-lūn,25
@@ -112,15 +151,20 @@ uá-hòo,uá-hòo,25
 刀術,to-su̍t,25
 分道,pun-tō,25
 分頁,hun-ia̍h,25
+切球,tshiat-kiû,25
 刣掉,thâi-tiāu,25
 利劍,lāi-kiàm,25
 刪除,san-tî,25
 刪除,san-tû,25
 制衡,tsè-hîng,25
+刺殺,tshì-sat,25
+前跤,tsîng-kha,25
 剪接,tsián-tsiap,25
 剪輯,tsián-tsi̍p,25
 劍術,kiàm-su̍t,25
 加碼,ka-bé,25
+助殺,tsōo-sat,25
+勝投,sìng-tâu,25
 勼排,kiu-pâi,25
 匿名,li̍k-miâ,25
 半勝,puànn-sìng,25
@@ -134,6 +178,7 @@ uá-hòo,uá-hòo,25
 卸妝,sià-tsong,25
 厚妝,kāu-tsong,25
 厝貸,tshù-tāi,25
+反向,huán-hiòng,25
 口碑,kháu-pi,25
 可送,khó-sòng,25
 司康,sir-kóng,25
@@ -158,6 +203,7 @@ uá-hòo,uá-hòo,25
 地板,tuē-pán,25
 地板,tē-pán,25
 坦邊,thán-pinn,25
+場務,tiûnn-bū,25
 墜機,tuī-ki,25
 壁球,piah-kiû,25
 壓制,ap-tsè,25
@@ -167,10 +213,14 @@ uá-hòo,uá-hòo,25
 壺鈴,ôo-lîng,25
 外遇,guā-gū,25
 外野,guā-iá,25
+大叉,tuā-tshah,25
 大寫,tuā-siá,25
 大骨,tuā-kut,25
 大麥,tuā-be̍h,25
 失事,sit-sū,25
+失分,sit-hun,25
+失誤,sit-gōo,25
+夾殺,kiap-sat,25
 奈米,nāi-bí,25
 奕手,ī-tshiú,25
 奕跤,ī-kha,25
@@ -181,21 +231,30 @@ uá-hòo,uá-hòo,25
 奶酒,ling-tsiú,25
 奶酒,ni-tsiú,25
 好球,hó-kiû,25
+妨礙,hông-gāi,25
 字元,jī-guân,25
 字元,lī-guân,25
 存檔,tsûn-tóng,25
 安入,an-ji̍p,25
 安入,an-li̍p,25
 安打,an-tánn,25
+完封,uân-hong,25
+完投,uân-tâu,25
 定妝,tīng-tsong,25
 寄罪,kià-tsuē,25
 密碼,bi̍t-bé,25
+封殺,hong-sat,25
 射擊,siā-kik,25
 射正,siā-tsiànn,25
 射箭,siā-tsìnn,25
 射門,siā-mn̂g,25
 對拍,tuì-phah,25
+小叉,sió-tshah,25
 小寫,sió-siá,25
+尾氣,bué-khuì,25
+尾氣,bé-khuì,25
+尾節,bué-tsat,25
+尾節,bé-tsat,25
 山友,suann-iú,25
 山球,suann-kiû,25
 山竹,suann-tik,25
@@ -204,12 +263,14 @@ uá-hòo,uá-hòo,25
 巨集,kū-tsi̍p,25
 巴哥,pa-ko,25
 布丁,pòo-ting,25
+布陣,pòo-tīn,25
 帆船,phâng-tsûn,25
 幌壺,hàinn-ôo,25
 弄舌,lāng-tsi̍h,25
 彈劾,tân-hik,25
 彗星,huī-tshinn,25
 影迷,iánn-bê,25
+後跤,āu-kha,25
 得分,tit-hun,25
 徛槳,khiā-tsiúnn,25
 徛琴,hah-phuh,25
@@ -218,10 +279,15 @@ uá-hòo,uá-hòo,25
 快送,khuài-sàng,25
 惡地,ok-tē,25
 慢分,bān-hun,25
+懸球,kuân-kiû,25
 截圖,tsia̍t-tôo,25
 房貸,pâng-tāi,25
 手球,tshiú-kiû,25
+打席,tánn-sik,25
 打擊,tánn-kik,25
+打數,tánn-sòo,25
+打點,tánn-tiám,25
+承球,sîn-kiû,25
 投手,tâu-tshiú,25
 抹匙,buah-sî,25
 抹茶,buah-tê,25
@@ -235,10 +301,13 @@ uá-hòo,uá-hòo,25
 挵球,lòng-kiû,25
 捕手,póo-tshiú,25
 捕殺,póo-sat,25
+捕逸,póo-i̍k,25
 捘卵,tsūn-nn̄g,25
 捲條,kńg-tiâu,25
 授權,siū-khuân,25
 掠夯,lia̍h-giâ,25
+接球,tsiap-kiû,25
+推進,thui-tsín,25
 掰會,pué-huē,25
 換逝,uānn-tsuā,25
 揤鈕,tshi̍h-liú,25
@@ -247,8 +316,10 @@ uá-hòo,uá-hòo,25
 搜揣,tshiau-tshuē,25
 搜揣,tshiau-tshē,25
 搭粉,tah-hún,25
+摃球,kòng-kiû,25
 摔技,siak-ki,25
 摔法,siak-huat,25
+摸著,bong-tio̍h,25
 擊劍,kik-kiàm,25
 擊球,kik-kiû,25
 擋皺,tòng-jiâu,25
@@ -257,7 +328,9 @@ uá-hòo,uá-hòo,25
 攔閘,nuâ-tsa̍h,25
 收賄,siu-hué,25
 放箭,pàng-tsìnn,25
+敗投,pāi-tâu,25
 散打,sàn-tánn,25
+敬遠,kìng-uán,25
 斜體,tshiâ-thé,25
 斷食,tn̄g-si̍t,25
 早鳥,tsá-niáu,25
@@ -266,6 +339,9 @@ uá-hòo,uá-hòo,25
 暖男,luán-lâm,25
 暗擊,àm-kik,25
 暗碼,àm-bé,25
+暴傳,po̍k-thuân,25
+暴投,po̍k-tâu,25
+曲球,khiau-kiû,25
 書籤,su-tshiam,25
 書籤,tsu-tshiam,25
 書迷,tsu-bê,25
@@ -301,11 +377,16 @@ uá-hòo,uá-hòo,25
 檢視,kiám-sī,25
 歇暝,hioh-mê,25
 歇暝,hioh-mî,25
+正向,tsiànn-hiòng,25
 正子,tsiànn-jí,25
 正子,tsiànn-lí,25
+正投,tsiànn-tâu,25
+正拍,tsiànn-phah,25
+正支,tsiànn-ki,25
 正齒,tsiànn-khí,25
 武術,bú-su̍t,25
 歹球,pháinn-kiû,25
+殘壘,tsân-luí,25
 段位,tuānn-uī,25
 段落,tuānn-lo̍h,25
 殺球,sat-kiû,25
@@ -318,6 +399,7 @@ uá-hòo,uá-hòo,25
 水豬,tsuí-ti,25
 水豬,tsuí-tu,25
 決賽,kuat-sài,25
+沉球,tîm-kiû,25
 沙拉,sa-la,25
 河內,hô-luē,25
 油鯃,iû-ngôo,25
@@ -335,9 +417,11 @@ uá-hòo,uá-hòo,25
 游標,iû-phiau,25
 游標,iû-piau,25
 湯餃,thng-kiáu,25
+滑球,ku̍t-kiû,25
 滑鼠,ku̍t-tshí,25
 滑鼠,ku̍t-tshú,25
 滾輪,kún-lûn,25
+漏球,lāu-kiû,25
 漸層,tsiām-tsân,25
 灌籃,kuàn-nâ,25
 火腿,hué-thuí,25
@@ -373,12 +457,15 @@ uá-hòo,uá-hòo,25
 牛市,gû-tshī,25
 牛棚,gû-pênn,25
 牛棚,gû-pînn,25
+牽制,khan-tsè,25
 犯規,huān-kui,25
 狐獴,hôo-bông,25
 狒狒,huì-huì,25
 猴珠,kâu-tsu,25
 珠光,tsu-kng,25
+球童,kiû-tông,25
 球迷,kiû-bê,25
+球速,kiû-sok,25
 甘地,kam-tī,25
 甜菜,tinn-tshài,25
 田徑,tiân-kìng,25
@@ -394,6 +481,7 @@ uá-hòo,uá-hòo,25
 病尾,pēnn-bé,25
 登入,ting-ji̍p,25
 登出,ting-tshut,25
+登板,ting-pán,25
 發球,huat-kiû,25
 白醬,pe̍h-tsiùnn,25
 盜壘,tō-luí,25
@@ -402,6 +490,7 @@ uá-hòo,uá-hòo,25
 目巡,ba̍k-sûn,25
 目彩,ba̍k-tshái,25
 直播,ti̍t-pò,25
+直球,ti̍t-kiû,25
 相偃,sio-ián,25
 眼影,gán-iánn,25
 眼膜,gán-mo̍oh,25
@@ -414,6 +503,7 @@ uá-hòo,uá-hòo,25
 硬夯,ngī-giâ,25
 硬體,ngī-thé,25
 磕網,kha̍p-bāng,25
+磕著,kha̍p-tio̍h,25
 社畜,siā-thiok,25
 移工,î-kang,25
 競行,kìng-kiânn,25
@@ -456,6 +546,7 @@ uá-hòo,uá-hòo,25
 考銃,khó-tshìng,25
 職場,tsit-tiûnn,25
 聽牌,thiann-pâi,25
+肉叉,bah-tshah,25
 肉桂,lio̍k-kuì,25
 胡桃,ôo-thô,25
 脂肪,tsi-hong,25
@@ -480,6 +571,7 @@ uá-hòo,uá-hòo,25
 芳料,phang-liāu,25
 茶凍,tê-tàng,25
 落妝,lak-tsong,25
+落球,lak-kiû,25
 蒲燒,pôo-sio,25
 蒸餾,tsing-liū,25
 蓄水,thiok-tsuí,25
@@ -503,9 +595,11 @@ uá-hòo,uá-hòo,25
 街友,kue-iú,25
 街舞,ke-bú,25
 街舞,kue-bú,25
+衝懸,tshìng-kuân,25
 衝湧,tshiong-íng,25
 表單,pió-tuann,25
 裁判,tshâi-phuànn,25
+補位,póo-uī,25
 製程,tsè-thîng,25
 複製,ho̍k-tsè,25
 視窗,sī-thang,25
@@ -525,9 +619,11 @@ uá-hòo,uá-hòo,25
 貼圖,tah-tôo,25
 贊助,tsàn-tsōo,25
 赤砂,tshiah-sua,25
+走壘,tsáu-luí,25
 超馬,tshiau-má,25
 越位,ua̍t-uī,25
 趨冰,tshu-ping,25
+趨壘,tshu-luí,25
 趨枋,tshu-pang,25
 趨水,tshu-tsuí,25
 跑者,pháu-tsiá,25
@@ -539,7 +635,9 @@ uá-hòo,uá-hòo,25
 跳水,thiàu-tsuí,25
 跳遠,thiàu-hn̄g,25
 跳馬,thiàu-bé,25
+踏壘,ta̍h-luí,25
 踢拳,that-kûn,25
+蹋壘,lap-luí,25
 軍刀,kun-to,25
 軍棋,kun-kî,25
 軍閥,kun-hua̍t,25
@@ -553,6 +651,7 @@ uá-hòo,uá-hòo,25
 輕鐵,khin-thih,25
 輝瑞,hui-suī,25
 轉翕,tsuán-hip,25
+轉速,tńg-sok,25
 迒年,hānn-nî,25
 追劇,tui-kio̍k,25
 追星,tui-tshenn,25
@@ -560,11 +659,14 @@ uá-hòo,uá-hòo,25
 逝懸,tsuā-kuân,25
 逝距,tsuā-kī,25
 逝距,tsuā-kū,25
+速球,sok-kiû,25
 連結,liân-kiat,25
+進壘,tsìn-luí,25
 運球,ūn-kiû,25
 遏子,at-tsí,25
 遮罩,jia-tà,25
 遮罩,jia-tàu,25
+選球,suán-kiû,25
 邊境,pian-kíng,25
 配套,phuè-thò,25
 配套,phè-thò,25
@@ -581,6 +683,7 @@ uá-hòo,uá-hòo,25
 釉皮,iu-phê,25
 重播,tîng-pò,25
 野手,iá-tshiú,25
+野選,iá-suán,25
 金棗,kim-tsó,25
 金粉,kim-hún,25
 釘鞋,ting-uê,25
@@ -598,6 +701,7 @@ uá-hòo,uá-hòo,25
 鐵餅,thih-piánn,25
 鑢卡,lù-khah,25
 鑿花,tsha̍k-hue,25
+長打,tn̂g-tánn,25
 長拳,tn̂g-kûn,25
 長跑,tn̂g-pháu,25
 門將,mn̂g-tsiòng,25
@@ -608,6 +712,7 @@ uá-hòo,uá-hòo,25
 閹殘,iam-tsân,25
 阻尼,tsóo-lî,25
 阻尼,tsóo-nî,25
+阻殺,tsóo-sat,25
 雙打,siang-tánn,25
 雙槓,siang-kǹg,25
 雙殺,siang-sat,25
@@ -645,6 +750,7 @@ uá-hòo,uá-hòo,25
 預設,ū-siat,25
 頓卡,tǹg-khah,25
 頓粉,tǹg-hún,25
+領隊,niá-tuī,25
 頭頁,thâu-ia̍h,25
 頷箍,ām-khoo,25
 顏智,gân-tì,25
@@ -668,6 +774,7 @@ uá-hòo,uá-hòo,25
 麩質,hu-tsit,25
 黃牌,n̂g-pâi,25
 點揤,tiám-tshi̍h,25
+點球,tiám-kiû,25
 點選,tiám-suán,25
 鼻刀,phīnn-to,25
 鼻柱,phīnn-thiāu,25
@@ -687,6 +794,7 @@ Phóo-meh狗,phóo-meh-káu,16
 Uí-sīr-kih,uí-sīr-kih,16
 Uí-sū-kih,uí-sū-kih,16
 a̋m-phái-ah,a̋m-phái-ah,16
+ba̍t-té-lih,ba̍t-té-lih,16
 bok-sìn-gù,bok-sìn-gù,16
 e-móo-jih,e-móo-jih,16
 goo-lú-huh,goo-lú-huh,16
@@ -697,7 +805,9 @@ hah-sìr 條,hah-sìr-tiâu,16
 hah-sìr 酥,hah-sìr-soo,16
 hoo-mú-láng,hoo-mú-láng,16
 hu-lìng-gah,hu-lìng-gah,16
+hua-lú-bóo,hua-lú-bóo,16
 huá-sū-tooh,huá-sū-tooh,16
+khong-tó-luh,khong-tó-luh,16
 khu-lì-mù,khu-lì-mù,16
 khú-khih餅,khú-khih-piánn,16
 khőng-niá-kuh,khőng-niá-kuh,16
@@ -707,18 +817,29 @@ ma-sá-lah,ma-sá-lah,16
 oo-mú 卵,oo-mú-nn̄g,16
 phián-khè-khò,phián-khè-khò,16
 se-khàn-tooh,se-khàn-tooh,16
+sia̋n-bá-tsirh,sia̋n-bá-tsirh,16
 sia̍k-siú-khah,sia̍k-siú-khah,16
+sir-lài-tah,sir-lài-tah,16
+sir-lèr-buh,sir-lèr-buh,16
+su-ìng-gù,su-ìng-gù,16
 tshì-sìr餅,tshì-sìr-piánn,16
 tshì-sù餅,tshì-sù-piánn,16
+áu-khòo-sirh,áu-khòo-sirh,16
+ín-khòo-sirh,ín-khòo-sirh,16
+òo-tah單,òo-tah-tuann,16
+一壘審,it-luí-sím,16
 一壘手,it-luí-tshiú,16
 一夜干,it-iā-kuann,16
 三不等,sam-put-tíng,16
 三分球,sann-hun-kiû,16
+三壘審,sann-luí-sím,16
 三壘手,sann-luí-tshiú,16
 三日賽,sann-ji̍t-sài,16
 三日賽,sann-li̍t-sài,16
+三殺打,sam-sat-tánn,16
 三角錐,sann-kak-tsui,16
 三項賽,sann-hāng-sài,16
+上壘率,tsiūnn-luí-lu̍t,16
 上細化,siōng-suè-huà,16
 上細化,siōng-sè-huà,16
 下一步,ē-tsi̍t-pōo,16
@@ -738,6 +859,9 @@ tshì-sù餅,tshì-sù-piánn,16
 九重粿,káu-tîng-ké,16
 二七仔,jī-tshit-á,16
 二七仔,lī-tshit-á,16
+二刀流,jī-to-liû,16
+二壘審,jī-luí-sím,16
+二壘審,lī-luí-sím,16
 二壘手,jī-luí-tshiú,16
 二壘手,lī-luí-tshiú,16
 二進位,jī-tsìn-uī,16
@@ -752,6 +876,7 @@ tshì-sù餅,tshì-sù-piánn,16
 便利貼,piān-lī-tah,16
 俗麭𩛩,sio̍k-pháng-kauh,16
 保庇跳,pó-pì-thiàu,16
+保送率,pó-sàng-lu̍t,16
 保養品,pó-ióng-phín,16
 保鮮膜,pó-sian-mo̍oh,16
 保齡球,pó-lîng-kiû,16
@@ -761,7 +886,10 @@ tshì-sù餅,tshì-sù-piánn,16
 個人賽,kò-jîn-sài,16
 個人賽,kò-lîn-sài,16
 倒徛騰,tò-khiā-thîng,16
+倒線審,tò-suànn-sím,16
 倖存者,hīng-tsûn-tsiá,16
+倚身球,uá-sin-kiû,16
+假khia̋n-sé,ké-khia̋n-sé,16
 假動作,ké tōng-tsok,16
 做散工,tsuè suánn-kang,16
 做散工,tsò suánn-kang,16
@@ -769,17 +897,23 @@ tshì-sù餅,tshì-sù-piánn,16
 側平夯,tshik-pênn-giâ,16
 側平夯,tshik-pînn-giâ,16
 側旋踢,tshik-suân-that,16
+偷本壘,thau-pún-luí,16
 傳播鍊,thuân-pò-liān,16
 僻智識,phiah-tì-sik,16
 儀表板,gî-pió-pán,16
 優格奶,iu-keh-ling,16
 充電柱,tshiong-tiān thiāu,16
 克流感,khik-liû-kám,16
+內角球,lāi-kak-kiû,16
 內輪差,lāi-lián-tsha,16
 內重巡,lāi-tîng-sûn,16
+內野手,lāi-iá-tshiú,16
 全壘打,tsuân-luí-tánn,16
 冰風暴,ping-hong-pō,16
 冷智識,líng-tì-sik,16
+出場數,tshut-tiûnn-sòo,16
+出手點,tshut-tshiú-tiám,16
+出賽數,tshut-sài-sòo,16
 分析師,hun-sik-su,16
 分道喙,pun-tō-tshuì,16
 切入,tshiat--ji̍p,16
@@ -788,6 +922,7 @@ tshì-sù餅,tshì-sù-piánn,16
 刪除線,san-tû-suànn,16
 刺目眉,tshiah ba̍k-bâi,16
 剪貼簿,tsián-tah-phōo,16
+副領隊,hù-niá-tuī,16
 副食品,hù-si̍t-phín,16
 功能齒,kong-lîng-khí,16
 加熱薰,ka-jia̍t-hun,16
@@ -825,6 +960,7 @@ tshì-sù餅,tshì-sù-piánn,16
 可蘭經,khó-lân-king,16
 可麗露,khó-lē-lōo,16
 台積電,tâi-tsik-tiān,16
+右打者,iū-tánn-tsiá,16
 合氣道,ha̍p-khì-tō,16
 吉娃娃,tshi-uá-uah,16
 吊熨機,tiàu-ut-ki,16
@@ -846,6 +982,8 @@ tshì-sù餅,tshì-sù-piánn,16
 喙脣蜜,tshuì-tûn-bi̍t,16
 單選鈕,tan-suán-liú,16
 噗仔紙,phok-á-tsuá,16
+噴射球,phùn-siā-kiû,16
+四䆀球,sì-bái-kiû,16
 團體賽,thuân-thé-sài,16
 坦笑泅,thán-tshiò-siû,16
 執行緒,tsip-hîng-sī,16
@@ -856,8 +994,11 @@ tshì-sù餅,tshì-sù-piánn,16
 壓炒房,ah tshá-pâng,16
 壓縮檔,ap-sok-tòng,16
 壓縮檔,ap-sok-tóng,16
+壘打數,luí-tánn-sòo,16
 外役監,guā-i̍k-kann,16
+外角球,guā-kak-kiû,16
 外野手,guā-iá-tshiú,16
+多壘打,to-luí-tánn,16
 多巴胺,to-pa-an,16
 多選框,to-suán-khing,16
 夜光粉,iā-kng-hún,16
@@ -877,8 +1018,10 @@ tshì-sù餅,tshì-sù-piánn,16
 太極劍,thài-ki̍k-kiàm,16
 太極拳,thài-ki̍k-kûn,16
 夯石碾,giâ-tsio̍h-lián,16
+失分率,sit-hun-lu̍t,16
 失智症,sit-tì-tsìng,16
 奢華品,tshia-hua-phín,16
+好球區,hó-kiû-khu,16
 好立克,hó-li̍p-khik,16
 妝前乳,tsong-tsîng-jú,16
 妝前乳,tsong-tsîng-lú,16
@@ -887,23 +1030,29 @@ tshì-sù餅,tshì-sù-piánn,16
 嬰仔油,enn-á-iû,16
 嬰仔油,inn-á-iû,16
 孤跤跍,koo-kha-khû,16
+守護神,siú-hōo-sîn,16
 守門員,siú-mn̂g-uân,16
 宮城縣,kiong-siânn-kuān,16
 導覽列,tō-lám-lia̍t,16
 小三通,sió-sam-thong,16
+小便球,sió-piān-kiû,16
 小耳症,sió-hīnn-tsìng,16
 少子化,siáu-tsú-huà,16
 尪仔粉,ang-á-hún,16
 尻川捒,kha-tshng-sak,16
 尻脊肌,kha-tsiah-ki,16
+尾番箠,bué-huan-tshuê,16
+尾番箠,bé-huan-tshê,16
 展好額,tián-hó-gia̍h,16
 崁名者,khàm-miâ-tsiá,16
 崁斑筅,khàm-pan-tshíng,16
 崁斑膏,khàm-pan-ko,16
 巡洋艦,sûn-iûnn-lām,16
+工具人,kang-kū-jîn,16
 工具列,kang-khū-lia̍t,16
 工具列,kang-kū-lia̍t,16
 工課場,khang-khuè-tiûnn,16
+左打者,tsó-tánn-tsiá,16
 巧固球,khá-kòo-kiû,16
 巨集齒,kī-tsi̍p-khí,16
 巨集齒,kū-tsi̍p-khí,16
@@ -924,8 +1073,11 @@ tshì-sù餅,tshì-sù-piánn,16
 引路人,ín-lōo-lâng,16
 彭博社,phênn-phok-siā,16
 彭博社,phînn-phok-siā,16
+後壁番,āu-piah-huan,16
 後旋踢,āu-suân-that,16
 後遺症,āu-uî-tsìng,16
+得分點,tit-hun-tiám,16
+得點圈,tit-tiám-khuan,16
 復活節,ho̍k-ua̍h-tseh,16
 復活節,ho̍k-ua̍h-tsueh,16
 循環杯,sûn-khuân-pue,16
@@ -933,6 +1085,7 @@ tshì-sù餅,tshì-sù-piánn,16
 心絲蟲,sim-si-thâng,16
 心輔狗,sim-hú-káu,16
 快時尚,khuài-sî-siōng,16
+快速球,khuài-sok-kiû,16
 快速齒,khuài-sok-khí,16
 性騷擾,sìng-so-jiáu,16
 憂鬱症,iu-ut-tsìng,16
@@ -943,7 +1096,9 @@ tshì-sù餅,tshì-sù-piánn,16
 手摵茶,tshiú-tshi̍k-tê,16
 手肚仁,tshiú-tóo-jîn,16
 手肚仁,tshiú-tóo-lîn,16
+打擊率,tánn-kik-lu̍t,16
 打擊者,tánn-kik-tsiá,16
+投球數,tâu-kiû-sòo,16
 抗力肌,khòng-li̍k-ki,16
 抗𤶃仔,khòng thiāu-á,16
 抹粉底,buah hún-té,16
@@ -958,6 +1113,7 @@ tshì-sù餅,tshì-sù-piánn,16
 拍底乳,phah-tué-lú,16
 拍底乳,phah-té-jú,16
 拍拚衝,phah-piànn-tshiong,16
+拍掛走,phah-kuà-tsáu,16
 拍暗影,phah-àm-iánn,16
 拍粉底,phah hún-té,16
 拔大索,pue̍h-tuā-soh,16
@@ -965,9 +1121,12 @@ tshì-sù餅,tshì-sù-piánn,16
 拚勢衝,piànn-sì-tshiong,16
 挖人才,óo jîn-tsâi,16
 挖人才,óo lîn-tsâi,16
+挾的,gia̍p--ê,16
 捋仔田,lua̍h-á-tshân,16
 捘卵機,tsūn-nn̄g-ki,16
 捲螺筅,kńg-lê-tshíng,16
+捽槌仔,sut-thuî-á,16
+掌心球,tsiáng-sim-kiû,16
 排名賽,pâi-miâ-sài,16
 掠篙泅,lia̍h-ko-siû,16
 掠龍椅,lia̍h-lîng-í,16
@@ -975,6 +1134,7 @@ tshì-sù餅,tshì-sù-piánn,16
 揀色器,kíng-sik-khì,16
 提示詞,thê-sī-sû,16
 揤兩下,tshi̍h-nn̄g-ē,16
+揮空率,hui-khong-lu̍t,16
 揹仔客,phāinn-á-kheh,16
 搖滾樂,iô-kún-ga̍k,16
 搜救狗,soo-kiù-káu,16
@@ -982,6 +1142,7 @@ tshì-sù餅,tshì-sù-piánn,16
 搝大索,khiú-tuā-soh,16
 摖板球,tshè-pán-kiû,16
 摧死,tshui--sí,16
+擉著人,tia̍k-tio̍h-lâng,16
 擋老化,tòng-nóo-huà,16
 攑頭痕,gia̍h-thâu-hûn,16
 放予爛,pàng hōo nuā,16
@@ -1039,9 +1200,12 @@ tshì-sù餅,tshì-sù-piánn,16
 榴彈炮,liû-tuânn-phàu,16
 橄欖球,kan-ná-kiû,16
 機械舞,ki-hāi-bú,16
+橫掃球,huâinn-sàu-kiû,16
 檸檬塔,lê-bóng-thah,16
 歐美妝,au-bí-tsong,16
+正線審,tsiànn-suànn-sím,16
 歹牢胎,pháinn-tiâu-the,16
+殘壘率,tsân-luí-lu̍t,16
 氣糋鍋,khì-tsìnn-ko,16
 水流屍,tsuí-lâu-si,16
 水浸粿,tsuí-tsìm-kué,16
@@ -1080,9 +1244,13 @@ tshì-sù餅,tshì-sù-piánn,16
 準決賽,tsún-kuat-sài,16
 滅火器,bia̍t-hué-khì,16
 滅火器,bia̍t-hé-khì,16
+滑曲球,ku̍t-khiau-kiû,16
 滯洪池,tī-hông-tî,16
+滾飛比,kún-hui-pí,16
+漏去,lāu--khì,16
 演算法,ián-suàn-huat,16
 漚查埔,àu-tsa-poo,16
+漩尿球,suān-jiō-kiû,16
 漸層色,tsiām-tsân-sik,16
 潛艇堡,tsiâm-thíng-pó,16
 激外外,kik-guā-guā,16
@@ -1104,6 +1272,7 @@ tshì-sù餅,tshì-sù-piánn,16
 無人機,bô-lâng-ki,16
 無人機,bû-jîn-ki,16
 無人機,bû-lîn-ki,16
+無承著,bô sîn tio̍h,16
 無花果,bû-hua-kó,16
 無重巡,bô tîng-sûn,16
 焦慮症,tsiau-lī-tsìng,16
@@ -1135,6 +1304,7 @@ tshì-sù餅,tshì-sù-piánn,16
 牛角麭,gû-kak-pháng,16
 牛頭狗,gû-thâu-káu,16
 物聯網,bu̍t-liân-bāng,16
+猛打賞,bíng-tánn-siúnn,16
 猴頭果,kâu-thâu-kó,16
 獅仔狗,sai-á-káu,16
 瑞士捲,suī-sū-kńg,16
@@ -1143,6 +1313,7 @@ tshì-sù餅,tshì-sù-piánn,16
 甕底油,àng-té-iû,16
 甜箍仔,tinn-khoo-á,16
 甜薟醬,tinn-hiam-tsiùnn,16
+甜蜜點,tinn-bi̍t-tiám,16
 生成式,sing-sîng-sik,16
 生湠地,senn-thuànn-tē,16
 生湠地,sinn-thuànn-tuē,16
@@ -1161,6 +1332,7 @@ tshì-sù餅,tshì-sù-piánn,16
 發球權,huat-kiû-khuân,16
 發球權,huat-kiû-kuân,16
 益生菌,ik-sing-khún,16
+盜本壘,tō-pún-luí,16
 監視器,kàm-sī-khì,16
 目墘線,ba̍k-kînn-suànn,16
 目尾痕,ba̍k-bué-hûn,16
@@ -1174,6 +1346,7 @@ tshì-sù餅,tshì-sù-piánn,16
 目眉膠,ba̍k-bâi-ka,16
 目睭頭,ba̍k-tsiu-thâu,16
 直排輪,ti̍t-pâi-lián,16
+直的,ti̍t--ê,16
 真假值,tsin-ké-ta̍t,16
 眼影盤,gán-iánn-puânn,16
 眼影筅,gán-iánn-tshíng,16
@@ -1210,11 +1383,15 @@ tshì-sù餅,tshì-sù-piánn,16
 紐結糖,niú-kat-thn̂g,16
 素顏霜,sòo-gân-song,16
 終端機,tsiong-tuan-ki,16
+終結者,tsiong-kiat-tsiá,16
 組合齒,tsoo-ha̍p-khí,16
 綠奶茶,li̍k-ling-tê,16
 綠奶茶,li̍k-ni-tê,16
 網仔瓜,bāng-á-kue,16
 網仔篩,bāng-á-thai,16
+緊的,kín--ê,16
+練習生,liān-si̍p-sing,16
+總教練,tsóng-kàu-liān,16
 羅宋湯,lô-sòng-thng,16
 羅素狗,lô-sòo-káu,16
 羊駱駝,iûnn-lo̍k-tô,16
@@ -1244,7 +1421,9 @@ tshì-sù餅,tshì-sù-piánn,16
 膨粉筅,phòng-hún tshíng,16
 膨粉餅,phòng-hún-piánn,16
 膽固醇,tánn-kòo-sûn,16
+自由跤,tsū-iû-kha,16
 自由車,tsū-iû-tshia,16
+自責分,tsū-tsik-hun,16
 自閉症,tsū-pì-tsìng,16
 臭殕茶,tshàu-phú-tê,16
 舍利子,sià-lī-tsú,16
@@ -1263,6 +1442,7 @@ tshì-sù餅,tshì-sù-piánn,16
 菇類麵,koo-luī-mī,16
 落崎賽,lo̍h-kiā-sài,16
 葉黃素,ia̍p-hông-sòo,16
+著球點,tio̍h-kiû-tiám,16
 蒙古巡,bông-kóo-sûn,16
 蓄水池,thiok-tsuí-tî,16
 蓄水率,thiok-tsuí-lu̍t,16
@@ -1272,15 +1452,22 @@ tshì-sù餅,tshì-sù-piánn,16
 薄 tshì-sù,po̍h tshì-sù,16
 薄喙脣,po̍h tshuì-tûn,16
 薰衫草,hun-sann-tsháu,16
+藏水艦,tshàng-tsuí-lām,16
 蘋果光,phōng-kó-kng,16
 蘋果派,phōng-kó-phài,16
 蘋果肌,phōng-kó-ki,16
 處理器,tshú-lí-khì,16
+蝴蝶球,ôo-tia̍p-kiû,16
 蝶仔䘼,ia̍h-á-ńg,16
 蝶仔泅,ia̍h-á-siû,16
+蝶仔球,ia̍h-á-kiû,16
+螺絲球,lôo-si-kiû,16
 螺螄粉,lê-sai-hún,16
+蟳仔球,tsîm-á-kiû,16
 蠓仔電,báng-á-tiān,16
+衝懸球,tshìng-kuân-kiû,16
 衝鋒銃,tshiong-hong-tshìng,16
+被安打,pī an-tánn,16
 複合弓,ho̍k-ha̍p king,16
 西施狗,se-si-káu,16
 西洋棋,se-iûnn-kî,16
@@ -1292,6 +1479,7 @@ tshì-sù餅,tshì-sù-piánn,16
 訂閱制,tīng-ua̍t-tsè,16
 討論區,thó-lūn-khu,16
 記憶體,kì-ik-thé,16
+記錄員,kì-lo̍k-uân,16
 記錄檔,kì-lio̍k-tòng,16
 記錄檔,kì-lo̍k-tóng,16
 調味料,tiâu-bī-liāu,16
@@ -1299,7 +1487,9 @@ tshì-sù餅,tshì-sù-piánn,16
 護手霜,hōo-tshiú-song,16
 護脣膏,hōo-tûn-ko,16
 讀卡機,tha̍k-khah-ki,16
+變化球,piàn-huà-kiû,16
 變異株,piàn-ī-tsu,16
+變速球,piàn-sok-kiû,16
 豆腐麵,tāu-hū-mī,16
 豬流感,ti-liû-kám,16
 豬流感,tu-liû-kám,16
@@ -1307,6 +1497,7 @@ tshì-sù餅,tshì-sù-piánn,16
 費南雪,huì-lâm-seh,16
 資料庫,tsu-liāu-khòo,16
 賽末點,sài-bua̍t-tiám,16
+走掛拍,tsáu-kuà-phah,16
 起泡片,khí-pho-phìnn,16
 起跑線,khí-pháu-suànn,16
 起跑點,khí-pháu-tiám,16
@@ -1315,6 +1506,8 @@ tshì-sù餅,tshì-sù-piánn,16
 趖蟲類,sô-thâng-luī,16
 趨角筅,tshu-kak-tshíng,16
 趨輪枋,tshu-lián-pang,16
+趨過頭,tshu-kuè-thâu,16
+趨過頭,tshu-kè-thâu,16
 跆拳道,tâi-kûn-tō,16
 跤後筋,kha-āu-kin,16
 跤後筋,kha-āu-kun,16
@@ -1327,10 +1520,12 @@ tshì-sù餅,tshì-sù-piánn,16
 載入中,tsài-li̍p-tiong,16
 輸入欄,su-ji̍p-nuâ,16
 輸入欄,su-li̍p-nuâ,16
+輾的,lián--ê,16
 轉接頭,tsuán-tsiap-thâu,16
 迷客夏,bê-kheh-hā,16
 迷眾頁,bê-tsiòng-ia̍h,16
 迷迭香,bê-tia̍t-hiang,16
+逆雙殺,gi̍k-siang-sat,16
 透明度,thàu-bîng-tōo,16
 透明度,thò-bîng-tōo,16
 過路人,kuè-lōo-lâng,16
@@ -1348,19 +1543,28 @@ tshì-sù餅,tshì-sù-piánn,16
 金萱茶,kim-suan-tê,16
 鈉含量,nà-hâm-liōng,16
 鈕仔餅,liú-á-piánn,16
+銃子球,tshìng-tsí-kiû,16
 鋁箔紙,lī-po̍h-tsuá,16
 鋁箔紙,lū-po̍h-tsuá,16
 鎮暴銃,tìn-pō-tshìng,16
+長打率,tn̂g-tánn-lu̍t,16
 開發者,khai-huat-tsiá,16
 開講室,khai-káng-sik,16
+閣踏壘,koh ta̍h-luí,16
 閬位坐,làng-uī-tsē,16
 防曝乳,hông-pha̍k-jú,16
 防曝乳,hông-pha̍k-lú,16
+防禦率,hông-gū-lu̍t,16
+防護員,hông-hōo-uân,16
 阿華田,a-huâ-tiân,16
 隔暝醉,keh-mê-tsuì,16
 隔暝醉,keh-mî-tsuì,16
 隔離霜,keh-lī-song,16
 隨身碟,suî-sin-tia̍p,16
+雙偷壘,siang-thau-luí,16
+雙刀流,siang-to-liû,16
+雙殺打,siang-sat-tánn,16
+雙盜壘,siang-tō-luí,16
 雙蹄目,siang-tuê-bo̍k,16
 雙蹄目,siang-tê-bo̍k,16
 雙響炮,siang-hiáng-phàu,16
@@ -1383,6 +1587,7 @@ tshì-sù餅,tshì-sù-piánn,16
 頂半場,tíng-puànn-tiûnn,16
 預售厝,ī-siū-tshù,16
 預售厝,ū-siū-tshù,16
+頭前番,thâu-tsîng-huan,16
 類普篩,luī-phóo-thai,16
 顯示卡,hián-sī-khah,16
 飄目眉,phiau-ba̍k-bâi,16
@@ -1420,27 +1625,53 @@ tshì-sù餅,tshì-sù-piánn,16
 𪐞染筅,tòo-ní-tshíng,16
 Má-thih-suh狗,má-thih-suh-káu,12
 Sa-móo-iat狗,sa-móo-iat-káu,12
+ang-ta su-ló,ang-ta su-ló,12
+góo-looh àu-tooh,góo-looh àu-tooh,12
+góo-looh投手,góo-looh tâu-tshiú,12
+hu-lái àu-tooh,hu-lái àu-tooh,12
+hu-lái投手,hu-lái tâu-tshiú,12
 huí-sū-toh 球,huí-sū-toh-kiû,12
+iú-bih--ê,iú-bih--ê,12
 ma-su-kha-phóng,ma-su-kha-phóng,12
+phi̋n-tsí hit-tah,phi̋n-tsí hit-tah,12
+phi̋n-tsí làng-nah,phi̋n-tsí làng-nah,12
 sa̋i-hóng 咖啡,sa̋i-hóng ka-pi,12
 si-lí-khóng 筅,si-lí-khóng-tshíng,12
 su-too-lài-khuh,su-too-lài-khuh,12
+sà-tooh khòo-tshih,sà-tooh khòo-tshih,12
+te-tó bòo-lù,te-tó bòo-lù,12
+thá-guh àu-tooh,thá-guh àu-tooh,12
+tshian-tsí á-phù,tshian-tsí á-phù,12
 tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 䖙倒坐起,the-tó-tsē-khí,12
+一人倒投,tsi̍t-lâng-tò-tâu,12
+一壘安打,it-luí an-tánn,12
+一壘教練,it-luí kàu-liān,12
+一線速球,tsi̍t-suànn sok-kiû,12
 七戰四勝,tshit-tsiàn sì-sìng,12
+三上三落,sann-tsiūnn sann-lo̍h,12
+三壘安打,sann-luí an-tánn,12
+三壘教練,sann-luí kàu-liān,12
 三線選單,sann-suànn suán-tuann,12
 三項全能,sann-hāng tsuân-lîng,12
+上壘次數,tsiūnn-luí tshù-sòo,12
 下目睫毛,ē ba̍k-tsiah-mn̂g,12
 下目睫毛,ē ba̍k-tsiap-mn̂g,12
+不死sa̋n-sín,put-sí sa̋n-sín,12
 中國割包,tiong-kok kuah-pau,12
 中場歇睏,tiông-tiûnn hioh-khùn,12
 中外野手,tiong-guā-iá-tshiú,12
+中心打者,tiong-sim tánn-tsiá,12
 中繼 phit-tsiah,tiong-kè phit-tsiah,12
+中繼成功,tiong-kè sîng-kong,12
 中繼投手,tiong-kè tâu-tshiú,12
 串仔卵餅,tshǹg-á nn̄g-piánn,12
 串流媒體,tshuàn-liû muî-thé,12
+九一連線,kiú-it liân-suànn,12
 乳突病毒,jú-tu̍t pēnn-to̍k,12
 乳突病毒,lú-tu̍t pīnn-to̍k,12
+予球擉著,hōo kiû tia̍k-tio̍h,12
+二壘安打,jī-luí an-tánn,12
 五戰三勝,gōo-tsiàn sann-sìng,12
 人字拖仔,jîn-jī thua-á,12
 人字拖仔,lîn-lī thua-á,12
@@ -1451,39 +1682,54 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 人本設計,lîn-pún siat-kè,12
 人蛇集團,lâng-tsuâ tsi̍p-thuân,12
 人面辨識,lâng-bīn piān-sik,12
+代訓球員,tāi-hùn kiû-uân,12
 伸勼工時,tshun-kiu kang-sî,12
+佈局投手,pòo-kio̍k tâu-tshiú,12
 低醣飲食,kē-thn̂g ím-si̍t,12
+促請裁決,tshiok-tshiánn tshâi-kuat,12
 保溼噴霧,pó-sip phùn-bū,12
 修容粉餅,siu-iông hún-piánn,12
 個資漏洩,kò-tsu lāu-sia̍p,12
 倒外野手,tò-guā-iá-tshiú,12
+倒鉤的,tò-kau--ê,12
 假目睫毛,ké-ba̍k-tsiah-mn̂g,12
 假目睫毛,ké-ba̍k-tsiap-mn̂g,12
 偏好設定,phian-hònn siat-tīng,12
 偵查氣球,tsing-tsa khì-kiû,12
 傳說對決,thuân-suat tuì-kuat,12
 傷停補時,siong-thîng-póo-sî,12
+優質先發,iu-tsit sian-huat,12
 儲存容量,tû-tsûn iông-liōng,12
 儲存空間,tû-tsûn khong-kan,12
 先發 phit-tsiah,sian-huat phit-tsiah,12
 先發投手,sian-huat tâu-tshiú,12
+先發球員,sian-huat kiû-uân,12
+先發輪值,sian-huat lûn-ti̍t,12
 內容農場,luē-iông lông-tiûnn,12
 內線跑道,lāi-suànn pháu-tō,12
+全壘打率,tsuân-luí-tánn-lu̍t,12
+兩線速球,nn̄g-suànn sok-kiû,12
 共伴效應,kiōng-phuān hāu-ìng,12
 共融公園,kiōng-iông kong-hn̂g,12
+再見保送,tsài-kiàn pó-sàng,12
+再見安打,tsài-kiàn an-tánn,12
 冬季兩項,tang-kuì nn̄g-hāng,12
 冰上 há-khih,ping-siōng há-khih,12
+刁工漏球,thiau-kang lāu-kiû,12
+刁工落球,thiau-kang lak-kiû,12
 前瞻計畫,tsiân-tsiam kè-uē,12
 加勒比海,ka-li̍k-pí-hái,12
 加密貨幣,ka-bi̍t huè-pè,12
 加密貨幣,ka-bi̍t hè-pè,12
 動態伸輪,tōng-thài tshun-lûn,12
 勗勉典禮,hiok-bián tián-lé,12
+勝利投手,sìng-lī tâu-tshiú,12
 匿蹤戰機,li̍k-tsong tsiàn-ki,12
 十六進位,tsa̍p-la̍k-tsìn-uī,12
 卡布奇諾,kha-pu-tshí-nooh,12
 印度烘餅,ìn-tōo hang-piánn,12
 厚肉植物,kāu-bah si̍t-bu̍t,12
+反常投球,huán-siông tâu-kiû,12
 反式脂肪,huán-sik tsi-hong,12
 取消復原,tshú-siau ho̍k-guân,12
 口服藥物,kháu-ho̍k io̍h-bu̍t,12
@@ -1492,7 +1738,9 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 咖啡濾紙,ka-pi lū-tsuá,12
 喙䫌胭脂,tshuì-phué ian-tsi,12
 喙脣膏盤,tshuì-tûn-ko-puânn,12
+單指曲球,tan-tsáinn khiau-kiû,12
 器官衰竭,khì-kuan sue-kia̍t,12
+四線速球,sì-suànn sok-kiû,12
 四角尖碑,sì-kak-tsiam-pi,12
 四跤仔泅,sì-kha-á-siû,12
 地板動作,tuē-pán tōng-tsok,12
@@ -1504,11 +1752,14 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 外掛程式,guā-kuà thîng-sik,12
 外掛程式,guā-kuà tîng-sik,12
 外籍勞工,guā-tsi̍k lô-kang,12
+外籍球員,guā-tsi̍k kiû-uân,12
+外籍的,guā-tsi̍k--ê,12
 外線跑道,guā-suànn pháu-tō,12
 大雨特報,tuā-ú ti̍k-pò,12
 天光之暝,thinn kng tsi mê,12
 天光之暝,thinn kng tsi mî,12
 太陽能枋,thài-iông-lîng pang,12
+妨礙走壘,hông-gāi tsáu-luí,12
 子宮喙癌,tsú-kiong-tshuì-gâm,12
 子宮肌瘤,tsú-kiong ki-liû,12
 子宮肌瘤,tsú-kiong-ki-liû,12
@@ -1517,7 +1768,13 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 字元距離,lī-guân kū-lī,12
 字距微調,jī-kī bî-tiâu,12
 字距微調,lī-kū-bî-tiâu,12
+守備教練,siú-pī kàu-liān,12
+安全上壘,an-tsuân tsiūnn luí,12
+安全人員,an-tsuân jîn-uân,12
 安非他命,an-hui-tha-bīng,12
+完全停止,uân-tsuân thîng-tsí,12
+完全打擊,uân-tsuân tánn-kik,12
+完全比賽,uân-tsuân pí-sài,12
 定向越野,tīng-hiòng ua̍t-iá,12
 定向運動,tīng-hiòng ūn-tōng,12
 定妝噴霧,tīng-tsong phùn-bū,12
@@ -1528,17 +1785,25 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 尪仔粉盤,ang-á-hún-puânn,12
 尪仔粉筅,ang-á-hún-tshíng,12
 尪仔粉膏,ang-á-hún-ko,12
+山頂山跤,suann-tíng suann-kha,12
 巡弋飛彈,sûn-ik hui-tuânn,12
 帕金森症,phà-kim-sim-tsìng,12
 平板電腦,pênn-pán-tiān-náu,12
 平板電腦,pînn-pán-tiān-náu,12
+延延投球,iân-tshiân tâu-kiû,12
 引體搝起,ín-thé-giú-khí,12
 引體搝起,ín-thé-khiú-khí,12
 強欲絕種,kiông-beh tse̍h-tsíng,12
 強欲絕種,kiông-beh tsua̍t-tsíng,12
+強迫取分,kiông-pik tshú-hun,12
+強迫進壘,kiông-pik tsìn-luí,12
+後備選手,āu-pī suán-tshiú,12
 後援 phit-tsiah,āu-uān phit-tsiah,12
+後援出賽,āu-uān tshut-sài,12
 後援投手,āu-uān tâu-tshiú,12
 後設資料,āu-siat tsu-liāu,12
+得分位置,tit-hun uī-tì,12
+復健教練,ho̍k-kiān kàu-liān,12
 德國煙腸,tik-kok ian-tshiâng,12
 心肌梗塞,sim-ki kīng-sik,12
 心肌梗窒,sim-ki kénn-that,12
@@ -1551,6 +1816,16 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 惡性腫瘤,ok-sìng tsíng-liû,12
 應用程式,ìng-iōng thîng-sik,12
 應用程式,ìng-iōng tîng-sik,12
+打擊教練,tánn-kik kàu-liān,12
+打擊順序,tánn-kik sūn-sī,12
+打擊順序,tánn-kik sūn-sū,12
+打跑戰術,tánn-pháu tsiàn-su̍t,12
+技術委員,ki-su̍t uí-uân,12
+投手教練,tâu-tshiú kàu-liān,12
+投手犯規,tâu-tshiú huān-kui,12
+投捕教練,tâu-póo kàu-liān,12
+投球局數,tâu-kiû kio̍k-sòo,12
+投補配搭,tâu-póo phuè-tah,12
 抗力作用,khòng-li̍k tsok-iōng,12
 拉不拉多,la-put-la-to,12
 拍光粉餅,phah-kng hún-piánn,12
@@ -1560,6 +1835,8 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 指定讓渡,tsí-tīng jiōng-tōo,12
 指定讓渡,tsí-tīng liōng-tōo,12
 指紋解鎖,tsí-bûn kái-só,12
+捕手妨礙,póo-tshiú hông-gāi,12
+捕手教練,póo-tshiú kàu-liān,12
 授權鎖匙,siū-khuân só-sî,12
 掛耳咖啡,kuà-hī ka-pi,12
 掛耳咖啡,kuà-hīnn ka-pi,12
@@ -1574,9 +1851,18 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 擴充功能,khok-tshiong kong-lîng,12
 收 khoo-mí-sióng,siu khoo-mí-sióng,12
 收烏西錢,siu oo-se-tsînn,12
+攻守陣容,kong-siú tīn-iông,12
+攻擊指數,kong-kik tsí-sòo,12
 政治分贓,tsìng-tī pun-tsng,12
+故意保送,kòo-ì pó-sàng,12
+故意四䆀,kòo-ì sì-bái,12
+故意漏球,kòo-ì lāu-kiû,12
+故意落球,kòo-ì lak-kiû,12
 救援 phit-tsiah,kiù-uān phit-tsiah,12
+救援失敗,kiù-uān sit-pāi,12
+救援成功,kiù-uān sîng-kong,12
 救援投手,kiù-uān tâu-tshiú,12
+救援機會,kiù-uān ki-huē,12
 散工換蹛,suánn-kang uānn-tuà,12
 敨結賽制,tháu-kat-sài-tsè,12
 文字樣式,bûn-jī iūnn-sik,12
@@ -1591,6 +1877,7 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 最佳紀錄,tsuè-ka kì-lo̍k,12
 有氧運動,iú-ióng ūn-tōng,12
 有氧體操,iú-ióng thé-tshau,12
+本壘相挵,pún-luí sio-lòng,12
 核心肌群,hi̍k-sim ki-kûn,12
 核酸檢測,hi̍k-sng kiám-tshik,12
 框線粗幼,khing-suànn tshoo-iù,12
@@ -1636,6 +1923,7 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 深色模式,tshim-sik bôo-sik,12
 混合雙打,hūn-ha̍p siang-tánn,12
 淺色模式,tshián-sik bôo-sik,12
+清壘打者,tshing-luí tánn-tsiá,12
 溫室效應,un-sik hāu-ìng,12
 溫室氣體,un-sik khì-thé,12
 滑輪搝落,ku̍t-lián giú-lo̍h,12
@@ -1658,17 +1946,28 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 熱壓俗麭,lia̍t-ap sio̍k-pháng,12
 熱脹冷縮,jia̍t-tiòng-líng-sok,12
 熱脹冷縮,lia̍t-tiòng-líng-sok,12
+燒一下,sio--tsi̍t-ē,12
+燒幾粒仔,sio kuí lia̍p-á,12
 燒膨冷縮,sio-phòng-líng-sok,12
 營養午餐,îng-ióng ngóo-tshan,12
+牛牢捕手,gû-tiâu póo-tshiú,12
+牛牢教練,gû-tiâu kàu-liān,12
 特效化妝,ti̍k-hāu huà-tsong,12
+犧牲bàn-tooh,hi-sing bàn-tooh,12
+犧牲飛球,hi-sing hui-kiû,12
 玉城丹尼,gio̍k-siânn tan-lî,12
 玉城丹尼,gio̍k-siânn tan-nî,12
 王梨蝦球,ông-lâi hê-kiû,12
+王牌投手,ông-pâi tâu-tshiú,12
 現代五項,hiān-tāi gōo-hāng,12
 球類比賽,kiû-luī pí-sài,12
 生肌減油,senn-ki kiám-iû,12
 生肌減油,sinn-ki kiám-iû,12
 生酮飲食,sing-tông ím-si̍t,12
+產生得分,sán-sing tit-hun,12
+用sai的,iōng sai--ê,12
+用捒的,iōng sak--ê,12
+用搝的,iōng giú--ê,12
 番麥羹湯,huan-be̍h kenn-thng,12
 番麥羹湯,huan-be̍h kinn-thng,12
 畫面縮放,uē-bīn sok-hòng,12
@@ -1681,6 +1980,7 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 白紙革命,pe̍h-tsuá kik-bīng,12
 百頁豆腐,pah-ia̍h tāu-hū,12
 盛裝舞步,sīng-tsong-bú-pōo,12
+盜壘失敗,tō-luí sit-pāi,12
 目墘線液,ba̍k-kînn-suànn-i̍k,12
 目墘線筅,ba̍k-kînn-suànn-tshíng,12
 目墘線筆,ba̍k-kînn-suànn-pit,12
@@ -1720,20 +2020,28 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 粿仔卵餅,kué-á-nn̄g-piánn,12
 粿仔卵餅,ké-á-nn̄g-piánn,12
 紅玉紅茶,âng-gi̍k âng-tê,12
+純長打率,sûn-tn̂g-tánn-lu̍t,12
 細粒圓麭,sè lia̍p înn-pháng,12
+細間房間,sè-king pâng-king,12
 組態設定,tsoo-thài siat-tīng,12
 絕地求生,tsua̍t-tuē kiû-sing,12
 絕地求生,tsua̍t-tē kiû-sing,12
 緩衝時間,uān-tshiong sî-kan,12
+繼承失分,kè-sîng sit-hun,12
+繼承走者,kè-sîng tsáu-tsiá,12
 美國割包,bí-kok-kuah-pau,12
 美國煙腸,bí-kok ian-tshiâng,12
 耐震係數,nāi-tsìn hē-sòo,12
 聖嬰現象,sìng-ing hiān-siōng,12
 肇事逃逸,tiāu-sū tô-i̍k,12
+育成教練,io̍k-sîng kàu-liān,12
 腿二頭肌,thuí-jī-thâu-ki,12
 腿二頭肌,thuí-lī-thâu-ki,12
+自培的,tsū-puê--ê,12
+自培選手,tsū-puê suán-tshiú,12
 自由組手,tsū-iû tsoo-tshiú,12
 自由體操,tsū-iû thé-tshau,12
+自責分率,tsū-tsik-hun-lu̍t,12
 自重訓練,tsū-tāng hùn-liān,12
 花式溜冰,hua-sik liu-ping,12
 花式趨冰,hua-sik tshu-ping,12
@@ -1742,6 +2050,8 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 英雄聯盟,ing-hiông liân-bîng,12
 草埔 há-khih,tsháu-poo há-khih,12
 菜頭簽餅,tshài-thâu-tshiam-piánn,12
+萬能的,bān-lîng--ê,12
+萬能選手,bān-lîng suán-tshiú,12
 蓄能設施,thiok-lîng siat-si,12
 蓄電設施,thiok-tiān siat-si,12
 藍光光碟,nâ-kng kng-tia̍p,12
@@ -1758,6 +2068,9 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 行動條碼,hîng-tōng tiâu-bé,12
 街式趨枋,ke-sik tshu-pang,12
 表情符號,piáu-tsîng hû-hō,12
+被全壘打,pī tsuân-luí-tánn,12
+被打擊率,pī tánn-kik-lu̍t,12
+製造得分,tsè-tsō tit-hun,12
 西洋燜飯,se-iûnn būn-pn̄g,12
 覆地牚身,phak-tuē-thìnn-sin,12
 覆地牚身,phak-tē-thènn-sin,12
@@ -1767,10 +2080,14 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 豪雨特報,hô-ú ti̍k-pò,12
 貼起去,tah--khí-khì,12
 資料鋏仔,tsu-liāu giap-á,12
+走壘教練,tsáu-luí kàu-liān,12
+走橫的,tsáu huâinn--ê,12
+走直的,tsáu ti̍t--ê,12
 超級雷暴,tshiau-kip luî-pō,12
 越野趨雪,ua̍t-iá tshu-seh,12
 趨輪趨冰,tshu-lián tshu-ping,12
 趨輪運動,tshu-lián ūn-tōng,12
+跑打戰術,pháu-tánn tsiàn-su̍t,12
 跔厝經濟,ku-tshù king-tsè,12
 跳台跳水,thiàu-tâi thiàu-tsuí,12
 跳板跳水,thiàu-pán thiáu-tsuí,12
@@ -1782,6 +2099,7 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 輕艇水球,khin-thíng tsuí-kiû,12
 輕艇競速,khin-thíng kīng-sok,12
 輻射冷卻,hok-siā líng-khiok,12
+農場主管,lông-tiûnn tsú-kuán,12
 透視畫法,thàu-sī uē-huat,12
 透視畫法,thàu-sī uī-huat,12
 通貨膨脹,thong-huè phòng-tiòng,12
@@ -1789,17 +2107,29 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 通貨膨脹,thong-hè-phòng-tiòng,12
 運動攀登,ūn-tōng phan-ting,12
 運動舞蹈,ūn-tōng bú-tō,12
+違規投球,uî-kui tâu-kiû,12
 遮光kha-tián,jia-kng kha-tián,12
 還稅於民,hîng-suè-î-bîn,12
 還稅於民,hîng-sè-î-bîn,12
 邊仔面,pinn--á-bīn,12
 酒精棉片,tsiú-tsing mî-phìnn,12
 重量訓練,tāng-liōng hùn-liān,12
+野手教練,iá-tshiú kàu-liān,12
+野手選擇,iá-tshiú suán-ti̍k,12
 金璇王梨,kim-suān ông-lâi,12
 鉸落來,ka--lo̍h-lâi,12
 銃子篋仔,tshìng-tsí kheh-á,12
+鋸齒打線,kì-khí tánn-suànn,12
+鋸齒打線,kù-khí tánn-suànn,12
 鐵人三項,thih-lâng sann-hāng,12
+開場投手,khui-tiûnn tâu-tshiú,12
+開路先鋒,khai-lōo sian-hong,12
+開路的,khui-lōo--ê,12
 閬歇時間,làng-hioh sî-kan,12
+關門投手,kuainn-mn̂g tâu-tshiú,12
+關門投手,kuinn-mn̂g tâu-tshiú,12
+關門的,kuainn-mn̂g--ê,12
+關門的,kuinn-mn̂g--ê,12
 防呆機制,hông-tai ki-tsè,12
 防曝係數,hông-pha̍k hē-sòo,12
 附加功能,hù-ka kong-lîng,12
@@ -1807,20 +2137,29 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 隨溶咖啡,suî-iûnn ka-pi,12
 隱形目鏡,ún-hîng ba̍k-kiànn,12
 隱形缺氧,ún-hîng khuat-ióng,12
+雙殺機會,siang-sat ki-huē,12
 雲端 há-ti,hûn-tuan há-ti,12
 雲端硬碟,hûn-tuan ngē-tia̍p,12
 雲端硬碟,hûn-tuan ngī-tia̍p,12
 電子支付,tiān-tsú tsi-hù,12
 露式相偃,lōo-sik sio-ián,12
 靜態伸輪,tsīng-thài tshun-lûn,12
+非自責分,hui-tsū-tsik-hun,12
 韻律體操,ūn-lu̍t thé-tshau,12
 頂目睫毛,tíng ba̍k-tsiah-mn̂g,12
 頂目睫毛,tíng ba̍k-tsiap-mn̂g,12
+預備裁判,ī-pī tshâi-phuànn,12
+預備裁判,ū-pī tshâi-phuànn,12
+預備選手,ī-pī suán-tshiú,12
+預備選手,ū-pī suán-tshiú,12
 頭毛試火,thâu-mn̂g tshì hué,12
 頭毛試火,thâu-mn̂g tshì hé,12
+頭部趨壘,thâu-pōo tshu-luí,12
+飛球投手,hui-kiû tâu-tshiú,12
 飛靶射擊,hui-pé siā-kik,12
 食食纖維,tsia̍h-si̍t tshiam-uî,12
 飽和脂肪,pá-hô tsi-hong,12
+首席教練,siú-sik kàu-liān,12
 馬場馬術,bé-tiûnn bé-su̍t,12
 馬鈴薯條,má-lîng-tsî-tiâu,12
 馬鈴薯條,má-lîng-tsû-tiâu,12
@@ -1831,7 +2170,9 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 馬鈴薯球,má-lîng-tsî-kiû,12
 馬鈴薯餅,má-lîng-tsî-piánn,12
 馬鈴薯餅,má-lîng-tsû-piánn,12
+體能教練,thé-lîng kàu-liān,12
 體脂肪率,thé tsi-hong-lu̍t,12
+高壓投法,ko-ap tâu-huat,12
 鬥目睫毛,tàu ba̍k-tsiah-mn̂g,12
 鬥目睫毛,tàu ba̍k-tsiap-mn̂g,12
 黃金獵狗,n̂g-kim la̍h-káu,12
@@ -1841,151 +2182,35 @@ tsioo-kóo-lè-tòo,tsioo-kóo-lè-tòo,12
 龍獅運動,lîng-sai ūn-tōng,12
 龍骨歪斜,liông-kut uai-tshua̍h,12
 龍骨歪斜,lîng-kut uai-tshua̍h,12
-I-tá-lih 燜飯,i-tá-lih būn-pn̄g,10
-khu-la-sí 相偃,khu-la-sí sio-ián,10
-khu-lì-mù tshì-sìr,khu-lì-mù tshì-sìr,10
-khu-lì-mù tshì-sù,khu-lì-mù tshì-sù,10
-si-hong雞卵糕,si-hong ke-nn̄g-ko,10
-si-hong雞卵糕,si-hong kue-nn̄g-ko,10
-tsioo-kóo-lè-tòo 醬,tsioo-kóo-lè-tòo-tsiùnn,10
-三對三籃球,sann tuì sann nâ-kiû,10
 中人,tiong-lâng,10
-五對五籃球,gōo tuì gōo nâ-kiû,10
-全螢幕檢視,tsuân-îng-bōo kiám-sī,10
-兩段式倒斡,nn̄g-tuān-sik tò-uat,10
-公園式趨枋,kong-hn̂g-sik tshu-pang,10
-公路自由車,kong-lōo tsū-iû-tshia,10
-共融遊戲場,kiōng-iông iû-hì-tiûnn,10
-冰上曲棍球,ping-siōng khiok-kùn-kiû,10
 划船,kò-tsûn,10
-卡啦雞腿堡,khah-lah ke-thuí-pó,10
-印度脆球餅,ìn-tōo tshè-kiû-piánn,10
 卵白質,nn̄g-pe̍h-tsit,10
 口座,kháu-tsō,10
-圖形化介面,tôo-hîng-huà kài-bīn,10
 團體,thuân-thé,10
-地面攔閘網,tuē-bīn nuâ-tsa̍h-bāng,10
-地面攔閘網,tē-bīn nuâ-tsa̍h-bāng,10
-場地自由車,tiûnn-tuē tsū-iû-tshia,10
-場地自由車,tiûnn-tē tsū-iû-tshia,10
-場地障礙賽,tiûnn-tuē tsiòng-gāi-sài,10
-場地障礙賽,tiûnn-tē tsiòng-gāi-sài,10
 多倫多,to-lûn-to,10
-大杯冰奶茶,tuā-pue ping-ling-tê,10
-大豪雨特報,tuā-hô-ú ti̍k-pò,10
-奶管原位癌,ling-kńg guân-uī-gâm,10
-對抗性比賽,tuì-khòng-sìng pí-sài,10
-希羅式相偃,hi-lô-sik sio-ián,10
-彈出式視窗,tuânn-tshut-sik sī-thang,10
 抹粉,buah-hún,10
-拗式跤踏車,áu-sik kha-ta̍h-tshia,10
-排序 lí-sirh-tooh,pâi-sī lí-sirh-tooh,10
-排序 lí-sirh-tooh,pâi-sū lí-sirh-tooh,10
 排球,pâi-kiû,10
-收束毛管空,siu-sok mn̂g-kńg-khang,10
-效能功耗比,hāu-lîng kong-hònn-pí,10
-斑腿樹蛤仔,pan-thuí tshiū-kap-á,10
-最低工資法,tsuè-kē kang-tsu-huat,10
 栗子,la̍t-tsí,10
-核子藏水艇,hi̍k-tsú tshàng-tsuí-thíng,10
 格式,keh-sik,10
 桔仔,kiat-á,10
 梅仔,m̂-á,10
 標題,phiau-tê,10
-櫻花鉤吻鮭,ing-hue-koo-bún-kui,10
-水上 oo-tóo-bái,tsuí-siōng oo-tóo-bái,10
-水上飛行機,tsuí-siōng hui-lîng-ki,10
-水平分隔線,tsuí-pênn hun-keh-suànn,10
-水平分隔線,tsuí-pîng hun-keh-suànn,10
-水平分隔線,tsuí-pînn hun-keh-suànn,10
-水煙火車母,tsuí-ian hué-tshia-bó,10
-水煙火車母,tsuí-ian hé-tshia-bú,10
 泅水衫,siû-tsuí-sann,10
-法國棍仔麭,huat-kok kùn-á-pháng,10
-法國鬥牛狗,huat-kok tàu-gû-káu,10
-泰式綠奶茶,thài-sik li̍k-ling-tê,10
-泰式綠奶茶,thài-sik li̍k-ni-tê,10
-淡化𤶃仔痕,tām-huà thiāu-á-hûn,10
-澳洲顧羊狗,ò-tsiu kòo-iûnn-káu,10
 火龍果,hué-liông-kó,10
-無政府主義,bô-tsìng-hú tsú-gī,10
-無線基地台,bô-suànn ki-tuē-tâi,10
-無線基地台,bô-suànn ki-tē-tâi,10
-無線電腦鼠,bô-suànn tiān-náu-tshí,10
-無線電腦鼠,bô-suànn tiān-náu-tshú,10
-無線鳥鼠仔,bô-suànn niáu-tshí-á,10
-無線鳥鼠仔,bô-suànn niáu-tshú-á,10
 煮食,tsú-tsia̍h,10
-班尼迪克卵,pan-nî-ti̍k-khik-nn̄g,10
-瑪奇朵咖啡,ma-khiá-tooh ka-pi,10
-生tsioo-kóo-lè-tòo,tshenn-tsioo-kóo-lè-tòo,10
-生tsioo-kóo-lè-tòo,tshinn-tsioo-kóo-lè-tòo,10
 留話,lâu-uē,10
-登山自由車,ting-san tsū-iû-tshia,10
-目睫毛鋏仔,ba̍k-tsiah-mn̂g giap-á,10
-目睫毛鋏仔,ba̍k-tsiap-mn̂g giap-á,10
-碳水化合物,thuànn-tsuí huà-ha̍p-bu̍t,10
-競技性比賽,kīng-ki-sìng pí-sài,10
-競速細輪車,kìng-sok-suè-lián-tshia,10
-競速細輪車,kīng-sok-sè-lián-tshia,10
-筅仔清潔劑,tshíng-á tshing-kiat-tse,10
-筆記型電腦,pit-kì-hîng tiān-náu,10
-筋肉放冗劑,kin-bah pàng-līng-tse,10
 籃球,nâ-kiû,10
-米泔豆油膏,bí-ám tāu-iû-ko,10
-紀錄保持人,kì-lio̍k pó-tshî-lîn,10
-紀錄保持人,kì-lo̍k pó-tshî-jîn,10
-網路防火牆,bāng-lōo hông-hué-tshiûnn,10
-網路防火牆,bāng-lōo hông-hé-tshiûnn,10
-編號 lí-sirh-tooh,phian-hō lí-sirh-tooh,10
-編號 lí-sirh-tooh,pian-hō lí-sirh-tooh,10
-置入性行銷,tì-ji̍p-sìng hîng-siau,10
-置入性行銷,tì-li̍p-sìng hîng-siau,10
 考古,khó-kóo,10
 肉桂,jio̍k-kuì,10
 胭脂,ian-tsi,10
-自由式相偃,tsū-iû-sik sio-ián,10
-自由式趨輪,tsū-iû-sik tshu-lián,10
-草埔曲棍球,tsháu-poo khiok-kùn-kiû,10
-落崎障礙賽,lo̍h-kiā tsiòng-gāi sài,10
-葡萄牙水狗,phû-tô-gâ tsuí-káu,10
-虎皮雞卵糕,hóo-phuê ke-nn̄g-ko,10
-虎皮雞卵糕,hóo-phê kue-nn̄g-ko,10
-虛擬實況主,hi-gí si̍t-hóng-tsú,10
-虹吸式咖啡,hông-khip-sik ka-pi,10
-螢幕更新率,îng-bōo king-sin-lu̍t,10
-西洋萵仔菜,se-iûnn e-á-tshài,10
-西洋萵仔菜,se-iûnn ue-á-tshài,10
-西班牙燜飯,se-pan-gâ būn-pn̄g,10
-西西里咖啡,si-si-lí ka-pi,10
 設定,siat-tīng,10
-負北極振盪,hū pak-ki̍k tsín-tōng,10
-越野障礙賽,ua̍t-iá tsiòng-gāi-sài,10
 軟體,nńg-thé,10
-輕銀集塵烌,khin-gîn tsi̍p-tîn-hu,10
-輕銀集塵烌,khin-gûn tsi̍p-tîn-hu,10
-遮光窗仔簾,jia-kng thang-á-lî,10
-邊境顧羊狗,pian-kíng kòo-iûnn-káu,10
 重巡,tîng-sûn,10
+鐵枝路,thih-ki-lōo,10
 鐵觀音,thih-kuan-im,10
-阿富汗獵狗,a-hù-hān la̍h-káu,10
-阿茲海默症,a-tsu-hái-bi̍k-tsìng,10
-隱私權設定,ún-su-khuân siat-tīng,10
-隱私權設定,ún-su-kuân siat-tīng,10
+阻擋,tsóo-tòng,10
 電子批,tiān-tsú-phue,10
-電源供應器,tiān-guân kiong-ìng-khì,10
-面大細䫌症,bīn-tuā-sè-phué-tsìng,10
-響應式網站,hiáng-ìng-sik bāng-tsām,10
-響應式網站,hióng-ìng-sik bāng-tsām,10
-項目 lí-sirh-tooh,hāng-bo̍k lí-sirh-tooh,10
-馬拉松泅水,ma-lá-sóng siû-tsuí,10
-馬拉松游泳,ma-lá-sóng iû-íng,10
 鹹酥雞,kiâm-soo-ke,10
-麝香貓咖啡,siā-hiunn-niau ka-pi,10
-麭幼仔導覽,pháng-iù-á tō-lám,10
-黃斑部病變,n̂g-pan-pōo pênn-piàn,10
-黃斑部病變,n̂g-pan-pōo pīnn-piàn,10
-點落式選單,tiám-lo̍h-sik suán-tuann,10
 羽毛球,ú-môo-kiû,9
 梅仔,muê-á,5
 標題,phiau-tuê,5
@@ -2013,9 +2238,11 @@ tsioo-kóo-lè-tòo 醬,tsioo-kóo-lè-tòo-tsiùnn,10
 葡萄牙,phû-tô-gâ,1
 論壇,lūn-tuânn,1
 象棋,tshiūnn-kî,1
+走者,tsáu-tsiá,1
 過濾,kuè-lī,1
 過濾,kè-lū,1
 選項,suán-hāng,1
+鐵枝,thih-ki,1
 閣活節,koh-ua̍h-tseh,1
 閣活節,koh-ua̍h-tsueh,1
 隱私權,ún-su-khuân,1

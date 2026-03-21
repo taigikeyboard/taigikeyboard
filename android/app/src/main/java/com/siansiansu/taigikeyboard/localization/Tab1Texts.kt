@@ -104,13 +104,11 @@ object Tab1Texts {
 
     val userGuide = LocalizedText(hanji = "網站紹介")
     val rateUs = LocalizedText(hanji = "為阮評分")
-    val contactUs = LocalizedText(hanji = "問題回報")
+    val contactUs = LocalizedText(hanji = "寄付")
     val privacyPolicy = LocalizedText(hanji = "隱私權政策")
 
-    // MARK: - 問題回報
+    // MARK: - 寄付
 
-    val feedbackDescription = LocalizedText(hanji = "無論是使用拄著 ê 問題、感覺好用 ê 所在，抑是會當改進 ê 建議，攏歡迎寫落來！影片、圖會使直接寄批去 info@taigikeyboard.tw")
-    val goToGoogleForm = LocalizedText(hanji = "揤遮去 Google 表單")
     val emailContact = LocalizedText(hanji = "台語齒盤是 1 人團隊，目前由我 1 个人塌錢開發佮維護，因為有你 ê 贊助，予我有氣力繼續行落去，咱做伙為著台語打拼。")
     val supportUs = LocalizedText(hanji = "支持台語齒盤")
 
@@ -126,6 +124,19 @@ object Tab1Texts {
     )
 
     val versionHistoryEntries = listOf(
+        VersionEntry("3.4.5", "2026/03/21", listOf(
+            LocalizedText(hanji = "Added symbol selection panel for inserting special characters."),
+            LocalizedText(hanji = "Added dictionary search in the dictionary settings page."),
+            LocalizedText(hanji = "TPS (方音符號) keyboard layout is now available."),
+            LocalizedText(hanji = "TPS layout auto-selects ㄇ/ㄫ initial and final forms based on context."),
+            LocalizedText(hanji = "Added dismiss keyboard button in toolbar."),
+            LocalizedText(hanji = "Improved number key input."),
+            LocalizedText(hanji = "Redesigned dictionary settings page with descriptions and categories."),
+            LocalizedText(hanji = "Improved symbol panel touch targets."),
+            LocalizedText(hanji = "Fixed an issue where some candidates were missing from search results."),
+            LocalizedText(hanji = "Added reset all settings option."),
+            LocalizedText(hanji = "Updated dictionary data."),
+        )),
         VersionEntry("3.4.4", "2026/03/09", listOf(
             LocalizedText(hanji = "Fixed an issue where some words could not be found when typing."),
         )),
@@ -225,7 +236,7 @@ object Tab1Texts {
     val sttiCopyright = LocalizedText(hanji = "© 教育部")
     val ogdlTaiwanLicense = LocalizedText(hanji = "OGDL-Taiwan-1.0")
 
-    // 腔口補充資料
-    val accentDict = LocalizedText(hanji = "腔口補充資料")
+    // 腔口差
+    val accentDict = LocalizedText(hanji = "腔口差")
     val accentDictCredit = LocalizedText(hanji = "「實齋」整理、提供")
 }

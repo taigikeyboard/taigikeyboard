@@ -82,7 +82,7 @@ fun DetailScreen(
     }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = {
@@ -101,7 +101,7 @@ fun DetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             )
         }
@@ -370,17 +370,11 @@ private fun buildDetailItems(
 
 private fun buildFeedbackItems(): List<DetailItem> {
     return listOf(
-        DetailItem.Paragraph(Tab1Texts.feedbackDescription),
-        DetailItem.ExternalLink(
-            Tab1Texts.goToGoogleForm,
-            R.drawable.ic_article,
-            "https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header"
-        ),
         DetailItem.Paragraph(Tab1Texts.emailContact),
         DetailItem.ExternalLink(
             Tab1Texts.supportUs,
             R.drawable.ic_star,
-            "https://portaly.cc/siansiansu/support"
+            "https://p.ecpay.com.tw/AA663DE"
         )
     )
 }
@@ -481,7 +475,6 @@ private fun getLocalizedTextByKey(key: String): LocalizedText? {
         "faq_2_question" -> Tab1Texts.faq2Question
         "faq_3_question" -> Tab1Texts.faq3Question
         "contact_us" -> Tab1Texts.contactUs
-        "feedback_description" -> Tab1Texts.feedbackDescription
         "feedback_email" -> Tab1Texts.emailContact
         "version_history" -> Tab1Texts.versionHistory
         else -> null

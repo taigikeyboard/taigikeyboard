@@ -12,7 +12,7 @@
     android:background="@drawable/candidate_button_background"
     android:clickable="true"
     android:focusable="true"
-    android:minWidth="64dp">
+    android:minWidth="44dp">
 
     <TextView
         android:id="@+id/candidate_title"

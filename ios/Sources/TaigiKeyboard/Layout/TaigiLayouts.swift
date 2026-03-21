@@ -118,11 +118,11 @@ enum TaigiLayouts {
             // Row 3: ㄆ, ㄊ, ㄎ, ㄗ(ㄐ), ㄨ, ㄛ, ㄠ, ㆲ, ㆥ, ㆮ
             [.char("ㄆ"), .char("ㄊ"), .char("ㄎ"), .char("ㄗ"), .char("ㄨ"), .char("ㄛ"), .char("ㄠ"), .char("ㆲ"), .char("ㆥ"), .char("ㆮ")],
 
-            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ，(。), backspace
-            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char("，"), .backspace],
+            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ,(。), backspace
+            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
-            // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), space, ㆨ, ㆤ(ㄝ), enter
-            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .space, .char("ㆨ"), .char("ㆤ"), .return]
+            // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, enter
+            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .return]
         ]
 
         /// TPS - iPhone SE / iPad (with globe key)
@@ -136,11 +136,11 @@ enum TaigiLayouts {
             // Row 3: ㄆ, ㄊ, ㄎ, ㄗ(ㄐ), ㄨ, ㄛ, ㄠ, ㆲ, ㆥ, ㆮ
             [.char("ㄆ"), .char("ㄊ"), .char("ㄎ"), .char("ㄗ"), .char("ㄨ"), .char("ㄛ"), .char("ㄠ"), .char("ㆲ"), .char("ㆥ"), .char("ㆮ")],
 
-            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ，(。), backspace
-            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char("，"), .backspace],
+            // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ,(。), backspace
+            [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
-            // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), space, ㆨ, ㆤ(ㄝ), enter
-            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .space, .char("ㆨ"), .char("ㆤ"), .return]
+            // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, enter
+            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .return]
         ]
 
         // MARK: MOE Layout 1 (教育部輸入法佈局1) - TL version
@@ -227,20 +227,23 @@ enum TaigiLayouts {
     // ========================================
     // MARK: - Numeric Keyboard (Common Symbols)
     // ========================================
-    // 5-row design: Numbers + Basic punctuation + Common brackets + Function row + Bottom row
+    // 5-row design: High-frequency symbols + Quotation marks & brackets + Punctuation + Common symbols + Bottom row
 
     enum Numeric {
 
         /// Numeric - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
-            // Row 1: Numbers
-            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"),
-             .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            // Row 1: High-frequency symbols (numbers available via alphabetic keyboard)
+            [.char("~", fullWidth: "～"), .char("/"),
+             .char("=", fullWidth: "＝"), .char("_", fullWidth: "＿"),
+             .char("《"), .char("》"),
+             .char("〈"), .char("〉"),
+             .char("|", fullWidth: "｜"), .char("‧", fullWidth: "·")],
 
             // Row 2: Quotation marks and CJK brackets (half-width uses curly quotes)
             [.char("\u{201C}", fullWidth: "「"), .char("\u{201D}", fullWidth: "」"),
              .char("\u{2018}", fullWidth: "『"), .char("\u{2019}", fullWidth: "』"),
-             .char("（"), .char("）"),
+             .char("(", fullWidth: "（"), .char(")", fullWidth: "）"),
              .char("【"), .char("】"),
              .char("["), .char("]")],
 
@@ -262,14 +265,17 @@ enum TaigiLayouts {
 
         /// Numeric - iPhone SE / iPad (with globe key)
         static let withGlobe: [[KeyDef]] = [
-            // Row 1: Numbers
-            [.char("1"), .char("2"), .char("3"), .char("4"), .char("5"),
-             .char("6"), .char("7"), .char("8"), .char("9"), .char("0")],
+            // Row 1: High-frequency symbols (numbers available via alphabetic keyboard)
+            [.char("~", fullWidth: "～"), .char("/"),
+             .char("=", fullWidth: "＝"), .char("_", fullWidth: "＿"),
+             .char("《"), .char("》"),
+             .char("〈"), .char("〉"),
+             .char("|", fullWidth: "｜"), .char("‧", fullWidth: "·")],
 
             // Row 2: Quotation marks and CJK brackets (half-width uses curly quotes)
             [.char("\u{201C}", fullWidth: "「"), .char("\u{201D}", fullWidth: "」"),
              .char("\u{2018}", fullWidth: "『"), .char("\u{2019}", fullWidth: "』"),
-             .char("（"), .char("）"),
+             .char("(", fullWidth: "（"), .char(")", fullWidth: "）"),
              .char("【"), .char("】"),
              .char("["), .char("]")],
 
@@ -293,7 +299,7 @@ enum TaigiLayouts {
     // ========================================
     // MARK: - Symbolic Keyboard (Advanced Symbols)
     // ========================================
-    // 5-row design: Programming brackets + Currency + Book title marks + Function row + Bottom row
+    // 5-row design: Programming brackets + Arrows & special symbols + Currency + Math + Bottom row
     // Note: Does not overlap with Numeric keyboard
 
     enum Symbolic {
@@ -307,12 +313,10 @@ enum TaigiLayouts {
              .char("<"), .char(">"),
              .char("^"), .char("※")],
 
-            // Row 2: Book title marks (always full-width)
-            [.char("〈"), .char("〉"),
-             .char("《"), .char("》"),
-             .char("|"), .char("~"),
-             .char("\\"), .char("/"),
-             .char("_"), .char("=")],
+            // Row 2: Arrows and special symbols
+            [.char("\\", fullWidth: "＼"),
+             .char("←"), .char("→"), .char("↑"), .char("↓"),
+             .char("§"), .char("†"), .char("¶"), .char("‰"), .char("℉")],
 
             // Row 3: Currency and special symbols
             [.char("€"), .char("£"), .char("¥"), .char("¢"),
@@ -337,12 +341,10 @@ enum TaigiLayouts {
              .char("<"), .char(">"),
              .char("^"), .char("※")],
 
-            // Row 2: Book title marks (always full-width)
-            [.char("〈"), .char("〉"),
-             .char("《"), .char("》"),
-             .char("|"), .char("~"),
-             .char("\\"), .char("/"),
-             .char("_"), .char("=")],
+            // Row 2: Arrows and special symbols
+            [.char("\\", fullWidth: "＼"),
+             .char("←"), .char("→"), .char("↑"), .char("↓"),
+             .char("§"), .char("†"), .char("¶"), .char("‰"), .char("℉")],
 
             // Row 3: Currency and special symbols
             [.char("€"), .char("£"), .char("¥"), .char("¢"),

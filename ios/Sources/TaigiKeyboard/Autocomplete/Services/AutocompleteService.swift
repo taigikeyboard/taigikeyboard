@@ -107,8 +107,22 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             let searchInput = buildSearchKey(from: rawInput)
             let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, limit: 100, rawInput: rawInput)
 
+            // TPS ㄜ expansion: also search "or" variant when toggle ON
+            var allWords = words
+            if TPSConverter.containsTPS(rawInput),
+               settings.tpsOrMapsToER,
+               searchInput.contains("er") {
+                let orVariantKey = searchInput.replacingOccurrences(of: "er", with: "or")
+                let orWords = try await lexiconService.search(
+                    for: orVariantKey, inputType: inputType,
+                    inputMode: inputMode, limit: 100, rawInput: rawInput
+                )
+                let existingIds = Set(allWords.map { $0.id })
+                allWords += orWords.filter { !existingIds.contains($0.id) }
+            }
+
             // Apply context boost: promote candidates matching bigram predictions from lastSelectedWord
-            let contextBoostedWords = await applyContextBoost(words: words)
+            let contextBoostedWords = await applyContextBoost(words: allWords)
 
             // 將詞彙轉換為候選詞（不做大小寫轉換，由 SuggestionCaseTransformer 在 View 層處理）
             var suggestions = convertToSuggestions(contextBoostedWords)
@@ -212,14 +226,19 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// - Toneless input (no digits): no default tones added, so the joined key
     ///   matches notone entries in the Trie for broader results.
     private func buildSearchKey(from rawInput: String) -> String {
+        // Convert TPS to TL before segmentation so the segmenter receives romanization
+        let processedInput = TPSConverter.containsTPS(rawInput)
+            ? TPSConverter.toTL(rawInput)
+            : rawInput
+
         let prefix = LexiconConstants.TriePrefix.prefix(for: settings.inputMode)
         let checker: SyllableSegmenter.WordPrefixChecker = { key in
             !TrieService.shared.prefixSearch(prefix + key, limit: 1).isEmpty
         }
-        let segments = SyllableSegmenter.segment(rawInput, wordPrefixChecker: checker, mode: settings.inputMode)
-        guard segments.count > 1 else { return rawInput }
+        let segments = SyllableSegmenter.segment(processedInput, wordPrefixChecker: checker, mode: settings.inputMode)
+        guard segments.count > 1 else { return processedInput }
 
-        let hasTones = rawInput.contains { $0.isNumber }
+        let hasTones = processedInput.contains { $0.isNumber }
 
         let processed = segments.enumerated().map { (index, seg) -> String in
             let base = seg.hasSuffix("-") ? String(seg.dropLast()) : seg

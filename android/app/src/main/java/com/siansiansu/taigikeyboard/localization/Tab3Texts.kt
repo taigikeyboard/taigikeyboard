@@ -23,6 +23,7 @@ object Tab3Texts {
     val dictionarySettings = LocalizedText(hanji = "詞庫管理")
     val customDictionary = LocalizedText(hanji = "自訂詞庫")
     val variantDictionary = LocalizedText(hanji = "異用字")
+    val khiin = LocalizedText(hanji = "在來字")
 
     // MARK: - 自訂詞庫
 
@@ -30,9 +31,9 @@ object Tab3Texts {
     val addEntry = LocalizedText(hanji = "增加詞")
     val editEntry = LocalizedText(hanji = "編輯詞")
     val romanLabel = LocalizedText(hanji = "拍字")
-    val romanPlaceholder = LocalizedText(hanji = "範例：gâu-tsá")
+    val romanPlaceholder = LocalizedText(hanji = "見本：gâu-tsá")
     val hanziLabel = LocalizedText(hanji = "對應")
-    val hanziPlaceholder = LocalizedText(hanji = "範例：𠢕早")
+    val hanziPlaceholder = LocalizedText(hanji = "見本：𠢕早")
     val entriesCount = LocalizedText(hanji = "个")
     val deleteAll = LocalizedText(hanji = "刪除全部")
     val deleteAllMessage = LocalizedText(hanji = "敢確定欲刪除所有自訂詞？")
@@ -54,22 +55,32 @@ object Tab3Texts {
     val clearCacheMessage = LocalizedText(hanji = "這个動作會挕掉所有捷用詞 ê 記錄。敢欲繼續？")
     val clearCacheSuccess = LocalizedText(hanji = "已經挕掉")
 
+    // MARK: - 詞庫資訊按鈕
+
+    val viewWebsite = LocalizedText(hanji = "官方網站")
+
+    // MARK: - 詞庫區塊標題
+
+    val moeSectionTitle = LocalizedText(hanji = "教育部用字")
+    val otherSectionTitle = LocalizedText(hanji = "其他辭典")
+    val supplementSectionTitle = LocalizedText(hanji = "補充資料")
+
     // MARK: - 詞庫名稱
 
     // 教育部臺灣台語常用詞辭典
-    val moeDict = LocalizedText(hanji = "台語常用詞辭典")
+    val moeDict = LocalizedText(hanji = "教育部臺灣台語常用詞辭典")
 
     // 台語新詞辭庫
-    val newwordDict = LocalizedText(hanji = "台語新詞辭庫")
+    val newwordDict = LocalizedText(hanji = "公視台語台台語新詞辭庫")
 
     // 台語工藝詞庫
-    val kunggeDict = LocalizedText(hanji = "台語工藝辭庫")
+    val kunggeDict = LocalizedText(hanji = "工藝中心臺灣台語工藝詞庫")
 
     // iTaigi 華台辭典
     val iTaigiDict = LocalizedText(hanji = "iTaigi愛台語")
 
-    // 台日大辭典
-    val taiwanJapanDict = LocalizedText(hanji = "台日大辭典")
+    // 臺日大辭典
+    val taiwanJapanDict = LocalizedText(hanji = "臺日大辭典台語譯本")
 
     // 台華線頂對照典
     val taiHuaDict = LocalizedText(hanji = "台華線頂對照典")
@@ -78,8 +89,22 @@ object Tab3Texts {
     val taiwanPlantDict = LocalizedText(hanji = "台灣植物名彙")
 
     // 學科術語辭庫
-    val sttiDict = LocalizedText(hanji = "學科術語辭庫")
+    val sttiDict = LocalizedText(hanji = "教育部學科術語臺灣台語對譯")
 
-    // 腔口補充資料
-    val khpooDict = LocalizedText(hanji = "腔口補充資料")
+    // 腔口差
+    val khpooDict = LocalizedText(hanji = "腔口差")
+
+    // LKK漢羅合用建議用字
+    val lkkDict = LocalizedText(hanji = "LKK漢羅合用建議用字")
+
+    // MARK: - 詞庫搜尋
+
+    val searchPlaceholder = LocalizedText(hanji = "拍字揣詞")
+    val noResults = LocalizedText(hanji = "揣無結果")
+    val customDictionarySource = LocalizedText(hanji = "自訂詞庫")
+
+    // MARK: - 辭典查詢選項
+
+    val lookupChhoe = LocalizedText(hanji = "ChhoeTaigi 辭典")
+    val lookupMoe = LocalizedText(hanji = "教育部辭典")
 }

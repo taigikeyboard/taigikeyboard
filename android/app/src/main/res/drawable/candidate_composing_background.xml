@@ -5,7 +5,7 @@
     <item android:state_pressed="true">
         <shape android:shape="rectangle">
             <solid android:color="?semiTransparentColor" />
-            <corners android:radius="8dp" />
+            <corners android:radius="16dp" />
         </shape>
     </item>
 
@@ -13,15 +13,15 @@
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <solid android:color="?semiTransparentColor" />
-            <corners android:radius="8dp" />
+            <corners android:radius="16dp" />
         </shape>
     </item>
 
-    <!-- 預設狀態：淡灰色背景 + 圓角（區分當前組字） -->
+    <!-- 預設狀態：鍵帽背景色 + 圓角（match iOS keyboardDarkButtonBackground） -->
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="?semiTransparentColor" /><!-- Black @ 12.5% opacity -->
-            <corners android:radius="8dp" />
+            <solid android:color="?key_bgColor" />
+            <corners android:radius="16dp" />
         </shape>
     </item>
 </selector>

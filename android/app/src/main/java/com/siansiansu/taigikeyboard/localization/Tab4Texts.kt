@@ -23,14 +23,24 @@ object Tab4Texts {
     val pojMode = LocalizedText(hanji = "白話字")
     val tlMode = LocalizedText(hanji = "台羅")
     val englishMode = LocalizedText(hanji = "英文")
+    val tpsMode = LocalizedText(hanji = "方音符號")
 
     // MARK: - 開關設定
 
     val outputBothScripts = LocalizedText(hanji = "括號標註")
     val autoCapitalization = LocalizedText(hanji = "自動大本字")
     val autoSpace = LocalizedText(hanji = "自動空白")
+
+    // MARK: - 白話字設定
+
+    val pojSettingsSectionTitle = LocalizedText(hanji = "白話字")
     val doubleTapOO = LocalizedText(hanji = "連紲拍 oo → o͘")
     val doubleTapNN = LocalizedText(hanji = "連紲拍 nn → ⁿ")
+
+    // MARK: - 方音符號設定
+
+    val tpsSettingsSectionTitle = LocalizedText(hanji = "方音符號")
+    val tpsOrMapsToER = LocalizedText(hanji = "or 對應 ㄜ")
 
     // MARK: - 重設設定
 

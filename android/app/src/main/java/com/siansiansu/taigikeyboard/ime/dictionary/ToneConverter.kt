@@ -76,15 +76,16 @@ object ToneConverter {
     /**
      * Convert vowel + nn pattern to vowel + ⁿ
      */
+    private val nasalVowels = setOf('a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U')
+
     private fun convertNasalDoubleN(input: String): String {
-        val vowels = "aeiouAEIOU"
         val result = StringBuilder()
         var i = 0
 
         while (i < input.length) {
             when {
                 i + 2 < input.length &&
-                vowels.contains(input[i]) &&
+                input[i] in nasalVowels &&
                 input[i + 1].lowercaseChar() == 'n' &&
                 input[i + 2].lowercaseChar() == 'n' -> {
                     result.append(input[i]).append("ⁿ")

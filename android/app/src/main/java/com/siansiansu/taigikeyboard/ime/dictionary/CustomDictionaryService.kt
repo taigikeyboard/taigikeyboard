@@ -79,7 +79,7 @@ object CustomDictionaryService {
     private data class DefaultEntry(val id: String, val roman: String, val hanzi: String)
 
     private val defaultEntries = listOf(
-        DefaultEntry("default-li-ho", "lí hó", "你好😀"),
+        DefaultEntry("default-li-ho", "lí hó", "你好"),
         DefaultEntry("default-gau-tsa", "gâu-tsá", "𠢕早"),
     )
 

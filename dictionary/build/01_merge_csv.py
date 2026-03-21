@@ -124,6 +124,37 @@ def main():
         )
         logger.info(f"  After Khiin supplement: {len(result_df)} records")
 
+    # Ensure dev column exists before dev supplement (needed for marking existing entries)
+    if "dev" not in result_df.columns:
+        result_df["dev"] = False
+
+    # 補入開發者補充辭典
+    dev_new = _load_dev_supplement(result_df, BASE_DIR, logger)
+    if dev_new is not None and len(dev_new) > 0:
+        result_df = pd.concat([result_df, dev_new], ignore_index=True)
+        result_df = result_df.sort_values(
+            ["frequency", "hanzi", "tl"],
+            ascending=[False, True, True],
+            ignore_index=True
+        )
+        logger.info(f"  After dev supplement: {len(result_df)} records")
+
+    # 補入 LKK 漢羅合用建議用字
+    if "lkk" not in result_df.columns:
+        result_df["lkk"] = False
+    lkk_new = _load_lkk_entries(result_df, BASE_DIR, logger)
+    if lkk_new is not None and len(lkk_new) > 0:
+        result_df = pd.concat([result_df, lkk_new], ignore_index=True)
+        result_df = result_df.sort_values(
+            ["frequency", "hanzi", "tl"],
+            ascending=[False, True, True],
+            ignore_index=True
+        )
+        logger.info(f"  After LKK supplement: {len(result_df)} records")
+
+    # Compute zairaiji column: entries not in any named source
+    result_df["khiin"] = ~(result_df[SOURCE_COLUMNS].any(axis=1) | result_df["dev"] | result_df["lkk"])
+
     # 統計來源
     logger.info(f"\n  [source statistics]")
     for col in SOURCE_COLUMNS:
@@ -210,6 +241,10 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: str, logger) ->
         except Exception:
             continue
 
+        # Skip entries exceeding 4 syllables
+        if len(tl.split("-")) > 4:
+            continue
+
         for hanzi in hanzi_set:
             if (hanzi, tl) in existing_keys:
                 continue
@@ -245,6 +280,205 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: str, logger) ->
 
     if new_rows:
         logger.info(f"  [khiin] Added {len(new_rows)} new entries from Khiin")
+
+    return pd.DataFrame(new_rows) if new_rows else None
+
+
+def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: str, logger) -> pd.DataFrame:
+    """
+    Load developer supplement dictionary entries.
+
+    Reads a minimal CSV (hanzi, tl) and auto-generates all romanization columns.
+    No cleanup is applied — trusts user input.
+    If a (hanzi, tl) pair already exists, marks it dev=True (always included).
+    New pairs are added with dev=True and all source columns set to False.
+    """
+    from kesi import Ku
+    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.notone import remove_tone
+    from common.abbrev import extract_abbrev
+
+    dev_path = os.path.join(base_dir, "15_開發者補充辭典", "data", "dev.csv")
+
+    if not os.path.exists(dev_path):
+        logger.warning("  [skip] dev supplement CSV not found")
+        return None
+
+    dev_df = pd.read_csv(dev_path)
+    if dev_df.empty:
+        logger.info("  [dev] dev.csv is empty, skipping")
+        return None
+
+    # Build map of existing (hanzi, tl_normalized) -> index for dedup
+    existing_key_index = {}
+    for idx, row in existing_df.iterrows():
+        tl_key = str(row["tl"]).lower().replace(" ", "-")
+        existing_key_index[(str(row["hanzi"]), tl_key)] = idx
+
+    # Load frequency map
+    freq_map_path = os.path.join(base_dir, "0_其他資料", "char_freq_merged.txt")
+    freq_map = load_frequency_map(freq_map_path)
+
+    marked_count = 0
+    new_rows = []
+    for _, row in dev_df.iterrows():
+        hanzi = str(row["hanzi"]).strip()
+        tl_raw = str(row["tl"]).strip().lower()
+
+        if not hanzi or not tl_raw:
+            continue
+
+        tl_key = tl_raw.replace(" ", "-")
+        if (hanzi, tl_key) in existing_key_index:
+            # Mark existing entry as dev so it's always included
+            existing_df.at[existing_key_index[(hanzi, tl_key)], "dev"] = True
+            logger.info(f"  [dev] marked existing: {hanzi} / {tl_raw}")
+            marked_count += 1
+            continue
+
+        try:
+            ku = Ku(tl_raw)
+            tl = ku.TL().hanlo.lower().replace(" ", "-")
+            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+            tl_num = to_numeric_tone(tl)
+            poj_num = to_numeric_tone(poj, ascii_only=True)
+        except Exception as e:
+            logger.warning(f"  [dev] romanization failed for {hanzi}/{tl_raw}: {e}")
+            continue
+
+        tl_notone = remove_tone(tl_num)
+        poj_notone = remove_tone(poj_num)
+        tl_abbrev = extract_abbrev(tl)
+        poj_abbrev = extract_abbrev(poj)
+
+        # Use user-provided frequency, or compute from character frequency
+        frequency = row.get("frequency") if "frequency" in dev_df.columns and pd.notna(row.get("frequency")) else None
+        if frequency is None:
+            frequency = get_frequency(hanzi, tl, freq_map)
+        else:
+            frequency = int(frequency)
+
+        is_variant = row.get("is_variant", False) if "is_variant" in dev_df.columns else False
+
+        new_rows.append({
+            "tl": tl,
+            "hanzi": hanzi,
+            "frequency": frequency,
+            "poj": poj,
+            "tl_num": tl_num,
+            "poj_num": poj_num,
+            "tl_notone": tl_notone,
+            "poj_notone": poj_notone,
+            "tl_abbrev": tl_abbrev,
+            "poj_abbrev": poj_abbrev,
+            "is_variant": is_variant,
+            **{col: False for col in SOURCE_COLUMNS},
+            "dev": True,
+        })
+        existing_key_index[(hanzi, tl_key)] = -1  # sentinel: already added as new
+
+    if marked_count:
+        logger.info(f"  [dev] Marked {marked_count} existing entries as dev")
+    if new_rows:
+        logger.info(f"  [dev] Added {len(new_rows)} new entries from dev supplement")
+
+    return pd.DataFrame(new_rows) if new_rows else None
+
+
+def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: str, logger) -> pd.DataFrame:
+    """
+    Load LKK 漢羅合用建議用字 dictionary entries.
+
+    Reads a minimal CSV (hanzi, tl) and auto-generates all romanization columns.
+    If a (hanzi, tl) pair already exists, marks it lkk=True.
+    New pairs are added with lkk=True and all other source columns set to False.
+    """
+    from kesi import Ku
+    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.notone import remove_tone
+    from common.abbrev import extract_abbrev
+
+    lkk_path = os.path.join(base_dir, "16_LKK漢羅合用建議用字", "data", "lkk.csv")
+
+    if not os.path.exists(lkk_path):
+        logger.warning("  [skip] LKK CSV not found")
+        return None
+
+    lkk_df = pd.read_csv(lkk_path)
+    if lkk_df.empty:
+        logger.info("  [lkk] lkk.csv is empty, skipping")
+        return None
+
+    # Build map of existing (hanzi, tl_normalized) -> index for dedup
+    existing_key_index = {}
+    for idx, row in existing_df.iterrows():
+        tl_key = str(row["tl"]).lower().replace(" ", "-")
+        existing_key_index[(str(row["hanzi"]), tl_key)] = idx
+
+    # Load frequency map
+    freq_map_path = os.path.join(base_dir, "0_其他資料", "char_freq_merged.txt")
+    freq_map = load_frequency_map(freq_map_path)
+
+    marked_count = 0
+    new_rows = []
+    for _, row in lkk_df.iterrows():
+        hanzi = str(row["hanzi"]).strip()
+        tl_raw = str(row["tl"]).strip().lower()
+
+        if not hanzi or not tl_raw:
+            continue
+
+        tl_key = tl_raw.replace(" ", "-")
+        if (hanzi, tl_key) in existing_key_index:
+            idx = existing_key_index[(hanzi, tl_key)]
+            if idx >= 0:
+                # Mark existing entry as lkk
+                existing_df.at[idx, "lkk"] = True
+                logger.info(f"  [lkk] marked existing: {hanzi} / {tl_raw}")
+                marked_count += 1
+            else:
+                logger.info(f"  [lkk] skip duplicate: {hanzi} / {tl_raw}")
+            continue
+
+        try:
+            ku = Ku(tl_raw)
+            tl = ku.TL().hanlo.lower().replace(" ", "-")
+            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+            tl_num = to_numeric_tone(tl)
+            poj_num = to_numeric_tone(poj, ascii_only=True)
+        except Exception as e:
+            logger.warning(f"  [lkk] romanization failed for {hanzi}/{tl_raw}: {e}")
+            continue
+
+        tl_notone = remove_tone(tl_num)
+        poj_notone = remove_tone(poj_num)
+        tl_abbrev = extract_abbrev(tl)
+        poj_abbrev = extract_abbrev(poj)
+
+        frequency = get_frequency(hanzi, tl, freq_map)
+
+        new_rows.append({
+            "tl": tl,
+            "hanzi": hanzi,
+            "frequency": frequency,
+            "poj": poj,
+            "tl_num": tl_num,
+            "poj_num": poj_num,
+            "tl_notone": tl_notone,
+            "poj_notone": poj_notone,
+            "tl_abbrev": tl_abbrev,
+            "poj_abbrev": poj_abbrev,
+            "is_variant": False,
+            **{col: False for col in SOURCE_COLUMNS},
+            "dev": False,
+            "lkk": True,
+        })
+        existing_key_index[(hanzi, tl_key)] = -1  # sentinel: already added as new
+
+    if marked_count:
+        logger.info(f"  [lkk] Marked {marked_count} existing entries as lkk")
+    if new_rows:
+        logger.info(f"  [lkk] Added {len(new_rows)} new entries from LKK")
 
     return pd.DataFrame(new_rows) if new_rows else None
 

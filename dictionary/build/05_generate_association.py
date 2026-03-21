@@ -39,6 +39,7 @@ SCRIPT_NAME = "05_generate_association"
 # 字數限制
 MIN_WORD_LEN = 2
 MAX_WORD_LEN = 5  # NextWord 用 ≤5 字，比前綴搜尋 (≤4 字) 更寬
+MAX_NEXT_WORD_LEN = 3  # Phrase association 的 next_word 最多 3 字
 
 # 詞庫來源欄位
 SOURCE_COLUMNS = ["kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit", "kungge", "stti", "khpoo"]
@@ -158,8 +159,11 @@ def generate_phrase_associations(hanzi: str, tl: str, frequency: int, sources: d
 
     phrases = []
     for i in range(len(hanzi_chars) - 2):  # remaining suffix must be >= 2 chars
+        remaining = hanzi_chars[i + 1:]
+        if len(remaining) > MAX_NEXT_WORD_LEN:
+            continue
         prev_char = hanzi_chars[i]
-        next_phrase = "".join(hanzi_chars[i + 1:])
+        next_phrase = "".join(remaining)
         next_tl = "-".join(tl_parts[i + 1:]) if len(tl_parts) > i + 1 else ""
 
         phrases.append({

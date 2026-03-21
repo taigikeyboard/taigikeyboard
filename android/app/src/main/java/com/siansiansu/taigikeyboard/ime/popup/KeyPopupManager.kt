@@ -152,7 +152,8 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
      */
     fun show(keyView: T_KV) {
         if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
-            && !exceptionsForKeyCodes.contains(keyView.data.code)) {
+            && !exceptionsForKeyCodes.contains(keyView.data.code)
+            && keyView.data.popup.isEmpty()) {
             return
         }
 
@@ -217,7 +218,8 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
      */
     fun extend(keyView: T_KV) {
         if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
-            && !exceptionsForKeyCodes.contains(keyView.data.code)) {
+            && !exceptionsForKeyCodes.contains(keyView.data.code)
+            && keyView.data.popup.isEmpty()) {
             return
         }
 

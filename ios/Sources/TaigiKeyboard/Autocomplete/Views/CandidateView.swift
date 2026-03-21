@@ -22,8 +22,10 @@ struct CandidateView: View {
     let onSettingsTap: () -> Void
     /// 點擊佈局選擇按鈕的回調
     let onLayoutTap: () -> Void
-    /// 點擊 Emoji 按鈕的回調
-    let onEmojiTap: () -> Void
+    /// 點擊符號面板按鈕的回調
+    let onSymbolTap: () -> Void
+    /// 點擊收合鍵盤按鈕的回調
+    let onDismissKeyboard: () -> Void
     /// 當前輸入模式
     let currentInputMode: InputMode
     /// 切換輸入模式的回調
@@ -71,16 +73,31 @@ struct CandidateView: View {
             // Toggle button always visible on the left
             toolShortcutsToggleButton
 
-            // Tool shortcuts: slide up from bottom
+            // Tool shortcuts: 9 equal-width buttons evenly distributed
             if isToolShortcutsExpanded {
                 HStack(spacing: 0) {
-                    inputModeSwitcher
+                    inputModeButton(mode: .poj, label: "POJ")
                         .offset(y: 7)
-                    Spacer()
-                    globeButton
-                    emojiButton
+                        .frame(maxWidth: .infinity)
+                    inputModeButton(mode: .tl, label: "TL")
+                        .offset(y: 7)
+                        .frame(maxWidth: .infinity)
+                    inputModeButton(mode: .english, label: "EN")
+                        .offset(y: 7)
+                        .frame(maxWidth: .infinity)
+                    inputModeButton(mode: .tps, label: "TPS")
+                        .offset(y: 7)
+                        .frame(maxWidth: .infinity)
+                    symbolButton
+                        .frame(maxWidth: .infinity)
                     layoutButton
+                        .frame(maxWidth: .infinity)
+                    globeButton
+                        .frame(maxWidth: .infinity)
+                    dismissKeyboardButton
+                        .frame(maxWidth: .infinity)
                     settingsButton
+                        .frame(maxWidth: .infinity)
                 }
                 .transition(.move(edge: .bottom))
             }
@@ -189,6 +206,7 @@ struct CandidateView: View {
         }) {
             Image(systemName: "plus")
                 .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .rotationEffect(.degrees(isToolShortcutsExpanded ? 45 : 0))
                 .animation(.easeInOut(duration: 0.2), value: isToolShortcutsExpanded)
@@ -200,14 +218,32 @@ struct CandidateView: View {
         .accessibilityLabel(isToolShortcutsExpanded ? "收合工具列" : "展開工具列")
     }
 
+    /// Symbol panel button
+    private var symbolButton: some View {
+        Button(action: {
+            onSymbolTap()
+        }) {
+            Text("※")
+                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .frame(width: 30, height: CandidateViewModels.UI.height)
+                .contentShape(Rectangle())
+                .offset(y: 7)
+        }
+        .buttonStyle(ToolShortcutButtonStyle())
+        .accessibilityLabel("符號面板")
+        .accessibilityHint("點擊以開啟符號選擇面板")
+    }
+
     /// Globe button for switching keyboards (tap: next keyboard, long-press: keyboard picker)
     private var globeButton: some View {
         Keyboard.NextKeyboardButton {
             Image(systemName: "globe")
                 .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
-                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .frame(width: 30, height: CandidateViewModels.UI.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)
         }
@@ -215,22 +251,23 @@ struct CandidateView: View {
         .accessibilityHint("點擊切換下一個鍵盤，長按選取鍵盤")
     }
 
-    /// Emoji keyboard button
-    private var emojiButton: some View {
+    /// Dismiss keyboard button
+    private var dismissKeyboardButton: some View {
         Button(action: {
-            onEmojiTap()
+            onDismissKeyboard()
         }) {
-            Image(systemName: "face.smiling")
+            Image(systemName: "keyboard.chevron.compact.down")
                 .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
-                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .frame(width: 30, height: CandidateViewModels.UI.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)
         }
         .buttonStyle(ToolShortcutButtonStyle())
-        .accessibilityLabel("Emoji")
-        .accessibilityHint("點擊以開啟 Emoji 鍵盤")
+        .accessibilityLabel("Dismiss Keyboard")
+        .accessibilityHint("Tap to dismiss keyboard")
     }
 
     /// Layout selection button
@@ -240,9 +277,10 @@ struct CandidateView: View {
         }) {
             Image(systemName: "photo")
                 .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
-                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .frame(width: 30, height: CandidateViewModels.UI.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)
         }
@@ -258,9 +296,10 @@ struct CandidateView: View {
         }) {
             Image(systemName: "gearshape")
                 .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
-                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .frame(width: 30, height: CandidateViewModels.UI.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)
         }
@@ -279,16 +318,6 @@ struct CandidateView: View {
 
     // MARK: - 輸入模式切換
 
-    /// 輸入模式切換按鈕組
-    private var inputModeSwitcher: some View {
-        HStack(spacing: 4) {
-            inputModeButton(mode: .poj, label: "POJ")
-            inputModeButton(mode: .tl, label: "TL")
-            inputModeButton(mode: .english, label: "EN")
-        }
-        .padding(.horizontal, 8)
-    }
-
     /// 單個輸入模式按鈕
     private func inputModeButton(mode: InputMode, label: String) -> some View {
         let isSelected = currentInputMode == mode
@@ -299,7 +328,9 @@ struct CandidateView: View {
                 .font(KeyboardModels.Fonts.globalFont(size: 16))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
-                .padding(.horizontal, 10)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 6)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 6)

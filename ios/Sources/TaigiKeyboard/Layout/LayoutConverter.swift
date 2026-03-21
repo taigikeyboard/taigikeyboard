@@ -28,8 +28,9 @@ struct LayoutConverter {
     private func keyDefToAction(_ keyDef: KeyDef) -> KeyboardAction {
         switch keyDef {
         case .char(let char, let fullWidth):
-            // Use half-width or full-width based on isTranslateSwapped
-            let actualChar = context.isTranslateSwapped ? (fullWidth ?? char) : char
+            // TPS layout: always use half-width (independent of isTranslateSwapped)
+            let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
+            let actualChar = (!isTPSLayout && context.isTranslateSwapped) ? (fullWidth ?? char) : char
             return .character(actualChar)
 
         case .shift:
@@ -90,7 +91,9 @@ struct LayoutConverter {
             )
 
         case .translate:
-            return .input
+            let layoutType = SharedSettings.shared.keyboardLayoutType
+            let scale: CGFloat = (layoutType == .phahTaigi || layoutType == .moe1) ? 2.0 : 1.5
+            return .inputPercentage(scale)
 
         case .char:
             return nil  // Use default input width

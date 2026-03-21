@@ -8,7 +8,7 @@ import XCTest
 ///
 /// Known intentional differences from reference:
 /// - iOS does not add trailing space for tone 1 (ref uses space as tone 1 marker)
-/// - iOS uses U+31B6 (ㆶ) for k-checked-tone; ref uses U+31BB (ㆻ)
+/// - iOS now uses U+31BB (ㆻ) for k-checked-tone, aligned with ref and Unicode 13.0
 /// - iOS does not support punctuation conversion or encode-safe mode
 /// - iOS toTL does not insert hyphens between multi-syllable output
 final class TPSConverterTests: XCTestCase {
@@ -78,8 +78,8 @@ final class TPSConverterTests: XCTestCase {
 
     func testToTPS_stopTone_k4() {
         // ref: toZhuyin("kak4") = "ㄍㄚ\u31bb"
-        // iOS uses U+31B6 (ㆶ) instead of ref's U+31BB (ㆻ)
-        XCTAssertEqual(TPSConverter.toTPS("kak4"), "ㄍㄚㆶ")
+        // Now aligned with ref: both use U+31BB (ㆻ)
+        XCTAssertEqual(TPSConverter.toTPS("kak4"), "ㄍㄚㆻ")
     }
 
     func testToTPS_stopTone_h4() {
@@ -88,16 +88,16 @@ final class TPSConverterTests: XCTestCase {
     }
 
     func testToTPS_tone_p8() {
-        // ref: toZhuyin("kap8") = "ㄍㄚㆴ̇"
-        XCTAssertEqual(TPSConverter.toTPS("kap8"), "ㄍㄚㆴ̇")
+        // ref: toZhuyin("kap8") = "ㄍㄚㆴ˙"
+        XCTAssertEqual(TPSConverter.toTPS("kap8"), "ㄍㄚㆴ˙")
     }
 
     func testToTPS_tone8_nonStop() {
-        // ref: toZhuyin("a8") = "ㄚ\u0307"
+        // ref: toZhuyin("a8") = "ㄚ˙" (U+02D9)
         let result = TPSConverter.toTPS("a8")
         XCTAssertTrue(
-            result.unicodeScalars.contains("\u{0307}"),
-            "Non-stop tone 8 should produce combining dot above: got \(result)"
+            result.unicodeScalars.contains("\u{02D9}"),
+            "Non-stop tone 8 should produce U+02D9 DOT ABOVE: got \(result)"
         )
     }
 
@@ -180,9 +180,41 @@ final class TPSConverterTests: XCTestCase {
 
     func testToTPS_tone8_stop_unaffected() {
         let kap8 = TPSConverter.toTPS("kap8")
-        XCTAssertTrue(kap8.hasSuffix("ㆴ̇"), "toTPS(\"kap8\") should end with ㆴ̇: got \(kap8)")
+        XCTAssertTrue(kap8.hasSuffix("ㆴ˙"), "toTPS(\"kap8\") should end with ㆴ˙: got \(kap8)")
         let kah8 = TPSConverter.toTPS("kah8")
-        XCTAssertTrue(kah8.hasSuffix("ㆷ̇"), "toTPS(\"kah8\") should end with ㆷ̇: got \(kah8)")
+        XCTAssertTrue(kah8.hasSuffix("ㆷ˙"), "toTPS(\"kah8\") should end with ㆷ˙: got \(kah8)")
+    }
+
+    // MARK: - toTPS: o → oo before stop tone (ref: toZhuyin post-processing)
+
+    func testToTPS_oBecomesOO_beforeStopK4() {
+        // ref: toZhuyin("ok4") — vowel ㄛ should become ㆦ before checked k
+        XCTAssertEqual(TPSConverter.toTPS("ok4"), "ㆦㆻ")
+    }
+
+    func testToTPS_oBecomesOO_beforeStopP4() {
+        // ref: toZhuyin("op4") — vowel ㄛ should become ㆦ before checked p
+        XCTAssertEqual(TPSConverter.toTPS("op4"), "ㆦㆴ")
+    }
+
+    func testToTPS_oBecomesOO_beforeStopT4() {
+        // ref: toZhuyin("ot4") — vowel ㄛ should become ㆦ before checked t
+        XCTAssertEqual(TPSConverter.toTPS("ot4"), "ㆦㆵ")
+    }
+
+    func testToTPS_oBecomesOO_withConsonant() {
+        // ref: toZhuyin("bok4") — b + o + k4 → ㆠㆦㆻ
+        XCTAssertEqual(TPSConverter.toTPS("bok4"), "ㆠㆦㆻ")
+    }
+
+    func testToTPS_oStaysO_beforeStopH4() {
+        // h4 should NOT trigger o→oo (ref only applies to p/t/k)
+        XCTAssertEqual(TPSConverter.toTPS("oh4"), "ㄛㆷ")
+    }
+
+    func testToTPS_ooStaysOO_beforeNonStop() {
+        // oo with non-stop tone should stay as ㆦ
+        XCTAssertEqual(TPSConverter.toTPS("oo2"), "ㆦˋ")
     }
 
     // MARK: - toTL (ref: fromZhuyin)
@@ -225,8 +257,8 @@ final class TPSConverterTests: XCTestCase {
 
     func testToTL_stopTone_k4() {
         // ref: fromZhuyin("ㄍㄚ\u31bb") = "kak4"
-        // iOS uses U+31B6 (ㆶ) instead of ref's U+31BB (ㆻ)
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆶ"), "kak4")
+        // Now aligned with ref: both use U+31BB (ㆻ)
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆻ"), "kak4")
     }
 
     func testToTL_stopTone_h4() {
@@ -235,8 +267,8 @@ final class TPSConverterTests: XCTestCase {
     }
 
     func testToTL_stopTone_p8() {
-        // ref: fromZhuyin("ㄍㄚㆴ̇") = "kap8"
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆴ̇"), "kap8")
+        // ref: fromZhuyin("ㄍㄚㆴ˙") = "kap8"
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆴ˙"), "kap8")
     }
 
     func testToTL_tone9() {
@@ -359,10 +391,54 @@ final class TPSConverterTests: XCTestCase {
     }
 
     func testToTL_checkedTone8_allFinals() {
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆴ̇"), "kap8")
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆵ̇"), "kat8")
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆶ̇"), "kak8")
-        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆷ̇"), "kah8")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆴ˙"), "kap8")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆵ˙"), "kat8")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆻ˙"), "kak8")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆷ˙"), "kah8")
+    }
+
+    func testToTL_keyboardInput_checkedTone8() {
+        // Keyboard outputs ˙ (U+02D9) — verify full syllable converts correctly
+        // This was the original bug: ㄍㄚㆻ˙ produced "kak48" instead of "kak8"
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆻ\u{02D9}"), "kak8")
+    }
+
+    // MARK: - toTL: Tone 8 standalone (˙ U+02D9)
+
+    func testToTL_tone8_standalone_dotAbove() {
+        // "˙" (U+02D9 DOT ABOVE) should map to tone 8
+        XCTAssertEqual(TPSConverter.toTL("ㄚ˙"), "a8")
+    }
+
+    func testToTL_tone8_standalone_withConsonant() {
+        // Full syllable with standalone tone 8
+        XCTAssertEqual(TPSConverter.toTL("ㄌㄚ˙"), "la8")
+    }
+
+    // MARK: - toTL: oo → o before stop tone (ref: fromZhuyin post-processing)
+
+    func testToTL_oo_becomesO_beforeStopK4() {
+        // ref: fromZhuyin — if syllable has "oo" and tone is k4, replace oo with o
+        XCTAssertEqual(TPSConverter.toTL("ㆦㆻ"), "ok4")
+    }
+
+    func testToTL_oo_becomesO_beforeStopP8() {
+        XCTAssertEqual(TPSConverter.toTL("ㆦㆴ˙"), "op8")
+    }
+
+    func testToTL_oo_becomesO_withConsonant() {
+        // "bok4" — b + oo + k4 → should output "bok4" not "book4"
+        XCTAssertEqual(TPSConverter.toTL("ㆠㆦㆻ"), "bok4")
+    }
+
+    func testToTL_oo_staysOO_beforeStopH4() {
+        // h4 should NOT trigger oo→o (ref regex only matches [ptk])
+        XCTAssertEqual(TPSConverter.toTL("ㆦㆷ"), "ooh4")
+    }
+
+    func testToTL_oo_staysOO_nonStop() {
+        // oo with non-stop tone should remain oo
+        XCTAssertEqual(TPSConverter.toTL("ㆦˋ"), "oo2")
     }
 
     // MARK: - toTLMultiSyllable
@@ -383,7 +459,7 @@ final class TPSConverterTests: XCTestCase {
         let cases: [(tps: String, expectedTl: String)] = [
             ("ㄍㄨㄚˋ", "kua2"),   // ㄍ→k (voiceless velar)
             ("ㄉㄧㄠˊ", "tiau5"),
-            ("ㄍㄚㆶ̇", "kak8"),
+            ("ㄍㄚㆻ˙", "kak8"),
         ]
         for (tps, expectedTl) in cases {
             let tl = TPSConverter.toTL(tps)
@@ -401,5 +477,115 @@ final class TPSConverterTests: XCTestCase {
 
     func testToTPS_empty() {
         XCTAssertEqual(TPSConverter.toTPS(""), "")
+    }
+
+    // MARK: - toTPS: ing special case (ng as vowel → ㄥ after ㄧ)
+
+    func testToTPS_ing() {
+        // ing uses ㄥ (not ㆭ)
+        XCTAssertEqual(TPSConverter.toTPS("ing5"), "ㄧㄥˊ")
+    }
+
+    func testToTPS_king() {
+        // consonant + ing
+        XCTAssertEqual(TPSConverter.toTPS("king5"), "ㄍㄧㄥˊ")
+    }
+
+    func testToTPS_ung_usesNg() {
+        // non-ing ng uses ㆭ
+        XCTAssertEqual(TPSConverter.toTPS("ung7"), "ㄨㆭ˫")
+    }
+
+    // MARK: - toTPS: or vowel mapping
+
+    func testToTPS_or_default() {
+        // Default: or → ㄛ
+        XCTAssertEqual(TPSConverter.toTPS("or2"), "ㄛˋ", "or2 default should map to ㄛˋ")
+    }
+
+    func testToTPS_or_mapsToER() {
+        // orMapsToER: or → ㄜ
+        XCTAssertEqual(TPSConverter.toTPS("or2", orMapsToER: true), "ㄜˋ", "or2 with orMapsToER should map to ㄜˋ")
+    }
+
+    func testToTPS_ior_default() {
+        // ior decomposes to i + or → ㄧㄛ
+        XCTAssertEqual(TPSConverter.toTPS("ior2"), "ㄧㄛˋ", "ior2 default should map to ㄧㄛˋ")
+    }
+
+    func testToTPS_ior_mapsToER() {
+        XCTAssertEqual(TPSConverter.toTPS("ior2", orMapsToER: true), "ㄧㄜˋ", "ior2 with orMapsToER should map to ㄧㄜˋ")
+    }
+
+    func testToTPS_orh4_default() {
+        // orh4: or + checked h4 → ㄛㆷ
+        XCTAssertEqual(TPSConverter.toTPS("orh4"), "ㄛㆷ", "orh4 default should map to ㄛㆷ")
+    }
+
+    func testToTPS_orh4_mapsToER() {
+        XCTAssertEqual(TPSConverter.toTPS("orh4", orMapsToER: true), "ㄜㆷ", "orh4 with orMapsToER should map to ㄜㆷ")
+    }
+
+    func testToTPS_kor_default() {
+        // consonant + or → ㄍㄛ
+        XCTAssertEqual(TPSConverter.toTPS("kor2"), "ㄍㄛˋ", "kor2 default should map to ㄍㄛˋ")
+    }
+
+    func testToTPS_kor_mapsToER() {
+        XCTAssertEqual(TPSConverter.toTPS("kor2", orMapsToER: true), "ㄍㄜˋ", "kor2 with orMapsToER should map to ㄍㄜˋ")
+    }
+
+    func testToTPS_er_unaffected() {
+        // er should always map to ㄜ regardless of orMapsToER
+        XCTAssertEqual(TPSConverter.toTPS("er2"), "ㄜˋ", "er2 should always be ㄜˋ")
+        XCTAssertEqual(TPSConverter.toTPS("er2", orMapsToER: true), "ㄜˋ", "er2 with orMapsToER should still be ㄜˋ")
+    }
+
+    func testToTPS_o_unaffected() {
+        // Plain o should be unaffected by orMapsToER
+        XCTAssertEqual(TPSConverter.toTPS("o2"), "ㄛˋ", "o2 should always be ㄛˋ")
+        XCTAssertEqual(TPSConverter.toTPS("o2", orMapsToER: true), "ㄛˋ", "o2 with orMapsToER should still be ㄛˋ")
+    }
+
+    // MARK: - adjustTPSInitialKey
+
+    func testAdjustTPSInitialKey_m_atSyllableStart() {
+        // Empty buffer → syllable start → ㄇ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄇ", afterRawInput: ""), "ㄇ")
+    }
+
+    func testAdjustTPSInitialKey_m_afterVowel() {
+        // After ㄧ → ㆬ (final form)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄇ", afterRawInput: "ㄧ"), "ㆬ")
+    }
+
+    func testAdjustTPSInitialKey_ng_afterI() {
+        // After ㄧ → ㄥ (ing special case)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄫ", afterRawInput: "ㄧ"), "ㄥ")
+    }
+
+    func testAdjustTPSInitialKey_ng_afterOtherVowel() {
+        // After ㄚ → ㆭ (final form)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄫ", afterRawInput: "ㄚ"), "ㆭ")
+    }
+
+    func testAdjustTPSInitialKey_m_afterTone() {
+        // After tone mark = new syllable → ㄇ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄇ", afterRawInput: "ㄇㄚˋ"), "ㄇ")
+    }
+
+    func testAdjustTPSInitialKey_m_afterCheckedFinal() {
+        // After checked tone final = new syllable → ㄇ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄇ", afterRawInput: "ㄍㄚㆴ"), "ㄇ")
+    }
+
+    func testAdjustTPSInitialKey_ng_atSyllableStart() {
+        // Empty buffer → syllable start → ㄫ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄫ", afterRawInput: ""), "ㄫ")
+    }
+
+    func testAdjustTPSInitialKey_nonTargetKey() {
+        // Non ㄇ/ㄫ key → pass through unchanged
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄍ", afterRawInput: "ㄧ"), "ㄍ")
     }
 }

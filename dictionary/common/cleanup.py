@@ -23,7 +23,7 @@ from kesi import kam_haphuat, Ku, TuiBeTse, normalize_taibun
 
 BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]")
 PROVERB_PUNCTUATION = "，。！；？、"
-DEFAULT_MAX_SYLLABLES = 5
+DEFAULT_MAX_SYLLABLES = 4
 
 # 所有可能含有括號標註的欄位
 BRACKET_COLUMNS = ["hanzi", "tl", "poj", "tl_num", "poj_num", "tl_notone", "poj_notone", "tl_abbrev", "poj_abbrev"]

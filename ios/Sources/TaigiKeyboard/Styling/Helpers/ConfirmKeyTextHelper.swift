@@ -12,6 +12,11 @@ struct ConfirmKeyTextHelper {
     static func getConfirmKeyText() -> String {
         let settings = SharedSettings.shared
 
+        // TPS layout: always show "選" (bopomofo users don't read romanization)
+        if settings.inputMode == .tps {
+            return "選"
+        }
+
         if settings.isTranslateSwapped {
             return "選"
         }
@@ -19,7 +24,7 @@ struct ConfirmKeyTextHelper {
         switch settings.inputMode {
         case .poj:
             return "soán"
-        case .tl, .english:
+        case .tl, .english, .tps:
             return "suán"
         }
     }

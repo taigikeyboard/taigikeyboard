@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
 import android.util.TypedValue
@@ -16,7 +17,9 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.util.FontUtils
 
 /**
  * Candidate overlay view — grid display over the keyboard.
@@ -29,9 +32,14 @@ class CandidateOverlayView : FrameLayout {
     companion object {
         private const val TAG = "CandidateOverlayView"
         private const val ITEMS_PER_PAGE = 20
-        private const val MAX_CHARS_PER_ROW = 20
-        private const val MIN_ITEMS_PER_ROW = 2
-        private const val MAX_ITEMS_PER_ROW = 4
+        private const val MINIMUM_CELL_WIDTH_DP = 44f
+        private const val CELL_HORIZONTAL_PADDING_DP = 20f
+        // Primary text size in sp (matches candidate_grid_cell.xml)
+        private const val PRIMARY_TEXT_SIZE_SP = 21f
+        // Subtitle text size in sp (matches candidate_grid_cell.xml)
+        private const val SUBTITLE_TEXT_SIZE_SP = 19f
+        // Right-side padding: 68dp (60dp panel + 8dp gap) + 4dp row margins
+        private const val RIGHT_RESERVED_DP = 72f
     }
 
     // UI
@@ -49,6 +57,14 @@ class CandidateOverlayView : FrameLayout {
     private var currentPage: Int = 0
     private var suggestions: List<TaigiWord> = emptyList()
     private val prefs: PrefHelper by lazy { PrefHelper(TaigiKeyboard.getInstance().context) }
+
+    // Text measurement
+    private val primaryPaint = Paint().apply { isAntiAlias = true }
+    private val subtitlePaint = Paint().apply { isAntiAlias = true }
+    private var measurementFontType: String? = null
+    private val density: Float get() = resources.displayMetrics.density
+    private val minimumCellWidthPx: Int get() = (MINIMUM_CELL_WIDTH_DP * density + 0.5f).toInt()
+    private val cellHorizontalPaddingPx: Int get() = (CELL_HORIZONTAL_PADDING_DP * density + 0.5f).toInt()
 
     // Click protection: prevent expand button click from propagating to cells
     private var isClickEnabled: Boolean = true
@@ -83,6 +99,8 @@ class CandidateOverlayView : FrameLayout {
             context = context,
             isTranslateSwapped = { SmartbarManager.getInstance().getCachedIsTranslateSwapped() },
             fontType = { prefs.fontType },
+            layoutType = { prefs.keyboardLayoutType },
+            orMapsToER = { prefs.tpsOrMapsToER },
             isClickEnabled = { isClickEnabled },
             onCellClick = { word, index ->
                 onSuggestionSelected?.invoke(word, index)
@@ -206,71 +224,87 @@ class CandidateOverlayView : FrameLayout {
     }
 
     /**
-     * Arrange candidates into rows based on character count and weight.
+     * Arrange candidates into rows using pixel-based measurement.
      *
-     * Algorithm matches iOS CandidateView.swift:arrangedRows.
-     *
-     * New-row conditions:
-     * 1. Current row chars + new word chars > MAX_CHARS_PER_ROW
-     *    AND current row has >= MIN_ITEMS_PER_ROW items
-     * 2. OR current row has reached MAX_ITEMS_PER_ROW items
+     * Algorithm matches iOS ExpandedCandidateOverlay.arrangedRows:
+     * measure each cell's text width with Paint, pack cells into rows
+     * until the next cell would exceed available width.
      */
     private fun arrangeRows(suggestions: List<TaigiWord>): List<CandidateOverlayAdapter.CandidateRow> {
+        ensurePaintsConfigured()
+
+        val screenWidthPx = resources.displayMetrics.widthPixels
+        val reservedPx = (RIGHT_RESERVED_DP * density + 0.5f).toInt()
+        val availableWidth = screenWidthPx - reservedPx
+        val spacing = context.resources.getDimensionPixelSize(R.dimen.smartbar_button_margin)
+
         val rows = mutableListOf<CandidateOverlayAdapter.CandidateRow>()
         var currentRow = mutableListOf<CandidateOverlayAdapter.CandidateItem>()
-        var currentRowCharCount = 0
+        var currentRowWidth = 0
 
         suggestions.forEachIndexed { index, word ->
-            val charCount = getCharacterCount(word)
-            val weight = getItemWeight(word)
+            val cellWidth = measureCellWidth(word)
+            val spacingNeeded = if (currentRow.isEmpty()) 0 else spacing
 
-            val shouldStartNewRow = (
-                (currentRowCharCount + charCount > MAX_CHARS_PER_ROW &&
-                    currentRow.isNotEmpty() &&
-                    currentRow.size >= MIN_ITEMS_PER_ROW) ||
-                    currentRow.size >= MAX_ITEMS_PER_ROW
-            )
-
-            if (shouldStartNewRow) {
-                rows.add(CandidateOverlayAdapter.CandidateRow(currentRow.toList(), currentRow.sumOf { it.weight }))
-                currentRow.clear()
-                currentRowCharCount = 0
+            if (currentRow.isNotEmpty() && (currentRowWidth + spacingNeeded + cellWidth) > availableWidth) {
+                rows.add(CandidateOverlayAdapter.CandidateRow(currentRow.toList()))
+                currentRow = mutableListOf()
+                currentRowWidth = 0
             }
 
-            val item = CandidateOverlayAdapter.CandidateItem(word, index, weight)
-            currentRow.add(item)
-            currentRowCharCount += charCount
+            currentRow.add(CandidateOverlayAdapter.CandidateItem(word, index, cellWidth))
+            currentRowWidth += (if (currentRow.size == 1) 0 else spacing) + cellWidth
         }
 
         if (currentRow.isNotEmpty()) {
-            rows.add(CandidateOverlayAdapter.CandidateRow(currentRow.toList(), currentRow.sumOf { it.weight }))
+            rows.add(CandidateOverlayAdapter.CandidateRow(currentRow.toList()))
         }
 
         return rows
     }
 
     /**
-     * Character count for a candidate word.
-     * Max of roman and hanzi length for visual sizing.
+     * Ensure Paint objects have the correct typeface and text sizes.
+     * Re-configures when font type changes.
      */
-    private fun getCharacterCount(word: TaigiWord): Int {
-        val romanLength = word.roman.length
-        val hanziLength = word.hanzi?.length ?: 0
-        return maxOf(romanLength, hanziLength)
+    private fun ensurePaintsConfigured() {
+        val currentFontType = prefs.fontType
+        if (measurementFontType != currentFontType) {
+            val typeface = FontUtils.getTypefaceByType(currentFontType, context)
+            primaryPaint.typeface = typeface
+            primaryPaint.textSize = PRIMARY_TEXT_SIZE_SP * resources.displayMetrics.scaledDensity
+            subtitlePaint.typeface = typeface
+            subtitlePaint.textSize = SUBTITLE_TEXT_SIZE_SP * resources.displayMetrics.scaledDensity
+            measurementFontType = currentFontType
+        }
     }
 
     /**
-     * Weight for visual proportion in the row.
+     * Measure cell width in pixels based on actual text rendering.
+     *
+     * - TPS layout: only measure hanzi (subtitle is hidden)
+     * - Non-TPS: measure both roman and hanzi widths to cover swap states,
+     *   so layout doesn't reflow on translate toggle (matching iOS behavior)
      */
-    private fun getItemWeight(word: TaigiWord): Double {
-        val maxLength = getCharacterCount(word)
-        return when (maxLength) {
-            in 1..3 -> 1.0
-            in 4..5 -> 1.1
-            in 6..7 -> 1.4
-            in 8..10 -> 2.2
-            else -> 4.0
+    private fun measureCellWidth(word: TaigiWord): Int {
+        val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+
+        if (isTPSLayout) {
+            // TPS: only hanzi title (or TPS-converted fallback), no subtitle
+            val titleText = if (!word.hanzi.isNullOrEmpty()) word.hanzi else TPSConverter.toTPS(word.roman, prefs.tpsOrMapsToER)
+            val titleWidth = primaryPaint.measureText(titleText)
+            return maxOf(minimumCellWidthPx, (titleWidth + cellHorizontalPaddingPx + 0.5f).toInt())
         }
+
+        // Non-TPS: measure both roman and hanzi to cover swap states
+        val romanWidth = primaryPaint.measureText(word.roman)
+        val hanziWidth = if (!word.hanzi.isNullOrEmpty()) {
+            subtitlePaint.measureText(word.hanzi)
+        } else {
+            0f
+        }
+        val maxTextWidth = maxOf(romanWidth, hanziWidth)
+        return maxOf(minimumCellWidthPx, (maxTextWidth + cellHorizontalPaddingPx + 0.5f).toInt())
     }
 
     /**
@@ -325,8 +359,16 @@ class CandidateOverlayView : FrameLayout {
 
     /**
      * Update translate button visual state.
+     * Hidden for TPS layout (always hanzi-only, no translate toggle).
      */
     private fun updateTranslateButtonState() {
+        // TPS layout: hide translate button entirely
+        if (prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps") {
+            translateButton?.visibility = View.GONE
+            return
+        }
+
+        translateButton?.visibility = View.VISIBLE
         val smartbarManager = SmartbarManager.getInstance()
         val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
         translateButton?.isActivated = isTranslateSwapped

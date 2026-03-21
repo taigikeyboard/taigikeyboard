@@ -65,7 +65,22 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **phraseLearning** | Multi-word sequences learned from user input patterns | `NextWordService.queryPhrases()` |
 | **sentenceStart** | Special token `$` for beginning-of-sentence predictions | bigram table |
 
-### 7. Input Flow (`engine/flow.md`)
+### 7. Custom Dictionary (`engine/custom-dictionary.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **CustomDictionaryEntry** | User-defined word (roman + hanzi + derived notone/abbrev) | `CustomDictionaryEntry` |
+| **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | `generateNotone()` |
+| **abbrev** | First-letter abbreviation for quick lookup (e.g. `"lí hó"` → `"lh"`) | `generateAbbrev()` |
+| **batchImport** | CSV import with deduplication by `roman\|hanzi` key | `batchImport()` / `importFromFile()` |
+| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | `LexiconService.search()` |
+
+### 8. Diagnostics (`engine/diagnostics.md`)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **DiagnosticInfo** | Minimal device metadata (appVersion, buildNumber, osVersion, deviceModel) | `DiagnosticService.gather()` |
+| **diagnosticActions** | Copy / Share / Email — user-initiated only, no automatic transmission | Tab4 UI buttons |
+
+### 9. Input Flow (`engine/flow.md`)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
 | **ActionHandler** | Central dispatcher for all keyboard actions | `ActionHandler` |
@@ -121,11 +136,13 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **phoneLarge** | iPhone Plus / Max |
 | **pad** | iPad |
 
-### Theme (`ui/theme.md`)
+### Theme & Styling (`ui/theme.md`)
 | Keyword | Definition |
 |---------|-----------|
-| **ThemeTokens** | Design token system for colors, spacing, fonts |
-| **accentColor** | Primary highlight color (SPY×FAMILY retro flat aesthetic) |
+| **KeyboardColorSettings** | User-customizable color overrides (RGBA, stored as JSON) |
+| **ButtonFontProvider** | Resolves font + scale per action/layout |
+| **ButtonTextProvider** | Button labels, tone hints, punctuation hints |
+| **ButtonImageProvider** | SF Symbols images for special keys |
 | **deviceFont** | Font size scaled by device classification |
 
 ---
@@ -143,10 +160,12 @@ Standardized keyword mapping for core input method functionality and UI componen
 | `engine/flow.md` | ActionHandler, characterInput, performAutocomplete |
 | `engine/segmentation.md` | SyllableSegmenter, DAG, DPScoring, onset atomicity, toneTerminator |
 | `engine/tps.md` | TPSConverter, containsTPS, toTL (Taiwanese Phonetic System) |
+| `engine/custom-dictionary.md` | CustomDictionaryEntry, notone, abbrev, batchImport, customWordMarker |
+| `engine/diagnostics.md` | DiagnosticInfo, diagnosticActions |
 | `ui/layout.md` | AlphaRow, SystemRow, TaigiLayouts, MOE layouts |
 | `ui/flick.md` | FlickCallout, FlickDirection, flickTone |
 | `ui/case.md` | KeyboardCase, CaseTransformer, autoCapitalization |
-| `ui/theme.md` | ThemeTokens, accentColor, deviceFont |
+| `ui/theme.md` | KeyboardColorSettings, ButtonFontProvider, deviceFont |
 | `ui/device.md` | phoneCompact/Regular/Large, pad |
 | `ui/app-ui.md` | HomeTab, LayoutTab, DictionaryTab, SettingsTab |
 | `file-structure.md` | Directory structure, file-to-service mapping |

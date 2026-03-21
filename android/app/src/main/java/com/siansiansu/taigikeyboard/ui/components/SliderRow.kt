@@ -1,0 +1,60 @@
+package com.siansiansu.taigikeyboard.ui.components
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.size
+
+@Composable
+fun SliderRow(
+    label: String,
+    value: Float,
+    valueFrom: Float,
+    valueTo: Float,
+    stepSize: Float,
+    defaultValue: Float? = null,
+    onValueChange: (Float) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontSize = 16.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            if (defaultValue != null && value != defaultValue) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Reset",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onValueChange(defaultValue) }
+                )
+            }
+        }
+        Slider(
+            value = value.coerceIn(valueFrom, valueTo),
+            onValueChange = onValueChange,
+            valueRange = valueFrom..valueTo,
+            steps = ((valueTo - valueFrom) / stepSize).toInt() - 1,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}

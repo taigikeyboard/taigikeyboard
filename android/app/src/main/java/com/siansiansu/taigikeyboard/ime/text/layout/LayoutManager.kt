@@ -23,6 +23,14 @@ class LayoutManager(
 ) {
     companion object {
         private const val TAG = "LayoutManager"
+
+        /** Cached Moshi instance (thread-safe, reusable) */
+        private val moshi: Moshi = Moshi.Builder()
+            .add(KotlinJsonAdapterFactory())
+            .add(LayoutTypeAdapter())
+            .add(KeyTypeAdapter())
+            .add(KeyVariationAdapter())
+            .build()
     }
 
     /**
@@ -41,12 +49,6 @@ class LayoutManager(
             if (BuildConfig.DEBUG) Log.e(TAG, "[LAYOUT] Failed to load layout $type/$name", e)
             null
         } ?: return null
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .add(LayoutTypeAdapter())
-            .add(KeyTypeAdapter())
-            .add(KeyVariationAdapter())
-            .build()
         val layoutAdapter = moshi.adapter(LayoutData::class.java)
         val layoutData = layoutAdapter.fromJson(rawJsonData)
         if (BuildConfig.DEBUG && layoutData != null && name?.contains("phah_taigi") == true) {
@@ -61,8 +63,8 @@ class LayoutManager(
     private fun loadExtendedPopups(subtype: Subtype): Map<String, List<KeyData>> {
         val inputMode = prefs.inputMode
 
-        // English mode：不載入台語 popup
-        if (inputMode == "english") {
+        // English / TPS mode：不載入台語 popup
+        if (inputMode == "english" || inputMode == "tps") {
             return mapOf()
         }
 
@@ -91,10 +93,6 @@ class LayoutManager(
         } catch (e: Exception) {
             null
         } ?: return null
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .add(KeyTypeAdapter())
-            .build()
         val mapAdaptor: JsonAdapter<Map<String, List<KeyData>>> =
             moshi.adapter(
                 Types.newParameterizedType(
@@ -245,6 +243,7 @@ class LayoutManager(
                 // 選擇佈局：English mode > keyboardLayoutType
                 val layoutName = when {
                     inputMode == "english" -> "qwerty_english"
+                    inputMode == "tps" -> "tps"
                     else -> when (prefs.keyboardLayoutType) {
                         "phahTaigi" -> {
                             // phahTaigi 佈局：根據 isTranslateSwapped 選擇全形/半形
@@ -265,6 +264,7 @@ class LayoutManager(
                                 else -> "qwerty_moe2$suffix"
                             }
                         }
+                        "tps" -> "tps"
                         "qwerty" -> {
                             // 原有邏輯：根據 inputMode 選擇 poj/tl
                             when (inputMode) {
@@ -293,14 +293,19 @@ class LayoutManager(
                 // 根據模式選擇 modifier
                 val modifierName = when {
                     inputMode == "english" -> "english"
+                    inputMode == "tps" -> "tps_halfwidth"
                     prefs.keyboardLayoutType == "phahTaigi" -> "phah_taigi_$modSuffix"
                     prefs.keyboardLayoutType == "moe1" -> "moe1_$modSuffix"
                     prefs.keyboardLayoutType == "moe2" -> "moe2_$modSuffix"
+                    prefs.keyboardLayoutType == "tps" -> "tps_halfwidth"
                     prefs.phahTaigiLayoutEnabled -> "phah_taigi_$modSuffix"
                     else -> "default_$modSuffix"
                 }
                 modifier = LTN(LayoutType.CHARACTERS_MOD, modifierName)
-                extension = LTN(LayoutType.EXTENSION, "number_row")
+                // TPS layout already has enough rows — skip number row
+                if (inputMode != "tps" && prefs.keyboardLayoutType != "tps") {
+                    extension = LTN(LayoutType.EXTENSION, "number_row")
+                }
             }
             KeyboardMode.NUMERIC -> {
                 main = LTN(LayoutType.NUMERIC, "default")

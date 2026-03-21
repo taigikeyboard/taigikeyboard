@@ -16,16 +16,20 @@ struct Tab1: View {
         NavigationStack {
             Form {
                 // 啟用鍵盤區塊
-                Section(languageManager.text(Tab1Texts.setupKeyboard)) {
+                Section {
                     NavigationLink {
                         SetupGuideView(viewModel: viewModel)
                     } label: {
                         Label(languageManager.text(Tab1Texts.setupGuide), systemImage: "keyboard.badge.ellipsis")
                     }
+                } header: {
+                    Text(languageManager.text(Tab1Texts.setupKeyboard))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
 
                 // 新功能資訊
-                Section(languageManager.text(Tab1Texts.newFeatures)) {
+                Section {
                     ForEach(FeatureType.allCases, id: \.self) { feature in
                         NavigationLink {
                             FeatureDetailView(feature: feature)
@@ -38,6 +42,10 @@ struct Tab1: View {
                             }
                         }
                     }
+                } header: {
+                    Text(languageManager.text(Tab1Texts.newFeatures))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
 
                 // 網站紹介與聯繫
@@ -65,7 +73,7 @@ struct Tab1: View {
                     NavigationLink {
                         FeedbackDetailView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.contactUs), systemImage: "envelope.fill")
+                        Label(languageManager.text(Tab1Texts.contactUs), systemImage: "heart.fill")
                     }
 
                     NavigationLink {
@@ -84,7 +92,7 @@ struct Tab1: View {
                 }
 
                 // 常見問題
-                Section(languageManager.text(Tab1Texts.faq)) {
+                Section {
                     ForEach(FAQType.allCases, id: \.self) { faq in
                         NavigationLink {
                             FAQDetailView(faq: faq, viewModel: viewModel)
@@ -92,6 +100,10 @@ struct Tab1: View {
                             Label(languageManager.text(faq.question), systemImage: faq.icon)
                         }
                     }
+                } header: {
+                    Text(languageManager.text(Tab1Texts.faq))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle(languageManager.text(Tab1Texts.appHeaderTitle))

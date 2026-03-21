@@ -11,33 +11,20 @@ struct TaigiButtonContent<StandardContent: View>: View {
     let action: KeyboardAction
     @ObservedObject var keyboardContext: KeyboardContext
     let standardContent: StandardContent
-    let keyFontSizeScale: CGFloat
+    let textProvider: ButtonTextProvider
+    let imageProvider: ButtonImageProvider
+    let fontProvider: ButtonFontProvider
+    let keyTextColor: Color
+    let inputMode: InputMode
 
-    private var textProvider: ButtonTextProvider {
-        ButtonTextProvider(keyboardContext: keyboardContext)
-    }
-
-    private var imageProvider: ButtonImageProvider {
-        ButtonImageProvider(keyboardContext: keyboardContext)
-    }
-
-    private var fontProvider: ButtonFontProvider {
-        ButtonFontProvider(keyboardContext: keyboardContext)
-    }
-
-    /// Resolved key text color: custom color from settings, or system default
-    private var keyTextColor: Color {
-        SharedSettings.shared.colorSettings.keyTextColor?.color ?? Color(.label)
-    }
-
-    /// Input mode label for the space bar (romanization layouts only)
+    /// Input mode label for the space bar
     private var spaceInputModeLabel: String? {
-        guard action == .space,
-              SharedSettings.shared.keyboardLayoutType != .tps else { return nil }
-        switch SharedSettings.shared.inputMode {
+        guard action == .space else { return nil }
+        switch inputMode {
         case .poj: return "POJ"
         case .tl: return "TL"
         case .english: return "EN"
+        case .tps: return "TPS"
         }
     }
 
@@ -50,14 +37,31 @@ struct TaigiButtonContent<StandardContent: View>: View {
         else if let text = textProvider.buttonText(for: action) {
             if let hint = textProvider.buttonHintText(for: action) {
                 if textProvider.isTPSHint(for: action) {
-                    // TPS layout: larger hint on top, smaller main text below
-                    VStack(spacing: -2) {
-                        Text(hint)
-                            .font(.system(size: 13))
+                    // TPS layout: hint(s) on top, main text below
+                    let hints = hint.split(separator: " ").map(String.init)
+                    VStack(spacing: -1) {
+                        if hints.count >= 2 {
+                            // Two callouts: top-left and top-right
+                            HStack {
+                                Text(hints[0])
+                                    .font(.system(size: 12))
+                                    .opacity(0.45)
+                                Spacer()
+                                Text(hints[1])
+                                    .font(.system(size: 12))
+                                    .opacity(0.45)
+                            }
+                            .padding(.horizontal, 3)
+                        } else {
+                            Text(hint)
+                                .font(.system(size: 13))
+                                .opacity(0.45)
+                        }
                         Text(text)
-                            .font(.system(size: 13))
+                            .font(.system(size: 19))
                     }
                     .lineLimit(1)
+                    .padding(.vertical, 2)
                 } else {
                     VStack(spacing: -4) {
                         Text(hint)

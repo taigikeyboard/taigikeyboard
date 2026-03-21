@@ -1,15 +1,18 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
+import android.graphics.drawable.InsetDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.util.FontUtils
 import com.siansiansu.taigikeyboard.util.getColorFromAttr
@@ -24,6 +27,8 @@ class CandidateAdapter(
     private val context: Context,
     private val isTranslateSwapped: () -> Boolean,
     private val fontType: () -> String,
+    private val layoutType: () -> String = { "" },
+    private val orMapsToER: () -> Boolean = { false },
     private val onCandidateClick: (TaigiWord, Int) -> Unit
 ) : ListAdapter<TaigiWord, CandidateAdapter.CandidateViewHolder>(CandidateDiffCallback()) {
 
@@ -61,7 +66,7 @@ class CandidateAdapter(
 
         // Available height = smartbar minus vertical padding and margins
         // Padding: (padding/3) top + (padding/3) bottom ≈ padding*2/3
-        // Margin: margin*2 top + margin*2 bottom = margin*4
+        // Margin: margin*6 top + margin*6 bottom = margin*12
         val verticalPaddingPx = padding * 2 / 3
         val verticalMarginPx = margin * 4
         val subtitleGapPx = 2 * density  // ~2dp gap between title and subtitle
@@ -76,8 +81,8 @@ class CandidateAdapter(
         val titlePx = availablePx * 0.58f * textSizeScale / lineHeightFactor
         val subtitlePx = availablePx * 0.42f * textSizeScale / lineHeightFactor
 
-        titleTextSizeSp = (titlePx / scaledDensity).coerceIn(10f, 24f)
-        subtitleTextSizeSp = (subtitlePx / scaledDensity).coerceIn(8f, 17f)
+        titleTextSizeSp = (titlePx / scaledDensity).coerceIn(10f, 21f)
+        subtitleTextSizeSp = (subtitlePx / scaledDensity).coerceIn(8f, 16f)
     }
 
     /**
@@ -123,12 +128,15 @@ class CandidateAdapter(
                 cachedFontType = currentFontType
             }
 
-            // 設定背景（第 0 個位置使用不同背景）
+            // 設定背景（composing: key_bgColor shrunk to wrap text, others: transparent — match iOS）
             val isNextWordCandidate = word.id < 0
-            container.setBackgroundResource(
-                if (position == 0 && !isNextWordCandidate) R.drawable.candidate_composing_background
-                else R.drawable.candidate_button_background
-            )
+            if (position == 0 && !isNextWordCandidate) {
+                val bg = ContextCompat.getDrawable(context, R.drawable.candidate_composing_background)
+                val verticalInset = padding / 2   // shrink height to wrap text
+                container.background = InsetDrawable(bg, 0, verticalInset, 0, verticalInset)
+            } else {
+                container.setBackgroundResource(R.drawable.candidate_button_background)
+            }
 
             // 設定 padding 和 margin
             val reducedVerticalPadding = padding / 3
@@ -138,7 +146,7 @@ class CandidateAdapter(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            val horizontalSpacing = margin * 5
+            val horizontalSpacing = margin * 3
             val verticalSpacing = margin * 2
             lp.setMargins(horizontalSpacing, verticalSpacing, horizontalSpacing, verticalSpacing)
             container.layoutParams = lp
@@ -146,18 +154,25 @@ class CandidateAdapter(
             // Determine title and subtitle content
             val titleText: String
             val subtitleText: String?
+            val isTPSLayout = layoutType() == "tps"
+            val displayRoman = TPSConverter.displayRoman(word.roman, layoutType(), orMapsToER())
 
             when {
                 word.hanzi.isNullOrEmpty() -> {
-                    titleText = word.roman
+                    titleText = displayRoman
+                    subtitleText = null
+                }
+                isTPSLayout -> {
+                    // TPS mode: always show hanzi only
+                    titleText = word.hanzi
                     subtitleText = null
                 }
                 isSwapped -> {
                     titleText = word.hanzi
-                    subtitleText = word.roman
+                    subtitleText = displayRoman
                 }
                 else -> {
-                    titleText = word.roman
+                    titleText = displayRoman
                     subtitleText = word.hanzi
                 }
             }
@@ -178,9 +193,19 @@ class CandidateAdapter(
                     textSize = subtitleTextSizeSp
                     typeface = cachedTypeface
                     setTextColor(customTextColor ?: subtitleColor)
+                    (layoutParams as? LinearLayout.LayoutParams)?.let {
+                        it.topMargin = margin * 2
+                        layoutParams = it
+                    }
                 }
             } else {
-                subtitleView.visibility = View.GONE
+                subtitleView.apply {
+                    visibility = View.GONE
+                    (layoutParams as? LinearLayout.LayoutParams)?.let {
+                        it.topMargin = 0
+                        layoutParams = it
+                    }
+                }
             }
 
             // 設定點擊事件

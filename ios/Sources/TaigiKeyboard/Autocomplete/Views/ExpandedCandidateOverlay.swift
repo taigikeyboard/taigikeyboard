@@ -61,82 +61,38 @@ struct ExpandedCandidateOverlay: View {
         }
     }
 
-    /// 候選詞行項目資料結構
+    /// Row item for pixel-based grid layout
     private struct RowItem {
-        /// 候選詞資料
         let suggestion: Autocomplete.Suggestion
-        /// 在原始列表中的索引
         let originalIndex: Int
-        /// 權重（用於版面配置）
-        let weight: Double
+        let measuredWidth: CGFloat
     }
 
-    /// 計算候選詞的網格排列
-    /// 根據字元數量和項目數量動態分配每行的候選詞
+    /// Arrange candidates into rows using pixel-based measurement
     private var arrangedRows: [[RowItem]] {
+        let availableWidth = UIScreen.main.bounds.width - 76  // 8+8 padding + 60 button panel
+        let itemSpacing = CandidateViewModels.UI.expandedItemSpacing
+
         var rows: [[RowItem]] = []
         var currentRow: [RowItem] = []
-        var currentRowCharCount = 0
-        let maxCharactersPerRow = 20  // 每行最大字元數
-        let minItemsPerRow = 2        // 每行最少項目數
-        let maxItemsPerRow = 4        // 每行最多項目數
+        var currentRowWidth: CGFloat = 0
 
         for (index, suggestion) in suggestions.enumerated() {
-            let charCount = getCharacterCount(for: suggestion)
-            let weight = getItemWeight(for: suggestion)
+            let cellWidth = CandidateCellHelper.measuredCellWidth(for: suggestion)
+            let spacingNeeded = currentRow.isEmpty ? 0 : itemSpacing
 
-            let shouldStartNewRow = (
-                (currentRowCharCount + charCount > maxCharactersPerRow &&
-                    !currentRow.isEmpty &&
-                    currentRow.count >= minItemsPerRow) ||
-                    currentRow.count >= maxItemsPerRow,
-            )
-
-            if shouldStartNewRow {
+            if !currentRow.isEmpty && (currentRowWidth + spacingNeeded + cellWidth) > availableWidth {
                 rows.append(currentRow)
                 currentRow = []
-                currentRowCharCount = 0
+                currentRowWidth = 0
             }
 
-            let item = RowItem(suggestion: suggestion, originalIndex: index, weight: weight)
-            currentRow.append(item)
-            currentRowCharCount += charCount
+            currentRow.append(RowItem(suggestion: suggestion, originalIndex: index, measuredWidth: cellWidth))
+            currentRowWidth += (currentRow.count == 1 ? 0 : itemSpacing) + cellWidth
         }
 
-        if !currentRow.isEmpty {
-            rows.append(currentRow)
-        }
-
+        if !currentRow.isEmpty { rows.append(currentRow) }
         return rows
-    }
-
-    /// 計算候選詞的字元數
-    /// 取主標題和副標題中較長者
-    private func getCharacterCount(for suggestion: Autocomplete.Suggestion) -> Int {
-        let mainLength = suggestion.text.count
-        let subtitleLength = suggestion.subtitle?.count ?? 0
-        return max(mainLength, subtitleLength)
-    }
-
-    /// 計算候選詞的權重
-    /// 較長的詞彙獲得較高權重，影響版面配置
-    private func getItemWeight(for suggestion: Autocomplete.Suggestion) -> Double {
-        let mainLength = suggestion.text.count
-        let subtitleLength = suggestion.subtitle?.count ?? 0
-        let maxLength = max(mainLength, subtitleLength)
-
-        switch maxLength {
-        case 1 ... 3:
-            return 1.0   // 短詞
-        case 4 ... 5:
-            return 1.1   // 中短詞
-        case 6 ... 7:
-            return 1.4   // 中詞
-        case 8 ... 10:
-            return 2.2   // 中長詞
-        default:
-            return 4.0   // 長詞
-        }
     }
 
     private var candidateContentSection: some View {
@@ -155,34 +111,17 @@ struct ExpandedCandidateOverlay: View {
                             VStack(spacing: 0) {
                                 HStack(spacing: CandidateViewModels.UI.expandedItemSpacing) {
                                     ForEach(rowItems, id: \.originalIndex) { item in
-                                        let textLength = calculateDisplayLength(for: item.suggestion)
-                                        let charCount = getCharacterCount(for: item.suggestion)
-
-                                        if charCount >= 12 {
-                                            ExpandedCandidateLongCell(
-                                                suggestion: item.suggestion,
-                                                isTranslateSwapped: isTranslateSwapped,
-                                                isSelected: selectedCandidateIndex == item.originalIndex,
-                                                onTap: { suggestion in
-                                                    onSuggestionTap(suggestion)
-                                                    onCollapse()
-                                                },
-                                            )
-                                            .id("candidate_\(item.originalIndex)")
-                                        } else {
-                                            ExpandedCandidateGridCell(
-                                                suggestion: item.suggestion,
-                                                textLength: textLength,
-                                                isTranslateSwapped: isTranslateSwapped,
-                                                isSelected: selectedCandidateIndex == item.originalIndex,
-                                                onTap: { suggestion in
-                                                    onSuggestionTap(suggestion)
-                                                    onCollapse()
-                                                },
-                                            )
-                                            .id("candidate_\(item.originalIndex)")
-                                            .frame(maxWidth: .infinity)
-                                        }
+                                        ExpandedCandidateGridCell(
+                                            suggestion: item.suggestion,
+                                            isTranslateSwapped: isTranslateSwapped,
+                                            isSelected: selectedCandidateIndex == item.originalIndex,
+                                            onTap: { suggestion in
+                                                onSuggestionTap(suggestion)
+                                                onCollapse()
+                                            }
+                                        )
+                                        .id("candidate_\(item.originalIndex)")
+                                        .frame(minWidth: item.measuredWidth, maxWidth: .infinity)
                                     }
                                     Spacer()
                                 }
@@ -261,24 +200,27 @@ struct ExpandedCandidateOverlay: View {
                             }
                         }, perform: {})
 
-                        Button(action: {
-                            onTranslateToggle()
-                        }) {
-                            Image(systemName: "translate")
-                                .font(KeyboardModels.Fonts.globalFont(size: 20))
-                                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                                .frame(width: 45, height: 45, alignment: .center)
-                                .background(translateButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
-                                .scaleEffect(translateButtonPressed ? 0.95 : 1.0)
-                                .contentShape(Rectangle())
-                                .offset(y: 25)
-                        }
-                        .buttonStyle(.plain)
-                        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                            withAnimation(.easeInOut(duration: 0.1)) {
-                                translateButtonPressed = pressing
+                        // Hide translate button for TPS layout (always hanzi-only)
+                        if SharedSettings.shared.keyboardLayoutType != .tps {
+                            Button(action: {
+                                onTranslateToggle()
+                            }) {
+                                Image(systemName: "translate")
+                                    .font(KeyboardModels.Fonts.globalFont(size: 20))
+                                    .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                                    .frame(width: 45, height: 45, alignment: .center)
+                                    .background(translateButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
+                                    .scaleEffect(translateButtonPressed ? 0.95 : 1.0)
+                                    .contentShape(Rectangle())
+                                    .offset(y: 25)
                             }
-                        }, perform: {})
+                            .buttonStyle(.plain)
+                            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    translateButtonPressed = pressing
+                                }
+                            }, perform: {})
+                        }
                     }
                     .padding(.top, 3)
                 }
@@ -314,12 +256,6 @@ struct ExpandedCandidateOverlay: View {
                 .padding(.bottom, 8),
             alignment: .topTrailing,
         )
-    }
-
-    private func calculateDisplayLength(for suggestion: Autocomplete.Suggestion) -> Int {
-        let mainLength = suggestion.text.count
-        let subtitleLength = suggestion.subtitle?.count ?? 0
-        return max(mainLength, subtitleLength)
     }
 
     /// 滾動到上一頁
@@ -380,7 +316,6 @@ struct FixedColumnDivider: View {
 /// 顯示一般長度的候選詞。
 struct ExpandedCandidateGridCell: View {
     let suggestion: Autocomplete.Suggestion
-    let textLength: Int
     let isTranslateSwapped: Bool
     let isSelected: Bool
     let onTap: (Autocomplete.Suggestion) -> Void
@@ -418,7 +353,6 @@ struct ExpandedCandidateGridCell: View {
                     .fontWeight(.regular)
                     .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                     .truncationMode(.tail)
 
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
@@ -428,7 +362,6 @@ struct ExpandedCandidateGridCell: View {
                         ))
                         .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
                         .truncationMode(.tail)
                 } else {
                     Text(" ")
@@ -457,83 +390,3 @@ struct ExpandedCandidateGridCell: View {
     }
 }
 
-/// 展開視圖長詞單元格
-///
-/// 顯示超過 12 個字元的長候選詞。
-struct ExpandedCandidateLongCell: View {
-    let suggestion: Autocomplete.Suggestion
-    let isTranslateSwapped: Bool
-    let isSelected: Bool
-    let onTap: (Autocomplete.Suggestion) -> Void
-
-    @State private var isPressed: Bool = false
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.candidateViewStyle) private var style
-
-    private var displayTitle: String {
-        CandidateCellHelper.displayTitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
-    }
-
-    private var displaySubtitle: String? {
-        CandidateCellHelper.displaySubtitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
-    }
-
-    private var backgroundColor: Color {
-        style.itemStyle.resolvedBackgroundColor(
-            for: colorScheme,
-            isSelected: isSelected,
-            isPressed: isPressed,
-            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
-        )
-    }
-
-    var body: some View {
-        Button(action: {
-            onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
-        }) {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(displayTitle)
-                        .font(KeyboardModels.Fonts.globalFont(
-                            size: CandidateCellHelper.longCellTitleFontSize(isTranslateSwapped: isTranslateSwapped)
-                        ))
-                        .fontWeight(.regular)
-                        .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                        .truncationMode(.tail)
-
-                    if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
-                        Text(subtitle)
-                            .font(KeyboardModels.Fonts.globalFont(
-                                size: CandidateCellHelper.longCellSubtitleFontSize(isTranslateSwapped: isTranslateSwapped)
-                            ))
-                            .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.7)
-                            .truncationMode(.tail)
-                    }
-                }
-                Spacer()
-            }
-            .padding(.vertical, CandidateViewModels.UI.expandedButtonVerticalPadding) // 使用統一的垂直內邊距
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity, minHeight: CandidateViewModels.UI.expandedMinRowHeight) // 使用統一的最小高度
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(backgroundColor)
-                    .padding(.horizontal, 4) // ✅ 增大背景區域
-                    .padding(.vertical, 2),
-            ) // ✅ 圓角白背景效果
-            .scaleEffect(isPressed ? 0.95 : 1.0) // ✅ 點擊縮放效果
-            .contentShape(Rectangle()) // ✅ 確保整個區域可點擊
-        }
-        .buttonStyle(.plain)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.easeInOut(duration: 0.1)) {
-                isPressed = pressing
-            }
-        }, perform: {})
-        .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
-    }
-}

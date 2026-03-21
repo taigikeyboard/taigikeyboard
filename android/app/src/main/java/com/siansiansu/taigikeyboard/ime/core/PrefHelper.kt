@@ -163,6 +163,48 @@ class PrefHelper(
     var inputMode: String
         get() = cached(PreferenceKeys.INPUT_MODE, "tl")
         set(value) {
+            val oldValue = inputMode
+
+            // TPS ↔ layout 1:1 sync (reverse direction: inputMode → layout)
+            // Write directly to cache/DataStore to avoid recursion with keyboardLayoutType setter
+            if (value == "tps" && oldValue != "tps") {
+                if (keyboardLayoutType != "tps") {
+                    layoutBeforeTps = keyboardLayoutType
+                    cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                        mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
+                        mutable[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
+                        cachedPrefs = mutable.toPreferences()
+                    }
+                    scope.launch {
+                        dataStore.edit { prefs ->
+                            prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
+                            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
+                        }
+                    }
+                }
+            } else if (value != "tps" && oldValue == "tps") {
+                if (keyboardLayoutType == "tps") {
+                    val restored = layoutBeforeTps
+                    cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                        mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
+                        mutable[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (restored == "phahTaigi")
+                        cachedPrefs = mutable.toPreferences()
+                    }
+                    scope.launch {
+                        dataStore.edit { prefs ->
+                            prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
+                            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (restored == "phahTaigi")
+                        }
+                    }
+                }
+            }
+
+            // Sync cache for inputMode synchronously
+            cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                mutable[PreferenceKeys.INPUT_MODE] = value
+                cachedPrefs = mutable.toPreferences()
+            }
+            // Persist to DataStore
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.INPUT_MODE] = value
@@ -252,10 +294,39 @@ class PrefHelper(
             }
         }
 
-    // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2
+    // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
     var keyboardLayoutType: String
         get() = cached(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "phahTaigi")
         set(value) {
+            val oldValue = keyboardLayoutType
+            // TPS ↔ inputMode 1:1 sync (forward direction: layout → inputMode)
+            // Write inputMode directly to cache/DataStore to avoid recursion with inputMode setter
+            if (value == "tps" && oldValue != "tps") {
+                val currentInputMode = inputMode
+                if (currentInputMode != "tps") {
+                    inputModeBeforeTps = currentInputMode
+                }
+                cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                    mutable[PreferenceKeys.INPUT_MODE] = "tps"
+                    cachedPrefs = mutable.toPreferences()
+                }
+                scope.launch {
+                    dataStore.edit { prefs ->
+                        prefs[PreferenceKeys.INPUT_MODE] = "tps"
+                    }
+                }
+            } else if (value != "tps" && oldValue == "tps") {
+                val restored = inputModeBeforeTps
+                cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                    mutable[PreferenceKeys.INPUT_MODE] = restored
+                    cachedPrefs = mutable.toPreferences()
+                }
+                scope.launch {
+                    dataStore.edit { prefs ->
+                        prefs[PreferenceKeys.INPUT_MODE] = restored
+                    }
+                }
+            }
             // Update cache synchronously so getter returns new value immediately
             cachedPrefs?.toMutablePreferences()?.let { mutable ->
                 mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
@@ -268,6 +339,39 @@ class PrefHelper(
                     prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
                     prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (value == "phahTaigi")
                     if (BuildConfig.DEBUG) Log.d(TAG, "[PREF] KeyboardLayoutType set to: $value")
+                }
+            }
+        }
+
+    // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
+    private var inputModeBeforeTps: String
+        get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.INPUT_MODE_BEFORE_TPS] = value
+                }
+            }
+        }
+
+    // Stores the layout before switching to TPS, so it can be restored when leaving TPS
+    private var layoutBeforeTps: String
+        get() = cached(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.LAYOUT_BEFORE_TPS] = value
+                }
+            }
+        }
+
+    // TPS settings
+    var tpsOrMapsToER: Boolean
+        get() = cached(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = value
                 }
             }
         }
@@ -308,7 +412,7 @@ class PrefHelper(
 
     // 台灣植物名彙（sitbut）
     var taiwanPlantDictEnabled: Boolean
-        get() = cached(PreferenceKeys.SITBUT_DICT_ENABLED, true)
+        get() = cached(PreferenceKeys.SITBUT_DICT_ENABLED, false)
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
@@ -317,9 +421,9 @@ class PrefHelper(
             }
         }
 
-    // 台華線頂對照典（taihoa）- matching iOS default: true
+    // 台華線頂對照典（taihoa）
     var taiHuaDictEnabled: Boolean
-        get() = cached(PreferenceKeys.TAIHOA_DICT_ENABLED, true)
+        get() = cached(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
@@ -330,7 +434,7 @@ class PrefHelper(
 
     // 台日大辭典（taijit）
     var taiwanJapanDictEnabled: Boolean
-        get() = cached(PreferenceKeys.TAIJIT_DICT_ENABLED, true)
+        get() = cached(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
@@ -341,7 +445,7 @@ class PrefHelper(
 
     // 台語工藝詞庫（kungge）
     var kunggeDictEnabled: Boolean
-        get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
+        get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, false)
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
@@ -352,7 +456,7 @@ class PrefHelper(
 
     // 學科術語辭典（stti）
     var sttiDictEnabled: Boolean
-        get() = cached(PreferenceKeys.STTI_DICT_ENABLED, true)
+        get() = cached(PreferenceKeys.STTI_DICT_ENABLED, false)
         set(value) {
             scope.launch {
                 dataStore.edit { prefs ->
@@ -368,6 +472,17 @@ class PrefHelper(
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.KHPOO_DICT_ENABLED] = value
+                }
+            }
+        }
+
+    // LKK漢羅合用建議用字（預設開啟）
+    var lkkDictEnabled: Boolean
+        get() = cached(PreferenceKeys.LKK_DICT_ENABLED, true)
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.LKK_DICT_ENABLED] = value
                 }
             }
         }
@@ -443,6 +558,71 @@ class PrefHelper(
                 }
             }
         }
+
+    // 在來字開關（預設關閉）
+    var khiin: Boolean
+        get() = cached(PreferenceKeys.KHIIN_ENABLED, false)
+        set(value) {
+            scope.launch {
+                dataStore.edit { prefs ->
+                    prefs[PreferenceKeys.KHIIN_ENABLED] = value
+                }
+            }
+        }
+
+    /**
+     * Snapshot of all dictionary-enabled flags, captured atomically from a single
+     * cached preferences read to avoid torn reads across multiple getters.
+     */
+    data class DictEnabledSnapshot(
+        val moe: Boolean,
+        val newword: Boolean,
+        val itaigi: Boolean,
+        val taiwanPlant: Boolean,
+        val taiHua: Boolean,
+        val taiwanJapan: Boolean,
+        val kungge: Boolean,
+        val stti: Boolean,
+        val khpoo: Boolean,
+        val variant: Boolean,
+        val khiin: Boolean,
+        val lkk: Boolean
+    )
+
+    fun snapshotEnabledDictionaries(): DictEnabledSnapshot {
+        val snapshot = cachedPrefs
+        return if (snapshot != null) {
+            DictEnabledSnapshot(
+                moe = snapshot[PreferenceKeys.MOE_DICT_ENABLED] ?: true,
+                newword = snapshot[PreferenceKeys.NEWWORD_DICT_ENABLED] ?: true,
+                itaigi = snapshot[PreferenceKeys.ITAIGI_DICT_ENABLED] ?: false,
+                taiwanPlant = snapshot[PreferenceKeys.SITBUT_DICT_ENABLED] ?: false,
+                taiHua = snapshot[PreferenceKeys.TAIHOA_DICT_ENABLED] ?: false,
+                taiwanJapan = snapshot[PreferenceKeys.TAIJIT_DICT_ENABLED] ?: false,
+                kungge = snapshot[PreferenceKeys.KUNGGE_DICT_ENABLED] ?: true,
+                stti = snapshot[PreferenceKeys.STTI_DICT_ENABLED] ?: true,
+                khpoo = snapshot[PreferenceKeys.KHPOO_DICT_ENABLED] ?: true,
+                variant = snapshot[PreferenceKeys.VARIANT_DICT_ENABLED] ?: false,
+                khiin = snapshot[PreferenceKeys.KHIIN_ENABLED] ?: false,
+                lkk = snapshot[PreferenceKeys.LKK_DICT_ENABLED] ?: true
+            )
+        } else {
+            DictEnabledSnapshot(
+                moe = moeDictEnabled,
+                newword = newwordDictEnabled,
+                itaigi = itaigiDictEnabled,
+                taiwanPlant = taiwanPlantDictEnabled,
+                taiHua = taiHuaDictEnabled,
+                taiwanJapan = taiwanJapanDictEnabled,
+                kungge = kunggeDictEnabled,
+                stti = sttiDictEnabled,
+                khpoo = khpooDictEnabled,
+                variant = variantEnabled,
+                khiin = khiin,
+                lkk = lkkDictEnabled
+            )
+        }
+    }
 
     // Flow-based API for reactive observations
     /**
@@ -547,14 +727,6 @@ class PrefHelper(
     }
 
     /**
-     * Placeholder for backward compatibility.
-     * DataStore doesn't require explicit initialization.
-     */
-    fun initDefaultPreferences() {
-        // No-op: DataStore handles defaults in getters
-    }
-
-    /**
      * 重置所有設定為預設值
      * 保留內部設定（版本資訊）
      */
@@ -595,6 +767,7 @@ class PrefHelper(
             prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = 1.0f
             prefs[PreferenceKeys.KEY_CORNER_RADIUS] = 6.0f
             prefs[PreferenceKeys.KEY_BORDER_WIDTH] = 0.0f
+            prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
 
             if (BuildConfig.DEBUG) {

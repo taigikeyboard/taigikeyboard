@@ -94,12 +94,11 @@ class KeyboardViewController: KeyboardInputViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        syncSettings()
-
-        // EmojiService 使用延遲初始化，只在實際需要時創建
-
-        // 同步 Full Access 狀態到 App Group
+        // Write first, so the notification from this write
+        // is coalesced with syncSettings changes
         SharedSettings.shared.isFullAccessEnabled = self.hasFullAccess
+
+        syncSettings()
     }
 
     override func viewWillSetupKeyboardView() {

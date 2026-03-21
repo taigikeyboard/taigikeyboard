@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.exp
 
 /**
@@ -70,8 +71,8 @@ object NextWordService {
     private var isInitialized = false
     private val initMutex = Mutex()
 
-    // 記錄計數器（用於觸發清理檢查）
-    private var recordCounter = 0
+    // 記錄計數器（用於觸發清理檢查，AtomicInteger for thread safety）
+    private val recordCounter = AtomicInteger(0)
 
     /**
      * NextWord 預測結果
@@ -158,9 +159,9 @@ object NextWordService {
         // 1. 查詢字典關聯（Bigram：用最後一字查詢）
         dictDatabase?.let { db ->
             try {
-                // 建立詞庫過濾條件（use provided PrefHelper to avoid runBlocking on new instance）
+                // 建立詞庫過濾條件（atomic snapshot to avoid torn reads）
                 val p = prefs ?: PrefHelper(context)
-                val dictWhereCondition = buildDictWhereCondition(p)
+                val dictWhereCondition = buildDictWhereCondition(p.snapshotEnabledDictionaries())
 
                 val sql = """
                     SELECT next_word, next_tl, count
@@ -312,9 +313,8 @@ object NextWordService {
             }
 
             // 定期檢查是否需要清理舊關聯
-            recordCounter++
-            if (recordCounter >= PRUNE_CHECK_INTERVAL) {
-                recordCounter = 0
+            if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
+                recordCounter.set(0)
                 pruneOldAssociations()
             }
         } catch (e: Exception) {
@@ -640,26 +640,28 @@ object NextWordService {
      *
      * 使用 OR 邏輯：只要 Bigram 來自任一開啟的詞庫即可
      * 全部開啟時返回空字串（不加過濾）
+     *
+     * @param snapshot atomic snapshot of dictionary enabled flags
      */
-    private fun buildDictWhereCondition(prefs: PrefHelper): String {
+    private fun buildDictWhereCondition(snapshot: PrefHelper.DictEnabledSnapshot): String {
         val conditions = mutableListOf<String>()
 
-        if (prefs.moeDictEnabled) conditions.add("$COL_KAUTIAN = 1")
-        if (prefs.newwordDictEnabled) conditions.add("$COL_TAIGITV = 1")
-        if (prefs.itaigiDictEnabled) conditions.add("$COL_ITAIGI = 1")
-        if (prefs.taiwanPlantDictEnabled) conditions.add("$COL_SITBUT = 1")
-        if (prefs.taiHuaDictEnabled) conditions.add("$COL_TAIHOA = 1")
-        if (prefs.taiwanJapanDictEnabled) conditions.add("$COL_TAIJIT = 1")
-        if (prefs.kunggeDictEnabled) conditions.add("$COL_KUNGGE = 1")
-        if (prefs.sttiDictEnabled) conditions.add("$COL_STTI = 1")
-        if (prefs.khpooDictEnabled) conditions.add("$COL_KHPOO = 1")
+        if (snapshot.moe) conditions.add("$COL_KAUTIAN = 1")
+        if (snapshot.newword) conditions.add("$COL_TAIGITV = 1")
+        if (snapshot.itaigi) conditions.add("$COL_ITAIGI = 1")
+        if (snapshot.taiwanPlant) conditions.add("$COL_SITBUT = 1")
+        if (snapshot.taiHua) conditions.add("$COL_TAIHOA = 1")
+        if (snapshot.taiwanJapan) conditions.add("$COL_TAIJIT = 1")
+        if (snapshot.kungge) conditions.add("$COL_KUNGGE = 1")
+        if (snapshot.stti) conditions.add("$COL_STTI = 1")
+        if (snapshot.khpoo) conditions.add("$COL_KHPOO = 1")
 
         // 全部開啟時不加過濾條件
-        val allEnabled = prefs.moeDictEnabled && prefs.newwordDictEnabled &&
-            prefs.itaigiDictEnabled && prefs.taiwanPlantDictEnabled &&
-            prefs.taiHuaDictEnabled && prefs.taiwanJapanDictEnabled &&
-            prefs.kunggeDictEnabled && prefs.sttiDictEnabled &&
-            prefs.khpooDictEnabled
+        val allEnabled = snapshot.moe && snapshot.newword &&
+            snapshot.itaigi && snapshot.taiwanPlant &&
+            snapshot.taiHua && snapshot.taiwanJapan &&
+            snapshot.kungge && snapshot.stti &&
+            snapshot.khpoo
 
         if (allEnabled) {
             return ""

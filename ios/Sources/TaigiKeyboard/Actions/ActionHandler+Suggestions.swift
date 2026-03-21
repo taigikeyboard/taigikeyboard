@@ -16,6 +16,8 @@ extension ActionHandler {
 
         if composingManager.isComposing || isNextWordPrediction {
             let wasSwapped = settings.isTranslateSwapped
+            let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
+            let effectiveSwapped = isTPSLayout || wasSwapped
 
             // Capture rawInput BEFORE selectSuggestion clears it
             let capturedRawInput = composingManager.rawInput
@@ -27,7 +29,7 @@ extension ActionHandler {
             if isNextWordPrediction {
                 hanzi = suggestion.additionalInfo["hanzi"]
                 roman = suggestion.additionalInfo["tl"] ?? suggestion.text
-            } else if wasSwapped {
+            } else if effectiveSwapped {
                 roman = suggestion.subtitle ?? suggestion.text
                 hanzi = suggestion.text
             } else {
@@ -38,10 +40,10 @@ extension ActionHandler {
             // 決定輸出文字
             let textToCommit: String
             if settings.outputBothScripts && hanzi != nil && !hanzi!.isEmpty {
-                textToCommit = settings.isTranslateSwapped
+                textToCommit = effectiveSwapped
                     ? "\(hanzi!) (\(roman))"
                     : "\(roman) (\(hanzi!))"
-            } else if settings.isTranslateSwapped && hanzi != nil && !hanzi!.isEmpty {
+            } else if effectiveSwapped && hanzi != nil && !hanzi!.isEmpty {
                 textToCommit = hanzi!
             } else {
                 textToCommit = roman
@@ -69,7 +71,8 @@ extension ActionHandler {
             logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman, privacy: .public)' hanzi='\(hanzi ?? "nil", privacy: .public)' displayText='\(displayText, privacy: .public)'")
 
             // 羅馬字模式：自動加空白（字尾非連字符時）
-            if settings.isAutoSpaceEnabled && (!settings.isTranslateSwapped || settings.outputBothScripts) {
+            // TPS mode disables auto-space (effectiveSwapped is true for TPS)
+            if settings.isAutoSpaceEnabled && (!effectiveSwapped || settings.outputBothScripts) {
                 if !textToCommit.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")
                 }

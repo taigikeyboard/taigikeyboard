@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * 使用者詞彙頻率服務
@@ -47,8 +48,7 @@ object UserFrequencyService {
     private var dbHelper: DatabaseHelper? = null
     private val initMutex = Mutex()
     private var isInitialized = false
-    @Volatile
-    private var recordCounter = 0
+    private val recordCounter = AtomicInteger(0)
 
     /**
      * 初始化服務（建議在 Application.onCreate 中呼叫）
@@ -140,9 +140,8 @@ object UserFrequencyService {
                 Log.d(TAG, "[RECORD] Recorded usage for: $word")
             }
 
-            recordCounter++
-            if (recordCounter >= PRUNE_CHECK_INTERVAL) {
-                recordCounter = 0
+            if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
+                recordCounter.set(0)
                 pruneOldEntries()
             }
         } catch (e: Exception) {

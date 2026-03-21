@@ -15,7 +15,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.logging_utils import setup_logging, log_header
 
-INPUT_FILE = "data/01_raw/scrape-20250928T154651Z.json"
+INPUT_FILE = "data/01_raw/scrape-20260319T144906Z.json"
 OUTPUT_DIR = "data/02_extracted"
 OUTPUT_FILE = "taigitv.csv"
 SCRIPT_NAME = "01_extract"

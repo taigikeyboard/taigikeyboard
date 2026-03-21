@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.util.FontUtils
 
@@ -25,13 +26,16 @@ class CandidateOverlayAdapter(
     private val context: Context,
     private val isTranslateSwapped: () -> Boolean,
     private val fontType: () -> String,
+    private val layoutType: () -> String = { "" },
+    private val orMapsToER: () -> Boolean = { false },
     private val isClickEnabled: () -> Boolean,
     private val onCellClick: (TaigiWord, Int) -> Unit
 ) : ListAdapter<CandidateOverlayAdapter.CandidateRow, CandidateOverlayAdapter.RowViewHolder>(RowDiffCallback()) {
 
     companion object {
-        private const val MAX_ITEMS_PER_ROW = 4
-        private const val LONG_WORD_THRESHOLD = 12
+        // Pre-inflated pool size: covers most phones (44dp min cell + 1dp spacing).
+        // If a row has more items, bind() inflates additional cells on demand.
+        private const val PRE_INFLATED_CELLS = 8
     }
 
     // Cached resources
@@ -66,9 +70,8 @@ class CandidateOverlayAdapter(
         private val itemsLayout: LinearLayout = itemView.findViewById(R.id.row_items_layout)
         private val divider: View = itemView.findViewById(R.id.row_divider)
 
-        // Pre-inflated cell views (grid + long variants)
+        // Pre-inflated cell views (grid only — long cell removed)
         private val gridCells: Array<View>
-        private val longCells: Array<View>
 
         init {
             // Set row margins matching createRowLayout()
@@ -81,12 +84,9 @@ class CandidateOverlayAdapter(
                 setMargins(spacing * 2, 0, spacing * 2 + 60, 0)
             }
 
-            // Pre-inflate MAX_ITEMS_PER_ROW grid cells and long cells
-            gridCells = Array(MAX_ITEMS_PER_ROW) {
+            // Pre-inflate common case; bind() inflates more if needed
+            gridCells = Array(PRE_INFLATED_CELLS) {
                 gridCellInflater.inflate(R.layout.candidate_grid_cell, itemsLayout, false)
-            }
-            longCells = Array(MAX_ITEMS_PER_ROW) {
-                gridCellInflater.inflate(R.layout.candidate_long_cell, itemsLayout, false)
             }
         }
 
@@ -98,10 +98,12 @@ class CandidateOverlayAdapter(
             itemsLayout.removeAllViews()
 
             row.items.forEachIndexed { cellIndex, item ->
-                val charCount = getCharacterCount(item.word)
-                val isLong = charCount >= LONG_WORD_THRESHOLD
-
-                val cellView = if (isLong) longCells[cellIndex] else gridCells[cellIndex]
+                // Use pre-inflated cell if available, otherwise inflate on demand
+                val cellView = if (cellIndex < gridCells.size) {
+                    gridCells[cellIndex]
+                } else {
+                    gridCellInflater.inflate(R.layout.candidate_grid_cell, itemsLayout, false)
+                }
 
                 // Detach from any previous parent (safety: pre-inflated views may have been
                 // added to a different row's itemsLayout if the ViewHolder was recycled)
@@ -117,17 +119,26 @@ class CandidateOverlayAdapter(
                 primaryText.typeface = typeface
                 subtitleText.typeface = typeface
 
-                // Set weight-based layout params
+                // Pixel-based layout: measuredWidth as base, weight=1 for equal flex
+                // Matches iOS .frame(minWidth: measuredWidth, maxWidth: .infinity)
                 val lp = LinearLayout.LayoutParams(
-                    0,
+                    item.measuredWidth,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    item.weight.toFloat()
+                    1.0f
                 ).apply {
                     if (cellIndex > 0) {
                         marginStart = spacing
                     }
                 }
                 cellView.layoutParams = lp
+
+                // Composing cell (position 0): key_bgColor background, same as smartbar
+                val isComposing = item.originalIndex == 0 && item.word.id >= 0
+                if (isComposing) {
+                    cellView.setBackgroundResource(R.drawable.candidate_grid_composing_background)
+                } else {
+                    cellView.setBackgroundResource(R.drawable.candidate_grid_cell_background)
+                }
 
                 // Set click listener
                 cellView.setOnClickListener {
@@ -148,42 +159,44 @@ class CandidateOverlayAdapter(
             subtitleText: TextView,
             isSwapped: Boolean
         ) {
+            val isTPSLayout = layoutType() == "tps"
+            val displayRoman = TPSConverter.displayRoman(word.roman, layoutType(), orMapsToER())
+
             when {
                 word.hanzi.isNullOrEmpty() -> {
-                    primaryText.text = word.roman
+                    primaryText.text = displayRoman
+                    subtitleText.visibility = View.GONE
+                }
+                isTPSLayout -> {
+                    // TPS mode: always show hanzi only
+                    primaryText.text = word.hanzi
                     subtitleText.visibility = View.GONE
                 }
                 isSwapped -> {
                     primaryText.text = word.hanzi
-                    subtitleText.text = word.roman
+                    subtitleText.text = displayRoman
                     subtitleText.visibility = View.VISIBLE
                 }
                 else -> {
-                    primaryText.text = word.roman
+                    primaryText.text = displayRoman
                     subtitleText.text = word.hanzi
                     subtitleText.visibility = View.VISIBLE
                 }
             }
         }
 
-        private fun getCharacterCount(word: TaigiWord): Int {
-            val romanLength = word.roman.length
-            val hanziLength = word.hanzi?.length ?: 0
-            return maxOf(romanLength, hanziLength)
-        }
     }
 
     // --- Data classes ---
 
     data class CandidateRow(
-        val items: List<CandidateItem>,
-        val totalWeight: Double
+        val items: List<CandidateItem>
     )
 
     data class CandidateItem(
         val word: TaigiWord,
         val originalIndex: Int,
-        val weight: Double
+        val measuredWidth: Int
     )
 
     // --- DiffUtil ---

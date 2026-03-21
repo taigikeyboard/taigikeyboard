@@ -140,7 +140,8 @@ class KeyView(
                     KeyCode.VIEW_SYMBOLS,
                     KeyCode.VIEW_SYMBOLS2,
                     KeyCode.DELETE,
-                    KeyCode.ENTER -> 0.0f
+                    KeyCode.ENTER,
+                    KeyCode.TRANSLATE -> 0.0f
                     else -> 1.0f
                 }
             }
@@ -229,15 +230,19 @@ class KeyView(
             keyData.code.toChar().toString()
         }
 
-        // Display override: "nn" key shows nasal marker ⁿ/ᴺ
-        if (baseLabel == "nn") {
+        // Display override: "˙" → "·" (middle dot, more visible)
+        if (baseLabel == "˙") return "·"
+
+        // Display override: "nn" key shows nasal marker ⁿ/ᴺ in POJ mode
+        // In TL mode, display as literal "nn" (falls through to normal case logic)
+        if (baseLabel == "nn" && taigikeyboard?.prefs?.inputMode == "poj") {
             return if (taigikeyboard?.textInputManager?.caps == true) "\u1D3A" else "\u207F"
         }
 
         // 使用對照表正確轉換聲調字母（如 á → Á）
         val inputMode = when (taigikeyboard?.prefs?.inputMode) {
             "poj" -> ToneConverterModels.InputMode.POJ
-            "tl" -> ToneConverterModels.InputMode.TL
+            "tl", "tps" -> ToneConverterModels.InputMode.TL
             else -> ToneConverterModels.InputMode.POJ
         }
 
@@ -398,6 +403,13 @@ class KeyView(
                 KeyCode.VIEW_SYMBOLS2,
                 KeyCode.DELETE,
                 KeyCode.ENTER -> (keyboardView.desiredKeyWidth * 1.56f).toInt()
+                KeyCode.TRANSLATE -> {
+                    val scale = when (keyboardView.prefs.keyboardLayoutType) {
+                        "phahTaigi", "moe1" -> 2.0f
+                        else -> 1.5f
+                    }
+                    (keyboardView.desiredKeyWidth * scale).toInt()
+                }
                 KeyCode.SPACE -> when (keyboardView.computedLayout?.mode) {
                     KeyboardMode.SYMBOLS -> (keyboardView.desiredKeyWidth * 0.56f).toInt()
                     else -> keyboardView.desiredKeyWidth
@@ -534,6 +546,7 @@ class KeyView(
                             // 組字模式：只顯示「確定」文字
                             // showHanjiMode 固定為 true
                             val displayLanguage = when {
+                                keyboardView.prefs.inputMode == "tps" -> DisplayLanguage.HANJI
                                 keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
                                 keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
                                 else -> DisplayLanguage.TL
@@ -584,12 +597,14 @@ class KeyView(
                 }
                 KeyCode.SHIFT -> {
                     label = null
+                    val isCaps = taigikeyboard?.textInputManager?.caps ?: false
+                    val isCapsLock = taigikeyboard?.textInputManager?.capsLock ?: false
                     drawable = getDrawable(context, when {
-                        taigikeyboard?.textInputManager?.caps ?: false && taigikeyboard?.textInputManager?.capsLock ?: false -> {
+                        isCaps && isCapsLock -> {
                             drawableColor = getColorFromAttr(context, R.attr.colorAccent)
                             R.drawable.ic_keyboard_capslock
                         }
-                        taigikeyboard?.textInputManager?.caps ?: false && !(taigikeyboard?.textInputManager?.capsLock ?: false) -> {
+                        isCaps && !isCapsLock -> {
                             drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                             R.drawable.ic_keyboard_capslock
                         }
@@ -614,7 +629,8 @@ class KeyView(
                             label = when (keyboardView.prefs.inputMode) {
                                 "poj" -> "POJ"
                                 "tl" -> "TL"
-                                "en" -> "EN"
+                                "tps" -> "TPS"
+                                "english" -> "EN"
                                 else -> null
                             }
                         }
@@ -812,13 +828,51 @@ class KeyView(
             val centerX = measuredWidth / 2.0f
             val centerY = measuredHeight / 2.0f + (sharedLabelPaint.textSize - sharedLabelPaint.descent()) / 2
 
-            if (label.contains("\n")) {
+            // TPS layout: show main char + first popup variant stacked vertically
+            // Only for TPS phonetic characters (code 0), not punctuation like comma
+            val isTpsWithPopup = keyboardView.prefs.keyboardLayoutType == "tps" &&
+                data.type == KeyType.CHARACTER && data.code == 0 && data.popup.isNotEmpty()
+
+            if (isTpsWithPopup) {
+                // Main char: larger, at bottom
+                sharedLabelPaint.textSize = baseTextSize * 0.78f
+                val topY = measuredHeight * 0.28f
+                val bottomY = measuredHeight * 0.80f
+                // Popup variants on top (lighter)
+                sharedHintPaint.color = sharedLabelPaint.color
+                sharedHintPaint.alpha = 130
+                sharedHintPaint.typeface = sharedLabelPaint.typeface
+                if (data.popup.size >= 2) {
+                    // Two callouts: top-left and top-right
+                    sharedHintPaint.textSize = baseTextSize * 0.48f
+                    val padding = measuredWidth * 0.12f
+                    canvas.drawText(data.popup[0].label, padding, topY, sharedHintPaint.apply { textAlign = Paint.Align.LEFT })
+                    canvas.drawText(data.popup[1].label, measuredWidth - padding, topY, sharedHintPaint.apply { textAlign = Paint.Align.RIGHT })
+                    sharedHintPaint.textAlign = Paint.Align.CENTER
+                } else {
+                    sharedHintPaint.textSize = baseTextSize * 0.52f
+                    canvas.drawText(data.popup[0].label, centerX, topY, sharedHintPaint)
+                }
+                canvas.drawText(label, centerX, bottomY, sharedLabelPaint)
+            } else if (label.contains("\n")) {
                 // Even if more lines may be existing only the first 2 are shown
                 val labelLines = label.split("\n")
                 canvas.drawText(labelLines[0], centerX, centerY * 0.70f, sharedLabelPaint)
                 canvas.drawText(labelLines[1], centerX, centerY * 1.30f, sharedLabelPaint)
             } else {
                 canvas.drawText(label, centerX, centerY, sharedLabelPaint)
+            }
+
+            // TPS layout: show popup hint above punctuation keys (e.g., "。" above "，")
+            if (keyboardView.prefs.keyboardLayoutType == "tps" &&
+                data.type == KeyType.CHARACTER && data.code != 0 && data.popup.isNotEmpty()) {
+                val hintLabel = data.popup[0].label
+                sharedHintPaint.textSize = baseTextSize * 0.52f
+                sharedHintPaint.color = sharedLabelPaint.color
+                sharedHintPaint.alpha = 130
+                sharedHintPaint.typeface = sharedLabelPaint.typeface
+                val hintY = measuredHeight * 0.28f
+                canvas.drawText(hintLabel, centerX, hintY, sharedHintPaint)
             }
 
             // Draw hint above keys (tone diacritics on number keys, punctuation hints on MOE1)

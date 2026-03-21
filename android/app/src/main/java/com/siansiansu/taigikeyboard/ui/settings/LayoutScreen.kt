@@ -79,7 +79,7 @@ fun LayoutScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Page title (pinned)
@@ -118,8 +118,7 @@ fun LayoutScreen(
             Text(
                 text = languageManager.text(Tab2Texts.romanizationKeyboard),
                 modifier = Modifier.padding(horizontal = 20.dp),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -155,20 +154,26 @@ fun LayoutScreen(
             Text(
                 text = languageManager.text(Tab2Texts.taigiPhonetic),
                 modifier = Modifier.padding(horizontal = 20.dp),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             Spacer(Modifier.height(8.dp))
 
-            // TPS Coming Soon card
+            // TPS layout option
             Row(
                 modifier = Modifier.padding(horizontal = 20.dp)
             ) {
-                TpsComingSoonCard(
+                LayoutCard(
                     label = languageManager.text(Tab2Texts.tpsLayout),
-                    comingSoonText = languageManager.text(Tab2Texts.comingSoon)
+                    previewRes = R.drawable.layout_tps_preview,
+                    isSelected = selectedLayout == "tps",
+                    onClick = {
+                        if (selectedLayout != "tps") {
+                            selectedLayout = "tps"
+                            prefs.keyboardLayoutType = "tps"
+                        }
+                    }
                 )
             }
             }
@@ -262,59 +267,3 @@ private fun LayoutCard(
     }
 }
 
-@Composable
-private fun TpsComingSoonCard(
-    label: String,
-    comingSoonText: String
-) {
-    Column(
-        modifier = Modifier.width(200.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                // TPS layout preview screenshot
-                androidx.compose.foundation.Image(
-                    painter = painterResource(R.drawable.layout_tps_preview),
-                    contentDescription = label,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentScale = ContentScale.FillWidth
-                )
-
-                // Dark overlay
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(Color(0x66000000))
-                )
-
-                // Coming soon text with capsule background
-                Text(
-                    text = comingSoonText,
-                    modifier = Modifier
-                        .background(
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(50)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
-
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
-        )
-    }
-}

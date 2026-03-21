@@ -25,6 +25,15 @@ taigikeyboard/
 └── CLAUDE.md       # This file
 ```
 
+## Context Management
+
+- Before starting multi-file refactoring or cross-platform changes, assess remaining context
+- **Do not start a large task if**:
+  - The system has already auto-compressed earlier messages
+  - The conversation has 10+ file reads or multiple agent outputs accumulated
+- **When context is low**: summarize progress, delegate file-heavy work to subagents, break remaining work into smaller steps that can each complete within available context
+- Cross-platform changes (iOS + Android) consume significant context — consider handling one platform per pass
+
 ## Core Development Principles
 
 1. **No unsolicited implementation** - Confirm with user before any feature or file changes

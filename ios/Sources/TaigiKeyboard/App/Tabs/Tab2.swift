@@ -10,13 +10,8 @@ struct Tab2: View {
 
     private let settings = SharedSettings.shared
 
-    #if DEBUG
     private static let tpsEntry: (KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool) =
         (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", nil, false)
-    #else
-    private static let tpsEntry: (KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool) =
-        (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", Tab2Texts.comingSoon, true)
-    #endif
 
     init() {
         _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
@@ -62,7 +57,8 @@ struct Tab2: View {
                         layouts: [Self.tpsEntry]
                     )
                 }
-                .padding(.vertical)
+                .padding(.top, 20)
+                .padding(.bottom)
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle(languageManager.text(Tab2Texts.tabTitle))
@@ -79,7 +75,7 @@ struct Tab2: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(header)
-                .font(KeyboardModels.Fonts.appFont(.subheadline))
+                .font(KeyboardModels.Fonts.appFont(.callout))
                 .fontWeight(.semibold)
                 .foregroundColor(.secondary)
                 .textCase(.uppercase)

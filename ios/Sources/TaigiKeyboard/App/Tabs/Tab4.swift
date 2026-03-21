@@ -16,6 +16,7 @@ struct Tab4: View {
     @State private var enableDoubleTapOO: Bool
     @State private var enableDoubleTapNN: Bool
     @State private var outputBothScripts: Bool
+    @State private var tpsOrMapsToER: Bool
     @State private var showResetSettingsAlert = false
     @State private var diagnosticCopied = false
     @State private var diagnosticText = ""
@@ -40,6 +41,7 @@ struct Tab4: View {
         _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
+        _tpsOrMapsToER = State(initialValue: settings.tpsOrMapsToER)
     }
 
     var body: some View {
@@ -77,7 +79,10 @@ struct Tab4: View {
                         .onChange(of: autoSpaceEnabled) { _, newValue in
                             settings.isAutoSpaceEnabled = newValue
                         }
+                }
 
+                // 白話字設定
+                Section {
                     Toggle(languageManager.text(Tab4Texts.doubleTapOO), isOn: $enableDoubleTapOO)
                         .onChange(of: enableDoubleTapOO) { _, newValue in
                             settings.enableDoubleTapOO = newValue
@@ -87,10 +92,26 @@ struct Tab4: View {
                         .onChange(of: enableDoubleTapNN) { _, newValue in
                             settings.enableDoubleTapNN = newValue
                         }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                // 方音符號設定
+                Section {
+                    Toggle(languageManager.text(Tab4Texts.tpsOrMapsToER), isOn: $tpsOrMapsToER)
+                        .onChange(of: tpsOrMapsToER) { _, newValue in
+                            settings.tpsOrMapsToER = newValue
+                        }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
 
                 // 診斷資訊
-                Section(header: Text(languageManager.text(Tab4Texts.diagnosticSectionTitle))) {
+                Section {
                     Button {
                         let info = DiagnosticService.gather()
                         UIPasteboard.general.string = info.formatted()
@@ -109,7 +130,7 @@ struct Tab4: View {
 
                     ShareLink(
                         item: diagnosticText,
-                        subject: Text("Taigi Keyboard Bug Report"),
+                        subject: Text("台語齒盤 Bug 回報"),
                         message: Text(diagnosticText)
                     ) {
                         Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "square.and.arrow.up")
@@ -117,7 +138,7 @@ struct Tab4: View {
 
                     Button {
                         let info = DiagnosticService.gather()
-                        let subject = "Taigi Keyboard Bug Report (v\(info.appVersion))"
+                        let subject = "台語齒盤 Bug 回報 (v\(info.appVersion))"
                             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                         let body = info.formatted()
                             .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
@@ -127,6 +148,10 @@ struct Tab4: View {
                     } label: {
                         Label(languageManager.text(Tab4Texts.diagnosticEmail), systemImage: "envelope")
                     }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.diagnosticSectionTitle))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
 
                 // 重設按鈕
@@ -178,6 +203,7 @@ struct Tab4: View {
         case .poj: return languageManager.text(Tab4Texts.pojMode)
         case .tl: return languageManager.text(Tab4Texts.tlMode)
         case .english: return languageManager.text(Tab4Texts.englishMode)
+        case .tps: return languageManager.text(Tab4Texts.tpsMode)
         }
     }
 
@@ -203,6 +229,7 @@ struct Tab4: View {
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
         outputBothScripts = settings.outputBothScripts
+        tpsOrMapsToER = settings.tpsOrMapsToER
 
         fontManager.reloadFontType()
 
@@ -221,7 +248,8 @@ private struct InputModePickerView: View {
     private let options: [(mode: InputMode, text: LocalizedText)] = [
         (.poj, Tab4Texts.pojMode),
         (.tl, Tab4Texts.tlMode),
-        (.english, Tab4Texts.englishMode)
+        (.english, Tab4Texts.englishMode),
+        (.tps, Tab4Texts.tpsMode)
     ]
 
     var body: some View {
