@@ -35,6 +35,13 @@ public extension Callouts {
             return actions.map { .character($0) }
         }
 
+        // Symbol callouts: apply to numeric/symbolic keyboard pages
+        // Checked after layout-specific callouts so TPS/MOE punctuation callouts take priority
+        // on their alphabetic pages, while symbol-only characters always get callouts
+        if let actions = SymbolCallouts.actions[char] {
+            return actions.map { .character($0) }
+        }
+
         // Get tone map based on current input mode
         let toneMap = SharedSettings.shared.inputMode == .poj
             ? TaigiToneMaps.poj

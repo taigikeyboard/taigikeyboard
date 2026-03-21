@@ -34,6 +34,9 @@ enum ToneUtilities {
         let nasalLower: Character = "\u{207F}"  // ⁿ
         let nasalUpper: Character = "\u{1D3A}"  // ᴺ
 
+        // Early exit: skip iteration if no nasal markers present
+        guard text.contains(nasalLower) || text.contains(nasalUpper) else { return text }
+
         var result = ""
         var lastLetterIsUppercase = false
 

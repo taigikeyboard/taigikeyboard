@@ -157,4 +157,5 @@ class SmartbarView : LinearLayout {
             imageTintList = ColorStateList.valueOf(typedValue.data)
         }
     }
+
 }

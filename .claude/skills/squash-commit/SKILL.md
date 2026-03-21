@@ -20,7 +20,10 @@ Run these in parallel:
 - `git status --short` — verify clean working tree
 - Read the current `CHANGELOG.md`
 
-If the working tree is not clean, warn the user and stop.
+If the working tree is not clean (unstaged or uncommitted changes), commit them first:
+1. `git add -A`
+2. `git commit -m "WIP: uncommitted changes before squash"`
+Then continue with the rest of the steps — these changes will be included in the final squashed commit.
 
 ### 2. Update CHANGELOG.md and versionHistoryEntries
 
@@ -92,6 +95,17 @@ Extract the version tag from the branch name or CHANGELOG header (e.g., `v3.4.1`
 1. `git log main..HEAD --oneline` — confirm exactly 1 commit
 2. `git status --short` — confirm clean working tree
 3. Ask the user for confirmation, then: `git push --force-with-lease origin <branch>`
+
+### 5. Tag the release
+
+After the push succeeds, create a git tag using the version extracted in step 3.
+
+1. Check if the tag already exists: `git tag -l <version-tag>`
+2. If the tag exists:
+   - Delete the remote tag: `git push origin :refs/tags/<version-tag>`
+   - Delete the local tag: `git tag -d <version-tag>`
+3. Create the tag on HEAD: `git tag <version-tag>`
+4. Push the tag: `git push origin <version-tag>`
 
 ## Important
 

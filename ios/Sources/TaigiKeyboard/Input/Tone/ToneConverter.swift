@@ -27,7 +27,7 @@ enum ToneConverter {
             result = TaigiPhonetics.convertToToneMarks(preprocessed, mode: .poj)
         case .tl:
             result = TaigiPhonetics.convertToToneMarks(input, mode: .tl)
-        case .english:
+        case .english, .tps:
             result = input
         }
 
@@ -62,18 +62,19 @@ enum ToneConverter {
         return result
     }
 
+    private static let nasalVowels: Set<Character> = ["a", "e", "i", "o", "u", "A", "E", "I", "O", "U"]
+
     /// Convert "nn" sequences after vowels to nasal marker "ⁿ"
     private static func convertNasalDoubleN(_ input: String) -> String {
-        let vowels = "aeiouAEIOU"
         var result = ""
         let chars = Array(input)
         var i = 0
 
         while i < chars.count {
             if i + 2 < chars.count,
-               vowels.contains(chars[i]),
-               String(chars[i + 1]).lowercased() == "n",
-               String(chars[i + 2]).lowercased() == "n"
+               nasalVowels.contains(chars[i]),
+               chars[i + 1].lowercased() == "n",
+               chars[i + 2].lowercased() == "n"
             {
                 result += String(chars[i]) + "ⁿ"
                 i += 3

@@ -67,6 +67,13 @@ class CustomLayoutService {
                 : TaigiLayouts.Alphabetic.qwerty_English_iPhone
         }
 
+        // TPS 模式（方音符號）— inputMode 優先於 keyboardLayoutType
+        if settings.inputMode == .tps {
+            return needsGlobe
+                ? TaigiLayouts.Alphabetic.tps_withGlobe
+                : TaigiLayouts.Alphabetic.tps_iPhone
+        }
+
         // 根據 keyboardLayoutType 選擇佈局
         switch settings.keyboardLayoutType {
         case .tps:

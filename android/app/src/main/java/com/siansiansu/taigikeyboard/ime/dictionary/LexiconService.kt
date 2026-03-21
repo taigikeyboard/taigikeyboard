@@ -28,8 +28,8 @@ import java.text.Normalizer
 object LexiconService {
     private const val TAG = "LexiconService"
 
-    private var database: SQLiteDatabase? = null
-    private var isInitialized = false
+    @Volatile private var database: SQLiteDatabase? = null
+    @Volatile private var isInitialized = false
     private val initMutex = Mutex()
 
     // Column names
@@ -48,6 +48,7 @@ object LexiconService {
         const val KUNGGE = "kungge"        // 台語工藝詞庫
         const val STTI = "stti"            // 學科術語辭典
         const val KHPOO = "khpoo"          // 腔口補充資料
+        const val LKK = "lkk"              // LKK漢羅合用建議用字
     }
 
     /**
@@ -89,19 +90,22 @@ object LexiconService {
 
         val db = database ?: throw DictionaryError.DatabaseNotAvailable
 
-        // 讀取搜尋設定（use provided PrefHelper to avoid runBlocking on new instance）
+        // 讀取搜尋設定（atomic snapshot to avoid torn reads across multiple getters）
         val p = prefs ?: PrefHelper(context)
+        val dictSnapshot = p.snapshotEnabledDictionaries()
         val enabledDicts = EnabledDictionaries(
-            kautian = p.moeDictEnabled,
-            taigitv = p.newwordDictEnabled,
-            itaigi = p.itaigiDictEnabled,
-            sitbut = p.taiwanPlantDictEnabled,
-            taihoa = p.taiHuaDictEnabled,
-            taijit = p.taiwanJapanDictEnabled,
-            kungge = p.kunggeDictEnabled,
-            stti = p.sttiDictEnabled,
-            khpoo = p.khpooDictEnabled,
-            variant = p.variantEnabled
+            kautian = dictSnapshot.moe,
+            taigitv = dictSnapshot.newword,
+            itaigi = dictSnapshot.itaigi,
+            sitbut = dictSnapshot.taiwanPlant,
+            taihoa = dictSnapshot.taiHua,
+            taijit = dictSnapshot.taiwanJapan,
+            kungge = dictSnapshot.kungge,
+            stti = dictSnapshot.stti,
+            khpoo = dictSnapshot.khpoo,
+            variant = dictSnapshot.variant,
+            khiin = dictSnapshot.khiin,
+            lkk = dictSnapshot.lkk
         )
 
         try {
@@ -131,8 +135,21 @@ object LexiconService {
             )
             if (BuildConfig.DEBUG) Log.d("PERF", "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms")
 
+            // TPS ㄜ expansion: also search "or" variant when toggle ON
+            val allSystemWords = if (
+                TPSConverter.containsTPS(input) && p.tpsOrMapsToER
+            ) {
+                val tlInput = TPSConverter.toTL(input)
+                if (tlInput.contains("er")) {
+                    val orVariant = tlInput.replace("er", "or")
+                    val orWords = searchWithTrie(db, orVariant, inputMode, limit, enabledDicts)
+                    val existingIds = words.map { it.id }.toSet()
+                    words + orWords.filter { it.id !in existingIds }
+                } else words
+            } else words
+
             // Merge: custom words first, then system words (matching iOS)
-            val mergedWords = customWords + words
+            val mergedWords = customWords + allSystemWords
 
             // Capitalization deferred to SuggestionCaseTransformer (view layer, matching iOS)
 
@@ -166,15 +183,17 @@ object LexiconService {
         val kungge: Boolean,    // 台語工藝詞庫
         val stti: Boolean,      // 學科術語辭典
         val khpoo: Boolean,     // 腔口補充資料
-        val variant: Boolean    // 異用字
+        val variant: Boolean,   // 異用字
+        val khiin: Boolean,     // 在來字
+        val lkk: Boolean        // LKK漢羅合用建議用字
     ) {
         /** 是否全部關閉 */
         fun allDisabled(): Boolean =
-            !kautian && !taigitv && !itaigi && !sitbut && !taihoa && !taijit && !kungge && !stti && !khpoo
+            !kautian && !taigitv && !itaigi && !sitbut && !taihoa && !taijit && !kungge && !stti && !khpoo && !lkk
 
         /** 是否全部開啟 */
         fun allEnabled(): Boolean =
-            kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
+            kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo && lkk
     }
 
     /**
@@ -237,7 +256,7 @@ object LexiconService {
         }
 
         // 2. 前綴搜尋（取較多結果以供後續過濾和排序）
-        val trieLimit = limit * 3
+        val trieLimit = limit * 6
         val prefixRowIds = TrieService.prefixSearch(trieKey, trieLimit)
 
         if (BuildConfig.DEBUG) {
@@ -290,14 +309,6 @@ object LexiconService {
             return emptyList()
         }
 
-        // 全部關閉時不顯示任何結果
-        if (enabledDicts.allDisabled()) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[SQL] queryByIds: all dicts disabled")
-            }
-            return emptyList()
-        }
-
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[SQL] queryByIds: ${ids.size} ids, enabledDicts=$enabledDicts")
         }
@@ -316,6 +327,9 @@ object LexiconService {
             // 異用字過濾：關閉時只顯示非異用字
             val variantCondition = if (!enabledDicts.variant) "AND is_variant = 0 " else ""
 
+            // 在來字過濾：關閉時排除在來字
+            val khiinCondition = if (!enabledDicts.khiin) "AND khiin = 0 " else ""
+
             // 建立過濾條件：使用 OR 邏輯，只要符合任一開啟的辭典即可
             val dictConditions = mutableListOf<String>()
             if (enabledDicts.kautian) dictConditions.add("${Column.KAUTIAN} = 1")
@@ -327,6 +341,10 @@ object LexiconService {
             if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
             if (enabledDicts.stti) dictConditions.add("${Column.STTI} = 1")
             if (enabledDicts.khpoo) dictConditions.add("${Column.KHPOO} = 1")
+            if (enabledDicts.lkk) dictConditions.add("${Column.LKK} = 1")
+
+            // Always include dev supplement entries
+            dictConditions.add("dev = 1")
 
             // 全部開啟時不加詞庫過濾條件
             val dictWhereCondition = if (enabledDicts.allEnabled()) {
@@ -336,7 +354,7 @@ object LexiconService {
             }
 
             // 合併所有過濾條件
-            val whereCondition = variantCondition + dictWhereCondition
+            val whereCondition = variantCondition + khiinCondition + dictWhereCondition
 
             val sql = """
                 SELECT ${Column.ID}, $romanColumn, ${Column.HANZI}, ${Column.FREQUENCY}
@@ -502,10 +520,9 @@ object LexiconService {
 
         for (word in words) {
             val key = "${word.roman}|${word.hanzi ?: ""}"
-            if (!seen.contains(key)) {
-                seen.add(key)
-                result.add(word)
-            }
+            if (key in seen) continue
+            seen.add(key)
+            result.add(word)
         }
 
         return result
@@ -553,6 +570,11 @@ object LexiconService {
         // 完全匹配加分（微調，+100）
         val exactBonus = if (candidateBase == inputBase) 100 else 0
 
+        // Completion penalty: penalize candidates extending beyond input (aligned with RIME/Mozc)
+        // Ensures exact matches rank above completions in cold-start;
+        // user frequency (~15+ uses) can still overcome this penalty
+        val completionPenalty = if (candidateBase != inputBase) -1000 else 0
+
         // Match closeness bonus (0-500): reward candidates whose length matches input
         val inputLen = maxOf(inputBase.length, 1)
         val candidateLen = maxOf(candidateBase.length, 1)
@@ -562,7 +584,7 @@ object LexiconService {
         // 詞庫頻率（新詞 fallback，約 0-100）
         val baseFreqScore = (word.lengthScore ?: 0) / 10
 
-        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore
+        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore + completionPenalty
     }
 
     /**
@@ -603,11 +625,19 @@ object LexiconService {
                 val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
 
                 // 按分數排序
-                words.sortedByDescending { word ->
-                    val freqData = frequencyDataMap[word.displayText]
-                        ?: UserFrequencyService.FrequencyData(0, 0)
-                    calculateScore(word, normalizedInput, freqData)
+                val sorted = words
+                    .map { word ->
+                        val freqData = frequencyDataMap[word.displayText]
+                            ?: UserFrequencyService.FrequencyData(0, 0)
+                        word to calculateScore(word, normalizedInput, freqData)
+                    }
+                    .sortedByDescending { it.second }
+
+                if (BuildConfig.DEBUG) {
+                    logScoreDetails(sorted, normalizedInput, frequencyDataMap)
                 }
+
+                sorted.map { it.first }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
                     Log.w(TAG, "[SORT] Scored sort failed, using original order", e)
@@ -615,6 +645,302 @@ object LexiconService {
                 words
             }
         }
+    }
+
+    /**
+     * Log score breakdown for each candidate (debug only).
+     * Recalculates components to match iOS logScoreDetails format.
+     */
+    private fun logScoreDetails(
+        sorted: List<Pair<TaigiWord, Int>>,
+        normalizedInput: String,
+        frequencyDataMap: Map<String, UserFrequencyService.FrequencyData>
+    ) {
+        val inputBase = inputToBase(normalizedInput)
+        val currentTime = System.currentTimeMillis()
+        val oneHourMillis = 60 * 60 * 1000L
+
+        for ((word, total) in sorted) {
+            val freq = frequencyDataMap[word.displayText]
+                ?: UserFrequencyService.FrequencyData(0, 0)
+            val candidateBase = romanToBase(word.roman)
+            val userFreqScore = minOf(freq.count, 100) * 100
+            val recency = if (freq.lastUsedMillis > 0 && (currentTime - freq.lastUsedMillis) < oneHourMillis) 200 else 0
+            val exact = if (candidateBase == inputBase) 100 else 0
+            val completion = if (candidateBase != inputBase) -1000 else 0
+            val inputLen = maxOf(inputBase.length, 1)
+            val candidateLen = maxOf(candidateBase.length, 1)
+            val closeness = (minOf(inputLen, candidateLen).toDouble() / maxOf(inputLen, candidateLen).toDouble() * 500).toInt()
+            val base = (word.lengthScore ?: 0) / 10
+            val hanzi = word.hanzi ?: ""
+
+            Log.d(TAG, "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=$userFreqScore recency=$recency exact=$exact close=$closeness base=$base completion=$completion total=$total")
+        }
+    }
+
+    /**
+     * Search dictionary with source information (for dictionary exploration in Tab 3).
+     * Searches all sources (no dictionary filter).
+     */
+    suspend fun searchWithSources(
+        input: String,
+        inputMode: InputMode,
+        limit: Int = 50,
+        context: Context
+    ): List<DictionarySearchResult> = withContext(Dispatchers.IO) {
+        if (input.isEmpty()) return@withContext emptyList()
+
+        ensureInitialized(context)
+        val db = database ?: throw DictionaryError.DatabaseNotAvailable
+
+        if (!TrieService.isReady) {
+            throw DictionaryError.TrieNotLoaded
+        }
+
+        val normalizedInput = InputNormalizer.normalize(input, inputMode)
+        if (normalizedInput.isEmpty()) return@withContext emptyList()
+
+        val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
+        val exactRowIds = TrieService.lookup(trieKey)
+        val prefixRowIds = TrieService.prefixSearch(trieKey, limit * 6)
+        val allRowIds = (exactRowIds.toList() + prefixRowIds.toList()).distinct()
+
+        if (allRowIds.isEmpty()) return@withContext emptyList()
+
+        val p = PrefHelper(context)
+        val dictSnapshot = p.snapshotEnabledDictionaries()
+        val enabledDicts = EnabledDictionaries(
+            kautian = dictSnapshot.moe,
+            taigitv = dictSnapshot.newword,
+            itaigi = dictSnapshot.itaigi,
+            sitbut = dictSnapshot.taiwanPlant,
+            taihoa = dictSnapshot.taiHua,
+            taijit = dictSnapshot.taiwanJapan,
+            kungge = dictSnapshot.kungge,
+            stti = dictSnapshot.stti,
+            khpoo = dictSnapshot.khpoo,
+            variant = dictSnapshot.variant,
+            khiin = dictSnapshot.khiin,
+            lkk = dictSnapshot.lkk
+        )
+
+        queryByIdsWithSources(db, allRowIds, inputMode, limit, enabledDicts)
+    }
+
+    /**
+     * Query SQLite with source columns included
+     */
+    private fun queryByIdsWithSources(
+        db: SQLiteDatabase,
+        ids: List<Int>,
+        inputMode: InputMode,
+        limit: Int,
+        enabledDicts: EnabledDictionaries
+    ): List<DictionarySearchResult> {
+        if (ids.isEmpty()) return emptyList()
+
+        val romanColumn = Column.TL
+        val batchSize = 500
+        val results = mutableListOf<DictionarySearchResult>()
+
+        // Build dictionary filter condition (same logic as queryByIds)
+        val variantCondition = if (!enabledDicts.variant) "AND is_variant = 0 " else ""
+        val khiinCondition = if (!enabledDicts.khiin) "AND khiin = 0 " else ""
+        val dictConditions = mutableListOf<String>()
+        if (enabledDicts.kautian) dictConditions.add("${Column.KAUTIAN} = 1")
+        if (enabledDicts.taigitv) dictConditions.add("${Column.TAIGITV} = 1")
+        if (enabledDicts.itaigi) dictConditions.add("${Column.ITAIGI} = 1")
+        if (enabledDicts.sitbut) dictConditions.add("${Column.SITBUT} = 1")
+        if (enabledDicts.taihoa) dictConditions.add("${Column.TAIHOA} = 1")
+        if (enabledDicts.taijit) dictConditions.add("${Column.TAIJIT} = 1")
+        if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
+        if (enabledDicts.stti) dictConditions.add("${Column.STTI} = 1")
+        if (enabledDicts.khpoo) dictConditions.add("${Column.KHPOO} = 1")
+        if (enabledDicts.lkk) dictConditions.add("${Column.LKK} = 1")
+        dictConditions.add("dev = 1")
+        val dictWhereCondition = if (enabledDicts.allEnabled()) "" else "AND (" + dictConditions.joinToString(" OR ") + ")"
+        val whereCondition = variantCondition + khiinCondition + dictWhereCondition
+
+        for (batch in ids.chunked(batchSize)) {
+            val placeholders = batch.joinToString(",") { "?" }
+
+            val sql = """
+                SELECT ${Column.ID}, $romanColumn, ${Column.HANZI}, ${Column.FREQUENCY},
+                       ${Column.KAUTIAN}, ${Column.TAIGITV}, ${Column.ITAIGI}, sitbut,
+                       ${Column.TAIHOA}, ${Column.TAIJIT}, ${Column.KUNGGE}, ${Column.STTI},
+                       ${Column.KHPOO}, khiin, ${Column.LKK}, dev
+                FROM dictionary
+                WHERE ${Column.ID} IN ($placeholders)
+                $whereCondition
+                ORDER BY ${Column.FREQUENCY} DESC
+            """.trimIndent()
+
+            val args = batch.map { it.toString() }.toTypedArray()
+            val cursor = db.rawQuery(sql, args)
+
+            cursor.use {
+                while (it.moveToNext()) {
+                    val id = it.getInt(0)
+                    val tlRoman = it.getString(1) ?: ""
+                    val hanziText = it.getString(2)
+                    val hanzi = if (hanziText.isNullOrEmpty()) null else hanziText
+                    val frequency = it.getInt(3)
+
+                    // Map source boolean columns (indices 4-15)
+                    val sourceEnums = listOf(
+                        DictionarySource.KAUTIAN, DictionarySource.TAIGITV,
+                        DictionarySource.ITAIGI, DictionarySource.SITBUT,
+                        DictionarySource.TAIHOA, DictionarySource.TAIJIT,
+                        DictionarySource.KUNGGE, DictionarySource.STTI,
+                        DictionarySource.KHPOO, DictionarySource.KHIIN,
+                        DictionarySource.LKK, DictionarySource.DEV
+                    )
+                    val sources = sourceEnums.filterIndexed { offset, _ ->
+                        it.getInt(4 + offset) == 1
+                    }
+
+                    val roman = if (inputMode == InputMode.POJ) {
+                        TaigiPhonetics.tlDisplayToPOJDisplay(tlRoman)
+                    } else {
+                        tlRoman
+                    }
+
+                    results.add(DictionarySearchResult(
+                        id = id,
+                        roman = roman,
+                        tl = tlRoman,
+                        hanzi = hanzi,
+                        frequency = frequency,
+                        sources = sources
+                    ))
+                }
+            }
+        }
+
+        return results
+            .sortedByDescending { it.frequency }
+            .take(limit)
+    }
+
+    /**
+     * Search dictionary by hanzi (漢字) and return results with source information.
+     * Uses direct SQL LIKE query since hanzi is not indexed in the trie.
+     */
+    suspend fun searchByHanzi(
+        input: String,
+        inputMode: InputMode,
+        limit: Int = 50,
+        context: Context
+    ): List<DictionarySearchResult> = withContext(Dispatchers.IO) {
+        if (input.isEmpty()) return@withContext emptyList()
+
+        if (BuildConfig.DEBUG) Log.d(TAG, "[HANZI-SEARCH] query='$input' limit=$limit")
+
+        ensureInitialized(context)
+        val db = database ?: throw DictionaryError.DatabaseNotAvailable
+
+        val romanColumn = Column.TL
+        val results = mutableListOf<DictionarySearchResult>()
+
+        // Build dictionary filter condition
+        val p = PrefHelper(context)
+        val dictSnapshot = p.snapshotEnabledDictionaries()
+        val enabledDicts = EnabledDictionaries(
+            kautian = dictSnapshot.moe,
+            taigitv = dictSnapshot.newword,
+            itaigi = dictSnapshot.itaigi,
+            sitbut = dictSnapshot.taiwanPlant,
+            taihoa = dictSnapshot.taiHua,
+            taijit = dictSnapshot.taiwanJapan,
+            kungge = dictSnapshot.kungge,
+            stti = dictSnapshot.stti,
+            khpoo = dictSnapshot.khpoo,
+            variant = dictSnapshot.variant,
+            khiin = dictSnapshot.khiin,
+            lkk = dictSnapshot.lkk
+        )
+        val variantCondition = if (!enabledDicts.variant) "AND is_variant = 0 " else ""
+        val khiinCondition = if (!enabledDicts.khiin) "AND khiin = 0 " else ""
+        val dictConditions = mutableListOf<String>()
+        if (enabledDicts.kautian) dictConditions.add("${Column.KAUTIAN} = 1")
+        if (enabledDicts.taigitv) dictConditions.add("${Column.TAIGITV} = 1")
+        if (enabledDicts.itaigi) dictConditions.add("${Column.ITAIGI} = 1")
+        if (enabledDicts.sitbut) dictConditions.add("${Column.SITBUT} = 1")
+        if (enabledDicts.taihoa) dictConditions.add("${Column.TAIHOA} = 1")
+        if (enabledDicts.taijit) dictConditions.add("${Column.TAIJIT} = 1")
+        if (enabledDicts.kungge) dictConditions.add("${Column.KUNGGE} = 1")
+        if (enabledDicts.stti) dictConditions.add("${Column.STTI} = 1")
+        if (enabledDicts.khpoo) dictConditions.add("${Column.KHPOO} = 1")
+        if (enabledDicts.lkk) dictConditions.add("${Column.LKK} = 1")
+        dictConditions.add("dev = 1")
+        val dictWhereCondition = if (enabledDicts.allEnabled()) "" else "AND (" + dictConditions.joinToString(" OR ") + ")"
+        val whereCondition = variantCondition + khiinCondition + dictWhereCondition
+
+        val sql = """
+            SELECT ${Column.ID}, $romanColumn, ${Column.HANZI}, ${Column.FREQUENCY},
+                   ${Column.KAUTIAN}, ${Column.TAIGITV}, ${Column.ITAIGI}, sitbut,
+                   ${Column.TAIHOA}, ${Column.TAIJIT}, ${Column.KUNGGE}, ${Column.STTI},
+                   ${Column.KHPOO}, khiin, ${Column.LKK}, dev
+            FROM dictionary
+            WHERE ${Column.HANZI} LIKE ?
+            $whereCondition
+            ORDER BY ${Column.FREQUENCY} DESC
+            LIMIT ?
+        """.trimIndent()
+
+        val args = arrayOf("%$input%", limit.toString())
+        val cursor = db.rawQuery(sql, args)
+
+        cursor.use {
+            while (it.moveToNext()) {
+                val id = it.getInt(0)
+                val tlRoman = it.getString(1) ?: ""
+                val hanziText = it.getString(2)
+                val hanzi = if (hanziText.isNullOrEmpty()) null else hanziText
+                val frequency = it.getInt(3)
+
+                // Map source boolean columns (indices 4-15)
+                val sourceEnums = listOf(
+                    DictionarySource.KAUTIAN, DictionarySource.TAIGITV,
+                    DictionarySource.ITAIGI, DictionarySource.SITBUT,
+                    DictionarySource.TAIHOA, DictionarySource.TAIJIT,
+                    DictionarySource.KUNGGE, DictionarySource.STTI,
+                    DictionarySource.KHPOO, DictionarySource.KHIIN,
+                    DictionarySource.LKK, DictionarySource.DEV
+                )
+                val sources = sourceEnums.filterIndexed { offset, _ ->
+                    it.getInt(4 + offset) == 1
+                }
+
+                val roman = if (inputMode == InputMode.POJ) {
+                    TaigiPhonetics.tlDisplayToPOJDisplay(tlRoman)
+                } else {
+                    tlRoman
+                }
+
+                results.add(DictionarySearchResult(
+                    id = id,
+                    roman = roman,
+                    tl = tlRoman,
+                    hanzi = hanzi,
+                    frequency = frequency,
+                    sources = sources
+                ))
+            }
+        }
+
+        val sorted = results
+            .sortedByDescending { it.frequency }
+            .take(limit)
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results (raw=${results.size})")
+            sorted.firstOrNull()?.let {
+                Log.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
+            }
+        }
+
+        sorted
     }
 
     /**

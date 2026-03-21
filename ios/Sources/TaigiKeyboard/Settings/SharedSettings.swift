@@ -52,6 +52,17 @@ enum KeyboardLayoutType: String, CaseIterable {
     case moe2 = "moe2"            // 教育部輸入法佈局2
 }
 
+/// Immutable snapshot of settings needed during a single render cycle.
+/// Avoids repeated UserDefaults reads when rendering ~50 keys.
+struct SettingsSnapshot {
+    let inputMode: InputMode
+    let fontType: FontType
+    let keyboardLayoutType: KeyboardLayoutType
+    let keyFontSizeScale: CGFloat
+    let keyCornerRadius: CGFloat
+    let colorSettings: KeyboardColorSettings
+}
+
 class SharedSettings {
     let userDefaults: UserDefaults
 
@@ -67,18 +78,9 @@ class SharedSettings {
 
     static var sharedUserDefaults: UserDefaults {
         if _sharedUserDefaults == nil {
-            do {
-                if let appGroupDefaults = UserDefaults(suiteName: appGroupId) {
-                    let testKey = "test_key_\(UUID().uuidString)"
-                    appGroupDefaults.set("test", forKey: testKey)
-                    _ = appGroupDefaults.string(forKey: testKey)
-                    appGroupDefaults.removeObject(forKey: testKey)
-
-                    _sharedUserDefaults = appGroupDefaults
-                } else {
-                    throw NSError(domain: "SharedSettings", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to create App Group UserDefaults"])
-                }
-            } catch {
+            if let appGroupDefaults = UserDefaults(suiteName: appGroupId) {
+                _sharedUserDefaults = appGroupDefaults
+            } else {
                 _sharedUserDefaults = UserDefaults.standard
             }
         }
@@ -96,6 +98,8 @@ class SharedSettings {
         static let autoSpaceEnabled = "autoSpaceEnabled"
         static let phahTaigiLayoutEnabled = "phahTaigiLayoutEnabled"
         static let keyboardLayoutType = "keyboardLayoutType"
+        static let inputModeBeforeTps = "inputModeBeforeTps"
+        static let layoutBeforeTps = "layoutBeforeTps"
         // 詞庫開關
         static let moeDictEnabled = "moeDictEnabled"
         static let newwordDictEnabled = "newwordDictEnabled"
@@ -108,6 +112,12 @@ class SharedSettings {
         static let khpooDictEnabled = "khpooDictEnabled"
         // 異用字開關
         static let variantEnabled = "variantEnabled"
+        // 在來字開關
+        static let khiin = "khiin"
+        // LKK漢羅合用建議用字
+        static let lkkDictEnabled = "lkkDictEnabled"
+        // 方音符號設定
+        static let tpsOrMapsToER = "tpsOrMapsToER"
         // 外觀設定
         static let keyHeightScale = "keyHeightScale"
         static let colorSettings = "colorSettings"
@@ -129,7 +139,26 @@ class SharedSettings {
             return InputMode(rawValue: rawValue) ?? InputMode.tl
         }
         set {
+            let oldValue = inputMode
             userDefaults.set(newValue.rawValue, forKey: Keys.inputMode)
+
+            // TPS ↔ layout 1:1 sync (reverse direction)
+            // Write directly to userDefaults to avoid recursion with keyboardLayoutType setter
+            if newValue == .tps && oldValue != .tps {
+                // Entering TPS mode: switch layout to TPS
+                if keyboardLayoutType != .tps {
+                    layoutBeforeTps = keyboardLayoutType
+                    userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
+                    phahTaigiLayoutEnabled = false
+                }
+            } else if newValue != .tps && oldValue == .tps {
+                // Leaving TPS mode: restore previous layout
+                if keyboardLayoutType == .tps {
+                    let restored = layoutBeforeTps
+                    userDefaults.set(restored.rawValue, forKey: Keys.keyboardLayoutType)
+                    phahTaigiLayoutEnabled = (restored == .phahTaigi)
+                }
+            }
         }
     }
 
@@ -208,9 +237,44 @@ class SharedSettings {
             return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
         }
         set {
+            let oldValue = keyboardLayoutType
+            // TPS ↔ inputMode 1:1 sync
+            if newValue == .tps && oldValue != .tps {
+                // Entering TPS: save current inputMode, then switch to tps
+                let currentInputMode = inputMode
+                if currentInputMode != .tps {
+                    inputModeBeforeTps = currentInputMode
+                }
+                inputMode = .tps
+            } else if newValue != .tps && oldValue == .tps {
+                // Leaving TPS: restore previous inputMode
+                inputMode = inputModeBeforeTps
+            }
             userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
             // 同步舊的 phahTaigiLayoutEnabled 設定（向後相容）
             phahTaigiLayoutEnabled = (newValue == .phahTaigi)
+        }
+    }
+
+    // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
+    private var inputModeBeforeTps: InputMode {
+        get {
+            let rawValue = userDefaults.string(forKey: Keys.inputModeBeforeTps) ?? "tl"
+            return InputMode(rawValue: rawValue) ?? .tl
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Keys.inputModeBeforeTps)
+        }
+    }
+
+    // Stores the layout before switching to TPS, so it can be restored when leaving TPS
+    private var layoutBeforeTps: KeyboardLayoutType {
+        get {
+            let rawValue = userDefaults.string(forKey: Keys.layoutBeforeTps) ?? KeyboardLayoutType.phahTaigi.rawValue
+            return KeyboardLayoutType(rawValue: rawValue) ?? .phahTaigi
+        }
+        set {
+            userDefaults.set(newValue.rawValue, forKey: Keys.layoutBeforeTps)
         }
     }
 
@@ -236,7 +300,7 @@ class SharedSettings {
     }
 
     var kunggeDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.kunggeDictEnabled) }
     }
 
@@ -246,22 +310,22 @@ class SharedSettings {
     }
 
     var taiwanJapanDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiwanJapanDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.taiwanJapanDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.taiwanJapanDictEnabled) }
     }
 
     var taiHuaDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiHuaDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.taiHuaDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.taiHuaDictEnabled) }
     }
 
     var taiwanPlantDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.taiwanPlantDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.taiwanPlantDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.taiwanPlantDictEnabled) }
     }
 
     var sttiDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? true }
+        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.sttiDictEnabled) }
     }
 
@@ -274,6 +338,26 @@ class SharedSettings {
     var variantEnabled: Bool {
         get { userDefaults.object(forKey: Keys.variantEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.variantEnabled) }
+    }
+
+    // 在來字開關（預設關閉）
+    var khiin: Bool {
+        get { userDefaults.object(forKey: Keys.khiin) as? Bool ?? false }
+        set { userDefaults.set(newValue, forKey: Keys.khiin) }
+    }
+
+    // LKK漢羅合用建議用字（預設開啟）
+    var lkkDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.lkkDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.lkkDictEnabled) }
+    }
+
+    // MARK: - 方音符號設定
+
+    // or 對應 ㄜ（預設開啟，關閉時 or → ㄛ）
+    var tpsOrMapsToER: Bool {
+        get { userDefaults.object(forKey: Keys.tpsOrMapsToER) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.tpsOrMapsToER) }
     }
 
     // MARK: - 外觀設定（scale factor, default 1.0）
@@ -317,6 +401,19 @@ class SharedSettings {
         }
     }
 
+    /// Creates an immutable snapshot of render-relevant settings.
+    /// Call once per render cycle to avoid repeated UserDefaults reads.
+    func snapshot() -> SettingsSnapshot {
+        SettingsSnapshot(
+            inputMode: inputMode,
+            fontType: fontType,
+            keyboardLayoutType: keyboardLayoutType,
+            keyFontSizeScale: keyFontSizeScale,
+            keyCornerRadius: keyCornerRadius,
+            colorSettings: colorSettings
+        )
+    }
+
     func resetToDefaults() {
         inputMode = .tl
         enableDoubleTapOO = true
@@ -330,14 +427,18 @@ class SharedSettings {
         // 詞庫開關預設（iTaigi、台華線頂對照典 預設關閉）
         moeDictEnabled = true
         newwordDictEnabled = true
-        kunggeDictEnabled = true
+        kunggeDictEnabled = false
         iTaigiDictEnabled = false
-        taiwanJapanDictEnabled = true
-        taiHuaDictEnabled = true
-        taiwanPlantDictEnabled = true
-        sttiDictEnabled = true
+        taiwanJapanDictEnabled = false
+        taiHuaDictEnabled = false
+        taiwanPlantDictEnabled = false
+        sttiDictEnabled = false
         khpooDictEnabled = true
         variantEnabled = false
+        khiin = false
+        lkkDictEnabled = false
+        // 方音符號設定
+        tpsOrMapsToER = true
         // 外觀設定
         keyHeightScale = 1.0
         keyFontSizeScale = 1.0

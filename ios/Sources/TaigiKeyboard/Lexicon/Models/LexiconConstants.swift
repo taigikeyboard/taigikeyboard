@@ -20,7 +20,7 @@ enum LexiconConstants {
         static func prefix(for mode: InputMode) -> String {
             switch mode {
             case .poj: return poj
-            case .tl, .english: return tl
+            case .tl, .english, .tps: return tl
             }
         }
     }

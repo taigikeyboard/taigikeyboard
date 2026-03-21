@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
@@ -23,6 +24,7 @@ import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.ui.settings.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.settings.DictionarySettingsScreen
 import com.siansiansu.taigikeyboard.ui.settings.HomeScreen
 import com.siansiansu.taigikeyboard.ui.settings.InputSettingsScreen
@@ -51,13 +53,13 @@ class SettingsMainActivity : AppCompatActivity(),
     lateinit var prefs: PrefHelper
     lateinit var subtypeManager: SubtypeManager
 
+    private val searchViewModel: DictionarySearchViewModel by viewModels()
     private var resetCounter by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         prefs = PrefHelper(this)
-        prefs.initDefaultPreferences()
 
         // Check if keyboard is enabled; show setup guide if not
         if (!TaigiKeyboard.checkIfImeIsEnabled(this)) {
@@ -115,7 +117,7 @@ class SettingsMainActivity : AppCompatActivity(),
                             onFeedback = {
                                 openDetailActivity(
                                     "contact_us", "feedback",
-                                    arrayOf("feedback_description", "feedback_email")
+                                    arrayOf("feedback_email")
                                 )
                             },
                             onVersionHistory = {
@@ -142,7 +144,8 @@ class SettingsMainActivity : AppCompatActivity(),
                             onClearCache = ::clearUserFrequencyDatabase,
                             onCustomDictionary = {
                                 startActivity(CustomDictionaryActivity.createIntent(this))
-                            }
+                            },
+                            searchViewModel = searchViewModel
                         )
 
                         TAB_SETTINGS -> InputSettingsScreen(

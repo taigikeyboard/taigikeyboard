@@ -55,7 +55,7 @@ fun HomeScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Page title (pinned)
@@ -184,7 +184,7 @@ fun HomeScreen(
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
-                    icon = painterResource(R.drawable.ic_email),
+                    icon = painterResource(R.drawable.ic_star),
                     label = languageManager.text(Tab1Texts.contactUs),
                     trailingIcon = chevronRight,
                     onClick = onFeedback
@@ -269,7 +269,7 @@ fun HomeScreen(
 private fun SectionHeader(text: String) {
     Text(
         text = text,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

@@ -128,7 +128,7 @@ enum SyllableSegmenter {
         switch mode {
         case .poj: root = pojTrieRoot
         case .tl: root = tlTrieRoot
-        case .english: return true
+        case .english, .tps: return true
         }
 
         var node = root
@@ -173,7 +173,7 @@ enum SyllableSegmenter {
         switch mode {
         case .poj: return pojTrieRoot
         case .tl: return tlTrieRoot
-        case .english: return combinedTrieRoot
+        case .english, .tps: return combinedTrieRoot
         }
     }
 

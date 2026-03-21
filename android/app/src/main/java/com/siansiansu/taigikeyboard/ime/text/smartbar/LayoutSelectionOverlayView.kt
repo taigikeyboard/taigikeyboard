@@ -63,7 +63,7 @@ class LayoutSelectionOverlayView : FrameLayout {
 
     private val phoneticLayouts: List<LayoutOption> by lazy {
         listOf(
-            LayoutOption("tps", { Tab2Texts.tpsLayout.hanji }, R.drawable.layout_tps_preview, isDisabled = true)
+            LayoutOption("tps", { Tab2Texts.tpsLayout.hanji }, R.drawable.layout_tps_preview)
         )
     }
 

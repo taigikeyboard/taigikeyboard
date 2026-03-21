@@ -1,0 +1,26 @@
+{
+  "type": "characters/mod",
+  "name": "tps_halfwidth",
+  "direction": "ltr",
+  "arrangement": [
+    [
+    ], [
+      { "code": -202, "label": "view_symbols", "type": "system_gui" },
+      { "code":    0, "label": "ㄌ" },
+      { "code":    0, "label": "ㆡ", "popup": [
+        { "code": 0, "label": "ㆢ" }
+      ] },
+      { "code":    0, "label": "ㄙ", "popup": [
+        { "code": 0, "label": "ㄒ" }
+      ] },
+      { "code":    0, "label": "ㆨ" },
+      { "code":    0, "label": "ㆤ", "popup": [
+        { "code": 0, "label": "ㄝ" }
+      ] },
+      { "code":   32, "label": " " },
+      { "code":   10, "label": "enter", "type": "enter_editing", "popup": [
+        { "code": -213, "label": "switch_to_media_context", "type": "system_gui" }
+      ] }
+    ]
+  ]
+}

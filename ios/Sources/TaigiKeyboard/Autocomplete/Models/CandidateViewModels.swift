@@ -55,26 +55,6 @@ enum CandidateViewModels {
             secondaryFontSize * tpsScale
         }
 
-        /// 長詞主標題字體大小（比一般候選詞稍小）
-        static var longCellPrimaryFontSize: CGFloat {
-            return primaryFontSize - 1
-        }
-
-        /// 長詞副標題字體大小（比一般候選詞稍小）
-        static var longCellSecondaryFontSize: CGFloat {
-            return secondaryFontSize - 2
-        }
-
-        /// TPS 長詞主標題字體大小
-        static var tpsLongCellPrimaryFontSize: CGFloat {
-            longCellPrimaryFontSize * tpsScale
-        }
-
-        /// TPS 長詞副標題字體大小
-        static var tpsLongCellSecondaryFontSize: CGFloat {
-            longCellSecondaryFontSize * tpsScale
-        }
-
         // 展開網格視圖配置
         static let expandedRowSpacing: CGFloat = 6 // 減少行間距 (從12減到10)
         static let expandedItemSpacing: CGFloat = 4

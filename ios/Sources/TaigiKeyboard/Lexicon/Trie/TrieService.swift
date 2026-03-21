@@ -101,8 +101,8 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        // 配置結果緩衝區（完全匹配通常結果較少）
-        let maxResults = 100
+        // 配置結果緩衝區（notone key 可能對應數百個 rowid，需足夠大以避免截斷）
+        let maxResults = 1000
         var results = [Int32](repeating: 0, count: maxResults)
         let count = trie_lookup(key, &results, Int32(maxResults))
 

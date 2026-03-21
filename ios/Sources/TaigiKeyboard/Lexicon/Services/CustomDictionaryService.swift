@@ -24,7 +24,7 @@ final class CustomDictionaryService: @unchecked Sendable {
     // MARK: - Default Entries
 
     private static let defaultEntries: [(id: String, roman: String, hanzi: String)] = [
-        ("default-li-ho", "lí hó", "你好😀"),
+        ("default-li-ho", "lí hó", "你好"),
         ("default-gau-tsa", "gâu-tsá", "𠢕早"),
     ]
 

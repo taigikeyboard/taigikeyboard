@@ -79,6 +79,8 @@ fun InputSettingsScreen(
     var autoSpace by remember(currentAutoSpace) { mutableStateOf(currentAutoSpace) }
     var doubleOO by remember(currentDoubleOO) { mutableStateOf(currentDoubleOO) }
     var doubleNN by remember(currentDoubleNN) { mutableStateOf(currentDoubleNN) }
+    val currentTpsOrMapsToER = remember(resetCounter) { prefs.tpsOrMapsToER }
+    var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
 
     if (showInputModePicker) {
         InputModeScreen(
@@ -93,7 +95,7 @@ fun InputSettingsScreen(
     } else {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainerLow
+            color = MaterialTheme.colorScheme.surfaceContainer
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Page title (pinned)
@@ -179,7 +181,18 @@ fun InputSettingsScreen(
                             prefs.isAutoSpaceEnabled = it
                         }
                     )
-                    SettingsDivider()
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // POJ settings card
+                Text(
+                    text = languageManager.text(Tab4Texts.pojSettingsSectionTitle),
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
+                SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.doubleTapOO),
                         checked = doubleOO,
@@ -201,10 +214,30 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
+                // TPS settings card
+                Text(
+                    text = languageManager.text(Tab4Texts.tpsSettingsSectionTitle),
+                    fontSize = 18.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
+                SettingsCard {
+                    SwitchRow(
+                        label = languageManager.text(Tab4Texts.tpsOrMapsToER),
+                        checked = tpsOrMapsToER,
+                        onCheckedChange = {
+                            tpsOrMapsToER = it
+                            prefs.tpsOrMapsToER = it
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 // Diagnostic info card
                 Text(
                     text = languageManager.text(DiagnosticTexts.sectionTitle),
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
@@ -243,7 +276,7 @@ fun InputSettingsScreen(
                         onClick = {
                             scope.launch {
                                 val info = DiagnosticService.gather(context)
-                                val subject = Uri.encode("Taigi Keyboard Bug Report (v${info.appVersion})")
+                                val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
                                 val body = Uri.encode(info.formatted())
                                 val uri = Uri.parse("mailto:info@taigikeyboard.tw?subject=$subject&body=$body")
                                 try {
@@ -311,6 +344,7 @@ private fun inputModeDisplayName(mode: String, languageManager: LanguageManager)
         "poj" -> languageManager.text(Tab4Texts.pojMode)
         "tl" -> languageManager.text(Tab4Texts.tlMode)
         "english" -> languageManager.text(Tab4Texts.englishMode)
+        "tps" -> languageManager.text(Tab4Texts.tpsMode)
         else -> languageManager.text(Tab4Texts.tlMode)
     }
 }

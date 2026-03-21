@@ -99,13 +99,11 @@ enum Tab1Texts {
 
     static let userGuide = LocalizedText(hanji: "網站紹介")
     static let rateUs = LocalizedText(hanji: "為阮評分")
-    static let contactUs = LocalizedText(hanji: "問題回報")
+    static let contactUs = LocalizedText(hanji: "寄付")
     static let privacyPolicy = LocalizedText(hanji: "隱私權政策")
 
-    // MARK: - 問題回報
+    // MARK: - 寄付
 
-    static let feedbackDescription = LocalizedText(hanji: "無論是使用拄著 ê 問題、感覺好用 ê 所在，抑是會當改進 ê 建議，攏歡迎寫落來！影片、圖會使直接寄批去 info@taigikeyboard.tw")
-    static let goToGoogleForm = LocalizedText(hanji: "揤遮去 Google 表單")
     static let emailContact = LocalizedText(hanji: "台語齒盤是 1 人團隊，目前由我 1 个人塌錢開發佮維護，因為有你 ê 贊助，予我有氣力繼續行落去，咱做伙為著台語打拼。")
     static let supportUs = LocalizedText(hanji: "支持台語齒盤")
 
@@ -115,6 +113,17 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.5", "2026/03/21", [
+            LocalizedText(hanji: "Added symbol selection panel for inserting special characters."),
+            LocalizedText(hanji: "Added dictionary search in the dictionary settings page."),
+            LocalizedText(hanji: "TPS layout auto-selects ㄇ/ㄫ initial and final forms based on context."),
+            LocalizedText(hanji: "Added dismiss keyboard button in toolbar."),
+            LocalizedText(hanji: "Improved number key input."),
+            LocalizedText(hanji: "Redesigned dictionary settings page with descriptions and categories."),
+            LocalizedText(hanji: "Improved symbol panel touch targets and fixed invisible characters."),
+            LocalizedText(hanji: "Fixed an issue where some candidates were missing from search results."),
+            LocalizedText(hanji: "Updated dictionary data."),
+        ]),
         ("3.4.4", "2026/03/09", [
             LocalizedText(hanji: "Fixed an issue where some words could not be found when typing."),
         ]),
@@ -214,7 +223,7 @@ enum Tab1Texts {
     static let sttiCopyright = LocalizedText(hanji: "© 教育部")
     static let ogdlTaiwanLicense = LocalizedText(hanji: "OGDL-Taiwan-1.0")
 
-    // 腔口補充資料
-    static let accentDict = LocalizedText(hanji: "腔口補充資料")
+    // 腔口差
+    static let accentDict = LocalizedText(hanji: "腔口差")
     static let accentDictCredit = LocalizedText(hanji: "「實齋」整理、提供")
 }

@@ -12,11 +12,7 @@ struct LayoutSelectionOverlay: View {
     @State private var selectedLayout: KeyboardLayoutType
     @Environment(\.colorScheme) private var colorScheme
 
-    #if DEBUG
     private static let tpsDisabled = false
-    #else
-    private static let tpsDisabled = true
-    #endif
 
     init(isExpanded: Bool, onDismiss: @escaping () -> Void) {
         self.isExpanded = isExpanded
@@ -30,11 +26,8 @@ struct LayoutSelectionOverlay: View {
                 GeometryReader { geometry in
                     let toolbarHeight = CandidateViewModels.UI.height
                     contentView
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: geometry.size.height - toolbarHeight,
-                            maxHeight: .infinity
-                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: geometry.size.height - toolbarHeight)
                 }
             } else {
                 EmptyView()
@@ -45,28 +38,30 @@ struct LayoutSelectionOverlay: View {
     // MARK: - Content
 
     private var contentView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Section 1: Romanization keyboards
-            layoutSection(
-                header: Tab2Texts.romanizationKeyboard.hanji,
-                layouts: [
-                    (.phahTaigi, Tab2Texts.phahTaigiLayout.hanji, "layout_phahtaigi_preview", false),
-                    (.qwerty, Tab2Texts.standardLayout.hanji, "layout_standard_preview", false),
-                    (.moe1, Tab2Texts.moe1Layout.hanji, "layout_moe1_preview", false),
-                    (.moe2, Tab2Texts.moe2Layout.hanji, "layout_moe2_preview", false),
-                ]
-            )
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Section 1: Romanization keyboards
+                layoutSection(
+                    header: Tab2Texts.romanizationKeyboard.hanji,
+                    layouts: [
+                        (.phahTaigi, Tab2Texts.phahTaigiLayout.hanji, "layout_phahtaigi_preview", false),
+                        (.qwerty, Tab2Texts.standardLayout.hanji, "layout_standard_preview", false),
+                        (.moe1, Tab2Texts.moe1Layout.hanji, "layout_moe1_preview", false),
+                        (.moe2, Tab2Texts.moe2Layout.hanji, "layout_moe2_preview", false),
+                    ]
+                )
 
-            // Section 2: Taigi phonetic
-            layoutSection(
-                header: Tab2Texts.taigiPhonetic.hanji,
-                layouts: [
-                    (.tps, Tab2Texts.tpsLayout.hanji, "layout_tps_preview", Self.tpsDisabled),
-                ]
-            )
+                // Section 2: Taigi phonetic
+                layoutSection(
+                    header: Tab2Texts.taigiPhonetic.hanji,
+                    layouts: [
+                        (.tps, Tab2Texts.tpsLayout.hanji, "layout_tps_preview", Self.tpsDisabled),
+                    ]
+                )
+            }
+            .padding(.top, 10)
+            .padding(.bottom, 4)
         }
-        .padding(.top, 10)
-        .padding(.bottom, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.keyboardBackground)
         .onAppear {

@@ -20,6 +20,7 @@ object TrieService {
     private const val TAG = "TrieService"
     private const val TRIE_FILE_NAME = "dictionary.trie"
 
+    @Volatile
     private var isInitialized = false
     private val initMutex = Mutex()
 
@@ -88,10 +89,10 @@ object TrieService {
     /**
      * 完全匹配查詢
      * @param key 要查詢的 key
-     * @param maxResults 最大結果數（default 100, matching iOS）
+     * @param maxResults 最大結果數（notone key 可能對應數百個 rowid，需足夠大以避免截斷）
      * @return 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
      */
-    fun lookup(key: String, maxResults: Int = 100): IntArray {
+    fun lookup(key: String, maxResults: Int = 1000): IntArray {
         if (!isInitialized) {
             Log.w(TAG, "[LOOKUP] Trie not initialized")
             return IntArray(0)

@@ -59,6 +59,9 @@ CREATE TABLE dictionary (
     kungge INTEGER DEFAULT 0,
     stti INTEGER DEFAULT 0,
     khpoo INTEGER DEFAULT 0,
+    khiin INTEGER DEFAULT 0,
+    dev INTEGER DEFAULT 0,
+    lkk INTEGER DEFAULT 0,
 
     UNIQUE(tl, hanzi)
 );
@@ -74,7 +77,7 @@ sqlite3 "$DB_FILE" << EOF
 .import ${DICTIONARY_CSV} temp_import
 
 INSERT OR IGNORE INTO dictionary (
-    hanzi, tl, frequency, is_variant, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti, khpoo
+    hanzi, tl, frequency, is_variant, kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti, khpoo, khiin, dev, lkk
 )
 SELECT
     CASE WHEN hanzi = '' OR hanzi IS NULL THEN NULL ELSE hanzi END,
@@ -88,10 +91,13 @@ SELECT
     CASE WHEN taijit = 'True' THEN 1 ELSE 0 END,
     CASE WHEN kungge = 'True' THEN 1 ELSE 0 END,
     CASE WHEN stti = 'True' THEN 1 ELSE 0 END,
-    CASE WHEN khpoo = 'True' THEN 1 ELSE 0 END
+    CASE WHEN khpoo = 'True' THEN 1 ELSE 0 END,
+    CASE WHEN khiin = 'True' THEN 1 ELSE 0 END,
+    CASE WHEN dev = 'True' THEN 1 ELSE 0 END,
+    CASE WHEN lkk = 'True' THEN 1 ELSE 0 END
 FROM temp_import
 WHERE tl IS NOT NULL AND tl != ''
-  AND (LENGTH(tl) - LENGTH(REPLACE(tl, '-', '')) + 1) <= 4;
+  AND (LENGTH(REPLACE(tl, ' ', '-')) - LENGTH(REPLACE(REPLACE(tl, ' ', ''), '-', '')) + 1) <= 4;
 
 DROP TABLE temp_import;
 

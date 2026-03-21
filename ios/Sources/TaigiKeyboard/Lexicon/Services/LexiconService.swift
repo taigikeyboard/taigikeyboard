@@ -138,6 +138,11 @@ class LexiconService: @unchecked Sendable {
         // Deduplicate
         let uniqueWords = CandidateProcessor.removeDuplicates(mergedWords)
 
+        // Ensure user frequency DB is initialized (lazy: first search triggers connection)
+        if !userFrequencyService.isConnected() {
+            try? await UserFrequencyRepository.shared.ensureInitialized()
+        }
+
         // 收集頻率資料並排序
         guard userFrequencyService.isConnected() else {
             return uniqueWords

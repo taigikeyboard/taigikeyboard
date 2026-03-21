@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Symbol selection overlay: covers keyboard area with symbol grid -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="?keyboard_bgColor">
+
+        <!-- Tab bar: fixed at top -->
+        <LinearLayout
+            android:id="@+id/symbol_overlay_tab_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp" />
+
+        <!-- Scrollable symbol grid -->
+        <ScrollView
+            android:id="@+id/symbol_overlay_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scrollbars="none"
+            android:clipToPadding="false">
+
+            <!-- Symbol grid container (populated programmatically) -->
+            <LinearLayout
+                android:id="@+id/symbol_overlay_grid_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp"
+                android:paddingBottom="8dp" />
+
+        </ScrollView>
+
+    </LinearLayout>
+
+</merge>

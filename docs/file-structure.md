@@ -28,7 +28,7 @@
 | `Layout` | `Layout/` | `ime/text/layout/` |
 | `Smartbar` | `Autocomplete/Views/` | `ime/text/smartbar/` |
 | `Settings` | `Settings/` | `settings/` |
-| `Theme` | `Theme/` | `ui/theme/` |
+| `Styling` | `Styling/` | `ui/theme/` |
 
 ---
 
@@ -168,6 +168,7 @@ TaigiKeyboard/
 │   └── Views/
 ├── Callouts/        # Long-press menus
 ├── Debug/           # Debug tools
+├── Diagnostics/     # Diagnostic info service
 ├── Emojis/          # Emoji related
 ├── Input/           # Input and composing
 │   └── Tone/        # Tone processing
@@ -181,10 +182,9 @@ TaigiKeyboard/
 │   └── Utils/
 ├── Localization/    # Localization
 ├── Settings/        # Settings
-├── Styling/         # Button styling
-│   ├── Helpers/
-│   └── Providers/
-└── Theme/           # Theme
+└── Styling/         # Button styling & theming
+    ├── Helpers/
+    └── Providers/
 ```
 
 ### Android (`android/app/src/main/java/.../taigikeyboard/`)

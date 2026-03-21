@@ -112,7 +112,7 @@
 
         </LinearLayout>
 
-        <!-- Toolbar container: matches iOS [POJ TL En] [spacer] [globe] [emoji] [photo] [gear] -->
+        <!-- Toolbar container: 9 equal-width buttons evenly distributed -->
         <LinearLayout
             android:id="@+id/toolbar_container"
             android:layout_width="match_parent"
@@ -123,27 +123,48 @@
             android:paddingEnd="4dp"
             android:visibility="gone">
 
-            <!-- Input mode buttons (left-aligned) -->
             <Button
                 android:id="@+id/toolbar_mode_poj"
                 style="@style/SmartbarToolbarMode"
+                android:singleLine="true"
+                android:ellipsize="none"
                 android:text="POJ" />
 
             <Button
                 android:id="@+id/toolbar_mode_tl"
                 style="@style/SmartbarToolbarMode"
+                android:singleLine="true"
+                android:ellipsize="none"
                 android:text="TL" />
 
             <Button
                 android:id="@+id/toolbar_mode_en"
                 style="@style/SmartbarToolbarMode"
+                android:singleLine="true"
+                android:ellipsize="none"
                 android:text="EN" />
 
-            <!-- Spacer pushes action icons to right -->
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
+            <Button
+                android:id="@+id/toolbar_mode_tps"
+                style="@style/SmartbarToolbarMode"
+                android:singleLine="true"
+                android:ellipsize="none"
+                android:text="TPS" />
+
+            <!-- Symbol panel -->
+            <Button
+                android:id="@+id/toolbar_symbol_button"
+                style="@style/SmartbarToolbarMode"
+                android:textSize="22sp"
+                android:text="※"
+                android:contentDescription="Symbol panel" />
+
+            <!-- Layout selection -->
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
+                android:id="@+id/toolbar_layout_button"
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Switch layout"
+                android:src="@drawable/ic_photo" />
 
             <!-- Globe (system IME picker) -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
@@ -152,19 +173,12 @@
                 android:contentDescription="Switch input method"
                 android:src="@drawable/ic_language" />
 
-            <!-- Emoji -->
+            <!-- Dismiss keyboard -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-                android:id="@+id/toolbar_emoji_button"
+                android:id="@+id/toolbar_dismiss_button"
                 style="@style/SmartbarToolbarIcon"
-                android:contentDescription="Emoji"
-                android:src="@drawable/ic_sentiment_satisfied" />
-
-            <!-- Layout selection (photo icon, matches iOS) -->
-            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
-                android:id="@+id/toolbar_layout_button"
-                style="@style/SmartbarToolbarIcon"
-                android:contentDescription="Switch layout"
-                android:src="@drawable/ic_photo" />
+                android:contentDescription="Dismiss keyboard"
+                android:src="@drawable/ic_keyboard_hide" />
 
             <!-- Settings -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton

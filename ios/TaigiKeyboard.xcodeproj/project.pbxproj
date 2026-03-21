@@ -88,6 +88,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		2A099CAC2F6BED54007E763B /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboard" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				dictionary.db,
+				dictionary.trie,
+			);
+			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
+		};
 		2A1FCDD22EAFCADE009F2800 /* Exceptions for "App" folder in "TaigiKeyboard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -212,12 +220,6 @@
 			path = Sources/TaigiKeyboard/Styling;
 			sourceTree = "<group>";
 		};
-		2A4FAF3D2EAF131B006E37A8 /* Theme */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Theme;
-			path = Sources/TaigiKeyboard/Theme;
-			sourceTree = "<group>";
-		};
 		2A4FAF492EAF137B006E37A8 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -249,6 +251,9 @@
 		};
 		F354362F2E5C437C0004DFAB /* Resources/Dictionaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				2A099CAC2F6BED54007E763B /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboard" target */,
+			);
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
 		};
@@ -323,7 +328,6 @@
 				F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */,
 				F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */,
 				F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */,
-				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				F3ECE84B2EFE6F6A002FCA11 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -367,7 +371,6 @@
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
-				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				2AAC89292EF9196A00C954D7 /* Debug */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
@@ -407,7 +410,6 @@
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
-				2A4FAF3D2EAF131B006E37A8 /* Theme */,
 				2AAC89292EF9196A00C954D7 /* Debug */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
@@ -769,7 +771,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 3.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -807,7 +809,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 3.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -838,7 +840,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 3.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -870,7 +872,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.4;
+				MARKETING_VERSION = 3.4.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

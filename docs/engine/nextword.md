@@ -21,7 +21,7 @@
 
 | Source | Query key | Prediction result | Description |
 |--------|-----------|-------------------|-------------|
-| Dictionary | Last character of selected word | Single character | Cold start |
+| Dictionary | Last character of selected word | Bigram (1 char) + Phrase (2-3 chars) | Cold start |
 | User | Full selected word | Full word | After learning |
 
 ### Database Schema

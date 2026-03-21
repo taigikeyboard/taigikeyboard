@@ -1,0 +1,79 @@
+{
+  "type": "characters",
+  "name": "tps",
+  "direction": "ltr",
+  "arrangement": [
+    [
+      { "code": 0, "label": "ㆠ" },
+      { "code": 0, "label": "ˋ" },
+      { "code": 0, "label": "˪" },
+      { "code": 0, "label": "ㆣ" },
+      { "code": 0, "label": "ˊ" },
+      { "code": 0, "label": "ˇ" },
+      { "code": 0, "label": "˫" },
+      { "code": 0, "label": "˙" },
+      { "code": 0, "label": "ㆪ", "popup": [
+        { "code": 0, "label": "ㆳ" }
+      ] },
+      { "code": 0, "label": "ㆩ" }
+    ], [
+      { "code": 0, "label": "ㄅ", "popup": [
+        { "code": 0, "label": "ㆴ" }
+      ] },
+      { "code": 0, "label": "ㄉ", "popup": [
+        { "code": 0, "label": "ㆵ" }
+      ] },
+      { "code": 0, "label": "ㄍ", "popup": [
+        { "code": 0, "label": "ㆻ" }
+      ] },
+      { "code": 0, "label": "ㄏ", "popup": [
+        { "code": 0, "label": "ㆷ" }
+      ] },
+      { "code": 0, "label": "ㄧ" },
+      { "code": 0, "label": "ㄚ" },
+      { "code": 0, "label": "ㄞ" },
+      { "code": 0, "label": "ㄤ" },
+      { "code": 0, "label": "ㆫ" },
+      { "code": 0, "label": "ㆧ" }
+    ], [
+      { "code": 0, "label": "ㄆ" },
+      { "code": 0, "label": "ㄊ" },
+      { "code": 0, "label": "ㄎ" },
+      { "code": 0, "label": "ㄗ", "popup": [
+        { "code": 0, "label": "ㄐ" }
+      ] },
+      { "code": 0, "label": "ㄨ" },
+      { "code": 0, "label": "ㄛ" },
+      { "code": 0, "label": "ㄠ" },
+      { "code": 0, "label": "ㆲ" },
+      { "code": 0, "label": "ㆥ" },
+      { "code": 0, "label": "ㆮ", "popup": [
+        { "code": 0, "label": "ㆯ" }
+      ] }
+    ], [
+      { "code": 0, "label": "ㄇ", "popup": [
+        { "code": 0, "label": "ㆬ" }
+      ] },
+      { "code": 0, "label": "ㄋ", "popup": [
+        { "code": 0, "label": "ㄣ" }
+      ] },
+      { "code": 0, "label": "ㄫ", "popup": [
+        { "code": 0, "label": "ㆭ" },
+        { "code": 0, "label": "ㄥ" }
+      ] },
+      { "code": 0, "label": "ㄘ", "popup": [
+        { "code": 0, "label": "ㄑ" }
+      ] },
+      { "code": 0, "label": "ㄜ" },
+      { "code": 0, "label": "ㆦ" },
+      { "code": 0, "label": "ㄢ" },
+      { "code": 0, "label": "ㆰ", "popup": [
+        { "code": 0, "label": "ㆱ" }
+      ] },
+      { "code": 44, "label": "，", "popup": [
+        { "code": 12290, "label": "。" }
+      ] },
+      { "code": -5, "label": "delete", "type": "enter_editing" }
+    ]
+  ]
+}

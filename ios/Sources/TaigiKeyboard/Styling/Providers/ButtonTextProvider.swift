@@ -7,21 +7,23 @@ import Foundation
 class ButtonTextProvider {
 
     private let keyboardContext: KeyboardContext
+    private let settings: SettingsSnapshot
 
-    init(keyboardContext: KeyboardContext) {
+    init(keyboardContext: KeyboardContext, settings: SettingsSnapshot) {
         self.keyboardContext = keyboardContext
+        self.settings = settings
     }
 
     /// Returns true if the hint is a TPS callout hint (larger hint, smaller main text).
     func isTPSHint(for action: KeyboardAction) -> Bool {
-        guard SharedSettings.shared.keyboardLayoutType == .tps,
+        guard settings.keyboardLayoutType == .tps,
               case let .character(char) = action else { return false }
         return Callouts.TPSCallouts.actions[char] != nil
     }
 
     /// Returns true if the hint is a text hint (smaller font), false for standalone diacritics (larger font).
     func isTextHint(for action: KeyboardAction) -> Bool {
-        let layoutType = SharedSettings.shared.keyboardLayoutType
+        let layoutType = settings.keyboardLayoutType
         guard case let .character(char) = action else { return false }
 
         // TPS layout: callout hints are text hints
@@ -46,18 +48,18 @@ class ButtonTextProvider {
     }
 
     func buttonHintText(for action: KeyboardAction) -> String? {
-        let layoutType = SharedSettings.shared.keyboardLayoutType
+        let layoutType = settings.keyboardLayoutType
         guard case let .character(char) = action else { return nil }
 
-        // TPS layout: show first callout variant as hint
+        // TPS layout: show callout variants as hint (space-separated for multiple)
         if layoutType == .tps {
             if let actions = Callouts.TPSCallouts.actions[char] {
-                return actions.first
+                return actions.joined(separator: " ")
             }
             return nil
         }
 
-        guard SharedSettings.shared.inputMode != .english else { return nil }
+        guard settings.inputMode != .english else { return nil }
 
         // Tone hints for number keys (all layouts except TPS)
         switch char {
@@ -70,7 +72,7 @@ class ButtonTextProvider {
         case "8": return "\u{02C8}"  // ˈ MODIFIER LETTER VERTICAL LINE
         case "9":
             // POJ: breve, TL: double prime (more visible than U+02DD)
-            return SharedSettings.shared.inputMode == .poj ? "\u{02D8}" : "\u{02BA}"
+            return settings.inputMode == .poj ? "\u{02D8}" : "\u{02BA}"
         default: break
         }
 
@@ -94,8 +96,12 @@ class ButtonTextProvider {
             // Display label override for hard-to-see characters
             if char == "˙" { return "·" }  // U+02D9 → U+00B7 (middle dot)
 
-            // Display override: "nn" key shows nasal marker ⁿ/ᴺ
-            if char == "nn" {
+            // TPS layout: display full-width comma
+            if char == ",", settings.keyboardLayoutType == .tps { return "，" }
+
+            // Display override: "nn" key shows nasal marker ⁿ/ᴺ in POJ mode
+            // In TL mode, display as literal "nn" (falls through to normal case logic)
+            if char == "nn", settings.inputMode == .poj {
                 return keyboardContext.keyboardCase == .lowercased
                     ? "\u{207F}" : "\u{1D3A}"  // ⁿ / ᴺ
             }

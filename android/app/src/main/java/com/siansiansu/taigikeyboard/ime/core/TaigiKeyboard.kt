@@ -39,6 +39,7 @@ import com.siansiansu.taigikeyboard.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 private var taigikeyboardInstance: TaigiKeyboard? = null
@@ -262,6 +263,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     override fun onDestroy() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
+        serviceScope.cancel()
         osHandler.removeCallbacksAndMessages(null)
         LexiconService.close()
         taigikeyboardInstance = null

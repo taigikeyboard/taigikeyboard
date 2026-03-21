@@ -20,36 +20,6 @@ object ToneConverterModels {
     }
 
     /**
-     * POJ tone mapping: from tone marked character to base character
-     */
-    val pojToneMapping = mapOf(
-        // a
-        "á" to "a", "à" to "a", "â" to "a", "ǎ" to "a", "ā" to "a", "a̍" to "a", "ă" to "a",
-        "Á" to "A", "À" to "A", "Â" to "A", "Ǎ" to "A", "Ā" to "A", "A̍" to "A", "Ă" to "A",
-        // e
-        "é" to "e", "è" to "e", "ê" to "e", "ě" to "e", "ē" to "e", "e̍" to "e", "ĕ" to "e",
-        "É" to "E", "È" to "E", "Ê" to "E", "Ě" to "E", "Ē" to "E", "E̍" to "E", "Ĕ" to "E",
-        // i
-        "í" to "i", "ì" to "i", "î" to "i", "ǐ" to "i", "ī" to "i", "i̍" to "i", "ĭ" to "i",
-        "Í" to "I", "Ì" to "I", "Î" to "I", "Ǐ" to "I", "Ī" to "I", "I̍" to "I", "Ĭ" to "I",
-        // o
-        "ó" to "o", "ò" to "o", "ô" to "o", "ǒ" to "o", "ō" to "o", "o̍" to "o", "ŏ" to "o",
-        "Ó" to "O", "Ò" to "O", "Ô" to "O", "Ǒ" to "O", "Ō" to "O", "O̍" to "O", "Ŏ" to "O",
-        // o͘
-        "ó͘" to "o͘", "ò͘" to "o͘", "ô͘" to "o͘", "ǒ͘" to "o͘", "ō͘" to "o͘", "o̍͘" to "o͘", "ŏ͘" to "o͘",
-        "Ó͘" to "O͘", "Ò͘" to "O͘", "Ô͘" to "O͘", "Ǒ͘" to "O͘", "Ō͘" to "O͘", "O̍͘" to "O͘", "Ŏ͘" to "O͘",
-        // u
-        "ú" to "u", "ù" to "u", "û" to "u", "ǔ" to "u", "ū" to "u", "u̍" to "u", "ŭ" to "u",
-        "Ú" to "U", "Ù" to "U", "Û" to "U", "Ǔ" to "U", "Ū" to "U", "U̍" to "U", "Ŭ" to "U",
-        // n
-        "ń" to "n", "ǹ" to "n", "n̂" to "n", "ň" to "n", "n̄" to "n", "n̍" to "n", "n̋" to "n",
-        "Ń" to "N", "Ǹ" to "N", "N̂" to "N", "Ň" to "N", "N̄" to "N", "N̍" to "N", "N̋" to "N",
-        // m
-        "ḿ" to "m", "m̀" to "m", "m̂" to "m", "m̌" to "m", "m̄" to "m", "m̍" to "m", "m̋" to "m",
-        "Ḿ" to "M", "M̀" to "M", "M̂" to "M", "M̌" to "M", "M̄" to "M", "M̍" to "M", "M̋" to "M"
-    )
-
-    /**
      * POJ number to tone mapping: converts base character + tone number to tone marked character
      */
     val pojNumberToToneMapping = mapOf(
@@ -80,36 +50,6 @@ object ToneConverterModels {
         // m (tones 2-9)
         "m2" to "ḿ", "m3" to "m̀", "m5" to "m̂", "m6" to "m̌", "m7" to "m̄", "m8" to "m̍", "m9" to "m̋",
         "M2" to "Ḿ", "M3" to "M̀", "M5" to "M̂", "M6" to "M̌", "M7" to "M̄", "M8" to "M̍", "M9" to "M̋"
-    )
-
-    /**
-     * TL tone mapping: from tone marked character to base character
-     */
-    val tlToneMapping = mapOf(
-        // a
-        "á" to "a", "à" to "a", "â" to "a", "ǎ" to "a", "ā" to "a", "a̍" to "a", "a̋" to "a",
-        "Á" to "A", "À" to "A", "Â" to "A", "Ǎ" to "A", "Ā" to "A", "A̍" to "A", "A̋" to "A",
-        // e
-        "é" to "e", "è" to "e", "ê" to "e", "ě" to "e", "ē" to "e", "e̍" to "e", "e̋" to "e",
-        "É" to "E", "È" to "E", "Ê" to "E", "Ě" to "E", "Ē" to "E", "E̍" to "E", "E̋" to "E",
-        // i
-        "í" to "i", "ì" to "i", "î" to "i", "ǐ" to "i", "ī" to "i", "i̍" to "i", "i̋" to "i",
-        "Í" to "I", "Ì" to "I", "Î" to "I", "Ǐ" to "I", "Ī" to "I", "I̍" to "I", "I̋" to "I",
-        // o
-        "ó" to "o", "ò" to "o", "ô" to "o", "ǒ" to "o", "ō" to "o", "o̍" to "o", "ő" to "o",
-        "Ó" to "O", "Ò" to "O", "Ô" to "O", "Ǒ" to "O", "Ō" to "O", "O̍" to "O", "Ő" to "O",
-        // oo
-        "óo" to "oo", "òo" to "oo", "ôo" to "oo", "ǒo" to "oo", "ōo" to "oo", "o̍o" to "oo", "őo" to "oo",
-        "Óo" to "Oo", "Òo" to "Oo", "Ôo" to "Oo", "Ǒo" to "Oo", "Ōo" to "Oo", "O̍o" to "Oo", "Őo" to "Oo",
-        // u
-        "ú" to "u", "ù" to "u", "û" to "u", "ǔ" to "u", "ū" to "u", "u̍" to "u", "ű" to "u",
-        "Ú" to "U", "Ù" to "U", "Û" to "U", "Ǔ" to "U", "Ū" to "U", "U̍" to "U", "Ű" to "U",
-        // n
-        "ń" to "n", "ǹ" to "n", "n̂" to "n", "ň" to "n", "n̄" to "n", "n̍" to "n", "n̋" to "n",
-        "Ń" to "N", "Ǹ" to "N", "N̂" to "N", "Ň" to "N", "N̄" to "N", "N̍" to "N", "N̋" to "N",
-        // m
-        "ḿ" to "m", "m̀" to "m", "m̂" to "m", "m̌" to "m", "m̄" to "m", "m̍" to "m", "m̋" to "m",
-        "Ḿ" to "M", "M̀" to "M", "M̂" to "M", "M̌" to "M", "M̄" to "M", "M̍" to "M", "M̋" to "M"
     )
 
     /**

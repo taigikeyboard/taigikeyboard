@@ -65,6 +65,11 @@ enum KeyboardModels {
             .custom(openHuninnFontName, size: size)
         }
 
+        /// Convenience wrapper: resolves the user's current font setting to UIFont
+        static func globalUIFont(size: CGFloat) -> UIFont {
+            uiFont(for: SharedSettings.shared.fontType, size: size)
+        }
+
         /// 根據字型類型取得對應的 UIFont（用於 UIKit 元件）
         static func uiFont(for fontType: FontType, size: CGFloat) -> UIFont {
             switch fontType {

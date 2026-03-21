@@ -136,6 +136,9 @@ public class ComposingManager: ObservableObject {
     private func deriveDisplay(from raw: String) -> String {
         guard !raw.isEmpty else { return "" }
 
+        // TPS symbols are already display-ready — no segmentation/tone conversion needed
+        if TPSConverter.containsTPS(raw) { return raw }
+
         let prefix = LexiconConstants.TriePrefix.prefix(for: inputMode)
         let checker: SyllableSegmenter.WordPrefixChecker = { key in
             !TrieService.shared.prefixSearch(prefix + key, limit: 1).isEmpty

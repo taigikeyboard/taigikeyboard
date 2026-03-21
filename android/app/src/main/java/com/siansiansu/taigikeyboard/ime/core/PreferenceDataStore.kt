@@ -41,6 +41,8 @@ object PreferenceKeys {
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
     val PHAH_TAIGI_LAYOUT_ENABLED = booleanPreferencesKey("keyboard__phah_taigi_layout_enabled")
     val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
+    val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
+    val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
 
     // Taigi-specific keys
     val ENABLE_DOUBLE_TAP_OO = booleanPreferencesKey("taigi__enable_double_tap_oo")
@@ -68,6 +70,13 @@ object PreferenceKeys {
     val KHPOO_DICT_ENABLED = booleanPreferencesKey("dictionary__khpoo_dict_enabled")
     // 異用字開關
     val VARIANT_DICT_ENABLED = booleanPreferencesKey("dictionary__variant_enabled")
+    // 在來字開關
+    val KHIIN_ENABLED = booleanPreferencesKey("dictionary__khiin_enabled")
+    // LKK漢羅合用建議用字
+    val LKK_DICT_ENABLED = booleanPreferencesKey("dictionary__lkk_dict_enabled")
+
+    // TPS settings
+    val TPS_OR_MAPS_TO_ER = booleanPreferencesKey("tps__or_maps_to_er")
 
     // Appearance settings
     val KEY_HEIGHT_SCALE = floatPreferencesKey("appearance__key_height_scale")

@@ -67,7 +67,8 @@ fun InputModeScreen(
             val options = listOf(
                 "poj" to Tab4Texts.pojMode,
                 "tl" to Tab4Texts.tlMode,
-                "english" to Tab4Texts.englishMode
+                "english" to Tab4Texts.englishMode,
+                "tps" to Tab4Texts.tpsMode
             )
 
             SettingsCard {

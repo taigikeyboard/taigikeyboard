@@ -17,31 +17,17 @@ object ToneUtilities {
      * For multi-character strings (e.g., "ph", "tsh"), only capitalize the first letter
      * Used for sentence case (auto-capitalization)
      */
-    fun uppercaseToneLetter(char: String, mode: InputMode): String {
-        // Nasal marker: ⁿ → ᴺ
-        if (char == "\u207F") return "\u1D3A"
-
-        val mapping = when (mode) {
-            InputMode.POJ -> ToneConverterModels.pojLowercaseToUppercaseMapping
-            InputMode.TL -> ToneConverterModels.tlLowercaseToUppercaseMapping
-            InputMode.ENGLISH -> null
-        }
-        // Check if there's a direct mapping first
-        mapping?.get(char)?.let { return it }
-
-        // For multi-character strings, capitalize only the first letter
-        return if (char.length > 1) {
-            char.replaceFirstChar { it.uppercaseChar() }
-        } else {
-            char.uppercase()
-        }
-    }
+    fun uppercaseToneLetter(char: String, mode: InputMode): String =
+        uppercaseInternal(char, mode, allChars = false)
 
     /**
      * Convert string to fully uppercase (for Caps Lock mode)
      * All characters are uppercased, e.g., "tsh" → "TSH"
      */
-    fun fullUppercaseToneLetter(char: String, mode: InputMode): String {
+    fun fullUppercaseToneLetter(char: String, mode: InputMode): String =
+        uppercaseInternal(char, mode, allChars = true)
+
+    private fun uppercaseInternal(char: String, mode: InputMode, allChars: Boolean): String {
         // Nasal marker: ⁿ → ᴺ
         if (char == "\u207F") return "\u1D3A"
 
@@ -52,8 +38,14 @@ object ToneUtilities {
         }
         // Check if there's a direct mapping first
         mapping?.get(char)?.let { return it }
-        // Full uppercase for all characters
-        return char.uppercase()
+
+        return if (allChars) {
+            char.uppercase()
+        } else if (char.length > 1) {
+            char.replaceFirstChar { it.uppercaseChar() }
+        } else {
+            char.uppercase()
+        }
     }
 
     /**
@@ -80,6 +72,9 @@ object ToneUtilities {
     fun adjustNasalMarkerCase(text: String): String {
         val nasalLower = '\u207F'  // ⁿ
         val nasalUpper = '\u1D3A'  // ᴺ
+
+        // Early exit: skip iteration if no nasal markers present
+        if (nasalLower !in text && nasalUpper !in text) return text
 
         val result = StringBuilder()
         var lastLetterIsUppercase = false

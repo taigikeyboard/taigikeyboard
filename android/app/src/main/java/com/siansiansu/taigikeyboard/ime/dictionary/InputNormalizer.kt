@@ -43,7 +43,7 @@ object InputNormalizer {
     fun normalize(input: String, mode: InputMode): String {
         if (input.isEmpty()) return ""
 
-        val lowercased = input.lowercase()
+        val lowercased = preprocessTPS(input).lowercase()
 
         // Only add default tones when input contains diacritics
         val shouldAddDefaultTones = hasToneMarks(lowercased)
@@ -158,6 +158,8 @@ object InputNormalizer {
     fun buildSearchKey(input: String, mode: InputMode): String {
         if (input.isEmpty()) return ""
 
+        val processedInput = preprocessTPS(input)
+
         // Aligned with iOS AutocompleteService.buildSearchKey:
         // - No lowercasing (preserve original case)
         // - Segment raw input, strip trailing hyphens, add default tones
@@ -167,12 +169,12 @@ object InputNormalizer {
         val checker: WordPrefixChecker? = if (TrieService.isReady) {
             { key -> TrieService.prefixSearch(prefix + key.lowercase(), 1).isNotEmpty() }
         } else null
-        val segments = SyllableSegmenter.segment(input, wordPrefixChecker = checker, mode = mode)
+        val segments = SyllableSegmenter.segment(processedInput, wordPrefixChecker = checker, mode = mode)
 
         // Single segment: return input unchanged (match iOS)
-        if (segments.size <= 1) return input
+        if (segments.size <= 1) return processedInput
 
-        val hasTones = input.any { it.isDigit() }
+        val hasTones = processedInput.any { it.isDigit() }
 
         val processed = segments.mapIndexed { index, seg ->
             val base = if (seg.endsWith("-")) seg.dropLast(1) else seg
@@ -198,5 +200,9 @@ object InputNormalizer {
         val nfd = Normalizer.normalize(input, Normalizer.Form.NFD)
         return nfd.any { it in toneMarkToNumber }
     }
+
+    /** Convert TPS input to TL; return original if no TPS characters found. */
+    private fun preprocessTPS(input: String): String =
+        if (TPSConverter.containsTPS(input)) TPSConverter.toTL(input) else input
 
 }

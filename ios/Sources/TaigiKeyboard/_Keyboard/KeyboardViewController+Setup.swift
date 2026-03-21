@@ -147,12 +147,18 @@ extension KeyboardViewController {
         // 重新讀取 KeyboardKit 的自動大寫設定
         // @AppStorage 會讀取最新值，但 didSet 不會被觸發
         // 所以需要手動設定 autocapitalizationTypeOverride
+        // Only write if different from current value to avoid triggering re-renders
         if contextValue {
-            state.keyboardContext.autocapitalizationTypeOverride = nil
+            if state.keyboardContext.autocapitalizationTypeOverride != nil {
+                state.keyboardContext.autocapitalizationTypeOverride = nil
+            }
         } else {
-            state.keyboardContext.autocapitalizationTypeOverride = Keyboard.AutocapitalizationType.none
+            if state.keyboardContext.autocapitalizationTypeOverride != Keyboard.AutocapitalizationType.none {
+                state.keyboardContext.autocapitalizationTypeOverride = Keyboard.AutocapitalizationType.none
+            }
             // 關閉自動大寫時，重置 keyboardCase 為小寫（Caps Lock 除外）
-            if state.keyboardContext.keyboardCase != .capsLocked {
+            if state.keyboardContext.keyboardCase != .capsLocked
+                && state.keyboardContext.keyboardCase != .lowercased {
                 state.keyboardContext.keyboardCase = .lowercased
             }
         }

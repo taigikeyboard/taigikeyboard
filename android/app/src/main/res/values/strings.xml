@@ -218,7 +218,7 @@
     <string name="url_privacy" translatable="false">https://taigikeyboard.tw/privacypolicy.html</string>
     <string name="url_rate" translatable="false">https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard</string>
     <string name="url_google_form" translatable="false">https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header</string>
-    <string name="url_support" translatable="false">https://portaly.cc/siansiansu/support</string>
+    <string name="url_support" translatable="false">https://p.ecpay.com.tw/AA663DE</string>
 
     <!-- Content Descriptions for Accessibility -->
     <string name="content_desc__icon_keyboard">鍵盤圖示</string>

@@ -20,14 +20,24 @@ enum Tab4Texts {
     static let pojMode = LocalizedText(hanji: "白話字")
     static let tlMode = LocalizedText(hanji: "台羅")
     static let englishMode = LocalizedText(hanji: "英文")
+    static let tpsMode = LocalizedText(hanji: "方音符號")
 
     // MARK: - 開關設定
 
     static let outputBothScripts = LocalizedText(hanji: "括號標註")
     static let autoCapitalization = LocalizedText(hanji: "自動大本字")
     static let autoSpace = LocalizedText(hanji: "自動空白")
+
+    // MARK: - 白話字設定
+
+    static let pojSettingsSectionTitle = LocalizedText(hanji: "白話字")
     static let doubleTapOO = LocalizedText(hanji: "連紲拍 oo → o͘")
     static let doubleTapNN = LocalizedText(hanji: "連紲拍 nn → ⁿ")
+
+    // MARK: - 方音符號設定
+
+    static let tpsSettingsSectionTitle = LocalizedText(hanji: "方音符號")
+    static let tpsOrMapsToER = LocalizedText(hanji: "or 對應 ㄜ")
 
     // MARK: - 重設設定
 

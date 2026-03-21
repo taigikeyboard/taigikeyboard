@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 
 // Teal/green brand color scheme (seed: #008A73, tone 50)
 // Surface container hierarchy follows iOS grouped-list pattern:
-//   screen bg = surfaceContainerLow (light gray)
+//   screen bg = surfaceContainer (gray, 2 levels above surface)
 //   card bg   = surface (white/lightest)
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF008A73),

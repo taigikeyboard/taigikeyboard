@@ -333,7 +333,7 @@ enum TaigiPhonetics {
             assembled = toPOJ(initial: initial, final: final, tone: toneStr)
         case .tl:
             assembled = toTL(initial: initial, final: final, tone: toneStr)
-        case .english:
+        case .english, .tps:
             return syllable
         }
 

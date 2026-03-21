@@ -27,11 +27,19 @@ extension ActionHandler {
             inputMode: settings.inputMode
         )
 
-        logger.debug("[AUTOCAP][INPUT] processedChar='\(processedChar, privacy: .public)'")
+        // TPS layout: auto-select ㄇ/ㆬ and ㄫ/ㆭ/ㄥ based on composing context
+        let finalChar: String
+        if settings.inputMode == .tps {
+            finalChar = TPSConverter.adjustTPSInitialKey(processedChar, afterRawInput: composingManager.rawInput)
+        } else {
+            finalChar = processedChar
+        }
+
+        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar, privacy: .public)'")
 
         // 英文模式：直接插入字元，不進入組字邏輯
         if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.insertText(processedChar)
+            keyboardContext.textDocumentProxy.insertText(finalChar)
             // 處理單次 Shift 復位（Caps Lock 除外）
             if keyboardContext.keyboardCase == .uppercased {
                 keyboardContext.keyboardCase = .lowercased
@@ -42,26 +50,37 @@ extension ActionHandler {
         // 以下為台語模式（POJ/TL）的組字邏輯
 
         // 檢查是否為標點符號（除了連字符號）
-        if isPunctuationExceptHyphen(processedChar) {
+        if isPunctuationExceptHyphen(finalChar) {
             // 如果正在組字，先確認組字
             if composingManager.isComposing {
                 composingManager.commitComposition()
             }
             // 直接插入標點符號
-            keyboardContext.textDocumentProxy.insertText(processedChar)
+            keyboardContext.textDocumentProxy.insertText(finalChar)
+            return true
+        }
+
+        // Standalone digit: commit directly without entering composing mode.
+        // Digits only enter composing as tone markers appended to existing romanization.
+        if !composingManager.isComposing && finalChar.first?.isNumber == true {
+            if isShowingNextWord {
+                isShowingNextWord = false
+                keyboardController?.state.autocompleteContext.reset()
+            }
+            keyboardContext.textDocumentProxy.insertText(finalChar)
             return true
         }
 
         // 原有的組字邏輯（只處理字母、數字和連字符號）
         if composingManager.isComposing {
-            if processedChar == "-" {
+            if finalChar == "-" {
                 composingManager.appendHyphen()
             } else {
-                composingManager.appendCharacter(processedChar)
+                composingManager.appendCharacter(finalChar)
             }
         } else {
             // 非組字模式：檢查是否正在顯示 NextWord 候選詞
-            if processedChar == "-" && isShowingNextWord {
+            if finalChar == "-" && isShowingNextWord {
                 // NextWord 模式下輸入 "-"：直接輸出，保留 NextWord 候選詞
                 // 用戶可以繼續點選 NextWord，或輸入其他字開始組字
                 keyboardContext.textDocumentProxy.insertText("-")
@@ -72,7 +91,7 @@ extension ActionHandler {
                     isShowingNextWord = false
                     keyboardController?.state.autocompleteContext.reset()
                 }
-                composingManager.startComposing(with: processedChar)
+                composingManager.startComposing(with: finalChar)
             }
         }
 

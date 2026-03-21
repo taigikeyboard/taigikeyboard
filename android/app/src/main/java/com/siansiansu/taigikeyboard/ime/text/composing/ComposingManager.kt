@@ -5,6 +5,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
 import com.siansiansu.taigikeyboard.ime.dictionary.SyllableSegmenter
+import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.dictionary.TrieService
@@ -201,6 +202,9 @@ class ComposingManager(
      */
     internal fun deriveDisplay(raw: String): String {
         if (raw.isEmpty()) return ""
+
+        // TPS input: display as-is (TPS symbols are already visual, no tone conversion needed)
+        if (TPSConverter.containsTPS(raw)) return raw
 
         // Create checker inline (matching iOS ComposingManager.deriveDisplay)
         val prefix = DictionaryConstants.triePrefix(inputMode)

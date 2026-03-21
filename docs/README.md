@@ -9,7 +9,7 @@
 
 - Ensure consistent implementation across iOS/Android platforms
 - Quick reference for Claude Code, bullet-point style, concise
-- **24 files** across 3 subfolders + root
+- **27 files** across 4 subfolders + root
 
 ---
 
@@ -17,9 +17,10 @@
 
 ```
 docs/
-├── engine/           ← IME core logic (9 files)
+├── engine/           ← IME core logic (11 files)
 ├── ui/               ← Presentation & layout (6 files)
 ├── references/       ← External IME research (5 files)
+├── reports/          ← Audit reports
 ├── README.md
 ├── keywords.md       ← Keyword glossary
 ├── file-structure.md ← iOS/Android file mapping
@@ -30,7 +31,7 @@ docs/
 
 ## Document Index
 
-### `engine/` — IME Core Logic (9)
+### `engine/` — IME Core Logic (11)
 
 | File | Description | Status |
 |------|-------------|--------|
@@ -43,6 +44,8 @@ docs/
 | `engine/nextword.md` | Next word prediction with bigram model | Active |
 | `engine/segmentation.md` | Syllable segmentation (DAG+DP, onset atomicity) | Active |
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) | Active |
+| `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) | Active |
+| `engine/diagnostics.md` | Device info collection for bug reporting | Active |
 
 ### `ui/` — Presentation & Layout (6)
 
@@ -53,7 +56,7 @@ docs/
 | `ui/case.md` | Case handling (Shift, CapsLock, transformation) | Active |
 | `ui/device.md` | Device adaptation for iPhone and iPad | Active |
 | `ui/app-ui.md` | Main App UI structure (tabs, settings) | Active |
-| `ui/theme.md` | Theme design (colors, styles) | Active |
+| `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
 
 ### `references/` — External IME Research (5)
 
@@ -137,4 +140,6 @@ docs/
 | `UserFrequency` | User frequency | `UserFrequencyService.swift` | `UserFrequencyService.kt` |
 | `NextWord` | Next word prediction | `NextWordService.swift` | `NextWordService.kt` |
 | `Layout` | Keyboard layout | `CustomLayoutService.swift` | `LayoutManager.kt` |
-| `Theme` | Theme | `ThemeTokens.swift` | `Theme.kt` |
+| `Theme` | Theme & styling | `Styling/Providers/` | `themes.xml` + `PrefHelper.kt` |
+| `CustomDictionary` | User-defined dictionary | `CustomDictionaryRepository.swift` | `CustomDictionaryService.kt` |
+| `Diagnostics` | Device info for bug reports | `DiagnosticService.swift` | `DiagnosticService.kt` |
