@@ -641,25 +641,7 @@ class InputNormalizerTest {
         }
     }
 
-    // MARK: - Mode Validation (strict POJ/TL separation)
-
-    @Test
-    fun testNormalize_pojMode_rejectsTLOnlyInput() {
-        val cases = listOf(
-            "ts" to "TL-only initial",
-            "tsi" to "TL-only initial ts",
-            "ing" to "TL-only final (POJ uses eng)",
-            "gua" to "TL-only final ua (POJ uses oa)",
-            "tsing" to "TL-only initial ts + TL-only final ing",
-        )
-        for ((input, reason) in cases) {
-            assertEquals(
-                "normalize(\"$input\", POJ) should be empty: $reason",
-                "",
-                InputNormalizer.normalize(input, InputMode.POJ)
-            )
-        }
-    }
+    // MARK: - Mode Validation
 
     @Test
     fun testNormalize_pojMode_acceptsPOJInput() {
@@ -676,23 +658,6 @@ class InputNormalizerTest {
             assertTrue(
                 "normalize(\"$input\", POJ) should not be empty: $reason, got \"$result\"",
                 result.isNotEmpty()
-            )
-        }
-    }
-
-    @Test
-    fun testNormalize_tlMode_rejectsPOJOnlyInput() {
-        val cases = listOf(
-            "ch" to "POJ-only initial (TL uses ts)",
-            "chi" to "POJ-only initial ch",
-            "chhi" to "POJ-only initial chh",
-            "goa" to "POJ-only final oa (TL uses ua)",
-        )
-        for ((input, reason) in cases) {
-            assertEquals(
-                "normalize(\"$input\", TL) should be empty: $reason",
-                "",
-                InputNormalizer.normalize(input, InputMode.TL)
             )
         }
     }

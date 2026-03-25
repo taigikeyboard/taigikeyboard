@@ -71,6 +71,7 @@ class KeyView(
 
         /** Returns the tone hint diacritic for a number key, or null if not applicable. */
         fun toneHintForCode(code: Int, inputMode: String?): String? {
+            if (inputMode == "english") return null
             if (code == 57) {
                 // Tone 9: POJ uses breve, TL uses double acute
                 return if (inputMode == "poj") "\u02D8" else "\u02BA"
@@ -369,9 +370,19 @@ class KeyView(
                 val retData = keyboardView.popupManager.getActiveKeyData(this)
                 keyboardView.popupManager.hide()
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && !shouldBlockNextKeyCode && retData != null) {
+                    if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
+                        android.util.Log.d("KeyView", "[TOUCH] UP → sendKeyPress: " +
+                            "code=${retData.code} (${retData.label})")
+                    }
                     taigikeyboard?.textInputManager?.sendKeyPress(retData)
                     performClick()
                 } else {
+                    if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
+                        android.util.Log.w("KeyView", "[TOUCH] UP → BLOCKED: " +
+                            "code=${data.code} (${data.label}), " +
+                            "cancel=${event.actionMasked == MotionEvent.ACTION_CANCEL}, " +
+                            "blocked=$shouldBlockNextKeyCode, retData=${retData != null}")
+                    }
                     shouldBlockNextKeyCode = false
                 }
             }
@@ -865,6 +876,7 @@ class KeyView(
 
             // TPS layout: show popup hint above punctuation keys (e.g., "。" above "，")
             if (keyboardView.prefs.keyboardLayoutType == "tps" &&
+                keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS &&
                 data.type == KeyType.CHARACTER && data.code != 0 && data.popup.isNotEmpty()) {
                 val hintLabel = data.popup[0].label
                 sharedHintPaint.textSize = baseTextSize * 0.52f

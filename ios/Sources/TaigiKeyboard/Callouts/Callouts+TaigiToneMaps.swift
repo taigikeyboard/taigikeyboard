@@ -113,6 +113,9 @@ public extension Callouts {
     /// TPS layout callouts (方音符號 long-press variants)
     enum TPSCallouts {
         static let actions: [String: [String]] = [
+            // Row 1: number shortcuts (digits accessible via long-press)
+            "ㆠ": ["1"], "ˋ": ["2"], "˪": ["3"], "ㆣ": ["4"], "ˊ": ["5"],
+            "ˇ": ["6"], "˫": ["7"], "˙": ["8"], "ㆩ": ["0"],
             // Checked tone finals (入聲韻尾)
             "ㄅ": ["ㆴ"],
             "ㄉ": ["ㆵ"],
@@ -130,8 +133,8 @@ public extension Callouts {
             "ㆤ": ["ㄝ"],
             // Voiced initials
             "ㆡ": ["ㆢ"],
-            // Nasalized vowels
-            "ㆪ": ["ㆳ"],
+            // Nasalized vowels (ㆪ also has number shortcut "9")
+            "ㆪ": ["ㆳ", "9"],
             "ㆮ": ["ㆯ"],
             // Other consonants
             "ㄙ": ["ㄒ"],

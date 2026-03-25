@@ -1,6 +1,7 @@
-# Syllable Segmentation
+# Syllable Segmentation (Archived)
 
-> **Type**: Feature
+> **Status**: REMOVED — Auto-segmentation was removed. This document is preserved for historical reference.
+> **Type**: Feature (archived)
 > **Keywords**: `SyllableSegmenter`, `DAG`, `DP`, `onset`, `trie`, `segmentContinuous`
 > **Related**: composing.md, autocomplete.md, tone.md
 

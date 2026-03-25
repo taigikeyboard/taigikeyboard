@@ -4,6 +4,7 @@ import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
@@ -50,13 +51,20 @@ class CandidateClickHandler(
         val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
+        // Convert roman to TPS for bracket annotation when in TPS mode
+        val bracketRoman = if (isTPSLayout) {
+            TPSConverter.toTPSFromDisplay(selectedWord.roman, prefs.tpsOrMapsToER)
+        } else {
+            selectedWord.roman
+        }
+
         val textToCommit = when {
             isEnglishSuggestion -> selectedWord.roman
             cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
                 if (effectiveSwapped) {
-                    "${selectedWord.hanzi} (${selectedWord.roman})"
+                    "${selectedWord.hanzi} ($bracketRoman)"
                 } else {
-                    "${selectedWord.roman} (${selectedWord.hanzi})"
+                    "$bracketRoman (${selectedWord.hanzi})"
                 }
             }
             effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
@@ -85,6 +93,7 @@ class CandidateClickHandler(
                 Log.d(TAG, "[NEXTWORD-CLICK] BEFORE commitText: text='$textToCommit', ic=$ic")
             }
             val result = ic.commitText(textToCommit, 1)
+            composingManager?.reset(ic)
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[NEXTWORD-CLICK] AFTER commitText: result=$result")
             }
@@ -151,12 +160,19 @@ class CandidateClickHandler(
         val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
+        // Convert roman to TPS for bracket annotation when in TPS mode
+        val bracketRoman = if (isTPSLayout) {
+            TPSConverter.toTPSFromDisplay(word.roman, prefs.tpsOrMapsToER)
+        } else {
+            word.roman
+        }
+
         val textToCommit = when {
             cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
                 if (effectiveSwapped) {
-                    "${word.hanzi} (${word.roman})"
+                    "${word.hanzi} ($bracketRoman)"
                 } else {
-                    "${word.roman} (${word.hanzi})"
+                    "$bracketRoman (${word.hanzi})"
                 }
             }
             effectiveSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
@@ -165,6 +181,7 @@ class CandidateClickHandler(
 
         if (isNextWordPred) {
             ic.commitText(textToCommit, 1)
+            composingManager?.reset(ic)
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[OVERLAY] NextWord commitText: '$textToCommit'")
             }

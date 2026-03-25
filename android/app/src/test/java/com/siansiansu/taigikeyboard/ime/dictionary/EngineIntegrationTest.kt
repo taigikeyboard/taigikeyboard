@@ -9,7 +9,7 @@ import org.junit.Test
  *
  * Ported from iOS EngineIntegrationTests.swift
  * Tests the interaction between InputNormalizer, TaigiPhonetics,
- * ToneRestoration, and SyllableSegmenter.
+ * and ToneRestoration.
  */
 class EngineIntegrationTest {
 
@@ -60,37 +60,4 @@ class EngineIntegrationTest {
         assertEquals("restore(ká, POJ)", "ka", restored)
     }
 
-    // MARK: - C. Segmenter + Normalizer Pipeline
-
-    @Test
-    fun testSegmenterThenNormalizer_continuousInput() {
-        val segments = SyllableSegmenter.segment("gua2si7")
-        assertEquals("segment(gua2si7)", listOf("gua2", "si7"), segments)
-
-        val normalized = InputNormalizer.normalize(
-            segments.joinToString("-"), InputMode.TL
-        )
-        assertEquals("normalize(gua2-si7, TL)", "gua2si7", normalized)
-    }
-
-    @Test
-    fun testSegmenterThenNormalizer_pojInput() {
-        val segments = SyllableSegmenter.segment("chhi2ka1")
-        assertEquals("segment(chhi2ka1)", listOf("chhi2", "ka1"), segments)
-
-        val normalized = InputNormalizer.normalize(
-            segments.joinToString("-"), InputMode.POJ
-        )
-        // POJ stays in POJ form
-        assertEquals("normalize(chhi2-ka1, POJ)", "chhi2ka1", normalized)
-    }
-
-    @Test
-    fun testSegmenterThenNormalizer_singleSyllable() {
-        val segments = SyllableSegmenter.segment("lang5")
-        assertEquals("segment(lang5)", listOf("lang5"), segments)
-
-        val normalized = InputNormalizer.normalize("lang5", InputMode.TL)
-        assertEquals("normalize(lang5, TL)", "lang5", normalized)
-    }
 }

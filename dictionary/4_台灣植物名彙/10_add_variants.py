@@ -25,25 +25,24 @@ SCRIPT_NAME = "10_add_variants"
 
 def load_variant_set(filepath, logger):
     """
-    載入異用字對照表，取得：
-    1. variant_set: 所有 (字, 音節) 的配對集合（逐字拆分）
-    2. hanzi_set: 所有 (字, 音節) 的配對集合（正字/主條目，逐字拆分）
+    載入異用字對照表，以完整詞為單位儲存。
 
-    若某 (字, 音節) 同時存在於兩個集合，表示它既是異用字也是正字，
-    此時應視為正字（主條目），不標記為異用字。
+    回傳 variant_entries: list of (variant_word, syllables_tuple)
+    例如 ("復元", ("ho̍k", "guân"))
+
+    標記時以完整異用字詞做子字串比對，避免拆字造成 false positive。
+    例如「復元」不會誤標「多元化」。
     """
-    variant_set = set()
-    hanzi_set = set()
+    variant_entries = []
 
     if not os.path.exists(filepath):
         logger.warning(f"Variants file not found: {filepath}")
-        return variant_set, hanzi_set
+        return variant_entries
 
     df = pd.read_csv(filepath)
     logger.info(f"Loaded variants: {len(df)} records")
 
     for _, row in df.iterrows():
-        hanzi = str(row["hanzi"]).strip()
         variant = str(row["variant"]).strip()
         tl_field = str(row["tl"]).strip()
 
@@ -55,27 +54,11 @@ def load_variant_set(filepath, logger):
             tl = tl.strip().lower()
             if not tl:
                 continue
+            syllables = tuple(tl.replace("--", "-").split("-"))
+            variant_entries.append((variant, syllables))
 
-            # 拆分漢字（逐字）
-            variant_chars = list(variant)
-            hanzi_chars = list(hanzi) if hanzi else []
-
-            # 拆分音節（-- 先換成 -，再以 - 分隔）
-            syllables = tl.replace("--", "-").split("-")
-
-            # 逐字配對存入 variant_set
-            for i, char in enumerate(variant_chars):
-                if i < len(syllables):
-                    variant_set.add((char, syllables[i]))
-
-            # 逐字配對存入 hanzi_set
-            for i, char in enumerate(hanzi_chars):
-                if i < len(syllables):
-                    hanzi_set.add((char, syllables[i]))
-
-    logger.info(f"Unique (char, syllable) variant pairs: {len(variant_set)}")
-    logger.info(f"Unique (char, syllable) hanzi pairs: {len(hanzi_set)}")
-    return variant_set, hanzi_set
+    logger.info(f"Variant entries: {len(variant_entries)}")
+    return variant_entries
 
 
 def main():
@@ -85,32 +68,30 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # 載入異用字集合
-    variant_set, hanzi_set = load_variant_set(VARIANTS_FILE, logger)
+    variant_entries = load_variant_set(VARIANTS_FILE, logger)
 
     # 載入辭典資料
     df = pd.read_csv(INPUT_FILE)
     total_count = len(df)
     logger.info(f"Loaded dictionary: {total_count} records")
 
-    # 標記 is_variant（檢查詞條中是否包含任一異用字）
+    # 標記 is_variant（檢查詞條是否包含完整異用字詞）
     def check_is_variant(row):
         hanzi = str(row["hanzi"]).strip()
         tl = str(row["tl"]).strip().lower()
-
-        # 拆分漢字（逐字）
-        chars = list(hanzi)
-
-        # 拆分音節（-- 先換成 -，再以 - 分隔）
         syllables = tl.replace("--", "-").split("-")
 
-        # 配對檢查：只要任一 (字, 音節) 是異用字就標記
-        for i, char in enumerate(chars):
-            if i < len(syllables):
-                syllable = syllables[i]
-                key = (char, syllable)
-                # 在 variant_set 中，但不在 hanzi_set 中，才是異用字
-                if key in variant_set and key not in hanzi_set:
-                    return True
+        for variant_word, variant_syllables in variant_entries:
+            variant_len = len(variant_word)
+            # 搜尋異用字詞是否為 hanzi 的子字串
+            idx = hanzi.find(variant_word)
+            while idx != -1:
+                end_idx = idx + variant_len
+                # 比對對應位置的音節是否吻合
+                if end_idx <= len(syllables):
+                    if tuple(syllables[idx:end_idx]) == variant_syllables:
+                        return True
+                idx = hanzi.find(variant_word, idx + 1)
 
         return False
 

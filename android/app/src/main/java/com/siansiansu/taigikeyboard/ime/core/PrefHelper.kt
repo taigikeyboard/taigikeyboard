@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
@@ -12,6 +13,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -30,6 +32,11 @@ class PrefHelper(
     @Volatile
     private var cachedPrefs: Preferences? = null
 
+    // Pending-keys guard: tracks keys written to cache but not yet confirmed by DataStore.
+    // Prevents the collector from reverting local writes with stale DataStore snapshots.
+    private val lock = Any()
+    private val pendingKeys = mutableMapOf<Preferences.Key<*>, Any?>()
+
     /**
      * Load all preferences into memory cache with a single DataStore read.
      * Call once during TaigiKeyboard.onCreate() to replace multiple runBlocking calls.
@@ -39,7 +46,64 @@ class PrefHelper(
         // Keep cache in sync when preferences change
         scope.launch {
             dataStore.data.collect { prefs ->
-                cachedPrefs = prefs
+                synchronized(lock) {
+                    if (pendingKeys.isEmpty()) {
+                        // Fast path: no pending writes, accept DataStore snapshot as-is
+                        cachedPrefs = prefs
+                    } else {
+                        // Merge: start from DataStore snapshot, overlay pending values
+                        val mutable = prefs.toMutablePreferences()
+                        for ((key, value) in pendingKeys) {
+                            @Suppress("UNCHECKED_CAST")
+                            if (value != null) {
+                                (mutable as MutablePreferences)[key as Preferences.Key<Any>] = value
+                            }
+                        }
+                        // Prune pending keys that DataStore has caught up to
+                        val iter = pendingKeys.iterator()
+                        while (iter.hasNext()) {
+                            val (key, pendingValue) = iter.next()
+                            if (prefs[key] == pendingValue) {
+                                iter.remove()
+                            }
+                        }
+                        cachedPrefs = mutable.toPreferences()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun <T> updateCacheAndPersist(key: Preferences.Key<T>, value: T) {
+        synchronized(lock) {
+            pendingKeys[key] = value
+            cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                mutable[key] = value
+                cachedPrefs = mutable.toPreferences()
+            }
+        }
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[key] = value
+            }
+        }
+    }
+
+    /**
+     * Atomically update multiple keys in the cache and register them as pending.
+     * Used by Pattern C setters (inputMode/keyboardLayoutType) that batch-update multiple keys.
+     */
+    private fun updateCacheBatch(updates: Map<Preferences.Key<*>, Any>) {
+        synchronized(lock) {
+            for ((key, value) in updates) {
+                pendingKeys[key] = value
+            }
+            cachedPrefs?.toMutablePreferences()?.let { mutable ->
+                for ((key, value) in updates) {
+                    @Suppress("UNCHECKED_CAST")
+                    (mutable as MutablePreferences)[key as Preferences.Key<Any>] = value
+                }
+                cachedPrefs = mutable.toPreferences()
             }
         }
     }
@@ -56,108 +120,44 @@ class PrefHelper(
     // Advanced settings
     var settingsTheme: String
         get() = cached(PreferenceKeys.SETTINGS_THEME, "auto")
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SETTINGS_THEME] = value
-                }
-            }
-        }
+        private set(value) { updateCacheAndPersist(PreferenceKeys.SETTINGS_THEME, value) }
 
     var showAppIcon: Boolean
         get() = cached(PreferenceKeys.SHOW_APP_ICON, true)
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SHOW_APP_ICON] = value
-                }
-            }
-        }
+        private set(value) { updateCacheAndPersist(PreferenceKeys.SHOW_APP_ICON, value) }
 
     // Correction settings
     var doubleSpacePeriod: Boolean
         get() = cached(PreferenceKeys.DOUBLE_SPACE_PERIOD, true)
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.DOUBLE_SPACE_PERIOD] = value
-                }
-            }
-        }
+        private set(value) { updateCacheAndPersist(PreferenceKeys.DOUBLE_SPACE_PERIOD, value) }
 
     // Internal settings
     var versionOnInstall: String
         get() = cached(PreferenceKeys.VERSION_ON_INSTALL, AppVersionUtils.DEFAULT_VERSION_RAW)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.VERSION_ON_INSTALL] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.VERSION_ON_INSTALL, value) }
 
     var versionLastUse: String
         get() = cached(PreferenceKeys.VERSION_LAST_USE, AppVersionUtils.DEFAULT_VERSION_RAW)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.VERSION_LAST_USE] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.VERSION_LAST_USE, value) }
 
     // Keyboard settings
     var activeSubtypeId: Int
         get() = cached(PreferenceKeys.ACTIVE_SUBTYPE_ID, -1)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.ACTIVE_SUBTYPE_ID, value) }
 
     var subtypes: String
         get() = cached(PreferenceKeys.SUBTYPES, "")
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SUBTYPES] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.SUBTYPES, value) }
 
     // Looknfeel settings
     var heightFactor: String
         get() = cached(PreferenceKeys.HEIGHT_FACTOR, "normal")
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.HEIGHT_FACTOR] = value
-                }
-            }
-        }
+        private set(value) { updateCacheAndPersist(PreferenceKeys.HEIGHT_FACTOR, value) }
 
     var longPressDelay: Int
         get() = cached(PreferenceKeys.LONG_PRESS_DELAY, 300)
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.LONG_PRESS_DELAY] = value
-                }
-            }
-        }
+        private set(value) { updateCacheAndPersist(PreferenceKeys.LONG_PRESS_DELAY, value) }
 
-    // Suggestion settings
-    var suggestionEnabled: Boolean
-        get() = cached(PreferenceKeys.SUGGESTION_ENABLED, true)
-        private set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SUGGESTION_ENABLED] = value
-                }
-            }
-        }
 
     // Language settings
     var inputMode: String
@@ -170,11 +170,10 @@ class PrefHelper(
             if (value == "tps" && oldValue != "tps") {
                 if (keyboardLayoutType != "tps") {
                     layoutBeforeTps = keyboardLayoutType
-                    cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                        mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
-                        mutable[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = false
-                        cachedPrefs = mutable.toPreferences()
-                    }
+                    updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
+                        Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "tps"),
+                        Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, false)
+                    ))
                     scope.launch {
                         dataStore.edit { prefs ->
                             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
@@ -185,11 +184,10 @@ class PrefHelper(
             } else if (value != "tps" && oldValue == "tps") {
                 if (keyboardLayoutType == "tps") {
                     val restored = layoutBeforeTps
-                    cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                        mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
-                        mutable[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (restored == "phahTaigi")
-                        cachedPrefs = mutable.toPreferences()
-                    }
+                    updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
+                        Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, restored),
+                        Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, restored == "phahTaigi")
+                    ))
                     scope.launch {
                         dataStore.edit { prefs ->
                             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
@@ -199,12 +197,8 @@ class PrefHelper(
                 }
             }
 
-            // Sync cache for inputMode synchronously
-            cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                mutable[PreferenceKeys.INPUT_MODE] = value
-                cachedPrefs = mutable.toPreferences()
-            }
-            // Persist to DataStore
+            // Sync cache + persist inputMode
+            updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, value)))
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.INPUT_MODE] = value
@@ -214,85 +208,52 @@ class PrefHelper(
 
     var isTranslateSwapped: Boolean
         get() = cached(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.IS_TRANSLATE_SWAPPED, value) }
 
     var outputBothScripts: Boolean
         get() = cached(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, value)
         }
 
     // Taigi-specific settings
     var enableDoubleTapOO: Boolean
         get() = cached(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, true)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.ENABLE_DOUBLE_TAP_OO, value)
         }
 
     var enableDoubleTapNN: Boolean
         get() = cached(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, value)
         }
 
     var autoCapitalizationEnabled: Boolean
         get() = cached(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, true)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, value)
         }
 
     var isAutoSpaceEnabled: Boolean
         get() = cached(PreferenceKeys.AUTO_SPACE_ENABLED, false)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.AUTO_SPACE_ENABLED, value)
+        }
+
+    var isToolbarAutoCollapse: Boolean
+        get() = cached(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, true)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, value)
         }
 
     var fontType: String
         get() = cached(PreferenceKeys.FONT_TYPE, "openHuninn")
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.FONT_TYPE] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.FONT_TYPE, value) }
 
     var phahTaigiLayoutEnabled: Boolean
         get() = cached(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = value
-                    if (BuildConfig.DEBUG) Log.d(TAG, "[PREF] PhahTaigiLayoutEnabled set to: $value")
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value) }
 
     // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
     var keyboardLayoutType: String
@@ -306,10 +267,7 @@ class PrefHelper(
                 if (currentInputMode != "tps") {
                     inputModeBeforeTps = currentInputMode
                 }
-                cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                    mutable[PreferenceKeys.INPUT_MODE] = "tps"
-                    cachedPrefs = mutable.toPreferences()
-                }
+                updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, "tps")))
                 scope.launch {
                     dataStore.edit { prefs ->
                         prefs[PreferenceKeys.INPUT_MODE] = "tps"
@@ -317,23 +275,18 @@ class PrefHelper(
                 }
             } else if (value != "tps" && oldValue == "tps") {
                 val restored = inputModeBeforeTps
-                cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                    mutable[PreferenceKeys.INPUT_MODE] = restored
-                    cachedPrefs = mutable.toPreferences()
-                }
+                updateCacheBatch(mapOf<Preferences.Key<*>, Any>(Pair(PreferenceKeys.INPUT_MODE, restored)))
                 scope.launch {
                     dataStore.edit { prefs ->
                         prefs[PreferenceKeys.INPUT_MODE] = restored
                     }
                 }
             }
-            // Update cache synchronously so getter returns new value immediately
-            cachedPrefs?.toMutablePreferences()?.let { mutable ->
-                mutable[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
-                mutable[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = (value == "phahTaigi")
-                cachedPrefs = mutable.toPreferences()
-            }
-            // Persist to DataStore asynchronously
+            // Sync cache + persist layout type
+            updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
+                Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, value),
+                Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value == "phahTaigi")
+            ))
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
@@ -346,229 +299,105 @@ class PrefHelper(
     // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
     private var inputModeBeforeTps: String
         get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.INPUT_MODE_BEFORE_TPS] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.INPUT_MODE_BEFORE_TPS, value) }
 
     // Stores the layout before switching to TPS, so it can be restored when leaving TPS
     private var layoutBeforeTps: String
         get() = cached(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.LAYOUT_BEFORE_TPS] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.LAYOUT_BEFORE_TPS, value) }
 
     // TPS settings
     var tpsOrMapsToER: Boolean
         get() = cached(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
         set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = value
-                }
-            }
+            updateCacheAndPersist(PreferenceKeys.TPS_OR_MAPS_TO_ER, value)
         }
 
     // 詞庫開關設定
     // 教育部臺灣台語常用詞辭典（kautian）
     var moeDictEnabled: Boolean
         get() = cached(PreferenceKeys.MOE_DICT_ENABLED, true)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.MOE_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.MOE_DICT_ENABLED, value) }
 
     // 台語新詞辭庫（taigitv）
     var newwordDictEnabled: Boolean
         get() = cached(PreferenceKeys.NEWWORD_DICT_ENABLED, true)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.NEWWORD_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.NEWWORD_DICT_ENABLED, value) }
 
     // iTaigi 華台對照典（itaigi）- 預設關閉
     var itaigiDictEnabled: Boolean
         get() = cached(PreferenceKeys.ITAIGI_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.ITAIGI_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.ITAIGI_DICT_ENABLED, value) }
 
     // 台灣植物名彙（sitbut）
     var taiwanPlantDictEnabled: Boolean
         get() = cached(PreferenceKeys.SITBUT_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.SITBUT_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.SITBUT_DICT_ENABLED, value) }
 
     // 台華線頂對照典（taihoa）
     var taiHuaDictEnabled: Boolean
         get() = cached(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.TAIHOA_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.TAIHOA_DICT_ENABLED, value) }
 
     // 台日大辭典（taijit）
     var taiwanJapanDictEnabled: Boolean
         get() = cached(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.TAIJIT_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.TAIJIT_DICT_ENABLED, value) }
 
     // 台語工藝詞庫（kungge）
     var kunggeDictEnabled: Boolean
-        get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KUNGGE_DICT_ENABLED] = value
-                }
-            }
-        }
+        get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
+        set(value) { updateCacheAndPersist(PreferenceKeys.KUNGGE_DICT_ENABLED, value) }
 
     // 學科術語辭典（stti）
     var sttiDictEnabled: Boolean
-        get() = cached(PreferenceKeys.STTI_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.STTI_DICT_ENABLED] = value
-                }
-            }
-        }
+        get() = cached(PreferenceKeys.STTI_DICT_ENABLED, true)
+        set(value) { updateCacheAndPersist(PreferenceKeys.STTI_DICT_ENABLED, value) }
 
     // 腔口補充資料（khpoo）
     var khpooDictEnabled: Boolean
         get() = cached(PreferenceKeys.KHPOO_DICT_ENABLED, true)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KHPOO_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KHPOO_DICT_ENABLED, value) }
 
     // LKK漢羅合用建議用字（預設開啟）
     var lkkDictEnabled: Boolean
         get() = cached(PreferenceKeys.LKK_DICT_ENABLED, true)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.LKK_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.LKK_DICT_ENABLED, value) }
 
     // Appearance settings
     var keyHeightScale: Float
         get() = cached(PreferenceKeys.KEY_HEIGHT_SCALE, 1.0f)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_HEIGHT_SCALE, value) }
 
     var keyFontSizeScale: Float
         get() = cached(PreferenceKeys.KEY_FONT_SIZE_SCALE, 1.0f)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_FONT_SIZE_SCALE, value) }
 
     var candidateTextSizeScale: Float
         get() = cached(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, 1.0f)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, value) }
 
     var keyCornerRadius: Float
         get() = cached(PreferenceKeys.KEY_CORNER_RADIUS, 6.0f)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KEY_CORNER_RADIUS] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_CORNER_RADIUS, value) }
 
     var keyBorderWidth: Float
         get() = cached(PreferenceKeys.KEY_BORDER_WIDTH, 0.0f)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KEY_BORDER_WIDTH] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_BORDER_WIDTH, value) }
 
     var colorSettings: String
         get() = cached(PreferenceKeys.COLOR_SETTINGS, "{}")
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.COLOR_SETTINGS] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.COLOR_SETTINGS, value) }
 
     // 異用字開關（預設關閉）
     var variantEnabled: Boolean
         get() = cached(PreferenceKeys.VARIANT_DICT_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.VARIANT_DICT_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.VARIANT_DICT_ENABLED, value) }
 
     // 在來字開關（預設關閉）
     var khiin: Boolean
         get() = cached(PreferenceKeys.KHIIN_ENABLED, false)
-        set(value) {
-            scope.launch {
-                dataStore.edit { prefs ->
-                    prefs[PreferenceKeys.KHIIN_ENABLED] = value
-                }
-            }
-        }
+        set(value) { updateCacheAndPersist(PreferenceKeys.KHIIN_ENABLED, value) }
 
     /**
      * Snapshot of all dictionary-enabled flags, captured atomically from a single
@@ -632,7 +461,7 @@ class PrefHelper(
     fun observeInputMode(): Flow<String> =
         dataStore.data.map { prefs ->
             prefs[PreferenceKeys.INPUT_MODE] ?: "tl"
-        }
+        }.distinctUntilChanged()
 
     /**
      * Observes phahTaigiLayoutEnabled changes as a Flow.
@@ -641,7 +470,7 @@ class PrefHelper(
     fun observePhahTaigiLayoutEnabled(): Flow<Boolean> =
         dataStore.data.map { prefs ->
             prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: false
-        }
+        }.distinctUntilChanged()
 
     /**
      * Observes keyboardLayoutType changes as a Flow.
@@ -650,7 +479,7 @@ class PrefHelper(
     fun observeKeyboardLayoutType(): Flow<String> =
         dataStore.data.map { prefs ->
             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] ?: "phahTaigi"
-        }
+        }.distinctUntilChanged()
 
     /**
      * Migrates data from SharedPreferences to DataStore.
@@ -711,10 +540,6 @@ class PrefHelper(
                 prefs[PreferenceKeys.LONG_PRESS_DELAY] =
                     sharedPrefs.getInt("looknfeel__long_press_delay", 300)
 
-                // Suggestion settings
-                prefs[PreferenceKeys.SUGGESTION_ENABLED] =
-                    sharedPrefs.getBoolean("suggestion__enabled", true)
-
                 if (BuildConfig.DEBUG) {
                     Log.d("PrefHelper", "Migration completed successfully")
                 }
@@ -761,13 +586,13 @@ class PrefHelper(
             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "phahTaigi"
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
-            prefs[PreferenceKeys.SUGGESTION_ENABLED] = true
             prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = 1.0f
             prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = 1.0f
             prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = 1.0f
             prefs[PreferenceKeys.KEY_CORNER_RADIUS] = 6.0f
             prefs[PreferenceKeys.KEY_BORDER_WIDTH] = 0.0f
             prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = true
+            prefs[PreferenceKeys.TOOLBAR_AUTO_COLLAPSE] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
 
             if (BuildConfig.DEBUG) {

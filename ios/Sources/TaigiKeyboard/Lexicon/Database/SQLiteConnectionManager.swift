@@ -187,6 +187,11 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         return queue.sync { connection != nil }
     }
 
+    // MARK: - Constants
+
+    /// SQLITE_TRANSIENT equivalent — tells SQLite to copy the bound value immediately
+    static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
     // MARK: - Query Execution
 
     /// 在佇列中執行資料庫操作

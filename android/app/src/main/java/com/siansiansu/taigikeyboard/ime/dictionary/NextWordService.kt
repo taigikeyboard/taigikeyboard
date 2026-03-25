@@ -160,8 +160,8 @@ object NextWordService {
         dictDatabase?.let { db ->
             try {
                 // 建立詞庫過濾條件（atomic snapshot to avoid torn reads）
-                val p = prefs ?: PrefHelper(context)
-                val dictWhereCondition = buildDictWhereCondition(p.snapshotEnabledDictionaries())
+                val prefHelper = prefs ?: PrefHelper(context)
+                val dictWhereCondition = buildDictWhereCondition(prefHelper.snapshotEnabledDictionaries())
 
                 val sql = """
                     SELECT next_word, next_tl, count

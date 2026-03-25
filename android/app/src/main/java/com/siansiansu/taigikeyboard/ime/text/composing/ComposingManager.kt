@@ -1,15 +1,9 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
 import android.view.inputmethod.InputConnection
-import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
-import com.siansiansu.taigikeyboard.ime.dictionary.SyllableSegmenter
 import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
-import com.siansiansu.taigikeyboard.ime.dictionary.TrieService
-import com.siansiansu.taigikeyboard.ime.dictionary.WordPrefixChecker
 
 /**
  * Manages Taigi input composing state with rawInput as single source of truth.
@@ -20,7 +14,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.WordPrefixChecker
  * Architecture (aligned with iOS):
  * - rawInput is the single source of truth
  * - composingText is derived from rawInput via deriveDisplay() (run off main thread)
- * - deriveDisplay() does: segment → group into words → tone convert → join
+ * - deriveDisplay() does: tone convert raw input
  * - On keystroke: rawInput shown immediately as temporary composing text,
  *   then replaced with derived display once background computation completes
  * - On commit (space/enter): deriveDisplay() runs synchronously as safety fallback
@@ -69,6 +63,18 @@ class ComposingManager(
 
         selectedCandidateIndex = 0
         rawInput += char
+        composingText = rawInput
+        displayDirty = true
+        updateComposingText(ic)
+    }
+
+    /**
+     * Replace the last character of rawInput with a new string.
+     * Used by palatalization auto-correct.
+     */
+    fun replaceLastCharacter(replacement: String, ic: InputConnection) {
+        if (!isComposing || rawInput.isEmpty()) return
+        rawInput = rawInput.dropLast(1) + replacement
         composingText = rawInput
         displayDirty = true
         updateComposingText(ic)
@@ -194,9 +200,9 @@ class ComposingManager(
     /**
      * Derive display text from raw input.
      *
-     * Segments continuous input into syllables, groups into words via dictionary lookup,
-     * converts each to tone-marked form, joins within words with hyphens and between
-     * words with spaces. Explicit user hyphens (trailing "-") are preserved as-is.
+     * Converts raw input to tone-marked form via ToneConverter.
+     * ToneConverter already handles hyphen-separated syllables internally
+     * (splits by "-", converts each syllable, rejoins with "-").
      *
      * Aligned with iOS ComposingManager.deriveDisplay().
      */
@@ -206,56 +212,7 @@ class ComposingManager(
         // TPS input: display as-is (TPS symbols are already visual, no tone conversion needed)
         if (TPSConverter.containsTPS(raw)) return raw
 
-        // Create checker inline (matching iOS ComposingManager.deriveDisplay)
-        val prefix = DictionaryConstants.triePrefix(inputMode)
-        val checker: WordPrefixChecker? = if (TrieService.isReady) {
-            { key -> TrieService.prefixSearch(prefix + key, 1).isNotEmpty() }
-        } else null
-        val syllables = SyllableSegmenter.segment(raw, wordPrefixChecker = checker, mode = inputMode)
-        val groups = SyllableSegmenter.groupIntoWords(syllables, checker)
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DISPLAY] raw='$raw' syllables=$syllables groups=${groups.map { it.joinToString("+") }}")
-        }
-
-        // Convert each group: tone-convert syllables, join within group with "-",
-        // join groups with " ". Explicit hyphens (trailing "-") are preserved.
-        val wordDisplays = mutableListOf<String>()
-        for (group in groups) {
-            val parts = mutableListOf<String>()
-            for (syllable in group) {
-                if (syllable.isEmpty()) continue
-                if (syllable.endsWith("-")) {
-                    val base = syllable.dropLast(1)
-                    parts.add(ToneConverter.convertToToneMarks(base, inputMode, enableDoubleTapOO, enableDoubleTapNN) + "-")
-                } else {
-                    parts.add(ToneConverter.convertToToneMarks(syllable, inputMode, enableDoubleTapOO, enableDoubleTapNN))
-                }
-            }
-            // Join parts with "-", but skip separator after explicit-hyphen parts
-            val groupDisplay = StringBuilder()
-            for ((j, part) in parts.withIndex()) {
-                if (j > 0 && !parts[j - 1].endsWith("-")) {
-                    groupDisplay.append("-")
-                }
-                groupDisplay.append(part)
-            }
-            wordDisplays.add(groupDisplay.toString())
-        }
-
-        // Join word groups, but not after explicit-hyphen-ending groups
-        val display = StringBuilder()
-        for ((i, word) in wordDisplays.withIndex()) {
-            if (i > 0 && !wordDisplays[i - 1].endsWith("-")) {
-                display.append(" ")
-            }
-            display.append(word)
-        }
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DISPLAY] result='$display'")
-        }
-        return display.toString()
+        return ToneConverter.convertToToneMarks(raw, inputMode, enableDoubleTapOO, enableDoubleTapNN)
     }
 
     /**
@@ -265,7 +222,4 @@ class ComposingManager(
         ic.setComposingText(composingText, 1)
     }
 
-    companion object {
-        private const val TAG = "ComposingManager"
-    }
 }

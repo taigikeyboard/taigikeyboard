@@ -27,10 +27,16 @@ extension ActionHandler {
             inputMode: settings.inputMode
         )
 
-        // TPS layout: auto-select ㄇ/ㆬ and ㄫ/ㆭ/ㄥ based on composing context
+        // TPS layout: context-aware character adjustments
         let finalChar: String
         if settings.inputMode == .tps {
-            finalChar = TPSConverter.adjustTPSInitialKey(processedChar, afterRawInput: composingManager.rawInput)
+            var adjusted = TPSConverter.adjustTPSInitialKey(processedChar, afterRawInput: composingManager.rawInput)
+            adjusted = TPSConverter.adjustTPSNasalizedVowelKey(adjusted, afterRawInput: composingManager.rawInput)
+            // Palatalization auto-correct: ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ → ㄐ/ㄑ/ㄒ/ㆢ
+            if let replacement = TPSConverter.palatalizationReplacement(forIncoming: adjusted, lastRawChar: composingManager.rawInput.last) {
+                composingManager.replaceLastCharacter(with: replacement)
+            }
+            finalChar = adjusted
         } else {
             finalChar = processedChar
         }
@@ -121,6 +127,18 @@ extension ActionHandler {
             return true
         }
 
+        // TPS mode: space as tone 1/4 syllable boundary marker.
+        // If the current syllable has no explicit tone mark, space adds a syllable
+        // boundary and stays in composing mode (like Microsoft Zhuyin's space for tone 1).
+        // If the syllable already has a tone mark or ends with space, fall through to commit.
+        if settings.inputMode == .tps && composingManager.isComposing {
+            if let lastChar = composingManager.rawInput.last,
+               !TPSConverter.isTPSToneMark(lastChar) && lastChar != " " {
+                composingManager.appendCharacter(" ")
+                return true
+            }
+        }
+
         // 以下為台語模式（POJ/TL）的邏輯
         if self.composingManager.isComposing {
             // 在確認之前先取得組字文字
@@ -200,14 +218,15 @@ extension ActionHandler {
 
         // 以下為台語模式（POJ/TL）的邏輯
         if composingManager.isComposing {
-            let committedText = composingManager.composingText
-            // Capture rawInput before commitComposition clears it
+            // Capture rawInput before commit clears it
             let capturedRawInput = composingManager.rawInput
 
             if composingManager.selectedCandidateIndex == 0 {
-                // 選中組字文字，直接確認
-                composingManager.commitComposition()
-                handleEnterNextWordPrediction(committedText: committedText, rawInput: capturedRawInput)
+                // Enter at index 0: commit raw input (literal keystrokes)
+                // This allows English words to pass through without tone conversion
+                // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
+                composingManager.commitRawInput()
+                handleEnterNextWordPrediction(committedText: capturedRawInput, rawInput: capturedRawInput)
             } else {
                 // 選中候選詞，確認該候選詞
                 let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
@@ -216,7 +235,7 @@ extension ActionHandler {
 
             // 羅馬字模式：自動加空白（字尾非連字符時）
             if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
-                if !committedText.hasSuffix("-") {
+                if !capturedRawInput.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")
                 }
             }

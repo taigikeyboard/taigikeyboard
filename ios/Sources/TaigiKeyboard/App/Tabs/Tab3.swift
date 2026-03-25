@@ -134,9 +134,7 @@ struct Tab3: View {
             }
             .navigationTitle(languageManager.text(Tab3Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
-            .onTapGesture {
-                isSearchFocused = false
-            }
+            .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
                     Divider()

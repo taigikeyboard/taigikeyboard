@@ -180,8 +180,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
 
         let version = getVersion()
-        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        sqlite3_bind_text(stmt, 1, version, -1, TRANSIENT)
+        sqlite3_bind_text(stmt, 1, version, -1, SQLiteConnectionManager.sqliteTransient)
         sqlite3_step(stmt)
         sqlite3_finalize(stmt)
     }
@@ -230,8 +229,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        sqlite3_bind_text(stmt, 1, word, -1, TRANSIENT)
+        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
@@ -274,8 +272,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-        sqlite3_bind_text(stmt, 1, word, -1, TRANSIENT)
+        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
 
         if sqlite3_step(stmt) == SQLITE_ROW {
             let count = Int(sqlite3_column_int(stmt, 0))
@@ -314,9 +311,8 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
         for (index, word) in words.enumerated() {
-            sqlite3_bind_text(stmt, Int32(index + 1), word, -1, TRANSIENT)
+            sqlite3_bind_text(stmt, Int32(index + 1), word, -1, SQLiteConnectionManager.sqliteTransient)
         }
 
         var result: [String: FrequencyData] = [:]
@@ -492,8 +488,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
                 defer { sqlite3_finalize(stmt) }
 
-                let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
-                sqlite3_bind_text(stmt, 1, word, -1, TRANSIENT)
+                sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
                 sqlite3_bind_int(stmt, 2, Int32(count))
 
                 if sqlite3_step(stmt) != SQLITE_DONE {

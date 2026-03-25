@@ -7,6 +7,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -91,8 +92,8 @@ object LexiconService {
         val db = database ?: throw DictionaryError.DatabaseNotAvailable
 
         // 讀取搜尋設定（atomic snapshot to avoid torn reads across multiple getters）
-        val p = prefs ?: PrefHelper(context)
-        val dictSnapshot = p.snapshotEnabledDictionaries()
+        val prefHelper = prefs ?: PrefHelper(context)
+        val dictSnapshot = prefHelper.snapshotEnabledDictionaries()
         val enabledDicts = EnabledDictionaries(
             kautian = dictSnapshot.moe,
             taigitv = dictSnapshot.newword,
@@ -137,7 +138,7 @@ object LexiconService {
 
             // TPS ㄜ expansion: also search "or" variant when toggle ON
             val allSystemWords = if (
-                TPSConverter.containsTPS(input) && p.tpsOrMapsToER
+                TPSConverter.containsTPS(input) && prefHelper.tpsOrMapsToER
             ) {
                 val tlInput = TPSConverter.toTL(input)
                 if (tlInput.contains("er")) {
@@ -162,6 +163,8 @@ object LexiconService {
                 Log.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
             }
             result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[SEARCH] Query failed", e)
@@ -487,11 +490,9 @@ object LexiconService {
         val db = database ?: return
 
         val configurations = listOf(
-            "PRAGMA journal_mode=DELETE;",
             "PRAGMA cache_size=10000;",
             "PRAGMA temp_store=MEMORY;",
-            "PRAGMA mmap_size=0;",
-            "PRAGMA synchronous=NORMAL;"
+            "PRAGMA mmap_size=0;"
         )
 
         configurations.forEach { config ->
@@ -707,8 +708,8 @@ object LexiconService {
 
         if (allRowIds.isEmpty()) return@withContext emptyList()
 
-        val p = PrefHelper(context)
-        val dictSnapshot = p.snapshotEnabledDictionaries()
+        val prefHelper = PrefHelper(context)
+        val dictSnapshot = prefHelper.snapshotEnabledDictionaries()
         val enabledDicts = EnabledDictionaries(
             kautian = dictSnapshot.moe,
             taigitv = dictSnapshot.newword,
@@ -843,8 +844,8 @@ object LexiconService {
         val results = mutableListOf<DictionarySearchResult>()
 
         // Build dictionary filter condition
-        val p = PrefHelper(context)
-        val dictSnapshot = p.snapshotEnabledDictionaries()
+        val prefHelper = PrefHelper(context)
+        val dictSnapshot = prefHelper.snapshotEnabledDictionaries()
         val enabledDicts = EnabledDictionaries(
             kautian = dictSnapshot.moe,
             taigitv = dictSnapshot.newword,

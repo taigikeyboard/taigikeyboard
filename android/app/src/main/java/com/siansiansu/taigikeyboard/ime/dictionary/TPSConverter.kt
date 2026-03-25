@@ -55,6 +55,7 @@ object TPSConverter {
         "ㆩ" to "ann",
         "ㆥ" to "enn",
         "ㆪ" to "inn",
+        "ㆳ" to "inn",  // Vertical glyph variant of ㆪ (same symbol, duplicate Unicode encoding)
         "ㆧ" to "onn",
         "ㆫ" to "unn",
         // Compound vowels
@@ -192,6 +193,13 @@ object TPSConverter {
     /** Stop consonants excluded from vowel matching (already consumed as checked tone finals) */
     private val stopConsonants = setOf("p", "t", "k", "h")
 
+    /**
+     * Non-palatalized affricates that cannot be followed by ㄧ.
+     * In TPS, [ts/tsh/s/j] + [i] must use the palatalized compound initials
+     * ㄐㄧ/ㄑㄧ/ㄒㄧ/ㆢㄧ, not the non-palatalized forms ㄗ/ㄘ/ㄙ/ㆡ + ㄧ.
+     */
+    private val nonPalatalizedAffricates = setOf("ㄗ", "ㄘ", "ㄙ", "ㆡ")
+
     // ========================================
     // MARK: - TPS character set (for detection)
     // ========================================
@@ -207,6 +215,20 @@ object TPSConverter {
     }
 
     // ========================================
+    // MARK: - Tone Mark Detection
+    // ========================================
+
+    /** Non-entering tone mark characters only (ˋ ˪ ˊ ˇ ˫ ˙ ˆ).
+     *  Does NOT include entering tone finals (ㆴ ㆵ ㆻ ㆷ).
+     *  Used to detect whether a syllable already has an explicit tone specified. */
+    private val toneMarkCharSet: Set<Char> by lazy {
+        toneMarks.flatMap { (tps, _) -> tps.toList() }.toSet()
+    }
+
+    /** Returns true if the character is a non-entering TPS tone mark (ˋ ˪ ˊ ˇ ˫ ˙ ˆ). */
+    fun isTPSToneMark(char: Char): Boolean = char in toneMarkCharSet
+
+    // ========================================
     // MARK: - TPS Initial Key Auto-Selection
     // ========================================
 
@@ -219,6 +241,39 @@ object TPSConverter {
         chars.addAll(listOf('ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'))
         chars
     }
+
+    // ========================================
+    // Palatalization auto-correct
+    // ========================================
+
+    /** Palatalization mapping: non-palatalized → palatalized affricate. */
+    private val palatalizationMap = mapOf(
+        'ㄗ' to "ㄐ",
+        'ㄘ' to "ㄑ",
+        'ㄙ' to "ㄒ",
+        'ㆡ' to "ㆢ",
+    )
+
+    /** Characters that trigger palatalization of the preceding affricate. */
+    private val palatalizationTriggers = setOf('ㄧ', 'ㆪ')
+
+    /**
+     * Returns the palatalized replacement for the last character of rawInput,
+     * or null if no replacement is needed.
+     *
+     * When user types ㄧ or ㆪ after a non-palatalized affricate (ㄗ/ㄘ/ㄙ/ㆡ),
+     * the affricate should be auto-corrected to its palatalized form (ㄐ/ㄑ/ㄒ/ㆢ).
+     */
+    fun palatalizationReplacement(incoming: String, lastRawChar: Char?): String? {
+        if (lastRawChar == null) return null
+        val first = incoming.firstOrNull() ?: return null
+        if (first !in palatalizationTriggers) return null
+        return palatalizationMap[lastRawChar]
+    }
+
+    // ========================================
+    // ㄇ/ㄫ auto-select
+    // ========================================
 
     /**
      * Returns context-adjusted TPS character for ㄇ/ㄫ keys.
@@ -240,6 +295,21 @@ object TPSConverter {
         if (char == "ㄇ") return "ㆬ"
         // char == "ㄫ": after ㄧ → ㄥ (ing), otherwise → ㆭ
         return if (lastChar == 'ㄧ') "ㄥ" else "ㆭ"
+    }
+
+    // ========================================
+    // ㆮ/ㆯ auto-correct
+    // ========================================
+
+    /**
+     * Auto-correct ㆮ (ainn) → ㆯ (aunn) when preceded by ㄧ.
+     * "iainn" is not a valid Taiwanese final; only "iaunn" exists.
+     * Only called when layoutType == "tps".
+     */
+    fun adjustTPSNasalizedVowelKey(char: String, afterRawInput: String): String {
+        if (char != "ㆮ") return char
+        val lastChar = afterRawInput.lastOrNull() ?: return char
+        return if (lastChar == 'ㄧ') "ㆯ" else char
     }
 
     // ========================================
@@ -273,6 +343,13 @@ object TPSConverter {
 
         var remaining = tps
         val result = StringBuilder()
+        // Track syllable state with separate consonant/vowel flags.
+        // In TPS, consonant codas are encoded in entering tone symbols (ㆴㆵㆻㆷ),
+        // and syllabic nasals use vowel-table characters (ㆬ, ㆭ).
+        // So: consonant mid-syllable = new syllable; tone after consonant-only = invalid syllable.
+        var hasConsonant = false
+        var hasVowel = false
+        var lastConsonantTPS = ""
 
         while (remaining.isNotEmpty()) {
             var matched = false
@@ -282,6 +359,9 @@ object TPSConverter {
                 if (remaining.startsWith(tpsPattern)) {
                     result.append(tlEnding).append(tone)
                     remaining = remaining.substring(tpsPattern.length)
+                    hasConsonant = false
+                    hasVowel = false
+                    lastConsonantTPS = ""
                     matched = true
                     break
                 }
@@ -289,10 +369,18 @@ object TPSConverter {
             if (matched) continue
 
             // 2. Try tone marks
+            // If consonant-only (no vowel), insert space — initial + tone is not a valid syllable.
+            // e.g. ㄫˊ → "ng 5" (not "ng5"), but ㆭˊ → "ng5" (ㆭ is a vowel).
             for ((tpsPattern, tone) in toneMarks) {
                 if (remaining.startsWith(tpsPattern)) {
+                    if (hasConsonant && !hasVowel) {
+                        result.append(' ')
+                    }
                     result.append(tone)
                     remaining = remaining.substring(tpsPattern.length)
+                    hasConsonant = false
+                    hasVowel = false
+                    lastConsonantTPS = ""
                     matched = true
                     break
                 }
@@ -300,10 +388,17 @@ object TPSConverter {
             if (matched) continue
 
             // 3. Try consonants (compound first, table is pre-sorted)
+            // If mid-syllable, insert space boundary first — consonant starts a new syllable.
             for ((tpsPattern, tl) in consonants) {
                 if (remaining.startsWith(tpsPattern)) {
+                    if (hasConsonant || hasVowel) {
+                        result.append(' ')
+                    }
                     result.append(tl)
                     remaining = remaining.substring(tpsPattern.length)
+                    hasConsonant = true
+                    hasVowel = false
+                    lastConsonantTPS = tpsPattern
                     matched = true
                     break
                 }
@@ -313,8 +408,16 @@ object TPSConverter {
             // 4. Try vowels (compound first, table is pre-sorted)
             for ((tpsPattern, tl) in vowels) {
                 if (remaining.startsWith(tpsPattern)) {
+                    // Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) + ㄧ is invalid TPS.
+                    // Must use compound initials ㄐㄧ/ㄑㄧ/ㄒㄧ/ㆢㄧ instead.
+                    if (tpsPattern == "ㄧ" && lastConsonantTPS in nonPalatalizedAffricates) {
+                        result.append(' ')
+                        hasConsonant = false
+                        lastConsonantTPS = ""
+                    }
                     result.append(tl)
                     remaining = remaining.substring(tpsPattern.length)
+                    hasVowel = true
                     matched = true
                     break
                 }
@@ -324,6 +427,9 @@ object TPSConverter {
             // 5. Unmatched char: preserve as-is (spaces, punctuation, etc.)
             result.append(remaining[0])
             remaining = remaining.substring(1)
+            hasConsonant = false
+            hasVowel = false
+            lastConsonantTPS = ""
         }
 
         // Post-process: oo before stop tone → o (e.g., "ook4" → "ok4", "oot8" → "ot8")
@@ -357,6 +463,29 @@ object TPSConverter {
 
         val syllables = tl.split("-")
         return syllables.joinToString(" ") { convertSyllableToTPS(it, orMapsToER) }
+    }
+
+    /**
+     * Convert display-form romanization (with diacritical tone marks) to TPS.
+     *
+     * The dictionary stores romanization with diacritics (e.g., "n̂g", "guá").
+     * This method first normalizes to numeric TL (e.g., "ng5", "gua2"),
+     * then converts to TPS.
+     *
+     * @param displayRoman Display-form romanization with diacritical tone marks
+     * @param orMapsToER true: or → ㄜ, false: or → ㄛ
+     * @return TPS string
+     */
+    fun toTPSFromDisplay(displayRoman: String, orMapsToER: Boolean = false): String {
+        if (displayRoman.isEmpty()) return ""
+
+        val numericTL = displayRoman.split("-").joinToString("-") { syllable ->
+            val (bare, tone) = TaigiPhonetics.stripToneMark(syllable)
+            val normalized = TaigiPhonetics.normalizeToTL(bare.lowercase())
+            normalized + tone
+        }
+
+        return toTPS(numericTL, orMapsToER)
     }
 
     /**

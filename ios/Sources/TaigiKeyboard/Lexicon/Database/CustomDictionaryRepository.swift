@@ -121,7 +121,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let backfillSQL = "SELECT id, roman FROM custom_dictionary;"
             var backfillStmt: OpaquePointer?
             if sqlite3_prepare_v2(db, backfillSQL, -1, &backfillStmt, nil) == SQLITE_OK {
-                let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
                 while sqlite3_step(backfillStmt) == SQLITE_ROW {
                     let id = String(cString: sqlite3_column_text(backfillStmt, 0))
                     let roman = String(cString: sqlite3_column_text(backfillStmt, 1))
@@ -171,7 +171,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let notone = CustomDictionaryService.generateNotone(entry.roman)
             let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
 
-            let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
@@ -231,7 +231,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
             defer { sqlite3_finalize(stmt) }
 
-            let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             let lowered = romanPrefix.lowercased()
             sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 2, lowered, -1, TRANSIENT)
@@ -273,7 +273,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 }
                 defer { sqlite3_finalize(stmt) }
 
-                let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
                 let lowered = romanPrefix.lowercased()
                 let notoneKey = (notonePrefix ?? romanPrefix).lowercased()
                 sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
@@ -305,7 +305,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
             defer { sqlite3_finalize(stmt) }
 
-            let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             sqlite3_bind_text(stmt, 1, id, -1, TRANSIENT)
             sqlite3_step(stmt)
         }
@@ -372,7 +372,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             """
 
             var insertedCount = 0
-            let TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
 
             for entry in entries {
                 let key = "\(entry.roman)|\(entry.hanzi)"

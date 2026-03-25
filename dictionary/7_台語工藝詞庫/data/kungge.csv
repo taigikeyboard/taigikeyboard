@@ -11,7 +11,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 毛,moo,384,mo͘,moo1,moo1,moo,moo,,,True,False
 堆,tui,350,tui,tui1,tui1,tui,tui,,,True,False
 塑,sok,300,sok,sok4,sok4,sok,sok,,,True,False
-摃,kòng,300,kòng,kong3,kong3,kong,kong,,,True,True
+摃,kòng,300,kòng,kong3,kong3,kong,kong,,,True,False
 貼,tah,300,tah,tah4,tah4,tah,tah,,,True,False
 敲,khà,200,khà,kha3,kha3,kha,kha,,,True,False
 疊,tha̍h,200,tha̍h,thah8,thah8,thah,thah,,,True,False
@@ -26,7 +26,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 九層,káu-tsan,25,káu-chan,kau2tsan1,kau2chan1,kautsan,kauchan,kt,kc,True,False
 令旗,līng-kî,25,lēng-kî,ling7ki5,leng7ki5,lingki,lengki,lk,lk,True,False
 作椅,tsoh-í,25,choh-í,tsoh4i2,choh4i2,tsohi,chohi,ti,ci,True,False
-保青,pó-tshenn,25,pó-chheⁿ,po2tshenn1,po2chhenn1,potshenn,pochhenn,pt,pc,True,False
+保青,pó-tshenn,25,pó-chheⁿ,po2tshenn1,po2chhenn1,potshenn,pochhenn,pt,pc,True,True
 修光,siu-kng,25,siu-kng,siu1kng1,siu1kng1,siukng,siukng,sk,sk,True,False
 倒角,tò-kak,25,tò-kak,to3kak4,to3kak4,tokak,tokak,tk,tk,True,False
 傍仔,png-á,25,png-á,png1a2,png1a2,pnga,pnga,pa,pa,True,False
@@ -39,7 +39,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 切檯,tshiat-tâi,25,chhiat-tâi,tshiat4tai5,chhiat4tai5,tshiattai,chhiattai,tt,ct,True,False
 切針,tshiat-tsiam,25,chhiat-chiam,tshiat4tsiam1,chhiat4chiam1,tshiattsiam,chhiatchiam,tt,cc,True,False
 刮刀,kueh-to,25,koeh-to,kueh4to1,koeh4to1,kuehto,koehto,kt,kt,True,False
-刮青,kueh-tshenn,25,koeh-chheⁿ,kueh4tshenn1,koeh4chhenn1,kuehtshenn,koehchhenn,kt,kc,True,False
+刮青,kueh-tshenn,25,koeh-chheⁿ,kueh4tshenn1,koeh4chhenn1,kuehtshenn,koehchhenn,kt,kc,True,True
 刻字,khik-jī,25,khek-jī,khik4ji7,khek4ji7,khikji,khekji,kj,kj,True,False
 刻花,khik-hue,25,khek-hoe,khik4hue1,khek4hoe1,khikhue,khekhoe,kh,kh,True,False
 剪仔,tsián-á,25,chián-á,tsian2a2,chian2a2,tsiana,chiana,ta,ca,True,False
@@ -48,7 +48,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 剾枋,khau-pang,25,khau-pang,khau1pang1,khau1pang1,khaupang,khaupang,kp,kp,True,False
 劍指,kiàm-kí,25,kiàm-kí,kiam3ki2,kiam3ki2,kiamki,kiamki,kk,kk,True,False
 劍獅,kiàm-sai,25,kiàm-sai,kiam3sai1,kiam3sai1,kiamsai,kiamsai,ks,ks,True,False
-包布,pau-pòo,25,pau-pò͘,pau1poo3,pau1poo3,paupoo,paupoo,pp,pp,True,False
+包布,pau-pòo,25,pau-pò͘,pau1poo3,pau1poo3,paupoo,paupoo,pp,pp,True,True
 包管,pau-kóng,25,pau-kóng,pau1kong2,pau1kong2,paukong,paukong,pk,pk,True,False
 化色,huà-sik,25,hòa-sek,hua3sik4,hoa3sek4,huasik,hoasek,hs,hs,True,False
 北式,pak-sik,25,pak-sek,pak4sik4,pak4sek4,paksik,paksek,ps,ps,True,False
@@ -58,9 +58,9 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 印花,ìn-hue,25,ìn-hoe,in3hue1,in3hoe1,inhue,inhoe,ih,ih,True,False
 卵殼,nn̄g-khak,25,nn̄g-khak,nng7khak4,nng7khak4,nngkhak,nngkhak,nk,nk,True,False
 古錢,kóo-tsînn,25,kó͘-chîⁿ,koo2tsinn5,koo2chinn5,kootsinn,koochinn,kt,kc,True,False
-吊夾,tiàu-ngeh,25,tiàu-ngeh,tiau3ngeh4,tiau3ngeh4,tiaungeh,tiaungeh,tn,tn,True,True
-吊花,tiàu-hue,25,tiàu-hoe,tiau3hue1,tiau3hoe1,tiauhue,tiauhoe,th,th,True,True
-吊鑽,tiàu-tsǹg,25,tiàu-chǹg,tiau3tsng3,tiau3chng3,tiautsng,tiauchng,tt,tc,True,True
+吊夾,tiàu-ngeh,25,tiàu-ngeh,tiau3ngeh4,tiau3ngeh4,tiaungeh,tiaungeh,tn,tn,True,False
+吊花,tiàu-hue,25,tiàu-hoe,tiau3hue1,tiau3hoe1,tiauhue,tiauhoe,th,th,True,False
+吊鑽,tiàu-tsǹg,25,tiàu-chǹg,tiau3tsng3,tiau3chng3,tiautsng,tiauchng,tt,tc,True,False
 名牌,bîng-pâi,25,bêng-pâi,bing5pai5,beng5pai5,bingpai,bengpai,bp,bp,True,False
 吟龍,gîm-lîng,25,gîm-lêng,gim5ling5,gim5leng5,gimling,gimleng,gl,gl,True,False
 喙舌,tshuì-tsi̍h,25,chhùi-chi̍h,tshui3tsih8,chhui3chih8,tshuitsih,chhuichih,tt,cc,True,False
@@ -96,7 +96,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 定闊,tīng-khuah,25,tēng-khoah,ting7khuah4,teng7khoah4,tingkhuah,tengkhoah,tk,tk,True,False
 寄線,kià-suànn,25,kià-sòaⁿ,kia3suann3,kia3soann3,kiasuann,kiasoann,ks,ks,True,False
 寶扇,pó-sìnn,25,pó-sìⁿ,po2sinn3,po2sinn3,posinn,posinn,ps,ps,True,False
-封帽,hong-bō,25,hong-bō,hong1bo7,hong1bo7,hongbo,hongbo,hb,hb,True,False
+封帽,hong-bō,25,hong-bō,hong1bo7,hong1bo7,hongbo,hongbo,hb,hb,True,True
 對破,tuì-phuà,25,tùi-phòa,tui3phua3,tui3phoa3,tuiphua,tuiphoa,tp,tp,True,False
 小旦,sió-tuànn,25,sió-tòaⁿ,sio2tuann3,sio2toann3,siotuann,siotoann,st,st,True,False
 小生,sió-sing,25,sió-seng,sio2sing1,sio2seng1,siosing,sioseng,ss,ss,True,False
@@ -104,9 +104,9 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 尺鎚,tshioh-thuî,25,chhioh-thûi,tshioh4thui5,chhioh4thui5,tshiohthui,chhiohthui,tt,ct,True,True
 屏風,pîn-hong,25,pîn-hong,pin5hong1,pin5hong1,pinhong,pinhong,ph,ph,True,False
 巧雕,khá-tiau,25,khá-tiau,kha2tiau1,kha2tiau1,khatiau,khatiau,kt,kt,True,False
-布枋,pòo-pang,25,pò͘-pang,poo3pang1,poo3pang1,poopang,poopang,pp,pp,True,False
-布碖,pòo-lún,25,pò͘-lún,poo3lun2,poo3lun2,poolun,poolun,pl,pl,True,False
-帶鋸,tuà-kù,25,tòa-kù,tua3ku3,toa3ku3,tuaku,toaku,tk,tk,True,False
+布枋,pòo-pang,25,pò͘-pang,poo3pang1,poo3pang1,poopang,poopang,pp,pp,True,True
+布碖,pòo-lún,25,pò͘-lún,poo3lun2,poo3lun2,poolun,poolun,pl,pl,True,True
+帶鋸,tuà-kù,25,tòa-kù,tua3ku3,toa3ku3,tuaku,toaku,tk,tk,True,True
 帶騎,tài-khiâ,25,tài-khiâ,tai3khia5,tai3khia5,taikhia,taikhia,tk,tk,True,False
 平尺,phînn-tshioh,25,phîⁿ-chhioh,phinn5tshioh4,phinn5chhioh4,phinntshioh,phinnchhioh,pt,pc,True,False
 平枋,pênn-pang,25,pêⁿ-pang,penn5pang1,penn5pang1,pennpang,pennpang,pp,pp,True,False
@@ -124,13 +124,13 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 徛柱,khiā-thiāu,25,khiā-thiāu,khia7thiau7,khia7thiau7,khiathiau,khiathiau,kt,kt,True,False
 徛鏡,khiā-kiànn,25,khiā-kiàⁿ,khia7kiann3,khia7kiann3,khiakiann,khiakiann,kk,kk,True,False
 戕仔,tshiâng-á,25,chhiâng-á,tshiang5a2,chhiang5a2,tshianga,chhianga,ta,ca,True,False
-戰甲,tsiàn-kah,25,chiàn-kah,tsian3kah4,chian3kah4,tsiankah,chiankah,tk,ck,True,False
+戰甲,tsiàn-kah,25,chiàn-kah,tsian3kah4,chian3kah4,tsiankah,chiankah,tk,ck,True,True
 扁擔,pún-tann,25,pún-taⁿ,pun2tann1,pun2tann1,puntann,puntann,pt,pt,True,False
 手包,tshiú-pau,25,chhiú-pau,tshiu2pau1,chhiu2pau1,tshiupau,chhiupau,tp,cp,True,False
 手裒,tshiú-pôo,25,chhiú-pô͘,tshiu2poo5,chhiu2poo5,tshiupoo,chhiupoo,tp,cp,True,False
 手銬,tshiú-khàu,25,chhiú-khàu,tshiu2khau3,chhiu2khau3,tshiukhau,chhiukhau,tk,ck,True,False
 托燈,thuh-ting,25,thuh-teng,thuh4ting1,thuh4teng1,thuhting,thuhteng,tt,tt,True,True
-批塗,phi-thôo,25,phi-thô͘,phi1thoo5,phi1thoo5,phithoo,phithoo,pt,pt,True,True
+批塗,phi-thôo,25,phi-thô͘,phi1thoo5,phi1thoo5,phithoo,phithoo,pt,pt,True,False
 披土,phi-thôo,25,phi-thô͘,phi1thoo5,phi1thoo5,phithoo,phithoo,pt,pt,True,True
 抹刀,buah-to,25,boah-to,buah4to1,boah4to1,buahto,boahto,bt,bt,True,False
 抾板,khioh-pán,25,khioh-pán,khioh4pan2,khioh4pan2,khiohpan,khiohpan,kp,kp,True,False
@@ -152,7 +152,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 掠花,lia̍h-hue,25,lia̍h-hoe,liah8hue1,liah8hoe1,liahhue,liahhoe,lh,lh,True,False
 接剾,tsiap-khau,25,chiap-khau,tsiap4khau1,chiap4khau1,tsiapkhau,chiapkhau,tk,ck,True,False
 接線,tsiap-suànn,25,chiap-sòaⁿ,tsiap4suann3,chiap4soann3,tsiapsuann,chiapsoann,ts,cs,True,False
-摃空,kòng-khang,25,kòng-khang,kong3khang1,kong3khang1,kongkhang,kongkhang,kk,kk,True,True
+摃空,kòng-khang,25,kòng-khang,kong3khang1,kong3khang1,kongkhang,kongkhang,kk,kk,True,False
 撋塗,nuá-thôo,25,nóa-thô͘,nua2thoo5,noa2thoo5,nuathoo,noathoo,nt,nt,True,False
 擠金,tsik-kim,25,chek-kim,tsik4kim1,chek4kim1,tsikkim,chekkim,tk,ck,True,False
 攕草,tshiám-tshó,25,chhiám-chhó,tshiam2tsho2,chhiam2chho2,tshiamtsho,chhiamchho,tt,cc,True,False
@@ -165,7 +165,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 文轎,bûn-kiō,25,bûn-kiō,bun5kio7,bun5kio7,bunkio,bunkio,bk,bk,True,False
 旗頭,kî-thâu,25,kî-thâu,ki5thau5,ki5thau5,kithau,kithau,kt,kt,True,False
 晟手,tshiânn-tshiú,25,chhiâⁿ-chhiú,tshiann5tshiu2,chhiann5chhiu2,tshianntshiu,chhiannchhiu,tt,cc,True,False
-月桃,ge̍h-thô,25,ge̍h-thô,geh8tho5,geh8tho5,gehtho,gehtho,gt,gt,True,True
+月桃,ge̍h-thô,25,ge̍h-thô,geh8tho5,geh8tho5,gehtho,gehtho,gt,gt,True,False
 朝天,tiâu-thian,25,tiâu-thian,tiau5thian1,tiau5thian1,tiauthian,tiauthian,tt,tt,True,False
 木尺,bo̍k-tshioh,25,bo̍k-chhioh,bok8tshioh4,bok8chhioh4,boktshioh,bokchhioh,bt,bc,True,False
 本尊,pún-tsun,25,pún-chun,pun2tsun1,pun2chun1,puntsun,punchun,pt,pc,True,False
@@ -184,7 +184,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 桶梯,tháng-thui,25,tháng-thui,thang2thui1,thang2thui1,thangthui,thangthui,tt,tt,True,False
 梅花,muî-hue,25,mûi-hoe,mui5hue1,mui5hoe1,muihue,muihoe,mh,mh,True,False
 梳仔,se-á,25,se-á,se1a2,se1a2,sea,sea,sa,sa,True,False
-棉布,mî-pòo,25,mî-pò͘,mi5poo3,mi5poo3,mipoo,mipoo,mp,mp,True,False
+棉布,mî-pòo,25,mî-pò͘,mi5poo3,mi5poo3,mipoo,mipoo,mp,mp,True,True
 棉線,mî-suànn,25,mî-sòaⁿ,mi5suann3,mi5soann3,misuann,misoann,ms,ms,True,False
 棕蓑,tsang-sui,25,chang-sui,tsang1sui1,chang1sui1,tsangsui,changsui,ts,cs,True,False
 植眉,ti̍t-bâi,25,ti̍t-bâi,tit8bai5,tit8bai5,titbai,titbai,tb,tb,True,False
@@ -240,7 +240,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 生坯,tshenn-phue,25,chheⁿ-phoe,tshenn1phue1,chhenn1phoe1,tshennphue,chhennphoe,tp,cp,True,False
 生漆,tshenn-tshat,25,chheⁿ-chhat,tshenn1tshat4,chhenn1chhat4,tshenntshat,chhennchhat,tt,cc,True,False
 生皮,tshenn-phuê,25,chheⁿ-phôe,tshenn1phue5,chhenn1phoe5,tshennphue,chhennphoe,tp,cp,True,False
-甲毛,kah-moo,25,kah-mo͘,kah4moo1,kah4moo1,kahmoo,kahmoo,km,km,True,False
+甲毛,kah-moo,25,kah-mo͘,kah4moo1,kah4moo1,kahmoo,kahmoo,km,km,True,True
 畚箕,pùn-ki,25,pùn-ki,pun3ki1,pun3ki1,punki,punki,pk,pk,True,False
 畫稿,uē-kó,25,ōe-kó,ue7ko2,oe7ko2,ueko,oeko,uk,ok,True,False
 畫筆,uē-pit,25,ōe-pit,ue7pit4,oe7pit4,uepit,oepit,up,op,True,False
@@ -288,13 +288,13 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 筆插,pit-tshah,25,pit-chhah,pit4tshah4,pit4chhah4,pittshah,pitchhah,pt,pc,True,False
 筆架,pit-kè,25,pit-kè,pit4ke3,pit4ke3,pitke,pitke,pk,pk,True,False
 筆桶,pit-tháng,25,pit-tháng,pit4thang2,pit4thang2,pitthang,pitthang,pt,pt,True,False
-筆筒,pit-tâng,25,pit-tâng,pit4tang5,pit4tang5,pittang,pittang,pt,pt,True,True
+筆筒,pit-tâng,25,pit-tâng,pit4tang5,pit4tang5,pittang,pittang,pt,pt,True,False
 管頭,kóng-thâu,25,kóng-thâu,kong2thau5,kong2thau5,kongthau,kongthau,kt,kt,True,False
 箸籠,tī-lāng,25,tī-lāng,ti7lang7,ti7lang7,tilang,tilang,tl,tl,True,False
 簽仔,tshiam-á,25,chhiam-á,tshiam1a2,chhiam1a2,tshiama,chhiama,ta,ca,True,False
-籤筒,tshiam-tâng,25,chhiam-tâng,tshiam1tang5,chhiam1tang5,tshiamtang,chhiamtang,tt,ct,True,True
+籤筒,tshiam-tâng,25,chhiam-tâng,tshiam1tang5,chhiam1tang5,tshiamtang,chhiamtang,tt,ct,True,False
 米紙,bí-tsuá,25,bí-chóa,bi2tsua2,bi2choa2,bitsua,bichoa,bt,bc,True,False
-粉筒,hún-tâng,25,hún-tâng,hun2tang5,hun2tang5,huntang,huntang,ht,ht,True,True
+粉筒,hún-tâng,25,hún-tâng,hun2tang5,hun2tang5,huntang,huntang,ht,ht,True,False
 粉面,hún-bīn,25,hún-bīn,hun2bin7,hun2bin7,hunbin,hunbin,hb,hb,True,False
 粗剾,tshoo-khau,25,chho͘-khau,tshoo1khau1,chhoo1khau1,tshookhau,chhookhau,tk,ck,True,False
 粗胚,tshoo-phue,25,chho͘-phoe,tshoo1phue1,chhoo1phoe1,tshoophue,chhoophoe,tp,cp,True,True
@@ -326,7 +326,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 肖楠,siau-lâm,25,siau-lâm,siau1lam5,siau1lam5,siaulam,siaulam,sl,sl,True,False
 股線,kóo-suànn,25,kó͘-sòaⁿ,koo2suann3,koo2soann3,koosuann,koosoann,ks,ks,True,False
 脫模,thuat-bôo,25,thoat-bô͘,thuat4boo5,thoat4boo5,thuatboo,thoatboo,tb,tb,True,False
-腰帶,io-tuà,25,io-tòa,io1tua3,io1toa3,iotua,iotoa,it,it,True,False
+腰帶,io-tuà,25,io-tòa,io1tua3,io1toa3,iotua,iotoa,it,it,True,True
 腰裒,io-pôo,25,io-pô͘,io1poo5,io1poo5,iopoo,iopoo,ip,ip,True,False
 膨剾,phòng-khau,25,phòng-khau,phong3khau1,phong3khau1,phongkhau,phongkhau,pk,pk,True,False
 色漆,sik-tshat,25,sek-chhat,sik4tshat4,sek4chhat4,siktshat,sekchhat,st,sc,True,False
@@ -334,10 +334,10 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 花心,hue-sim,25,hoe-sim,hue1sim1,hoe1sim1,huesim,hoesim,hs,hs,True,False
 花板,hue-pán,25,hoe-pán,hue1pan2,hoe1pan2,huepan,hoepan,hp,hp,True,False
 花鳥,hue-tsiáu,25,hoe-chiáu,hue1tsiau2,hoe1chiau2,huetsiau,hoechiau,ht,hc,True,False
-荖安,láu-an,25,láu-an,lau2an1,lau2an1,lauan,lauan,la,la,True,True
+荖安,láu-an,25,láu-an,lau2an1,lau2an1,lauan,lauan,la,la,True,False
 菘藍,siông-nâ,25,siông-nâ,siong5na5,siong5na5,siongna,siongna,sn,sn,True,False
 菜砧,tshài-tiam,25,chhài-tiam,tshai3tiam1,chhai3tiam1,tshaitiam,chhaitiam,tt,ct,True,False
-蒼布,tshong-pòo,25,chhong-pò͘,tshong1poo3,chhong1poo3,tshongpoo,chhongpoo,tp,cp,True,False
+蒼布,tshong-pòo,25,chhong-pò͘,tshong1poo3,chhong1poo3,tshongpoo,chhongpoo,tp,cp,True,True
 蓮葉,liân-hio̍h,25,liân-hio̍h,lian5hioh8,lian5hioh8,lianhioh,lianhioh,lh,lh,True,False
 蓮蓬,liân-phōng,25,liân-phōng,lian5phong7,lian5phong7,lianphong,lianphong,lp,lp,True,False
 蓼藍,liau-nâ,25,liau-nâ,liau1na5,liau1na5,liauna,liauna,ln,ln,True,False
@@ -346,7 +346,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 藩尺,huan-tshioh,25,hoan-chhioh,huan1tshioh4,hoan1chhioh4,huantshioh,hoanchhioh,ht,hc,True,False
 蘇式,soo-sik,25,so͘-sek,soo1sik4,soo1sek4,soosik,soosek,ss,ss,True,False
 蘇木,soo-bo̍k,25,so͘-bo̍k,soo1bok8,soo1bok8,soobok,soobok,sb,sb,True,False
-虎杖,hóo-tiōng,25,hó͘-tiōng,hoo2tiong7,hoo2tiong7,hootiong,hootiong,ht,ht,True,False
+虎杖,hóo-tiōng,25,hó͘-tiōng,hoo2tiong7,hoo2tiong7,hootiong,hootiong,ht,ht,True,True
 虹仔,khîng-á,25,khêng-á,khing5a2,kheng5a2,khinga,khenga,ka,ka,True,False
 衣脊,i-tsit,25,i-chit,i1tsit4,i1chit4,itsit,ichit,it,ic,True,False
 裁紙,tshâi-tsuá,25,chhâi-chóa,tshai5tsua2,chhai5choa2,tshaitsua,chhaichoa,tt,cc,True,False
@@ -375,7 +375,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 軟斜,nńg-tshiâ,25,nńg-chhiâ,nng2tshia5,nng2chhia5,nngtshia,nngchhia,nt,nc,True,False
 軟身,nńg-sin,25,nńg-sin,nng2sin1,nng2sin1,nngsin,nngsin,ns,ns,True,False
 軟鉛,nńg-iân,25,nńg-iân,nng2ian5,nng2ian5,nngian,nngian,ni,ni,True,False
-轆斗,lo̍k-táu,25,lo̍k-táu,lok8tau2,lok8tau2,loktau,loktau,lt,lt,True,True
+轆斗,lo̍k-táu,25,lo̍k-táu,lok8tau2,lok8tau2,loktau,loktau,lt,lt,True,False
 轆空,lak-khang,25,lak-khang,lak4khang1,lak4khang1,lakkhang,lakkhang,lk,lk,True,False
 轆管,lak-kóng,25,lak-kóng,lak4kong2,lak4kong2,lakkong,lakkong,lk,lk,True,False
 轎堵,kiō-tóo,25,kiō-tó͘,kio7too2,kio7too2,kiotoo,kiotoo,kt,kt,True,False
@@ -399,7 +399,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 鋼刀,kǹg-to,25,kǹg-to,kng3to1,kng3to1,kngto,kngto,kt,kt,True,False
 鋼板,kǹg-pán,25,kǹg-pán,kng3pan2,kng3pan2,kngpan,kngpan,kp,kp,True,False
 錢櫃,tsînn-kuī,25,chîⁿ-kūi,tsinn5kui7,chinn5kui7,tsinnkui,chinnkui,tk,ck,True,False
-錦甲,gím-kah,25,gím-kah,gim2kah4,gim2kah4,gimkah,gimkah,gk,gk,True,False
+錦甲,gím-kah,25,gím-kah,gim2kah4,gim2kah4,gimkah,gimkah,gk,gk,True,True
 錦花,gím-hue,25,gím-hoe,gim2hue1,gim2hoe1,gimhue,gimhoe,gh,gh,True,False
 鎖頭,só-thâu,25,só-thâu,so2thau5,so2thau5,sothau,sothau,st,st,True,False
 鎮針,tìn-tsiam,25,tìn-chiam,tin3tsiam1,tin3chiam1,tintsiam,tinchiam,tt,tc,True,False
@@ -438,7 +438,7 @@ iōng碗,iōng-uánn,25,iōng-óaⁿ,iong7uann2,iong7oann2,ionguann,iongoann,iu,
 飯擔,pn̄g-tann,25,pn̄g-taⁿ,png7tann1,png7tann1,pngtann,pngtann,pt,pt,True,False
 餅模,piánn-bôo,25,piáⁿ-bô͘,piann2boo5,piann2boo5,piannboo,piannboo,pb,pb,True,False
 香爐,hiunn-lôo,25,hiuⁿ-lô͘,hiunn1loo5,hiunn1loo5,hiunnloo,hiunnloo,hl,hl,True,False
-香筒,hiunn-tâng,25,hiuⁿ-tâng,hiunn1tang5,hiunn1tang5,hiunntang,hiunntang,ht,ht,True,True
+香筒,hiunn-tâng,25,hiuⁿ-tâng,hiunn1tang5,hiunn1tang5,hiunntang,hiunntang,ht,ht,True,False
 馬椅,bé-í,25,bé-í,be2i2,be2i2,bei,bei,bi,bi,True,False
 鬚仔,tshiu-á,25,chhiu-á,tshiu1a2,chhiu1a2,tshiua,chhiua,ta,ca,True,False
 鳳眼,hōng-gán,25,hōng-gán,hong7gan2,hong7gan2,honggan,honggan,hg,hg,True,False
@@ -470,19 +470,19 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 三轉型,sam-tsuān-hîng,16,sam-choān-hêng,sam1tsuan7hing5,sam1choan7heng5,samtsuanhing,samchoanheng,sth,sch,True,False
 丹迪紙,tan-tik-tsuá,16,tan-tek-chóa,tan1tik4tsua2,tan1tek4choa2,tantiktsua,tantekchoa,ttt,ttc,True,False
 九芎仔,kiú-kiong-á,16,kiú-kiong-á,kiu2kiong1a2,kiu2kiong1a2,kiukionga,kiukionga,kka,kka,True,False
-乾漆粉,kan-tshat-hún,16,kan-chhat-hún,kan1tshat4hun2,kan1chhat4hun2,kantshathun,kanchhathun,kth,kch,True,True
+乾漆粉,kan-tshat-hún,16,kan-chhat-hún,kan1tshat4hun2,kan1chhat4hun2,kantshathun,kanchhathun,kth,kch,True,False
 二層座,jī-tsàn-tsō,16,jī-chàn-chō,ji7tsan3tso7,ji7chan3cho7,jitsantso,jichancho,jtt,jcc,True,False
 二次胚,jī-tshù-phue,16,jī-chhù-phoe,ji7tshu3phue1,ji7chhu3phoe1,jitshuphue,jichhuphoe,jtp,jcp,True,True
 五倍子,ngóo-puē-tsí,16,ngó͘-pōe-chí,ngoo2pue7tsi2,ngoo2poe7chi2,ngoopuetsi,ngoopoechi,npt,npc,True,False
 五福花,ngóo-hok-hue,16,ngó͘-hok-hoe,ngoo2hok4hue1,ngoo2hok4hoe1,ngoohokhue,ngoohokhoe,nhh,nhh,True,False
-交趾釉,kau-tsí-iu,16,kau-chí-iu,kau1tsi2iu1,kau1chi2iu1,kautsiiu,kauchiiu,kti,kci,True,True
+交趾釉,kau-tsí-iu,16,kau-chí-iu,kau1tsi2iu1,kau1chi2iu1,kautsiiu,kauchiiu,kti,kci,True,False
 亭仔景,tîng-á-kíng,16,têng-á-kéng,ting5a2king2,teng5a2keng2,tingaking,tengakeng,tak,tak,True,False
 人物堵,jîn-bu̍t-tóo,16,jîn-bu̍t-tó͘,jin5but8too2,jin5but8too2,jinbuttoo,jinbuttoo,jbt,jbt,True,False
 人物旗,jîn-bu̍t-kî,16,jîn-bu̍t-kî,jin5but8ki5,jin5but8ki5,jinbutki,jinbutki,jbk,jbk,True,False
 人面竹,lâng-bīn-tik,16,lâng-bīn-tek,lang5bin7tik4,lang5bin7tek4,langbintik,langbintek,lbt,lbt,True,False
 保溫棉,pó-un-mî,16,pó-un-mî,po2un1mi5,po2un1mi5,pounmi,pounmi,pum,pum,True,False
 保溫磚,pó-un-tsng,16,pó-un-chng,po2un1tsng1,po2un1chng1,pountsng,pounchng,put,puc,True,False
-倒吊獅,tò-tiàu-sai,16,tò-tiàu-sai,to3tiau3sai1,to3tiau3sai1,totiausai,totiausai,tts,tts,True,True
+倒吊獅,tò-tiàu-sai,16,tò-tiàu-sai,to3tiau3sai1,to3tiau3sai1,totiausai,totiausai,tts,tts,True,False
 倒角仔,tò-kak-á,16,tò-kak-á,to3kak4a2,to3kak4a2,tokaka,tokaka,tka,tka,True,False
 備零件,pī-lîng-kiānn,16,pī-lêng-kiāⁿ,pi7ling5kiann7,pi7leng5kiann7,pilingkiann,pilengkiann,plk,plk,True,False
 八仙綵,pat-sian-tshái,16,pat-sian-chhái,pat4sian1tshai2,pat4sian1chhai2,patsiantshai,patsianchhai,pst,psc,True,False
@@ -490,25 +490,25 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 八字彈,peh-jī-tân,16,peh-jī-tân,peh4ji7tan5,peh4ji7tan5,pehjitan,pehjitan,pjt,pjt,True,False
 八獅座,pat-sai-tsō,16,pat-sai-chō,pat4sai1tso7,pat4sai1cho7,patsaitso,patsaicho,pst,psc,True,False
 公婆椅,kong-pô-í,16,kong-pô-í,kong1po5i2,kong1po5i2,kongpoi,kongpoi,kpi,kpi,True,False
-公母榫,kang-bú-sún,16,kang-bú-sún,kang1bu2sun2,kang1bu2sun2,kangbusun,kangbusun,kbs,kbs,True,False
+公母榫,kang-bú-sún,16,kang-bú-sún,kang1bu2sun2,kang1bu2sun2,kangbusun,kangbusun,kbs,kbs,True,True
 切割墊,tshiat-kuah-tiām,16,chhiat-koah-tiām,tshiat4kuah4tiam7,chhiat4koah4tiam7,tshiatkuahtiam,chhiatkoahtiam,tkt,ckt,True,False
 切管頭,tshiat-kóng-thâu,16,chhiat-kóng-thâu,tshiat4kong2thau5,chhiat4kong2thau5,tshiatkongthau,chhiatkongthau,tkt,ckt,True,False
 切紙枋,tshiat-tsuá-pang,16,chhiat-chóa-pang,tshiat4tsua2pang1,chhiat4choa2pang1,tshiattsuapang,chhiatchoapang,ttp,ccp,True,False
 利利安,li-li-an,16,li-li-an,li1li1an1,li1li1an1,lilian,lilian,lla,lla,True,False
 割紙刀,kuah-tsuá-to,16,koah-chóa-to,kuah4tsua2to1,koah4choa2to1,kuahtsuato,koahchoato,ktt,kct,True,False
 包喙口,pau-tshuì-kháu,16,pau-chhùi-kháu,pau1tshui3khau2,pau1chhui3khau2,pautshuikhau,pauchhuikhau,ptk,pck,True,False
-包蒼布,pau-tshong-pòo,16,pau-chhong-pò͘,pau1tshong1poo3,pau1chhong1poo3,pautshongpoo,pauchhongpoo,ptp,pcp,True,False
+包蒼布,pau-tshong-pòo,16,pau-chhong-pò͘,pau1tshong1poo3,pau1chhong1poo3,pautshongpoo,pauchhongpoo,ptp,pcp,True,True
 包頭巾,pau-thâu-kin,16,pau-thâu-kin,pau1thau5kin1,pau1thau5kin1,pauthaukin,pauthaukin,ptk,ptk,True,False
 半堆剪,puànn-tui-tsián,16,pòaⁿ-tui-chián,puann3tui1tsian2,poann3tui1chian2,puanntuitsian,poanntuichian,ptt,ptc,True,False
 半浮堵,puànn-phû-tóo,16,pòaⁿ-phû-tó͘,puann3phu5too2,poann3phu5too2,puannphutoo,poannphutoo,ppt,ppt,True,False
 半金彩,puànn-kim-tshái,16,pòaⁿ-kim-chhái,puann3kim1tshai2,poann3kim1chhai2,puannkimtshai,poannkimchhai,pkt,pkc,True,False
 厚殼仔,kāu-khak-á,16,kāu-khak-á,kau7khak4a2,kau7khak4a2,kaukhaka,kaukhaka,kka,kka,True,False
 反手體,huán-tshiú-thé,16,hoán-chhiú-thé,huan2tshiu2the2,hoan2chhiu2the2,huantshiuthe,hoanchhiuthe,htt,hct,True,False
-古錢甲,kóo-tsînn-kah,16,kó͘-chîⁿ-kah,koo2tsinn5kah4,koo2chinn5kah4,kootsinnkah,koochinnkah,ktk,kck,True,False
+古錢甲,kóo-tsînn-kah,16,kó͘-chîⁿ-kah,koo2tsinn5kah4,koo2chinn5kah4,kootsinnkah,koochinnkah,ktk,kck,True,True
 古體鱗,kóo-thé-lân,16,kó͘-thé-lân,koo2the2lan5,koo2the2lan5,koothelan,koothelan,ktl,ktl,True,False
 和尚頭,huê-siūnn-thâu,16,hôe-siūⁿ-thâu,hue5siunn7thau5,hoe5siunn7thau5,huesiunnthau,hoesiunnthau,hst,hst,True,False
 咸豐草,hâm-hong-tsháu,16,hâm-hong-chháu,ham5hong1tshau2,ham5hong1chhau2,hamhongtshau,hamhongchhau,hht,hhc,True,False
-四方竹,sù-hong-tik,16,sù-hong-tek,su3hong1tik4,su3hong1tek4,suhongtik,suhongtek,sht,sht,True,True
+四方竹,sù-hong-tik,16,sù-hong-tek,su3hong1tik4,su3hong1tek4,suhongtik,suhongtek,sht,sht,True,False
 四點金,sì-tiám-kim,16,sì-tiám-kim,si3tiam2kim1,si3tiam2kim1,sitiamkim,sitiamkim,stk,stk,True,False
 圓仔花,înn-á-hue,16,îⁿ-á-hoe,inn5a2hue1,inn5a2hoe1,innahue,innahoe,iah,iah,True,False
 圓鑿仔,înn-tsha̍k-á,16,îⁿ-chha̍k-á,inn5tshak8a2,inn5chhak8a2,inntshaka,innchhaka,ita,ica,True,False
@@ -529,19 +529,19 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 太魯刀,thài-lù-to,16,thài-lù-to,thai3lu3to1,thai3lu3to1,thailuto,thailuto,tlt,tlt,True,False
 如意手,jû-ì-tshiú,16,jû-ì-chhiú,ju5i3tshiu2,ju5i3chhiu2,juitshiu,juichhiu,jit,jic,True,False
 如意花,jû-ì-hue,16,jû-ì-hoe,ju5i3hue1,ju5i3hoe1,juihue,juihoe,jih,jih,True,False
-娘絲布,niû-si-pòo,16,niû-si-pò͘,niu5si1poo3,niu5si1poo3,niusipoo,niusipoo,nsp,nsp,True,False
+娘絲布,niû-si-pòo,16,niû-si-pò͘,niu5si1poo3,niu5si1poo3,niusipoo,niusipoo,nsp,nsp,True,True
 安金漆,an-kim-tshat,16,an-kim-chhat,an1kim1tshat4,an1kim1chhat4,ankimtshat,ankimchhat,akt,akc,True,False
 實腹管,tsa̍t-pak-kóng,16,cha̍t-pak-kóng,tsat8pak4kong2,chat8pak4kong2,tsatpakkong,chatpakkong,tpk,cpk,True,False
 寶石碭,pó-tsio̍h-thn̄g,16,pó-chio̍h-thn̄g,po2tsioh8thng7,po2chioh8thng7,potsiohthng,pochiohthng,ptt,pct,True,False
 小冊櫃,sió-tsheh-kuì,16,sió-chheh-kùi,sio2tsheh4kui3,sio2chheh4kui3,siotshehkui,siochhehkui,stk,sck,True,False
 小葉桑,sió-hio̍h-song,16,sió-hio̍h-song,sio2hioh8song1,sio2hioh8song1,siohiohsong,siohiohsong,shs,shs,True,False
-尤加利,iu-kha-lih,16,iu-kha-lih,iu1kha1lih4,iu1kha1lih4,iukhalih,iukhalih,ikl,ikl,True,True
+尤加利,iu-kha-lih,16,iu-kha-lih,iu1kha1lih4,iu1kha1lih4,iukhalih,iukhalih,ikl,ikl,True,False
 尪仔頭,ang-á-thâu,16,ang-á-thâu,ang1a2thau5,ang1a2thau5,angathau,angathau,aat,aat,True,False
 山棧花,suann-tsàn-hue,16,soaⁿ-chàn-hoe,suann1tsan3hue1,soann1chan3hoe1,suanntsanhue,soannchanhoe,sth,sch,True,False
 山石仔,suann-tsio̍h-á,16,soaⁿ-chio̍h-á,suann1tsioh8a2,soann1chioh8a2,suanntsioha,soannchioha,sta,sca,True,False
 工作台,kang-tsok-tâi,16,kang-chok-tâi,kang1tsok4tai5,kang1chok4tai5,kangtsoktai,kangchoktai,ktt,kct,True,False
 工作椅,kang-tsok-í,16,kang-chok-í,kang1tsok4i2,kang1chok4i2,kangtsoki,kangchoki,kti,kci,True,False
-布輪機,pòo-lûn-ki,16,pò͘-lûn-ki,poo3lun5ki1,poo3lun5ki1,poolunki,poolunki,plk,plk,True,False
+布輪機,pòo-lûn-ki,16,pò͘-lûn-ki,poo3lun5ki1,poo3lun5ki1,poolunki,poolunki,plk,plk,True,True
 平剾仔,phînn-khau-á,16,phîⁿ-khau-á,phinn5khau1a2,phinn5khau1a2,phinnkhaua,phinnkhaua,pka,pka,True,False
 平剾仔,pêng-khau-á,16,pêng-khau-á,peng5khau1a2,peng5khau1a2,pengkhaua,pengkhaua,pka,pka,True,False
 平鑿仔,phînn-tsha̍k-á,16,phîⁿ-chha̍k-á,phinn5tshak8a2,phinn5chhak8a2,phinntshaka,phinnchhaka,pta,pca,True,False
@@ -551,9 +551,9 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 彎仔鋸,uan-á-kì,16,oan-á-kì,uan1a2ki3,oan1a2ki3,uanaki,oanaki,uak,oak,True,False
 戮空的,lak-khang-ê,16,lak-khang-ê,lak4khang1e5,lak4khang1e5,lakkhange,lakkhange,lke,lke,True,False
 扁鋏仔,pínn-giap-á,16,píⁿ-giap-á,pinn2giap4a2,pinn2giap4a2,pinngiapa,pinngiapa,pga,pga,True,False
-手指圍,tshiú-tsí-uî,16,chhiú-chí-ûi,tshiu2tsi2ui5,chhiu2chi2ui5,tshiutsiui,chhiuchiui,ttu,ccu,True,True
-手指條,tshiú-tsí-tiâu,16,chhiú-chí-tiâu,tshiu2tsi2tiau5,chhiu2chi2tiau5,tshiutsitiau,chhiuchitiau,ttt,cct,True,True
-手指通,tshiú-tsí-thong,16,chhiú-chí-thong,tshiu2tsi2thong1,chhiu2chi2thong1,tshiutsithong,chhiuchithong,ttt,cct,True,True
+手指圍,tshiú-tsí-uî,16,chhiú-chí-ûi,tshiu2tsi2ui5,chhiu2chi2ui5,tshiutsiui,chhiuchiui,ttu,ccu,True,False
+手指條,tshiú-tsí-tiâu,16,chhiú-chí-tiâu,tshiu2tsi2tiau5,chhiu2chi2tiau5,tshiutsitiau,chhiuchitiau,ttt,cct,True,False
+手指通,tshiú-tsí-thong,16,chhiú-chí-thong,tshiu2tsi2thong1,chhiu2chi2thong1,tshiutsithong,chhiuchithong,ttt,cct,True,False
 手搖鈴,tshiú-iô-lîng,16,chhiú-iô-lêng,tshiu2io5ling5,chhiu2io5leng5,tshiuioling,chhiuioleng,til,cil,True,False
 手環箸,tshiú-khuân-tī,16,chhiú-khoân-tī,tshiu2khuan5ti7,chhiu2khoan5ti7,tshiukhuanti,chhiukhoanti,tkt,ckt,True,False
 抓耙仔,jiàu-pê-á,16,jiàu-pê-á,jiau3pe5a2,jiau3pe5a2,jiaupea,jiaupea,jpa,jpa,True,False
@@ -569,16 +569,16 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 捏版仔,lia̍p-pán-á,16,lia̍p-pán-á,liap8pan2a2,liap8pan2a2,liappana,liappana,lpa,lpa,True,False
 捶篾仔,tuî-bi̍h-á,16,tûi-bi̍h-á,tui5bih8a2,tui5bih8a2,tuibiha,tuibiha,tba,tba,True,False
 捻塔啾,liàn-thah-tshiu,16,liàn-thah-chhiu,lian3thah4tshiu1,lian3thah4chhiu1,lianthahtshiu,lianthahchhiu,ltt,ltc,True,False
-控制錶,khòng-tsè-pió,16,khòng-chè-pió,khong3tse3pio2,khong3che3pio2,khongtsepio,khongchepio,ktp,kcp,True,True
+控制錶,khòng-tsè-pió,16,khòng-chè-pió,khong3tse3pio2,khong3che3pio2,khongtsepio,khongchepio,ktp,kcp,True,False
 掰糊仔,pué-kôo-á,16,póe-kô͘-á,pue2koo5a2,poe2koo5a2,puekooa,poekooa,pka,pka,True,False
-描圖紙,biô-tôo-tsuá,16,biô-tô͘-chóa,bio5too5tsua2,bio5too5choa2,biotootsua,biotoochoa,btt,btc,True,True
+描圖紙,biô-tôo-tsuá,16,biô-tô͘-chóa,bio5too5tsua2,bio5too5choa2,biotootsua,biotoochoa,btt,btc,True,False
 搝厚薄,giú-kāu-po̍h,16,giú-kāu-po̍h,giu2kau7poh8,giu2kau7poh8,giukaupoh,giukaupoh,gkp,gkp,True,False
 撞璇仔,tōng-suān-á,16,tōng-soān-á,tong7suan7a2,tong7soan7a2,tongsuana,tongsoana,tsa,tsa,True,False
 擠浮線,tsik-phû-suànn,16,chek-phû-sòaⁿ,tsik4phu5suann3,chek4phu5soann3,tsikphusuann,chekphusoann,tps,cps,True,False
 敆內裡,kap-lāi-lí,16,kap-lāi-lí,kap4lai7li2,kap4lai7li2,kaplaili,kaplaili,kll,kll,True,False
 敲薰屎,khà hun-sái,16,khà hun-sái,kha3hun1sai2,kha3hun1sai2,khahunsai,khahunsai,khs,khs,True,False
 文公尺,bûn-kong-tshioh,16,bûn-kong-chhioh,bun5kong1tshioh4,bun5kong1chhioh4,bunkongtshioh,bunkongchhioh,bkt,bkc,True,False
-文武甲,bûn-bú-kah,16,bûn-bú-kah,bun5bu2kah4,bun5bu2kah4,bunbukah,bunbukah,bbk,bbk,True,False
+文武甲,bûn-bú-kah,16,bûn-bú-kah,bun5bu2kah4,bun5bu2kah4,bunbukah,bunbukah,bbk,bbk,True,True
 文武跤,bûn-bú-kha,16,bûn-bú-kha,bun5bu2kha1,bun5bu2kha1,bunbukha,bunbukha,bbk,bbk,True,False
 文轎蓋,bûn-kiō-kuà,16,bûn-kiō-kòa,bun5kio7kua3,bun5kio7koa3,bunkiokua,bunkiokoa,bkk,bkk,True,False
 曝日頭,pha̍k-ji̍t-thâu,16,pha̍k-ji̍t-thâu,phak8jit8thau5,phak8jit8thau5,phakjitthau,phakjitthau,pjt,pjt,True,False
@@ -602,7 +602,7 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 栽喙齒,tsai-tshuì-khí,16,chai-chhùi-khí,tsai1tshui3khi2,chai1chhui3khi2,tsaitshuikhi,chaichhuikhi,ttk,cck,True,False
 栽目睭,tsai-ba̍k-tsiu,16,chai-ba̍k-chiu,tsai1bak8tsiu1,chai1bak8chiu1,tsaibaktsiu,chaibakchiu,tbt,cbc,True,False
 栽馬啾,tsai-bé-tshiu,16,chai-bé-chhiu,tsai1be2tshiu1,chai1be2chhiu1,tsaibetshiu,chaibechhiu,tbt,cbc,True,False
-桂花甲,kuì-hue-kah,16,kùi-hoe-kah,kui3hue1kah4,kui3hoe1kah4,kuihuekah,kuihoekah,khk,khk,True,False
+桂花甲,kuì-hue-kah,16,kùi-hoe-kah,kui3hue1kah4,kui3hoe1kah4,kuihuekah,kuihoekah,khk,khk,True,True
 梳妝台,se-tsong-tâi,16,se-chong-tâi,se1tsong1tai5,se1chong1tai5,setsongtai,sechongtai,stt,sct,True,False
 椅頭仔,í-thâu-á,16,í-thâu-á,i2thau5a2,i2thau5a2,ithaua,ithaua,ita,ita,True,False
 椅馬仔,í-bé-á,16,í-bé-á,i2be2a2,i2be2a2,ibea,ibea,iba,iba,True,False
@@ -623,11 +623,11 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 油壓模,iû-ap-bôo,16,iû-ap-bô͘,iu5ap4boo5,iu5ap4boo5,iuapboo,iuapboo,iab,iab,True,False
 油漏仔,iû-lāu-á,16,iû-lāu-á,iu5lau7a2,iu5lau7a2,iulaua,iulaua,ila,ila,True,False
 油燈罩,iû-ting-tà,16,iû-teng-tà,iu5ting1ta3,iu5teng1ta3,iutingta,iutengta,itt,itt,True,False
-油筒仔,iû-tâng-á,16,iû-tâng-á,iu5tang5a2,iu5tang5a2,iutanga,iutanga,ita,ita,True,True
+油筒仔,iû-tâng-á,16,iû-tâng-á,iu5tang5a2,iu5tang5a2,iutanga,iutanga,ita,ita,True,False
 泉州派,tsuân-tsiu-phài,16,choân-chiu-phài,tsuan5tsiu1phai3,choan5chiu1phai3,tsuantsiuphai,choanchiuphai,ttp,ccp,True,False
 注蠟機,tsù-la̍h-ki,16,chù-la̍h-ki,tsu3lah8ki1,chu3lah8ki1,tsulahki,chulahki,tlk,clk,True,False
 洋蔥皮,iûnn-tshang-phuê,16,iûⁿ-chhang-phôe,iunn5tshang1phue5,iunn5chhang1phoe5,iunntshangphue,iunnchhangphoe,itp,icp,True,False
-浮綿仔,phoo-mî-a,16,pho͘-mî-a,phoo1mi5a1,phoo1mi5a1,phoomia,phoomia,pma,pma,True,True
+浮綿仔,phoo-mî-a,16,pho͘-mî-a,phoo1mi5a1,phoo1mi5a1,phoomia,phoomia,pma,pma,True,False
 浮雕堵,phû-tiau-tóo,16,phû-tiau-tó͘,phu5tiau1too2,phu5tiau1too2,phutiautoo,phutiautoo,ptt,ptt,True,False
 淋碭釉,lâm-thn̄g-iu,16,lâm-thn̄g-iu,lam5thng7iu1,lam5thng7iu1,lamthngiu,lamthngiu,lti,lti,True,False
 深篩仔,tshim-thai-á,16,chhim-thai-á,tshim1thai1a2,chhim1thai1a2,tshimthaia,chhimthaia,tta,cta,True,False
@@ -643,7 +643,7 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 烏心石,oo-sim-tsio̍h,16,o͘-sim-chio̍h,oo1sim1tsioh8,oo1sim1chioh8,oosimtsioh,oosimchioh,ost,osc,True,False
 熟桐油,si̍k-tâng-iû,16,se̍k-tâng-iû,sik8tang5iu5,sek8tang5iu5,siktangiu,sektangiu,sti,sti,True,False
 燈火罩,ting-hué-tà,16,teng-hóe-tà,ting1hue2ta3,teng1hoe2ta3,tinghueta,tenghoeta,tht,tht,True,False
-燖筒仔,tīm-tâng-á,16,tīm-tâng-á,tim7tang5a2,tim7tang5a2,timtanga,timtanga,tta,tta,True,True
+燖筒仔,tīm-tâng-á,16,tīm-tâng-á,tim7tang5a2,tim7tang5a2,timtanga,timtanga,tta,tta,True,False
 牛喙罨,gû-tshuì-am,16,gû-chhùi-am,gu5tshui3am1,gu5chhui3am1,gutshuiam,guchhuiam,gta,gca,True,False
 牛鈴仔,gû-lîng-á,16,gû-lêng-á,gu5ling5a2,gu5leng5a2,gulinga,gulenga,gla,gla,True,False
 牽漆線,khan-tshat-suànn,16,khan-chhat-sòaⁿ,khan1tshat4suann3,khan1chhat4soann3,khantshatsuann,khanchhatsoann,kts,kcs,True,False
@@ -689,16 +689,16 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 粉線管,hún-suànn-kóng,16,hún-sòaⁿ-kóng,hun2suann3kong2,hun2soann3kong2,hunsuannkong,hunsoannkong,hsk,hsk,True,False
 糖篋仔,thn̂g-kheh-á,16,thn̂g-kheh-á,thng5kheh4a2,thng5kheh4a2,thngkheha,thngkheha,tka,tka,True,False
 紅寶石,âng-pó-tsio̍h,16,âng-pó-chio̍h,ang5po2tsioh8,ang5po2chioh8,angpotsioh,angpochioh,apt,apc,True,False
-紙膠帶,tsuá-ka-tuà,16,chóa-ka-tòa,tsua2ka1tua3,choa2ka1toa3,tsuakatua,choakatoa,tkt,ckt,True,False
+紙膠帶,tsuá-ka-tuà,16,chóa-ka-tòa,tsua2ka1tua3,choa2ka1toa3,tsuakatua,choakatoa,tkt,ckt,True,True
 紙輪釘,tsuá-lián-ting,16,chóa-lián-teng,tsua2lian2ting1,choa2lian2teng1,tsualianting,choalianteng,tlt,clt,True,False
 紙輪釘,tsuá-lián-tìng,16,chóa-lián-tèng,tsua2lian2ting3,choa2lian2teng3,tsualianting,choalianteng,tlt,clt,True,False
-紡布輪,pháng-pòo-lún,16,pháng-pò͘-lún,phang2poo3lun2,phang2poo3lun2,phangpoolun,phangpoolun,ppl,ppl,True,False
+紡布輪,pháng-pòo-lún,16,pháng-pò͘-lún,phang2poo3lun2,phang2poo3lun2,phangpoolun,phangpoolun,ppl,ppl,True,True
 紡金檯,pháng-kim-tâi,16,pháng-kim-tâi,phang2kim1tai5,phang2kim1tai5,phangkimtai,phangkimtai,pkt,pkt,True,False
 索仔捲,soh-á-kńg,16,soh-á-kńg,soh4a2kng2,soh4a2kng2,sohakng,sohakng,sak,sak,True,False
 紫色的,tsí-sik-ê,16,chí-sek-ê,tsi2sik4e5,chi2sek4e5,tsisike,chiseke,tse,cse,True,False
 結龍跤,kiat-lîng-kha,16,kiat-lêng-kha,kiat4ling5kha1,kiat4leng5kha1,kiatlingkha,kiatlengkha,klk,klk,True,False
 絲仔線,si-á-suànn,16,si-á-sòaⁿ,si1a2suann3,si1a2soann3,siasuann,siasoann,sas,sas,True,False
-網仔甲,bāng-á-kah,16,bāng-á-kah,bang7a2kah4,bang7a2kah4,bangakah,bangakah,bak,bak,True,False
+網仔甲,bāng-á-kah,16,bāng-á-kah,bang7a2kah4,bang7a2kah4,bangakah,bangakah,bak,bak,True,True
 練塗機,liān-thôo-ki,16,liān-thô͘-ki,lian7thoo5ki1,lian7thoo5ki1,lianthooki,lianthooki,ltk,ltk,True,False
 縛厝蓋,pa̍k-tshù-kuà,16,pa̍k-chhù-kòa,pak8tshu3kua3,pak8chhu3koa3,paktshukua,pakchhukoa,ptk,pck,True,False
 縛紙釘,pa̍k-tsuá-ting,16,pa̍k-chóa-teng,pak8tsua2ting1,pak8choa2teng1,paktsuating,pakchoateng,ptt,pct,True,False
@@ -709,7 +709,7 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 美工刀,bí-kang-to,16,bí-kang-to,bi2kang1to1,bi2kang1to1,bikangto,bikangto,bkt,bkt,True,False
 耐火磚,nāi-hué-tsng,16,nāi-hóe-chng,nai7hue2tsng1,nai7hoe2chng1,naihuetsng,naihoechng,nht,nhc,True,False
 胭脂蟲,ian-tsi-thâng,16,ian-chi-thâng,ian1tsi1thang5,ian1chi1thang5,iantsithang,ianchithang,itt,ict,True,False
-腰帶花,io-tuà-hue,16,io-tòa-hoe,io1tua3hue1,io1toa3hoe1,iotuahue,iotoahoe,ith,ith,True,False
+腰帶花,io-tuà-hue,16,io-tòa-hoe,io1tua3hue1,io1toa3hoe1,iotuahue,iotoahoe,ith,ith,True,True
 腱子肉,kiàn-tsí-bah,16,kiàn-chí-bah,kian3tsi2bah4,kian3chi2bah4,kiantsibah,kianchibah,ktb,kcb,True,False
 臥蠶眉,ngōo-tshám-bî,16,ngō͘-chhám-bî,ngoo7tsham2bi5,ngoo7chham2bi5,ngootshambi,ngoochhambi,ntb,ncb,True,False
 自動剾,tsū-tōng-khau,16,chū-tōng-khau,tsu7tong7khau1,chu7tong7khau1,tsutongkhau,chutongkhau,ttk,ctk,True,False
@@ -734,19 +734,19 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 薄胎的,po̍h-thai-ê,16,po̍h-thai-ê,poh8thai1e5,poh8thai1e5,pohthaie,pohthaie,pte,pte,True,False
 薰竹仔,hun-tik-á,16,hun-tek-á,hun1tik4a2,hun1tek4a2,huntika,hunteka,hta,hta,True,False
 藍寶石,nâ-pó-tsio̍h,16,nâ-pó-chio̍h,na5po2tsioh8,na5po2chioh8,napotsioh,napochioh,npt,npc,True,False
-虎爺衫,hóo-iâ-sann,16,hó͘-iâ-saⁿ,hoo2ia5sann1,hoo2ia5sann1,hooiasann,hooiasann,his,his,True,False
+虎爺衫,hóo-iâ-sann,16,hó͘-iâ-saⁿ,hoo2ia5sann1,hoo2ia5sann1,hooiasann,hooiasann,his,his,True,True
 蛋殼畫,nn̄g-khak-uē,16,nn̄g-khak-ōe,nng7khak4ue7,nng7khak4oe7,nngkhakue,nngkhakoe,nku,nko,True,False
 蜘蛛紋,ti-tu-bûn,16,ti-tu-bûn,ti1tu1bun5,ti1tu1bun5,titubun,titubun,ttb,ttb,True,False
 蝦仔盤,hê-á-puânn,16,hê-á-pôaⁿ,he5a2puann5,he5a2poann5,heapuann,heapoann,hap,hap,True,False
-螭虎窗,tshi-hóo-thang,16,chhi-hó͘-thang,tshi1hoo2thang1,chhi1hoo2thang1,tshihoothang,chhihoothang,tht,cht,True,False
-螭虎緞,tshu-hóo-tuān,16,chhu-hó͘-toān,tshu1hoo2tuan7,chhu1hoo2toan7,tshuhootuan,chhuhootoan,tht,cht,True,False
-螭虎草,tshu-hóo-tshó,16,chhu-hó͘-chhó,tshu1hoo2tsho2,chhu1hoo2chho2,tshuhootsho,chhuhoochho,tht,chc,True,False
+螭虎窗,tshi-hóo-thang,16,chhi-hó͘-thang,tshi1hoo2thang1,chhi1hoo2thang1,tshihoothang,chhihoothang,tht,cht,True,True
+螭虎緞,tshu-hóo-tuān,16,chhu-hó͘-toān,tshu1hoo2tuan7,chhu1hoo2toan7,tshuhootuan,chhuhootoan,tht,cht,True,True
+螭虎草,tshu-hóo-tshó,16,chhu-hó͘-chhó,tshu1hoo2tsho2,chhu1hoo2chho2,tshuhootsho,chhuhoochho,tht,chc,True,True
 螭龍頭,tshi-liông-thâu,16,chhi-liông-thâu,tshi1liong5thau5,chhi1liong5thau5,tshiliongthau,chhiliongthau,tlt,clt,True,False
-螺仔片,lê-á-phìnn,16,lê-á-phìⁿ,le5a2phinn3,le5a2phinn3,leaphinn,leaphinn,lap,lap,True,False
+螺仔片,lê-á-phìnn,16,lê-á-phìⁿ,le5a2phinn3,le5a2phinn3,leaphinn,leaphinn,lap,lap,True,True
 衫摺路,sann-tsih-lōo,16,saⁿ-chih-lō͘,sann1tsih4loo7,sann1chih4loo7,sanntsihloo,sannchihloo,stl,scl,True,False
 袚繡線,phua̍h-siù-suànn,16,phoa̍h-siù-sòaⁿ,phuah8siu3suann3,phoah8siu3soann3,phuahsiusuann,phoahsiusoann,pss,pss,True,False
 裝喙鬚,tsng-tshuì-tshiu,16,chng-chhùi-chhiu,tsng1tshui3tshiu1,chng1chhui3chhiu1,tsngtshuitshiu,chngchhuichhiu,ttt,ccc,True,False
-設計圖,siat-kè-tôo,16,siat-kè-tô͘,siat4ke3too5,siat4ke3too5,siatketoo,siatketoo,skt,skt,True,True
+設計圖,siat-kè-tôo,16,siat-kè-tô͘,siat4ke3too5,siat4ke3too5,siatketoo,siatketoo,skt,skt,True,False
 設計稿,siat-kè-kó,16,siat-kè-kó,siat4ke3ko2,siat4ke3ko2,siatkeko,siatkeko,skk,skk,True,False
 試金石,tshì-kim-tsio̍h,16,chhì-kim-chio̍h,tshi3kim1tsioh8,chhi3kim1chioh8,tshikimtsioh,chhikimchioh,tkt,ckc,True,False
 豆油缸,tāu-iû-kng,16,tāu-iû-kng,tau7iu5kng1,tau7iu5kng1,tauiukng,tauiukng,tik,tik,True,False
@@ -778,7 +778,7 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 銅抿仔,tâng-bín-á,16,tâng-bín-á,tang5bin2a2,tang5bin2a2,tangbina,tangbina,tba,tba,True,False
 鋏玻璃,giap-po-lê,16,giap-po-lê,giap4po1le5,giap4po1le5,giappole,giappole,gpl,gpl,True,False
 錢袋仔,tsînn-tē-á,16,chîⁿ-tē-á,tsinn5te7a2,chinn5te7a2,tsinntea,chinntea,tta,cta,True,False
-鍊帶鋸,lián-tuà-kì,16,lián-tòa-kì,lian2tua3ki3,lian2toa3ki3,liantuaki,liantoaki,ltk,ltk,True,False
+鍊帶鋸,lián-tuà-kì,16,lián-tòa-kì,lian2tua3ki3,lian2toa3ki3,liantuaki,liantoaki,ltk,ltk,True,True
 鏡箱仔,kiànn-siunn-á,16,kiàⁿ-siuⁿ-á,kiann3siunn1a2,kiann3siunn1a2,kiannsiunna,kiannsiunna,ksa,ksa,True,False
 鐮刈仔,liâm-li̍k-á,16,liâm-le̍k-á,liam5lik8a2,liam5lek8a2,liamlika,liamleka,lla,lla,True,False
 鐵仔支,thih-á-ki,16,thih-á-ki,thih4a2ki1,thih4a2ki1,thihaki,thihaki,tak,tak,True,False
@@ -796,19 +796,19 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 電塗燈,tiān-thôo-ting,16,tiān-thô͘-teng,tian7thoo5ting1,tian7thoo5teng1,tianthooting,tianthooteng,ttt,ttt,True,False
 電熱爐,tiān-jia̍t-lôo,16,tiān-jia̍t-lô͘,tian7jiat8loo5,tian7jiat8loo5,tianjiatloo,tianjiatloo,tjl,tjl,True,False
 電風龜,tiān-hong-ku,16,tiān-hong-ku,tian7hong1ku1,tian7hong1ku1,tianhongku,tianhongku,thk,thk,True,False
-青斗石,tshenn-táu-tsio̍h,16,chheⁿ-táu-chio̍h,tshenn1tau2tsioh8,chhenn1tau2chioh8,tshenntautsioh,chhenntauchioh,ttt,ctc,True,False
+青斗石,tshenn-táu-tsio̍h,16,chheⁿ-táu-chio̍h,tshenn1tau2tsioh8,chhenn1tau2chioh8,tshenntautsioh,chhenntauchioh,ttt,ctc,True,True
 鞋拔仔,ê-pue̍h-á,16,ê-poe̍h-á,e5pueh8a2,e5poeh8a2,epueha,epoeha,epa,epa,True,False
-順手體,sūn-tshiú-thé,16,sūn-chhiú-thé,sun7tshiu2the2,sun7chhiu2the2,suntshiuthe,sunchhiuthe,stt,sct,True,False
+順手體,sūn-tshiú-thé,16,sūn-chhiú-thé,sun7tshiu2the2,sun7chhiu2the2,suntshiuthe,sunchhiuthe,stt,sct,True,True
 風車花,hong-tshia-hue,16,hong-chhia-hoe,hong1tshia1hue1,hong1chhia1hoe1,hongtshiahue,hongchhiahoe,hth,hch,True,False
 食生漆,tsia̍h-tshenn-tshat,16,chia̍h-chheⁿ-chhat,tsiah8tshenn1tshat4,chiah8chhenn1chhat4,tsiahtshenntshat,chiahchhennchhat,ttt,ccc,True,False
 飯攕仔,pn̄g-tshiám-á,16,pn̄g-chhiám-á,png7tshiam2a2,png7chhiam2a2,pngtshiama,pngchhiama,pta,pca,True,False
 魚仔盤,hî-á-puânn,16,hî-á-pôaⁿ,hi5a2puann5,hi5a2poann5,hiapuann,hiapoann,hap,hap,True,False
 魚籠仔,hî-láng-á,16,hî-láng-á,hi5lang2a2,hi5lang2a2,hilanga,hilanga,hla,hla,True,False
-魚鱗甲,hî-lân-kah,16,hî-lân-kah,hi5lan5kah4,hi5lan5kah4,hilankah,hilankah,hlk,hlk,True,False
+魚鱗甲,hî-lân-kah,16,hî-lân-kah,hi5lan5kah4,hi5lan5kah4,hilankah,hilankah,hlk,hlk,True,True
 魚鱗紋,hî-lân-bûn,16,hî-lân-bûn,hi5lan5bun5,hi5lan5bun5,hilanbun,hilanbun,hlb,hlb,True,False
 鯉魚嘴,tāi-hî-tshuî,16,tāi-hî-chhûi,tai7hi5tshui5,tai7hi5chhui5,taihitshui,taihichhui,tht,thc,True,False
 鯊魚刀,sua-hî-to,16,soa-hî-to,sua1hi5to1,soa1hi5to1,suahito,soahito,sht,sht,True,False
-鹽筒仔,iâm-tâng-á,16,iâm-tâng-á,iam5tang5a2,iam5tang5a2,iamtanga,iamtanga,ita,ita,True,True
+鹽筒仔,iâm-tâng-á,16,iâm-tâng-á,iam5tang5a2,iam5tang5a2,iamtanga,iamtanga,ita,ita,True,False
 黃塗底,n̂g-thôo-té,16,n̂g-thô͘-té,ng5thoo5te2,ng5thoo5te2,ngthoote,ngthoote,ntt,ntt,True,False
 黃塗粉,n̂g-thôo-hún,16,n̂g-thô͘-hún,ng5thoo5hun2,ng5thoo5hun2,ngthoohun,ngthoohun,nth,nth,True,False
 黃豆粉,n̂g-tāu-hún,16,n̂g-tāu-hún,ng5tau7hun2,ng5tau7hun2,ngtauhun,ngtauhun,nth,nth,True,False
@@ -817,8 +817,8 @@ hì-tah線,hì-tah-suànn,16,hì-tah-sòaⁿ,hi3tah4suann3,hi3tah4soann3,hitahsu
 鼓仔燈,kóo-á-ting,16,kó͘-á-teng,koo2a2ting1,koo2a2teng1,kooating,kooateng,kat,kat,True,False
 龍椅手,liông-í-tshiú,16,liông-í-chhiú,liong5i2tshiu2,liong5i2chhiu2,liongitshiu,liongichhiu,lit,lic,True,False
 龍眼葉,lîng-gíng-hio̍h,16,lêng-géng-hio̍h,ling5ging2hioh8,leng5geng2hioh8,lingginghioh,lenggenghioh,lgh,lgh,True,False
-龜甲紋,ku-kah-bûn,16,ku-kah-bûn,ku1kah4bun5,ku1kah4bun5,kukahbun,kukahbun,kkb,kkb,True,False
-布袋,pòo-tē,15,pò͘-tē,poo3te7,poo3te7,poote,poote,pt,pt,True,False
+龜甲紋,ku-kah-bûn,16,ku-kah-bûn,ku1kah4bun5,ku1kah4bun5,kukahbun,kukahbun,kkb,kkb,True,True
+布袋,pòo-tē,15,pò͘-tē,poo3te7,poo3te7,poote,poote,pt,pt,True,True
 hì-tah開關,hì-tah khai-kuan,12,hì-tah khai-koan,hi3tah4khai1kuan1,hi3tah4khai1koan1,hitahkhaikuan,hitahkhaikoan,htkk,htkk,True,False
 khe金倒槽,khe-kim-tò-tsô,12,khe-kim-tò-chô,khe1kim1to3tso5,khe1kim1to3cho5,khekimtotso,khekimtocho,kktt,kktc,True,False
 phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1the2koe1pang1,phuethekuepang,phoethekoepang,ptkp,ptkp,True,False
@@ -826,7 +826,7 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 七分鑿仔,tshit-hun-tsha̍k-á,12,chhit-hun-chha̍k-á,tshit4hun1tshak8a2,chhit4hun1chhak8a2,tshithuntshaka,chhithunchhaka,thta,chca,True,False
 三分鑿仔,sann-hun-tsha̍k-á,12,saⁿ-hun-chha̍k-á,sann1hun1tshak8a2,sann1hun1chhak8a2,sannhuntshaka,sannhunchhaka,shta,shca,True,False
 三角刀仔,sann-kak-to-á,12,saⁿ-kak-to-á,sann1kak4to1a2,sann1kak4to1a2,sannkaktoa,sannkaktoa,skta,skta,True,False
-乾漆茶盤,kan-tshat tê-puânn,12,kan-chhat tê-pôaⁿ,kan1tshat4te5puann5,kan1chhat4te5poann5,kantshattepuann,kanchhattepoann,kttp,kctp,True,True
+乾漆茶盤,kan-tshat tê-puânn,12,kan-chhat tê-pôaⁿ,kan1tshat4te5puann5,kan1chhat4te5poann5,kantshattepuann,kanchhattepoann,kttp,kctp,True,False
 五分鑿仔,gōo-hun-tsha̍k-á,12,gō͘-hun-chha̍k-á,goo7hun1tshak8a2,goo7hun1chhak8a2,goohuntshaka,goohunchhaka,ghta,ghca,True,False
 便當篋仔,piān-tong-kheh-á,12,piān-tong-kheh-á,pian7tong1kheh4a2,pian7tong1kheh4a2,piantongkheha,piantongkheha,ptka,ptka,True,False
 修光鑿仔,siu-kng-tsha̍k-á,12,siu-kng-chha̍k-á,siu1kng1tshak8a2,siu1kng1chhak8a2,siukngtshaka,siukngchhaka,skta,skca,True,False
@@ -838,7 +838,7 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 分半鑿仔,hun-puànn-tsha̍k-á,12,hun-pòaⁿ-chha̍k-á,hun1puann3tshak8a2,hun1poann3chhak8a2,hunpuanntshaka,hunpoannchhaka,hpta,hpca,True,False
 切線模仔,tshiat-suànn-bôo-á,12,chhiat-sòaⁿ-bô͘-á,tshiat4suann3boo5a2,chhiat4soann3boo5a2,tshiatsuannbooa,chhiatsoannbooa,tsba,csba,True,False
 南京剾仔,lâm-kiann-khau-á,12,lâm-kiaⁿ-khau-á,lam5kiann1khau1a2,lam5kiann1khau1a2,lamkiannkhaua,lamkiannkhaua,lkka,lkka,True,False
-印仔手指,ìn-á-tshiú-tsí,12,ìn-á-chhiú-chí,in3a2tshiu2tsi2,in3a2chhiu2chi2,inatshiutsi,inachhiuchi,iatt,iacc,True,True
+印仔手指,ìn-á-tshiú-tsí,12,ìn-á-chhiú-chí,in3a2tshiu2tsi2,in3a2chhiu2chi2,inatshiutsi,inachhiuchi,iatt,iacc,True,False
 厚葉柃木,kāu-hio̍h-lîng-bo̍k,12,kāu-hio̍h-lêng-bo̍k,kau7hioh8ling5bok8,kau7hioh8leng5bok8,kauhiohlingbok,kauhiohlengbok,khlb,khlb,True,False
 原料槽仔,guân-liāu-tsô-á,12,goân-liāu-chô-á,guan5liau7tso5a2,goan5liau7cho5a2,guanliautsoa,goanliauchoa,glta,glca,True,False
 吊鏡片仔,tiò-kiànn-phìnn-á,12,tiò-kiàⁿ-phìⁿ-á,tio3kiann3phinn3a2,tio3kiann3phinn3a2,tiokiannphinna,tiokiannphinna,tkpa,tkpa,True,False
@@ -861,9 +861,9 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 拌料機仔,puānn-liāu-ki-á,12,pōaⁿ-liāu-ki-á,puann7liau7ki1a2,poann7liau7ki1a2,puannliaukia,poannliaukia,plka,plka,True,False
 挲線枋仔,so-suànn-pang-á,12,so-sòaⁿ-pang-á,so1suann3pang1a2,so1soann3pang1a2,sosuannpanga,sosoannpanga,sspa,sspa,True,False
 掃梳笒仔,sàu-se-gím-á,12,sàu-se-gím-á,sau3se1gim2a2,sau3se1gim2a2,sausegima,sausegima,ssga,ssga,True,False
-搭架剪仔,tah-kè-tsián-á,12,tah-kè-chián-á,tah4ke3tsian2a2,tah4ke3chian2a2,tahketsiana,tahkechiana,tkta,tkca,True,False
-摃手指跤,kòng-tshiú-tsí-kha,12,kòng-chhiú-chí-kha,kong3tshiu2tsi2kha1,kong3chhiu2chi2kha1,kongtshiutsikha,kongchhiuchikha,kttk,kcck,True,True
-春壽香筒,tshun-siū-hiunn-tâng,12,chhun-siū-hiuⁿ-tâng,tshun1siu7hiunn1tang5,chhun1siu7hiunn1tang5,tshunsiuhiunntang,chhunsiuhiunntang,tsht,csht,True,True
+搭架剪仔,tah-kè-tsián-á,12,tah-kè-chián-á,tah4ke3tsian2a2,tah4ke3chian2a2,tahketsiana,tahkechiana,tkta,tkca,True,True
+摃手指跤,kòng-tshiú-tsí-kha,12,kòng-chhiú-chí-kha,kong3tshiu2tsi2kha1,kong3chhiu2chi2kha1,kongtshiutsikha,kongchhiuchikha,kttk,kcck,True,False
+春壽香筒,tshun-siū-hiunn-tâng,12,chhun-siū-hiuⁿ-tâng,tshun1siu7hiunn1tang5,chhun1siu7hiunn1tang5,tshunsiuhiunntang,chhunsiuhiunntang,tsht,csht,True,False
 木苧仔麻,bo̍k-tē-á-muâ,12,bo̍k-tē-á-môa,bok8te7a2mua5,bok8te7a2moa5,bokteamua,bokteamoa,btam,btam,True,False
 果子粒仔,kué-tsí-lia̍p-á,12,kóe-chí-lia̍p-á,kue2tsi2liap8a2,koe2chi2liap8a2,kuetsiliapa,koechiliapa,ktla,kcla,True,False
 栽目睭毛,tsai-ba̍k-tsiu-moo,12,chai-ba̍k-chiu-mo͘,tsai1bak8tsiu1moo1,chai1bak8chiu1moo1,tsaibaktsiumoo,chaibakchiumoo,tbtm,cbcm,True,False
@@ -884,7 +884,7 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 玻璃𣁳仔,po-lê-khat-á,12,po-lê-khat-á,po1le5khat4a2,po1le5khat4a2,polekhata,polekhata,plka,plka,True,False
 生毛柿仔,senn-moo-khī-á,12,seⁿ-mo͘-khī-á,senn1moo1khi7a2,senn1moo1khi7a2,sennmookhia,sennmookhia,smka,smka,True,False
 生頭發尾,senn-thâu-huat-bué,12,seⁿ-thâu-hoat-bóe,senn1thau5huat4bue2,senn1thau5hoat4boe2,sennthauhuatbue,sennthauhoatboe,sthb,sthb,True,False
-畫布花仔,uē-pòo-hue-á,12,ōe-pò͘-hoe-á,ue7poo3hue1a2,oe7poo3hoe1a2,uepoohuea,oepoohoea,upha,opha,True,False
+畫布花仔,uē-pòo-hue-á,12,ōe-pò͘-hoe-á,ue7poo3hue1a2,oe7poo3hoe1a2,uepoohuea,oepoohoea,upha,opha,True,True
 白糊固定,pe̍h-kôo kòo-tīng,12,pe̍h-kô͘ kò͘-tēng,peh8koo5koo3ting7,peh8koo5koo3teng7,pehkookooting,pehkookooteng,pkkt,pkkt,True,False
 相思仔樹,siunn-si-á-tshiū,12,siuⁿ-si-á-chhiū,siunn1si1a2tshiu7,siunn1si1a2chhiu7,siunnsiatshiu,siunnsiachhiu,ssat,ssac,True,False
 石仔秤錘,tsio̍h ê tshìn-thuî,12,chio̍h ê chhìn-thûi,tsioh8e5tshin3thui5,chioh8e5chhin3thui5,tsiohetshinthui,chiohechhinthui,tett,cect,True,False
@@ -896,14 +896,14 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 竹管仔飯,tik-kóng-á-pn̄g,12,tek-kóng-á-pn̄g,tik4kong2a2png7,tek4kong2a2png7,tikkongapng,tekkongapng,tkap,tkap,True,False
 竹編花籃,tik-pinn hue-nâ,12,tek-piⁿ hoe-nâ,tik4pinn1hue1na5,tek4pinn1hoe1na5,tikpinnhuena,tekpinnhoena,tphn,tphn,True,False
 管頭鋏仔,kóng-thâu-giap-á,12,kóng-thâu-giap-á,kong2thau5giap4a2,kong2thau5giap4a2,kongthaugiapa,kongthaugiapa,ktga,ktga,True,False
-籤尾刀仔,tshiam-bué-to-á,12,chhiam-bóe-to-á,tshiam1bue2to1a2,chhiam1boe2to1a2,tshiambuetoa,chhiamboetoa,tbta,cbta,True,True
+籤尾刀仔,tshiam-bué-to-á,12,chhiam-bóe-to-á,tshiam1bue2to1a2,chhiam1boe2to1a2,tshiambuetoa,chhiamboetoa,tbta,cbta,True,False
 粗胚鑿仔,tshoo-phue-tsha̍k-á,12,chho͘-phoe-chha̍k-á,tshoo1phue1tshak8a2,chhoo1phoe1chhak8a2,tshoophuetshaka,chhoophoechhaka,tpta,cpca,True,True
 細支鉸刀,sè-ki-ka-to,12,sè-ki-ka-to,se3ki1ka1to1,se3ki1ka1to1,sekikato,sekikato,skkt,skkt,True,False
 綠釉夜壺,lik-iu-iā-hôo,12,lek-iu-iā-hô͘,lik4iu1ia7hoo5,lek4iu1ia7hoo5,likiuiahoo,lekiuiahoo,liih,liih,True,False
 線板鋸仔,suànn-pán-kì-á,12,sòaⁿ-pán-kì-á,suann3pan2ki3a2,soann3pan2ki3a2,suannpankia,soannpankia,spka,spka,True,False
 線條鋏仔,suànn-tiâu-giap-á,12,sòaⁿ-tiâu-giap-á,suann3tiau5giap4a2,soann3tiau5giap4a2,suanntiaugiapa,soanntiaugiapa,stga,stga,True,False
 練塗機仔,liān-thôo-ki-á,12,liān-thô͘-ki-á,lian7thoo5ki1a2,lian7thoo5ki1a2,lianthookia,lianthookia,ltka,ltka,True,False
-縛冬瓜箍,pa̍k-tang-kue-khoo,12,pa̍k-tang-koe-kho͘,pak8tang1kue1khoo1,pak8tang1koe1khoo1,paktangkuekhoo,paktangkoekhoo,ptkk,ptkk,True,True
+縛冬瓜箍,pa̍k-tang-kue-khoo,12,pa̍k-tang-koe-kho͘,pak8tang1kue1khoo1,pak8tang1koe1khoo1,paktangkuekhoo,paktangkoekhoo,ptkk,ptkk,True,False
 纏鍊仔目,tînn-liān-á-ba̍k,12,tîⁿ-liān-á-ba̍k,tinn5lian7a2bak8,tinn5lian7a2bak8,tinnlianabak,tinnlianabak,tlab,tlab,True,False
 胭脂樹仔,ian-tsi-tshiū-á,12,ian-chi-chhiū-á,ian1tsi1tshiu7a2,ian1chi1chhiu7a2,iantsitshiua,ianchichhiua,itta,icca,True,False
 脫胎漆器,thuat-thai-tshat-khì,12,thoat-thai-chhat-khì,thuat4thai1tshat4khi3,thoat4thai1chhat4khi3,thuatthaitshatkhi,thoatthaichhatkhi,tttk,ttck,True,False
@@ -932,9 +932,9 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 鉛筆盒仔,iân-pit-a̍p-á,12,iân-pit-a̍p-á,ian5pit4ap8a2,ian5pit4ap8a2,ianpitapa,ianpitapa,ipaa,ipaa,True,False
 鉸刀剪仔,ka-to-tsián-á,12,ka-to-chián-á,ka1to1tsian2a2,ka1to1chian2a2,katotsiana,katochiana,ktta,ktca,True,False
 鉸鍊仔機,ka-liān-á-ki,12,ka-liān-á-ki,ka1lian7a2ki1,ka1lian7a2ki1,kalianaki,kalianaki,klak,klak,True,False
-銀花矸仔,gîn-hue-kan-á,12,gîn-hoe-kan-á,gin5hue1kan1a2,gin5hoe1kan1a2,ginhuekana,ginhoekana,ghka,ghka,True,True
+銀花矸仔,gîn-hue-kan-á,12,gîn-hoe-kan-á,gin5hue1kan1a2,gin5hoe1kan1a2,ginhuekana,ginhoekana,ghka,ghka,True,False
 鋸鍊仔目,kù-liān-á-ba̍k,12,kù-liān-á-ba̍k,ku3lian7a2bak8,ku3lian7a2bak8,kulianabak,kulianabak,klab,klab,True,False
-鑿人字甲,tsha̍k-jîn-jī-kah,12,chha̍k-jîn-jī-kah,tshak8jin5ji7kah4,chhak8jin5ji7kah4,tshakjinjikah,chhakjinjikah,tjjk,cjjk,True,False
+鑿人字甲,tsha̍k-jîn-jī-kah,12,chha̍k-jîn-jī-kah,tshak8jin5ji7kah4,chhak8jin5ji7kah4,tshakjinjikah,chhakjinjikah,tjjk,cjjk,True,True
 雞鵤仔車,ke-kak-á-tshia,12,ke-kak-á-chhia,ke1kak4a2tshia1,ke1kak4a2chhia1,kekakatshia,kekakachhia,kkat,kkac,True,False
 電子磅仔,tiān-tsú-pōng-á,12,tiān-chú-pōng-á,tian7tsu2pong7a2,tian7chu2pong7a2,tiantsuponga,tianchuponga,ttpa,tcpa,True,False
 電解機仔,tiān-kái-ki-á,12,tiān-kái-ki-á,tian7kai2ki1a2,tian7kai2ki1a2,tiankaikia,tiankaikia,tkka,tkka,True,False
@@ -948,44 +948,15 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 黃金染料,n̂g-kim-ní-liāu,12,n̂g-kim-ní-liāu,ng5kim1ni2liau7,ng5kim1ni2liau7,ngkimniliau,ngkimniliau,nknl,nknl,True,False
 點火的,tiám-hué--ê,12,tiám-hóe--ê,tiam2hue2e5,tiam2hoe2e5,tiamhuee,tiamhoee,the,the,True,False
 茄苳,ka-tang,11,ka-tang,ka1tang1,ka1tang1,katang,katang,kt,kt,True,False
-三尺的花鐘,sann-tshioh ê hue-tsing,10,saⁿ-chhioh ê hoe-cheng,sann1tshioh4e5hue1tsing1,sann1chhioh4e5hoe1cheng1,sanntshiohehuetsing,sannchhiohehoecheng,steht,scehc,True,False
-三角溫度針,sann-kak-un-tōo-tsiam,10,saⁿ-kak-un-tō͘-chiam,sann1kak4un1too7tsiam1,sann1kak4un1too7chiam1,sannkakuntootsiam,sannkakuntoochiam,skutt,skutc,True,False
-五尺的花鐘,gōo-tshioh ê hue-tsing,10,gō͘-chhioh ê hoe-cheng,goo7tshioh4e5hue1tsing1,goo7chhioh4e5hoe1cheng1,gootshiohehuetsing,goochhiohehoecheng,gteht,gcehc,True,False
-仿古的銅鼎,hóng-kóo ê tâng-tiánn,10,hóng-kó͘ ê tâng-tiáⁿ,hong2koo2e5tang5tiann2,hong2koo2e5tang5tiann2,hongkooetangtiann,hongkooetangtiann,hkett,hkett,True,False
-切割的直尺,tshiat-kuah ê ti̍t-tshioh,10,chhiat-koah ê ti̍t-chhioh,tshiat4kuah4e5tit8tshioh4,chhiat4koah4e5tit8chhioh4,tshiatkuahetittshioh,chhiatkoahetitchhioh,tkett,cketc,True,False
-剪白鐵網剪,tsián-pe̍h-thih-bāng-tsián,10,chián-pe̍h-thih-bāng-chián,tsian2peh8thih4bang7tsian2,chian2peh8thih4bang7chian2,tsianpehthihbangtsian,chianpehthihbangchian,tptbt,cptbc,True,False
-割圓的器具,kuah-înn ê khì-kū,10,koah-îⁿ ê khì-kū,kuah4inn5e5khi3ku7,koah4inn5e5khi3ku7,kuahinnekhiku,koahinnekhiku,kiekk,kiekk,True,False
-厚葉石斑木,kāu-hio̍h-tsio̍h-pan-bo̍k,10,kāu-hio̍h-chio̍h-pan-bo̍k,kau7hioh8tsioh8pan1bok8,kau7hioh8chioh8pan1bok8,kauhiohtsiohpanbok,kauhiohchiohpanbok,khtpb,khcpb,True,False
-古早的鎖頭,kóo-tsá ê só-thâu,10,kó͘-chá ê só-thâu,koo2tsa2e5so2thau5,koo2cha2e5so2thau5,kootsaesothau,koochaesothau,ktest,kcest,True,False
-四角柱仔跤,sì-kak thiāu-á-kha,10,sì-kak thiāu-á-kha,si3kak4thiau7a2kha1,si3kak4thiau7a2kha1,sikakthiauakha,sikakthiauakha,sktak,sktak,True,False
-塗燒的螿蜍,thôo sio ê tsiunn-tsî,10,thô͘ sio ê chiuⁿ-chî,thoo5sio1e5tsiunn1tsi5,thoo5sio1e5chiunn1chi5,thoosioetsiunntsi,thoosioechiunnchi,tsett,tsecc,True,False
-奇種茶米罐,kî-tsióng tê-bí-kuàn,10,kî-chióng tê-bí-koàn,ki5tsiong2te5bi2kuan3,ki5chiong2te5bi2koan3,kitsiongtebikuan,kichiongtebikoan,kttbk,kctbk,True,False
-小型的籠床,sió-hîng ê lâng-sn̂g,10,sió-hêng ê lâng-sn̂g,sio2hing5e5lang5sng5,sio2heng5e5lang5sng5,siohingelangsng,siohengelangsng,shels,shels,True,False
-尪仔頭模仔,ang-á-thâu-bôo-á,10,ang-á-thâu-bô͘-á,ang1a2thau5boo5a2,ang1a2thau5boo5a2,angathaubooa,angathaubooa,aatba,aatba,True,False
 帽仔,bō-á,10,bō-á,bo7a2,bo7a2,boa,boa,ba,ba,True,False
-彎角柱仔跤,uan-kak thiāu-á-kha,10,oan-kak thiāu-á-kha,uan1kak4thiau7a2kha1,oan1kak4thiau7a2kha1,uankakthiauakha,oankakthiauakha,uktak,oktak,True,False
-彩繪錦花仔,tshái-uē-gím-hue-á,10,chhái-ōe-gím-hoe-á,tshai2ue7gim2hue1a2,chhai2oe7gim2hoe1a2,tshaiuegimhuea,chhaioegimhoea,tugha,cogha,True,False
-彩色的玻璃,tshái-sik-ê po-lê,10,chhái-sek-ê po-lê,tshai2sik4e5po1le5,chhai2sek4e5po1le5,tshaisikepole,chhaisekepole,tsepl,csepl,True,False
-戰甲人字甲,tsiàn-kah jîn-jī-kah,10,chiàn-kah jîn-jī-kah,tsian3kah4jin5ji7kah4,chian3kah4jin5ji7kah4,tsiankahjinjikah,chiankahjinjikah,tkjjk,ckjjk,True,False
 手巾仔,tshiú-kin-á,10,chhiú-kin-á,tshiu2kin1a2,chhiu2kin1a2,tshiukina,chhiukina,tka,cka,True,False
-手指,tshiú-tsí,10,chhiú-chí,tshiu2tsi2,chhiu2chi2,tshiutsi,chhiuchi,tt,cc,True,True
-拍空的工具,phah-khang ê kang-kū,10,phah-khang ê kang-kū,phah4khang1e5kang1ku7,phah4khang1e5kang1ku7,phahkhangekangku,phahkhangekangku,pkekk,pkekk,True,False
-挑紗的戰甲,thiàu-se ê tsiàn-kah,10,thiàu-se ê chiàn-kah,thiau3se1e5tsian3kah4,thiau3se1e5chian3kah4,thiauseetsiankah,thiauseechiankah,tsetk,tseck,True,False
-捲紙的鐵筆,kńg-tsuá-ê thih-pit,10,kńg-chóa-ê thih-pit,kng2tsua2e5thih4pit4,kng2choa2e5thih4pit4,kngtsuaethihpit,kngchoaethihpit,ktetp,kcetp,True,False
-摃槌仔,kòng-thuî-á,10,kòng-thûi-á,kong3thui5a2,kong3thui5a2,kongthuia,kongthuia,kta,kta,True,True
+手指,tshiú-tsí,10,chhiú-chí,tshiu2tsi2,chhiu2chi2,tshiutsi,chhiuchi,tt,cc,True,False
+摃槌仔,kòng-thuî-á,10,kòng-thûi-á,kong3thui5a2,kong3thui5a2,kongthuia,kongthuia,kta,kta,True,False
 斧頭,póo-thâu,10,pó͘-thâu,poo2thau5,poo2thau5,poothau,poothau,pt,pt,True,False
 時鐘,sî-tsing,10,sî-cheng,si5tsing1,si5cheng1,sitsing,sicheng,st,sc,True,False
-晟手的二鏨,tshiânn-tshiú ê jī-tsām,10,chhiâⁿ-chhiú ê jī-chām,tshiann5tshiu2e5ji7tsam7,chhiann5chhiu2e5ji7cham7,tshianntshiuejitsam,chhiannchhiuejicham,ttejt,ccejc,True,False
-柴做的飯坩,tshâ tsò ê pn̄g-khann,10,chhâ chò ê pn̄g-khaⁿ,tsha5tso3e5png7khann1,chha5cho3e5png7khann1,tshatsoepngkhann,chhachoepngkhann,ttepk,ccepk,True,False
-柴的敲槌仔,tshâ ê khà-thuî-á,10,chhâ ê khà-thûi-á,tsha5e5kha3thui5a2,chha5e5kha3thui5a2,tshaekhathuia,chhaekhathuia,tekta,cekta,True,False
-柴雕的劍獅,tshâ-tiau ê kiàm-sai,10,chhâ-tiau ê kiàm-sai,tsha5tiau1e5kiam3sai1,chha5tiau1e5kiam3sai1,tshatiauekiamsai,chhatiauekiamsai,tteks,cteks,True,False
 椅條,í-liâu,10,í-liâu,i2liau5,i2liau5,iliau,iliau,il,il,True,False
 楓仔樹,png-á-tshiū,10,png-á-chhiū,png1a2tshiu7,png1a2chhiu7,pngatshiu,pngachhiu,pat,pac,True,False
-樟仔柴冊櫃,tsiunn-á-tshâ tsheh-kuì,10,chiuⁿ-á-chhâ chheh-kùi,tsiunn1a2tsha5tsheh4kui3,chiunn1a2chha5chheh4kui3,tsiunnatshatshehkui,chiunnachhachhehkui,tattk,cacck,True,False
-泉州派牽線,tsuân-tsiu-phài khan-suànn,10,choân-chiu-phài khan-sòaⁿ,tsuan5tsiu1phai3khan1suann3,choan5chiu1phai3khan1soann3,tsuantsiuphaikhansuann,choanchiuphaikhansoann,ttpks,ccpks,True,False
-泡棉的膠帶,phàu-mî ê ka-tuà,10,phàu-mî ê ka-tòa,phau3mi5e5ka1tua3,phau3mi5e5ka1toa3,phaumiekatua,phaumiekatoa,pmekt,pmekt,True,False
 湯匙,thng-sî,10,thng-sî,thng1si5,thng1si5,thngsi,thngsi,ts,ts,True,False
-火炭的熨斗,hué-thuànn ê ut-táu,10,hóe-thòaⁿ ê ut-táu,hue2thuann3e5ut4tau2,hoe2thoann3e5ut4tau2,huethuanneuttau,hoethoanneuttau,hteut,hteut,True,False
 烏枋,oo-pang,10,o͘-pang,oo1pang1,oo1pang1,oopang,oopang,op,op,True,False
 烘爐,hang-lôo,10,hang-lô͘,hang1loo5,hang1loo5,hangloo,hangloo,hl,hl,True,False
 玉蘭,gio̍k-lân,10,gio̍k-lân,giok8lan5,giok8lan5,gioklan,gioklan,gl,gl,True,False
@@ -993,28 +964,12 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 番仔火,huan-á-hué,10,hoan-á-hóe,huan1a2hue2,hoan1a2hoe2,huanahue,hoanahoe,hah,hah,True,False
 皮鞋,phuê-ê,10,phôe-ê,phue5e5,phoe5e5,phuee,phoee,pe,pe,True,False
 真珠,tsin-tsu,10,chin-chu,tsin1tsu1,chin1chu1,tsintsu,chinchu,tt,cc,True,False
-硩紙的鐵筆,teh-tsuá-ê thih-pit,10,teh-chóa-ê thih-pit,teh4tsua2e5thih4pit4,teh4choa2e5thih4pit4,tehtsuaethihpit,tehchoaethihpit,ttetp,tcetp,True,False
-硩邊的軟墊,teh-pinn ê nńg-tiām,10,teh-piⁿ ê nńg-tiām,teh4pinn1e5nng2tiam7,teh4pinn1e5nng2tiam7,tehpinnenngtiam,tehpinnenngtiam,tpent,tpent,True,False
-磨跳舞鍊仔,buâ-thiàu-bú-liān-á,10,bôa-thiàu-bú-liān-á,bua5thiau3bu2lian7a2,boa5thiau3bu2lian7a2,buathiaubuliana,boathiaubuliana,btbla,btbla,True,False
-神像設計圖,sîn-siōng siat-kè-tôo,10,sîn-siōng siat-kè-tô͘,sin5siong7siat4ke3too5,sin5siong7siat4ke3too5,sinsiongsiatketoo,sinsiongsiatketoo,ssskt,ssskt,True,False
-福州派粉線,hok-tsiu-phài hún-suànn,10,hok-chiu-phài hún-sòaⁿ,hok4tsiu1phai3hun2suann3,hok4chiu1phai3hun2soann3,hoktsiuphaihunsuann,hokchiuphaihunsoann,htphs,hcphs,True,False
 秤仔,tshìn-á,10,chhìn-á,tshin3a2,chhin3a2,tshina,chhina,ta,ca,True,False
-竹編的火籠,tik-pinn-ê hué-lang,10,tek-piⁿ-ê hóe-lang,tik4pinn1e5hue2lang1,tek4pinn1e5hoe2lang1,tikpinnehuelang,tekpinnehoelang,tpehl,tpehl,True,False
-竹編的飯擔,tik-pinn ê pn̄g-tànn,10,tek-piⁿ ê pn̄g-tàⁿ,tik4pinn1e5png7tann3,tek4pinn1e5png7tann3,tikpinnepngtann,tekpinnepngtann,tpept,tpept,True,False
-簇柴灰架子,tshok-tshâ-hu-kè-á,10,chhok-chhâ-hu-kè-á,tshok4tsha5hu1ke3a2,chhok4chha5hu1ke3a2,tshoktshahukea,chhokchhahukea,tthka,cchka,True,True
-粗胚的大鏨,tshoo-phue ê tuā-tsām,10,chho͘-phoe ê tōa-chām,tshoo1phue1e5tua7tsam7,chhoo1phoe1e5toa7cham7,tshoophueetuatsam,chhoophoeetoacham,tpett,cpetc,True,False
-粗胚的頓槌,tshoo-phue ê tǹg-thuî,10,chho͘-phoe ê tǹg-thûi,tshoo1phue1e5tng3thui5,chhoo1phoe1e5tng3thui5,tshoophueetngthui,chhoophoeetngthui,tpett,cpett,True,False
-純銀的秤仔,sûn-gîn-ê tshìn-á,10,sûn-gîn-ê chhìn-á,sun5gin5e5tshin3a2,sun5gin5e5chhin3a2,sunginetshina,sunginechhina,sgeta,sgeca,True,False
-茄苳入石榴,ka-tang ji̍p-tsio̍h-liû,10,ka-tang ji̍p-chio̍h-liû,ka1tang1jip8tsioh8liu5,ka1tang1jip8chioh8liu5,katangjiptsiohliu,katangjipchiohliu,ktjtl,ktjcl,True,False
 草鞋,tsháu-ê,10,chháu-ê,tshau2e5,chhau2e5,tshaue,chhaue,te,ce,True,False
 菜刀,tshài-to,10,chhài-to,tshai3to1,chhai3to1,tshaito,chhaito,tt,ct,True,False
-調味的架仔,tiâu-bī ê kè-á,10,tiâu-bī ê kè-á,tiau5bi7e5ke3a2,tiau5bi7e5ke3a2,tiaubiekea,tiaubiekea,tbeka,tbeka,True,False
 鉸刀,ka-to,10,ka-to,ka1to1,ka1to1,kato,kato,kt,kt,True,False
-銅雕的祥獸,tâng-tiau ê siông-siù,10,tâng-tiau ê siông-siù,tang5tiau1e5siong5siu3,tang5tiau1e5siong5siu3,tangtiauesiongsiu,tangtiauesiongsiu,ttess,ttess,True,False
 鋸仔,kì-á,10,kì-á,ki3a2,ki3a2,kia,kia,ka,ka,True,False
-鋸齒的剪刀,kì-khí ê ka-to,10,kì-khí ê ka-to,ki3khi2e5ka1to1,ki3khi2e5ka1to1,kikhiekato,kikhiekato,kkekt,kkekt,True,False
 鐵線,thih-suànn,10,thih-sòaⁿ,thih4suann3,thih4soann3,thihsuann,thihsoann,ts,ts,True,False
-鶯歌的箸籠,ing-ko ê tī-lāng,10,eng-ko ê tī-lāng,ing1ko1e5ti7lang7,eng1ko1e5ti7lang7,ingkoetilang,engkoetilang,iketl,eketl,True,False
 枇杷,gî-pê,2,gî-pê,gi5pe5,gi5pe5,gipe,gipe,gp,gp,True,False
 楊梅,iûnn-muî,2,iûⁿ-mûi,iunn5mui5,iunn5mui5,iunnmui,iunnmui,im,im,True,False
 剪絨,tsián-jiông,1,chián-jiông,tsian2jiong5,chian2jiong5,tsianjiong,chianjiong,tj,cj,True,False
@@ -1035,16 +990,16 @@ phue體kue枋,phue-thé kue-pang,12,phoe-thé koe-pang,phue1the2kue1pang1,phoe1t
 米酒,bí-tsiú,1,bí-chiú,bi2tsiu2,bi2chiu2,bitsiu,bichiu,bt,bc,True,False
 糊仔,kôo-á,1,kô͘-á,koo5a2,koo5a2,kooa,kooa,ka,ka,True,False
 翼股,si̍t-kóo,1,si̍t-kó͘,sit8koo2,sit8koo2,sitkoo,sitkoo,sk,sk,True,False
-葫蘆,hôo-lôo,1,hô͘-lô͘,hoo5loo5,hoo5loo5,hooloo,hooloo,hl,hl,True,True
+葫蘆,hôo-lôo,1,hô͘-lô͘,hoo5loo5,hoo5loo5,hooloo,hooloo,hl,hl,True,False
 葵扇,khuê-sìnn,1,khôe-sìⁿ,khue5sinn3,khoe5sinn3,khuesinn,khoesinn,ks,ks,True,False
 薯榔,tsû-nn̂g,1,chû-nn̂g,tsu5nng5,chu5nng5,tsunng,chunng,tn,cn,True,False
 蝴蝶,ôo-tia̍p,1,ô͘-tia̍p,oo5tiap8,oo5tiap8,ootiap,ootiap,ot,ot,True,False
 雞籠,ke-lang,1,ke-lang,ke1lang1,ke1lang1,kelang,kelang,kl,kl,True,False
-風調雨順,hong-tiâu-ú-sūn,1,hong-tiâu-ú-sūn,hong1tiau5u2sun7,hong1tiau5u2sun7,hongtiauusun,hongtiauusun,htus,htus,True,False
+風調雨順,hong-tiâu-ú-sūn,1,hong-tiâu-ú-sūn,hong1tiau5u2sun7,hong1tiau5u2sun7,hongtiauusun,hongtiauusun,htus,htus,True,True
 飯匙,pn̄g-sî,1,pn̄g-sî,png7si5,png7si5,pngsi,pngsi,ps,ps,True,False
 飯篱,pn̄g-lē,1,pn̄g-lē,png7le7,png7le7,pngle,pngle,pl,pl,True,False
 鹿仔,lo̍k-á,1,lo̍k-á,lok8a2,lok8a2,loka,loka,la,la,True,False
 麒麟,kî-lîn,1,kî-lîn,ki5lin5,ki5lin5,kilin,kilin,kl,kl,True,False
 麥芽膏,be̍h-gê-ko,1,be̍h-gê-ko,beh8ge5ko1,beh8ge5ko1,behgeko,behgeko,bgk,bgk,True,False
-麻布,muâ-pòo,1,môa-pò͘,mua5poo3,moa5poo3,muapoo,moapoo,mp,mp,True,False
+麻布,muâ-pòo,1,môa-pò͘,mua5poo3,moa5poo3,muapoo,moapoo,mp,mp,True,True
 𥴊壺仔,kám-ôo-á,1,kám-ô͘-á,kam2oo5a2,kam2oo5a2,kamooa,kamooa,koa,koa,True,False

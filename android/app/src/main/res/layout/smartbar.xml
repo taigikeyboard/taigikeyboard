@@ -48,6 +48,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
+                android:paddingEnd="48dp"
                 android:clipToPadding="false"
                 android:scrollbars="none" />
 
@@ -119,8 +120,8 @@
             android:layout_height="match_parent"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            android:paddingStart="1dp"
+            android:paddingEnd="1dp"
             android:visibility="gone">
 
             <Button
@@ -152,12 +153,11 @@
                 android:text="TPS" />
 
             <!-- Symbol panel -->
-            <Button
+            <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
                 android:id="@+id/toolbar_symbol_button"
-                style="@style/SmartbarToolbarMode"
-                android:textSize="22sp"
-                android:text="※"
-                android:contentDescription="Symbol panel" />
+                style="@style/SmartbarToolbarIcon"
+                android:contentDescription="Symbol panel"
+                android:src="@drawable/ic_tag" />
 
             <!-- Layout selection -->
             <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton

@@ -14,15 +14,19 @@ Guidelines for **Claude Code (claude.ai/code)** when working with this codebase.
 
 ```
 taigikeyboard/
-├── android/        # Android version (Kotlin + FlorisBoard)
-├── ios/            # iOS version (Swift + KeyboardKit)
-├── docs/           # Technical specifications
-│   ├── engine/     # IME core logic (composing, tone, trie, autocomplete, sort, nextword, flow, tps)
-│   ├── ui/         # Presentation & layout (layout, flick, case, device, app-ui, theme)
-│   ├── references/ # External IME research (azookey, khiin, moe-taigi, rime)
-│   ├── keywords.md # Keyword glossary — start here
-│   └── README.md   # Full index
-└── CLAUDE.md       # This file
+├── android/           # Android version (Kotlin + FlorisBoard)
+├── ios/               # iOS version (Swift + KeyboardKit)
+├── docs/              # Technical specifications
+│   ├── engine/        # IME core logic (composing, tone, trie, autocomplete, sort, nextword, flow, tps)
+│   ├── ui/            # Presentation & layout (layout, flick, case, device, app-ui, theme)
+│   ├── references/    # External IME research (azookey, khiin, moe-taigi, rime)
+│   ├── keywords.md    # Keyword glossary — start here
+│   └── README.md      # Full index
+├── knowledge/         # Taiwanese phonetics reference data (TL/POJ/TPS)
+├── taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
+├── dictionary/        # Dictionary data files
+├── scripts/           # Build and utility scripts
+└── CLAUDE.md          # This file
 ```
 
 ## Context Management
@@ -41,6 +45,24 @@ taigikeyboard/
 3. **Follow YAGNI** - Only implement what's currently needed, keep it simple
 4. **No project config modification** - `.xcodeproj`, `.xcworkspace`, `.pbxproj`, `build.gradle`, and other project/build configuration files must be modified manually by the user. AI must never edit these files
 5. **Cross-platform alignment** - When porting logic between iOS and Android, align on **intended behavior** (what the user should see), not on **API calls**. iOS and Android have different platform semantics (e.g. marked text vs composing text). Always: (1) define the expected behavior first, (2) verify each platform's API achieves that behavior independently, (3) document in code comments when the same behavior requires different implementation per platform
+6. **Phonetic conversion reference** - When working on TL, POJ, or TPS conversion logic, **must** read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` (git submodule) as the canonical reference implementation before making changes
+
+## Build & Test Commands
+
+### iOS
+- Build: Open `ios/` in Xcode, build the keyboard extension target
+- Tests: `xcodebuild test` or run from Xcode (XCTest)
+
+### Android
+- Build: `cd android && ./gradlew assembleDebug`
+- Tests: `cd android && ./gradlew test`
+
+### taigi-converter (submodule)
+- Tests: `cd taigi-converter && node --test tests/`
+
+## Gotchas
+
+- `references/` is gitignored — do not place submodules or git-tracked content there
 
 ## Communication Guidelines
 
@@ -53,6 +75,11 @@ taigikeyboard/
 ---
 
 # iOS Project Guidelines
+
+## SourceKit Diagnostics
+
+- SourceKit cannot resolve cross-file types without a full Xcode build — errors like "Cannot find type 'X' in scope" are expected and should be ignored
+- Only investigate diagnostics that reference types/functions within the same file
 
 ## KeyboardKit Development Rules
 
@@ -68,10 +95,21 @@ taigikeyboard/
 3. **Service class Delegates** - Must use `weak` reference
 4. **Any memory-related changes must explicitly document risks**
 
+## iOS Architecture Notes
+
+- **SQLite layer**: `SQLiteConnectionManager` handles connection, queue, and initialization. Repositories use raw `sqlite3_*` C API inside `connectionManager.execute { db in }` closures — this verbosity is inherent to the C API, don't add wrapper abstractions
+- **Shared constant**: `SQLiteConnectionManager.sqliteTransient` replaces inline `unsafeBitCast(-1, to: sqlite3_destructor_type.self)` — use it for all `sqlite3_bind_text` calls
+
+## Swift Naming Conventions
+
+- Boolean `@State` and properties: always use `is`/`has`/`can`/`should` prefix (`isPressed`, `isExpanded`, not `pressed`, `expanded`)
+- Private nested types: prefix with parent context (`CandidateRowItem` not `RowItem`)
+- Extract magic numbers into named local constants with units in the name where applicable
+
 ## Test Conventions
 
 - Tests must be simple, effective, and non-redundant — no duplicate coverage across files
-- All conversion-related tests (TPS, TL, POJ, tone marks) use `./references/taigi-converter` as canonical reference implementation
+- All conversion-related tests (TPS, TL, POJ, tone marks) use `./taigi-converter` (git submodule) as canonical reference implementation
 - When tests fail, verify against reference behavior before changing production code
 - Assertion messages must be descriptive enough to copy-paste for debugging
 - Framework: XCTest; pattern: parametric arrays `[(input, expected)]` with loops + `XCTAssertEqual`
@@ -105,6 +143,8 @@ taigikeyboard/
   - `docs/ui/` — presentation specs (layout, flick, case, device, app-ui, theme)
   - `docs/references/` — external IME research (azookey, khiin, moe-taigi, rime)
 - `./references/` contains cloned external repos (azooKey, KeyboardKit-Documentation, etc.) — search here first when referencing external projects, no need for web search
+- `./knowledge/` — Taiwanese phonetics reference data (source PDFs + `taigi-phonetics-reference.md` for TL/POJ/TPS cross-reference)
+- `./taigi-converter/` — canonical TL↔POJ↔TPS converter (git submodule); consult `src/tables.js` for mapping data
 - iOS: New files require manual target addition by user
 
 ## Design Principles
@@ -120,5 +160,4 @@ taigikeyboard/
 
 ### General
 - Follow GitHub open-source conventions
-- Do not arbitrarily remove features or create files without user confirmation
 - No build testing required

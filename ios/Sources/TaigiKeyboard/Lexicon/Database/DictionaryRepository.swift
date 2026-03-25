@@ -397,34 +397,7 @@ final class DictionaryRepository: @unchecked Sendable {
         var results: [DictionarySearchResult] = []
 
         while sqlite3_step(stmt) == SQLITE_ROW {
-            let id = Int(sqlite3_column_int(stmt, 0))
-            let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-            let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
-            let hanzi = hanziText?.isEmpty == false ? hanziText : nil
-            let frequency = Int(sqlite3_column_int(stmt, 3))
-
-            // Map source boolean columns (columns 4-15)
-            var sources: [DictionarySource] = []
-            let sourceColumns: [DictionarySource] = [
-                .kautian, .taigitv, .itaigi, .sitbut, .taihoa, .taijit,
-                .kungge, .stti, .khpoo, .khiin, .lkk, .dev
-            ]
-            for (offset, source) in sourceColumns.enumerated() {
-                if sqlite3_column_int(stmt, Int32(4 + offset)) == 1 {
-                    sources.append(source)
-                }
-            }
-
-            let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
-
-            results.append(DictionarySearchResult(
-                id: id,
-                roman: roman,
-                tl: tlRoman,
-                hanzi: hanzi,
-                frequency: frequency,
-                sources: sources
-            ))
+            results.append(parseSearchResult(from: stmt!, inputMode: inputMode))
         }
 
         return results
@@ -476,34 +449,7 @@ final class DictionaryRepository: @unchecked Sendable {
             sqlite3_bind_int(stmt, Int32(batch.count + 1), Int32(limit))
 
             while sqlite3_step(stmt) == SQLITE_ROW {
-                let id = Int(sqlite3_column_int(stmt, 0))
-                let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-                let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
-                let hanzi = hanziText?.isEmpty == false ? hanziText : nil
-                let frequency = Int(sqlite3_column_int(stmt, 3))
-
-                // Map source boolean columns (columns 4-15)
-                var sources: [DictionarySource] = []
-                let sourceColumns: [DictionarySource] = [
-                    .kautian, .taigitv, .itaigi, .sitbut, .taihoa, .taijit,
-                    .kungge, .stti, .khpoo, .khiin, .lkk, .dev
-                ]
-                for (offset, source) in sourceColumns.enumerated() {
-                    if sqlite3_column_int(stmt, Int32(4 + offset)) == 1 {
-                        sources.append(source)
-                    }
-                }
-
-                let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
-
-                allResults.append(DictionarySearchResult(
-                    id: id,
-                    roman: roman,
-                    tl: tlRoman,
-                    hanzi: hanzi,
-                    frequency: frequency,
-                    sources: sources
-                ))
+                allResults.append(parseSearchResult(from: stmt!, inputMode: inputMode))
             }
         }
 
@@ -511,6 +457,45 @@ final class DictionaryRepository: @unchecked Sendable {
             .sorted { $0.frequency > $1.frequency }
             .prefix(limit)
             .map { $0 }
+    }
+
+    // MARK: - Row Parsing
+
+    /// All dictionary source columns in their SQL column order (starting at column index 4)
+    private static let sourceColumnOrder: [DictionarySource] = [
+        .kautian, .taigitv, .itaigi, .sitbut, .taihoa, .taijit,
+        .kungge, .stti, .khpoo, .khiin, .lkk, .dev,
+    ]
+
+    /// Parse a DictionarySearchResult from a prepared statement row.
+    /// Expects columns: id(0), tl(1), hanzi(2), frequency(3), source flags(4-15)
+    private func parseSearchResult(
+        from stmt: OpaquePointer,
+        inputMode: InputMode
+    ) -> DictionarySearchResult {
+        let id = Int(sqlite3_column_int(stmt, 0))
+        let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+        let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
+        let hanzi = hanziText?.isEmpty == false ? hanziText : nil
+        let frequency = Int(sqlite3_column_int(stmt, 3))
+
+        var sources: [DictionarySource] = []
+        for (offset, source) in Self.sourceColumnOrder.enumerated() {
+            if sqlite3_column_int(stmt, Int32(4 + offset)) == 1 {
+                sources.append(source)
+            }
+        }
+
+        let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
+
+        return DictionarySearchResult(
+            id: id,
+            roman: roman,
+            tl: tlRoman,
+            hanzi: hanzi,
+            frequency: frequency,
+            sources: sources
+        )
     }
 
     // MARK: - Connection Status

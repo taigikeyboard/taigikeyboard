@@ -46,36 +46,4 @@ final class EngineIntegrationTests: XCTestCase {
         XCTAssertEqual(restored, "ka")
     }
 
-    // MARK: - C. Segmenter + Normalizer Pipeline
-
-    func testSegmenterThenNormalizer_continuousInput() {
-        // Segment continuous input, then normalize each syllable
-        let segments = SyllableSegmenter.segment("gua2si7")
-        XCTAssertEqual(segments, ["gua2", "si7"])
-
-        let normalized = InputNormalizer.normalize(
-            segments.joined(separator: "-"), mode: .tl
-        )
-        XCTAssertEqual(normalized, "gua2si7")
-    }
-
-    func testSegmenterThenNormalizer_pojInput() {
-        let segments = SyllableSegmenter.segment("chhi2ka1")
-        XCTAssertEqual(segments, ["chhi2", "ka1"])
-
-        let normalized = InputNormalizer.normalize(
-            segments.joined(separator: "-"), mode: .poj
-        )
-        // Stays in POJ form (no ch->ts conversion)
-        XCTAssertEqual(normalized, "chhi2ka1")
-    }
-
-    func testSegmenterThenNormalizer_singleSyllable() {
-        let segments = SyllableSegmenter.segment("lang5")
-        XCTAssertEqual(segments, ["lang5"])
-
-        let normalized = InputNormalizer.normalize("lang5", mode: .tl)
-        XCTAssertEqual(normalized, "lang5")
-    }
-
 }

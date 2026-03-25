@@ -5,6 +5,7 @@ import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.dictionary.*
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import kotlinx.coroutines.CancellationException
 
 /**
  * 台語自動完成服務
@@ -83,6 +84,8 @@ class TaigiAutocompleteService(
                 Log.d("PERF", "[3-c] buildList: ${System.currentTimeMillis() - buildStart}ms")
             }
             result
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
                 Log.e(TAG, "[ERROR] autocomplete failed for: $rawInput", e)

@@ -148,12 +148,23 @@ User input → TPS detection → TPSConverter.toTL() → InputNormalizer → Tri
 ## Keyboard Layout
 
 ```
-Row 1 (Tones):  [ˊ] [ˋ] [˪] [˫] [ㆴ] [ㆵ] [ㆻ] [ㆷ] [ㆦ] [ㆤ]
-Row 2 (Initials): [ㄅ] [ㄉ] [ㆣ] [ㄍ] [ㄎ] [ㄆ] [ㄊ] [ㄗ] [ㆡ] [ㄫ]
-Row 3 (Mixed):  [ㄇ] [ㄚ] [ㄨ] [ㄏ] [ㄌ] [ㄘ] [ㄧ] [ㆠ] [ㄢ]
-Row 4 (Vowels): [⬆]  [ㄛ] [ㄙ] [ㆬ] [ㄋ] [ㄥ] [ㄤ] [ㄞ] [⌫]
-Row 5 (Function): [123] [😀] [     Space     ] [Translate] [⏎]
+Row 1 (Voiced/Tones): [ㆠ] [ˋ] [˪] [ㆣ] [ˊ] [ˇ] [˫] [˙] [ㆪ] [ㆩ]
+Row 2 (Stops/Vowels): [ㄅ] [ㄉ] [ㄍ] [ㄏ] [ㄧ] [ㄚ] [ㄞ] [ㄤ] [ㆫ] [ㆧ]
+Row 3 (Aspirated):    [ㄆ] [ㄊ] [ㄎ] [ㄗ] [ㄨ] [ㄛ] [ㄠ] [ㆲ] [ㆥ] [ㆮ]
+Row 4 (Nasals/Other): [ㄇ] [ㄋ] [ㄫ] [ㄘ] [ㄜ] [ㆦ] [ㄢ] [ㆰ] [，] [⌫]
+Row 5 (Function):     [123] [ㄌ] [ㆡ] [ㄙ] [ㆨ] [ㆤ] [Space] [⏎]
 ```
+
+Entering tone codas (ㆴ/ㆵ/ㆻ/ㆷ) are accessed via **long-press popups**:
+
+| Main key | Popup |
+|----------|-------|
+| ㄅ | ㆴ (-p coda) |
+| ㄉ | ㆵ (-t coda) |
+| ㄍ | ㆻ (-k coda) |
+| ㄏ | ㆷ (-h coda) |
+
+**Important**: ㄏ (U+310F) and ㆷ (U+31B7) are distinct Unicode characters. ㄏ is always an initial consonant; ㆷ is the entering tone -h coda (BOPOMOFO FINAL LETTER H). The `toTL()` converter treats them differently — ㆷ maps to "h4"/"h8" via the tones table, while ㄏ maps to initial "h" via the consonants table.
 
 ### Layout Variants
 

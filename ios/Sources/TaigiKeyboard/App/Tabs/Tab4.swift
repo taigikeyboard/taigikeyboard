@@ -17,6 +17,7 @@ struct Tab4: View {
     @State private var enableDoubleTapNN: Bool
     @State private var outputBothScripts: Bool
     @State private var tpsOrMapsToER: Bool
+    @State private var toolbarAutoCollapse: Bool
     @State private var showResetSettingsAlert = false
     @State private var diagnosticCopied = false
     @State private var diagnosticText = ""
@@ -42,6 +43,7 @@ struct Tab4: View {
         _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
         _tpsOrMapsToER = State(initialValue: settings.tpsOrMapsToER)
+        _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
     }
 
     var body: some View {
@@ -78,6 +80,11 @@ struct Tab4: View {
                     Toggle(languageManager.text(Tab4Texts.autoSpace), isOn: $autoSpaceEnabled)
                         .onChange(of: autoSpaceEnabled) { _, newValue in
                             settings.isAutoSpaceEnabled = newValue
+                        }
+
+                    Toggle(languageManager.text(Tab4Texts.toolbarAutoCollapse), isOn: $toolbarAutoCollapse)
+                        .onChange(of: toolbarAutoCollapse) { _, newValue in
+                            settings.isToolbarAutoCollapse = newValue
                         }
                 }
 
@@ -230,6 +237,7 @@ struct Tab4: View {
         enableDoubleTapNN = settings.enableDoubleTapNN
         outputBothScripts = settings.outputBothScripts
         tpsOrMapsToER = settings.tpsOrMapsToER
+        toolbarAutoCollapse = settings.isToolbarAutoCollapse
 
         fontManager.reloadFontType()
 

@@ -35,7 +35,7 @@ struct Tab2: View {
                         }
                         .padding()
                         .background(Color(.secondarySystemGroupedBackground))
-                        .cornerRadius(10)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal)

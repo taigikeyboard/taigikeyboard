@@ -103,7 +103,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             // 使用 rawInput 判斷（因為 displayText 可能已移除聲調數字，如 soo1 → soo）
             let inputType = determineInputType(rawInput)
 
-            // Segment continuous input and normalize for Trie search
+            // Build search key for Trie search
             let searchInput = buildSearchKey(from: rawInput)
             let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, limit: 100, rawInput: rawInput)
 
@@ -127,7 +127,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             // 將詞彙轉換為候選詞（不做大小寫轉換，由 SuggestionCaseTransformer 在 View 層處理）
             var suggestions = convertToSuggestions(contextBoostedWords)
 
-            // 在第 0 個位置插入當前組字文字候選詞（使用顯示文字）
+            // Position 0: composing text (tone-marked display)
             let composingTextSuggestion = createComposingTextSuggestion(displayText)
             suggestions.insert(composingTextSuggestion, at: 0)
 
@@ -140,6 +140,17 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     }
 
     // MARK: - 私有方法
+
+    /// Create raw input suggestion (literal keystrokes, no tone conversion).
+    /// Placed at position 0 — Enter or tap to commit the exact text the user typed.
+    private func createRawInputSuggestion(_ rawInput: String) -> Autocomplete.Suggestion {
+        return Autocomplete.Suggestion(
+            text: rawInput,
+            title: rawInput,
+            subtitle: nil,
+            additionalInfo: ["isRawInput": "true"]
+        )
+    }
 
     /// 建立當前組字文字的候選詞物件
     /// 這個候選詞會被放在候選詞列的第 0 個位置，顯示使用者目前正在輸入的內容
@@ -216,46 +227,14 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         return boosted + rest
     }
 
-    /// Build a Trie-compatible search key from continuous raw input
+    /// Build a Trie-compatible search key from raw input
     ///
-    /// Segments continuous input into syllables and joins with hyphens
-    /// so the existing InputNormalizer + Trie pipeline handles it correctly.
-    ///
-    /// - Toned input (has digits): non-final toneless syllables get a default
-    ///   tone (1 or 4) so the joined key matches tl_num entries in the Trie.
-    /// - Toneless input (no digits): no default tones added, so the joined key
-    ///   matches notone entries in the Trie for broader results.
+    /// Converts TPS input to TL romanization for trie lookup.
+    /// Non-TPS input is returned as-is.
     private func buildSearchKey(from rawInput: String) -> String {
-        // Convert TPS to TL before segmentation so the segmenter receives romanization
-        let processedInput = TPSConverter.containsTPS(rawInput)
+        return TPSConverter.containsTPS(rawInput)
             ? TPSConverter.toTL(rawInput)
             : rawInput
-
-        let prefix = LexiconConstants.TriePrefix.prefix(for: settings.inputMode)
-        let checker: SyllableSegmenter.WordPrefixChecker = { key in
-            !TrieService.shared.prefixSearch(prefix + key, limit: 1).isEmpty
-        }
-        let segments = SyllableSegmenter.segment(processedInput, wordPrefixChecker: checker, mode: settings.inputMode)
-        guard segments.count > 1 else { return processedInput }
-
-        let hasTones = processedInput.contains { $0.isNumber }
-
-        let processed = segments.enumerated().map { (index, seg) -> String in
-            let base = seg.hasSuffix("-") ? String(seg.dropLast()) : seg
-            guard !base.isEmpty else { return "" }
-
-            let isLast = index == segments.count - 1
-
-            // Only add default tones when input already contains tone digits.
-            // For toneless input, skip to match notone keys in the Trie.
-            if hasTones, !isLast, let lastChar = base.last, !lastChar.isNumber {
-                return base + (TaigiPhonetics.isStopTone(base) ? "4" : "1")
-            }
-
-            return base
-        }
-
-        return processed.joined(separator: "-")
     }
 
     /// 將台語詞彙轉換為 KeyboardKit 候選詞格式

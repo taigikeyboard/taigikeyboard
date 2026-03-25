@@ -41,24 +41,6 @@ enum InputNormalizer {
             normalizeSyllable(String(syllable), addDefaultTone: shouldAddDefaultTones)
         }
 
-        // Validate each syllable against the mode-appropriate trie
-        if mode.isTaigi {
-            for syllable in result {
-                guard !syllable.isEmpty else { continue }
-                // Strip trailing tone digit to get the bare syllable
-                let base: String
-                if let last = syllable.last, last.isNumber {
-                    base = String(syllable.dropLast())
-                } else {
-                    base = syllable
-                }
-                guard !base.isEmpty else { continue }
-                if !SyllableSegmenter.isValidPrefix(base, mode: mode) {
-                    return ""
-                }
-            }
-        }
-
         let normalized = result.joined()
 
         #if DEBUG

@@ -2,11 +2,13 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.drawable.InsetDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -119,12 +121,15 @@ class CandidateOverlayAdapter(
                 primaryText.typeface = typeface
                 subtitleText.typeface = typeface
 
+                // Composing cell (position 0): no flex + inset background
+                val isComposing = item.originalIndex == 0 && item.word.id >= 0
+
                 // Pixel-based layout: measuredWidth as base, weight=1 for equal flex
-                // Matches iOS .frame(minWidth: measuredWidth, maxWidth: .infinity)
+                // Composing cell: weight=0 to prevent stretching beyond content width
                 val lp = LinearLayout.LayoutParams(
                     item.measuredWidth,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    1.0f
+                    if (isComposing) 0f else 1.0f
                 ).apply {
                     if (cellIndex > 0) {
                         marginStart = spacing
@@ -132,10 +137,11 @@ class CandidateOverlayAdapter(
                 }
                 cellView.layoutParams = lp
 
-                // Composing cell (position 0): key_bgColor background, same as smartbar
-                val isComposing = item.originalIndex == 0 && item.word.id >= 0
+                // Composing cell: key_bgColor with InsetDrawable (match smartbar approach)
                 if (isComposing) {
-                    cellView.setBackgroundResource(R.drawable.candidate_grid_composing_background)
+                    val bg = ContextCompat.getDrawable(context, R.drawable.candidate_grid_composing_background)
+                    val verticalInset = cellView.paddingTop
+                    cellView.background = InsetDrawable(bg, 0, verticalInset, 0, verticalInset)
                 } else {
                     cellView.setBackgroundResource(R.drawable.candidate_grid_cell_background)
                 }

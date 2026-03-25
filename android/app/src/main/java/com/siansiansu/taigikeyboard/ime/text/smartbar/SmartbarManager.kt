@@ -44,6 +44,8 @@ class SmartbarManager private constructor() :
         private set
     var symbolSelectionOverlayView: SymbolSelectionOverlayView? = null
         private set
+    var settingsSelectionOverlayView: SettingsSelectionOverlayView? = null
+        private set
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -84,6 +86,7 @@ class SmartbarManager private constructor() :
         candidateOverlayViewProvider = { candidateOverlayView },
         layoutSelectionOverlayViewProvider = { layoutSelectionOverlayView },
         symbolSelectionOverlayViewProvider = { symbolSelectionOverlayView },
+        settingsSelectionOverlayViewProvider = { settingsSelectionOverlayView },
         onInputModeChanged = { mode ->
             when (mode) {
                 "emoji" -> taigikeyboard.setActiveInput(R.id.media_input)
@@ -240,7 +243,7 @@ class SmartbarManager private constructor() :
         overlayView.onLayoutSelected = { newLayoutType ->
             textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
             layoutSelectionOverlayView?.hide()
-            collapseToolbarIfOpen()
+            if (prefs.isToolbarAutoCollapse) collapseToolbarIfOpen()
         }
     }
 
@@ -251,6 +254,31 @@ class SmartbarManager private constructor() :
 
         overlayView.onSymbolSelected = { symbol ->
             TaigiKeyboard.getInstance().currentInputConnection?.commitText(symbol, 1)
+        }
+    }
+
+    fun registerSettingsSelectionOverlayView(overlayView: SettingsSelectionOverlayView) {
+        if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "registerSettingsSelectionOverlayView(overlayView)")
+
+        this.settingsSelectionOverlayView = overlayView
+
+        overlayView.onHide = {
+            cachedOutputBothScripts = prefs.outputBothScripts
+            textInputManager.refreshDoubleTapSettings()
+        }
+
+        overlayView.onOpenApp = {
+            val context = overlayView.context
+            val intent = android.content.Intent(
+                context,
+                com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java
+            )
+            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                    android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+            context.startActivity(intent)
+            taigikeyboard.requestHideSelf(0)
+            settingsSelectionOverlayView?.hide()
         }
     }
 
@@ -278,6 +306,7 @@ class SmartbarManager private constructor() :
         smartbarView = null
         layoutSelectionOverlayView = null
         symbolSelectionOverlayView = null
+        settingsSelectionOverlayView = null
         instance = null
     }
 
@@ -301,6 +330,7 @@ class SmartbarManager private constructor() :
                 smartbarView?.visibility = View.VISIBLE
                 layoutSelectionOverlayView?.hide()
                 symbolSelectionOverlayView?.hide()
+                settingsSelectionOverlayView?.hide()
                 activeContainerId = R.id.candidates_container
                 toolbarManager.updateInputModeSwitcherState()
             }
@@ -473,6 +503,7 @@ class SmartbarManager private constructor() :
 
         layoutSelectionOverlayView?.hide()
         symbolSelectionOverlayView?.hide()
+        settingsSelectionOverlayView?.hide()
         overlay.show(currentSuggestions, keyboardHeight)
     }
 

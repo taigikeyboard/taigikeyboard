@@ -230,22 +230,22 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         anchorRight = !anchorLeft
 
         // 決定每一行的按鍵數量
-        val n = when (keyView) {
+        val popupCount = when (keyView) {
             is KeyView -> keyView.data.popup.size
             else -> 0 // EmojiKeyView is no longer used (Compose implementation)
         }
         when {
-            n <= 10 -> {
+            popupCount <= 10 -> {
                 row1count = 0
-                row0count = n
+                row0count = popupCount
             }
-            n > 10 && n % 2 == 1 -> {
-                row1count = (n - 1) / 2
-                row0count = (n + 1) / 2
+            popupCount > 10 && popupCount % 2 == 1 -> {
+                row1count = (popupCount - 1) / 2
+                row0count = (popupCount + 1) / 2
             }
             else -> {
-                row1count = n / 2
-                row0count = n / 2
+                row1count = popupCount / 2
+                row0count = popupCount / 2
             }
         }
 

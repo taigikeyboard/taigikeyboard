@@ -114,6 +114,8 @@ extension KeyboardViewController {
 
     /// 記錄上次的輸入模式，用於偵測變更
     private static var lastInputMode: InputMode?
+    /// 記錄上次的佈局類型，用於偵測變更
+    private static var lastKeyboardLayoutType: KeyboardLayoutType?
 
     /// 同步設定
     ///
@@ -132,6 +134,14 @@ extension KeyboardViewController {
             setupAutocompleteServiceForCurrentMode()
 
             // 清除候選詞（避免顯示舊模式的候選詞）
+            state.autocompleteContext.reset()
+        }
+
+        // 檢查佈局類型是否變更，若變更則觸發鍵盤佈局重建
+        let currentLayoutType = settings.keyboardLayoutType
+        if Self.lastKeyboardLayoutType != currentLayoutType {
+            setupLogger.debug("[SETTINGS] LayoutType changed: \(Self.lastKeyboardLayoutType.map { String(describing: $0) } ?? "nil", privacy: .public) -> \(String(describing: currentLayoutType), privacy: .public)")
+            Self.lastKeyboardLayoutType = currentLayoutType
             state.autocompleteContext.reset()
         }
 

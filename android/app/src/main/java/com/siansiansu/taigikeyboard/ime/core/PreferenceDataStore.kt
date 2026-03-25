@@ -43,6 +43,7 @@ object PreferenceKeys {
     val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
+    val TOOLBAR_AUTO_COLLAPSE = booleanPreferencesKey("keyboard__toolbar_auto_collapse")
 
     // Taigi-specific keys
     val ENABLE_DOUBLE_TAP_OO = booleanPreferencesKey("taigi__enable_double_tap_oo")
@@ -54,9 +55,6 @@ object PreferenceKeys {
     // Looknfeel settings
     val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
     val LONG_PRESS_DELAY = intPreferencesKey("looknfeel__long_press_delay")
-
-    // Suggestion settings
-    val SUGGESTION_ENABLED = booleanPreferencesKey("suggestion__enabled")
 
     // 詞庫開關設定
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")

@@ -124,6 +124,16 @@ object Tab1Texts {
     )
 
     val versionHistoryEntries = listOf(
+        VersionEntry("3.4.6", "2026/03/24", listOf(
+            LocalizedText(hanji = "Added in-keyboard settings panel accessible from toolbar."),
+            LocalizedText(hanji = "Added toolbar auto-collapse toggle in settings."),
+            LocalizedText(hanji = "TPS layout auto-corrects palatalized initials (ㄗ+ㄧ→ㄐ, ㄘ+ㄧ→ㄑ, etc.)."),
+            LocalizedText(hanji = "TPS layout: digit keys accessible via long-press on row 1."),
+            LocalizedText(hanji = "Improved TPS syllable boundary detection for more accurate input."),
+            LocalizedText(hanji = "Fixed toolbar settings toggles not taking effect until restart."),
+            LocalizedText(hanji = "Fixed backspace showing romanization after selecting a custom dictionary word."),
+            LocalizedText(hanji = "Enabled 台語工藝詞庫 and 學科術語辭典 by default."),
+        )),
         VersionEntry("3.4.5", "2026/03/21", listOf(
             LocalizedText(hanji = "Added symbol selection panel for inserting special characters."),
             LocalizedText(hanji = "Added dictionary search in the dictionary settings page."),

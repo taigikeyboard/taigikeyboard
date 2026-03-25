@@ -53,18 +53,6 @@ object InputNormalizer {
             normalizeSyllable(syllable, addDefaultTone = shouldAddDefaultTones)
         }
 
-        // Validate each syllable against the mode-appropriate trie (aligned with iOS)
-        if (mode != InputMode.ENGLISH) {
-            for (syllable in result) {
-                if (syllable.isEmpty()) continue
-                val base = if (syllable.last().isDigit()) syllable.dropLast(1) else syllable
-                if (base.isEmpty()) continue
-                if (!SyllableSegmenter.isValidPrefix(base, mode)) {
-                    return ""
-                }
-            }
-        }
-
         val normalized = result.joinToString("")
 
         if (BuildConfig.DEBUG && input != normalized) {
@@ -139,58 +127,18 @@ object InputNormalizer {
     }
 
     /**
-     * Build a search key from continuous input using SyllableSegmenter.
+     * Build a search key from raw input.
      *
-     * For continuous input without hyphens (e.g., "gua2si7soo"), segments into
-     * valid syllables, adds default tones to non-final segments
-     * (tone 1 for open syllables, tone 4 for stop consonants), then joins
-     * without hyphens to match the trie key format.
-     *
-     * This enables autocomplete for continuous input like "guasisoo" ->
-     * segmented as ["gua", "si", "soo"] -> normalized as "gua1si1soo".
-     *
-     * For hyphenated input, falls back to the regular normalize() behavior.
+     * Converts TPS input to TL romanization for trie lookup.
+     * Non-TPS input is returned as-is.
      *
      * @param input Raw user input
      * @param mode POJ or TL mode
-     * @return Normalized search key for trie prefix matching
+     * @return Search key for trie prefix matching
      */
     fun buildSearchKey(input: String, mode: InputMode): String {
         if (input.isEmpty()) return ""
-
-        val processedInput = preprocessTPS(input)
-
-        // Aligned with iOS AutocompleteService.buildSearchKey:
-        // - No lowercasing (preserve original case)
-        // - Segment raw input, strip trailing hyphens, add default tones
-        // - Join with "-" separator
-
-        val prefix = DictionaryConstants.triePrefix(mode)
-        val checker: WordPrefixChecker? = if (TrieService.isReady) {
-            { key -> TrieService.prefixSearch(prefix + key.lowercase(), 1).isNotEmpty() }
-        } else null
-        val segments = SyllableSegmenter.segment(processedInput, wordPrefixChecker = checker, mode = mode)
-
-        // Single segment: return input unchanged (match iOS)
-        if (segments.size <= 1) return processedInput
-
-        val hasTones = processedInput.any { it.isDigit() }
-
-        val processed = segments.mapIndexed { index, seg ->
-            val base = if (seg.endsWith("-")) seg.dropLast(1) else seg
-            if (base.isEmpty()) return@mapIndexed ""
-
-            val isLast = index == segments.size - 1
-
-            // Add default tones to non-final segments only when input already has tone digits
-            if (hasTones && !isLast && !base.last().isDigit()) {
-                base + if (TaigiPhonetics.isStopTone(base)) "4" else "1"
-            } else {
-                base
-            }
-        }
-
-        return processed.joinToString("-")
+        return preprocessTPS(input)
     }
 
     /**

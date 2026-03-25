@@ -2,39 +2,27 @@ import KeyboardKit
 import OSLog
 import SwiftUI
 
-/// 展開候選詞覆蓋層
-///
-/// 以網格形式顯示更多候選詞選項。
+/// Overlay that displays expanded candidate grid with navigation controls
 struct ExpandedCandidateOverlay: View {
 
-    /// 所有候選詞建議
     let suggestions: [Autocomplete.Suggestion]
-    /// 常用詞集合
     let frequentWords: Set<String>
-    /// 當前選中的候選詞索引
     let selectedCandidateIndex: Int
-    /// 點擊候選詞的回調
     let onSuggestionTap: (Autocomplete.Suggestion) -> Void
-    /// 是否交換漢字與羅馬字顯示
     let isTranslateSwapped: Bool
-    /// 切換翻譯模式的回調
     let onTranslateToggle: () -> Void
-    /// 收合視圖的回調
     let onCollapse: () -> Void
-    /// 是否處於展開狀態
     let isExpanded: Bool
 
     @Environment(\.candidateViewStyle) private var style
     @Environment(\.colorScheme) private var colorScheme
     @State private var currentPage: Int = 0
-    @State private var upButtonPressed: Bool = false
-    @State private var downButtonPressed: Bool = false
-    @State private var translateButtonPressed: Bool = false
-
+    @State private var isUpButtonPressed: Bool = false
+    @State private var isDownButtonPressed: Bool = false
+    @State private var isTranslateButtonPressed: Bool = false
 
     private var isLiquidGlassEnabled: Bool {
-        // 檢查是否為 Liquid Glass 樣式
-        return style.itemStyle.cornerRadius == 9 && style.backgroundColor == nil
+        style.itemStyle.cornerRadius == 9 && style.backgroundColor == nil
     }
 
     #if DEBUG
@@ -45,36 +33,36 @@ struct ExpandedCandidateOverlay: View {
     #endif
 
     var body: some View {
-        Group {
-            if isExpanded {
-                GeometryReader { geometry in
-                    candidateContentSection
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: geometry.size.height,
-                            maxHeight: .infinity
-                        )
-                }
-            } else {
-                EmptyView()
+        if isExpanded {
+            GeometryReader { geometry in
+                candidateGridContent
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: geometry.size.height,
+                        maxHeight: .infinity
+                    )
+                    .padding(.top, -4)
             }
         }
     }
 
-    /// Row item for pixel-based grid layout
-    private struct RowItem {
+    // MARK: - Row Layout
+
+    private struct CandidateRowItem {
         let suggestion: Autocomplete.Suggestion
         let originalIndex: Int
         let measuredWidth: CGFloat
     }
 
     /// Arrange candidates into rows using pixel-based measurement
-    private var arrangedRows: [[RowItem]] {
-        let availableWidth = UIScreen.main.bounds.width - 76  // 8+8 padding + 60 button panel
+    private var arrangedRows: [[CandidateRowItem]] {
+        let controlPanelWidth: CGFloat = 60
+        let horizontalPadding: CGFloat = 16  // 8 left + 8 right
+        let availableWidth = UIScreen.main.bounds.width - controlPanelWidth - horizontalPadding
         let itemSpacing = CandidateViewModels.UI.expandedItemSpacing
 
-        var rows: [[RowItem]] = []
-        var currentRow: [RowItem] = []
+        var rows: [[CandidateRowItem]] = []
+        var currentRow: [CandidateRowItem] = []
         var currentRowWidth: CGFloat = 0
 
         for (index, suggestion) in suggestions.enumerated() {
@@ -87,7 +75,7 @@ struct ExpandedCandidateOverlay: View {
                 currentRowWidth = 0
             }
 
-            currentRow.append(RowItem(suggestion: suggestion, originalIndex: index, measuredWidth: cellWidth))
+            currentRow.append(CandidateRowItem(suggestion: suggestion, originalIndex: index, measuredWidth: cellWidth))
             currentRowWidth += (currentRow.count == 1 ? 0 : itemSpacing) + cellWidth
         }
 
@@ -95,160 +83,20 @@ struct ExpandedCandidateOverlay: View {
         return rows
     }
 
-    private var candidateContentSection: some View {
-        candidateGridContent
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.top, -4) // 向上延伸網格高度 4px
-            .onAppear {}
-    }
+    // MARK: - Main Content
 
     private var candidateGridContent: some View {
         ScrollViewReader { proxy in
             ZStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(arrangedRows.enumerated()), id: \.offset) { rowIndex, rowItems in
-                            VStack(spacing: 0) {
-                                HStack(spacing: CandidateViewModels.UI.expandedItemSpacing) {
-                                    ForEach(rowItems, id: \.originalIndex) { item in
-                                        ExpandedCandidateGridCell(
-                                            suggestion: item.suggestion,
-                                            isTranslateSwapped: isTranslateSwapped,
-                                            isSelected: selectedCandidateIndex == item.originalIndex,
-                                            onTap: { suggestion in
-                                                onSuggestionTap(suggestion)
-                                                onCollapse()
-                                            }
-                                        )
-                                        .id("candidate_\(item.originalIndex)")
-                                        .frame(minWidth: item.measuredWidth, maxWidth: .infinity)
-                                    }
-                                    Spacer()
-                                }
-                                .frame(maxWidth: .infinity)
-                                .frame(minHeight: CandidateViewModels.UI.expandedMinRowHeight)
-                                .padding(.horizontal, 8)
-                                .padding(.trailing, 60)
-
-                                if rowIndex < arrangedRows.count - 1 {
-                                    Divider()
-                                        .background(CandidateViewModels.Colors.separatorColor.opacity(0.3))
-                                        .padding(.leading, 8)
-                                        .padding(.trailing, 68)
-                                }
-                            }
-                            .padding(.vertical, CandidateViewModels.UI.expandedRowSpacing / 2)
-                        }
-                    }
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
-                }
-
-                VStack(spacing: 0) {
-                    Button(action: {
-                        onCollapse()
-                    }) {
-                        Image(systemName: "chevron.up")
-                            .font(KeyboardModels.Fonts.globalFont(size: 20))
-                            .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                            .frame(width: 60, height: 56, alignment: .center)
-                            .background(Color.clear)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(spacing: 3) {
-                        Button(action: {
-                            scrollToPreviousPage { id in
-                                proxy.scrollTo(id, anchor: .top)
-                            }
-                        }) {
-                            Image(systemName: "arrowtriangle.up.fill")
-                                .font(KeyboardModels.Fonts.globalFont(size: 20))
-                                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                                .frame(width: 45, height: 45, alignment: .center)
-                                .background(upButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
-                                .scaleEffect(upButtonPressed ? 0.95 : 1.0)
-                                .contentShape(Rectangle())
-                                .offset(y: 2)
-                        }
-                        .buttonStyle(.plain)
-                        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                            withAnimation(.easeInOut(duration: 0.1)) {
-                                upButtonPressed = pressing
-                            }
-                        }, perform: {})
-
-                        Button(action: {
-                            scrollToNextPage { id in
-                                proxy.scrollTo(id, anchor: .top)
-                            }
-                        }) {
-                            Image(systemName: "arrowtriangle.down.fill")
-                                .font(KeyboardModels.Fonts.globalFont(size: 20))
-                                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                                .frame(width: 45, height: 45, alignment: .center)
-                                .background(downButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
-                                .scaleEffect(downButtonPressed ? 0.95 : 1.0)
-                                .contentShape(Rectangle())
-                                .offset(y: 16)
-                        }
-                        .buttonStyle(.plain)
-                        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                            withAnimation(.easeInOut(duration: 0.1)) {
-                                downButtonPressed = pressing
-                            }
-                        }, perform: {})
-
-                        // Hide translate button for TPS layout (always hanzi-only)
-                        if SharedSettings.shared.keyboardLayoutType != .tps {
-                            Button(action: {
-                                onTranslateToggle()
-                            }) {
-                                Image(systemName: "translate")
-                                    .font(KeyboardModels.Fonts.globalFont(size: 20))
-                                    .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                                    .frame(width: 45, height: 45, alignment: .center)
-                                    .background(translateButtonPressed ? Color.gray.opacity(0.3) : Color.clear)
-                                    .scaleEffect(translateButtonPressed ? 0.95 : 1.0)
-                                    .contentShape(Rectangle())
-                                    .offset(y: 25)
-                            }
-                            .buttonStyle(.plain)
-                            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                                withAnimation(.easeInOut(duration: 0.1)) {
-                                    translateButtonPressed = pressing
-                                }
-                            }, perform: {})
-                        }
-                    }
-                    .padding(.top, 3)
-                }
-                .padding(.top, 6)
-                .padding(.trailing, 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                candidateScrollContent
+                controlButtonPanel(proxy: proxy)
             }
         }
-        .onAppear {
-            currentPage = 0
-        }
+        .onAppear { currentPage = 0 }
         .onChange(of: isExpanded) { _, expanded in
-            if expanded {
-                currentPage = 0
-            }
+            if expanded { currentPage = 0 }
         }
-        .background(
-            Group {
-                if isLiquidGlassEnabled {
-                    // iOS 26 Liquid Glass：使用 KeyboardKit 預設背景色（支援 dark mode）
-                    Color.keyboardBackground
-                } else {
-                    // Use custom candidate background color if set, otherwise default
-                    (style.backgroundColor ?? Color.keyboardBackground)
-                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: -2)
-                }
-            }
-        )
+        .background(backgroundView)
         .overlay(
             FixedColumnDivider()
                 .padding(.top, 6)
@@ -258,7 +106,119 @@ struct ExpandedCandidateOverlay: View {
         )
     }
 
-    /// 滾動到上一頁
+    // MARK: - Scroll Content
+
+    private var candidateScrollContent: some View {
+        let rows = arrangedRows
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
+                    VStack(spacing: 0) {
+                        candidateRow(rowItems: rowItems)
+
+                        if rowIndex < rows.count - 1 {
+                            Divider()
+                                .background(CandidateViewModels.Colors.separatorColor.opacity(0.3))
+                                .padding(.leading, 8)
+                                .padding(.trailing, 68)
+                        }
+                    }
+                    .padding(.vertical, CandidateViewModels.UI.expandedRowSpacing / 2)
+                }
+            }
+            .padding(.top, 6)
+            .padding(.bottom, 8)
+        }
+    }
+
+    private func candidateRow(rowItems: [CandidateRowItem]) -> some View {
+        HStack(spacing: CandidateViewModels.UI.expandedItemSpacing) {
+            ForEach(rowItems, id: \.originalIndex) { item in
+                ExpandedCandidateGridCell(
+                    suggestion: item.suggestion,
+                    isTranslateSwapped: isTranslateSwapped,
+                    isSelected: selectedCandidateIndex == item.originalIndex,
+                    onTap: { suggestion in
+                        onSuggestionTap(suggestion)
+                        onCollapse()
+                    }
+                )
+                .id("candidate_\(item.originalIndex)")
+                .frame(minWidth: item.measuredWidth, maxWidth: .infinity)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: CandidateViewModels.UI.expandedMinRowHeight)
+        .padding(.horizontal, 8)
+        .padding(.trailing, 60)
+    }
+
+    // MARK: - Control Button Panel
+
+    private func controlButtonPanel(proxy: ScrollViewProxy) -> some View {
+        VStack(spacing: 0) {
+            Button(action: { onCollapse() }) {
+                Image(systemName: "chevron.up")
+                    .font(KeyboardModels.Fonts.globalFont(size: 20))
+                    .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                    .frame(width: 60, height: 56, alignment: .center)
+                    .background(Color.clear)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            VStack(spacing: 3) {
+                ControlButton(
+                    iconName: "arrowtriangle.up.fill",
+                    yOffset: 2,
+                    isPressed: $isUpButtonPressed,
+                    action: {
+                        scrollToPreviousPage { id in proxy.scrollTo(id, anchor: .top) }
+                    }
+                )
+
+                ControlButton(
+                    iconName: "arrowtriangle.down.fill",
+                    yOffset: 16,
+                    isPressed: $isDownButtonPressed,
+                    action: {
+                        scrollToNextPage { id in proxy.scrollTo(id, anchor: .top) }
+                    }
+                )
+
+                // Hide translate button for TPS layout (always hanzi-only)
+                if SharedSettings.shared.keyboardLayoutType != .tps {
+                    ControlButton(
+                        iconName: "translate",
+                        yOffset: 25,
+                        isPressed: $isTranslateButtonPressed,
+                        action: { onTranslateToggle() }
+                    )
+                }
+            }
+            .padding(.top, 3)
+        }
+        .padding(.top, 6)
+        .padding(.trailing, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    }
+
+    // MARK: - Background
+
+    private var backgroundView: some View {
+        Group {
+            if isLiquidGlassEnabled {
+                Color.keyboardBackground
+            } else {
+                (style.backgroundColor ?? Color.keyboardBackground)
+                    .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: -2)
+            }
+        }
+    }
+
+    // MARK: - Pagination
+
     private func scrollToPreviousPage(_ scrollToAction: @escaping (String) -> Void) {
         let itemsPerPage = 20
         let newStartIndex = max(0, currentPage * itemsPerPage - itemsPerPage)
@@ -271,7 +231,6 @@ struct ExpandedCandidateOverlay: View {
         }
     }
 
-    /// 滾動到下一頁
     private func scrollToNextPage(_ scrollToAction: @escaping (String) -> Void) {
         let itemsPerPage = 20
         let newStartIndex = min(suggestions.count - 1, (currentPage + 1) * itemsPerPage)
@@ -285,9 +244,38 @@ struct ExpandedCandidateOverlay: View {
     }
 }
 
-/// 固定欄位分隔線
-///
-/// 展開視圖右側的控制按鈕區域分隔線。
+// MARK: - Reusable Control Button
+
+/// Icon button with press feedback animation for the expanded overlay control panel
+private struct ControlButton: View {
+    let iconName: String
+    let yOffset: CGFloat
+    @Binding var isPressed: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: iconName)
+                .font(KeyboardModels.Fonts.globalFont(size: 20))
+                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .frame(width: 45, height: 45, alignment: .center)
+                .background(isPressed ? Color.gray.opacity(0.3) : Color.clear)
+                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .contentShape(Rectangle())
+                .offset(y: yOffset)
+        }
+        .buttonStyle(.plain)
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.easeInOut(duration: 0.1)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+    }
+}
+
+// MARK: - Fixed Column Divider
+
+/// Vertical and horizontal divider lines for the right-side control panel area
 struct FixedColumnDivider: View {
     var body: some View {
         GeometryReader { geometry in
@@ -311,9 +299,7 @@ struct FixedColumnDivider: View {
 }
 
 
-/// 展開視圖網格單元格
-///
-/// 顯示一般長度的候選詞。
+/// Grid cell displaying a single candidate in the expanded overlay
 struct ExpandedCandidateGridCell: View {
     let suggestion: Autocomplete.Suggestion
     let isTranslateSwapped: Bool
@@ -375,7 +361,7 @@ struct ExpandedCandidateGridCell: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(backgroundColor)
                     .padding(.horizontal, 4)
-                    .padding(.vertical, 2),
+                    .padding(.vertical, 2)
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .contentShape(Rectangle())
@@ -389,4 +375,3 @@ struct ExpandedCandidateGridCell: View {
         .accessibilityLabel("\(displayTitle)\(displaySubtitle.map { ", " + $0 } ?? "")")
     }
 }
-

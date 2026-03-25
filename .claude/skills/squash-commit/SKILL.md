@@ -96,17 +96,6 @@ Extract the version tag from the branch name or CHANGELOG header (e.g., `v3.4.1`
 2. `git status --short` — confirm clean working tree
 3. Ask the user for confirmation, then: `git push --force-with-lease origin <branch>`
 
-### 5. Tag the release
-
-After the push succeeds, create a git tag using the version extracted in step 3.
-
-1. Check if the tag already exists: `git tag -l <version-tag>`
-2. If the tag exists:
-   - Delete the remote tag: `git push origin :refs/tags/<version-tag>`
-   - Delete the local tag: `git tag -d <version-tag>`
-3. Create the tag on HEAD: `git tag <version-tag>`
-4. Push the tag: `git push origin <version-tag>`
-
 ## Important
 
 - Do NOT modify source code files other than the two `Tab1Texts` files — only CHANGELOG.md, iOS/Android Tab1Texts, and commit history

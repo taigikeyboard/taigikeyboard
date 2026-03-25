@@ -1,7 +1,6 @@
 package com.siansiansu.taigikeyboard.settings
 
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -13,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.PreferenceManager
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -37,8 +35,7 @@ import com.siansiansu.taigikeyboard.util.PackageManagerUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
 
-class SettingsMainActivity : AppCompatActivity(),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+class SettingsMainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_START_TAB = "extra_start_tab"
@@ -218,12 +215,6 @@ class SettingsMainActivity : AppCompatActivity(),
         }
     }
 
-    override fun onSharedPreferenceChanged(sp: SharedPreferences?, key: String?) {
-        if (key == "advanced__settings_theme") {
-            recreate()
-        }
-    }
-
     private fun updateLauncherIconStatus() {
         if (prefs.showAppIcon) {
             PackageManagerUtils.showAppIcon(this)
@@ -238,22 +229,12 @@ class SettingsMainActivity : AppCompatActivity(),
         // Note: tab switching via intent is handled by Compose's rememberSaveable
     }
 
-    override fun onResume() {
-        PreferenceManager.getDefaultSharedPreferences(this)
-            .registerOnSharedPreferenceChangeListener(this)
-        super.onResume()
-    }
-
     override fun onPause() {
-        PreferenceManager.getDefaultSharedPreferences(this)
-            .unregisterOnSharedPreferenceChangeListener(this)
         updateLauncherIconStatus()
         super.onPause()
     }
 
     override fun onDestroy() {
-        PreferenceManager.getDefaultSharedPreferences(this)
-            .unregisterOnSharedPreferenceChangeListener(this)
         updateLauncherIconStatus()
         super.onDestroy()
     }

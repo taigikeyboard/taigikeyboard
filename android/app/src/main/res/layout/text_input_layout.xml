@@ -67,4 +67,13 @@
         android:elevation="8dp"
         android:visibility="gone" />
 
+    <!-- Settings selection overlay: covers keyboard with settings toggles -->
+    <com.siansiansu.taigikeyboard.ime.text.smartbar.SettingsSelectionOverlayView
+        android:id="@+id/settings_selection_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="top"
+        android:elevation="8dp"
+        android:visibility="gone" />
+
 </FrameLayout>

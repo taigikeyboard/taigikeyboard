@@ -71,6 +71,12 @@ public class ComposingManager: ObservableObject {
         updateComposingState(.composing(raw: newRawInput))
     }
 
+    public func replaceLastCharacter(with replacement: String) {
+        guard isComposing, !rawInput.isEmpty else { return }
+        let newRawInput = String(rawInput.dropLast()) + replacement
+        updateComposingState(.composing(raw: newRawInput))
+    }
+
     public func appendHyphen() {
         appendCharacter("-")
     }
@@ -93,6 +99,19 @@ public class ComposingManager: ObservableObject {
         guard isComposing, !composingText.isEmpty else { return }
 
         let textToInsert = composingText
+        updateComposingState(.idle)
+        selectedCandidateIndex = -1
+        suggestions = []
+        keyboardViewController?.textDocumentProxy.insertText(textToInsert)
+        keyboardViewController?.state.autocompleteContext.reset()
+    }
+
+    /// Commit raw input text (literal keystrokes) without tone conversion or segmentation.
+    /// Used when Enter is pressed to output the exact text the user typed (e.g., English words).
+    public func commitRawInput() {
+        guard isComposing, !rawInput.isEmpty else { return }
+
+        let textToInsert = rawInput
         updateComposingState(.idle)
         selectedCandidateIndex = -1
         suggestions = []
@@ -130,64 +149,16 @@ public class ComposingManager: ObservableObject {
 
     /// Derive display text from raw input
     ///
-    /// Segments continuous input into syllables, groups into words via dictionary lookup,
-    /// converts each to tone-marked form, joins within words with hyphens and between
-    /// words with spaces. Explicit user hyphens (trailing `-`) are preserved as-is.
+    /// Converts raw input to tone-marked form via ToneConverter.
+    /// ToneConverter already handles hyphen-separated syllables internally
+    /// (splits by "-", converts each syllable, rejoins with "-").
     private func deriveDisplay(from raw: String) -> String {
         guard !raw.isEmpty else { return "" }
 
-        // TPS symbols are already display-ready — no segmentation/tone conversion needed
+        // TPS symbols are already display-ready — no tone conversion needed
         if TPSConverter.containsTPS(raw) { return raw }
 
-        let prefix = LexiconConstants.TriePrefix.prefix(for: inputMode)
-        let checker: SyllableSegmenter.WordPrefixChecker = { key in
-            !TrieService.shared.prefixSearch(prefix + key, limit: 1).isEmpty
-        }
-        let syllables = SyllableSegmenter.segment(raw, wordPrefixChecker: checker, mode: inputMode)
-        let groups = SyllableSegmenter.groupIntoWords(syllables, wordPrefixChecker: checker)
-
-        #if DEBUG
-        logger.debug("[DISPLAY] raw='\(raw, privacy: .public)' syllables=\(syllables, privacy: .public) groups=\(groups.map { $0.joined(separator: "+") }, privacy: .public)")
-        #endif
-
-        // Convert each group: tone-convert syllables, join within group with "-",
-        // join groups with " ". Explicit hyphens (trailing "-") are preserved.
-        var wordDisplays: [String] = []
-        for group in groups {
-            var parts: [String] = []
-            for syllable in group {
-                guard !syllable.isEmpty else { continue }
-                if syllable.hasSuffix("-") {
-                    let base = String(syllable.dropLast())
-                    parts.append(ToneConverter.convertToToneMarks(base, mode: inputMode) + "-")
-                } else {
-                    parts.append(ToneConverter.convertToToneMarks(syllable, mode: inputMode))
-                }
-            }
-            // Join parts with "-", but skip separator after explicit-hyphen parts
-            var groupDisplay = ""
-            for (j, part) in parts.enumerated() {
-                if j > 0 && !parts[j - 1].hasSuffix("-") {
-                    groupDisplay += "-"
-                }
-                groupDisplay += part
-            }
-            wordDisplays.append(groupDisplay)
-        }
-
-        // Join word groups, but not after explicit-hyphen-ending groups
-        var display = ""
-        for (i, word) in wordDisplays.enumerated() {
-            if i > 0 && !wordDisplays[i - 1].hasSuffix("-") {
-                display += " "
-            }
-            display += word
-        }
-        #if DEBUG
-        logger.debug("[DISPLAY] result='\(display, privacy: .public)'")
-        #endif
-
-        return display
+        return ToneConverter.convertToToneMarks(raw, mode: inputMode)
     }
 
     /// 清除所有狀態（用於鍵盤重置）

@@ -143,7 +143,7 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 | Component | File |
 |-----------|------|
 | Tab container | `ContentView.swift` |
-| Theme colors | `ThemeTokens.swift` |
+| Theme colors | KeyboardKit adaptive colors + `SharedSettings.colorSettings` |
 | Localization | `LocalizedText.swift` |
 | Image assets | `Assets.xcassets/` |
 

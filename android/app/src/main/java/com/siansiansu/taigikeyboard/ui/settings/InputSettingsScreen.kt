@@ -79,6 +79,8 @@ fun InputSettingsScreen(
     var autoSpace by remember(currentAutoSpace) { mutableStateOf(currentAutoSpace) }
     var doubleOO by remember(currentDoubleOO) { mutableStateOf(currentDoubleOO) }
     var doubleNN by remember(currentDoubleNN) { mutableStateOf(currentDoubleNN) }
+    val currentToolbarAutoCollapse = remember(resetCounter) { prefs.isToolbarAutoCollapse }
+    var toolbarAutoCollapse by remember(currentToolbarAutoCollapse) { mutableStateOf(currentToolbarAutoCollapse) }
     val currentTpsOrMapsToER = remember(resetCounter) { prefs.tpsOrMapsToER }
     var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
 
@@ -179,6 +181,15 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it
+                        }
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = languageManager.text(Tab4Texts.toolbarAutoCollapse),
+                        checked = toolbarAutoCollapse,
+                        onCheckedChange = {
+                            toolbarAutoCollapse = it
+                            prefs.isToolbarAutoCollapse = it
                         }
                     )
                 }

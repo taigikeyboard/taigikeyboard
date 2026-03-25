@@ -32,6 +32,15 @@ class CustomLayoutService {
 
     // MARK: - Private
 
+    /// Returns the globe or iPhone variant based on device requirements
+    private func resolveLayout(
+        withGlobe: [[KeyDef]],
+        iPhone: [[KeyDef]],
+        needsGlobe: Bool
+    ) -> [[KeyDef]] {
+        needsGlobe ? withGlobe : iPhone
+    }
+
     /// 根據 keyboardType、設定、裝置選擇對應的佈局
     private func selectLayout(for context: KeyboardContext) -> [[KeyDef]] {
         let settings = SharedSettings.shared
@@ -41,9 +50,9 @@ class CustomLayoutService {
         case .alphabetic:
             return selectAlphabeticLayout(settings: settings, needsGlobe: needsGlobe)
         case .numeric:
-            return needsGlobe ? TaigiLayouts.Numeric.withGlobe : TaigiLayouts.Numeric.iPhone
+            return resolveLayout(withGlobe: TaigiLayouts.Numeric.withGlobe, iPhone: TaigiLayouts.Numeric.iPhone, needsGlobe: needsGlobe)
         case .symbolic:
-            return needsGlobe ? TaigiLayouts.Symbolic.withGlobe : TaigiLayouts.Symbolic.iPhone
+            return resolveLayout(withGlobe: TaigiLayouts.Symbolic.withGlobe, iPhone: TaigiLayouts.Symbolic.iPhone, needsGlobe: needsGlobe)
         default:
             return TaigiLayouts.Alphabetic.qwerty_TL_iPhone
         }
@@ -60,67 +69,42 @@ class CustomLayoutService {
         settings: SharedSettings,
         needsGlobe: Bool
     ) -> [[KeyDef]] {
-        // English 模式（Apple 標準英文鍵盤）
+        let A = TaigiLayouts.Alphabetic.self
+
+        // English mode (Apple standard English keyboard)
         if settings.inputMode == .english {
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.qwerty_English_withGlobe
-                : TaigiLayouts.Alphabetic.qwerty_English_iPhone
+            return resolveLayout(withGlobe: A.qwerty_English_withGlobe, iPhone: A.qwerty_English_iPhone, needsGlobe: needsGlobe)
         }
 
-        // TPS 模式（方音符號）— inputMode 優先於 keyboardLayoutType
+        // TPS mode — inputMode takes priority over keyboardLayoutType
         if settings.inputMode == .tps {
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.tps_withGlobe
-                : TaigiLayouts.Alphabetic.tps_iPhone
+            return resolveLayout(withGlobe: A.tps_withGlobe, iPhone: A.tps_iPhone, needsGlobe: needsGlobe)
         }
 
-        // 根據 keyboardLayoutType 選擇佈局
         switch settings.keyboardLayoutType {
         case .tps:
-            // 方音符號佈局
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.tps_withGlobe
-                : TaigiLayouts.Alphabetic.tps_iPhone
+            return resolveLayout(withGlobe: A.tps_withGlobe, iPhone: A.tps_iPhone, needsGlobe: needsGlobe)
 
         case .phahTaigi:
-            // PhahTaigi 佈局
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.phahTaigi_withGlobe
-                : TaigiLayouts.Alphabetic.phahTaigi_iPhone
+            return resolveLayout(withGlobe: A.phahTaigi_withGlobe, iPhone: A.phahTaigi_iPhone, needsGlobe: needsGlobe)
 
         case .moe1:
-            // 教育部輸入法佈局1（根據 inputMode 選擇 TL 或 POJ）
             if settings.inputMode == .poj {
-                return needsGlobe
-                    ? TaigiLayouts.Alphabetic.moe1_POJ_withGlobe
-                    : TaigiLayouts.Alphabetic.moe1_POJ_iPhone
+                return resolveLayout(withGlobe: A.moe1_POJ_withGlobe, iPhone: A.moe1_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.moe1_TL_withGlobe
-                : TaigiLayouts.Alphabetic.moe1_TL_iPhone
+            return resolveLayout(withGlobe: A.moe1_TL_withGlobe, iPhone: A.moe1_TL_iPhone, needsGlobe: needsGlobe)
 
         case .moe2:
-            // 教育部輸入法佈局2（根據 inputMode 選擇 TL 或 POJ）
             if settings.inputMode == .poj {
-                return needsGlobe
-                    ? TaigiLayouts.Alphabetic.moe2_POJ_withGlobe
-                    : TaigiLayouts.Alphabetic.moe2_POJ_iPhone
+                return resolveLayout(withGlobe: A.moe2_POJ_withGlobe, iPhone: A.moe2_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.moe2_TL_withGlobe
-                : TaigiLayouts.Alphabetic.moe2_TL_iPhone
+            return resolveLayout(withGlobe: A.moe2_TL_withGlobe, iPhone: A.moe2_TL_iPhone, needsGlobe: needsGlobe)
 
         case .qwerty:
-            // QWERTY 佈局（根據 inputMode 選擇 POJ 或 TL）
             if settings.inputMode == .poj {
-                return needsGlobe
-                    ? TaigiLayouts.Alphabetic.qwerty_POJ_withGlobe
-                    : TaigiLayouts.Alphabetic.qwerty_POJ_iPhone
+                return resolveLayout(withGlobe: A.qwerty_POJ_withGlobe, iPhone: A.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            // TL 模式（預設）
-            return needsGlobe
-                ? TaigiLayouts.Alphabetic.qwerty_TL_withGlobe
-                : TaigiLayouts.Alphabetic.qwerty_TL_iPhone
+            return resolveLayout(withGlobe: A.qwerty_TL_withGlobe, iPhone: A.qwerty_TL_iPhone, needsGlobe: needsGlobe)
         }
     }
 }

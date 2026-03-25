@@ -118,6 +118,8 @@ class SharedSettings {
         static let lkkDictEnabled = "lkkDictEnabled"
         // 方音符號設定
         static let tpsOrMapsToER = "tpsOrMapsToER"
+        // 家私櫥設定
+        static let toolbarAutoCollapse = "toolbarAutoCollapse"
         // 外觀設定
         static let keyHeightScale = "keyHeightScale"
         static let colorSettings = "colorSettings"
@@ -300,7 +302,7 @@ class SharedSettings {
     }
 
     var kunggeDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? false }
+        get { userDefaults.object(forKey: Keys.kunggeDictEnabled) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.kunggeDictEnabled) }
     }
 
@@ -325,7 +327,7 @@ class SharedSettings {
     }
 
     var sttiDictEnabled: Bool {
-        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? false }
+        get { userDefaults.object(forKey: Keys.sttiDictEnabled) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.sttiDictEnabled) }
     }
 
@@ -350,6 +352,14 @@ class SharedSettings {
     var lkkDictEnabled: Bool {
         get { userDefaults.object(forKey: Keys.lkkDictEnabled) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.lkkDictEnabled) }
+    }
+
+    // MARK: - 家私櫥設定
+
+    /// Toolbar auto-collapse toggle (default: true = auto-collapse on composing/mode change)
+    var isToolbarAutoCollapse: Bool {
+        get { userDefaults.object(forKey: Keys.toolbarAutoCollapse) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.toolbarAutoCollapse) }
     }
 
     // MARK: - 方音符號設定
@@ -427,16 +437,18 @@ class SharedSettings {
         // 詞庫開關預設（iTaigi、台華線頂對照典 預設關閉）
         moeDictEnabled = true
         newwordDictEnabled = true
-        kunggeDictEnabled = false
+        kunggeDictEnabled = true
         iTaigiDictEnabled = false
         taiwanJapanDictEnabled = false
         taiHuaDictEnabled = false
         taiwanPlantDictEnabled = false
-        sttiDictEnabled = false
+        sttiDictEnabled = true
         khpooDictEnabled = true
         variantEnabled = false
         khiin = false
         lkkDictEnabled = false
+        // 家私櫥設定
+        isToolbarAutoCollapse = true
         // 方音符號設定
         tpsOrMapsToER = true
         // 外觀設定

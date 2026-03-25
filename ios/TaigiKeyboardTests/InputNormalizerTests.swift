@@ -630,23 +630,7 @@ final class InputNormalizerTests: XCTestCase {
         }
     }
 
-    // MARK: - Mode Validation (strict POJ/TL separation)
-
-    func testNormalize_pojMode_rejectsTLOnlyInput() {
-        let cases: [(input: String, reason: String)] = [
-            ("ts", "TL-only initial"),
-            ("tsi", "TL-only initial ts"),
-            ("ing", "TL-only final (POJ uses eng)"),
-            ("gua", "TL-only final ua (POJ uses oa)"),
-            ("tsing", "TL-only initial ts + TL-only final ing"),
-        ]
-        for (input, reason) in cases {
-            XCTAssertEqual(
-                InputNormalizer.normalize(input, mode: .poj), "",
-                "normalize(\"\(input)\", .poj) should be empty: \(reason)"
-            )
-        }
-    }
+    // MARK: - Mode Validation
 
     func testNormalize_pojMode_acceptsPOJInput() {
         let cases: [(input: String, reason: String)] = [
@@ -662,21 +646,6 @@ final class InputNormalizerTests: XCTestCase {
             XCTAssertNotEqual(
                 result, "",
                 "normalize(\"\(input)\", .poj) should not be empty: \(reason)"
-            )
-        }
-    }
-
-    func testNormalize_tlMode_rejectsPOJOnlyInput() {
-        let cases: [(input: String, reason: String)] = [
-            ("ch", "POJ-only initial (TL uses ts)"),
-            ("chi", "POJ-only initial ch"),
-            ("chhi", "POJ-only initial chh"),
-            ("goa", "POJ-only final oa (TL uses ua)"),
-        ]
-        for (input, reason) in cases {
-            XCTAssertEqual(
-                InputNormalizer.normalize(input, mode: .tl), "",
-                "normalize(\"\(input)\", .tl) should be empty: \(reason)"
             )
         }
     }

@@ -469,6 +469,125 @@ final class TPSConverterTests: XCTestCase {
         }
     }
 
+    // MARK: - Syllable Boundary: ㄏ (initial) vs ㆷ (entering tone coda)
+
+    func testToTL_syllableBoundary_initialAfterVowel() {
+        // ㄍㄛㄏ: ㄏ is initial h-, NOT coda -h. Must NOT match "koh" (閣).
+        // ㄏ (U+310F) is in consonants table, ㆷ (U+31B7) is in tones table.
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄛㄏ"), "ko h",
+                       "ㄍㄛㄏ should insert space before ㄏ (initial), not produce 'koh'")
+    }
+
+    func testToTL_syllableBoundary_enteringToneCoda() {
+        // ㄍㄛㆷ: ㆷ is entering tone -h coda. Should produce "koh4".
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄛㆷ"), "koh4",
+                       "ㄍㄛㆷ should match koh4 via entering tone coda")
+    }
+
+    func testToTL_syllableBoundary_multiSyllable() {
+        // ㄍㄛㄏㄧㆲˊ: ko + hiong5, not "kohiong5"
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄛㄏㄧㆲˊ"), "ko hiong5",
+                       "Consonant after vowel should start new syllable")
+    }
+
+    func testToTL_syllableBoundary_allCheckedCodas() {
+        // All entering tone codas should work without space insertion
+        let cases: [(input: String, expected: String, desc: String)] = [
+            ("ㄍㄚㆴ", "kap4", "ㆴ = -p coda"),
+            ("ㄍㄚㆵ", "kat4", "ㆵ = -t coda"),
+            ("ㄍㄚㆻ", "kak4", "ㆻ = -k coda"),
+            ("ㄍㄚㆷ", "kah4", "ㆷ = -h coda"),
+        ]
+        for (input, expected, desc) in cases {
+            XCTAssertEqual(TPSConverter.toTL(input), expected, desc)
+        }
+    }
+
+    func testToTL_syllableBoundary_consecutiveInitials() {
+        // ㄍˋㄏㄧㆲˊ: tone resets syllable, so ㄏ starts cleanly
+        // Note: ㄍ is consonant-only when ˋ hits → "k 2", then ㄏ starts new syllable
+        XCTAssertEqual(TPSConverter.toTL("ㄍˋㄏㄧㆲˊ"), "k 2 hiong5")
+    }
+
+    // MARK: - Syllable Boundary: ㄫ (initial) vs ㆭ (syllabic ng)
+
+    func testToTL_syllableBoundary_syllabicNg() {
+        // ㆭˊ: ㆭ is syllabic ng (vowel table) → "ng5" → matches 黃
+        XCTAssertEqual(TPSConverter.toTL("ㆭˊ"), "ng5",
+                       "ㆭˊ (syllabic ng + tone) should produce 'ng5'")
+    }
+
+    func testToTL_syllableBoundary_initialNg() {
+        // ㄫˊ: ㄫ is initial ng (consonant table) → should NOT produce "ng5"
+        // Consonant-only + tone → space separates them
+        XCTAssertEqual(TPSConverter.toTL("ㄫˊ"), "ng 5",
+                       "ㄫˊ (initial ng + tone) should NOT match syllabic ng5 (黃)")
+    }
+
+    func testToTL_syllableBoundary_syllabicM() {
+        // ㆬˋ: ㆬ is syllabic m (vowel table) → "m2"
+        XCTAssertEqual(TPSConverter.toTL("ㆬˋ"), "m2",
+                       "ㆬˋ (syllabic m + tone) should produce 'm2'")
+    }
+
+    func testToTL_syllableBoundary_initialM() {
+        // ㄇˋ: ㄇ is initial m (consonant table) → should NOT produce "m2"
+        XCTAssertEqual(TPSConverter.toTL("ㄇˋ"), "m 2",
+                       "ㄇˋ (initial m + tone) should NOT match syllabic m2")
+    }
+
+    func testToTL_syllableBoundary_initialNgWithVowel() {
+        // ㄫㄚˋ: normal syllable — initial ng + vowel a + tone 2
+        XCTAssertEqual(TPSConverter.toTL("ㄫㄚˋ"), "nga2",
+                       "ㄫㄚˋ should produce normal syllable 'nga2'")
+    }
+
+    // MARK: - Palatalized vs Non-Palatalized Affricates
+
+    func testToTL_palatalized_tshi() {
+        // ㄑㄧ˪: compound initial ㄑㄧ → "tshi3" → matches 試
+        XCTAssertEqual(TPSConverter.toTL("ㄑㄧ˪"), "tshi3",
+                       "ㄑㄧ˪ (palatalized compound) should produce 'tshi3'")
+    }
+
+    func testToTL_nonPalatalized_tsh_i() {
+        // ㄘㄧ˪: ㄘ + ㄧ is invalid TPS → should NOT produce "tshi3"
+        XCTAssertEqual(TPSConverter.toTL("ㄘㄧ˪"), "tsh i3",
+                       "ㄘㄧ˪ (non-palatalized + ㄧ) should NOT match 'tshi3' (試)")
+    }
+
+    func testToTL_palatalized_allPairs() {
+        // All 4 palatalized compound initials
+        let cases: [(input: String, expected: String, desc: String)] = [
+            ("ㄐㄧ˪", "tsi3", "ㄐㄧ = tsi"),
+            ("ㄑㄧ˪", "tshi3", "ㄑㄧ = tshi"),
+            ("ㄒㄧ˪", "si3", "ㄒㄧ = si"),
+            ("ㆢㄧ˪", "ji3", "ㆢㄧ = ji"),
+        ]
+        for (input, expected, desc) in cases {
+            XCTAssertEqual(TPSConverter.toTL(input), expected, desc)
+        }
+    }
+
+    func testToTL_nonPalatalized_allPairs() {
+        // All 4 non-palatalized + ㄧ (invalid TPS, should insert space)
+        let cases: [(input: String, expected: String, desc: String)] = [
+            ("ㄗㄧ˪", "ts i3", "ㄗ + ㄧ invalid"),
+            ("ㄘㄧ˪", "tsh i3", "ㄘ + ㄧ invalid"),
+            ("ㄙㄧ˪", "s i3", "ㄙ + ㄧ invalid"),
+            ("ㆡㄧ˪", "j i3", "ㆡ + ㄧ invalid"),
+        ]
+        for (input, expected, desc) in cases {
+            XCTAssertEqual(TPSConverter.toTL(input), expected, desc)
+        }
+    }
+
+    func testToTL_nonPalatalized_otherVowels() {
+        // Non-palatalized affricates with non-ㄧ vowels should work normally
+        XCTAssertEqual(TPSConverter.toTL("ㄘㄚˋ"), "tsha2", "ㄘ + ㄚ is valid")
+        XCTAssertEqual(TPSConverter.toTL("ㄗㄨˊ"), "tsu5", "ㄗ + ㄨ is valid")
+    }
+
     // MARK: - Empty Input
 
     func testToTL_empty() {
@@ -587,5 +706,52 @@ final class TPSConverterTests: XCTestCase {
     func testAdjustTPSInitialKey_nonTargetKey() {
         // Non ㄇ/ㄫ key → pass through unchanged
         XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄍ", afterRawInput: "ㄧ"), "ㄍ")
+    }
+
+    // MARK: - palatalizationReplacement
+
+    func testPalatalization_s_beforeI() {
+        // ㄙ + ㄧ → replace ㄙ with ㄒ
+        XCTAssertEqual(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄙ"), "ㄒ")
+    }
+
+    func testPalatalization_ts_beforeI() {
+        // ㄗ + ㄧ → replace ㄗ with ㄐ
+        XCTAssertEqual(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄗ"), "ㄐ")
+    }
+
+    func testPalatalization_tsh_beforeI() {
+        // ㄘ + ㄧ → replace ㄘ with ㄑ
+        XCTAssertEqual(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄘ"), "ㄑ")
+    }
+
+    func testPalatalization_j_beforeI() {
+        // ㆡ + ㄧ → replace ㆡ with ㆢ
+        XCTAssertEqual(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㆡ"), "ㆢ")
+    }
+
+    func testPalatalization_s_beforeNasalizedI() {
+        // ㄙ + ㆪ → replace ㄙ with ㄒ (nasalized i also triggers)
+        XCTAssertEqual(TPSConverter.palatalizationReplacement(forIncoming: "ㆪ", lastRawChar: "ㄙ"), "ㄒ")
+    }
+
+    func testPalatalization_noTrigger_nonIVowel() {
+        // ㄙ + ㄚ → nil (ㄚ is not a palatalization trigger)
+        XCTAssertNil(TPSConverter.palatalizationReplacement(forIncoming: "ㄚ", lastRawChar: "ㄙ"))
+    }
+
+    func testPalatalization_noTrigger_alreadyPalatalized() {
+        // ㄒ + ㄧ → nil (ㄒ is already palatalized)
+        XCTAssertNil(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄒ"))
+    }
+
+    func testPalatalization_noTrigger_nonAffricate() {
+        // ㄍ + ㄧ → nil (ㄍ is not an affricate)
+        XCTAssertNil(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄍ"))
+    }
+
+    func testPalatalization_noTrigger_emptyRawInput() {
+        // nil last char → nil
+        XCTAssertNil(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: nil))
     }
 }

@@ -121,8 +121,8 @@ enum TaigiLayouts {
             // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ,(。), backspace
             [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
-            // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, enter
-            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .return]
+            // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, emoji, enter
+            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return]
         ]
 
         /// TPS - iPhone SE / iPad (with globe key)
@@ -139,8 +139,8 @@ enum TaigiLayouts {
             // Row 4: ㄇ(ㆬ), ㄋ, ㄫ(ㆭ,ㄙ), ㄘ(ㄑ), ㄜ, ㆦ, ㄢ, ㆰ(ㆱ), ,(。), backspace
             [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
-            // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, enter
-            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .return]
+            // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, emoji, enter
+            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return]
         ]
 
         // MARK: MOE Layout 1 (教育部輸入法佈局1) - TL version

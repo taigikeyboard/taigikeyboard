@@ -30,6 +30,7 @@ object Tab4Texts {
     val outputBothScripts = LocalizedText(hanji = "括號標註")
     val autoCapitalization = LocalizedText(hanji = "自動大本字")
     val autoSpace = LocalizedText(hanji = "自動空白")
+    val toolbarAutoCollapse = LocalizedText(hanji = "自動隱藏 toolbar")
 
     // MARK: - 白話字設定
 
@@ -51,4 +52,8 @@ object Tab4Texts {
     // MARK: - Debug 模式
 
     val debugMode = LocalizedText(hanji = "Debug 模式")
+
+    // MARK: - Settings Overlay
+
+    val openApp = LocalizedText(hanji = "去APP調整")
 }

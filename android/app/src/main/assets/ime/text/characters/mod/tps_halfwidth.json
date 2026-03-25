@@ -18,6 +18,7 @@
         { "code": 0, "label": "ㄝ" }
       ] },
       { "code":   32, "label": " " },
+      { "code": -213, "label": "switch_to_media_context", "type": "system_gui" },
       { "code":   10, "label": "enter", "type": "enter_editing", "popup": [
         { "code": -213, "label": "switch_to_media_context", "type": "system_gui" }
       ] }

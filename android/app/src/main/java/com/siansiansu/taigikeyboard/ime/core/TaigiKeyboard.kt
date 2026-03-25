@@ -96,7 +96,8 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         @Synchronized
         fun getInstance(): TaigiKeyboard {
-            return taigikeyboardInstance!!
+            return taigikeyboardInstance
+                ?: throw IllegalStateException("TaigiKeyboard not initialized")
         }
     }
 
@@ -187,7 +188,8 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             Log.d("TaigiKeyboard", "Setting up WindowInsets listener on inputView")
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(inputView!!) { v, insets ->
+        val currentInputView = inputView ?: return inputView
+        ViewCompat.setOnApplyWindowInsetsListener(currentInputView) { v, insets ->
             if (BuildConfig.DEBUG) {
                 Log.d("TaigiKeyboard", "=== WindowInsets listener called ===")
             }
@@ -470,11 +472,11 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      */
     fun launchSettings() {
         requestHideSelf(0)
-        val i = Intent(this, SettingsMainActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+        val intent = Intent(this, SettingsMainActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                   Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
                   Intent.FLAG_ACTIVITY_CLEAR_TOP
-        startActivity(i)
+        startActivity(intent)
     }
 
     /**

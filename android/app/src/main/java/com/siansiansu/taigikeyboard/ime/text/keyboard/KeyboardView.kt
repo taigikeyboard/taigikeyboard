@@ -141,6 +141,8 @@ class KeyboardView : LinearLayout {
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         popupManager.dismissAllPopups()
+        activeKeyView = null
+        activePointerId = null
     }
 
     /**
@@ -170,10 +172,26 @@ class KeyboardView : LinearLayout {
                     activeX = event.getX(pointerIndex)
                     activeY = event.getY(pointerIndex)
                     searchForActiveKeyView()
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[TOUCH] DOWN → key=${activeKeyView?.data?.code} " +
+                            "(${activeKeyView?.data?.label})")
+                    }
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_DOWN)
                 } else if (activePointerId != pointerId) {
                     // New pointer arrived. Send ACTION_UP to current active view and move on
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_UP)
+                    activePointerId = pointerId
+                    activeX = event.getX(pointerIndex)
+                    activeY = event.getY(pointerIndex)
+                    searchForActiveKeyView()
+                    sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_DOWN)
+                } else {
+                    // Same pointer ID with stale state — previous UP/CANCEL was missed.
+                    // Recover by treating as a fresh touch.
+                    if (BuildConfig.DEBUG) {
+                        Log.w(TAG, "[TOUCH] ACTION_DOWN with stale pointerId=$pointerId, recovering")
+                    }
+                    activeKeyView = null
                     activePointerId = pointerId
                     activeX = event.getX(pointerIndex)
                     activeY = event.getY(pointerIndex)
@@ -203,6 +221,9 @@ class KeyboardView : LinearLayout {
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_UP)
                     activeKeyView = null
                     activePointerId = null
+                } else if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[TOUCH] ACTION_UP ignored: " +
+                        "activePointerId=$activePointerId, eventPointerId=$pointerId")
                 }
             }
             else -> return false
@@ -220,7 +241,13 @@ class KeyboardView : LinearLayout {
      * @param actionParam The action to set the [event] to.
      */
     private fun sendFlorisTouchEvent(event: MotionEvent, actionParam: Int) {
-        val keyView = activeKeyView ?: return
+        val keyView = activeKeyView ?: run {
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "[TOUCH] sendFlorisTouchEvent skipped: " +
+                    "activeKeyView is null, action=$actionParam")
+            }
+            return
+        }
         val keyViewParent = keyView.parent as ViewGroup
         keyView.onFlorisTouchEvent(event.apply {
             action = when (actionParam) {
@@ -281,10 +308,17 @@ class KeyboardView : LinearLayout {
      * the loss of focus.
      */
     fun dismissActiveKeyViewReference() {
-        activeKeyView?.onFlorisTouchEvent(MotionEvent.obtain(
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[TOUCH] dismissActiveKeyViewReference: " +
+                "keyCode=${activeKeyView?.data?.code}, pointerId=$activePointerId")
+        }
+        val cancelEvent = MotionEvent.obtain(
             0, 0, MotionEvent.ACTION_CANCEL, 0.0f, 0.0f, 0
-        ))
+        )
+        activeKeyView?.onFlorisTouchEvent(cancelEvent)
+        cancelEvent.recycle()
         activeKeyView = null
+        activePointerId = null
     }
 
     /**

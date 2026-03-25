@@ -637,32 +637,27 @@ final class NextWordService: @unchecked Sendable {
     private func buildDictWhereCondition() -> String {
         let settings = SharedSettings.shared
 
-        var conditions: [String] = []
-        if settings.moeDictEnabled { conditions.append("kautian = 1") }
-        if settings.newwordDictEnabled { conditions.append("taigitv = 1") }
-        if settings.iTaigiDictEnabled { conditions.append("itaigi = 1") }
-        if settings.taiwanPlantDictEnabled { conditions.append("sitbut = 1") }
-        if settings.taiHuaDictEnabled { conditions.append("taihoa = 1") }
-        if settings.taiwanJapanDictEnabled { conditions.append("taijit = 1") }
-        if settings.kunggeDictEnabled { conditions.append("kungge = 1") }
-        if settings.sttiDictEnabled { conditions.append("stti = 1") }
-        if settings.khpooDictEnabled { conditions.append("khpoo = 1") }
+        let dictionaries: [(enabled: Bool, column: String)] = [
+            (settings.moeDictEnabled, "kautian"),
+            (settings.newwordDictEnabled, "taigitv"),
+            (settings.iTaigiDictEnabled, "itaigi"),
+            (settings.taiwanPlantDictEnabled, "sitbut"),
+            (settings.taiHuaDictEnabled, "taihoa"),
+            (settings.taiwanJapanDictEnabled, "taijit"),
+            (settings.kunggeDictEnabled, "kungge"),
+            (settings.sttiDictEnabled, "stti"),
+            (settings.khpooDictEnabled, "khpoo"),
+        ]
 
-        // 全部開啟時不加過濾條件
-        let allEnabled = settings.moeDictEnabled && settings.newwordDictEnabled &&
-            settings.iTaigiDictEnabled && settings.taiwanPlantDictEnabled &&
-            settings.taiHuaDictEnabled && settings.taiwanJapanDictEnabled &&
-            settings.kunggeDictEnabled && settings.sttiDictEnabled &&
-            settings.khpooDictEnabled
+        let conditions = dictionaries
+            .filter { $0.enabled }
+            .map { "\($0.column) = 1" }
 
-        if allEnabled {
-            return ""
-        }
+        // All enabled: no filter needed
+        if conditions.count == dictionaries.count { return "" }
 
-        // 全部關閉時返回不可能的條件
-        if conditions.isEmpty {
-            return "AND 0"
-        }
+        // All disabled: impossible condition
+        if conditions.isEmpty { return "AND 0" }
 
         return "AND (\(conditions.joined(separator: " OR ")))"
     }

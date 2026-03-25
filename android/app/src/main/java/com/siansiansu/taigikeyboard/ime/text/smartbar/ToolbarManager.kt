@@ -18,6 +18,7 @@ class ToolbarManager(
     private val candidateOverlayViewProvider: () -> CandidateOverlayView?,
     private val layoutSelectionOverlayViewProvider: () -> LayoutSelectionOverlayView?,
     private val symbolSelectionOverlayViewProvider: () -> SymbolSelectionOverlayView?,
+    private val settingsSelectionOverlayViewProvider: () -> SettingsSelectionOverlayView?,
     private val onInputModeChanged: (String) -> Unit,
     private val onLayoutSelected: (String) -> Unit,
     private val onActiveContainerChanged: (Int) -> Unit,
@@ -44,6 +45,7 @@ class ToolbarManager(
      */
     fun collapseToolbarIfOpen() {
         symbolSelectionOverlayViewProvider()?.hide()
+        settingsSelectionOverlayViewProvider()?.hide()
         if (activeContainerId == R.id.toolbar_container) {
             animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
             animateToggleRotation(45f, 0f)
@@ -59,6 +61,7 @@ class ToolbarManager(
             // Hide overlays when toggling toolbar
             layoutSelectionOverlayViewProvider()?.hide()
             symbolSelectionOverlayViewProvider()?.hide()
+            settingsSelectionOverlayViewProvider()?.hide()
 
             if (activeContainerId == R.id.toolbar_container) {
                 // × → + : collapse toolbar, restore previous container
@@ -109,18 +112,9 @@ class ToolbarManager(
             setInputMode("tps")
         }
 
-        // Settings button in toolbar
+        // Settings button in toolbar — show settings overlay
         smartbarView.findViewById<View>(R.id.toolbar_settings_button)?.setOnClickListener {
-            val context = smartbarView.context
-            val intent = android.content.Intent(
-                context,
-                com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java
-            )
-            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                    android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
-            context.startActivity(intent)
-            onInputModeChanged("hide_self")
+            showSettingsSelection()
         }
     }
 
@@ -135,9 +129,10 @@ class ToolbarManager(
         // Close any open overlay panels
         symbolSelectionOverlayViewProvider()?.hide()
         layoutSelectionOverlayViewProvider()?.hide()
+        settingsSelectionOverlayViewProvider()?.hide()
 
         // Auto-collapse toolbar after mode selection
-        if (activeContainerId == R.id.toolbar_container) {
+        if (prefs.isToolbarAutoCollapse && activeContainerId == R.id.toolbar_container) {
             animateContainerSlide(R.id.toolbar_container, containerBeforeToolbar, expanding = false)
             animateToggleRotation(45f, 0f)
         }
@@ -174,6 +169,7 @@ class ToolbarManager(
         }
         candidateOverlayViewProvider()?.hide()
         symbolSelectionOverlayViewProvider()?.hide()
+        settingsSelectionOverlayViewProvider()?.hide()
         overlay.show(getKeyboardHeight())
     }
 
@@ -188,6 +184,22 @@ class ToolbarManager(
         }
         candidateOverlayViewProvider()?.hide()
         layoutSelectionOverlayViewProvider()?.hide()
+        settingsSelectionOverlayViewProvider()?.hide()
+        overlay.show(getKeyboardHeight())
+    }
+
+    /**
+     * Show settings selection overlay.
+     */
+    private fun showSettingsSelection() {
+        val overlay = settingsSelectionOverlayViewProvider() ?: return
+        if (overlay.isVisible()) {
+            overlay.hide()
+            return
+        }
+        candidateOverlayViewProvider()?.hide()
+        layoutSelectionOverlayViewProvider()?.hide()
+        symbolSelectionOverlayViewProvider()?.hide()
         overlay.show(getKeyboardHeight())
     }
 
@@ -241,9 +253,9 @@ class ToolbarManager(
                 duration = 200
                 interpolator = android.view.animation.DecelerateInterpolator()
                 addUpdateListener { anim ->
-                    val f = anim.animatedFraction
-                    fromView.translationY = fromTargetY * f
-                    toView.translationY = toStartY * (1f - f)
+                    val fraction = anim.animatedFraction
+                    fromView.translationY = fromTargetY * fraction
+                    toView.translationY = toStartY * (1f - fraction)
                 }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) {

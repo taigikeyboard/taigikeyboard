@@ -180,13 +180,15 @@ struct CandidateView: View {
         .offset(y: topOffset)
         .onChange(of: currentInputMode) { _, _ in
             // Auto-collapse shortcuts when input mode changes
-            withAnimation(.easeInOut(duration: 0.2)) {
-                isToolShortcutsExpanded = false
+            if SharedSettings.shared.isToolbarAutoCollapse {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isToolShortcutsExpanded = false
+                }
             }
         }
         .onChange(of: isComposing) { _, newValue in
             // Auto-collapse toolbar when user starts typing
-            if newValue && isToolShortcutsExpanded {
+            if SharedSettings.shared.isToolbarAutoCollapse && newValue && isToolShortcutsExpanded {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isToolShortcutsExpanded = false
                 }
@@ -223,9 +225,11 @@ struct CandidateView: View {
         Button(action: {
             onSymbolTap()
         }) {
-            Text("※")
+            Image(systemName: "number")
                 .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .scaleEffect(1.2)
                 .frame(width: 30, height: CandidateViewModels.UI.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)

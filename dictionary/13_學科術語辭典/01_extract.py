@@ -20,6 +20,55 @@ OUTPUT_FILE = "stti.csv"
 SCRIPT_NAME = "01_extract"
 
 
+def expand_variant_readings(hanzi, tl):
+    """
+    Detect and expand variant readings in TL field.
+
+    Source data uses space to separate variant readings (e.g.,
+    "tāu-hū-gâm tāu-hū-giâm" = two readings for 豆腐岩).
+    Space also appears as word boundary within a single reading (e.g.,
+    "Tiong-huâ Bîn-kok" = one reading for 中華).
+
+    Uses hanzi character count to distinguish: greedily group TL tokens
+    until cumulative syllable count matches hanzi count. Multiple groups
+    = variant readings. Single group = word boundaries within one reading.
+
+    Returns:
+        list of TL strings (1 if no variants, N if variants detected)
+    """
+    tokens = tl.split()
+    if len(tokens) <= 1:
+        return [tl]
+
+    hanzi_count = len(hanzi)
+    if hanzi_count == 0:
+        return [tl]
+
+    groups = []
+    current_group = []
+    current_syllables = 0
+
+    for token in tokens:
+        syllables = len(token.split("-"))
+        current_group.append(token)
+        current_syllables += syllables
+
+        if current_syllables == hanzi_count:
+            # Join multi-token group with hyphen (cleanup normalizes spaces to hyphens anyway)
+            groups.append("-".join(current_group))
+            current_group = []
+            current_syllables = 0
+        elif current_syllables > hanzi_count:
+            # Overshot — can't form clean groups, keep original
+            return [tl]
+
+    if current_group:
+        # Leftover tokens — grouping failed, keep original
+        return [tl]
+
+    return groups if len(groups) > 1 else [tl]
+
+
 def main():
     logger = setup_logging(SCRIPT_NAME)
     log_header(logger, SCRIPT_NAME, INPUT_FILE, f"{OUTPUT_DIR}/{OUTPUT_FILE}")
@@ -34,6 +83,7 @@ def main():
     # 處理複數資料（以空白分隔）
     results = []
     skipped_mismatch = 0
+    expanded_count = 0
 
     for _, row in df.iterrows():
         hanzi_raw = str(row["臺灣台語詞彙"]).strip()
@@ -62,11 +112,15 @@ def main():
                         "tl": tl,
                     })
         else:
-            # 單一詞彙：保持 tl 原樣（空白為音節分隔符，後續會被正規化）
-            results.append({
-                "hanzi": hanzi_raw,
-                "tl": tl_raw,
-            })
+            # 單一詞彙：展開變體讀音（若有）
+            tl_variants = expand_variant_readings(hanzi_raw, tl_raw)
+            if len(tl_variants) > 1:
+                expanded_count += 1
+            for tl in tl_variants:
+                results.append({
+                    "hanzi": hanzi_raw,
+                    "tl": tl,
+                })
 
     # 轉換為 DataFrame
     df = pd.DataFrame(results)
@@ -77,6 +131,8 @@ def main():
     after_dedup = len(df)
 
     logger.info(f"Extracted: {len(results)} records")
+    if expanded_count > 0:
+        logger.info(f"Expanded variant readings: {expanded_count}")
     if skipped_mismatch > 0:
         logger.warning(f"Skipped (hanzi/tl count mismatch): {skipped_mismatch}")
     logger.info(f"Duplicates removed: {before_dedup - after_dedup}")

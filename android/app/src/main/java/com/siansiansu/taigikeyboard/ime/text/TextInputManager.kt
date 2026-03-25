@@ -48,6 +48,9 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     private val layoutManager: LayoutManager by lazy { LayoutManager(taigikeyboard, taigikeyboard.prefs) }
     lateinit var smartbarManager: SmartbarManager
 
+    // Cancels previous layout reload to prevent race conditions on rapid mode switches
+    private var layoutReloadJob: Job? = null
+
     // Composing manager (synchronized access via composingLock)
     private val composingLock = Any()
     private var composingManager: ComposingManager? = null
@@ -140,6 +143,11 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                     R.id.symbol_selection_overlay
                 )
                 smartbarManager.registerSymbolSelectionOverlayView(symbolOverlay)
+
+                val settingsOverlay = inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.SettingsSelectionOverlayView>(
+                    R.id.settings_selection_overlay
+                )
+                smartbarManager.registerSettingsSelectionOverlayView(settingsOverlay)
 
                 textViewGroup?.post {
                     measureAndUpdateKeyboardHeight()
@@ -276,7 +284,6 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
         if (keyboardViews.containsKey(actualMode)) {
             switchToKeyboardView(actualMode)
         } else {
-            activeKeyboardMode = actualMode
             launch(Dispatchers.Default) {
                 addKeyboardView(actualMode)
                 withContext(Dispatchers.Main) {
@@ -287,11 +294,12 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     }
 
     private fun switchToKeyboardView(mode: KeyboardMode) {
+        val keyboardView = keyboardViews[mode] ?: return
         textViewFlipper?.displayedChild =
-            textViewFlipper?.indexOfChild(keyboardViews[mode]) ?: 0
-        keyboardViews[mode]?.updateVisibility()
-        keyboardViews[mode]?.requestLayout()
-        keyboardViews[mode]?.requestLayoutAllKeys()
+            textViewFlipper?.indexOfChild(keyboardView) ?: 0
+        keyboardView.updateVisibility()
+        keyboardView.requestLayout()
+        keyboardView.requestLayoutAllKeys()
 
         textViewGroup?.post {
             measureAndUpdateKeyboardHeight()
@@ -307,7 +315,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     }
 
     override fun onSubtypeChanged(newSubtype: Subtype) {
-        launch {
+        layoutReloadJob?.cancel()
+        layoutReloadJob = launch {
             val keyboardView = keyboardViews[KeyboardMode.CHARACTERS]
             keyboardView?.computedLayout = withContext(Dispatchers.IO) {
                 layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, newSubtype)
@@ -332,7 +341,8 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             }
         }
 
-        launch {
+        layoutReloadJob?.cancel()
+        layoutReloadJob = launch {
             val keyboardView = keyboardViews[KeyboardMode.CHARACTERS]
             keyboardView?.computedLayout = withContext(Dispatchers.IO) {
                 layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, taigikeyboard.activeSubtype)
@@ -344,12 +354,22 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
     override fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onKeyboardLayoutTypeChanged($newLayoutType)")
 
-        launch {
+        layoutReloadJob?.cancel()
+        layoutReloadJob = launch {
             val keyboardView = keyboardViews[KeyboardMode.CHARACTERS] ?: return@launch
             keyboardView.computedLayout = withContext(Dispatchers.IO) {
                 layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, taigikeyboard.activeSubtype)
             }
             keyboardView.updateVisibility()
+        }
+    }
+
+    fun refreshDoubleTapSettings() {
+        synchronized(composingLock) {
+            composingManager?.let { manager ->
+                manager.enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO
+                manager.enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN
+            }
         }
     }
 
@@ -551,6 +571,21 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             return
         }
 
+        // TPS mode: space as tone 1/4 syllable boundary marker.
+        // If the current syllable has no explicit tone mark, space adds a syllable
+        // boundary and stays in composing mode (like Microsoft Zhuyin's space for tone 1).
+        // If the syllable already has a tone mark or ends with space, fall through to commit.
+        if (taigikeyboard.prefs.keyboardLayoutType == "tps" && composingManager?.isComposing() == true) {
+            val rawInput = composingManager?.getRawInput() ?: ""
+            val lastChar = rawInput.lastOrNull()
+            if (lastChar != null && !TPSConverter.isTPSToneMark(lastChar) && lastChar != ' ') {
+                composingManager?.appendCharacter(" ", ic)
+                candidateCoordinator.scheduleDisplayDerivation()
+                candidateCoordinator.updateTaigiCandidatesDebounced()
+                return
+            }
+        }
+
         if (composingManager?.isComposing() == true) {
             val committedText = composingManager?.getComposingText() ?: ""
             val capturedRawInput = composingManager?.getRawInput() ?: ""
@@ -709,9 +744,16 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             else -> ToneUtilities.lowercaseToneLetter(baseText, inputMode)
         }
 
-        // TPS layout: auto-select ㄇ/ㆬ and ㄫ/ㆭ/ㄥ based on composing context
+        // TPS layout: context-aware character adjustments
         if (taigikeyboard.prefs.keyboardLayoutType == "tps") {
-            char = TPSConverter.adjustTPSInitialKey(char, composingManager?.getRawInput() ?: "")
+            val rawInput = composingManager?.getRawInput() ?: ""
+            char = TPSConverter.adjustTPSInitialKey(char, rawInput)
+            char = TPSConverter.adjustTPSNasalizedVowelKey(char, rawInput)
+            // Palatalization auto-correct: ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ → ㄐ/ㄑ/ㄒ/ㆢ
+            val replacement = TPSConverter.palatalizationReplacement(char, rawInput.lastOrNull())
+            if (replacement != null) {
+                composingManager?.replaceLastCharacter(replacement, ic)
+            }
         }
 
         // English mode: commit directly
@@ -753,7 +795,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
             } else {
                 manager.appendCharacter(char, ic)
             }
-            smartbarManager.collapseToolbarIfOpen()
+            if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
             candidateCoordinator.scheduleDisplayDerivation()
             if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms")
             candidateCoordinator.updateTaigiCandidatesDebounced()
@@ -765,7 +807,7 @@ class TextInputManager private constructor() : CoroutineScope by MainScope(),
                 }
             } else {
                 manager.startComposing(char, ic)
-                smartbarManager.collapseToolbarIfOpen()
+                if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                 candidateCoordinator.scheduleDisplayDerivation()
                 if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput newComposing: ${System.currentTimeMillis() - inputStart}ms")
                 candidateCoordinator.updateTaigiCandidatesDebounced()

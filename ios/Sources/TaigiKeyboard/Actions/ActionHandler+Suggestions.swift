@@ -12,6 +12,15 @@ extension ActionHandler {
     // MARK: - 候選詞選擇
 
     func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
+        // Raw input candidate: commit literal keystrokes directly (no tone conversion)
+        if suggestion.additionalInfo["isRawInput"] == "true" {
+            composingManager.commitRawInput()
+            if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
+                keyboardContext.textDocumentProxy.insertText(" ")
+            }
+            return
+        }
+
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {
@@ -37,12 +46,17 @@ extension ActionHandler {
                 hanzi = suggestion.subtitle
             }
 
+            // Convert roman to TPS for bracket annotation when in TPS mode
+            let bracketRoman = isTPSLayout
+                ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
+                : roman
+
             // 決定輸出文字
             let textToCommit: String
             if settings.outputBothScripts && hanzi != nil && !hanzi!.isEmpty {
                 textToCommit = effectiveSwapped
-                    ? "\(hanzi!) (\(roman))"
-                    : "\(roman) (\(hanzi!))"
+                    ? "\(hanzi!) (\(bracketRoman))"
+                    : "\(bracketRoman) (\(hanzi!))"
             } else if effectiveSwapped && hanzi != nil && !hanzi!.isEmpty {
                 textToCommit = hanzi!
             } else {

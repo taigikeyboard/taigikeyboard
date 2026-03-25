@@ -113,6 +113,15 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.6", "2026/03/24", [
+            LocalizedText(hanji: "Added in-keyboard settings panel accessible from toolbar."),
+            LocalizedText(hanji: "Added toolbar auto-collapse toggle in settings."),
+            LocalizedText(hanji: "TPS layout auto-corrects palatalized initials (ㄗ+ㄧ→ㄐ, ㄘ+ㄧ→ㄑ, etc.)."),
+            LocalizedText(hanji: "TPS layout: digit keys accessible via long-press on row 1."),
+            LocalizedText(hanji: "Improved TPS syllable boundary detection for more accurate input."),
+            LocalizedText(hanji: "Fixed custom dictionary link not responding in dictionary settings."),
+            LocalizedText(hanji: "Enabled 台語工藝詞庫 and 學科術語辭典 by default."),
+        ]),
         ("3.4.5", "2026/03/21", [
             LocalizedText(hanji: "Added symbol selection panel for inserting special characters."),
             LocalizedText(hanji: "Added dictionary search in the dictionary settings page."),

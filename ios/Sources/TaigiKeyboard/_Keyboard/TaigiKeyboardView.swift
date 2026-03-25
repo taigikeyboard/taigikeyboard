@@ -23,6 +23,7 @@ struct TaigiKeyboardView: View {
     @State private var keyBorderWidth: CGFloat = SharedSettings.shared.keyBorderWidth
     @State private var isLayoutPanelExpanded = false
     @State private var isSymbolPanelExpanded = false
+    @State private var isSettingsPanelExpanded = false
 
     /// Per-render-cycle cached settings and providers.
     /// Created once per body evaluation to avoid repeated UserDefaults reads.
@@ -59,6 +60,73 @@ struct TaigiKeyboardView: View {
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
             && colorSettings.backgroundColor == nil
 
+        keyboardWithOverlays(
+            p: p,
+            suggestions: suggestions,
+            frequentWords: frequentWords,
+            selectedCandidateIndex: selectedCandidateIndex,
+            isTranslateSwapped: isTranslateSwapped,
+            candidateStyle: candidateStyle
+        )
+        .keyboardToolbarStyle(
+            Keyboard.ToolbarStyle(
+                // Use Liquid Glass pass-through only when enabled AND
+                // no custom background color is set; otherwise clear
+                // so the external .background() color shows through.
+                backgroundColor: useLiquidGlassBg
+                    ? .white.opacity(0.001)
+                    : .clear
+            )
+        )
+        .keyboardViewStyle(
+            // Always make KK's internal background transparent so our
+            // external .background() controls the color consistently
+            // in both the keyboard extension and the preview panel.
+            KeyboardViewStyle(
+                background: useLiquidGlassBg
+                    ? .color(Color.white.opacity(0.001))
+                    : .color(.clear)
+            )
+        )
+        .background(
+            useLiquidGlassBg
+                ? Color.white.opacity(0.001)
+                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground)
+        )
+        .onAppear {
+            if let mode = initialInputMode {
+                currentInputMode = mode
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let latest = SharedSettings.shared.colorSettings
+            if colorSettings != latest {
+                colorSettings = latest
+            }
+            let latestScale = SharedSettings.shared.keyFontSizeScale
+            if keyFontSizeScale != latestScale {
+                keyFontSizeScale = latestScale
+            }
+            let latestBorderWidth = SharedSettings.shared.keyBorderWidth
+            if keyBorderWidth != latestBorderWidth {
+                keyBorderWidth = latestBorderWidth
+            }
+        }
+    }
+
+    // MARK: - Keyboard with Overlays
+
+    /// Core keyboard + overlay panels + state change handlers.
+    /// Extracted from body to reduce type-checker complexity.
+    @ViewBuilder
+    private func keyboardWithOverlays(
+        p: RenderProviders,
+        suggestions: [Autocomplete.Suggestion],
+        frequentWords: Set<String>,
+        selectedCandidateIndex: Int,
+        isTranslateSwapped: Bool,
+        candidateStyle: CandidateView.Style
+    ) -> some View {
         coreKeyboard(
             p: p,
             suggestions: suggestions,
@@ -121,59 +189,36 @@ struct TaigiKeyboardView: View {
             },
             alignment: .topLeading,
         )
+        .overlay(
+            Group {
+                if isSettingsPanelExpanded {
+                    SettingsSelectionOverlay(
+                        isExpanded: true,
+                        onDismiss: {
+                            isSettingsPanelExpanded = false
+                        },
+                        onOpenApp: { [unowned services] in
+                            services.actionHandler.handle(.settings)
+                        }
+                    )
+                    .offset(y: CandidateViewModels.UI.height)
+                }
+            },
+            alignment: .topLeading,
+        )
         .onChange(of: expandState.isExpanded) { _, isExpanded in
             if isExpanded {
                 isLayoutPanelExpanded = false
                 isSymbolPanelExpanded = false
+                isSettingsPanelExpanded = false
             }
         }
         .onChange(of: composingManager.isComposing) { _, isComposing in
             if isComposing && isSymbolPanelExpanded {
                 isSymbolPanelExpanded = false
             }
-        }
-        .keyboardToolbarStyle(
-            Keyboard.ToolbarStyle(
-                // Use Liquid Glass pass-through only when enabled AND
-                // no custom background color is set; otherwise clear
-                // so the external .background() color shows through.
-                backgroundColor: useLiquidGlassBg
-                    ? .white.opacity(0.001)
-                    : .clear
-            )
-        )
-        .keyboardViewStyle(
-            // Always make KK's internal background transparent so our
-            // external .background() controls the color consistently
-            // in both the keyboard extension and the preview panel.
-            KeyboardViewStyle(
-                background: useLiquidGlassBg
-                    ? .color(Color.white.opacity(0.001))
-                    : .color(.clear)
-            )
-        )
-        .background(
-            useLiquidGlassBg
-                ? Color.white.opacity(0.001)
-                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground)
-        )
-        .onAppear {
-            if let mode = initialInputMode {
-                currentInputMode = mode
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let latest = SharedSettings.shared.colorSettings
-            if colorSettings != latest {
-                colorSettings = latest
-            }
-            let latestScale = SharedSettings.shared.keyFontSizeScale
-            if keyFontSizeScale != latestScale {
-                keyFontSizeScale = latestScale
-            }
-            let latestBorderWidth = SharedSettings.shared.keyBorderWidth
-            if keyBorderWidth != latestBorderWidth {
-                keyBorderWidth = latestBorderWidth
+            if isComposing && isSettingsPanelExpanded {
+                isSettingsPanelExpanded = false
             }
         }
     }
@@ -234,13 +279,19 @@ struct TaigiKeyboardView: View {
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
                     onTranslateToggle: onTranslateToggle,
-                    onSettingsTap: { [unowned services] in
-                        services.actionHandler.handle(.settings)
+                    onSettingsTap: {
+                        isSettingsPanelExpanded.toggle()
+                        if isSettingsPanelExpanded {
+                            isLayoutPanelExpanded = false
+                            isSymbolPanelExpanded = false
+                            expandState.collapse()
+                        }
                     },
                     onLayoutTap: {
                         isLayoutPanelExpanded.toggle()
                         if isLayoutPanelExpanded {
                             isSymbolPanelExpanded = false
+                            isSettingsPanelExpanded = false
                             expandState.collapse()
                         }
                     },
@@ -248,12 +299,14 @@ struct TaigiKeyboardView: View {
                         isSymbolPanelExpanded.toggle()
                         if isSymbolPanelExpanded {
                             isLayoutPanelExpanded = false
+                            isSettingsPanelExpanded = false
                             expandState.collapse()
                         }
                     },
                     onDismissKeyboard: { [unowned services] in
                         isLayoutPanelExpanded = false
                         isSymbolPanelExpanded = false
+                        isSettingsPanelExpanded = false
                         services.actionHandler.handle(.dismissKeyboard)
                     },
                     currentInputMode: currentInputMode,
@@ -263,6 +316,7 @@ struct TaigiKeyboardView: View {
                         // Close any open overlay panels
                         isSymbolPanelExpanded = false
                         isLayoutPanelExpanded = false
+                        isSettingsPanelExpanded = false
                     },
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
                     isComposing: composingManager.isComposing
