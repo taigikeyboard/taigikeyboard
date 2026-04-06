@@ -3,7 +3,9 @@ import UniformTypeIdentifiers
 
 /// FileDocument wrapper for CSV export via fileExporter
 struct CSVDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+    static var readableContentTypes: [UTType] {
+        [.commaSeparatedText]
+    }
 
     var text: String
 
@@ -19,7 +21,31 @@ struct CSVDocument: FileDocument {
         }
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    func fileWrapper(configuration _: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+
+    // MARK: - Shared CSV Helpers
+
+    /// Parse a single CSV line, handling quoted fields.
+    static func parseLine(_ line: String) -> [String] {
+        var fields: [String] = []
+        var current = ""
+        var inQuotes = false
+        for char in line {
+            if char == "\"" { inQuotes.toggle() }
+            else if char == ",", !inQuotes { fields.append(current); current = "" }
+            else { current.append(char) }
+        }
+        fields.append(current)
+        return fields
+    }
+
+    /// Escape a field for CSV output (wrap in quotes if needed).
+    static func escape(_ field: String) -> String {
+        if field.contains(",") || field.contains("\"") || field.contains("\n") {
+            return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
+        }
+        return field
     }
 }

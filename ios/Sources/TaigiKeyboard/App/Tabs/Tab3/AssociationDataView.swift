@@ -8,7 +8,6 @@ struct AssociationDataView: View {
 
     @State private var isAssociationRecordingEnabled: Bool
     @State private var allData: [NextWordService.AssociationEntry] = []
-    @State private var total = 0
     @State private var isLoading = true
     @State private var filterText = ""
     @State private var showClearAlert = false
@@ -133,7 +132,6 @@ struct AssociationDataView: View {
                                     Task {
                                         await NextWordService.shared.deleteAssociation(item)
                                         allData.removeAll { $0.id == item.id }
-                                        total = max(total - 1, 0)
                                     }
                                 } label: {
                                     Image(systemName: "trash")
@@ -151,36 +149,7 @@ struct AssociationDataView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                Divider()
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField(
-                        languageManager.text(Tab3Texts.searchPlaceholder),
-                        text: $filterText,
-                    )
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    if !filterText.isEmpty {
-                        Button {
-                            filterText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.tertiarySystemFill))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-            }
-            .background(Color(.systemBackground))
-            .padding(.bottom, 8)
+            SearchBar(text: $filterText, placeholder: languageManager.text(Tab3Texts.searchPlaceholder))
         }
         .navigationTitle(languageManager.text(Tab3Texts.associationManagement))
         .navigationBarTitleDisplayMode(.large)
@@ -234,7 +203,6 @@ struct AssociationDataView: View {
     private func loadData() async {
         let assoc = await NextWordService.shared.allAssociations()
         await MainActor.run {
-            total = assoc.count
             allData = assoc
             isLoading = false
         }
@@ -251,7 +219,6 @@ struct AssociationDataView: View {
             await NextWordService.shared.clearAllAssociations()
             await MainActor.run {
                 allData = []
-                total = 0
             }
         }
     }
@@ -269,7 +236,7 @@ struct AssociationDataView: View {
             let allData = await NextWordService.shared.allAssociations()
             var csv = ""
             for item in allData {
-                csv += "\(csvEscape(item.prevWord)),\(csvEscape(item.prevTl)),\(csvEscape(item.nextWord)),\(csvEscape(item.nextTl)),\(item.count)\n"
+                csv += "\(CSVDocument.escape(item.prevWord)),\(CSVDocument.escape(item.prevTl)),\(CSVDocument.escape(item.nextWord)),\(CSVDocument.escape(item.nextTl)),\(item.count)\n"
             }
             await MainActor.run {
                 csvDocument = CSVDocument(csv)
@@ -326,7 +293,7 @@ struct AssociationDataView: View {
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
-            let columns = parseCSVLine(trimmed)
+            let columns = CSVDocument.parseLine(trimmed)
             guard columns.count >= 5 else { continue }
             let prevWord = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
             let prevTl = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -337,26 +304,6 @@ struct AssociationDataView: View {
             entries.append((prevWord: prevWord, prevTl: prevTl, nextWord: nextWord, nextTl: nextTl, count: count))
         }
         return entries
-    }
-
-    private func parseCSVLine(_ line: String) -> [String] {
-        var fields: [String] = []
-        var current = ""
-        var inQuotes = false
-        for char in line {
-            if char == "\"" { inQuotes.toggle() }
-            else if char == ",", !inQuotes { fields.append(current); current = "" }
-            else { current.append(char) }
-        }
-        fields.append(current)
-        return fields
-    }
-
-    private func csvEscape(_ field: String) -> String {
-        if field.contains(",") || field.contains("\"") || field.contains("\n") {
-            return "\"\(field.replacingOccurrences(of: "\"", with: "\"\""))\""
-        }
-        return field
     }
 }
 

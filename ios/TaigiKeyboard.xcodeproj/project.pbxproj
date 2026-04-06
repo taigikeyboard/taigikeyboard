@@ -222,12 +222,6 @@
 			path = Sources/TaigiKeyboard/App;
 			sourceTree = "<group>";
 		};
-		2AAC89292EF9196A00C954D7 /* Debug */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Debug;
-			path = Sources/TaigiKeyboard/Debug;
-			sourceTree = "<group>";
-		};
 		F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TaigiKeyboardTests;
@@ -305,7 +299,6 @@
 				2A4FAF492EAF137B006E37A8 /* App */,
 				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
-				2AAC89292EF9196A00C954D7 /* Debug */,
 				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
@@ -364,7 +357,6 @@
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
-				2AAC89292EF9196A00C954D7 /* Debug */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F3559CA32F5A96CC005AD5BF /* Diagnostics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
@@ -402,7 +394,6 @@
 				2A2883032EAF0DBE00AE3C75 /* Localization */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
-				2AAC89292EF9196A00C954D7 /* Debug */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F3559CA32F5A96CC005AD5BF /* Diagnostics */,

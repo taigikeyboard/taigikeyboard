@@ -17,6 +17,10 @@
 - **Tab3 font consistency**: `dictToggleWithDescription` description `.font(.body)` → `AppStyle.bodyFont`; "no results" text `appFont(.subheadline)` → `AppStyle.captionFont`
 - **Tab3 dead code**: Removed unused `disabledDictionaryToggle` method
 - **Tab3 subpages font consistency**: `CustomDictionaryView`, `FrequencyDataView`, `AssociationDataView` description text `.font(.body)` → `AppStyle.bodyFont`
+- **Tabs folder structure**: Unified tab organization — created `Tab2/`, `Tab4/` folders; moved `AppearanceSettingsView.swift` → `Tab2/`, `DictionarySearchViewModel.swift` → `Tab3/`, `Tab3.swift` → `Tab3/`, `Tab2.swift` → `Tab2/`, `Tab4.swift` → `Tab4/`; `TabType.swift` stays in `Tabs/` root as shared enum
+- **Remove dead code**: Removed unused `total` state var from `AssociationDataView`; removed unused `deleteEntries(at:)` from `CustomDictionaryView`
+- **Extract shared CSV helpers**: Moved duplicate `parseCSVLine()` and `csvEscape()` from `FrequencyDataView` and `AssociationDataView` into `CSVDocument.parseLine()` / `CSVDocument.escape()` static methods
+- **Extract SearchBar component**: New `Components/SearchBar.swift` replaces 3 identical search bar implementations in `CustomDictionaryView`, `FrequencyDataView`, `AssociationDataView`
 
 #### Design Decisions (v3.4.8)
 - **Main app font**: Fixed to Open Huninn; user font setting (System/Huninn/Iansui) only affects keyboard extension

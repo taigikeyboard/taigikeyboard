@@ -173,36 +173,7 @@ struct CustomDictionaryView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 0) {
-                Divider()
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField(
-                        languageManager.text(Tab3Texts.searchPlaceholder),
-                        text: $filterText,
-                    )
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    if !filterText.isEmpty {
-                        Button {
-                            filterText = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(.tertiarySystemFill))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-            }
-            .background(Color(.systemBackground))
-            .padding(.bottom, 8)
+            SearchBar(text: $filterText, placeholder: languageManager.text(Tab3Texts.searchPlaceholder))
         }
         .navigationTitle(languageManager.text(Tab3Texts.customDictionary))
         .navigationBarTitleDisplayMode(.large)
@@ -315,16 +286,6 @@ struct CustomDictionaryView: View {
     private func saveAndReload(_ entry: CustomDictionaryEntry) async {
         try? await service.save(entry)
         await loadEntries()
-    }
-
-    private func deleteEntries(at offsets: IndexSet) {
-        let idsToDelete = offsets.map { entries[$0].id }
-        Task {
-            for id in idsToDelete {
-                try? await service.delete(id: id)
-            }
-            await loadEntries()
-        }
     }
 
     private func customDictExportFilename() -> String {
