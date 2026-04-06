@@ -11,13 +11,12 @@
 /// - Default shows half-width (for full romanization text)
 /// - When isTranslateSwapped = true, shows full-width (for Hàn-lô mixed text)
 enum TaigiLayouts {
-
     // ========================================
     // MARK: - Alphabetic Keyboards
+
     // ========================================
 
     enum Alphabetic {
-
         // MARK: PhahTaigi Layout
 
         /// PhahTaigi - iPhone (no globe key)
@@ -26,7 +25,7 @@ enum TaigiLayouts {
             [.char("!", fullWidth: "！"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .space, .translate, .return]
+            [.numeric, .emoji, .space, .translate, .return],
         ]
 
         /// PhahTaigi - iPhone SE / iPad (with globe key)
@@ -35,7 +34,7 @@ enum TaigiLayouts {
             [.char("!", fullWidth: "！"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .space, .translate, .return]
+            [.numeric, .globe, .emoji, .space, .translate, .return],
         ]
 
         // MARK: QWERTY Layout (TL mode)
@@ -46,7 +45,7 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .char(","), .space, .char("-"), .translate, .return]
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char("-"), .translate, .return],
         ]
 
         /// QWERTY TL - iPhone SE / iPad (with globe key)
@@ -55,7 +54,7 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .char(","), .space, .char("-"), .translate, .return]
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char("-"), .translate, .return],
         ]
 
         // MARK: QWERTY Layout (POJ mode)
@@ -66,7 +65,7 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("o͘")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .char(","), .space, .char("-"), .translate, .return]
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char("-"), .translate, .return],
         ]
 
         /// QWERTY POJ - iPhone SE / iPad (with globe key)
@@ -75,10 +74,11 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("o͘")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .char(","), .space, .char("-"), .translate, .return]
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char("-"), .translate, .return],
         ]
 
         // MARK: QWERTY Layout (English mode)
+
         // Apple standard English keyboard: 4 rows, no number row
 
         /// QWERTY English - iPhone (no globe key)
@@ -87,7 +87,7 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .space, .return]
+            [.numeric, .emoji, .space, .return],
         ]
 
         /// QWERTY English - iPhone SE / iPad (with globe key)
@@ -96,10 +96,11 @@ enum TaigiLayouts {
             [.char("q"), .char("w"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l")],
             [.shift, .char("z"), .char("x"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .space, .return]
+            [.numeric, .globe, .emoji, .space, .return],
         ]
 
         // MARK: TPS Layout (Taiwanese Phonetic Symbols / 方音符號)
+
         //
         // Row 1: Voiced initials + tones + nasalized vowels
         // Row 2: Unaspirated stops + vowels + nasalized vowels
@@ -122,7 +123,7 @@ enum TaigiLayouts {
             [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
             // Row 5: ?123, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, emoji, enter
-            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return]
+            [.numeric, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return],
         ]
 
         /// TPS - iPhone SE / iPad (with globe key)
@@ -140,7 +141,7 @@ enum TaigiLayouts {
             [.char("ㄇ"), .char("ㄋ"), .char("ㄫ"), .char("ㄘ"), .char("ㄜ"), .char("ㆦ"), .char("ㄢ"), .char("ㆰ"), .char(",", fullWidth: "，"), .backspace],
 
             // Row 5: ?123, globe, ㄌ, ㆡ(ㆢ), ㄙ(ㄒ), ㆨ, ㆤ(ㄝ), space, emoji, enter
-            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return]
+            [.numeric, .globe, .char("ㄌ"), .char("ㆡ"), .char("ㄙ"), .char("ㆨ"), .char("ㆤ"), .space, .emoji, .return],
         ]
 
         // MARK: MOE Layout 1 (教育部輸入法佈局1) - TL version
@@ -151,7 +152,7 @@ enum TaigiLayouts {
             [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("("), .char(")"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .space, .translate, .return]
+            [.numeric, .emoji, .space, .translate, .return],
         ]
 
         /// MOE1 TL - iPhone SE / iPad (with globe key)
@@ -160,7 +161,7 @@ enum TaigiLayouts {
             [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("("), .char(")"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .space, .translate, .return]
+            [.numeric, .globe, .emoji, .space, .translate, .return],
         ]
 
         // MARK: MOE Layout 1 (教育部輸入法佈局1) - POJ version
@@ -171,7 +172,7 @@ enum TaigiLayouts {
             [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .emoji, .space, .translate, .return]
+            [.numeric, .emoji, .space, .translate, .return],
         ]
 
         /// MOE1 POJ - iPhone SE / iPad (with globe key)
@@ -180,7 +181,7 @@ enum TaigiLayouts {
             [.char("*"), .char("?", fullWidth: "？"), .char("e"), .char("r"), .char("t"), .char("y"), .char("u"), .char("i"), .char("o"), .char("p")],
             [.char("a"), .char("s"), .char("d"), .char("f"), .char("g"), .char("h"), .char("j"), .char("k"), .char("l"), .char("-")],
             [.shift, .char(",", fullWidth: "，"), .char(".", fullWidth: "。"), .char("c"), .char("v"), .char("b"), .char("n"), .char("m"), .backspace],
-            [.numeric, .globe, .emoji, .space, .translate, .return]
+            [.numeric, .globe, .emoji, .space, .translate, .return],
         ]
 
         // MARK: MOE Layout 2 (教育部輸入法佈局2) - TL version
@@ -191,7 +192,7 @@ enum TaigiLayouts {
             [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ts"), .char("tsh"), .char("a"), .char("i"), .char("o"), .char("oo")],
             [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
             [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
-            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return],
         ]
 
         /// MOE2 TL - iPhone SE / iPad (with globe key)
@@ -200,7 +201,7 @@ enum TaigiLayouts {
             [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ts"), .char("tsh"), .char("a"), .char("i"), .char("o"), .char("oo")],
             [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
             [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
-            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return],
         ]
 
         // MARK: MOE Layout 2 (教育部輸入法佈局2) - POJ version
@@ -211,7 +212,7 @@ enum TaigiLayouts {
             [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ch"), .char("chh"), .char("a"), .char("i"), .char("o"), .char("o\u{0358}")],
             [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
             [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
-            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+            [.numeric, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return],
         ]
 
         /// MOE2 POJ - iPhone SE / iPad (with globe key)
@@ -220,17 +221,17 @@ enum TaigiLayouts {
             [.char("p"), .char("ph"), .char("m"), .char("b"), .char("ch"), .char("chh"), .char("a"), .char("i"), .char("o"), .char("o\u{0358}")],
             [.char("t"), .char("th"), .char("n"), .char("l"), .char("s"), .char("j"), .char("u"), .char("e"), .char("r"), .char("-")],
             [.shift, .char("k"), .char("kh"), .char("ng"), .char("g"), .char("h"), .char("nn"), .char("?", fullWidth: "？"), .backspace],
-            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return]
+            [.numeric, .globe, .emoji, .char(",", fullWidth: "，"), .space, .char(".", fullWidth: "。"), .translate, .return],
         ]
     }
 
     // ========================================
     // MARK: - Numeric Keyboard (Common Symbols)
+
     // ========================================
     // 5-row design: High-frequency symbols + Quotation marks & brackets + Punctuation + Common symbols + Bottom row
 
     enum Numeric {
-
         /// Numeric - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
             // Row 1: High-frequency symbols (numbers available via alphabetic keyboard)
@@ -260,7 +261,7 @@ enum TaigiLayouts {
              .char("*"), .char("+"), .char("@"), .backspace],
 
             // Row 5: Bottom row
-            [.alphabetic, .emoji, .space, .translate, .return]
+            [.alphabetic, .emoji, .space, .translate, .return],
         ]
 
         /// Numeric - iPhone SE / iPad (with globe key)
@@ -292,18 +293,18 @@ enum TaigiLayouts {
              .char("*"), .char("+"), .char("@"), .backspace],
 
             // Row 5: Bottom row
-            [.alphabetic, .globe, .emoji, .space, .translate, .return]
+            [.alphabetic, .globe, .emoji, .space, .translate, .return],
         ]
     }
 
     // ========================================
     // MARK: - Symbolic Keyboard (Advanced Symbols)
+
     // ========================================
     // 5-row design: Programming brackets + Arrows & special symbols + Currency + Math + Bottom row
     // Note: Does not overlap with Numeric keyboard
 
     enum Symbolic {
-
         /// Symbolic - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
             // Row 1: Programming brackets (half-width, ｛｝ have full-width versions)
@@ -329,7 +330,7 @@ enum TaigiLayouts {
              .char("≠"), .char("≈"), .char("∞"), .char("√"), .backspace],
 
             // Row 5: Bottom row
-            [.alphabetic, .emoji, .space, .translate, .return]
+            [.alphabetic, .emoji, .space, .translate, .return],
         ]
 
         /// Symbolic - iPhone SE / iPad (with globe key)
@@ -357,7 +358,7 @@ enum TaigiLayouts {
              .char("≠"), .char("≈"), .char("∞"), .char("√"), .backspace],
 
             // Row 5: Bottom row
-            [.alphabetic, .globe, .emoji, .space, .translate, .return]
+            [.alphabetic, .globe, .emoji, .space, .translate, .return],
         ]
     }
 }

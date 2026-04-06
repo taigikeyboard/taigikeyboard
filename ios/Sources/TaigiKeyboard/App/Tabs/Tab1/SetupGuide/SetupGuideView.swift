@@ -70,7 +70,7 @@ struct SetupGuideView: View {
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppStyle.warningOrange)
                 }
 
                 Label {
@@ -78,7 +78,7 @@ struct SetupGuideView: View {
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
+                        .foregroundColor(AppStyle.warningOrange)
                 }
             }
 
@@ -120,7 +120,7 @@ private struct SetupGuideStepRow: View {
                     .font(KeyboardModels.Fonts.appFont(size: 14).bold())
                     .foregroundColor(.white)
                     .frame(width: 24, height: 24)
-                    .background(Color.accentColor)
+                    .background(AppStyle.accentBlue)
                     .clipShape(Circle())
 
                 Text(title)

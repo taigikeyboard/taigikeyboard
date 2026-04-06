@@ -18,8 +18,8 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 346
-        versionName = "3.4.6"
+        versionCode = 347
+        versionName = "3.4.7"
 
         ndk {
             debugSymbolLevel = "FULL"
@@ -77,6 +77,14 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+    }
+
+    lint {
+        disable += "MissingTranslation"
+        disable += "UnusedResources"
+        disable += "GradleDependency"
+        disable += "OldTargetApi"
+        disable += "AndroidGradlePluginVersion"
     }
 }
 

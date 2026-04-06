@@ -6,16 +6,21 @@ import OSLog
 ///
 /// 處理台語羅馬字與漢字的候選詞搜尋，支援多種輸入類型。
 class AutocompleteService: KeyboardKit.AutocompleteService {
-
     // MARK: - KeyboardKit 協議屬性
+
     var locale: Locale = .current
 
     // MARK: - 學習功能屬性（未使用）
+
     /// 是否支援忽略詞彙功能（台語鍵盤不使用此功能）
-    var canIgnoreWords: Bool { false }
+    var canIgnoreWords: Bool {
+        false
+    }
 
     /// 是否支援學習詞彙功能（台語鍵盤不使用此功能）
-    var canLearnWords: Bool { false }
+    var canLearnWords: Bool {
+        false
+    }
 
     /// 忽略的詞彙列表（台語鍵盤不使用此功能）
     var ignoredWords: [String] = []
@@ -24,11 +29,16 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     var learnedWords: [String] = []
 
     // MARK: - 學習功能方法（未實作）
+
     /// 檢查是否已忽略指定詞彙（台語鍵盤不使用）
-    func hasIgnoredWord(_: String) -> Bool { false }
+    func hasIgnoredWord(_: String) -> Bool {
+        false
+    }
 
     /// 檢查是否已學習指定詞彙（台語鍵盤不使用）
-    func hasLearnedWord(_: String) -> Bool { false }
+    func hasLearnedWord(_: String) -> Bool {
+        false
+    }
 
     /// 忽略指定詞彙（台語鍵盤不實作）
     func ignoreWord(_: String) {}
@@ -43,6 +53,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     func unlearnWord(_: String) {}
 
     // MARK: - 核心屬性
+
     /// 詞典搜尋服務
     private let lexiconService = LexiconService.shared
 
@@ -56,12 +67,13 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     private weak var actionHandler: ActionHandler?
 
     /// 日誌記錄器
-    internal let logger = Logger(
+    let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
         category: "AutocompleteService",
     )
 
     // MARK: - 公開介面
+
     /// 設定組字管理器
     /// - Parameter manager: 組字管理器實例
     func setComposingManager(_ manager: ComposingManager) {
@@ -94,10 +106,12 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                 return Autocomplete.Result(inputText: text, suggestions: [])
             }
 
-            let rawInput = composingManager.rawInput           // 搜尋用（如 gua2）
-            let displayText = composingManager.composingText   // 顯示用（如 guá）
+            let rawInput = composingManager.rawInput // 搜尋用（如 gua2）
+            let displayText = composingManager.composingText // 顯示用（如 guá）
 
-            logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput, privacy: .public)' display='\(displayText, privacy: .public)'")
+            #if DEBUG
+                logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput, privacy: .public)' display='\(displayText, privacy: .public)'")
+            #endif
 
             let inputMode = settings.inputMode
             // 使用 rawInput 判斷（因為 displayText 可能已移除聲調數字，如 soo1 → soo）
@@ -111,13 +125,14 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             var allWords = words
             if TPSConverter.containsTPS(rawInput),
                settings.tpsOrMapsToER,
-               searchInput.contains("er") {
+               searchInput.contains("er")
+            {
                 let orVariantKey = searchInput.replacingOccurrences(of: "er", with: "or")
                 let orWords = try await lexiconService.search(
                     for: orVariantKey, inputType: inputType,
-                    inputMode: inputMode, limit: 100, rawInput: rawInput
+                    inputMode: inputMode, limit: 100, rawInput: rawInput,
                 )
-                let existingIds = Set(allWords.map { $0.id })
+                let existingIds = Set(allWords.map(\.id))
                 allWords += orWords.filter { !existingIds.contains($0.id) }
             }
 
@@ -131,37 +146,27 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             let composingTextSuggestion = createComposingTextSuggestion(displayText)
             suggestions.insert(composingTextSuggestion, at: 0)
 
-            let result = Autocomplete.Result(inputText: text, suggestions: suggestions)
-            return result
+            return Autocomplete.Result(inputText: text, suggestions: suggestions)
         } catch {
-            logger.error("[AUTOCOMPLETE] failed for text '\(text, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[AUTOCOMPLETE] failed for text '\(text, privacy: .public)': \(error.localizedDescription, privacy: .public)")
+            #endif
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
     }
 
     // MARK: - 私有方法
 
-    /// Create raw input suggestion (literal keystrokes, no tone conversion).
-    /// Placed at position 0 — Enter or tap to commit the exact text the user typed.
-    private func createRawInputSuggestion(_ rawInput: String) -> Autocomplete.Suggestion {
-        return Autocomplete.Suggestion(
-            text: rawInput,
-            title: rawInput,
-            subtitle: nil,
-            additionalInfo: ["isRawInput": "true"]
-        )
-    }
-
     /// 建立當前組字文字的候選詞物件
     /// 這個候選詞會被放在候選詞列的第 0 個位置，顯示使用者目前正在輸入的內容
     /// - Parameter composingText: 當前組字文字
     /// - Returns: 組字文字的候選詞物件
     private func createComposingTextSuggestion(_ composingText: String) -> Autocomplete.Suggestion {
-        return Autocomplete.Suggestion(
+        Autocomplete.Suggestion(
             text: composingText,
             title: composingText,
             subtitle: nil,
-            additionalInfo: ["isComposingText": "true"]
+            additionalInfo: ["isComposingText": "true"],
         )
     }
 
@@ -201,7 +206,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// then partitions candidates: context-matched first, then the rest (preserving original order within each group).
     private func applyContextBoost(words: [TaigiWord]) async -> [TaigiWord] {
         guard let lastWord = actionHandler?.lastSelectedWord,
-              !lastWord.isEmpty else {
+              !lastWord.isEmpty
+        else {
             return words
         }
 
@@ -232,7 +238,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// Converts TPS input to TL romanization for trie lookup.
     /// Non-TPS input is returned as-is.
     private func buildSearchKey(from rawInput: String) -> String {
-        return TPSConverter.containsTPS(rawInput)
+        TPSConverter.containsTPS(rawInput)
             ? TPSConverter.toTL(rawInput)
             : rawInput
     }
@@ -245,7 +251,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// - Parameter words: 台語詞彙列表
     /// - Returns: KeyboardKit 候選詞列表
     private func convertToSuggestions(_ words: [TaigiWord]) -> [Autocomplete.Suggestion] {
-        let suggestions = words.compactMap { word -> Autocomplete.Suggestion? in
+        words.compactMap { word -> Autocomplete.Suggestion? in
             let romanText = word.roman
             let hanziText = word.hanzi ?? ""
 
@@ -255,10 +261,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                 text: romanText,
                 title: romanText,
                 subtitle: hanziText.isEmpty ? nil : hanziText,
-                additionalInfo: ["displayText": word.displayText]
+                additionalInfo: ["displayText": word.displayText],
             )
         }
-
-        return suggestions
     }
 }

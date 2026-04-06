@@ -37,6 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.LanguageManager
@@ -148,12 +150,12 @@ fun AppearanceSettingsScreen(
                         Text(
                             text = languageManager.text(Tab2Texts.customFont),
                             modifier = Modifier.weight(1f),
-                            fontSize = 16.sp,
+                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = fontDisplayName(fontType, languageManager),
-                            fontSize = 14.sp,
+                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.width(4.dp))
@@ -171,7 +173,7 @@ fun AppearanceSettingsScreen(
                 // Card 2: Keyboard (齒盤介面)
                 Text(
                     text = languageManager.text(Tab2Texts.keyboardSection),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
@@ -214,7 +216,7 @@ fun AppearanceSettingsScreen(
                 // Card 3: Key (揤鈕介面)
                 Text(
                     text = languageManager.text(Tab2Texts.colorKeySection),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
@@ -317,7 +319,7 @@ fun AppearanceSettingsScreen(
                 // Card 4: Candidate (候選詞介面)
                 Text(
                     text = languageManager.text(Tab2Texts.candidateSection),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )

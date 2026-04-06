@@ -56,21 +56,25 @@ Called after `adjustTPSInitialKey` in the input pipeline. Uses `composingManager
 
 ---
 
-## Rule 2: ㄇ/ㄫ Position Auto-Selection (聲母/韻尾自動判斷)
+## Rule 2: Nasal/Stop Position Auto-Selection (聲母/韻尾自動判斷)
 
 ### Phonetic basis
 
-> TPS ㆠ is the voiced counterpart of ㄅ; ㆣ is the voiced counterpart of ㄍ; ㆡ is the voiced counterpart of ㄗ
-> — `taigi-phonetics-reference.md` Section 2
+Nasals (m, n, ng) and stops (p, t, k, h) have different TPS symbols depending on syllable position:
 
-m and ng have different TPS symbols depending on syllable position:
-- **Initial** (syllable start): ㄇ, ㄫ
-- **Final/syllabic** (after vowel): ㆬ, ㆭ
+**Nasals:**
+- **Initial** (syllable start): ㄇ, ㄋ, ㄫ
+- **Final/syllabic** (after vowel): ㆬ, ㄣ, ㆭ
 - **Special**: ㄧ + ng → ㄥ (dedicated symbol for -ing rhyme)
+
+**Stops (entering tone codas):**
+- **Initial** (syllable start): ㄅ, ㄉ, ㄍ, ㄏ
+- **Coda** (after vowel): ㆴ (-p, tone 4), ㆵ (-t, tone 4), ㆻ (-k, tone 4), ㆷ (-h, tone 4)
+- Tone 8: append ˙ after coda (e.g., ㆴ˙ = -p tone 8)
 
 ### Rule
 
-When the user taps ㄇ or ㄫ, check the last character of rawInput:
+When the user taps ㄇ, ㄋ, ㄫ, ㄅ, ㄉ, ㄍ, or ㄏ, check the last character of rawInput:
 
 **At syllable start** (keep initial form):
 - rawInput is empty
@@ -78,26 +82,44 @@ When the user taps ㄇ or ㄫ, check the last character of rawInput:
 - Last char is a checked tone final: ㆴ ㆵ ㆻ ㆷ
 - Last char is a space
 
-**Not at syllable start** (convert to final/syllabic form):
+**Not at syllable start** (convert to final form):
 
 | Key tapped | After ㄧ | Other positions |
 |---|---|---|
 | ㄇ | → ㆬ | → ㆬ |
+| ㄋ | → ㄣ | → ㄣ |
 | ㄫ | → ㄥ | → ㆭ |
+| ㄅ | → ㆴ | → ㆴ |
+| ㄉ | → ㆵ | → ㆵ |
+| ㄍ | → ㆻ | → ㆻ |
+| ㄏ | → ㆷ | → ㆷ |
 
 ### Examples
 
 | Input sequence | rawInput result | TL |
 |---|---|---|
 | (empty) + ㄇ | ㄇ | m (initial) |
+| (empty) + ㄋ | ㄋ | n (initial) |
+| (empty) + ㄅ | ㄅ | p (initial) |
 | ㄚ + ㄇ | ㄚㆬ | am |
+| ㄚ + ㄋ | ㄚㄣ | an |
+| ㄒㄧ + ㄋ | ㄒㄧㄣ | sin |
 | ㄧ + ㄫ | ㄧㄥ | ing |
 | ㄚ + ㄫ | ㄚㆭ | ang |
+| ㄍㄚ + ㄅ | ㄍㄚㆴ | kap4 |
+| ㄍㄚ + ㄅ + ˙ | ㄍㄚㆴ˙ | kap8 |
+| ㄍㄚ + ㄉ | ㄍㄚㆵ | kat4 |
+| ㄍㄚ + ㄍ | ㄍㄚㆻ | kak4 |
+| ㄍㄚ + ㄏ | ㄍㄚㆷ | kah4 |
 | ˋ + ㄇ | ...ˋㄇ | m (new syllable) |
+| ˋ + ㄅ | ...ˋㄅ | p (new syllable) |
+| ㆴ + ㄅ | ...ㆴㄅ | p (new syllable — ㆴ is in syllableBoundaryChars) |
 
-### Known limitation
+### Why auto-correction is necessary
 
-Standalone syllabic m/ng at syllable start (e.g. ㆬ˫ = m̄) will display as initial form (ㄇ˫) because at input time we cannot predict whether a vowel will follow. Search is unaffected — both map to the same TL.
+Initial forms (ㄅ/ㄉ/ㄍ/ㄏ/ㄋ) are in the consonant table; final forms (ㆴ/ㆵ/ㆻ/ㆷ/ㄣ) are in the tone/vowel tables. Without auto-correction, `toTL()` treats the initial form as a new syllable and inserts a space:
+- ㄍㄚㄅ → `"ka p"` (broken) instead of ㄍㄚㆴ → `"kap4"` (correct)
+- ㄒㄧㄋ → `"si n"` (broken) instead of ㄒㄧㄣ → `"sin"` (correct)
 
 ### Implementation
 
@@ -105,6 +127,42 @@ Standalone syllabic m/ng at syllable start (e.g. ㆬ˫ = m̄) will display as in
 |---|---|---|
 | iOS | `TPSConverter.adjustTPSInitialKey(_:afterRawInput:)` | `TPSConverter.swift` |
 | Android | `TPSConverter.adjustTPSInitialKey(char, afterRawInput)` | `TPSConverter.kt` |
+
+---
+
+## Rule 2b: Syllabic Nasal Tone-Triggered Correction (獨立鼻音聲調校正)
+
+### Phonetic basis
+
+Standalone syllabic m and ng are valid Taiwanese syllables (e.g. m̄ = 姆, n̂g = 黃). In TPS, these use the syllabic forms ㆬ and ㆭ (from the vowel table), not the initial forms ㄇ and ㄫ (from the consonant table).
+
+When the user types ㄇ at syllable start, `adjustTPSInitialKey` keeps it as ㄇ because a vowel might follow. But when a tone mark arrives next, we know no vowel followed — the user wants syllabic m/ng.
+
+### Rule
+
+When the incoming character is a **tone mark** (ˋ ˪ ˊ ˇ ˫ ˙ ˆ), and the last character of rawInput is an unconverted initial nasal, retroactively replace it with the syllabic form:
+
+| rawInput last char | Incoming | Replace last with | Example |
+|---|---|---|---|
+| ㄇ (initial m) | any tone mark | ㆬ (syllabic m) | ㄇ + ˫ → ㆬ˫ (m7) |
+| ㄫ (initial ng) | any tone mark | ㆭ (syllabic ng) | ㄫ + ˊ → ㆭˊ (ng5) |
+
+### Why auto-correction is necessary
+
+Without correction, `toTL("ㄇ˫")` produces `"m 7"` (with space — consonant-only + tone is invalid), which does not match any dictionary entry. With correction, `toTL("ㆬ˫")` produces `"m7"` (valid syllabic m).
+
+### Why this is safe
+
+If ㄇ were after a vowel, `adjustTPSInitialKey` (Rule 2) would have already converted it to ㆬ. So if rawInput still ends with ㄇ, it must be at syllable start. A tone mark after syllable-start ㄇ unambiguously means syllabic m. Same logic for ㄫ.
+
+### Implementation
+
+| Platform | Function | Location |
+|---|---|---|
+| iOS | `TPSConverter.syllabicNasalReplacement(forIncoming:lastRawChar:)` | `TPSConverter.swift` |
+| Android | `TPSConverter.syllabicNasalReplacement(incoming, lastRawChar)` | `TPSConverter.kt` |
+
+Called after `adjustTPSNasalizedVowelKey` and before `palatalizationReplacement` in the input pipeline. Uses `composingManager.replaceLastCharacter()` to modify rawInput retroactively (same pattern as Rule 1).
 
 ---
 
@@ -151,6 +209,9 @@ User taps key
   │
   ├─ 3. adjustTPSNasalizedVowelKey() ← Rule 3: ㆮ/ㆯ
   │     Modifies: incoming character
+  │
+  ├─ 3b. syllabicNasalReplacement() ← Rule 2b: ㄇ/ㄫ + tone
+  │     Modifies: last character of rawInput (retroactive)
   │
   ├─ 4. palatalizationReplacement()  ← Rule 1: palatalization
   │     Modifies: last character of rawInput (retroactive)
@@ -220,7 +281,14 @@ These are manual alternatives accessible via long-press, providing access to rel
 |---|---|---|
 | Palatalization: ts/tsh/s/j + i → tɕ/tɕʰ/ɕ/dʑ | Rule 1: `palatalizationReplacement()` | Implemented |
 | m position: initial vs final/syllabic | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| n position: initial vs final (ㄣ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
 | ng position: initial vs final (ㆭ) vs -ing (ㄥ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| p position: initial (ㄅ) vs coda (ㆴ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| t position: initial (ㄉ) vs coda (ㆵ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| k position: initial (ㄍ) vs coda (ㆻ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| h position: initial (ㄏ) vs coda (ㆷ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
+| Standalone syllabic m + tone → ㆬ | Rule 2b: `syllabicNasalReplacement()` | Implemented |
+| Standalone syllabic ng + tone → ㆭ | Rule 2b: `syllabicNasalReplacement()` | Implemented |
 | iainn invalid → iaunn | Rule 3: `adjustTPSNasalizedVowelKey()` | Implemented |
 | o → oo before -p/-t/-k (not -h) | Post-processing Step 7 (display only) | Display only |
 | ㄧ + ㆭ → ㄧㄥ (ing rhyme) | Post-processing Step 5b (display only) | Display only |

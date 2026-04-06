@@ -14,19 +14,6 @@ enum TaigiPhonetics {
         "ts", "tsh", "s", "j", "h", "",
     ]
 
-    /// POJ initials (derived from TL: ts→ch, tsh→chh)
-    static let pojInitials: Set<String> = {
-        var result = Set<String>()
-        for initial in tlInitials {
-            if let pojInitial = pojInitialFromTL[initial] {
-                result.insert(pojInitial)
-            } else {
-                result.insert(initial)
-            }
-        }
-        return result
-    }()
-
     static let tlFinals: Set<String> = [
         "a", "ah", "ap", "at", "ak", "ann", "annh", "am", "an", "ang",
         "e", "eh", "enn", "ennh",
@@ -86,31 +73,6 @@ enum TaigiPhonetics {
         ("ing", "eng"),
         ("ik", "ek"),
     ]
-
-    /// POJ finals (derived from TL finals via reverse substitutions for keyboard input)
-    static let pojFinals: Set<String> = {
-        Set(tlFinals.map { tlFinalToPOJInput($0) })
-    }()
-
-    /// Convert TL final to POJ keyboard-input form
-    ///
-    /// Only handles differences that affect raw keystroke input:
-    /// - ua -> oa, ue -> oe (prefix substitution)
-    /// - ing -> eng, ik -> ek (exact match)
-    static func tlFinalToPOJInput(_ tlFinal: String) -> String {
-        var result = tlFinal
-
-        if result.hasPrefix("ua") {
-            result = "oa" + String(result.dropFirst(2))
-        } else if result.hasPrefix("ue") {
-            result = "oe" + String(result.dropFirst(2))
-        }
-
-        if result == "ing" { result = "eng" }
-        if result == "ik" { result = "ek" }
-
-        return result
-    }
 
     // MARK: - Core Parsing (from phonetics.js)
 
@@ -352,6 +314,63 @@ enum TaigiPhonetics {
             syllable.isEmpty ? "" : convertSyllable(syllable, mode: mode)
         }
         return converted.joined(separator: "-")
+    }
+
+    /// Convert POJ display text (with diacritics) to TL display text.
+    /// Splits by "-" and " " (word boundary), for each syllable: strip tone -> normalizeToTL -> toTL.
+    /// Preserves original separators (space = word boundary, hyphen = syllable boundary).
+    static func pojDisplayToTLDisplay(_ text: String) -> String {
+        guard !text.isEmpty else { return "" }
+
+        // Split while preserving separators (space and hyphen)
+        var tokens: [(text: String, separator: String)] = []
+        var current = ""
+        for char in text {
+            if char == "-" || char == " " {
+                tokens.append((text: current, separator: String(char)))
+                current = ""
+            } else {
+                current.append(char)
+            }
+        }
+        tokens.append((text: current, separator: ""))
+
+        var result = ""
+        for (i, token) in tokens.enumerated() {
+            let s = token.text
+            if s.isEmpty {
+                // Preserve separator (e.g., "--" for 輕聲)
+                if i < tokens.count - 1 || !token.separator.isEmpty {
+                    result += token.separator
+                }
+                continue
+            }
+
+            let (bare, toneNum) = stripToneMark(s)
+            let converted: String
+            if bare.isEmpty {
+                converted = s
+            } else {
+                let normalized = normalizeToTL(bare.lowercased())
+                if let (initial, final) = splitInitialFinal(normalized) {
+                    let tone = toneNum.isEmpty ? (isStopTone(final) ? "4" : "1") : toneNum
+                    let tlResult = toTL(initial: initial, final: final, tone: tone)
+                    if let first = s.first, first.isUppercase {
+                        converted = tlResult.prefix(1).uppercased() + tlResult.dropFirst()
+                    } else {
+                        converted = tlResult
+                    }
+                } else {
+                    converted = s
+                }
+            }
+
+            result += converted
+            if !token.separator.isEmpty {
+                result += token.separator
+            }
+        }
+        return result
     }
 
     /// Convert TL display text (with diacritics) to POJ display text.

@@ -13,7 +13,6 @@ import org.junit.Test
  * Tests uppercaseToneLetter, lowercaseToneLetter, adjustNasalMarkerCase, and isHanzi.
  */
 class ToneConverterModelsTest {
-
     // MARK: - uppercaseToneLetter
 
     @Test
@@ -155,22 +154,65 @@ class ToneConverterModelsTest {
 
     @Test
     fun testPOJ_uppercaseToneLetters() {
-        val testCases = listOf(
-            // a
-            "á" to "Á", "à" to "À", "â" to "Â", "ǎ" to "Ǎ", "ā" to "Ā", "a̍" to "A̍", "ă" to "Ă",
-            // e
-            "é" to "É", "è" to "È", "ê" to "Ê", "ě" to "Ě", "ē" to "Ē", "e̍" to "E̍", "ĕ" to "Ĕ",
-            // i
-            "í" to "Í", "ì" to "Ì", "î" to "Î", "ǐ" to "Ǐ", "ī" to "Ī", "i̍" to "I̍", "ĭ" to "Ĭ",
-            // o
-            "ó" to "Ó", "ò" to "Ò", "ô" to "Ô", "ǒ" to "Ǒ", "ō" to "Ō", "o̍" to "O̍", "ŏ" to "Ŏ",
-            // u
-            "ú" to "Ú", "ù" to "Ù", "û" to "Û", "ǔ" to "Ǔ", "ū" to "Ū", "u̍" to "U̍", "ŭ" to "Ŭ",
-            // n
-            "ń" to "Ń", "ǹ" to "Ǹ", "n̂" to "N̂", "ň" to "Ň", "n̄" to "N̄", "n̍" to "N̍", "n̋" to "N̋",
-            // m
-            "ḿ" to "Ḿ", "m̀" to "M̀", "m̂" to "M̂", "m̌" to "M̌", "m̄" to "M̄", "m̍" to "M̍", "m̋" to "M̋",
-        )
+        val testCases =
+            listOf(
+                // a
+                "á" to "Á",
+                "à" to "À",
+                "â" to "Â",
+                "ǎ" to "Ǎ",
+                "ā" to "Ā",
+                "a̍" to "A̍",
+                "ă" to "Ă",
+                // e
+                "é" to "É",
+                "è" to "È",
+                "ê" to "Ê",
+                "ě" to "Ě",
+                "ē" to "Ē",
+                "e̍" to "E̍",
+                "ĕ" to "Ĕ",
+                // i
+                "í" to "Í",
+                "ì" to "Ì",
+                "î" to "Î",
+                "ǐ" to "Ǐ",
+                "ī" to "Ī",
+                "i̍" to "I̍",
+                "ĭ" to "Ĭ",
+                // o
+                "ó" to "Ó",
+                "ò" to "Ò",
+                "ô" to "Ô",
+                "ǒ" to "Ǒ",
+                "ō" to "Ō",
+                "o̍" to "O̍",
+                "ŏ" to "Ŏ",
+                // u
+                "ú" to "Ú",
+                "ù" to "Ù",
+                "û" to "Û",
+                "ǔ" to "Ǔ",
+                "ū" to "Ū",
+                "u̍" to "U̍",
+                "ŭ" to "Ŭ",
+                // n
+                "ń" to "Ń",
+                "ǹ" to "Ǹ",
+                "n̂" to "N̂",
+                "ň" to "Ň",
+                "n̄" to "N̄",
+                "n̍" to "N̍",
+                "n̋" to "N̋",
+                // m
+                "ḿ" to "Ḿ",
+                "m̀" to "M̀",
+                "m̂" to "M̂",
+                "m̌" to "M̌",
+                "m̄" to "M̄",
+                "m̍" to "M̍",
+                "m̋" to "M̋",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.uppercaseToneLetter(input, InputMode.POJ)
@@ -182,22 +224,65 @@ class ToneConverterModelsTest {
 
     @Test
     fun testPOJ_lowercaseToneLetters() {
-        val testCases = listOf(
-            // A
-            "Á" to "á", "À" to "à", "Â" to "â", "Ǎ" to "ǎ", "Ā" to "ā", "A̍" to "a̍", "Ă" to "ă",
-            // E
-            "É" to "é", "È" to "è", "Ê" to "ê", "Ě" to "ě", "Ē" to "ē", "E̍" to "e̍", "Ĕ" to "ĕ",
-            // I
-            "Í" to "í", "Ì" to "ì", "Î" to "î", "Ǐ" to "ǐ", "Ī" to "ī", "I̍" to "i̍", "Ĭ" to "ĭ",
-            // O
-            "Ó" to "ó", "Ò" to "ò", "Ô" to "ô", "Ǒ" to "ǒ", "Ō" to "ō", "O̍" to "o̍", "Ŏ" to "ŏ",
-            // U
-            "Ú" to "ú", "Ù" to "ù", "Û" to "û", "Ǔ" to "ǔ", "Ū" to "ū", "U̍" to "u̍", "Ŭ" to "ŭ",
-            // N
-            "Ń" to "ń", "Ǹ" to "ǹ", "N̂" to "n̂", "Ň" to "ň", "N̄" to "n̄", "N̍" to "n̍", "N̋" to "n̋",
-            // M
-            "Ḿ" to "ḿ", "M̀" to "m̀", "M̂" to "m̂", "M̌" to "m̌", "M̄" to "m̄", "M̍" to "m̍", "M̋" to "m̋",
-        )
+        val testCases =
+            listOf(
+                // A
+                "Á" to "á",
+                "À" to "à",
+                "Â" to "â",
+                "Ǎ" to "ǎ",
+                "Ā" to "ā",
+                "A̍" to "a̍",
+                "Ă" to "ă",
+                // E
+                "É" to "é",
+                "È" to "è",
+                "Ê" to "ê",
+                "Ě" to "ě",
+                "Ē" to "ē",
+                "E̍" to "e̍",
+                "Ĕ" to "ĕ",
+                // I
+                "Í" to "í",
+                "Ì" to "ì",
+                "Î" to "î",
+                "Ǐ" to "ǐ",
+                "Ī" to "ī",
+                "I̍" to "i̍",
+                "Ĭ" to "ĭ",
+                // O
+                "Ó" to "ó",
+                "Ò" to "ò",
+                "Ô" to "ô",
+                "Ǒ" to "ǒ",
+                "Ō" to "ō",
+                "O̍" to "o̍",
+                "Ŏ" to "ŏ",
+                // U
+                "Ú" to "ú",
+                "Ù" to "ù",
+                "Û" to "û",
+                "Ǔ" to "ǔ",
+                "Ū" to "ū",
+                "U̍" to "u̍",
+                "Ŭ" to "ŭ",
+                // N
+                "Ń" to "ń",
+                "Ǹ" to "ǹ",
+                "N̂" to "n̂",
+                "Ň" to "ň",
+                "N̄" to "n̄",
+                "N̍" to "n̍",
+                "N̋" to "n̋",
+                // M
+                "Ḿ" to "ḿ",
+                "M̀" to "m̀",
+                "M̂" to "m̂",
+                "M̌" to "m̌",
+                "M̄" to "m̄",
+                "M̍" to "m̍",
+                "M̋" to "m̋",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.lowercaseToneLetter(input, InputMode.POJ)
@@ -209,13 +294,23 @@ class ToneConverterModelsTest {
 
     @Test
     fun testTL_uppercaseToneLetters() {
-        val testCases = listOf(
-            // TL tone 9
-            "a̋" to "A̋", "e̋" to "E̋", "i̋" to "I̋", "ő" to "Ő", "ű" to "Ű",
-            // oo (TL specific)
-            "óo" to "Óo", "òo" to "Òo", "ôo" to "Ôo", "ǒo" to "Ǒo",
-            "ōo" to "Ōo", "o̍o" to "O̍o", "őo" to "Őo",
-        )
+        val testCases =
+            listOf(
+                // TL tone 9
+                "a̋" to "A̋",
+                "e̋" to "E̋",
+                "i̋" to "I̋",
+                "ő" to "Ő",
+                "ű" to "Ű",
+                // oo (TL specific)
+                "óo" to "Óo",
+                "òo" to "Òo",
+                "ôo" to "Ôo",
+                "ǒo" to "Ǒo",
+                "ōo" to "Ōo",
+                "o̍o" to "O̍o",
+                "őo" to "Őo",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.uppercaseToneLetter(input, InputMode.TL)
@@ -227,13 +322,23 @@ class ToneConverterModelsTest {
 
     @Test
     fun testTL_lowercaseToneLetters() {
-        val testCases = listOf(
-            // TL tone 9
-            "A̋" to "a̋", "E̋" to "e̋", "I̋" to "i̋", "Ő" to "ő", "Ű" to "ű",
-            // oo (TL specific)
-            "Óo" to "óo", "Òo" to "òo", "Ôo" to "ôo", "Ǒo" to "ǒo",
-            "Ōo" to "ōo", "O̍o" to "o̍o", "Őo" to "őo",
-        )
+        val testCases =
+            listOf(
+                // TL tone 9
+                "A̋" to "a̋",
+                "E̋" to "e̋",
+                "I̋" to "i̋",
+                "Ő" to "ő",
+                "Ű" to "ű",
+                // oo (TL specific)
+                "Óo" to "óo",
+                "Òo" to "òo",
+                "Ôo" to "ôo",
+                "Ǒo" to "ǒo",
+                "Ōo" to "ōo",
+                "O̍o" to "o̍o",
+                "Őo" to "őo",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.lowercaseToneLetter(input, InputMode.TL)
@@ -245,10 +350,16 @@ class ToneConverterModelsTest {
 
     @Test
     fun testPOJ_oDot_uppercase() {
-        val testCases = listOf(
-            "ó͘" to "Ó͘", "ò͘" to "Ò͘", "ô͘" to "Ô͘", "ǒ͘" to "Ǒ͘",
-            "ō͘" to "Ō͘", "o̍͘" to "O̍͘", "ŏ͘" to "Ŏ͘",
-        )
+        val testCases =
+            listOf(
+                "ó͘" to "Ó͘",
+                "ò͘" to "Ò͘",
+                "ô͘" to "Ô͘",
+                "ǒ͘" to "Ǒ͘",
+                "ō͘" to "Ō͘",
+                "o̍͘" to "O̍͘",
+                "ŏ͘" to "Ŏ͘",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.uppercaseToneLetter(input, InputMode.POJ)
@@ -256,12 +367,34 @@ class ToneConverterModelsTest {
         }
     }
 
+    // MARK: - fullUppercaseToneLetter
+
+    @Test
+    fun testFullUppercaseToneLetter_multiChar() {
+        // fullUppercaseToneLetter uppercases ALL characters, unlike uppercaseToneLetter
+        assertEquals("tsh -> TSH", "TSH", ToneUtilities.fullUppercaseToneLetter("tsh", InputMode.TL))
+        assertEquals("ph -> PH", "PH", ToneUtilities.fullUppercaseToneLetter("ph", InputMode.TL))
+    }
+
+    @Test
+    fun testFullUppercaseToneLetter_singleChar() {
+        // Single char behaves same as uppercaseToneLetter
+        assertEquals("a -> A", "A", ToneUtilities.fullUppercaseToneLetter("a", InputMode.TL))
+        assertEquals("á -> Á", "\u00C1", ToneUtilities.fullUppercaseToneLetter("\u00E1", InputMode.TL))
+    }
+
     @Test
     fun testPOJ_oDot_lowercase() {
-        val testCases = listOf(
-            "Ó͘" to "ó͘", "Ò͘" to "ò͘", "Ô͘" to "ô͘", "Ǒ͘" to "ǒ͘",
-            "Ō͘" to "ō͘", "O̍͘" to "o̍͘", "Ŏ͘" to "ŏ͘",
-        )
+        val testCases =
+            listOf(
+                "Ó͘" to "ó͘",
+                "Ò͘" to "ò͘",
+                "Ô͘" to "ô͘",
+                "Ǒ͘" to "ǒ͘",
+                "Ō͘" to "ō͘",
+                "O̍͘" to "o̍͘",
+                "Ŏ͘" to "ŏ͘",
+            )
 
         for ((input, expected) in testCases) {
             val result = ToneUtilities.lowercaseToneLetter(input, InputMode.POJ)

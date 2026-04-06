@@ -68,6 +68,18 @@ docs/
 | `references/moe-taigi-asr-reference.md` | MOE Taigi IME ASR implementation analysis | Reference |
 | `references/rime-reference.md` | librime research (Pipeline, DAG, SpellingAlgebra) | Reference |
 
+### `reports/` — Audit & Analysis Reports
+
+| File | Description | Status |
+|------|-------------|--------|
+| `reports/architecture-review.md` | Full architecture review: SRP, layers, folders, naming, data flow | Active |
+| `reports/refactor-backlog.md` | Refactoring task backlog (iOS + Android) | Active |
+| `reports/codebase-health.md` | Code quality metrics and health check | Reference |
+| `reports/docs-audit.md` | Documentation accuracy verification | Reference |
+| `reports/khiin-lattice-research.md` | Word lattice architecture research | Reference |
+| `reports/segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis | Reference |
+| `reports/2026-03-11-audit-report.md` | Combined audit report (docs, health, research) | Reference |
+
 ### Root — Guides & Planning (4)
 
 | File | Description | Status |

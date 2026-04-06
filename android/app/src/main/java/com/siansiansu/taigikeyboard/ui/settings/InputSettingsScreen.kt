@@ -14,12 +14,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.OpenInNew
+import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -29,10 +37,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -45,19 +55,20 @@ import com.siansiansu.taigikeyboard.diagnostics.DiagnosticService
 import com.siansiansu.taigikeyboard.localization.DiagnosticTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import androidx.compose.material3.Icon
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputSettingsScreen(
     languageManager: LanguageManager,
     prefs: PrefHelper,
     onResetSettings: () -> Unit,
-    onNavigateToDebug: () -> Unit,
-    isDebugBuild: Boolean,
     resetCounter: Int
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
@@ -81,8 +92,18 @@ fun InputSettingsScreen(
     var doubleNN by remember(currentDoubleNN) { mutableStateOf(currentDoubleNN) }
     val currentToolbarAutoCollapse = remember(resetCounter) { prefs.isToolbarAutoCollapse }
     var toolbarAutoCollapse by remember(currentToolbarAutoCollapse) { mutableStateOf(currentToolbarAutoCollapse) }
+    val currentGlobeKey = remember(resetCounter) { prefs.isGlobeKeyEnabled }
+    var isGlobeKeyEnabled by remember(currentGlobeKey) { mutableStateOf(currentGlobeKey) }
+    val currentSoundFeedback = remember(resetCounter) { prefs.isSoundFeedbackEnabled }
+    var soundFeedback by remember(currentSoundFeedback) { mutableStateOf(currentSoundFeedback) }
+    val currentVibrationFeedback = remember(resetCounter) { prefs.isVibrationFeedbackEnabled }
+    var vibrationFeedback by remember(currentVibrationFeedback) { mutableStateOf(currentVibrationFeedback) }
     val currentTpsOrMapsToER = remember(resetCounter) { prefs.tpsOrMapsToER }
     var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
+
+    val features = remember { FeatureContentLoader.loadFeatures(context) }
+    fun featureSummary(id: String): String? =
+        features.firstOrNull { it.id == id }?.summary?.let { languageManager.text(it) }
 
     if (showInputModePicker) {
         InputModeScreen(
@@ -95,32 +116,36 @@ fun InputSettingsScreen(
             onBack = { showInputModePicker = false }
         )
     } else {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Page title (pinned)
-                Text(
-                    text = languageManager.text(Tab4Texts.tabTitle),
-                    modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 80.dp),
-                    fontSize = 34.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            topBar = {
+                LargeTopAppBar(
+                    title = {
+                        Text(
+                            text = languageManager.text(Tab4Texts.tabTitle),
+                            fontSize = AppStyle.pageTitleFontSize
+                        )
+                    },
+                    expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
-
-                Spacer(Modifier.height(24.dp))
-
-                // Scrollable content
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 40.dp)
-                ) {
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 40.dp)
+            ) {
 
                 // Input mode card - navigates to sub-page
                 SettingsCard {
@@ -135,12 +160,12 @@ fun InputSettingsScreen(
                         Text(
                             text = languageManager.text(Tab4Texts.inputMode),
                             modifier = Modifier.weight(1f),
-                            fontSize = 16.sp,
+                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = inputModeDisplayName(inputMode, languageManager),
-                            fontSize = 16.sp,
+                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.width(8.dp))
@@ -155,11 +180,18 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Settings switches card
+                // 拍字設定
+                Text(
+                    text = languageManager.text(Tab4Texts.typingSectionTitle),
+                    fontSize = AppStyle.sectionHeaderFontSize,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.outputBothScripts),
                         checked = outputBoth,
+                        infoText = featureSummary("hanloDesign"),
                         onCheckedChange = {
                             outputBoth = it
                             prefs.outputBothScripts = it
@@ -169,6 +201,7 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.autoCapitalization),
                         checked = autoCap,
+                        infoText = featureSummary("caseSwitch"),
                         onCheckedChange = {
                             autoCap = it
                             prefs.autoCapitalizationEnabled = it
@@ -178,18 +211,74 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.autoSpace),
                         checked = autoSpace,
+                        infoText = featureSummary("hanloDesign"),
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it
                         }
                     )
-                    SettingsDivider()
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // 齒盤設定
+                Text(
+                    text = languageManager.text(Tab4Texts.keyboardSectionTitle),
+                    fontSize = AppStyle.sectionHeaderFontSize,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
+                SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.toolbarAutoCollapse),
                         checked = toolbarAutoCollapse,
+                        icon = SettingsIcons.toolbar,
+                        infoText = languageManager.text(Tab4Texts.toolbarAutoCollapseInfo),
                         onCheckedChange = {
                             toolbarAutoCollapse = it
                             prefs.isToolbarAutoCollapse = it
+                        }
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = languageManager.text(Tab4Texts.globeKey),
+                        checked = isGlobeKeyEnabled,
+                        icon = SettingsIcons.globe,
+                        infoText = languageManager.text(Tab4Texts.globeKeyInfo),
+                        onCheckedChange = {
+                            isGlobeKeyEnabled = it
+                            prefs.isGlobeKeyEnabled = it
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                // Feedback settings card
+                Text(
+                    text = languageManager.text(Tab4Texts.feedbackSectionTitle),
+                    fontSize = AppStyle.sectionHeaderFontSize,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+                )
+                SettingsCard {
+                    SwitchRow(
+                        label = languageManager.text(Tab4Texts.soundFeedback),
+                        checked = soundFeedback,
+                        icon = SettingsIcons.sound,
+                        onCheckedChange = {
+                            soundFeedback = it
+                            prefs.isSoundFeedbackEnabled = it
+                        }
+                    )
+                    SettingsDivider()
+                    SwitchRow(
+                        label = languageManager.text(Tab4Texts.vibrationFeedback),
+                        checked = vibrationFeedback,
+                        icon = SettingsIcons.vibration,
+                        onCheckedChange = {
+                            vibrationFeedback = it
+                            prefs.isVibrationFeedbackEnabled = it
                         }
                     )
                 }
@@ -199,7 +288,7 @@ fun InputSettingsScreen(
                 // POJ settings card
                 Text(
                     text = languageManager.text(Tab4Texts.pojSettingsSectionTitle),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
@@ -228,7 +317,7 @@ fun InputSettingsScreen(
                 // TPS settings card
                 Text(
                     text = languageManager.text(Tab4Texts.tpsSettingsSectionTitle),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
@@ -236,6 +325,7 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.tpsOrMapsToER),
                         checked = tpsOrMapsToER,
+                        infoText = languageManager.text(Tab4Texts.tpsOrMapsToERInfo),
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
@@ -248,13 +338,14 @@ fun InputSettingsScreen(
                 // Diagnostic info card
                 Text(
                     text = languageManager.text(DiagnosticTexts.sectionTitle),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
                 )
                 SettingsCard {
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.copy),
+                        icon = Icons.Outlined.ContentCopy,
                         onClick = {
                             scope.launch {
                                 val info = DiagnosticService.gather(context)
@@ -269,6 +360,8 @@ fun InputSettingsScreen(
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.share),
+                        icon = Icons.Outlined.OpenInNew,
+                        textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
                             scope.launch {
                                 val info = DiagnosticService.gather(context)
@@ -284,6 +377,8 @@ fun InputSettingsScreen(
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.email),
+                        icon = Icons.Outlined.OpenInNew,
+                        textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
                             scope.launch {
                                 val info = DiagnosticService.gather(context)
@@ -309,20 +404,6 @@ fun InputSettingsScreen(
                         onClick = { showResetDialog = true },
                         textColor = MaterialTheme.colorScheme.error
                     )
-                }
-
-                // Debug zone card (only visible in debug builds)
-                if (isDebugBuild) {
-                    Spacer(Modifier.height(24.dp))
-
-                    SettingsCard {
-                        ActionRow(
-                            label = languageManager.text(Tab4Texts.debugMode),
-                            onClick = onNavigateToDebug,
-                            trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight
-                        )
-                    }
-                }
                 }
             }
         }

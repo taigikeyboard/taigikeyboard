@@ -1,5 +1,5 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// TPSConverter unit tests
 /// Ported from references/taigi-converter/tests/zhuyin.test.js
@@ -12,7 +12,6 @@ import XCTest
 /// - iOS does not support punctuation conversion or encode-safe mode
 /// - iOS toTL does not insert hyphens between multi-syllable output
 final class TPSConverterTests: XCTestCase {
-
     // MARK: - containsTPS (ref: isZhuyin)
 
     func testContainsTPS_tpsChars() {
@@ -97,7 +96,7 @@ final class TPSConverterTests: XCTestCase {
         let result = TPSConverter.toTPS("a8")
         XCTAssertTrue(
             result.unicodeScalars.contains("\u{02D9}"),
-            "Non-stop tone 8 should produce U+02D9 DOT ABOVE: got \(result)"
+            "Non-stop tone 8 should produce U+02D9 DOT ABOVE: got \(result)",
         )
     }
 
@@ -146,7 +145,7 @@ final class TPSConverterTests: XCTestCase {
         let t1 = TPSConverter.toTPS("ka1")
         XCTAssertFalse(
             t1.contains("ˋ") || t1.contains("˪") || t1.contains("ˊ") || t1.contains("˫"),
-            "toTPS(\"ka1\") should have no tone mark: got \(t1)"
+            "toTPS(\"ka1\") should have no tone mark: got \(t1)",
         )
     }
 
@@ -457,7 +456,7 @@ final class TPSConverterTests: XCTestCase {
 
     func testRoundTrip_tpsToTlToTps() {
         let cases: [(tps: String, expectedTl: String)] = [
-            ("ㄍㄨㄚˋ", "kua2"),   // ㄍ→k (voiceless velar)
+            ("ㄍㄨㄚˋ", "kua2"), // ㄍ→k (voiceless velar)
             ("ㄉㄧㄠˊ", "tiau5"),
             ("ㄍㄚㆻ˙", "kak8"),
         ]
@@ -703,9 +702,81 @@ final class TPSConverterTests: XCTestCase {
         XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄫ", afterRawInput: ""), "ㄫ")
     }
 
+    func testAdjustTPSInitialKey_n_atSyllableStart() {
+        // Empty buffer → syllable start → ㄋ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: ""), "ㄋ")
+    }
+
+    func testAdjustTPSInitialKey_n_afterVowel() {
+        // After ㄧ → ㄣ (final form): ㄒㄧㄋ → ㄒㄧㄣ (sin)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: "ㄒㄧ"), "ㄣ")
+    }
+
+    func testAdjustTPSInitialKey_n_afterOtherVowel() {
+        // After ㄚ → ㄣ (final form)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: "ㄚ"), "ㄣ")
+    }
+
+    func testAdjustTPSInitialKey_n_afterTone() {
+        // After tone mark = new syllable → ㄋ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: "ㄒㄧㄣˋ"), "ㄋ")
+    }
+
+    func testAdjustTPSInitialKey_n_afterCheckedFinal() {
+        // After checked tone final = new syllable → ㄋ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: "ㄍㄚㆴ"), "ㄋ")
+    }
+
+    func testAdjustTPSInitialKey_n_afterSpace() {
+        // After space = new syllable → ㄋ
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄋ", afterRawInput: "ㄚ "), "ㄋ")
+    }
+
+    // MARK: - Stop coda auto-select (ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ)
+
+    func testAdjustTPSInitialKey_p_atSyllableStart() {
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄅ", afterRawInput: ""), "ㄅ")
+    }
+
+    func testAdjustTPSInitialKey_p_afterVowel() {
+        // ㄍㄚ + ㄅ → ㆴ (kap coda)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄅ", afterRawInput: "ㄍㄚ"), "ㆴ")
+    }
+
+    func testAdjustTPSInitialKey_p_afterTone() {
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄅ", afterRawInput: "ㄚˋ"), "ㄅ")
+    }
+
+    func testAdjustTPSInitialKey_p_afterCheckedFinal() {
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄅ", afterRawInput: "ㄍㄚㆴ"), "ㄅ")
+    }
+
+    func testAdjustTPSInitialKey_t_afterVowel() {
+        // ㄍㄚ + ㄉ → ㆵ (kat coda)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄉ", afterRawInput: "ㄍㄚ"), "ㆵ")
+    }
+
+    func testAdjustTPSInitialKey_k_afterVowel() {
+        // ㄍㄚ + ㄍ → ㆻ (kak coda)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄍ", afterRawInput: "ㄍㄚ"), "ㆻ")
+    }
+
+    func testAdjustTPSInitialKey_h_afterVowel() {
+        // ㄍㄚ + ㄏ → ㆷ (kah coda)
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄏ", afterRawInput: "ㄍㄚ"), "ㆷ")
+    }
+
+    func testAdjustTPSInitialKey_h_atSyllableStart() {
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄏ", afterRawInput: ""), "ㄏ")
+    }
+
+    func testAdjustTPSInitialKey_p_afterSpace() {
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄅ", afterRawInput: "ㄚ "), "ㄅ")
+    }
+
     func testAdjustTPSInitialKey_nonTargetKey() {
-        // Non ㄇ/ㄫ key → pass through unchanged
-        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄍ", afterRawInput: "ㄧ"), "ㄍ")
+        // Non-target key → pass through unchanged
+        XCTAssertEqual(TPSConverter.adjustTPSInitialKey("ㄌ", afterRawInput: "ㄧ"), "ㄌ")
     }
 
     // MARK: - palatalizationReplacement
@@ -753,5 +824,59 @@ final class TPSConverterTests: XCTestCase {
     func testPalatalization_noTrigger_emptyRawInput() {
         // nil last char → nil
         XCTAssertNil(TPSConverter.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: nil))
+    }
+
+    // MARK: - Nasalized vowel + checked tone
+
+    func testToTL_nasalizedVowel_checkedTone() {
+        XCTAssertEqual(TPSConverter.toTL("ㄏㆯㆷ˙"), "haunnh8",
+                       "ㆯ(aunn) + ㆷ˙(h8) should produce haunnh8")
+        XCTAssertEqual(TPSConverter.toTL("ㄏㆯㆷ"), "haunnh4",
+                       "ㆯ(aunn) + ㆷ(h4) should produce haunnh4")
+        XCTAssertEqual(TPSConverter.toTL("ㆩㆷ˙"), "annh8",
+                       "ㆩ(ann) + ㆷ˙(h8) should produce annh8")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㆯㆷ˙"), "kaunnh8",
+                       "ㄍ + ㆯ(aunn) + ㆷ˙(h8) should produce kaunnh8")
+    }
+
+    // MARK: - Multi-syllable with entering tones
+
+    func testToTL_multiSyllable_enteringTone() {
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆷㄏㄧㆲˊ"), "kah4 hiong5",
+                       "Entering tone followed by new syllable should have space")
+        XCTAssertEqual(TPSConverter.toTL("ㄍㄚㆷ˙ㄍㄚㆷ˙"), "kah8 kah8",
+                       "Two entering-tone syllables should be space-separated")
+    }
+
+    // MARK: - syllabicNasalReplacement
+
+    func testSyllabicNasalReplacement_m_beforeToneMark() {
+        XCTAssertEqual(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: "ㄇ"), "ㆬ")
+        XCTAssertEqual(TPSConverter.syllabicNasalReplacement(forIncoming: "ˋ", lastRawChar: "ㄇ"), "ㆬ")
+        XCTAssertEqual(TPSConverter.syllabicNasalReplacement(forIncoming: "ˊ", lastRawChar: "ㄇ"), "ㆬ")
+    }
+
+    func testSyllabicNasalReplacement_ng_beforeToneMark() {
+        XCTAssertEqual(TPSConverter.syllabicNasalReplacement(forIncoming: "ˊ", lastRawChar: "ㄫ"), "ㆭ")
+        XCTAssertEqual(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: "ㄫ"), "ㆭ")
+    }
+
+    func testSyllabicNasalReplacement_nonTone_noChange() {
+        XCTAssertNil(TPSConverter.syllabicNasalReplacement(forIncoming: "ㄚ", lastRawChar: "ㄇ"),
+                     "Vowel is not a tone mark")
+    }
+
+    func testSyllabicNasalReplacement_otherConsonant_noChange() {
+        XCTAssertNil(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: "ㄍ"),
+                     "ㄍ is not ㄇ/ㄫ")
+    }
+
+    func testSyllabicNasalReplacement_alreadySyllabic_noChange() {
+        XCTAssertNil(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: "ㆬ"),
+                     "ㆬ is already syllabic")
+    }
+
+    func testSyllabicNasalReplacement_nilLastChar() {
+        XCTAssertNil(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: nil))
     }
 }

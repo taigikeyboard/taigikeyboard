@@ -1,0 +1,114 @@
+{
+  "faqs": [
+    {
+      "id": "installIssue",
+      "title": {
+        "hanji": "齒盤裝好了後無出現"
+      },
+      "icon": {
+        "ios": "keyboard.badge.ellipsis",
+        "android": "ic_keyboard_hide"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "1. 先檢查齒盤敢有照「啟用方法」設定好。"
+          },
+          "attachment": {
+            "type": "navigation",
+            "text": {
+              "hanji": "揤遮去看「啟用方法」"
+            },
+            "destination": "setup_guide",
+            "icon": {
+              "ios": "keyboard.badge.ellipsis",
+              "android": "keyboard_24"
+            }
+          }
+        },
+        {
+          "text": {
+            "hanji": "2. 重開你當咧使用 ê App，予 App 重新掠著齒盤。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "3. 佇會當拍字 ê 所在，揤牢地球圖示就會使切去台語齒盤。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "title": {
+        "hanji": "回報 ê 問題無消息"
+      },
+      "icon": {
+        "ios": "envelope",
+        "android": "ic_email"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "可能無小心落勾去，麻煩 koh 回報 1 遍，抑是直接聯絡我。"
+          },
+          "attachment": {
+            "type": "navigation",
+            "text": {
+              "hanji": "揤遮去看「問題回報」"
+            },
+            "destination": "feedback",
+            "icon": {
+              "ios": "envelope",
+              "android": "ic_email"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "samsungSwitch",
+      "title": {
+        "hanji": "三星手機仔齒盤切換"
+      },
+      "icon": {
+        "ios": "arrow.triangle.2.circlepath",
+        "android": "ic_swap"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "因為三星手機無「預設齒盤」、「副齒盤」ê 功能，下跤是切換齒盤較利便 ê 方法。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "1. 揣著三星齒盤倒爿下跤 ê mài-kù 揤鈕，伊預設是語音輸入。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "faq_samsung_switch_1"
+          }
+        },
+        {
+          "text": {
+            "hanji": "2. 揤牢 mài-kù 揤鈕，共伊改做「輸入法」。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "faq_samsung_switch_2"
+          }
+        },
+        {
+          "text": {
+            "hanji": "3. 揤鈕會變做齒盤圖示，閣揤一下著會當切換齒盤矣。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "faq_samsung_switch_3"
+          }
+        }
+      ]
+    }
+  ]
+}

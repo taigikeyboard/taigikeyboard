@@ -330,6 +330,64 @@ object TaigiPhonetics {
         return converted.joinToString("-")
     }
 
+    /** Convert POJ display text (with diacritics) to TL display text.
+     *  Splits by "-" and " " (word boundary), for each syllable: strip tone -> normalizeToTL -> toTL.
+     *  Preserves original separators (space = word boundary, hyphen = syllable boundary). */
+    fun pojDisplayToTLDisplay(text: String): String {
+        if (text.isEmpty()) return ""
+
+        // Split while preserving separators (space and hyphen)
+        val tokens = mutableListOf<Pair<String, String>>() // (text, separator)
+        val current = StringBuilder()
+        for (char in text) {
+            if (char == '-' || char == ' ') {
+                tokens.add(current.toString() to char.toString())
+                current.clear()
+            } else {
+                current.append(char)
+            }
+        }
+        tokens.add(current.toString() to "")
+
+        val result = StringBuilder()
+        for ((i, token) in tokens.withIndex()) {
+            val (s, separator) = token
+            if (s.isEmpty()) {
+                // Preserve separator (e.g., "--" for 輕聲)
+                if (i < tokens.size - 1 || separator.isNotEmpty()) {
+                    result.append(separator)
+                }
+                continue
+            }
+
+            val (bare, toneNum) = stripToneMark(s)
+            val converted = if (bare.isEmpty()) {
+                s
+            } else {
+                val normalized = normalizeToTL(bare.lowercase())
+                val split = splitInitialFinal(normalized)
+                if (split != null) {
+                    val (initial, final_) = split
+                    val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
+                    val tlResult = toTL(initial = initial, final_ = final_, tone = tone)
+                    if (s.first().isUpperCase()) {
+                        tlResult.substring(0, 1).uppercase() + tlResult.substring(1)
+                    } else {
+                        tlResult
+                    }
+                } else {
+                    s
+                }
+            }
+
+            result.append(converted)
+            if (separator.isNotEmpty()) {
+                result.append(separator)
+            }
+        }
+        return result.toString()
+    }
+
     /** Convert TL display text (with diacritics) to POJ display text.
      *  Splits by "-" and " " (word boundary), for each syllable: strip tone -> parse -> toPOJ.
      *  Preserves original separators (space = word boundary, hyphen = syllable boundary). */

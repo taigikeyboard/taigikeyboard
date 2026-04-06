@@ -24,9 +24,6 @@ struct Tab3: View {
     @State private var khiin: Bool
     @State private var lkkDictEnabled: Bool
 
-    // 清除資料 Alert
-    @State private var showClearCacheAlert = false
-
     // Search focus
     @FocusState private var isSearchFocused: Bool
 
@@ -53,31 +50,54 @@ struct Tab3: View {
     var body: some View {
         NavigationStack {
             Form {
-                // 自訂詞庫區塊
+                // 資料管理
                 Section {
                     NavigationLink(destination: CustomDictionaryView()) {
                         Text(languageManager.text(Tab3Texts.customDictionary))
                     }
+                    NavigationLink(destination: FrequencyDataView()) {
+                        Text(languageManager.text(Tab3Texts.frequencyManagement))
+                    }
+                    NavigationLink(destination: AssociationDataView()) {
+                        Text(languageManager.text(Tab3Texts.associationManagement))
+                    }
+                    NavigationLink(destination: DataManagementView()) {
+                        Text(languageManager.text(Tab3Texts.backupRestore))
+                    }
+                } header: {
+                    Text(languageManager.text(Tab3Texts.dataManagement))
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 教育部用字
                 Section {
-                    dictionaryToggle(Tab3Texts.moeDict, isOn: $moeDictEnabled, info: .moe) {
-                        settings.moeDictEnabled = $0
-                    }
-                    dictionaryToggle(Tab3Texts.newwordDict, isOn: $newwordDictEnabled, info: .newword) {
-                        settings.newwordDictEnabled = $0
-                    }
-                    dictionaryToggle(Tab3Texts.sttiDict, isOn: $sttiDictEnabled, info: .stti) {
-                        settings.sttiDictEnabled = $0
-                    }
-                    dictionaryToggle(Tab3Texts.kunggeDict, isOn: $kunggeDictEnabled, info: .kungge) {
-                        settings.kunggeDictEnabled = $0
-                    }
+                    dictToggleWithDescription(
+                        title: Tab3Texts.moeDict,
+                        url: "https://sutian.moe.edu.tw/",
+                        isOn: $moeDictEnabled,
+                        description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。"
+                    ) { settings.moeDictEnabled = $0 }
+                    dictToggleWithDescription(
+                        title: Tab3Texts.newwordDict,
+                        url: "https://www.taigitv.org.tw/taigi-words",
+                        isOn: $newwordDictEnabled,
+                        description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。"
+                    ) { settings.newwordDictEnabled = $0 }
+                    dictToggleWithDescription(
+                        title: Tab3Texts.sttiDict,
+                        url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
+                        isOn: $sttiDictEnabled,
+                        description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。"
+                    ) { settings.sttiDictEnabled = $0 }
+                    dictToggleWithDescription(
+                        title: Tab3Texts.kunggeDict,
+                        url: "https://kanggesu.ntcri.org.tw",
+                        isOn: $kunggeDictEnabled,
+                        description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。"
+                    ) { settings.kunggeDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.moeSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 其他辭典
@@ -96,8 +116,7 @@ struct Tab3: View {
                     }
                 } header: {
                     Text(languageManager.text(Tab3Texts.otherSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 異用字 / 在來字 / 腔口補充資料
@@ -114,23 +133,17 @@ struct Tab3: View {
                         settings.khpooDictEnabled = $0
                     }
 
-                    dictionaryToggle(Tab3Texts.lkkDict, isOn: $lkkDictEnabled, info: .lkk) {
-                        settings.lkkDictEnabled = $0
-                    }
+                    dictToggleWithDescription(
+                        title: Tab3Texts.lkkDict,
+                        url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
+                        isOn: $lkkDictEnabled,
+                        description: "李江却台語文教基金會漢羅合用建議用字。"
+                    ) { settings.lkkDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.supplementSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 清除資料區塊
-                Section {
-                    Button(role: .destructive) {
-                        showClearCacheAlert = true
-                    } label: {
-                        Text(languageManager.text(Tab3Texts.clearCache))
-                    }
-                }
             }
             .navigationTitle(languageManager.text(Tab3Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
@@ -142,7 +155,7 @@ struct Tab3: View {
                     if !searchVM.searchText.isEmpty {
                         if searchVM.results.isEmpty && !searchVM.isSearching {
                             Text(languageManager.text(Tab3Texts.noResults))
-                                .font(.subheadline)
+                                .font(KeyboardModels.Fonts.appFont(.subheadline))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
@@ -214,14 +227,6 @@ struct Tab3: View {
             }
             Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
         }
-        .alert(languageManager.text(Tab3Texts.clearCache), isPresented: $showClearCacheAlert) {
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
-            Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
-                clearUserFrequencyDatabase()
-            }
-        } message: {
-            Text(languageManager.text(Tab3Texts.clearCacheMessage))
-        }
     }
 
     // MARK: - Search Result Row
@@ -234,12 +239,12 @@ struct Tab3: View {
         } label: {
             HStack {
                 Text(result.roman)
-                    .font(.body)
+                    .font(AppStyle.bodyFont)
                     .foregroundStyle(.primary)
                 if let hanzi = result.hanzi {
                     Text(hanzi)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.bodyFont)
+                        .foregroundStyle(.primary)
                 }
                 let uniqueTags: [String] = {
                     var seen = Set<String>()
@@ -251,7 +256,7 @@ struct Tab3: View {
                 }()
                 ForEach(uniqueTags, id: \.self) { tag in
                     Text(tag)
-                        .font(.caption2)
+                        .font(AppStyle.captionFont)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
@@ -260,13 +265,51 @@ struct Tab3: View {
                 }
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .font(.caption)
+                    .font(AppStyle.captionFont)
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Dictionary Toggle with Description + Link
+
+    @ViewBuilder
+    private func dictToggleWithDescription(
+        title: LocalizedText,
+        url: String,
+        isOn: Binding<Bool>,
+        description: String,
+        onChange: @escaping (Bool) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Button {
+                    if let link = URL(string: url) {
+                        UIApplication.shared.open(link)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.forward.square")
+                            .font(.subheadline)
+                        Text(languageManager.text(title))
+                    }
+                    .foregroundColor(AppStyle.accentBlue)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+                Toggle("", isOn: isOn)
+                    .labelsHidden()
+            }
+            .onChange(of: isOn.wrappedValue) { _, newValue in
+                onChange(newValue)
+            }
+            Text(description)
+                .font(.body)
+                .foregroundColor(.primary)
+        }
     }
 
     // MARK: - Dictionary Toggle with Info Button
@@ -281,10 +324,7 @@ struct Tab3: View {
         Toggle(isOn: isOn) {
             HStack {
                 Text(languageManager.text(text))
-                DictionaryInfoButton(
-                    title: languageManager.text(text),
-                    info: info
-                )
+                SettingInfoButton(description: info.description)
             }
         }
         .onChange(of: isOn.wrappedValue) { _, newValue in
@@ -299,10 +339,7 @@ struct Tab3: View {
     ) -> some View {
         HStack {
             Text(languageManager.text(text))
-            DictionaryInfoButton(
-                title: languageManager.text(text),
-                info: info
-            )
+            SettingInfoButton(description: info.description)
             Spacer()
             Toggle("", isOn: .constant(false))
                 .labelsHidden()
@@ -310,18 +347,6 @@ struct Tab3: View {
         }
     }
 
-    /// 清除使用者學習資料（詞頻 + 詞關聯）
-    private func clearUserFrequencyDatabase() {
-        do {
-            // 刪除 User Frequency
-            try UserFrequencyService.deleteUserDatabase()
-            // 刪除 User Association（比照 Android）
-            try NextWordService.deleteUserDatabase()
-
-            let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-            impactFeedback.impactOccurred()
-        } catch {}
-    }
 }
 
 // MARK: - Dictionary Info Data
@@ -382,25 +407,3 @@ extension DictionaryInfo {
     )
 }
 
-// MARK: - Dictionary Info Button
-
-private struct DictionaryInfoButton: View {
-    let title: String
-    let info: DictionaryInfo
-
-    @State private var showAlert = false
-
-    var body: some View {
-        Button { showAlert = true } label: {
-            Image(systemName: "questionmark.circle")
-                .foregroundColor(.blue)
-                .font(.subheadline)
-        }
-        .buttonStyle(.plain)
-        .alert("", isPresented: $showAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(info.description)
-        }
-    }
-}

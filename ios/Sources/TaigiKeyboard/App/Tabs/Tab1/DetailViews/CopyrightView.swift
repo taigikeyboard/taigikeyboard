@@ -135,7 +135,7 @@ private struct CopyrightSection: View {
                     .foregroundColor(.secondary)
 
                 Text(languageManager.text(license))
-                    .font(KeyboardModels.Fonts.appFont(.caption))
+                    .font(AppStyle.captionFont)
                     .foregroundColor(.secondary)
                     .italic()
             }

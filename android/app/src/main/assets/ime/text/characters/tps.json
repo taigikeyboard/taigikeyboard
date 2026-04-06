@@ -71,7 +71,7 @@
       { "code": 0, "label": "ㆰ", "popup": [
         { "code": 0, "label": "ㆱ" }
       ] },
-      { "code": 44, "label": "，", "popup": [
+      { "code": 65292, "label": "，", "popup": [
         { "code": 12290, "label": "。" }
       ] },
       { "code": -5, "label": "delete", "type": "enter_editing" }

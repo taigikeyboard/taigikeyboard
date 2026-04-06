@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.SubtypeManager
@@ -20,7 +19,6 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.settings.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.settings.DictionarySettingsScreen
@@ -138,9 +136,17 @@ class SettingsMainActivity : AppCompatActivity() {
                         TAB_DICTIONARY -> DictionarySettingsScreen(
                             languageManager = languageManager,
                             prefs = prefs,
-                            onClearCache = ::clearUserFrequencyDatabase,
                             onCustomDictionary = {
                                 startActivity(CustomDictionaryActivity.createIntent(this))
+                            },
+                            onNavigateToFrequency = {
+                                startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
+                            },
+                            onNavigateToAssociation = {
+                                startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
+                            },
+                            onBackupRestore = {
+                                startActivity(DataManagementActivity.createIntent(this))
                             },
                             searchViewModel = searchViewModel
                         )
@@ -149,10 +155,6 @@ class SettingsMainActivity : AppCompatActivity() {
                             languageManager = languageManager,
                             prefs = prefs,
                             onResetSettings = ::resetAllSettings,
-                            onNavigateToDebug = {
-                                startActivity(Intent(this, DebugActivity::class.java))
-                            },
-                            isDebugBuild = BuildConfig.DEBUG,
                             resetCounter = resetCounter
                         )
                     }
@@ -176,23 +178,6 @@ class SettingsMainActivity : AppCompatActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
             // Handle exception
-        }
-    }
-
-    private fun clearUserFrequencyDatabase() {
-        val languageManager = LanguageManager.getInstance(this)
-        lifecycleScope.launch {
-            try {
-                UserFrequencyService.deleteDatabase()
-                NextWordService.clearAllAssociations(this@SettingsMainActivity)
-                Toast.makeText(
-                    this@SettingsMainActivity,
-                    languageManager.text(Tab3Texts.clearCacheSuccess),
-                    Toast.LENGTH_SHORT
-                ).show()
-            } catch (_: Exception) {
-                // Handle exception silently
-            }
         }
     }
 

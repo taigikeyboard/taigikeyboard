@@ -47,18 +47,26 @@
 | Function | iOS | Android |
 |----------|-----|---------|
 | Composing manager | `ComposingManager.swift` | `ComposingManager.kt` |
-| TPS conversion | `TPSConverter.swift` | - |
+| TPS conversion | `TPSConverter.swift` | `TPSConverter.kt` |
 | Case transformation | `CaseTransformationService.swift` | `SuggestionCaseTransformer.kt` |
+| Caps state | (KeyboardKit managed) | `CapsStateManager.kt` |
+| Candidate coordinator | (inline in AutocompleteService) | `CandidateUpdateCoordinator.kt` |
 
 ### Autocomplete
 
 | Function | iOS | Android |
 |----------|-----|---------|
 | Taigi autocomplete | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
-| English autocomplete | - | `EnglishAutocompleteService.kt` |
+| English autocomplete | `EnglishAutocompleteService.swift` | `EnglishAutocompleteService.kt` |
 | Candidate View | `CandidateView.swift` | `SmartbarView.kt` |
 | Candidate Adapter | - | `CandidateAdapter.kt` |
+| Candidate click | (inline in ActionHandler+Suggestions) | `CandidateClickHandler.kt` |
 | Expanded overlay | `ExpandedCandidateOverlay.swift` | `CandidateOverlayView.kt` |
+| Symbol overlay | `SymbolSelectionOverlay.swift` | `SymbolSelectionOverlayView.kt` |
+| Settings overlay | `SettingsSelectionOverlay.swift` | `SettingsSelectionOverlayView.kt` |
+| Layout overlay | `LayoutSelectionOverlay.swift` | `LayoutSelectionOverlayView.kt` |
+| Symbol data | `SymbolData.swift` | `SymbolData.kt` |
+| Toolbar | (inline in CandidateView) | `ToolbarManager.kt` |
 
 ### Lexicon
 
@@ -68,12 +76,13 @@
 | Trie service | `TrieService.swift` | `TrieService.kt` |
 | Input normalization | `InputNormalizer.swift` | `InputNormalizer.kt` |
 | Word model | `TaigiWord.swift` | `DictionaryModels.kt` |
-
-### Segmentation
-
-| Function | iOS | Android |
-|----------|-----|---------|
-| Syllable segmenter | `SyllableSegmenter.swift` | `SyllableSegmenter.kt` |
+| Custom dictionary | `CustomDictionaryService.swift` | `CustomDictionaryService.kt` |
+| Custom dict repo | `CustomDictionaryRepository.swift` | (built into Service) |
+| Custom dict model | `CustomDictionaryEntry.swift` | (in `DictionaryModels.kt`) |
+| Search result | `DictionarySearchResult.swift` | `DictionarySearchResult.kt` |
+| Next word | `NextWordService.swift` | `NextWordService.kt` |
+| Next word handler | (inline in ActionHandler) | `NextWordHandler.kt` |
+| Backup | `BackupService.swift` | `BackupService.kt` |
 
 ### Tone
 
@@ -82,7 +91,8 @@
 | Tone conversion | `ToneConverter.swift` | `ToneConverter.kt` |
 | Phonetics engine | `TaigiPhonetics.swift` | `TaigiPhonetics.kt` |
 | Tone restoration | `ToneRestoration.swift` | `ToneRestoration.kt` |
-| Tone utilities | `ToneUtilities.swift` | `ToneConverterModels.kt` + `ToneCharacterUtils.kt` |
+| Tone utilities | `ToneUtilities.swift` | `ToneUtilities.kt` |
+| Tone models | - | `ToneConverterModels.kt` |
 
 ### UserFrequency
 
@@ -99,23 +109,42 @@
 
 | iOS File | Android File | Description |
 |----------|--------------|-------------|
-| `ContentView.swift` | `SettingsMainActivity.kt` | Tab container |
-| `Tab1.swift` | `Tab1Fragment.kt` | Home |
-| `Tab2.swift` | `Tab2Fragment.kt` | Layout |
-| `Tab3.swift` | `Tab3Fragment.kt` | Dictionary |
-| `Tab4.swift` | `Tab4Fragment.kt` | Settings |
+| `ContentView.swift` | `MainSettingsScreen.kt` | Tab container |
+| `Tab1.swift` | `HomeScreen.kt` | Home |
+| `Tab2.swift` | `LayoutScreen.kt` | Layout |
+| `Tab3.swift` | `DictionarySettingsScreen.kt` | Dictionary |
+| `Tab4.swift` | `InputSettingsScreen.kt` | Settings |
 
 ### Tab1 Sub-pages
 
 | iOS Page | iOS File | Android File |
 |----------|----------|--------------|
-| SetupGuide | `SetupGuideView.swift` | `SetupGuideActivity.kt` |
-| FeatureDetail | `FeatureDetailView.swift` | `DetailActivity.kt` |
-| FAQDetail | `FAQDetailView.swift` | `DetailActivity.kt` |
-| FeedbackDetail | `FeedbackDetailView.swift` | `DetailActivity.kt` |
-| VersionHistory | `VersionHistoryDetailView.swift` | `DetailActivity.kt` |
-| Copyright | `CopyrightView.swift` | `CopyrightActivity.kt` |
-| AppearanceSettings | `AppearanceSettingsView.swift` | `AppearanceSettingsActivity.kt` |
+| SetupGuide | `SetupGuideView.swift` | `SetupGuideScreen.kt` |
+| FeatureDetail | `FeatureDetailView.swift` | `DetailScreen.kt` |
+| FAQDetail | `FAQDetailView.swift` | `DetailScreen.kt` |
+| FeedbackDetail | `FeedbackDetailView.swift` | `DetailScreen.kt` |
+| VersionHistory | `VersionHistoryDetailView.swift` | `DetailScreen.kt` |
+| Copyright | `CopyrightView.swift` | `CopyrightScreen.kt` |
+| AppearanceSettings | `AppearanceSettingsView.swift` | `AppearanceSettingsScreen.kt` |
+
+### Tab1 Content Models
+
+| iOS File | Android File | Description |
+|----------|--------------|-------------|
+| `FeatureContent.swift` | `FeatureContent.kt` | Feature data model |
+| `FeatureContentLoader.swift` | `FeatureContentLoader.kt` | JSON loader |
+
+### Tab3 Sub-pages
+
+| iOS Page | iOS File | Android File |
+|----------|----------|--------------|
+| Custom Dictionary | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
+| Custom Dict Edit | `CustomDictionaryEditView.swift` | (inline dialog) |
+| Frequency Data | `FrequencyDataView.swift` | `FrequencyDataScreen.kt` |
+| Association Data | `AssociationDataView.swift` | `AssociationDataScreen.kt` |
+| Data Management | `DataManagementView.swift` | `DataManagementScreen.kt` |
+| Backup Document | `BackupDocument.swift` | - |
+| CSV Document | `CSVDocument.swift` | - |
 
 ### Localization
 
@@ -139,14 +168,15 @@
 
 | iOS Component | Android Component | Use |
 |---------------|-------------------|-----|
-| `ImageSlideshowView.swift` | `ImageSlideshowView.kt` | Auto image slideshow |
-| `LocalizedTextView` (extension) | `LocalizedTextView.kt` | Localized text display |
+| `ImageSlideshowView.swift` | - | Auto image slideshow |
+| `SettingInfoButton.swift` | `SettingInfoButton.kt` | Info icon button |
 
-### Other App Files
+### Diagnostics
 
 | iOS File | Android File | Description |
 |----------|--------------|-------------|
-| `DebugView.swift` | `DebugActivity.kt` | Debug page |
+| `DiagnosticService.swift` | `DiagnosticService.kt` | Device/app diagnostic info |
+| `DiagnosticTexts.kt` | `DiagnosticTexts.kt` | Diagnostic string localization |
 
 ---
 
@@ -156,32 +186,34 @@
 
 ```
 TaigiKeyboard/
-├── _Keyboard/       # IME main entry
-├── Actions/         # Action handlers
+├── _Keyboard/       # IME main entry (KeyboardViewController + extensions)
+├── Actions/         # Action handlers (ActionHandler + extensions)
 ├── App/             # Main App UI
-│   ├── Assets/      # Image resources
 │   ├── Components/  # Shared components
 │   └── Tabs/        # Tab pages
+│       ├── Tab1/    # Home (setup guide, features, FAQ)
+│       │   ├── Models/      # FeatureContent, FeatureContentLoader
+│       │   ├── DetailViews/ # Feature/FAQ/Feedback/Copyright views
+│       │   └── SetupGuide/  # Setup guide views
+│       └── Tab3/    # Data management
 ├── Autocomplete/    # Autocomplete
-│   ├── Models/
-│   ├── Services/
-│   └── Views/
+│   ├── Models/      # CandidateViewModels, SymbolData
+│   ├── Services/    # AutocompleteService, SuggestionCaseTransformer
+│   └── Views/       # CandidateView, overlays (Layout/Symbol/Settings)
 ├── Callouts/        # Long-press menus
-├── Debug/           # Debug tools
-├── Diagnostics/     # Diagnostic info service
+├── Diagnostics/     # DiagnosticService
 ├── Emojis/          # Emoji related
 ├── Input/           # Input and composing
 │   └── Tone/        # Tone processing
 ├── Layout/          # Keyboard layout
-│   └── Flick/       # Flick input
 ├── Lexicon/         # Dictionary query
-│   ├── Database/
-│   ├── Models/
-│   ├── Services/
-│   ├── Trie/
-│   └── Utils/
+│   ├── Database/    # SQLite repositories
+│   ├── Models/      # TaigiWord, CustomDictionaryEntry, etc.
+│   ├── Services/    # LexiconService, NextWordService, CustomDictionaryService, BackupService
+│   ├── Trie/        # TrieService, InputNormalizer
+│   └── Utils/       # TextProcessor, ResourceBundleResolver
 ├── Localization/    # Localization
-├── Settings/        # Settings
+├── Settings/        # SharedSettings, InputMode
 └── Styling/         # Button styling & theming
     ├── Helpers/
     └── Providers/
@@ -192,25 +224,28 @@ TaigiKeyboard/
 ```
 taigikeyboard/
 ├── ime/
-│   ├── core/        # TaigiKeyboard, PrefHelper, InputView
-│   ├── dictionary/  # Trie, Lexicon, Tone
+│   ├── core/        # TaigiKeyboard, PrefHelper, InputView, Subtype
+│   ├── dictionary/  # Trie, Lexicon, Tone, TPS, CustomDictionary, NextWord, Backup
 │   ├── keyboard/    # EmojiSkinTone
 │   ├── lifecycle/   # LifecycleInputMethodService
-│   ├── media/       # Emoji
+│   ├── media/       # MediaInputManager
 │   │   └── emoji/   # EmojiKeyboardView, EmojiPaletteView
 │   ├── popup/       # Key popups
 │   └── text/
-│       ├── composing/   # Composing, Autocomplete
-│       ├── key/         # KeyView, KeyData
-│       ├── keyboard/    # KeyboardView
-│       ├── layout/      # LayoutManager
-│       └── smartbar/    # Smartbar
-├── localization/    # Localization
-├── model/           # Data models
-├── onboarding/      # Onboarding flow
-├── settings/        # Settings pages
-├── ui/theme/        # Theme
-└── util/            # Utilities
+│       ├── composing/   # ComposingManager, Autocomplete, UserFrequency
+│       ├── key/         # KeyView, KeyData, KeyCode, KeyType
+│       ├── keyboard/    # KeyboardView, KeyboardRowView
+│       ├── layout/      # LayoutManager, LayoutData
+│       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, ToolbarManager
+├── diagnostics/     # DiagnosticService
+├── localization/    # LocalizedText, LanguageManager, Tab1-4Texts
+├── model/           # FeatureContent, CopyrightData
+├── settings/        # Activity wrappers (Compose host)
+├── ui/
+│   ├── components/  # Reusable Compose components (SwitchRow, ColorRow, etc.)
+│   ├── settings/    # Compose settings screens
+│   └── theme/       # Theme, Type
+└── util/            # AppVersionUtils, FontUtils, etc.
 ```
 
 ---

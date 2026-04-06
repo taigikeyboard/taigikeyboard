@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
 fun ColorRow(
@@ -40,7 +41,7 @@ fun ColorRow(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = 16.sp,
+            fontSize = AppStyle.bodyFontSize,
             color = MaterialTheme.colorScheme.onSurface
         )
 

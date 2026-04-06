@@ -4,7 +4,6 @@ import OSLog
 /// ViewModel for dictionary search in Tab 3
 @MainActor
 final class DictionarySearchViewModel: ObservableObject {
-
     @Published var searchText = ""
     @Published var results: [DictionarySearchResult] = []
     @Published var isSearching = false
@@ -13,7 +12,7 @@ final class DictionarySearchViewModel: ObservableObject {
     private let repository = DictionaryRepository.shared
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "DictionarySearchVM"
+        category: "DictionarySearchVM",
     )
 
     init() {
@@ -63,28 +62,34 @@ final class DictionarySearchViewModel: ObservableObject {
 
                 // Detect CJK input and use hanzi search path
                 let isCJK = query.unicodeScalars.contains {
-                    (0x4E00...0x9FFF).contains($0.value) ||
-                    (0x3400...0x4DBF).contains($0.value) ||
-                    (0x20000...0x2A6DF).contains($0.value)
+                    (0x4E00 ... 0x9FFF).contains($0.value) ||
+                        (0x3400 ... 0x4DBF).contains($0.value) ||
+                        (0x20000 ... 0x2A6DF).contains($0.value)
                 }
 
-                logger.debug("[SEARCH] query='\(query, privacy: .public)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode), privacy: .public)")
+                #if DEBUG
+                    logger.debug("[SEARCH] query='\(query, privacy: .public)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode), privacy: .public)")
+                #endif
 
                 let searchResults: [DictionarySearchResult]
                 if isCJK {
                     searchResults = try await repository.searchByHanzi(
                         query: query,
                         inputMode: inputMode,
-                        limit: 20
+                        limit: 20,
                     )
-                    logger.debug("[SEARCH] hanzi path returned \(searchResults.count) results")
+                    #if DEBUG
+                        logger.debug("[SEARCH] hanzi path returned \(searchResults.count) results")
+                    #endif
                 } else {
                     searchResults = try await repository.searchWithSources(
                         input: query,
                         inputMode: inputMode,
-                        limit: 20
+                        limit: 20,
                     )
-                    logger.debug("[SEARCH] roman path returned \(searchResults.count) results")
+                    #if DEBUG
+                        logger.debug("[SEARCH] roman path returned \(searchResults.count) results")
+                    #endif
                 }
 
                 // Also search custom dictionary (only for romanization input)
@@ -92,11 +97,16 @@ final class DictionarySearchViewModel: ObservableObject {
                 if isCJK {
                     customResults = []
                 } else {
-                    let customNotoneKey = CustomDictionaryService.generateNotone(query)
+                    let isToneAware = query.contains { $0.isNumber }
+                    let searchPrefix = isToneAware
+                        ? query.lowercased()
+                        .replacingOccurrences(of: "-", with: "")
+                        .replacingOccurrences(of: " ", with: "")
+                        : CustomDictionaryService.generateNotone(query)
                     let customEntries = CustomDictionaryRepository.shared.searchSync(
-                        romanPrefix: query,
-                        notonePrefix: customNotoneKey,
-                        limit: 20
+                        prefix: searchPrefix,
+                        isToneAware: isToneAware,
+                        limit: 20,
                     )
                     customResults = customEntries.map { entry in
                         DictionarySearchResult(
@@ -105,7 +115,7 @@ final class DictionarySearchViewModel: ObservableObject {
                             tl: entry.roman,
                             hanzi: entry.hanzi,
                             frequency: Int.max,
-                            sources: [.custom]
+                            sources: [.custom],
                         )
                     }
                 }
@@ -127,14 +137,16 @@ final class DictionarySearchViewModel: ObservableObject {
                         tl: result.tl,
                         hanzi: result.hanzi,
                         frequency: result.frequency,
-                        sources: result.sources.filter { enabledSources.contains($0) }
+                        sources: result.sources.filter { enabledSources.contains($0) },
                     )
                 }
                 results = customResults + filtered
                 isSearching = false
             } catch {
                 guard !Task.isCancelled else { return }
-                logger.error("[SEARCH] Failed: \(error.localizedDescription, privacy: .public)")
+                #if DEBUG
+                    logger.error("[SEARCH] Failed: \(error.localizedDescription, privacy: .public)")
+                #endif
                 results = []
                 isSearching = false
             }

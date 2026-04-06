@@ -6,9 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import kotlinx.coroutines.FlowPreview
@@ -22,8 +22,9 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel for dictionary search in Tab 3 (詞庫)
  */
-class DictionarySearchViewModel(application: Application) : AndroidViewModel(application) {
-
+class DictionarySearchViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "DictionarySearchVM"
     }
@@ -41,7 +42,7 @@ class DictionarySearchViewModel(application: Application) : AndroidViewModel(app
         observeSearchText()
     }
 
-    /// Build set of enabled dictionary sources from current preferences
+    // / Build set of enabled dictionary sources from current preferences
     private fun buildEnabledSources(prefs: PrefHelper): Set<DictionarySource> {
         val sources = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
         if (prefs.moeDictEnabled) sources.add(DictionarySource.KAUTIAN)
@@ -85,10 +86,11 @@ class DictionarySearchViewModel(application: Application) : AndroidViewModel(app
         try {
             val context = getApplication<Application>()
             val prefs = PrefHelper(context)
-            val inputMode = when (prefs.inputMode) {
-                "poj" -> ToneConverterModels.InputMode.POJ
-                else -> ToneConverterModels.InputMode.TL
-            }
+            val inputMode =
+                when (prefs.inputMode) {
+                    "poj" -> ToneConverterModels.InputMode.POJ
+                    else -> ToneConverterModels.InputMode.TL
+                }
 
             // Detect CJK input and use hanzi search path
             val isCJK = query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }
@@ -97,69 +99,80 @@ class DictionarySearchViewModel(application: Application) : AndroidViewModel(app
                 Log.d(TAG, "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode")
             }
 
-            val searchResults = if (isCJK) {
-                LexiconService.searchByHanzi(
-                    input = query,
-                    inputMode = inputMode,
-                    limit = 20,
-                    context = context
-                )
-            } else {
-                LexiconService.searchWithSources(
-                    input = query,
-                    inputMode = inputMode,
-                    limit = 20,
-                    context = context
-                )
-            }
+            val searchResults =
+                if (isCJK) {
+                    LexiconService.searchByHanzi(
+                        input = query,
+                        inputMode = inputMode,
+                        limit = 20,
+                        context = context,
+                    )
+                } else {
+                    LexiconService.searchWithSources(
+                        input = query,
+                        inputMode = inputMode,
+                        limit = 20,
+                        context = context,
+                    )
+                }
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${searchResults.size} results")
             }
 
             // Search custom dictionary for non-CJK input (matching iOS behavior)
-            val customResults = if (isCJK) {
-                emptyList()
-            } else {
-                try {
-                    CustomDictionaryService.init(context)
-                    val notoneKey = CustomDictionaryService.generateNotone(query)
-                    CustomDictionaryService.search(
-                        romanPrefix = query,
-                        notonePrefix = notoneKey,
-                        limit = 20
-                    ).map { entry ->
-                        DictionarySearchResult(
-                            id = -2,
-                            roman = entry.roman,
-                            tl = entry.roman,
-                            hanzi = entry.hanzi,
-                            frequency = Int.MAX_VALUE,
-                            sources = listOf(DictionarySource.CUSTOM)
-                        )
-                    }
-                } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) {
-                        Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
-                    }
+            val customResults =
+                if (isCJK) {
                     emptyList()
+                } else {
+                    try {
+                        CustomDictionaryService.init(context)
+                        val isToneAware = query.any { it.isDigit() }
+                        val searchPrefix =
+                            if (isToneAware) {
+                                query.lowercase().replace("-", "").replace(" ", "")
+                            } else {
+                                CustomDictionaryService.generateNotone(query)
+                            }
+                        CustomDictionaryService
+                            .search(
+                                prefix = searchPrefix,
+                                isToneAware = isToneAware,
+                                limit = 20,
+                            ).map { entry ->
+                                DictionarySearchResult(
+                                    id = -2,
+                                    roman = entry.roman,
+                                    tl = entry.roman,
+                                    hanzi = entry.hanzi,
+                                    frequency = Int.MAX_VALUE,
+                                    sources = listOf(DictionarySource.CUSTOM),
+                                )
+                            }
+                    } catch (e: Exception) {
+                        if (BuildConfig.DEBUG) {
+                            Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
+                        }
+                        emptyList()
+                    }
                 }
-            }
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[SEARCH] custom dictionary returned ${customResults.size} results")
             }
 
             // Sort: KAUTIAN (教育部) first, then by frequency
-            val sorted = searchResults.sortedWith(
-                compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }
-                    .thenByDescending { it.frequency }
-            )
+            val sorted =
+                searchResults.sortedWith(
+                    compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }
+                        .thenByDescending { it.frequency },
+                )
             // Filter source tags to only show enabled dictionaries
             val enabledSources = buildEnabledSources(prefs)
-            val filtered = sorted.map { result ->
-                result.copy(sources = result.sources.filter { it in enabledSources })
-            }
+            val filtered =
+                sorted.map { result ->
+                    result.copy(sources = result.sources.filter { it in enabledSources })
+                }
             _results.value = customResults + filtered
             _isSearching.value = false
         } catch (e: Exception) {

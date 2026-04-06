@@ -43,6 +43,7 @@ class EnglishAutocompleteService(
 
             val suggestions = mutableListOf<String>()
             results?.forEachIndexed { idx, info ->
+                if (info == null) return@forEachIndexed
                 val attrs = info.suggestionsAttributes
                 if (BuildConfig.DEBUG) {
                     Log.d("ENSPELL", "[CALLBACK] result[$idx] attrs=$attrs, count=${info.suggestionsCount}")
@@ -67,11 +68,13 @@ class EnglishAutocompleteService(
 
             val suggestions = mutableListOf<String>()
             results?.forEachIndexed { resultIdx, sentenceInfo ->
+                if (sentenceInfo == null) return@forEachIndexed
                 if (BuildConfig.DEBUG) {
                     Log.d("ENSPELL", "[CALLBACK] result[$resultIdx] suggestionsCount=${sentenceInfo.suggestionsCount}")
                 }
                 for (i in 0 until sentenceInfo.suggestionsCount) {
                     val suggestionsInfo = sentenceInfo.getSuggestionsInfoAt(i)
+                        ?: continue
                     val attrs = suggestionsInfo.suggestionsAttributes
                     if (BuildConfig.DEBUG) {
                         Log.d("ENSPELL", "[CALLBACK]   [$i] attrs=$attrs, count=${suggestionsInfo.suggestionsCount}")

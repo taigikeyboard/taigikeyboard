@@ -23,9 +23,9 @@ enum TabType: Int, CaseIterable, Hashable {
     var title: LocalizedText {
         switch self {
         case .home: return Tab1Texts.tabTitle
-        case .layout: return Tab2Texts.tabTitle
-        case .dictionary: return Tab3Texts.tabTitle
-        case .settings: return Tab4Texts.tabTitle
+        case .layout: return Tab2Texts.tabBarTitle
+        case .dictionary: return Tab3Texts.tabBarTitle
+        case .settings: return Tab4Texts.tabBarTitle
         }
     }
 }

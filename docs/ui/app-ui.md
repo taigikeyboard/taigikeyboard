@@ -18,10 +18,12 @@
 
 | Tab | iOS | Android |
 |-----|-----|---------|
-| Tab1 Home (頭頁) | `Tab1.swift` | `Tab1Fragment.kt` |
-| Tab2 Layout (佈局) | `Tab2.swift` | `Tab2Fragment.kt` |
-| Tab3 Dictionary (詞庫) | `Tab3.swift` | `Tab3Fragment.kt` |
-| Tab4 Settings (設定) | `Tab4.swift` | `Tab4Fragment.kt` |
+| Tab1 Home (頭頁) | `Tab1.swift` | `HomeScreen.kt` |
+| Tab2 Layout (佈局) | `Tab2.swift` | `LayoutScreen.kt` |
+| Tab3 Dictionary (詞庫) | `Tab3.swift` | `DictionarySettingsScreen.kt` |
+| Tab4 Settings (設定) | `Tab4.swift` | `InputSettingsScreen.kt` |
+
+Android uses Jetpack Compose screens (not Fragments). Tab container: `MainSettingsScreen.kt`.
 
 ---
 
@@ -80,15 +82,47 @@
 
 ---
 
+## Tab1 Content Architecture (v3.4.7+)
+
+Tab1 (Home) content is **JSON-driven** — feature descriptions and FAQ are loaded from shared JSON files instead of hardcoded enums.
+
+| File | Platform | Description |
+|------|----------|-------------|
+| `content/tab1-features.json` | Shared | Feature descriptions (input modes, autocomplete, etc.) |
+| `content/tab1-faq.json` | Shared | FAQ entries |
+| `FeatureContent.swift` / `.kt` | Both | Data model |
+| `FeatureContentLoader.swift` / `.kt` | Both | JSON loader |
+
+Content sync: `scripts/sync-tab1-content.sh` copies JSON to both platform resource directories.
+
+---
+
+## Tab3 Data Management (v3.4.5+)
+
+Tab3 expanded from basic dictionary settings to full data management:
+
+| Sub-screen | iOS | Android | Description |
+|------------|-----|---------|-------------|
+| Custom Dictionary | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` | CRUD, import/export |
+| Frequency Data | `FrequencyDataView.swift` | `FrequencyDataScreen.kt` | View/clear user frequency |
+| Association Data | `AssociationDataView.swift` | `AssociationDataScreen.kt` | View/clear next-word data |
+| Data Management | `DataManagementView.swift` | `DataManagementScreen.kt` | Backup/restore |
+
+Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced by these production views.
+
+---
+
 ## Localization Architecture
 
 | File | Purpose |
 |------|---------|
-| `LocalizedText.swift` | Core structure |
-| `Tab1Texts.swift` | Tab1 text |
-| `Tab2Texts.swift` | Tab2 text |
-| `Tab3Texts.swift` | Tab3 text |
-| `Tab4Texts.swift` | Tab4 text |
+| `LocalizedText.swift` / `.kt` | Core structure |
+| `Tab1Texts.swift` / `.kt` | Tab1 text |
+| `Tab2Texts.swift` / `.kt` | Tab2 text |
+| `Tab3Texts.swift` / `.kt` | Tab3 text |
+| `Tab4Texts.swift` / `.kt` | Tab4 text |
+| `LanguageManager.kt` | Android language selection (StateFlow) |
+| `DisplayLanguage.kt` | Android display language enum |
 
 ---
 
@@ -151,7 +185,7 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 
 | Component | File |
 |-----------|------|
-| Tab container | `SettingsMainActivity.kt` |
-| Bottom navigation | `bottom_navigation.xml` |
-| Colors | `colors.xml` |
-| Strings | `strings.xml` |
+| Tab container | `SettingsMainActivity.kt` + `MainSettingsScreen.kt` |
+| Navigation | Compose Navigation (no XML) |
+| Theme | `Theme.kt` + `Type.kt` |
+| Strings | `LocalizedText.kt` + `Tab1-4Texts.kt` |

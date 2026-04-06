@@ -7,7 +7,8 @@ enum Tab2Texts {
 
     // MARK: - Tab 標題
 
-    static let tabTitle = LocalizedText(hanji: "齒佈")
+    static let tabTitle = LocalizedText(hanji: "齒盤佈局")
+    static let tabBarTitle = LocalizedText(hanji: "齒佈")
 
     // MARK: - 佈局選擇
 

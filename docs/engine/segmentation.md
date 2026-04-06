@@ -1,6 +1,9 @@
 # Syllable Segmentation (Archived)
 
-> **Status**: REMOVED — Auto-segmentation was removed. This document is preserved for historical reference.
+> **Status**: REMOVED in v3.4.6 — `SyllableSegmenter` deleted from both iOS and Android.
+> Continuous auto-segmentation was removed; prefix validation is now handled by `InputNormalizer`.
+> This document is preserved for **historical reference only** — the code described here no longer exists.
+
 > **Type**: Feature (archived)
 > **Keywords**: `SyllableSegmenter`, `DAG`, `DP`, `onset`, `trie`, `segmentContinuous`
 > **Related**: composing.md, autocomplete.md, tone.md

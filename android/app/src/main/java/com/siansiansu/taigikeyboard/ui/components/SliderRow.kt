@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import androidx.compose.foundation.layout.size
 
 @Composable
@@ -34,7 +35,7 @@ fun SliderRow(
         ) {
             Text(
                 text = label,
-                fontSize = 16.sp,
+                fontSize = AppStyle.bodyFontSize,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )

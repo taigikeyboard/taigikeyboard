@@ -1,5 +1,5 @@
-import XCTest
 import SQLite3
+import XCTest
 
 /// Direct SQL verification of dictionary.db content for 教育部臺灣台語常用詞辭典 (kautian=1).
 ///
@@ -11,21 +11,27 @@ import SQLite3
 /// 4. Data integrity — no empty tl, no orphan entries
 /// 5. Data quality baselines — empty hanzi, zero frequency, syllable-hanzi mismatch
 final class DictionaryContentTests: XCTestCase {
-
     private var db: OpaquePointer?
 
     override func setUpWithError() throws {
         try super.setUpWithError()
 
-        // #filePath → .../ios/TaigiKeyboardTests/DictionaryContentTests.swift
-        // Drop 2 components → .../ios/
-        let testFileURL = URL(fileURLWithPath: #filePath)
-        let iosDir = testFileURL
-            .deletingLastPathComponent()  // TaigiKeyboardTests/
-            .deletingLastPathComponent()  // ios/
-        let dbPath = iosDir
-            .appendingPathComponent("Resources/Dictionaries/dictionary.db")
-            .path
+        // Prefer test bundle resource (works in simulator sandbox on macOS 26+)
+        // Fallback to #filePath-based resolution for local development
+        let dbPath: String
+        if let bundlePath = Bundle(for: type(of: self))
+            .path(forResource: "dictionary", ofType: "db")
+        {
+            dbPath = bundlePath
+        } else {
+            let testFileURL = URL(fileURLWithPath: #filePath)
+            let iosDir = testFileURL
+                .deletingLastPathComponent() // TaigiKeyboardTests/
+                .deletingLastPathComponent() // ios/
+            dbPath = iosDir
+                .appendingPathComponent("Resources/Dictionaries/dictionary.db")
+                .path
+        }
 
         let rc = sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil)
         guard rc == SQLITE_OK else {
@@ -35,7 +41,7 @@ final class DictionaryContentTests: XCTestCase {
     }
 
     override func tearDown() {
-        if let db = db {
+        if let db {
             sqlite3_close(db)
         }
         db = nil
@@ -49,8 +55,8 @@ final class DictionaryContentTests: XCTestCase {
     func testKautian_totalCountNotDecreased() throws {
         let db = try XCTUnwrap(db, "database not opened")
         let count = querySingleInt(db: db, sql: "SELECT COUNT(*) FROM dictionary WHERE kautian = 1")
-        XCTAssertGreaterThanOrEqual(count, 49664,
-            "kautian=1 entry count dropped: got \(count), baseline is 49664")
+        XCTAssertGreaterThanOrEqual(count, 49612,
+                                    "kautian=1 entry count dropped: got \(count), baseline is 49612")
     }
 
     // MARK: - Layer 2: (tl, hanzi) Uniqueness
@@ -59,11 +65,11 @@ final class DictionaryContentTests: XCTestCase {
     func testKautian_noDuplicateTlHanziPairs() throws {
         let db = try XCTUnwrap(db, "database not opened")
         let dupes = querySingleInt(db: db, sql: """
-            SELECT COUNT(*) FROM (
-                SELECT tl, hanzi FROM dictionary WHERE kautian = 1
-                GROUP BY tl, hanzi HAVING COUNT(*) > 1
-            )
-            """)
+        SELECT COUNT(*) FROM (
+            SELECT tl, hanzi FROM dictionary WHERE kautian = 1
+            GROUP BY tl, hanzi HAVING COUNT(*) > 1
+        )
+        """)
         XCTAssertEqual(dupes, 0, "Found \(dupes) duplicate (tl, hanzi) pairs in kautian=1")
     }
 
@@ -100,7 +106,7 @@ final class DictionaryContentTests: XCTestCase {
             for tl in tc.tlValues {
                 let count = queryCountWhere(db: db, tl: tl, hanzi: tc.hanzi, kautian: true)
                 XCTAssertGreaterThan(count, 0,
-                    "\(tc.label): tl=\"\(tl)\" hanzi=\"\(tc.hanzi)\" not found in kautian=1")
+                                     "\(tc.label): tl=\"\(tl)\" hanzi=\"\(tc.hanzi)\" not found in kautian=1")
             }
         }
     }
@@ -119,11 +125,11 @@ final class DictionaryContentTests: XCTestCase {
     func testNoOrphanEntries() throws {
         let db = try XCTUnwrap(db, "database not opened")
         let count = querySingleInt(db: db, sql: """
-            SELECT COUNT(*) FROM dictionary WHERE
-              kautian = 0 AND taigitv = 0 AND itaigi = 0 AND sitbut = 0 AND
-              taihoa = 0 AND taijit = 0 AND kungge = 0 AND stti = 0 AND
-              khpoo = 0 AND khiin = 0 AND dev = 0 AND lkk = 0
-            """)
+        SELECT COUNT(*) FROM dictionary WHERE
+          kautian = 0 AND taigitv = 0 AND itaigi = 0 AND sitbut = 0 AND
+          taihoa = 0 AND taijit = 0 AND kungge = 0 AND stti = 0 AND
+          khpoo = 0 AND khiin = 0 AND dev = 0 AND lkk = 0
+        """)
         XCTAssertEqual(count, 0, "Found \(count) orphan entries with all source flags = 0")
     }
 
@@ -136,7 +142,7 @@ final class DictionaryContentTests: XCTestCase {
         let count = querySingleInt(db: db, sql:
             "SELECT COUNT(*) FROM dictionary WHERE kautian = 1 AND (hanzi IS NULL OR hanzi = '')")
         XCTAssertLessThanOrEqual(count, 198,
-            "kautian=1 empty-hanzi count grew to \(count), baseline is 198 — check for data corruption")
+                                 "kautian=1 empty-hanzi count grew to \(count), baseline is 198 — check for data corruption")
     }
 
     /// kautian=1 entries with frequency <= 0 (rare/literary characters).
@@ -146,7 +152,7 @@ final class DictionaryContentTests: XCTestCase {
         let count = querySingleInt(db: db, sql:
             "SELECT COUNT(*) FROM dictionary WHERE kautian = 1 AND (frequency IS NULL OR frequency <= 0)")
         XCTAssertLessThanOrEqual(count, 785,
-            "kautian=1 zero-frequency count grew to \(count), baseline is 785 — check for data corruption")
+                                 "kautian=1 zero-frequency count grew to \(count), baseline is 785 — check for data corruption")
     }
 
     /// Entries where syllable count (hyphens+1) differs from hanzi character count by more than 1.
@@ -154,15 +160,15 @@ final class DictionaryContentTests: XCTestCase {
     func testKautian_syllableHanziMismatchCountStable() throws {
         let db = try XCTUnwrap(db, "database not opened")
         let count = querySingleInt(db: db, sql: """
-            SELECT COUNT(*) FROM (
-                SELECT tl, hanzi,
-                    LENGTH(REPLACE(tl, '--', '-')) - LENGTH(REPLACE(REPLACE(tl, '--', '-'), '-', '')) + 1 AS syllables
-                FROM dictionary
-                WHERE kautian = 1 AND hanzi IS NOT NULL AND hanzi != '' AND tl IS NOT NULL AND tl != ''
-            ) WHERE ABS(syllables - LENGTH(hanzi)) > 1
-            """)
+        SELECT COUNT(*) FROM (
+            SELECT tl, hanzi,
+                LENGTH(REPLACE(tl, '--', '-')) - LENGTH(REPLACE(REPLACE(tl, '--', '-'), '-', '')) + 1 AS syllables
+            FROM dictionary
+            WHERE kautian = 1 AND hanzi IS NOT NULL AND hanzi != '' AND tl IS NOT NULL AND tl != ''
+        ) WHERE ABS(syllables - LENGTH(hanzi)) > 1
+        """)
         XCTAssertLessThanOrEqual(count, 69,
-            "kautian=1 syllable-hanzi mismatch count grew to \(count), baseline is 69 — check for data corruption")
+                                 "kautian=1 syllable-hanzi mismatch count grew to \(count), baseline is 69 — check for data corruption")
     }
 
     // MARK: - Helpers

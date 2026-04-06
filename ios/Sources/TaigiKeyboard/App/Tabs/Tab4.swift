@@ -18,6 +18,7 @@ struct Tab4: View {
     @State private var outputBothScripts: Bool
     @State private var tpsOrMapsToER: Bool
     @State private var toolbarAutoCollapse: Bool
+    @State private var isGlobeKeyEnabled: Bool
     @State private var showResetSettingsAlert = false
     @State private var diagnosticCopied = false
     @State private var diagnosticText = ""
@@ -30,9 +31,17 @@ struct Tab4: View {
     )
     private var autoCapitalizationEnabled = true
 
-    #if DEBUG
-    @State private var showDebug = false
-    #endif
+    @AppStorage(
+        "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled",
+        store: UserDefaults(suiteName: SharedSettings.appGroupId)
+    )
+    private var isAudioFeedbackEnabled = true
+
+    @AppStorage(
+        "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled",
+        store: UserDefaults(suiteName: SharedSettings.appGroupId)
+    )
+    private var isHapticFeedbackEnabled = true
 
     init() {
         let settings = SharedSettings.shared
@@ -44,6 +53,7 @@ struct Tab4: View {
         _outputBothScripts = State(initialValue: settings.outputBothScripts)
         _tpsOrMapsToER = State(initialValue: settings.tpsOrMapsToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
+        _isGlobeKeyEnabled = State(initialValue: settings.isGlobeKeyEnabled)
     }
 
     var body: some View {
@@ -68,24 +78,85 @@ struct Tab4: View {
                     }
                 }
 
-                // 設定開關
+                // 拍字設定
                 Section {
-                    Toggle(languageManager.text(Tab4Texts.outputBothScripts), isOn: $outputBothScripts)
-                        .onChange(of: outputBothScripts) { _, newValue in
-                            settings.outputBothScripts = newValue
+                    Toggle(isOn: $outputBothScripts) {
+                        HStack {
+                            Text(languageManager.text(Tab4Texts.outputBothScripts))
+                            SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
+                    }
+                    .onChange(of: outputBothScripts) { _, newValue in
+                        settings.outputBothScripts = newValue
+                    }
 
-                    Toggle(languageManager.text(Tab4Texts.autoCapitalization), isOn: $autoCapitalizationEnabled)
-
-                    Toggle(languageManager.text(Tab4Texts.autoSpace), isOn: $autoSpaceEnabled)
-                        .onChange(of: autoSpaceEnabled) { _, newValue in
-                            settings.isAutoSpaceEnabled = newValue
+                    Toggle(isOn: $autoCapitalizationEnabled) {
+                        HStack {
+                            Text(languageManager.text(Tab4Texts.autoCapitalization))
+                            SettingInfoButton(description: featureSummary("caseSwitch"))
                         }
+                    }
 
-                    Toggle(languageManager.text(Tab4Texts.toolbarAutoCollapse), isOn: $toolbarAutoCollapse)
-                        .onChange(of: toolbarAutoCollapse) { _, newValue in
-                            settings.isToolbarAutoCollapse = newValue
+                    Toggle(isOn: $autoSpaceEnabled) {
+                        HStack {
+                            Text(languageManager.text(Tab4Texts.autoSpace))
+                            SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
+                    }
+                    .onChange(of: autoSpaceEnabled) { _, newValue in
+                        settings.isAutoSpaceEnabled = newValue
+                    }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.typingSectionTitle))
+                }
+
+                // 齒盤設定
+                Section {
+                    Toggle(isOn: $toolbarAutoCollapse) {
+                        HStack {
+                            Label {
+                                Text(languageManager.text(Tab4Texts.toolbarAutoCollapse))
+                            } icon: {
+                                Image(systemName: Tab4Texts.toolbarIcon)
+                                    .foregroundColor(AppStyle.accentBlue)
+                            }
+                            SettingInfoButton(description: languageManager.text(Tab4Texts.toolbarAutoCollapseInfo))
+                        }
+                    }
+                    .onChange(of: toolbarAutoCollapse) { _, newValue in
+                        settings.isToolbarAutoCollapse = newValue
+                    }
+
+                    Toggle(isOn: $isGlobeKeyEnabled) {
+                        HStack {
+                            Label {
+                                Text(languageManager.text(Tab4Texts.globeKey))
+                            } icon: {
+                                Image(systemName: Tab4Texts.globeKeyIcon)
+                                    .foregroundColor(AppStyle.accentBlue)
+                            }
+                            SettingInfoButton(description: languageManager.text(Tab4Texts.globeKeyInfo))
+                        }
+                    }
+                    .onChange(of: isGlobeKeyEnabled) { _, newValue in
+                        settings.isGlobeKeyEnabled = newValue
+                    }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.keyboardSectionTitle))
+                }
+
+                // 回饋設定
+                Section {
+                    Toggle(isOn: $isAudioFeedbackEnabled) {
+                        Label(languageManager.text(Tab4Texts.soundFeedback), systemImage: Tab4Texts.soundFeedbackIcon)
+                    }
+
+                    Toggle(isOn: $isHapticFeedbackEnabled) {
+                        Label(languageManager.text(Tab4Texts.vibrationFeedback), systemImage: Tab4Texts.vibrationFeedbackIcon)
+                    }
+                } header: {
+                    Text(languageManager.text(Tab4Texts.feedbackSectionTitle))
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 白話字設定
@@ -101,20 +172,23 @@ struct Tab4: View {
                         }
                 } header: {
                     Text(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 方音符號設定
                 Section {
-                    Toggle(languageManager.text(Tab4Texts.tpsOrMapsToER), isOn: $tpsOrMapsToER)
-                        .onChange(of: tpsOrMapsToER) { _, newValue in
-                            settings.tpsOrMapsToER = newValue
+                    Toggle(isOn: $tpsOrMapsToER) {
+                        HStack {
+                            Text(languageManager.text(Tab4Texts.tpsOrMapsToER))
+                            SettingInfoButton(description: languageManager.text(Tab4Texts.tpsOrMapsToERInfo))
                         }
+                    }
+                    .onChange(of: tpsOrMapsToER) { _, newValue in
+                        settings.tpsOrMapsToER = newValue
+                    }
                 } header: {
                     Text(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 診斷資訊
@@ -133,6 +207,7 @@ struct Tab4: View {
                                 : languageManager.text(Tab4Texts.diagnosticCopy),
                             systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc"
                         )
+                        .foregroundColor(.primary)
                     }
 
                     ShareLink(
@@ -140,7 +215,7 @@ struct Tab4: View {
                         subject: Text("台語齒盤 Bug 回報"),
                         message: Text(diagnosticText)
                     ) {
-                        Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "square.and.arrow.up")
+                        Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "arrow.up.forward.square")
                     }
 
                     Button {
@@ -153,12 +228,11 @@ struct Tab4: View {
                             openURL(url)
                         }
                     } label: {
-                        Label(languageManager.text(Tab4Texts.diagnosticEmail), systemImage: "envelope")
+                        Label(languageManager.text(Tab4Texts.diagnosticEmail), systemImage: "arrow.up.forward.square")
                     }
                 } header: {
                     Text(languageManager.text(Tab4Texts.diagnosticSectionTitle))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 重設按鈕
@@ -170,16 +244,6 @@ struct Tab4: View {
                     }
                 }
 
-                #if DEBUG
-                // Debug 區塊
-                Section {
-                    Button {
-                        showDebug = true
-                    } label: {
-                        Text(languageManager.text(Tab4Texts.debugMode))
-                    }
-                }
-                #endif
             }
             .navigationTitle(languageManager.text(Tab4Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
@@ -196,11 +260,16 @@ struct Tab4: View {
         } message: {
             Text(languageManager.text(Tab4Texts.resetSettingsMessage))
         }
-        #if DEBUG
-        .sheet(isPresented: $showDebug) {
-            DebugView()
-        }
-        #endif
+    }
+
+    // MARK: - Feature Summary Lookup
+
+    private func featureSummary(_ featureId: String) -> String {
+        FeatureContentLoader.features
+            .first(where: { $0.id == featureId })?
+            .summary?
+            .asLocalizedText
+            .hanji ?? ""
     }
 
     // MARK: - Display Name Helpers
@@ -232,12 +301,15 @@ struct Tab4: View {
         // 更新本地狀態
         selectedInputMode = settings.inputMode
         autoCapitalizationEnabled = true  // KeyboardKit 預設值
+        isAudioFeedbackEnabled = true
+        isHapticFeedbackEnabled = true
         autoSpaceEnabled = settings.isAutoSpaceEnabled
         enableDoubleTapOO = settings.enableDoubleTapOO
         enableDoubleTapNN = settings.enableDoubleTapNN
         outputBothScripts = settings.outputBothScripts
         tpsOrMapsToER = settings.tpsOrMapsToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
+        isGlobeKeyEnabled = settings.isGlobeKeyEnabled
 
         fontManager.reloadFontType()
 
@@ -274,7 +346,7 @@ private struct InputModePickerView: View {
                             Spacer()
                             if selectedMode == option.mode {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
+                                    .foregroundColor(AppStyle.accentBlue)
                             }
                         }
                     }

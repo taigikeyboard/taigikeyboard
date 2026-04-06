@@ -5,7 +5,6 @@ import KeyboardKit
 ///
 /// 處理字元、空白、退格、Return 鍵的輸入邏輯。
 extension ActionHandler {
-
     // MARK: - 字元輸入
 
     /// 處理字元輸入（含組字邏輯）
@@ -24,7 +23,7 @@ extension ActionHandler {
             char,
             keyboardCase: currentCase,
             isAutoCapitalizationEnabled: autoCap,
-            inputMode: settings.inputMode
+            inputMode: settings.inputMode,
         )
 
         // TPS layout: context-aware character adjustments
@@ -32,6 +31,10 @@ extension ActionHandler {
         if settings.inputMode == .tps {
             var adjusted = TPSConverter.adjustTPSInitialKey(processedChar, afterRawInput: composingManager.rawInput)
             adjusted = TPSConverter.adjustTPSNasalizedVowelKey(adjusted, afterRawInput: composingManager.rawInput)
+            // Syllabic nasal auto-correct: ㄇ+tone → ㆬ, ㄫ+tone → ㆭ
+            if let nasalReplacement = TPSConverter.syllabicNasalReplacement(forIncoming: adjusted, lastRawChar: composingManager.rawInput.last) {
+                composingManager.replaceLastCharacter(with: nasalReplacement)
+            }
             // Palatalization auto-correct: ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ → ㄐ/ㄑ/ㄒ/ㆢ
             if let replacement = TPSConverter.palatalizationReplacement(forIncoming: adjusted, lastRawChar: composingManager.rawInput.last) {
                 composingManager.replaceLastCharacter(with: replacement)
@@ -53,22 +56,11 @@ extension ActionHandler {
             return true
         }
 
-        // 以下為台語模式（POJ/TL）的組字邏輯
-
-        // 檢查是否為標點符號（除了連字符號）
-        if isPunctuationExceptHyphen(finalChar) {
-            // 如果正在組字，先確認組字
-            if composingManager.isComposing {
-                composingManager.commitComposition()
-            }
-            // 直接插入標點符號
-            keyboardContext.textDocumentProxy.insertText(finalChar)
-            return true
-        }
+        // 以下為台語模式（POJ/TL/TPS）的組字邏輯
 
         // Standalone digit: commit directly without entering composing mode.
         // Digits only enter composing as tone markers appended to existing romanization.
-        if !composingManager.isComposing && finalChar.first?.isNumber == true {
+        if !composingManager.isComposing, finalChar.first?.isNumber == true {
             if isShowingNextWord {
                 isShowingNextWord = false
                 keyboardController?.state.autocompleteContext.reset()
@@ -77,28 +69,38 @@ extension ActionHandler {
             return true
         }
 
-        // 原有的組字邏輯（只處理字母、數字和連字符號）
-        if composingManager.isComposing {
-            if finalChar == "-" {
-                composingManager.appendHyphen()
-            } else {
-                composingManager.appendCharacter(finalChar)
-            }
-        } else {
-            // 非組字模式：檢查是否正在顯示 NextWord 候選詞
-            if finalChar == "-" && isShowingNextWord {
-                // NextWord 模式下輸入 "-"：直接輸出，保留 NextWord 候選詞
-                // 用戶可以繼續點選 NextWord，或輸入其他字開始組字
-                keyboardContext.textDocumentProxy.insertText("-")
-                logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
-            } else {
-                // 開始新組字時清除 NextWord 狀態
-                if isShowingNextWord {
-                    isShowingNextWord = false
-                    keyboardController?.state.autocompleteContext.reset()
+        // 組字字元（字母、TPS 符號、連字符號、˙）→ 進入組字
+        if isComposingCharacter(finalChar) {
+            if composingManager.isComposing {
+                if finalChar == "-" {
+                    composingManager.appendHyphen()
+                } else {
+                    composingManager.appendCharacter(finalChar)
                 }
-                composingManager.startComposing(with: finalChar)
+            } else {
+                // 非組字模式：檢查是否正在顯示 NextWord 候選詞
+                if finalChar == "-", isShowingNextWord {
+                    // NextWord 模式下輸入 "-"：直接輸出，保留 NextWord 候選詞
+                    keyboardContext.textDocumentProxy.insertText("-")
+                    logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
+                } else {
+                    if isShowingNextWord {
+                        isShowingNextWord = false
+                        keyboardController?.state.autocompleteContext.reset()
+                    }
+                    composingManager.startComposing(with: finalChar)
+                }
             }
+        } else if composingManager.isComposing, finalChar.first?.isNumber == true {
+            // 組字中輸入數字 → 作為聲調標記追加
+            composingManager.appendCharacter(finalChar)
+        } else {
+            // 非組字字元（標點、符號、箭頭等）→ 確認組字後直接輸出
+            if composingManager.isComposing {
+                composingManager.commitComposition()
+            }
+            keyboardContext.textDocumentProxy.insertText(finalChar)
+            return true
         }
 
         // 處理單次 Shift 復位（Caps Lock 除外）
@@ -113,7 +115,7 @@ extension ActionHandler {
 
     func handleSpaceAction() -> Bool {
         // 拖曳移動游標時不處理
-        if let keyboardController = keyboardController {
+        if let keyboardController {
             let dragOffset = keyboardController.services.spacebarDragGestureHandler.currentDragTextPositionOffset
 
             if dragOffset != 0 {
@@ -131,21 +133,22 @@ extension ActionHandler {
         // If the current syllable has no explicit tone mark, space adds a syllable
         // boundary and stays in composing mode (like Microsoft Zhuyin's space for tone 1).
         // If the syllable already has a tone mark or ends with space, fall through to commit.
-        if settings.inputMode == .tps && composingManager.isComposing {
+        if settings.inputMode == .tps, composingManager.isComposing {
             if let lastChar = composingManager.rawInput.last,
-               !TPSConverter.isTPSToneMark(lastChar) && lastChar != " " {
+               !TPSConverter.isTPSToneMark(lastChar), lastChar != " "
+            {
                 composingManager.appendCharacter(" ")
                 return true
             }
         }
 
         // 以下為台語模式（POJ/TL）的邏輯
-        if self.composingManager.isComposing {
+        if composingManager.isComposing {
             // 在確認之前先取得組字文字
             let committedText = composingManager.composingText
 
             // 確認當前組字 + 插入空白（不選擇候選詞）
-            self.composingManager.commitComposition()
+            composingManager.commitComposition()
             keyboardContext.textDocumentProxy.insertText(" ")
 
             // 更新 lastSelectedWord，讓後續輸入可以建立關聯
@@ -160,12 +163,14 @@ extension ActionHandler {
     // MARK: - 退格鍵
 
     func handleBackspaceAction() -> Bool {
-        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+        let caseBefore = String(describing: keyboardContext.keyboardCase)
+        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore, privacy: .public)")
 
         // 英文模式：直接刪除
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.deleteBackward()
-            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+            let caseAfter = String(describing: keyboardContext.keyboardCase)
+            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
             return true
         }
 
@@ -177,7 +182,8 @@ extension ActionHandler {
             handleBackspaceForNextWord()
         }
 
-        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+        let caseAfter = String(describing: keyboardContext.keyboardCase)
+        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
         return true
     }
 
@@ -201,6 +207,7 @@ extension ActionHandler {
 
         // 更新上下文（但不記錄關聯，因為是退格操作）
         lastSelectedWord = lastChar
+        lastSelectedRoman = nil
         lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
 
         // 觸發 NextWord 預測
@@ -234,7 +241,7 @@ extension ActionHandler {
             }
 
             // 羅馬字模式：自動加空白（字尾非連字符時）
-            if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
+            if settings.isAutoSpaceEnabled, !settings.isTranslateSwapped {
                 if !capturedRawInput.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")
                 }

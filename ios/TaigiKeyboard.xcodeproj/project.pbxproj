@@ -88,14 +88,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		2A099CAC2F6BED54007E763B /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				dictionary.db,
-				dictionary.trie,
-			);
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
 		2A1FCDD22EAFCADE009F2800 /* Exceptions for "App" folder in "TaigiKeyboard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -119,12 +111,12 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		F34AE2472EEE6C5F00859124 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */ = {
+		F32A225A2F82324A00FCC5B3 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				OFL.txt,
+				dictionary.db,
 			);
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
+			target = F34AE2912EEE7CE000859124 /* TaigiKeyboardTests */;
 		};
 		F3ECE8862EFFFD5B002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -143,7 +135,8 @@
 		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				OFL.txt,
+				"Iansui-Regular.ttf",
+				"jf-openhuninn-2.1.ttf",
 			);
 			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
 		};
@@ -243,7 +236,6 @@
 		F35436232E5C43680004DFAB /* Resources/Fonts */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F34AE2472EEE6C5F00859124 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */,
 				F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */,
 			);
 			path = Resources/Fonts;
@@ -252,7 +244,7 @@
 		F354362F2E5C437C0004DFAB /* Resources/Dictionaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2A099CAC2F6BED54007E763B /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboard" target */,
+				F32A225A2F82324A00FCC5B3 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */,
 			);
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
@@ -771,7 +763,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.6;
+				MARKETING_VERSION = 3.4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -809,7 +801,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.6;
+				MARKETING_VERSION = 3.4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -840,7 +832,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.6;
+				MARKETING_VERSION = 3.4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -872,7 +864,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.6;
+				MARKETING_VERSION = 3.4.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

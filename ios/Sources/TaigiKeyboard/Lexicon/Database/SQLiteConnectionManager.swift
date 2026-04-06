@@ -5,7 +5,6 @@ import SQLite3
 /// SQLite 連接管理器
 /// 提供資料庫連接、配置、延遲初始化等共用功能
 final class SQLiteConnectionManager: @unchecked Sendable {
-
     // MARK: - Properties
 
     private var connection: OpaquePointer?
@@ -24,13 +23,13 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     init(
         databasePath: @escaping () throws -> String,
         queueLabel: String,
-        loggerCategory: String
+        loggerCategory: String,
     ) {
         self.databasePath = databasePath
-        self.queue = DispatchQueue(label: queueLabel, qos: .userInitiated)
-        self.logger = Logger(
+        queue = DispatchQueue(label: queueLabel, qos: .userInitiated)
+        logger = Logger(
             subsystem: LexiconConstants.Logging.subsystem,
-            category: loggerCategory
+            category: loggerCategory,
         )
     }
 
@@ -48,7 +47,9 @@ final class SQLiteConnectionManager: @unchecked Sendable {
             let errorMsg = connection != nil
                 ? String(cString: sqlite3_errmsg(connection))
                 : "Unknown error"
-            logger.error("[INIT] Failed to open: \(errorMsg, privacy: .public)")
+            #if DEBUG
+                logger.error("[INIT] Failed to open: \(errorMsg, privacy: .public)")
+            #endif
             sqlite3_close(connection)
             connection = nil
             throw DictionaryError.databaseConnectionFailed(errorMsg)
@@ -77,7 +78,9 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                 sqlite3_finalize(stmt)
             } else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
-                logger.warning("[CONFIG] Could not set pragma \(config, privacy: .public): \(errorMsg, privacy: .public)")
+                #if DEBUG
+                    logger.warning("[CONFIG] Could not set pragma \(config, privacy: .public): \(errorMsg, privacy: .public)")
+                #endif
             }
         }
     }
@@ -140,7 +143,9 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                         self.isInitializing = false
                         self.initializationTask = nil
                     }
-                    logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription, privacy: .public)")
+                    #if DEBUG
+                        logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription, privacy: .public)")
+                    #endif
                     throw error
                 }
             }
@@ -200,7 +205,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
-                guard let self, let db = self.connection else {
+                guard let self, let db = connection else {
                     continuation.resume(throwing: DictionaryError.databaseNotAvailable)
                     return
                 }
@@ -222,7 +227,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
 
         return try queue.sync { [weak self] in
-            guard let self, let db = self.connection else {
+            guard let self, let db = connection else {
                 throw DictionaryError.databaseNotAvailable
             }
             return try operation(db)

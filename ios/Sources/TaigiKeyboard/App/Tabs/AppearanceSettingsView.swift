@@ -278,10 +278,6 @@ struct AppearanceSettingsView: View {
         }
     }
 
-    private func formatPercent(_ value: Double) -> String {
-        "\(Int(round(value * 100)))%"
-    }
-
     // MARK: - Color Row
 
     @ViewBuilder
@@ -374,7 +370,7 @@ private struct AppearanceFontPickerView: View {
                             Spacer()
                             if selectedFont == option.font {
                                 Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
+                                    .foregroundColor(AppStyle.accentBlue)
                             }
                         }
                     }

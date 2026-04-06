@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightButton
@@ -112,7 +113,7 @@ private fun CopyrightCard(
             // Title
             Text(
                 text = languageManager.text(page.title),
-                fontSize = 16.sp,
+                fontSize = AppStyle.bodyFontSize,
                 fontWeight = FontWeight.Bold,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface
@@ -123,7 +124,7 @@ private fun CopyrightCard(
             // Description (copyright holder)
             Text(
                 text = languageManager.text(page.description),
-                fontSize = 14.sp,
+                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

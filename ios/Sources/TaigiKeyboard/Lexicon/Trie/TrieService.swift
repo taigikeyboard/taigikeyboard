@@ -6,7 +6,6 @@ import OSLog
 /// 提供前綴搜尋和完全匹配功能，用於快速查詢詞典索引。
 /// 底層使用 C++ MARISA-trie library 透過 C 橋接層存取。
 final class TrieService: @unchecked Sendable {
-
     // MARK: - Constants
 
     private enum Constants {
@@ -21,7 +20,7 @@ final class TrieService: @unchecked Sendable {
 
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "TrieService"
+        category: "TrieService",
     )
 
     /// 用於保護初始化的序列佇列
@@ -44,7 +43,9 @@ final class TrieService: @unchecked Sendable {
             }
 
             guard let path = triePath else {
-                logger.error("[INIT] Trie file not found in bundle")
+                #if DEBUG
+                    logger.error("[INIT] Trie file not found in bundle")
+                #endif
                 return false
             }
 
@@ -52,10 +53,14 @@ final class TrieService: @unchecked Sendable {
 
             if success {
                 isInitialized = true
-                let keyCount = trie_get_key_count()
-                logger.info("[INIT] Trie loaded, keys=\(keyCount)")
+                #if DEBUG
+                    let keyCount = trie_get_key_count()
+                    logger.info("[INIT] Trie loaded, keys=\(keyCount)")
+                #endif
             } else {
-                logger.error("[INIT] Failed to load trie")
+                #if DEBUG
+                    logger.error("[INIT] Failed to load trie")
+                #endif
             }
 
             return success
@@ -69,7 +74,9 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 匹配的 rowid 列表
     func prefixSearch(_ prefix: String, limit: Int = Constants.defaultSearchLimit) -> [Int] {
         guard isInitialized else {
-            logger.warning("[SEARCH] Trie not initialized")
+            #if DEBUG
+                logger.warning("[SEARCH] Trie not initialized")
+            #endif
             return []
         }
 
@@ -93,7 +100,9 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
     func lookup(_ key: String) -> [Int] {
         guard isInitialized else {
-            logger.warning("[LOOKUP] Trie not initialized")
+            #if DEBUG
+                logger.warning("[LOOKUP] Trie not initialized")
+            #endif
             return []
         }
 
@@ -124,7 +133,9 @@ final class TrieService: @unchecked Sendable {
             if isInitialized {
                 trie_close()
                 isInitialized = false
-                logger.info("[CLOSE] Trie closed")
+                #if DEBUG
+                    logger.info("[CLOSE] Trie closed")
+                #endif
             }
         }
     }
@@ -133,9 +144,9 @@ final class TrieService: @unchecked Sendable {
 
     /// 取得 trie 檔案路徑
     private var triePath: String? {
-        Bundle(for: type(of: self)).path(
+        ResourceBundleResolver.dictionaryBundle.path(
             forResource: Constants.trieFileName,
-            ofType: Constants.trieFileExtension
+            ofType: Constants.trieFileExtension,
         )
     }
 }

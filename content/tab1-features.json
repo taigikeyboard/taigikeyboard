@@ -1,0 +1,517 @@
+{
+  "features": [
+    {
+      "id": "inputModes",
+      "title": {
+        "hanji": "4 種拍字方式"
+      },
+      "icon": {
+        "ios": "keyboard",
+        "android": "ic_keyboard"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "台語齒盤有 4 種拍字方式：「白話字」、「台羅」、「方音符號」佮「英文」，佇齒盤面頂工具列通切換。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "input_modes_1",
+              "input_modes_2",
+              "input_modes_3",
+              "input_modes_4"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "「白話字」（POJ）佮「台羅」（TL）攏是羅馬字，差別佇聲調符號佮部份拼法無仝款，譬論「ch」（白話字）佮「ts」（台羅），「o͘」（白話字）佮「oo」（台羅）。若已經慣勢 1 種著用彼種，無特別 ê 偏好用台羅著好，因為台羅是目前教育部 ê 正式標準。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「方音符號」（TPS）類似注音輸入法，民間嘛有人講「台語注音」，用台語方音符號拍字，會切去使用專用齒盤佈局。拍好符號了後，齒盤會自動轉做台羅去揣字，所以辭典結果佮台羅模式仝款。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「英文」模式是一般 ê 英文齒盤，干焦基本 ê 拼音檢查爾，拍英文 ê 時陣切過來用較方便，袂觸發台語 ê 選字佮聲調功能。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "romanInput",
+      "title": {
+        "hanji": "羅馬字輸入"
+      },
+      "icon": {
+        "ios": "textformat.abc",
+        "android": "ic_abc"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "拍羅馬字佮拍英文仝款，先拍字母，紲落來拍聲調數字（1-8），齒盤會自動加聲調符號。譬論用 'tong' 做例：拍 '2' 變做 'tóng'（黨），拍 '5' 變做 'tông'（同），拍 '7' 變做 'tōng'（洞）。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "台語有 8 个基本聲調。第 1 聲（陰平）佮第 4 聲（陰入）無聲調符號，拍數字齒盤會直接顯示數字，袂加符號。第 4 聲佮第 8 聲是入聲，韻尾一定是 -p、-t、-k 抑是 -h，譬論 'tok'（督）佮 'to̍k'（毒）。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "若聲調拍毋著，揤刪除揤仔會使修正：揤 1 改會先刪掉聲調符號，閣揤 1 改才會刪掉字母，所以拍毋著 ê 聲調免規个字重拍，刪除修正著好。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "roman_tone_1",
+              "roman_tone_2",
+              "roman_tone_3"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "白話字有特殊組合：連紲拍 2 个 'o' 會變做 'o͘'，連紲拍 2 个 'n' 會變做 'ⁿ'，佇設定有開關通切。台羅免特殊處理，'oo' 佮 'nn' 直接顯示。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍好羅馬字了後，齒盤會自動揣辭典，候選欄第 1 个位是你拍 ê 字，後壁 ê 是候選詞。拍字無一定愛加聲調，但是有加結果較精準。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "用「gâu-tsá」（𠢕早）做例，以下拍法攏揣會著：'gau5-tsa2'（加連劃）、'gau5tsa2'（無連劃）、'gautsa'（免拍聲調）、'gt'（頭字母縮寫）。拍法愈完整，結果愈精準。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "roman_input_1",
+              "roman_input_2",
+              "roman_input_3"
+            ],
+            "interval": 1.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "accuracyTips",
+      "title": {
+        "hanji": "按怎拍字拍較準"
+      },
+      "icon": {
+        "ios": "textformat.123",
+        "android": "ic_numbers"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "拍字若愈完整，結果就愈準。譬論 gâu-tsá，若是拍 gautsa 抑是 gau5tsa2，候選詞會比干焦拍 gt 閣較準。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【聲調 1、4 愛拍出來】教育部輸入法免拍第 1 聲佮第 4 聲，台語齒盤雖然嘛會使免拍，但是若有拍聲調，結果會較準。以「phang 芳」這个字做例，拍 phang1 會正確揣第一聲 ê 字，若干焦拍 phang，會出現誠濟結果。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "faq_tone_handling"
+          }
+        },
+        {
+          "text": {
+            "hanji": "第 4 聲嘛相仝，第 4 聲韻尾一定是 -p、-t、-k、-h，若聲調數字拍出來會比無拍較準。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【關掉無需要 ê 辭典】若感覺候選詞傷濟、想欲揣 ê 字攏佇後壁，會當去「詞庫管理」頁面共無需要 ê 辭典關起來。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【「腔口差」開關關起來】「腔口差」收錄城濟無仝腔口，會增加候選詞 ê 數量。若你平常時拍字干焦用通用腔，會使考慮佇「詞庫管理」頁面共「腔口差」關起來。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "hanloDesign",
+      "title": {
+        "hanji": "針對漢羅合用設計"
+      },
+      "icon": {
+        "ios": "text.and.command.macwindow",
+        "android": "ic_translate"
+      },
+      "summary": {
+        "hanji": "「括號標註」予漢字佮羅馬字做伙輸出。「自動空白」佇漢羅合用 ê 時陣自動處理空格。"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "台語書寫有人慣勢用全漢字，有人慣勢用全羅馬字，嘛有人漢字佮羅馬字攙做伙寫，這个齒盤有特別為著無仝拍字習慣設計。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "齒盤上尾排有 1 个「漢 / 羅」轉換揤鈕，揤著會切換漢字佮羅馬字模式。預設是羅馬字模式，揤候選詞會輸出羅馬字，漢字顯示佇下底做參考；切做「漢字優先」模式了後，揤候選詞會直接輸出漢字，羅馬字改做參考，標點嘛會自動換做全形。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "hanlo_switch_1",
+              "hanlo_switch_2"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "「括號標註」開關切開了後，輸出 ê 時陣漢字佮羅馬字會做伙出來，免家己加註，適合予當咧學台語 ê 朋友看。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "hanlo_bracket_1",
+              "hanlo_bracket_2"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "寫漢羅合用文 ê 時陣，使用「漢 / 羅」揤鈕隨時切換，配合「自動空白」開關，羅馬字 ê 空格縫嘛會自動處理，免家己加空格。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "caseSwitch",
+      "title": {
+        "hanji": "3 段式大本字切換"
+      },
+      "icon": {
+        "ios": "textformat.size",
+        "android": "ic_text_format"
+      },
+      "summary": {
+        "hanji": "「自動大本字」控制頭字母敢會自動變大本字。關起來著是細本字模式，連紲揤 Shift 2 改切做 Caps Lock。"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "一般 ê 情形，頭 1 个字母會自動變大本字，Shift 揤鈕會反烏。若「自動大本字」有關起來，著愛家己揤 Shift，頭字才會變大本字。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "case_auto"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「自動大本字」開關若關起來，就是細本字模式，拍出來 ê 字攏是細本字。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "case_lower"
+          }
+        },
+        {
+          "text": {
+            "hanji": "連紲揤 Shift 2 改會切做 Caps Lock 模式，揤鈕變烏色，圖示嘛無仝款，這時陣拍出來 ê 字攏是大本字，閣揤 1 改才會轉去細本字。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "case_caps"
+          }
+        },
+        {
+          "text": {
+            "hanji": "若連紲切換符號齒盤，大細本字有時陣會走精去，若拄著這个情形，切轉來羅馬字齒盤著會正常。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "tpsAutoCorrect",
+      "title": {
+        "hanji": "方音符號自動校正"
+      },
+      "icon": {
+        "ios": "wand.and.stars",
+        "android": "ic_auto_fix"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "方音符號模式有自動校正功能，會自動修正符號，予你拍字較緊閣較正確。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【齒音→顎化音】拍 ㄧ 或 ㆪ ê 時陣，頭前 ê 齒音會自動改做顎化音：ㄗ→ㄐ、ㄘ→ㄑ、ㄙ→ㄒ、ㆡ→ㆢ。譬論欲拍「錢 tsînn」，拍 ㄗ＋ㆪ 會自動變做 ㄐㆪ，免家己揤 ㄐ。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【聲母／韻尾自動切換】仝 1 粒揤鈕，佇音節頭是聲母，佇音節中間會自動變做韻尾：ㄇ→ㆬ、ㄋ→ㄣ、ㄫ→ㆭ；入聲韻尾嘛仝款：ㄅ→ㆴ、ㄉ→ㆵ、ㄍ→ㆻ、ㄏ→ㆷ。譬論拍「心 sim」，拍 ㄙ＋ㄧ＋ㄇ，尾字 ㄇ 會自動變做 ㆬ。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "【鼻化韻自動修正】拍 ㄧ 了後揤 ㆮ（ainn），會自動改做 ㆯ（aunn），因為台語無「iainn」這个韻母，干焦「iaunn」才是正確 ê。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "nextWord",
+      "title": {
+        "hanji": "連紲建議詞"
+      },
+      "icon": {
+        "ios": "lightbulb.max",
+        "android": "lightbulb_24"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "拍字會連紲建議，譬論講拍「𠢕」這个字，齒盤會出現連紲適合 ê 詞：「𠢕」⭢「早」⭢「gâu-tsá」，毋免逐个音節攏家己拍。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "詞庫無 ê 字，若拍過 1 改，後擺著會自動出現佇「連紲建議詞」，譬論拍「我想欲食飯」，以後著會記起來。"
+          },
+          "attachment": {
+            "type": "slideshow",
+            "images": [
+              "nextword_learn_1",
+              "nextword_learn_2",
+              "nextword_learn_3",
+              "nextword_learn_4",
+              "nextword_learn_5"
+            ],
+            "interval": 1.5
+          }
+        },
+        {
+          "text": {
+            "hanji": "拍羅馬字時，空格縫佮連劃愛家己揤。若「自動空白」開關有切開，空格縫會自動加，免家己加。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "customFont",
+      "title": {
+        "hanji": "詞庫管理"
+      },
+      "icon": {
+        "ios": "book",
+        "android": "dictionary_24"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "齒盤預設使用「教育部用字」詞庫，包括「教育部臺灣台語常用詞辭典」、「公視台語台台語新詞辭庫」、「教育部學科術語臺灣台語對譯」、「工藝中心臺灣台語工藝詞庫」，閣有其他辭典好選，無仝詞庫收錄 ê 字各有特色。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "若感覺候選詞傷濟，會使共無用著 ê 辭典關起來，按呢候選詞著會較少，想欲揣 ê 字會較佇頭前。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「詞庫」頁面嘛有「拍字揣詞」ê 功能，拍漢字抑是羅馬字攏會使揣，方便確認齒盤內底有收錄啥物詞，嘛會使連去線頂辭典查。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "dict_search"
+          }
+        },
+        {
+          "text": {
+            "hanji": "辭典 ê 詞是半自動、半人工校對，若有拄著問題請回報予我知。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "userDict",
+      "title": {
+        "hanji": "拍字記持詞庫"
+      },
+      "icon": {
+        "ios": "externaldrive.badge.person.crop",
+        "android": "ic_person_storage"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "台語齒盤有 1 个「拍字記持詞庫」，拍過 ê 字攏會記起來，較捷拍 ê 詞會出現佇頭前，愈久無拍 ê 詞會沓沓仔排佇後壁。白話字佮台羅 ê 詞攏會記。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "這个詞庫是予「連紲建議詞」使用 ê，會根據你當時 ê 輸入模式顯示對應 ê 詞，譬論佇白話字模式著顯示白話字 ê 詞，台羅模式著顯示台羅 ê 詞。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "feature_userdict"
+          }
+        },
+        {
+          "text": {
+            "hanji": "詞出現 ê 順序是照「拍過幾改」佮「偌久無拍」來排 ê，若感覺想欲用 ê 字攏揣無，請回報予我知。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "variant",
+      "title": {
+        "hanji": "異用字開關"
+      },
+      "icon": {
+        "ios": "arrow.left.arrow.right",
+        "android": "switches_24"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "依據教典 ê 資料標示台語異用字，譬論：「人」⭢「儂」、「生」⭢「青」。這个開關預設是關起來，有需要才開。"
+          },
+          "attachment": {
+            "type": "link",
+            "text": {
+              "hanji": "揤遮到教典網站掠辭典資料"
+            },
+            "url": "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/"
+          }
+        },
+        {
+          "text": {
+            "hanji": "因為教典異用字 ê 資料猶未齊全，有 ê 字可能無標示著，若有發現請回報予我知。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "appearance",
+      "title": {
+        "hanji": "外觀設定"
+      },
+      "icon": {
+        "ios": "paintbrush",
+        "android": "ic_palette"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "調齒盤 ê 外觀，包括字骨、色水、揤鈕大細佮形體，調整了會當佇下底 ê 齒盤預覽看著效果。這是我改 ê 「間諜扮公伙仔」配色。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "appearance_preview"
+          }
+        },
+        {
+          "text": {
+            "hanji": "字骨有 3 種通好揀：系統預設、粉圓佮芫荽。後 2 種是專門支援台語特殊字符 ê 開源字型，若選系統預設，有 ê 漢字無法度顯示。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "色水會使改齒盤背景、揤鈕色、字色佮候選欄 ê 色水，逐个攏有色盤通好選，若改了無合意，揤重設揤鈕著會轉去預設值。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "揤鈕懸度、字型大細、圓角攏會使用 at-á 調整，一个一个試看覓，揣著家己上佮意 ê 設定。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dataManagement",
+      "title": {
+        "hanji": "資料管理"
+      },
+      "icon": {
+        "ios": "checkmark.shield",
+        "android": "ic_shield_check"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "台語齒盤袂收集你 ê 資料傳去別 ê 所在，所有暫時儉 ê 資料攏囥佇你家己 ê 手機仔內底，App 刣掉了後資料著攏會無去。"
+          },
+          "attachment": {
+            "type": "image",
+            "name": "data_privacy"
+          }
+        },
+        {
+          "text": {
+            "hanji": "台語齒盤紀錄 ê 詞頻資料是誠有價值 ê 資料，因為台語誠欠這部份 ê 語料統計。若欲予研究使用，愛會記得先刣掉敏感 ê 詞，嘛毋通凊彩傳予生份人，手機仔嘛莫借予別人使用。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "「自訂詞庫」嘛仝款，內底莫囥敏感 ê 詞抑是個人資訊，譬論電話、身分證號碼、人名，尤其是欲分享予別人 ê 時陣愛較注意。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "台語齒盤有提供資料備份 ê 功能，若驚資料無去，愛記得定期備份較安心。"
+          }
+        }
+      ]
+    },
+    {
+      "id": "taigiConverter",
+      "title": {
+        "hanji": "台語通用轉換器"
+      },
+      "icon": {
+        "ios": "globe",
+        "android": "ic_globe"
+      },
+      "paragraphs": [
+        {
+          "text": {
+            "hanji": "「台語通用轉換器」是我做 ê 線頂家私，會使共白話字、台羅佮方音符號互相轉換，嘛會使一改共聲調數字轉做聲調符號。"
+          },
+          "attachment": {
+            "type": "link",
+            "text": {
+              "hanji": "揤遮去台語通用轉換器"
+            },
+            "url": "https://taigikeyboard.tw/taigi-converter/"
+          }
+        },
+        {
+          "text": {
+            "hanji": "這个轉換器佮台語齒盤用相仝 ê 核心，所以轉換 ê 結果佮齒盤拍出來 ê 攏仝款。若拍字 ê 時陣對聲調抑是拼法有問題，嘛會使去網站比較看覓。"
+          }
+        },
+        {
+          "text": {
+            "hanji": "若發現轉換結果有毋著 ê 所在，請共我講，我會趕緊修理。"
+          }
+        }
+      ]
+    }
+  ]
+}

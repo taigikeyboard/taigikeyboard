@@ -31,39 +31,40 @@ object TrieService {
                 Log.i(TAG, "[INIT] Native library loaded")
             }
         } catch (e: UnsatisfiedLinkError) {
-            Log.e(TAG, "[INIT] Failed to load native library", e)
+            if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Failed to load native library", e)
         }
     }
 
     /**
      * 初始化 trie（從 assets 複製並載入）
      */
-    suspend fun init(context: Context): Boolean = withContext(Dispatchers.IO) {
-        if (isInitialized) return@withContext true
+    suspend fun init(context: Context): Boolean =
+        withContext(Dispatchers.IO) {
+            if (isInitialized) return@withContext true
 
-        initMutex.withLock {
-            if (isInitialized) return@withLock true
+            initMutex.withLock {
+                if (isInitialized) return@withLock true
 
-            try {
-                val triePath = getTriePath(context)
-                val success = nativeLoad(triePath)
+                try {
+                    val triePath = getTriePath(context)
+                    val success = nativeLoad(triePath)
 
-                if (success) {
-                    isInitialized = true
-                    if (BuildConfig.DEBUG) {
-                        Log.i(TAG, "[INIT] Trie loaded, keys=${nativeGetKeyCount()}")
+                    if (success) {
+                        isInitialized = true
+                        if (BuildConfig.DEBUG) {
+                            Log.i(TAG, "[INIT] Trie loaded, keys=${nativeGetKeyCount()}")
+                        }
+                    } else {
+                        if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Failed to load trie")
                     }
-                } else {
-                    Log.e(TAG, "[INIT] Failed to load trie")
-                }
 
-                success
-            } catch (e: Exception) {
-                Log.e(TAG, "[INIT] Exception during init", e)
-                false
+                    success
+                } catch (e: Exception) {
+                    if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Exception during init", e)
+                    false
+                }
             }
         }
-    }
 
     /**
      * 前綴搜尋
@@ -71,9 +72,12 @@ object TrieService {
      * @param limit 最大結果數
      * @return 匹配的 rowid 列表
      */
-    fun prefixSearch(prefix: String, limit: Int = 1000): IntArray {
+    fun prefixSearch(
+        prefix: String,
+        limit: Int = 1000,
+    ): IntArray {
         if (!isInitialized) {
-            Log.w(TAG, "[SEARCH] Trie not initialized")
+            if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Trie not initialized")
             return IntArray(0)
         }
         if (prefix.isEmpty()) return IntArray(0)
@@ -81,7 +85,7 @@ object TrieService {
         return try {
             nativePrefixSearch(prefix, limit)
         } catch (e: Exception) {
-            Log.e(TAG, "[SEARCH] Prefix search failed", e)
+            if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Prefix search failed", e)
             IntArray(0)
         }
     }
@@ -92,9 +96,12 @@ object TrieService {
      * @param maxResults 最大結果數（notone key 可能對應數百個 rowid，需足夠大以避免截斷）
      * @return 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
      */
-    fun lookup(key: String, maxResults: Int = 1000): IntArray {
+    fun lookup(
+        key: String,
+        maxResults: Int = 1000,
+    ): IntArray {
         if (!isInitialized) {
-            Log.w(TAG, "[LOOKUP] Trie not initialized")
+            if (BuildConfig.DEBUG) Log.w(TAG, "[LOOKUP] Trie not initialized")
             return IntArray(0)
         }
         if (key.isEmpty()) return IntArray(0)
@@ -103,7 +110,7 @@ object TrieService {
             val results = nativeLookup(key)
             if (results.size > maxResults) results.copyOf(maxResults) else results
         } catch (e: Exception) {
-            Log.e(TAG, "[LOOKUP] Lookup failed", e)
+            if (BuildConfig.DEBUG) Log.e(TAG, "[LOOKUP] Lookup failed", e)
             IntArray(0)
         }
     }
@@ -111,9 +118,7 @@ object TrieService {
     /**
      * 取得 trie 中的 key 數量
      */
-    fun getKeyCount(): Int {
-        return if (isInitialized) nativeGetKeyCount() else 0
-    }
+    fun getKeyCount(): Int = if (isInitialized) nativeGetKeyCount() else 0
 
     /**
      * 檢查是否已初始化
@@ -142,11 +147,12 @@ object TrieService {
         val versionFile = File(context.filesDir, "trie_app_version.txt")
 
         val currentAppVersion = BuildConfig.VERSION_CODE
-        val lastCopiedVersion = if (versionFile.exists()) {
-            versionFile.readText().trim().toIntOrNull() ?: 0
-        } else {
-            0
-        }
+        val lastCopiedVersion =
+            if (versionFile.exists()) {
+                versionFile.readText().trim().toIntOrNull() ?: 0
+            } else {
+                0
+            }
 
         // App 版本更新時重新複製 trie
         if (currentAppVersion > lastCopiedVersion || !trieFile.exists()) {
@@ -162,7 +168,7 @@ object TrieService {
                     Log.i(TAG, "[UPDATE] Trie updated from v$lastCopiedVersion to v$currentAppVersion")
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "[ERROR] Failed to copy trie from assets", e)
+                if (BuildConfig.DEBUG) Log.e(TAG, "[ERROR] Failed to copy trie from assets", e)
                 throw e
             }
         }
@@ -172,9 +178,17 @@ object TrieService {
 
     // Native methods
     private external fun nativeLoad(path: String): Boolean
-    private external fun nativePrefixSearch(prefix: String, limit: Int): IntArray
+
+    private external fun nativePrefixSearch(
+        prefix: String,
+        limit: Int,
+    ): IntArray
+
     private external fun nativeLookup(key: String): IntArray
+
     private external fun nativeGetKeyCount(): Int
+
     private external fun nativeIsLoaded(): Boolean
+
     private external fun nativeClose()
 }

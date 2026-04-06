@@ -16,12 +16,12 @@ struct VersionHistoryDetailView: View {
                         HStack {
                             Text("v\(entry.version)")
                                 .font(KeyboardModels.Fonts.appFont(.headline))
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(AppStyle.accentBlue)
 
                             Spacer()
 
                             Text(entry.date)
-                                .font(KeyboardModels.Fonts.appFont(.caption))
+                                .font(AppStyle.captionFont)
                                 .foregroundColor(.secondary)
                         }
 

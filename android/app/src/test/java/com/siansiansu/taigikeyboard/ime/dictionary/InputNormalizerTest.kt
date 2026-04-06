@@ -10,9 +10,9 @@ import org.junit.Test
  * 自動產生自 dictionary.csv（600 筆測試案例）
  */
 class InputNormalizerTest {
-
     // tl -> tl_num
-    private val tlCases = listOf(
+    private val tlCases =
+        listOf(
             "tsún-tuann" to "tsun2tuann1",
             "tńg-sio-jua̍h" to "tng2sio1juah8",
             "bô-lōo" to "bo5loo7",
@@ -313,10 +313,11 @@ class InputNormalizerTest {
             "phòng-nah-kiànn" to "phong3nah4kiann3",
             "ōo-jiông" to "oo7jiong5",
             "tsiánn-sin" to "tsiann2sin1",
-    )
+        )
 
     // poj -> poj_num
-    private val pojCases = listOf(
+    private val pojCases =
+        listOf(
             "kài-sêng" to "kai3seng5",
             "óa-ok" to "oa2ok4",
             "chìⁿ-ti-pâi" to "chinn3ti1pai5",
@@ -617,7 +618,7 @@ class InputNormalizerTest {
             "jia̍t-lūi" to "jiat8lui7",
             "miâu-le̍k" to "miau5lek8",
             "chha-ī" to "chha1i7",
-    )
+        )
 
     @Test
     fun testTlToTlNum() {
@@ -625,7 +626,7 @@ class InputNormalizerTest {
             assertEquals(
                 "normalize(\"$input\", TL) should be \"$expected\"",
                 expected,
-                InputNormalizer.normalize(input, InputMode.TL)
+                InputNormalizer.normalize(input, InputMode.TL),
             )
         }
     }
@@ -636,7 +637,27 @@ class InputNormalizerTest {
             assertEquals(
                 "normalize(\"$input\", POJ) should be \"$expected\"",
                 expected,
-                InputNormalizer.normalize(input, InputMode.POJ)
+                InputNormalizer.normalize(input, InputMode.POJ),
+            )
+        }
+    }
+
+    /** o͘ (U+0358) from POJ keyboard picker + numeric tone must normalize to oo + digit */
+    @Test
+    fun testNormalize_pojODotWithNumericTone() {
+        val cases =
+            listOf(
+                "o\u03581" to "oo1",
+                "ho\u03582" to "hoo2",
+                "ko\u03585" to "koo5",
+                "lo\u03587" to "loo7",
+                "ho\u03582-goa2" to "hoo2goa2",
+            )
+        for ((input, expected) in cases) {
+            assertEquals(
+                "normalize(\"$input\", POJ) should be \"$expected\"",
+                expected,
+                InputNormalizer.normalize(input, InputMode.POJ),
             )
         }
     }
@@ -645,38 +666,80 @@ class InputNormalizerTest {
 
     @Test
     fun testNormalize_pojMode_acceptsPOJInput() {
-        val cases = listOf(
-            "ch" to "POJ initial prefix",
-            "chi" to "POJ syllable",
-            "eng" to "POJ final",
-            "goa" to "POJ final oa",
-            "hoo2" to "oo is shared",
-            "ka" to "shared syllable",
-        )
+        val cases =
+            listOf(
+                "ch" to "POJ initial prefix",
+                "chi" to "POJ syllable",
+                "eng" to "POJ final",
+                "goa" to "POJ final oa",
+                "hoo2" to "oo is shared",
+                "ka" to "shared syllable",
+            )
         for ((input, reason) in cases) {
             val result = InputNormalizer.normalize(input, InputMode.POJ)
             assertTrue(
                 "normalize(\"$input\", POJ) should not be empty: $reason, got \"$result\"",
-                result.isNotEmpty()
+                result.isNotEmpty(),
             )
         }
     }
 
     @Test
     fun testNormalize_tlMode_acceptsTLInput() {
-        val cases = listOf(
-            "ts" to "TL initial prefix",
-            "tsi" to "TL syllable",
-            "gua" to "TL final ua",
-            "ing" to "TL final",
-            "eng" to "TL final (嬰)",
-            "ka" to "shared syllable",
-        )
+        val cases =
+            listOf(
+                "ts" to "TL initial prefix",
+                "tsi" to "TL syllable",
+                "gua" to "TL final ua",
+                "ing" to "TL final",
+                "eng" to "TL final (嬰)",
+                "ka" to "shared syllable",
+            )
         for ((input, reason) in cases) {
             val result = InputNormalizer.normalize(input, InputMode.TL)
             assertTrue(
                 "normalize(\"$input\", TL) should not be empty: $reason, got \"$result\"",
-                result.isNotEmpty()
+                result.isNotEmpty(),
+            )
+        }
+    }
+
+    // MARK: - TPS input normalization
+
+    @Test
+    fun testNormalize_tps_nasalizedCheckedTone() {
+        // TPS input should be converted to TL numeric format via TPSConverter
+        val cases =
+            listOf(
+                "ㄏㆯㆷ˙" to "haunnh8", // h + aunn + h8
+                "ㄏㆯㆷ" to "haunnh4", // h + aunn + h4
+                "ㄍㄚㆷ˙" to "kah8", // k + a + h8
+                "ㄍㆯㆷ˙" to "kaunnh8", // k + aunn + h8
+            )
+        for ((input, expected) in cases) {
+            assertEquals(
+                "normalize(\"$input\", TL) should be \"$expected\"",
+                expected,
+                InputNormalizer.normalize(input, InputMode.TL),
+            )
+        }
+    }
+
+    // MARK: - TPS toTL space handling
+
+    @Test
+    fun testNormalize_tpsSpaceSeparatedSyllables() {
+        val cases =
+            listOf(
+                "tsu a" to "tsua",
+                "ka2 hi5" to "ka2hi5",
+                "ng 5" to "ng5",
+            )
+        for ((input, expected) in cases) {
+            assertEquals(
+                "normalize(\"$input\", TL)",
+                expected,
+                InputNormalizer.normalize(input, InputMode.TL),
             )
         }
     }

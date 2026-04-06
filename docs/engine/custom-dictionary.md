@@ -20,14 +20,14 @@
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | String (UUID) | Unique identifier |
-| `roman` | String | Romanization (POJ/TL with tones) |
+| `roman` | String | Romanization (TL with tones) |
 | `hanzi` | String | Chinese/Taiwanese characters |
 | `notone` | String | Derived: toneless form for matching |
 | `abbrev` | String | Derived: first letter of each syllable (min 2 syllables) |
 | `createdAt` | Timestamp | Creation time (UTC) |
 | `updatedAt` | Timestamp | Last update time |
 
-Example: `roman="lí hó"` → `notone="liho"` → `abbrev="lh"`
+Example: `roman="gâu-tsá"` → `notone="gautsa"` → `abbrev="gt"`
 
 ---
 
@@ -71,16 +71,16 @@ CREATE INDEX idx_custom_abbrev ON custom_dictionary(abbrev);
 
 ### Export (CSV)
 ```
-roman,hanzi
-lí hó,你好😀
 gâu-tsá,𠢕早
+tsia̍h-pá--buē,食飽未
 ```
+- Data-only format (no header row)
 - Fields containing commas/quotes/newlines are quoted
 - Internal quotes escaped as `""`
 
 ### Import (CSV File)
 1. Read UTF-8
-2. Parse CSV, skip header (detects "roman", "hanzi", "poj", "tl", or CJK equivalents)
+2. Parse CSV (data-only, 2 columns: roman, hanzi)
 3. Validate format
 4. Deduplicate by `roman|hanzi` key
 5. Return `ImportResult { imported: Int, skipped: Int }`
@@ -121,8 +121,8 @@ Example: `"gâu-tsá"` → `"gt"`
 
 Both platforms seed if empty:
 ```
-id: "default-li-ho",   roman: "lí hó",    hanzi: "你好😀"
-id: "default-gau-tsa", roman: "gâu-tsá",  hanzi: "𠢕早"
+id: "default-gau-tsa",       roman: "gâu-tsá",        hanzi: "𠢕早"
+id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 ```
 
 ---

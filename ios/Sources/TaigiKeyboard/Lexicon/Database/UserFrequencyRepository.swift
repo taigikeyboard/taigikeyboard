@@ -5,13 +5,12 @@ import SQLite3
 /// 使用者詞頻資料庫 Repository
 /// 負責使用者詞頻資料的存取與管理
 final class UserFrequencyRepository: @unchecked Sendable {
-
     // MARK: - Constants
 
     private enum Constants {
-        static let maxEntries = 20_000
+        static let maxEntries = 20000
         static let pruneCheckInterval = 100
-        static let pruneBatchSize = 2_000
+        static let pruneBatchSize = 2000
     }
 
     // MARK: - Properties
@@ -21,7 +20,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     private let connectionManager: SQLiteConnectionManager
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "UserFrequencyRepository"
+        category: "UserFrequencyRepository",
     )
 
     private var isTablesCreated = false
@@ -31,10 +30,10 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Test Data
 
     #if DEBUG
-    static let testData = [
-        ("word1", 1), ("word2", 1), ("góa", 1), ("我", 1), ("accumulate", 3),
-        ("popular", 5), ("frequent", 4), ("common", 3), ("rare", 1),
-    ]
+        static let testData = [
+            ("word1", 1), ("word2", 1), ("góa", 1), ("我", 1), ("accumulate", 3),
+            ("popular", 5), ("frequent", 4), ("common", 3), ("rare", 1),
+        ]
     #endif
 
     // MARK: - Initialization
@@ -43,7 +42,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
             databasePath: Self.getDatabasePath,
             queueLabel: "com.siansiansu.taigikeyboard.userfrequency",
-            loggerCategory: "UserFrequencyRepository"
+            loggerCategory: "UserFrequencyRepository",
         )
     }
 
@@ -56,7 +55,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         try FileManager.default.createDirectory(
             at: containerURL,
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
         )
 
         let databaseURL = containerURL.appendingPathComponent("user_frequency.db")
@@ -69,7 +68,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     func ensureInitialized() async throws {
         // 使用 CREATE flag 初始化連接
         try await connectionManager.ensureInitialized(
-            flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+            flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
         )
 
         // 確保表格已建立
@@ -208,7 +207,9 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 await pruneOldEntries()
             }
         } catch {
-            logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
+            #if DEBUG
+                logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
+            #endif
         }
     }
 
@@ -223,7 +224,9 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            logger.error("[RECORD] Failed to prepare statement")
+            #if DEBUG
+                logger.error("[RECORD] Failed to prepare statement")
+            #endif
             return
         }
 
@@ -232,14 +235,16 @@ final class UserFrequencyRepository: @unchecked Sendable {
         sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
-            logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
+            #if DEBUG
+                logger.error("[RECORD] Failed to record usage for: \(word, privacy: .public)")
+            #endif
         }
     }
 
     /// 使用者頻率資料（包含頻率和最後使用時間）
     struct FrequencyData {
         let count: Int
-        let lastUsedMillis: Int64  // Unix timestamp in milliseconds
+        let lastUsedMillis: Int64 // Unix timestamp in milliseconds
 
         static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
     }
@@ -365,7 +370,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_int(stmt, 1, Int32(limit))
+        sqlite3_bind_int64(stmt, 1, Int64(limit))
 
         var results: [(word: String, count: Int)] = []
 
@@ -396,7 +401,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
             let deleteCount = min(
                 Constants.pruneBatchSize,
-                currentCount - Constants.maxEntries + Constants.pruneBatchSize
+                currentCount - Constants.maxEntries + Constants.pruneBatchSize,
             )
 
             try await connectionManager.execute { db in
@@ -415,9 +420,65 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 sqlite3_step(stmt)
             }
 
-            logger.info("[PRUNE] Deleted \(deleteCount) frequency entries (was \(currentCount))")
+            #if DEBUG
+                logger.info("[PRUNE] Deleted \(deleteCount) frequency entries (was \(currentCount))")
+            #endif
         } catch {
-            logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
+            #endif
+        }
+    }
+
+    // MARK: - Batch Import (Merge)
+
+    /// Import frequency entries with merge strategy: keep higher count
+    func batchImportMerge(entries: [(word: String, count: Int)]) async throws -> Int {
+        try await ensureInitialized()
+        return try await connectionManager.execute { db in
+            let sql = """
+                INSERT INTO user_frequency (word, count, last_used)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(word) DO UPDATE SET
+                    count = MAX(count, excluded.count),
+                    last_used = CURRENT_TIMESTAMP;
+            """
+
+            if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
+                return 0
+            }
+
+            var imported = 0
+            for entry in entries {
+                var stmt: OpaquePointer?
+                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                    continue
+                }
+                defer { sqlite3_finalize(stmt) }
+
+                sqlite3_bind_text(stmt, 1, entry.word, -1, SQLiteConnectionManager.sqliteTransient)
+                sqlite3_bind_int(stmt, 2, Int32(entry.count))
+
+                if sqlite3_step(stmt) == SQLITE_DONE {
+                    imported += 1
+                }
+            }
+
+            sqlite3_exec(db, "COMMIT;", nil, nil, nil)
+            return imported
+        }
+    }
+
+    /// Delete a single word from frequency data
+    func deleteWord(_ word: String) async throws {
+        try await ensureInitialized()
+        try await connectionManager.execute { db in
+            let sql = "DELETE FROM user_frequency WHERE word = ?"
+            var stmt: OpaquePointer?
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+            defer { sqlite3_finalize(stmt) }
+            sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
+            sqlite3_step(stmt)
         }
     }
 
@@ -464,47 +525,47 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Debug Methods
 
     #if DEBUG
-    func insertTestData() async throws {
-        try await ensureInitialized()
+        func insertTestData() async throws {
+            try await ensureInitialized()
 
-        try await connectionManager.execute { db in
-            if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
-                self.logger.error("[TEST] Failed to begin transaction")
-                throw DictionaryError.queryExecutionFailed("Failed to begin transaction")
-            }
-
-            let sql = """
-                INSERT OR IGNORE INTO user_frequency (word, count, last_used, created_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-            """
-
-            for (word, count) in UserFrequencyRepository.testData {
-                var stmt: OpaquePointer?
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                    self.logger.error("[TEST] Failed to prepare insert statement")
-                    sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
-                    throw DictionaryError.queryPreparationFailed("Failed to prepare test data insert")
+            try await connectionManager.execute { db in
+                if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
+                    self.logger.error("[TEST] Failed to begin transaction")
+                    throw DictionaryError.queryExecutionFailed("Failed to begin transaction")
                 }
 
-                defer { sqlite3_finalize(stmt) }
+                let sql = """
+                    INSERT OR IGNORE INTO user_frequency (word, count, last_used, created_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+                """
 
-                sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_int(stmt, 2, Int32(count))
+                for (word, count) in UserFrequencyRepository.testData {
+                    var stmt: OpaquePointer?
+                    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                        self.logger.error("[TEST] Failed to prepare insert statement")
+                        sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
+                        throw DictionaryError.queryPreparationFailed("Failed to prepare test data insert")
+                    }
 
-                if sqlite3_step(stmt) != SQLITE_DONE {
-                    let errorMsg = String(cString: sqlite3_errmsg(db))
-                    self.logger.error("[TEST] Failed to insert test data for '\(word, privacy: .public)': \(errorMsg, privacy: .public)")
-                    sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
-                    throw DictionaryError.queryExecutionFailed("Failed to insert test data")
+                    defer { sqlite3_finalize(stmt) }
+
+                    sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
+                    sqlite3_bind_int(stmt, 2, Int32(count))
+
+                    if sqlite3_step(stmt) != SQLITE_DONE {
+                        let errorMsg = String(cString: sqlite3_errmsg(db))
+                        self.logger.error("[TEST] Failed to insert test data for '\(word, privacy: .public)': \(errorMsg, privacy: .public)")
+                        sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
+                        throw DictionaryError.queryExecutionFailed("Failed to insert test data")
+                    }
                 }
-            }
 
-            if sqlite3_exec(db, "COMMIT;", nil, nil, nil) != SQLITE_OK {
-                self.logger.error("[TEST] Failed to commit transaction")
-                sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
-                throw DictionaryError.queryExecutionFailed("Failed to commit transaction")
+                if sqlite3_exec(db, "COMMIT;", nil, nil, nil) != SQLITE_OK {
+                    self.logger.error("[TEST] Failed to commit transaction")
+                    sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
+                    throw DictionaryError.queryExecutionFailed("Failed to commit transaction")
+                }
             }
         }
-    }
     #endif
 }

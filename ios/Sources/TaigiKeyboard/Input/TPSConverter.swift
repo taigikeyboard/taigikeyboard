@@ -8,7 +8,6 @@ import Foundation
 ///
 /// 參考：https://github.com/leechunhoe/Tailo-TPS-Converter
 enum TPSConverter {
-
     // MARK: - 聲母對照表（TPS → TL）
 
     /// 聲母對照表
@@ -55,7 +54,7 @@ enum TPSConverter {
         ("ㆩ", "ann"),
         ("ㆥ", "enn"),
         ("ㆪ", "inn"),
-        ("ㆳ", "inn"),  // Vertical glyph variant of ㆪ (same symbol, duplicate Unicode encoding)
+        ("ㆳ", "inn"), // Vertical glyph variant of ㆪ (same symbol, duplicate Unicode encoding)
         ("ㆧ", "onn"),
         ("ㆫ", "unn"),
         // 複合韻母
@@ -88,25 +87,25 @@ enum TPSConverter {
     /// 入聲韻尾（ㆴㆵㆻㆷ）會同時影響韻尾和聲調
     private static let tones: [(tps: String, tl: String, tone: String)] = [
         // 入聲韻尾（帶點為第8聲，無點為第4聲）
-        ("ㆴ˙", "p", "8"),  // p + 第8聲
-        ("ㆵ˙", "t", "8"),  // t + 第8聲
-        ("ㆻ˙", "k", "8"),  // k + 第8聲
-        ("ㆷ˙", "h", "8"),  // h + 第8聲
-        ("ㆴ", "p", "4"),   // p + 第4聲
-        ("ㆵ", "t", "4"),   // t + 第4聲
-        ("ㆻ", "k", "4"),   // k + 第4聲
-        ("ㆷ", "h", "4"),   // h + 第4聲
+        ("ㆴ˙", "p", "8"), // p + 第8聲
+        ("ㆵ˙", "t", "8"), // t + 第8聲
+        ("ㆻ˙", "k", "8"), // k + 第8聲
+        ("ㆷ˙", "h", "8"), // h + 第8聲
+        ("ㆴ", "p", "4"), // p + 第4聲
+        ("ㆵ", "t", "4"), // t + 第4聲
+        ("ㆻ", "k", "4"), // k + 第4聲
+        ("ㆷ", "h", "4"), // h + 第4聲
     ]
 
     /// 聲調符號（非入聲）
     private static let toneMarks: [(tps: String, tone: String)] = [
-        ("ˋ", "2"),   // 第2聲
-        ("˪", "3"),   // 第3聲
-        ("ˊ", "5"),   // 第5聲
-        ("ˇ", "6"),   // 第6聲
-        ("˫", "7"),   // 第7聲
-        ("ˆ", "9"),   // 第9聲
-        ("˙", "8"),   // 第8聲（非入聲），U+02D9 DOT ABOVE
+        ("ˋ", "2"), // 第2聲
+        ("˪", "3"), // 第3聲
+        ("ˊ", "5"), // 第5聲
+        ("ˇ", "6"), // 第6聲
+        ("˫", "7"), // 第7聲
+        ("ˆ", "9"), // 第9聲
+        ("˙", "8"), // 第8聲（非入聲），U+02D9 DOT ABOVE
         // 第1聲無符號
     ]
 
@@ -164,7 +163,7 @@ enum TPSConverter {
 
     // MARK: - TPS Initial Key Auto-Selection
 
-    /// Characters that indicate the start of a new syllable (tone marks and checked tone finals)
+    /// Characters that indicate the start of a new syllable (tone marks, checked tone finals, nasal finals)
     private static let syllableBoundaryChars: Set<Character> = {
         var chars = Set<Character>()
         // Tone marks: ˋ ˪ ˊ ˇ ˫ ˙ ˆ
@@ -176,6 +175,11 @@ enum TPSConverter {
         chars.insert("ㆵ")
         chars.insert("ㆻ")
         chars.insert("ㆷ")
+        // Nasal finals: ㆬ ㄣ ㆭ ㄥ
+        chars.insert("ㆬ")
+        chars.insert("ㄣ")
+        chars.insert("ㆭ")
+        chars.insert("ㄥ")
         return chars
     }()
 
@@ -200,22 +204,48 @@ enum TPSConverter {
     static func palatalizationReplacement(forIncoming char: String, lastRawChar: Character?) -> String? {
         guard let last = lastRawChar,
               let firstChar = char.first,
-              palatalizationTriggers.contains(firstChar) else {
+              palatalizationTriggers.contains(firstChar)
+        else {
             return nil
         }
         return palatalizationMap[last]
     }
 
-    // MARK: - ㄇ/ㄫ auto-select
+    // MARK: - Syllabic nasal tone-triggered correction
 
-    /// Returns context-adjusted TPS character for ㄇ/ㄫ keys.
+    /// Returns the syllabic replacement for the last character of rawInput,
+    /// or nil if no replacement is needed.
+    ///
+    /// When user types a tone mark after a bare ㄇ or ㄫ at syllable start,
+    /// the consonant should be retroactively corrected to its syllabic form:
+    /// ㄇ → ㆬ (syllabic m), ㄫ → ㆭ (syllabic ng).
+    static func syllabicNasalReplacement(forIncoming char: String, lastRawChar: Character?) -> String? {
+        guard let last = lastRawChar,
+              let firstChar = char.first,
+              isTPSToneMark(firstChar)
+        else {
+            return nil
+        }
+        switch last {
+        case "ㄇ": return "ㆬ"
+        case "ㄫ": return "ㆭ"
+        default: return nil
+        }
+    }
+
+    // MARK: - Nasal/stop positional auto-select
+
+    /// Returns context-adjusted TPS character for keys with initial/final dual forms.
     /// Only called when inputMode == .tps.
     ///
     /// At syllable start (empty, after tone mark, after checked final, after space) → initial form.
-    /// After ㄧ: ㄇ→ㆬ, ㄫ→ㄥ (ing special case).
-    /// Other positions: ㄇ→ㆬ, ㄫ→ㆭ.
+    /// Not at syllable start → final form:
+    ///   Nasals: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㄥ (after ㄧ) / ㆭ (otherwise).
+    ///   Stops:  ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ (entering tone coda, tone 4 default).
     static func adjustTPSInitialKey(_ char: String, afterRawInput raw: String) -> String {
-        guard char == "ㄇ" || char == "ㄫ" else { return char }
+        guard char == "ㄇ" || char == "ㄋ" || char == "ㄫ" ||
+            char == "ㄅ" || char == "ㄉ" || char == "ㄍ" || char == "ㄏ"
+        else { return char }
 
         // At syllable start → keep initial form
         if raw.isEmpty { return char }
@@ -224,10 +254,13 @@ enum TPSConverter {
             return char
         }
 
-        // Not at syllable start → final/syllabic form
-        if char == "ㄇ" {
-            return "ㆬ"
-        }
+        // Not at syllable start → final form
+        if char == "ㄇ" { return "ㆬ" }
+        if char == "ㄋ" { return "ㄣ" }
+        if char == "ㄅ" { return "ㆴ" }
+        if char == "ㄉ" { return "ㆵ" }
+        if char == "ㄍ" { return "ㆻ" }
+        if char == "ㄏ" { return "ㆷ" }
         // char == "ㄫ": after ㄧ → ㄥ (ing), otherwise → ㆭ
         return lastChar == "ㄧ" ? "ㄥ" : "ㆭ"
     }
@@ -277,6 +310,8 @@ enum TPSConverter {
         var hasConsonant = false
         var hasVowel = false
         var lastConsonantTPS = ""
+        // Tone/entering-tone ends a syllable; the next consonant or vowel needs a space.
+        var needsSpace = false
 
         while !remaining.isEmpty {
             var matched = false
@@ -289,6 +324,7 @@ enum TPSConverter {
                     hasConsonant = false
                     hasVowel = false
                     lastConsonantTPS = ""
+                    needsSpace = true
                     matched = true
                     break
                 }
@@ -300,7 +336,7 @@ enum TPSConverter {
             // e.g. ㄫˊ → "ng 5" (not "ng5"), but ㆭˊ → "ng5" (ㆭ is a vowel).
             for (tpsPattern, tone) in toneMarks {
                 if remaining.hasPrefix(tpsPattern) {
-                    if hasConsonant && !hasVowel {
+                    if hasConsonant, !hasVowel {
                         result += " "
                     }
                     result += tone
@@ -308,6 +344,7 @@ enum TPSConverter {
                     hasConsonant = false
                     hasVowel = false
                     lastConsonantTPS = ""
+                    needsSpace = true
                     matched = true
                     break
                 }
@@ -318,13 +355,15 @@ enum TPSConverter {
             // If mid-syllable, insert space boundary first — consonant starts a new syllable.
             for (tpsPattern, tl) in consonants {
                 if remaining.hasPrefix(tpsPattern) {
-                    if hasConsonant || hasVowel {
+                    if needsSpace || hasConsonant || hasVowel {
                         result += " "
+                        needsSpace = false
                     }
                     result += tl
                     remaining.removeFirst(tpsPattern.count)
                     hasConsonant = true
-                    hasVowel = false
+                    // Compound consonants with ㄧ (ㄑㄧ→tshi etc.) include a vowel component
+                    hasVowel = tpsPattern.hasSuffix("ㄧ")
                     lastConsonantTPS = tpsPattern
                     matched = true
                     break
@@ -335,9 +374,13 @@ enum TPSConverter {
             // 4. 嘗試匹配韻母（複合韻母優先，因為陣列已排序）
             for (tpsPattern, tl) in vowels {
                 if remaining.hasPrefix(tpsPattern) {
+                    if needsSpace {
+                        result += " "
+                        needsSpace = false
+                    }
                     // Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) + ㄧ is invalid TPS.
                     // Must use compound initials ㄐㄧ/ㄑㄧ/ㄒㄧ/ㆢㄧ instead.
-                    if tpsPattern == "ㄧ" && nonPalatalizedAffricates.contains(lastConsonantTPS) {
+                    if tpsPattern == "ㄧ", !hasVowel, nonPalatalizedAffricates.contains(lastConsonantTPS) {
                         result += " "
                         hasConsonant = false
                         lastConsonantTPS = ""
@@ -355,6 +398,7 @@ enum TPSConverter {
             result.append(remaining.removeFirst())
             hasConsonant = false
             hasVowel = false
+            needsSpace = false
             lastConsonantTPS = ""
         }
 
@@ -363,7 +407,7 @@ enum TPSConverter {
         return result.replacingOccurrences(
             of: #"oo([ptk][48])"#,
             with: "o$1",
-            options: .regularExpression
+            options: .regularExpression,
         )
     }
 
@@ -449,7 +493,7 @@ enum TPSConverter {
         ("5", "ˊ"),
         ("6", "ˇ"),
         ("7", "˫"),
-        ("8", "\u{02D9}"),  // Non-stop tone 8 (U+02D9 DOT ABOVE)
+        ("8", "\u{02D9}"), // Non-stop tone 8 (U+02D9 DOT ABOVE)
         ("9", "ˆ"),
         // 1, 4 無符號
     ]
@@ -556,7 +600,7 @@ enum TPSConverter {
         while !remaining.isEmpty {
             var matched = false
             for (tl, tps) in tlToTPSVowels {
-                if remaining.hasPrefix(tl) && !stopConsonants.contains(tl) {
+                if remaining.hasPrefix(tl), !stopConsonants.contains(tl) {
                     let effectiveTPS = (orMapsToER && tl == "or") ? "ㄜ" : tps
                     vowel += effectiveTPS
                     remaining.removeFirst(tl.count)
@@ -579,7 +623,7 @@ enum TPSConverter {
         if vowel == "ㄧㆭ" { vowel = "ㄧㄥ" }
 
         // 6. Post-processing: palatalized initial + ㄣㄣ → nasalized ㆪ
-        if consonant.hasSuffix("ㄧ") && vowel == "ㄣㄣ" {
+        if consonant.hasSuffix("ㄧ"), vowel == "ㄣㄣ" {
             consonant = String(consonant.dropLast())
             vowel = "ㆪ"
         }
@@ -587,7 +631,7 @@ enum TPSConverter {
         // 7. Post-processing: o → oo before stop tone (e.g., "ok4" → ㆦㆻ not ㄛㆻ)
         // Reference: taigi-converter toZhuyin — if vowel contains ㄛ and tone is p/t/k checked,
         // replace ㄛ with ㆦ (the "oo" form is used before stop consonants)
-        if vowel.contains("ㄛ") && !tone.isEmpty {
+        if vowel.contains("ㄛ"), !tone.isEmpty {
             let first = tone.unicodeScalars.first!.value
             // ㆴ = U+31B4 (p), ㆵ = U+31B5 (t), ㆻ = U+31BB (k)
             if first == 0x31B4 || first == 0x31B5 || first == 0x31BB {

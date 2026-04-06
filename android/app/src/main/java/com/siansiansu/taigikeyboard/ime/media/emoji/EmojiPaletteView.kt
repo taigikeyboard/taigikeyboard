@@ -170,7 +170,7 @@ private fun EmojiCategoriesTabRow(
             TabRowDefaults.PrimaryIndicator(
                 modifier = Modifier.tabIndicatorOffset(selectedTabIndex, matchContentSize = false),
                 height = 4.dp,
-                color = Color(0xFF4CAF50)  // florisboard 綠色 (76, 175, 80)
+                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
             )
         }
     ) {

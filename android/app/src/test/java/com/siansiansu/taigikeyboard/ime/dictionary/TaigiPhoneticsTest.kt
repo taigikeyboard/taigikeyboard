@@ -478,4 +478,53 @@ class TaigiPhoneticsTest {
     fun testTlDisplayToPOJDisplay_empty() {
         assertEquals("", TaigiPhonetics.tlDisplayToPOJDisplay(""))
     }
+
+    // MARK: - K. pojDisplayToTLDisplay
+
+    @Test
+    fun testPojDisplayToTLDisplay_chConversion() {
+        // POJ ch -> TL ts
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("ch\u00E1i")  // chái
+        assertTrue("ch should become ts: got $result", result.startsWith("ts"))
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_casePreservation() {
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("T\u00E2i")  // Tâi (POJ)
+        assertTrue("Case should be preserved: got $result", result.first().isUpperCase())
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_oaDipthong() {
+        // POJ oa -> TL ua
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("h\u00F2a")  // hòa
+        assertTrue("oa should become ua: got $result", result.contains("u"))
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_hyphenatedMultiSyllable() {
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("t\u00E2i-g\u00ED")  // tâi-gí (POJ)
+        assertTrue("Hyphens should be preserved", result.contains("-"))
+        assertTrue("Result should be TL format: got $result", result.startsWith("t"))
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_idempotentOnTL() {
+        // pojDisplayToTLDisplay on TL input should return same TL
+        val tlInput = "t\u00E2i-g\u00ED"  // tâi-gí (TL)
+        val result = TaigiPhonetics.pojDisplayToTLDisplay(tlInput)
+        assertEquals("Should be idempotent on TL input", tlInput, result)
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_empty() {
+        assertEquals("", TaigiPhonetics.pojDisplayToTLDisplay(""))
+    }
+
+    @Test
+    fun testPojDisplayToTLDisplay_nasalConversion() {
+        // POJ superscript ⁿ -> TL nn
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("sa\u207F")  // saⁿ
+        assertTrue("Nasal ⁿ should become nn: got $result", result.contains("nn"))
+    }
 }

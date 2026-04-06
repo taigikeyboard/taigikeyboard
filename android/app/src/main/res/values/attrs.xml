@@ -38,6 +38,7 @@
         <attr name="smartbar_candidate_fgColor" format="color" />
         <attr name="smartbar_candidate_subtitle_fgColor" format="color" />
 
+        <attr name="smartbar_accentColor" format="color" />
         <attr name="overlay_button_bgColorPressed" format="color" />
     </declare-styleable>
 

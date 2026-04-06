@@ -25,7 +25,7 @@ class CandidateUpdateCoordinator(
     private val scope: CoroutineScope,
     private val taigikeyboard: TaigiKeyboard,
     private val getComposingManager: () -> ComposingManager?,
-    private val smartbarManager: SmartbarManager
+    private val smartbarManager: SmartbarManager,
 ) {
     private var candidateUpdateJob: Job? = null
     private var englishCandidateUpdateJob: Job? = null
@@ -46,17 +46,18 @@ class CandidateUpdateCoordinator(
     fun updateTaigiCandidatesDebounced() {
         candidateUpdateJob?.cancel()
 
-        candidateUpdateJob = scope.launch {
-            delay(CANDIDATE_DEBOUNCE_MS)
-            if (!isActive) return@launch
+        candidateUpdateJob =
+            scope.launch {
+                delay(CANDIDATE_DEBOUNCE_MS)
+                if (!isActive) return@launch
 
-            val candidateStart = System.currentTimeMillis()
-            updateTaigiCandidates()
+                val candidateStart = System.currentTimeMillis()
+                updateTaigiCandidates()
 
-            if (BuildConfig.DEBUG) {
-                Log.d("PERF", "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms")
+                if (BuildConfig.DEBUG) {
+                    Log.d("PERF", "[TOTAL] updateTaigiCandidates: ${System.currentTimeMillis() - candidateStart}ms")
+                }
             }
-        }
     }
 
     /**
@@ -67,15 +68,17 @@ class CandidateUpdateCoordinator(
         val manager = getComposingManager() ?: return
         val raw = manager.getRawInput() ?: return
 
-        displayDerivationJob = scope.launch {
-            val derived = withContext(Dispatchers.Default) {
-                manager.deriveDisplay(raw)
+        displayDerivationJob =
+            scope.launch {
+                val derived =
+                    withContext(Dispatchers.Default) {
+                        manager.deriveDisplay(raw)
+                    }
+                val ic = taigikeyboard.currentInputConnection ?: return@launch
+                if (manager.isComposing() && manager.getRawInput() == raw) {
+                    manager.applyDerivedDisplay(derived, ic)
+                }
             }
-            val ic = taigikeyboard.currentInputConnection ?: return@launch
-            if (manager.isComposing() && manager.getRawInput() == raw) {
-                manager.applyDerivedDisplay(derived, ic)
-            }
-        }
     }
 
     /**
@@ -88,15 +91,16 @@ class CandidateUpdateCoordinator(
 
         englishCandidateUpdateJob?.cancel()
 
-        englishCandidateUpdateJob = scope.launch {
-            delay(CANDIDATE_DEBOUNCE_MS)
-            if (!isActive) return@launch
+        englishCandidateUpdateJob =
+            scope.launch {
+                delay(CANDIDATE_DEBOUNCE_MS)
+                if (!isActive) return@launch
 
-            if (BuildConfig.DEBUG) {
-                Log.d("ENSPELL", "[2] After debounce, calling updateEnglishCandidates()")
+                if (BuildConfig.DEBUG) {
+                    Log.d("ENSPELL", "[2] After debounce, calling updateEnglishCandidates()")
+                }
+                updateEnglishCandidates()
             }
-            updateEnglishCandidates()
-        }
     }
 
     /**
@@ -109,16 +113,18 @@ class CandidateUpdateCoordinator(
             Log.d(TAG, "[DEBUG] updateTaigiCandidates() called from: $caller")
         }
 
-        val manager = getComposingManager() ?: run {
-            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] composingManager=null, skip")
-            return
-        }
+        val manager =
+            getComposingManager() ?: run {
+                if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] composingManager=null, skip")
+                return
+            }
 
-        val rawInput = manager.getRawInput() ?: run {
-            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=null, clearCandidates")
-            smartbarManager.clearCandidates()
-            return
-        }
+        val rawInput =
+            manager.getRawInput() ?: run {
+                if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=null, clearCandidates")
+                smartbarManager.clearCandidates()
+                return
+            }
         val displayText = manager.getComposingText() ?: rawInput
 
         if (BuildConfig.DEBUG) {
@@ -126,29 +132,37 @@ class CandidateUpdateCoordinator(
         }
 
         // Reuse TaigiAutocompleteService — only recreate when inputMode changes
-        val inputMode = taigikeyboard.prefs.inputMode.let {
-            when (it) {
-                "poj" -> ToneConverterModels.InputMode.POJ
-                "tl", "tps" -> ToneConverterModels.InputMode.TL
-                else -> ToneConverterModels.InputMode.POJ
+        val inputMode =
+            taigikeyboard.prefs.inputMode.let {
+                when (it) {
+                    "poj" -> ToneConverterModels.InputMode.POJ
+                    "tl", "tps" -> ToneConverterModels.InputMode.TL
+                    else -> ToneConverterModels.InputMode.POJ
+                }
             }
-        }
 
-        val service = synchronized(serviceLock) {
-            if (taigiAutocompleteService == null || cachedInputMode != inputMode) {
-                cachedInputMode = inputMode
-                taigiAutocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
-                    taigikeyboard.context,
-                    inputMode,
-                    prefs = taigikeyboard.prefs
-                )
+        val service =
+            synchronized(serviceLock) {
+                if (taigiAutocompleteService == null || cachedInputMode != inputMode) {
+                    cachedInputMode = inputMode
+                    taigiAutocompleteService =
+                        com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
+                            taigikeyboard.context,
+                            inputMode,
+                            prefs = taigikeyboard.prefs,
+                        )
+                }
+                taigiAutocompleteService!!
             }
-            taigiAutocompleteService!!
-        }
 
         val searchStart = System.currentTimeMillis()
         val suggestions = service.autocomplete(rawInput, displayText, smartbarManager.getLastSelectedWord())
-        if (BuildConfig.DEBUG) Log.d("PERF", "[3] autocomplete (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms")
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                "PERF",
+                "[3] autocomplete (${suggestions.size} results): ${System.currentTimeMillis() - searchStart}ms",
+            )
+        }
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[CANDIDATES] found ${suggestions.size} suggestions")
@@ -169,10 +183,11 @@ class CandidateUpdateCoordinator(
             Log.d("ENSPELL", "[3] updateEnglishCandidates() called")
         }
 
-        val ic = taigikeyboard.currentInputConnection ?: run {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] inputConnection is null")
-            return
-        }
+        val ic =
+            taigikeyboard.currentInputConnection ?: run {
+                if (BuildConfig.DEBUG) Log.d("ENSPELL", "[3] inputConnection is null")
+                return
+            }
 
         val textBeforeCursor = ic.getTextBeforeCursor(100, 0)?.toString() ?: ""
 
@@ -188,13 +203,16 @@ class CandidateUpdateCoordinator(
 
         if (englishAutocompleteService == null) {
             if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] Creating EnglishAutocompleteService...")
-            englishAutocompleteService = com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService(taigikeyboard.context)
+            englishAutocompleteService =
+                com.siansiansu.taigikeyboard.ime.text.composing
+                    .EnglishAutocompleteService(taigikeyboard.context)
         }
 
-        val service = englishAutocompleteService ?: run {
-            if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] service is null after creation")
-            return
-        }
+        val service =
+            englishAutocompleteService ?: run {
+                if (BuildConfig.DEBUG) Log.d("ENSPELL", "[4] service is null after creation")
+                return
+            }
 
         try {
             if (BuildConfig.DEBUG) Log.d("ENSPELL", "[5] Calling getSuggestions()...")
@@ -207,14 +225,15 @@ class CandidateUpdateCoordinator(
                 suggestions.forEachIndexed { i, s -> Log.d("ENSPELL", "[6]   [$i] ${s.text}") }
             }
 
-            val words = suggestions.mapIndexed { index, suggestion ->
-                com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord(
-                    id = -100 - index,
-                    roman = suggestion.text,
-                    hanzi = null,
-                    lengthScore = null
-                )
-            }
+            val words =
+                suggestions.mapIndexed { index, suggestion ->
+                    com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord(
+                        id = -100 - index,
+                        roman = suggestion.text,
+                        hanzi = null,
+                        lengthScore = null,
+                    )
+                }
 
             withContext(Dispatchers.Main) {
                 if (words.isNotEmpty()) {

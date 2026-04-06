@@ -78,7 +78,9 @@ extension ActionHandler {
 
             // 記錄使用頻率
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
-            UserFrequencyService.recordUsage(for: displayText)
+            if SharedSettings.shared.frequencyRecordingEnabled {
+                UserFrequencyService.recordUsage(for: displayText)
+            }
 
             // DEBUG: NextWord trace - suggestion selection parsing
             logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text, privacy: .public)' subtitle='\(suggestion.subtitle ?? "nil", privacy: .public)' additionalInfo=\(suggestion.additionalInfo.description, privacy: .public)")
@@ -117,20 +119,28 @@ extension ActionHandler {
             return
         }
 
-        // 記錄與前一詞的關聯
-        if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-            Task {
-                await NextWordService.shared.recordAssociation(
-                    prev: prevWord,
-                    nextHanzi: displayText,
-                    nextTl: roman
-                )
-            }
-        }
+        // Normalize romanization to TL for consistent storage and query
+        // pojToTL is idempotent on TL input, safe for all modes including TPS
+        let romanTl = RomanizationConverter.pojToTL(roman)
+        let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        recordCompoundWordAssociations(displayText: displayText, roman: roman)
-        updateNextWordState(selectedWord: displayText)
-        triggerNextWordPrediction(for: displayText)
+        // 記錄與前一詞的關聯
+        if SharedSettings.shared.associationRecordingEnabled {
+            if shouldRecordAssociation(), let prevWord = lastSelectedWord {
+                Task {
+                    await NextWordService.shared.recordAssociation(
+                        prev: prevWord,
+                        prevTl: prevTl,
+                        nextHanzi: displayText,
+                        nextTl: romanTl
+                    )
+                }
+            }
+
+            recordCompoundWordAssociations(displayText: displayText, roman: romanTl)
+        }
+        updateNextWordState(selectedWord: displayText, roman: romanTl)
+        triggerNextWordPrediction(for: displayText, roman: romanTl)
     }
 
     func splitCompoundWord(_ word: String) -> [String] {
@@ -148,11 +158,13 @@ extension ActionHandler {
         Task {
             for i in 0..<(parts.count - 1) {
                 let prevPart = parts[i]
+                let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
                 let nextPart = parts[i + 1]
                 let nextRoman = romanParts.indices.contains(i + 1) ? romanParts[i + 1] : ""
 
                 await NextWordService.shared.recordAssociation(
                     prev: prevPart,
+                    prevTl: prevPartRoman,
                     nextHanzi: nextPart,
                     nextTl: nextRoman
                 )
@@ -165,18 +177,25 @@ extension ActionHandler {
         guard !settings.isTranslateSwapped, !committedText.isEmpty else { return }
         guard !isNoiseText(committedText) else { return }
 
-        if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-            Task {
-                await NextWordService.shared.recordAssociation(
-                    prev: prevWord,
-                    nextHanzi: committedText,
-                    nextTl: committedText
-                )
-            }
-        }
+        // Normalize romanization to TL for consistent storage
+        let committedTl = RomanizationConverter.pojToTL(committedText)
+        let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        recordCompoundWordAssociations(displayText: committedText, roman: committedText)
-        updateNextWordState(selectedWord: committedText)
-        triggerNextWordPrediction(for: committedText)
+        if SharedSettings.shared.associationRecordingEnabled {
+            if shouldRecordAssociation(), let prevWord = lastSelectedWord {
+                Task {
+                    await NextWordService.shared.recordAssociation(
+                        prev: prevWord,
+                        prevTl: prevTl,
+                        nextHanzi: committedText,
+                        nextTl: committedTl
+                    )
+                }
+            }
+
+            recordCompoundWordAssociations(displayText: committedText, roman: committedTl)
+        }
+        updateNextWordState(selectedWord: committedText, roman: committedTl)
+        triggerNextWordPrediction(for: committedText, roman: committedTl)
     }
 }

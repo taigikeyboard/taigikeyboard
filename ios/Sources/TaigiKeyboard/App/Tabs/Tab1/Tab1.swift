@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyboardKit
+import SwiftUI
 
 /// 頭頁 Tab
 ///
@@ -24,56 +24,73 @@ struct Tab1: View {
                     }
                 } header: {
                     Text(languageManager.text(Tab1Texts.setupKeyboard))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 新功能資訊
+                // 拍字說明
                 Section {
-                    ForEach(FeatureType.allCases, id: \.self) { feature in
+                    ForEach(Array(FeatureContentLoader.features.prefix(6))) { feature in
                         NavigationLink {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(languageManager.text(feature.title))
+                                Text(languageManager.text(feature.title.asLocalizedText))
                             } icon: {
-                                Image(systemName: feature.icon)
-                                    .foregroundStyle(.orange)
+                                Image(systemName: feature.icon.ios)
+                                    .foregroundStyle(AppStyle.warningOrange)
+                            }
+                        }
+                    }
+                } header: {
+                    Text(languageManager.text(Tab1Texts.typingGuide))
+                        .font(AppStyle.sectionHeaderFont)
+                }
+
+                // 功能設定
+                Section {
+                    ForEach(Array(FeatureContentLoader.features.dropFirst(6))) { feature in
+                        NavigationLink {
+                            FeatureDetailView(feature: feature)
+                        } label: {
+                            Label {
+                                Text(languageManager.text(feature.title.asLocalizedText))
+                            } icon: {
+                                Image(systemName: feature.icon.ios)
+                                    .foregroundStyle(AppStyle.accentBlue)
                             }
                         }
                     }
                 } header: {
                     Text(languageManager.text(Tab1Texts.newFeatures))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
                 // 網站紹介與聯繫
                 Section {
                     // 外部連結
                     Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
-                        Label(languageManager.text(Tab1Texts.userGuide), systemImage: "globe")
+                        Label(languageManager.text(Tab1Texts.userGuide), systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://taigikeyboard.tw/privacypolicy")!) {
-                        Label(languageManager.text(Tab1Texts.privacyPolicy), systemImage: "hand.raised.fill")
+                        Label(languageManager.text(Tab1Texts.privacyPolicy), systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://apps.apple.com/app/id6751871806?action=write-review")!) {
-                        Label(languageManager.text(Tab1Texts.rateUs), systemImage: "star.fill")
+                        Label(languageManager.text(Tab1Texts.rateUs), systemImage: "arrow.up.right.square")
                     }
 
                     // 內部導覽
                     NavigationLink {
                         CopyrightView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.copyrightNotice), systemImage: "doc.text.fill")
+                        Label(languageManager.text(Tab1Texts.copyrightNotice), systemImage: "doc.text")
                     }
 
                     NavigationLink {
                         FeedbackDetailView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.contactUs), systemImage: "heart.fill")
+                        Label(languageManager.text(Tab1Texts.contactUs), systemImage: "heart")
                     }
 
                     NavigationLink {
@@ -84,7 +101,7 @@ struct Tab1: View {
 
                     // 版本資訊
                     HStack {
-                        Label(languageManager.text(Tab1Texts.version), systemImage: "info.circle.fill")
+                        Label(languageManager.text(Tab1Texts.version), systemImage: "info.circle")
                         Spacer()
                         Text(appVersion)
                             .foregroundColor(.secondary)
@@ -93,17 +110,20 @@ struct Tab1: View {
 
                 // 常見問題
                 Section {
-                    ForEach(FAQType.allCases, id: \.self) { faq in
+                    ForEach(FeatureContentLoader.faqs) { faq in
                         NavigationLink {
                             FAQDetailView(faq: faq, viewModel: viewModel)
                         } label: {
-                            Label(languageManager.text(faq.question), systemImage: faq.icon)
+                            Label {
+                                Text(languageManager.text(faq.title.asLocalizedText))
+                            } icon: {
+                                Image(systemName: faq.icon.ios)
+                            }
                         }
                     }
                 } header: {
                     Text(languageManager.text(Tab1Texts.faq))
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .font(AppStyle.sectionHeaderFont)
                 }
             }
             .navigationTitle(languageManager.text(Tab1Texts.appHeaderTitle))

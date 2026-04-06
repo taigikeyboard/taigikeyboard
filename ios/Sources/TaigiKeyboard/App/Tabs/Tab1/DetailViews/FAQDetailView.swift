@@ -2,83 +2,80 @@ import SwiftUI
 
 /// FAQ 詳細頁面
 ///
-/// 顯示常見問題的詳細說明和操作指引。
+/// 根據 JSON 資料驅動顯示，支援文字、圖片、in-app 導航連結。
 struct FAQDetailView: View {
-    let faq: FAQType
+    let faq: FeatureContent
     @ObservedObject var viewModel: SetupGuideViewModel
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
-            // 根據 FAQ 類型決定內容
-            if faq == .installIssue {
-                Section {
-                    Text(languageManager.text(faq.answerParagraphs[0]))
-                        .lineSpacing(6)
-                }
+            ForEach(faq.paragraphs.indices, id: \.self) { index in
+                let paragraph = faq.paragraphs[index]
 
                 Section {
-                    NavigationLink {
-                        SetupGuideView(viewModel: viewModel)
-                    } label: {
-                        Label(languageManager.text(Tab1Texts.goToSetupGuide), systemImage: "keyboard.badge.ellipsis")
-                    }
+                    paragraphView(paragraph)
                 }
 
-                ForEach(1..<faq.answerParagraphs.count, id: \.self) { index in
+                // Render navigation attachment as a separate section (after the paragraph)
+                if case .navigation(let navText, let destination, let navIcon) = paragraph.attachment {
                     Section {
-                        Text(languageManager.text(faq.answerParagraphs[index]))
-                            .lineSpacing(6)
-                    }
-                }
-            } else if faq == .feedback {
-                Section {
-                    Text(languageManager.text(faq.answerParagraphs[0]))
-                        .lineSpacing(6)
-                }
-
-                Section {
-                    NavigationLink {
-                        FeedbackDetailView()
-                    } label: {
-                        Label(languageManager.text(Tab1Texts.goToFeedback), systemImage: "envelope.fill")
-                    }
-                }
-
-                ForEach(1..<faq.answerParagraphs.count, id: \.self) { index in
-                    Section {
-                        Text(languageManager.text(faq.answerParagraphs[index]))
-                            .lineSpacing(6)
-                    }
-                }
-            } else if faq == .toneHandling {
-                Section {
-                    Text(languageManager.text(faq.answerParagraphs[0]))
-                        .lineSpacing(6)
-                }
-
-                Section {
-                    Image("faq_tone_handling")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-
-                Section {
-                    Text(languageManager.text(faq.answerParagraphs[1]))
-                        .lineSpacing(6)
-                }
-            } else {
-                ForEach(faq.answerParagraphs.indices, id: \.self) { index in
-                    Section {
-                        Text(languageManager.text(faq.answerParagraphs[index]))
-                            .lineSpacing(6)
+                        NavigationLink {
+                            navigationDestination(destination)
+                        } label: {
+                            Label(
+                                languageManager.text(navText.asLocalizedText),
+                                systemImage: navIcon.ios
+                            )
+                        }
                     }
                 }
             }
         }
-        .navigationTitle(languageManager.text(faq.question))
+        .navigationTitle(languageManager.text(faq.title.asLocalizedText))
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    @ViewBuilder
+    private func paragraphView(_ paragraph: FeatureParagraph) -> some View {
+        switch paragraph.attachment {
+        case .slideshow(let images, let interval):
+            VStack(alignment: .leading, spacing: 12) {
+                paragraphText(paragraph)
+                ImageSlideshowView(imageNames: images, interval: interval)
+                    .frame(maxWidth: .infinity)
+            }
+
+        case .image(let name):
+            VStack(alignment: .leading, spacing: 12) {
+                paragraphText(paragraph)
+                Image(name)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+        case .navigation, .link, .none:
+            paragraphText(paragraph)
+        }
+    }
+
+    private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
+        Text(languageManager.text(paragraph.text.asLocalizedText))
+            .lineSpacing(6)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    @ViewBuilder
+    private func navigationDestination(_ destination: String) -> some View {
+        switch destination {
+        case "setup_guide":
+            SetupGuideView(viewModel: viewModel)
+        case "feedback":
+            FeedbackDetailView()
+        default:
+            EmptyView()
+        }
     }
 }
