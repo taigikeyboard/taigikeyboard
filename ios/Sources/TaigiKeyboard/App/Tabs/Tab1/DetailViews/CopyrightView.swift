@@ -1,14 +1,12 @@
 import SwiftUI
 
-/// 版權聲明視圖
-///
-/// 顯示詞庫和開源專案的版權資訊。
+/// Copyright notices for dictionaries and open-source projects.
 struct CopyrightView: View {
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
-            // 粉圓體
+            // Open Huninn (粉圓體)
             CopyrightSection(
                 title: Tab1Texts.openFontTitle,
                 description: Tab1Texts.openFontCopyright,
@@ -17,7 +15,7 @@ struct CopyrightView: View {
                 websiteURL: "https://justfont.com/huninn/",
             )
 
-            // 芫荽體
+            // Iansui (芫荽體)
             CopyrightSection(
                 title: Tab1Texts.iansuiFontTitle,
                 description: Tab1Texts.iansuiFontCopyright,
@@ -26,7 +24,7 @@ struct CopyrightView: View {
                 websiteURL: "https://github.com/ButTaiwan/iansui",
             )
 
-            // 教育部臺灣閩南語常用詞辭典
+            // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)
             CopyrightSection(
                 title: Tab1Texts.moeDict,
                 description: Tab1Texts.moeCopyright,
@@ -35,7 +33,7 @@ struct CopyrightView: View {
                 websiteURL: "https://sutian.moe.edu.tw/",
             )
 
-            // 新詞辭典
+            // New Words Dictionary (新詞新語)
             CopyrightSection(
                 title: Tab1Texts.newwordDict,
                 description: Tab1Texts.newwordCopyright,
@@ -44,7 +42,7 @@ struct CopyrightView: View {
                 websiteURL: "https://www.taigitv.org.tw/taigi-words",
             )
 
-            // 工藝辭典
+            // Craft Dictionary (工藝詞庫)
             CopyrightSection(
                 title: Tab1Texts.kunggeDict,
                 description: Tab1Texts.kunggeCopyright,
@@ -62,7 +60,7 @@ struct CopyrightView: View {
                 websiteURL: "https://itaigi.tw/",
             )
 
-            // 台日大辭典
+            // Taiwan-Japan Dictionary (台日大辭典)
             CopyrightSection(
                 title: Tab1Texts.taiwanJapanDict,
                 description: Tab1Texts.taiwanJapanCopyright,
@@ -71,7 +69,7 @@ struct CopyrightView: View {
                 websiteURL: "http://taigi.fhl.net/dict/",
             )
 
-            // 台華辭典
+            // Tai-Hua Dictionary (台華線頂辭典)
             CopyrightSection(
                 title: Tab1Texts.taiHuaDict,
                 description: Tab1Texts.taiHuaCopyright,
@@ -80,7 +78,7 @@ struct CopyrightView: View {
                 websiteURL: nil,
             )
 
-            // 台灣植物辭典
+            // Taiwan Plant Dictionary (台灣植物名彙)
             CopyrightSection(
                 title: Tab1Texts.taiwanPlantDict,
                 description: Tab1Texts.taiwanPlantCopyright,
@@ -89,7 +87,7 @@ struct CopyrightView: View {
                 websiteURL: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106",
             )
 
-            // 學科術語辭典
+            // Subject Terminology Dictionary (學科術語)
             CopyrightSection(
                 title: Tab1Texts.sttiDict,
                 description: Tab1Texts.sttiCopyright,
@@ -98,7 +96,7 @@ struct CopyrightView: View {
                 websiteURL: "https://stti.moe.edu.tw/",
             )
 
-            // 腔口補充資料
+            // Accent/dialect supplementary data (腔口補充)
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(languageManager.text(Tab1Texts.accentDict))

@@ -1,7 +1,7 @@
 import KeyboardKit
 import SwiftUI
 
-/// 台語鍵盤 App 進入點
+/// Taigi Keyboard app entry point.
 @main
 struct TaigiKeyboardApp: App {
     @StateObject private var keyboardStatus = KeyboardStatusContext(
@@ -9,8 +9,8 @@ struct TaigiKeyboardApp: App {
     )
 
     init() {
-        // 設定 KeyboardKit 使用 App Group 持久化設定
-        // 必須在任何 @AppStorage 存取之前呼叫
+        // Configure KeyboardKit to persist settings via App Group.
+        // Must be called before any @AppStorage access.
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
 
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
@@ -39,9 +39,9 @@ struct TaigiKeyboardApp: App {
     }
 }
 
-/// App 根視圖
+/// App root view.
 ///
-/// 管理 Deep Link 和設定引導流程。
+/// Manages deep links and setup guide flow.
 struct AppRootView: View {
     @ObservedObject var keyboardStatus: KeyboardStatusContext
     @StateObject private var viewModel: SetupGuideViewModel
@@ -68,16 +68,11 @@ struct AppRootView: View {
             }
     }
 
-    /// 處理 Deep Link
+    /// Handle deep link (e.g. taigikeyboard://settings).
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "taigikeyboard" else { return }
 
-        // taigikeyboard://settings → 切換到設定 Tab
-        // 目前 ContentView 使用 @State 管理 selectedTab
-        // Deep Link 支援需要透過其他方式實現（如 @AppStorage 或 NotificationCenter）
-        // 暫時保留此處理邏輯，後續可擴展
         if url.host == "settings" {
-            // 可透過 NotificationCenter 通知 ContentView 切換 Tab
             NotificationCenter.default.post(
                 name: .switchToSettingsTab,
                 object: nil,
@@ -86,9 +81,9 @@ struct AppRootView: View {
     }
 }
 
-// MARK: - 通知名稱
+// MARK: - Notification Names
 
 extension Notification.Name {
-    /// 切換到設定 Tab
+    /// Switch to Settings tab via deep link.
     static let switchToSettingsTab = Notification.Name("switchToSettingsTab")
 }

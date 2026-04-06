@@ -24,9 +24,6 @@ enum AppStyle {
     /// Caption size (14pt).
     static let captionSize: CGFloat = 14
 
-    /// Headline size (17pt, bold weight).
-    static let headlineSize: CGFloat = 17
-
     // MARK: - Fonts
 
     /// Section header font (18pt Open Huninn).
@@ -34,9 +31,9 @@ enum AppStyle {
         KeyboardModels.Fonts.appFont(size: sectionHeaderSize)
     }
 
-    /// Headline font (17pt Open Huninn, bold) for card/section titles.
+    /// Headline font (18pt Open Huninn, bold) for card/section titles.
     static var headlineFont: Font {
-        KeyboardModels.Fonts.appFont(size: headlineSize).bold()
+        KeyboardModels.Fonts.appFont(size: sectionHeaderSize).bold()
     }
 
     /// Body font (17pt Open Huninn) for row labels, body text, dialog text.

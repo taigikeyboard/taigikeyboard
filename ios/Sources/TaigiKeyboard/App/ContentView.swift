@@ -1,9 +1,9 @@
 import KeyboardKit
 import SwiftUI
 
-/// 主內容視圖
+/// Main content view.
 ///
-/// 使用 TabView 架構，包含頭頁、佈局、詞庫、設定四個 Tab。
+/// TabView container with 4 tabs: Home, Layout, Dictionary, Settings.
 struct ContentView: View {
     @State private var selectedTab: TabType = .home
     @ObservedObject var viewModel: SetupGuideViewModel
@@ -11,7 +11,7 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab1: 頭頁
+            // Tab1: Home
             Tab1(viewModel: viewModel)
                 .tabItem {
                     Label {
@@ -22,7 +22,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.home)
 
-            // Tab2: 佈局
+            // Tab2: Layout
             Tab2()
                 .tabItem {
                     Label {
@@ -33,7 +33,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.layout)
 
-            // Tab3: 詞庫
+            // Tab3: Dictionary
             Tab3()
                 .tabItem {
                     Label {
@@ -44,7 +44,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.dictionary)
 
-            // Tab4: 設定
+            // Tab4: Settings
             Tab4()
                 .tabItem {
                     Label {

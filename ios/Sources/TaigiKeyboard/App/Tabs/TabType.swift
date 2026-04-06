@@ -1,31 +1,29 @@
 import SwiftUI
 
-/// Tab 類型
-///
-/// 定義主 App 的四個 Tab：頭頁、佈局、詞庫、設定。
+/// Tab type enum for the main app's 4 tabs.
 enum TabType: Int, CaseIterable, Hashable {
-    case home = 0       // 頭頁
-    case layout = 1     // 佈局
-    case dictionary = 2 // 詞庫
-    case settings = 3   // 設定
+    case home = 0
+    case layout = 1
+    case dictionary = 2
+    case settings = 3
 
-    /// Tab 圖標
+    /// SF Symbol name for this tab.
     var icon: String {
         switch self {
-        case .home: return "house.fill"
-        case .layout: return "keyboard"
-        case .dictionary: return "book.fill"
-        case .settings: return "gearshape.fill"
+        case .home: "house.fill"
+        case .layout: "keyboard"
+        case .dictionary: "book.fill"
+        case .settings: "gearshape.fill"
         }
     }
 
-    /// Tab 標題（LocalizedText）
+    /// Localized tab title.
     var title: LocalizedText {
         switch self {
-        case .home: return Tab1Texts.tabTitle
-        case .layout: return Tab2Texts.tabBarTitle
-        case .dictionary: return Tab3Texts.tabBarTitle
-        case .settings: return Tab4Texts.tabBarTitle
+        case .home: Tab1Texts.tabTitle
+        case .layout: Tab2Texts.tabBarTitle
+        case .dictionary: Tab3Texts.tabBarTitle
+        case .settings: Tab4Texts.tabBarTitle
         }
     }
 }

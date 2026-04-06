@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 圖片輪播元件
+/// Auto-cycling image slideshow.
 ///
-/// 自動循環播放圖片，用於設定引導頁面。
+/// Used in setup guide and feature detail pages.
 struct ImageSlideshowView: View {
     let imageNames: [String]
     let interval: TimeInterval

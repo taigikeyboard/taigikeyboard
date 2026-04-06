@@ -1,9 +1,8 @@
 import SwiftUI
 
-/// 佈局 Tab
+/// Layout tab.
 ///
-/// 鍵盤佈局選擇，支援 PhahTaigi、標準 QWERTY、教育部及方音符號佈局。
-/// Uses horizontal swipe cards grouped into sections.
+/// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
 struct Tab2: View {
     @StateObject private var languageManager = LanguageManager.shared
     @State private var selectedLayout: KeyboardLayoutType
@@ -21,7 +20,6 @@ struct Tab2: View {
         NavigationStack {
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 24) {
-
                     // Appearance settings link
                     NavigationLink {
                         AppearanceSettingsView()
@@ -48,13 +46,13 @@ struct Tab2: View {
                             (.qwerty, Tab2Texts.standardLayout, "layout_standard_preview", nil, false),
                             (.moe1, Tab2Texts.moe1Layout, "layout_moe1_preview", nil, false),
                             (.moe2, Tab2Texts.moe2Layout, "layout_moe2_preview", nil, false),
-                        ]
+                        ],
                     )
 
                     // Section 2: Taigi phonetic
                     layoutSection(
                         header: languageManager.text(Tab2Texts.taigiPhonetic),
-                        layouts: [Self.tpsEntry]
+                        layouts: [Self.tpsEntry],
                     )
                 }
                 .padding(.top, 20)
@@ -68,10 +66,9 @@ struct Tab2: View {
 
     // MARK: - Section builder
 
-    @ViewBuilder
     private func layoutSection(
         header: String,
-        layouts: [(KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool)]
+        layouts: [(KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(header)
@@ -81,7 +78,7 @@ struct Tab2: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(layouts, id: \.0) { (layoutType, titleText, imageName, subtitleText, isDisabled) in
+                    ForEach(layouts, id: \.0) { layoutType, titleText, imageName, subtitleText, isDisabled in
                         LayoutOptionCard(
                             title: languageManager.text(titleText),
                             subtitle: subtitleText.map { languageManager.text($0) },
@@ -90,7 +87,7 @@ struct Tab2: View {
                             isDisabled: isDisabled,
                             action: {
                                 selectLayout(layoutType)
-                            }
+                            },
                         )
                     }
                 }
@@ -111,7 +108,7 @@ struct Tab2: View {
 
 private struct LayoutOptionCard: View {
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     let previewImageName: String
     let isSelected: Bool
     var isDisabled: Bool = false
@@ -149,13 +146,13 @@ private struct LayoutOptionCard: View {
                             .overlay(
                                 Image(systemName: "checkmark")
                                     .font(KeyboardModels.Fonts.appFont(size: 16).bold())
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.white),
                             )
                     }
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected && !isDisabled ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5)
+                        .stroke(isSelected && !isDisabled ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5),
                 )
                 .frame(width: cardWidth)
 
@@ -166,7 +163,7 @@ private struct LayoutOptionCard: View {
                         .fontWeight(.semibold)
                         .foregroundColor(isDisabled ? .secondary : .primary)
                         .lineLimit(1)
-                    if let subtitle = subtitle, !isDisabled {
+                    if let subtitle, !isDisabled {
                         Text(subtitle)
                             .font(AppStyle.captionFont)
                             .foregroundColor(.secondary)
@@ -197,7 +194,7 @@ private struct LayoutOptionCard: View {
                         Text(title)
                             .font(AppStyle.captionFont)
                             .foregroundColor(.secondary)
-                    }
+                    },
                 )
         }
     }

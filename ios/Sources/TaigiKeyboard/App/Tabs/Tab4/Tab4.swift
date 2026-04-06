@@ -2,9 +2,9 @@ import KeyboardKit
 import SwiftUI
 import UIKit
 
-/// 設定 Tab
+/// Settings tab.
 ///
-/// 鍵盤設定，包含輸入模式、外觀設定、開關選項。
+/// Input mode, typing options, keyboard toggles, feedback, and diagnostics.
 struct Tab4: View {
     @StateObject private var languageManager = LanguageManager.shared
 
@@ -23,7 +23,7 @@ struct Tab4: View {
     @State private var diagnosticText = ""
     @Environment(\.openURL) private var openURL
 
-    /// 使用 KeyboardKit 的持久化機制
+    /// KeyboardKit persisted settings via App Group
     @AppStorage(
         "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
         store: UserDefaults(suiteName: SharedSettings.appGroupId),
@@ -58,7 +58,7 @@ struct Tab4: View {
     var body: some View {
         NavigationStack {
             Form {
-                // 輸入模式
+                // Input mode
                 Section {
                     NavigationLink {
                         InputModePickerView(
@@ -77,7 +77,7 @@ struct Tab4: View {
                     }
                 }
 
-                // 拍字設定
+                // Typing options
                 Section {
                     Toggle(isOn: $outputBothScripts) {
                         HStack {
@@ -109,7 +109,7 @@ struct Tab4: View {
                     Text(languageManager.text(Tab4Texts.typingSectionTitle))
                 }
 
-                // 齒盤設定
+                // Keyboard settings
                 Section {
                     Toggle(isOn: $toolbarAutoCollapse) {
                         HStack {
@@ -144,7 +144,7 @@ struct Tab4: View {
                     Text(languageManager.text(Tab4Texts.keyboardSectionTitle))
                 }
 
-                // 回饋設定
+                // Feedback
                 Section {
                     Toggle(isOn: $isAudioFeedbackEnabled) {
                         Label(languageManager.text(Tab4Texts.soundFeedback), systemImage: Tab4Texts.soundFeedbackIcon)
@@ -158,7 +158,7 @@ struct Tab4: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 白話字設定
+                // POJ settings
                 Section {
                     Toggle(languageManager.text(Tab4Texts.doubleTapOO), isOn: $enableDoubleTapOO)
                         .onChange(of: enableDoubleTapOO) { _, newValue in
@@ -174,7 +174,7 @@ struct Tab4: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 方音符號設定
+                // TPS (方音符號) settings
                 Section {
                     Toggle(isOn: $tpsOrMapsToER) {
                         HStack {
@@ -190,7 +190,7 @@ struct Tab4: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 診斷資訊
+                // Diagnostics
                 Section {
                     Button {
                         let info = DiagnosticService.gather()
@@ -234,7 +234,7 @@ struct Tab4: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 重設按鈕
+                // Reset
                 Section {
                     Button(role: .destructive) {
                         showResetSettingsAlert = true
@@ -281,24 +281,24 @@ struct Tab4: View {
         }
     }
 
-    // MARK: - 功能函數
+    // MARK: - Actions
 
     private func resetAllSettings() {
         settings.resetToDefaults()
 
-        // 清除使用者詞頻資料
+        // Clear user frequency data
         do {
             try UserFrequencyService.deleteUserDatabase()
         } catch {}
 
-        // 清除 NextWord 使用者關聯資料
+        // Clear user association data
         do {
             try NextWordService.deleteUserDatabase()
         } catch {}
 
-        // 更新本地狀態
+        // Sync local state
         selectedInputMode = settings.inputMode
-        autoCapitalizationEnabled = true // KeyboardKit 預設值
+        autoCapitalizationEnabled = true // KeyboardKit default
         isAudioFeedbackEnabled = true
         isHapticFeedbackEnabled = true
         autoSpaceEnabled = settings.isAutoSpaceEnabled

@@ -63,7 +63,6 @@ struct FrequencyDataView: View {
                 Section {
                     Text(languageManager.text(Tab3Texts.frequencyDescription))
                         .font(AppStyle.bodyFont)
-                        .foregroundColor(.primary)
                     Button {
                         exportFrequencyCSV()
                     } label: {

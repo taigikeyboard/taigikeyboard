@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// 寄付頁面
-///
-/// 提供贊助資訊。
+/// Donation / feedback page with support link.
 struct FeedbackDetailView: View {
     @StateObject private var languageManager = LanguageManager.shared
 

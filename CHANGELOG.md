@@ -21,6 +21,11 @@
 - **Remove dead code**: Removed unused `total` state var from `AssociationDataView`; removed unused `deleteEntries(at:)` from `CustomDictionaryView`
 - **Extract shared CSV helpers**: Moved duplicate `parseCSVLine()` and `csvEscape()` from `FrequencyDataView` and `AssociationDataView` into `CSVDocument.parseLine()` / `CSVDocument.escape()` static methods
 - **Extract SearchBar component**: New `Components/SearchBar.swift` replaces 3 identical search bar implementations in `CustomDictionaryView`, `FrequencyDataView`, `AssociationDataView`
+- **Merge headlineSize into sectionHeaderSize**: Removed `headlineSize` constant; `headlineFont` now uses `sectionHeaderSize` (18pt) — 1pt visual difference eliminated
+- **Extract DictionaryInfo**: Moved `DictionaryInfo` struct + 12 static instances from `Tab3.swift` to `DictionaryInfo.swift`; changed from `private` to `internal`
+- **Extract KeyboardPreviewPanel**: Moved `KeyboardPreviewPanel` from `AppearanceSettingsView.swift` to `KeyboardPreviewPanel.swift`; changed from `private` to `internal`
+- **Remove redundant styles**: Removed 6 redundant style modifiers — `.font(AppStyle.bodyFont)` where environment font already applies (SettingInfoButton, Tab3 searchResultRow), `.foregroundColor(.primary)` on Text with default color (CustomDictionaryView, FrequencyDataView, AssociationDataView)
+- **Comments to English**: Converted all Chinese comments across App/ to English (primary) with Taiwanese Mandarin in parentheses only for proper nouns (dictionary names, font names, phonetic system names)
 
 #### Design Decisions (v3.4.8)
 - **Main app font**: Fixed to Open Huninn; user font setting (System/Huninn/Iansui) only affects keyboard extension

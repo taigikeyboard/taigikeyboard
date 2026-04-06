@@ -75,7 +75,6 @@ struct CustomDictionaryView: View {
                         .listRowSeparator(.hidden)
                     Text(languageManager.text(Tab3Texts.customDictDescription))
                         .font(AppStyle.bodyFont)
-                        .foregroundColor(.primary)
                     Button {
                         exportCSV()
                     } label: {

@@ -68,7 +68,6 @@ struct AssociationDataView: View {
                 Section {
                     Text(languageManager.text(Tab3Texts.associationDescription))
                         .font(AppStyle.bodyFont)
-                        .foregroundColor(.primary)
                     Button {
                         exportAssociationCSV()
                     } label: {

@@ -1,9 +1,7 @@
-import SwiftUI
 import KeyboardKit
+import SwiftUI
 
-/// 設定引導全螢幕視圖
-///
-/// 首次啟動時顯示的鍵盤設定引導。
+/// Full-screen setup guide shown on first launch.
 struct SetupGuideFullScreenView: View {
     @StateObject private var viewModel = SetupGuideViewModel()
     @StateObject private var languageManager = LanguageManager.shared
@@ -18,12 +16,12 @@ struct SetupGuideFullScreenView: View {
         SetupGuideView(
             viewModel: viewModel,
             isFullScreen: true,
-            onComplete: onComplete
+            onComplete: onComplete,
         )
         .environmentObject(languageManager)
         .task {
             viewModel.refresh()
-            // 若已完成設定，直接關閉
+            // Auto-dismiss if setup already complete
             if viewModel.isSetupComplete {
                 onComplete()
             }
@@ -31,7 +29,7 @@ struct SetupGuideFullScreenView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             Task { @MainActor in
                 viewModel.refresh()
-                // 若已完成設定，直接關閉
+                // Auto-dismiss if setup already complete
                 if viewModel.isSetupComplete {
                     onComplete()
                 }

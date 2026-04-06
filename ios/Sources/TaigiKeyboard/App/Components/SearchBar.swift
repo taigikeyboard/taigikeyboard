@@ -5,7 +5,7 @@ import SwiftUI
 /// Usage:
 /// ```
 /// .safeAreaInset(edge: .bottom) {
-///     SearchBar(text: $filterText, placeholder: "搜尋")
+///     SearchBar(text: $filterText, placeholder: "Search")
 /// }
 /// ```
 struct SearchBar: View {

@@ -13,7 +13,6 @@ struct SettingInfoButton: View {
         Button { showAlert = true } label: {
             Image(systemName: "questionmark.circle")
                 .foregroundColor(AppStyle.accentBlue)
-                .font(AppStyle.bodyFont)
         }
         .buttonStyle(.plain)
         .alert("", isPresented: $showAlert) {

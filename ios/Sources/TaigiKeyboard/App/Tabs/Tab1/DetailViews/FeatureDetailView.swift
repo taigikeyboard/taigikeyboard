@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// 新功能詳細頁面
+/// Feature detail page.
 ///
-/// 根據 JSON 資料驅動顯示，支援文字、圖片、輪播、外部連結。
+/// JSON-driven display with text, images, slideshows, and external links.
 struct FeatureDetailView: View {
     let feature: FeatureContent
     @StateObject private var languageManager = LanguageManager.shared
@@ -17,7 +17,7 @@ struct FeatureDetailView: View {
                 }
 
                 // Render link attachment as a separate section (after the paragraph)
-                if case .link(let linkText, let url) = paragraph.attachment {
+                if case let .link(linkText, url) = paragraph.attachment {
                     Section {
                         Link(destination: URL(string: url)!) {
                             Label(languageManager.text(linkText.asLocalizedText), systemImage: "arrow.up.right.square")
@@ -33,14 +33,14 @@ struct FeatureDetailView: View {
     @ViewBuilder
     private func paragraphView(_ paragraph: FeatureParagraph) -> some View {
         switch paragraph.attachment {
-        case .slideshow(let images, let interval):
+        case let .slideshow(images, interval):
             VStack(alignment: .leading, spacing: 12) {
                 paragraphText(paragraph)
                 ImageSlideshowView(imageNames: images, interval: interval)
                     .frame(maxWidth: .infinity)
             }
 
-        case .image(let name):
+        case let .image(name):
             VStack(alignment: .leading, spacing: 12) {
                 paragraphText(paragraph)
                 Image(name)

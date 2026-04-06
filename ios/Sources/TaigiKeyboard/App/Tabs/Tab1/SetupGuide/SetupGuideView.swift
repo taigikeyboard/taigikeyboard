@@ -1,22 +1,22 @@
 import SwiftUI
 
-/// 設定引導視圖
+/// Keyboard setup guide.
 ///
-/// 顯示鍵盤啟用步驟，共用於全螢幕引導和頭頁。
+/// Shows activation steps. Shared between full-screen onboarding and Tab1 navigation.
 struct SetupGuideView: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.openURL) private var openURL
 
-    /// 全螢幕模式（與 Android SetupGuideActivity isFullScreen 對應）
+    /// Full-screen mode (matches Android SetupGuideActivity.isFullScreen).
     var isFullScreen: Bool = false
 
-    /// 全螢幕模式關閉 callback（僅在 isFullScreen = true 時使用）
+    /// Dismiss callback (only used when isFullScreen = true).
     var onComplete: (() -> Void)?
 
     var body: some View {
         Form {
-            // 全螢幕模式標題
+            // Full-screen title
             if isFullScreen {
                 Section {
                     Text(languageManager.text(Tab1Texts.setupGuide))
@@ -25,13 +25,13 @@ struct SetupGuideView: View {
                 }
             }
 
-            // 說明文字
+            // Description
             Section {
                 Text(languageManager.text(Tab1Texts.setupGuideDescription))
                     .lineSpacing(4)
             }
 
-            // 步驟說明
+            // Steps
             Section {
                 SetupGuideStepRow(
                     stepNumber: 1,
@@ -46,12 +46,12 @@ struct SetupGuideView: View {
                 )
             }
 
-            // 完成說明
+            // Completion message
             Section {
                 Text(languageManager.text(Tab1Texts.setupGuideCompletedMessage))
             }
 
-            // 前往設定按鈕
+            // Open Settings button
             Section {
                 Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -63,7 +63,7 @@ struct SetupGuideView: View {
                 }
             }
 
-            // 警告訊息
+            // Warnings
             Section {
                 Label {
                     Text(languageManager.text(Tab1Texts.setupInfoMessage))
@@ -82,7 +82,7 @@ struct SetupGuideView: View {
                 }
             }
 
-            // 關閉按鈕（僅全螢幕模式顯示）
+            // Close button (full-screen only)
             if isFullScreen, let onComplete {
                 Section {
                     Button(role: .destructive) {
@@ -105,7 +105,7 @@ struct SetupGuideView: View {
     }
 }
 
-// MARK: - 步驟列
+// MARK: - Step Row
 
 private struct SetupGuideStepRow: View {
     let stepNumber: Int
@@ -114,7 +114,7 @@ private struct SetupGuideStepRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // 步驟標題
+            // Step title
             HStack(spacing: 12) {
                 Text("\(stepNumber)")
                     .font(KeyboardModels.Fonts.appFont(size: AppStyle.captionSize).bold())
@@ -126,7 +126,7 @@ private struct SetupGuideStepRow: View {
                 Text(title)
             }
 
-            // 截圖
+            // Screenshot
             if let uiImage = UIImage(named: screenshotName) {
                 Image(uiImage: uiImage)
                     .resizable()
