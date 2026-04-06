@@ -1,13 +1,12 @@
+import KeyboardKit
 import SwiftUI
 import UIKit
-import KeyboardKit
 
 /// 設定 Tab
 ///
 /// 鍵盤設定，包含輸入模式、外觀設定、開關選項。
 struct Tab4: View {
     @StateObject private var languageManager = LanguageManager.shared
-    @StateObject private var fontManager = FontManager.shared
 
     private let settings = SharedSettings.shared
 
@@ -24,22 +23,22 @@ struct Tab4: View {
     @State private var diagnosticText = ""
     @Environment(\.openURL) private var openURL
 
-    // 使用 KeyboardKit 的持久化機制
+    /// 使用 KeyboardKit 的持久化機制
     @AppStorage(
         "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
-        store: UserDefaults(suiteName: SharedSettings.appGroupId)
+        store: UserDefaults(suiteName: SharedSettings.appGroupId),
     )
     private var autoCapitalizationEnabled = true
 
     @AppStorage(
         "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled",
-        store: UserDefaults(suiteName: SharedSettings.appGroupId)
+        store: UserDefaults(suiteName: SharedSettings.appGroupId),
     )
     private var isAudioFeedbackEnabled = true
 
     @AppStorage(
         "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled",
-        store: UserDefaults(suiteName: SharedSettings.appGroupId)
+        store: UserDefaults(suiteName: SharedSettings.appGroupId),
     )
     private var isHapticFeedbackEnabled = true
 
@@ -66,7 +65,7 @@ struct Tab4: View {
                             selectedMode: $selectedInputMode,
                             onChange: { newValue in
                                 settings.inputMode = newValue
-                            }
+                            },
                         )
                     } label: {
                         HStack {
@@ -205,7 +204,7 @@ struct Tab4: View {
                             diagnosticCopied
                                 ? languageManager.text(Tab4Texts.diagnosticCopied)
                                 : languageManager.text(Tab4Texts.diagnosticCopy),
-                            systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc"
+                            systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc",
                         )
                         .foregroundColor(.primary)
                     }
@@ -213,7 +212,7 @@ struct Tab4: View {
                     ShareLink(
                         item: diagnosticText,
                         subject: Text("台語齒盤 Bug 回報"),
-                        message: Text(diagnosticText)
+                        message: Text(diagnosticText),
                     ) {
                         Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "arrow.up.forward.square")
                     }
@@ -243,7 +242,6 @@ struct Tab4: View {
                         Text(languageManager.text(Tab4Texts.resetSettings))
                     }
                 }
-
             }
             .navigationTitle(languageManager.text(Tab4Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
@@ -276,10 +274,10 @@ struct Tab4: View {
 
     private func inputModeDisplayName(_ mode: InputMode) -> String {
         switch mode {
-        case .poj: return languageManager.text(Tab4Texts.pojMode)
-        case .tl: return languageManager.text(Tab4Texts.tlMode)
-        case .english: return languageManager.text(Tab4Texts.englishMode)
-        case .tps: return languageManager.text(Tab4Texts.tpsMode)
+        case .poj: languageManager.text(Tab4Texts.pojMode)
+        case .tl: languageManager.text(Tab4Texts.tlMode)
+        case .english: languageManager.text(Tab4Texts.englishMode)
+        case .tps: languageManager.text(Tab4Texts.tpsMode)
         }
     }
 
@@ -300,7 +298,7 @@ struct Tab4: View {
 
         // 更新本地狀態
         selectedInputMode = settings.inputMode
-        autoCapitalizationEnabled = true  // KeyboardKit 預設值
+        autoCapitalizationEnabled = true // KeyboardKit 預設值
         isAudioFeedbackEnabled = true
         isHapticFeedbackEnabled = true
         autoSpaceEnabled = settings.isAutoSpaceEnabled
@@ -310,8 +308,6 @@ struct Tab4: View {
         tpsOrMapsToER = settings.tpsOrMapsToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled
-
-        fontManager.reloadFontType()
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
@@ -329,7 +325,7 @@ private struct InputModePickerView: View {
         (.poj, Tab4Texts.pojMode),
         (.tl, Tab4Texts.tlMode),
         (.english, Tab4Texts.englishMode),
-        (.tps, Tab4Texts.tpsMode)
+        (.tps, Tab4Texts.tpsMode),
     ]
 
     var body: some View {
@@ -357,4 +353,3 @@ private struct InputModePickerView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 }
-

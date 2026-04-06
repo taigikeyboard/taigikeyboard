@@ -24,7 +24,7 @@ struct Tab3: View {
     @State private var khiin: Bool
     @State private var lkkDictEnabled: Bool
 
-    // Search focus
+    /// Search focus
     @FocusState private var isSearchFocused: Bool
 
     // Dictionary lookup selection
@@ -75,25 +75,25 @@ struct Tab3: View {
                         title: Tab3Texts.moeDict,
                         url: "https://sutian.moe.edu.tw/",
                         isOn: $moeDictEnabled,
-                        description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。"
+                        description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
                     ) { settings.moeDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.newwordDict,
                         url: "https://www.taigitv.org.tw/taigi-words",
                         isOn: $newwordDictEnabled,
-                        description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。"
+                        description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
                     ) { settings.newwordDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.sttiDict,
                         url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
                         isOn: $sttiDictEnabled,
-                        description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。"
+                        description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
                     ) { settings.sttiDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.kunggeDict,
                         url: "https://kanggesu.ntcri.org.tw",
                         isOn: $kunggeDictEnabled,
-                        description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。"
+                        description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
                     ) { settings.kunggeDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.moeSectionTitle))
@@ -137,13 +137,12 @@ struct Tab3: View {
                         title: Tab3Texts.lkkDict,
                         url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
                         isOn: $lkkDictEnabled,
-                        description: "李江却台語文教基金會漢羅合用建議用字。"
+                        description: "李江却台語文教基金會漢羅合用建議用字。",
                     ) { settings.lkkDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.supplementSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
                 }
-
             }
             .navigationTitle(languageManager.text(Tab3Texts.tabTitle))
             .navigationBarTitleDisplayMode(.large)
@@ -153,9 +152,9 @@ struct Tab3: View {
                     Divider()
                     // Search results above search bar
                     if !searchVM.searchText.isEmpty {
-                        if searchVM.results.isEmpty && !searchVM.isSearching {
+                        if searchVM.results.isEmpty, !searchVM.isSearching {
                             Text(languageManager.text(Tab3Texts.noResults))
-                                .font(KeyboardModels.Fonts.appFont(.subheadline))
+                                .font(AppStyle.captionFont)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 16)
@@ -184,7 +183,7 @@ struct Tab3: View {
                             .foregroundStyle(.secondary)
                         TextField(
                             languageManager.text(Tab3Texts.searchPlaceholder),
-                            text: $searchVM.searchText
+                            text: $searchVM.searchText,
                         )
                         .focused($isSearchFocused)
                         .onChange(of: searchVM.searchText) { _, _ in
@@ -231,7 +230,6 @@ struct Tab3: View {
 
     // MARK: - Search Result Row
 
-    @ViewBuilder
     private func searchResultRow(_ result: DictionarySearchResult) -> some View {
         Button {
             selectedResult = result
@@ -276,13 +274,12 @@ struct Tab3: View {
 
     // MARK: - Dictionary Toggle with Description + Link
 
-    @ViewBuilder
     private func dictToggleWithDescription(
         title: LocalizedText,
         url: String,
         isOn: Binding<Bool>,
         description: String,
-        onChange: @escaping (Bool) -> Void
+        onChange: @escaping (Bool) -> Void,
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -307,19 +304,18 @@ struct Tab3: View {
                 onChange(newValue)
             }
             Text(description)
-                .font(.body)
+                .font(AppStyle.bodyFont)
                 .foregroundColor(.primary)
         }
     }
 
     // MARK: - Dictionary Toggle with Info Button
 
-    @ViewBuilder
     private func dictionaryToggle(
         _ text: LocalizedText,
         isOn: Binding<Bool>,
         info: DictionaryInfo,
-        onChange: @escaping (Bool) -> Void
+        onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
             HStack {
@@ -331,22 +327,6 @@ struct Tab3: View {
             onChange(newValue)
         }
     }
-
-    @ViewBuilder
-    private func disabledDictionaryToggle(
-        _ text: LocalizedText,
-        info: DictionaryInfo
-    ) -> some View {
-        HStack {
-            Text(languageManager.text(text))
-            SettingInfoButton(description: info.description)
-            Spacer()
-            Toggle("", isOn: .constant(false))
-                .labelsHidden()
-                .disabled(true)
-        }
-    }
-
 }
 
 // MARK: - Dictionary Info Data
@@ -359,51 +339,50 @@ private struct DictionaryInfo {
 extension DictionaryInfo {
     static let moe = DictionaryInfo(
         description: "教育部編纂，收錄台語常用詞。",
-        websiteURL: URL(string: "https://sutian.moe.edu.tw/")
+        websiteURL: URL(string: "https://sutian.moe.edu.tw/"),
     )
     static let stti = DictionaryInfo(
         description: "教育部提供逐學科專業術語ê台語對譯。",
-        websiteURL: URL(string: "https://stti.moe.edu.tw/")
+        websiteURL: URL(string: "https://stti.moe.edu.tw/"),
     )
     static let newword = DictionaryInfo(
         description: "公視台語台整理ê台語新詞。",
-        websiteURL: URL(string: "https://www.taigitv.org.tw/taigi-words")
+        websiteURL: URL(string: "https://www.taigitv.org.tw/taigi-words"),
     )
     static let kungge = DictionaryInfo(
         description: "國立臺灣工藝研究發展中心收錄ê台語工藝相關台語詞。",
-        websiteURL: URL(string: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite")
+        websiteURL: URL(string: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite"),
     )
     static let iTaigi = DictionaryInfo(
         description: "一个群眾編輯ê開放台語辭典",
-        websiteURL: URL(string: "https://itaigi.tw/")
+        websiteURL: URL(string: "https://itaigi.tw/"),
     )
     static let taiwanJapan = DictionaryInfo(
         description: "日本時代小川尚義編纂ê台語辭典。",
-        websiteURL: URL(string: "http://taigi.fhl.net/dict/")
+        websiteURL: URL(string: "http://taigi.fhl.net/dict/"),
     )
     static let taiHua = DictionaryInfo(
         description: "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修",
-        websiteURL: nil
+        websiteURL: nil,
     )
     static let taiwanPlant = DictionaryInfo(
         description: "日本時代佐佐木舜一整理ê台灣植物台語名。",
-        websiteURL: URL(string: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106")
+        websiteURL: URL(string: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106"),
     )
     static let variant = DictionaryInfo(
         description: "依據教典資料標示台語異用字。",
-        websiteURL: nil
+        websiteURL: nil,
     )
     static let khpoo = DictionaryInfo(
         description: "補充在地腔口差異",
-        websiteURL: nil
+        websiteURL: nil,
     )
     static let khiin = DictionaryInfo(
         description: "「水台文」、「台字田」用字",
-        websiteURL: nil
+        websiteURL: nil,
     )
     static let lkk = DictionaryInfo(
         description: "李江却台語文教基金會漢羅合用建議用字。",
-        websiteURL: nil
+        websiteURL: nil,
     )
 }
-

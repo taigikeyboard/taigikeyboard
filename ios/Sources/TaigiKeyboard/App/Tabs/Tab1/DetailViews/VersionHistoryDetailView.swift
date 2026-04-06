@@ -15,7 +15,7 @@ struct VersionHistoryDetailView: View {
                         // 版本號與日期
                         HStack {
                             Text("v\(entry.version)")
-                                .font(KeyboardModels.Fonts.appFont(.headline))
+                                .font(AppStyle.headlineFont)
                                 .foregroundColor(AppStyle.accentBlue)
 
                             Spacer()

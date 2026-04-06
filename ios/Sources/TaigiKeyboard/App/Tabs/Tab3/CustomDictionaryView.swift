@@ -74,7 +74,7 @@ struct CustomDictionaryView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .listRowSeparator(.hidden)
                     Text(languageManager.text(Tab3Texts.customDictDescription))
-                        .font(.body)
+                        .font(AppStyle.bodyFont)
                         .foregroundColor(.primary)
                     Button {
                         exportCSV()

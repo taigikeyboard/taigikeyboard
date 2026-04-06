@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.4.8 (rel-v3.4.8-bugfix)
+
+### iOS
+
+#### Refactoring
+- **AppStyle font size constants**: Extracted magic numbers (34, 22, 18, 17, 14) into named constants (`navBarLargeTitleSize`, `navBarInlineTitleSize`, `sectionHeaderSize`, `bodySize`, `captionSize`); font computed properties now reference these constants
+- **Remove FontManager from main app**: Removed `FontManager` class, `FontEnvironmentModifier`, and `withFontEnvironment()` from `SharedSettings.swift` (~45 lines); main app UI is fixed to Open Huninn — user font setting only affects the keyboard extension
+- **TaigiKeyboardApp NavBar font sizes**: Replaced hardcoded `34`/`22` with `AppStyle.navBarLargeTitleSize`/`AppStyle.navBarInlineTitleSize`; removed `.withFontEnvironment()` modifier
+- **ContentView global font**: Replaced `Font.custom(..., size: 17)` with `KeyboardModels.Fonts.appFont(size: AppStyle.bodySize)`
+- **AppearanceSettingsView**: Removed `@StateObject fontManager`, replaced `fontManager.updateFontType(x)` with direct `settings.fontType = x`
+- **Tab4**: Removed `@StateObject fontManager` and `fontManager.reloadFontType()` call (was no-op)
+- **AppStyle headlineFont**: Added `headlineSize`/`headlineFont` constant; `CopyrightView` and `VersionHistoryDetailView` now use `AppStyle.headlineFont` instead of direct `KeyboardModels.Fonts.appFont(.headline)`
+- **Remove unused SectionHeader**: Deleted `SectionHeader` struct from `AppStyle.swift` (zero usages across codebase)
+- **SetupGuideView step badge**: Replaced hardcoded `14` with `AppStyle.captionSize`
+- **Tab3 font consistency**: `dictToggleWithDescription` description `.font(.body)` → `AppStyle.bodyFont`; "no results" text `appFont(.subheadline)` → `AppStyle.captionFont`
+- **Tab3 dead code**: Removed unused `disabledDictionaryToggle` method
+- **Tab3 subpages font consistency**: `CustomDictionaryView`, `FrequencyDataView`, `AssociationDataView` description text `.font(.body)` → `AppStyle.bodyFont`
+
+#### Design Decisions (v3.4.8)
+- **Main app font**: Fixed to Open Huninn; user font setting (System/Huninn/Iansui) only affects keyboard extension
+- **Accent color**: Uses system default blue (`.accentColor`); `AccentColor.colorset` intentionally empty — no custom brand color
+- **FontManager scope**: Removed from main app entirely; keyboard extension reads `SharedSettings.shared.fontType` directly
+
 ## v3.4.7 (rel-v3.4.7-last-edit)
 
 ### Cross-Platform (iOS & Android)

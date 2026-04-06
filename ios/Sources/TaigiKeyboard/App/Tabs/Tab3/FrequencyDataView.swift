@@ -62,7 +62,7 @@ struct FrequencyDataView: View {
                 // Import/Export
                 Section {
                     Text(languageManager.text(Tab3Texts.frequencyDescription))
-                        .font(.body)
+                        .font(AppStyle.bodyFont)
                         .foregroundColor(.primary)
                     Button {
                         exportFrequencyCSV()

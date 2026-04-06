@@ -1,5 +1,5 @@
-import SwiftUI
 import KeyboardKit
+import SwiftUI
 
 /// 主內容視圖
 ///
@@ -55,7 +55,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.settings)
         }
-        .environment(\.font, Font.custom(KeyboardModels.Fonts.openHuninnFontName, size: 17))
+        .environment(\.font, KeyboardModels.Fonts.appFont(size: AppStyle.bodySize))
         .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
             selectedTab = .settings
         }

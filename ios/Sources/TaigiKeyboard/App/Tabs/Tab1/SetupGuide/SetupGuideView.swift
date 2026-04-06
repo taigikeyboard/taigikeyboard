@@ -12,7 +12,7 @@ struct SetupGuideView: View {
     var isFullScreen: Bool = false
 
     /// 全螢幕模式關閉 callback（僅在 isFullScreen = true 時使用）
-    var onComplete: (() -> Void)? = nil
+    var onComplete: (() -> Void)?
 
     var body: some View {
         Form {
@@ -36,13 +36,13 @@ struct SetupGuideView: View {
                 SetupGuideStepRow(
                     stepNumber: 1,
                     title: languageManager.text(Tab1Texts.setupGuideStep1Settings),
-                    screenshotName: "setup_step1"
+                    screenshotName: "setup_step1",
                 )
 
                 SetupGuideStepRow(
                     stepNumber: 2,
                     title: languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard),
-                    screenshotName: "setup_step2"
+                    screenshotName: "setup_step2",
                 )
             }
 
@@ -83,7 +83,7 @@ struct SetupGuideView: View {
             }
 
             // 關閉按鈕（僅全螢幕模式顯示）
-            if isFullScreen, let onComplete = onComplete {
+            if isFullScreen, let onComplete {
                 Section {
                     Button(role: .destructive) {
                         onComplete()
@@ -117,7 +117,7 @@ private struct SetupGuideStepRow: View {
             // 步驟標題
             HStack(spacing: 12) {
                 Text("\(stepNumber)")
-                    .font(KeyboardModels.Fonts.appFont(size: 14).bold())
+                    .font(KeyboardModels.Fonts.appFont(size: AppStyle.captionSize).bold())
                     .foregroundColor(.white)
                     .frame(width: 24, height: 24)
                     .background(AppStyle.accentBlue)

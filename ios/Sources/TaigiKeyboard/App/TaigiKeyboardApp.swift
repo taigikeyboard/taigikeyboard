@@ -1,11 +1,11 @@
-import SwiftUI
 import KeyboardKit
+import SwiftUI
 
 /// 台語鍵盤 App 進入點
 @main
 struct TaigiKeyboardApp: App {
     @StateObject private var keyboardStatus = KeyboardStatusContext(
-        bundleId: (Bundle.main.bundleIdentifier ?? "com.siansiansu.TaigiKeyboard") + ".TaigiKeyboardExtension"
+        bundleId: (Bundle.main.bundleIdentifier ?? "com.siansiansu.TaigiKeyboard") + ".TaigiKeyboardExtension",
     )
 
     init() {
@@ -16,10 +16,10 @@ struct TaigiKeyboardApp: App {
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithDefaultBackground()
-        let largeFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 34)
-            ?? .systemFont(ofSize: 34)
-        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 22)
-            ?? .systemFont(ofSize: 22)
+        let largeFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: AppStyle.navBarLargeTitleSize)
+            ?? .systemFont(ofSize: AppStyle.navBarLargeTitleSize)
+        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: AppStyle.navBarInlineTitleSize)
+            ?? .systemFont(ofSize: AppStyle.navBarInlineTitleSize)
         navAppearance.largeTitleTextAttributes = [.font: largeFont]
         navAppearance.titleTextAttributes = [.font: inlineFont]
         UINavigationBar.appearance().standardAppearance = navAppearance
@@ -35,7 +35,6 @@ struct TaigiKeyboardApp: App {
         WindowGroup {
             AppRootView(keyboardStatus: keyboardStatus)
                 .withLanguageEnvironment()
-                .withFontEnvironment()
         }
     }
 }
@@ -61,7 +60,7 @@ struct AppRootView: View {
                 SetupGuideFullScreenView(
                     onComplete: {
                         viewModel.dismissSetupGuide()
-                    }
+                    },
                 )
             }
             .task {
@@ -81,7 +80,7 @@ struct AppRootView: View {
             // 可透過 NotificationCenter 通知 ContentView 切換 Tab
             NotificationCenter.default.post(
                 name: .switchToSettingsTab,
-                object: nil
+                object: nil,
             )
         }
     }
