@@ -386,23 +386,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         outInsets?.contentTopInsets = topInset
         outInsets?.visibleTopInsets = topInset
         outInsets?.touchableInsets = Insets.TOUCHABLE_INSETS_VISIBLE
-
-        // if (BuildConfig.DEBUG) {
-        //     val screenHeight = resources.displayMetrics.heightPixels
-        //     val keyboardBottom = topInset + innerInputViewContainer.height
-
-        //     Log.d("KeyboardInsets", "=== onComputeInsets ===")
-        //     Log.d("KeyboardInsets", "Screen height: $screenHeight")
-        //     Log.d("KeyboardInsets", "inputView height: ${inputView.height}")
-        //     Log.d("KeyboardInsets", "innerContainer location Y: $topInset")
-        //     Log.d("KeyboardInsets", "innerContainer height: ${innerInputViewContainer.height}")
-        //     Log.d("KeyboardInsets", "innerContainer measuredHeight: ${innerInputViewContainer.measuredHeight}")
-        //     Log.d("KeyboardInsets", "innerContainer paddingBottom: ${innerInputViewContainer.paddingBottom}")
-        //     Log.d("KeyboardInsets", "Keyboard bottom position: $keyboardBottom")
-        //     Log.d("KeyboardInsets", "Extends beyond screen: ${keyboardBottom > screenHeight}")
-        //     Log.d("KeyboardInsets", "contentTopInsets: ${outInsets?.contentTopInsets}")
-        //     Log.d("KeyboardInsets", "visibleTopInsets: ${outInsets?.visibleTopInsets}")
-        // }
     }
 
     override fun onConfigureWindow(win: Window, isFullscreen: Boolean, isCandidatesOnly: Boolean) {
@@ -450,6 +433,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      * Uses performHapticFeedback which automatically respects system settings.
      */
     fun keyPressVibrate(view: View) {
+        if (!prefs.isVibrationFeedbackEnabled) return
         view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
@@ -458,6 +442,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      * Uses playSoundEffect which automatically respects system settings.
      */
     fun keyPressSound(keyData: KeyData? = null) {
+        if (!prefs.isSoundFeedbackEnabled) return
         val effect = when (keyData?.code) {
             KeyCode.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
             KeyCode.DELETE -> AudioManager.FX_KEYPRESS_DELETE

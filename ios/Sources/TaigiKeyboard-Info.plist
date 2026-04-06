@@ -22,5 +22,25 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app does not use the microphone. This key is required by a linked framework.</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string>Taigi Keyboard Backup</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeIdentifier</key>
+			<string>tw.taigikeyboard.backup</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>taigi</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

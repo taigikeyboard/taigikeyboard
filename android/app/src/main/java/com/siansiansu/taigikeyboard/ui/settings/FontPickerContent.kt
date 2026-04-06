@@ -1,6 +1,8 @@
 package com.siansiansu.taigikeyboard.ui.settings
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab2Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -112,7 +115,7 @@ private fun FontPickerRow(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = 16.sp,
+            fontSize = AppStyle.bodyFontSize,
             color = MaterialTheme.colorScheme.onSurface
         )
         if (isSelected) {

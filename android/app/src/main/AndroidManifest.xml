@@ -4,6 +4,8 @@
 
     <application
         android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -41,7 +43,6 @@
             android:name="com.siansiansu.taigikeyboard.SettingsLauncherAlias"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
-            android:launchMode="singleTask"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:targetActivity="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="true">
@@ -79,6 +80,20 @@
         <!-- Custom Dictionary Activity -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.CustomDictionaryActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Data Management Activity (Backup/Restore) -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.DataManagementActivity"
+            android:theme="@style/SettingsTheme"
+            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
+            android:exported="false"/>
+
+        <!-- Frequent Words Activity (Frequency data) -->
+        <activity
+            android:name="com.siansiansu.taigikeyboard.settings.FrequentWordsActivity"
             android:theme="@style/SettingsTheme"
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>

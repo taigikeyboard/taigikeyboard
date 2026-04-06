@@ -9,7 +9,7 @@ object Tab2Texts {
 
     // MARK: - Tab 標題
 
-    val tabTitle = LocalizedText(hanji = "齒佈")
+    val tabTitle = LocalizedText(hanji = "齒盤佈局")
 
     // MARK: - 佈局選擇
 

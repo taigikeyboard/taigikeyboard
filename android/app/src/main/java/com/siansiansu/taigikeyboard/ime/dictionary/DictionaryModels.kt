@@ -13,10 +13,11 @@ object DictionaryConstants {
     const val TRIE_PREFIX_TL = "tl:"
     const val TRIE_PREFIX_POJ = "poj:"
 
-    fun triePrefix(mode: InputMode): String = when (mode) {
-        InputMode.POJ -> TRIE_PREFIX_POJ
-        else -> TRIE_PREFIX_TL
-    }
+    fun triePrefix(mode: InputMode): String =
+        when (mode) {
+            InputMode.POJ -> TRIE_PREFIX_POJ
+            else -> TRIE_PREFIX_TL
+        }
 }
 
 /**
@@ -30,7 +31,7 @@ data class TaigiWord(
     val id: Int,
     val roman: String,
     val hanzi: String?,
-    val lengthScore: Int?
+    val lengthScore: Int?,
 ) {
     /**
      * Display text prioritizes hanzi over roman
@@ -65,11 +66,17 @@ sealed class DictionaryError : Exception() {
         override val message: String = "Dictionary database is not available"
     }
 
-    data class DatabaseConnectionFailed(override val message: String) : DictionaryError()
+    data class DatabaseConnectionFailed(
+        override val message: String,
+    ) : DictionaryError()
 
-    data class QueryExecutionFailed(override val message: String) : DictionaryError()
+    data class QueryExecutionFailed(
+        override val message: String,
+    ) : DictionaryError()
 
-    data class QueryPreparationFailed(override val message: String) : DictionaryError()
+    data class QueryPreparationFailed(
+        override val message: String,
+    ) : DictionaryError()
 
     object TrieNotLoaded : DictionaryError() {
         override val message: String = "Trie index not loaded"

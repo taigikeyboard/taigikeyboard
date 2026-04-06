@@ -11,21 +11,21 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
 
-        <item name="android:navigationBarColor" tools:targetApi="o_mr1">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
         <item name="android:colorControlNormal">#B3FFFFFF</item><!-- White, semi transparent -->
         <item name="android:textColor">#FFFFFF</item><!-- White -->
         <item name="semiTransparentColor">#20FFFFFF</item><!-- White, semi transparent -->
 
-        <item name="key_bgColor">#424242</item><!-- Gray 800 -->
-        <item name="key_bgColorPressed">#616161</item><!-- Gray 700 -->
-        <item name="key_bgColorActive">#757575</item><!-- Gray 600, for translate button active state -->
-        <item name="key_function_bgColor">#1A1A1A</item>
-        <item name="key_function_bgColorPressed">#141414</item>
+        <item name="key_bgColor">#6B6B6B</item><!-- iOS keyboardButtonBackground dark -->
+        <item name="key_bgColorPressed">#808080</item><!-- +21 lighter for press feedback -->
+        <item name="key_bgColorActive">#9E9E9E</item><!-- Translate button active/swapped state -->
+        <item name="key_function_bgColor">#6B6B6B</item><!-- Same as normal key bg -->
+        <item name="key_function_bgColorPressed">#808080</item><!-- Same as normal key pressed -->
         <item name="key_fgColor">?android:textColor</item>
-        <item name="key_enter_bgColor">#8AB4F8</item><!-- Google Blue (dark) -->
-        <item name="key_enter_bgColorPressed">#669DF6</item><!-- Google Blue (dark, pressed) -->
-        <item name="key_enter_fgColor">#202124</item><!-- Dark text on light blue -->
+        <item name="key_enter_bgColor">#6B6B6B</item><!-- Same as normal key -->
+        <item name="key_enter_bgColorPressed">#808080</item><!-- Same as normal key pressed -->
+        <item name="key_enter_fgColor">#FFFFFF</item><!-- White text -->
 
         <item name="key_popup_bgColor">#757575</item><!-- Gray 600 -->
         <item name="key_popup_fgColor">?android:textColor</item>
@@ -34,7 +34,7 @@
         <item name="key_popup_extended_bgColorActive">#BDBDBD</item><!-- Gray 400 -->
         <item name="key_popup_extended_shadowColor">#CD353535</item>
 
-        <item name="keyboard_bgColor">#212121</item><!-- Gray 900 -->
+        <item name="keyboard_bgColor">#2C2C2C</item><!-- iOS keyboardBackground dark -->
 
         <item name="emoji_key_bgColor">?keyboard_bgColor</item>
         <item name="emoji_key_bgColorPressed">?key_popup_extended_bgColorActive</item>
@@ -46,6 +46,7 @@
         <item name="smartbar_button_bgColorPressed">?key_bgColorPressed</item>
         <item name="smartbar_button_fgColor">?key_fgColor</item>
         <item name="smartbar_candidate_fgColor">?android:textColor</item>
+        <item name="smartbar_accentColor">#0A84FF</item><!-- iOS blue (dark), for toolbar selection -->
         <item name="smartbar_candidate_subtitle_fgColor">#FFFFFF</item><!-- White, for subtitle text in dark mode -->
 
         <item name="overlay_button_bgColorPressed">#40FFFFFF</item><!-- White, 25% opacity -->

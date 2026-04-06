@@ -3,44 +3,34 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
 import android.widget.FrameLayout
-import android.widget.TextView
-import androidx.appcompat.widget.SwitchCompat
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
  * Settings selection overlay view.
  *
- * Covers the keyboard area with settings toggles,
+ * Covers the keyboard area with settings toggles using Compose UI,
  * matching the overlay pattern of LayoutSelectionOverlayView and SymbolSelectionOverlayView.
+ * Follows the ComposeView integration pattern established by EmojiKeyboardView.
  */
 class SettingsSelectionOverlayView : FrameLayout {
-
     companion object {
         private const val TAG = "SettingsSelectionOverlay"
     }
 
-    private val prefs: PrefHelper get() = TaigiKeyboard.getInstance().prefs
     private var isShowing: Boolean = false
+    private var composeView: ComposeView? = null
 
-    // Suppress listener callbacks during programmatic sync
-    private var isSyncing: Boolean = false
-
-    private var switchOutputBoth: SwitchCompat? = null
-    private var switchAutoCap: SwitchCompat? = null
-    private var switchAutoSpace: SwitchCompat? = null
-    private var switchToolbarCollapse: SwitchCompat? = null
-    private var switchDoubleOO: SwitchCompat? = null
-    private var switchDoubleNN: SwitchCompat? = null
-    private var switchTpsOrER: SwitchCompat? = null
-    private var openAppButton: TextView? = null
+    // Incremented on each show() to refresh Compose toggle states from prefs
+    private val refreshTrigger = mutableIntStateOf(0)
 
     var onOpenApp: (() -> Unit)? = null
     var onHide: (() -> Unit)? = null
@@ -50,55 +40,44 @@ class SettingsSelectionOverlayView : FrameLayout {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
 
     init {
-        LayoutInflater.from(context).inflate(R.layout.settings_selection_overlay, this, true)
         visibility = GONE
+        val typedValue = TypedValue()
+        if (context.theme.resolveAttribute(R.attr.keyboard_bgColor, typedValue, true)) {
+            setBackgroundColor(typedValue.data)
+        }
     }
 
-    override fun onFinishInflate() {
-        super.onFinishInflate()
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
 
-        // Section headers
-        findViewById<TextView>(R.id.settings_overlay_general_header)?.text =
-            Tab4Texts.tabTitle.hanji
-        findViewById<TextView>(R.id.settings_overlay_poj_header)?.text =
-            Tab4Texts.pojSettingsSectionTitle.hanji
-        findViewById<TextView>(R.id.settings_overlay_tps_header)?.text =
-            Tab4Texts.tpsSettingsSectionTitle.hanji
+        composeView =
+            ComposeView(context).apply {
+                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            }
 
-        // Labels
-        findViewById<TextView>(R.id.settings_overlay_label_output_both)?.text =
-            Tab4Texts.outputBothScripts.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_auto_cap)?.text =
-            Tab4Texts.autoCapitalization.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_auto_space)?.text =
-            Tab4Texts.autoSpace.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_toolbar_collapse)?.text =
-            Tab4Texts.toolbarAutoCollapse.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_double_oo)?.text =
-            Tab4Texts.doubleTapOO.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_double_nn)?.text =
-            Tab4Texts.doubleTapNN.hanji
-        findViewById<TextView>(R.id.settings_overlay_label_tps_or_er)?.text =
-            Tab4Texts.tpsOrMapsToER.hanji
+        addView(
+            composeView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+            ),
+        )
 
-        // Switches
-        switchOutputBoth = findViewById(R.id.settings_overlay_switch_output_both)
-        switchAutoCap = findViewById(R.id.settings_overlay_switch_auto_cap)
-        switchAutoSpace = findViewById(R.id.settings_overlay_switch_auto_space)
-        switchToolbarCollapse = findViewById(R.id.settings_overlay_switch_toolbar_collapse)
-        switchDoubleOO = findViewById(R.id.settings_overlay_switch_double_oo)
-        switchDoubleNN = findViewById(R.id.settings_overlay_switch_double_nn)
-        switchTpsOrER = findViewById(R.id.settings_overlay_switch_tps_or_er)
-
-        // Open App link
-        openAppButton = findViewById<TextView>(R.id.settings_overlay_open_app_button)?.also { btn ->
-            btn.text = Tab4Texts.openApp.hanji
-            btn.setOnClickListener {
-                onOpenApp?.invoke()
+        composeView?.setContent {
+            TaigiKeyboardTheme {
+                val trigger by refreshTrigger
+                SettingsOverlayContent(
+                    refreshTrigger = trigger,
+                    onDismiss = { hide() },
+                    onOpenApp = { onOpenApp?.invoke() },
+                )
             }
         }
+    }
 
-        setupListeners()
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        composeView = null
     }
 
     /**
@@ -114,16 +93,18 @@ class SettingsSelectionOverlayView : FrameLayout {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {
                 height = overlayHeight
                 topMargin = smartbarHeight
-            } ?: FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                overlayHeight
-            ).apply {
-                gravity = Gravity.TOP
-                topMargin = smartbarHeight
-            }
+            } ?: FrameLayout
+                .LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    overlayHeight,
+                ).apply {
+                    gravity = Gravity.TOP
+                    topMargin = smartbarHeight
+                }
         }
 
-        syncSwitchStates()
+        // Trigger Compose recomposition to refresh toggle states from prefs
+        refreshTrigger.intValue++
         visibility = VISIBLE
         isShowing = true
 
@@ -148,44 +129,4 @@ class SettingsSelectionOverlayView : FrameLayout {
     }
 
     fun isVisible(): Boolean = isShowing
-
-    /**
-     * Refresh switch states from preferences.
-     */
-    private fun syncSwitchStates() {
-        isSyncing = true
-        switchOutputBoth?.isChecked = prefs.outputBothScripts
-        switchAutoCap?.isChecked = prefs.autoCapitalizationEnabled
-        switchAutoSpace?.isChecked = prefs.isAutoSpaceEnabled
-        switchToolbarCollapse?.isChecked = prefs.isToolbarAutoCollapse
-        switchDoubleOO?.isChecked = prefs.enableDoubleTapOO
-        switchDoubleNN?.isChecked = prefs.enableDoubleTapNN
-        switchTpsOrER?.isChecked = prefs.tpsOrMapsToER
-        isSyncing = false
-    }
-
-    private fun setupListeners() {
-        switchOutputBoth?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.outputBothScripts = isChecked
-        }
-        switchAutoCap?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.autoCapitalizationEnabled = isChecked
-        }
-        switchAutoSpace?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.isAutoSpaceEnabled = isChecked
-        }
-        switchToolbarCollapse?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.isToolbarAutoCollapse = isChecked
-        }
-        switchDoubleOO?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.enableDoubleTapOO = isChecked
-        }
-        switchDoubleNN?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.enableDoubleTapNN = isChecked
-        }
-        switchTpsOrER?.setOnCheckedChangeListener { _, isChecked ->
-            if (!isSyncing) prefs.tpsOrMapsToER = isChecked
-        }
-    }
-
 }

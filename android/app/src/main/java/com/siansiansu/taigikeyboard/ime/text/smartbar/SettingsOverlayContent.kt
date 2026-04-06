@@ -1,0 +1,236 @@
+package com.siansiansu.taigikeyboard.ime.text.smartbar
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
+import com.siansiansu.taigikeyboard.ui.components.SwitchRow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+/**
+ * Compose content for the keyboard settings overlay.
+ *
+ * Renders the same settings as InputSettingsScreen (Tab4) but styled
+ * for the keyboard overlay context. Uses shared SwitchRow and SettingsIcons.
+ */
+@Composable
+fun SettingsOverlayContent(
+    refreshTrigger: Int,
+    onDismiss: () -> Unit,
+    onOpenApp: () -> Unit,
+) {
+    val prefs: PrefHelper = TaigiKeyboard.getInstance().prefs
+    val scope = rememberCoroutineScope()
+
+    val fontFamily =
+        remember(prefs.fontType) {
+            when (prefs.fontType) {
+                "openHuninn" -> FontFamily(Font(R.font.jf_openhuninn_2_1))
+                "iansui" -> FontFamily(Font(R.font.iansui_regular))
+                else -> FontFamily.Default
+            }
+        }
+
+    // Toggle states — refreshTrigger as key ensures re-read from prefs on each show()
+    var outputBoth by remember(refreshTrigger) { mutableStateOf(prefs.outputBothScripts) }
+    var autoCap by remember(refreshTrigger) { mutableStateOf(prefs.autoCapitalizationEnabled) }
+    var autoSpace by remember(refreshTrigger) { mutableStateOf(prefs.isAutoSpaceEnabled) }
+    var toolbarAutoCollapse by remember(refreshTrigger) { mutableStateOf(prefs.isToolbarAutoCollapse) }
+    var isGlobeKeyEnabled by remember(refreshTrigger) { mutableStateOf(prefs.isGlobeKeyEnabled) }
+    var soundFeedback by remember(refreshTrigger) { mutableStateOf(prefs.isSoundFeedbackEnabled) }
+    var vibrationFeedback by remember(refreshTrigger) { mutableStateOf(prefs.isVibrationFeedbackEnabled) }
+    var doubleOO by remember(refreshTrigger) { mutableStateOf(prefs.enableDoubleTapOO) }
+    var doubleNN by remember(refreshTrigger) { mutableStateOf(prefs.enableDoubleTapNN) }
+    var tpsOrER by remember(refreshTrigger) { mutableStateOf(prefs.tpsOrMapsToER) }
+
+    fun autoDismissIfNeeded() {
+        if (prefs.isToolbarAutoCollapse) {
+            scope.launch {
+                delay(300)
+                onDismiss()
+            }
+        }
+    }
+
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val iconTint = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(top = 4.dp, bottom = 8.dp),
+    ) {
+        // General settings
+        SwitchRow(
+            label = Tab4Texts.outputBothScripts.hanji,
+            checked = outputBoth,
+            icon = SettingsIcons.outputBothScripts,
+            iconTint = iconTint,
+            onCheckedChange = {
+                outputBoth = it
+                prefs.outputBothScripts = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.autoCapitalization.hanji,
+            checked = autoCap,
+            icon = SettingsIcons.autoCapitalization,
+            iconTint = iconTint,
+            onCheckedChange = {
+                autoCap = it
+                prefs.autoCapitalizationEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.autoSpace.hanji,
+            checked = autoSpace,
+            icon = SettingsIcons.autoSpace,
+            iconTint = iconTint,
+            onCheckedChange = {
+                autoSpace = it
+                prefs.isAutoSpaceEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.toolbarAutoCollapse.hanji,
+            checked = toolbarAutoCollapse,
+            icon = SettingsIcons.toolbar,
+            iconTint = iconTint,
+            onCheckedChange = {
+                toolbarAutoCollapse = it
+                prefs.isToolbarAutoCollapse = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.globeKey.hanji,
+            checked = isGlobeKeyEnabled,
+            icon = SettingsIcons.globe,
+            iconTint = iconTint,
+            onCheckedChange = {
+                isGlobeKeyEnabled = it
+                prefs.isGlobeKeyEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+
+        // Feedback settings
+        SwitchRow(
+            label = Tab4Texts.soundFeedback.hanji,
+            checked = soundFeedback,
+            icon = SettingsIcons.sound,
+            iconTint = iconTint,
+            onCheckedChange = {
+                soundFeedback = it
+                prefs.isSoundFeedbackEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.vibrationFeedback.hanji,
+            checked = vibrationFeedback,
+            icon = SettingsIcons.vibration,
+            iconTint = iconTint,
+            onCheckedChange = {
+                vibrationFeedback = it
+                prefs.isVibrationFeedbackEnabled = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+
+        // POJ settings
+        SwitchRow(
+            label = Tab4Texts.doubleTapOO.hanji,
+            checked = doubleOO,
+            onCheckedChange = {
+                doubleOO = it
+                prefs.enableDoubleTapOO = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+        SwitchRow(
+            label = Tab4Texts.doubleTapNN.hanji,
+            checked = doubleNN,
+            onCheckedChange = {
+                doubleNN = it
+                prefs.enableDoubleTapNN = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+
+        // TPS settings
+        SwitchRow(
+            label = Tab4Texts.tpsOrMapsToER.hanji,
+            checked = tpsOrER,
+            onCheckedChange = {
+                tpsOrER = it
+                prefs.tpsOrMapsToER = it
+                autoDismissIfNeeded()
+            },
+            labelColor = labelColor,
+            fontFamily = fontFamily,
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Open App button
+        TextButton(
+            onClick = {
+                onOpenApp()
+                onDismiss()
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text(
+                text = Tab4Texts.openApp.hanji,
+                fontFamily = fontFamily,
+            )
+        }
+    }
+}

@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ui.settings
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
@@ -93,7 +95,7 @@ fun SetupGuideScreen(
             // Description
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideDescription),
-                fontSize = 17.sp,
+                fontSize = AppStyle.bodyFontSize,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -121,7 +123,7 @@ fun SetupGuideScreen(
             // Completed message
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideCompletedMessage),
-                fontSize = 17.sp,
+                fontSize = AppStyle.bodyFontSize,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -135,7 +137,7 @@ fun SetupGuideScreen(
             ) {
                 Text(
                     text = languageManager.text(Tab1Texts.setupGuideGoToSettings),
-                    fontSize = 17.sp,
+                    fontSize = AppStyle.bodyFontSize,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -164,12 +166,12 @@ fun SetupGuideScreen(
                         painter = painterResource(R.drawable.ic_close),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onError
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = languageManager.text(Tab1Texts.setupGuideCloseButton),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onError
                     )
                 }
             }
@@ -211,7 +213,7 @@ private fun StepCard(
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = title,
-                    fontSize = 17.sp,
+                    fontSize = AppStyle.bodyFontSize,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -236,12 +238,12 @@ private fun WarningRow(text: String) {
             modifier = Modifier
                 .size(16.dp)
                 .padding(top = 2.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = AppStyle.warningOrange()
         )
         Spacer(Modifier.width(8.dp))
         Text(
             text = text,
-            fontSize = 17.sp,
+            fontSize = AppStyle.bodyFontSize,
             lineHeight = 22.sp,
             color = MaterialTheme.colorScheme.onSurface
         )

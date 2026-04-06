@@ -5,25 +5,45 @@ import UniformTypeIdentifiers
 /// Lists all user-added entries with add/edit/delete and import/export
 struct CustomDictionaryView: View {
     @StateObject private var languageManager = LanguageManager.shared
+    @State private var isCustomDictEnabled: Bool
 
     @State private var entries: [CustomDictionaryEntry] = []
     @State private var isLoading = true
-    @State private var showAddSheet = false
+    @State private var filterText = ""
+    @State private var showEntryAlert = false
     @State private var editingEntry: CustomDictionaryEntry?
+    @State private var romanInput = ""
+    @State private var hanziInput = ""
     @State private var showDeleteAllAlert = false
 
     // Import/Export
+    @State private var isImporting = false
     @State private var showFileImporter = false
     @State private var showFileExporter = false
     @State private var csvDocument: CSVDocument?
     @State private var showImportResultAlert = false
     @State private var importResultMessage = ""
     @State private var showExportSuccessAlert = false
-    @State private var showHelp = false
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
 
+    private let settings = SharedSettings.shared
     private let service = CustomDictionaryService.shared
+
+    private var filteredEntries: [CustomDictionaryEntry] {
+        if filterText.isEmpty {
+            return Array(entries.prefix(100))
+        }
+        let query = filterText.lowercased()
+        return entries.filter {
+            $0.roman.lowercased().contains(query) ||
+                $0.hanzi.lowercased().contains(query)
+        }
+    }
+
+    init() {
+        _isCustomDictEnabled = State(initialValue: SharedSettings.shared.customDictEnabled)
+    }
 
     var body: some View {
         List {
@@ -33,39 +53,74 @@ struct CustomDictionaryView: View {
                         .frame(maxWidth: .infinity)
                 }
             } else {
-                // Import/Export section
+                // Enable/Disable toggle
                 Section {
-                    Button {
-                        showFileImporter = true
-                    } label: {
-                        Label(
-                            languageManager.text(Tab3Texts.importCSV),
-                            systemImage: "square.and.arrow.down"
-                        )
+                    Toggle(isOn: $isCustomDictEnabled) {
+                        HStack {
+                            Text(languageManager.text(Tab3Texts.customDictEnabled))
+                            SettingInfoButton(description: languageManager.text(Tab3Texts.customDictEnabledInfo))
+                        }
                     }
+                    .onChange(of: isCustomDictEnabled) { _, newValue in
+                        settings.customDictEnabled = newValue
+                    }
+                }
 
+                // Import/Export
+                Section {
+                    Image("csv_example")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .listRowSeparator(.hidden)
+                    Text(languageManager.text(Tab3Texts.customDictDescription))
+                        .font(.body)
+                        .foregroundColor(.primary)
                     Button {
                         exportCSV()
                     } label: {
                         Label(
                             languageManager.text(Tab3Texts.exportCSV),
-                            systemImage: "square.and.arrow.up"
+                            systemImage: "square.and.arrow.up",
                         )
                     }
-                } header: {
-                    HStack {
-                        Text(languageManager.text(Tab3Texts.importExportTitle))
+                    .disabled(isImporting)
+                    if isImporting {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                    } else {
                         Button {
-                            showHelp = true
+                            showFileImporter = true
                         } label: {
-                            Image(systemName: "questionmark.circle")
+                            Label(
+                                languageManager.text(Tab3Texts.importCSV),
+                                systemImage: "square.and.arrow.down",
+                            )
                         }
                     }
+                } header: {
+                    Text(languageManager.text(Tab3Texts.importExportTitle))
+                        .font(AppStyle.sectionHeaderFont)
                 }
 
-                // Entry list section
-                if entries.isEmpty {
-                    Section {
+                // Delete all
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteAllAlert = true
+                    } label: {
+                        Text(languageManager.text(Tab3Texts.deleteAll))
+                    }
+                    .disabled(isImporting)
+                }
+
+                // Privacy warning
+                Section {
+                    Text(languageManager.text(Tab3Texts.customDictPrivacyWarning))
+                }
+
+                // Entry list
+                Section {
+                    if entries.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "book.closed")
                                 .font(KeyboardModels.Fonts.appFont(size: 48))
@@ -75,68 +130,113 @@ struct CustomDictionaryView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
-                    }
-                } else {
-                    Section {
-                        ForEach(entries) { entry in
+                    } else if !filterText.isEmpty, filteredEntries.isEmpty {
+                        Text(languageManager.text(Tab3Texts.noResults))
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(filteredEntries) { entry in
                             Button {
                                 editingEntry = entry
+                                romanInput = entry.roman
+                                hanziInput = entry.hanzi
+                                showEntryAlert = true
                             } label: {
                                 HStack {
-                                    Text(entry.roman)
-                                        .font(KeyboardModels.Fonts.appFont(.body))
+                                    Text("\(entry.roman) → \(entry.hanzi)")
+                                        .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
-                                    Text(entry.hanzi)
-                                        .font(KeyboardModels.Fonts.appFont(.body))
-                                        .foregroundColor(.secondary)
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .font(KeyboardModels.Fonts.appFont(.caption))
+                                        .font(AppStyle.captionFont)
                                         .foregroundColor(.secondary)
                                 }
                             }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    Task {
+                                        try? await service.delete(id: entry.id)
+                                        await loadEntries()
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
                         }
-                        .onDelete(perform: deleteEntries)
-                    } header: {
-                        Text("\(entries.count) \(languageManager.text(Tab3Texts.entriesCount))")
                     }
-
-                    // Delete all section
-                    Section {
-                        Button(role: .destructive) {
-                            showDeleteAllAlert = true
-                        } label: {
-                            Text(languageManager.text(Tab3Texts.deleteAll))
-                        }
+                } header: {
+                    HStack {
+                        Text(languageManager.text(Tab3Texts.customDictionary))
+                            .font(AppStyle.sectionHeaderFont)
+                        SettingInfoButton(description: languageManager.text(Tab3Texts.filterHint))
                     }
                 }
             }
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Divider()
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField(
+                        languageManager.text(Tab3Texts.searchPlaceholder),
+                        text: $filterText,
+                    )
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    if !filterText.isEmpty {
+                        Button {
+                            filterText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(.tertiarySystemFill))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .background(Color(.systemBackground))
+            .padding(.bottom, 8)
         }
         .navigationTitle(languageManager.text(Tab3Texts.customDictionary))
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    showAddSheet = true
+                    editingEntry = nil
+                    romanInput = ""
+                    hanziInput = ""
+                    showEntryAlert = true
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
-        .sheet(isPresented: $showAddSheet) {
-            CustomDictionaryEditView { newEntry in
-                Task { await saveAndReload(newEntry) }
+        .alert(
+            languageManager.text(editingEntry != nil ? Tab3Texts.editEntry : Tab3Texts.addEntry),
+            isPresented: $showEntryAlert,
+        ) {
+            TextField(languageManager.text(Tab3Texts.romanPlaceholder), text: $romanInput)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            TextField(languageManager.text(Tab3Texts.hanziPlaceholder), text: $hanziInput)
+            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {
+                editingEntry = nil
             }
-        }
-        .sheet(item: $editingEntry) { entry in
-            CustomDictionaryEditView(entry: entry) { updatedEntry in
-                Task { await saveAndReload(updatedEntry) }
+            Button(languageManager.text(Tab3Texts.save)) {
+                saveEntryFromAlert()
             }
         }
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: [.commaSeparatedText, .plainText],
-            allowsMultipleSelection: false
+            allowsMultipleSelection: false,
         ) { result in
             handleFileImport(result)
         }
@@ -144,16 +244,11 @@ struct CustomDictionaryView: View {
             isPresented: $showFileExporter,
             document: csvDocument,
             contentType: .commaSeparatedText,
-            defaultFilename: "custom_dictionary.csv"
+            defaultFilename: customDictExportFilename(),
         ) { result in
             if case .success = result {
                 showExportSuccessAlert = true
             }
-        }
-        .alert(languageManager.text(Tab3Texts.importExportHelpTitle), isPresented: $showHelp) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(languageManager.text(Tab3Texts.importExportHelp))
         }
         .alert(languageManager.text(Tab3Texts.importCSV), isPresented: $showImportResultAlert) {
             Button(languageManager.text(Tab3Texts.ok)) {}
@@ -188,6 +283,26 @@ struct CustomDictionaryView: View {
 
     // MARK: - Actions
 
+    private func saveEntryFromAlert() {
+        let trimmedRoman = romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedHanzi = hanziInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedRoman.isEmpty, !trimmedHanzi.isEmpty else { return }
+
+        let entry = if let existing = editingEntry {
+            CustomDictionaryEntry(
+                id: existing.id,
+                roman: trimmedRoman,
+                hanzi: trimmedHanzi,
+                createdAt: existing.createdAt,
+                updatedAt: Date(),
+            )
+        } else {
+            CustomDictionaryEntry(roman: trimmedRoman, hanzi: trimmedHanzi)
+        }
+        editingEntry = nil
+        Task { await saveAndReload(entry) }
+    }
+
     private func loadEntries() async {
         do {
             entries = try await service.fetchAll()
@@ -212,6 +327,12 @@ struct CustomDictionaryView: View {
         }
     }
 
+    private func customDictExportFilename() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return "自訂詞庫_\(f.string(from: Date())).csv"
+    }
+
     private func exportCSV() {
         Task {
             do {
@@ -231,15 +352,19 @@ struct CustomDictionaryView: View {
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
         switch result {
-        case .success(let urls):
+        case let .success(urls):
             guard let url = urls.first else { return }
+            isImporting = true
             Task {
+                defer {
+                    Task { @MainActor in isImporting = false }
+                }
                 do {
                     let importResult = try await service.importFromFile(url: url)
                     await MainActor.run {
                         importResultMessage = String(
                             format: languageManager.text(Tab3Texts.importResult),
-                            importResult.imported, importResult.skipped
+                            importResult.imported, importResult.skipped,
                         )
                         showImportResultAlert = true
                     }
@@ -251,7 +376,7 @@ struct CustomDictionaryView: View {
                     }
                 }
             }
-        case .failure(let error):
+        case let .failure(error):
             errorMessage = error.localizedDescription
             showErrorAlert = true
         }

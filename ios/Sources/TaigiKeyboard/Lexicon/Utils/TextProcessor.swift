@@ -69,6 +69,19 @@ enum CandidateProcessor {
         return result
     }
 
+    /// Remove visual duplicates for TPS mode (dedup by hanzi only).
+    /// Words without hanzi are always kept (they display as TPS symbols, unique by roman).
+    /// Must be called AFTER sorting so the highest-ranked entry for each hanzi is kept.
+    static func removeDisplayDuplicates(_ words: [TaigiWord]) -> [TaigiWord] {
+        var seenHanzi = Set<String>()
+        return words.filter { word in
+            guard let hanzi = word.hanzi, !hanzi.isEmpty else {
+                return true
+            }
+            return seenHanzi.insert(hanzi).inserted
+        }
+    }
+
     // MARK: - Sorting
 
     /// 計算候選詞排序分數

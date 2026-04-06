@@ -86,5 +86,7 @@ func syncToKeyboardContext(_ context: KeyboardContext) {
 | Item | iOS | Android |
 |------|-----|---------|
 | Framework | KeyboardKit | Self-managed |
+| State tracking | KeyboardKit managed | `CapsStateManager.kt` (extracted from TextInputManager in v3.4.6) |
 | Control method | Settings sync | `updateCapsState()` |
 | Real-time update | NotificationCenter | DataStore Flow |
+| Suggestion case | `SuggestionCaseTransformer.swift` | `SuggestionCaseTransformer.kt` |

@@ -24,10 +24,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,10 +46,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.LanguageManager
@@ -59,6 +66,7 @@ private data class LayoutOption(
     @param:DrawableRes val previewRes: Int
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LayoutScreen(
     languageManager: LanguageManager,
@@ -77,31 +85,35 @@ fun LayoutScreen(
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surfaceContainer
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Page title (pinned)
-            Text(
-                text = languageManager.text(Tab2Texts.tabTitle),
-                modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 80.dp),
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        topBar = {
+            LargeTopAppBar(
+                title = {
+                    Text(
+                        text = languageManager.text(Tab2Texts.tabTitle),
+                        fontSize = AppStyle.pageTitleFontSize
+                    )
+                },
+                expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                scrollBehavior = scrollBehavior
             )
-
-            Spacer(Modifier.height(24.dp))
-
-            // Scrollable content
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 40.dp)
-            ) {
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 40.dp)
+        ) {
 
             // Appearance settings card
             SettingsCard(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -118,7 +130,7 @@ fun LayoutScreen(
             Text(
                 text = languageManager.text(Tab2Texts.romanizationKeyboard),
                 modifier = Modifier.padding(horizontal = 20.dp),
-                fontSize = 18.sp,
+                fontSize = AppStyle.sectionHeaderFontSize,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -154,7 +166,7 @@ fun LayoutScreen(
             Text(
                 text = languageManager.text(Tab2Texts.taigiPhonetic),
                 modifier = Modifier.padding(horizontal = 20.dp),
-                fontSize = 18.sp,
+                fontSize = AppStyle.sectionHeaderFontSize,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
@@ -175,7 +187,6 @@ fun LayoutScreen(
                         }
                     }
                 )
-            }
             }
         }
     }
@@ -229,7 +240,7 @@ private fun LayoutCard(
                         modifier = Modifier
                             .matchParentSize()
                             .alpha(overlayAlpha)
-                            .background(Color(0x40000000))
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.25f))
                     )
                 }
 
@@ -248,7 +259,7 @@ private fun LayoutCard(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
@@ -259,7 +270,7 @@ private fun LayoutCard(
 
         Text(
             text = label,
-            fontSize = 12.sp,
+            fontSize = AppStyle.captionFontSize,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center

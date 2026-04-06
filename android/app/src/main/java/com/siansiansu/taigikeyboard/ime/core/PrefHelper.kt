@@ -247,6 +247,24 @@ class PrefHelper(
             updateCacheAndPersist(PreferenceKeys.TOOLBAR_AUTO_COLLAPSE, value)
         }
 
+    var isGlobeKeyEnabled: Boolean
+        get() = cached(PreferenceKeys.GLOBE_KEY_ENABLED, true)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.GLOBE_KEY_ENABLED, value)
+        }
+
+    var isSoundFeedbackEnabled: Boolean
+        get() = cached(PreferenceKeys.SOUND_FEEDBACK_ENABLED, true)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.SOUND_FEEDBACK_ENABLED, value)
+        }
+
+    var isVibrationFeedbackEnabled: Boolean
+        get() = cached(PreferenceKeys.VIBRATION_FEEDBACK_ENABLED, true)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.VIBRATION_FEEDBACK_ENABLED, value)
+        }
+
     var fontType: String
         get() = cached(PreferenceKeys.FONT_TYPE, "openHuninn")
         set(value) { updateCacheAndPersist(PreferenceKeys.FONT_TYPE, value) }
@@ -312,6 +330,21 @@ class PrefHelper(
         set(value) {
             updateCacheAndPersist(PreferenceKeys.TPS_OR_MAPS_TO_ER, value)
         }
+
+    // 詞頻紀錄開關（預設開啟）
+    var frequencyRecordingEnabled: Boolean
+        get() = cached(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
+        set(value) { updateCacheAndPersist(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, value) }
+
+    // 詞關聯紀錄開關（預設開啟）
+    var associationRecordingEnabled: Boolean
+        get() = cached(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
+        set(value) { updateCacheAndPersist(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, value) }
+
+    // 自訂詞庫開關（預設開啟）
+    var customDictEnabled: Boolean
+        get() = cached(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
+        set(value) { updateCacheAndPersist(PreferenceKeys.CUSTOM_DICT_ENABLED, value) }
 
     // 詞庫開關設定
     // 教育部臺灣台語常用詞辭典（kautian）
@@ -464,15 +497,6 @@ class PrefHelper(
         }.distinctUntilChanged()
 
     /**
-     * Observes phahTaigiLayoutEnabled changes as a Flow.
-     * Emits true/false whenever the value changes in DataStore.
-     */
-    fun observePhahTaigiLayoutEnabled(): Flow<Boolean> =
-        dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] ?: false
-        }.distinctUntilChanged()
-
-    /**
      * Observes keyboardLayoutType changes as a Flow.
      * Emits the layout type string whenever the value changes in DataStore.
      */
@@ -593,6 +617,12 @@ class PrefHelper(
             prefs[PreferenceKeys.KEY_BORDER_WIDTH] = 0.0f
             prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = true
             prefs[PreferenceKeys.TOOLBAR_AUTO_COLLAPSE] = true
+            prefs[PreferenceKeys.GLOBE_KEY_ENABLED] = true
+            prefs[PreferenceKeys.SOUND_FEEDBACK_ENABLED] = true
+            prefs[PreferenceKeys.VIBRATION_FEEDBACK_ENABLED] = true
+            prefs[PreferenceKeys.FREQUENCY_RECORDING_ENABLED] = true
+            prefs[PreferenceKeys.ASSOCIATION_RECORDING_ENABLED] = true
+            prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
 
             if (BuildConfig.DEBUG) {

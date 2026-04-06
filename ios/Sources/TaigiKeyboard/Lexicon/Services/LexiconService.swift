@@ -4,7 +4,6 @@ import OSLog
 /// 詞典服務
 /// 提供台語詞彙搜尋功能
 class LexiconService: @unchecked Sendable {
-
     // MARK: - Properties
 
     static let shared = LexiconService()
@@ -15,7 +14,7 @@ class LexiconService: @unchecked Sendable {
     private let customDictionaryRepository: CustomDictionaryRepository
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "LexiconService"
+        category: "LexiconService",
     )
 
     // MARK: - Initialization
@@ -24,7 +23,7 @@ class LexiconService: @unchecked Sendable {
         repository: DictionaryRepository = .shared,
         userFrequencyService: UserFrequencyService = .shared,
         trieService: TrieService = .shared,
-        customDictionaryRepository: CustomDictionaryRepository = .shared
+        customDictionaryRepository: CustomDictionaryRepository = .shared,
     ) {
         self.repository = repository
         self.userFrequencyService = userFrequencyService
@@ -43,23 +42,30 @@ class LexiconService: @unchecked Sendable {
     private func initializeTrie() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let success = self?.trieService.initialize() ?? false
-            if success {
-                self?.logger.info("[INIT] Trie initialized successfully")
-            } else {
-                self?.logger.warning("[INIT] Trie initialization failed, using fallback")
-            }
+            #if DEBUG
+                if success {
+                    self?.logger.info("[INIT] Trie initialized successfully")
+                } else {
+                    self?.logger.warning("[INIT] Trie initialization failed, using fallback")
+                }
+            #endif
         }
     }
 
     /// 初始化 Custom Dictionary DB（背景執行）
     /// searchSync doesn't call ensureInitialized, so we must initialize eagerly
     private func initializeCustomDictionary() {
+        guard SharedSettings.shared.customDictEnabled else { return }
         Task {
             do {
                 try await customDictionaryRepository.ensureInitialized()
-                logger.info("[INIT] Custom dictionary initialized successfully")
+                #if DEBUG
+                    logger.info("[INIT] Custom dictionary initialized successfully")
+                #endif
             } catch {
-                logger.warning("[INIT] Custom dictionary initialization failed: \(error.localizedDescription, privacy: .public)")
+                #if DEBUG
+                    logger.warning("[INIT] Custom dictionary initialization failed: \(error.localizedDescription, privacy: .public)")
+                #endif
             }
         }
     }
@@ -75,36 +81,47 @@ class LexiconService: @unchecked Sendable {
         inputType: InputType,
         inputMode: InputMode = .poj,
         limit: Int = LexiconConstants.Search.defaultLimit,
-        rawInput: String? = nil
+        rawInput: String? = nil,
     ) async throws -> [TaigiWord] {
         guard !input.isEmpty else {
             return []
         }
 
         // Query custom dictionary by unsegmented input (highest priority)
-        // Custom dict's notone column stores unsegmented form, so raw input matches correctly
-        let customSearchKey = rawInput ?? input
-        let customNotoneKey = CustomDictionaryService.generateNotone(customSearchKey)
-        let customEntries = customDictionaryRepository.searchSync(
-            romanPrefix: customSearchKey,
-            notonePrefix: customNotoneKey,
-            limit: 20
-        )
-        logger.debug("[SEARCH] customDict key='\(customSearchKey, privacy: .public)' notoneKey='\(customNotoneKey, privacy: .public)' segmented='\(input, privacy: .public)' results=\(customEntries.count)")
-        let customWords = customEntries.map { entry in
-            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: input)
-            let processedHanzi: String?
-            if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
-                processedHanzi = CandidateProcessor.capitalize(entry.hanzi, basedOn: input)
-            } else {
-                processedHanzi = entry.hanzi
-            }
-            return TaigiWord(
-                id: -2,  // Custom dictionary marker
-                roman: processedRoman,
-                hanzi: processedHanzi,
-                lengthScore: nil
+        // Tone-aware: match roman_num column; toneless: match notone column
+        let customWords: [TaigiWord]
+        if SharedSettings.shared.customDictEnabled {
+            let customSearchKey = rawInput ?? input
+            let isToneAware = customSearchKey.contains { $0.isNumber }
+            let searchPrefix = isToneAware
+                ? customSearchKey.lowercased()
+                .replacingOccurrences(of: "-", with: "")
+                .replacingOccurrences(of: " ", with: "")
+                : CustomDictionaryService.generateNotone(customSearchKey)
+            let customEntries = customDictionaryRepository.searchSync(
+                prefix: searchPrefix,
+                isToneAware: isToneAware,
+                limit: 20,
             )
+            #if DEBUG
+                logger.debug("[SEARCH] customDict key='\(customSearchKey, privacy: .public)' prefix='\(searchPrefix, privacy: .public)' toneAware=\(isToneAware) segmented='\(input, privacy: .public)' results=\(customEntries.count)")
+            #endif
+            customWords = customEntries.map { entry in
+                let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: input)
+                let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
+                    CandidateProcessor.capitalize(entry.hanzi, basedOn: input)
+                } else {
+                    entry.hanzi
+                }
+                return TaigiWord(
+                    id: -2, // Custom dictionary marker
+                    roman: processedRoman,
+                    hanzi: processedHanzi,
+                    lengthScore: nil,
+                )
+            }
+        } else {
+            customWords = []
         }
 
         // Query system dictionaries
@@ -112,23 +129,22 @@ class LexiconService: @unchecked Sendable {
             for: input,
             inputType: inputType,
             inputMode: inputMode,
-            limit: limit
+            limit: limit,
         )
 
         // Process case for system results
         let processedWords = words.map { word in
-            let processedHanzi: String?
-            if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
-                processedHanzi = CandidateProcessor.capitalize(hanzi, basedOn: input)
+            let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
+                CandidateProcessor.capitalize(hanzi, basedOn: input)
             } else {
-                processedHanzi = word.hanzi
+                word.hanzi
             }
 
             return TaigiWord(
                 id: word.id,
                 roman: CandidateProcessor.capitalize(word.roman, basedOn: input),
                 hanzi: processedHanzi,
-                lengthScore: word.lengthScore
+                lengthScore: word.lengthScore,
             )
         }
 
@@ -158,8 +174,13 @@ class LexiconService: @unchecked Sendable {
         let sortedWords = CandidateProcessor.sortByScore(
             uniqueWords,
             normalizedInput: normalizedInput,
-            frequencyDataMap: frequencyDataMap
+            frequencyDataMap: frequencyDataMap,
         )
+
+        // TPS mode: remove visual duplicates (same hanzi, different roman)
+        if inputMode == .tps {
+            return CandidateProcessor.removeDisplayDuplicates(sortedWords)
+        }
         return sortedWords
     }
 

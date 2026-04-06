@@ -26,6 +26,7 @@ class NextWordHandler(
     private val onClearCandidates: () -> Unit
 ) {
     private var lastSelectedWord: String? = null
+    private var lastSelectedRoman: String? = null
     private var lastSelectionTime: Long = 0
     var isShowingNextWord: Boolean = false
         private set
@@ -36,6 +37,7 @@ class NextWordHandler(
 
     fun resetContext() {
         lastSelectedWord = null
+        lastSelectedRoman = null
         lastSelectionTime = 0
     }
 
@@ -62,6 +64,7 @@ class NextWordHandler(
 
         if (shouldReset) {
             lastSelectedWord = null
+            lastSelectedRoman = null
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[NEXTWORD] Context reset")
             }
@@ -71,48 +74,54 @@ class NextWordHandler(
             (currentTime - lastSelectionTime) < ASSOCIATION_TIMEOUT_MS
 
         val parts = splitCompoundWord(displayText)
-        val romanParts = splitCompoundWord(roman)
+        // Normalize romanization to TL for consistent storage and query
+        // pojDisplayToTLDisplay is idempotent on TL input, safe for all modes
+        val romanTl = TaigiPhonetics.pojDisplayToTLDisplay(roman)
+        val romanTlParts = splitCompoundWord(romanTl)
         val prevWord = lastSelectedWord
+        val prevTl = TaigiPhonetics.pojDisplayToTLDisplay(lastSelectedRoman ?: "")
 
         scope.launch {
-            val useTl = (prefs.inputMode == "tl")
+            if (prefs.associationRecordingEnabled) {
+                if (shouldRecordAssociation && prevWord != null) {
+                    if (!isNoise(displayText)) {
+                        NextWordService.recordAssociation(
+                            prev = prevWord,
+                            prevTl = prevTl,
+                            nextHanzi = displayText,
+                            nextTl = romanTl,
+                            context = taigikeyboard.context
+                        )
+                        if (BuildConfig.DEBUG) {
+                            Log.d(TAG, "[NEXTWORD] Record: '$prevWord($prevTl)' → '$displayText'")
+                        }
+                    } else if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[NEXTWORD] Skip noise: '$displayText'")
+                    }
+                }
 
-            if (shouldRecordAssociation && prevWord != null) {
-                if (!isNoise(displayText)) {
-                    val nextTl = if (useTl) roman else ""
+                // Record compound word internal associations
+                for (i in 0 until parts.size - 1) {
+                    val prevPart = parts[i]
+                    val prevPartTl = romanTlParts.getOrNull(i) ?: ""
+                    val nextPart = parts[i + 1]
+                    val nextPartTl = romanTlParts.getOrNull(i + 1) ?: ""
                     NextWordService.recordAssociation(
-                        prev = prevWord,
-                        nextHanzi = displayText,
-                        nextTl = nextTl,
+                        prev = prevPart,
+                        prevTl = prevPartTl,
+                        nextHanzi = nextPart,
+                        nextTl = nextPartTl,
                         context = taigikeyboard.context
                     )
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[NEXTWORD] Record: '$prevWord' → '$displayText'")
+                        Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart'")
                     }
-                } else if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD] Skip noise: '$displayText'")
-                }
-            }
-
-            // Record compound word internal associations
-            for (i in 0 until parts.size - 1) {
-                val prevPart = parts[i]
-                val nextPart = parts[i + 1]
-                val nextRoman = romanParts.getOrNull(i + 1) ?: ""
-                val nextTl = if (useTl) nextRoman else ""
-                NextWordService.recordAssociation(
-                    prev = prevPart,
-                    nextHanzi = nextPart,
-                    nextTl = nextTl,
-                    context = taigikeyboard.context
-                )
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart'")
                 }
             }
 
             val predictions = NextWordService.predict(
                 word = displayText,
+                roman = romanTl,
                 context = taigikeyboard.context,
                 prefs = taigikeyboard.prefs
             )
@@ -129,8 +138,9 @@ class NextWordHandler(
         // Update context (noise doesn't update lastSelectedWord)
         if (!isNoise(displayText)) {
             lastSelectedWord = displayText
+            lastSelectedRoman = romanTl
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] lastSelectedWord updated: '$displayText'")
+                Log.d(TAG, "[NEXTWORD] lastSelectedWord updated: '$displayText' roman='$romanTl'")
             }
         } else if (BuildConfig.DEBUG) {
             Log.d(TAG, "[NEXTWORD] Skip updating lastSelectedWord for noise: '$displayText'")
@@ -142,22 +152,26 @@ class NextWordHandler(
      * Update lastSelectedWord without triggering NextWord prediction.
      * Used when space key confirms composing text.
      */
-    fun updateLastSelectedWord(word: String) {
+    fun updateLastSelectedWord(word: String, roman: String? = null) {
         if (word.isEmpty()) return
 
         val parts = splitCompoundWord(word)
+        // Normalize romanization to TL for consistent storage
+        val romanTl = TaigiPhonetics.pojDisplayToTLDisplay(roman ?: word)
 
-        if (parts.size > 1) {
-            val useTl = (prefs.inputMode == "tl")
+        if (parts.size > 1 && prefs.associationRecordingEnabled) {
+            val romanTlParts = splitCompoundWord(romanTl)
             scope.launch {
                 for (i in 0 until parts.size - 1) {
                     val prevPart = parts[i]
+                    val prevPartTl = romanTlParts.getOrNull(i) ?: ""
                     val nextPart = parts[i + 1]
-                    val nextTl = if (useTl) nextPart else ""
+                    val nextPartTl = romanTlParts.getOrNull(i + 1) ?: ""
                     NextWordService.recordAssociation(
                         prev = prevPart,
+                        prevTl = prevPartTl,
                         nextHanzi = nextPart,
-                        nextTl = nextTl,
+                        nextTl = nextPartTl,
                         context = taigikeyboard.context
                     )
                     if (BuildConfig.DEBUG) {
@@ -169,8 +183,9 @@ class NextWordHandler(
 
         if (!isNoise(word)) {
             lastSelectedWord = word
+            lastSelectedRoman = romanTl
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: '$word'")
+                Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: '$word' roman='$romanTl'")
             }
         } else if (BuildConfig.DEBUG) {
             Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: skip noise '$word'")
@@ -187,6 +202,7 @@ class NextWordHandler(
         if (trimmedText.isEmpty()) {
             onClearCandidates()
             lastSelectedWord = null
+            lastSelectedRoman = null
             lastSelectionTime = 0
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[NEXTWORD] Backspace: text empty, cleared predictions")
@@ -212,6 +228,7 @@ class NextWordHandler(
         }
 
         lastSelectedWord = lastChar
+        lastSelectedRoman = null
         lastSelectionTime = System.currentTimeMillis()
 
         if (BuildConfig.DEBUG) {

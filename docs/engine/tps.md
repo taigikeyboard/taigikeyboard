@@ -327,9 +327,16 @@ When the user taps ㄇ or ㄫ, `adjustTPSInitialKey()` checks the last character
 | iOS | `TPSConverter.adjustTPSInitialKey(_:afterRawInput:)` | `ActionHandler+CharacterInput.swift` |
 | Android | `TPSConverter.adjustTPSInitialKey(char, afterRawInput)` | `TextInputManager.handleTaigiInput()` |
 
-### Known Limitation
+### Syllabic Nasal Tone-Triggered Correction (v3.4.7)
 
-Standalone syllabic m/ng at syllable start (e.g. m̄ = ㆬ˫) will display as initial form (ㄇ˫) because at input time we cannot predict whether a vowel will follow. Search is unaffected since both forms produce identical TL.
+When a tone mark follows bare ㄇ or ㄫ at syllable start, the consonant is retroactively corrected to its syllabic form:
+
+| Input sequence | Auto-corrected to | TL equivalent |
+|----------------|-------------------|---------------|
+| ㄇ + ˫ | ㆬ + ˫ | m7 |
+| ㄫ + ˊ | ㆭ + ˊ | ng5 |
+
+**Implementation**: `TPSConverter.syllabicNasalReplacement(forIncoming:lastRawChar:)`
 
 ---
 
@@ -380,7 +387,103 @@ Phonetic symbols are visually larger than romanization, TPS mode reduces font si
 
 ---
 
+## Auto-Correct Features (v3.4.6+)
+
+### Palatalization Auto-Correct
+
+Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) followed by ㄧ or ㆪ are auto-corrected to palatalized forms:
+
+| Input sequence | Auto-corrected to | TL equivalent |
+|----------------|-------------------|---------------|
+| ㄗ + ㄧ | ㄐ + ㄧ | tsi |
+| ㄘ + ㄧ | ㄑ + ㄧ | tshi |
+| ㄙ + ㄧ | ㄒ + ㄧ | si |
+| ㆡ + ㄧ | ㆢ + ㄧ | ji |
+
+**Implementation**: `TPSConverter.palatalizationReplacement(forIncoming:lastRawChar:)`
+
+Called from:
+- iOS: `ActionHandler+CharacterInput.swift`
+- Android: `TextInputManager.handleTaigiInput()`
+
+### Nasalized Vowel Auto-Correct
+
+ㆮ (ainn) after ㄧ is auto-corrected to ㆯ (aunn), because "iainn" is not a valid Taiwanese final — only "iaunn" exists.
+
+| Input sequence | Auto-corrected to | TL equivalent |
+|----------------|-------------------|---------------|
+| ㄧ + ㆮ | ㄧ + ㆯ | iaunn |
+
+**Implementation**: `TPSConverter.adjustTPSNasalizedVowelKey(_:afterRawInput:)`
+
+### Multi-Syllable Boundary Detection (v3.4.7)
+
+TPS multi-syllable input inserts automatic spaces at syllable boundaries when a tone mark or entering tone coda is followed by a new consonant or vowel.
+
+**Implementation**: Space insertion logic in `TPSConverter.toTLMultiSyllable()` uses tone marks (ˋ ˪ ˊ ˇ ˫ ˙) and entering tone codas (ㆴ ㆵ ㆻ ㆷ) as boundary signals.
+
+---
+
+## Known Limitation: Tone 1/4 Ambiguous Syllable Matching
+
+> **Status**: NOT YET IMPLEMENTED — documented for future improvement.
+
+### Problem
+
+TPS tone 1 and tone 4 are **unmarked** (no symbol). When a user types `ㄗㄨㄚˋ`, the toTL output is `"tsua2"` (single syllable). This matches 紙 (tl_num: `tsua2`) but NOT 珠仔 (tl_num: `tsu1a2`), because the implicit tone 1 on `tsu` is absent from the search key.
+
+| Word | tl_num | TPS input ㄗㄨㄚˋ | Match? |
+|------|--------|------------------|--------|
+| 紙 tsuá | `tsua2` | `tsua2` | ✓ |
+| 珠仔 tsu-á | `tsu1a2` | `tsua2` | ✗ |
+
+In contrast, POJ/TL users can type `tsua` (toneless) which matches the `tl_notone` key `"tsua"` → both words found. But TPS users who type an explicit tone 2 get `"tsua2"`, which doesn't match `"tsu1a2"`.
+
+### Proposed Solution: `tps:` Prefix Trie Key
+
+Build a separate set of trie keys with `tps:` prefix where tone digits 1 and 4 are stripped:
+
+```
+紙  tl_num: tsua2   → tps key: tsua2   (no 1/4 to strip)
+珠仔 tl_num: tsu1a2  → tps key: tsua2   (tone 1 removed)
+甘  tl_num: kam1    → tps key: kam     (tone 1 removed)
+角  tl_num: kak4    → tps key: kak     (tone 4 removed)
+```
+
+Search side: TPS mode uses `tps:` prefix and also strips 1/4 from the search key.
+
+### Implementation Plan
+
+1. **Trie builder** (`dictionary/build/04_create_trie.py`): Add `tps:` prefix keys — `tps_num` = `tl_num` with '1' and '4' removed, plus reuse `tl_notone` and `tl_abbrev` under `tps:` prefix.
+2. **Prefix constants** (both platforms): Add `tps:` prefix, map `.tps` → `"tps:"` in `triePrefix()`.
+3. **Search key** (both platforms): Strip '1' and '4' from `normalizedInput` when `inputMode == .tps`.
+4. **Android InputMode**: Add `InputMode.TPS` enum value (only for trie search; tone/case handling still uses TL).
+5. **Rebuild trie**: Run build script to regenerate `dictionary.trie` with `tps:` keys.
+
+### Why Tone 1/4 Specifically
+
+| Tone | TPS symbol | Explicitly typed? |
+|------|-----------|-------------------|
+| 1 | (none) | No |
+| 2 | ˋ | Yes |
+| 3 | ˪ | Yes |
+| 4 | (none, implied by checked coda) | No |
+| 5 | ˊ | Yes |
+| 7 | ˫ | Yes |
+| 8 | ˙ | Yes |
+| 9 | ˆ | Yes |
+
+Stripping 1/4 = removing tones that TPS users physically cannot type, while preserving tones they explicitly chose.
+
+### Impact Estimate
+
+- Trie size: ~50% more keys (~3 per entry added to existing 6).
+- MARISA-trie is highly compressed — estimated ~1-2 MB increase.
+- Zero impact on POJ/TL (they continue using `tl:`/`poj:` prefix).
+
+---
+
 ## References
 
 - [Tailo-TPS-Converter](https://github.com/leechunhoe/Tailo-TPS-Converter)
-- [MOE Taiwanese Dictionary](https://sutian.moe.edu.tw/zh-hant/siannuntiau/)
+- [MOE Taiwanese Dictionary](https://sutian.moe.edu.tw/zh-hant/siannuntiao/)

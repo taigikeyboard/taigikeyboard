@@ -1,14 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark Mode 色彩 -->
-
-    <!-- Kotlin 程式碼引用的色彩（Dark Mode 版本） -->
-    <color name="modern_accent">#D0BCFF</color>
-    <color name="modern_text_primary">#E6E1E5</color>
-    <color name="modern_text_secondary">#CAC4D0</color>
-    <color name="modern_surface_secondary">#2B2930</color>
-    <color name="modern_shadow_light">#1FFFFFFF</color>
-
-    <!-- Tab2 佈局選項膠囊背景（深色模式） -->
-    <color name="layout_capsule_background">#E6303030</color>
 </resources>

@@ -2,89 +2,61 @@ import SwiftUI
 
 /// 新功能詳細頁面
 ///
-/// 顯示新功能的詳細說明。
+/// 根據 JSON 資料驅動顯示，支援文字、圖片、輪播、外部連結。
 struct FeatureDetailView: View {
-    let feature: FeatureType
+    let feature: FeatureContent
     @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
-            ForEach(feature.detailParagraphs.indices, id: \.self) { index in
+            ForEach(feature.paragraphs.indices, id: \.self) { index in
+                let paragraph = feature.paragraphs[index]
+
                 Section {
-                    // 連紲建議詞第 1 段：文字 + 圖片輪播
-                    if feature == .nextWord && index == 0 {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(languageManager.text(feature.detailParagraphs[index]))
-                                .lineSpacing(6)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            ImageSlideshowView(
-                                imageNames: ["nextword_1", "nextword_2", "nextword_3"],
-                                interval: 1.5
-                            )
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
-                    // 拍字記持詞庫第 2 段：文字 + 圖片
-                    else if feature == .userDict && index == 1 {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(languageManager.text(feature.detailParagraphs[index]))
-                                .lineSpacing(6)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Image("feature_userdict")
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxWidth: .infinity)
-                        }
-                    }
-                    // 大小寫切換：每段文字 + 對應圖片
-                    else if feature == .caseSwitch {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(languageManager.text(feature.detailParagraphs[index]))
-                                .lineSpacing(6)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            if index == 0 {
-                                // shift 圖片輪播
-                                ImageSlideshowView(
-                                    imageNames: ["case_shift_1", "case_shift_2"],
-                                    interval: 1.5
-                                )
-                                .frame(maxWidth: .infinity)
-                            } else if index == 1 {
-                                // lowercase 圖片
-                                Image("case_lowercase")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: .infinity)
-                            } else if index == 2 {
-                                // capslock 圖片
-                                Image("case_capslock")
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                    }
-                    else {
-                        Text(languageManager.text(feature.detailParagraphs[index]))
-                            .lineSpacing(6)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    paragraphView(paragraph)
                 }
 
-                // 異用字開關：第 1 段後插入教育部辭典連結
-                if feature == .variant && index == 0 {
+                // Render link attachment as a separate section (after the paragraph)
+                if case .link(let linkText, let url) = paragraph.attachment {
                     Section {
-                        Link(destination: URL(string: "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/")!) {
-                            Label(languageManager.text(Tab1Texts.featureVariantDictLink), systemImage: "arrow.up.right.square")
+                        Link(destination: URL(string: url)!) {
+                            Label(languageManager.text(linkText.asLocalizedText), systemImage: "arrow.up.right.square")
                         }
                     }
                 }
             }
         }
-        .navigationTitle(languageManager.text(feature.title))
+        .navigationTitle(languageManager.text(feature.title.asLocalizedText))
         .navigationBarTitleDisplayMode(.large)
+    }
+
+    @ViewBuilder
+    private func paragraphView(_ paragraph: FeatureParagraph) -> some View {
+        switch paragraph.attachment {
+        case .slideshow(let images, let interval):
+            VStack(alignment: .leading, spacing: 12) {
+                paragraphText(paragraph)
+                ImageSlideshowView(imageNames: images, interval: interval)
+                    .frame(maxWidth: .infinity)
+            }
+
+        case .image(let name):
+            VStack(alignment: .leading, spacing: 12) {
+                paragraphText(paragraph)
+                Image(name)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+            }
+
+        case .navigation, .link, .none:
+            paragraphText(paragraph)
+        }
+    }
+
+    private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
+        Text(languageManager.text(paragraph.text.asLocalizedText))
+            .lineSpacing(6)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

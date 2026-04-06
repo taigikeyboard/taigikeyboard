@@ -12,7 +12,6 @@ import org.junit.Test
  * and ToneRestoration.
  */
 class EngineIntegrationTest {
-
     // MARK: - A. Normalization Pipeline
 
     @Test
@@ -54,10 +53,18 @@ class EngineIntegrationTest {
     @Test
     fun testToneMarkRoundTrip_pojMode() {
         val marked = TaigiPhonetics.convertSyllable("ka2", InputMode.POJ)
-        assertEquals("convertSyllable(ka2, POJ)", "k\u00E1", marked)  // ká
+        assertEquals("convertSyllable(ka2, POJ)", "k\u00E1", marked) // ká
 
         val restored = ToneRestoration.restore(marked, InputMode.POJ)
         assertEquals("restore(ká, POJ)", "ka", restored)
     }
 
+    @Test
+    fun testToneMarkRoundTrip_tlMode() {
+        val marked = TaigiPhonetics.convertSyllable("ka2", InputMode.TL)
+        assertEquals("convertSyllable(ka2, TL)", "k\u00E1", marked) // ká
+
+        val restored = ToneRestoration.restore(marked, InputMode.TL)
+        assertEquals("restore(ká, TL)", "ka", restored)
+    }
 }

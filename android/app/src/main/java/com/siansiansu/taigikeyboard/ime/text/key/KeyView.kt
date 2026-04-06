@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.*
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.MotionEvent
@@ -178,7 +179,9 @@ class KeyView(
         val borderWidthPx = (keyboardView.prefs.keyBorderWidth * resources.displayMetrics.density).toInt()
         val borderColor = getColorFromAttr(context, R.attr.key_fgColor)
         val bg = background
-        if (bg is android.graphics.drawable.StateListDrawable) {
+        if (bg is android.graphics.drawable.StateListDrawable &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        ) {
             for (i in 0 until bg.stateCount) {
                 val item = bg.getStateDrawable(i)
                 if (item is android.graphics.drawable.GradientDrawable) {

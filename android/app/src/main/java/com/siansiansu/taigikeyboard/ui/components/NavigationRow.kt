@@ -18,15 +18,17 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
 fun NavigationRow(
     icon: Painter,
     label: String,
-    trailingIcon: ImageVector,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    trailingIcon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
+    labelColor: Color = MaterialTheme.colorScheme.onSurface,
     trailingIconSize: Int = 24
 ) {
     Row(
@@ -48,15 +50,17 @@ fun NavigationRow(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = AppStyle.bodyFontSize,
+            color = labelColor
         )
 
-        Icon(
-            imageVector = trailingIcon,
-            contentDescription = null,
-            modifier = Modifier.size(trailingIconSize.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        if (trailingIcon != null) {
+            Icon(
+                imageVector = trailingIcon,
+                contentDescription = null,
+                modifier = Modifier.size(trailingIconSize.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

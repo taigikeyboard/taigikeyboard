@@ -66,9 +66,10 @@ object UserFrequencyService {
         initMutex.withLock {
             if (isInitialized) return
 
-            val context = appContext ?: throw IllegalStateException(
-                "UserFrequencyService 尚未初始化，請在 Application.onCreate 中呼叫 init(context)"
-            )
+            val context =
+                appContext ?: throw IllegalStateException(
+                    "UserFrequencyService 尚未初始化，請在 Application.onCreate 中呼叫 init(context)",
+                )
 
             dbHelper = DatabaseHelper(context)
             isInitialized = true
@@ -87,19 +88,22 @@ object UserFrequencyService {
             val db = dbHelper?.readableDatabase ?: return
 
             // 檢查使用者頻率資料筆數
-            val countCursor = db.rawQuery(
-                "SELECT COUNT(*) FROM ${Table.NAME}",
-                null
-            )
-            val recordCount = countCursor.use {
-                if (it.moveToFirst()) it.getInt(0) else 0
-            }
+            val countCursor =
+                db.rawQuery(
+                    "SELECT COUNT(*) FROM ${Table.NAME}",
+                    null,
+                )
+            val recordCount =
+                countCursor.use {
+                    if (it.moveToFirst()) it.getInt(0) else 0
+                }
 
             // 讀取 metadata
-            val metadataCursor = db.rawQuery(
-                "SELECT ${MetadataTable.KEY}, ${MetadataTable.VALUE} FROM ${MetadataTable.NAME}",
-                null
-            )
+            val metadataCursor =
+                db.rawQuery(
+                    "SELECT ${MetadataTable.KEY}, ${MetadataTable.VALUE} FROM ${MetadataTable.NAME}",
+                    null,
+                )
             val metadata = mutableMapOf<String, String>()
             metadataCursor.use {
                 while (it.moveToNext()) {
@@ -109,47 +113,52 @@ object UserFrequencyService {
                 }
             }
 
-            Log.i(TAG, "[INIT] Database initialized successfully")
-            Log.i(TAG, "[INIT] User frequency records: $recordCount")
-            Log.i(TAG, "[INIT] Schema version: ${metadata["schema_version"]}")
-            Log.i(TAG, "[INIT] App version: ${metadata["app_version"]}")
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[INIT] Database initialized successfully")
+                Log.i(TAG, "[INIT] User frequency records: $recordCount")
+                Log.i(TAG, "[INIT] Schema version: ${metadata["schema_version"]}")
+                Log.i(TAG, "[INIT] App version: ${metadata["app_version"]}")
+            }
         } catch (e: Exception) {
-            Log.w(TAG, "[INIT] Failed to log database info", e)
+            if (BuildConfig.DEBUG) Log.w(TAG, "[INIT] Failed to log database info", e)
         }
     }
 
     /**
      * 記錄詞彙使用
      */
-    suspend fun recordUsage(word: String) = withContext(Dispatchers.IO) {
-        try {
-            initialize()
-            val db = dbHelper?.writableDatabase ?: return@withContext
+    @Suppress("SqlResolve")
+    suspend fun recordUsage(word: String) =
+        withContext(Dispatchers.IO) {
+            try {
+                initialize()
+                val db = dbHelper?.writableDatabase ?: return@withContext
 
-            val sql = """
-                INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.COUNT}, ${Table.LAST_USED})
-                VALUES (?, 1, CURRENT_TIMESTAMP)
-                ON CONFLICT(${Table.WORD}) DO UPDATE SET
-                    ${Table.COUNT} = ${Table.COUNT} + 1,
-                    ${Table.LAST_USED} = CURRENT_TIMESTAMP;
-            """.trimIndent()
+                val sql =
+                    """
+                    INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.COUNT}, ${Table.LAST_USED})
+                    VALUES (?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(${Table.WORD}) DO UPDATE SET
+                        ${Table.COUNT} = ${Table.COUNT} + 1,
+                        ${Table.LAST_USED} = CURRENT_TIMESTAMP
+                    """.trimIndent()
 
-            db.execSQL(sql, arrayOf(word))
+                db.execSQL(sql, arrayOf(word))
 
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[RECORD] Recorded usage for: $word")
-            }
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[RECORD] Recorded usage for: $word")
+                }
 
-            if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
-                recordCounter.set(0)
-                pruneOldEntries()
-            }
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[RECORD] Failed to record usage for: $word", e)
+                if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
+                    recordCounter.set(0)
+                    pruneOldEntries()
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[RECORD] Failed to record usage for: $word", e)
+                }
             }
         }
-    }
 
     /**
      * Prune least-used entries when exceeding capacity
@@ -159,9 +168,10 @@ object UserFrequencyService {
             val db = dbHelper?.writableDatabase ?: return
 
             val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
-            val currentCount = cursor.use {
-                if (it.moveToFirst()) it.getInt(0) else 0
-            }
+            val currentCount =
+                cursor.use {
+                    if (it.moveToFirst()) it.getInt(0) else 0
+                }
 
             if (currentCount <= MAX_ENTRIES) return
 
@@ -176,7 +186,7 @@ object UserFrequencyService {
                     LIMIT ?
                 )
                 """.trimIndent(),
-                arrayOf(deleteCount.toString())
+                arrayOf(deleteCount.toString()),
             )
 
             if (BuildConfig.DEBUG) {
@@ -194,186 +204,196 @@ object UserFrequencyService {
      */
     data class FrequencyData(
         val count: Int,
-        val lastUsedMillis: Long  // Unix timestamp in milliseconds
+        val lastUsedMillis: Long, // Unix timestamp in milliseconds
     )
 
     /**
      * 取得詞彙使用頻率
      */
-    suspend fun frequency(word: String): Int = withContext(Dispatchers.IO) {
-        frequencyData(word).count
-    }
+    suspend fun frequency(word: String): Int =
+        withContext(Dispatchers.IO) {
+            frequencyData(word).count
+        }
 
     /**
      * 取得詞彙使用頻率資料（包含頻率和最後使用時間）
      */
-    suspend fun frequencyData(word: String): FrequencyData = withContext(Dispatchers.IO) {
-        try {
-            initialize()
-            val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData(0, 0)
+    suspend fun frequencyData(word: String): FrequencyData =
+        withContext(Dispatchers.IO) {
+            try {
+                initialize()
+                val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData(0, 0)
 
-            val cursor = db.rawQuery(
-                """
-                SELECT ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
-                FROM ${Table.NAME}
-                WHERE ${Table.WORD} = ?
-                """.trimIndent(),
-                arrayOf(word)
-            )
+                val cursor =
+                    db.rawQuery(
+                        """
+                        SELECT ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                        FROM ${Table.NAME}
+                        WHERE ${Table.WORD} = ?
+                        """.trimIndent(),
+                        arrayOf(word),
+                    )
 
-            cursor.use {
-                if (it.moveToFirst()) {
-                    val count = it.getInt(0)
-                    val lastUsedMillis = it.getLong(1)
-                    return@withContext FrequencyData(count, lastUsedMillis)
+                cursor.use {
+                    if (it.moveToFirst()) {
+                        val count = it.getInt(0)
+                        val lastUsedMillis = it.getLong(1)
+                        return@withContext FrequencyData(count, lastUsedMillis)
+                    }
                 }
-            }
 
-            FrequencyData(0, 0)
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[QUERY] Failed to get frequency data for: $word", e)
+                FrequencyData(0, 0)
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[QUERY] Failed to get frequency data for: $word", e)
+                }
+                FrequencyData(0, 0)
             }
-            FrequencyData(0, 0)
         }
-    }
 
     /**
      * 批次取得多個詞彙的頻率資料
      */
-    suspend fun frequencyDataBatch(words: List<String>): Map<String, FrequencyData> = withContext(Dispatchers.IO) {
-        if (words.isEmpty()) return@withContext emptyMap()
+    suspend fun frequencyDataBatch(words: List<String>): Map<String, FrequencyData> =
+        withContext(Dispatchers.IO) {
+            if (words.isEmpty()) return@withContext emptyMap()
 
-        try {
-            initialize()
-            val db = dbHelper?.readableDatabase ?: return@withContext emptyMap()
+            try {
+                initialize()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyMap()
 
-            val result = mutableMapOf<String, FrequencyData>()
-            val placeholders = words.joinToString(",") { "?" }
+                val result = mutableMapOf<String, FrequencyData>()
+                val placeholders = words.joinToString(",") { "?" }
 
-            val cursor = db.rawQuery(
-                """
-                SELECT ${Table.WORD}, ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
-                FROM ${Table.NAME}
-                WHERE ${Table.WORD} IN ($placeholders)
-                """.trimIndent(),
-                words.toTypedArray()
-            )
+                val cursor =
+                    db.rawQuery(
+                        """
+                        SELECT ${Table.WORD}, ${Table.COUNT}, strftime('%s', ${Table.LAST_USED}) * 1000
+                        FROM ${Table.NAME}
+                        WHERE ${Table.WORD} IN ($placeholders)
+                        """.trimIndent(),
+                        words.toTypedArray(),
+                    )
 
-            cursor.use {
-                while (it.moveToNext()) {
-                    val word = it.getString(0)
-                    val count = it.getInt(1)
-                    val lastUsedMillis = it.getLong(2)
-                    result[word] = FrequencyData(count, lastUsedMillis)
+                cursor.use {
+                    while (it.moveToNext()) {
+                        val word = it.getString(0)
+                        val count = it.getInt(1)
+                        val lastUsedMillis = it.getLong(2)
+                        result[word] = FrequencyData(count, lastUsedMillis)
+                    }
                 }
-            }
 
-            result
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[QUERY] Failed to get frequency data batch", e)
+                result
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[QUERY] Failed to get frequency data batch", e)
+                }
+                emptyMap()
             }
-            emptyMap()
         }
-    }
 
     /**
      * 取得最常用的詞彙
      */
-    suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
-        try {
-            initialize()
-            val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
+    suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> =
+        withContext(Dispatchers.IO) {
+            try {
+                initialize()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
 
-            val cursor = db.rawQuery(
-                """
-                SELECT ${Table.WORD}, ${Table.COUNT}
-                FROM ${Table.NAME}
-                ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
-                LIMIT ?
-                """.trimIndent(),
-                arrayOf(limit.toString())
-            )
+                val cursor =
+                    db.rawQuery(
+                        """
+                        SELECT ${Table.WORD}, ${Table.COUNT}
+                        FROM ${Table.NAME}
+                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        LIMIT ?
+                        """.trimIndent(),
+                        arrayOf(limit.toString()),
+                    )
 
-            val results = mutableListOf<Pair<String, Int>>()
-            cursor.use {
-                while (it.moveToNext()) {
-                    val word = it.getString(0)
-                    val count = it.getInt(1)
-                    results.add(word to count)
+                val results = mutableListOf<Pair<String, Int>>()
+                cursor.use {
+                    while (it.moveToNext()) {
+                        val word = it.getString(0)
+                        val count = it.getInt(1)
+                        results.add(word to count)
+                    }
                 }
-            }
 
-            results
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[QUERY] Failed to get top words", e)
+                results
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[QUERY] Failed to get top words", e)
+                }
+                emptyList()
             }
-            emptyList()
         }
-    }
 
     /**
      * 取得所有詞彙頻率（Debug 用）
      */
-    suspend fun getAllFrequencies(context: Context): List<Pair<String, Int>> = withContext(Dispatchers.IO) {
-        try {
-            if (appContext == null) {
-                appContext = context.applicationContext
-            }
-            initialize()
-            val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-
-            val cursor = db.rawQuery(
-                """
-                SELECT ${Table.WORD}, ${Table.COUNT}
-                FROM ${Table.NAME}
-                ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
-                """.trimIndent(),
-                null
-            )
-
-            val results = mutableListOf<Pair<String, Int>>()
-            cursor.use {
-                while (it.moveToNext()) {
-                    val word = it.getString(0)
-                    val count = it.getInt(1)
-                    results.add(word to count)
+    suspend fun getAllFrequencies(context: Context): List<Pair<String, Int>> =
+        withContext(Dispatchers.IO) {
+            try {
+                if (appContext == null) {
+                    appContext = context.applicationContext
                 }
-            }
+                initialize()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
 
-            results
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[QUERY] Failed to get all frequencies", e)
+                val cursor =
+                    db.rawQuery(
+                        """
+                        SELECT ${Table.WORD}, ${Table.COUNT}
+                        FROM ${Table.NAME}
+                        ORDER BY ${Table.COUNT} DESC, ${Table.LAST_USED} DESC
+                        """.trimIndent(),
+                        null,
+                    )
+
+                val results = mutableListOf<Pair<String, Int>>()
+                cursor.use {
+                    while (it.moveToNext()) {
+                        val word = it.getString(0)
+                        val count = it.getInt(1)
+                        results.add(word to count)
+                    }
+                }
+
+                results
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[QUERY] Failed to get all frequencies", e)
+                }
+                emptyList()
             }
-            emptyList()
         }
-    }
 
     /**
      * 清除所有頻率資料（Debug 用）
      */
-    suspend fun clearAllFrequencies(context: Context) = withContext(Dispatchers.IO) {
-        try {
-            if (appContext == null) {
-                appContext = context.applicationContext
-            }
-            initialize()
-            val db = dbHelper?.writableDatabase ?: return@withContext
+    suspend fun clearAllFrequencies(context: Context) =
+        withContext(Dispatchers.IO) {
+            try {
+                if (appContext == null) {
+                    appContext = context.applicationContext
+                }
+                initialize()
+                val db = dbHelper?.writableDatabase ?: return@withContext
 
-            db.execSQL("DELETE FROM ${Table.NAME}")
+                db.execSQL("DELETE FROM ${Table.NAME}")
 
-            if (BuildConfig.DEBUG) {
-                Log.i(TAG, "[CLEAR] All frequencies cleared")
-            }
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[CLEAR] Failed to clear frequencies", e)
+                if (BuildConfig.DEBUG) {
+                    Log.i(TAG, "[CLEAR] All frequencies cleared")
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[CLEAR] Failed to clear frequencies", e)
+                }
             }
         }
-    }
 
     /**
      * Returns total entry count, or -1 if DB is not open.
@@ -383,42 +403,109 @@ object UserFrequencyService {
             val db = dbHelper?.readableDatabase ?: return -1
             val cursor = db.rawQuery("SELECT COUNT(*) FROM ${Table.NAME}", null)
             cursor.use { if (it.moveToFirst()) it.getInt(0) else -1 }
-        } catch (_: Exception) { -1 }
+        } catch (_: Exception) {
+            -1
+        }
+    }
+
+    /**
+     * Batch import frequency entries with merge strategy: keep higher count.
+     */
+    @Suppress("SqlResolve")
+    suspend fun batchImportMerge(
+        context: Context,
+        entries: List<Pair<String, Int>>,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                if (appContext == null) {
+                    appContext = context.applicationContext
+                }
+                initialize()
+                val db = dbHelper?.writableDatabase ?: return@withContext 0
+
+                val sql =
+                    """
+                    INSERT INTO ${Table.NAME} (${Table.WORD}, ${Table.COUNT}, ${Table.LAST_USED})
+                    VALUES (?, ?, datetime('now'))
+                    ON CONFLICT(${Table.WORD}) DO UPDATE SET
+                        ${Table.COUNT} = MAX(${Table.COUNT}, excluded.${Table.COUNT}),
+                        ${Table.LAST_USED} = datetime('now')
+                    """.trimIndent()
+
+                db.beginTransaction()
+                var imported = 0
+                try {
+                    val stmt = db.compileStatement(sql)
+                    for ((word, count) in entries) {
+                        stmt.clearBindings()
+                        stmt.bindString(1, word)
+                        stmt.bindLong(2, count.toLong())
+                        stmt.executeInsert()
+                        imported++
+                    }
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
+                imported
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[BATCH_IMPORT] Failed", e)
+                }
+                0
+            }
+        }
+
+    /**
+     * Delete a single word from frequency data
+     */
+    suspend fun deleteWord(
+        context: Context,
+        word: String,
+    ) = withContext(Dispatchers.IO) {
+        if (appContext == null) init(context)
+        initialize()
+        val db = dbHelper?.writableDatabase ?: return@withContext
+        db.delete(Table.NAME, "${Table.WORD} = ?", arrayOf(word))
     }
 
     /**
      * 刪除資料庫
      */
-    suspend fun deleteDatabase() = withContext(Dispatchers.IO) {
-        try {
-            dbHelper?.close()
-            dbHelper = null
-            isInitialized = false
+    suspend fun deleteDatabase() =
+        withContext(Dispatchers.IO) {
+            try {
+                dbHelper?.close()
+                dbHelper = null
+                isInitialized = false
 
-            val context = appContext ?: return@withContext
-            val dbFile = context.getDatabasePath(DATABASE_NAME)
-            if (dbFile.exists()) {
-                dbFile.delete()
+                val context = appContext ?: return@withContext
+                val dbFile = context.getDatabasePath(DATABASE_NAME)
+                if (dbFile.exists()) {
+                    dbFile.delete()
+                    if (BuildConfig.DEBUG) {
+                        Log.i(TAG, "[DELETE] Database deleted successfully")
+                    }
+                }
+            } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[DELETE] Database deleted successfully")
+                    Log.e(TAG, "[DELETE] Failed to delete database", e)
                 }
             }
-        } catch (e: Exception) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[DELETE] Failed to delete database", e)
-            }
         }
-    }
 
     /**
      * 資料庫輔助類別
      */
-    private class DatabaseHelper(private val context: Context) : SQLiteOpenHelper(
-        context,
-        DATABASE_NAME,
-        null,
-        DATABASE_VERSION
-    ) {
+    private class DatabaseHelper(
+        private val context: Context,
+    ) : SQLiteOpenHelper(
+            context,
+            DATABASE_NAME,
+            null,
+            DATABASE_VERSION,
+        ) {
         override fun onCreate(db: SQLiteDatabase) {
             // 建立使用者頻率表
             db.execSQL(
@@ -430,7 +517,7 @@ object UserFrequencyService {
                     ${Table.LAST_USED} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     ${Table.CREATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
-                """.trimIndent()
+                """.trimIndent(),
             )
 
             // 建立索引
@@ -445,7 +532,7 @@ object UserFrequencyService {
                     ${MetadataTable.KEY} TEXT PRIMARY KEY,
                     ${MetadataTable.VALUE} TEXT
                 );
-                """.trimIndent()
+                """.trimIndent(),
             )
 
             // 寫入 metadata
@@ -459,28 +546,33 @@ object UserFrequencyService {
         /**
          * 寫入 metadata 資訊
          */
-        private fun insertMetadata(db: SQLiteDatabase, context: Context) {
+        private fun insertMetadata(
+            db: SQLiteDatabase,
+            context: Context,
+        ) {
             try {
-                val appVersion = context.packageManager.getPackageInfo(
-                    context.packageName,
-                    0
-                ).versionName
+                val appVersion =
+                    context.packageManager
+                        .getPackageInfo(
+                            context.packageName,
+                            0,
+                        ).versionName
 
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, ?)",
-                    arrayOf("schema_version", "1")
+                    arrayOf("schema_version", "1"),
                 )
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, ?)",
-                    arrayOf("app_version", appVersion)
+                    arrayOf("app_version", appVersion),
                 )
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, datetime('now'))",
-                    arrayOf("created_date")
+                    arrayOf("created_date"),
                 )
                 db.execSQL(
                     "INSERT OR REPLACE INTO ${MetadataTable.NAME} (${MetadataTable.KEY}, ${MetadataTable.VALUE}) VALUES (?, datetime('now'))",
-                    arrayOf("last_modified")
+                    arrayOf("last_modified"),
                 )
             } catch (e: Exception) {
                 // metadata 寫入失敗不影響主要功能
@@ -490,7 +582,11 @@ object UserFrequencyService {
             }
         }
 
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        override fun onUpgrade(
+            db: SQLiteDatabase,
+            oldVersion: Int,
+            newVersion: Int,
+        ) {
             // 漸進式升級策略：保留使用者資料
             // 未來如需 schema 變更，在此處新增對應版本的 ALTER TABLE 語句
 

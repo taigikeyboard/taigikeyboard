@@ -23,7 +23,6 @@ class CapsStateManager(
     var capsLock: Boolean = false
         private set
     private var cursorCapsMode: CapsMode = CapsMode.NONE
-    private var editorCapsMode: CapsMode = CapsMode.NONE
     private var hasCapsRecentlyChanged: Boolean = false
     var hasSpaceRecentlyPressed: Boolean = false
 
@@ -54,7 +53,6 @@ class CapsStateManager(
      */
     fun updateCapsState() {
         cursorCapsMode = fetchCurrentCursorCapsMode()
-        editorCapsMode = parseCapsModeFromFlags(taigikeyboard.currentInputEditorInfo.inputType)
         if (!capsLock) {
             caps = if (taigikeyboard.prefs.autoCapitalizationEnabled) {
                 cursorCapsMode != CapsMode.NONE

@@ -9,4 +9,9 @@ enum RomanizationConverter {
     static func tlToPOJ(_ text: String) -> String {
         TaigiPhonetics.tlDisplayToPOJDisplay(text)
     }
+
+    /// Convert POJ diacritic text (with hyphens) to TL diacritic text.
+    static func pojToTL(_ text: String) -> String {
+        TaigiPhonetics.pojDisplayToTLDisplay(text)
+    }
 }

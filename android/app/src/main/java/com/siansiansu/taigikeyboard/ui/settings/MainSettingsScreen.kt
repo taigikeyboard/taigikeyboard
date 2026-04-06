@@ -6,6 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,14 +20,14 @@ import com.siansiansu.taigikeyboard.R
 
 data class TabItem(
     val iconResId: Int,
-    val label: String
+    val label: String,
 )
 
 @Composable
 fun MainSettingsScreen(
     tabs: List<TabItem>,
     initialTab: Int = 0,
-    content: @Composable (selectedTab: Int) -> Unit
+    content: @Composable (selectedTab: Int) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(initialTab) }
 
@@ -38,16 +39,22 @@ fun MainSettingsScreen(
                         icon = {
                             Icon(
                                 painter = painterResource(tab.iconResId),
-                                contentDescription = tab.label
+                                contentDescription = tab.label,
                             )
                         },
                         label = { Text(tab.label) },
                         selected = selectedTab == index,
-                        onClick = { selectedTab = index }
+                        onClick = { selectedTab = index },
+                        colors =
+                            NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.surfaceContainer,
+                            ),
                     )
                 }
             }
-        }
+        },
     ) { innerPadding ->
         Box(Modifier.padding(innerPadding)) {
             content(selectedTab)

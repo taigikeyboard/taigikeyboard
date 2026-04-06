@@ -1,32 +1,31 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// TaigiPhonetics unit tests
 /// Ported from references/taigi-converter/tests/{phonetics,tl,poj}.test.js
 final class TaigiPhoneticsTests: XCTestCase {
-
     // MARK: - A. stripToneMark
 
     func testStripToneMark_acuteAccentTone2() {
-        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E1}")  // á
+        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E1}") // á
         XCTAssertEqual(bare, "a")
         XCTAssertEqual(tone, "2")
     }
 
     func testStripToneMark_graveAccentTone3() {
-        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E0}")  // à
+        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E0}") // à
         XCTAssertEqual(bare, "a")
         XCTAssertEqual(tone, "3")
     }
 
     func testStripToneMark_circumflexTone5() {
-        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E2}")  // â
+        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{00E2}") // â
         XCTAssertEqual(bare, "a")
         XCTAssertEqual(tone, "5")
     }
 
     func testStripToneMark_macronTone7() {
-        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{0101}")  // ā
+        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{0101}") // ā
         XCTAssertEqual(bare, "a")
         XCTAssertEqual(tone, "7")
     }
@@ -38,7 +37,7 @@ final class TaigiPhoneticsTests: XCTestCase {
     }
 
     func testStripToneMark_breveTone9_POJ() {
-        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{0103}")  // ă (a + breve)
+        let (bare, tone) = TaigiPhonetics.stripToneMark("\u{0103}") // ă (a + breve)
         XCTAssertEqual(bare, "a")
         XCTAssertEqual(tone, "9")
     }
@@ -79,14 +78,14 @@ final class TaigiPhoneticsTests: XCTestCase {
             ("eng", "ing"),
             ("ek", "ik"),
             ("ou", "oo"),
-            ("o\u{0358}", "oo"),  // o͘ -> oo
-            ("\u{207F}", "nn"),   // ⁿ -> nn
+            ("o\u{0358}", "oo"), // o͘ -> oo
+            ("\u{207F}", "nn"), // ⁿ -> nn
             ("oonn", "onn"),
         ]
         for (input, expected) in cases {
             XCTAssertEqual(
                 TaigiPhonetics.normalizeToTL(input), expected,
-                "normalizeToTL(\(input)) should be \(expected)"
+                "normalizeToTL(\(input)) should be \(expected)",
             )
         }
     }
@@ -102,12 +101,12 @@ final class TaigiPhoneticsTests: XCTestCase {
             ("a", false),
             ("an", false),
             ("ang", false),
-            ("annh", true),  // nasal with h
+            ("annh", true), // nasal with h
         ]
         for (final, expected) in stops {
             XCTAssertEqual(
                 TaigiPhonetics.isStopTone(final), expected,
-                "isStopTone(\(final)) should be \(expected)"
+                "isStopTone(\(final)) should be \(expected)",
             )
         }
     }
@@ -118,9 +117,9 @@ final class TaigiPhoneticsTests: XCTestCase {
         let cases: [(input: String, initial: String, final: String)] = [
             ("ka", "k", "a"),
             ("tshiu", "tsh", "iu"),
-            ("a", "", "a"),       // no initial
-            ("ng", "", "ng"),     // syllabic ng
-            ("m", "", "m"),       // syllabic m
+            ("a", "", "a"), // no initial
+            ("ng", "", "ng"), // syllabic ng
+            ("m", "", "m"), // syllabic m
             ("phang", "ph", "ang"),
             ("iang", "", "iang"),
             ("oo", "", "oo"),
@@ -146,10 +145,10 @@ final class TaigiPhoneticsTests: XCTestCase {
             ("kang1", "k", "ang", "1"),
             ("a1", "", "a", "1"),
             // Tone mark
-            ("k\u{00E1}", "k", "a", "2"),  // ká
+            ("k\u{00E1}", "k", "a", "2"), // ká
             // Inferred tones
-            ("kah", "k", "ah", "4"),   // stop tone -> 4
-            ("ka", "k", "a", "1"),     // non-stop -> 1
+            ("kah", "k", "ah", "4"), // stop tone -> 4
+            ("ka", "k", "a", "1"), // non-stop -> 1
             // Aspirated initial
             ("pha3", "ph", "a", "3"),
             // tsh initial
@@ -166,10 +165,10 @@ final class TaigiPhoneticsTests: XCTestCase {
 
     func testParseSyllable_pojForms() {
         let cases: [(input: String, initial: String, final: String, tone: String)] = [
-            ("chhi2", "tsh", "i", "2"),    // ch->ts, chh->tsh
-            ("koa1", "k", "ua", "1"),      // oa->ua
-            ("koe1", "k", "ue", "1"),      // oe->ue
-            ("peng5", "p", "ing", "5"),    // eng->ing
+            ("chhi2", "tsh", "i", "2"), // ch->ts, chh->tsh
+            ("koa1", "k", "ua", "1"), // oa->ua
+            ("koe1", "k", "ue", "1"), // oe->ue
+            ("peng5", "p", "ing", "5"), // eng->ing
         ]
         for (input, expectedInitial, expectedFinal, expectedTone) in cases {
             let result = TaigiPhonetics.parseSyllable(input)
@@ -202,10 +201,10 @@ final class TaigiPhoneticsTests: XCTestCase {
 
     func testToTL_allTones() {
         let cases: [(initial: String, final: String, tone: String, expected: String)] = [
-            ("k", "a", "1", "ka"),        // tone 1: no mark
+            ("k", "a", "1", "ka"), // tone 1: no mark
             ("k", "a", "2", "k\u{00E1}"), // ká
             ("k", "a", "3", "k\u{00E0}"), // kà
-            ("k", "ah", "4", "kah"),      // tone 4: no mark
+            ("k", "ah", "4", "kah"), // tone 4: no mark
             ("k", "a", "5", "k\u{00E2}"), // kâ
             ("k", "a", "7", "k\u{0101}"), // kā
             ("k", "ah", "8", "ka\u{030D}h"), // ka̍h
@@ -220,7 +219,7 @@ final class TaigiPhoneticsTests: XCTestCase {
         let result = TaigiPhonetics.toTL(initial: "k", final: "a", tone: "9")
         XCTAssertTrue(
             result.unicodeScalars.contains("\u{030B}"),
-            "TL tone 9 should use double acute accent (U+030B)"
+            "TL tone 9 should use double acute accent (U+030B)",
         )
     }
 
@@ -251,13 +250,13 @@ final class TaigiPhoneticsTests: XCTestCase {
 
     func testToTL_noInitial() {
         let result = TaigiPhonetics.toTL(initial: "", final: "a", tone: "2")
-        XCTAssertEqual(result, "\u{00E1}")  // á
+        XCTAssertEqual(result, "\u{00E1}") // á
     }
 
     func testToTL_complexFinal_iang() {
         // a takes priority in iang
         let result = TaigiPhonetics.toTL(initial: "k", final: "iang", tone: "5")
-        XCTAssertEqual(result, "ki\u{00E2}ng")  // kiâng
+        XCTAssertEqual(result, "ki\u{00E2}ng") // kiâng
     }
 
     // MARK: - G. toPOJ
@@ -265,11 +264,11 @@ final class TaigiPhoneticsTests: XCTestCase {
     func testToPOJ_initialConversion() {
         // ts -> ch
         let result1 = TaigiPhonetics.toPOJ(initial: "ts", final: "u", tone: "2")
-        XCTAssertEqual(result1, "ch\u{00FA}")  // chú
+        XCTAssertEqual(result1, "ch\u{00FA}") // chú
 
         // tsh -> chh
         let result2 = TaigiPhonetics.toPOJ(initial: "tsh", final: "iu", tone: "7")
-        XCTAssertEqual(result2, "chhi\u{016B}")  // chhiū
+        XCTAssertEqual(result2, "chhi\u{016B}") // chhiū
     }
 
     func testToPOJ_finalConversions() {
@@ -281,7 +280,7 @@ final class TaigiPhoneticsTests: XCTestCase {
         let ooResult = TaigiPhonetics.toPOJ(initial: "k", final: "oo", tone: "1")
         XCTAssertTrue(
             ooResult.unicodeScalars.contains("\u{0358}"),
-            "oo should become o͘ in POJ: got \(ooResult)"
+            "oo should become o͘ in POJ: got \(ooResult)",
         )
 
         // ua -> oa
@@ -302,13 +301,6 @@ final class TaigiPhoneticsTests: XCTestCase {
     }
 
     func testToPOJ_toneMarks() {
-        let cases: [(initial: String, final: String, tone: String)] = [
-            ("k", "a", "1"),  // no mark
-            ("k", "a", "2"),  // acute
-            ("k", "a", "5"),  // circumflex
-            ("k", "a", "7"),  // macron
-        ]
-
         XCTAssertEqual(TaigiPhonetics.toPOJ(initial: "k", final: "a", tone: "1"), "ka")
         XCTAssertEqual(TaigiPhonetics.toPOJ(initial: "k", final: "a", tone: "2"), "k\u{00E1}")
         XCTAssertEqual(TaigiPhonetics.toPOJ(initial: "k", final: "a", tone: "5"), "k\u{00E2}")
@@ -402,30 +394,72 @@ final class TaigiPhoneticsTests: XCTestCase {
 
     func testTlDisplayToPOJDisplay_tsConversion() {
         // TL ts -> POJ ch
-        let result = TaigiPhonetics.tlDisplayToPOJDisplay("ts\u{00E1}i")  // tsái
+        let result = TaigiPhonetics.tlDisplayToPOJDisplay("ts\u{00E1}i") // tsái
         XCTAssertTrue(result.hasPrefix("ch"), "ts should become ch: got \(result)")
     }
 
     func testTlDisplayToPOJDisplay_casePreservation() {
-        let result = TaigiPhonetics.tlDisplayToPOJDisplay("T\u{00E2}i")  // Tâi
+        let result = TaigiPhonetics.tlDisplayToPOJDisplay("T\u{00E2}i") // Tâi
         XCTAssertTrue(result.first?.isUppercase == true, "Case should be preserved: got \(result)")
     }
 
     func testTlDisplayToPOJDisplay_ooHandling() {
         // TL oo -> POJ o͘
-        let result = TaigiPhonetics.tlDisplayToPOJDisplay("h\u{00F4}o")  // hôo
+        let result = TaigiPhonetics.tlDisplayToPOJDisplay("h\u{00F4}o") // hôo
         XCTAssertTrue(
             result.unicodeScalars.contains { $0 == "\u{0358}" },
-            "oo should become o͘ in POJ: got \(result)"
+            "oo should become o͘ in POJ: got \(result)",
         )
     }
 
     func testTlDisplayToPOJDisplay_hyphenatedMultiSyllable() {
-        let result = TaigiPhonetics.tlDisplayToPOJDisplay("t\u{00E2}i-g\u{00ED}")  // tâi-gí
+        let result = TaigiPhonetics.tlDisplayToPOJDisplay("t\u{00E2}i-g\u{00ED}") // tâi-gí
         XCTAssertTrue(result.contains("-"), "Hyphens should be preserved")
     }
 
     func testTlDisplayToPOJDisplay_empty() {
         XCTAssertEqual(TaigiPhonetics.tlDisplayToPOJDisplay(""), "")
+    }
+
+    // MARK: - K. pojDisplayToTLDisplay
+
+    func testPojDisplayToTLDisplay_chConversion() {
+        // POJ ch -> TL ts
+        let result = TaigiPhonetics.pojDisplayToTLDisplay("ch\u{00E1}i") // chái
+        XCTAssertTrue(result.hasPrefix("ts"), "ch should become ts: got \(result)")
+    }
+
+    func testPojDisplayToTLDisplay_casePreservation() {
+        let result = TaigiPhonetics.pojDisplayToTLDisplay("T\u{00E2}i") // Tâi (POJ)
+        XCTAssertTrue(result.first?.isUppercase == true, "Case should be preserved: got \(result)")
+    }
+
+    func testPojDisplayToTLDisplay_oaDiphthong() {
+        // POJ oa -> TL ua
+        let result = TaigiPhonetics.pojDisplayToTLDisplay("h\u{00F2}a") // hòa
+        XCTAssertTrue(result.contains("u"), "oa should become ua: got \(result)")
+    }
+
+    func testPojDisplayToTLDisplay_hyphenatedMultiSyllable() {
+        let result = TaigiPhonetics.pojDisplayToTLDisplay("t\u{00E2}i-g\u{00ED}") // tâi-gí (POJ)
+        XCTAssertTrue(result.contains("-"), "Hyphens should be preserved")
+        XCTAssertTrue(result.hasPrefix("t"), "Result should be TL format: got \(result)")
+    }
+
+    func testPojDisplayToTLDisplay_idempotentOnTL() {
+        // pojDisplayToTLDisplay on TL input should return same TL
+        let tlInput = "t\u{00E2}i-g\u{00ED}" // tâi-gí (TL)
+        let result = TaigiPhonetics.pojDisplayToTLDisplay(tlInput)
+        XCTAssertEqual(result, tlInput, "Should be idempotent on TL input")
+    }
+
+    func testPojDisplayToTLDisplay_empty() {
+        XCTAssertEqual(TaigiPhonetics.pojDisplayToTLDisplay(""), "")
+    }
+
+    func testPojDisplayToTLDisplay_nasalConversion() {
+        // POJ superscript ⁿ -> TL nn
+        let result = TaigiPhonetics.pojDisplayToTLDisplay("sa\u{207F}") // saⁿ
+        XCTAssertTrue(result.contains("nn"), "Nasal ⁿ should become nn: got \(result)")
     }
 }

@@ -2,10 +2,10 @@ import Foundation
 import OSLog
 
 #if DEBUG
-private let normalizerLogger = Logger(
-    subsystem: LexiconConstants.Logging.subsystem,
-    category: "InputNormalizer"
-)
+    private let normalizerLogger = Logger(
+        subsystem: LexiconConstants.Logging.subsystem,
+        category: "InputNormalizer",
+    )
 #endif
 
 /// Input normalizer
@@ -22,11 +22,10 @@ private let normalizerLogger = Logger(
 ///
 /// Pipeline: TPS conversion → split syllables → per-syllable (diacritics→digits) → join
 enum InputNormalizer {
-
     // MARK: - Public API
 
     /// Normalize input to Trie query format (TL numeric tones)
-    static func normalize(_ input: String, mode: InputMode) -> String {
+    static func normalize(_ input: String, mode _: InputMode) -> String {
         guard !input.isEmpty else { return "" }
 
         let processedInput = TPSConverter.containsTPS(input)
@@ -36,7 +35,7 @@ enum InputNormalizer {
         let lowercased = processedInput.lowercased()
         let shouldAddDefaultTones = hasToneMarks(lowercased)
 
-        let syllables = lowercased.split(separator: "-", omittingEmptySubsequences: false)
+        let syllables = lowercased.split(omittingEmptySubsequences: false) { $0 == "-" || $0 == " " }
         let result = syllables.map { syllable in
             normalizeSyllable(String(syllable), addDefaultTone: shouldAddDefaultTones)
         }
@@ -44,9 +43,9 @@ enum InputNormalizer {
         let normalized = result.joined()
 
         #if DEBUG
-        if input != normalized {
-            normalizerLogger.debug("[NORMALIZE] input='\(input, privacy: .public)' -> '\(normalized, privacy: .public)'")
-        }
+            if input != normalized {
+                normalizerLogger.debug("[NORMALIZE] input='\(input, privacy: .public)' -> '\(normalized, privacy: .public)'")
+            }
         #endif
 
         return normalized
@@ -70,12 +69,14 @@ enum InputNormalizer {
             .replacingOccurrences(of: "\u{207F}", with: "nn")
             .replacingOccurrences(of: "\u{1D3A}", with: "nn")
 
-        if let lastChar = withNasalConverted.last, lastChar.isNumber {
-            return withNasalConverted
-        }
-
+        // NFD + convert o͘ (U+0358) → oo before digit check,
+        // so "ho͘2" from the POJ keyboard picker normalizes to "hoo2"
         let nfd = withNasalConverted.decomposedStringWithCanonicalMapping
         let withOoConverted = nfd.replacingOccurrences(of: "\u{0358}", with: "o")
+
+        if let lastChar = withOoConverted.last, lastChar.isNumber {
+            return withOoConverted
+        }
 
         var toneNumber = ""
         var withoutTone = ""

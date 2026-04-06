@@ -2,7 +2,6 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.Build
 import android.util.Log
 import android.view.Window
 import androidx.core.view.WindowCompat
@@ -41,13 +40,11 @@ class NavigationBarManager {
 
         // 設定導覽列前景色（圖示顏色）
         // light mode: 深色圖示，dark mode: 淺色圖示
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            WindowCompat.getInsetsController(window, window.decorView)
-                .isAppearanceLightNavigationBars = !isDark
+        WindowCompat.getInsetsController(window, window.decorView)
+            .isAppearanceLightNavigationBars = !isDark
 
-            if (BuildConfig.DEBUG) {
-                Log.d("NavigationBarManager", "  isAppearanceLightNavigationBars set to: ${!isDark}")
-            }
+        if (BuildConfig.DEBUG) {
+            Log.d("NavigationBarManager", "  isAppearanceLightNavigationBars set to: ${!isDark}")
         }
     }
 }

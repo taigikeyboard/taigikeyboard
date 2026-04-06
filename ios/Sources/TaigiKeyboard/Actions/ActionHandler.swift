@@ -31,6 +31,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     /// 前一個選中的詞（用於記錄詞彙關聯）
     var lastSelectedWord: String?
+    var lastSelectedRoman: String?
     var lastSelectionTime: Int64 = 0
     var isShowingNextWord: Bool = false
     private var contextTimeoutTimer: Timer?
@@ -198,6 +199,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     func resetNextWordContext() {
         lastSelectedWord = nil
+        lastSelectedRoman = nil
         lastSelectionTime = 0
         isShowingNextWord = false
         stopContextTimeoutTimer()
@@ -251,8 +253,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         return NextWordConstants.sentenceEndPunctuation.contains(firstChar)
     }
 
-    func updateNextWordState(selectedWord: String) {
+    func updateNextWordState(selectedWord: String, roman: String = "") {
         lastSelectedWord = selectedWord
+        lastSelectedRoman = roman
         lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
         startContextTimeoutTimer()
     }
@@ -260,10 +263,11 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     /// 更新前一詞記錄（不觸發預測）
     ///
     /// 用於空白鍵確認組字時，記錄已輸出的文字讓後續輸入可建立關聯。
-    func updateLastSelectedWord(_ word: String) {
+    func updateLastSelectedWord(_ word: String, roman: String? = nil) {
         guard !word.isEmpty, !isNoiseText(word) else { return }
 
         lastSelectedWord = word
+        lastSelectedRoman = roman ?? word
         lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
         recordCompoundWordAssociations(displayText: word, roman: word)
         startContextTimeoutTimer()
@@ -272,12 +276,12 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     // MARK: - NextWord 預測
 
     /// 根據指定詞彙觸發下一詞預測
-    func triggerNextWordPrediction(for word: String) {
+    func triggerNextWordPrediction(for word: String, roman: String = "") {
         // DEBUG: NextWord trace - triggerNextWordPrediction entry
         logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word, privacy: .public)'")
 
         Task { @MainActor in
-            let predictions = await NextWordService.shared.predict(word: word)
+            let predictions = await NextWordService.shared.predict(word: word, roman: roman)
 
             // DEBUG: NextWord trace - predictions returned
             logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word, privacy: .public)'")
@@ -310,7 +314,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                     additionalInfo: [
                         "isNextWord": "true",
                         "hanzi": prediction.hanzi,
-                        "tl": roman,
+                        "tl": prediction.tl,
                         "displayText": prediction.hanzi
                     ]
                 )

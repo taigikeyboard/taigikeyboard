@@ -133,10 +133,22 @@ Text output
 
 ## Key Files
 
-| Phase | Files |
-|-------|-------|
-| Input | `ActionHandler.swift`, `ActionHandler+CharacterInput.swift` |
-| Composing | `ComposingManager.swift` |
-| Search | `AutocompleteService.swift`, `LexiconService.swift` |
-| Display | `TaigiKeyboardView.swift`, `CandidateView.swift` |
-| Selection | `ActionHandler+Suggestions.swift` |
+| Phase | iOS | Android |
+|-------|-----|---------|
+| Input | `ActionHandler.swift` + extensions | `TextInputManager.kt` |
+| Composing | `ComposingManager.swift` | `ComposingManager.kt` |
+| Search | `AutocompleteService.swift`, `LexiconService.swift` | `TaigiAutocompleteService.kt`, `LexiconService.kt` |
+| Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` |
+| Selection | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
+| NextWord | `NextWordService.swift` | `NextWordHandler.kt`, `NextWordService.kt` |
+
+### Keyboard Overlays (v3.4.5+)
+
+In addition to the main candidate bar, the smartbar/candidate area supports overlay modes:
+
+| Overlay | Trigger | iOS | Android |
+|---------|---------|-----|---------|
+| Symbol | Toolbar button | `SymbolSelectionOverlay.swift` | `SymbolSelectionOverlayView.kt` |
+| Settings | Toolbar button | `SettingsSelectionOverlay.swift` | `SettingsSelectionOverlayView.kt` |
+| Layout | Toolbar button | `LayoutSelectionOverlay.swift` | `LayoutSelectionOverlayView.kt` |
+| Expanded candidates | Expand toggle | `ExpandedCandidateOverlay.swift` | `CandidateOverlayView.kt` |

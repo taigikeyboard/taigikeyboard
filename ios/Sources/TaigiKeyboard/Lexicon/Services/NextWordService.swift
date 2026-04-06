@@ -11,7 +11,6 @@ import SQLite3
 /// - dictionary.db (word_association 表): 字典關聯（冷啟動）
 /// - user_association.db: 使用者學習（個人化）
 final class NextWordService: @unchecked Sendable {
-
     // MARK: - Constants
 
     private enum Constants {
@@ -21,21 +20,21 @@ final class NextWordService: @unchecked Sendable {
         static let userWeight: Double = 50.0
         static let dictWeight: Double = 1.0
 
-        // 時間衰減：半衰期 168 小時（一週）
+        /// 時間衰減：半衰期 168 小時（一週）
         static let decayHalfLifeHours: Double = 168.0
 
         // Memory strength: ensures user entries rank above dict entries
         static let learningBonus: Double = 300.0
-        static let highUsageDecayFloor: Double = 0.95   // count >= 3: near-permanent
-        static let lowUsageDecayFloor: Double = 0.3     // count < 3: prevents full decay
+        static let highUsageDecayFloor: Double = 0.95 // count >= 3: near-permanent
+        static let lowUsageDecayFloor: Double = 0.3 // count < 3: prevents full decay
         static let highUsageThreshold: Int = 3
 
         // 使用者關聯上限
-        static let maxUserAssociations = 50_000
+        static let maxUserAssociations = 50000
         static let pruneCheckInterval = 100
-        static let pruneBatchSize = 5_000
+        static let pruneBatchSize = 5000
 
-        // SQLite SQLITE_TRANSIENT destructor type for bind calls
+        /// SQLite SQLITE_TRANSIENT destructor type for bind calls
         static let sqliteTransient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
     }
 
@@ -43,9 +42,9 @@ final class NextWordService: @unchecked Sendable {
 
     /// NextWord 預測結果
     struct Prediction {
-        let hanzi: String       // 預測的下一個字/詞
-        let tl: String          // TL 羅馬字
-        let score: Double       // 排序分數
+        let hanzi: String // 預測的下一個字/詞
+        let tl: String // TL 羅馬字
+        let score: Double // 排序分數
     }
 
     // MARK: - Properties
@@ -56,7 +55,7 @@ final class NextWordService: @unchecked Sendable {
     private let userConnectionManager: SQLiteConnectionManager
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "NextWordService"
+        category: "NextWordService",
     )
 
     private var recordCounter = 0
@@ -64,26 +63,26 @@ final class NextWordService: @unchecked Sendable {
     // MARK: - Initialization
 
     init() {
-        self.dictConnectionManager = SQLiteConnectionManager(
+        dictConnectionManager = SQLiteConnectionManager(
             databasePath: Self.getDictDatabasePath,
             queueLabel: "com.siansiansu.taigikeyboard.nextword.dict",
-            loggerCategory: "NextWordService.Dict"
+            loggerCategory: "NextWordService.Dict",
         )
 
-        self.userConnectionManager = SQLiteConnectionManager(
+        userConnectionManager = SQLiteConnectionManager(
             databasePath: Self.getUserDatabasePath,
             queueLabel: "com.siansiansu.taigikeyboard.nextword.user",
-            loggerCategory: "NextWordService.User"
+            loggerCategory: "NextWordService.User",
         )
     }
 
     // MARK: - Database Paths
 
     private static func getDictDatabasePath() throws -> String {
-        let bundle = Bundle(for: NextWordService.self)
+        let bundle = ResourceBundleResolver.dictionaryBundle
         guard let path = bundle.path(
             forResource: LexiconConstants.Database.fileName,
-            ofType: LexiconConstants.Database.fileExtension
+            ofType: LexiconConstants.Database.fileExtension,
         ) else {
             throw DictionaryError.databaseNotFound
         }
@@ -97,7 +96,7 @@ final class NextWordService: @unchecked Sendable {
 
         try FileManager.default.createDirectory(
             at: containerURL,
-            withIntermediateDirectories: true
+            withIntermediateDirectories: true,
         )
 
         let databaseURL = containerURL.appendingPathComponent("user_association.db")
@@ -116,34 +115,42 @@ final class NextWordService: @unchecked Sendable {
     ///   - word: 當前選中的詞
     ///   - limit: 最大結果數
     /// - Returns: 預測結果列表
-    func predict(word: String, limit: Int = Constants.defaultLimit) async -> [Prediction] {
+    func predict(word: String, roman: String = "", limit: Int = Constants.defaultLimit) async -> [Prediction] {
         guard !word.isEmpty else { return [] }
 
         // Bigram 模型：使用最後一字作為字典查詢 key
         let lastChar = String(word.last!)
 
-        // DEBUG: NextWord trace - predict entry
-        logger.debug("[PREDICT][ENTRY] word='\(word, privacy: .public)' lastChar='\(lastChar, privacy: .public)'")
+        #if DEBUG
+            // DEBUG: NextWord trace - predict entry
+            logger.debug("[PREDICT][ENTRY] word='\(word, privacy: .public)' lastChar='\(lastChar, privacy: .public)'")
+        #endif
 
         var results: [String: Prediction] = [:]
 
         // 1. 查詢字典關聯（用最後一字）
         await queryDictAssociations(lastChar: lastChar, limit: limit, results: &results)
         let dictCount = results.count
-        logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar, privacy: .public)'")
+        #if DEBUG
+            logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar, privacy: .public)'")
+        #endif
 
-        // 2. 查詢使用者關聯（用完整詞）
-        await queryUserAssociations(word: word, limit: limit, results: &results)
+        // 2. 查詢使用者關聯（用完整詞 + 羅馬字 context）
+        await queryUserAssociations(word: word, roman: roman, limit: limit, results: &results)
         let totalCount = results.count
-        logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word, privacy: .public)'")
+        #if DEBUG
+            logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word, privacy: .public)'")
+        #endif
 
         // 3. 按分數排序，返回結果
         let sortedResults = results.values
             .sorted { $0.score > $1.score }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
 
-        logger.debug("[PREDICT] '\(word, privacy: .public)' -> \(sortedResults.count) results")
+        #if DEBUG
+            logger.debug("[PREDICT] '\(word, privacy: .public)' -> \(sortedResults.count) results")
+        #endif
 
         return Array(sortedResults)
     }
@@ -151,13 +158,15 @@ final class NextWordService: @unchecked Sendable {
     /// 記錄使用者選詞關聯
     ///
     /// - Parameters:
-    ///   - prev: 前一個選中的詞
+    ///   - prev: 前一個選中的詞（漢字）
+    ///   - prevTl: 前一個選中的詞（TL）
     ///   - nextHanzi: 當前選中的詞（漢字）
     ///   - nextTl: 當前選中的詞（TL）
     func recordAssociation(
         prev: String,
+        prevTl: String = "",
         nextHanzi: String,
-        nextTl: String = ""
+        nextTl: String = "",
     ) async {
         guard !prev.isEmpty, !nextHanzi.isEmpty else { return }
 
@@ -166,15 +175,18 @@ final class NextWordService: @unchecked Sendable {
 
             try await userConnectionManager.execute { [weak self] db in
                 guard let self else { return }
-                try self.insertOrUpdateAssociation(
+                try insertOrUpdateAssociation(
                     db: db,
                     prev: prev,
+                    prevTl: prevTl,
                     nextHanzi: nextHanzi,
-                    nextTl: nextTl
+                    nextTl: nextTl,
                 )
             }
 
-            logger.debug("[RECORD] '\(prev, privacy: .public)' -> '\(nextHanzi, privacy: .public)'")
+            #if DEBUG
+                logger.debug("[RECORD] '\(prev, privacy: .public)' -> '\(nextHanzi, privacy: .public)'")
+            #endif
 
             // 定期檢查是否需要清理
             recordCounter += 1
@@ -183,7 +195,9 @@ final class NextWordService: @unchecked Sendable {
                 await pruneOldAssociations()
             }
         } catch {
-            logger.error("[RECORD] Failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[RECORD] Failed: \(error.localizedDescription, privacy: .public)")
+            #endif
         }
     }
 
@@ -197,11 +211,84 @@ final class NextWordService: @unchecked Sendable {
                     sqlite3_step(stmt)
                     sqlite3_finalize(stmt)
                 }
-
             }
-            logger.info("[CLEAR] All user associations cleared")
+            #if DEBUG
+                logger.info("[CLEAR] All user associations cleared")
+            #endif
         } catch {
-            logger.error("[CLEAR] Failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[CLEAR] Failed: \(error.localizedDescription, privacy: .public)")
+            #endif
+        }
+    }
+
+    /// Delete a single user association entry
+    func deleteAssociation(_ entry: AssociationEntry) async {
+        do {
+            try await ensureUserTablesCreated()
+            try await userConnectionManager.execute { db in
+                let sql = "DELETE FROM user_association WHERE prev_word = ? AND prev_tl = ? AND next_word = ? AND next_tl = ?"
+                var stmt: OpaquePointer?
+                defer { sqlite3_finalize(stmt) }
+                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, Constants.sqliteTransient)
+                sqlite3_step(stmt)
+            }
+        } catch {
+            #if DEBUG
+                logger.error("[DELETE] Failed to delete association: \(error.localizedDescription, privacy: .public)")
+            #endif
+        }
+    }
+
+    /// Import association entries with merge strategy: keep higher count
+    func batchImportAssociations(
+        entries: [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)],
+    ) async throws -> Int {
+        try await ensureUserTablesCreated()
+        return try await userConnectionManager.execute { db in
+            let sql = """
+                INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
+                    prev_tl = excluded.prev_tl,
+                    count = MAX(count, excluded.count),
+                    last_used = CURRENT_TIMESTAMP;
+            """
+
+            if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
+                return 0
+            }
+
+            // Prepare statement once and reuse for all entries
+            var stmt: OpaquePointer?
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+                sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
+                return 0
+            }
+            defer { sqlite3_finalize(stmt) }
+
+            var imported = 0
+            for entry in entries {
+                sqlite3_reset(stmt)
+                sqlite3_clear_bindings(stmt)
+
+                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, Constants.sqliteTransient)
+                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, Constants.sqliteTransient)
+                sqlite3_bind_int(stmt, 5, Int32(entry.count))
+
+                if sqlite3_step(stmt) == SQLITE_DONE {
+                    imported += 1
+                }
+            }
+
+            sqlite3_exec(db, "COMMIT;", nil, nil, nil)
+            return imported
         }
     }
 
@@ -240,21 +327,22 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// 使用者關聯資料（用於 Debug Zone 顯示）
+    /// 使用者關聯資料
     struct AssociationEntry {
         let prevWord: String
+        let prevTl: String
         let nextWord: String
         let nextTl: String
         let count: Int
     }
 
-    /// 取得所有使用者關聯（用於 Debug Zone）
+    /// 取得所有使用者關聯
     func allAssociations() async -> [AssociationEntry] {
         do {
             try await ensureUserTablesCreated()
             return try await userConnectionManager.execute { db in
                 let sql = """
-                    SELECT prev_word, next_word, next_tl, count
+                    SELECT prev_word, prev_tl, next_word, next_tl, count
                     FROM user_association
                     ORDER BY count DESC, last_used DESC
                 """
@@ -268,21 +356,25 @@ final class NextWordService: @unchecked Sendable {
                 var results: [AssociationEntry] = []
                 while sqlite3_step(stmt) == SQLITE_ROW {
                     let prevWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-                    let nextWord = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-                    let nextTl = sqlite3_column_text(stmt, 2).map(String.init(cString:)) ?? ""
-                    let count = Int(sqlite3_column_int(stmt, 3))
+                    let prevTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+                    let nextWord = sqlite3_column_text(stmt, 2).map(String.init(cString:)) ?? ""
+                    let nextTl = sqlite3_column_text(stmt, 3).map(String.init(cString:)) ?? ""
+                    let count = Int(sqlite3_column_int(stmt, 4))
 
                     results.append(AssociationEntry(
                         prevWord: prevWord,
+                        prevTl: prevTl,
                         nextWord: nextWord,
                         nextTl: nextTl,
-                        count: count
+                        count: count,
                     ))
                 }
                 return results
             }
         } catch {
-            logger.error("[USER] allAssociations failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[USER] allAssociations failed: \(error.localizedDescription, privacy: .public)")
+            #endif
             return []
         }
     }
@@ -293,14 +385,14 @@ final class NextWordService: @unchecked Sendable {
     private func queryDictAssociations(
         lastChar: String,
         limit: Int,
-        results: inout [String: Prediction]
+        results: inout [String: Prediction],
     ) async {
         do {
             try await dictConnectionManager.ensureInitialized(flags: SQLITE_OPEN_READONLY)
 
             let dictResults = try await dictConnectionManager.execute { [weak self] db -> [Prediction] in
                 guard let self else { return [] }
-                return try self.queryDictAssociationsFromDB(db: db, lastChar: lastChar, limit: limit)
+                return try queryDictAssociationsFromDB(db: db, lastChar: lastChar, limit: limit)
             }
 
             for prediction in dictResults {
@@ -308,14 +400,16 @@ final class NextWordService: @unchecked Sendable {
                 results[key] = prediction
             }
         } catch {
-            logger.error("[DICT] Query failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[DICT] Query failed: \(error.localizedDescription, privacy: .public)")
+            #endif
         }
     }
 
     private func queryDictAssociationsFromDB(
         db: OpaquePointer,
         lastChar: String,
-        limit: Int
+        limit: Int,
     ) throws -> [Prediction] {
         // 建立詞庫過濾條件
         let dictCondition = buildDictWhereCondition()
@@ -349,7 +443,7 @@ final class NextWordService: @unchecked Sendable {
             predictions.append(Prediction(
                 hanzi: nextWord,
                 tl: nextTl,
-                score: Double(count) * Constants.dictWeight
+                score: Double(count) * Constants.dictWeight,
             ))
         }
 
@@ -362,15 +456,16 @@ final class NextWordService: @unchecked Sendable {
     /// 查詢使用者關聯
     private func queryUserAssociations(
         word: String,
+        roman: String = "",
         limit: Int,
-        results: inout [String: Prediction]
+        results: inout [String: Prediction],
     ) async {
         do {
             try await ensureUserTablesCreated()
 
             let userResults = try await userConnectionManager.execute { [weak self] db -> [UserAssociationRow] in
                 guard let self else { return [] }
-                return try self.queryUserAssociationsFromDB(db: db, word: word, limit: limit)
+                return try queryUserAssociationsFromDB(db: db, word: word, roman: roman, limit: limit)
             }
 
             for row in userResults {
@@ -381,31 +476,34 @@ final class NextWordService: @unchecked Sendable {
                     results[key] = Prediction(
                         hanzi: row.hanzi,
                         tl: row.tl.isEmpty ? existing.tl : row.tl,
-                        score: existing.score + userScore
+                        score: existing.score + userScore,
                     )
                 } else {
                     results[key] = Prediction(
                         hanzi: row.hanzi,
                         tl: row.tl,
-                        score: userScore
+                        score: userScore,
                     )
                 }
             }
         } catch {
-            logger.error("[USER] Query failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[USER] Query failed: \(error.localizedDescription, privacy: .public)")
+            #endif
         }
     }
 
     private func queryUserAssociationsFromDB(
         db: OpaquePointer,
         word: String,
-        limit: Int
+        roman: String = "",
+        limit: Int,
     ) throws -> [UserAssociationRow] {
         let sql = """
             SELECT next_word, next_tl, count,
                    strftime('%s', last_used) * 1000 AS last_used_ms
             FROM user_association
-            WHERE prev_word = ?
+            WHERE prev_word = ? AND (prev_tl = ? OR prev_tl = '')
             ORDER BY count DESC
             LIMIT ?
         """
@@ -417,8 +515,9 @@ final class NextWordService: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         sqlite3_bind_text(stmt, 1, word, -1, Constants.sqliteTransient)
+        sqlite3_bind_text(stmt, 2, roman, -1, Constants.sqliteTransient)
         // Over-fetch 2x to account for deduplication when merging dict + user results
-        sqlite3_bind_int(stmt, 2, Int32(limit * 2))
+        sqlite3_bind_int(stmt, 3, Int32(limit * 2))
 
         var results: [UserAssociationRow] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
@@ -441,12 +540,12 @@ final class NextWordService: @unchecked Sendable {
         if isUserTablesCreated { return }
 
         try await userConnectionManager.ensureInitialized(
-            flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE
+            flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
         )
 
         try await userConnectionManager.execute { [weak self] db in
             guard let self else { return }
-            try self.createUserTables(db: db)
+            try createUserTables(db: db)
         }
 
         isUserTablesCreated = true
@@ -460,6 +559,7 @@ final class NextWordService: @unchecked Sendable {
             CREATE TABLE IF NOT EXISTS user_association (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 prev_word TEXT NOT NULL,
+                prev_tl TEXT DEFAULT '',
                 next_word TEXT NOT NULL,
                 next_tl TEXT DEFAULT '',
                 count INTEGER DEFAULT 1,
@@ -482,20 +582,24 @@ final class NextWordService: @unchecked Sendable {
         sqlite3_finalize(stmt)
 
         // 建立索引
-        let indexSQL = "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word);"
-        var indexStmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, indexSQL, -1, &indexStmt, nil) == SQLITE_OK {
-            sqlite3_step(indexStmt)
-            sqlite3_finalize(indexStmt)
+        for indexSQL in [
+            "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word);",
+            "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl);",
+        ] {
+            var indexStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, indexSQL, -1, &indexStmt, nil) == SQLITE_OK {
+                sqlite3_step(indexStmt)
+                sqlite3_finalize(indexStmt)
+            }
         }
     }
 
     /// Schema version for user_association.db (mirrors Android's DATABASE_VERSION)
-    private static let userSchemaVersion = 3
+    private static let userSchemaVersion = 4
 
     /// Migrate user_association.db to current schema version using PRAGMA user_version.
     /// v3: UNIQUE(prev_word, next_word) → UNIQUE(prev_word, next_word, next_tl)
-    /// Strategy: DROP + CREATE (user_association is learning data, safe to reset).
+    /// v4: Add prev_tl column (ALTER TABLE, preserves data)
     private func migrateUserTables(db: OpaquePointer) throws {
         // Read current schema version
         var versionStmt: OpaquePointer?
@@ -507,19 +611,38 @@ final class NextWordService: @unchecked Sendable {
 
         guard currentVersion < Self.userSchemaVersion else { return }
 
-        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(Self.userSchemaVersion)")
+        #if DEBUG
+            logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(Self.userSchemaVersion)")
+        #endif
 
-        // Drop old table if it exists (safe: learning data can be reset)
-        var dropStmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "DROP TABLE IF EXISTS user_association", -1, &dropStmt, nil) == SQLITE_OK {
-            sqlite3_step(dropStmt)
-            sqlite3_finalize(dropStmt)
+        if currentVersion < 3 {
+            // v0/v1/v2 → v3: DROP + CREATE (old schema incompatible)
+            var dropStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "DROP TABLE IF EXISTS user_association", -1, &dropStmt, nil) == SQLITE_OK {
+                sqlite3_step(dropStmt)
+                sqlite3_finalize(dropStmt)
+            }
+
+            var dropIdxStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "DROP INDEX IF EXISTS idx_user_prev_word", -1, &dropIdxStmt, nil) == SQLITE_OK {
+                sqlite3_step(dropIdxStmt)
+                sqlite3_finalize(dropIdxStmt)
+            }
         }
 
-        var dropIdxStmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "DROP INDEX IF EXISTS idx_user_prev_word", -1, &dropIdxStmt, nil) == SQLITE_OK {
-            sqlite3_step(dropIdxStmt)
-            sqlite3_finalize(dropIdxStmt)
+        if currentVersion >= 3, currentVersion < 4 {
+            // v3 → v4: Add prev_tl column (preserves existing data)
+            var alterStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''", -1, &alterStmt, nil) == SQLITE_OK {
+                sqlite3_step(alterStmt)
+                sqlite3_finalize(alterStmt)
+            }
+
+            var indexStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)", -1, &indexStmt, nil) == SQLITE_OK {
+                sqlite3_step(indexStmt)
+                sqlite3_finalize(indexStmt)
+            }
         }
 
         // Stamp new version
@@ -533,13 +656,15 @@ final class NextWordService: @unchecked Sendable {
     private func insertOrUpdateAssociation(
         db: OpaquePointer,
         prev: String,
+        prevTl: String,
         nextHanzi: String,
-        nextTl: String
+        nextTl: String,
     ) throws {
         let sql = """
-            INSERT INTO user_association (prev_word, next_word, next_tl, count, last_used)
-            VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)
+            INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
+            VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
             ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
+                prev_tl = excluded.prev_tl,
                 count = count + 1,
                 last_used = CURRENT_TIMESTAMP
         """
@@ -552,8 +677,9 @@ final class NextWordService: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         sqlite3_bind_text(stmt, 1, prev, -1, Constants.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, nextHanzi, -1, Constants.sqliteTransient)
-        sqlite3_bind_text(stmt, 3, nextTl, -1, Constants.sqliteTransient)
+        sqlite3_bind_text(stmt, 2, prevTl, -1, Constants.sqliteTransient)
+        sqlite3_bind_text(stmt, 3, nextHanzi, -1, Constants.sqliteTransient)
+        sqlite3_bind_text(stmt, 4, nextTl, -1, Constants.sqliteTransient)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             let errorMsg = String(cString: sqlite3_errmsg(db))
@@ -598,13 +724,15 @@ final class NextWordService: @unchecked Sendable {
             let currentCount = await associationCount()
 
             guard currentCount > Constants.maxUserAssociations else {
-                logger.debug("[PRUNE] No pruning needed: \(currentCount) <= \(Constants.maxUserAssociations)")
+                #if DEBUG
+                    logger.debug("[PRUNE] No pruning needed: \(currentCount) <= \(Constants.maxUserAssociations)")
+                #endif
                 return
             }
 
             let deleteCount = min(
                 Constants.pruneBatchSize,
-                currentCount - Constants.maxUserAssociations + Constants.pruneBatchSize
+                currentCount - Constants.maxUserAssociations + Constants.pruneBatchSize,
             )
 
             try await userConnectionManager.execute { db in
@@ -625,9 +753,13 @@ final class NextWordService: @unchecked Sendable {
                 sqlite3_step(stmt)
             }
 
-            logger.info("[PRUNE] Deleted \(deleteCount) associations (was \(currentCount))")
+            #if DEBUG
+                logger.info("[PRUNE] Deleted \(deleteCount) associations (was \(currentCount))")
+            #endif
         } catch {
-            logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
+            #if DEBUG
+                logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
+            #endif
         }
     }
 
@@ -650,7 +782,7 @@ final class NextWordService: @unchecked Sendable {
         ]
 
         let conditions = dictionaries
-            .filter { $0.enabled }
+            .filter(\.enabled)
             .map { "\($0.column) = 1" }
 
         // All enabled: no filter needed

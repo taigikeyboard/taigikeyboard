@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.ui.settings.CustomDictionaryScreen
@@ -24,6 +25,8 @@ class CustomDictionaryActivity : ComponentActivity() {
 
         CustomDictionaryService.init(this)
         val languageManager = LanguageManager.getInstance(this)
+        val prefHelper = PrefHelper(this)
+        prefHelper.warmUp()
 
         setupEdgeToEdge()
 
@@ -31,6 +34,7 @@ class CustomDictionaryActivity : ComponentActivity() {
             TaigiKeyboardTheme {
                 CustomDictionaryScreen(
                     languageManager = languageManager,
+                    prefs = prefHelper,
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()
                     }

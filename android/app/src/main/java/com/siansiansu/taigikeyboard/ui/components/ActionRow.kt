@@ -13,11 +13,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
 fun ActionRow(
@@ -25,13 +28,15 @@ fun ActionRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
+    icon: ImageVector? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
     trailingIcon: ImageVector? = null
 ) {
     val view = LocalView.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = 56.dp)
             .clickable {
                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 onClick()
@@ -39,10 +44,19 @@ fun ActionRow(
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = iconTint
+            )
+            Spacer(Modifier.width(12.dp))
+        }
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = 16.sp,
+            fontSize = AppStyle.bodyFontSize,
             color = textColor
         )
         if (trailingIcon != null) {

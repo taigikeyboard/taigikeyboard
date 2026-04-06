@@ -18,8 +18,8 @@ struct TaigiKeyboardApp: App {
         navAppearance.configureWithDefaultBackground()
         let largeFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 34)
             ?? .systemFont(ofSize: 34)
-        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 17)
-            ?? .systemFont(ofSize: 17)
+        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: 22)
+            ?? .systemFont(ofSize: 22)
         navAppearance.largeTitleTextAttributes = [.font: largeFont]
         navAppearance.titleTextAttributes = [.font: inlineFont]
         UINavigationBar.appearance().standardAppearance = navAppearance

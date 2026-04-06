@@ -1,22 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 基礎系統色彩（保留給可能的舊代碼引用） -->
+    <!-- 基礎系統色彩（KeyboardTheme AppCompat 引用） -->
     <color name="colorPrimary">#4CAF50</color>
     <color name="colorPrimaryDark">#388E3C</color>
     <color name="colorAccent">#FF9800</color>
 
-    <!-- Kotlin 程式碼引用的色彩（使用 Material 3 標準色） -->
-    <color name="copyright_accent_green">#4CAF50</color>
-    <color name="copyright_accent_blue">#2196F3</color>
-    <color name="copyright_accent_purple">#9C27B0</color>
-    <color name="copyright_accent_orange">#FF9800</color>
-
-    <color name="modern_accent">#6750A4</color>
-    <color name="modern_text_primary">#1C1B1F</color>
-    <color name="modern_text_secondary">#49454F</color>
-    <color name="modern_surface_secondary">#F5F5F5</color>
-    <color name="modern_shadow_light">#1F000000</color>
-
-    <!-- Tab2 佈局選項膠囊背景（模擬毛玻璃效果） -->
-    <color name="layout_capsule_background">#E6FFFFFF</color>
 </resources>

@@ -109,8 +109,10 @@ class CandidateClickHandler(
         }
 
         // Record usage frequency
-        scope.launch {
-            UserFrequencyService.recordUsage(selectedWord.displayText)
+        if (prefs.frequencyRecordingEnabled) {
+            scope.launch {
+                UserFrequencyService.recordUsage(selectedWord.displayText)
+            }
         }
 
         // NextWord prediction
@@ -197,8 +199,10 @@ class CandidateClickHandler(
         }
 
         // Record usage frequency
-        scope.launch {
-            UserFrequencyService.recordUsage(word.displayText)
+        if (prefs.frequencyRecordingEnabled) {
+            scope.launch {
+                UserFrequencyService.recordUsage(word.displayText)
+            }
         }
 
         // NextWord prediction

@@ -1,6 +1,8 @@
 import Foundation
 import KeyboardKit
+import LocalAuthentication
 import SwiftUI
+import UIKit
 
 // MARK: - Codable Color
 
@@ -100,6 +102,12 @@ class SharedSettings {
         static let keyboardLayoutType = "keyboardLayoutType"
         static let inputModeBeforeTps = "inputModeBeforeTps"
         static let layoutBeforeTps = "layoutBeforeTps"
+        // 詞頻紀錄開關
+        static let frequencyRecordingEnabled = "frequencyRecordingEnabled"
+        // 詞關聯紀錄開關
+        static let associationRecordingEnabled = "associationRecordingEnabled"
+        // 自訂詞庫開關
+        static let customDictEnabled = "customDictEnabled"
         // 詞庫開關
         static let moeDictEnabled = "moeDictEnabled"
         static let newwordDictEnabled = "newwordDictEnabled"
@@ -120,6 +128,8 @@ class SharedSettings {
         static let tpsOrMapsToER = "tpsOrMapsToER"
         // 家私櫥設定
         static let toolbarAutoCollapse = "toolbarAutoCollapse"
+        // 切換鍵盤鍵
+        static let isGlobeKeyEnabled = "isGlobeKeyEnabled"
         // 外觀設定
         static let keyHeightScale = "keyHeightScale"
         static let colorSettings = "colorSettings"
@@ -289,6 +299,27 @@ class SharedSettings {
         }
     }
 
+    // MARK: - 詞頻紀錄開關（預設開啟）
+
+    var frequencyRecordingEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.frequencyRecordingEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.frequencyRecordingEnabled) }
+    }
+
+    // MARK: - 詞關聯紀錄開關（預設開啟）
+
+    var associationRecordingEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.associationRecordingEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.associationRecordingEnabled) }
+    }
+
+    // MARK: - 自訂詞庫開關
+
+    var customDictEnabled: Bool {
+        get { userDefaults.object(forKey: Keys.customDictEnabled) as? Bool ?? true }
+        set { userDefaults.set(newValue, forKey: Keys.customDictEnabled) }
+    }
+
     // MARK: - 詞庫開關設定
 
     var moeDictEnabled: Bool {
@@ -360,6 +391,30 @@ class SharedSettings {
     var isToolbarAutoCollapse: Bool {
         get { userDefaults.object(forKey: Keys.toolbarAutoCollapse) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.toolbarAutoCollapse) }
+    }
+
+    // MARK: - 切換鍵盤鍵
+
+    /// Globe key toggle. Default depends on device type for backward compatibility:
+    /// iPad/iPhone SE (Touch ID) = true, regular iPhone = false.
+    var isGlobeKeyEnabled: Bool {
+        get {
+            guard let stored = userDefaults.object(forKey: Keys.isGlobeKeyEnabled) as? Bool else {
+                return Self.defaultGlobeKeyEnabled
+            }
+            return stored
+        }
+        set { userDefaults.set(newValue, forKey: Keys.isGlobeKeyEnabled) }
+    }
+
+    /// Device-based default: iPad or iPhone SE (Touch ID) = true, otherwise false
+    private static var defaultGlobeKeyEnabled: Bool {
+        if UIDevice.current.userInterfaceIdiom == .pad { return true }
+        guard UIDevice.current.userInterfaceIdiom == .phone else { return false }
+        let laContext = LAContext()
+        var error: NSError?
+        _ = laContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        return laContext.biometryType == .touchID
     }
 
     // MARK: - 方音符號設定
@@ -449,6 +504,8 @@ class SharedSettings {
         lkkDictEnabled = false
         // 家私櫥設定
         isToolbarAutoCollapse = true
+        // 切換鍵盤鍵（移除儲存值，讓裝置預設邏輯生效）
+        userDefaults.removeObject(forKey: Keys.isGlobeKeyEnabled)
         // 方音符號設定
         tpsOrMapsToER = true
         // 外觀設定
@@ -461,6 +518,8 @@ class SharedSettings {
 
         // 重設 KeyboardKit 設定
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
+        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled")
+        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
     }
 }
 

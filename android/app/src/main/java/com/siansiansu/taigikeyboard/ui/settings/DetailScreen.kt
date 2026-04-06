@@ -1,7 +1,9 @@
 package com.siansiansu.taigikeyboard.ui.settings
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -42,10 +44,15 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.R
+import androidx.compose.ui.platform.LocalContext
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.LocalizedText
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
+import com.siansiansu.taigikeyboard.model.FeatureContent
+import com.siansiansu.taigikeyboard.model.FeatureContentLoader
+import com.siansiansu.taigikeyboard.model.ParagraphAttachment
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import kotlinx.coroutines.delay
 
@@ -73,12 +80,30 @@ fun DetailScreen(
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
 
-    val title = remember(language, titleKey) {
-        getLocalizedTextByKey(titleKey)?.let { languageManager.text(it) } ?: ""
+    val context = LocalContext.current
+
+    // For feature/faq content types, load from JSON; otherwise use existing key-based resolution
+    val contentItem = remember(contentType, contentKeys) {
+        if (contentKeys.isEmpty()) null
+        else when (contentType) {
+            "feature" -> FeatureContentLoader.loadFeatures(context).find { it.id == contentKeys[0] }
+            "faq" -> FeatureContentLoader.loadFAQs(context).find { it.id == contentKeys[0] }
+            else -> null
+        }
     }
 
-    val items = remember(language, contentType, contentKeys) {
-        buildDetailItems(contentType, contentKeys, languageManager)
+    val title = remember(language, titleKey, contentItem) {
+        contentItem?.let { languageManager.text(it.title) }
+            ?: getLocalizedTextByKey(titleKey)?.let { languageManager.text(it) }
+            ?: ""
+    }
+
+    val items = remember(language, contentType, contentKeys, contentItem) {
+        if (contentItem != null) {
+            buildContentItems(contentItem, context)
+        } else {
+            buildDetailItems(contentType, contentKeys, languageManager)
+        }
     }
 
     Scaffold(
@@ -179,7 +204,7 @@ private fun ParagraphCard(text: String, fontFamily: FontFamily) {
         Text(
             text = text,
             modifier = Modifier.padding(16.dp),
-            fontSize = 17.sp,
+            fontSize = AppStyle.bodyFontSize,
             fontFamily = fontFamily,
             lineHeight = 24.sp,
             color = MaterialTheme.colorScheme.onSurface
@@ -237,17 +262,18 @@ private fun NavigationLinkCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val iconBlue = MaterialTheme.colorScheme.primary
             Icon(
                 painter = painterResource(iconResId),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = iconBlue
             )
             Spacer(Modifier.width(12.dp))
             Text(
                 text = text,
                 modifier = Modifier.weight(1f),
-                fontSize = 17.sp,
+                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -276,17 +302,18 @@ private fun ExternalLinkCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val iconBlue = MaterialTheme.colorScheme.primary
             Icon(
                 painter = painterResource(iconResId),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = iconBlue
             )
             Spacer(Modifier.width(12.dp))
             Text(
                 text = text,
                 modifier = Modifier.weight(1f),
-                fontSize = 17.sp,
+                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -318,14 +345,14 @@ private fun VersionEntryCard(
                 Text(
                     text = "v$version",
                     modifier = Modifier.weight(1f),
-                    fontSize = 18.sp,
+                    fontSize = AppStyle.bodyFontSize,
                     fontWeight = FontWeight.Bold,
                     fontFamily = fontFamily,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = date,
-                    fontSize = 14.sp,
+                    fontSize = AppStyle.captionFontSize,
                     fontFamily = fontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -338,13 +365,13 @@ private fun VersionEntryCard(
                 Row(modifier = Modifier.padding(bottom = 8.dp)) {
                     Text(
                         text = "\u2022",
-                        fontSize = 16.sp,
+                        fontSize = AppStyle.bodyFontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = languageManager.text(change),
-                        fontSize = 16.sp,
+                        fontSize = AppStyle.bodyFontSize,
                         fontFamily = fontFamily,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -373,9 +400,10 @@ private fun buildFeedbackItems(): List<DetailItem> {
         DetailItem.Paragraph(Tab1Texts.emailContact),
         DetailItem.ExternalLink(
             Tab1Texts.supportUs,
-            R.drawable.ic_star,
+            R.drawable.ic_open_in_new,
             "https://p.ecpay.com.tw/AA663DE"
-        )
+        ),
+        DetailItem.Paragraph(Tab1Texts.freePromise)
     )
 }
 
@@ -385,6 +413,56 @@ private fun buildVersionItems(): List<DetailItem> {
     }
 }
 
+private fun buildContentItems(
+    content: FeatureContent,
+    context: android.content.Context
+): List<DetailItem> {
+    val items = mutableListOf<DetailItem>()
+
+    content.paragraphs.forEach { paragraph ->
+        items.add(DetailItem.Paragraph(paragraph.text))
+
+        when (val attachment = paragraph.attachment) {
+            is ParagraphAttachment.Slideshow -> {
+                val resIds = attachment.images.map { name ->
+                    context.resources.getIdentifier(name, "drawable", context.packageName)
+                }.filter { it != 0 }
+                if (resIds.isNotEmpty()) {
+                    items.add(DetailItem.Slideshow(resIds, (attachment.interval * 1000).toLong()))
+                }
+            }
+            is ParagraphAttachment.Image -> {
+                val resId = context.resources.getIdentifier(
+                    attachment.name, "drawable", context.packageName
+                )
+                if (resId != 0) {
+                    items.add(DetailItem.ImageCard(resId))
+                }
+            }
+            is ParagraphAttachment.Link -> {
+                items.add(DetailItem.ExternalLink(
+                    attachment.text,
+                    R.drawable.ic_open_in_new,
+                    attachment.url
+                ))
+            }
+            is ParagraphAttachment.Navigation -> {
+                val iconResId = context.resources.getIdentifier(
+                    attachment.icon.android, "drawable", context.packageName
+                )
+                items.add(DetailItem.NavigationLink(
+                    attachment.text,
+                    if (iconResId != 0) iconResId else R.drawable.keyboard_24,
+                    attachment.destination
+                ))
+            }
+            null -> { /* text only */ }
+        }
+    }
+
+    return items
+}
+
 private fun buildGenericItems(
     contentKeys: Array<String>,
     languageManager: LanguageManager
@@ -392,72 +470,9 @@ private fun buildGenericItems(
     val items = mutableListOf<DetailItem>()
 
     contentKeys.forEach { key ->
-        val paragraphs = getLocalizedTextListByKey(key)
-        if (paragraphs != null) {
-            paragraphs.forEachIndexed { index, localizedText ->
-                // Special: next word feature - first paragraph with slideshow
-                if (key == "feature_next_word_detail" && index == 0) {
-                    items.add(DetailItem.Paragraph(localizedText))
-                    items.add(DetailItem.Slideshow(
-                        listOf(R.drawable.nextword_1, R.drawable.nextword_2, R.drawable.nextword_3)
-                    ))
-                } else {
-                    items.add(DetailItem.Paragraph(localizedText))
-                }
-
-                // Special: variant feature - external link after first paragraph
-                if (key == "feature_variant_detail" && index == 0) {
-                    items.add(DetailItem.ExternalLink(
-                        Tab1Texts.featureVariantDictLink,
-                        R.drawable.ic_open_in_new,
-                        "https://sutian.moe.edu.tw/zh-hant/siongkuantsuguan/"
-                    ))
-                }
-
-                // Special: FAQ 1 - navigation to setup guide after first paragraph
-                if (key == "faq_1_answer" && index == 0) {
-                    items.add(DetailItem.NavigationLink(
-                        Tab1Texts.goToSetupGuide,
-                        R.drawable.keyboard_24,
-                        "setup_guide"
-                    ))
-                }
-
-                // Special: FAQ 2 - navigation to feedback after first paragraph
-                if (key == "faq_2_answer" && index == 0) {
-                    items.add(DetailItem.NavigationLink(
-                        Tab1Texts.goToFeedback,
-                        R.drawable.ic_email,
-                        "feedback"
-                    ))
-                }
-
-                // Special: FAQ 3 - screenshot after first paragraph
-                if (key == "faq_3_answer" && index == 0) {
-                    items.add(DetailItem.ImageCard(R.drawable.faq_tone_handling))
-                }
-
-                // Special: user dict - screenshot after second paragraph
-                if (key == "feature_user_dict_detail" && index == 1) {
-                    items.add(DetailItem.ImageCard(R.drawable.feature_userdict))
-                }
-
-                // Special: case switch - screenshots after each paragraph
-                if (key == "feature_case_switch_detail") {
-                    when (index) {
-                        0 -> items.add(DetailItem.Slideshow(
-                            listOf(R.drawable.case_shift_1, R.drawable.case_shift_2)
-                        ))
-                        1 -> items.add(DetailItem.ImageCard(R.drawable.case_lowercase))
-                        2 -> items.add(DetailItem.ImageCard(R.drawable.case_capslock))
-                    }
-                }
-            }
-        } else {
-            val localizedText = getLocalizedTextByKey(key)
-            if (localizedText != null) {
-                items.add(DetailItem.Paragraph(localizedText))
-            }
+        val localizedText = getLocalizedTextByKey(key)
+        if (localizedText != null) {
+            items.add(DetailItem.Paragraph(localizedText))
         }
     }
 
@@ -466,14 +481,6 @@ private fun buildGenericItems(
 
 private fun getLocalizedTextByKey(key: String): LocalizedText? {
     return when (key) {
-        "feature_next_word" -> Tab1Texts.featureNextWord
-        "feature_variant" -> Tab1Texts.featureVariant
-        "feature_custom_font" -> Tab1Texts.featureCustomFont
-        "feature_user_dict" -> Tab1Texts.featureUserDict
-        "feature_case_switch" -> Tab1Texts.featureCaseSwitch
-        "faq_1_question" -> Tab1Texts.faq1Question
-        "faq_2_question" -> Tab1Texts.faq2Question
-        "faq_3_question" -> Tab1Texts.faq3Question
         "contact_us" -> Tab1Texts.contactUs
         "feedback_email" -> Tab1Texts.emailContact
         "version_history" -> Tab1Texts.versionHistory
@@ -481,16 +488,3 @@ private fun getLocalizedTextByKey(key: String): LocalizedText? {
     }
 }
 
-private fun getLocalizedTextListByKey(key: String): List<LocalizedText>? {
-    return when (key) {
-        "feature_next_word_detail" -> Tab1Texts.featureNextWordParagraphs
-        "feature_variant_detail" -> Tab1Texts.featureVariantParagraphs
-        "feature_custom_font_detail" -> Tab1Texts.featureCustomFontParagraphs
-        "feature_user_dict_detail" -> Tab1Texts.featureUserDictParagraphs
-        "feature_case_switch_detail" -> Tab1Texts.featureCaseSwitchParagraphs
-        "faq_1_answer" -> Tab1Texts.faq1Paragraphs
-        "faq_2_answer" -> Tab1Texts.faq2Paragraphs
-        "faq_3_answer" -> Tab1Texts.faq3Paragraphs
-        else -> null
-    }
-}

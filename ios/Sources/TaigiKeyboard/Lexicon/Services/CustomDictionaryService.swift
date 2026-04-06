@@ -4,7 +4,6 @@ import OSLog
 /// Service for managing user custom dictionary
 /// Handles CRUD, CSV export, and file import
 final class CustomDictionaryService: @unchecked Sendable {
-
     // MARK: - Properties
 
     static let shared = CustomDictionaryService()
@@ -12,7 +11,7 @@ final class CustomDictionaryService: @unchecked Sendable {
     private let repository: CustomDictionaryRepository
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "CustomDictionaryService"
+        category: "CustomDictionaryService",
     )
 
     // MARK: - Initialization
@@ -24,8 +23,8 @@ final class CustomDictionaryService: @unchecked Sendable {
     // MARK: - Default Entries
 
     private static let defaultEntries: [(id: String, roman: String, hanzi: String)] = [
-        ("default-li-ho", "lí hó", "你好"),
         ("default-gau-tsa", "gâu-tsá", "𠢕早"),
+        ("default-tsiah-pa-bue", "tsia̍h-pá--buē", "食飽未"),
     ]
 
     /// Seed default example entries if the dictionary is empty
@@ -36,7 +35,7 @@ final class CustomDictionaryService: @unchecked Sendable {
             let defaultEntry = CustomDictionaryEntry(
                 id: entry.id,
                 roman: entry.roman,
-                hanzi: entry.hanzi
+                hanzi: entry.hanzi,
             )
             try await repository.upsert(defaultEntry)
         }
@@ -60,9 +59,9 @@ final class CustomDictionaryService: @unchecked Sendable {
         try await repository.deleteAll()
     }
 
-    /// Search by roman prefix (for autocomplete)
-    func search(romanPrefix: String, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
-        try await repository.search(romanPrefix: romanPrefix, limit: limit)
+    /// Search by prefix (for autocomplete)
+    func search(prefix: String, isToneAware: Bool, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
+        try await repository.search(prefix: prefix, isToneAware: isToneAware, limit: limit)
     }
 
     // MARK: - Export
@@ -70,7 +69,7 @@ final class CustomDictionaryService: @unchecked Sendable {
     /// Export all entries as CSV string
     func exportCSV() async throws -> String {
         let entries = try await repository.fetchAll()
-        var csv = "roman,hanzi\n"
+        var csv = ""
         for entry in entries {
             let escapedRoman = csvEscape(entry.roman)
             let escapedHanzi = csvEscape(entry.hanzi)
@@ -86,11 +85,20 @@ final class CustomDictionaryService: @unchecked Sendable {
         let skipped: Int
     }
 
+    private static let maxFileSize = 5 * 1024 * 1024 // 5 MB
+    private static let maxEntryCount = 30000
+
     /// Import entries from a local CSV file
     func importFromFile(url: URL) async throws -> ImportResult {
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing { url.stopAccessingSecurityScopedResource() }
+        }
+
+        // Pre-validate file size
+        let resourceValues = try url.resourceValues(forKeys: [.fileSizeKey])
+        if let fileSize = resourceValues.fileSize, fileSize > Self.maxFileSize {
+            throw CustomDictionaryError.fileTooLarge
         }
 
         let data = try Data(contentsOf: url)
@@ -100,10 +108,15 @@ final class CustomDictionaryService: @unchecked Sendable {
 
         let entries = parseCSV(csvString)
 
+        // Pre-validate entry count
+        if entries.count > Self.maxEntryCount {
+            throw CustomDictionaryError.tooManyEntries
+        }
+
         // If the file has non-empty content lines but no valid entries, it's a format error
         let hasContentLines = csvString.components(separatedBy: .newlines)
             .contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        if entries.isEmpty && hasContentLines {
+        if entries.isEmpty, hasContentLines {
             throw CustomDictionaryError.invalidCSVFormat
         }
 
@@ -113,7 +126,9 @@ final class CustomDictionaryService: @unchecked Sendable {
 
         let importedCount = try await repository.batchImport(entries)
         let skipped = entries.count - importedCount
-        logger.info("[IMPORT] Imported \(importedCount), skipped \(skipped)")
+        #if DEBUG
+            logger.info("[IMPORT] Imported \(importedCount), skipped \(skipped)")
+        #endif
         return ImportResult(imported: importedCount, skipped: skipped)
     }
 
@@ -121,21 +136,11 @@ final class CustomDictionaryService: @unchecked Sendable {
 
     /// Parse CSV string into entries
     /// Expected format: column A = roman, column B = hanzi
-    /// First row is treated as header if it contains "roman" (case-insensitive)
     func parseCSV(_ csv: String) -> [CustomDictionaryEntry] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [CustomDictionaryEntry] = []
-        var startIndex = 0
 
-        // Skip header row if present
-        if let firstLine = lines.first?.lowercased(),
-           firstLine.contains("roman") || firstLine.contains("hanzi") ||
-           firstLine.contains("poj") || firstLine.contains("tl") ||
-           firstLine.contains("羅馬字") || firstLine.contains("漢字") || firstLine.contains("中文") {
-            startIndex = 1
-        }
-
-        for i in startIndex..<lines.count {
+        for i in 0 ..< lines.count {
             let line = lines[i].trimmingCharacters(in: .whitespacesAndNewlines)
             guard !line.isEmpty else { continue }
 
@@ -162,7 +167,7 @@ final class CustomDictionaryService: @unchecked Sendable {
         for char in line {
             if char == "\"" {
                 inQuotes.toggle()
-            } else if char == "," && !inQuotes {
+            } else if char == ",", !inQuotes {
                 fields.append(current)
                 current = ""
             } else {
@@ -187,7 +192,11 @@ final class CustomDictionaryService: @unchecked Sendable {
     /// Generate toneless form from romanization.
     /// Strips tone diacritics (via NFD), trailing digits, hyphens, and spaces.
     static func generateNotone(_ roman: String) -> String {
-        let decomposed = roman.lowercased().decomposedStringWithCanonicalMapping
+        // Convert POJ nasal markers ⁿ (U+207F) / ᴺ (U+1D3A) → nn
+        let withNasalConverted = roman.lowercased()
+            .replacingOccurrences(of: "\u{207F}", with: "nn")
+            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
+        let decomposed = withNasalConverted.decomposedStringWithCanonicalMapping
         var result = ""
         for scalar in decomposed.unicodeScalars {
             // Skip combining marks (Unicode category Mn)
@@ -221,6 +230,13 @@ final class CustomDictionaryService: @unchecked Sendable {
             return bare.precomposedStringWithCanonicalMapping
         }.joined()
     }
+
+    /// Generate numeric-toned form from romanization (for tone-aware search).
+    /// Converts diacritics to tone digits and strips hyphens.
+    /// Example: "gâu-tsá" → "gau5tsa2"
+    static func generateRomanNum(_ roman: String) -> String {
+        InputNormalizer.normalize(roman, mode: .tl)
+    }
 }
 
 // MARK: - Custom Dictionary Errors
@@ -228,6 +244,8 @@ final class CustomDictionaryService: @unchecked Sendable {
 enum CustomDictionaryError: LocalizedError {
     case invalidCSVData
     case invalidCSVFormat
+    case fileTooLarge
+    case tooManyEntries
 
     var errorDescription: String? {
         switch self {
@@ -235,6 +253,10 @@ enum CustomDictionaryError: LocalizedError {
             "Invalid CSV data"
         case .invalidCSVFormat:
             LanguageManager.shared.text(Tab3Texts.invalidCSVFormat)
+        case .fileTooLarge:
+            LanguageManager.shared.text(Tab3Texts.fileTooLarge)
+        case .tooManyEntries:
+            LanguageManager.shared.text(Tab3Texts.tooManyEntries)
         }
     }
 }

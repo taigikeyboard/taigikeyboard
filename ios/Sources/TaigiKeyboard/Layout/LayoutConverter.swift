@@ -27,10 +27,14 @@ struct LayoutConverter {
     /// Converts KeyDef to KeyboardAction
     private func keyDefToAction(_ keyDef: KeyDef) -> KeyboardAction {
         switch keyDef {
-        case .char(let char, let fullWidth):
-            // TPS layout: always use half-width (independent of isTranslateSwapped)
+        case let .char(char, fullWidth):
             let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
-            let actualChar = (!isTPSLayout && context.isTranslateSwapped) ? (fullWidth ?? char) : char
+            let actualChar: String = if isTPSLayout {
+                // TPS layout: always use full-width (independent of isTranslateSwapped)
+                fullWidth ?? char
+            } else {
+                context.isTranslateSwapped ? (fullWidth ?? char) : char
+            }
             return .character(actualChar)
 
         case .shift:
@@ -81,13 +85,13 @@ struct LayoutConverter {
         case .return:
             return .percentage(
                 isPortrait ? LayoutConstants.ReturnButton.portrait
-                           : LayoutConstants.ReturnButton.landscape
+                    : LayoutConstants.ReturnButton.landscape,
             )
 
         case .numeric, .symbolic, .alphabetic, .globe, .emoji:
             return .percentage(
                 isPortrait ? LayoutConstants.BottomSystemButton.portrait
-                           : LayoutConstants.BottomSystemButton.landscape
+                    : LayoutConstants.BottomSystemButton.landscape,
             )
 
         case .translate:
@@ -96,7 +100,7 @@ struct LayoutConverter {
             return .inputPercentage(scale)
 
         case .char:
-            return nil  // Use default input width
+            return nil // Use default input width
         }
     }
 }

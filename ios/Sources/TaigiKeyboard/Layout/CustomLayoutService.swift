@@ -2,10 +2,10 @@ import KeyboardKit
 import OSLog
 
 #if DEBUG
-private let layoutLogger = Logger(
-    subsystem: LexiconConstants.Logging.subsystem,
-    category: "CustomLayoutService"
-)
+    private let layoutLogger = Logger(
+        subsystem: LexiconConstants.Logging.subsystem,
+        category: "CustomLayoutService",
+    )
 #endif
 
 /// KeyboardKit 10 相容的 Layout Service
@@ -13,7 +13,6 @@ private let layoutLogger = Logger(
 /// 根據鍵盤類型、設定、裝置選擇對應的佈局，
 /// 並透過 LayoutConverter 轉換為 KeyboardLayout。
 class CustomLayoutService {
-
     /// 根據 context 建構鍵盤 layout
     func keyboardLayout(for context: KeyboardContext) -> KeyboardLayout {
         var config = KeyboardLayout.DeviceConfiguration.standard(for: context)
@@ -24,7 +23,7 @@ class CustomLayoutService {
         let keyDefs = selectLayout(for: context)
 
         #if DEBUG
-        layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType), privacy: .public) rows=\(keyDefs.count)")
+            layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType), privacy: .public) rows=\(keyDefs.count)")
         #endif
 
         return converter.convert(keyDefs)
@@ -36,7 +35,7 @@ class CustomLayoutService {
     private func resolveLayout(
         withGlobe: [[KeyDef]],
         iPhone: [[KeyDef]],
-        needsGlobe: Bool
+        needsGlobe: Bool,
     ) -> [[KeyDef]] {
         needsGlobe ? withGlobe : iPhone
     }
@@ -58,16 +57,24 @@ class CustomLayoutService {
         }
     }
 
-    /// 判斷是否需要 globe 鍵（iPhone SE 或 iPad）
+    /// Determines whether the globe key should be shown.
+    /// English mode: preserves device-dependent behavior (iPad/iPhone SE).
+    /// Other modes: uses user toggle setting.
     private func needsGlobeKey(for context: KeyboardContext) -> Bool {
-        let device = DeviceConfiguration(context: context)
-        return device.isIPad || device.isSmallIPhone
+        let settings = SharedSettings.shared
+        if context.keyboardType == .alphabetic, settings.inputMode == .english {
+            let device = DeviceConfiguration(context: context)
+            return device.isIPad || device.isSmallIPhone
+        }
+        // TPS layout has more keys — never show globe key
+        if settings.inputMode == .tps { return false }
+        return settings.isGlobeKeyEnabled
     }
 
     /// 選擇 Alphabetic 鍵盤佈局
     private func selectAlphabeticLayout(
         settings: SharedSettings,
-        needsGlobe: Bool
+        needsGlobe: Bool,
     ) -> [[KeyDef]] {
         let A = TaigiLayouts.Alphabetic.self
 

@@ -5,23 +5,22 @@ import SQLite3
 /// 詞典資料庫 Repository
 /// 負責詞典資料的查詢與存取
 final class DictionaryRepository: @unchecked Sendable {
-
     // MARK: - 詞庫開關設定
 
     /// 詞庫開關設定結構
     private struct EnabledDictionaries {
-        let kautian: Bool   // 教育部臺灣台語常用詞辭典
-        let taigitv: Bool   // 台語新詞辭庫
-        let kungge: Bool    // 台語工藝詞庫
-        let itaigi: Bool    // iTaigi 華台對照典
-        let taijit: Bool    // 台日大辭典
-        let taihoa: Bool    // 台華線頂對照典
-        let sitbut: Bool    // 台灣植物名彙
-        let stti: Bool      // 學科術語辭典
-        let khpoo: Bool     // 腔口補充資料
-        let variant: Bool   // 異用字
-        let khiin: Bool     // 在來字
-        let lkk: Bool       // LKK漢羅合用建議用字
+        let kautian: Bool // 教育部臺灣台語常用詞辭典
+        let taigitv: Bool // 台語新詞辭庫
+        let kungge: Bool // 台語工藝詞庫
+        let itaigi: Bool // iTaigi 華台對照典
+        let taijit: Bool // 台日大辭典
+        let taihoa: Bool // 台華線頂對照典
+        let sitbut: Bool // 台灣植物名彙
+        let stti: Bool // 學科術語辭典
+        let khpoo: Bool // 腔口補充資料
+        let variant: Bool // 異用字
+        let khiin: Bool // 在來字
+        let lkk: Bool // LKK漢羅合用建議用字
 
         /// 從 SharedSettings 讀取設定
         static func fromSettings() -> EnabledDictionaries {
@@ -38,7 +37,7 @@ final class DictionaryRepository: @unchecked Sendable {
                 khpoo: settings.khpooDictEnabled,
                 variant: settings.variantEnabled,
                 khiin: settings.khiin,
-                lkk: settings.lkkDictEnabled
+                lkk: settings.lkkDictEnabled,
             )
         }
 
@@ -100,19 +99,19 @@ final class DictionaryRepository: @unchecked Sendable {
     private let trieService: TrieService
     private let logger = Logger(
         subsystem: LexiconConstants.Logging.subsystem,
-        category: "DictionaryRepository"
+        category: "DictionaryRepository",
     )
 
     // MARK: - Initialization
 
     init(
         connectionManager: SQLiteConnectionManager? = nil,
-        trieService: TrieService = .shared
+        trieService: TrieService = .shared,
     ) {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
             databasePath: Self.getDatabasePath,
             queueLabel: "com.taigikeyboard.dictionary",
-            loggerCategory: "DictionaryRepository"
+            loggerCategory: "DictionaryRepository",
         )
         self.trieService = trieService
     }
@@ -120,10 +119,10 @@ final class DictionaryRepository: @unchecked Sendable {
     // MARK: - Database Path
 
     private static func getDatabasePath() throws -> String {
-        let bundle = Bundle(for: DictionaryRepository.self)
+        let bundle = ResourceBundleResolver.dictionaryBundle
         guard let path = bundle.path(
             forResource: LexiconConstants.Database.fileName,
-            ofType: LexiconConstants.Database.fileExtension
+            ofType: LexiconConstants.Database.fileExtension,
         ) else {
             throw DictionaryError.databaseNotFound
         }
@@ -139,7 +138,7 @@ final class DictionaryRepository: @unchecked Sendable {
         for input: String,
         inputType: InputType,
         inputMode: InputMode,
-        limit: Int = LexiconConstants.Search.defaultLimit
+        limit: Int = LexiconConstants.Search.defaultLimit,
     ) async throws -> [TaigiWord] {
         guard !input.isEmpty else {
             return []
@@ -149,20 +148,24 @@ final class DictionaryRepository: @unchecked Sendable {
 
         // 確認 Trie 已載入
         guard trieService.isReady else {
-            logger.error("[QUERY] Trie not loaded")
+            #if DEBUG
+                logger.error("[QUERY] Trie not loaded")
+            #endif
             throw DictionaryError.trieNotLoaded
         }
 
         // 漢字輸入暫不支援
         guard inputType != .hanzi else {
-            logger.warning("[QUERY] Hanzi input not supported")
+            #if DEBUG
+                logger.warning("[QUERY] Hanzi input not supported")
+            #endif
             return []
         }
 
         return try await queryWithTrie(
             input: input,
             inputMode: inputMode,
-            limit: limit
+            limit: limit,
         )
     }
 
@@ -177,12 +180,14 @@ final class DictionaryRepository: @unchecked Sendable {
     private func queryWithTrie(
         input: String,
         inputMode: InputMode,
-        limit: Int
+        limit: Int,
     ) async throws -> [TaigiWord] {
         // 正規化輸入（包含調符或 POJ 特殊字符時需要轉換）
         let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
 
-        logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
+        #if DEBUG
+            logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
+        #endif
 
         guard !normalizedInput.isEmpty else {
             return []
@@ -200,7 +205,9 @@ final class DictionaryRepository: @unchecked Sendable {
         // 3. 合併去重
         let allRowIds = Array(Set(exactRowIds + prefixRowIds))
 
-        logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
+        #if DEBUG
+            logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
+        #endif
 
         guard !allRowIds.isEmpty else {
             return []
@@ -212,7 +219,7 @@ final class DictionaryRepository: @unchecked Sendable {
                 db: db,
                 ids: allRowIds,
                 inputMode: inputMode,
-                limit: limit
+                limit: limit,
             )
         }
     }
@@ -222,7 +229,7 @@ final class DictionaryRepository: @unchecked Sendable {
         db: OpaquePointer,
         ids: [Int],
         inputMode: InputMode,
-        limit: Int
+        limit: Int,
     ) throws -> [TaigiWord] {
         guard !ids.isEmpty else { return [] }
 
@@ -239,7 +246,7 @@ final class DictionaryRepository: @unchecked Sendable {
         var startIndex = 0
         while startIndex < ids.count {
             let endIndex = min(startIndex + batchSize, ids.count)
-            let batch = Array(ids[startIndex..<endIndex])
+            let batch = Array(ids[startIndex ..< endIndex])
             startIndex = endIndex
             let placeholders = batch.map { _ in "?" }.joined(separator: ",")
 
@@ -280,7 +287,7 @@ final class DictionaryRepository: @unchecked Sendable {
                     id: id,
                     roman: roman,
                     hanzi: hanzi,
-                    lengthScore: frequency
+                    lengthScore: frequency,
                 ))
             }
         }
@@ -289,7 +296,7 @@ final class DictionaryRepository: @unchecked Sendable {
         return allResults
             .sorted { ($0.lengthScore ?? 0) > ($1.lengthScore ?? 0) }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 
     // MARK: - Search With Sources (for dictionary exploration)
@@ -299,14 +306,16 @@ final class DictionaryRepository: @unchecked Sendable {
     func searchWithSources(
         input: String,
         inputMode: InputMode,
-        limit: Int = 50
+        limit: Int = 50,
     ) async throws -> [DictionarySearchResult] {
         guard !input.isEmpty else { return [] }
 
         try await connectionManager.ensureInitialized()
 
         guard trieService.isReady else {
-            logger.error("[SEARCH-SOURCES] Trie not loaded")
+            #if DEBUG
+                logger.error("[SEARCH-SOURCES] Trie not loaded")
+            #endif
             throw DictionaryError.trieNotLoaded
         }
 
@@ -326,7 +335,7 @@ final class DictionaryRepository: @unchecked Sendable {
                 db: db,
                 ids: allRowIds,
                 inputMode: inputMode,
-                limit: limit
+                limit: limit,
             )
         }
     }
@@ -336,11 +345,13 @@ final class DictionaryRepository: @unchecked Sendable {
     func searchByHanzi(
         query: String,
         inputMode: InputMode,
-        limit: Int = 50
+        limit: Int = 50,
     ) async throws -> [DictionarySearchResult] {
         guard !query.isEmpty else { return [] }
 
-        logger.debug("[HANZI-SEARCH] query='\(query, privacy: .public)' limit=\(limit)")
+        #if DEBUG
+            logger.debug("[HANZI-SEARCH] query='\(query, privacy: .public)' limit=\(limit)")
+        #endif
 
         try await connectionManager.ensureInitialized()
 
@@ -349,14 +360,16 @@ final class DictionaryRepository: @unchecked Sendable {
                 db: db,
                 query: query,
                 inputMode: inputMode,
-                limit: limit
+                limit: limit,
             )
         }
 
-        logger.debug("[HANZI-SEARCH] returned \(results.count) results")
-        if let first = results.first {
-            logger.debug("[HANZI-SEARCH] first: \(first.roman, privacy: .public) / \(first.hanzi ?? "", privacy: .public)")
-        }
+        #if DEBUG
+            logger.debug("[HANZI-SEARCH] returned \(results.count) results")
+            if let first = results.first {
+                logger.debug("[HANZI-SEARCH] first: \(first.roman, privacy: .public) / \(first.hanzi ?? "", privacy: .public)")
+            }
+        #endif
 
         return results
     }
@@ -366,7 +379,7 @@ final class DictionaryRepository: @unchecked Sendable {
         db: OpaquePointer,
         query: String,
         inputMode: InputMode,
-        limit: Int
+        limit: Int,
     ) throws -> [DictionarySearchResult] {
         let enabledDicts = EnabledDictionaries.fromSettings()
         let dictCondition = enabledDicts.buildWhereCondition()
@@ -390,7 +403,9 @@ final class DictionaryRepository: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         let likePattern = "%\(query)%"
-        logger.debug("[HANZI-SQL] LIKE pattern='\(likePattern, privacy: .public)'")
+        #if DEBUG
+            logger.debug("[HANZI-SQL] LIKE pattern='\(likePattern, privacy: .public)'")
+        #endif
         sqlite3_bind_text(stmt, 1, (likePattern as NSString).utf8String, -1, nil)
         sqlite3_bind_int(stmt, 2, Int32(limit))
 
@@ -408,7 +423,7 @@ final class DictionaryRepository: @unchecked Sendable {
         db: OpaquePointer,
         ids: [Int],
         inputMode: InputMode,
-        limit: Int
+        limit: Int,
     ) throws -> [DictionarySearchResult] {
         guard !ids.isEmpty else { return [] }
 
@@ -418,7 +433,7 @@ final class DictionaryRepository: @unchecked Sendable {
         var startIndex = 0
         while startIndex < ids.count {
             let endIndex = min(startIndex + batchSize, ids.count)
-            let batch = Array(ids[startIndex..<endIndex])
+            let batch = Array(ids[startIndex ..< endIndex])
             startIndex = endIndex
             let placeholders = batch.map { _ in "?" }.joined(separator: ",")
 
@@ -456,7 +471,7 @@ final class DictionaryRepository: @unchecked Sendable {
         return allResults
             .sorted { $0.frequency > $1.frequency }
             .prefix(limit)
-            .map { $0 }
+            .map(\.self)
     }
 
     // MARK: - Row Parsing
@@ -471,7 +486,7 @@ final class DictionaryRepository: @unchecked Sendable {
     /// Expects columns: id(0), tl(1), hanzi(2), frequency(3), source flags(4-15)
     private func parseSearchResult(
         from stmt: OpaquePointer,
-        inputMode: InputMode
+        inputMode: InputMode,
     ) -> DictionarySearchResult {
         let id = Int(sqlite3_column_int(stmt, 0))
         let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
@@ -494,7 +509,7 @@ final class DictionaryRepository: @unchecked Sendable {
             tl: tlRoman,
             hanzi: hanzi,
             frequency: frequency,
-            sources: sources
+            sources: sources,
         )
     }
 

@@ -8,21 +8,21 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
 
-        <item name="android:navigationBarColor" tools:targetApi="o_mr1">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
         <item name="android:colorControlNormal">#8A000000</item>
         <item name="android:textColor">#000000</item>
         <item name="semiTransparentColor">#20000000</item>
 
-        <item name="key_bgColor">#FBF9F5</item>
+        <item name="key_bgColor">#FFFFFF</item>
         <item name="key_bgColorPressed">#E0E0E0</item>
-        <item name="key_bgColorActive">#BDBDBD</item>
-        <item name="key_function_bgColor">#D5D5D5</item>
-        <item name="key_function_bgColorPressed">#C8C8C8</item>
+        <item name="key_bgColorActive">#BDBDBD</item><!-- Translate button active/swapped state -->
+        <item name="key_function_bgColor">#FFFFFF</item>
+        <item name="key_function_bgColorPressed">#E0E0E0</item>
         <item name="key_fgColor">?android:textColor</item>
-        <item name="key_enter_bgColor">#4285F4</item><!-- Google Blue -->
-        <item name="key_enter_bgColorPressed">#3367D6</item><!-- Google Blue (pressed) -->
-        <item name="key_enter_fgColor">#FFFFFF</item><!-- White on blue -->
+        <item name="key_enter_bgColor">#FFFFFF</item><!-- Same as normal key -->
+        <item name="key_enter_bgColorPressed">#E0E0E0</item><!-- Same as normal key pressed -->
+        <item name="key_enter_fgColor">#000000</item><!-- Black text on white -->
 
         <item name="key_popup_bgColor">#EEEEEE</item>
         <item name="key_popup_fgColor">?android:textColor</item>
@@ -31,7 +31,7 @@
         <item name="key_popup_extended_bgColorActive">#BDBDBD</item>
         <item name="key_popup_extended_shadowColor">#CDCACACA</item>
 
-        <item name="keyboard_bgColor">#E0E0E0</item>
+        <item name="keyboard_bgColor">#D4D5DD</item>
 
         <item name="emoji_key_bgColor">?keyboard_bgColor</item>
         <item name="emoji_key_bgColorPressed">?key_popup_extended_bgColorActive</item>
@@ -43,6 +43,7 @@
         <item name="smartbar_button_bgColorPressed">?key_bgColorPressed</item>
         <item name="smartbar_button_fgColor">?key_fgColor</item>
         <item name="smartbar_candidate_fgColor">?android:textColor</item>
+        <item name="smartbar_accentColor">#007AFF</item><!-- iOS blue, for toolbar selection -->
         <item name="smartbar_candidate_subtitle_fgColor">#6D6D73</item>
 
         <item name="overlay_button_bgColorPressed">#40000000</item>

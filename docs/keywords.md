@@ -46,15 +46,10 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **userFrequency** | Per-word usage count, dominates ranking | `recordUsage()` |
 | **timeDecay** | Exponential decay with 1-week half-life for recency | `calculateWeight()` |
 
-### 5. Segmentation (`SyllableSegmenter`)
+### 5. Segmentation — ARCHIVED (removed in v3.4.6)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
-| **SyllableTrie** | Trie of valid TL+POJ syllables (initials × finals) | `SyllableSegmenter.trieRoot` |
-| **DAG** | Directed Acyclic Graph of valid syllable spans at each position | `edges[]` in `segmentContinuous()` |
-| **DPScoring** | Maximize sum of squared syllable lengths | `score[]` in `segmentContinuous()` |
-| **toneTerminator** | Tone digit (1-9) unambiguously ends a syllable | DAG edge with `j+1` |
-| **defaultTone** | Auto-added tone for non-final toneless syllables (1=open, 4=stop) | `buildSearchKey()` |
-| **fallback** | Single-char segment for unrecognized input | `fallbackScore` in DP |
+| ~~**SyllableSegmenter**~~ | Removed in v3.4.6. See `engine/segmentation.md` for historical reference | (deleted) |
 
 ### 6. Next-Word Prediction (`engine/nextword.md`)
 | Keyword | Definition | Key Class/Method |
@@ -80,7 +75,23 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **DiagnosticInfo** | Minimal device metadata (appVersion, buildNumber, osVersion, deviceModel) | `DiagnosticService.gather()` |
 | **diagnosticActions** | Copy / Share / Email — user-initiated only, no automatic transmission | Tab4 UI buttons |
 
-### 9. Input Flow (`engine/flow.md`)
+### 9. Keyboard Overlays (v3.4.5+)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **SymbolOverlay** | Quick symbol insertion overlay on candidate bar | `SymbolSelectionOverlay` / `SymbolSelectionOverlayView` |
+| **SettingsOverlay** | Quick settings toggle overlay on candidate bar | `SettingsSelectionOverlay` / `SettingsSelectionOverlayView` |
+| **LayoutOverlay** | Layout switcher overlay on candidate bar | `LayoutSelectionOverlay` / `LayoutSelectionOverlayView` |
+| **SymbolData** | Symbol definitions (punctuation, math, etc.) | `SymbolData` |
+| **ToolbarManager** | Toolbar visibility and overlay mode switching (Android) | `ToolbarManager.kt` |
+
+### 10. Data Management (v3.4.5+)
+| Keyword | Definition | Key Class/Method |
+|---------|-----------|-----------------|
+| **BackupService** | Export/import user data (custom dict, frequency, associations) | `BackupService` |
+| **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
+| **DictionarySearch** | In-app dictionary search from settings | `DictionarySearchViewModel` |
+
+### 11. Input Flow (`engine/flow.md`)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
 | **ActionHandler** | Central dispatcher for all keyboard actions | `ActionHandler` |
@@ -158,8 +169,8 @@ Standardized keyword mapping for core input method functionality and UI componen
 | `engine/sort.md` | scoringFormula, userFrequency, timeDecay |
 | `engine/nextword.md` | bigram, userAssociation, phraseLearning, lastSelectedWord |
 | `engine/flow.md` | ActionHandler, characterInput, performAutocomplete |
-| `engine/segmentation.md` | SyllableSegmenter, DAG, DPScoring, onset atomicity, toneTerminator |
-| `engine/tps.md` | TPSConverter, containsTPS, toTL (Taiwanese Phonetic System) |
+| `engine/segmentation.md` | ~~SyllableSegmenter~~ (archived, removed v3.4.6) |
+| `engine/tps.md` | TPSConverter, containsTPS, toTL, palatalization, nasalizedVowelAutoCorrect |
 | `engine/custom-dictionary.md` | CustomDictionaryEntry, notone, abbrev, batchImport, customWordMarker |
 | `engine/diagnostics.md` | DiagnosticInfo, diagnosticActions |
 | `ui/layout.md` | AlphaRow, SystemRow, TaigiLayouts, MOE layouts |

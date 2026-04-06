@@ -106,7 +106,8 @@
 
     <!-- Tab1: 頭頁 Section Headers -->
     <string name="home__section__setup_keyboard">齒盤愛拍開才會當使用</string>
-    <string name="home__section__new_features">功能解說</string>
+    <string name="home__section__typing_guide">拍字說明</string>
+    <string name="home__section__new_features">功能設定</string>
     <string name="home__section__known_issues">當 leh 修理 ê 問題</string>
     <string name="home__section__upcoming_features">未來安排欲做 ê 功能</string>
     <string name="home__section__faq">捷問 ê 問題</string>
@@ -171,7 +172,7 @@
     <string name="home__faq__3_answer">拍聲調 1，會正確出現無聲調符號 ê 字。拍尾溜是 -p, -t, -k, -h ê 字加聲調 4，會正確出現無聲調符號 ê 字。</string>
 
     <!-- Tab1: 版本紀錄 -->
-    <string name="home__version__3_3_8">v3.3.8 - 2025/12/24</string>
+    <string name="home__version__3_3_8">v3.3.8 – 2025/12/24</string>
     <string name="home__version__3_3_8_changes">• 新功能：連紲建議詞\n• 新功能：異用字開關\n• 改善：詞庫管理介面</string>
 
     <!-- Tab2: 齒佈 -->

@@ -30,7 +30,7 @@ struct Tab2: View {
                             Text(languageManager.text(Tab2Texts.appearanceSettings))
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(KeyboardModels.Fonts.appFont(.caption))
+                                .font(AppStyle.captionFont)
                                 .foregroundColor(.secondary)
                         }
                         .padding()
@@ -75,10 +75,8 @@ struct Tab2: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(header)
-                .font(KeyboardModels.Fonts.appFont(.callout))
-                .fontWeight(.semibold)
-                .foregroundColor(.secondary)
-                .textCase(.uppercase)
+                .font(AppStyle.sectionHeaderFont)
+                .foregroundStyle(.secondary)
                 .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -135,7 +133,7 @@ private struct LayoutOptionCard: View {
                             .fill(Color.black.opacity(0.5))
 
                         Text(subtitle ?? "")
-                            .font(KeyboardModels.Fonts.appFont(.footnote))
+                            .font(AppStyle.captionFont)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                             .padding(.horizontal, 12)
@@ -146,7 +144,7 @@ private struct LayoutOptionCard: View {
                             .fill(Color.black.opacity(0.25))
 
                         Circle()
-                            .fill(Color.accentColor)
+                            .fill(AppStyle.accentBlue)
                             .frame(width: 36, height: 36)
                             .overlay(
                                 Image(systemName: "checkmark")
@@ -157,20 +155,20 @@ private struct LayoutOptionCard: View {
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(isSelected && !isDisabled ? Color.accentColor : Color.clear, lineWidth: 2.5)
+                        .stroke(isSelected && !isDisabled ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5)
                 )
                 .frame(width: cardWidth)
 
                 // Title label
                 VStack(spacing: 2) {
                     Text(title)
-                        .font(KeyboardModels.Fonts.appFont(.caption))
+                        .font(AppStyle.captionFont)
                         .fontWeight(.semibold)
                         .foregroundColor(isDisabled ? .secondary : .primary)
                         .lineLimit(1)
                     if let subtitle = subtitle, !isDisabled {
                         Text(subtitle)
-                            .font(KeyboardModels.Fonts.appFont(.caption2))
+                            .font(AppStyle.captionFont)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -197,7 +195,7 @@ private struct LayoutOptionCard: View {
                             .font(KeyboardModels.Fonts.appFont(size: 28))
                             .foregroundColor(.secondary)
                         Text(title)
-                            .font(KeyboardModels.Fonts.appFont(.caption2))
+                            .font(AppStyle.captionFont)
                             .foregroundColor(.secondary)
                     }
                 )

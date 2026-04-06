@@ -23,7 +23,6 @@ import com.siansiansu.taigikeyboard.R
  * matching the LayoutSelectionOverlayView pattern.
  */
 class SymbolSelectionOverlayView : FrameLayout {
-
     companion object {
         private const val TAG = "SymbolSelectionOverlay"
     }
@@ -63,27 +62,30 @@ class SymbolSelectionOverlayView : FrameLayout {
         val density = resources.displayMetrics.density
 
         for ((index, category) in SymbolCategory.entries.withIndex()) {
-            val btn = Button(context).apply {
-                text = category.label
-                textSize = 13f
-                isAllCaps = false
-                minWidth = 0
-                minimumWidth = 0
-                setPadding(0, 0, 0, 0)
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    (44 * density).toInt(),
-                    1f
-                ).apply {
-                    marginStart = if (index > 0) (4 * density).toInt() else 0
+            val btn =
+                Button(context).apply {
+                    text = category.label
+                    textSize = 13f
+                    isAllCaps = false
+                    minWidth = 0
+                    minimumWidth = 0
+                    setPadding(0, 0, 0, 0)
+                    layoutParams =
+                        LinearLayout
+                            .LayoutParams(
+                                0,
+                                (44 * density).toInt(),
+                                1f,
+                            ).apply {
+                                marginStart = if (index > 0) (4 * density).toInt() else 0
+                            }
+                    setBackgroundResource(R.drawable.smartbar_button_background)
+                    setOnClickListener {
+                        selectedTab = category
+                        updateTabStyles()
+                        buildGrid(SymbolData.rows(category), category.columnCount, category.fontSize)
+                    }
                 }
-                setBackgroundResource(R.drawable.smartbar_button_background)
-                setOnClickListener {
-                    selectedTab = category
-                    updateTabStyles()
-                    buildGrid(SymbolData.rows(category), category.columnCount, category.fontSize)
-                }
-            }
             tabButtons.add(btn)
             bar.addView(btn)
         }
@@ -102,13 +104,14 @@ class SymbolSelectionOverlayView : FrameLayout {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {
                 height = overlayHeight
                 topMargin = smartbarHeight
-            } ?: FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                overlayHeight
-            ).apply {
-                gravity = Gravity.TOP
-                topMargin = smartbarHeight
-            }
+            } ?: FrameLayout
+                .LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    overlayHeight,
+                ).apply {
+                    gravity = Gravity.TOP
+                    topMargin = smartbarHeight
+                }
         }
 
         selectedTab = SymbolCategory.FULL_WIDTH
@@ -147,11 +150,12 @@ class SymbolSelectionOverlayView : FrameLayout {
         SymbolCategory.entries.forEachIndexed { index, category ->
             val btn = tabButtons.getOrNull(index) ?: return@forEachIndexed
             if (category == selectedTab) {
-                btn.background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 6 * density
-                    setColor(accentColor)
-                }
+                btn.background =
+                    GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 6 * density
+                        setColor(accentColor)
+                    }
                 btn.setTextColor(Color.WHITE)
             } else {
                 btn.setBackgroundResource(R.drawable.smartbar_button_background)
@@ -160,7 +164,11 @@ class SymbolSelectionOverlayView : FrameLayout {
         }
     }
 
-    private fun buildGrid(rows: List<List<String>>, columnCount: Int, fontSize: Float) {
+    private fun buildGrid(
+        rows: List<List<String>>,
+        columnCount: Int,
+        fontSize: Float,
+    ) {
         val container = gridContainer ?: return
         container.removeAllViews()
 
@@ -170,48 +178,57 @@ class SymbolSelectionOverlayView : FrameLayout {
         val spacing = (4 * density).toInt()
 
         for (row in rows) {
-            val rowLayout = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    bottomMargin = spacing
+            val rowLayout =
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    layoutParams =
+                        LinearLayout
+                            .LayoutParams(
+                                LinearLayout.LayoutParams.MATCH_PARENT,
+                                LinearLayout.LayoutParams.WRAP_CONTENT,
+                            ).apply {
+                                bottomMargin = spacing
+                            }
                 }
-            }
 
             for (i in 0 until columnCount) {
                 val symbol = row.getOrNull(i)
                 if (symbol != null) {
-                    val cell = TextView(context).apply {
-                        text = symbol
-                        setTextColor(fgColor)
-                        textSize = fontSize
-                        gravity = Gravity.CENTER
-                        layoutParams = LinearLayout.LayoutParams(
-                            0,
-                            cellHeight,
-                            1f
-                        ).apply {
-                            marginStart = if (i > 0) spacing else 0
+                    val cell =
+                        TextView(context).apply {
+                            text = symbol
+                            setTextColor(fgColor)
+                            textSize = fontSize
+                            gravity = Gravity.CENTER
+                            layoutParams =
+                                LinearLayout
+                                    .LayoutParams(
+                                        0,
+                                        cellHeight,
+                                        1f,
+                                    ).apply {
+                                        marginStart = if (i > 0) spacing else 0
+                                    }
+                            isClickable = true
+                            setOnClickListener {
+                                onSymbolSelected?.invoke(symbol)
+                            }
                         }
-                        isClickable = true
-                        setOnClickListener {
-                            onSymbolSelected?.invoke(symbol)
-                        }
-                    }
                     rowLayout.addView(cell)
                 } else {
                     // Empty placeholder cell
-                    val spacer = View(context).apply {
-                        layoutParams = LinearLayout.LayoutParams(
-                            0,
-                            cellHeight,
-                            1f
-                        ).apply {
-                            marginStart = if (i > 0) spacing else 0
+                    val spacer =
+                        View(context).apply {
+                            layoutParams =
+                                LinearLayout
+                                    .LayoutParams(
+                                        0,
+                                        cellHeight,
+                                        1f,
+                                    ).apply {
+                                        marginStart = if (i > 0) spacing else 0
+                                    }
                         }
-                    }
                     rowLayout.addView(spacer)
                 }
             }
@@ -222,10 +239,10 @@ class SymbolSelectionOverlayView : FrameLayout {
 
     private fun resolveAccentColor(): Int {
         val typedValue = TypedValue()
-        return if (context.theme.resolveAttribute(R.attr.key_enter_bgColor, typedValue, true)) {
+        return if (context.theme.resolveAttribute(R.attr.smartbar_accentColor, typedValue, true)) {
             typedValue.data
         } else {
-            Color.parseColor("#4285F4")
+            Color.parseColor("#007AFF")
         }
     }
 

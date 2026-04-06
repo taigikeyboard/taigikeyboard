@@ -44,6 +44,9 @@ object PreferenceKeys {
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
     val TOOLBAR_AUTO_COLLAPSE = booleanPreferencesKey("keyboard__toolbar_auto_collapse")
+    val GLOBE_KEY_ENABLED = booleanPreferencesKey("keyboard__globe_key_enabled")
+    val SOUND_FEEDBACK_ENABLED = booleanPreferencesKey("keyboard__sound_feedback_enabled")
+    val VIBRATION_FEEDBACK_ENABLED = booleanPreferencesKey("keyboard__vibration_feedback_enabled")
 
     // Taigi-specific keys
     val ENABLE_DOUBLE_TAP_OO = booleanPreferencesKey("taigi__enable_double_tap_oo")
@@ -56,6 +59,12 @@ object PreferenceKeys {
     val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
     val LONG_PRESS_DELAY = intPreferencesKey("looknfeel__long_press_delay")
 
+    // 詞頻紀錄開關
+    val FREQUENCY_RECORDING_ENABLED = booleanPreferencesKey("dictionary__frequency_recording_enabled")
+    // 詞關聯紀錄開關
+    val ASSOCIATION_RECORDING_ENABLED = booleanPreferencesKey("dictionary__association_recording_enabled")
+    // 自訂詞庫開關
+    val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
     // 詞庫開關設定
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")

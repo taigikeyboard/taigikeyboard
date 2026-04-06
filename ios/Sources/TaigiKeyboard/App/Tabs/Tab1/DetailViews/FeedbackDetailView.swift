@@ -17,8 +17,13 @@ struct FeedbackDetailView: View {
 
             Section {
                 Link(destination: URL(string: supportURL)!) {
-                    Label(languageManager.text(Tab1Texts.supportUs), systemImage: "heart.fill")
+                    Label(languageManager.text(Tab1Texts.supportUs), systemImage: "arrow.up.right.square")
                 }
+            }
+
+            Section {
+                Text(languageManager.text(Tab1Texts.freePromise))
+                    .lineSpacing(6)
             }
         }
         .navigationTitle(languageManager.text(Tab1Texts.contactUs))

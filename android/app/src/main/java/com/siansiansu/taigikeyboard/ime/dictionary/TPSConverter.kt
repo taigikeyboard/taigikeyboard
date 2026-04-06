@@ -10,185 +10,192 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * Reference: https://github.com/leechunhoe/Tailo-TPS-Converter
  */
 object TPSConverter {
-
     // ========================================
     // MARK: - TPS → TL mapping tables
     // ========================================
 
     /** Consonant mapping (TPS → TL). Compound consonants must come first for greedy match. */
-    private val consonants: List<Pair<String, String>> = listOf(
-        // Compound consonants (match first)
-        "ㄑㄧ" to "tshi",
-        "ㄐㄧ" to "tsi",
-        "ㄒㄧ" to "si",
-        "ㆢㄧ" to "ji",
-        // Standalone palatalized consonants (for nasalized vowel combos like ㄐㆪ)
-        "ㄐ" to "ts",
-        "ㄑ" to "tsh",
-        "ㄒ" to "s",
-        "ㆢ" to "j",
-        // Single consonants
-        "ㄅ" to "p",
-        "ㄆ" to "ph",
-        "ㄇ" to "m",
-        "ㆠ" to "b",
-        "ㄉ" to "t",
-        "ㄊ" to "th",
-        "ㄋ" to "n",
-        "ㄌ" to "l",
-        "ㄍ" to "k",
-        "ㄎ" to "kh",
-        "ㄫ" to "ng",
-        "ㆣ" to "g",
-        "ㄏ" to "h",
-        "ㄗ" to "ts",
-        "ㄘ" to "tsh",
-        "ㄙ" to "s",
-        "ㆡ" to "j",
-    )
+    private val consonants: List<Pair<String, String>> =
+        listOf(
+            // Compound consonants (match first)
+            "ㄑㄧ" to "tshi",
+            "ㄐㄧ" to "tsi",
+            "ㄒㄧ" to "si",
+            "ㆢㄧ" to "ji",
+            // Standalone palatalized consonants (for nasalized vowel combos like ㄐㆪ)
+            "ㄐ" to "ts",
+            "ㄑ" to "tsh",
+            "ㄒ" to "s",
+            "ㆢ" to "j",
+            // Single consonants
+            "ㄅ" to "p",
+            "ㄆ" to "ph",
+            "ㄇ" to "m",
+            "ㆠ" to "b",
+            "ㄉ" to "t",
+            "ㄊ" to "th",
+            "ㄋ" to "n",
+            "ㄌ" to "l",
+            "ㄍ" to "k",
+            "ㄎ" to "kh",
+            "ㄫ" to "ng",
+            "ㆣ" to "g",
+            "ㄏ" to "h",
+            "ㄗ" to "ts",
+            "ㄘ" to "tsh",
+            "ㄙ" to "s",
+            "ㆡ" to "j",
+        )
 
     /** Vowel mapping (TPS → TL). Compound vowels must come first for greedy match. */
-    private val vowels: List<Pair<String, String>> = listOf(
-        // Nasalized vowels (match first)
-        "ㆮ" to "ainn",
-        "ㆯ" to "aunn",
-        "ㆩ" to "ann",
-        "ㆥ" to "enn",
-        "ㆪ" to "inn",
-        "ㆳ" to "inn",  // Vertical glyph variant of ㆪ (same symbol, duplicate Unicode encoding)
-        "ㆧ" to "onn",
-        "ㆫ" to "unn",
-        // Compound vowels
-        "ㄤ" to "ang",
-        "ㆲ" to "ong",
-        "ㆦ" to "oo",
-        "ㄝ" to "ee",
-        "ㄜ" to "er",
-        "ㆨ" to "ir",
-        "ㄞ" to "ai",
-        "ㄠ" to "au",
-        "ㆰ" to "am",
-        "ㆱ" to "om",
-        "ㄢ" to "an",
-        "ㆭ" to "ng",
-        // Single vowels
-        "ㄚ" to "a",
-        "ㆤ" to "e",
-        "ㄧ" to "i",
-        "ㄛ" to "o",
-        "ㄨ" to "u",
-        "ㄣ" to "n",
-        "ㄥ" to "ng",
-        "ㆬ" to "m",
-    )
+    private val vowels: List<Pair<String, String>> =
+        listOf(
+            // Nasalized vowels (match first)
+            "ㆮ" to "ainn",
+            "ㆯ" to "aunn",
+            "ㆩ" to "ann",
+            "ㆥ" to "enn",
+            "ㆪ" to "inn",
+            "ㆳ" to "inn", // Vertical glyph variant of ㆪ (same symbol, duplicate Unicode encoding)
+            "ㆧ" to "onn",
+            "ㆫ" to "unn",
+            // Compound vowels
+            "ㄤ" to "ang",
+            "ㆲ" to "ong",
+            "ㆦ" to "oo",
+            "ㄝ" to "ee",
+            "ㄜ" to "er",
+            "ㆨ" to "ir",
+            "ㄞ" to "ai",
+            "ㄠ" to "au",
+            "ㆰ" to "am",
+            "ㆱ" to "om",
+            "ㄢ" to "an",
+            "ㆭ" to "ng",
+            // Single vowels
+            "ㄚ" to "a",
+            "ㆤ" to "e",
+            "ㄧ" to "i",
+            "ㄛ" to "o",
+            "ㄨ" to "u",
+            "ㄣ" to "n",
+            "ㄥ" to "ng",
+            "ㆬ" to "m",
+        )
 
     /** Checked tone finals (TPS → TL). Dotted variants (tone 8) must come before plain (tone 4). */
-    private val tones: List<Triple<String, String, String>> = listOf(
-        Triple("ㆴ˙", "p", "8"),  // p + tone 8
-        Triple("ㆵ˙", "t", "8"),  // t + tone 8
-        Triple("ㆻ˙", "k", "8"),  // k + tone 8
-        Triple("ㆷ˙", "h", "8"),  // h + tone 8
-        Triple("ㆴ", "p", "4"),   // p + tone 4
-        Triple("ㆵ", "t", "4"),   // t + tone 4
-        Triple("ㆻ", "k", "4"),   // k + tone 4
-        Triple("ㆷ", "h", "4"),   // h + tone 4
-    )
+    private val tones: List<Triple<String, String, String>> =
+        listOf(
+            Triple("ㆴ˙", "p", "8"), // p + tone 8
+            Triple("ㆵ˙", "t", "8"), // t + tone 8
+            Triple("ㆻ˙", "k", "8"), // k + tone 8
+            Triple("ㆷ˙", "h", "8"), // h + tone 8
+            Triple("ㆴ", "p", "4"), // p + tone 4
+            Triple("ㆵ", "t", "4"), // t + tone 4
+            Triple("ㆻ", "k", "4"), // k + tone 4
+            Triple("ㆷ", "h", "4"), // h + tone 4
+        )
 
     /** Non-checked tone marks */
-    private val toneMarks: List<Pair<String, String>> = listOf(
-        "ˋ" to "2",   // tone 2
-        "˪" to "3",   // tone 3
-        "ˊ" to "5",   // tone 5
-        "ˇ" to "6",   // tone 6
-        "˫" to "7",   // tone 7
-        "ˆ" to "9",   // tone 9
-        "˙" to "8",   // tone 8 (non-stop), U+02D9 DOT ABOVE
-        // tone 1: no mark
-    )
+    private val toneMarks: List<Pair<String, String>> =
+        listOf(
+            "ˋ" to "2", // tone 2
+            "˪" to "3", // tone 3
+            "ˊ" to "5", // tone 5
+            "ˇ" to "6", // tone 6
+            "˫" to "7", // tone 7
+            "ˆ" to "9", // tone 9
+            "˙" to "8", // tone 8 (non-stop), U+02D9 DOT ABOVE
+            // tone 1: no mark
+        )
 
     // ========================================
     // MARK: - TL → TPS mapping tables
     // ========================================
 
     /** TL → TPS consonant mapping (longest match first) */
-    private val tlToTPSConsonants: List<Pair<String, String>> = listOf(
-        "tshi" to "ㄑㄧ",
-        "tsi" to "ㄐㄧ",
-        "tsh" to "ㄘ",
-        "ts" to "ㄗ",
-        "ph" to "ㄆ",
-        "th" to "ㄊ",
-        "kh" to "ㄎ",
-        "ng" to "ㄫ",
-        "si" to "ㄒㄧ",
-        "ji" to "ㆢㄧ",
-        "p" to "ㄅ",
-        "m" to "ㄇ",
-        "b" to "ㆠ",
-        "t" to "ㄉ",
-        "n" to "ㄋ",
-        "l" to "ㄌ",
-        "k" to "ㄍ",
-        "g" to "ㆣ",
-        "h" to "ㄏ",
-        "s" to "ㄙ",
-        "j" to "ㆡ",
-    )
+    private val tlToTPSConsonants: List<Pair<String, String>> =
+        listOf(
+            "tshi" to "ㄑㄧ",
+            "tsi" to "ㄐㄧ",
+            "tsh" to "ㄘ",
+            "ts" to "ㄗ",
+            "ph" to "ㄆ",
+            "th" to "ㄊ",
+            "kh" to "ㄎ",
+            "ng" to "ㄫ",
+            "si" to "ㄒㄧ",
+            "ji" to "ㆢㄧ",
+            "p" to "ㄅ",
+            "m" to "ㄇ",
+            "b" to "ㆠ",
+            "t" to "ㄉ",
+            "n" to "ㄋ",
+            "l" to "ㄌ",
+            "k" to "ㄍ",
+            "g" to "ㆣ",
+            "h" to "ㄏ",
+            "s" to "ㄙ",
+            "j" to "ㆡ",
+        )
 
     /** TL → TPS vowel mapping (longest match first) */
-    private val tlToTPSVowels: List<Pair<String, String>> = listOf(
-        "ainn" to "ㆮ",
-        "aunn" to "ㆯ",
-        "ann" to "ㆩ",
-        "enn" to "ㆥ",
-        "inn" to "ㆪ",
-        "onn" to "ㆧ",
-        "unn" to "ㆫ",
-        "ang" to "ㄤ",
-        "ong" to "ㆲ",
-        "oo" to "ㆦ",
-        "ee" to "ㄝ",
-        "er" to "ㄜ",
-        "ir" to "ㆨ",
-        "or" to "ㄛ",
-        "ai" to "ㄞ",
-        "au" to "ㄠ",
-        "am" to "ㆰ",
-        "om" to "ㆱ",
-        "an" to "ㄢ",
-        "ng" to "ㆭ",
-        "a" to "ㄚ",
-        "e" to "ㆤ",
-        "i" to "ㄧ",
-        "o" to "ㄛ",
-        "u" to "ㄨ",
-        "m" to "ㆬ",
-        "n" to "ㄣ",
-    )
+    private val tlToTPSVowels: List<Pair<String, String>> =
+        listOf(
+            "ainn" to "ㆮ",
+            "aunn" to "ㆯ",
+            "ann" to "ㆩ",
+            "enn" to "ㆥ",
+            "inn" to "ㆪ",
+            "onn" to "ㆧ",
+            "unn" to "ㆫ",
+            "ang" to "ㄤ",
+            "ong" to "ㆲ",
+            "oo" to "ㆦ",
+            "ee" to "ㄝ",
+            "er" to "ㄜ",
+            "ir" to "ㆨ",
+            "or" to "ㄛ",
+            "ai" to "ㄞ",
+            "au" to "ㄠ",
+            "am" to "ㆰ",
+            "om" to "ㆱ",
+            "an" to "ㄢ",
+            "ng" to "ㆭ",
+            "a" to "ㄚ",
+            "e" to "ㆤ",
+            "i" to "ㄧ",
+            "o" to "ㄛ",
+            "u" to "ㄨ",
+            "m" to "ㆬ",
+            "n" to "ㄣ",
+        )
 
     /** TL → TPS tone mapping */
-    private val tlToTPSTones: List<Pair<String, String>> = listOf(
-        "2" to "ˋ",
-        "3" to "˪",
-        "5" to "ˊ",
-        "6" to "ˇ",
-        "7" to "˫",
-        "8" to "\u02D9",  // Non-stop tone 8 (U+02D9 DOT ABOVE)
-        "9" to "ˆ",
-        // 1, 4: no mark
-    )
+    private val tlToTPSTones: List<Pair<String, String>> =
+        listOf(
+            "2" to "ˋ",
+            "3" to "˪",
+            "5" to "ˊ",
+            "6" to "ˇ",
+            "7" to "˫",
+            "8" to "\u02D9", // Non-stop tone 8 (U+02D9 DOT ABOVE)
+            "9" to "ˆ",
+            // 1, 4: no mark
+        )
 
     /** TL → TPS checked tone finals */
-    private val tlToTPSCheckedTones: List<Pair<String, String>> = listOf(
-        "p8" to "ㆴ˙",
-        "t8" to "ㆵ˙",
-        "k8" to "ㆻ˙",
-        "h8" to "ㆷ˙",
-        "p4" to "ㆴ",
-        "t4" to "ㆵ",
-        "k4" to "ㆻ",
-        "h4" to "ㆷ",
-    )
+    private val tlToTPSCheckedTones: List<Pair<String, String>> =
+        listOf(
+            "p8" to "ㆴ˙",
+            "t8" to "ㆵ˙",
+            "k8" to "ㆻ˙",
+            "h8" to "ㆷ˙",
+            "p4" to "ㆴ",
+            "t4" to "ㆵ",
+            "k4" to "ㆻ",
+            "h4" to "ㆷ",
+        )
 
     /** Stop consonants excluded from vowel matching (already consumed as checked tone finals) */
     private val stopConsonants = setOf("p", "t", "k", "h")
@@ -232,13 +239,15 @@ object TPSConverter {
     // MARK: - TPS Initial Key Auto-Selection
     // ========================================
 
-    /** Characters that indicate the start of a new syllable (tone marks and checked tone finals) */
+    /** Characters that indicate the start of a new syllable (tone marks, checked tone finals, nasal finals) */
     private val syllableBoundaryChars: Set<Char> by lazy {
         val chars = mutableSetOf<Char>()
         // Tone marks: ˋ ˪ ˊ ˇ ˫ ˙ ˆ
         toneMarks.forEach { (tps, _) -> chars.addAll(tps.toList()) }
         // Checked tone finals: ㆴ ㆵ ㆻ ㆷ
         chars.addAll(listOf('ㆴ', 'ㆵ', 'ㆻ', 'ㆷ'))
+        // Nasal finals: ㆬ ㄣ ㆭ ㄥ
+        chars.addAll(listOf('ㆬ', 'ㄣ', 'ㆭ', 'ㄥ'))
         chars
     }
 
@@ -247,12 +256,13 @@ object TPSConverter {
     // ========================================
 
     /** Palatalization mapping: non-palatalized → palatalized affricate. */
-    private val palatalizationMap = mapOf(
-        'ㄗ' to "ㄐ",
-        'ㄘ' to "ㄑ",
-        'ㄙ' to "ㄒ",
-        'ㆡ' to "ㆢ",
-    )
+    private val palatalizationMap =
+        mapOf(
+            'ㄗ' to "ㄐ",
+            'ㄘ' to "ㄑ",
+            'ㄙ' to "ㄒ",
+            'ㆡ' to "ㆢ",
+        )
 
     /** Characters that trigger palatalization of the preceding affricate. */
     private val palatalizationTriggers = setOf('ㄧ', 'ㆪ')
@@ -264,7 +274,10 @@ object TPSConverter {
      * When user types ㄧ or ㆪ after a non-palatalized affricate (ㄗ/ㄘ/ㄙ/ㆡ),
      * the affricate should be auto-corrected to its palatalized form (ㄐ/ㄑ/ㄒ/ㆢ).
      */
-    fun palatalizationReplacement(incoming: String, lastRawChar: Char?): String? {
+    fun palatalizationReplacement(
+        incoming: String,
+        lastRawChar: Char?,
+    ): String? {
         if (lastRawChar == null) return null
         val first = incoming.firstOrNull() ?: return null
         if (first !in palatalizationTriggers) return null
@@ -272,27 +285,66 @@ object TPSConverter {
     }
 
     // ========================================
-    // ㄇ/ㄫ auto-select
+    // Syllabic nasal tone-triggered correction
     // ========================================
 
     /**
-     * Returns context-adjusted TPS character for ㄇ/ㄫ keys.
+     * Returns the syllabic replacement for the last character of rawInput,
+     * or null if no replacement is needed.
+     *
+     * When user types a tone mark after a bare ㄇ or ㄫ at syllable start,
+     * the consonant should be retroactively corrected to its syllabic form:
+     * ㄇ → ㆬ (syllabic m), ㄫ → ㆭ (syllabic ng).
+     */
+    fun syllabicNasalReplacement(
+        incoming: String,
+        lastRawChar: Char?,
+    ): String? {
+        if (lastRawChar == null) return null
+        val first = incoming.firstOrNull() ?: return null
+        if (!isTPSToneMark(first)) return null
+        return when (lastRawChar) {
+            'ㄇ' -> "ㆬ"
+            'ㄫ' -> "ㆭ"
+            else -> null
+        }
+    }
+
+    // ========================================
+    // Nasal/stop positional auto-select
+    // ========================================
+
+    /**
+     * Returns context-adjusted TPS character for keys with initial/final dual forms.
      * Only called when layoutType == "tps".
      *
      * At syllable start (empty, after tone mark, after checked final, after space) → initial form.
-     * After ㄧ: ㄇ→ㆬ, ㄫ→ㄥ (ing special case).
-     * Other positions: ㄇ→ㆬ, ㄫ→ㆭ.
+     * Not at syllable start → final form:
+     *   Nasals: ㄇ→ㆬ, ㄋ→ㄣ, ㄫ→ㄥ (after ㄧ) / ㆭ (otherwise).
+     *   Stops:  ㄅ→ㆴ, ㄉ→ㆵ, ㄍ→ㆻ, ㄏ→ㆷ (entering tone coda, tone 4 default).
      */
-    fun adjustTPSInitialKey(char: String, afterRawInput: String): String {
-        if (char != "ㄇ" && char != "ㄫ") return char
+    fun adjustTPSInitialKey(
+        char: String,
+        afterRawInput: String,
+    ): String {
+        if (char != "ㄇ" && char != "ㄋ" && char != "ㄫ" &&
+            char != "ㄅ" && char != "ㄉ" && char != "ㄍ" && char != "ㄏ"
+        ) {
+            return char
+        }
 
         // At syllable start → keep initial form
         if (afterRawInput.isEmpty()) return char
         val lastChar = afterRawInput.last()
         if (lastChar == ' ' || lastChar in syllableBoundaryChars) return char
 
-        // Not at syllable start → final/syllabic form
+        // Not at syllable start → final form
         if (char == "ㄇ") return "ㆬ"
+        if (char == "ㄋ") return "ㄣ"
+        if (char == "ㄅ") return "ㆴ"
+        if (char == "ㄉ") return "ㆵ"
+        if (char == "ㄍ") return "ㆻ"
+        if (char == "ㄏ") return "ㆷ"
         // char == "ㄫ": after ㄧ → ㄥ (ing), otherwise → ㆭ
         return if (lastChar == 'ㄧ') "ㄥ" else "ㆭ"
     }
@@ -306,7 +358,10 @@ object TPSConverter {
      * "iainn" is not a valid Taiwanese final; only "iaunn" exists.
      * Only called when layoutType == "tps".
      */
-    fun adjustTPSNasalizedVowelKey(char: String, afterRawInput: String): String {
+    fun adjustTPSNasalizedVowelKey(
+        char: String,
+        afterRawInput: String,
+    ): String {
         if (char != "ㆮ") return char
         val lastChar = afterRawInput.lastOrNull() ?: return char
         return if (lastChar == 'ㄧ') "ㆯ" else char
@@ -317,13 +372,14 @@ object TPSConverter {
     // ========================================
 
     /** Check if string contains any TPS characters */
-    fun containsTPS(input: String): Boolean {
-        return input.any { it in tpsCharacters }
-    }
+    fun containsTPS(input: String): Boolean = input.any { it in tpsCharacters }
 
     /** Return TPS display form when layout is "tps", otherwise return roman as-is. */
-    fun displayRoman(roman: String, layoutType: String, orMapsToER: Boolean = false): String =
-        if (layoutType == "tps") toTPS(roman, orMapsToER) else roman
+    fun displayRoman(
+        roman: String,
+        layoutType: String,
+        orMapsToER: Boolean = false,
+    ): String = if (layoutType == "tps") toTPS(roman, orMapsToER) else roman
 
     /**
      * Convert TPS to TL.
@@ -350,6 +406,8 @@ object TPSConverter {
         var hasConsonant = false
         var hasVowel = false
         var lastConsonantTPS = ""
+        // Tone/entering-tone ends a syllable; the next consonant or vowel needs a space.
+        var needsSpace = false
 
         while (remaining.isNotEmpty()) {
             var matched = false
@@ -362,6 +420,7 @@ object TPSConverter {
                     hasConsonant = false
                     hasVowel = false
                     lastConsonantTPS = ""
+                    needsSpace = true
                     matched = true
                     break
                 }
@@ -381,6 +440,7 @@ object TPSConverter {
                     hasConsonant = false
                     hasVowel = false
                     lastConsonantTPS = ""
+                    needsSpace = true
                     matched = true
                     break
                 }
@@ -391,13 +451,15 @@ object TPSConverter {
             // If mid-syllable, insert space boundary first — consonant starts a new syllable.
             for ((tpsPattern, tl) in consonants) {
                 if (remaining.startsWith(tpsPattern)) {
-                    if (hasConsonant || hasVowel) {
+                    if (needsSpace || hasConsonant || hasVowel) {
                         result.append(' ')
+                        needsSpace = false
                     }
                     result.append(tl)
                     remaining = remaining.substring(tpsPattern.length)
                     hasConsonant = true
-                    hasVowel = false
+                    // Compound consonants with ㄧ (ㄑㄧ→tshi etc.) include a vowel component
+                    hasVowel = tpsPattern.endsWith("ㄧ")
                     lastConsonantTPS = tpsPattern
                     matched = true
                     break
@@ -408,9 +470,13 @@ object TPSConverter {
             // 4. Try vowels (compound first, table is pre-sorted)
             for ((tpsPattern, tl) in vowels) {
                 if (remaining.startsWith(tpsPattern)) {
+                    if (needsSpace) {
+                        result.append(' ')
+                        needsSpace = false
+                    }
                     // Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) + ㄧ is invalid TPS.
                     // Must use compound initials ㄐㄧ/ㄑㄧ/ㄒㄧ/ㆢㄧ instead.
-                    if (tpsPattern == "ㄧ" && lastConsonantTPS in nonPalatalizedAffricates) {
+                    if (tpsPattern == "ㄧ" && !hasVowel && lastConsonantTPS in nonPalatalizedAffricates) {
                         result.append(' ')
                         hasConsonant = false
                         lastConsonantTPS = ""
@@ -430,23 +496,12 @@ object TPSConverter {
             hasConsonant = false
             hasVowel = false
             lastConsonantTPS = ""
+            needsSpace = false
         }
 
         // Post-process: oo before stop tone → o (e.g., "ook4" → "ok4", "oot8" → "ot8")
         // Reference: taigi-converter fromZhuyin rule
         return result.toString().replace(Regex("oo([ptk][48])"), "o$1")
-    }
-
-    /**
-     * Convert multi-syllable TPS to TL (space-separated).
-     *
-     * @param tps TPS string (e.g., "ㄉㄧㄠˊ ㄙㄨˊ")
-     * @return TL string (e.g., "tiau5 su5")
-     */
-    fun toTLMultiSyllable(tps: String): String {
-        return tps.split(" ")
-            .map { toTL(it) }
-            .joinToString(" ")
     }
 
     /**
@@ -458,7 +513,10 @@ object TPSConverter {
      * @param orMapsToER true: or → ㄜ (dialect variant), false: or → ㄛ (default)
      * @return TPS string (e.g., "ㄍㄨㄚˋ ㄍㄨㄚˋ")
      */
-    fun toTPS(tl: String, orMapsToER: Boolean = false): String {
+    fun toTPS(
+        tl: String,
+        orMapsToER: Boolean = false,
+    ): String {
         if (tl.isEmpty()) return ""
 
         val syllables = tl.split("-")
@@ -476,14 +534,18 @@ object TPSConverter {
      * @param orMapsToER true: or → ㄜ, false: or → ㄛ
      * @return TPS string
      */
-    fun toTPSFromDisplay(displayRoman: String, orMapsToER: Boolean = false): String {
+    fun toTPSFromDisplay(
+        displayRoman: String,
+        orMapsToER: Boolean = false,
+    ): String {
         if (displayRoman.isEmpty()) return ""
 
-        val numericTL = displayRoman.split("-").joinToString("-") { syllable ->
-            val (bare, tone) = TaigiPhonetics.stripToneMark(syllable)
-            val normalized = TaigiPhonetics.normalizeToTL(bare.lowercase())
-            normalized + tone
-        }
+        val numericTL =
+            displayRoman.split("-").joinToString("-") { syllable ->
+                val (bare, tone) = TaigiPhonetics.stripToneMark(syllable)
+                val normalized = TaigiPhonetics.normalizeToTL(bare.lowercase())
+                normalized + tone
+            }
 
         return toTPS(numericTL, orMapsToER)
     }
@@ -499,7 +561,10 @@ object TPSConverter {
      * 5. Post-processing: standalone m/ng → syllabic form
      * 6. Post-processing: palatalized + ㄣㄣ → nasalized ㆪ
      */
-    private fun convertSyllableToTPS(syllable: String, orMapsToER: Boolean = false): String {
+    private fun convertSyllableToTPS(
+        syllable: String,
+        orMapsToER: Boolean = false,
+    ): String {
         if (syllable.isEmpty()) return ""
 
         var remaining = syllable.lowercase()
@@ -558,13 +623,22 @@ object TPSConverter {
         // 5. Post-processing: standalone m/ng → syllabic form
         if (vowel.isEmpty()) {
             when (consonant) {
-                "ㄇ" -> { consonant = ""; vowel = "ㆬ" }
-                "ㄫ" -> { consonant = ""; vowel = "ㆭ" }
+                "ㄇ" -> {
+                    consonant = ""
+                    vowel = "ㆬ"
+                }
+
+                "ㄫ" -> {
+                    consonant = ""
+                    vowel = "ㆭ"
+                }
             }
         }
 
         // 5b. Post-processing: ing special case — ㄧㆭ → ㄧㄥ
-        if (vowel == "ㄧㆭ") { vowel = "ㄧㄥ" }
+        if (vowel == "ㄧㆭ") {
+            vowel = "ㄧㄥ"
+        }
 
         // 6. Post-processing: palatalized initial + ㄣㄣ → nasalized ㆪ
         if (consonant.endsWith("ㄧ") && vowel == "ㄣㄣ") {

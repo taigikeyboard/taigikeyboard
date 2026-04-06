@@ -76,6 +76,9 @@ class KeyboardViewController: KeyboardInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // Register custom fonts from containing app bundle (extension only)
+        FontRegistration.registerFontsIfNeeded()
+
         setupServices()
 
         // 確保關鍵服務的 lazy var 被觸發，遵循 KeyboardKit 標準模式
