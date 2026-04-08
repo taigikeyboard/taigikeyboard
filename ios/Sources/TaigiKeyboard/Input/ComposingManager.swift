@@ -1,6 +1,5 @@
 import Foundation
 import KeyboardKit
-import OSLog
 import SwiftUI
 
 /// Composing manager
@@ -9,15 +8,9 @@ import SwiftUI
 /// - `rawInput`: Original keystrokes (e.g. "gua2") — used for Trie search
 /// - `composingText`: Derived display text (e.g. "guá") — computed via ToneConverter on every state change
 public class ComposingManager: ObservableObject {
-
     // MARK: - Properties
 
-    #if DEBUG
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "ComposingManager"
-    )
-    #endif
+    private let logger = DebugLogger(category: "ComposingManager")
 
     private enum ComposingState {
         case idle
@@ -176,7 +169,7 @@ public class ComposingManager: ObservableObject {
             composingText = ""
             rawInput = ""
 
-        case .composing(let raw):
+        case let .composing(raw):
             isComposing = true
             rawInput = raw
             composingText = deriveDisplay(from: raw)

@@ -55,7 +55,7 @@ struct ContentView: View {
                 }
                 .tag(TabType.settings)
         }
-        .environment(\.font, KeyboardModels.Fonts.appFont(size: AppStyle.bodySize))
+        .environment(\.font, AppStyle.bodyFont)
         .onReceive(NotificationCenter.default.publisher(for: .switchToSettingsTab)) { _ in
             selectedTab = .settings
         }

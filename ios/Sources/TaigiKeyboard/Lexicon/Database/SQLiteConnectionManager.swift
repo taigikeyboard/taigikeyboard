@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import SQLite3
 
 /// SQLite 連接管理器
@@ -10,7 +9,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     private var connection: OpaquePointer?
     private let databasePath: () throws -> String
     private let queue: DispatchQueue
-    private let logger: Logger
+    private let logger: DebugLogger
 
     // 延遲初始化相關屬性
     private var isInitialized = false
@@ -27,10 +26,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     ) {
         self.databasePath = databasePath
         queue = DispatchQueue(label: queueLabel, qos: .userInitiated)
-        logger = Logger(
-            subsystem: LexiconConstants.Logging.subsystem,
-            category: loggerCategory,
-        )
+        logger = DebugLogger(category: loggerCategory)
     }
 
     deinit {
@@ -47,9 +43,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
             let errorMsg = connection != nil
                 ? String(cString: sqlite3_errmsg(connection))
                 : "Unknown error"
-            #if DEBUG
-                logger.error("[INIT] Failed to open: \(errorMsg, privacy: .public)")
-            #endif
+            logger.error("[INIT] Failed to open: \(errorMsg)")
             sqlite3_close(connection)
             connection = nil
             throw DictionaryError.databaseConnectionFailed(errorMsg)
@@ -78,9 +72,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                 sqlite3_finalize(stmt)
             } else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
-                #if DEBUG
-                    logger.warning("[CONFIG] Could not set pragma \(config, privacy: .public): \(errorMsg, privacy: .public)")
-                #endif
+                logger.warning("[CONFIG] Could not set pragma \(config): \(errorMsg)")
             }
         }
     }
@@ -143,9 +135,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
                         self.isInitializing = false
                         self.initializationTask = nil
                     }
-                    #if DEBUG
-                        logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription, privacy: .public)")
-                    #endif
+                    logger.error("[LAZY-INIT] Database initialization failed: \(error.localizedDescription)")
                     throw error
                 }
             }

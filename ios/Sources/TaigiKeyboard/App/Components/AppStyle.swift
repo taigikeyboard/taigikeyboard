@@ -24,26 +24,37 @@ enum AppStyle {
     /// Caption size (14pt).
     static let captionSize: CGFloat = 14
 
-    // MARK: - Fonts
+    // MARK: - Font Helper
+
+    /// Font name for the main app UI (fixed to Open Huninn).
+    private static let appFontName = KeyboardModels.Fonts.openHuninnFontName
+
+    /// Returns Open Huninn font at an explicit point size.
+    /// All app UI fonts should go through this or the semantic properties below.
+    static func appFont(size: CGFloat) -> Font {
+        .custom(appFontName, size: size)
+    }
+
+    // MARK: - Semantic Fonts
 
     /// Section header font (18pt Open Huninn).
     static var sectionHeaderFont: Font {
-        KeyboardModels.Fonts.appFont(size: sectionHeaderSize)
+        appFont(size: sectionHeaderSize)
     }
 
     /// Headline font (18pt Open Huninn, bold) for card/section titles.
     static var headlineFont: Font {
-        KeyboardModels.Fonts.appFont(size: sectionHeaderSize).bold()
+        appFont(size: sectionHeaderSize).bold()
     }
 
     /// Body font (17pt Open Huninn) for row labels, body text, dialog text.
     static var bodyFont: Font {
-        KeyboardModels.Fonts.appFont(size: bodySize)
+        appFont(size: bodySize)
     }
 
     /// Caption font (14pt Open Huninn) for trailing values, dates, annotations, tags, badges.
     static var captionFont: Font {
-        KeyboardModels.Fonts.appFont(size: captionSize)
+        appFont(size: captionSize)
     }
 
     // MARK: - Colors

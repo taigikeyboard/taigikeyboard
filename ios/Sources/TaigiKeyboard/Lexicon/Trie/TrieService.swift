@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// MARISA-trie 查詢服務
 ///
@@ -18,10 +17,7 @@ final class TrieService: @unchecked Sendable {
 
     static let shared = TrieService()
 
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "TrieService",
-    )
+    private let logger = DebugLogger(category: "TrieService")
 
     /// 用於保護初始化的序列佇列
     private let initQueue = DispatchQueue(label: "com.taigikeyboard.trie.init")
@@ -43,9 +39,7 @@ final class TrieService: @unchecked Sendable {
             }
 
             guard let path = triePath else {
-                #if DEBUG
-                    logger.error("[INIT] Trie file not found in bundle")
-                #endif
+                logger.error("[INIT] Trie file not found in bundle")
                 return false
             }
 
@@ -53,14 +47,10 @@ final class TrieService: @unchecked Sendable {
 
             if success {
                 isInitialized = true
-                #if DEBUG
-                    let keyCount = trie_get_key_count()
-                    logger.info("[INIT] Trie loaded, keys=\(keyCount)")
-                #endif
+                let keyCount = trie_get_key_count()
+                logger.info("[INIT] Trie loaded, keys=\(keyCount)")
             } else {
-                #if DEBUG
-                    logger.error("[INIT] Failed to load trie")
-                #endif
+                logger.error("[INIT] Failed to load trie")
             }
 
             return success
@@ -74,9 +64,7 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 匹配的 rowid 列表
     func prefixSearch(_ prefix: String, limit: Int = Constants.defaultSearchLimit) -> [Int] {
         guard isInitialized else {
-            #if DEBUG
-                logger.warning("[SEARCH] Trie not initialized")
-            #endif
+            logger.warning("[SEARCH] Trie not initialized")
             return []
         }
 
@@ -100,9 +88,7 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
     func lookup(_ key: String) -> [Int] {
         guard isInitialized else {
-            #if DEBUG
-                logger.warning("[LOOKUP] Trie not initialized")
-            #endif
+            logger.warning("[LOOKUP] Trie not initialized")
             return []
         }
 
@@ -133,9 +119,7 @@ final class TrieService: @unchecked Sendable {
             if isInitialized {
                 trie_close()
                 isInitialized = false
-                #if DEBUG
-                    logger.info("[CLOSE] Trie closed")
-                #endif
+                logger.info("[CLOSE] Trie closed")
             }
         }
     }

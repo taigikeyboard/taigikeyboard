@@ -20,7 +20,7 @@ struct SetupGuideView: View {
             if isFullScreen {
                 Section {
                     Text(languageManager.text(Tab1Texts.setupGuide))
-                        .font(KeyboardModels.Fonts.appFont(.largeTitle))
+                        .font(AppStyle.appFont(size: AppStyle.navBarLargeTitleSize))
                         .fontWeight(.bold)
                 }
             }
@@ -117,7 +117,7 @@ private struct SetupGuideStepRow: View {
             // Step title
             HStack(spacing: 12) {
                 Text("\(stepNumber)")
-                    .font(KeyboardModels.Fonts.appFont(size: AppStyle.captionSize).bold())
+                    .font(AppStyle.captionFont.bold())
                     .foregroundColor(.white)
                     .frame(width: 24, height: 24)
                     .background(AppStyle.accentBlue)

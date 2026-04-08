@@ -122,7 +122,7 @@ struct CustomDictionaryView: View {
                     if entries.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "book.closed")
-                                .font(KeyboardModels.Fonts.appFont(size: 48))
+                                .font(AppStyle.appFont(size: 48))
                                 .foregroundColor(.secondary)
                             Text(languageManager.text(Tab3Texts.customDictEmpty))
                                 .foregroundColor(.secondary)

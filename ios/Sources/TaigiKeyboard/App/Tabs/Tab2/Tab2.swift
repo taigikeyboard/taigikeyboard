@@ -145,7 +145,7 @@ private struct LayoutOptionCard: View {
                             .frame(width: 36, height: 36)
                             .overlay(
                                 Image(systemName: "checkmark")
-                                    .font(KeyboardModels.Fonts.appFont(size: 16).bold())
+                                    .font(AppStyle.appFont(size: 16).bold())
                                     .foregroundColor(.white),
                             )
                     }
@@ -189,7 +189,7 @@ private struct LayoutOptionCard: View {
                 .overlay(
                     VStack(spacing: 6) {
                         Image(systemName: "keyboard")
-                            .font(KeyboardModels.Fonts.appFont(size: 28))
+                            .font(AppStyle.appFont(size: 28))
                             .foregroundColor(.secondary)
                         Text(title)
                             .font(AppStyle.captionFont)

@@ -1,19 +1,14 @@
 import Foundation
-import OSLog
 
 /// 使用者詞頻服務
 /// 管理使用者選擇詞彙的頻率
 final class UserFrequencyService: @unchecked Sendable {
-
     // MARK: - Properties
 
     static let shared = UserFrequencyService()
 
     private let repository: UserFrequencyRepository
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "UserFrequencyService"
-    )
+    private let logger = DebugLogger(category: "UserFrequencyService")
 
     // MARK: - Initialization
 
@@ -88,20 +83,4 @@ final class UserFrequencyService: @unchecked Sendable {
     func deleteDatabase() throws {
         try repository.deleteDatabase()
     }
-
-    // MARK: - Debug Methods
-
-    #if DEBUG
-    static func deleteDatabase() {
-        shared.deleteDB()
-    }
-
-    private func deleteDB() {
-        do {
-            try repository.deleteDatabase()
-        } catch {
-            logger.error("[TEST] Failed to delete database: \(error.localizedDescription, privacy: .public)")
-        }
-    }
-    #endif
 }

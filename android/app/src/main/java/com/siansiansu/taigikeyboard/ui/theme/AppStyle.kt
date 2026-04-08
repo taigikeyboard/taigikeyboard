@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
@@ -25,6 +26,12 @@ object AppStyle {
     val sectionHeaderFontSize = 19.sp
     val bodyFontSize = 18.sp // row labels, body text, dialog text, search empty state
     val captionFontSize = 14.sp // trailing values, dates, TL annotations, tags, badges
+
+    // ── Spacing ─────────────────────────────────────────────────
+    val screenHorizontalPadding = 20.dp
+    val contentVerticalPadding = 12.dp
+    val sectionSpacing = 24.dp
+    val sectionHeaderBottomPadding = 6.dp
 
     // ── LargeTopAppBar ──────────────────────────────────────────
     val largeTopAppBarExpandedHeight = 112.dp
@@ -52,7 +59,8 @@ object AppStyle {
 @Composable
 fun SectionHeader(
     text: String,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
+        .padding(start = 16.dp, bottom = AppStyle.sectionHeaderBottomPadding),
 ) {
     Text(
         text = text,

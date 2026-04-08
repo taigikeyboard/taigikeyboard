@@ -8,14 +8,13 @@ import KeyboardKit
 /// - NextWord 下一詞預測候選詞
 /// - 詞彙關聯記錄
 extension ActionHandler {
-
     // MARK: - 候選詞選擇
 
     func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
             composingManager.commitRawInput()
-            if settings.isAutoSpaceEnabled && !settings.isTranslateSwapped {
+            if settings.isAutoSpaceEnabled, !settings.isTranslateSwapped {
                 keyboardContext.textDocumentProxy.insertText(" ")
             }
             return
@@ -52,15 +51,14 @@ extension ActionHandler {
                 : roman
 
             // 決定輸出文字
-            let textToCommit: String
-            if settings.outputBothScripts && hanzi != nil && !hanzi!.isEmpty {
-                textToCommit = effectiveSwapped
+            let textToCommit: String = if settings.outputBothScripts, hanzi != nil, !hanzi!.isEmpty {
+                effectiveSwapped
                     ? "\(hanzi!) (\(bracketRoman))"
                     : "\(bracketRoman) (\(hanzi!))"
-            } else if effectiveSwapped && hanzi != nil && !hanzi!.isEmpty {
-                textToCommit = hanzi!
+            } else if effectiveSwapped, hanzi != nil, !hanzi!.isEmpty {
+                hanzi!
             } else {
-                textToCommit = roman
+                roman
             }
 
             // 提交文字
@@ -71,7 +69,7 @@ extension ActionHandler {
                     text: textToCommit,
                     title: suggestion.title,
                     subtitle: suggestion.subtitle,
-                    additionalInfo: suggestion.additionalInfo
+                    additionalInfo: suggestion.additionalInfo,
                 )
                 composingManager.selectSuggestion(modifiedSuggestion)
             }
@@ -83,12 +81,12 @@ extension ActionHandler {
             }
 
             // DEBUG: NextWord trace - suggestion selection parsing
-            logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text, privacy: .public)' subtitle='\(suggestion.subtitle ?? "nil", privacy: .public)' additionalInfo=\(suggestion.additionalInfo.description, privacy: .public)")
-            logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman, privacy: .public)' hanzi='\(hanzi ?? "nil", privacy: .public)' displayText='\(displayText, privacy: .public)'")
+            logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
+            logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
 
             // 羅馬字模式：自動加空白（字尾非連字符時）
             // TPS mode disables auto-space (effectiveSwapped is true for TPS)
-            if settings.isAutoSpaceEnabled && (!effectiveSwapped || settings.outputBothScripts) {
+            if settings.isAutoSpaceEnabled, !effectiveSwapped || settings.outputBothScripts {
                 if !textToCommit.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")
                 }
@@ -98,7 +96,7 @@ extension ActionHandler {
                 displayText: displayText,
                 roman: roman,
                 hanzi: hanzi,
-                rawInput: capturedRawInput
+                rawInput: capturedRawInput,
             )
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
@@ -108,9 +106,9 @@ extension ActionHandler {
     // MARK: - NextWord 處理
 
     /// 選詞後觸發 NextWord 預測並記錄關聯
-    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil, rawInput: String = "") {
+    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil, rawInput _: String = "") {
         // DEBUG: NextWord trace - handleNextWordPrediction entry
-        logger.debug("[NEXTWORD][HANDLE] displayText='\(displayText, privacy: .public)' roman='\(roman, privacy: .public)' hanzi='\(hanzi ?? "nil", privacy: .public)' isNoise=\(self.isNoiseText(displayText), privacy: .public)")
+        logger.debug("[NEXTWORD][HANDLE] displayText='\(displayText)' roman='\(roman)' hanzi='\(hanzi ?? "nil")' isNoise=\(isNoiseText(displayText))")
 
         guard !isNoiseText(displayText) else {
             if isSentenceEndPunctuation(displayText) {
@@ -132,7 +130,7 @@ extension ActionHandler {
                         prev: prevWord,
                         prevTl: prevTl,
                         nextHanzi: displayText,
-                        nextTl: romanTl
+                        nextTl: romanTl,
                     )
                 }
             }
@@ -156,7 +154,7 @@ extension ActionHandler {
         guard parts.count > 1 else { return }
 
         Task {
-            for i in 0..<(parts.count - 1) {
+            for i in 0 ..< (parts.count - 1) {
                 let prevPart = parts[i]
                 let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
                 let nextPart = parts[i + 1]
@@ -166,14 +164,14 @@ extension ActionHandler {
                     prev: prevPart,
                     prevTl: prevPartRoman,
                     nextHanzi: nextPart,
-                    nextTl: nextRoman
+                    nextTl: nextRoman,
                 )
             }
         }
     }
 
     /// Enter 確認組字後觸發 NextWord 預測（僅羅馬字模式）
-    func handleEnterNextWordPrediction(committedText: String, rawInput: String = "") {
+    func handleEnterNextWordPrediction(committedText: String, rawInput _: String = "") {
         guard !settings.isTranslateSwapped, !committedText.isEmpty else { return }
         guard !isNoiseText(committedText) else { return }
 
@@ -188,7 +186,7 @@ extension ActionHandler {
                         prev: prevWord,
                         prevTl: prevTl,
                         nextHanzi: committedText,
-                        nextTl: committedTl
+                        nextTl: committedTl,
                     )
                 }
             }

@@ -1,9 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.settings
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,11 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,7 +38,7 @@ fun InputModeScreen(
     languageManager: LanguageManager,
     selectedMode: String,
     onModeSelected: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
 
@@ -54,48 +52,51 @@ fun InputModeScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            val options = listOf(
-                "poj" to Tab4Texts.pojMode,
-                "tl" to Tab4Texts.tlMode,
-                "english" to Tab4Texts.englishMode,
-                "tps" to Tab4Texts.tpsMode
-            )
+            val options =
+                listOf(
+                    "poj" to Tab4Texts.pojMode,
+                    "tl" to Tab4Texts.tlMode,
+                    "english" to Tab4Texts.englishMode,
+                    "tps" to Tab4Texts.tpsMode,
+                )
 
             SettingsCard {
                 options.forEachIndexed { index, (value, text) ->
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable { onModeSelected(value) }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .clickable { onModeSelected(value) }
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = languageManager.text(text),
                             modifier = Modifier.weight(1f),
                             fontSize = AppStyle.bodyFontSize,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         if (selectedMode == value) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }

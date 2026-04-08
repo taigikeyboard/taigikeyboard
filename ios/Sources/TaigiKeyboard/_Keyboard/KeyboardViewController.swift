@@ -57,9 +57,6 @@ class KeyboardViewController: KeyboardInputViewController {
 
         setupServices()
 
-        // 確保關鍵服務的 lazy var 被觸發，遵循 KeyboardKit 標準模式
-        ensureEssentialServicesInitialized()
-
         // 確保新實例啟動時有乾淨的狀態
         ensureCleanState()
 

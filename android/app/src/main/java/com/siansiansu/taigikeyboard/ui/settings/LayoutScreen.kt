@@ -99,7 +99,7 @@ fun LayoutScreen(
                     )
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
+                colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
                     scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),

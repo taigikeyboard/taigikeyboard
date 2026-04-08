@@ -4,19 +4,22 @@ import SwiftUI
     import UIKit
 #endif
 
+/// Font utilities for the keyboard extension and main app.
+///
+/// Two font resolution paths exist due to KeyboardKit's architecture:
+/// - Keyboard keys: use `ButtonFontProvider` (fed by `SettingsSnapshot`, called by KeyboardKit internally)
+/// - Toolbar / candidate UI: use `globalFont` / `globalUIFont` (our custom SwiftUI views, not in KeyboardKit's pipeline)
+///
+/// Both paths resolve the same user-selected font (System / Open Huninn / Iansui).
 enum KeyboardModels {
-    enum UI {
-        enum Emoji {
-            static let defaultRecentCount = 50
-        }
-    }
-
     enum Fonts {
+        /// PostScript font name for jf-openhuninn (粉圓)
         static let openHuninnFontName = "jf-openhuninn-2.1"
+        /// PostScript font name for Iansui (芫荽)
         static let iansuiFontName = "Iansui-Regular"
 
-        static let keyboardButtonFontSize: CGFloat = 22
-
+        /// Returns a SwiftUI Font based on the user's font setting.
+        /// Used by toolbar buttons and candidate views (not keyboard keys).
         static func globalFont(size: CGFloat) -> Font {
             let fontType = SharedSettings.shared.fontType
             switch fontType {
@@ -29,49 +32,10 @@ enum KeyboardModels {
             }
         }
 
-        /// 根據字型類型取得對應的 Font
-        static func font(for fontType: FontType, size: CGFloat) -> Font {
-            switch fontType {
-            case .system:
-                return Font.system(size: size)
-            case .openHuninn:
-                return Font.custom(openHuninnFontName, size: size)
-            case .iansui:
-                return Font.custom(iansuiFontName, size: size)
-            }
-        }
-
-        // MARK: - App UI font helpers (Huninn for settings screens)
-
-        static func appFont(_ style: Font.TextStyle) -> Font {
-            let size: CGFloat = switch style {
-            case .largeTitle: 34
-            case .title: 28
-            case .title2: 22
-            case .title3: 20
-            case .headline: 17
-            case .body: 17
-            case .callout: 16
-            case .subheadline: 15
-            case .footnote: 13
-            case .caption: 12
-            case .caption2: 11
-            @unknown default: 17
-            }
-            return .custom(openHuninnFontName, size: size, relativeTo: style)
-        }
-
-        static func appFont(size: CGFloat) -> Font {
-            .custom(openHuninnFontName, size: size)
-        }
-
-        /// Convenience wrapper: resolves the user's current font setting to UIFont
+        /// Returns a UIKit UIFont based on the user's font setting.
+        /// Used where UIKit measurement is needed (e.g. candidate cell width calculation).
         static func globalUIFont(size: CGFloat) -> UIFont {
-            uiFont(for: SharedSettings.shared.fontType, size: size)
-        }
-
-        /// 根據字型類型取得對應的 UIFont（用於 UIKit 元件）
-        static func uiFont(for fontType: FontType, size: CGFloat) -> UIFont {
+            let fontType = SharedSettings.shared.fontType
             switch fontType {
             case .system:
                 return UIFont.systemFont(ofSize: size)

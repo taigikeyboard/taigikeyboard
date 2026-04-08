@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -36,7 +35,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -58,11 +56,14 @@ import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -116,7 +117,7 @@ fun FrequencyDataScreen(
                     val csv =
                         buildString {
                             for ((word, count) in allData) {
-                                append("${csvEscapeFreq(word)},$count\n")
+                                append("${CsvUtils.escape(word)},$count\n")
                             }
                         }
                     withContext(Dispatchers.IO) {
@@ -439,36 +440,27 @@ fun FrequencyDataScreen(
     }
 
     if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text(languageManager.text(Tab3Texts.clearAllFrequency)) },
-            text = { Text(languageManager.text(Tab3Texts.clearFrequencyMessage)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showClearDialog = false
-                    scope.launch {
-                        withContext(Dispatchers.IO) { UserFrequencyService.deleteDatabase() }
-                        allData = emptyList()
-                    }
-                }) { Text(languageManager.text(Tab3Texts.clear)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.cancel))
+        ConfirmationDialog(
+            title = languageManager.text(Tab3Texts.clearAllFrequency),
+            message = languageManager.text(Tab3Texts.clearFrequencyMessage),
+            confirmLabel = languageManager.text(Tab3Texts.clear),
+            dismissLabel = languageManager.text(Tab3Texts.cancel),
+            onConfirm = {
+                showClearDialog = false
+                scope.launch {
+                    withContext(Dispatchers.IO) { UserFrequencyService.deleteDatabase() }
+                    allData = emptyList()
                 }
             },
+            onDismiss = { showClearDialog = false },
         )
     }
 
     if (showResultDialog) {
-        AlertDialog(
-            onDismissRequest = { showResultDialog = false },
-            text = { Text(resultMessage) },
-            confirmButton = {
-                TextButton(onClick = { showResultDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.ok))
-                }
-            },
+        ResultDialog(
+            message = resultMessage,
+            confirmLabel = languageManager.text(Tab3Texts.ok),
+            onDismiss = { showResultDialog = false },
         )
     }
 }
@@ -478,7 +470,7 @@ private fun parseFrequencyCSV(csv: String): List<Pair<String, Int>> {
     for (line in csv.split("\n")) {
         val trimmed = line.trim()
         if (trimmed.isEmpty()) continue
-        val columns = parseCSVLineFreq(trimmed)
+        val columns = CsvUtils.parseLine(trimmed)
         if (columns.size < 2) continue
         val word = columns[0].trim()
         val count = columns[1].trim().toIntOrNull() ?: continue
@@ -487,34 +479,3 @@ private fun parseFrequencyCSV(csv: String): List<Pair<String, Int>> {
     }
     return entries
 }
-
-private fun parseCSVLineFreq(line: String): List<String> {
-    val fields = mutableListOf<String>()
-    val current = StringBuilder()
-    var inQuotes = false
-    for (char in line) {
-        when {
-            char == '"' -> {
-                inQuotes = !inQuotes
-            }
-
-            char == ',' && !inQuotes -> {
-                fields.add(current.toString())
-                current.clear()
-            }
-
-            else -> {
-                current.append(char)
-            }
-        }
-    }
-    fields.add(current.toString())
-    return fields
-}
-
-private fun csvEscapeFreq(field: String): String =
-    if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-        "\"${field.replace("\"", "\"\"")}\""
-    } else {
-        field
-    }

@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// All-in-one user data backup and restore service
 ///
@@ -10,10 +9,7 @@ final class BackupService: @unchecked Sendable {
 
     static let shared = BackupService()
 
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "BackupService",
-    )
+    private let logger = DebugLogger(category: "BackupService")
 
     // MARK: - Models
 
@@ -111,9 +107,7 @@ final class BackupService: @unchecked Sendable {
         // Import association data (merge: higher count wins)
         let assocCount = await importAssociations(backup.userAssociation)
 
-        #if DEBUG
-            logger.info("[IMPORT] custom=\(customCount), freq=\(freqCount), assoc=\(assocCount)")
-        #endif
+        logger.info("[IMPORT] custom=\(customCount), freq=\(freqCount), assoc=\(assocCount)")
         return ImportResult(customDict: customCount, frequency: freqCount, association: assocCount)
     }
 
@@ -143,9 +137,7 @@ final class BackupService: @unchecked Sendable {
                 (word: $0.word, count: $0.count)
             })
         } catch {
-            #if DEBUG
-                logger.error("[IMPORT] Frequency import failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[IMPORT] Frequency import failed: \(error.localizedDescription)")
             return 0
         }
     }
@@ -162,9 +154,7 @@ final class BackupService: @unchecked Sendable {
                  count: $0.count)
             })
         } catch {
-            #if DEBUG
-                logger.error("[IMPORT] Association import failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[IMPORT] Association import failed: \(error.localizedDescription)")
             return 0
         }
     }

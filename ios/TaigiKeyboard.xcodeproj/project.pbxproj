@@ -10,6 +10,8 @@
 		2A3B2A9E2ED81EB500317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9D2ED81EB500317D6D /* ISEmojiView */; };
 		2A3B2AA02ED81ECB00317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */; };
 		F32651AE2E524AA8002E99A4 /* TaigiKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
+		F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
 		F3ECE84F2EFE79FD002FCA11 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3ECE84E2EFE79FD002FCA11 /* KeyboardKit */; };
 		F3ECE8512EFE7A03002FCA11 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3ECE8502EFE7A03002FCA11 /* KeyboardKit */; };
 /* End PBXBuildFile section */
@@ -85,6 +87,7 @@
 		F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaigiKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaigiKeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaigiKeyboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F361A8A32F8578E500682CC6 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogger.swift; path = Sources/TaigiKeyboard/DebugLogger.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -243,10 +246,16 @@
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
 		};
-		F3559CA32F5A96CC005AD5BF /* Diagnostics */ = {
+		F361A88B2F85522D00682CC6 /* Overlays */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Diagnostics;
-			path = Sources/TaigiKeyboard/Diagnostics;
+			name = Overlays;
+			path = Sources/TaigiKeyboard/Overlays;
+			sourceTree = "<group>";
+		};
+		F361A89A2F8560BF00682CC6 /* Phonetics */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Phonetics;
+			path = Sources/TaigiKeyboard/Phonetics;
 			sourceTree = "<group>";
 		};
 		F39C27AA2EEE980700AA2361 /* marisa */ = {
@@ -293,7 +302,9 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
-				F3559CA32F5A96CC005AD5BF /* Diagnostics */,
+				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
+				F361A89A2F8560BF00682CC6 /* Phonetics */,
+				F361A88B2F85522D00682CC6 /* Overlays */,
 				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A4FAF492EAF137B006E37A8 /* App */,
@@ -358,7 +369,8 @@
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
-				F3559CA32F5A96CC005AD5BF /* Diagnostics */,
+				F361A88B2F85522D00682CC6 /* Overlays */,
+				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 			);
 			name = TaigiKeyboard;
@@ -396,7 +408,8 @@
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
-				F3559CA32F5A96CC005AD5BF /* Diagnostics */,
+				F361A88B2F85522D00682CC6 /* Overlays */,
+				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 			);
 			name = TaigiKeyboardExtension;
@@ -568,6 +581,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -575,6 +589,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -754,7 +769,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.7;
+				MARKETING_VERSION = 3.4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -792,7 +807,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.4.7;
+				MARKETING_VERSION = 3.4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -823,7 +838,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.7;
+				MARKETING_VERSION = 3.4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -855,7 +870,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.4.7;
+				MARKETING_VERSION = 3.4.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

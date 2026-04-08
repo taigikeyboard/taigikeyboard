@@ -1,6 +1,5 @@
 import Foundation
 import KeyboardKit
-import OSLog
 
 /// 自動完成服務
 ///
@@ -67,10 +66,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     private weak var actionHandler: ActionHandler?
 
     /// 日誌記錄器
-    let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "AutocompleteService",
-    )
+    let logger = DebugLogger(category: "AutocompleteService")
 
     // MARK: - 公開介面
 
@@ -109,9 +105,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             let rawInput = composingManager.rawInput // 搜尋用（如 gua2）
             let displayText = composingManager.composingText // 顯示用（如 guá）
 
-            #if DEBUG
-                logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput, privacy: .public)' display='\(displayText, privacy: .public)'")
-            #endif
+            logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput)' display='\(displayText)'")
 
             let inputMode = settings.inputMode
             // 使用 rawInput 判斷（因為 displayText 可能已移除聲調數字，如 soo1 → soo）
@@ -148,9 +142,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
             return Autocomplete.Result(inputText: text, suggestions: suggestions)
         } catch {
-            #if DEBUG
-                logger.error("[AUTOCOMPLETE] failed for text '\(text, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[AUTOCOMPLETE] failed for text '\(text)': \(error.localizedDescription)")
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
     }

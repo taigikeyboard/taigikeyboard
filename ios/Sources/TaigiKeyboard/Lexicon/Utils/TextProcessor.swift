@@ -1,16 +1,11 @@
 import Foundation
 import KeyboardKit
-import OSLog
 
 /// Candidate processing utilities
 ///
 /// Provides capitalization, deduplication, scoring, and text classification.
 enum CandidateProcessor {
-
-    private static let logger = Logger(
-        subsystem: "com.siansiansu.taigikeyboard",
-        category: "CandidateProcessor"
-    )
+    private static let logger = DebugLogger(category: "CandidateProcessor")
 
     // MARK: - Text Classification
 
@@ -33,14 +28,14 @@ enum CandidateProcessor {
     static func capitalize(_ text: String, basedOn input: String) -> String {
         // 從 KeyboardKit 的持久化設定讀取
         let isAutoCap = KeyboardSettings.store.bool(
-            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
+            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
         )
 
         return CaseTransformer.capitalizeCandidate(
             text,
             basedOn: input,
             isAutoCapitalizationEnabled: isAutoCap,
-            inputMode: SharedSettings.shared.inputMode
+            inputMode: SharedSettings.shared.inputMode,
         )
     }
 
@@ -102,7 +97,7 @@ enum CandidateProcessor {
     static func calculateScore(
         word: TaigiWord,
         normalizedInput: String,
-        frequencyData: UserFrequencyService.FrequencyData
+        frequencyData: UserFrequencyService.FrequencyData,
     ) -> Int {
         // Normalize both sides to base form (no tones, no hyphens) for comparison
         let candidateBase = romanToBase(word.roman)
@@ -115,12 +110,12 @@ enum CandidateProcessor {
         // Recency 加分（微調，最近 1 小時內用過 +200）
         let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
         let oneHourMillis: Int64 = 60 * 60 * 1000
-        let recencyBonus: Int
-        if frequencyData.lastUsedMillis > 0 &&
-            (currentTime - frequencyData.lastUsedMillis) < oneHourMillis {
-            recencyBonus = 200
+        let recencyBonus = if frequencyData.lastUsedMillis > 0 &&
+            (currentTime - frequencyData.lastUsedMillis) < oneHourMillis
+        {
+            200
         } else {
-            recencyBonus = 0
+            0
         }
 
         // 完全匹配加分（微調，+100）
@@ -179,7 +174,7 @@ enum CandidateProcessor {
     static func sortByScore(
         _ words: [TaigiWord],
         normalizedInput: String,
-        frequencyDataMap: [String: UserFrequencyService.FrequencyData]
+        frequencyDataMap: [String: UserFrequencyService.FrequencyData],
     ) -> [TaigiWord] {
         let scored = words.map { word -> (TaigiWord, Int) in
             let freq = frequencyDataMap[word.displayText] ?? .empty
@@ -188,19 +183,16 @@ enum CandidateProcessor {
         }
         let sorted = scored.sorted { $0.1 > $1.1 }
 
-        #if DEBUG
         logScoreDetails(sorted: sorted, normalizedInput: normalizedInput, frequencyDataMap: frequencyDataMap)
-        #endif
 
-        return sorted.map { $0.0 }
+        return sorted.map(\.0)
     }
 
-    #if DEBUG
     /// Log score breakdown for each candidate (visible in Console.app)
     private static func logScoreDetails(
         sorted: [(TaigiWord, Int)],
         normalizedInput: String,
-        frequencyDataMap: [String: UserFrequencyService.FrequencyData]
+        frequencyDataMap: [String: UserFrequencyService.FrequencyData],
     ) {
         let inputBase = inputToBase(normalizedInput)
         let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
@@ -218,10 +210,7 @@ enum CandidateProcessor {
             let closeness = Int(Double(min(inputLen, candidateLen)) / Double(max(inputLen, candidateLen)) * 500)
             let base = (word.lengthScore ?? 0) / 10
 
-            logger.debug("[SCORE] input='\(normalizedInput, privacy: .public)' | \(word.roman, privacy: .public) \(word.hanzi ?? "", privacy: .public): user=\(userFreqScore) recency=\(recency) exact=\(exact) close=\(closeness) base=\(base) completion=\(completion) total=\(total)")
+            logger.debug("[SCORE] input='\(normalizedInput)' | \(word.roman) \(word.hanzi ?? ""): user=\(userFreqScore) recency=\(recency) exact=\(exact) close=\(closeness) base=\(base) completion=\(completion) total=\(total)")
         }
     }
-    #endif
-
-
 }

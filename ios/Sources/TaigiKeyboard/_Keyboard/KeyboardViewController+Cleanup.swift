@@ -1,5 +1,5 @@
-import KeyboardKit
 import Foundation
+import KeyboardKit
 
 // MARK: - Cleanup Operations
 
@@ -43,8 +43,7 @@ extension KeyboardViewController {
         }
 
         // 2. 清理 TextDocumentProxy 的 markedText
-        textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-        textDocumentProxy.unmarkText()
+        clearMarkedText()
 
         // 3. 清理 AutocompleteContext
         state.autocompleteContext.reset()

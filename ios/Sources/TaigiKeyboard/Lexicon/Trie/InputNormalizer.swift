@@ -1,12 +1,6 @@
 import Foundation
-import OSLog
 
-#if DEBUG
-    private let normalizerLogger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "InputNormalizer",
-    )
-#endif
+private let normalizerLogger = DebugLogger(category: "InputNormalizer")
 
 /// Input normalizer
 ///
@@ -42,11 +36,9 @@ enum InputNormalizer {
 
         let normalized = result.joined()
 
-        #if DEBUG
-            if input != normalized {
-                normalizerLogger.debug("[NORMALIZE] input='\(input, privacy: .public)' -> '\(normalized, privacy: .public)'")
-            }
-        #endif
+        if input != normalized {
+            normalizerLogger.debug("[NORMALIZE] input='\(input)' -> '\(normalized)'")
+        }
 
         return normalized
     }

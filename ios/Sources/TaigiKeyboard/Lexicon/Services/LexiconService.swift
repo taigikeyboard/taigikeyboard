@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// 詞典服務
 /// 提供台語詞彙搜尋功能
@@ -12,10 +11,7 @@ class LexiconService: @unchecked Sendable {
     private let userFrequencyService: UserFrequencyService
     private let trieService: TrieService
     private let customDictionaryRepository: CustomDictionaryRepository
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "LexiconService",
-    )
+    private let logger = DebugLogger(category: "LexiconService")
 
     // MARK: - Initialization
 
@@ -42,13 +38,11 @@ class LexiconService: @unchecked Sendable {
     private func initializeTrie() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             let success = self?.trieService.initialize() ?? false
-            #if DEBUG
-                if success {
-                    self?.logger.info("[INIT] Trie initialized successfully")
-                } else {
-                    self?.logger.warning("[INIT] Trie initialization failed, using fallback")
-                }
-            #endif
+            if success {
+                self?.logger.info("[INIT] Trie initialized successfully")
+            } else {
+                self?.logger.warning("[INIT] Trie initialization failed, using fallback")
+            }
         }
     }
 
@@ -59,13 +53,9 @@ class LexiconService: @unchecked Sendable {
         Task {
             do {
                 try await customDictionaryRepository.ensureInitialized()
-                #if DEBUG
-                    logger.info("[INIT] Custom dictionary initialized successfully")
-                #endif
+                logger.info("[INIT] Custom dictionary initialized successfully")
             } catch {
-                #if DEBUG
-                    logger.warning("[INIT] Custom dictionary initialization failed: \(error.localizedDescription, privacy: .public)")
-                #endif
+                logger.warning("[INIT] Custom dictionary initialization failed: \(error.localizedDescription)")
             }
         }
     }
@@ -103,9 +93,7 @@ class LexiconService: @unchecked Sendable {
                 isToneAware: isToneAware,
                 limit: 20,
             )
-            #if DEBUG
-                logger.debug("[SEARCH] customDict key='\(customSearchKey, privacy: .public)' prefix='\(searchPrefix, privacy: .public)' toneAware=\(isToneAware) segmented='\(input, privacy: .public)' results=\(customEntries.count)")
-            #endif
+            logger.debug("[SEARCH] customDict key='\(customSearchKey)' prefix='\(searchPrefix)' toneAware=\(isToneAware) segmented='\(input)' results=\(customEntries.count)")
             customWords = customEntries.map { entry in
                 let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: input)
                 let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {

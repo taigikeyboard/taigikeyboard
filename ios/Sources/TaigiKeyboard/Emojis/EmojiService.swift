@@ -1,6 +1,5 @@
 import ISEmojiView
 import KeyboardKit
-import OSLog
 import SwiftUI
 import UIKit
 
@@ -12,7 +11,6 @@ protocol EmojiServiceDelegate: AnyObject {
 }
 
 class EmojiService: NSObject {
-
     weak var delegate: EmojiServiceDelegate?
     private var emojiView: EmojiView?
 
@@ -48,7 +46,6 @@ class EmojiService: NSObject {
         }
         return AnyView(EmojiViewRepresentable(emojiView: emojiView))
     }
-
 }
 
 extension EmojiService: EmojiViewDelegate {
@@ -94,12 +91,11 @@ extension EmojiService {
 
         static let `default` = Configuration(
             bottomType: .categories,
-            countOfRecentsEmojis: KeyboardModels.UI.Emoji.defaultRecentCount,
+            countOfRecentsEmojis: 30,
             needToShowAbcButton: true,
             isShowPopPreview: true,
             needToShowDeleteButton: true,
             updateRecentEmojiImmediately: true,
         )
-
     }
 }

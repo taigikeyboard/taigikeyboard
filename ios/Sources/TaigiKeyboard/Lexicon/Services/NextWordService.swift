@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import SQLite3
 
 /// NextWord 下一詞預測服務
@@ -53,10 +52,7 @@ final class NextWordService: @unchecked Sendable {
 
     private let dictConnectionManager: SQLiteConnectionManager
     private let userConnectionManager: SQLiteConnectionManager
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "NextWordService",
-    )
+    private let logger = DebugLogger(category: "NextWordService")
 
     private var recordCounter = 0
 
@@ -121,26 +117,19 @@ final class NextWordService: @unchecked Sendable {
         // Bigram 模型：使用最後一字作為字典查詢 key
         let lastChar = String(word.last!)
 
-        #if DEBUG
-            // DEBUG: NextWord trace - predict entry
-            logger.debug("[PREDICT][ENTRY] word='\(word, privacy: .public)' lastChar='\(lastChar, privacy: .public)'")
-        #endif
+        logger.debug("[PREDICT][ENTRY] word='\(word)' lastChar='\(lastChar)'")
 
         var results: [String: Prediction] = [:]
 
         // 1. 查詢字典關聯（用最後一字）
         await queryDictAssociations(lastChar: lastChar, limit: limit, results: &results)
         let dictCount = results.count
-        #if DEBUG
-            logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar, privacy: .public)'")
-        #endif
+        logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar)'")
 
         // 2. 查詢使用者關聯（用完整詞 + 羅馬字 context）
         await queryUserAssociations(word: word, roman: roman, limit: limit, results: &results)
         let totalCount = results.count
-        #if DEBUG
-            logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word, privacy: .public)'")
-        #endif
+        logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word)'")
 
         // 3. 按分數排序，返回結果
         let sortedResults = results.values
@@ -148,9 +137,7 @@ final class NextWordService: @unchecked Sendable {
             .prefix(limit)
             .map(\.self)
 
-        #if DEBUG
-            logger.debug("[PREDICT] '\(word, privacy: .public)' -> \(sortedResults.count) results")
-        #endif
+        logger.debug("[PREDICT] '\(word)' -> \(sortedResults.count) results")
 
         return Array(sortedResults)
     }
@@ -184,9 +171,7 @@ final class NextWordService: @unchecked Sendable {
                 )
             }
 
-            #if DEBUG
-                logger.debug("[RECORD] '\(prev, privacy: .public)' -> '\(nextHanzi, privacy: .public)'")
-            #endif
+            logger.debug("[RECORD] '\(prev)' -> '\(nextHanzi)'")
 
             // 定期檢查是否需要清理
             recordCounter += 1
@@ -195,9 +180,7 @@ final class NextWordService: @unchecked Sendable {
                 await pruneOldAssociations()
             }
         } catch {
-            #if DEBUG
-                logger.error("[RECORD] Failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[RECORD] Failed: \(error.localizedDescription)")
         }
     }
 
@@ -212,13 +195,9 @@ final class NextWordService: @unchecked Sendable {
                     sqlite3_finalize(stmt)
                 }
             }
-            #if DEBUG
-                logger.info("[CLEAR] All user associations cleared")
-            #endif
+            logger.info("[CLEAR] All user associations cleared")
         } catch {
-            #if DEBUG
-                logger.error("[CLEAR] Failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[CLEAR] Failed: \(error.localizedDescription)")
         }
     }
 
@@ -238,9 +217,7 @@ final class NextWordService: @unchecked Sendable {
                 sqlite3_step(stmt)
             }
         } catch {
-            #if DEBUG
-                logger.error("[DELETE] Failed to delete association: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[DELETE] Failed to delete association: \(error.localizedDescription)")
         }
     }
 
@@ -372,9 +349,7 @@ final class NextWordService: @unchecked Sendable {
                 return results
             }
         } catch {
-            #if DEBUG
-                logger.error("[USER] allAssociations failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[USER] allAssociations failed: \(error.localizedDescription)")
             return []
         }
     }
@@ -400,9 +375,7 @@ final class NextWordService: @unchecked Sendable {
                 results[key] = prediction
             }
         } catch {
-            #if DEBUG
-                logger.error("[DICT] Query failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[DICT] Query failed: \(error.localizedDescription)")
         }
     }
 
@@ -487,9 +460,7 @@ final class NextWordService: @unchecked Sendable {
                 }
             }
         } catch {
-            #if DEBUG
-                logger.error("[USER] Query failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[USER] Query failed: \(error.localizedDescription)")
         }
     }
 
@@ -611,9 +582,7 @@ final class NextWordService: @unchecked Sendable {
 
         guard currentVersion < Self.userSchemaVersion else { return }
 
-        #if DEBUG
-            logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(Self.userSchemaVersion)")
-        #endif
+        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(Self.userSchemaVersion)")
 
         if currentVersion < 3 {
             // v0/v1/v2 → v3: DROP + CREATE (old schema incompatible)
@@ -724,9 +693,7 @@ final class NextWordService: @unchecked Sendable {
             let currentCount = await associationCount()
 
             guard currentCount > Constants.maxUserAssociations else {
-                #if DEBUG
-                    logger.debug("[PRUNE] No pruning needed: \(currentCount) <= \(Constants.maxUserAssociations)")
-                #endif
+                logger.debug("[PRUNE] No pruning needed: \(currentCount) <= \(Constants.maxUserAssociations)")
                 return
             }
 
@@ -753,13 +720,9 @@ final class NextWordService: @unchecked Sendable {
                 sqlite3_step(stmt)
             }
 
-            #if DEBUG
-                logger.info("[PRUNE] Deleted \(deleteCount) associations (was \(currentCount))")
-            #endif
+            logger.info("[PRUNE] Deleted \(deleteCount) associations (was \(currentCount))")
         } catch {
-            #if DEBUG
-                logger.error("[PRUNE] Failed: \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[PRUNE] Failed: \(error.localizedDescription)")
         }
     }
 

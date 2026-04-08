@@ -69,6 +69,7 @@ ENV/
 
 # === Claude Code ===
 .claude/settings.local.json
+.claude/projects/
 
 references
 !spec/references

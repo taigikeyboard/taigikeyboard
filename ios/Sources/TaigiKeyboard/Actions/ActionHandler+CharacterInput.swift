@@ -12,7 +12,7 @@ extension ActionHandler {
         let currentCase = keyboardContext.keyboardCase
         let autoCap = keyboardContext.settings.isAutocapitalizationEnabled
 
-        logger.debug("[AUTOCAP][INPUT] char='\(char, privacy: .public)' keyboardCase=\(String(describing: currentCase), privacy: .public) autoCap=\(autoCap, privacy: .public)")
+        logger.debug("[AUTOCAP][INPUT] char='\(char)' keyboardCase=\(String(describing: currentCase)) autoCap=\(autoCap)")
 
         guard !char.isEmpty else {
             return false
@@ -44,7 +44,7 @@ extension ActionHandler {
             finalChar = processedChar
         }
 
-        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar, privacy: .public)'")
+        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar)'")
 
         // 英文模式：直接插入字元，不進入組字邏輯
         if settings.inputMode == .english {
@@ -164,13 +164,13 @@ extension ActionHandler {
 
     func handleBackspaceAction() -> Bool {
         let caseBefore = String(describing: keyboardContext.keyboardCase)
-        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore, privacy: .public)")
+        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore)")
 
         // 英文模式：直接刪除
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.deleteBackward()
             let caseAfter = String(describing: keyboardContext.keyboardCase)
-            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
+            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter)")
             return true
         }
 
@@ -183,7 +183,7 @@ extension ActionHandler {
         }
 
         let caseAfter = String(describing: keyboardContext.keyboardCase)
-        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
+        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter)")
         return true
     }
 
