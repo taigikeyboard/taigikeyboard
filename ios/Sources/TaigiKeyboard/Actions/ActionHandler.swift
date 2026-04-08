@@ -1,6 +1,5 @@
 import Foundation
 import KeyboardKit
-import OSLog
 
 /// 台語鍵盤動作處理器
 ///
@@ -12,13 +11,9 @@ import OSLog
 ///
 /// - Note: 相關 extension 定義於 `ActionHandler+*.swift`
 public class ActionHandler: KeyboardAction.StandardActionHandler {
-
     // MARK: - 屬性
 
-    let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "ActionHandler"
-    )
+    let logger = DebugLogger(category: "ActionHandler")
 
     let settings = SharedSettings.shared
     public let composingManager = ComposingManager()
@@ -38,9 +33,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     private enum NextWordConstants {
         /// 連續選詞間隔上限（超過則不記錄關聯）
-        static let associationTimeoutMs: Int64 = 10_000
+        static let associationTimeoutMs: Int64 = 10000
         /// 上下文超時（超過則清除 NextWord 狀態）
-        static let contextTimeoutMs: Int64 = 30_000
+        static let contextTimeoutMs: Int64 = 30000
         static let contextTimeoutSeconds: TimeInterval = 30.0
         /// 句末標點（遇到時重置 NextWord 上下文）
         static let sentenceEndPunctuation = Set<Character>(["。", "！", "？", ".", "!", "?"])
@@ -112,12 +107,12 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             // DEBUG: 追蹤 keyboardType 切換時的 keyboardCase 變化
             if case .keyboardType = action {
                 let beforeCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] BEFORE super.handle(\(String(describing: gesture), privacy: .public), \(String(describing: action), privacy: .public)): keyboardCase=\(String(describing: beforeCase), privacy: .public)")
+                logger.debug("[CASE][handle] BEFORE super.handle(\(String(describing: gesture)), \(String(describing: action))): keyboardCase=\(String(describing: beforeCase))")
                 super.handle(gesture, on: action)
                 let afterCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] AFTER super.handle: keyboardCase=\(String(describing: afterCase), privacy: .public)")
+                logger.debug("[CASE][handle] AFTER super.handle: keyboardCase=\(String(describing: afterCase))")
                 if beforeCase != afterCase {
-                    logger.debug("[CASE][handle] ⚠️ keyboardCase CHANGED from \(String(describing: beforeCase), privacy: .public) to \(String(describing: afterCase), privacy: .public)")
+                    logger.debug("[CASE][handle] ⚠️ keyboardCase CHANGED from \(String(describing: beforeCase)) to \(String(describing: afterCase))")
                 }
                 return
             }
@@ -128,7 +123,6 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
         let handled = handleTaigiSpecificAction(action)
         if handled {
-
             // 對齊 Android 行為：以下情況不觸發 autocomplete（保留 NextWord 候選詞）
             // 1. 非組字模式按空白鍵
             // 2. 非組字模式輸入 "-" 且正在顯示 NextWord
@@ -166,30 +160,32 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         handle(.release, on: action)
     }
 
-    /// 覆寫 KeyboardKit 的 keyboardCase 自動調整
+    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
+    /// Part of 3-layer workaround — see KeyboardViewController.swift for full context.
+    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
     ///
-    /// - Shift 動作：始終讓 super 處理（保留 doubleTap → Caps Lock 功能）
-    /// - 其他動作：只在自動大寫開啟時調用 super，避免 KeyboardKit 自動將 keyboardCase 改為大寫
+    /// - Shift: always let super handle (preserves doubleTap → Caps Lock)
+    /// - Other actions: only call super when auto-cap is on
     override public func tryChangeKeyboardCase(
         after gesture: Keyboard.Gesture,
-        on action: KeyboardAction
+        on action: KeyboardAction,
     ) {
         let beforeCase = keyboardContext.keyboardCase
         let isAutoCap = keyboardContext.settings.isAutocapitalizationEnabled
 
-        logger.debug("[CASE][tryChange] gesture=\(String(describing: gesture), privacy: .public) action=\(String(describing: action), privacy: .public) before=\(String(describing: beforeCase), privacy: .public) isAutoCap=\(isAutoCap, privacy: .public)")
+        logger.debug("[CASE][tryChange] gesture=\(String(describing: gesture)) action=\(String(describing: action)) before=\(String(describing: beforeCase)) isAutoCap=\(isAutoCap)")
 
         // Shift 動作：始終讓 super 處理（包括 doubleTap → Caps Lock）
         if case .shift = action {
             super.tryChangeKeyboardCase(after: gesture, on: action)
-            logger.debug("[CASE][tryChange] after shift: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+            logger.debug("[CASE][tryChange] after shift: \(String(describing: keyboardContext.keyboardCase))")
             return
         }
 
         // 其他動作：只在自動大寫開啟時調用 super
         if isAutoCap {
             super.tryChangeKeyboardCase(after: gesture, on: action)
-            logger.debug("[CASE][tryChange] after autoCap: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+            logger.debug("[CASE][tryChange] after autoCap: \(String(describing: keyboardContext.keyboardCase))")
         } else {
             logger.debug("[CASE][tryChange] skipped (autoCap=false)")
         }
@@ -209,7 +205,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         stopContextTimeoutTimer()
         contextTimeoutTimer = Timer.scheduledTimer(
             withTimeInterval: NextWordConstants.contextTimeoutSeconds,
-            repeats: false
+            repeats: false,
         ) { [weak self] _ in
             self?.handleContextTimeout()
         }
@@ -278,13 +274,13 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     /// 根據指定詞彙觸發下一詞預測
     func triggerNextWordPrediction(for word: String, roman: String = "") {
         // DEBUG: NextWord trace - triggerNextWordPrediction entry
-        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word, privacy: .public)'")
+        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word)'")
 
         Task { @MainActor in
             let predictions = await NextWordService.shared.predict(word: word, roman: roman)
 
             // DEBUG: NextWord trace - predictions returned
-            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word, privacy: .public)'")
+            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
 
             if predictions.isEmpty {
                 isShowingNextWord = false
@@ -296,7 +292,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             let suggestions = predictions.compactMap { prediction -> Autocomplete.Suggestion? in
                 if !settings.isTranslateSwapped && prediction.tl.isEmpty {
                     // DEBUG: NextWord trace - filtered out prediction with empty TL
-                    self.logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi, privacy: .public)' tl='\(prediction.tl, privacy: .public)' (TL empty in roman mode)")
+                    self.logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
                     return nil
                 }
 
@@ -315,8 +311,8 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                         "isNextWord": "true",
                         "hanzi": prediction.hanzi,
                         "tl": prediction.tl,
-                        "displayText": prediction.hanzi
-                    ]
+                        "displayText": prediction.hanzi,
+                    ],
                 )
             }
 

@@ -1,19 +1,11 @@
 import Combine
 import KeyboardKit
-import OSLog
 import SwiftUI
 
 class KeyboardViewController: KeyboardInputViewController {
     // MARK: - Properties
 
-    #if DEBUG
-        private static var instanceCount = 0
-        private var instanceId: Int
-        internal let logger = Logger(
-            subsystem: LexiconConstants.Logging.subsystem,
-            category: "KeyboardViewController"
-        )
-    #endif
+    let logger = DebugLogger(category: "KeyboardViewController")
 
     var emojiSvc: EmojiService?
     weak var actionHandler: ActionHandler?
@@ -25,11 +17,19 @@ class KeyboardViewController: KeyboardInputViewController {
     /// Combine subscriptions
     private var cancellables = Set<AnyCancellable>()
 
-    /// 預期的 keyboardCase（用於保護自動大寫關閉時的狀態）
+    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
+    /// These two properties are part of a 3-layer workaround (see also:
+    /// - textDidChangeAsync override (this file)
+    /// - tryChangeKeyboardCase override (ActionHandler.swift)
+    /// - setupKeyboardCaseProtection (this file)
+    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
     private var expectedKeyboardCase: Keyboard.KeyboardCase = .lowercased
-
-    /// 標記是否剛切換到 alphabetic 鍵盤（用於保護機制）
     private var justSwitchedToAlphabetic = false
+
+    /// 記錄上次的輸入模式，用於偵測變更
+    var lastInputMode: InputMode?
+    /// 記錄上次的佈局類型，用於偵測變更
+    var lastKeyboardLayoutType: KeyboardLayoutType?
 
     var emojiService: EmojiService {
         if emojiSvc == nil {
@@ -41,33 +41,9 @@ class KeyboardViewController: KeyboardInputViewController {
 
     // MARK: - Initialization
 
-    override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
-        #if DEBUG
-            Self.instanceCount += 1
-            instanceId = Self.instanceCount
-        #endif
-        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
-        #if DEBUG
-            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
-        #endif
-    }
-
-    required init?(coder: NSCoder) {
-        #if DEBUG
-            Self.instanceCount += 1
-            instanceId = Self.instanceCount
-        #endif
-        super.init(coder: coder)
-        #if DEBUG
-            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) init (total: \(Self.instanceCount))")
-        #endif
-    }
-
+    // TODO: Migrate settingsObserver to Combine, actionHandler/emojiService to weak refs,
+    // so deinit only handles logical state reset (composing/markedText/autocomplete).
     deinit {
-        #if DEBUG
-            Self.instanceCount -= 1
-            logger.debug("[MEMORY] KeyboardViewController #\(self.instanceId) deinit (remaining: \(Self.instanceCount))")
-        #endif
         performCleanup()
     }
 
@@ -99,23 +75,31 @@ class KeyboardViewController: KeyboardInputViewController {
 
         // Write first, so the notification from this write
         // is coalesced with syncSettings changes
-        SharedSettings.shared.isFullAccessEnabled = self.hasFullAccess
+        SharedSettings.shared.isFullAccessEnabled = hasFullAccess
 
         syncSettings()
     }
 
     override func viewWillSetupKeyboardView() {
         setupKeyboardView { (controller: KeyboardInputViewController) in
-            guard let keyboardController = controller as? KeyboardViewController else {
+            guard let keyboardController = controller as? KeyboardViewController,
+                  let handler = keyboardController.actionHandler
+            else {
                 return AnyView(EmptyView())
             }
 
-            return AnyView(keyboardController.createQwertyKeyboardView(controller: controller))
+            return AnyView(keyboardController.createQwertyKeyboardView(
+                controller: controller,
+                composingManager: handler.composingManager,
+            ))
         }
     }
 
     /// 建立 QWERTY 鍵盤視圖
-    private func createQwertyKeyboardView(controller: KeyboardInputViewController) -> some View {
+    private func createQwertyKeyboardView(
+        controller: KeyboardInputViewController,
+        composingManager: ComposingManager,
+    ) -> some View {
         let layoutService = CustomLayoutService()
         let layout = layoutService.keyboardLayout(for: controller.state.keyboardContext)
 
@@ -123,26 +107,22 @@ class KeyboardViewController: KeyboardInputViewController {
             services: controller.services,
             layout: layout,
             emojiKeyboardView: { [unowned self] in
-                self.emojiService.getEmojiKeyboardView()
+                emojiService.getEmojiKeyboardView()
             },
             calloutStyle: createCalloutStyle(),
             autocompleteContext: controller.state.autocompleteContext,
             keyboardContext: controller.state.keyboardContext,
-            composingManager: (controller.services.actionHandler as! ActionHandler).composingManager,
+            composingManager: composingManager,
             onSuggestionTap: { [unowned controller] suggestion in
                 controller.services.actionHandler.handle(suggestion)
             },
             onTranslateToggle: { [unowned self] in
-                self.toggleTranslateSwap()
-            }
+                state.keyboardContext.toggleTranslateSwapped()
+            },
         )
     }
 
     override func viewWillDisappear(_ animated: Bool) {
-        if let handler = actionHandler {
-            handler.keyboardViewController = nil
-        }
-
         super.viewWillDisappear(animated)
         performCleanup()
     }
@@ -185,21 +165,21 @@ class KeyboardViewController: KeyboardInputViewController {
         }
     }
 
-    /// 文字變更後的非同步處理
-    ///
-    /// KeyboardKit 預設會在此調用 `setKeyboardCase(preferredKeyboardCase)`，
-    /// 但當自動大寫關閉時，我們只執行 autocomplete，不調整 keyboardCase。
+    /// FIXME: Workaround layer 1/3 for KeyboardKit 10 auto-capitalization override.
+    /// Skips super's setKeyboardCase(preferredKeyboardCase) when auto-cap is off.
     override func textDidChangeAsync(_ textInput: UITextInput?) {
         let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
 
-        #if DEBUG
-        logger.debug("[CASE][textDidChangeAsync] isAutoCap=\(isAutoCap, privacy: .public) keyboardCase=\(String(describing: self.state.keyboardContext.keyboardCase), privacy: .public)")
+        let caseDesc = String(describing: state.keyboardContext.keyboardCase)
+        logger.debug("[CASE][textDidChangeAsync] isAutoCap=\(isAutoCap) keyboardCase=\(caseDesc)")
 
         // DEBUG: NextWord trace - textDidChangeAsync state
         if let handler = actionHandler {
-            logger.debug("[NEXTWORD][textDidChangeAsync] isShowingNextWord=\(handler.isShowingNextWord, privacy: .public) isComposing=\(handler.composingManager.isComposing, privacy: .public) rawInput='\(handler.composingManager.rawInput, privacy: .public)'")
+            let isNextWord = handler.isShowingNextWord
+            let isComp = handler.composingManager.isComposing
+            let raw = handler.composingManager.rawInput
+            logger.debug("[NEXTWORD][textDidChangeAsync] isShowingNextWord=\(isNextWord) isComposing=\(isComp) rawInput='\(raw)'")
         }
-        #endif
 
         if isAutoCap {
             // 自動大寫開啟：使用 KeyboardKit 預設行為
@@ -212,25 +192,23 @@ class KeyboardViewController: KeyboardInputViewController {
 
     // MARK: - KeyboardCase Tracking
 
-    #if DEBUG
-    /// 覆寫 setKeyboardCase 來追蹤所有變更來源
+    /// FIXME: Workaround layer 2/3 — debug tracking for KeyboardKit case changes.
+    /// Remove when auto-capitalization workaround is no longer needed.
     override func setKeyboardCase(_ case: Keyboard.KeyboardCase) {
         let before = state.keyboardContext.keyboardCase
-        logger.debug("[CASE][setKeyboardCase] before=\(String(describing: before), privacy: .public) new=\(String(describing: `case`), privacy: .public)")
+        let beforeDesc = String(describing: before)
+        let newDesc = String(describing: `case`)
+        logger.debug("[CASE][setKeyboardCase] before=\(beforeDesc) new=\(newDesc)")
         super.setKeyboardCase(`case`)
-        logger.debug("[CASE][setKeyboardCase] after=\(String(describing: self.state.keyboardContext.keyboardCase), privacy: .public)")
-    }
-    #endif
-
-    // MARK: - Actions
-
-    @objc func toggleTranslateSwap() {
-        state.keyboardContext.toggleTranslateSwapped()
+        let afterDesc = String(describing: state.keyboardContext.keyboardCase)
+        logger.debug("[CASE][setKeyboardCase] after=\(afterDesc)")
     }
 
     // MARK: - KeyboardCase Protection
 
-    /// 設定 keyboardCase 保護機制
+    /// FIXME: Workaround layer 3/3 — Combine-based guard against KeyboardKit 10
+    /// internally setting keyboardCase = preferredKeyboardCase via a code path that
+    /// bypasses our setKeyboardCase/tryChangeKeyboardCase overrides.
     ///
     /// KeyboardKit 10 會在 keyboardType 切換到 alphabetic 時，
     /// 透過內部路徑直接設定 keyboardCase = preferredKeyboardCase，
@@ -245,12 +223,10 @@ class KeyboardViewController: KeyboardInputViewController {
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] newType in
-                guard let self = self else { return }
+                guard let self else { return }
                 if newType == .alphabetic {
-                    self.justSwitchedToAlphabetic = true
-                    #if DEBUG
-                    self.logger.debug("[CASE][PROTECT] keyboardType → alphabetic, flag set")
-                    #endif
+                    justSwitchedToAlphabetic = true
+                    logger.debug("[CASE][PROTECT] keyboardType → alphabetic, flag set")
                 }
             }
             .store(in: &cancellables)
@@ -260,39 +236,33 @@ class KeyboardViewController: KeyboardInputViewController {
             .removeDuplicates()
             .dropFirst()
             .sink { [weak self] newCase in
-                guard let self = self else { return }
-                let isAutoCap = self.state.keyboardContext.settings.isAutocapitalizationEnabled
+                guard let self else { return }
+                let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
 
-                #if DEBUG
-                self.logger.debug("[CASE][PROTECT] newCase=\(String(describing: newCase), privacy: .public) expected=\(String(describing: self.expectedKeyboardCase), privacy: .public) isAutoCap=\(isAutoCap, privacy: .public) justSwitched=\(self.justSwitchedToAlphabetic, privacy: .public)")
-                #endif
+                logger.debug("[CASE][PROTECT] newCase=\(String(describing: newCase)) expected=\(String(describing: expectedKeyboardCase)) isAutoCap=\(isAutoCap) justSwitched=\(justSwitchedToAlphabetic)")
 
                 // 當自動大寫關閉且剛切換到字母鍵盤時，阻止非預期的 uppercased 變化
-                if !isAutoCap
-                    && self.justSwitchedToAlphabetic
-                    && newCase == .uppercased
-                    && self.expectedKeyboardCase != .uppercased
-                    && self.expectedKeyboardCase != .capsLocked
+                if !isAutoCap,
+                   justSwitchedToAlphabetic,
+                   newCase == .uppercased,
+                   expectedKeyboardCase != .uppercased,
+                   expectedKeyboardCase != .capsLocked
                 {
-                    #if DEBUG
-                    self.logger.debug("[CASE][PROTECT] ⚠️ BLOCKING uppercased, restoring to \(String(describing: self.expectedKeyboardCase), privacy: .public)")
-                    #endif
+                    logger.debug("[CASE][PROTECT] ⚠️ BLOCKING uppercased, restoring to \(String(describing: expectedKeyboardCase))")
                     // 使用異步恢復，確保在 KeyboardKit 內部處理完成後執行
-                    let targetCase = self.expectedKeyboardCase
+                    let targetCase = expectedKeyboardCase
                     DispatchQueue.main.async { [weak self] in
-                        guard let self = self else { return }
-                        #if DEBUG
-                        self.logger.debug("[CASE][PROTECT] async restoring to \(String(describing: targetCase), privacy: .public)")
-                        #endif
-                        self.state.keyboardContext.keyboardCase = targetCase
+                        guard let self else { return }
+                        logger.debug("[CASE][PROTECT] async restoring to \(String(describing: targetCase))")
+                        state.keyboardContext.keyboardCase = targetCase
                     }
                 } else {
                     // 更新預期值（合法的變化）
-                    self.expectedKeyboardCase = newCase
+                    expectedKeyboardCase = newCase
                 }
 
                 // 清除標志（無論是否阻止，都清除）
-                self.justSwitchedToAlphabetic = false
+                justSwitchedToAlphabetic = false
             }
             .store(in: &cancellables)
     }
@@ -301,18 +271,14 @@ class KeyboardViewController: KeyboardInputViewController {
 
     /// 設定監聯器（監聯主 App 的設定變更）
     private func setupSettingsObserver() {
-        #if DEBUG
         logger.debug("[AUTOCAP][SETTINGS] setupSettingsObserver registered")
-        #endif
 
         settingsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification,
             object: SharedSettings.sharedUserDefaults,
-            queue: .main
+            queue: .main,
         ) { [weak self] _ in
-            #if DEBUG
             self?.logger.debug("[AUTOCAP][SETTINGS] UserDefaults.didChangeNotification received")
-            #endif
             self?.syncSettings()
         }
     }
