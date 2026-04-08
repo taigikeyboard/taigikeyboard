@@ -7,11 +7,10 @@ class KeyboardViewController: KeyboardInputViewController {
 
     let logger = DebugLogger(category: "KeyboardViewController")
 
-    var emojiSvc: EmojiService?
+    var emojiServiceStorage: EmojiService?
     weak var actionHandler: ActionHandler?
     var isCleanedUp = false
 
-    /// Combine subscriptions
     private var cancellables = Set<AnyCancellable>()
 
     /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
@@ -23,17 +22,16 @@ class KeyboardViewController: KeyboardInputViewController {
     private var expectedKeyboardCase: Keyboard.KeyboardCase = .lowercased
     private var justSwitchedToAlphabetic = false
 
-    /// 記錄上次的輸入模式，用於偵測變更
+    /// Previous values for change detection in syncSettings()
     var lastInputMode: InputMode?
-    /// 記錄上次的佈局類型，用於偵測變更
     var lastKeyboardLayoutType: KeyboardLayoutType?
 
     var emojiService: EmojiService {
-        if emojiSvc == nil {
-            emojiSvc = EmojiService()
-            emojiSvc?.delegate = self
+        if emojiServiceStorage == nil {
+            emojiServiceStorage = EmojiService()
+            emojiServiceStorage?.delegate = self
         }
-        return emojiSvc!
+        return emojiServiceStorage!
     }
 
     // MARK: - Initialization
@@ -54,10 +52,10 @@ class KeyboardViewController: KeyboardInputViewController {
 
         setupServices()
 
-        // 監聯設定變更（從主 App 即時同步）
+        // Observe settings changes (live sync from main app)
         setupSettingsObserver()
 
-        // 設定 keyboardCase 保護機制（防止 KeyboardKit 10 內部路徑覆蓋狀態）
+        // Guard keyboardCase against KeyboardKit 10 internal path overriding state
         setupKeyboardCaseProtection()
     }
 
@@ -86,7 +84,6 @@ class KeyboardViewController: KeyboardInputViewController {
         }
     }
 
-    /// 建立鍵盤視圖（佈局由 CustomLayoutService 根據設定決定）
     private func createKeyboardView(
         composingManager: ComposingManager,
     ) -> some View {
@@ -119,23 +116,18 @@ class KeyboardViewController: KeyboardInputViewController {
 
     // MARK: - Autocomplete
 
-    /// 覆寫 autocompleteText 屬性，優先使用 rawInput（搜尋用）
-    /// 必須使用 rawInput 而非 composingText，因為：
-    /// - rawInput 包含聲調數字（如 "Soo1"），用於 Trie 搜尋
-    /// - composingText 是顯示文字（如 "Soo"），聲調 1/4 不加調號
-    /// - KeyboardKit 根據此值變化決定是否觸發 autocomplete
+    /// Prefer rawInput over composingText for autocomplete:
+    /// rawInput keeps tone digits ("Soo1") for Trie lookup;
+    /// composingText is display-only ("Soo", tone 1/4 have no diacritics).
     override var autocompleteText: String? {
-        // 如果正在組字中，使用 rawInput 作為自動完成的輸入
         if let handler = actionHandler, handler.composingManager.isComposing {
             return handler.composingManager.rawInput
         }
-        // 否則使用 KeyboardKit 的預設邏輯
         return super.autocompleteText
     }
 
     // MARK: - Text Input Change
 
-    /// 輸入框切換時觸發（textDocumentProxy 變化）
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
 
@@ -167,15 +159,15 @@ class KeyboardViewController: KeyboardInputViewController {
     /// internally setting keyboardCase = preferredKeyboardCase via a code path that
     /// bypasses our setKeyboardCase/tryChangeKeyboardCase overrides.
     ///
-    /// KeyboardKit 10 會在 keyboardType 切換到 alphabetic 時，
-    /// 透過內部路徑直接設定 keyboardCase = preferredKeyboardCase，
-    /// 繞過我們覆寫的 tryChangeKeyboardCase 和 setKeyboardCase。
-    /// 這個保護機制會監聽 keyboardCase 變化，在自動大寫關閉時恢復預期的狀態。
+    /// KeyboardKit 10 sets keyboardCase = preferredKeyboardCase via an internal path
+    /// when keyboardType switches to alphabetic, bypassing our tryChangeKeyboardCase
+    /// and setKeyboardCase overrides. This guard observes keyboardCase changes and
+    /// restores the expected state when auto-capitalization is off.
     private func setupKeyboardCaseProtection() {
-        // 初始化預期值
+        // Initialize expected value
         expectedKeyboardCase = state.keyboardContext.keyboardCase
 
-        // 監聽 keyboardType 變化，設置標志
+        // Observe keyboardType changes and set the flag
         state.keyboardContext.$keyboardType
             .removeDuplicates()
             .dropFirst()
@@ -188,7 +180,7 @@ class KeyboardViewController: KeyboardInputViewController {
             }
             .store(in: &cancellables)
 
-        // 監聽 keyboardCase 變化，檢查是否需要阻止
+        // Observe keyboardCase changes and block unexpected mutations
         state.keyboardContext.$keyboardCase
             .removeDuplicates()
             .dropFirst()
@@ -198,7 +190,7 @@ class KeyboardViewController: KeyboardInputViewController {
 
                 logger.debug("[CASE][PROTECT] newCase=\(String(describing: newCase)) expected=\(String(describing: expectedKeyboardCase)) isAutoCap=\(isAutoCap) justSwitched=\(justSwitchedToAlphabetic)")
 
-                // 當自動大寫關閉且剛切換到字母鍵盤時，阻止非預期的 uppercased 變化
+                // Block unexpected uppercased when auto-cap is off and just switched to alphabetic
                 if !isAutoCap,
                    justSwitchedToAlphabetic,
                    newCase == .uppercased,
@@ -206,7 +198,7 @@ class KeyboardViewController: KeyboardInputViewController {
                    expectedKeyboardCase != .capsLocked
                 {
                     logger.debug("[CASE][PROTECT] ⚠️ BLOCKING uppercased, restoring to \(String(describing: expectedKeyboardCase))")
-                    // 使用異步恢復，確保在 KeyboardKit 內部處理完成後執行
+                    // Restore asynchronously to ensure KeyboardKit internal processing completes first
                     let targetCase = expectedKeyboardCase
                     DispatchQueue.main.async { [weak self] in
                         guard let self else { return }
@@ -214,11 +206,11 @@ class KeyboardViewController: KeyboardInputViewController {
                         state.keyboardContext.keyboardCase = targetCase
                     }
                 } else {
-                    // 更新預期值（合法的變化）
+                    // Update expected value (legitimate change)
                     expectedKeyboardCase = newCase
                 }
 
-                // 清除標志（無論是否阻止，都清除）
+                // Clear the flag regardless of whether we blocked
                 justSwitchedToAlphabetic = false
             }
             .store(in: &cancellables)
@@ -226,7 +218,7 @@ class KeyboardViewController: KeyboardInputViewController {
 
     // MARK: - Settings Observer
 
-    /// 監聽主 App 的設定變更（透過 App Group UserDefaults）
+    /// Observe main app settings via App Group UserDefaults → syncSettings()
     private func setupSettingsObserver() {
         NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,

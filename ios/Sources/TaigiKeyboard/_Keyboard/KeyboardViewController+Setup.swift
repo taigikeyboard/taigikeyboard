@@ -6,39 +6,33 @@ import SwiftUI
 private let setupLogger = DebugLogger(category: "KeyboardViewController+Setup")
 
 extension KeyboardViewController {
-    /// 設置所有服務
     func setupServices() {
-        // 設定 KeyboardKit 使用 App Group 持久化設定
-        // 必須在任何 KeyboardSettings 存取之前呼叫
+        // Must be called before any KeyboardSettings access
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
 
-        // One-time keyboard context config (constant, never changes)
         state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
 
-        setupLiquidGlass() // 設置 Liquid Glass 支援
-        setupCoreServices() // 只設置核心服務
+        setupLiquidGlass()
+        setupCoreServices()
     }
 
-    /// 設置 Liquid Glass 支援（使用 KeyboardKit 內建功能）
     func setupLiquidGlass() {
         let context = state.keyboardContext
-
-        // 啟用 KeyboardKit 的 Liquid Glass 支援
         if context.isLiquidGlassAvailable {
             context.isLiquidGlassEnabled = true
         }
     }
 
-    /// 設置核心服務（立即需要的服務）
+    /// Order matters: AutocompleteService → ActionHandler → link them together.
     func setupCoreServices() {
-        // 1. 設置 AutocompleteContext 配置
+        // 1. Configure AutocompleteContext
         state.autocompleteContext.settings.suggestionsDisplayCount = 100
 
-        // 2. 建立正確的 AutocompleteService（必須在 ActionHandler 之前，
-        //    否則 ActionHandler 內部會持有 KeyboardKit 預設 service 的引用）
+        // 2. Create the correct AutocompleteService (must be before ActionHandler,
+        //    otherwise ActionHandler internally holds a reference to KeyboardKit's default service)
         setupAutocompleteServiceForCurrentMode()
 
-        // 3. 核心 ActionHandler — 取得正確的 autocompleteService
+        // 3. Core ActionHandler — receives the correct autocompleteService
         let handler = ActionHandler(
             controller: self,
             keyboardContext: state.keyboardContext,
@@ -57,20 +51,18 @@ extension KeyboardViewController {
         handler.composingManager.setKeyboardContext(state.keyboardContext)
         handler.composingManager.delegate = self
 
-        // 4. 連結台語 AutocompleteService 與 handler（需要 handler 已建立）
+        // 4. Connect Taigi AutocompleteService with handler (requires handler already created)
         if let taigiService = services.autocompleteService as? AutocompleteService {
             taigiService.setComposingManager(handler.composingManager)
             taigiService.setActionHandler(handler)
         }
 
-        // 5. 初始化追蹤變數，避免 syncSettings() 首次呼叫時誤判為「改變了」
+        // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         let settings = SharedSettings.shared
         lastInputMode = settings.inputMode
         lastKeyboardLayoutType = settings.keyboardLayoutType
     }
 
-    /// 根據當前輸入模式設置對應的 AutocompleteService
-    ///
     /// Called at initial setup and from syncSettings() when input mode changes.
     func setupAutocompleteServiceForCurrentMode() {
         let settings = SharedSettings.shared
@@ -82,7 +74,7 @@ extension KeyboardViewController {
             let autocompleteService = AutocompleteService()
             services.autocompleteService = autocompleteService
 
-            // 連接 AutocompleteService 和 ComposingManager / ActionHandler
+            // Connect AutocompleteService with ComposingManager / ActionHandler
             if let handler = actionHandler {
                 autocompleteService.setComposingManager(handler.composingManager)
                 autocompleteService.setActionHandler(handler)
@@ -93,16 +85,14 @@ extension KeyboardViewController {
         // syncs handler.autocompleteService — no manual sync needed.
     }
 
-    /// 同步設定
-    ///
-    /// 當主 App 變更設定時，透過 UserDefaults.didChangeNotification 觸發此方法。
-    /// 需要手動重新讀取 KeyboardKit 的設定，因為 @AppStorage 的 didSet
-    /// 不會被外部進程的變更觸發。
+    /// Re-read settings from App Group UserDefaults.
+    /// @AppStorage didSet doesn't fire for changes from an external process,
+    /// so this is triggered via UserDefaults.didChangeNotification.
     func syncSettings() {
         let settings = SharedSettings.shared
         var needsAutocompleteReset = false
 
-        // 檢查輸入模式是否變更，若變更則重新設置 AutocompleteService
+        // Check if input mode changed; if so, recreate AutocompleteService
         let currentInputMode = settings.inputMode
         if lastInputMode != currentInputMode {
             let previousMode = lastInputMode?.rawValue ?? "nil"
@@ -112,7 +102,7 @@ extension KeyboardViewController {
             needsAutocompleteReset = true
         }
 
-        // 檢查佈局類型是否變更
+        // Check if keyboard layout type changed
         let currentLayoutType = settings.keyboardLayoutType
         if lastKeyboardLayoutType != currentLayoutType {
             let previousLayout = lastKeyboardLayoutType.map { String(describing: $0) } ?? "nil"
@@ -146,7 +136,6 @@ extension KeyboardViewController {
         }
     }
 
-    /// 建立 Callout 樣式
     func createCalloutStyle() -> Callouts.CalloutStyle {
         guard let fontName = SharedSettings.shared.fontType.customFontName else {
             return Callouts.CalloutStyle.standard

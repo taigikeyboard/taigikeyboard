@@ -45,7 +45,7 @@ struct TaigiKeyboardView: View {
     var body: some View {
         let p = RenderProviders(keyboardContext: keyboardContext)
 
-        // 根據 keyboardCase 轉換候選詞大小寫
+        // Transform candidate case based on keyboardCase
         let suggestions = SuggestionCaseTransformer.transform(
             autocompleteContext.suggestions,
             composingText: composingManager.composingText,
@@ -231,7 +231,7 @@ struct TaigiKeyboardView: View {
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
     ) -> some View {
-        // KeyboardKit 10: 使用 layout: 和 services: 參數
+        // KeyboardKit 10: uses layout: and services: parameters
         KeyboardView(
             layout: layout,
             services: services,
@@ -261,12 +261,12 @@ struct TaigiKeyboardView: View {
             },
             collapsedView: { $0.view },
             emojiKeyboard: { _ in
-                // KeyboardKit 10: ISEmojiView 需要明確設置高度
+                // KeyboardKit 10: ISEmojiView requires explicit height
                 emojiKeyboardView()
                     .frame(height: layout.totalHeight)
             },
             toolbar: { params in
-                // 統一使用 CandidateView，英文模式傳入 KeyboardKit 預設視圖
+                // Unified CandidateView; English mode passes in KeyboardKit's default view
                 CandidateView(
                     suggestions: suggestions,
                     frequentWords: frequentWords,
