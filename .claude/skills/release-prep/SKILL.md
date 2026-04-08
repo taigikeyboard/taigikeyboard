@@ -1,12 +1,12 @@
 ---
-name: squash-commit
-description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history, then squash all branch commits into a single commit with a structured message. Use when the user wants to squash commits before merge.
+name: release-prep
+description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history based on commits since main (last release). Run on develop branch when preparing a release.
 disable-model-invocation: true
 ---
 
 # Release Prep
 
-Prepare the current branch for merge by updating CHANGELOG.md and squashing all commits into one.
+Prepare the current release by updating CHANGELOG.md and version history. Run on `develop` branch, comparing against `main` (last release) to find all new commits.
 
 ## Steps
 
@@ -20,10 +20,7 @@ Run these in parallel:
 - `git status --short` — verify clean working tree
 - Read `CHANGELOG.md` (index file) to find the current version's changelog path, then read that version file (e.g., `changelog/v3.4.8.md`)
 
-If the working tree is not clean (unstaged or uncommitted changes), commit them first:
-1. `git add -A`
-2. `git commit -m "WIP: uncommitted changes before squash"`
-Then continue with the rest of the steps — these changes will be included in the final squashed commit.
+If the working tree is not clean (unstaged or uncommitted changes), ask the user to commit or stash first.
 
 ### 2. Update CHANGELOG.md and versionHistoryEntries
 
@@ -63,43 +60,23 @@ Common rules for both:
   - "Refactored the codebase for better cleanliness and maintainability." (internal)
   - "Upgraded KeyboardKit to v10." (dependency detail, unless it brings user-visible changes)
 
-### 3. Squash commits
+### 3. Commit changelog updates
 
-1. Find merge base: `git merge-base main HEAD`
-2. Stage updated files: `git add CHANGELOG.md changelog/<version>.md ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt`
-3. Soft reset: `git reset --soft <merge-base>`
-4. Create a single commit with a structured message:
+Stage and commit only the changelog-related files:
 
 ```
-<version-tag>: <concise summary>
-
-### iOS
-- bullet points of iOS changes
-
-### Android
-- bullet points of Android changes
-
-### Dictionary
-- bullet points of dictionary changes (if any)
-
-### Shared
-- bullet points of shared changes (if any)
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+git add CHANGELOG.md changelog/<version>.md ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt
+git commit -m "<version>: Update changelog and version history"
 ```
 
-Extract the version tag from the branch name or CHANGELOG header (e.g., `v3.4.1` from `bugfix-v3.4.1`).
+### 4. Verify
 
-### 4. Verify and push
-
-1. `git log main..HEAD --oneline` — confirm exactly 1 commit
+1. `git log main..HEAD --oneline` — confirm the changelog commit is included
 2. `git status --short` — confirm clean working tree
-3. Ask the user for confirmation, then: `git push --force-with-lease origin <branch>`
 
 ## Important
 
-- Do NOT modify source code files other than the two `Tab1Texts` files — only `CHANGELOG.md` (index), `changelog/<version>.md`, iOS/Android Tab1Texts, and commit history
+- Do NOT modify source code files other than the two `Tab1Texts` files — only `CHANGELOG.md` (index), `changelog/<version>.md`, iOS/Android Tab1Texts
 - Do NOT alter any functionality
-- If the changelog version file is already complete, skip to step 3
+- If the changelog version file is already complete, inform the user — nothing to do
 - For new releases: create `changelog/<version>.md` and add it to the `CHANGELOG.md` index
-- Always use `--force-with-lease` (not `--force`) for safety
