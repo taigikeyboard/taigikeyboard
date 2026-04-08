@@ -2,7 +2,7 @@ import Combine
 import KeyboardKit
 import SwiftUI
 
-class KeyboardViewController: KeyboardInputViewController {
+class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Properties
 
     let logger = DebugLogger(category: "KeyboardViewController")
@@ -214,6 +214,16 @@ class KeyboardViewController: KeyboardInputViewController {
                 justSwitchedToAlphabetic = false
             }
             .store(in: &cancellables)
+    }
+
+    // MARK: - ComposingDelegate (overrides must be in class body)
+
+    override func insertText(_ text: String) {
+        textDocumentProxy.insertText(text)
+    }
+
+    override func deleteBackward() {
+        textDocumentProxy.deleteBackward()
     }
 
     // MARK: - Settings Observer

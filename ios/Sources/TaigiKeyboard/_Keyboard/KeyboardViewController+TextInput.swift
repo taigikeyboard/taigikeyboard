@@ -3,32 +3,22 @@ import KeyboardKit
 
 // MARK: - ComposingDelegate
 
-extension KeyboardViewController: ComposingDelegate {
-    /// Insert text into the text document proxy
-    func insertText(_ text: String) {
-        textDocumentProxy.insertText(text)
-    }
+extension KeyboardViewController {
+    // insertText(_:) and deleteBackward() are in KeyboardViewController.swift
+    // (protocol methods that override superclass must be in the class body)
 
-    /// Delete backward in the text document proxy
-    func deleteBackward() {
-        textDocumentProxy.deleteBackward()
-    }
-
-    /// Set markedText (composing underline)
+    /// Selection point at end of markedText for cursor positioning
     func setMarkedText(_ text: String) {
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
     }
 
-    /// Clear markedText completely
+    /// Clear + unmark (two steps required by UITextInput)
     func clearMarkedText() {
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         textDocumentProxy.unmarkText()
     }
 
-    /// Reset autocomplete context (clear suggestions)
     func resetAutocompleteContext() {
         state.autocompleteContext.reset()
     }
-
-    // resetAutocomplete() and performAutocomplete() are inherited from KeyboardInputViewController
 }

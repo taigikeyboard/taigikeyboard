@@ -1,14 +1,8 @@
 import Foundation
 import KeyboardKit
 
-/// 候選詞選擇處理
-///
-/// 處理使用者點選候選詞的邏輯，包含：
-/// - 一般組字候選詞
-/// - NextWord 下一詞預測候選詞
-/// - 詞彙關聯記錄
 extension ActionHandler {
-    // MARK: - 候選詞選擇
+    // MARK: - Suggestion Selection
 
     func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
@@ -30,7 +24,7 @@ extension ActionHandler {
             // Capture rawInput BEFORE selectSuggestion clears it
             let capturedRawInput = composingManager.rawInput
 
-            // 解析羅馬字與漢字
+            // Parse romanization and Hanji (漢字)
             let roman: String
             let hanzi: String?
 
@@ -50,7 +44,7 @@ extension ActionHandler {
                 ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
                 : roman
 
-            // 決定輸出文字
+            // Determine output text
             let textToCommit: String = if settings.outputBothScripts, hanzi != nil, !hanzi!.isEmpty {
                 effectiveSwapped
                     ? "\(hanzi!) (\(bracketRoman))"
@@ -61,7 +55,7 @@ extension ActionHandler {
                 roman
             }
 
-            // 提交文字
+            // Commit text
             if isNextWordPrediction {
                 keyboardContext.textDocumentProxy.insertText(textToCommit)
             } else {
@@ -74,7 +68,7 @@ extension ActionHandler {
                 composingManager.selectSuggestion(modifiedSuggestion)
             }
 
-            // 記錄使用頻率
+            // Record usage frequency
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
             if SharedSettings.shared.frequencyRecordingEnabled {
                 UserFrequencyService.recordUsage(for: displayText)
@@ -84,7 +78,7 @@ extension ActionHandler {
             logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
             logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
 
-            // 羅馬字模式：自動加空白（字尾非連字符時）
+            // Romanization mode: auto-space (unless trailing hyphen)
             // TPS mode disables auto-space (effectiveSwapped is true for TPS)
             if settings.isAutoSpaceEnabled, !effectiveSwapped || settings.outputBothScripts {
                 if !textToCommit.hasSuffix("-") {
@@ -103,10 +97,10 @@ extension ActionHandler {
         }
     }
 
-    // MARK: - NextWord 處理
+    // MARK: - NextWord Handling
 
-    /// 選詞後觸發 NextWord 預測並記錄關聯
-    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil, rawInput _: String = "") {
+    /// Trigger NextWord prediction and record association after word selection
+    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil) {
         // DEBUG: NextWord trace - handleNextWordPrediction entry
         logger.debug("[NEXTWORD][HANDLE] displayText='\(displayText)' roman='\(roman)' hanzi='\(hanzi ?? "nil")' isNoise=\(isNoiseText(displayText))")
 
@@ -122,7 +116,7 @@ extension ActionHandler {
         let romanTl = RomanizationConverter.pojToTL(roman)
         let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        // 記錄與前一詞的關聯
+        // Record association with previous word
         if SharedSettings.shared.associationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
                 Task {
@@ -146,7 +140,7 @@ extension ActionHandler {
         return word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
     }
 
-    /// 記錄複合詞內部關聯（如 tshit-niû → tshit, niû）
+    /// Record associations between parts of compound words (e.g. tshit-niû → tshit, niû)
     func recordCompoundWordAssociations(displayText: String, roman: String) {
         let parts = splitCompoundWord(displayText)
         let romanParts = splitCompoundWord(roman)
@@ -170,8 +164,8 @@ extension ActionHandler {
         }
     }
 
-    /// Enter 確認組字後觸發 NextWord 預測（僅羅馬字模式）
-    func handleEnterNextWordPrediction(committedText: String, rawInput _: String = "") {
+    /// Trigger NextWord prediction after Enter commits composing (romanization mode only)
+    func handleEnterNextWordPrediction(committedText: String) {
         guard !settings.isTranslateSwapped, !committedText.isEmpty else { return }
         guard !isNoiseText(committedText) else { return }
 

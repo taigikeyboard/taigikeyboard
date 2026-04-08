@@ -64,6 +64,7 @@ Branch: `rel-v3.4.8-bugfix`
 ### Stage 6: KeyboardViewController review & cleanup ✅
 **Branch**: `refactor/ios-review`
 **Goal**: Review KeyboardViewController startup flow, fix issues found
+**Principle**: Follow clean code — extract repeated expressions, tighten access control, remove dead code
 **What was done**:
 - Removed boilerplate `init(nibName:bundle:)` and `init?(coder:)` — Swift inherits automatically
 - Fixed `setupServices`/`ensureEssentialServicesInitialized` merge — autocomplete service was created twice (KeyboardKit default then replaced); ActionHandler now gets the correct service directly
@@ -108,6 +109,28 @@ Branch: `rel-v3.4.8-bugfix`
 - [x] `_Keyboard/` folder review — moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift`, flattened namespace (30 refs updated, 11 files)
 - [x] ComposingManager decoupling — introduced `ComposingDelegate` protocol, replaced `weak var keyboardViewController: KeyboardViewController?` with `weak var delegate: (any ComposingDelegate)?`. Input/ no longer depends on _Keyboard/. Removed `deleteBackwardManually()` (replaced by protocol `deleteBackward()`)
 
+### Stage 7: Actions/ review & cleanup
+**Branch**: `refactor/ios-review-actions`
+**Goal**: Review ActionHandler and extensions — clean code, English comments, remove dead code
+**Principle**: Follow clean code — extract repeated expressions, tighten access control, remove dead code
+**What was done**:
+- Converted all Chinese comments to English (5 Actions/ files + 4 _Keyboard/ files, ~50 comments)
+- Removed redundant extension doc comments and inline comments that restated code
+- Removed dead constant `contextTimeoutMs` (unused, superseded by `contextTimeoutSeconds`)
+- Extracted `currentTimestampMs` computed property (was `Int64(Date()...* 1000)` repeated 4 times across 2 files)
+- `private(set)` on `lastSelectedRoman`, `lastSelectionTime`, `isShowingNextWord` — restrict external writes
+- Moved hardcoded punctuation string → `NextWordConstants.noisePunctuation`
+- Removed unused `rawInput _:` parameter from `handleNextWordPrediction` and `handleEnterNextWordPrediction`
+- Fixed `ComposingDelegate` conformance — moved `insertText`/`deleteBackward` overrides to class body (Swift requires override in class, not extension)
+- Fixed duplicate `// MARK: - Settings Observer` in KeyboardViewController
+- Replaced WHAT comments with WHY comments in TextInput (markedText cursor positioning, two-step UITextInput clear)
+- Ran simplify 3-agent review on both Actions/ and _Keyboard/ — fixed safe issues, noted future work
+**Noted for future** (from simplify review):
+- Stringly-typed `additionalInfo` keys → needs separate PR (touches many files)
+- Panel bools → enum consolidation in TaigiKeyboardView
+- Prediction filtering → move from ActionHandler to NextWordService
+**Status**: ✅
+
 ---
 
 ## Android Refactoring
@@ -139,3 +162,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-08** (iOS): Stage 6 in progress — KeyboardViewController review, fixed service init order, protocol decoupling, Combine migration, dead code removal
 - **2026-04-09** (iOS): Stage 6 continued — reviewed syncSettings auto-cap (clean), setupKeyboardCaseProtection (cannot simplify), removed ActionHandler `.keyboardType` debug trace; reviewed EmojiDelegate (clean), TextInput (fixed duplicated clearMarkedText in ComposingManager.selectSuggestion), TaigiKeyboardView (clean); `_Keyboard/` folder review: moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift` (flattened namespace, 30 refs across 11 files); decoupled ComposingManager from KeyboardViewController via `ComposingDelegate` protocol (Input/ no longer depends on _Keyboard/)
 - **2026-04-09** (iOS): _Keyboard/ comment & naming review — converted all Chinese comments to English (4 files), renamed `emojiSvc` → `emojiServiceStorage`, removed redundant doc comments that restated function names, trimmed verbose comments to keep only "why" context (net −29 lines)
+- **2026-04-09** (iOS): Stage 7 — Actions/ + _Keyboard/ review with simplify 3-agent scan. English comments, dead code removal (`contextTimeoutMs`, unused `rawInput` params), `private(set)` access control, `currentTimestampMs` helper, punctuation constant extraction, ComposingDelegate override fix, duplicate MARK fix
