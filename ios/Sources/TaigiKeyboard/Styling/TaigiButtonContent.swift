@@ -86,13 +86,12 @@ struct TaigiButtonContent<StandardContent: View>: View {
         // KeyboardKit's "space" text overlapping on iPad.
         else if let modeLabel = spaceInputModeLabel {
             Text(modeLabel)
-                .font(KeyboardModels.Fonts.globalFont(size: 12))
+                .font(KeyboardFonts.globalFont(size: 12))
                 .foregroundColor(keyTextColor)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .padding(.trailing, 4)
                 .padding(.bottom, 2)
-        }
-        else {
+        } else {
             standardContent
         }
     }

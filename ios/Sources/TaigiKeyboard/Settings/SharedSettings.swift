@@ -522,17 +522,3 @@ class SharedSettings {
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
     }
 }
-
-extension SharedSettings {
-    /// 同步台語鍵盤專屬設定到 KeyboardContext
-    ///
-    /// 注意：isAutocapitalizationEnabled 由 KeyboardKit 自動管理，
-    /// 透過 KeyboardSettings.setupStore() 使用 App Group 持久化。
-    func syncToKeyboardContext(_ context: KeyboardKit.KeyboardContext) {
-        // KeyboardKit 10: 設定空白鍵長按行為
-        context.settings.spacebarLongPressBehavior = .moveInputCursor
-
-        // 自動大寫設定由 KeyboardKit 的 KeyboardSettings 自動管理
-        // 不需要手動同步，KeyboardKit 會自動讀取持久化的值
-    }
-}

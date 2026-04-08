@@ -10,14 +10,13 @@ import KeyboardKit
 /// - NextWord 下一詞預測
 ///
 /// - Note: 相關 extension 定義於 `ActionHandler+*.swift`
-public class ActionHandler: KeyboardAction.StandardActionHandler {
+public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionContextProvider {
     // MARK: - 屬性
 
     let logger = DebugLogger(category: "ActionHandler")
 
     let settings = SharedSettings.shared
     public let composingManager = ComposingManager()
-    weak var keyboardViewController: KeyboardInputViewController?
 
     /// 空白鍵拖曳狀態（用於區分拖曳移動游標與點擊輸入空白）
     private var isSpaceDragInProgress = false
@@ -100,19 +99,6 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                 // 允許退格鍵的重複按壓手勢
                 if gesture == .repeatPress {
                     _ = handleBackspaceAction()
-                }
-                return
-            }
-
-            // DEBUG: 追蹤 keyboardType 切換時的 keyboardCase 變化
-            if case .keyboardType = action {
-                let beforeCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] BEFORE super.handle(\(String(describing: gesture)), \(String(describing: action))): keyboardCase=\(String(describing: beforeCase))")
-                super.handle(gesture, on: action)
-                let afterCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] AFTER super.handle: keyboardCase=\(String(describing: afterCase))")
-                if beforeCase != afterCase {
-                    logger.debug("[CASE][handle] ⚠️ keyboardCase CHANGED from \(String(describing: beforeCase)) to \(String(describing: afterCase))")
                 }
                 return
             }
@@ -319,7 +305,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             // DEBUG: NextWord trace - after filter
             self.logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
 
-            if let controller = keyboardViewController {
+            if let controller = keyboardController {
                 if suggestions.isEmpty {
                     isShowingNextWord = false
                     controller.state.autocompleteContext.reset()
@@ -330,7 +316,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                 }
                 self.logger.debug("[NEXTWORD][TRIGGER] isShowingNextWord=\(self.isShowingNextWord)")
             } else {
-                self.logger.debug("[NEXTWORD][TRIGGER] keyboardViewController is nil!")
+                self.logger.debug("[NEXTWORD][TRIGGER] keyboardController is nil!")
             }
         }
     }

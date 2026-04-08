@@ -152,7 +152,7 @@ struct CandidateView: View {
                             expandState.toggle()
                         }) {
                             Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
-                                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                                .font(KeyboardFonts.globalFont(size: 18))
                                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                                 .scaleEffect(1.2)
                                 .frame(width: 42, height: CandidateViewModels.UI.height)
@@ -200,7 +200,7 @@ struct CandidateView: View {
             }
         }) {
             Image(systemName: "plus")
-                .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .rotationEffect(.degrees(isToolShortcutsExpanded ? 45 : 0))
@@ -219,7 +219,7 @@ struct CandidateView: View {
             onSymbolTap()
         }) {
             Image(systemName: "number")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -236,7 +236,7 @@ struct CandidateView: View {
     private var globeButton: some View {
         Keyboard.NextKeyboardButton {
             Image(systemName: "globe")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -254,7 +254,7 @@ struct CandidateView: View {
             onDismissKeyboard()
         }) {
             Image(systemName: "keyboard.chevron.compact.down")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -273,7 +273,7 @@ struct CandidateView: View {
             onLayoutTap()
         }) {
             Image(systemName: "photo")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -292,7 +292,7 @@ struct CandidateView: View {
             onSettingsTap()
         }) {
             Image(systemName: "gearshape")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -322,7 +322,7 @@ struct CandidateView: View {
             onInputModeChange(mode)
         }) {
             Text(label)
-                .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
                 .lineLimit(1)
@@ -425,7 +425,7 @@ extension CandidateView {
             }) {
                 VStack(alignment: .center, spacing: 0) {
                     Text(displayTitle)
-                        .font(KeyboardModels.Fonts.globalFont(
+                        .font(KeyboardFonts.globalFont(
                             size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped),
                         ))
                         .fontWeight(.regular)
@@ -434,7 +434,7 @@ extension CandidateView {
 
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
-                            .font(KeyboardModels.Fonts.globalFont(
+                            .font(KeyboardFonts.globalFont(
                                 size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped),
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)

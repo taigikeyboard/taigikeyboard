@@ -16,9 +16,9 @@ struct TaigiKeyboardApp: App {
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithDefaultBackground()
-        let largeFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: AppStyle.navBarLargeTitleSize)
+        let largeFont = UIFont(name: KeyboardFonts.openHuninnFontName, size: AppStyle.navBarLargeTitleSize)
             ?? .systemFont(ofSize: AppStyle.navBarLargeTitleSize)
-        let inlineFont = UIFont(name: KeyboardModels.Fonts.openHuninnFontName, size: AppStyle.navBarInlineTitleSize)
+        let inlineFont = UIFont(name: KeyboardFonts.openHuninnFontName, size: AppStyle.navBarInlineTitleSize)
             ?? .systemFont(ofSize: AppStyle.navBarInlineTitleSize)
         navAppearance.largeTitleTextAttributes = [.font: largeFont]
         navAppearance.titleTextAttributes = [.font: inlineFont]

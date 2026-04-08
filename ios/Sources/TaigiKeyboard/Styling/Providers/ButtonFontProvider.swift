@@ -1,12 +1,11 @@
-import KeyboardKit
 import Foundation
+import KeyboardKit
 
 /// Button font provider
 ///
 /// Returns the appropriate KeyboardFont based on user's font setting
 /// (System / jf open 粉圓 / 芫荽 Iansui).
 class ButtonFontProvider {
-
     private let keyboardContext: KeyboardContext
     private let settings: SettingsSnapshot
 
@@ -25,15 +24,15 @@ class ButtonFontProvider {
             return KeyboardFont.system(size: fontSize)
         case .openHuninn:
             return KeyboardFont.custom(
-                KeyboardModels.Fonts.openHuninnFontName,
+                KeyboardFonts.openHuninnFontName,
                 size: fontSize,
-                weight: .regular
+                weight: .regular,
             )
         case .iansui:
             return KeyboardFont.custom(
-                KeyboardModels.Fonts.iansuiFontName,
+                KeyboardFonts.iansuiFontName,
                 size: fontSize,
-                weight: .regular
+                weight: .regular,
             )
         }
     }
@@ -42,7 +41,7 @@ class ButtonFontProvider {
     private func adjustedFontSize(for action: KeyboardAction, baseFontSize: CGFloat) -> CGFloat {
         let userScale = settings.keyFontSizeScale
 
-        guard case .character(let char) = action else {
+        guard case let .character(char) = action else {
             return baseFontSize * userScale
         }
 

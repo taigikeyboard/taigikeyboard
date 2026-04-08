@@ -12,9 +12,6 @@ extension KeyboardViewController {
 
         isCleanedUp = true
 
-        // 移除設定監聽器
-        removeSettingsObserver()
-
         // 清理輸入狀態
         cleanupInputState()
 
@@ -29,9 +26,6 @@ extension KeyboardViewController {
 
     /// 清理服務連結
     func cleanupServices() {
-        if let handler = actionHandler {
-            handler.keyboardViewController = nil
-        }
         actionHandler = nil
     }
 

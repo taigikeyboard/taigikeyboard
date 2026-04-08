@@ -22,7 +22,7 @@ struct SettingsSelectionOverlay: View {
     @State private var tpsOrMapsToER: Bool
     @State private var isGlobeKeyEnabled: Bool
 
-    // Prevents auto-dismiss during initial onAppear sync
+    /// Prevents auto-dismiss during initial onAppear sync
     @State private var isReady = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -38,15 +38,15 @@ struct SettingsSelectionOverlay: View {
         let s = SharedSettings.shared
         _outputBothScripts = State(initialValue: s.outputBothScripts)
         _autoCapitalizationEnabled = State(
-            initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey)
+            initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey),
         )
         _autoSpaceEnabled = State(initialValue: s.isAutoSpaceEnabled)
         _toolbarAutoCollapse = State(initialValue: s.isToolbarAutoCollapse)
         _isAudioFeedbackEnabled = State(
-            initialValue: KeyboardSettings.store.object(forKey: Self.audioFeedbackKey) as? Bool ?? true
+            initialValue: KeyboardSettings.store.object(forKey: Self.audioFeedbackKey) as? Bool ?? true,
         )
         _isHapticFeedbackEnabled = State(
-            initialValue: KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true
+            initialValue: KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true,
         )
         _enableDoubleTapOO = State(initialValue: s.enableDoubleTapOO)
         _enableDoubleTapNN = State(initialValue: s.enableDoubleTapNN)
@@ -144,7 +144,7 @@ struct SettingsSelectionOverlay: View {
         _ label: String,
         isOn: Binding<Bool>,
         icon: String? = nil,
-        onChange: @escaping (Bool) -> Void
+        onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
             if let icon {
@@ -158,7 +158,7 @@ struct SettingsSelectionOverlay: View {
                 Text(label)
             }
         }
-        .font(KeyboardModels.Fonts.globalFont(size: 15))
+        .font(KeyboardFonts.globalFont(size: 15))
         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
         .tint(.accentColor)
         .frame(height: 44)
@@ -174,7 +174,7 @@ struct SettingsSelectionOverlay: View {
             onDismiss()
         }) {
             Text(Tab4Texts.openApp.hanji)
-                .font(KeyboardModels.Fonts.globalFont(size: 15))
+                .font(KeyboardFonts.globalFont(size: 15))
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)

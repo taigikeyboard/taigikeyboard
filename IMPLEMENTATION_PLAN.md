@@ -2,6 +2,7 @@
 
 ## Overview
 Cross-platform refactoring to reduce coupling, extract shared components, and improve code organization.
+This refactoring aims to build the right foundation for the future — do the correct thing now, handle it carefully.
 Branch: `rel-v3.4.8-bugfix`
 
 ---
@@ -39,11 +40,11 @@ Branch: `rel-v3.4.8-bugfix`
 - Removed empty `Input/Tone/` directory
 **Note**: User must update Xcode project groups manually.
 
-### Stage 4: Reduce Autocomplete cross-folder coupling ✅ (partially resolved)
+### Stage 4: Reduce Autocomplete cross-folder coupling ✅
 **Goal**: Remove unnecessary imports leaking into Autocomplete/
 **Analysis result**:
 - `Tab1Texts`–`Tab4Texts` in Autocomplete — **already resolved by Stage 2** (overlays moved to Overlays/, Autocomplete has zero TabNTexts references now)
-- `KeyboardModels.Fonts` in Autocomplete (12 refs) — **deferred**. `KeyboardModels` is used across 16 files in 7 folders; it's a global font utility that happens to live in `_Keyboard/`. Moving to `Styling/` would be semantically cleaner but touches 16 files for a pure rename with no coupling benefit (no circular deps). Not worth the risk.
+- `KeyboardModels.Fonts` in Autocomplete — **resolved in Stage 6**. Moved `_Keyboard/KeyboardModels.swift` → `Styling/KeyboardFonts.swift`, flattened `KeyboardModels.Fonts` → `KeyboardFonts` (removed unnecessary double namespace). Updated 30 references across 11 files. Eliminates reverse dependency from 5 folders (Settings, Autocomplete, Overlays, Styling, App) back to `_Keyboard/`.
 - Moved `DiagnosticService.swift` from `Diagnostics/` → `App/Tabs/Tab4/` (only consumer); removed empty `Diagnostics/` folder
 
 ### Stage 5: Unify DEBUG logging pattern ✅
@@ -60,11 +61,52 @@ Branch: `rel-v3.4.8-bugfix`
 - Removed `docs/debug-log.md` (redundant with security-rules.md), updated `docs/README.md`
 **New file**: `DebugLogger.swift` (root of TaigiKeyboard/)
 
-### Stage 6: Non-App comments to English
-**Status**: Not Started
-**Goal**: Convert remaining Chinese comments in non-App folders to English (matching Stage 1 pattern)
-**Scope**: _Keyboard/, Actions/, Autocomplete/, Callouts/, Input/, Layout/, Lexicon/, Styling/
-**Rule**: English primary; Taiwanese Mandarin in parentheses only for proper nouns
+### Stage 6: KeyboardViewController review & cleanup ✅
+**Branch**: `refactor/ios-review`
+**Goal**: Review KeyboardViewController startup flow, fix issues found
+**What was done**:
+- Removed boilerplate `init(nibName:bundle:)` and `init?(coder:)` — Swift inherits automatically
+- Fixed `setupServices`/`ensureEssentialServicesInitialized` merge — autocomplete service was created twice (KeyboardKit default then replaced); ActionHandler now gets the correct service directly
+- Removed redundant `ensureEssentialServicesInitialized()` — lazy var triggers already done in ActionHandler init
+- Removed redundant `ensureCleanState()` — state is already clean at `viewDidLoad` time
+- Removed redundant `ActionHandler.keyboardViewController` — replaced with inherited `keyboardController` (KeyboardKit's weak ref)
+- Removed redundant `setKeyboardCase` override — was pure debug log, no protection logic
+- Decoupled AutocompleteService from ActionHandler/ComposingManager — introduced `ComposingStateProvider` and `SelectionContextProvider` protocols
+- Migrated `settingsObserver` from NotificationCenter block to Combine — eliminated manual cleanup, removed `removeSettingsObserver()`, simplified `performCleanup()`
+- Removed dead code in `syncSettings()` — hardcoded KeyboardKit key read only used in log
+- Added FIXME markers on 2-layer auto-capitalization workaround
+- Updated deinit TODO (settingsObserver migration done)
+- viewDidAppear: guarded `isFullAccessEnabled` write to avoid unnecessary notification → double `syncSettings()`
+- syncSettings: removed `syncToKeyboardContext` (constant `spacebarLongPressBehavior` moved to one-time `setupServices()`); initialized `lastInputMode`/`lastKeyboardLayoutType` in `setupCoreServices()` to prevent redundant first-launch service rebuild; merged double `autocompleteContext.reset()` on TPS switch with `needsAutocompleteReset` flag
+- Removed `SharedSettings.syncToKeyboardContext` extension (no longer used)
+- viewWillSetupKeyboardView: removed redundant `controller` parameter and `as? KeyboardViewController` cast — unified to `[unowned self]` per ios-guidelines
+- Renamed `createQwertyKeyboardView` → `createKeyboardView` (handles all layout types, not just QWERTY)
+- createCalloutStyle: extracted `FontType.customFontName` computed property, eliminated duplicated `.openHuninn`/`.iansui` switch cases
+- Removed `viewDidDisappear` — redundant with `viewWillDisappear` + `deinit` (both call `performCleanup()` with `isCleanedUp` guard)
+- textDidChange: unified `actionHandler` access (removed `services.actionHandler as? ActionHandler` cast)
+- textDidChangeAsync: removed 6-line NextWord debug trace, kept 1-line auto-cap log
+**New file**: `AutocompleteProviders.swift` (ComposingStateProvider + SelectionContextProvider protocols)
+**Review criteria**: Remove redundant code, scrutinize necessity, eliminate duplication (logic & variables)
+**Review progress** (KeyboardViewController lifecycle):
+- [x] Properties
+- [x] Initialization (init/deinit)
+- [x] viewDidLoad → FontRegistration
+- [x] viewDidLoad → setupServices / setupCoreServices
+- [x] viewDidLoad → ensureCleanState (removed)
+- [x] viewDidLoad → setupSettingsObserver
+- [x] viewDidLoad → setupKeyboardCaseProtection (FIXME, workaround)
+- [x] viewDidAppear
+- [x] viewWillSetupKeyboardView / createKeyboardView / createCalloutStyle
+- [x] viewWillDisappear (viewDidDisappear removed)
+- [x] textDidChange / textDidChangeAsync
+- [x] autocompleteText
+- [x] syncSettings (auto-cap section) — clean, no issues
+- [x] setupKeyboardCaseProtection (FIXME) — necessarily complex, cannot simplify; removed ActionHandler `.keyboardType` debug trace (11 lines, purely diagnostic)
+- [x] EmojiDelegate — clean, no issues
+- [x] TextInput — clean; fixed `ComposingManager.selectSuggestion` duplicating `clearMarkedText()` logic
+- [x] TaigiKeyboardView — clean, no issues
+- [x] `_Keyboard/` folder review — moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift`, flattened namespace (30 refs updated, 11 files)
+- [x] ComposingManager decoupling — introduced `ComposingDelegate` protocol, replaced `weak var keyboardViewController: KeyboardViewController?` with `weak var delegate: (any ComposingDelegate)?`. Input/ no longer depends on _Keyboard/. Removed `deleteBackwardManually()` (replaced by protocol `deleteBackward()`)
 
 ---
 
@@ -94,3 +136,5 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-07** (iOS): Stage 3 completed — moved 4 phonetics files to Phonetics/, removed Input/Tone/
 - **2026-04-07** (iOS): Stage 4 analyzed — Tab1-4Texts coupling already resolved by Stage 2; KeyboardModels.Fonts rename deferred (16 files, no coupling benefit); DiagnosticService moved to Tab4
 - **2026-04-08** (iOS): Stage 5 completed — DebugLogger wrapper, 87→1 #if DEBUG, removed instance counting & dead test code, updated docs
+- **2026-04-08** (iOS): Stage 6 in progress — KeyboardViewController review, fixed service init order, protocol decoupling, Combine migration, dead code removal
+- **2026-04-09** (iOS): Stage 6 continued — reviewed syncSettings auto-cap (clean), setupKeyboardCaseProtection (cannot simplify), removed ActionHandler `.keyboardType` debug trace; reviewed EmojiDelegate (clean), TextInput (fixed duplicated clearMarkedText in ComposingManager.selectSuggestion), TaigiKeyboardView (clean); `_Keyboard/` folder review: moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift` (flattened namespace, 30 refs across 11 files); decoupled ComposingManager from KeyboardViewController via `ComposingDelegate` protocol (Input/ no longer depends on _Keyboard/)

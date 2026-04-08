@@ -80,14 +80,14 @@ struct SymbolSelectionOverlay: View {
             selectedTab = category
         }) {
             Text(category.label)
-                .font(KeyboardModels.Fonts.globalFont(size: 13))
+                .font(KeyboardFonts.globalFont(size: 13))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor : Color.clear)
+                        .fill(isSelected ? Color.accentColor : Color.clear),
                 )
         }
         .buttonStyle(.plain)

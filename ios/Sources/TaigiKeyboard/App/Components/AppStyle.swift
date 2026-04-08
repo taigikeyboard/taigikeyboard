@@ -27,7 +27,7 @@ enum AppStyle {
     // MARK: - Font Helper
 
     /// Font name for the main app UI (fixed to Open Huninn).
-    private static let appFontName = KeyboardModels.Fonts.openHuninnFontName
+    private static let appFontName = KeyboardFonts.openHuninnFontName
 
     /// Returns Open Huninn font at an explicit point size.
     /// All app UI fonts should go through this or the semantic properties below.

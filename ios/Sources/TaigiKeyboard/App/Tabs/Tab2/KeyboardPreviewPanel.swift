@@ -56,13 +56,13 @@ struct KeyboardPreviewPanel: View {
         case .system:
             return .standard
         case .openHuninn:
-            let name = KeyboardModels.Fonts.openHuninnFontName
+            let name = KeyboardFonts.openHuninnFontName
             return Callouts.CalloutStyle(
                 actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
                 inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
             )
         case .iansui:
-            let name = KeyboardModels.Fonts.iansuiFontName
+            let name = KeyboardFonts.iansuiFontName
             return Callouts.CalloutStyle(
                 actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
                 inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),

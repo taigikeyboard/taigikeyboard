@@ -2,12 +2,26 @@ import Foundation
 import KeyboardKit
 import SwiftUI
 
+/// Delegate protocol for text input and autocomplete operations.
+///
+/// Decouples ComposingManager from KeyboardViewController,
+/// allowing Input/ to be independent of _Keyboard/.
+protocol ComposingDelegate: AnyObject {
+    func insertText(_ text: String)
+    func deleteBackward()
+    func setMarkedText(_ text: String)
+    func clearMarkedText()
+    func resetAutocomplete()
+    func performAutocomplete()
+    func resetAutocompleteContext()
+}
+
 /// Composing manager
 ///
 /// Manages Taigi input composing state with rawInput as single source of truth.
 /// - `rawInput`: Original keystrokes (e.g. "gua2") — used for Trie search
 /// - `composingText`: Derived display text (e.g. "guá") — computed via ToneConverter on every state change
-public class ComposingManager: ObservableObject {
+public class ComposingManager: ObservableObject, ComposingStateProvider {
     // MARK: - Properties
 
     private let logger = DebugLogger(category: "ComposingManager")
@@ -28,7 +42,7 @@ public class ComposingManager: ObservableObject {
     @Published public var selectedCandidateIndex: Int = 0
 
     private weak var keyboardContext: KeyboardContext?
-    private weak var keyboardViewController: KeyboardViewController?
+    weak var delegate: (any ComposingDelegate)?
 
     private var inputMode: InputMode {
         SharedSettings.shared.inputMode
@@ -40,10 +54,6 @@ public class ComposingManager: ObservableObject {
 
     public func setKeyboardContext(_ context: KeyboardContext) {
         keyboardContext = context
-    }
-
-    func setKeyboardViewController(_ controller: KeyboardViewController?) {
-        keyboardViewController = controller
     }
 
     // MARK: - 組字操作
@@ -82,7 +92,7 @@ public class ComposingManager: ObservableObject {
             updateComposingState(.idle)
             selectedCandidateIndex = -1
             suggestions = []
-            keyboardViewController?.deleteBackwardManually()
+            delegate?.deleteBackward()
         } else {
             updateComposingState(.composing(raw: newRawInput))
         }
@@ -95,8 +105,8 @@ public class ComposingManager: ObservableObject {
         updateComposingState(.idle)
         selectedCandidateIndex = -1
         suggestions = []
-        keyboardViewController?.textDocumentProxy.insertText(textToInsert)
-        keyboardViewController?.state.autocompleteContext.reset()
+        delegate?.insertText(textToInsert)
+        delegate?.resetAutocompleteContext()
     }
 
     /// Commit raw input text (literal keystrokes) without tone conversion or segmentation.
@@ -108,25 +118,22 @@ public class ComposingManager: ObservableObject {
         updateComposingState(.idle)
         selectedCandidateIndex = -1
         suggestions = []
-        keyboardViewController?.textDocumentProxy.insertText(textToInsert)
-        keyboardViewController?.state.autocompleteContext.reset()
+        delegate?.insertText(textToInsert)
+        delegate?.resetAutocompleteContext()
     }
 
     public func selectSuggestion(_ suggestion: Autocomplete.Suggestion) {
         guard isComposing else { return }
 
-        if let proxy = keyboardViewController?.textDocumentProxy {
-            proxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-            proxy.unmarkText()
-            proxy.insertText(suggestion.text)
-        }
+        delegate?.clearMarkedText()
+        delegate?.insertText(suggestion.text)
 
         state = .idle
         syncStateToProperties()
         selectedCandidateIndex = -1
         suggestions = []
-        keyboardViewController?.resetAutocomplete()
-        keyboardViewController?.state.autocompleteContext.reset()
+        delegate?.resetAutocomplete()
+        delegate?.resetAutocompleteContext()
     }
 
     public func confirmSelectedCandidate(availableSuggestions: [Autocomplete.Suggestion]) -> Bool {
@@ -173,7 +180,7 @@ public class ComposingManager: ObservableObject {
             isComposing = true
             rawInput = raw
             composingText = deriveDisplay(from: raw)
-            keyboardViewController?.setMarkedText(composingText)
+            delegate?.setMarkedText(composingText)
         }
 
         keyboardContext?.isComposingText = isComposing
@@ -185,10 +192,10 @@ public class ComposingManager: ObservableObject {
 
         switch newState {
         case .idle:
-            keyboardViewController?.clearMarkedText()
-            keyboardViewController?.resetAutocomplete()
+            delegate?.clearMarkedText()
+            delegate?.resetAutocomplete()
         case .composing:
-            keyboardViewController?.performAutocomplete()
+            delegate?.performAutocomplete()
         }
     }
 }

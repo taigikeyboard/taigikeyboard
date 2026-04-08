@@ -12,6 +12,9 @@ extension KeyboardViewController {
         // 必須在任何 KeyboardSettings 存取之前呼叫
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
 
+        // One-time keyboard context config (constant, never changes)
+        state.keyboardContext.settings.spacebarLongPressBehavior = .moveInputCursor
+
         setupLiquidGlass() // 設置 Liquid Glass 支援
         setupCoreServices() // 只設置核心服務
     }
@@ -50,16 +53,20 @@ extension KeyboardViewController {
 
         services.actionHandler = handler
         actionHandler = handler
-        handler.keyboardViewController = self
 
         handler.composingManager.setKeyboardContext(state.keyboardContext)
-        handler.composingManager.setKeyboardViewController(self)
+        handler.composingManager.delegate = self
 
         // 4. 連結台語 AutocompleteService 與 handler（需要 handler 已建立）
         if let taigiService = services.autocompleteService as? AutocompleteService {
             taigiService.setComposingManager(handler.composingManager)
             taigiService.setActionHandler(handler)
         }
+
+        // 5. 初始化追蹤變數，避免 syncSettings() 首次呼叫時誤判為「改變了」
+        let settings = SharedSettings.shared
+        lastInputMode = settings.inputMode
+        lastKeyboardLayoutType = settings.keyboardLayoutType
     }
 
     /// 根據當前輸入模式設置對應的 AutocompleteService
@@ -82,25 +89,8 @@ extension KeyboardViewController {
             }
             setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(settings.inputMode.rawValue)")
         }
-
-        // 同步 ActionHandler 內部的引用（runtime 切換模式時）
-        if let handler = actionHandler {
-            handler.autocompleteService = services.autocompleteService
-        }
-    }
-
-    /// 確保新實例啟動時有乾淨的狀態
-    func ensureCleanState() {
-        // 重置 AutocompleteContext（清除任何殘留候選詞）
-        state.autocompleteContext.reset()
-
-        // 重置 ComposingManager（如果已初始化）
-        if let handler = actionHandler {
-            handler.composingManager.reset()
-        }
-
-        // 確保 TextDocumentProxy 沒有殘留的 markedText
-        clearMarkedText()
+        // Note: KeyboardKit's services.autocompleteService didSet automatically
+        // syncs handler.autocompleteService — no manual sync needed.
     }
 
     /// 同步設定
@@ -110,7 +100,7 @@ extension KeyboardViewController {
     /// 不會被外部進程的變更觸發。
     func syncSettings() {
         let settings = SharedSettings.shared
-        settings.syncToKeyboardContext(state.keyboardContext)
+        var needsAutocompleteReset = false
 
         // 檢查輸入模式是否變更，若變更則重新設置 AutocompleteService
         let currentInputMode = settings.inputMode
@@ -119,35 +109,28 @@ extension KeyboardViewController {
             setupLogger.debug("[SETTINGS] InputMode changed: \(previousMode) -> \(currentInputMode.rawValue)")
             lastInputMode = currentInputMode
             setupAutocompleteServiceForCurrentMode()
-
-            // 清除候選詞（避免顯示舊模式的候選詞）
-            state.autocompleteContext.reset()
+            needsAutocompleteReset = true
         }
 
-        // 檢查佈局類型是否變更，若變更則觸發鍵盤佈局重建
+        // 檢查佈局類型是否變更
         let currentLayoutType = settings.keyboardLayoutType
         if lastKeyboardLayoutType != currentLayoutType {
             let previousLayout = lastKeyboardLayoutType.map { String(describing: $0) } ?? "nil"
             setupLogger.debug("[SETTINGS] LayoutType changed: \(previousLayout) -> \(String(describing: currentLayoutType))")
             lastKeyboardLayoutType = currentLayoutType
+            needsAutocompleteReset = true
+        }
+
+        if needsAutocompleteReset {
             state.autocompleteContext.reset()
         }
 
-        // 讀取 KeyboardKit 持久化設定（直接從 UserDefaults）
-        let persistedValue = KeyboardSettings.store.bool(
-            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
-        )
-        // 讀取 KeyboardContext.settings 的值（@AppStorage）
-        let contextValue = state.keyboardContext.settings.isAutocapitalizationEnabled
+        // Sync auto-capitalization override from KeyboardKit settings
+        let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
 
-        let currentKeyboardCase = String(describing: state.keyboardContext.keyboardCase)
-        setupLogger.debug("[AUTOCAP][SYNC] persisted=\(persistedValue) context=\(contextValue) keyboardCase=\(currentKeyboardCase)")
+        setupLogger.debug("[AUTOCAP][SYNC] isAutoCap=\(isAutoCap) keyboardCase=\(String(describing: state.keyboardContext.keyboardCase))")
 
-        // 重新讀取 KeyboardKit 的自動大寫設定
-        // @AppStorage 會讀取最新值，但 didSet 不會被觸發
-        // 所以需要手動設定 autocapitalizationTypeOverride
-        // Only write if different from current value to avoid triggering re-renders
-        if contextValue {
+        if isAutoCap {
             if state.keyboardContext.autocapitalizationTypeOverride != nil {
                 state.keyboardContext.autocapitalizationTypeOverride = nil
             }
@@ -155,38 +138,23 @@ extension KeyboardViewController {
             if state.keyboardContext.autocapitalizationTypeOverride != Keyboard.AutocapitalizationType.none {
                 state.keyboardContext.autocapitalizationTypeOverride = Keyboard.AutocapitalizationType.none
             }
-            // 關閉自動大寫時，重置 keyboardCase 為小寫（Caps Lock 除外）
             if state.keyboardContext.keyboardCase != .capsLocked,
                state.keyboardContext.keyboardCase != .lowercased
             {
                 state.keyboardContext.keyboardCase = .lowercased
             }
         }
-
-        let currentOverride = String(describing: state.keyboardContext.autocapitalizationTypeOverride)
-        let finalKeyboardCase = String(describing: state.keyboardContext.keyboardCase)
-        setupLogger.debug("[AUTOCAP][SYNC] override=\(currentOverride) keyboardCase=\(finalKeyboardCase)")
     }
 
     /// 建立 Callout 樣式
     func createCalloutStyle() -> Callouts.CalloutStyle {
-        let fontType = SharedSettings.shared.fontType
-
-        switch fontType {
-        case .system:
+        guard let fontName = SharedSettings.shared.fontType.customFontName else {
             return Callouts.CalloutStyle.standard
-        case .openHuninn:
-            let fontName = KeyboardModels.Fonts.openHuninnFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
-            )
-        case .iansui:
-            let fontName = KeyboardModels.Fonts.iansuiFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
-            )
         }
+
+        return Callouts.CalloutStyle(
+            actionItemFont: KeyboardFont.custom(fontName, size: 20, weight: .regular),
+            inputItemFont: KeyboardFont.custom(fontName, size: 32, weight: .light),
+        )
     }
 }

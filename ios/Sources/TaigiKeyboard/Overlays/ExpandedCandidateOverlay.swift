@@ -153,7 +153,7 @@ struct ExpandedCandidateOverlay: View {
         VStack(spacing: 0) {
             Button(action: { onCollapse() }) {
                 Image(systemName: "chevron.up")
-                    .font(KeyboardModels.Fonts.globalFont(size: 20))
+                    .font(KeyboardFonts.globalFont(size: 20))
                     .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                     .frame(width: 60, height: 56, alignment: .center)
                     .background(Color.clear)
@@ -249,7 +249,7 @@ private struct ControlButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: iconName)
-                .font(KeyboardModels.Fonts.globalFont(size: 20))
+                .font(KeyboardFonts.globalFont(size: 20))
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .frame(width: 45, height: 45, alignment: .center)
                 .background(isPressed ? Color.gray.opacity(0.3) : Color.clear)
@@ -325,7 +325,7 @@ struct ExpandedCandidateGridCell: View {
         }) {
             VStack(alignment: .center, spacing: 2) {
                 Text(displayTitle)
-                    .font(KeyboardModels.Fonts.globalFont(
+                    .font(KeyboardFonts.globalFont(
                         size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped),
                     ))
                     .fontWeight(.regular)
@@ -335,7 +335,7 @@ struct ExpandedCandidateGridCell: View {
 
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                     Text(subtitle)
-                        .font(KeyboardModels.Fonts.globalFont(
+                        .font(KeyboardFonts.globalFont(
                             size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped),
                         ))
                         .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
@@ -343,7 +343,7 @@ struct ExpandedCandidateGridCell: View {
                         .truncationMode(.tail)
                 } else {
                     Text(" ")
-                        .font(KeyboardModels.Fonts.globalFont(size: CandidateViewModels.UI.secondaryFontSize))
+                        .font(KeyboardFonts.globalFont(size: CandidateViewModels.UI.secondaryFontSize))
                         .opacity(0)
                 }
             }
