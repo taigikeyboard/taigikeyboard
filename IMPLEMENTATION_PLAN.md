@@ -125,6 +125,7 @@ Branch: `rel-v3.4.8-bugfix`
 - Fixed duplicate `// MARK: - Settings Observer` in KeyboardViewController
 - Replaced WHAT comments with WHY comments in TextInput (markedText cursor positioning, two-step UITextInput clear)
 - Ran simplify 3-agent review on both Actions/ and _Keyboard/ — fixed safe issues, noted future work
+- Build fix: reverted `private(set)` (Swift `private` is file-scoped, blocks cross-file extensions), removed dead `capturedRawInput` and stale caller `rawInput:` argument
 **Noted for future** (from simplify review):
 - Stringly-typed `additionalInfo` keys → needs separate PR (touches many files)
 - Panel bools → enum consolidation in TaigiKeyboardView

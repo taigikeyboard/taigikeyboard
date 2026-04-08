@@ -18,9 +18,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
 
     /// Previous selection for word association recording
     var lastSelectedWord: String?
-    private(set) var lastSelectedRoman: String?
-    private(set) var lastSelectionTime: Int64 = 0
-    private(set) var isShowingNextWord: Bool = false
+    var lastSelectedRoman: String?
+    var lastSelectionTime: Int64 = 0
+    var isShowingNextWord: Bool = false
     private var contextTimeoutTimer: Timer?
 
     private enum NextWordConstants {
@@ -204,7 +204,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
         }
     }
 
-    private static var currentTimestampMs: Int64 {
+    static var currentTimestampMs: Int64 {
         Int64(Date().timeIntervalSince1970 * 1000)
     }
 

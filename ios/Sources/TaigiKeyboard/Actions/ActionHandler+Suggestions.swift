@@ -21,9 +21,6 @@ extension ActionHandler {
             let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
             let effectiveSwapped = isTPSLayout || wasSwapped
 
-            // Capture rawInput BEFORE selectSuggestion clears it
-            let capturedRawInput = composingManager.rawInput
-
             // Parse romanization and Hanji (漢字)
             let roman: String
             let hanzi: String?
@@ -90,7 +87,6 @@ extension ActionHandler {
                 displayText: displayText,
                 roman: roman,
                 hanzi: hanzi,
-                rawInput: capturedRawInput,
             )
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
