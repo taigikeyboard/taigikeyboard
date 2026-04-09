@@ -1,3 +1,6 @@
+// ActionHandler extension: per-key action handlers (character, space, backspace, return).
+// Each handler returns true if handled (skips KeyboardKit default).
+
 import Foundation
 import KeyboardKit
 
@@ -147,8 +150,8 @@ extension ActionHandler {
             composingManager.commitComposition()
             keyboardContext.textDocumentProxy.insertText(" ")
 
-            // Record committed text for future associations (space itself doesn't trigger NextWord)
-            updateLastSelectedWord(committedText)
+            // Record committed text for future associations (space doesn't trigger NextWord prediction)
+            processNextWord(text: committedText, roman: committedText, triggerPrediction: false)
         } else {
             keyboardContext.textDocumentProxy.insertText(" ")
         }
@@ -198,7 +201,9 @@ extension ActionHandler {
 
         let lastChar = String(trimmedText.last!)
 
-        // Update context without recording association (backspace, not selection)
+        // Intentionally NOT using processNextWord here:
+        // backspace is not a word selection — we only want to re-predict based on
+        // the last remaining character, without recording associations or compound words.
         lastSelectedWord = lastChar
         lastSelectedRoman = nil
         lastSelectionTime = Self.currentTimestampMs
@@ -225,7 +230,7 @@ extension ActionHandler {
                 // This allows English words to pass through without tone conversion
                 // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
                 composingManager.commitRawInput()
-                handleEnterNextWordPrediction(committedText: capturedRawInput)
+                processNextWord(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
             } else {
                 // Non-zero index: confirm selected candidate
                 let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []

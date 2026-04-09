@@ -132,6 +132,68 @@ Branch: `rel-v3.4.8-bugfix`
 - Prediction filtering → move from ActionHandler to NextWordService
 **Status**: ✅
 
+### Stage 8: NextWord State deduplication
+**Branch**: `refactor/ios-review-actions`
+**Goal**: Eliminate duplicated NextWord logic across 3 entry points
+**Principle**: One flow, one method — use parameters to control behavior variants
+**Rollback**: Each step = 1 commit, can `git revert` individually
+
+**Problem analysis** (5 issues identified):
+1. `handleNextWordPrediction` ≈ `handleEnterNextWordPrediction` (~90% identical code)
+2. `hanzi` parameter in `handleNextWordPrediction` is dead (unused in body)
+3. `updateNextWordState` vs `updateLastSelectedWord` — overlapping state updates
+4. `recordCompoundWordAssociations` called from 3 scattered locations
+5. Noise filtering logic duplicated across 3 entry points with slight variations
+
+**Steps**:
+
+- [ ] **Step A**: Remove dead `hanzi` parameter from `handleNextWordPrediction`
+  - Files: `ActionHandler+Suggestions.swift` (declaration + call site)
+  - Risk: Zero — parameter unused in body
+  - Commit separately
+
+- [ ] **Step B**: Unify `handleNextWordPrediction` + `handleEnterNextWordPrediction` into single method
+  - Signature: `processNextWord(text:roman:triggerPrediction:requireRomanMode:)`
+  - `handleNextWordPrediction` → `processNextWord(triggerPrediction: true, requireRomanMode: false)`
+  - `handleEnterNextWordPrediction` → `processNextWord(triggerPrediction: true, requireRomanMode: true)`
+  - Preserves sentence-end punctuation reset from original `handleNextWordPrediction`
+  - Files: `ActionHandler+Suggestions.swift`
+  - Risk: Low — same logic, just merged
+
+- [ ] **Step C**: Absorb `updateLastSelectedWord` into `processNextWord`
+  - Space path → `processNextWord(triggerPrediction: false, requireRomanMode: false)`
+  - Remove `updateLastSelectedWord`, remove `updateNextWordState` (inlined into `processNextWord`)
+  - Files: `ActionHandler.swift`, `ActionHandler+Suggestions.swift`, `ActionHandler+CharacterInput.swift`
+  - Risk: Medium — Space path semantics change slightly (adds TL normalization, consistent noise filtering)
+  - Verify: Space commit still records associations correctly
+
+**After completion**: 3 entry points → 1 method, ~50 lines removed
+
+**What was done**:
+- Removed dead `hanzi` parameter from `handleNextWordPrediction` (declaration + call site)
+- Replaced `handleNextWordPrediction` + `handleEnterNextWordPrediction` with unified `processNextWord(text:roman:requireRomanMode:triggerPrediction:)` in `ActionHandler+Suggestions.swift`
+- Replaced `updateLastSelectedWord` (Space path) call with `processNextWord(triggerPrediction: false)`
+- Removed `updateNextWordState` and `updateLastSelectedWord` from `ActionHandler.swift` (state update inlined into `processNextWord`)
+- Call sites updated: `ActionHandler+Suggestions.swift:86`, `ActionHandler+CharacterInput.swift:151,228`
+- AI-friendliness improvements:
+  - Added action flow overview to `ActionHandler` class doc (gesture → dispatch → handler → processNextWord → predict)
+  - Added file-level overview comments to all 4 extension files
+  - Added WHY comment on `handleBackspaceForNextWord` explaining why it bypasses `processNextWord` (backspace is not a word selection — no association/compound recording)
+  - Made FIXME cross-reference precise: "see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2)"
+
+**Revert guide**:
+- All changes are in one commit on `refactor/ios-review-actions`
+- To revert NextWord dedup only: restore these 3 deleted methods and their call sites:
+  - `handleNextWordPrediction(displayText:roman:)` → private in `ActionHandler+Suggestions.swift`, called from `handleSuggestionSelection`
+  - `handleEnterNextWordPrediction(committedText:)` → func in `ActionHandler+Suggestions.swift`, called from `handleReturnAction`
+  - `updateNextWordState(selectedWord:roman:)` → func in `ActionHandler.swift`, called by the above two
+  - `updateLastSelectedWord(_:roman:)` → func in `ActionHandler.swift`, called from `handleSpaceAction`
+- Then remove `processNextWord` and update call sites back
+- Comment/doc changes are independent and safe to keep even if logic is reverted
+
+**Manual test results**: All 9 scenarios passed (candidate selection → predict, Enter → predict, Space → no predict, new letter clears, punctuation resets, digit clears, backspace re-predicts, "-" preserves, 30s timeout clears)
+**Status**: ✅
+
 ---
 
 ## Android Refactoring
@@ -164,3 +226,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): Stage 6 continued — reviewed syncSettings auto-cap (clean), setupKeyboardCaseProtection (cannot simplify), removed ActionHandler `.keyboardType` debug trace; reviewed EmojiDelegate (clean), TextInput (fixed duplicated clearMarkedText in ComposingManager.selectSuggestion), TaigiKeyboardView (clean); `_Keyboard/` folder review: moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift` (flattened namespace, 30 refs across 11 files); decoupled ComposingManager from KeyboardViewController via `ComposingDelegate` protocol (Input/ no longer depends on _Keyboard/)
 - **2026-04-09** (iOS): _Keyboard/ comment & naming review — converted all Chinese comments to English (4 files), renamed `emojiSvc` → `emojiServiceStorage`, removed redundant doc comments that restated function names, trimmed verbose comments to keep only "why" context (net −29 lines)
 - **2026-04-09** (iOS): Stage 7 — Actions/ + _Keyboard/ review with simplify 3-agent scan. English comments, dead code removal (`contextTimeoutMs`, unused `rawInput` params), `private(set)` access control, `currentTimestampMs` helper, punctuation constant extraction, ComposingDelegate override fix, duplicate MARK fix
+- **2026-04-09** (iOS): Stage 8 — NextWord State deduplication. Merged 3 entry points (`handleNextWordPrediction`, `handleEnterNextWordPrediction`, `updateLastSelectedWord`) into unified `processNextWord`. Removed `updateNextWordState`. Added AI-friendly docs (action flow overview, extension file headers, WHY comments, precise FIXME refs). 9/9 manual tests passed

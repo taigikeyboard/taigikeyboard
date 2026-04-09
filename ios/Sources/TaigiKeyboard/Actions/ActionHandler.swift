@@ -1,8 +1,19 @@
 import Foundation
 import KeyboardKit
 
-/// Taigi keyboard action handler. Extensions in ActionHandler+*.swift.
-/// Handles character input/composing, suggestion selection, and NextWord prediction.
+/// Taigi keyboard action handler.
+///
+/// **Action flow** (gesture → output):
+/// 1. `handle(_:on:)` — KeyboardKit entry point, filters gesture type
+/// 2. `handleTaigiSpecificAction` — dispatches by action type
+/// 3. Per-action handlers (in extension files):
+///    - `handleCharacterInput` → composing / direct output  (KeyActions)
+///    - `handleSpaceAction` → commit composing / insert space  (KeyActions)
+///    - `handleReturnAction` → commit raw or selected candidate  (KeyActions)
+///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
+///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
+/// 4. `processNextWord` — unified entry: record association → update state → predict  (Suggestions)
+/// 5. `triggerNextWordPrediction` — async query NextWordService, update UI  (this file)
 public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionContextProvider {
     // MARK: - Properties
 
@@ -101,26 +112,21 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
 
         let handled = handleTaigiSpecificAction(action)
         if handled {
-            // Align with Android: skip autocomplete to preserve NextWord suggestions
-            // when not composing and pressing space or "-" during NextWord
-            let skipAutocomplete: Bool = {
-                if !composingManager.isComposing {
-                    if action == .space {
-                        return true
-                    }
-                    if case .character("-") = action, isShowingNextWord {
-                        return true
-                    }
-                }
-                return false
-            }()
-
-            if !skipAutocomplete {
+            if !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
             }
             return
         }
         super.handle(gesture, on: action)
+    }
+
+    /// Align with Android: skip autocomplete to preserve NextWord suggestions
+    /// when not composing and pressing space or "-" during NextWord
+    private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
+        guard !composingManager.isComposing else { return false }
+        if action == .space { return true }
+        if case .character("-") = action, isShowingNextWord { return true }
+        return false
     }
 
     override public func handle(_ suggestion: Autocomplete.Suggestion) {
@@ -138,7 +144,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
     }
 
     /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
-    /// Part of 3-layer workaround — see KeyboardViewController.swift for full context.
+    /// Part of 3-layer workaround — see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2).
     /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
     ///
     /// - Shift: always let super handle (preserves doubleTap → Caps Lock)
@@ -229,36 +235,14 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
         return NextWordConstants.sentenceEndPunctuation.contains(firstChar)
     }
 
-    func updateNextWordState(selectedWord: String, roman: String = "") {
-        lastSelectedWord = selectedWord
-        lastSelectedRoman = roman
-        lastSelectionTime = Self.currentTimestampMs
-        startContextTimeoutTimer()
-    }
-
-    /// Record previous word without triggering prediction.
-    /// Used when space commits composing text — records it for future associations.
-    func updateLastSelectedWord(_ word: String, roman: String? = nil) {
-        guard !word.isEmpty, !isNoiseText(word) else { return }
-
-        lastSelectedWord = word
-        lastSelectedRoman = roman ?? word
-        lastSelectionTime = Self.currentTimestampMs
-        recordCompoundWordAssociations(displayText: word, roman: word)
-        startContextTimeoutTimer()
-    }
-
     // MARK: - NextWord Prediction
 
     /// Trigger next-word prediction for the given word
     func triggerNextWordPrediction(for word: String, roman: String = "") {
-        // DEBUG: NextWord trace - triggerNextWordPrediction entry
         logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word)'")
 
         Task { @MainActor in
             let predictions = await NextWordService.shared.predict(word: word, roman: roman)
-
-            // DEBUG: NextWord trace - predictions returned
             logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
 
             if predictions.isEmpty {
@@ -267,36 +251,8 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
                 return
             }
 
-            // Convert to suggestions (filter out entries with empty TL in romanization mode)
-            let suggestions = predictions.compactMap { prediction -> Autocomplete.Suggestion? in
-                if !settings.isTranslateSwapped && prediction.tl.isEmpty {
-                    // DEBUG: NextWord trace - filtered out prediction with empty TL
-                    self.logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
-                    return nil
-                }
-
-                // Convert TL -> POJ for display in POJ mode
-                let roman = settings.inputMode == .poj
-                    ? RomanizationConverter.tlToPOJ(prediction.tl)
-                    : prediction.tl
-                let text = roman.isEmpty ? prediction.hanzi : roman
-                let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
-
-                return Autocomplete.Suggestion(
-                    text: text,
-                    title: text,
-                    subtitle: subtitle,
-                    additionalInfo: [
-                        "isNextWord": "true",
-                        "hanzi": prediction.hanzi,
-                        "tl": prediction.tl,
-                        "displayText": prediction.hanzi,
-                    ],
-                )
-            }
-
-            // DEBUG: NextWord trace - after filter
-            self.logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
+            let suggestions = makeSuggestions(from: predictions)
+            logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
 
             if let controller = keyboardController {
                 if suggestions.isEmpty {
@@ -311,6 +267,34 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
             } else {
                 self.logger.debug("[NEXTWORD][TRIGGER] keyboardController is nil!")
             }
+        }
+    }
+
+    /// Convert NextWord predictions to autocomplete suggestions, filtering empty TL in romanization mode
+    private func makeSuggestions(from predictions: [NextWordService.Prediction]) -> [Autocomplete.Suggestion] {
+        predictions.compactMap { prediction in
+            if !settings.isTranslateSwapped && prediction.tl.isEmpty {
+                logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
+                return nil
+            }
+
+            let roman = settings.inputMode == .poj
+                ? RomanizationConverter.tlToPOJ(prediction.tl)
+                : prediction.tl
+            let text = roman.isEmpty ? prediction.hanzi : roman
+            let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
+
+            return Autocomplete.Suggestion(
+                text: text,
+                title: text,
+                subtitle: subtitle,
+                additionalInfo: [
+                    "isNextWord": "true",
+                    "hanzi": prediction.hanzi,
+                    "tl": prediction.tl,
+                    "displayText": prediction.hanzi,
+                ],
+            )
         }
     }
 }

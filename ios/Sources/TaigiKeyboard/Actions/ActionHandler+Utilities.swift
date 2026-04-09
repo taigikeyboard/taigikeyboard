@@ -1,3 +1,5 @@
+// ActionHandler extension: input classification utilities (composing character detection).
+
 import Foundation
 
 extension ActionHandler {

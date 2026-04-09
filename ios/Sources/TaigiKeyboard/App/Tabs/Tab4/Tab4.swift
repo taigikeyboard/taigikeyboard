@@ -289,12 +289,16 @@ struct Tab4: View {
         // Clear user frequency data
         do {
             try UserFrequencyService.deleteUserDatabase()
-        } catch {}
+        } catch {
+            DebugLogger(category: "Tab4").error("Failed to delete frequency database: \(error)")
+        }
 
         // Clear user association data
         do {
             try NextWordService.deleteUserDatabase()
-        } catch {}
+        } catch {
+            DebugLogger(category: "Tab4").error("Failed to delete association database: \(error)")
+        }
 
         // Sync local state
         selectedInputMode = settings.inputMode

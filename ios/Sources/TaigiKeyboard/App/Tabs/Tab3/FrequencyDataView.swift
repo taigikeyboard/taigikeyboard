@@ -206,7 +206,9 @@ struct FrequencyDataView: View {
         do {
             try UserFrequencyService.deleteUserDatabase()
             allData = []
-        } catch {}
+        } catch {
+            DebugLogger(category: "FrequencyDataView").error("Failed to delete frequency database: \(error)")
+        }
     }
 
     // MARK: - Export/Import

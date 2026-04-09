@@ -1,3 +1,6 @@
+// ActionHandler extension: suggestion selection (candidate commit, output formatting)
+// and NextWord prediction flow (association recording, state update, prediction trigger).
+
 import Foundation
 import KeyboardKit
 
@@ -17,61 +20,19 @@ extension ActionHandler {
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {
-            let wasSwapped = settings.isTranslateSwapped
             let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
-            let effectiveSwapped = isTPSLayout || wasSwapped
+            let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
 
-            // Parse romanization and Hanji (漢字)
-            let roman: String
-            let hanzi: String?
+            let (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
+            let textToCommit = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
 
-            if isNextWordPrediction {
-                hanzi = suggestion.additionalInfo["hanzi"]
-                roman = suggestion.additionalInfo["tl"] ?? suggestion.text
-            } else if effectiveSwapped {
-                roman = suggestion.subtitle ?? suggestion.text
-                hanzi = suggestion.text
-            } else {
-                roman = suggestion.text
-                hanzi = suggestion.subtitle
-            }
+            commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
-            // Convert roman to TPS for bracket annotation when in TPS mode
-            let bracketRoman = isTPSLayout
-                ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
-                : roman
-
-            // Determine output text
-            let textToCommit: String = if settings.outputBothScripts, hanzi != nil, !hanzi!.isEmpty {
-                effectiveSwapped
-                    ? "\(hanzi!) (\(bracketRoman))"
-                    : "\(bracketRoman) (\(hanzi!))"
-            } else if effectiveSwapped, hanzi != nil, !hanzi!.isEmpty {
-                hanzi!
-            } else {
-                roman
-            }
-
-            // Commit text
-            if isNextWordPrediction {
-                keyboardContext.textDocumentProxy.insertText(textToCommit)
-            } else {
-                let modifiedSuggestion = Autocomplete.Suggestion(
-                    text: textToCommit,
-                    title: suggestion.title,
-                    subtitle: suggestion.subtitle,
-                    additionalInfo: suggestion.additionalInfo,
-                )
-                composingManager.selectSuggestion(modifiedSuggestion)
-            }
-
-            // Record usage frequency
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
             if SharedSettings.shared.frequencyRecordingEnabled {
                 UserFrequencyService.recordUsage(for: displayText)
             }
 
-            // DEBUG: NextWord trace - suggestion selection parsing
             logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
             logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
 
@@ -83,25 +44,73 @@ extension ActionHandler {
                 }
             }
 
-            handleNextWordPrediction(
-                displayText: displayText,
-                roman: roman,
-                hanzi: hanzi,
-            )
+            processNextWord(text: displayText, roman: roman)
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
         }
     }
 
+    // MARK: - Suggestion Helpers
+
+    /// Extract romanization and Hanji from suggestion based on display mode
+    private func parseRomanAndHanzi(
+        from suggestion: Autocomplete.Suggestion,
+        isNextWord: Bool,
+        effectiveSwapped: Bool,
+    ) -> (roman: String, hanzi: String?) {
+        if isNextWord {
+            (suggestion.additionalInfo["tl"] ?? suggestion.text, suggestion.additionalInfo["hanzi"])
+        } else if effectiveSwapped {
+            (suggestion.subtitle ?? suggestion.text, suggestion.text)
+        } else {
+            (suggestion.text, suggestion.subtitle)
+        }
+    }
+
+    /// Format output text based on display mode (roman, Hanji, or both scripts)
+    private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
+        let bracketRoman = isTPSLayout
+            ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
+            : roman
+
+        if settings.outputBothScripts, let hanzi, !hanzi.isEmpty {
+            return effectiveSwapped
+                ? "\(hanzi) (\(bracketRoman))"
+                : "\(bracketRoman) (\(hanzi))"
+        } else if effectiveSwapped, let hanzi, !hanzi.isEmpty {
+            return hanzi
+        } else {
+            return roman
+        }
+    }
+
+    /// Commit text via proxy (NextWord) or composing manager (regular candidate)
+    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion: Autocomplete.Suggestion) {
+        if isNextWord {
+            keyboardContext.textDocumentProxy.insertText(text)
+        } else {
+            let modifiedSuggestion = Autocomplete.Suggestion(
+                text: text,
+                title: suggestion.title,
+                subtitle: suggestion.subtitle,
+                additionalInfo: suggestion.additionalInfo,
+            )
+            composingManager.selectSuggestion(modifiedSuggestion)
+        }
+    }
+
     // MARK: - NextWord Handling
 
-    /// Trigger NextWord prediction and record association after word selection
-    private func handleNextWordPrediction(displayText: String, roman: String, hanzi: String? = nil) {
-        // DEBUG: NextWord trace - handleNextWordPrediction entry
-        logger.debug("[NEXTWORD][HANDLE] displayText='\(displayText)' roman='\(roman)' hanzi='\(hanzi ?? "nil")' isNoise=\(isNoiseText(displayText))")
+    /// Unified NextWord processing: record association, update state, optionally trigger prediction.
+    /// - `requireRomanMode`: when true, skip if in Hanji mode (Enter commits raw romanization only)
+    /// - `triggerPrediction`: when false, only record + update state (Space path)
+    func processNextWord(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
+        if requireRomanMode {
+            guard !settings.isTranslateSwapped else { return }
+        }
 
-        guard !isNoiseText(displayText) else {
-            if isSentenceEndPunctuation(displayText) {
+        guard !text.isEmpty, !isNoiseText(text) else {
+            if isSentenceEndPunctuation(text) {
                 resetNextWordContext()
             }
             return
@@ -109,26 +118,32 @@ extension ActionHandler {
 
         // Normalize romanization to TL for consistent storage and query
         // pojToTL is idempotent on TL input, safe for all modes including TPS
-        let romanTl = RomanizationConverter.pojToTL(roman)
+        let textTl = RomanizationConverter.pojToTL(roman)
         let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        // Record association with previous word
         if SharedSettings.shared.associationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
                 Task {
                     await NextWordService.shared.recordAssociation(
                         prev: prevWord,
                         prevTl: prevTl,
-                        nextHanzi: displayText,
-                        nextTl: romanTl,
+                        nextHanzi: text,
+                        nextTl: textTl,
                     )
                 }
             }
 
-            recordCompoundWordAssociations(displayText: displayText, roman: romanTl)
+            recordCompoundWordAssociations(displayText: text, roman: textTl)
         }
-        updateNextWordState(selectedWord: displayText, roman: romanTl)
-        triggerNextWordPrediction(for: displayText, roman: romanTl)
+
+        lastSelectedWord = text
+        lastSelectedRoman = textTl
+        lastSelectionTime = Self.currentTimestampMs
+        startContextTimeoutTimer()
+
+        if triggerPrediction {
+            triggerNextWordPrediction(for: text, roman: textTl)
+        }
     }
 
     func splitCompoundWord(_ word: String) -> [String] {
@@ -158,32 +173,5 @@ extension ActionHandler {
                 )
             }
         }
-    }
-
-    /// Trigger NextWord prediction after Enter commits composing (romanization mode only)
-    func handleEnterNextWordPrediction(committedText: String) {
-        guard !settings.isTranslateSwapped, !committedText.isEmpty else { return }
-        guard !isNoiseText(committedText) else { return }
-
-        // Normalize romanization to TL for consistent storage
-        let committedTl = RomanizationConverter.pojToTL(committedText)
-        let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
-
-        if SharedSettings.shared.associationRecordingEnabled {
-            if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-                Task {
-                    await NextWordService.shared.recordAssociation(
-                        prev: prevWord,
-                        prevTl: prevTl,
-                        nextHanzi: committedText,
-                        nextTl: committedTl,
-                    )
-                }
-            }
-
-            recordCompoundWordAssociations(displayText: committedText, roman: committedTl)
-        }
-        updateNextWordState(selectedWord: committedText, roman: committedTl)
-        triggerNextWordPrediction(for: committedText, roman: committedTl)
     }
 }

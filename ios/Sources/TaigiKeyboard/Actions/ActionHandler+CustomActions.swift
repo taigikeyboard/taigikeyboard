@@ -1,3 +1,5 @@
+// ActionHandler extension: custom button actions (translate toggle, open main app).
+
 import Foundation
 import KeyboardKit
 
