@@ -251,7 +251,10 @@ Branch: `rel-v3.4.8-bugfix`
 - Updated `shouldSkipAutocomplete` and character input handlers to use `nextWordController.isShowing` / `.clearDisplay()`
 - Updated `KeyboardViewController.textDidChange` → `nextWordController.resetAndClearUI()`
 - Wired `nextWordController.contextUpdater = handler` in `setupCoreServices()`
-**Line count change**: ActionHandler 300→168, +Suggestions 177→100, +KeyActions 252→239, new NextWordController 273
+- Moved `AutocompleteContextUpdater` protocol to `AutocompleteProviders.swift` (alongside other decoupling protocols)
+- Updated `docs/file-structure.md` — NextWord handler row now points to `NextWordController.swift`
+- Post-review: tightened `isNoiseText`/`isSentenceEndPunctuation` to `private`; added `Called by:` annotations on 4 public methods; unified 3× `SharedSettings.shared` → `settings` in Suggestions
+**Line count change**: ActionHandler 300→168, +Suggestions 177→100, +KeyActions 252→239, new NextWordController 267
 **New file**: `NextWord/NextWordController.swift` (user must add to Xcode project)
 **Status**: ✅
 
