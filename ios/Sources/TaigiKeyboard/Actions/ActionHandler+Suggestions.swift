@@ -19,7 +19,7 @@ extension ActionHandler {
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {
-            let isTPSLayout = SharedSettings.shared.keyboardLayoutType == .tps
+            let isTPSLayout = settings.keyboardLayoutType == .tps
             let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
 
             let (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
@@ -28,7 +28,7 @@ extension ActionHandler {
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
-            if SharedSettings.shared.frequencyRecordingEnabled {
+            if settings.frequencyRecordingEnabled {
                 UserFrequencyService.recordUsage(for: displayText)
             }
 
@@ -69,7 +69,7 @@ extension ActionHandler {
     /// Format output text based on display mode (roman, Hanji, or both scripts)
     private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
         let bracketRoman = isTPSLayout
-            ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
+            ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: settings.tpsOrMapsToER)
             : roman
 
         if settings.outputBothScripts, let hanzi, !hanzi.isEmpty {
