@@ -26,6 +26,8 @@ If the working tree is not clean (unstaged or uncommitted changes), ask the user
 
 Compare the current version's changelog file (e.g., `changelog/v3.4.8.md`) against the full diff to find missing entries. Add any changes not already documented. If this is a new version with no existing file, create a new file in `changelog/` and add it to the index in `CHANGELOG.md`.
 
+**Dedup rule**: Before adding an entry, check existing entries for semantic duplicates — if a change is already covered (even with different wording), skip it. Never create duplicate entries.
+
 **Categorization rules** (this is a cross-platform mobile project):
 - **iOS** — changes under `ios/`
 - **Android** — changes under `android/`
