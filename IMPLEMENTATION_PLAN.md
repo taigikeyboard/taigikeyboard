@@ -203,28 +203,22 @@ Branch: `rel-v3.4.8-bugfix`
 - Fixed 3 empty `catch {}` blocks in Tab4 and FrequencyDataView → DebugLogger error logging
 **Status**: ✅
 
-### Stage 9: Tab3 data view deduplication (Not Started)
-**Branch**: TBD
-**Goal**: Extract shared import/export/clear pattern from CustomDictionaryView, FrequencyDataView, AssociationDataView
-**Why**: 3 views share ~90% identical code — state vars, import handler, export handler, alert chain, loading UI, filtered data pattern, DateFormatter
+### Stage 9: Tab3 data view deduplication
+**Branch**: `refactor/ios-review-actions`
+**Goal**: Extract shared import/export pattern from CustomDictionaryView, FrequencyDataView, AssociationDataView
+**Why**: 3 views share identical import/export state vars (8 each), alert chain (3 modifiers), file importer/exporter, export filename pattern, and import handler boilerplate
+**Approach**: Option B — `ImportExportHandler` (ObservableObject) + `ImportExportModifiers` (ViewModifier)
 
-**Shared patterns to extract**:
-1. Import/export `@State` vars (10+ identical declarations per view)
-2. File import handler (security-scoped resource + parse + error handling)
-3. CSV export handler (async service call + CSVDocument + fileExporter)
-4. Alert chain (import result + export success + error — 3 `.alert` modifiers)
-5. Loading spinner section
-6. Filtered data with display limit (100 items)
-7. DateFormatter for export filename
-8. Clear/delete confirmation + action
-
-**Approach options**:
-- A: Extract shared `DataManagementViewModel` (ObservableObject) — holds all state + handlers, views only provide service-specific closures
-- B: Extract shared ViewModifier for alerts + fileImporter/fileExporter
-- C: Protocol-based — define `DataManageable` protocol, each view conforms
-
-**Risk**: Medium — touches 3 views with complex SwiftUI state. Need careful testing of import/export flows.
-**Status**: Not Started
+**What was done**:
+- Created `ImportExportHandler.swift` — `@MainActor ObservableObject` holding 8 shared `@Published` state vars + `performExport()` + `handleFileImport()` + `exportFilename(prefix:)` utility
+- Created `ImportExportModifiers` ViewModifier — attaches `.fileImporter`, `.fileExporter`, and 3 `.alert` modifiers (import result, export success, error) in one call
+- Added `View.importExportModifiers(handler:...)` convenience extension
+- Updated `FrequencyDataView`: 8 `@State` → 1 `@StateObject`, 5 modifiers → 1, removed `exportFilename()` + `exportFrequencyCSV()` + `handleFrequencyImport()`, added `exportCSV()` (returns String) + `handleImport()` (delegates to handler)
+- Updated `AssociationDataView`: same pattern — 8 `@State` → 1 `@StateObject`, removed 3 methods, added 2 simplified methods
+- Updated `CustomDictionaryView`: same pattern — 8 `@State` → 1 `@StateObject`, removed `customDictExportFilename()` + `exportCSV()` + `handleFileImport()`, export now inlines `service.exportCSV()` directly
+**New file**: `ImportExportHandler.swift` (App/Tabs/Tab3/)
+**Net change**: ~−120 lines across 3 views, +120 lines in new file (zero duplication vs 3× duplication)
+**Status**: ✅
 
 ---
 
@@ -260,3 +254,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): Stage 7 — Actions/ + _Keyboard/ review with simplify 3-agent scan. English comments, dead code removal (`contextTimeoutMs`, unused `rawInput` params), `private(set)` access control, `currentTimestampMs` helper, punctuation constant extraction, ComposingDelegate override fix, duplicate MARK fix
 - **2026-04-09** (iOS): Stage 8 — NextWord State deduplication. Merged 3 entry points (`handleNextWordPrediction`, `handleEnterNextWordPrediction`, `updateLastSelectedWord`) into unified `processNextWord`. Removed `updateNextWordState`. Added AI-friendly docs (action flow overview, extension file headers, WHY comments, precise FIXME refs). 9/9 manual tests passed
 - **2026-04-09** (iOS): Stage 8b — App/ simplify scan. Unified 3 slider rows in AppearanceSettingsView, added AppStyle spacing/cornerRadius constants (6 values), replaced hardcoded values across 6 files, fixed 3 empty catch blocks → DebugLogger. Recorded Stage 9 (Tab3 data view dedup) for future session
+- **2026-04-09** (iOS): Stage 9 — Tab3 data view deduplication. Created `ImportExportHandler` (ObservableObject + ViewModifier) extracting 8 shared @State vars, 5 shared modifiers, export/import flow. Updated CustomDictionaryView, FrequencyDataView, AssociationDataView. New file: `ImportExportHandler.swift`

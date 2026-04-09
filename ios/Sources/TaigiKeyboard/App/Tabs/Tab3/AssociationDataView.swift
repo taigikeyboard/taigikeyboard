@@ -12,16 +12,7 @@ struct AssociationDataView: View {
     @State private var filterText = ""
     @State private var showClearAlert = false
 
-    // Import/Export
-    @State private var isImporting = false
-    @State private var showFileImporter = false
-    @State private var showFileExporter = false
-    @State private var csvDocument: CSVDocument?
-    @State private var showImportResultAlert = false
-    @State private var importResultMessage = ""
-    @State private var showExportSuccessAlert = false
-    @State private var showErrorAlert = false
-    @State private var errorMessage = ""
+    @StateObject private var importExport = ImportExportHandler()
 
     private let settings = SharedSettings.shared
     private let displayLimit = 100
@@ -69,20 +60,20 @@ struct AssociationDataView: View {
                     Text(languageManager.text(Tab3Texts.associationDescription))
                         .font(AppStyle.bodyFont)
                     Button {
-                        exportAssociationCSV()
+                        importExport.performExport { try await exportCSV() }
                     } label: {
                         Label(
                             languageManager.text(Tab3Texts.associationExportCSV),
                             systemImage: "square.and.arrow.up",
                         )
                     }
-                    .disabled(isImporting)
-                    if isImporting {
+                    .disabled(importExport.isImporting)
+                    if importExport.isImporting {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                     } else {
                         Button {
-                            showFileImporter = true
+                            importExport.showFileImporter = true
                         } label: {
                             Label(
                                 languageManager.text(Tab3Texts.associationImportCSV),
@@ -160,38 +151,15 @@ struct AssociationDataView: View {
         } message: {
             Text(languageManager.text(Tab3Texts.clearAssociationMessage))
         }
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.commaSeparatedText, .plainText],
-            allowsMultipleSelection: false,
-        ) { result in
-            handleAssociationImport(result)
-        }
-        .fileExporter(
-            isPresented: $showFileExporter,
-            document: csvDocument,
-            contentType: .commaSeparatedText,
-            defaultFilename: exportFilename(),
-        ) { result in
-            if case .success = result {
-                showExportSuccessAlert = true
-            }
-        }
-        .alert(languageManager.text(Tab3Texts.associationImportCSV), isPresented: $showImportResultAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(importResultMessage)
-        }
-        .alert(languageManager.text(Tab3Texts.associationExportCSV), isPresented: $showExportSuccessAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(languageManager.text(Tab3Texts.exportSuccess))
-        }
-        .alert("Error", isPresented: $showErrorAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(errorMessage)
-        }
+        .importExportModifiers(
+            handler: importExport,
+            importAlertTitle: languageManager.text(Tab3Texts.associationImportCSV),
+            exportAlertTitle: languageManager.text(Tab3Texts.associationExportCSV),
+            exportFilename: { ImportExportHandler.exportFilename(prefix: "詞關聯紀錄") },
+            okText: languageManager.text(Tab3Texts.ok),
+            exportSuccessText: languageManager.text(Tab3Texts.exportSuccess),
+            onFileImport: { handleImport($0) },
+        )
         .task {
             await loadData()
         }
@@ -224,64 +192,34 @@ struct AssociationDataView: View {
 
     // MARK: - Export/Import
 
-    private func exportFilename() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return "詞關聯紀錄_\(f.string(from: Date())).csv"
-    }
-
-    private func exportAssociationCSV() {
-        Task {
-            let allData = await NextWordService.shared.allAssociations()
-            var csv = ""
-            for item in allData {
-                csv += "\(CSVDocument.escape(item.prevWord)),\(CSVDocument.escape(item.prevTl)),\(CSVDocument.escape(item.nextWord)),\(CSVDocument.escape(item.nextTl)),\(item.count)\n"
-            }
-            await MainActor.run {
-                csvDocument = CSVDocument(csv)
-                showFileExporter = true
-            }
+    private func exportCSV() async throws -> String {
+        let data = await NextWordService.shared.allAssociations()
+        var csv = ""
+        for item in data {
+            csv += "\(CSVDocument.escape(item.prevWord)),\(CSVDocument.escape(item.prevTl)),\(CSVDocument.escape(item.nextWord)),\(CSVDocument.escape(item.nextTl)),\(item.count)\n"
         }
+        return csv
     }
 
-    private func handleAssociationImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case let .success(urls):
-            guard let url = urls.first else { return }
-            isImporting = true
-            Task {
-                defer { Task { @MainActor in isImporting = false } }
-                do {
-                    let accessing = url.startAccessingSecurityScopedResource()
-                    defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                    let fileData = try Data(contentsOf: url)
-                    guard let csvString = String(data: fileData, encoding: .utf8) else {
-                        throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot read file"])
-                    }
-                    let entries = parseAssociationCSV(csvString)
-                    let imported = try await NextWordService.shared.batchImportAssociations(entries: entries.map {
-                        (prevWord: $0.prevWord, prevTl: $0.prevTl, nextWord: $0.nextWord, nextTl: $0.nextTl, count: $0.count)
-                    })
-                    let skipped = entries.count - imported
-                    await MainActor.run {
-                        importResultMessage = String(
-                            format: languageManager.text(Tab3Texts.associationImportResult),
-                            imported, skipped,
-                        )
-                        showImportResultAlert = true
-                    }
-                    await loadData()
-                } catch {
-                    await MainActor.run {
-                        errorMessage = error.localizedDescription
-                        showErrorAlert = true
-                    }
+    private func handleImport(_ result: Result<[URL], Error>) {
+        importExport.handleFileImport(
+            result,
+            importAction: { url in
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+                let fileData = try Data(contentsOf: url)
+                guard let csvString = String(data: fileData, encoding: .utf8) else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot read file"])
                 }
-            }
-        case let .failure(error):
-            errorMessage = error.localizedDescription
-            showErrorAlert = true
-        }
+                let entries = parseAssociationCSV(csvString)
+                let imported = try await NextWordService.shared.batchImportAssociations(entries: entries.map {
+                    (prevWord: $0.prevWord, prevTl: $0.prevTl, nextWord: $0.nextWord, nextTl: $0.nextTl, count: $0.count)
+                })
+                return (imported: imported, skipped: entries.count - imported)
+            },
+            resultFormat: languageManager.text(Tab3Texts.associationImportResult),
+            onComplete: { await loadData() },
+        )
     }
 
     // MARK: - CSV Helpers

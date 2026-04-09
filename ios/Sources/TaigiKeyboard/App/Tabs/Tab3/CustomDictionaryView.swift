@@ -16,16 +16,7 @@ struct CustomDictionaryView: View {
     @State private var hanziInput = ""
     @State private var showDeleteAllAlert = false
 
-    // Import/Export
-    @State private var isImporting = false
-    @State private var showFileImporter = false
-    @State private var showFileExporter = false
-    @State private var csvDocument: CSVDocument?
-    @State private var showImportResultAlert = false
-    @State private var importResultMessage = ""
-    @State private var showExportSuccessAlert = false
-    @State private var showErrorAlert = false
-    @State private var errorMessage = ""
+    @StateObject private var importExport = ImportExportHandler()
 
     private let settings = SharedSettings.shared
     private let service = CustomDictionaryService.shared
@@ -76,20 +67,20 @@ struct CustomDictionaryView: View {
                     Text(languageManager.text(Tab3Texts.customDictDescription))
                         .font(AppStyle.bodyFont)
                     Button {
-                        exportCSV()
+                        importExport.performExport { try await service.exportCSV() }
                     } label: {
                         Label(
                             languageManager.text(Tab3Texts.exportCSV),
                             systemImage: "square.and.arrow.up",
                         )
                     }
-                    .disabled(isImporting)
-                    if isImporting {
+                    .disabled(importExport.isImporting)
+                    if importExport.isImporting {
                         ProgressView()
                             .frame(maxWidth: .infinity)
                     } else {
                         Button {
-                            showFileImporter = true
+                            importExport.showFileImporter = true
                         } label: {
                             Label(
                                 languageManager.text(Tab3Texts.importCSV),
@@ -109,7 +100,7 @@ struct CustomDictionaryView: View {
                     } label: {
                         Text(languageManager.text(Tab3Texts.deleteAll))
                     }
-                    .disabled(isImporting)
+                    .disabled(importExport.isImporting)
                 }
 
                 // Privacy warning
@@ -203,38 +194,15 @@ struct CustomDictionaryView: View {
                 saveEntryFromAlert()
             }
         }
-        .fileImporter(
-            isPresented: $showFileImporter,
-            allowedContentTypes: [.commaSeparatedText, .plainText],
-            allowsMultipleSelection: false,
-        ) { result in
-            handleFileImport(result)
-        }
-        .fileExporter(
-            isPresented: $showFileExporter,
-            document: csvDocument,
-            contentType: .commaSeparatedText,
-            defaultFilename: customDictExportFilename(),
-        ) { result in
-            if case .success = result {
-                showExportSuccessAlert = true
-            }
-        }
-        .alert(languageManager.text(Tab3Texts.importCSV), isPresented: $showImportResultAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(importResultMessage)
-        }
-        .alert(languageManager.text(Tab3Texts.exportCSV), isPresented: $showExportSuccessAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(languageManager.text(Tab3Texts.exportSuccess))
-        }
-        .alert("Error", isPresented: $showErrorAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
-        } message: {
-            Text(errorMessage)
-        }
+        .importExportModifiers(
+            handler: importExport,
+            importAlertTitle: languageManager.text(Tab3Texts.importCSV),
+            exportAlertTitle: languageManager.text(Tab3Texts.exportCSV),
+            exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
+            okText: languageManager.text(Tab3Texts.ok),
+            exportSuccessText: languageManager.text(Tab3Texts.exportSuccess),
+            onFileImport: { handleImport($0) },
+        )
         .alert(languageManager.text(Tab3Texts.deleteAll), isPresented: $showDeleteAllAlert) {
             Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
             Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
@@ -287,58 +255,15 @@ struct CustomDictionaryView: View {
         await loadEntries()
     }
 
-    private func customDictExportFilename() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return "自訂詞庫_\(f.string(from: Date())).csv"
-    }
-
-    private func exportCSV() {
-        Task {
-            do {
-                let csv = try await service.exportCSV()
-                await MainActor.run {
-                    csvDocument = CSVDocument(csv)
-                    showFileExporter = true
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showErrorAlert = true
-                }
-            }
-        }
-    }
-
-    private func handleFileImport(_ result: Result<[URL], Error>) {
-        switch result {
-        case let .success(urls):
-            guard let url = urls.first else { return }
-            isImporting = true
-            Task {
-                defer {
-                    Task { @MainActor in isImporting = false }
-                }
-                do {
-                    let importResult = try await service.importFromFile(url: url)
-                    await MainActor.run {
-                        importResultMessage = String(
-                            format: languageManager.text(Tab3Texts.importResult),
-                            importResult.imported, importResult.skipped,
-                        )
-                        showImportResultAlert = true
-                    }
-                    await loadEntries()
-                } catch {
-                    await MainActor.run {
-                        errorMessage = error.localizedDescription
-                        showErrorAlert = true
-                    }
-                }
-            }
-        case let .failure(error):
-            errorMessage = error.localizedDescription
-            showErrorAlert = true
-        }
+    private func handleImport(_ result: Result<[URL], Error>) {
+        importExport.handleFileImport(
+            result,
+            importAction: { url in
+                let result = try await service.importFromFile(url: url)
+                return (imported: result.imported, skipped: result.skipped)
+            },
+            resultFormat: languageManager.text(Tab3Texts.importResult),
+            onComplete: { await loadEntries() },
+        )
     }
 }
