@@ -76,7 +76,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     }
 
     /// Set selection context provider (for context boost)
-    func setActionHandler(_ provider: any SelectionContextProvider) {
+    func setSelectionContextProvider(_ provider: any SelectionContextProvider) {
         selectionContext = provider
     }
 

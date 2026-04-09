@@ -1,7 +1,7 @@
 import Foundation
 import KeyboardKit
 
-/// Taigi keyboard action handler.
+/// Taigi keyboard action handler — dispatches keyboard gestures to per-action handlers.
 ///
 /// **Action flow** (gesture → output):
 /// 1. `handle(_:on:)` — KeyboardKit entry point, filters gesture type
@@ -12,38 +12,18 @@ import KeyboardKit
 ///    - `handleReturnAction` → commit raw or selected candidate  (KeyActions)
 ///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
 ///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
-/// 4. `processNextWord` — unified entry: record association → update state → predict  (Suggestions)
-/// 5. `triggerNextWordPrediction` — async query NextWordService, update UI  (this file)
-public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionContextProvider {
+/// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
+public class ActionHandler: KeyboardAction.StandardActionHandler {
     // MARK: - Properties
 
     let logger = DebugLogger(category: "ActionHandler")
 
     let settings = SharedSettings.shared
     public let composingManager = ComposingManager()
+    let nextWordController = NextWordController()
 
     /// Distinguishes space-drag (cursor move) from space-tap (insert space)
     private var isSpaceDragInProgress = false
-
-    // MARK: - NextWord State
-
-    /// Previous selection for word association recording
-    var lastSelectedWord: String?
-    var lastSelectedRoman: String?
-    var lastSelectionTime: Int64 = 0
-    var isShowingNextWord: Bool = false
-    private var contextTimeoutTimer: Timer?
-
-    private enum NextWordConstants {
-        /// Max interval between selections to record association
-        static let associationTimeoutMs: Int64 = 10000
-        /// Context timeout — clears NextWord state after inactivity
-        static let contextTimeoutSeconds: TimeInterval = 30.0
-        /// Sentence-end punctuation resets NextWord context
-        static let sentenceEndPunctuation = Set<Character>(["。", "！", "？", ".", "!", "?"])
-        /// Noise punctuation — superset of sentenceEndPunctuation, used by isNoiseText()
-        static let noisePunctuation = "。！？.!?，,、；;：:「」『』\"\"\u{2018}\u{2019}（）()【】[]{}—–-～~…·"
-    }
 
     // MARK: - Action Dispatch
 
@@ -125,7 +105,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
     private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
         guard !composingManager.isComposing else { return false }
         if action == .space { return true }
-        if case .character("-") = action, isShowingNextWord { return true }
+        if case .character("-") = action, nextWordController.isShowing { return true }
         return false
     }
 
@@ -173,128 +153,16 @@ public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionConte
             logger.debug("[CASE][tryChange] skipped (autoCap=false)")
         }
     }
+}
 
-    // MARK: - NextWord State Management
+// MARK: - AutocompleteContextUpdater
 
-    func resetNextWordContext() {
-        lastSelectedWord = nil
-        lastSelectedRoman = nil
-        lastSelectionTime = 0
-        isShowingNextWord = false
-        stopContextTimeoutTimer()
+extension ActionHandler: AutocompleteContextUpdater {
+    func setNextWordSuggestions(_ suggestions: [Autocomplete.Suggestion]) {
+        keyboardController?.state.autocompleteContext.suggestionsFromService = suggestions
     }
 
-    func startContextTimeoutTimer() {
-        stopContextTimeoutTimer()
-        contextTimeoutTimer = Timer.scheduledTimer(
-            withTimeInterval: NextWordConstants.contextTimeoutSeconds,
-            repeats: false,
-        ) { [weak self] _ in
-            self?.handleContextTimeout()
-        }
-    }
-
-    func stopContextTimeoutTimer() {
-        contextTimeoutTimer?.invalidate()
-        contextTimeoutTimer = nil
-    }
-
-    private func handleContextTimeout() {
-        logger.debug("[NEXTWORD] Context timeout - resetting")
-        let wasShowingNextWord = isShowingNextWord
-        resetNextWordContext()
-        if wasShowingNextWord {
-            DispatchQueue.main.async { [weak self] in
-                self?.keyboardController?.state.autocompleteContext.reset()
-            }
-        }
-    }
-
-    static var currentTimestampMs: Int64 {
-        Int64(Date().timeIntervalSince1970 * 1000)
-    }
-
-    /// Whether to record word association (selection interval < 10s)
-    func shouldRecordAssociation() -> Bool {
-        guard lastSelectedWord != nil else { return false }
-        return (Self.currentTimestampMs - lastSelectionTime) < NextWordConstants.associationTimeoutMs
-    }
-
-    /// Noise filter: punctuation, whitespace, pure digits don't trigger NextWord
-    func isNoiseText(_ text: String) -> Bool {
-        guard let firstChar = text.first else { return true }
-        let punctuation = NextWordConstants.noisePunctuation
-        if punctuation.contains(firstChar) { return true }
-        if firstChar.isWhitespace { return true }
-        if text.allSatisfy({ $0.isASCII && $0.isNumber }) { return true }
-        return false
-    }
-
-    func isSentenceEndPunctuation(_ text: String) -> Bool {
-        guard let firstChar = text.first else { return false }
-        return NextWordConstants.sentenceEndPunctuation.contains(firstChar)
-    }
-
-    // MARK: - NextWord Prediction
-
-    /// Trigger next-word prediction for the given word
-    func triggerNextWordPrediction(for word: String, roman: String = "") {
-        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word)'")
-
-        Task { @MainActor in
-            let predictions = await NextWordService.shared.predict(word: word, roman: roman)
-            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
-
-            if predictions.isEmpty {
-                isShowingNextWord = false
-                keyboardController?.state.autocompleteContext.reset()
-                return
-            }
-
-            let suggestions = makeSuggestions(from: predictions)
-            logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
-
-            if let controller = keyboardController {
-                if suggestions.isEmpty {
-                    isShowingNextWord = false
-                    controller.state.autocompleteContext.reset()
-                } else {
-                    controller.state.autocompleteContext.suggestionsFromService = suggestions
-                    isShowingNextWord = true
-                    startContextTimeoutTimer()
-                }
-                self.logger.debug("[NEXTWORD][TRIGGER] isShowingNextWord=\(self.isShowingNextWord)")
-            } else {
-                self.logger.debug("[NEXTWORD][TRIGGER] keyboardController is nil!")
-            }
-        }
-    }
-
-    /// Convert NextWord predictions to autocomplete suggestions, filtering empty TL in romanization mode
-    private func makeSuggestions(from predictions: [NextWordService.Prediction]) -> [Autocomplete.Suggestion] {
-        predictions.compactMap { prediction in
-            if !settings.isTranslateSwapped && prediction.tl.isEmpty {
-                logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
-                return nil
-            }
-
-            let roman = settings.inputMode == .poj
-                ? RomanizationConverter.tlToPOJ(prediction.tl)
-                : prediction.tl
-            let text = roman.isEmpty ? prediction.hanzi : roman
-            let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
-
-            return Autocomplete.Suggestion(
-                text: text,
-                title: text,
-                subtitle: subtitle,
-                additionalInfo: [
-                    "isNextWord": "true",
-                    "hanzi": prediction.hanzi,
-                    "tl": prediction.tl,
-                    "displayText": prediction.hanzi,
-                ],
-            )
-        }
+    func resetNextWordSuggestions() {
+        keyboardController?.state.autocompleteContext.reset()
     }
 }

@@ -131,13 +131,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
 
-        if let handler = actionHandler {
-            handler.resetNextWordContext()
-
-            if handler.isShowingNextWord {
-                state.autocompleteContext.reset()
-            }
-        }
+        actionHandler?.nextWordController.resetAndClearUI()
     }
 
     /// FIXME: Workaround layer 1/2 for KeyboardKit 10 auto-capitalization override.

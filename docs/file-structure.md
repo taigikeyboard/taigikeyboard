@@ -81,7 +81,7 @@
 | Custom dict model | `CustomDictionaryEntry.swift` | (in `DictionaryModels.kt`) |
 | Search result | `DictionarySearchResult.swift` | `DictionarySearchResult.kt` |
 | Next word | `NextWordService.swift` | `NextWordService.kt` |
-| Next word handler | (inline in ActionHandler) | `NextWordHandler.kt` |
+| Next word handler | `NextWordController.swift` | `NextWordHandler.kt` |
 | Backup | `BackupService.swift` | `BackupService.kt` |
 
 ### Tone

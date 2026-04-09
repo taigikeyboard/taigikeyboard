@@ -238,23 +238,22 @@ Branch: `rel-v3.4.8-bugfix`
 
 ### Stage 2: (TBD — depends on Stage 1 completion)
 
----
-
-## Future Work (post-v3.4.8)
-
-### NextWord decoupling from ActionHandler
-**Problem**: ActionHandler 同時負責「鍵盤動作分派」和「NextWord 控制層」兩個職責。NextWord 在 ActionHandler 中佔 ~14 methods/properties + 1 enum（超過一半程式碼）。`NextWordService` 只負責資料層（DB query），控制層邏輯全部散在 ActionHandler。
-
-**耦合點**:
-1. NextWord 狀態（4 vars + timer）住在 ActionHandler
-2. NextWord 需讀 `settings`（inputMode, isTranslateSwapped）
-3. NextWord 需寫 `keyboardController.state.autocompleteContext` 更新 UI
-4. `shouldSkipAutocomplete()` 讀取 `isShowingNextWord`
-5. 四個 action handler（select、space、enter、backspace）都呼叫 NextWord
-
-**方向**: 提取 `NextWordController`，持有狀態 + 預測 + 關聯記錄邏輯。ActionHandler 只在動作發生時呼叫 `nextWordController.process(...)`。
-
-**涉及檔案**: `ActionHandler.swift`（狀態 + 預測）、`ActionHandler+Suggestions.swift`（processNextWord + compound word）、`ActionHandler+KeyActions.swift`（呼叫端）
+### Stage 10: NextWord decoupling from ActionHandler ✅
+**Goal**: Extract NextWord prediction logic from ActionHandler into dedicated `NextWordController`
+**Why**: ActionHandler mixed two responsibilities — keyboard action dispatch and NextWord prediction control (~44% of code, ~340 lines). Violates SRP, hard to test NextWord logic independently.
+**What was done**:
+- Created `NextWord/NextWordController.swift` — holds all NextWord state (5 vars), constants, prediction logic, association recording, compound word handling, and timer management
+- Defined `AutocompleteContextUpdater` protocol — decouples UI state updates (`setNextWordSuggestions`/`resetNextWordSuggestions`) from KeyboardKit controller hierarchy
+- ActionHandler conforms to `AutocompleteContextUpdater`, forwarding to `keyboardController.state.autocompleteContext`
+- NextWordController conforms to `SelectionContextProvider` (moved from ActionHandler) — provides `lastSelectedWord` to AutocompleteService for context boost
+- Renamed `AutocompleteService.setActionHandler()` → `setSelectionContextProvider()` (clearer intent)
+- Updated all 4 ActionHandler entry points: select → `.process()`, space → `.process(triggerPrediction: false)`, return → `.process(requireRomanMode: true)`, backspace → `.rePredictAfterBackspace(lastChar:)` / `.resetAndClearUI()`
+- Updated `shouldSkipAutocomplete` and character input handlers to use `nextWordController.isShowing` / `.clearDisplay()`
+- Updated `KeyboardViewController.textDidChange` → `nextWordController.resetAndClearUI()`
+- Wired `nextWordController.contextUpdater = handler` in `setupCoreServices()`
+**Line count change**: ActionHandler 300→168, +Suggestions 177→100, +KeyActions 252→239, new NextWordController 273
+**New file**: `NextWord/NextWordController.swift` (user must add to Xcode project)
+**Status**: ✅
 
 ---
 
@@ -273,3 +272,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): Stage 8 — NextWord State deduplication. Merged 3 entry points (`handleNextWordPrediction`, `handleEnterNextWordPrediction`, `updateLastSelectedWord`) into unified `processNextWord`. Removed `updateNextWordState`. Added AI-friendly docs (action flow overview, extension file headers, WHY comments, precise FIXME refs). 9/9 manual tests passed
 - **2026-04-09** (iOS): Stage 8b — App/ simplify scan. Unified 3 slider rows in AppearanceSettingsView, added AppStyle spacing/cornerRadius constants (6 values), replaced hardcoded values across 6 files, fixed 3 empty catch blocks → DebugLogger. Recorded Stage 9 (Tab3 data view dedup) for future session
 - **2026-04-09** (iOS): Stage 9 — Tab3 data view deduplication. Created `ImportExportHandler` (ObservableObject + ViewModifier) extracting 8 shared @State vars, 5 shared modifiers, export/import flow. Updated CustomDictionaryView, FrequencyDataView, AssociationDataView. New file: `ImportExportHandler.swift`
+- **2026-04-10** (iOS): Stage 10 — NextWord decoupling from ActionHandler. Extracted `NextWordController` (273 lines) holding all NextWord state, prediction, association recording, timer management. ActionHandler reduced from 300→168 lines. Defined `AutocompleteContextUpdater` protocol for UI decoupling. Renamed `setActionHandler` → `setSelectionContextProvider`. Updated all 4 entry points + `textDidChange`

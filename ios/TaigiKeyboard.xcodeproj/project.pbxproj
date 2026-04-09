@@ -268,6 +268,12 @@
 			path = "../libs/marisa-trie/lib/marisa";
 			sourceTree = SOURCE_ROOT;
 		};
+		F3E176912F8824050017FB6D /* NextWord */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = NextWord;
+			path = Sources/TaigiKeyboard/NextWord;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -302,6 +308,7 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F3E176912F8824050017FB6D /* NextWord */,
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
@@ -372,6 +379,7 @@
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
+				F3E176912F8824050017FB6D /* NextWord */,
 			);
 			name = TaigiKeyboard;
 			packageProductDependencies = (
@@ -411,6 +419,7 @@
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
+				F3E176912F8824050017FB6D /* NextWord */,
 			);
 			name = TaigiKeyboardExtension;
 			packageProductDependencies = (

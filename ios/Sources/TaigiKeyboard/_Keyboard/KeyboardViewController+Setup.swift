@@ -50,11 +50,12 @@ extension KeyboardViewController {
 
         handler.composingManager.setKeyboardContext(state.keyboardContext)
         handler.composingManager.delegate = self
+        handler.nextWordController.contextUpdater = handler
 
         // 4. Connect Taigi AutocompleteService with handler (requires handler already created)
         if let taigiService = services.autocompleteService as? AutocompleteService {
             taigiService.setComposingManager(handler.composingManager)
-            taigiService.setActionHandler(handler)
+            taigiService.setSelectionContextProvider(handler.nextWordController)
         }
 
         // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
@@ -74,10 +75,10 @@ extension KeyboardViewController {
             let autocompleteService = AutocompleteService()
             services.autocompleteService = autocompleteService
 
-            // Connect AutocompleteService with ComposingManager / ActionHandler
+            // Connect AutocompleteService with ComposingManager / NextWordController
             if let handler = actionHandler {
                 autocompleteService.setComposingManager(handler.composingManager)
-                autocompleteService.setActionHandler(handler)
+                autocompleteService.setSelectionContextProvider(handler.nextWordController)
             }
             setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(settings.inputMode.rawValue)")
         }

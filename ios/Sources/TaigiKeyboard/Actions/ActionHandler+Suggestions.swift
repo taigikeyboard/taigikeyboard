@@ -1,5 +1,4 @@
-// ActionHandler extension: suggestion selection (candidate commit, output formatting)
-// and NextWord prediction flow (association recording, state update, prediction trigger).
+// ActionHandler extension: suggestion selection (candidate commit, output formatting).
 
 import Foundation
 import KeyboardKit
@@ -33,8 +32,8 @@ extension ActionHandler {
                 UserFrequencyService.recordUsage(for: displayText)
             }
 
-            logger.debug("[NEXTWORD][SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
-            logger.debug("[NEXTWORD][SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
+            logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
+            logger.debug("[SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
 
             // Romanization mode: auto-space (unless trailing hyphen)
             // TPS mode disables auto-space (effectiveSwapped is true for TPS)
@@ -44,7 +43,7 @@ extension ActionHandler {
                 }
             }
 
-            processNextWord(text: displayText, roman: roman)
+            nextWordController.process(text: displayText, roman: roman)
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
         }
@@ -96,82 +95,6 @@ extension ActionHandler {
                 additionalInfo: suggestion.additionalInfo,
             )
             composingManager.selectSuggestion(modifiedSuggestion)
-        }
-    }
-
-    // MARK: - NextWord Handling
-
-    /// Unified NextWord processing: record association, update state, optionally trigger prediction.
-    /// - `requireRomanMode`: when true, skip if in Hanji mode (Enter commits raw romanization only)
-    /// - `triggerPrediction`: when false, only record + update state (Space path)
-    func processNextWord(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
-        if requireRomanMode {
-            guard !settings.isTranslateSwapped else { return }
-        }
-
-        guard !text.isEmpty, !isNoiseText(text) else {
-            if isSentenceEndPunctuation(text) {
-                resetNextWordContext()
-            }
-            return
-        }
-
-        // Normalize romanization to TL for consistent storage and query
-        // pojToTL is idempotent on TL input, safe for all modes including TPS
-        let textTl = RomanizationConverter.pojToTL(roman)
-        let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
-
-        if SharedSettings.shared.associationRecordingEnabled {
-            if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-                Task {
-                    await NextWordService.shared.recordAssociation(
-                        prev: prevWord,
-                        prevTl: prevTl,
-                        nextHanzi: text,
-                        nextTl: textTl,
-                    )
-                }
-            }
-
-            recordCompoundWordAssociations(displayText: text, roman: textTl)
-        }
-
-        lastSelectedWord = text
-        lastSelectedRoman = textTl
-        lastSelectionTime = Self.currentTimestampMs
-        startContextTimeoutTimer()
-
-        if triggerPrediction {
-            triggerNextWordPrediction(for: text, roman: textTl)
-        }
-    }
-
-    func splitCompoundWord(_ word: String) -> [String] {
-        guard !word.isEmpty else { return [] }
-        return word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
-    }
-
-    /// Record associations between parts of compound words (e.g. tshit-niû → tshit, niû)
-    func recordCompoundWordAssociations(displayText: String, roman: String) {
-        let parts = splitCompoundWord(displayText)
-        let romanParts = splitCompoundWord(roman)
-
-        guard parts.count > 1 else { return }
-
-        Task {
-            for i in 0 ..< (parts.count - 1) {
-                let prevPart = parts[i]
-                let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
-                let nextPart = parts[i + 1]
-                let nextRoman = romanParts.indices.contains(i + 1) ? romanParts[i + 1] : ""
-
-                await NextWordService.shared.recordAssociation(
-                    prev: prevPart,
-                    prevTl: prevPartRoman,
-                    nextHanzi: nextPart,
-                    nextTl: nextRoman,
-                )
-            }
         }
     }
 }

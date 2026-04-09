@@ -61,9 +61,8 @@ extension ActionHandler {
         // Standalone digit: commit directly without entering composing mode.
         // Digits only enter composing as tone markers appended to existing romanization.
         if !composingManager.isComposing, finalChar.first?.isNumber == true {
-            if isShowingNextWord {
-                isShowingNextWord = false
-                keyboardController?.state.autocompleteContext.reset()
+            if nextWordController.isShowing {
+                nextWordController.clearDisplay()
             }
             keyboardContext.textDocumentProxy.insertText(finalChar)
             return true
@@ -79,14 +78,13 @@ extension ActionHandler {
                 }
             } else {
                 // Not composing: check NextWord state
-                if finalChar == "-", isShowingNextWord {
+                if finalChar == "-", nextWordController.isShowing {
                     // "-" during NextWord: output directly, keep NextWord suggestions
                     keyboardContext.textDocumentProxy.insertText("-")
                     logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
                 } else {
-                    if isShowingNextWord {
-                        isShowingNextWord = false
-                        keyboardController?.state.autocompleteContext.reset()
+                    if nextWordController.isShowing {
+                        nextWordController.clearDisplay()
                     }
                     composingManager.startComposing(with: finalChar)
                 }
@@ -151,7 +149,7 @@ extension ActionHandler {
             keyboardContext.textDocumentProxy.insertText(" ")
 
             // Record committed text for future associations (space doesn't trigger NextWord prediction)
-            processNextWord(text: committedText, roman: committedText, triggerPrediction: false)
+            nextWordController.process(text: committedText, roman: committedText, triggerPrediction: false)
         } else {
             keyboardContext.textDocumentProxy.insertText(" ")
         }
@@ -185,30 +183,19 @@ extension ActionHandler {
         return true
     }
 
-    /// Re-predict NextWord after backspace based on last remaining character
+    /// Re-predict NextWord after backspace based on last remaining character.
+    /// Extracts context from text proxy, then delegates to NextWordController.
     private func handleBackspaceForNextWord() {
         let textBeforeCursor = keyboardContext.textDocumentProxy.documentContextBeforeInput ?? ""
         let trimmedText = textBeforeCursor.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmedText.isEmpty {
-            let wasShowingNextWord = isShowingNextWord
-            resetNextWordContext()
-            if wasShowingNextWord {
-                keyboardController?.state.autocompleteContext.reset()
-            }
+            nextWordController.resetAndClearUI()
             return
         }
 
-        let lastChar = String(trimmedText.last!)
-
-        // Intentionally NOT using processNextWord here:
-        // backspace is not a word selection — we only want to re-predict based on
-        // the last remaining character, without recording associations or compound words.
-        lastSelectedWord = lastChar
-        lastSelectedRoman = nil
-        lastSelectionTime = Self.currentTimestampMs
-
-        triggerNextWordPrediction(for: lastChar)
+        // Re-predict based on last remaining character (not a word selection — no association recording)
+        nextWordController.rePredictAfterBackspace(lastChar: String(trimmedText.last!))
     }
 
     // MARK: - Return
@@ -230,7 +217,7 @@ extension ActionHandler {
                 // This allows English words to pass through without tone conversion
                 // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
                 composingManager.commitRawInput()
-                processNextWord(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
+                nextWordController.process(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
             } else {
                 // Non-zero index: confirm selected candidate
                 let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
