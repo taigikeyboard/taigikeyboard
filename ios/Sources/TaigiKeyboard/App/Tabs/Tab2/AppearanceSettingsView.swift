@@ -99,9 +99,10 @@ struct AppearanceSettingsView: View {
                         defaultColor: Self.defaultKeyboardBackground,
                         keyPath: \.backgroundColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.keyHeight),
                         value: $keyHeightScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyHeightScale,
                         onChanged: { settings.keyHeightScale = $0 },
                     )
@@ -127,14 +128,27 @@ struct AppearanceSettingsView: View {
                         defaultColor: Self.defaultSpecialKeyFill,
                         keyPath: \.specialKeyFillColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.keyFontSize),
                         value: $keyFontSizeScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyFontSizeScale,
                         onChanged: { settings.keyFontSizeScale = $0 },
                     )
-                    radiusSliderRow()
-                    borderWidthSliderRow()
+                    sliderRow(
+                        label: languageManager.text(Tab2Texts.keyCornerRadius),
+                        value: $keyCornerRadius,
+                        in: radiusRange, step: radiusStep,
+                        defaultValue: Self.defaultKeyCornerRadius,
+                        onChanged: { settings.keyCornerRadius = $0 },
+                    )
+                    sliderRow(
+                        label: languageManager.text(Tab2Texts.keyBorderWidth),
+                        value: $keyBorderWidth,
+                        in: borderWidthRange, step: borderWidthStep,
+                        defaultValue: Self.defaultKeyBorderWidth,
+                        onChanged: { settings.keyBorderWidth = $0 },
+                    )
                 }
 
                 // Candidate section: colors + text size
@@ -151,9 +165,10 @@ struct AppearanceSettingsView: View {
                         defaultColor: Self.defaultCandidateBackground,
                         keyPath: \.candidateBackgroundColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.candidateTextSize),
                         value: $candidateTextSizeScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultCandidateTextSizeScale,
                         onChanged: { settings.candidateTextSizeScale = $0 },
                     )
@@ -184,12 +199,14 @@ struct AppearanceSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Scale Slider Row
+    // MARK: - Slider Row
 
-    private func scaleSliderRow(
+    private func sliderRow(
         label: String,
         value: Binding<Double>,
-        defaultValue: Double = 1.0,
+        in range: ClosedRange<Double>,
+        step: Double,
+        defaultValue: Double,
         onChanged: @escaping (Double) -> Void,
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -207,59 +224,9 @@ struct AppearanceSettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            Slider(value: value, in: scaleRange, step: scaleStep)
+            Slider(value: value, in: range, step: step)
                 .onChange(of: value.wrappedValue) { _, newValue in
                     onChanged(newValue)
-                }
-        }
-    }
-
-    // MARK: - Radius Slider Row
-
-    private func radiusSliderRow() -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(languageManager.text(Tab2Texts.keyCornerRadius))
-                Spacer()
-                if keyCornerRadius != Self.defaultKeyCornerRadius {
-                    Button {
-                        keyCornerRadius = Self.defaultKeyCornerRadius
-                        settings.keyCornerRadius = Self.defaultKeyCornerRadius
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Slider(value: $keyCornerRadius, in: radiusRange, step: radiusStep)
-                .onChange(of: keyCornerRadius) { _, newValue in
-                    settings.keyCornerRadius = newValue
-                }
-        }
-    }
-
-    // MARK: - Border Width Slider Row
-
-    private func borderWidthSliderRow() -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(languageManager.text(Tab2Texts.keyBorderWidth))
-                Spacer()
-                if keyBorderWidth != Self.defaultKeyBorderWidth {
-                    Button {
-                        keyBorderWidth = Self.defaultKeyBorderWidth
-                        settings.keyBorderWidth = Self.defaultKeyBorderWidth
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Slider(value: $keyBorderWidth, in: borderWidthRange, step: borderWidthStep)
-                .onChange(of: keyBorderWidth) { _, newValue in
-                    settings.keyBorderWidth = newValue
                 }
         }
     }

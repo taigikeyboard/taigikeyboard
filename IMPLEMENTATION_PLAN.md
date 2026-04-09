@@ -194,6 +194,38 @@ Branch: `rel-v3.4.8-bugfix`
 **Manual test results**: All 9 scenarios passed (candidate selection → predict, Enter → predict, Space → no predict, new letter clears, punctuation resets, digit clears, backspace re-predicts, "-" preserves, 30s timeout clears)
 **Status**: ✅
 
+### Stage 8b: App/ simplify scan fixes
+**Branch**: `refactor/ios-review-actions`
+**What was done**:
+- Unified 3 slider row methods → single `sliderRow(label:value:in:step:defaultValue:onChanged:)` in AppearanceSettingsView
+- Added spacing/cornerRadius constants to AppStyle: `horizontalPadding`(16), `innerHorizontalPadding`(12), `verticalPadding`(8), `cardCornerRadius`(12), `previewCornerRadius`(10), `smallCornerRadius`(8)
+- Replaced hardcoded values across 6 files: SearchBar, Tab2, Tab3, CustomDictionaryView, FAQDetailView, SetupGuideView
+- Fixed 3 empty `catch {}` blocks in Tab4 and FrequencyDataView → DebugLogger error logging
+**Status**: ✅
+
+### Stage 9: Tab3 data view deduplication (Not Started)
+**Branch**: TBD
+**Goal**: Extract shared import/export/clear pattern from CustomDictionaryView, FrequencyDataView, AssociationDataView
+**Why**: 3 views share ~90% identical code — state vars, import handler, export handler, alert chain, loading UI, filtered data pattern, DateFormatter
+
+**Shared patterns to extract**:
+1. Import/export `@State` vars (10+ identical declarations per view)
+2. File import handler (security-scoped resource + parse + error handling)
+3. CSV export handler (async service call + CSVDocument + fileExporter)
+4. Alert chain (import result + export success + error — 3 `.alert` modifiers)
+5. Loading spinner section
+6. Filtered data with display limit (100 items)
+7. DateFormatter for export filename
+8. Clear/delete confirmation + action
+
+**Approach options**:
+- A: Extract shared `DataManagementViewModel` (ObservableObject) — holds all state + handlers, views only provide service-specific closures
+- B: Extract shared ViewModifier for alerts + fileImporter/fileExporter
+- C: Protocol-based — define `DataManageable` protocol, each view conforms
+
+**Risk**: Medium — touches 3 views with complex SwiftUI state. Need careful testing of import/export flows.
+**Status**: Not Started
+
 ---
 
 ## Android Refactoring
@@ -227,3 +259,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): _Keyboard/ comment & naming review — converted all Chinese comments to English (4 files), renamed `emojiSvc` → `emojiServiceStorage`, removed redundant doc comments that restated function names, trimmed verbose comments to keep only "why" context (net −29 lines)
 - **2026-04-09** (iOS): Stage 7 — Actions/ + _Keyboard/ review with simplify 3-agent scan. English comments, dead code removal (`contextTimeoutMs`, unused `rawInput` params), `private(set)` access control, `currentTimestampMs` helper, punctuation constant extraction, ComposingDelegate override fix, duplicate MARK fix
 - **2026-04-09** (iOS): Stage 8 — NextWord State deduplication. Merged 3 entry points (`handleNextWordPrediction`, `handleEnterNextWordPrediction`, `updateLastSelectedWord`) into unified `processNextWord`. Removed `updateNextWordState`. Added AI-friendly docs (action flow overview, extension file headers, WHY comments, precise FIXME refs). 9/9 manual tests passed
+- **2026-04-09** (iOS): Stage 8b — App/ simplify scan. Unified 3 slider rows in AppearanceSettingsView, added AppStyle spacing/cornerRadius constants (6 values), replaced hardcoded values across 6 files, fixed 3 empty catch blocks → DebugLogger. Recorded Stage 9 (Tab3 data view dedup) for future session

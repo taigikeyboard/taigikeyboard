@@ -57,6 +57,28 @@ enum AppStyle {
         appFont(size: captionSize)
     }
 
+    // MARK: - Spacing
+
+    /// Standard horizontal padding for sections and cards (16pt).
+    static let horizontalPadding: CGFloat = 16
+
+    /// Inner horizontal padding for compact elements like search bars (12pt).
+    static let innerHorizontalPadding: CGFloat = 12
+
+    /// Standard vertical padding between elements (8pt).
+    static let verticalPadding: CGFloat = 8
+
+    // MARK: - Corner Radius
+
+    /// Card/container corner radius (12pt).
+    static let cardCornerRadius: CGFloat = 12
+
+    /// Preview/thumbnail corner radius (10pt).
+    static let previewCornerRadius: CGFloat = 10
+
+    /// Small image/badge corner radius (8pt).
+    static let smallCornerRadius: CGFloat = 8
+
     // MARK: - Colors
 
     /// Interactive blue for icons, links, info buttons. Android equivalent: primary.

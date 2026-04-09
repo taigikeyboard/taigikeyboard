@@ -53,7 +53,7 @@ struct FAQDetailView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
             }
 
         case .navigation, .link, .none:

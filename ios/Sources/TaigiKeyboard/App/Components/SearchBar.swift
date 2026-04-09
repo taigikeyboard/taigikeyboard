@@ -31,12 +31,12 @@ struct SearchBar: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, AppStyle.innerHorizontalPadding)
+            .padding(.vertical, AppStyle.verticalPadding)
             .background(Color(.tertiarySystemFill))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .clipShape(RoundedRectangle(cornerRadius: AppStyle.cardCornerRadius, style: .continuous))
+            .padding(.horizontal, AppStyle.horizontalPadding)
+            .padding(.vertical, AppStyle.verticalPadding)
         }
         .background(Color(.systemBackground))
         .padding(.bottom, 8)

@@ -33,7 +33,7 @@ struct Tab2: View {
                         }
                         .padding()
                         .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: AppStyle.cardCornerRadius, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal)
@@ -123,10 +123,10 @@ private struct LayoutOptionCard: View {
                 // Preview image with rounded corners (KeyboardKit theme style)
                 ZStack {
                     previewImage
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .clipShape(RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius))
 
                     if isDisabled {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
                             .fill(Color.black.opacity(0.5))
 
                         Text(subtitle ?? "")
@@ -137,7 +137,7 @@ private struct LayoutOptionCard: View {
                             .padding(.vertical, 6)
                             .background(Color.black.opacity(0.7), in: Capsule())
                     } else if isSelected {
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
                             .fill(Color.black.opacity(0.25))
 
                         Circle()
@@ -151,7 +151,7 @@ private struct LayoutOptionCard: View {
                     }
                 }
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10)
+                    RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
                         .stroke(isSelected && !isDisabled ? AppStyle.accentBlue : Color.clear, lineWidth: 2.5),
                 )
                 .frame(width: cardWidth)

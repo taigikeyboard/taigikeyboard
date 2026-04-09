@@ -157,8 +157,8 @@ struct Tab3: View {
                                 .font(AppStyle.captionFont)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
+                                .padding(.horizontal, AppStyle.horizontalPadding)
+                                .padding(.vertical, AppStyle.verticalPadding)
                         } else if !searchVM.results.isEmpty {
                             Divider()
                             ScrollView {
@@ -200,12 +200,12 @@ struct Tab3: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, AppStyle.innerHorizontalPadding)
+                    .padding(.vertical, AppStyle.verticalPadding)
                     .background(Color(.tertiarySystemFill))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.cardCornerRadius, style: .continuous))
+                    .padding(.horizontal, AppStyle.horizontalPadding)
+                    .padding(.vertical, AppStyle.verticalPadding)
                 }
                 .background(Color(.systemBackground))
                 .padding(.bottom, 8)
@@ -264,7 +264,7 @@ struct Tab3: View {
                     .font(AppStyle.captionFont)
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, AppStyle.horizontalPadding)
             .padding(.vertical, 10)
         }
         .buttonStyle(.plain)

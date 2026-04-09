@@ -132,7 +132,7 @@ private struct SetupGuideStepRow: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
             }
         }
         .padding(.vertical, 4)

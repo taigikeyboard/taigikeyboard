@@ -71,7 +71,7 @@ struct CustomDictionaryView: View {
                     Image("csv_example")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
                         .listRowSeparator(.hidden)
                     Text(languageManager.text(Tab3Texts.customDictDescription))
                         .font(AppStyle.bodyFont)
