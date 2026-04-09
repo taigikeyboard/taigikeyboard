@@ -1,24 +1,24 @@
+// ActionHandler extension: per-key action handlers (character, space, backspace, return).
+// Each handler returns true if handled (skips KeyboardKit default).
+
 import Foundation
 import KeyboardKit
 
-/// 字元輸入處理
-///
-/// 處理字元、空白、退格、Return 鍵的輸入邏輯。
 extension ActionHandler {
-    // MARK: - 字元輸入
+    // MARK: - Character Input
 
-    /// 處理字元輸入（含組字邏輯）
+    /// Returns true if handled (skip KeyboardKit default)
     func handleCharacterInput(_ char: String) -> Bool {
         let currentCase = keyboardContext.keyboardCase
         let autoCap = keyboardContext.settings.isAutocapitalizationEnabled
 
-        logger.debug("[AUTOCAP][INPUT] char='\(char, privacy: .public)' keyboardCase=\(String(describing: currentCase), privacy: .public) autoCap=\(autoCap, privacy: .public)")
+        logger.debug("[AUTOCAP][INPUT] char='\(char)' keyboardCase=\(String(describing: currentCase)) autoCap=\(autoCap)")
 
         guard !char.isEmpty else {
             return false
         }
 
-        // 使用 CaseTransformer 統一處理大小寫轉換
+        // Unified case transformation
         let processedChar = CaseTransformer.transformForInput(
             char,
             keyboardCase: currentCase,
@@ -44,19 +44,19 @@ extension ActionHandler {
             finalChar = processedChar
         }
 
-        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar, privacy: .public)'")
+        logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar)'")
 
-        // 英文模式：直接插入字元，不進入組字邏輯
+        // English mode: insert directly, skip composing
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.insertText(finalChar)
-            // 處理單次 Shift 復位（Caps Lock 除外）
+            // Reset single-shift (preserve Caps Lock)
             if keyboardContext.keyboardCase == .uppercased {
                 keyboardContext.keyboardCase = .lowercased
             }
             return true
         }
 
-        // 以下為台語模式（POJ/TL/TPS）的組字邏輯
+        // Taigi mode (POJ/TL/TPS) composing logic
 
         // Standalone digit: commit directly without entering composing mode.
         // Digits only enter composing as tone markers appended to existing romanization.
@@ -69,7 +69,7 @@ extension ActionHandler {
             return true
         }
 
-        // 組字字元（字母、TPS 符號、連字符號、˙）→ 進入組字
+        // Composing characters (letters, TPS symbols, hyphen, ˙) → enter composing
         if isComposingCharacter(finalChar) {
             if composingManager.isComposing {
                 if finalChar == "-" {
@@ -78,9 +78,9 @@ extension ActionHandler {
                     composingManager.appendCharacter(finalChar)
                 }
             } else {
-                // 非組字模式：檢查是否正在顯示 NextWord 候選詞
+                // Not composing: check NextWord state
                 if finalChar == "-", isShowingNextWord {
-                    // NextWord 模式下輸入 "-"：直接輸出，保留 NextWord 候選詞
+                    // "-" during NextWord: output directly, keep NextWord suggestions
                     keyboardContext.textDocumentProxy.insertText("-")
                     logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
                 } else {
@@ -92,10 +92,10 @@ extension ActionHandler {
                 }
             }
         } else if composingManager.isComposing, finalChar.first?.isNumber == true {
-            // 組字中輸入數字 → 作為聲調標記追加
+            // Digit while composing → tone marker
             composingManager.appendCharacter(finalChar)
         } else {
-            // 非組字字元（標點、符號、箭頭等）→ 確認組字後直接輸出
+            // Non-composing char (punctuation, symbols, etc.) → commit then output
             if composingManager.isComposing {
                 composingManager.commitComposition()
             }
@@ -103,7 +103,7 @@ extension ActionHandler {
             return true
         }
 
-        // 處理單次 Shift 復位（Caps Lock 除外）
+        // Reset single-shift (preserve Caps Lock)
         if keyboardContext.keyboardCase == .uppercased {
             keyboardContext.keyboardCase = .lowercased
         }
@@ -111,10 +111,10 @@ extension ActionHandler {
         return true
     }
 
-    // MARK: - 空白鍵
+    // MARK: - Space
 
     func handleSpaceAction() -> Bool {
-        // 拖曳移動游標時不處理
+        // Ignore during cursor-drag
         if let keyboardController {
             let dragOffset = keyboardController.services.spacebarDragGestureHandler.currentDragTextPositionOffset
 
@@ -123,7 +123,7 @@ extension ActionHandler {
             }
         }
 
-        // 英文模式：直接插入空白
+        // English mode: insert space directly
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.insertText(" ")
             return true
@@ -142,39 +142,37 @@ extension ActionHandler {
             }
         }
 
-        // 以下為台語模式（POJ/TL）的邏輯
+        // Taigi mode (POJ/TL)
         if composingManager.isComposing {
-            // 在確認之前先取得組字文字
             let committedText = composingManager.composingText
 
-            // 確認當前組字 + 插入空白（不選擇候選詞）
+            // Commit composing + insert space (no candidate selection)
             composingManager.commitComposition()
             keyboardContext.textDocumentProxy.insertText(" ")
 
-            // 更新 lastSelectedWord，讓後續輸入可以建立關聯
-            // （空白本身不觸發 NextWord 預測，但記錄已輸出的文字）
-            updateLastSelectedWord(committedText)
+            // Record committed text for future associations (space doesn't trigger NextWord prediction)
+            processNextWord(text: committedText, roman: committedText, triggerPrediction: false)
         } else {
             keyboardContext.textDocumentProxy.insertText(" ")
         }
         return true
     }
 
-    // MARK: - 退格鍵
+    // MARK: - Backspace
 
     func handleBackspaceAction() -> Bool {
         let caseBefore = String(describing: keyboardContext.keyboardCase)
-        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore, privacy: .public)")
+        logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore)")
 
-        // 英文模式：直接刪除
+        // English mode: delete directly
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.deleteBackward()
             let caseAfter = String(describing: keyboardContext.keyboardCase)
-            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
+            logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter)")
             return true
         }
 
-        // 以下為台語模式（POJ/TL）的邏輯
+        // Taigi mode
         if composingManager.isComposing {
             composingManager.deleteBackward()
         } else {
@@ -183,17 +181,16 @@ extension ActionHandler {
         }
 
         let caseAfter = String(describing: keyboardContext.keyboardCase)
-        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter, privacy: .public)")
+        logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter)")
         return true
     }
 
-    /// 退格後重新預測 NextWord（根據剩餘文字的最後一個字）
+    /// Re-predict NextWord after backspace based on last remaining character
     private func handleBackspaceForNextWord() {
         let textBeforeCursor = keyboardContext.textDocumentProxy.documentContextBeforeInput ?? ""
         let trimmedText = textBeforeCursor.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmedText.isEmpty {
-            // 文字已清空，清除 NextWord 候選詞並重置上下文
             let wasShowingNextWord = isShowingNextWord
             resetNextWordContext()
             if wasShowingNextWord {
@@ -202,28 +199,28 @@ extension ActionHandler {
             return
         }
 
-        // 取得最後一個字進行預測
         let lastChar = String(trimmedText.last!)
 
-        // 更新上下文（但不記錄關聯，因為是退格操作）
+        // Intentionally NOT using processNextWord here:
+        // backspace is not a word selection — we only want to re-predict based on
+        // the last remaining character, without recording associations or compound words.
         lastSelectedWord = lastChar
         lastSelectedRoman = nil
-        lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
+        lastSelectionTime = Self.currentTimestampMs
 
-        // 觸發 NextWord 預測
         triggerNextWordPrediction(for: lastChar)
     }
 
-    // MARK: - Return 鍵
+    // MARK: - Return
 
     func handleReturnAction() -> Bool {
-        // 英文模式：直接插入換行
+        // English mode: insert newline directly
         if settings.inputMode == .english {
             keyboardContext.textDocumentProxy.insertText("\n")
             return true
         }
 
-        // 以下為台語模式（POJ/TL）的邏輯
+        // Taigi mode
         if composingManager.isComposing {
             // Capture rawInput before commit clears it
             let capturedRawInput = composingManager.rawInput
@@ -233,14 +230,14 @@ extension ActionHandler {
                 // This allows English words to pass through without tone conversion
                 // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
                 composingManager.commitRawInput()
-                handleEnterNextWordPrediction(committedText: capturedRawInput, rawInput: capturedRawInput)
+                processNextWord(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
             } else {
-                // 選中候選詞，確認該候選詞
+                // Non-zero index: confirm selected candidate
                 let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
                 _ = composingManager.confirmSelectedCandidate(availableSuggestions: suggestions)
             }
 
-            // 羅馬字模式：自動加空白（字尾非連字符時）
+            // Romanization mode: auto-space (unless trailing hyphen)
             if settings.isAutoSpaceEnabled, !settings.isTranslateSwapped {
                 if !capturedRawInput.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")

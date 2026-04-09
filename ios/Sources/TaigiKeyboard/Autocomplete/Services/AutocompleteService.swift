@@ -1,6 +1,5 @@
 import Foundation
 import KeyboardKit
-import OSLog
 
 /// 自動完成服務
 ///
@@ -60,30 +59,25 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// 共用設定管理器
     private let settings = SharedSettings.shared
 
-    /// 組字管理器的弱引用
-    private weak var composingManager: ComposingManager?
+    /// Composing state provider (decoupled from ComposingManager)
+    private weak var composingState: (any ComposingStateProvider)?
 
-    /// ActionHandler 的弱引用（用於取得 lastSelectedWord 進行上下文提升）
-    private weak var actionHandler: ActionHandler?
+    /// Selection context provider (decoupled from ActionHandler)
+    private weak var selectionContext: (any SelectionContextProvider)?
 
     /// 日誌記錄器
-    let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "AutocompleteService",
-    )
+    let logger = DebugLogger(category: "AutocompleteService")
 
     // MARK: - 公開介面
 
-    /// 設定組字管理器
-    /// - Parameter manager: 組字管理器實例
-    func setComposingManager(_ manager: ComposingManager) {
-        composingManager = manager
+    /// Set composing state provider
+    func setComposingManager(_ provider: any ComposingStateProvider) {
+        composingState = provider
     }
 
-    /// 設定 ActionHandler（用於存取 lastSelectedWord 進行上下文候選詞提升）
-    /// - Parameter handler: ActionHandler 實例
-    func setActionHandler(_ handler: ActionHandler) {
-        actionHandler = handler
+    /// Set selection context provider (for context boost)
+    func setActionHandler(_ provider: any SelectionContextProvider) {
+        selectionContext = provider
     }
 
     /// 自動完成核心方法
@@ -98,20 +92,18 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
         do {
             // 取得 rawInput（搜尋用）和 composingText（顯示用）
-            guard let composingManager,
-                  composingManager.isComposing,
-                  !composingManager.rawInput.isEmpty
+            guard let composingState,
+                  composingState.isComposing,
+                  !composingState.rawInput.isEmpty
             else {
                 // 沒有組字狀態時不顯示候選詞
                 return Autocomplete.Result(inputText: text, suggestions: [])
             }
 
-            let rawInput = composingManager.rawInput // 搜尋用（如 gua2）
-            let displayText = composingManager.composingText // 顯示用（如 guá）
+            let rawInput = composingState.rawInput // 搜尋用（如 gua2）
+            let displayText = composingState.composingText // 顯示用（如 guá）
 
-            #if DEBUG
-                logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput, privacy: .public)' display='\(displayText, privacy: .public)'")
-            #endif
+            logger.debug("[AUTOCOMPLETE] rawInput='\(rawInput)' display='\(displayText)'")
 
             let inputMode = settings.inputMode
             // 使用 rawInput 判斷（因為 displayText 可能已移除聲調數字，如 soo1 → soo）
@@ -148,9 +140,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
             return Autocomplete.Result(inputText: text, suggestions: suggestions)
         } catch {
-            #if DEBUG
-                logger.error("[AUTOCOMPLETE] failed for text '\(text, privacy: .public)': \(error.localizedDescription, privacy: .public)")
-            #endif
+            logger.error("[AUTOCOMPLETE] failed for text '\(text)': \(error.localizedDescription)")
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
     }
@@ -205,7 +195,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// Uses `lastSelectedWord` from ActionHandler to query NextWordService for bigram predictions,
     /// then partitions candidates: context-matched first, then the rest (preserving original order within each group).
     private func applyContextBoost(words: [TaigiWord]) async -> [TaigiWord] {
-        guard let lastWord = actionHandler?.lastSelectedWord,
+        guard let lastWord = selectionContext?.lastSelectedWord,
               !lastWord.isEmpty
         else {
             return words

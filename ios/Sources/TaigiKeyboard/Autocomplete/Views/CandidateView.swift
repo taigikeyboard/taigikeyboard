@@ -1,5 +1,4 @@
 import KeyboardKit
-import OSLog
 import SwiftUI
 
 /// 候選詞列視圖
@@ -40,25 +39,21 @@ struct CandidateView: View {
     @State private var isToolShortcutsExpanded = false
 
     // MARK: - 環境變數
+
     /// 候選詞視圖樣式
     @Environment(\.candidateViewStyle) private var style
     /// 系統顏色模式（淺色/深色）
     @Environment(\.colorScheme) private var colorScheme
 
-    #if DEBUG
-        private let logger = Logger(
-            subsystem: LexiconConstants.Logging.subsystem,
-            category: "CandidateView",
-        )
-    #endif
+    private let logger = DebugLogger(category: "CandidateView")
 
     /// iOS 版本兼容的候選詞列上邊距
     /// iOS 26+ 使用較大負偏移，舊版本使用較小負偏移以避免顯示問題
     private var topOffset: CGFloat {
         if #available(iOS 26.0, *) {
-            return -6  // iOS 26+ 保持現有設定
+            -6 // iOS 26+ 保持現有設定
         } else {
-            return -2  // iOS 26 以下增加 padding（減少負偏移）
+            -2 // iOS 26 以下增加 padding（減少負偏移）
         }
     }
 
@@ -133,11 +128,9 @@ struct CandidateView: View {
                                     }
                                 }
                                 .padding(.horizontal, CandidateViewModels.Spacing.small)
-                                .onChange(of: selectedCandidateIndex) { oldIndex, newIndex in
+                                .onChange(of: selectedCandidateIndex) { _, newIndex in
                                     if newIndex >= 0 {
-                                        #if DEBUG
                                         logger.debug("[SCROLL] scrollTo candidate index: \(newIndex)")
-                                        #endif
                                         let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
                                         withAnimation(.easeInOut(duration: animationDuration)) {
                                             proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
@@ -159,7 +152,7 @@ struct CandidateView: View {
                             expandState.toggle()
                         }) {
                             Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
-                                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                                .font(KeyboardFonts.globalFont(size: 18))
                                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                                 .scaleEffect(1.2)
                                 .frame(width: 42, height: CandidateViewModels.UI.height)
@@ -188,7 +181,7 @@ struct CandidateView: View {
         }
         .onChange(of: isComposing) { _, newValue in
             // Auto-collapse toolbar when user starts typing
-            if SharedSettings.shared.isToolbarAutoCollapse && newValue && isToolShortcutsExpanded {
+            if SharedSettings.shared.isToolbarAutoCollapse, newValue, isToolShortcutsExpanded {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     isToolShortcutsExpanded = false
                 }
@@ -207,7 +200,7 @@ struct CandidateView: View {
             }
         }) {
             Image(systemName: "plus")
-                .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .rotationEffect(.degrees(isToolShortcutsExpanded ? 45 : 0))
@@ -226,7 +219,7 @@ struct CandidateView: View {
             onSymbolTap()
         }) {
             Image(systemName: "number")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -243,7 +236,7 @@ struct CandidateView: View {
     private var globeButton: some View {
         Keyboard.NextKeyboardButton {
             Image(systemName: "globe")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -261,7 +254,7 @@ struct CandidateView: View {
             onDismissKeyboard()
         }) {
             Image(systemName: "keyboard.chevron.compact.down")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -280,7 +273,7 @@ struct CandidateView: View {
             onLayoutTap()
         }) {
             Image(systemName: "photo")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -299,7 +292,7 @@ struct CandidateView: View {
             onSettingsTap()
         }) {
             Image(systemName: "gearshape")
-                .font(KeyboardModels.Fonts.globalFont(size: 18))
+                .font(KeyboardFonts.globalFont(size: 18))
                 .fontWeight(.light)
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .scaleEffect(1.2)
@@ -329,7 +322,7 @@ struct CandidateView: View {
             onInputModeChange(mode)
         }) {
             Text(label)
-                .font(KeyboardModels.Fonts.globalFont(size: 16))
+                .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
                 .lineLimit(1)
@@ -338,7 +331,7 @@ struct CandidateView: View {
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(isSelected ? Color.accentColor : Color.clear)
+                        .fill(isSelected ? Color.accentColor : Color.clear),
                 )
                 .animation(nil, value: isSelected)
         }
@@ -366,7 +359,6 @@ struct CandidateView: View {
 }
 
 extension CandidateView {
-
     /// 計算候選詞中的常用詞集合
     /// 根據使用頻率動態計算閾值，選出最常用的詞彙
     /// - Parameter suggestions: 候選詞列表
@@ -419,7 +411,7 @@ extension CandidateView {
                 for: colorScheme,
                 isSelected: isSelected,
                 isPressed: isPressed,
-                isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
+                isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius),
             )
         }
 
@@ -433,8 +425,8 @@ extension CandidateView {
             }) {
                 VStack(alignment: .center, spacing: 0) {
                     Text(displayTitle)
-                        .font(KeyboardModels.Fonts.globalFont(
-                            size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped)
+                        .font(KeyboardFonts.globalFont(
+                            size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped),
                         ))
                         .fontWeight(.regular)
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
@@ -442,8 +434,8 @@ extension CandidateView {
 
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
-                            .font(KeyboardModels.Fonts.globalFont(
-                                size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped)
+                            .font(KeyboardFonts.globalFont(
+                                size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped),
                             ))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                             .lineLimit(1)
@@ -456,7 +448,7 @@ extension CandidateView {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .fill(backgroundColor)
                     .padding(.horizontal, -2) // 減少水平擴展，縮小點擊區域
-                    .padding(.vertical, -4)   // 減少垂直擴展，縮小點擊區域
+                    .padding(.vertical, -4), // 減少垂直擴展，縮小點擊區域
             )
             .offset(y: 5) // 讓整個候選詞項目背景往下移動
             .scaleEffect(isPressed ? 0.95 : 1.0)

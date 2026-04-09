@@ -1,12 +1,6 @@
 import KeyboardKit
-import OSLog
 
-#if DEBUG
-    private let layoutLogger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "CustomLayoutService",
-    )
-#endif
+private let layoutLogger = DebugLogger(category: "CustomLayoutService")
 
 /// KeyboardKit 10 相容的 Layout Service
 ///
@@ -22,9 +16,7 @@ class CustomLayoutService {
         let converter = LayoutConverter(context: context, config: config)
         let keyDefs = selectLayout(for: context)
 
-        #if DEBUG
-            layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType), privacy: .public) rows=\(keyDefs.count)")
-        #endif
+        layoutLogger.debug("[LAYOUT] keyboardType=\(String(describing: context.keyboardType)) rows=\(keyDefs.count)")
 
         return converter.convert(keyDefs)
     }

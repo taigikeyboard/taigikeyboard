@@ -1,19 +1,12 @@
 import Foundation
-import OSLog
 
-#if DEBUG
-private let toneLogger = Logger(
-    subsystem: LexiconConstants.Logging.subsystem,
-    category: "ToneConverter"
-)
-#endif
+private let toneLogger = DebugLogger(category: "ToneConverter")
 
 /// Tone converter
 ///
 /// Coordinates POJ and TL tone conversion through TaigiPhonetics engine.
 /// POJ preprocessing (oo→o͘, nn→ⁿ) is handled here since it depends on SharedSettings.
 enum ToneConverter {
-
     /// Convert input to tone marks
     /// - Parameters:
     ///   - input: Input string (may contain multiple hyphen-separated syllables)
@@ -33,11 +26,9 @@ enum ToneConverter {
 
         let adjusted = ToneUtilities.adjustNasalMarkerCase(result)
 
-        #if DEBUG
         if input != adjusted {
-            toneLogger.debug("[TONE] input='\(input, privacy: .public)' mode=\(String(describing: mode), privacy: .public) -> '\(adjusted, privacy: .public)'")
+            toneLogger.debug("[TONE] input='\(input)' mode=\(String(describing: mode)) -> '\(adjusted)'")
         }
-        #endif
 
         return adjusted
     }

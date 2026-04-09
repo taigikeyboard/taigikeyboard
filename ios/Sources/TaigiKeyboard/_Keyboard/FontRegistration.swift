@@ -1,16 +1,12 @@
 import CoreText
 import Foundation
-import OSLog
 
 /// Registers custom fonts at runtime when they are not in the current bundle.
 ///
 /// Used by the keyboard extension to load fonts from the containing app bundle,
 /// avoiding the need to duplicate font files in both targets.
 enum FontRegistration {
-    private static let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "FontRegistration",
-    )
+    private static let logger = DebugLogger(category: "FontRegistration")
 
     private static let fontFileNames = [
         "jf-openhuninn-2.1.ttf",
@@ -36,9 +32,7 @@ enum FontRegistration {
             let fontURL = containingAppURL.appendingPathComponent(fileName)
 
             guard FileManager.default.fileExists(atPath: fontURL.path) else {
-                #if DEBUG
-                    logger.warning("[FONT] Not found: \(fileName, privacy: .public)")
-                #endif
+                logger.warning("[FONT] Not found: \(fileName)")
                 continue
             }
 
@@ -49,15 +43,13 @@ enum FontRegistration {
                 &error,
             )
 
-            #if DEBUG
-                if success {
-                    logger.debug("[FONT] Registered: \(fileName, privacy: .public)")
-                } else if let cfError = error?.takeRetainedValue() {
-                    // kCTFontManagerErrorAlreadyRegistered is expected on extension reuse
-                    let nsError = cfError as Error
-                    logger.debug("[FONT] \(fileName, privacy: .public): \(nsError.localizedDescription, privacy: .public)")
-                }
-            #endif
+            if success {
+                logger.debug("[FONT] Registered: \(fileName)")
+            } else if let cfError = error?.takeRetainedValue() {
+                // kCTFontManagerErrorAlreadyRegistered is expected on extension reuse
+                let nsError = cfError as Error
+                logger.debug("[FONT] \(fileName): \(nsError.localizedDescription)")
+            }
         }
     }
 }

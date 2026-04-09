@@ -1,10 +1,8 @@
 import KeyboardKit
-import OSLog
 import SwiftUI
 
 /// Overlay that displays expanded candidate grid with navigation controls
 struct ExpandedCandidateOverlay: View {
-
     let suggestions: [Autocomplete.Suggestion]
     let frequentWords: Set<String>
     let selectedCandidateIndex: Int
@@ -25,12 +23,7 @@ struct ExpandedCandidateOverlay: View {
         style.itemStyle.cornerRadius == 9 && style.backgroundColor == nil
     }
 
-    #if DEBUG
-        private let logger = Logger(
-            subsystem: LexiconConstants.Logging.subsystem,
-            category: "ExpandedCandidateOverlay",
-        )
-    #endif
+    private let logger = DebugLogger(category: "ExpandedCandidateOverlay")
 
     var body: some View {
         if isExpanded {
@@ -39,7 +32,7 @@ struct ExpandedCandidateOverlay: View {
                     .frame(
                         maxWidth: .infinity,
                         minHeight: geometry.size.height,
-                        maxHeight: .infinity
+                        maxHeight: .infinity,
                     )
                     .padding(.top, -4)
             }
@@ -57,7 +50,7 @@ struct ExpandedCandidateOverlay: View {
     /// Arrange candidates into rows using pixel-based measurement
     private var arrangedRows: [[CandidateRowItem]] {
         let controlPanelWidth: CGFloat = 60
-        let horizontalPadding: CGFloat = 16  // 8 left + 8 right
+        let horizontalPadding: CGFloat = 16 // 8 left + 8 right
         let availableWidth = UIScreen.main.bounds.width - controlPanelWidth - horizontalPadding
         let itemSpacing = CandidateViewModels.UI.expandedItemSpacing
 
@@ -69,7 +62,7 @@ struct ExpandedCandidateOverlay: View {
             let cellWidth = CandidateCellHelper.measuredCellWidth(for: suggestion)
             let spacingNeeded = currentRow.isEmpty ? 0 : itemSpacing
 
-            if !currentRow.isEmpty && (currentRowWidth + spacingNeeded + cellWidth) > availableWidth {
+            if !currentRow.isEmpty, (currentRowWidth + spacingNeeded + cellWidth) > availableWidth {
                 rows.append(currentRow)
                 currentRow = []
                 currentRowWidth = 0
@@ -141,7 +134,7 @@ struct ExpandedCandidateOverlay: View {
                     onTap: { suggestion in
                         onSuggestionTap(suggestion)
                         onCollapse()
-                    }
+                    },
                 )
                 .id("candidate_\(item.originalIndex)")
                 .frame(minWidth: item.measuredWidth, maxWidth: .infinity)
@@ -160,7 +153,7 @@ struct ExpandedCandidateOverlay: View {
         VStack(spacing: 0) {
             Button(action: { onCollapse() }) {
                 Image(systemName: "chevron.up")
-                    .font(KeyboardModels.Fonts.globalFont(size: 20))
+                    .font(KeyboardFonts.globalFont(size: 20))
                     .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                     .frame(width: 60, height: 56, alignment: .center)
                     .background(Color.clear)
@@ -175,7 +168,7 @@ struct ExpandedCandidateOverlay: View {
                     isPressed: $isUpButtonPressed,
                     action: {
                         scrollToPreviousPage { id in proxy.scrollTo(id, anchor: .top) }
-                    }
+                    },
                 )
 
                 ControlButton(
@@ -184,7 +177,7 @@ struct ExpandedCandidateOverlay: View {
                     isPressed: $isDownButtonPressed,
                     action: {
                         scrollToNextPage { id in proxy.scrollTo(id, anchor: .top) }
-                    }
+                    },
                 )
 
                 // Hide translate button for TPS layout (always hanzi-only)
@@ -193,7 +186,7 @@ struct ExpandedCandidateOverlay: View {
                         iconName: "translate",
                         yOffset: 25,
                         isPressed: $isTranslateButtonPressed,
-                        action: { onTranslateToggle() }
+                        action: { onTranslateToggle() },
                     )
                 }
             }
@@ -256,7 +249,7 @@ private struct ControlButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: iconName)
-                .font(KeyboardModels.Fonts.globalFont(size: 20))
+                .font(KeyboardFonts.globalFont(size: 20))
                 .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                 .frame(width: 45, height: 45, alignment: .center)
                 .background(isPressed ? Color.gray.opacity(0.3) : Color.clear)
@@ -298,7 +291,6 @@ struct FixedColumnDivider: View {
     }
 }
 
-
 /// Grid cell displaying a single candidate in the expanded overlay
 struct ExpandedCandidateGridCell: View {
     let suggestion: Autocomplete.Suggestion
@@ -323,7 +315,7 @@ struct ExpandedCandidateGridCell: View {
             for: colorScheme,
             isSelected: isSelected,
             isPressed: isPressed,
-            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius)
+            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius),
         )
     }
 
@@ -333,8 +325,8 @@ struct ExpandedCandidateGridCell: View {
         }) {
             VStack(alignment: .center, spacing: 2) {
                 Text(displayTitle)
-                    .font(KeyboardModels.Fonts.globalFont(
-                        size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped)
+                    .font(KeyboardFonts.globalFont(
+                        size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped),
                     ))
                     .fontWeight(.regular)
                     .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
@@ -343,15 +335,15 @@ struct ExpandedCandidateGridCell: View {
 
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                     Text(subtitle)
-                        .font(KeyboardModels.Fonts.globalFont(
-                            size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped)
+                        .font(KeyboardFonts.globalFont(
+                            size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped),
                         ))
                         .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } else {
                     Text(" ")
-                        .font(KeyboardModels.Fonts.globalFont(size: CandidateViewModels.UI.secondaryFontSize))
+                        .font(KeyboardFonts.globalFont(size: CandidateViewModels.UI.secondaryFontSize))
                         .opacity(0)
                 }
             }
@@ -361,7 +353,7 @@ struct ExpandedCandidateGridCell: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(backgroundColor)
                     .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 2),
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .contentShape(Rectangle())

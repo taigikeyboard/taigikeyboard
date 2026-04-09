@@ -1,10 +1,9 @@
-import KeyboardKit
 import Foundation
+import KeyboardKit
 
 // MARK: - Cleanup Operations
 
 extension KeyboardViewController {
-    /// 執行完整清理
     func performCleanup() {
         guard !isCleanedUp else {
             return
@@ -12,41 +11,25 @@ extension KeyboardViewController {
 
         isCleanedUp = true
 
-        // 移除設定監聽器
-        removeSettingsObserver()
-
-        // 清理輸入狀態
         cleanupInputState()
-
-        // 清理服務
         cleanupServices()
 
-        if let emojiService = emojiSvc {
+        if let emojiService = emojiServiceStorage {
             emojiService.delegate = nil
-            emojiSvc = nil
+            emojiServiceStorage = nil
         }
     }
 
-    /// 清理服務連結
     func cleanupServices() {
-        if let handler = actionHandler {
-            handler.keyboardViewController = nil
-        }
         actionHandler = nil
     }
 
-    /// 清理所有輸入相關狀態，確保鍵盤重新啟動時是乾淨的
+    /// Ensure clean state for next keyboard activation
     func cleanupInputState() {
-        // 1. 清理 ComposingManager 狀態
         if let handler = actionHandler {
             handler.composingManager.reset()
         }
-
-        // 2. 清理 TextDocumentProxy 的 markedText
-        textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-        textDocumentProxy.unmarkText()
-
-        // 3. 清理 AutocompleteContext
+        clearMarkedText()
         state.autocompleteContext.reset()
     }
 }

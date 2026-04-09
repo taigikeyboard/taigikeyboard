@@ -1,14 +1,14 @@
-import Foundation
-import SwiftUI
-import KeyboardKit
 import Combine
+import Foundation
+import KeyboardKit
+import SwiftUI
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 
-/// 設定引導 ViewModel
+/// Setup guide view model.
 ///
-/// 管理鍵盤啟用狀態檢查和設定引導流程。
+/// Checks keyboard activation status and controls setup guide flow.
 @MainActor
 class SetupGuideViewModel: ObservableObject {
     @Published var isKeyboardEnabled = false
@@ -21,15 +21,15 @@ class SetupGuideViewModel: ObservableObject {
 
     init(keyboardStatus: KeyboardStatusContext? = nil) {
         if let bundleId = Bundle.main.bundleIdentifier {
-            self.keyboardBundleId = "\(bundleId).TaigiKeyboardExtension"
+            keyboardBundleId = "\(bundleId).TaigiKeyboardExtension"
         } else {
-            self.keyboardBundleId = "com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension"
+            keyboardBundleId = "com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension"
         }
 
-        if let keyboardStatus = keyboardStatus {
-            self.statusContext = keyboardStatus
+        if let keyboardStatus {
+            statusContext = keyboardStatus
         } else {
-            self.statusContext = KeyboardStatusContext(bundleId: keyboardBundleId)
+            statusContext = KeyboardStatusContext(bundleId: keyboardBundleId)
         }
 
         statusContext.$isKeyboardEnabled
@@ -40,27 +40,27 @@ class SetupGuideViewModel: ObservableObject {
         isKeyboardEnabled && isFullAccessEnabled
     }
 
-    /// 重新檢查鍵盤啟用狀態
+    /// Re-check keyboard activation status.
     func refresh() {
         #if os(iOS)
-        Task { @MainActor in
-            statusContext.refresh()
-            isKeyboardEnabled = statusContext.isKeyboardEnabled
-            isFullAccessEnabled = statusContext.isFullAccessEnabled
-        }
+            Task { @MainActor in
+                statusContext.refresh()
+                isKeyboardEnabled = statusContext.isKeyboardEnabled
+                isFullAccessEnabled = statusContext.isFullAccessEnabled
+            }
         #endif
     }
 
-    /// 系統設定頁面 URL
+    /// System Settings URL.
     var settingsURL: URL? {
         #if os(iOS)
-        return URL(string: UIApplication.openSettingsURLString)
+            return URL(string: UIApplication.openSettingsURLString)
         #else
-        return nil
+            return nil
         #endif
     }
 
-    /// 檢查鍵盤設定狀態，未完成則顯示 Setup Guide
+    /// Check keyboard status; show setup guide if not complete.
     func checkKeyboardStatus() {
         Task { @MainActor in
             statusContext.refresh()

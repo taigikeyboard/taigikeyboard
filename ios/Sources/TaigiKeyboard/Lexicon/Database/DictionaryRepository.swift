@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import SQLite3
 
 /// 詞典資料庫 Repository
@@ -97,10 +96,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
     private let connectionManager: SQLiteConnectionManager
     private let trieService: TrieService
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "DictionaryRepository",
-    )
+    private let logger = DebugLogger(category: "DictionaryRepository")
 
     // MARK: - Initialization
 
@@ -148,17 +144,13 @@ final class DictionaryRepository: @unchecked Sendable {
 
         // 確認 Trie 已載入
         guard trieService.isReady else {
-            #if DEBUG
-                logger.error("[QUERY] Trie not loaded")
-            #endif
+            logger.error("[QUERY] Trie not loaded")
             throw DictionaryError.trieNotLoaded
         }
 
         // 漢字輸入暫不支援
         guard inputType != .hanzi else {
-            #if DEBUG
-                logger.warning("[QUERY] Hanzi input not supported")
-            #endif
+            logger.warning("[QUERY] Hanzi input not supported")
             return []
         }
 
@@ -185,9 +177,7 @@ final class DictionaryRepository: @unchecked Sendable {
         // 正規化輸入（包含調符或 POJ 特殊字符時需要轉換）
         let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
 
-        #if DEBUG
-            logger.debug("[TRIE] input='\(input, privacy: .public)' -> normalized='\(normalizedInput, privacy: .public)'")
-        #endif
+        logger.debug("[TRIE] input='\(input)' -> normalized='\(normalizedInput)'")
 
         guard !normalizedInput.isEmpty else {
             return []
@@ -205,9 +195,7 @@ final class DictionaryRepository: @unchecked Sendable {
         // 3. 合併去重
         let allRowIds = Array(Set(exactRowIds + prefixRowIds))
 
-        #if DEBUG
-            logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
-        #endif
+        logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
 
         guard !allRowIds.isEmpty else {
             return []
@@ -313,9 +301,7 @@ final class DictionaryRepository: @unchecked Sendable {
         try await connectionManager.ensureInitialized()
 
         guard trieService.isReady else {
-            #if DEBUG
-                logger.error("[SEARCH-SOURCES] Trie not loaded")
-            #endif
+            logger.error("[SEARCH-SOURCES] Trie not loaded")
             throw DictionaryError.trieNotLoaded
         }
 
@@ -349,9 +335,7 @@ final class DictionaryRepository: @unchecked Sendable {
     ) async throws -> [DictionarySearchResult] {
         guard !query.isEmpty else { return [] }
 
-        #if DEBUG
-            logger.debug("[HANZI-SEARCH] query='\(query, privacy: .public)' limit=\(limit)")
-        #endif
+        logger.debug("[HANZI-SEARCH] query='\(query)' limit=\(limit)")
 
         try await connectionManager.ensureInitialized()
 
@@ -364,12 +348,10 @@ final class DictionaryRepository: @unchecked Sendable {
             )
         }
 
-        #if DEBUG
-            logger.debug("[HANZI-SEARCH] returned \(results.count) results")
-            if let first = results.first {
-                logger.debug("[HANZI-SEARCH] first: \(first.roman, privacy: .public) / \(first.hanzi ?? "", privacy: .public)")
-            }
-        #endif
+        logger.debug("[HANZI-SEARCH] returned \(results.count) results")
+        if let first = results.first {
+            logger.debug("[HANZI-SEARCH] first: \(first.roman) / \(first.hanzi ?? "")")
+        }
 
         return results
     }
@@ -403,9 +385,7 @@ final class DictionaryRepository: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         let likePattern = "%\(query)%"
-        #if DEBUG
-            logger.debug("[HANZI-SQL] LIKE pattern='\(likePattern, privacy: .public)'")
-        #endif
+        logger.debug("[HANZI-SQL] LIKE pattern='\(likePattern)'")
         sqlite3_bind_text(stmt, 1, (likePattern as NSString).utf8String, -1, nil)
         sqlite3_bind_int(stmt, 2, Int32(limit))
 

@@ -7,7 +7,6 @@ import SwiftUI
 /// and key corner radius, with a keyboard preview anchored at the bottom.
 struct AppearanceSettingsView: View {
     @StateObject private var languageManager = LanguageManager.shared
-    @StateObject private var fontManager = FontManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
     private let settings = SharedSettings.shared
@@ -44,11 +43,11 @@ struct AppearanceSettingsView: View {
     private static let defaultKeyBorderWidth: Double = 0
     private static let defaultFontType: FontType = .openHuninn
 
-    private let scaleRange: ClosedRange<Double> = 0.85...1.15
+    private let scaleRange: ClosedRange<Double> = 0.85 ... 1.15
     private let scaleStep: Double = 0.01
-    private let radiusRange: ClosedRange<Double> = 0...15
+    private let radiusRange: ClosedRange<Double> = 0 ... 15
     private let radiusStep: Double = 0.5
-    private let borderWidthRange: ClosedRange<Double> = 0...3
+    private let borderWidthRange: ClosedRange<Double> = 0 ... 3
     private let borderWidthStep: Double = 0.5
 
     init() {
@@ -79,8 +78,8 @@ struct AppearanceSettingsView: View {
                         AppearanceFontPickerView(
                             selectedFont: $selectedFontType,
                             onChange: { newValue in
-                                fontManager.updateFontType(newValue)
-                            }
+                                settings.fontType = newValue
+                            },
                         )
                     } label: {
                         HStack {
@@ -98,13 +97,14 @@ struct AppearanceSettingsView: View {
                         label: languageManager.text(Tab2Texts.colorKeyboardBackground),
                         color: $keyboardBackground,
                         defaultColor: Self.defaultKeyboardBackground,
-                        keyPath: \.backgroundColor
+                        keyPath: \.backgroundColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.keyHeight),
                         value: $keyHeightScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyHeightScale,
-                        onChanged: { settings.keyHeightScale = $0 }
+                        onChanged: { settings.keyHeightScale = $0 },
                     )
                 }
 
@@ -114,28 +114,41 @@ struct AppearanceSettingsView: View {
                         label: languageManager.text(Tab2Texts.colorKeyText),
                         color: $keyText,
                         defaultColor: Self.defaultKeyText,
-                        keyPath: \.keyTextColor
+                        keyPath: \.keyTextColor,
                     )
                     colorRow(
                         label: languageManager.text(Tab2Texts.colorNormalKeyFill),
                         color: $normalKeyFill,
                         defaultColor: Self.defaultNormalKeyFill,
-                        keyPath: \.normalKeyFillColor
+                        keyPath: \.normalKeyFillColor,
                     )
                     colorRow(
                         label: languageManager.text(Tab2Texts.colorSpecialKeyFill),
                         color: $specialKeyFill,
                         defaultColor: Self.defaultSpecialKeyFill,
-                        keyPath: \.specialKeyFillColor
+                        keyPath: \.specialKeyFillColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.keyFontSize),
                         value: $keyFontSizeScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyFontSizeScale,
-                        onChanged: { settings.keyFontSizeScale = $0 }
+                        onChanged: { settings.keyFontSizeScale = $0 },
                     )
-                    radiusSliderRow()
-                    borderWidthSliderRow()
+                    sliderRow(
+                        label: languageManager.text(Tab2Texts.keyCornerRadius),
+                        value: $keyCornerRadius,
+                        in: radiusRange, step: radiusStep,
+                        defaultValue: Self.defaultKeyCornerRadius,
+                        onChanged: { settings.keyCornerRadius = $0 },
+                    )
+                    sliderRow(
+                        label: languageManager.text(Tab2Texts.keyBorderWidth),
+                        value: $keyBorderWidth,
+                        in: borderWidthRange, step: borderWidthStep,
+                        defaultValue: Self.defaultKeyBorderWidth,
+                        onChanged: { settings.keyBorderWidth = $0 },
+                    )
                 }
 
                 // Candidate section: colors + text size
@@ -144,19 +157,20 @@ struct AppearanceSettingsView: View {
                         label: languageManager.text(Tab2Texts.colorCandidateText),
                         color: $candidateText,
                         defaultColor: Self.defaultCandidateText,
-                        keyPath: \.candidateTextColor
+                        keyPath: \.candidateTextColor,
                     )
                     colorRow(
                         label: languageManager.text(Tab2Texts.colorCandidateBackground),
                         color: $candidateBackground,
                         defaultColor: Self.defaultCandidateBackground,
-                        keyPath: \.candidateBackgroundColor
+                        keyPath: \.candidateBackgroundColor,
                     )
-                    scaleSliderRow(
+                    sliderRow(
                         label: languageManager.text(Tab2Texts.candidateTextSize),
                         value: $candidateTextSizeScale,
+                        in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultCandidateTextSizeScale,
-                        onChanged: { settings.candidateTextSizeScale = $0 }
+                        onChanged: { settings.candidateTextSizeScale = $0 },
                     )
                 }
 
@@ -178,21 +192,22 @@ struct AppearanceSettingsView: View {
                 candidateTextSizeScale: candidateTextSizeScale,
                 keyCornerRadius: keyCornerRadius,
                 fontType: selectedFontType,
-                colorScheme: colorScheme
+                colorScheme: colorScheme,
             )
         }
         .navigationTitle(languageManager.text(Tab2Texts.appearanceSettings))
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Scale Slider Row
+    // MARK: - Slider Row
 
-    @ViewBuilder
-    private func scaleSliderRow(
+    private func sliderRow(
         label: String,
         value: Binding<Double>,
-        defaultValue: Double = 1.0,
-        onChanged: @escaping (Double) -> Void
+        in range: ClosedRange<Double>,
+        step: Double,
+        defaultValue: Double,
+        onChanged: @escaping (Double) -> Void,
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -209,61 +224,9 @@ struct AppearanceSettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            Slider(value: value, in: scaleRange, step: scaleStep)
+            Slider(value: value, in: range, step: step)
                 .onChange(of: value.wrappedValue) { _, newValue in
                     onChanged(newValue)
-                }
-        }
-    }
-
-    // MARK: - Radius Slider Row
-
-    @ViewBuilder
-    private func radiusSliderRow() -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(languageManager.text(Tab2Texts.keyCornerRadius))
-                Spacer()
-                if keyCornerRadius != Self.defaultKeyCornerRadius {
-                    Button {
-                        keyCornerRadius = Self.defaultKeyCornerRadius
-                        settings.keyCornerRadius = Self.defaultKeyCornerRadius
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Slider(value: $keyCornerRadius, in: radiusRange, step: radiusStep)
-                .onChange(of: keyCornerRadius) { _, newValue in
-                    settings.keyCornerRadius = newValue
-                }
-        }
-    }
-
-    // MARK: - Border Width Slider Row
-
-    @ViewBuilder
-    private func borderWidthSliderRow() -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(languageManager.text(Tab2Texts.keyBorderWidth))
-                Spacer()
-                if keyBorderWidth != Self.defaultKeyBorderWidth {
-                    Button {
-                        keyBorderWidth = Self.defaultKeyBorderWidth
-                        settings.keyBorderWidth = Self.defaultKeyBorderWidth
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Slider(value: $keyBorderWidth, in: borderWidthRange, step: borderWidthStep)
-                .onChange(of: keyBorderWidth) { _, newValue in
-                    settings.keyBorderWidth = newValue
                 }
         }
     }
@@ -272,20 +235,19 @@ struct AppearanceSettingsView: View {
 
     private func fontDisplayName(_ font: FontType) -> String {
         switch font {
-        case .system: return languageManager.text(Tab2Texts.fontSystemDefault)
-        case .openHuninn: return languageManager.text(Tab2Texts.fontOpenHuninn)
-        case .iansui: return languageManager.text(Tab2Texts.fontIansui)
+        case .system: languageManager.text(Tab2Texts.fontSystemDefault)
+        case .openHuninn: languageManager.text(Tab2Texts.fontOpenHuninn)
+        case .iansui: languageManager.text(Tab2Texts.fontIansui)
         }
     }
 
     // MARK: - Color Row
 
-    @ViewBuilder
     private func colorRow(
         label: String,
         color: Binding<Color>,
         defaultColor: Color,
-        keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>
+        keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>,
     ) -> some View {
         HStack {
             ColorPicker(label, selection: color, supportsOpacity: false)
@@ -317,7 +279,7 @@ struct AppearanceSettingsView: View {
     private func resetAllAppearance() {
         // Reset font
         selectedFontType = Self.defaultFontType
-        fontManager.updateFontType(Self.defaultFontType)
+        settings.fontType = Self.defaultFontType
 
         // Reset sliders
         keyHeightScale = Self.defaultKeyHeightScale
@@ -353,7 +315,7 @@ private struct AppearanceFontPickerView: View {
     private let options: [(font: FontType, text: LocalizedText)] = [
         (.system, Tab2Texts.fontSystemDefault),
         (.openHuninn, Tab2Texts.fontOpenHuninn),
-        (.iansui, Tab2Texts.fontIansui)
+        (.iansui, Tab2Texts.fontIansui),
     ]
 
     var body: some View {
@@ -379,77 +341,5 @@ private struct AppearanceFontPickerView: View {
         }
         .navigationTitle(languageManager.text(Tab2Texts.customFont))
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Keyboard Preview (using real TaigiKeyboardView)
-
-/// A display-only keyboard preview that renders the real `TaigiKeyboardView`.
-/// All appearance settings (key height, font size, candidate text size, corner radius, font)
-/// propagate automatically through `SharedSettings` → `CustomLayoutService` / `ButtonFontProvider`.
-private struct KeyboardPreviewPanel: View {
-    let keyHeightScale: Double
-    let keyFontSizeScale: Double
-    let candidateTextSizeScale: Double
-    let keyCornerRadius: Double
-    let fontType: FontType
-    let colorScheme: ColorScheme
-
-    @State private var previewState = Keyboard.State()
-    @StateObject private var composingManager = ComposingManager()
-
-    var body: some View {
-        let services = Keyboard.Services(state: previewState)
-        let layout = CustomLayoutService()
-            .keyboardLayout(for: previewState.keyboardContext)
-
-        TaigiKeyboardView(
-            services: services,
-            layout: layout,
-            emojiKeyboardView: { AnyView(EmptyView()) },
-            calloutStyle: Self.createCalloutStyle(fontType: fontType),
-            autocompleteContext: previewState.autocompleteContext,
-            keyboardContext: previewState.keyboardContext,
-            composingManager: composingManager,
-            onSuggestionTap: { _ in },
-            onTranslateToggle: { },
-            initialInputMode: SharedSettings.shared.inputMode == .english ? .tl : nil
-        )
-        .keyboardState(previewState)
-        .onAppear { configurePreviewContext() }
-        .onChange(of: colorScheme) { _, newValue in
-            previewState.keyboardContext.colorScheme = newValue
-        }
-    }
-
-    private func configurePreviewContext() {
-        let ctx = previewState.keyboardContext
-        ctx.isLiquidGlassEnabled = false
-        ctx.screenSize = UIScreen.main.bounds.size
-        ctx.colorScheme = colorScheme
-        previewState.autocompleteContext.suggestionsFromService = [
-            .init(text: "mī-tê", title: "mī-tê", subtitle: "麵茶"),
-            .init(text: "kú-nî", title: "kú-nî", subtitle: "久年"),
-            .init(text: "gîm-á", title: "gîm-á", subtitle: "砛仔"),
-        ]
-    }
-
-    private static func createCalloutStyle(fontType: FontType) -> Callouts.CalloutStyle {
-        switch fontType {
-        case .system:
-            return .standard
-        case .openHuninn:
-            let name = KeyboardModels.Fonts.openHuninnFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light)
-            )
-        case .iansui:
-            let name = KeyboardModels.Fonts.iansuiFontName
-            return Callouts.CalloutStyle(
-                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
-                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light)
-            )
-        }
     }
 }

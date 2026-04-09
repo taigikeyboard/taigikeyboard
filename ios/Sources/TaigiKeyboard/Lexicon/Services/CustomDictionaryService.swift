@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// Service for managing user custom dictionary
 /// Handles CRUD, CSV export, and file import
@@ -9,10 +8,7 @@ final class CustomDictionaryService: @unchecked Sendable {
     static let shared = CustomDictionaryService()
 
     private let repository: CustomDictionaryRepository
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "CustomDictionaryService",
-    )
+    private let logger = DebugLogger(category: "CustomDictionaryService")
 
     // MARK: - Initialization
 
@@ -126,9 +122,7 @@ final class CustomDictionaryService: @unchecked Sendable {
 
         let importedCount = try await repository.batchImport(entries)
         let skipped = entries.count - importedCount
-        #if DEBUG
-            logger.info("[IMPORT] Imported \(importedCount), skipped \(skipped)")
-        #endif
+        logger.info("[IMPORT] Imported \(importedCount), skipped \(skipped)")
         return ImportResult(imported: importedCount, skipped: skipped)
     }
 

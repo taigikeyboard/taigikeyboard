@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,7 +60,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
@@ -182,7 +180,7 @@ fun DictionarySettingsScreen(
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
                 colors =
-                    TopAppBarDefaults.largeTopAppBarColors(
+                    TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),
@@ -201,13 +199,8 @@ fun DictionarySettingsScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = 40.dp),
             ) {
-                // 資料管理
-                Text(
-                    text = languageManager.text(Tab3Texts.dataManagement),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
-                )
+                // Data management
+                SectionHeader(languageManager.text(Tab3Texts.dataManagement))
 
                 SettingsCard {
                     ActionRow(
@@ -237,13 +230,8 @@ fun DictionarySettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // 教育部用字
-                Text(
-                    text = languageManager.text(Tab3Texts.moeSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
-                )
+                // MOE dictionaries (教育部)
+                SectionHeader(languageManager.text(Tab3Texts.moeSectionTitle))
 
                 SettingsCard {
                     DictRowWithDescription(
@@ -281,13 +269,8 @@ fun DictionarySettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // 其他辭典
-                Text(
-                    text = languageManager.text(Tab3Texts.otherSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
-                )
+                // Other dictionaries
+                SectionHeader(languageManager.text(Tab3Texts.otherSectionTitle))
 
                 SettingsCard {
                     DictionaryInfoSwitch(
@@ -329,13 +312,8 @@ fun DictionarySettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // 補充資料
-                Text(
-                    text = languageManager.text(Tab3Texts.supplementSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp),
-                )
+                // Supplementary data
+                SectionHeader(languageManager.text(Tab3Texts.supplementSectionTitle))
 
                 SettingsCard {
                     DictionaryInfoSwitch(

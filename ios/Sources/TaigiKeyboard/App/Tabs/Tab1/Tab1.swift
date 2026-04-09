@@ -1,9 +1,9 @@
 import KeyboardKit
 import SwiftUI
 
-/// 頭頁 Tab
+/// Home tab.
 ///
-/// 顯示啟用方法、新功能、網站紹介、FAQ。
+/// Setup guide, typing guides, feature settings, links, and FAQ.
 struct Tab1: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @StateObject private var languageManager = LanguageManager.shared
@@ -15,7 +15,7 @@ struct Tab1: View {
     var body: some View {
         NavigationStack {
             Form {
-                // 啟用鍵盤區塊
+                // Setup guide
                 Section {
                     NavigationLink {
                         SetupGuideView(viewModel: viewModel)
@@ -27,7 +27,7 @@ struct Tab1: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 拍字說明
+                // Typing guide
                 Section {
                     ForEach(Array(FeatureContentLoader.features.prefix(6))) { feature in
                         NavigationLink {
@@ -46,7 +46,7 @@ struct Tab1: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 功能設定
+                // Feature settings
                 Section {
                     ForEach(Array(FeatureContentLoader.features.dropFirst(6))) { feature in
                         NavigationLink {
@@ -65,9 +65,9 @@ struct Tab1: View {
                         .font(AppStyle.sectionHeaderFont)
                 }
 
-                // 網站紹介與聯繫
+                // Links and contact
                 Section {
-                    // 外部連結
+                    // External links
                     Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
                         Label(languageManager.text(Tab1Texts.userGuide), systemImage: "arrow.up.right.square")
                     }
@@ -80,7 +80,7 @@ struct Tab1: View {
                         Label(languageManager.text(Tab1Texts.rateUs), systemImage: "arrow.up.right.square")
                     }
 
-                    // 內部導覽
+                    // In-app navigation
                     NavigationLink {
                         CopyrightView()
                     } label: {
@@ -99,7 +99,7 @@ struct Tab1: View {
                         Label(languageManager.text(Tab1Texts.versionHistory), systemImage: "clock.arrow.circlepath")
                     }
 
-                    // 版本資訊
+                    // Version info
                     HStack {
                         Label(languageManager.text(Tab1Texts.version), systemImage: "info.circle")
                         Spacer()
@@ -108,7 +108,7 @@ struct Tab1: View {
                     }
                 }
 
-                // 常見問題
+                // FAQ
                 Section {
                     ForEach(FeatureContentLoader.faqs) { faq in
                         NavigationLink {

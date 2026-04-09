@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// FAQ 詳細頁面
+/// FAQ detail page.
 ///
-/// 根據 JSON 資料驅動顯示，支援文字、圖片、in-app 導航連結。
+/// JSON-driven display with text, images, and in-app navigation links.
 struct FAQDetailView: View {
     let faq: FeatureContent
     @ObservedObject var viewModel: SetupGuideViewModel
@@ -18,14 +18,14 @@ struct FAQDetailView: View {
                 }
 
                 // Render navigation attachment as a separate section (after the paragraph)
-                if case .navigation(let navText, let destination, let navIcon) = paragraph.attachment {
+                if case let .navigation(navText, destination, navIcon) = paragraph.attachment {
                     Section {
                         NavigationLink {
                             navigationDestination(destination)
                         } label: {
                             Label(
                                 languageManager.text(navText.asLocalizedText),
-                                systemImage: navIcon.ios
+                                systemImage: navIcon.ios,
                             )
                         }
                     }
@@ -39,21 +39,21 @@ struct FAQDetailView: View {
     @ViewBuilder
     private func paragraphView(_ paragraph: FeatureParagraph) -> some View {
         switch paragraph.attachment {
-        case .slideshow(let images, let interval):
+        case let .slideshow(images, interval):
             VStack(alignment: .leading, spacing: 12) {
                 paragraphText(paragraph)
                 ImageSlideshowView(imageNames: images, interval: interval)
                     .frame(maxWidth: .infinity)
             }
 
-        case .image(let name):
+        case let .image(name):
             VStack(alignment: .leading, spacing: 12) {
                 paragraphText(paragraph)
                 Image(name)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
             }
 
         case .navigation, .link, .none:

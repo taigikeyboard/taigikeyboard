@@ -13,7 +13,7 @@ struct TaigiKeyboardView: View {
 
     let onSuggestionTap: (Autocomplete.Suggestion) -> Void
     let onTranslateToggle: () -> Void
-    var initialInputMode: InputMode? = nil
+    var initialInputMode: InputMode?
 
     @StateObject private var expandState = CandidateExpandState()
     @State private var currentInputMode: InputMode = SharedSettings.shared.inputMode
@@ -45,12 +45,12 @@ struct TaigiKeyboardView: View {
     var body: some View {
         let p = RenderProviders(keyboardContext: keyboardContext)
 
-        // 根據 keyboardCase 轉換候選詞大小寫
+        // Transform candidate case based on keyboardCase
         let suggestions = SuggestionCaseTransformer.transform(
             autocompleteContext.suggestions,
             composingText: composingManager.composingText,
             keyboardCase: keyboardContext.keyboardCase,
-            inputMode: p.settings.inputMode
+            inputMode: p.settings.inputMode,
         )
         let frequentWords = CandidateView.getSharedFrequentWords(in: suggestions)
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
@@ -65,7 +65,7 @@ struct TaigiKeyboardView: View {
             frequentWords: frequentWords,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
-            candidateStyle: candidateStyle
+            candidateStyle: candidateStyle,
         )
         .keyboardToolbarStyle(
             Keyboard.ToolbarStyle(
@@ -74,8 +74,8 @@ struct TaigiKeyboardView: View {
                 // so the external .background() color shows through.
                 backgroundColor: useLiquidGlassBg
                     ? .white.opacity(0.001)
-                    : .clear
-            )
+                    : .clear,
+            ),
         )
         .keyboardViewStyle(
             // Always make KK's internal background transparent so our
@@ -84,13 +84,13 @@ struct TaigiKeyboardView: View {
             KeyboardViewStyle(
                 background: useLiquidGlassBg
                     ? .color(Color.white.opacity(0.001))
-                    : .color(.clear)
-            )
+                    : .color(.clear),
+            ),
         )
         .background(
             useLiquidGlassBg
                 ? Color.white.opacity(0.001)
-                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground)
+                : (colorSettings.backgroundColor?.color ?? Color.keyboardBackground),
         )
         .onAppear {
             if let mode = initialInputMode {
@@ -117,14 +117,13 @@ struct TaigiKeyboardView: View {
 
     /// Core keyboard + overlay panels + state change handlers.
     /// Extracted from body to reduce type-checker complexity.
-    @ViewBuilder
     private func keyboardWithOverlays(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
         frequentWords: Set<String>,
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
-        candidateStyle: CandidateView.Style
+        candidateStyle: CandidateView.Style,
     ) -> some View {
         coreKeyboard(
             p: p,
@@ -132,7 +131,7 @@ struct TaigiKeyboardView: View {
             frequentWords: frequentWords,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
-            candidateStyle: candidateStyle
+            candidateStyle: candidateStyle,
         )
         .overlay(
             Group {
@@ -162,7 +161,7 @@ struct TaigiKeyboardView: View {
                         isExpanded: true,
                         onDismiss: {
                             isLayoutPanelExpanded = false
-                        }
+                        },
                     )
                     .offset(y: CandidateViewModels.UI.height)
                 }
@@ -181,7 +180,7 @@ struct TaigiKeyboardView: View {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 isSymbolPanelExpanded = false
                             }
-                        }
+                        },
                     )
                     .offset(y: CandidateViewModels.UI.height)
                 }
@@ -198,7 +197,7 @@ struct TaigiKeyboardView: View {
                         },
                         onOpenApp: { [unowned services] in
                             services.actionHandler.handle(.settings)
-                        }
+                        },
                     )
                     .offset(y: CandidateViewModels.UI.height)
                 }
@@ -207,16 +206,14 @@ struct TaigiKeyboardView: View {
         )
         .onChange(of: expandState.isExpanded) { _, isExpanded in
             if isExpanded {
-                isLayoutPanelExpanded = false
-                isSymbolPanelExpanded = false
-                isSettingsPanelExpanded = false
+                closeAllOverlayPanels()
             }
         }
         .onChange(of: composingManager.isComposing) { _, isComposing in
-            if isComposing && isSymbolPanelExpanded {
+            if isComposing, isSymbolPanelExpanded {
                 isSymbolPanelExpanded = false
             }
-            if isComposing && isSettingsPanelExpanded {
+            if isComposing, isSettingsPanelExpanded {
                 isSettingsPanelExpanded = false
             }
         }
@@ -226,16 +223,15 @@ struct TaigiKeyboardView: View {
 
     /// Builds the KeyboardView with button content, style, and toolbar.
     /// Extracted from body to reduce type-checker complexity.
-    @ViewBuilder
     private func coreKeyboard(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
         frequentWords: Set<String>,
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
-        candidateStyle: CandidateView.Style
+        candidateStyle: CandidateView.Style,
     ) -> some View {
-        // KeyboardKit 10: 使用 layout: 和 services: 參數
+        // KeyboardKit 10: uses layout: and services: parameters
         KeyboardView(
             layout: layout,
             services: services,
@@ -248,16 +244,16 @@ struct TaigiKeyboardView: View {
                     imageProvider: p.image,
                     fontProvider: p.font,
                     keyTextColor: p.keyTextColor,
-                    inputMode: p.settings.inputMode
+                    inputMode: p.settings.inputMode,
                 )
             },
             buttonView: { params in
-                let borderWidth = self.keyBorderWidth
+                let borderWidth = keyBorderWidth
                 if borderWidth > 0, params.item.action != .none {
                     params.view.overlay(
                         RoundedRectangle(cornerRadius: p.settings.keyCornerRadius)
                             .strokeBorder(Color.black, lineWidth: borderWidth)
-                            .padding(params.item.edgeInsets)
+                            .padding(params.item.edgeInsets),
                     )
                 } else {
                     params.view
@@ -265,12 +261,12 @@ struct TaigiKeyboardView: View {
             },
             collapsedView: { $0.view },
             emojiKeyboard: { _ in
-                // KeyboardKit 10: ISEmojiView 需要明確設置高度
+                // KeyboardKit 10: ISEmojiView requires explicit height
                 emojiKeyboardView()
                     .frame(height: layout.totalHeight)
             },
             toolbar: { params in
-                // 統一使用 CandidateView，英文模式傳入 KeyboardKit 預設視圖
+                // Unified CandidateView; English mode passes in KeyboardKit's default view
                 CandidateView(
                     suggestions: suggestions,
                     frequentWords: frequentWords,
@@ -279,46 +275,35 @@ struct TaigiKeyboardView: View {
                     isTranslateSwapped: isTranslateSwapped,
                     onTranslateToggle: onTranslateToggle,
                     onSettingsTap: {
-                        isSettingsPanelExpanded.toggle()
-                        if isSettingsPanelExpanded {
-                            isLayoutPanelExpanded = false
-                            isSymbolPanelExpanded = false
-                            expandState.collapse()
-                        }
+                        let wasOpen = isSettingsPanelExpanded
+                        closeAllOverlayPanels()
+                        expandState.collapse()
+                        if !wasOpen { isSettingsPanelExpanded = true }
                     },
                     onLayoutTap: {
-                        isLayoutPanelExpanded.toggle()
-                        if isLayoutPanelExpanded {
-                            isSymbolPanelExpanded = false
-                            isSettingsPanelExpanded = false
-                            expandState.collapse()
-                        }
+                        let wasOpen = isLayoutPanelExpanded
+                        closeAllOverlayPanels()
+                        expandState.collapse()
+                        if !wasOpen { isLayoutPanelExpanded = true }
                     },
                     onSymbolTap: {
-                        isSymbolPanelExpanded.toggle()
-                        if isSymbolPanelExpanded {
-                            isLayoutPanelExpanded = false
-                            isSettingsPanelExpanded = false
-                            expandState.collapse()
-                        }
+                        let wasOpen = isSymbolPanelExpanded
+                        closeAllOverlayPanels()
+                        expandState.collapse()
+                        if !wasOpen { isSymbolPanelExpanded = true }
                     },
                     onDismissKeyboard: { [unowned services] in
-                        isLayoutPanelExpanded = false
-                        isSymbolPanelExpanded = false
-                        isSettingsPanelExpanded = false
+                        closeAllOverlayPanels()
                         services.actionHandler.handle(.dismissKeyboard)
                     },
                     currentInputMode: currentInputMode,
                     onInputModeChange: { newMode in
                         currentInputMode = newMode
                         SharedSettings.shared.inputMode = newMode
-                        // Close any open overlay panels
-                        isSymbolPanelExpanded = false
-                        isLayoutPanelExpanded = false
-                        isSettingsPanelExpanded = false
+                        closeAllOverlayPanels()
                     },
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
-                    isComposing: composingManager.isComposing
+                    isComposing: composingManager.isComposing,
                 )
                 .environmentObject(expandState)
                 .candidateViewStyle(candidateStyle)
@@ -330,7 +315,7 @@ struct TaigiKeyboardView: View {
             style.cornerRadius = p.settings.keyCornerRadius
 
             // Apply custom colors from SharedSettings
-            let colors = self.colorSettings
+            let colors = colorSettings
             if let textColor = colors.keyTextColor?.color {
                 style.foregroundColor = textColor
             }
@@ -361,9 +346,19 @@ struct TaigiKeyboardView: View {
         .keyboardCalloutStyle(calloutStyle)
     }
 
+    // MARK: - Panel Management
+
+    /// Close all overlay panels (settings, layout, symbol).
+    /// Centralizes panel state to avoid missed resets when adding new panels.
+    private func closeAllOverlayPanels() {
+        isLayoutPanelExpanded = false
+        isSymbolPanelExpanded = false
+        isSettingsPanelExpanded = false
+    }
+
     private static func candidateStyle(
         for context: KeyboardContext,
-        colorSettings: KeyboardColorSettings
+        colorSettings: KeyboardColorSettings,
     ) -> CandidateView.Style {
         var style = CandidateView.Style.adaptive(for: context)
         if let bg = colorSettings.candidateBackgroundColor?.color {

@@ -25,10 +25,10 @@ struct CodableColor: Codable, Equatable {
         let uiColor = UIColor(color)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-        self.red = Double(r)
-        self.green = Double(g)
-        self.blue = Double(b)
-        self.alpha = Double(a)
+        red = Double(r)
+        green = Double(g)
+        blue = Double(b)
+        alpha = Double(a)
     }
 }
 
@@ -47,11 +47,11 @@ struct KeyboardColorSettings: Codable, Equatable {
 
 /// 鍵盤佈局類型
 enum KeyboardLayoutType: String, CaseIterable {
-    case phahTaigi = "phahTaigi"  // PhahTaigi 佈局
-    case qwerty = "qwerty"        // 標準 QWERTY 佈局
-    case tps = "tps"              // 方音符號佈局
-    case moe1 = "moe1"            // 教育部輸入法佈局1
-    case moe2 = "moe2"            // 教育部輸入法佈局2
+    case phahTaigi // PhahTaigi 佈局
+    case qwerty // 標準 QWERTY 佈局
+    case tps // 方音符號佈局
+    case moe1 // 教育部輸入法佈局1
+    case moe2 // 教育部輸入法佈局2
 }
 
 /// Immutable snapshot of settings needed during a single render cycle.
@@ -102,11 +102,11 @@ class SharedSettings {
         static let keyboardLayoutType = "keyboardLayoutType"
         static let inputModeBeforeTps = "inputModeBeforeTps"
         static let layoutBeforeTps = "layoutBeforeTps"
-        // 詞頻紀錄開關
+        /// 詞頻紀錄開關
         static let frequencyRecordingEnabled = "frequencyRecordingEnabled"
-        // 詞關聯紀錄開關
+        /// 詞關聯紀錄開關
         static let associationRecordingEnabled = "associationRecordingEnabled"
-        // 自訂詞庫開關
+        /// 自訂詞庫開關
         static let customDictEnabled = "customDictEnabled"
         // 詞庫開關
         static let moeDictEnabled = "moeDictEnabled"
@@ -118,17 +118,17 @@ class SharedSettings {
         static let taiwanPlantDictEnabled = "taiwanPlantDictEnabled"
         static let sttiDictEnabled = "sttiDictEnabled"
         static let khpooDictEnabled = "khpooDictEnabled"
-        // 異用字開關
+        /// 異用字開關
         static let variantEnabled = "variantEnabled"
-        // 在來字開關
+        /// 在來字開關
         static let khiin = "khiin"
-        // LKK漢羅合用建議用字
+        /// LKK漢羅合用建議用字
         static let lkkDictEnabled = "lkkDictEnabled"
-        // 方音符號設定
+        /// 方音符號設定
         static let tpsOrMapsToER = "tpsOrMapsToER"
-        // 家私櫥設定
+        /// 家私櫥設定
         static let toolbarAutoCollapse = "toolbarAutoCollapse"
-        // 切換鍵盤鍵
+        /// 切換鍵盤鍵
         static let isGlobeKeyEnabled = "isGlobeKeyEnabled"
         // 外觀設定
         static let keyHeightScale = "keyHeightScale"
@@ -156,14 +156,14 @@ class SharedSettings {
 
             // TPS ↔ layout 1:1 sync (reverse direction)
             // Write directly to userDefaults to avoid recursion with keyboardLayoutType setter
-            if newValue == .tps && oldValue != .tps {
+            if newValue == .tps, oldValue != .tps {
                 // Entering TPS mode: switch layout to TPS
                 if keyboardLayoutType != .tps {
                     layoutBeforeTps = keyboardLayoutType
                     userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
                     phahTaigiLayoutEnabled = false
                 }
-            } else if newValue != .tps && oldValue == .tps {
+            } else if newValue != .tps, oldValue == .tps {
                 // Leaving TPS mode: restore previous layout
                 if keyboardLayoutType == .tps {
                     let restored = layoutBeforeTps
@@ -251,14 +251,14 @@ class SharedSettings {
         set {
             let oldValue = keyboardLayoutType
             // TPS ↔ inputMode 1:1 sync
-            if newValue == .tps && oldValue != .tps {
+            if newValue == .tps, oldValue != .tps {
                 // Entering TPS: save current inputMode, then switch to tps
                 let currentInputMode = inputMode
                 if currentInputMode != .tps {
                     inputModeBeforeTps = currentInputMode
                 }
                 inputMode = .tps
-            } else if newValue != .tps && oldValue == .tps {
+            } else if newValue != .tps, oldValue == .tps {
                 // Leaving TPS: restore previous inputMode
                 inputMode = inputModeBeforeTps
             }
@@ -268,7 +268,7 @@ class SharedSettings {
         }
     }
 
-    // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
+    /// Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
     private var inputModeBeforeTps: InputMode {
         get {
             let rawValue = userDefaults.string(forKey: Keys.inputModeBeforeTps) ?? "tl"
@@ -279,7 +279,7 @@ class SharedSettings {
         }
     }
 
-    // Stores the layout before switching to TPS, so it can be restored when leaving TPS
+    /// Stores the layout before switching to TPS, so it can be restored when leaving TPS
     private var layoutBeforeTps: KeyboardLayoutType {
         get {
             let rawValue = userDefaults.string(forKey: Keys.layoutBeforeTps) ?? KeyboardLayoutType.phahTaigi.rawValue
@@ -367,19 +367,19 @@ class SharedSettings {
         set { userDefaults.set(newValue, forKey: Keys.khpooDictEnabled) }
     }
 
-    // 異用字開關（預設關閉）
+    /// 異用字開關（預設關閉）
     var variantEnabled: Bool {
         get { userDefaults.object(forKey: Keys.variantEnabled) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.variantEnabled) }
     }
 
-    // 在來字開關（預設關閉）
+    /// 在來字開關（預設關閉）
     var khiin: Bool {
         get { userDefaults.object(forKey: Keys.khiin) as? Bool ?? false }
         set { userDefaults.set(newValue, forKey: Keys.khiin) }
     }
 
-    // LKK漢羅合用建議用字（預設開啟）
+    /// LKK漢羅合用建議用字（預設開啟）
     var lkkDictEnabled: Bool {
         get { userDefaults.object(forKey: Keys.lkkDictEnabled) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.lkkDictEnabled) }
@@ -419,7 +419,7 @@ class SharedSettings {
 
     // MARK: - 方音符號設定
 
-    // or 對應 ㄜ（預設開啟，關閉時 or → ㄛ）
+    /// or 對應 ㄜ（預設開啟，關閉時 or → ㄛ）
     var tpsOrMapsToER: Bool {
         get { userDefaults.object(forKey: Keys.tpsOrMapsToER) as? Bool ?? true }
         set { userDefaults.set(newValue, forKey: Keys.tpsOrMapsToER) }
@@ -475,7 +475,7 @@ class SharedSettings {
             keyboardLayoutType: keyboardLayoutType,
             keyFontSizeScale: keyFontSizeScale,
             keyCornerRadius: keyCornerRadius,
-            colorSettings: colorSettings
+            colorSettings: colorSettings,
         )
     }
 
@@ -520,67 +520,5 @@ class SharedSettings {
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled")
         KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
-    }
-}
-
-extension SharedSettings {
-    /// 同步台語鍵盤專屬設定到 KeyboardContext
-    ///
-    /// 注意：isAutocapitalizationEnabled 由 KeyboardKit 自動管理，
-    /// 透過 KeyboardSettings.setupStore() 使用 App Group 持久化。
-    func syncToKeyboardContext(_ context: KeyboardKit.KeyboardContext) {
-        // KeyboardKit 10: 設定空白鍵長按行為
-        context.settings.spacebarLongPressBehavior = .moveInputCursor
-
-        // 自動大寫設定由 KeyboardKit 的 KeyboardSettings 自動管理
-        // 不需要手動同步，KeyboardKit 會自動讀取持久化的值
-    }
-}
-
-// MARK: - Font Manager
-
-/// 字體管理器（負責根據設定切換顯示字體）
-class FontManager: ObservableObject {
-    static let shared = FontManager()
-
-    @Published var currentFontType: FontType
-
-    private init() {
-        currentFontType = SharedSettings.shared.fontType
-    }
-
-    /// 更新字體類型
-    func updateFontType(_ fontType: FontType) {
-        SharedSettings.shared.fontType = fontType
-        currentFontType = fontType
-    }
-
-    /// 重新載入字體設定（從 UserDefaults）
-    func reloadFontType() {
-        currentFontType = SharedSettings.shared.fontType
-    }
-
-    /// 取得指定大小的字體
-    func font(size: CGFloat) -> Font {
-        KeyboardModels.Fonts.font(for: currentFontType, size: size)
-    }
-}
-
-// MARK: - View Extension for Font Environment
-
-extension View {
-    /// 套用全域字體環境
-    func withFontEnvironment() -> some View {
-        modifier(FontEnvironmentModifier())
-    }
-}
-
-/// 字體環境 Modifier
-struct FontEnvironmentModifier: ViewModifier {
-    @ObservedObject private var fontManager = FontManager.shared
-
-    func body(content: Content) -> some View {
-        content
-            .environmentObject(fontManager)
     }
 }

@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// ViewModel for dictionary search in Tab 3
 @MainActor
@@ -10,10 +9,7 @@ final class DictionarySearchViewModel: ObservableObject {
 
     private var searchTask: Task<Void, Never>?
     private let repository = DictionaryRepository.shared
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "DictionarySearchVM",
-    )
+    private let logger = DebugLogger(category: "DictionarySearchVM")
 
     init() {
         // Trigger LexiconService init to ensure Trie loads
@@ -67,9 +63,7 @@ final class DictionarySearchViewModel: ObservableObject {
                         (0x20000 ... 0x2A6DF).contains($0.value)
                 }
 
-                #if DEBUG
-                    logger.debug("[SEARCH] query='\(query, privacy: .public)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode), privacy: .public)")
-                #endif
+                logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
                 let searchResults: [DictionarySearchResult]
                 if isCJK {
@@ -78,18 +72,14 @@ final class DictionarySearchViewModel: ObservableObject {
                         inputMode: inputMode,
                         limit: 20,
                     )
-                    #if DEBUG
-                        logger.debug("[SEARCH] hanzi path returned \(searchResults.count) results")
-                    #endif
+                    logger.debug("[SEARCH] hanzi path returned \(searchResults.count) results")
                 } else {
                     searchResults = try await repository.searchWithSources(
                         input: query,
                         inputMode: inputMode,
                         limit: 20,
                     )
-                    #if DEBUG
-                        logger.debug("[SEARCH] roman path returned \(searchResults.count) results")
-                    #endif
+                    logger.debug("[SEARCH] roman path returned \(searchResults.count) results")
                 }
 
                 // Also search custom dictionary (only for romanization input)
@@ -144,9 +134,7 @@ final class DictionarySearchViewModel: ObservableObject {
                 isSearching = false
             } catch {
                 guard !Task.isCancelled else { return }
-                #if DEBUG
-                    logger.error("[SEARCH] Failed: \(error.localizedDescription, privacy: .public)")
-                #endif
+                logger.error("[SEARCH] Failed: \(error.localizedDescription)")
                 results = []
                 isSearching = false
             }

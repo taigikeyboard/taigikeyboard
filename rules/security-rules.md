@@ -11,15 +11,15 @@ All logging must be guarded so that **no log output appears in production/releas
 
 | Platform | Guard | Example |
 |----------|-------|---------|
-| iOS | `#if DEBUG ... #endif` | `#if DEBUG`<br>`    logger.debug("[SEARCH] query='\(query, privacy: .public)'")`<br>`#endif` |
+| iOS | `DebugLogger` wrapper | `logger.debug("[SEARCH] query='\(query)'")`|
 | Android | `if (BuildConfig.DEBUG)` | `if (BuildConfig.DEBUG) Log.d(TAG, "[SEARCH] query='$input'")` |
 
 ### iOS specifics
 
-- Use `os.Logger` with subsystem `LexiconConstants.Logging.subsystem`
-- Logger declarations may remain at file level (passive objects, no output)
-- Every `logger.debug()` / `logger.info()` / `logger.warning()` / `logger.error()` call must be inside `#if DEBUG`
-- Mark sensitive data with `privacy: .private` when applicable
+- Use `DebugLogger(category:)` — wrapper around `os.Logger` that is a complete no-op in release builds
+- No `#if DEBUG` needed at call sites — the wrapper handles it internally via `@autoclosure` (message string is never constructed in release)
+- No `privacy: .public` needed at call sites — the wrapper applies it automatically
+- Do NOT use `os.Logger` directly — always use `DebugLogger`
 
 ### Android specifics
 

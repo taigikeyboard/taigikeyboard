@@ -1,5 +1,11 @@
 package com.siansiansu.taigikeyboard.ui.settings
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,55 +19,47 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.Email
-import androidx.compose.material.icons.outlined.OpenInNew
-import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import kotlinx.coroutines.launch
 import com.siansiansu.taigikeyboard.diagnostics.DiagnosticService
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.DiagnosticTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
+import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import androidx.compose.material3.Icon
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +67,7 @@ fun InputSettingsScreen(
     languageManager: LanguageManager,
     prefs: PrefHelper,
     onResetSettings: () -> Unit,
-    resetCounter: Int
+    resetCounter: Int,
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
     val context = LocalContext.current
@@ -102,8 +100,8 @@ fun InputSettingsScreen(
     var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
 
     val features = remember { FeatureContentLoader.loadFeatures(context) }
-    fun featureSummary(id: String): String? =
-        features.firstOrNull { it.id == id }?.summary?.let { languageManager.text(it) }
+
+    fun featureSummary(id: String): String? = features.firstOrNull { it.id == id }?.summary?.let { languageManager.text(it) }
 
     if (showInputModePicker) {
         InputModeScreen(
@@ -113,7 +111,7 @@ fun InputSettingsScreen(
                 inputMode = it
                 prefs.inputMode = it
             },
-            onBack = { showInputModePicker = false }
+            onBack = { showInputModePicker = false },
         )
     } else {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -126,67 +124,64 @@ fun InputSettingsScreen(
                     title = {
                         Text(
                             text = languageManager.text(Tab4Texts.tabTitle),
-                            fontSize = AppStyle.pageTitleFontSize
+                            fontSize = AppStyle.pageTitleFontSize,
                         )
                     },
                     expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    scrollBehavior = scrollBehavior
+                    colors =
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        ),
+                    scrollBehavior = scrollBehavior,
                 )
-            }
+            },
         ) { innerPadding ->
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 40.dp)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 40.dp),
             ) {
-
                 // Input mode card - navigates to sub-page
                 SettingsCard {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 48.dp)
-                            .clickable { showInputModePicker = true }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 48.dp)
+                                .clickable { showInputModePicker = true }
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = languageManager.text(Tab4Texts.inputMode),
                             modifier = Modifier.weight(1f),
                             fontSize = AppStyle.bodyFontSize,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = inputModeDisplayName(inputMode, languageManager),
                             fontSize = AppStyle.bodyFontSize,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
                 Spacer(Modifier.height(24.dp))
 
-                // 拍字設定
-                Text(
-                    text = languageManager.text(Tab4Texts.typingSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                // Typing settings
+                SectionHeader(languageManager.text(Tab4Texts.typingSectionTitle))
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.outputBothScripts),
@@ -195,7 +190,7 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             outputBoth = it
                             prefs.outputBothScripts = it
-                        }
+                        },
                     )
                     SettingsDivider()
                     SwitchRow(
@@ -205,7 +200,7 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             autoCap = it
                             prefs.autoCapitalizationEnabled = it
-                        }
+                        },
                     )
                     SettingsDivider()
                     SwitchRow(
@@ -215,19 +210,14 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it
-                        }
+                        },
                     )
                 }
 
                 Spacer(Modifier.height(24.dp))
 
-                // 齒盤設定
-                Text(
-                    text = languageManager.text(Tab4Texts.keyboardSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                // Keyboard settings
+                SectionHeader(languageManager.text(Tab4Texts.keyboardSectionTitle))
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.toolbarAutoCollapse),
@@ -237,7 +227,7 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             toolbarAutoCollapse = it
                             prefs.isToolbarAutoCollapse = it
-                        }
+                        },
                     )
                     SettingsDivider()
                     SwitchRow(
@@ -248,19 +238,14 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             isGlobeKeyEnabled = it
                             prefs.isGlobeKeyEnabled = it
-                        }
+                        },
                     )
                 }
 
                 Spacer(Modifier.height(24.dp))
 
                 // Feedback settings card
-                Text(
-                    text = languageManager.text(Tab4Texts.feedbackSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab4Texts.feedbackSectionTitle))
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.soundFeedback),
@@ -269,7 +254,7 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             soundFeedback = it
                             prefs.isSoundFeedbackEnabled = it
-                        }
+                        },
                     )
                     SettingsDivider()
                     SwitchRow(
@@ -279,19 +264,14 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             vibrationFeedback = it
                             prefs.isVibrationFeedbackEnabled = it
-                        }
+                        },
                     )
                 }
 
                 Spacer(Modifier.height(24.dp))
 
                 // POJ settings card
-                Text(
-                    text = languageManager.text(Tab4Texts.pojSettingsSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.doubleTapOO),
@@ -299,7 +279,7 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             doubleOO = it
                             prefs.enableDoubleTapOO = it
-                        }
+                        },
                     )
                     SettingsDivider()
                     SwitchRow(
@@ -308,19 +288,14 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             doubleNN = it
                             prefs.enableDoubleTapNN = it
-                        }
+                        },
                     )
                 }
 
                 Spacer(Modifier.height(24.dp))
 
                 // TPS settings card
-                Text(
-                    text = languageManager.text(Tab4Texts.tpsSettingsSectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
                 SettingsCard {
                     SwitchRow(
                         label = languageManager.text(Tab4Texts.tpsOrMapsToER),
@@ -329,19 +304,14 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
-                        }
+                        },
                     )
                 }
 
                 Spacer(Modifier.height(24.dp))
 
                 // Diagnostic info card
-                Text(
-                    text = languageManager.text(DiagnosticTexts.sectionTitle),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(DiagnosticTexts.sectionTitle))
                 SettingsCard {
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.copy),
@@ -351,33 +321,34 @@ fun InputSettingsScreen(
                                 val info = DiagnosticService.gather(context)
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 clipboard.setPrimaryClip(
-                                    ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted())
+                                    ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted()),
                                 )
                                 Toast.makeText(context, languageManager.text(DiagnosticTexts.copied), Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        },
                     )
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.share),
-                        icon = Icons.Outlined.OpenInNew,
+                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
                             scope.launch {
                                 val info = DiagnosticService.gather(context)
-                                val sendIntent = Intent().apply {
-                                    action = Intent.ACTION_SEND
-                                    putExtra(Intent.EXTRA_TEXT, info.formatted())
-                                    type = "text/plain"
-                                }
+                                val sendIntent =
+                                    Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(Intent.EXTRA_TEXT, info.formatted())
+                                        type = "text/plain"
+                                    }
                                 context.startActivity(Intent.createChooser(sendIntent, null))
                             }
-                        }
+                        },
                     )
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(DiagnosticTexts.email),
-                        icon = Icons.Outlined.OpenInNew,
+                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
                             scope.launch {
@@ -391,7 +362,7 @@ fun InputSettingsScreen(
                                     Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
                                 }
                             }
-                        }
+                        },
                     )
                 }
 
@@ -402,41 +373,36 @@ fun InputSettingsScreen(
                     ActionRow(
                         label = languageManager.text(Tab4Texts.resetSettings),
                         onClick = { showResetDialog = true },
-                        textColor = MaterialTheme.colorScheme.error
+                        textColor = MaterialTheme.colorScheme.error,
                     )
                 }
             }
         }
 
         if (showResetDialog) {
-            AlertDialog(
-                onDismissRequest = { showResetDialog = false },
-                title = { Text(languageManager.text(Tab4Texts.resetSettings)) },
-                text = { Text(languageManager.text(Tab4Texts.resetSettingsMessage)) },
-                confirmButton = {
-                    TextButton(onClick = {
-                        showResetDialog = false
-                        onResetSettings()
-                    }) {
-                        Text(languageManager.text(Tab4Texts.reset))
-                    }
+            ConfirmationDialog(
+                title = languageManager.text(Tab4Texts.resetSettings),
+                message = languageManager.text(Tab4Texts.resetSettingsMessage),
+                confirmLabel = languageManager.text(Tab4Texts.reset),
+                dismissLabel = languageManager.text(Tab4Texts.cancel),
+                onConfirm = {
+                    showResetDialog = false
+                    onResetSettings()
                 },
-                dismissButton = {
-                    TextButton(onClick = { showResetDialog = false }) {
-                        Text(languageManager.text(Tab4Texts.cancel))
-                    }
-                }
+                onDismiss = { showResetDialog = false },
             )
         }
     }
 }
 
-private fun inputModeDisplayName(mode: String, languageManager: LanguageManager): String {
-    return when (mode) {
+private fun inputModeDisplayName(
+    mode: String,
+    languageManager: LanguageManager,
+): String =
+    when (mode) {
         "poj" -> languageManager.text(Tab4Texts.pojMode)
         "tl" -> languageManager.text(Tab4Texts.tlMode)
         "english" -> languageManager.text(Tab4Texts.englishMode)
         "tps" -> languageManager.text(Tab4Texts.tpsMode)
         else -> languageManager.text(Tab4Texts.tlMode)
     }
-}

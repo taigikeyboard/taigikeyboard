@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 
 /// Resolves the bundle containing dictionary resources.
 ///
@@ -8,10 +7,7 @@ import OSLog
 /// the main app, this resolver locates the embedded .appex bundle.
 /// When running inside the extension, it returns the extension's own bundle.
 enum ResourceBundleResolver {
-    private static let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "ResourceBundleResolver",
-    )
+    private static let logger = DebugLogger(category: "ResourceBundleResolver")
 
     /// Returns the bundle containing dictionary resources.
     ///
@@ -35,9 +31,7 @@ enum ResourceBundleResolver {
         }
 
         // Fallback for unit tests or unexpected configurations
-        #if DEBUG
-            logger.warning("[RESOLVE] Could not locate extension bundle, falling back to Bundle(for:)")
-        #endif
+        logger.warning("[RESOLVE] Could not locate extension bundle, falling back to Bundle(for:)")
         return Bundle(for: DictionaryRepository.self)
     }
 }

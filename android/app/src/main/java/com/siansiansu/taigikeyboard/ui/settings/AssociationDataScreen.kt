@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -36,13 +35,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,11 +55,14 @@ import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,7 +82,6 @@ fun AssociationDataScreen(
     val displayLimit = 100
 
     var allData by remember { mutableStateOf<List<NextWordService.AssociationEntry>>(emptyList()) }
-    var total by remember { mutableIntStateOf(0) }
     var showClearDialog by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
@@ -105,7 +104,6 @@ fun AssociationDataScreen(
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val assoc = NextWordService.allAssociations(context)
-            total = assoc.size
             allData = assoc
         }
     }
@@ -125,11 +123,11 @@ fun AssociationDataScreen(
                         buildString {
                             for (entry in allData) {
                                 append(
-                                    "${csvEscapeAssoc(
+                                    "${CsvUtils.escape(
                                         entry.prevWord,
-                                    )},${csvEscapeAssoc(
+                                    )},${CsvUtils.escape(
                                         entry.prevTl,
-                                    )},${csvEscapeAssoc(entry.nextWord)},${csvEscapeAssoc(entry.nextTl)},${entry.count}\n",
+                                    )},${CsvUtils.escape(entry.nextWord)},${CsvUtils.escape(entry.nextTl)},${entry.count}\n",
                                 )
                             }
                         }
@@ -177,7 +175,6 @@ fun AssociationDataScreen(
                     // Reload data
                     withContext(Dispatchers.IO) {
                         val assoc = NextWordService.allAssociations(context)
-                        total = assoc.size
                         allData = assoc
                     }
                 } catch (e: Exception) {
@@ -395,7 +392,6 @@ fun AssociationDataScreen(
                                                         it.nextTl == entry.nextTl
                                                 )
                                             }
-                                        total = maxOf(total - 1, 0)
                                     }
                                 },
                             ) {
@@ -465,37 +461,27 @@ fun AssociationDataScreen(
     }
 
     if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text(languageManager.text(Tab3Texts.clearAllAssociation)) },
-            text = { Text(languageManager.text(Tab3Texts.clearAssociationMessage)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showClearDialog = false
-                    scope.launch {
-                        withContext(Dispatchers.IO) { NextWordService.clearAllAssociations(context) }
-                        allData = emptyList()
-                        total = 0
-                    }
-                }) { Text(languageManager.text(Tab3Texts.clear)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.cancel))
+        ConfirmationDialog(
+            title = languageManager.text(Tab3Texts.clearAllAssociation),
+            message = languageManager.text(Tab3Texts.clearAssociationMessage),
+            confirmLabel = languageManager.text(Tab3Texts.clear),
+            dismissLabel = languageManager.text(Tab3Texts.cancel),
+            onConfirm = {
+                showClearDialog = false
+                scope.launch {
+                    withContext(Dispatchers.IO) { NextWordService.clearAllAssociations(context) }
+                    allData = emptyList()
                 }
             },
+            onDismiss = { showClearDialog = false },
         )
     }
 
     if (showResultDialog) {
-        AlertDialog(
-            onDismissRequest = { showResultDialog = false },
-            text = { Text(resultMessage) },
-            confirmButton = {
-                TextButton(onClick = { showResultDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.ok))
-                }
-            },
+        ResultDialog(
+            message = resultMessage,
+            confirmLabel = languageManager.text(Tab3Texts.ok),
+            onDismiss = { showResultDialog = false },
         )
     }
 }
@@ -505,7 +491,7 @@ private fun parseAssociationCSV(csv: String): List<NextWordService.AssociationEn
     for (line in csv.split("\n")) {
         val trimmed = line.trim()
         if (trimmed.isEmpty()) continue
-        val columns = parseCSVLineAssoc(trimmed)
+        val columns = CsvUtils.parseLine(trimmed)
         if (columns.size < 5) continue
         val prevWord = columns[0].trim()
         val prevTl = columns[1].trim()
@@ -517,34 +503,3 @@ private fun parseAssociationCSV(csv: String): List<NextWordService.AssociationEn
     }
     return entries
 }
-
-private fun parseCSVLineAssoc(line: String): List<String> {
-    val fields = mutableListOf<String>()
-    val current = StringBuilder()
-    var inQuotes = false
-    for (char in line) {
-        when {
-            char == '"' -> {
-                inQuotes = !inQuotes
-            }
-
-            char == ',' && !inQuotes -> {
-                fields.add(current.toString())
-                current.clear()
-            }
-
-            else -> {
-                current.append(char)
-            }
-        }
-    }
-    fields.add(current.toString())
-    return fields
-}
-
-private fun csvEscapeAssoc(field: String): String =
-    if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-        "\"${field.replace("\"", "\"\"")}\""
-    } else {
-        field
-    }

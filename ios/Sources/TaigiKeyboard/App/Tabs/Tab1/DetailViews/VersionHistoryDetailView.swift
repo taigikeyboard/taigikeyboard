@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// 版本紀錄頁面
-///
-/// 顯示 App 版本更新歷史。
+/// Version history page showing app update changelog.
 struct VersionHistoryDetailView: View {
     @StateObject private var languageManager = LanguageManager.shared
 
@@ -12,10 +10,10 @@ struct VersionHistoryDetailView: View {
                 let entry = Tab1Texts.versionHistoryEntries[index]
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
-                        // 版本號與日期
+                        // Version number and date
                         HStack {
                             Text("v\(entry.version)")
-                                .font(KeyboardModels.Fonts.appFont(.headline))
+                                .font(AppStyle.headlineFont)
                                 .foregroundColor(AppStyle.accentBlue)
 
                             Spacer()
@@ -25,7 +23,7 @@ struct VersionHistoryDetailView: View {
                                 .foregroundColor(.secondary)
                         }
 
-                        // 變更內容
+                        // Change list
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(entry.changes.indices, id: \.self) { changeIndex in
                                 HStack(alignment: .top, spacing: 8) {

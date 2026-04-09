@@ -78,7 +78,7 @@ fun HomeScreen(
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
                 colors =
-                    TopAppBarDefaults.largeTopAppBarColors(
+                    TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer,
                         scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),

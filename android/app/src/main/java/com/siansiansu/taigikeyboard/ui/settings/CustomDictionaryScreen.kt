@@ -71,6 +71,8 @@ import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -494,39 +496,28 @@ fun CustomDictionaryScreen(
 
     // Delete all confirmation
     if (showDeleteAllDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text(languageManager.text(Tab3Texts.deleteAll)) },
-            text = { Text(languageManager.text(Tab3Texts.deleteAllMessage)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteAllDialog = false
-                    scope.launch {
-                        CustomDictionaryService.deleteAll()
-                        reload()
-                    }
-                }) {
-                    Text(languageManager.text(Tab3Texts.clear))
+        ConfirmationDialog(
+            title = languageManager.text(Tab3Texts.deleteAll),
+            message = languageManager.text(Tab3Texts.deleteAllMessage),
+            confirmLabel = languageManager.text(Tab3Texts.clear),
+            dismissLabel = languageManager.text(Tab3Texts.cancel),
+            onConfirm = {
+                showDeleteAllDialog = false
+                scope.launch {
+                    CustomDictionaryService.deleteAll()
+                    reload()
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteAllDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.cancel))
-                }
-            },
+            onDismiss = { showDeleteAllDialog = false },
         )
     }
 
     // Result dialog
     if (showResultDialog) {
-        AlertDialog(
-            onDismissRequest = { showResultDialog = false },
-            text = { Text(resultMessage) },
-            confirmButton = {
-                TextButton(onClick = { showResultDialog = false }) {
-                    Text(languageManager.text(Tab3Texts.ok))
-                }
-            },
+        ResultDialog(
+            message = resultMessage,
+            confirmLabel = languageManager.text(Tab3Texts.ok),
+            onDismiss = { showResultDialog = false },
         )
     }
 }

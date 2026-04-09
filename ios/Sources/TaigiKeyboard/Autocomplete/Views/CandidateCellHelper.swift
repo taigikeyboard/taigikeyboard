@@ -6,7 +6,6 @@ import SwiftUI
 /// 封裝候選詞顯示和處理的共用邏輯。
 /// 支援 TPS（方音符號）模式：羅馬字會轉換為方音符號顯示。
 enum CandidateCellHelper {
-
     // MARK: - 顯示文字計算
 
     /// 檢查是否為 TPS 佈局模式
@@ -31,7 +30,7 @@ enum CandidateCellHelper {
         }
 
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-            return subtitle  // 漢字為主標題
+            return subtitle // 漢字為主標題
         }
 
         return suggestion.text
@@ -51,9 +50,9 @@ enum CandidateCellHelper {
         }
 
         if isTranslateSwapped {
-            return suggestion.text  // 羅馬字為副標題
+            return suggestion.text // 羅馬字為副標題
         }
-        return suggestion.subtitle  // 漢字為副標題
+        return suggestion.subtitle // 漢字為副標題
     }
 
     // MARK: - 建議處理
@@ -69,28 +68,30 @@ enum CandidateCellHelper {
         // TPS mode: always output hanzi (fallback to TPS symbols if no hanzi)
         if isTPSLayout,
            let subtitle = suggestion.subtitle,
-           !subtitle.isEmpty {
+           !subtitle.isEmpty
+        {
             let additionalDeleteCount = max(0, suggestion.text.count - subtitle.count)
             return Autocomplete.Suggestion(
                 text: subtitle,
                 title: subtitle,
                 subtitle: suggestion.text,
                 additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo
+                additionalInfo: suggestion.additionalInfo,
             )
         }
 
         // 漢字優先模式：輸出漢字
         if isTranslateSwapped,
            let subtitle = suggestion.subtitle,
-           !subtitle.isEmpty {
+           !subtitle.isEmpty
+        {
             let additionalDeleteCount = max(0, suggestion.text.count - subtitle.count)
             return Autocomplete.Suggestion(
                 text: subtitle,
                 title: subtitle,
                 subtitle: suggestion.text,
                 additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo
+                additionalInfo: suggestion.additionalInfo,
             )
         }
 
@@ -103,7 +104,7 @@ enum CandidateCellHelper {
                 title: tpsText,
                 subtitle: suggestion.subtitle,
                 additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo
+                additionalInfo: suggestion.additionalInfo,
             )
         }
 
@@ -116,7 +117,7 @@ enum CandidateCellHelper {
     /// 計算主標題字體大小
     ///
     /// TPS 模式顯示漢字，使用正常字體大小
-    static func titleFontSize(isTranslateSwapped: Bool) -> CGFloat {
+    static func titleFontSize(isTranslateSwapped _: Bool) -> CGFloat {
         // TPS mode: displaying hanzi, use normal font size
         if isTPSLayout {
             return CandidateViewModels.UI.primaryFontSize
@@ -127,7 +128,7 @@ enum CandidateCellHelper {
     /// 計算副標題字體大小
     ///
     /// TPS 模式無副標題，使用正常字體大小
-    static func subtitleFontSize(isTranslateSwapped: Bool) -> CGFloat {
+    static func subtitleFontSize(isTranslateSwapped _: Bool) -> CGFloat {
         // TPS mode: no subtitle, use normal font size
         if isTPSLayout {
             return CandidateViewModels.UI.secondaryFontSize
@@ -144,8 +145,8 @@ enum CandidateCellHelper {
     /// returns max width + padding. Always measures both regardless of
     /// isTranslateSwapped so layout doesn't reflow on translate toggle.
     static func measuredCellWidth(for suggestion: Autocomplete.Suggestion) -> CGFloat {
-        let titleFont = KeyboardModels.Fonts.globalUIFont(size: CandidateViewModels.UI.primaryFontSize)
-        let subtitleFont = KeyboardModels.Fonts.globalUIFont(size: CandidateViewModels.UI.secondaryFontSize)
+        let titleFont = KeyboardFonts.globalUIFont(size: CandidateViewModels.UI.primaryFontSize)
+        let subtitleFont = KeyboardFonts.globalUIFont(size: CandidateViewModels.UI.secondaryFontSize)
 
         let text = suggestion.text
         let subtitle = suggestion.subtitle ?? ""

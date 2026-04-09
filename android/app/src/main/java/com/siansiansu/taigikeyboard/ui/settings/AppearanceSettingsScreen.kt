@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
@@ -171,12 +170,7 @@ fun AppearanceSettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Card 2: Keyboard (齒盤介面)
-                Text(
-                    text = languageManager.text(Tab2Texts.keyboardSection),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab2Texts.keyboardSection))
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorRow(
@@ -214,12 +208,7 @@ fun AppearanceSettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Card 3: Key (揤鈕介面)
-                Text(
-                    text = languageManager.text(Tab2Texts.colorKeySection),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab2Texts.colorKeySection))
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorRow(
@@ -317,12 +306,7 @@ fun AppearanceSettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Card 4: Candidate (候選詞介面)
-                Text(
-                    text = languageManager.text(Tab2Texts.candidateSection),
-                    fontSize = AppStyle.sectionHeaderFontSize,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
-                )
+                SectionHeader(languageManager.text(Tab2Texts.candidateSection))
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
                         ColorRow(

@@ -1,5 +1,4 @@
 import Foundation
-import OSLog
 import SQLite3
 
 /// Repository for user custom dictionary entries
@@ -10,10 +9,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     static let shared = CustomDictionaryRepository()
 
     private let connectionManager: SQLiteConnectionManager
-    private let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "CustomDictionaryRepository",
-    )
+    private let logger = DebugLogger(category: "CustomDictionaryRepository")
 
     private var isTablesCreated = false
 

@@ -1,35 +1,33 @@
 import Foundation
 import KeyboardKit
-import OSLog
 
-/// 台語鍵盤動作處理器
+/// Taigi keyboard action handler.
 ///
-/// 繼承自 KeyboardKit 的 `StandardActionHandler`，處理所有按鍵動作。
-/// 主要功能包含：
-/// - 字元輸入與組字管理
-/// - 候選詞選擇
-/// - NextWord 下一詞預測
-///
-/// - Note: 相關 extension 定義於 `ActionHandler+*.swift`
-public class ActionHandler: KeyboardAction.StandardActionHandler {
+/// **Action flow** (gesture → output):
+/// 1. `handle(_:on:)` — KeyboardKit entry point, filters gesture type
+/// 2. `handleTaigiSpecificAction` — dispatches by action type
+/// 3. Per-action handlers (in extension files):
+///    - `handleCharacterInput` → composing / direct output  (KeyActions)
+///    - `handleSpaceAction` → commit composing / insert space  (KeyActions)
+///    - `handleReturnAction` → commit raw or selected candidate  (KeyActions)
+///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
+///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
+/// 4. `processNextWord` — unified entry: record association → update state → predict  (Suggestions)
+/// 5. `triggerNextWordPrediction` — async query NextWordService, update UI  (this file)
+public class ActionHandler: KeyboardAction.StandardActionHandler, SelectionContextProvider {
+    // MARK: - Properties
 
-    // MARK: - 屬性
-
-    let logger = Logger(
-        subsystem: LexiconConstants.Logging.subsystem,
-        category: "ActionHandler"
-    )
+    let logger = DebugLogger(category: "ActionHandler")
 
     let settings = SharedSettings.shared
     public let composingManager = ComposingManager()
-    weak var keyboardViewController: KeyboardInputViewController?
 
-    /// 空白鍵拖曳狀態（用於區分拖曳移動游標與點擊輸入空白）
+    /// Distinguishes space-drag (cursor move) from space-tap (insert space)
     private var isSpaceDragInProgress = false
 
-    // MARK: - NextWord 狀態
+    // MARK: - NextWord State
 
-    /// 前一個選中的詞（用於記錄詞彙關聯）
+    /// Previous selection for word association recording
     var lastSelectedWord: String?
     var lastSelectedRoman: String?
     var lastSelectionTime: Int64 = 0
@@ -37,19 +35,19 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     private var contextTimeoutTimer: Timer?
 
     private enum NextWordConstants {
-        /// 連續選詞間隔上限（超過則不記錄關聯）
-        static let associationTimeoutMs: Int64 = 10_000
-        /// 上下文超時（超過則清除 NextWord 狀態）
-        static let contextTimeoutMs: Int64 = 30_000
+        /// Max interval between selections to record association
+        static let associationTimeoutMs: Int64 = 10000
+        /// Context timeout — clears NextWord state after inactivity
         static let contextTimeoutSeconds: TimeInterval = 30.0
-        /// 句末標點（遇到時重置 NextWord 上下文）
+        /// Sentence-end punctuation resets NextWord context
         static let sentenceEndPunctuation = Set<Character>(["。", "！", "？", ".", "!", "?"])
+        /// Noise punctuation — superset of sentenceEndPunctuation, used by isNoiseText()
+        static let noisePunctuation = "。！？.!?，,、；;：:「」『』\"\"\u{2018}\u{2019}（）()【】[]{}—–-～~…·"
     }
 
-    // MARK: - 動作分發
+    // MARK: - Action Dispatch
 
-    /// 處理台語鍵盤特定動作
-    /// - Returns: 是否已處理（true 表示不需繼續傳遞給 KeyboardKit）
+    /// - Returns: true if handled (skip KeyboardKit default)
     private func handleTaigiSpecificAction(_ action: KeyboardAction) -> Bool {
         switch action {
         case .settings:
@@ -80,7 +78,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     // MARK: - KeyboardKit Override
 
     override public func handle(_ gesture: Keyboard.Gesture, on action: KeyboardAction) {
-        // 空白鍵拖曳狀態追蹤
+        // Space drag state tracking
         if action == .space {
             switch gesture {
             case .longPress:
@@ -88,12 +86,11 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             case .release:
                 if isSpaceDragInProgress {
                     isSpaceDragInProgress = false
-                    super.handle(gesture, on: action) // 確保 KeyboardKit 處理拖曳結束
+                    super.handle(gesture, on: action) // Let KeyboardKit handle drag end
                     return
                 }
                 isSpaceDragInProgress = false
             case .end:
-                // 重置拖曳狀態
                 isSpaceDragInProgress = false
             default:
                 break
@@ -102,22 +99,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
         guard gesture == .release else {
             if action == .backspace {
-                // 允許退格鍵的重複按壓手勢
+                // Allow backspace repeat-press gesture
                 if gesture == .repeatPress {
                     _ = handleBackspaceAction()
-                }
-                return
-            }
-
-            // DEBUG: 追蹤 keyboardType 切換時的 keyboardCase 變化
-            if case .keyboardType = action {
-                let beforeCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] BEFORE super.handle(\(String(describing: gesture), privacy: .public), \(String(describing: action), privacy: .public)): keyboardCase=\(String(describing: beforeCase), privacy: .public)")
-                super.handle(gesture, on: action)
-                let afterCase = keyboardContext.keyboardCase
-                logger.debug("[CASE][handle] AFTER super.handle: keyboardCase=\(String(describing: afterCase), privacy: .public)")
-                if beforeCase != afterCase {
-                    logger.debug("[CASE][handle] ⚠️ keyboardCase CHANGED from \(String(describing: beforeCase), privacy: .public) to \(String(describing: afterCase), privacy: .public)")
                 }
                 return
             }
@@ -128,23 +112,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
         let handled = handleTaigiSpecificAction(action)
         if handled {
-
-            // 對齊 Android 行為：以下情況不觸發 autocomplete（保留 NextWord 候選詞）
-            // 1. 非組字模式按空白鍵
-            // 2. 非組字模式輸入 "-" 且正在顯示 NextWord
-            let skipAutocomplete: Bool = {
-                if !composingManager.isComposing {
-                    if action == .space {
-                        return true
-                    }
-                    if case .character("-") = action, isShowingNextWord {
-                        return true
-                    }
-                }
-                return false
-            }()
-
-            if !skipAutocomplete {
+            if !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
             }
             return
@@ -152,13 +120,22 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         super.handle(gesture, on: action)
     }
 
+    /// Align with Android: skip autocomplete to preserve NextWord suggestions
+    /// when not composing and pressing space or "-" during NextWord
+    private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
+        guard !composingManager.isComposing else { return false }
+        if action == .space { return true }
+        if case .character("-") = action, isShowingNextWord { return true }
+        return false
+    }
+
     override public func handle(_ suggestion: Autocomplete.Suggestion) {
-        // 英文模式：使用 KeyboardKit 預設處理（會自動刪除已輸入的字元再插入）
+        // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
             super.handle(suggestion)
             return
         }
-        // 台語模式：使用自定義處理
+        // Taigi mode: custom handling
         handleSuggestionSelection(suggestion)
     }
 
@@ -166,36 +143,38 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         handle(.release, on: action)
     }
 
-    /// 覆寫 KeyboardKit 的 keyboardCase 自動調整
+    /// FIXME: Workaround for KeyboardKit 10 auto-capitalization override.
+    /// Part of 3-layer workaround — see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2).
+    /// Remove when KeyboardKit provides a proper API to disable auto-capitalization.
     ///
-    /// - Shift 動作：始終讓 super 處理（保留 doubleTap → Caps Lock 功能）
-    /// - 其他動作：只在自動大寫開啟時調用 super，避免 KeyboardKit 自動將 keyboardCase 改為大寫
+    /// - Shift: always let super handle (preserves doubleTap → Caps Lock)
+    /// - Other actions: only call super when auto-cap is on
     override public func tryChangeKeyboardCase(
         after gesture: Keyboard.Gesture,
-        on action: KeyboardAction
+        on action: KeyboardAction,
     ) {
         let beforeCase = keyboardContext.keyboardCase
         let isAutoCap = keyboardContext.settings.isAutocapitalizationEnabled
 
-        logger.debug("[CASE][tryChange] gesture=\(String(describing: gesture), privacy: .public) action=\(String(describing: action), privacy: .public) before=\(String(describing: beforeCase), privacy: .public) isAutoCap=\(isAutoCap, privacy: .public)")
+        logger.debug("[CASE][tryChange] gesture=\(String(describing: gesture)) action=\(String(describing: action)) before=\(String(describing: beforeCase)) isAutoCap=\(isAutoCap)")
 
-        // Shift 動作：始終讓 super 處理（包括 doubleTap → Caps Lock）
+        // Shift: always let super handle (preserves doubleTap → Caps Lock)
         if case .shift = action {
             super.tryChangeKeyboardCase(after: gesture, on: action)
-            logger.debug("[CASE][tryChange] after shift: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+            logger.debug("[CASE][tryChange] after shift: \(String(describing: keyboardContext.keyboardCase))")
             return
         }
 
-        // 其他動作：只在自動大寫開啟時調用 super
+        // Other actions: only call super when auto-cap is on
         if isAutoCap {
             super.tryChangeKeyboardCase(after: gesture, on: action)
-            logger.debug("[CASE][tryChange] after autoCap: \(String(describing: self.keyboardContext.keyboardCase), privacy: .public)")
+            logger.debug("[CASE][tryChange] after autoCap: \(String(describing: keyboardContext.keyboardCase))")
         } else {
             logger.debug("[CASE][tryChange] skipped (autoCap=false)")
         }
     }
 
-    // MARK: - NextWord 狀態管理
+    // MARK: - NextWord State Management
 
     func resetNextWordContext() {
         lastSelectedWord = nil
@@ -209,7 +188,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         stopContextTimeoutTimer()
         contextTimeoutTimer = Timer.scheduledTimer(
             withTimeInterval: NextWordConstants.contextTimeoutSeconds,
-            repeats: false
+            repeats: false,
         ) { [weak self] _ in
             self?.handleContextTimeout()
         }
@@ -231,17 +210,20 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         }
     }
 
-    /// 檢查是否應記錄詞彙關聯（間隔需小於 10 秒）
-    func shouldRecordAssociation() -> Bool {
-        guard lastSelectedWord != nil else { return false }
-        let now = Int64(Date().timeIntervalSince1970 * 1000)
-        return (now - lastSelectionTime) < NextWordConstants.associationTimeoutMs
+    static var currentTimestampMs: Int64 {
+        Int64(Date().timeIntervalSince1970 * 1000)
     }
 
-    /// 檢查是否為雜訊（標點、空白、純數字不觸發 NextWord）
+    /// Whether to record word association (selection interval < 10s)
+    func shouldRecordAssociation() -> Bool {
+        guard lastSelectedWord != nil else { return false }
+        return (Self.currentTimestampMs - lastSelectionTime) < NextWordConstants.associationTimeoutMs
+    }
+
+    /// Noise filter: punctuation, whitespace, pure digits don't trigger NextWord
     func isNoiseText(_ text: String) -> Bool {
         guard let firstChar = text.first else { return true }
-        let punctuation = "。！？.!?，,、；;：:「」『』\"\"\u{2018}\u{2019}（）()【】[]{}—–-～~…·"
+        let punctuation = NextWordConstants.noisePunctuation
         if punctuation.contains(firstChar) { return true }
         if firstChar.isWhitespace { return true }
         if text.allSatisfy({ $0.isASCII && $0.isNumber }) { return true }
@@ -253,38 +235,15 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         return NextWordConstants.sentenceEndPunctuation.contains(firstChar)
     }
 
-    func updateNextWordState(selectedWord: String, roman: String = "") {
-        lastSelectedWord = selectedWord
-        lastSelectedRoman = roman
-        lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
-        startContextTimeoutTimer()
-    }
+    // MARK: - NextWord Prediction
 
-    /// 更新前一詞記錄（不觸發預測）
-    ///
-    /// 用於空白鍵確認組字時，記錄已輸出的文字讓後續輸入可建立關聯。
-    func updateLastSelectedWord(_ word: String, roman: String? = nil) {
-        guard !word.isEmpty, !isNoiseText(word) else { return }
-
-        lastSelectedWord = word
-        lastSelectedRoman = roman ?? word
-        lastSelectionTime = Int64(Date().timeIntervalSince1970 * 1000)
-        recordCompoundWordAssociations(displayText: word, roman: word)
-        startContextTimeoutTimer()
-    }
-
-    // MARK: - NextWord 預測
-
-    /// 根據指定詞彙觸發下一詞預測
+    /// Trigger next-word prediction for the given word
     func triggerNextWordPrediction(for word: String, roman: String = "") {
-        // DEBUG: NextWord trace - triggerNextWordPrediction entry
-        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word, privacy: .public)'")
+        logger.debug("[NEXTWORD][TRIGGER] querying for word='\(word)'")
 
         Task { @MainActor in
             let predictions = await NextWordService.shared.predict(word: word, roman: roman)
-
-            // DEBUG: NextWord trace - predictions returned
-            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word, privacy: .public)'")
+            logger.debug("[NEXTWORD][TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
 
             if predictions.isEmpty {
                 isShowingNextWord = false
@@ -292,38 +251,10 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                 return
             }
 
-            // 轉換為候選詞格式（羅馬字模式下過濾無羅馬字的項目）
-            let suggestions = predictions.compactMap { prediction -> Autocomplete.Suggestion? in
-                if !settings.isTranslateSwapped && prediction.tl.isEmpty {
-                    // DEBUG: NextWord trace - filtered out prediction with empty TL
-                    self.logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi, privacy: .public)' tl='\(prediction.tl, privacy: .public)' (TL empty in roman mode)")
-                    return nil
-                }
+            let suggestions = makeSuggestions(from: predictions)
+            logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
 
-                // Convert TL -> POJ for display in POJ mode
-                let roman = settings.inputMode == .poj
-                    ? RomanizationConverter.tlToPOJ(prediction.tl)
-                    : prediction.tl
-                let text = roman.isEmpty ? prediction.hanzi : roman
-                let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
-
-                return Autocomplete.Suggestion(
-                    text: text,
-                    title: text,
-                    subtitle: subtitle,
-                    additionalInfo: [
-                        "isNextWord": "true",
-                        "hanzi": prediction.hanzi,
-                        "tl": prediction.tl,
-                        "displayText": prediction.hanzi
-                    ]
-                )
-            }
-
-            // DEBUG: NextWord trace - after filter
-            self.logger.debug("[NEXTWORD][TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
-
-            if let controller = keyboardViewController {
+            if let controller = keyboardController {
                 if suggestions.isEmpty {
                     isShowingNextWord = false
                     controller.state.autocompleteContext.reset()
@@ -334,8 +265,36 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
                 }
                 self.logger.debug("[NEXTWORD][TRIGGER] isShowingNextWord=\(self.isShowingNextWord)")
             } else {
-                self.logger.debug("[NEXTWORD][TRIGGER] keyboardViewController is nil!")
+                self.logger.debug("[NEXTWORD][TRIGGER] keyboardController is nil!")
             }
+        }
+    }
+
+    /// Convert NextWord predictions to autocomplete suggestions, filtering empty TL in romanization mode
+    private func makeSuggestions(from predictions: [NextWordService.Prediction]) -> [Autocomplete.Suggestion] {
+        predictions.compactMap { prediction in
+            if !settings.isTranslateSwapped && prediction.tl.isEmpty {
+                logger.debug("[NEXTWORD][FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
+                return nil
+            }
+
+            let roman = settings.inputMode == .poj
+                ? RomanizationConverter.tlToPOJ(prediction.tl)
+                : prediction.tl
+            let text = roman.isEmpty ? prediction.hanzi : roman
+            let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
+
+            return Autocomplete.Suggestion(
+                text: text,
+                title: text,
+                subtitle: subtitle,
+                additionalInfo: [
+                    "isNextWord": "true",
+                    "hanzi": prediction.hanzi,
+                    "tl": prediction.tl,
+                    "displayText": prediction.hanzi,
+                ],
+            )
         }
     }
 }

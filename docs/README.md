@@ -24,7 +24,7 @@ docs/
 ├── README.md
 ├── keywords.md       ← Keyword glossary
 ├── file-structure.md ← iOS/Android file mapping
-└── debug-log.md      ← Log conventions
+└── keywords.md       ← Keyword glossary
 ```
 
 ---
@@ -86,7 +86,7 @@ docs/
 |------|-------------|--------|
 | `keywords.md` | Standardized keyword mapping for core logic and UI | Reference |
 | `file-structure.md` | File index, directory structure, naming conventions | Reference |
-| `debug-log.md` | Debug log conventions (OSLog, Logcat) | Reference |
+
 
 ---
 

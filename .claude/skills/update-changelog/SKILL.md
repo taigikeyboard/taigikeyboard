@@ -1,12 +1,12 @@
 ---
-name: squash-commit
-description: Update CHANGELOG.md + Tab1 version history, then squash all branch commits into a single commit with a structured message. Use when the user wants to squash commits before merge.
+name: update-changelog
+description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history based on commits since main (last release). Run on develop branch when preparing a release.
 disable-model-invocation: true
 ---
 
 # Release Prep
 
-Prepare the current branch for merge by updating CHANGELOG.md and squashing all commits into one.
+Prepare the current release by updating CHANGELOG.md and version history. Run on `develop` branch, comparing against `main` (last release) to find all new commits.
 
 ## Steps
 
@@ -18,16 +18,15 @@ Run these in parallel:
 - `git diff main..HEAD --name-status` — file changes with A/M/D/R status
 - `git log main..HEAD --format="%s%n%b%n---"` — full commit messages
 - `git status --short` — verify clean working tree
-- Read the current `CHANGELOG.md`
+- Read `CHANGELOG.md` (index file) to find the current version's changelog path, then read that version file (e.g., `changelog/v3.4.8.md`)
 
-If the working tree is not clean (unstaged or uncommitted changes), commit them first:
-1. `git add -A`
-2. `git commit -m "WIP: uncommitted changes before squash"`
-Then continue with the rest of the steps — these changes will be included in the final squashed commit.
+If the working tree is not clean (unstaged or uncommitted changes), ask the user to commit or stash first.
 
 ### 2. Update CHANGELOG.md and versionHistoryEntries
 
-Compare the existing CHANGELOG.md against the full diff to find missing entries. Add any changes not already documented.
+Compare the current version's changelog file (e.g., `changelog/v3.4.8.md`) against the full diff to find missing entries. Add any changes not already documented. If this is a new version with no existing file, create a new file in `changelog/` and add it to the index in `CHANGELOG.md`.
+
+**Dedup rule**: Before adding an entry, check existing entries for semantic duplicates — if a change is already covered (even with different wording), skip it. Never create duplicate entries.
 
 **Categorization rules** (this is a cross-platform mobile project):
 - **iOS** — changes under `ios/`
@@ -63,42 +62,23 @@ Common rules for both:
   - "Refactored the codebase for better cleanliness and maintainability." (internal)
   - "Upgraded KeyboardKit to v10." (dependency detail, unless it brings user-visible changes)
 
-### 3. Squash commits
+### 3. Commit changelog updates
 
-1. Find merge base: `git merge-base main HEAD`
-2. Stage updated files: `git add CHANGELOG.md ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt`
-3. Soft reset: `git reset --soft <merge-base>`
-4. Create a single commit with a structured message:
+Stage and commit only the changelog-related files:
 
 ```
-<version-tag>: <concise summary>
-
-### iOS
-- bullet points of iOS changes
-
-### Android
-- bullet points of Android changes
-
-### Dictionary
-- bullet points of dictionary changes (if any)
-
-### Shared
-- bullet points of shared changes (if any)
-
-Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+git add CHANGELOG.md changelog/<version>.md ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt
+git commit -m "<version>: Update changelog and version history"
 ```
 
-Extract the version tag from the branch name or CHANGELOG header (e.g., `v3.4.1` from `bugfix-v3.4.1`).
+### 4. Verify
 
-### 4. Verify and push
-
-1. `git log main..HEAD --oneline` — confirm exactly 1 commit
+1. `git log main..HEAD --oneline` — confirm the changelog commit is included
 2. `git status --short` — confirm clean working tree
-3. Ask the user for confirmation, then: `git push --force-with-lease origin <branch>`
 
 ## Important
 
-- Do NOT modify source code files other than the two `Tab1Texts` files — only CHANGELOG.md, iOS/Android Tab1Texts, and commit history
+- Do NOT modify source code files other than the two `Tab1Texts` files — only `CHANGELOG.md` (index), `changelog/<version>.md`, iOS/Android Tab1Texts
 - Do NOT alter any functionality
-- If the CHANGELOG.md is already complete, skip to step 3
-- Always use `--force-with-lease` (not `--force`) for safety
+- If the changelog version file is already complete, inform the user — nothing to do
+- For new releases: create `changelog/<version>.md` and add it to the `CHANGELOG.md` index
