@@ -1,5 +1,5 @@
 ---
-name: release-prep
+name: update-changelog
 description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history based on commits since main (last release). Run on develop branch when preparing a release.
 disable-model-invocation: true
 ---
