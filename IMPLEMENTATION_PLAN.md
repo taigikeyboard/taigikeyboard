@@ -240,6 +240,24 @@ Branch: `rel-v3.4.8-bugfix`
 
 ---
 
+## Future Work (post-v3.4.8)
+
+### NextWord decoupling from ActionHandler
+**Problem**: ActionHandler 同時負責「鍵盤動作分派」和「NextWord 控制層」兩個職責。NextWord 在 ActionHandler 中佔 ~14 methods/properties + 1 enum（超過一半程式碼）。`NextWordService` 只負責資料層（DB query），控制層邏輯全部散在 ActionHandler。
+
+**耦合點**:
+1. NextWord 狀態（4 vars + timer）住在 ActionHandler
+2. NextWord 需讀 `settings`（inputMode, isTranslateSwapped）
+3. NextWord 需寫 `keyboardController.state.autocompleteContext` 更新 UI
+4. `shouldSkipAutocomplete()` 讀取 `isShowingNextWord`
+5. 四個 action handler（select、space、enter、backspace）都呼叫 NextWord
+
+**方向**: 提取 `NextWordController`，持有狀態 + 預測 + 關聯記錄邏輯。ActionHandler 只在動作發生時呼叫 `nextWordController.process(...)`。
+
+**涉及檔案**: `ActionHandler.swift`（狀態 + 預測）、`ActionHandler+Suggestions.swift`（processNextWord + compound word）、`ActionHandler+KeyActions.swift`（呼叫端）
+
+---
+
 ## Session Log
 - **2026-04-06** (iOS): Completed Stage 1 — App/ folder cleanup (3 commits)
 - **2026-04-07** (Android): Stage 1 completed — cleanup, shared components, deprecated API fixes, SectionHeader unification
