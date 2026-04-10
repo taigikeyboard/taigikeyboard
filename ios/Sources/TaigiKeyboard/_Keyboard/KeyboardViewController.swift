@@ -94,7 +94,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             services: services,
             layout: layout,
             emojiKeyboardView: { [unowned self] in
-                emojiService.getEmojiKeyboardView()
+                emojiService.emojiKeyboardView
             },
             calloutStyle: createCalloutStyle(),
             autocompleteContext: state.autocompleteContext,

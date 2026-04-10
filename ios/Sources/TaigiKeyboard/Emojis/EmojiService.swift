@@ -10,41 +10,25 @@ protocol EmojiServiceDelegate: AnyObject {
     func emojiKeyboardShouldDeleteBackward()
 }
 
-class EmojiService: NSObject {
+final class EmojiService: NSObject {
     weak var delegate: EmojiServiceDelegate?
-    private var emojiView: EmojiView?
+    private let emojiView: EmojiView
 
     override init() {
-        super.init()
-        setupEmojiView()
-    }
-
-    private func setupEmojiView() {
-        setupEmojiView(with: .default)
-    }
-
-    private func setupEmojiView(with configuration: Configuration) {
-        let keyboardSettings = KeyboardSettings(
-            bottomType: configuration.bottomType,
-        )
-        keyboardSettings.countOfRecentsEmojis =
-            configuration.countOfRecentsEmojis
-        keyboardSettings.needToShowAbcButton = configuration.needToShowAbcButton
-        keyboardSettings.isShowPopPreview = configuration.isShowPopPreview
-        keyboardSettings.needToShowDeleteButton =
-            configuration.needToShowDeleteButton
-        keyboardSettings.updateRecentEmojiImmediately =
-            configuration.updateRecentEmojiImmediately
+        let keyboardSettings = KeyboardSettings(bottomType: .categories)
+        keyboardSettings.countOfRecentsEmojis = 30
+        keyboardSettings.needToShowAbcButton = true
+        keyboardSettings.isShowPopPreview = true
+        keyboardSettings.needToShowDeleteButton = true
+        keyboardSettings.updateRecentEmojiImmediately = true
 
         emojiView = EmojiView(keyboardSettings: keyboardSettings)
-        emojiView?.delegate = self
+        super.init()
+        emojiView.delegate = self
     }
 
-    func getEmojiKeyboardView() -> AnyView {
-        guard let emojiView else {
-            return AnyView(EmptyView())
-        }
-        return AnyView(EmojiViewRepresentable(emojiView: emojiView))
+    var emojiKeyboardView: AnyView {
+        AnyView(EmojiViewRepresentable(emojiView: emojiView))
     }
 }
 
@@ -66,36 +50,12 @@ extension EmojiService: EmojiViewDelegate {
     }
 }
 
-struct EmojiViewRepresentable: UIViewRepresentable {
+private struct EmojiViewRepresentable: UIViewRepresentable {
     let emojiView: EmojiView
 
     func makeUIView(context _: Context) -> EmojiView {
         emojiView
     }
 
-    func updateUIView(_: EmojiView, context _: Context) {
-        // Update logic if needed
-    }
-
-    typealias UIViewType = EmojiView
-}
-
-extension EmojiService {
-    struct Configuration {
-        let bottomType: BottomType
-        let countOfRecentsEmojis: Int
-        let needToShowAbcButton: Bool
-        let isShowPopPreview: Bool
-        let needToShowDeleteButton: Bool
-        let updateRecentEmojiImmediately: Bool
-
-        static let `default` = Configuration(
-            bottomType: .categories,
-            countOfRecentsEmojis: 30,
-            needToShowAbcButton: true,
-            isShowPopPreview: true,
-            needToShowDeleteButton: true,
-            updateRecentEmojiImmediately: true,
-        )
-    }
+    func updateUIView(_: EmojiView, context _: Context) {}
 }
