@@ -24,7 +24,6 @@ final class SharedSettings {
         static let fontType = "fontType"
         static let fullAccessEnabled = "fullAccessEnabled"
         static let autoSpaceEnabled = "autoSpaceEnabled"
-        static let phahTaigiLayoutEnabled = "phahTaigiLayoutEnabled"
         static let keyboardLayoutType = "keyboardLayoutType"
         static let inputModeBeforeTps = "inputModeBeforeTps"
         static let layoutBeforeTps = "layoutBeforeTps"
@@ -81,14 +80,12 @@ final class SharedSettings {
                 if keyboardLayoutType != .tps {
                     layoutBeforeTps = keyboardLayoutType
                     userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
-                    isPhahTaigiLayoutEnabled = false
                 }
             } else if newValue != .tps, oldValue == .tps {
                 // Leaving TPS mode: restore previous layout
                 if keyboardLayoutType == .tps {
                     let restored = layoutBeforeTps
                     userDefaults.set(restored.rawValue, forKey: Keys.keyboardLayoutType)
-                    isPhahTaigiLayoutEnabled = (restored == .phahTaigi)
                 }
             }
         }
@@ -152,15 +149,6 @@ final class SharedSettings {
         }
     }
 
-    var isPhahTaigiLayoutEnabled: Bool {
-        get {
-            userDefaults.object(forKey: Keys.phahTaigiLayoutEnabled) as? Bool ?? true
-        }
-        set {
-            userDefaults.set(newValue, forKey: Keys.phahTaigiLayoutEnabled)
-        }
-    }
-
     var keyboardLayoutType: KeyboardLayoutType {
         get {
             let rawValue = userDefaults.string(forKey: Keys.keyboardLayoutType) ?? KeyboardLayoutType.phahTaigi.rawValue
@@ -181,8 +169,6 @@ final class SharedSettings {
                 inputMode = inputModeBeforeTps
             }
             userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
-            // Sync legacy phahTaigiLayoutEnabled flag (backward compat)
-            isPhahTaigiLayoutEnabled = (newValue == .phahTaigi)
         }
     }
 
@@ -405,7 +391,6 @@ final class SharedSettings {
         isOutputBothScripts = false
         fontType = .openHuninn
         isAutoSpaceEnabled = false
-        isPhahTaigiLayoutEnabled = true
         keyboardLayoutType = .phahTaigi
         // Dictionary toggles (iTaigi, TaiHua default off)
         isMoeDictEnabled = true
