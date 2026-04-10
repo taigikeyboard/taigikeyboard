@@ -251,6 +251,23 @@ Branch: `rel-v3.4.8-bugfix`
 **Line count change**: 335 → 290 (−45 lines)
 **Status**: ✅
 
+### Stage 13: Settings/ cleanup ✅
+**Branch**: `develop-settings`
+**Goal**: Review Settings/ folder for best practices, redundancy, naming, AI-friendliness
+**Principle**: Follow ios-guidelines naming conventions, single-responsibility file structure
+**What was done**:
+- Removed deprecated `userDefaults.synchronize()` from `isTranslateSwapped` setter
+- Simplified `sharedUserDefaults` from manual lazy init (7 lines, force unwrap) to `static let` (1 line)
+- Converted ~20 Chinese comments to English in SharedSettings.swift and InputMode.swift
+- Extracted model types (`InputMode`, `FontType`, `KeyboardLayoutType`, `CodableColor`, `KeyboardColorSettings`, `SettingsSnapshot`) from SharedSettings.swift → new `SettingsTypes.swift`; deleted `InputMode.swift` (content merged)
+- Renamed 20 Bool properties to follow ios-guidelines `is___` prefix convention across 18 consumer files (UserDefaults key strings unchanged for backward compat)
+- `khiin` → `isKhiinEnabled` (surgical rename preserving `.khiin` DictionarySource enum case)
+**Rename list**: `enableDoubleTapOO` → `isDoubleTapOOEnabled`, `enableDoubleTapNN` → `isDoubleTapNNEnabled`, `outputBothScripts` → `isOutputBothScripts`, `frequencyRecordingEnabled` → `isFrequencyRecordingEnabled`, `associationRecordingEnabled` → `isAssociationRecordingEnabled`, `customDictEnabled` → `isCustomDictEnabled`, 9 dict toggles → `is___DictEnabled`, `variantEnabled` → `isVariantEnabled`, `khiin` → `isKhiinEnabled`, `lkkDictEnabled` → `isLkkDictEnabled`, `tpsOrMapsToER` → `isTpsOrMappedToER`, `phahTaigiLayoutEnabled` → `isPhahTaigiLayoutEnabled`
+**New file**: `Settings/SettingsTypes.swift` (user must add to Xcode project)
+**Deleted file**: `Settings/InputMode.swift` (user must remove from Xcode project)
+**Line count change**: net −107 lines (19 files changed, 230 insertions, 337 deletions)
+**Status**: ✅
+
 ---
 
 ## Android Refactoring
@@ -309,3 +326,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-10** (iOS): Stage 10 — NextWord decoupling from ActionHandler. Extracted `NextWordController` (273 lines) holding all NextWord state, prediction, association recording, timer management. ActionHandler reduced from 300→168 lines. Defined `AutocompleteContextUpdater` protocol for UI decoupling. Renamed `setActionHandler` → `setSelectionContextProvider`. Updated all 4 entry points + `textDidChange`
 - **2026-04-10** (iOS): Stage 11 — Emojis/ cleanup. Simplified EmojiService: removed unused Configuration struct, double setupEmojiView indirection, made emojiView non-optional, added final, tightened access control. 101→65 lines
 - **2026-04-10** (iOS): Stage 12 — Callouts/ cleanup. Extracted `combiningMark` + `buildVariations` helpers (5× duplication eliminated), `buildToneMap` 93→42 lines, cached layout type + switch, cleaned comments. 335→290 lines
+- **2026-04-10** (iOS): Stage 13 — Settings/ cleanup. Removed deprecated `.synchronize()`, simplified `sharedUserDefaults` init, Chinese→English comments, extracted model types to `SettingsTypes.swift`, renamed 20 Bool properties to `is___` prefix across 18 files. Net −107 lines

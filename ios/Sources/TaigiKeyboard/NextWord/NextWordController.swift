@@ -67,7 +67,7 @@ final class NextWordController: SelectionContextProvider {
         let textTl = RomanizationConverter.pojToTL(roman)
         let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        if settings.associationRecordingEnabled {
+        if settings.isAssociationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
                 Task {
                     await NextWordService.shared.recordAssociation(

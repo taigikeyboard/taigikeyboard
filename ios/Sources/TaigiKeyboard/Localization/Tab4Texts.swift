@@ -26,7 +26,7 @@ enum Tab4Texts {
     // MARK: - 拍字設定
 
     static let typingSectionTitle = LocalizedText(hanji: "拍字設定")
-    static let outputBothScripts = LocalizedText(hanji: "括號標註")
+    static let isOutputBothScripts = LocalizedText(hanji: "括號標註")
     static let autoCapitalization = LocalizedText(hanji: "自動大本字")
     static let autoSpace = LocalizedText(hanji: "自動空白")
 
@@ -51,7 +51,7 @@ enum Tab4Texts {
     // MARK: - 方音符號設定
 
     static let tpsSettingsSectionTitle = LocalizedText(hanji: "方音符號")
-    static let tpsOrMapsToER = LocalizedText(hanji: "or 對應 ㄜ")
+    static let isTpsOrMappedToER = LocalizedText(hanji: "or 對應 ㄜ")
 
     // MARK: - 重設設定
 
@@ -75,11 +75,11 @@ enum Tab4Texts {
 
     static let toolbarAutoCollapseInfo = LocalizedText(hanji: "選字了後工具列會自動合起來，予齒盤面頂空間較大。")
     static let globeKeyInfo = LocalizedText(hanji: "佇齒盤面頂加 1 粒地球揤鈕，揤著會使切換去其他齒盤。")
-    static let tpsOrMapsToERInfo = LocalizedText(hanji: "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。共 or 嘛對應 ㄜ 是就音值來處理，毋過會予 er 佮 or 兩个音位攏對應到仝一个 ㄜ。\n\n開啟（預設）：or 對應 ㄜ，候選詞排佇 er 後壁。\n關閉：or 對應 ㄛ（恢復台羅 o），避免 er／or 相濫。教典 or 攏有 o 版本，袂影響拍字。")
+    static let isTpsOrMappedToERInfo = LocalizedText(hanji: "台羅 or 毋是正式寫法，方音符號 ㄜ 正式干焦對應 er。共 or 嘛對應 ㄜ 是就音值來處理，毋過會予 er 佮 or 兩个音位攏對應到仝一个 ㄜ。\n\n開啟（預設）：or 對應 ㄜ，候選詞排佇 er 後壁。\n關閉：or 對應 ㄛ（恢復台羅 o），避免 er／or 相濫。教典 or 攏有 o 版本，袂影響拍字。")
 
     // MARK: - Icons (shared between Tab4 and keyboard overlay)
 
-    static let outputBothScriptsIcon = "character.book.closed"
+    static let isOutputBothScriptsIcon = "character.book.closed"
     static let autoCapitalizationIcon = "textformat.size"
     static let autoSpaceIcon = "space"
     static let toolbarIcon = "menubar.rectangle"

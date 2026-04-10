@@ -40,13 +40,13 @@ enum ToneConverter {
         var result = input
         let settings = SharedSettings.shared
 
-        if settings.enableDoubleTapOO {
+        if settings.isDoubleTapOOEnabled {
             result = result.replacingOccurrences(of: "oo", with: "o͘")
             result = result.replacingOccurrences(of: "Oo", with: "O͘")
             result = result.replacingOccurrences(of: "OO", with: "O͘")
         }
 
-        if settings.enableDoubleTapNN {
+        if settings.isDoubleTapNNEnabled {
             result = convertNasalDoubleN(result)
         }
 

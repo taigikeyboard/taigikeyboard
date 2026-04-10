@@ -31,7 +31,7 @@ struct AssociationDataView: View {
     }
 
     init() {
-        _isAssociationRecordingEnabled = State(initialValue: SharedSettings.shared.associationRecordingEnabled)
+        _isAssociationRecordingEnabled = State(initialValue: SharedSettings.shared.isAssociationRecordingEnabled)
     }
 
     var body: some View {
@@ -46,12 +46,12 @@ struct AssociationDataView: View {
                 Section {
                     Toggle(isOn: $isAssociationRecordingEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.associationRecordingEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.associationRecordingEnabledInfo))
+                            Text(languageManager.text(Tab3Texts.isAssociationRecordingEnabled))
+                            SettingInfoButton(description: languageManager.text(Tab3Texts.isAssociationRecordingEnabledInfo))
                         }
                     }
                     .onChange(of: isAssociationRecordingEnabled) { _, newValue in
-                        settings.associationRecordingEnabled = newValue
+                        settings.isAssociationRecordingEnabled = newValue
                     }
                 }
 

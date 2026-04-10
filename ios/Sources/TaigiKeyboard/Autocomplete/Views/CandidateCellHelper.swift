@@ -26,7 +26,7 @@ enum CandidateCellHelper {
             if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             }
-            return TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
+            return TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER)
         }
 
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
@@ -97,7 +97,7 @@ enum CandidateCellHelper {
 
         // TPS fallback: output TPS symbols when no hanzi
         if isTPSLayout {
-            let tpsText = TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.tpsOrMapsToER)
+            let tpsText = TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER)
             let additionalDeleteCount = max(0, suggestion.text.count - tpsText.count)
             return Autocomplete.Suggestion(
                 text: tpsText,
@@ -153,7 +153,7 @@ enum CandidateCellHelper {
 
         if SharedSettings.shared.keyboardLayoutType == .tps {
             // TPS: only hanzi title (or TPS-converted fallback), no subtitle
-            let titleText = subtitle.isEmpty ? TPSConverter.toTPS(text, orMapsToER: SharedSettings.shared.tpsOrMapsToER) : subtitle
+            let titleText = subtitle.isEmpty ? TPSConverter.toTPS(text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER) : subtitle
             let w = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
             return max(minimumCellWidth, w + cellHorizontalPadding)
         }

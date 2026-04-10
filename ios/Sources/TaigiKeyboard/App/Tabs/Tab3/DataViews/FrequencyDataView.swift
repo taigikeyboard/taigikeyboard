@@ -26,7 +26,7 @@ struct FrequencyDataView: View {
     }
 
     init() {
-        _isFrequencyRecordingEnabled = State(initialValue: SharedSettings.shared.frequencyRecordingEnabled)
+        _isFrequencyRecordingEnabled = State(initialValue: SharedSettings.shared.isFrequencyRecordingEnabled)
     }
 
     var body: some View {
@@ -41,12 +41,12 @@ struct FrequencyDataView: View {
                 Section {
                     Toggle(isOn: $isFrequencyRecordingEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.frequencyRecordingEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.frequencyRecordingEnabledInfo))
+                            Text(languageManager.text(Tab3Texts.isFrequencyRecordingEnabled))
+                            SettingInfoButton(description: languageManager.text(Tab3Texts.isFrequencyRecordingEnabledInfo))
                         }
                     }
                     .onChange(of: isFrequencyRecordingEnabled) { _, newValue in
-                        settings.frequencyRecordingEnabled = newValue
+                        settings.isFrequencyRecordingEnabled = newValue
                     }
                 }
 

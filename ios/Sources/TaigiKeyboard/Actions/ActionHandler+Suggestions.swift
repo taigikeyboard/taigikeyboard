@@ -28,7 +28,7 @@ extension ActionHandler {
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
-            if settings.frequencyRecordingEnabled {
+            if settings.isFrequencyRecordingEnabled {
                 UserFrequencyService.recordUsage(for: displayText)
             }
 
@@ -37,7 +37,7 @@ extension ActionHandler {
 
             // Romanization mode: auto-space (unless trailing hyphen)
             // TPS mode disables auto-space (effectiveSwapped is true for TPS)
-            if settings.isAutoSpaceEnabled, !effectiveSwapped || settings.outputBothScripts {
+            if settings.isAutoSpaceEnabled, !effectiveSwapped || settings.isOutputBothScripts {
                 if !textToCommit.hasSuffix("-") {
                     keyboardContext.textDocumentProxy.insertText(" ")
                 }
@@ -69,10 +69,10 @@ extension ActionHandler {
     /// Format output text based on display mode (roman, Hanji, or both scripts)
     private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
         let bracketRoman = isTPSLayout
-            ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: settings.tpsOrMapsToER)
+            ? TPSConverter.toTPSFromDisplay(roman, orMapsToER: settings.isTpsOrMappedToER)
             : roman
 
-        if settings.outputBothScripts, let hanzi, !hanzi.isEmpty {
+        if settings.isOutputBothScripts, let hanzi, !hanzi.isEmpty {
             return effectiveSwapped
                 ? "\(hanzi) (\(bracketRoman))"
                 : "\(bracketRoman) (\(hanzi))"

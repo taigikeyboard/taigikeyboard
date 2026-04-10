@@ -11,18 +11,18 @@ struct Tab3: View {
     private let settings = SharedSettings.shared
 
     // Dictionary toggle states
-    @State private var moeDictEnabled: Bool
-    @State private var newwordDictEnabled: Bool
-    @State private var kunggeDictEnabled: Bool
-    @State private var iTaigiDictEnabled: Bool
-    @State private var taiwanJapanDictEnabled: Bool
-    @State private var taiHuaDictEnabled: Bool
-    @State private var taiwanPlantDictEnabled: Bool
-    @State private var sttiDictEnabled: Bool
-    @State private var khpooDictEnabled: Bool
-    @State private var variantEnabled: Bool
-    @State private var khiin: Bool
-    @State private var lkkDictEnabled: Bool
+    @State private var isMoeDictEnabled: Bool
+    @State private var isNewwordDictEnabled: Bool
+    @State private var isKunggeDictEnabled: Bool
+    @State private var isITaigiDictEnabled: Bool
+    @State private var isTaiwanJapanDictEnabled: Bool
+    @State private var isTaiHuaDictEnabled: Bool
+    @State private var isTaiwanPlantDictEnabled: Bool
+    @State private var isSttiDictEnabled: Bool
+    @State private var isKhpooDictEnabled: Bool
+    @State private var isVariantEnabled: Bool
+    @State private var isKhiinEnabled: Bool
+    @State private var isLkkDictEnabled: Bool
 
     /// Search focus
     @FocusState private var isSearchFocused: Bool
@@ -33,18 +33,18 @@ struct Tab3: View {
 
     init() {
         let settings = SharedSettings.shared
-        _moeDictEnabled = State(initialValue: settings.moeDictEnabled)
-        _newwordDictEnabled = State(initialValue: settings.newwordDictEnabled)
-        _kunggeDictEnabled = State(initialValue: settings.kunggeDictEnabled)
-        _iTaigiDictEnabled = State(initialValue: settings.iTaigiDictEnabled)
-        _taiwanJapanDictEnabled = State(initialValue: settings.taiwanJapanDictEnabled)
-        _taiHuaDictEnabled = State(initialValue: settings.taiHuaDictEnabled)
-        _taiwanPlantDictEnabled = State(initialValue: settings.taiwanPlantDictEnabled)
-        _sttiDictEnabled = State(initialValue: settings.sttiDictEnabled)
-        _khpooDictEnabled = State(initialValue: settings.khpooDictEnabled)
-        _variantEnabled = State(initialValue: settings.variantEnabled)
-        _khiin = State(initialValue: settings.khiin)
-        _lkkDictEnabled = State(initialValue: settings.lkkDictEnabled)
+        _isMoeDictEnabled = State(initialValue: settings.isMoeDictEnabled)
+        _isNewwordDictEnabled = State(initialValue: settings.isNewwordDictEnabled)
+        _isKunggeDictEnabled = State(initialValue: settings.isKunggeDictEnabled)
+        _isITaigiDictEnabled = State(initialValue: settings.isITaigiDictEnabled)
+        _isTaiwanJapanDictEnabled = State(initialValue: settings.isTaiwanJapanDictEnabled)
+        _isTaiHuaDictEnabled = State(initialValue: settings.isTaiHuaDictEnabled)
+        _isTaiwanPlantDictEnabled = State(initialValue: settings.isTaiwanPlantDictEnabled)
+        _isSttiDictEnabled = State(initialValue: settings.isSttiDictEnabled)
+        _isKhpooDictEnabled = State(initialValue: settings.isKhpooDictEnabled)
+        _isVariantEnabled = State(initialValue: settings.isVariantEnabled)
+        _isKhiinEnabled = State(initialValue: settings.isKhiinEnabled)
+        _isLkkDictEnabled = State(initialValue: settings.isLkkDictEnabled)
     }
 
     var body: some View {
@@ -74,27 +74,27 @@ struct Tab3: View {
                     dictToggleWithDescription(
                         title: Tab3Texts.moeDict,
                         url: "https://sutian.moe.edu.tw/",
-                        isOn: $moeDictEnabled,
+                        isOn: $isMoeDictEnabled,
                         description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
-                    ) { settings.moeDictEnabled = $0 }
+                    ) { settings.isMoeDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.newwordDict,
                         url: "https://www.taigitv.org.tw/taigi-words",
-                        isOn: $newwordDictEnabled,
+                        isOn: $isNewwordDictEnabled,
                         description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
-                    ) { settings.newwordDictEnabled = $0 }
+                    ) { settings.isNewwordDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.sttiDict,
                         url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
-                        isOn: $sttiDictEnabled,
+                        isOn: $isSttiDictEnabled,
                         description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
-                    ) { settings.sttiDictEnabled = $0 }
+                    ) { settings.isSttiDictEnabled = $0 }
                     dictToggleWithDescription(
                         title: Tab3Texts.kunggeDict,
                         url: "https://kanggesu.ntcri.org.tw",
-                        isOn: $kunggeDictEnabled,
+                        isOn: $isKunggeDictEnabled,
                         description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
-                    ) { settings.kunggeDictEnabled = $0 }
+                    ) { settings.isKunggeDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.moeSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
@@ -102,17 +102,17 @@ struct Tab3: View {
 
                 // Other dictionaries
                 Section {
-                    dictionaryToggle(Tab3Texts.iTaigiDict, isOn: $iTaigiDictEnabled, info: .iTaigi) {
-                        settings.iTaigiDictEnabled = $0
+                    dictionaryToggle(Tab3Texts.iTaigiDict, isOn: $isITaigiDictEnabled, info: .iTaigi) {
+                        settings.isITaigiDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiwanJapanDict, isOn: $taiwanJapanDictEnabled, info: .taiwanJapan) {
-                        settings.taiwanJapanDictEnabled = $0
+                    dictionaryToggle(Tab3Texts.taiwanJapanDict, isOn: $isTaiwanJapanDictEnabled, info: .taiwanJapan) {
+                        settings.isTaiwanJapanDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiHuaDict, isOn: $taiHuaDictEnabled, info: .taiHua) {
-                        settings.taiHuaDictEnabled = $0
+                    dictionaryToggle(Tab3Texts.taiHuaDict, isOn: $isTaiHuaDictEnabled, info: .taiHua) {
+                        settings.isTaiHuaDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiwanPlantDict, isOn: $taiwanPlantDictEnabled, info: .taiwanPlant) {
-                        settings.taiwanPlantDictEnabled = $0
+                    dictionaryToggle(Tab3Texts.taiwanPlantDict, isOn: $isTaiwanPlantDictEnabled, info: .taiwanPlant) {
+                        settings.isTaiwanPlantDictEnabled = $0
                     }
                 } header: {
                     Text(languageManager.text(Tab3Texts.otherSectionTitle))
@@ -121,24 +121,24 @@ struct Tab3: View {
 
                 // Variant characters / legacy characters / accent data
                 Section {
-                    dictionaryToggle(Tab3Texts.variantDictionary, isOn: $variantEnabled, info: .variant) {
-                        settings.variantEnabled = $0
+                    dictionaryToggle(Tab3Texts.variantDictionary, isOn: $isVariantEnabled, info: .variant) {
+                        settings.isVariantEnabled = $0
                     }
 
-                    dictionaryToggle(Tab3Texts.khiin, isOn: $khiin, info: .khiin) {
-                        settings.khiin = $0
+                    dictionaryToggle(Tab3Texts.khiin, isOn: $isKhiinEnabled, info: .khiin) {
+                        settings.isKhiinEnabled = $0
                     }
 
-                    dictionaryToggle(Tab3Texts.khpooDict, isOn: $khpooDictEnabled, info: .khpoo) {
-                        settings.khpooDictEnabled = $0
+                    dictionaryToggle(Tab3Texts.khpooDict, isOn: $isKhpooDictEnabled, info: .khpoo) {
+                        settings.isKhpooDictEnabled = $0
                     }
 
                     dictToggleWithDescription(
                         title: Tab3Texts.lkkDict,
                         url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
-                        isOn: $lkkDictEnabled,
+                        isOn: $isLkkDictEnabled,
                         description: "李江却台語文教基金會漢羅合用建議用字。",
-                    ) { settings.lkkDictEnabled = $0 }
+                    ) { settings.isLkkDictEnabled = $0 }
                 } header: {
                     Text(languageManager.text(Tab3Texts.supplementSectionTitle))
                         .font(AppStyle.sectionHeaderFont)
