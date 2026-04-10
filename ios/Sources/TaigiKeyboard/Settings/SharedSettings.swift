@@ -60,6 +60,9 @@ final class SharedSettings {
 
     static let shared = SharedSettings()
 
+    /// Prevents infinite recursion when inputMode and keyboardLayoutType setters sync each other.
+    private var isSyncingTPS = false
+
     private init() {
         userDefaults = Self.sharedUserDefaults
     }
@@ -73,19 +76,19 @@ final class SharedSettings {
             let oldValue = inputMode
             userDefaults.set(newValue.rawValue, forKey: Keys.inputMode)
 
-            // TPS ↔ layout 1:1 sync (reverse direction)
-            // Write directly to userDefaults to avoid recursion with keyboardLayoutType setter
+            // TPS ↔ layout 1:1 sync
+            guard !isSyncingTPS else { return }
+            isSyncingTPS = true
+            defer { isSyncingTPS = false }
+
             if newValue == .tps, oldValue != .tps {
-                // Entering TPS mode: switch layout to TPS
                 if keyboardLayoutType != .tps {
                     layoutBeforeTps = keyboardLayoutType
-                    userDefaults.set(KeyboardLayoutType.tps.rawValue, forKey: Keys.keyboardLayoutType)
+                    keyboardLayoutType = .tps
                 }
             } else if newValue != .tps, oldValue == .tps {
-                // Leaving TPS mode: restore previous layout
                 if keyboardLayoutType == .tps {
-                    let restored = layoutBeforeTps
-                    userDefaults.set(restored.rawValue, forKey: Keys.keyboardLayoutType)
+                    keyboardLayoutType = layoutBeforeTps
                 }
             }
         }
@@ -156,19 +159,22 @@ final class SharedSettings {
         }
         set {
             let oldValue = keyboardLayoutType
+            userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
+
             // TPS ↔ inputMode 1:1 sync
+            guard !isSyncingTPS else { return }
+            isSyncingTPS = true
+            defer { isSyncingTPS = false }
+
             if newValue == .tps, oldValue != .tps {
-                // Entering TPS: save current inputMode, then switch to tps
                 let currentInputMode = inputMode
                 if currentInputMode != .tps {
                     inputModeBeforeTps = currentInputMode
                 }
                 inputMode = .tps
             } else if newValue != .tps, oldValue == .tps {
-                // Leaving TPS: restore previous inputMode
                 inputMode = inputModeBeforeTps
             }
-            userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
         }
     }
 
