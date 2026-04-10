@@ -271,18 +271,20 @@ Branch: `rel-v3.4.8-bugfix`
 - Removed dead `isPhahTaigiLayoutEnabled` — write-only backward compat property with zero iOS readers; `keyboardLayoutType` getter uses its own default, never falls back to old key; Android has independent copy in SharedPreferences
 **Status**: ✅
 
-### Stage 13b: TPS bidirectional sync cleanup (pending)
-**Branch**: `develop-settings`
+### Stage 13b: TPS bidirectional sync cleanup ✅
+**Branch**: `refactor-SharedSettings-tps`
 **Goal**: Replace fragile bidirectional setter sync with reentrancy guard pattern
-**Why**: Current `inputMode` setter bypasses `keyboardLayoutType` setter with direct `userDefaults.set(...)` to avoid recursion. This is a maintenance trap — future logic added to `keyboardLayoutType` setter would be silently bypassed. Also hard to read (must trace both setters to understand TPS flow).
-**Proposed approach**: Add `private var isSyncingTPS = false` reentrancy guard. Both setters write to UserDefaults first, then use `guard !isSyncingTPS` + `defer` to prevent recursion. Both setters call each other's **actual setter** (not direct UD writes), ensuring future setter logic is always triggered.
-**Scope**: SharedSettings.swift only — no other files affected
-**Risk**: Low (same behavior, cleaner implementation) — must verify all 4 TPS transition scenarios:
-1. inputMode: non-TPS → .tps (enter TPS via input mode switch)
-2. inputMode: .tps → non-TPS (leave TPS via input mode switch)
-3. keyboardLayoutType: non-TPS → .tps (enter TPS via layout picker)
-4. keyboardLayoutType: .tps → non-TPS (leave TPS via layout picker)
-**Status**: Not Started
+**Why**: `inputMode` setter bypassed `keyboardLayoutType` setter with direct `userDefaults.set(...)` to avoid recursion. Maintenance trap — future setter logic would be silently skipped. Asymmetric pattern hard to read.
+**What was done**:
+- Added `private var isSyncingTPS = false` reentrancy guard
+- Both setters now write to UserDefaults first, then use `guard !isSyncingTPS` + `defer` to prevent recursion
+- `inputMode` setter now calls `keyboardLayoutType = .tps` (real setter) instead of direct `userDefaults.set(...)`
+- `keyboardLayoutType` setter also writes UD first (moved from end to before guard), then syncs `inputMode`
+- Both setters are now symmetric: write own UD → guard → sync other property via real setter
+- Verified all 4 TPS transition scenarios: no recursion, correct save/restore behavior
+**Scope**: SharedSettings.swift only
+**Codex review**: Readability 6→8, Maintainability 4→8, Correctness 7→9. Recommended refactor.
+**Status**: ✅
 
 ---
 
@@ -344,3 +346,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-10** (iOS): Stage 12 — Callouts/ cleanup. Extracted `combiningMark` + `buildVariations` helpers (5× duplication eliminated), `buildToneMap` 93→42 lines, cached layout type + switch, cleaned comments. 335→290 lines
 - **2026-04-10** (iOS): Stage 13 — Settings/ cleanup. Removed deprecated `.synchronize()`, simplified `sharedUserDefaults` init, Chinese→English comments, extracted model types to `SettingsTypes.swift`, renamed 20 Bool properties to `is___` prefix across 18 files. Net −107 lines
 - **2026-04-11** (iOS): Stage 13 continued — `final class`, `private let userDefaults`, `sharedContainerURL` rename, removed dead `isPhahTaigiLayoutEnabled`. Identified TPS bidirectional sync as next cleanup target (Stage 13b): replace direct UserDefaults writes with reentrancy guard pattern
+- **2026-04-11** (iOS): Stage 13b — TPS bidirectional sync cleanup. Added `isSyncingTPS` reentrancy guard, both setters now use real setter (no direct UD writes), symmetric pattern. Codex cross-review confirmed refactor value
