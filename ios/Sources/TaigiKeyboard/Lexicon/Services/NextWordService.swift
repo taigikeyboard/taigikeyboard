@@ -86,7 +86,7 @@ final class NextWordService: @unchecked Sendable {
     }
 
     private static func getUserDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.getSharedContainerURL() else {
+        guard let containerURL = SharedSettings.sharedContainerURL else {
             throw DictionaryError.databaseNotFound
         }
 

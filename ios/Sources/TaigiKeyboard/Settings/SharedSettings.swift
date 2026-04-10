@@ -3,13 +3,13 @@ import KeyboardKit
 import LocalAuthentication
 import UIKit
 
-class SharedSettings {
-    let userDefaults: UserDefaults
+final class SharedSettings {
+    private let userDefaults: UserDefaults
 
     static let appGroupId = "group.com.siansiansu.TaigiKeyboard"
 
     /// App Group shared container URL, accessible by both main app and keyboard extension.
-    static func getSharedContainerURL() -> URL? {
+    static var sharedContainerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
     }
 
