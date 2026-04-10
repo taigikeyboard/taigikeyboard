@@ -138,7 +138,7 @@ Batch-by-batch codebase review using `/simplify`. Each batch is scoped to fit in
 
 ### Batch I8: Styling & Callouts
 **Path**: `ios/Sources/TaigiKeyboard/Styling/` + `ios/Sources/TaigiKeyboard/Callouts/`
-**Files (7)**: TaigiButtonContent, ButtonTextProvider, ButtonImageProvider, ButtonFontProvider, ConfirmKeyTextHelper, Callouts+TaigiActions, Callouts+TaigiToneMaps
+**Files (7)**: TaigiButtonContent, ButtonTextProvider, ButtonImageProvider, ButtonFontProvider, ConfirmKeyTextHelper, Callouts+TaigiCalloutBuilder, Callouts+TaigiCalloutMaps
 **Focus**: Display overrides, callout completeness
 **Status**: [x] Done — reviewed; good provider pattern, no issues
 

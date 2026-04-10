@@ -1,7 +1,12 @@
+// Callouts+TaigiCalloutMaps.swift
+// Callout data: TaigiToneMaps (POJ/TL tone variations), TPSCallouts, MOE1Callouts,
+// MOE2Callouts, SymbolCallouts. Each enum provides [String: [String]] action maps.
+// Some keys (e.g. ",", ".", "-") intentionally appear in both layout-specific and
+// SymbolCallouts with different values — the builder checks layout-specific first.
+
 import Foundation
 import KeyboardKit
 
-/// Tone variation mappings for POJ and TL callout actions
 public extension Callouts {
     /// Maps base characters to their toned variants, sorted by tone number
     enum TaigiToneMaps {
