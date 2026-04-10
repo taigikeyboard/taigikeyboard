@@ -220,6 +220,22 @@ Branch: `rel-v3.4.8-bugfix`
 **Net change**: ~−120 lines across 3 views, +120 lines in new file (zero duplication vs 3× duplication)
 **Status**: ✅
 
+### Stage 11: Emojis/ cleanup ✅
+**Branch**: `refactor/ios-emojis-cleanup`
+**Goal**: Simplify EmojiService — remove premature abstractions, tighten access control
+**What was done**:
+- Made `EmojiService` `final`
+- Changed `emojiView` from `var EmojiView?` to `let EmojiView` (non-optional) — always assigned in `init`, eliminates unreachable `EmptyView` fallback
+- Removed `Configuration` struct (18 lines, only `.default` ever used) — inlined settings directly in `init`
+- Removed double `setupEmojiView()` indirection (no-arg → with-arg) — single flat `init`
+- Renamed `getEmojiKeyboardView()` → computed property `emojiKeyboardView` (Swift naming convention)
+- Made `EmojiViewRepresentable` `private` (implementation detail)
+- Removed redundant `typealias UIViewType` (compiler-inferred)
+- Removed placeholder comment `// Update logic if needed`
+- Updated caller in `KeyboardViewController.swift`
+**Line count change**: 101 → 65 (−36 lines)
+**Status**: ✅
+
 ---
 
 ## Android Refactoring
@@ -276,3 +292,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): Stage 8b — App/ simplify scan. Unified 3 slider rows in AppearanceSettingsView, added AppStyle spacing/cornerRadius constants (6 values), replaced hardcoded values across 6 files, fixed 3 empty catch blocks → DebugLogger. Recorded Stage 9 (Tab3 data view dedup) for future session
 - **2026-04-09** (iOS): Stage 9 — Tab3 data view deduplication. Created `ImportExportHandler` (ObservableObject + ViewModifier) extracting 8 shared @State vars, 5 shared modifiers, export/import flow. Updated CustomDictionaryView, FrequencyDataView, AssociationDataView. New file: `ImportExportHandler.swift`
 - **2026-04-10** (iOS): Stage 10 — NextWord decoupling from ActionHandler. Extracted `NextWordController` (273 lines) holding all NextWord state, prediction, association recording, timer management. ActionHandler reduced from 300→168 lines. Defined `AutocompleteContextUpdater` protocol for UI decoupling. Renamed `setActionHandler` → `setSelectionContextProvider`. Updated all 4 entry points + `textDidChange`
+- **2026-04-10** (iOS): Stage 11 — Emojis/ cleanup. Simplified EmojiService: removed unused Configuration struct, double setupEmojiView indirection, made emojiView non-optional, added final, tightened access control. 101→65 lines
