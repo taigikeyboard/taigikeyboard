@@ -266,7 +266,23 @@ Branch: `rel-v3.4.8-bugfix`
 **New file**: `Settings/SettingsTypes.swift` (user must add to Xcode project)
 **Deleted file**: `Settings/InputMode.swift` (user must remove from Xcode project)
 **Line count change**: net −107 lines (19 files changed, 230 insertions, 337 deletions)
+**Additional commits**:
+- Made `SharedSettings` `final class`, `userDefaults` → `private let`, `getSharedContainerURL()` → computed property `sharedContainerURL` (3 consumer files updated)
+- Removed dead `isPhahTaigiLayoutEnabled` — write-only backward compat property with zero iOS readers; `keyboardLayoutType` getter uses its own default, never falls back to old key; Android has independent copy in SharedPreferences
 **Status**: ✅
+
+### Stage 13b: TPS bidirectional sync cleanup (pending)
+**Branch**: `develop-settings`
+**Goal**: Replace fragile bidirectional setter sync with reentrancy guard pattern
+**Why**: Current `inputMode` setter bypasses `keyboardLayoutType` setter with direct `userDefaults.set(...)` to avoid recursion. This is a maintenance trap — future logic added to `keyboardLayoutType` setter would be silently bypassed. Also hard to read (must trace both setters to understand TPS flow).
+**Proposed approach**: Add `private var isSyncingTPS = false` reentrancy guard. Both setters write to UserDefaults first, then use `guard !isSyncingTPS` + `defer` to prevent recursion. Both setters call each other's **actual setter** (not direct UD writes), ensuring future setter logic is always triggered.
+**Scope**: SharedSettings.swift only — no other files affected
+**Risk**: Low (same behavior, cleaner implementation) — must verify all 4 TPS transition scenarios:
+1. inputMode: non-TPS → .tps (enter TPS via input mode switch)
+2. inputMode: .tps → non-TPS (leave TPS via input mode switch)
+3. keyboardLayoutType: non-TPS → .tps (enter TPS via layout picker)
+4. keyboardLayoutType: .tps → non-TPS (leave TPS via layout picker)
+**Status**: Not Started
 
 ---
 
@@ -327,3 +343,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-10** (iOS): Stage 11 — Emojis/ cleanup. Simplified EmojiService: removed unused Configuration struct, double setupEmojiView indirection, made emojiView non-optional, added final, tightened access control. 101→65 lines
 - **2026-04-10** (iOS): Stage 12 — Callouts/ cleanup. Extracted `combiningMark` + `buildVariations` helpers (5× duplication eliminated), `buildToneMap` 93→42 lines, cached layout type + switch, cleaned comments. 335→290 lines
 - **2026-04-10** (iOS): Stage 13 — Settings/ cleanup. Removed deprecated `.synchronize()`, simplified `sharedUserDefaults` init, Chinese→English comments, extracted model types to `SettingsTypes.swift`, renamed 20 Bool properties to `is___` prefix across 18 files. Net −107 lines
+- **2026-04-11** (iOS): Stage 13 continued — `final class`, `private let userDefaults`, `sharedContainerURL` rename, removed dead `isPhahTaigiLayoutEnabled`. Identified TPS bidirectional sync as next cleanup target (Stage 13b): replace direct UserDefaults writes with reentrancy guard pattern
