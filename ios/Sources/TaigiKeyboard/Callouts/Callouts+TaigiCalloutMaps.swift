@@ -1,109 +1,79 @@
+// Callouts+TaigiCalloutMaps.swift
+// Callout data: TaigiToneMaps (POJ/TL tone variations), TPSCallouts, MOE1Callouts,
+// MOE2Callouts, SymbolCallouts. Each enum provides [String: [String]] action maps.
+// Some keys (e.g. ",", ".", "-") intentionally appear in both layout-specific and
+// SymbolCallouts with different values — the builder checks layout-specific first.
+
 import Foundation
 import KeyboardKit
 
-/// Taigi-specific tone mapping for callout actions
-/// Extends KeyboardKit's Callouts namespace following framework conventions
 public extension Callouts {
-    /// Provides tone variation mappings for POJ and TL input modes
-    /// Maps base characters to their tone variations, sorted by tone number
+    /// Maps base characters to their toned variants, sorted by tone number
     enum TaigiToneMaps {
-        /// POJ mode: Base character to tone variations mapping
         static let poj: [String: [String]] = buildToneMap(mode: .poj)
-
-        /// TL mode: Base character to tone variations mapping
         static let tl: [String: [String]] = buildToneMap(mode: .tl)
 
-        /// Build tone map dynamically from combining marks
+        /// Returns the combining mark for a given tone number and input mode.
+        /// POJ and TL share all marks except tone 9: POJ uses breve (U+0306, already in toneNumToCombining),
+        /// TL uses double acute (U+030B).
+        private static func combiningMark(for tone: String, mode: InputMode) -> String {
+            if tone == "9", mode == .tl {
+                return TaigiPhonetics.tlTone9Combining
+            }
+            return TaigiPhonetics.toneNumToCombining[tone] ?? ""
+        }
+
+        /// Builds toned variations by inserting combining marks between base and suffix.
+        /// Example: base="o", suffix="o" → ["óo", "òo", "ôo", ...] (TL oo variants)
+        private static func buildVariations(
+            base: String, suffix: String = "", toneNumbers: [String], mode: InputMode,
+        ) -> [String] {
+            toneNumbers.compactMap { tone in
+                let mark = combiningMark(for: tone, mode: mode)
+                guard !mark.isEmpty else { return nil }
+                return (base + mark + suffix).precomposedStringWithCanonicalMapping
+            }
+        }
+
         private static func buildToneMap(mode: InputMode) -> [String: [String]] {
-            let baseChars = ["a", "e", "i", "o", "u"]
             let toneNumbers = ["2", "3", "5", "6", "7", "8", "9"]
             var mapping: [String: [String]] = [:]
 
-            for base in baseChars {
-                var variations: [String] = []
-                for tone in toneNumbers {
-                    let mark: String
-                    if mode == .poj {
-                        mark = tone == "9" ? "\u{0306}" : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    } else {
-                        mark = tone == "9" ? TaigiPhonetics.tlTone9Combining : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    }
-                    if !mark.isEmpty {
-                        let toned = (base + mark).precomposedStringWithCanonicalMapping
-                        variations.append(toned)
-                    }
-                }
+            for base in ["a", "e", "i", "o", "u"] {
+                let variations = buildVariations(base: base, toneNumbers: toneNumbers, mode: mode)
                 mapping[base] = variations
                 mapping[base.uppercased()] = variations.map { $0.uppercased() }
             }
 
-            // POJ: add o͘ variants
+            // POJ: o͘ (o + combining dot above right U+0358)
             if mode == .poj {
-                let oDot = "o\u{0358}"  // o͘
-                var oDotVariations: [String] = []
-                for tone in toneNumbers {
-                    let mark = tone == "9" ? "\u{0306}" : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    if !mark.isEmpty {
-                        let toned = ("o" + mark + "\u{0358}").precomposedStringWithCanonicalMapping
-                        oDotVariations.append(toned)
-                    }
-                }
-                mapping[oDot] = oDotVariations
-                let oDotUpper = "O\u{0358}"  // O͘
-                mapping[oDotUpper] = oDotVariations.map { $0.uppercased() }
+                let variations = buildVariations(base: "o", suffix: "\u{0358}", toneNumbers: toneNumbers, mode: mode)
+                mapping["o\u{0358}"] = variations
+                // Single logical character — full uppercasing is correct (o͘ → O͘)
+                mapping["O\u{0358}"] = variations.map { $0.uppercased() }
             }
 
-            // TL: add oo variants
+            // TL: oo (double o — tone mark on first o)
             if mode == .tl {
-                var ooVariations: [String] = []
-                for tone in toneNumbers {
-                    let mark = tone == "9" ? TaigiPhonetics.tlTone9Combining : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    if !mark.isEmpty {
-                        let toned = ("o" + mark + "o").precomposedStringWithCanonicalMapping
-                        ooVariations.append(toned)
-                    }
-                }
-                mapping["oo"] = ooVariations
-                mapping["Oo"] = ooVariations.map { $0.prefix(1).uppercased() + $0.dropFirst() }
+                let variations = buildVariations(base: "o", suffix: "o", toneNumbers: toneNumbers, mode: mode)
+                mapping["oo"] = variations
+                // Multi-char: capitalize only first character (oo → Oo, not OO)
+                mapping["Oo"] = variations.map { $0.prefix(1).uppercased() + $0.dropFirst() }
             }
 
-            // Syllabic consonants: n, ng, m
+            // Syllabic consonants: n, m (appended to existing vowel entries above)
             for base in ["n", "m"] {
-                var variations: [String] = []
-                for tone in toneNumbers {
-                    let mark: String
-                    if mode == .poj {
-                        mark = tone == "9" ? "\u{0306}" : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    } else {
-                        mark = tone == "9" ? TaigiPhonetics.tlTone9Combining : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                    }
-                    if !mark.isEmpty {
-                        let toned = (base + mark).precomposedStringWithCanonicalMapping
-                        variations.append(toned)
-                    }
-                }
+                let variations = buildVariations(base: base, toneNumbers: toneNumbers, mode: mode)
                 mapping[base] = (mapping[base] ?? []) + variations
                 mapping[base.uppercased()] = (mapping[base.uppercased()] ?? []) + variations.map { $0.uppercased() }
             }
 
-            // ng variants: tone mark goes on n
-            var ngVariations: [String] = []
-            for tone in toneNumbers {
-                let mark: String
-                if mode == .poj {
-                    mark = tone == "9" ? "\u{0306}" : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                } else {
-                    mark = tone == "9" ? TaigiPhonetics.tlTone9Combining : (TaigiPhonetics.toneNumToCombining[tone] ?? "")
-                }
-                if !mark.isEmpty {
-                    let toned = ("n" + mark + "g").precomposedStringWithCanonicalMapping
-                    ngVariations.append(toned)
-                }
-            }
+            // ng: tone mark goes on n, g is suffix
+            let ngVariations = buildVariations(base: "n", suffix: "g", toneNumbers: toneNumbers, mode: mode)
             mapping["ng"] = ngVariations
+            // Multi-char: capitalize only first character (ng → Ng, not NG)
             mapping["Ng"] = ngVariations.map { $0.prefix(1).uppercased() + $0.dropFirst() }
 
-            // Nasal marker ⁿ on 'n' key
             mapping["n"] = (mapping["n"] ?? []) + ["ⁿ"]
 
             return mapping
@@ -204,12 +174,12 @@ public extension Callouts {
             "·": ["‧", "•", "°", "‥"],
 
             // === Page 1 Row 2: Quotation marks & brackets ===
-            "\u{201C}": ["「", "«", "‹"],       // "
-            "\u{201D}": ["」", "»", "›"],       // "
+            "\u{201C}": ["「", "«", "‹"], // "
+            "\u{201D}": ["」", "»", "›"], // "
             "「": ["\u{201C}", "«", "‹"],
             "」": ["\u{201D}", "»", "›"],
-            "\u{2018}": ["『", "‹"],             // '
-            "\u{2019}": ["』", "›"],             // '
+            "\u{2018}": ["『", "‹"], // '
+            "\u{2019}": ["』", "›"], // '
             "『": ["\u{2018}", "‹"],
             "』": ["\u{2019}", "›"],
             "(": ["（", "〔", "﹙"],

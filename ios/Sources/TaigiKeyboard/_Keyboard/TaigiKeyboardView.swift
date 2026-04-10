@@ -342,7 +342,7 @@ struct TaigiKeyboardView: View {
             }
             return style
         }
-        .keyboardCalloutActions(Callouts.taigiToneActions)
+        .keyboardCalloutActions(Callouts.taigiCalloutActions)
         .keyboardCalloutStyle(calloutStyle)
     }
 

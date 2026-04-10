@@ -51,11 +51,9 @@
 - **Problem**: Mixed patterns: `enableDoubleTapOO` (verb), `phahTaigiLayoutEnabled` (adjective suffix), `moeDictEnabled` (past participle). Should use `is-` prefix per Swift convention.
 - **Why risky**: Property names may map to UserDefaults keys. Renaming requires migration logic to preserve existing user settings. Must verify key mapping before renaming.
 
-#### 7. Callouts+TaigiToneMaps: buildToneMap Complexity
-- **File**: `ios/Sources/TaigiKeyboard/Callouts/Callouts+TaigiToneMaps.swift` (lines 17-110)
-- **Problem**: 93-line function with 6 nested loops and 8 conditional blocks. Hard to verify correctness.
-- **Fix direction**: Extract `addToneVariations(for:mode:mapping:)` helper
-- **Why risky**: Tone map affects long-press menus; wrong map = missing/wrong tone options
+#### 7. ~~Callouts+TaigiToneMaps: buildToneMap Complexity~~ ✅ Fixed (Stage 12)
+- **File**: `ios/Sources/TaigiKeyboard/Callouts/Callouts+TaigiCalloutMaps.swift`
+- **Resolution**: Extracted `combiningMark(for:mode:)` and `buildVariations(base:suffix:toneNumbers:mode:)` helpers; `buildToneMap` reduced from 93→42 lines
 
 #### 8. CaseTransformationService: Unused Parameter
 - **File**: `ios/Sources/TaigiKeyboard/Input/CaseTransformationService.swift` (lines 24-32)

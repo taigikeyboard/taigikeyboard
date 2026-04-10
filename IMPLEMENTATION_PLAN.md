@@ -236,6 +236,21 @@ Branch: `rel-v3.4.8-bugfix`
 **Line count change**: 101 → 65 (−36 lines)
 **Status**: ✅
 
+### Stage 12: Callouts/ cleanup ✅
+**Branch**: `develop-Callouts`
+**Goal**: Eliminate code duplication in tone map builder, improve clarity and AI-friendliness
+**Principle**: Extract shared patterns, remove WHAT comments, add WHY comments
+**What was done**:
+- Extracted `combiningMark(for:mode:)` — eliminated 5× duplicated tone-mark selection logic; simplified POJ tone 9 (uses `toneNumToCombining["9"]` directly, no special case needed)
+- Extracted `buildVariations(base:suffix:toneNumbers:mode:)` — eliminated 5× duplicated tone-variation-building loops into single `compactMap`
+- `buildToneMap()` reduced from 93→42 lines — clear sequential structure: vowels → o͘/oo → n/m → ng → nasal
+- Cached `SharedSettings.shared.keyboardLayoutType` into local variable (1 read instead of 3)
+- Converted 3 layout-specific if-blocks → switch statement (explicit mutual exclusivity)
+- Removed WHAT comments, kept/added WHY comments (priority ordering, capitalization strategy)
+- Removed redundant doc comments
+**Line count change**: 335 → 290 (−45 lines)
+**Status**: ✅
+
 ---
 
 ## Android Refactoring
@@ -293,3 +308,4 @@ Branch: `rel-v3.4.8-bugfix`
 - **2026-04-09** (iOS): Stage 9 — Tab3 data view deduplication. Created `ImportExportHandler` (ObservableObject + ViewModifier) extracting 8 shared @State vars, 5 shared modifiers, export/import flow. Updated CustomDictionaryView, FrequencyDataView, AssociationDataView. New file: `ImportExportHandler.swift`
 - **2026-04-10** (iOS): Stage 10 — NextWord decoupling from ActionHandler. Extracted `NextWordController` (273 lines) holding all NextWord state, prediction, association recording, timer management. ActionHandler reduced from 300→168 lines. Defined `AutocompleteContextUpdater` protocol for UI decoupling. Renamed `setActionHandler` → `setSelectionContextProvider`. Updated all 4 entry points + `textDidChange`
 - **2026-04-10** (iOS): Stage 11 — Emojis/ cleanup. Simplified EmojiService: removed unused Configuration struct, double setupEmojiView indirection, made emojiView non-optional, added final, tightened access control. 101→65 lines
+- **2026-04-10** (iOS): Stage 12 — Callouts/ cleanup. Extracted `combiningMark` + `buildVariations` helpers (5× duplication eliminated), `buildToneMap` 93→42 lines, cached layout type + switch, cleaned comments. 335→290 lines

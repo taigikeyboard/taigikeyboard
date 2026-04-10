@@ -128,7 +128,7 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **AlphaRow1-3** | Main area | Letter key rows | `TaigiLayouts` |
 | **SystemRow** | Bottom row | Globe, 123, comma, space, period, enter | `TaigiLayouts` |
 | **FlickCallout** | Overlay on key | 4-direction tone swipe indicator | `FlickKeyDef` |
-| **LongPressCallout** | Overlay on key | Tone 8 / special character popup | `Callouts+TaigiActions` |
+| **LongPressCallout** | Overlay on key | Tone 8 / special character popup | `Callouts+TaigiCalloutBuilder` |
 | **MarkedText** | Inline in text field | Underlined composing text | `setMarkedText()` |
 
 ### App Screens (Main App, not keyboard extension)
