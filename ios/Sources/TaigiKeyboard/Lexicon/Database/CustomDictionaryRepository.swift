@@ -26,7 +26,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Database Path
 
     private static func getDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.getSharedContainerURL() else {
+        guard let containerURL = SharedSettings.sharedContainerURL else {
             throw DictionaryError.databaseNotFound
         }
 

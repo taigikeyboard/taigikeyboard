@@ -86,7 +86,7 @@ final class NextWordService: @unchecked Sendable {
     }
 
     private static func getUserDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.getSharedContainerURL() else {
+        guard let containerURL = SharedSettings.sharedContainerURL else {
             throw DictionaryError.databaseNotFound
         }
 
@@ -733,15 +733,15 @@ final class NextWordService: @unchecked Sendable {
         let settings = SharedSettings.shared
 
         let dictionaries: [(enabled: Bool, column: String)] = [
-            (settings.moeDictEnabled, "kautian"),
-            (settings.newwordDictEnabled, "taigitv"),
-            (settings.iTaigiDictEnabled, "itaigi"),
-            (settings.taiwanPlantDictEnabled, "sitbut"),
-            (settings.taiHuaDictEnabled, "taihoa"),
-            (settings.taiwanJapanDictEnabled, "taijit"),
-            (settings.kunggeDictEnabled, "kungge"),
-            (settings.sttiDictEnabled, "stti"),
-            (settings.khpooDictEnabled, "khpoo"),
+            (settings.isMoeDictEnabled, "kautian"),
+            (settings.isNewwordDictEnabled, "taigitv"),
+            (settings.isITaigiDictEnabled, "itaigi"),
+            (settings.isTaiwanPlantDictEnabled, "sitbut"),
+            (settings.isTaiHuaDictEnabled, "taihoa"),
+            (settings.isTaiwanJapanDictEnabled, "taijit"),
+            (settings.isKunggeDictEnabled, "kungge"),
+            (settings.isSttiDictEnabled, "stti"),
+            (settings.isKhpooDictEnabled, "khpoo"),
         ]
 
         let conditions = dictionaries

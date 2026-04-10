@@ -33,7 +33,7 @@ struct CustomDictionaryView: View {
     }
 
     init() {
-        _isCustomDictEnabled = State(initialValue: SharedSettings.shared.customDictEnabled)
+        _isCustomDictEnabled = State(initialValue: SharedSettings.shared.isCustomDictEnabled)
     }
 
     var body: some View {
@@ -48,12 +48,12 @@ struct CustomDictionaryView: View {
                 Section {
                     Toggle(isOn: $isCustomDictEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.customDictEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.customDictEnabledInfo))
+                            Text(languageManager.text(Tab3Texts.isCustomDictEnabled))
+                            SettingInfoButton(description: languageManager.text(Tab3Texts.isCustomDictEnabledInfo))
                         }
                     }
                     .onChange(of: isCustomDictEnabled) { _, newValue in
-                        settings.customDictEnabled = newValue
+                        settings.isCustomDictEnabled = newValue
                     }
                 }
 

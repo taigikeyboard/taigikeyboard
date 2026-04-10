@@ -12,10 +12,10 @@ struct Tab4: View {
 
     @State private var selectedInputMode: InputMode
     @State private var autoSpaceEnabled: Bool
-    @State private var enableDoubleTapOO: Bool
-    @State private var enableDoubleTapNN: Bool
-    @State private var outputBothScripts: Bool
-    @State private var tpsOrMapsToER: Bool
+    @State private var isDoubleTapOOEnabled: Bool
+    @State private var isDoubleTapNNEnabled: Bool
+    @State private var isOutputBothScripts: Bool
+    @State private var isTpsOrMappedToER: Bool
     @State private var toolbarAutoCollapse: Bool
     @State private var isGlobeKeyEnabled: Bool
     @State private var showResetSettingsAlert = false
@@ -47,10 +47,10 @@ struct Tab4: View {
 
         _selectedInputMode = State(initialValue: InputMode(rawValue: settings.inputMode.rawValue) ?? InputMode.tl)
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
-        _enableDoubleTapOO = State(initialValue: settings.enableDoubleTapOO)
-        _enableDoubleTapNN = State(initialValue: settings.enableDoubleTapNN)
-        _outputBothScripts = State(initialValue: settings.outputBothScripts)
-        _tpsOrMapsToER = State(initialValue: settings.tpsOrMapsToER)
+        _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
+        _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
+        _isOutputBothScripts = State(initialValue: settings.isOutputBothScripts)
+        _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
         _isGlobeKeyEnabled = State(initialValue: settings.isGlobeKeyEnabled)
     }
@@ -79,14 +79,14 @@ struct Tab4: View {
 
                 // Typing options
                 Section {
-                    Toggle(isOn: $outputBothScripts) {
+                    Toggle(isOn: $isOutputBothScripts) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.outputBothScripts))
+                            Text(languageManager.text(Tab4Texts.isOutputBothScripts))
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
-                    .onChange(of: outputBothScripts) { _, newValue in
-                        settings.outputBothScripts = newValue
+                    .onChange(of: isOutputBothScripts) { _, newValue in
+                        settings.isOutputBothScripts = newValue
                     }
 
                     Toggle(isOn: $autoCapitalizationEnabled) {
@@ -160,14 +160,14 @@ struct Tab4: View {
 
                 // POJ settings
                 Section {
-                    Toggle(languageManager.text(Tab4Texts.doubleTapOO), isOn: $enableDoubleTapOO)
-                        .onChange(of: enableDoubleTapOO) { _, newValue in
-                            settings.enableDoubleTapOO = newValue
+                    Toggle(languageManager.text(Tab4Texts.doubleTapOO), isOn: $isDoubleTapOOEnabled)
+                        .onChange(of: isDoubleTapOOEnabled) { _, newValue in
+                            settings.isDoubleTapOOEnabled = newValue
                         }
 
-                    Toggle(languageManager.text(Tab4Texts.doubleTapNN), isOn: $enableDoubleTapNN)
-                        .onChange(of: enableDoubleTapNN) { _, newValue in
-                            settings.enableDoubleTapNN = newValue
+                    Toggle(languageManager.text(Tab4Texts.doubleTapNN), isOn: $isDoubleTapNNEnabled)
+                        .onChange(of: isDoubleTapNNEnabled) { _, newValue in
+                            settings.isDoubleTapNNEnabled = newValue
                         }
                 } header: {
                     Text(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
@@ -176,14 +176,14 @@ struct Tab4: View {
 
                 // TPS (方音符號) settings
                 Section {
-                    Toggle(isOn: $tpsOrMapsToER) {
+                    Toggle(isOn: $isTpsOrMappedToER) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.tpsOrMapsToER))
-                            SettingInfoButton(description: languageManager.text(Tab4Texts.tpsOrMapsToERInfo))
+                            Text(languageManager.text(Tab4Texts.isTpsOrMappedToER))
+                            SettingInfoButton(description: languageManager.text(Tab4Texts.isTpsOrMappedToERInfo))
                         }
                     }
-                    .onChange(of: tpsOrMapsToER) { _, newValue in
-                        settings.tpsOrMapsToER = newValue
+                    .onChange(of: isTpsOrMappedToER) { _, newValue in
+                        settings.isTpsOrMappedToER = newValue
                     }
                 } header: {
                     Text(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
@@ -306,10 +306,10 @@ struct Tab4: View {
         isAudioFeedbackEnabled = true
         isHapticFeedbackEnabled = true
         autoSpaceEnabled = settings.isAutoSpaceEnabled
-        enableDoubleTapOO = settings.enableDoubleTapOO
-        enableDoubleTapNN = settings.enableDoubleTapNN
-        outputBothScripts = settings.outputBothScripts
-        tpsOrMapsToER = settings.tpsOrMapsToER
+        isDoubleTapOOEnabled = settings.isDoubleTapOOEnabled
+        isDoubleTapNNEnabled = settings.isDoubleTapNNEnabled
+        isOutputBothScripts = settings.isOutputBothScripts
+        isTpsOrMappedToER = settings.isTpsOrMappedToER
         toolbarAutoCollapse = settings.isToolbarAutoCollapse
         isGlobeKeyEnabled = settings.isGlobeKeyEnabled
 

@@ -11,15 +11,15 @@ struct SettingsSelectionOverlay: View {
     let onDismiss: () -> Void
     let onOpenApp: () -> Void
 
-    @State private var outputBothScripts: Bool
+    @State private var isOutputBothScripts: Bool
     @State private var autoCapitalizationEnabled: Bool
     @State private var autoSpaceEnabled: Bool
     @State private var toolbarAutoCollapse: Bool
     @State private var isAudioFeedbackEnabled: Bool
     @State private var isHapticFeedbackEnabled: Bool
-    @State private var enableDoubleTapOO: Bool
-    @State private var enableDoubleTapNN: Bool
-    @State private var tpsOrMapsToER: Bool
+    @State private var isDoubleTapOOEnabled: Bool
+    @State private var isDoubleTapNNEnabled: Bool
+    @State private var isTpsOrMappedToER: Bool
     @State private var isGlobeKeyEnabled: Bool
 
     /// Prevents auto-dismiss during initial onAppear sync
@@ -36,7 +36,7 @@ struct SettingsSelectionOverlay: View {
         self.onDismiss = onDismiss
         self.onOpenApp = onOpenApp
         let s = SharedSettings.shared
-        _outputBothScripts = State(initialValue: s.outputBothScripts)
+        _isOutputBothScripts = State(initialValue: s.isOutputBothScripts)
         _autoCapitalizationEnabled = State(
             initialValue: KeyboardSettings.store.bool(forKey: Self.autoCapKey),
         )
@@ -48,9 +48,9 @@ struct SettingsSelectionOverlay: View {
         _isHapticFeedbackEnabled = State(
             initialValue: KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true,
         )
-        _enableDoubleTapOO = State(initialValue: s.enableDoubleTapOO)
-        _enableDoubleTapNN = State(initialValue: s.enableDoubleTapNN)
-        _tpsOrMapsToER = State(initialValue: s.tpsOrMapsToER)
+        _isDoubleTapOOEnabled = State(initialValue: s.isDoubleTapOOEnabled)
+        _isDoubleTapNNEnabled = State(initialValue: s.isDoubleTapNNEnabled)
+        _isTpsOrMappedToER = State(initialValue: s.isTpsOrMappedToER)
         _isGlobeKeyEnabled = State(initialValue: s.isGlobeKeyEnabled)
     }
 
@@ -76,8 +76,8 @@ struct SettingsSelectionOverlay: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
-                    settingsToggle(Tab4Texts.outputBothScripts.hanji, isOn: $outputBothScripts, icon: Tab4Texts.outputBothScriptsIcon) {
-                        SharedSettings.shared.outputBothScripts = $0
+                    settingsToggle(Tab4Texts.isOutputBothScripts.hanji, isOn: $isOutputBothScripts, icon: Tab4Texts.isOutputBothScriptsIcon) {
+                        SharedSettings.shared.isOutputBothScripts = $0
                     }
                     settingsToggle(Tab4Texts.autoCapitalization.hanji, isOn: $autoCapitalizationEnabled, icon: Tab4Texts.autoCapitalizationIcon) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
@@ -101,16 +101,16 @@ struct SettingsSelectionOverlay: View {
                     }
 
                     // POJ settings
-                    settingsToggle(Tab4Texts.doubleTapOO.hanji, isOn: $enableDoubleTapOO) {
-                        SharedSettings.shared.enableDoubleTapOO = $0
+                    settingsToggle(Tab4Texts.doubleTapOO.hanji, isOn: $isDoubleTapOOEnabled) {
+                        SharedSettings.shared.isDoubleTapOOEnabled = $0
                     }
-                    settingsToggle(Tab4Texts.doubleTapNN.hanji, isOn: $enableDoubleTapNN) {
-                        SharedSettings.shared.enableDoubleTapNN = $0
+                    settingsToggle(Tab4Texts.doubleTapNN.hanji, isOn: $isDoubleTapNNEnabled) {
+                        SharedSettings.shared.isDoubleTapNNEnabled = $0
                     }
 
                     // TPS settings
-                    settingsToggle(Tab4Texts.tpsOrMapsToER.hanji, isOn: $tpsOrMapsToER) {
-                        SharedSettings.shared.tpsOrMapsToER = $0
+                    settingsToggle(Tab4Texts.isTpsOrMappedToER.hanji, isOn: $isTpsOrMappedToER) {
+                        SharedSettings.shared.isTpsOrMappedToER = $0
                     }
 
                     openAppButton
@@ -124,15 +124,15 @@ struct SettingsSelectionOverlay: View {
         .background(Color.keyboardBackground)
         .onAppear {
             let s = SharedSettings.shared
-            outputBothScripts = s.outputBothScripts
+            isOutputBothScripts = s.isOutputBothScripts
             autoCapitalizationEnabled = KeyboardSettings.store.bool(forKey: Self.autoCapKey)
             autoSpaceEnabled = s.isAutoSpaceEnabled
             toolbarAutoCollapse = s.isToolbarAutoCollapse
             isAudioFeedbackEnabled = KeyboardSettings.store.object(forKey: Self.audioFeedbackKey) as? Bool ?? true
             isHapticFeedbackEnabled = KeyboardSettings.store.object(forKey: Self.hapticFeedbackKey) as? Bool ?? true
-            enableDoubleTapOO = s.enableDoubleTapOO
-            enableDoubleTapNN = s.enableDoubleTapNN
-            tpsOrMapsToER = s.tpsOrMapsToER
+            isDoubleTapOOEnabled = s.isDoubleTapOOEnabled
+            isDoubleTapNNEnabled = s.isDoubleTapNNEnabled
+            isTpsOrMappedToER = s.isTpsOrMappedToER
             isGlobeKeyEnabled = s.isGlobeKeyEnabled
             isReady = true
         }

@@ -49,7 +49,7 @@ class LexiconService: @unchecked Sendable {
     /// 初始化 Custom Dictionary DB（背景執行）
     /// searchSync doesn't call ensureInitialized, so we must initialize eagerly
     private func initializeCustomDictionary() {
-        guard SharedSettings.shared.customDictEnabled else { return }
+        guard SharedSettings.shared.isCustomDictEnabled else { return }
         Task {
             do {
                 try await customDictionaryRepository.ensureInitialized()
@@ -80,7 +80,7 @@ class LexiconService: @unchecked Sendable {
         // Query custom dictionary by unsegmented input (highest priority)
         // Tone-aware: match roman_num column; toneless: match notone column
         let customWords: [TaigiWord]
-        if SharedSettings.shared.customDictEnabled {
+        if SharedSettings.shared.isCustomDictEnabled {
             let customSearchKey = rawInput ?? input
             let isToneAware = customSearchKey.contains { $0.isNumber }
             let searchPrefix = isToneAware

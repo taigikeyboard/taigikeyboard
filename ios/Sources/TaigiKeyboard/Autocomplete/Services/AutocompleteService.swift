@@ -116,7 +116,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             // TPS ㄜ expansion: also search "or" variant when toggle ON
             var allWords = words
             if TPSConverter.containsTPS(rawInput),
-               settings.tpsOrMapsToER,
+               settings.isTpsOrMappedToER,
                searchInput.contains("er")
             {
                 let orVariantKey = searchInput.replacingOccurrences(of: "er", with: "or")

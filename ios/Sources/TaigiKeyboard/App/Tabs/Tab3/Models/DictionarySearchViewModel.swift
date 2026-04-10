@@ -20,17 +20,17 @@ final class DictionarySearchViewModel: ObservableObject {
     private static func enabledSources() -> Set<DictionarySource> {
         let s = SharedSettings.shared
         var sources: Set<DictionarySource> = [.dev, .custom]
-        if s.moeDictEnabled { sources.insert(.kautian) }
-        if s.newwordDictEnabled { sources.insert(.taigitv) }
-        if s.kunggeDictEnabled { sources.insert(.kungge) }
-        if s.iTaigiDictEnabled { sources.insert(.itaigi) }
-        if s.taiwanJapanDictEnabled { sources.insert(.taijit) }
-        if s.taiHuaDictEnabled { sources.insert(.taihoa) }
-        if s.taiwanPlantDictEnabled { sources.insert(.sitbut) }
-        if s.sttiDictEnabled { sources.insert(.stti) }
-        if s.khpooDictEnabled { sources.insert(.khpoo) }
-        if s.khiin { sources.insert(.khiin) }
-        if s.lkkDictEnabled { sources.insert(.lkk) }
+        if s.isMoeDictEnabled { sources.insert(.kautian) }
+        if s.isNewwordDictEnabled { sources.insert(.taigitv) }
+        if s.isKunggeDictEnabled { sources.insert(.kungge) }
+        if s.isITaigiDictEnabled { sources.insert(.itaigi) }
+        if s.isTaiwanJapanDictEnabled { sources.insert(.taijit) }
+        if s.isTaiHuaDictEnabled { sources.insert(.taihoa) }
+        if s.isTaiwanPlantDictEnabled { sources.insert(.sitbut) }
+        if s.isSttiDictEnabled { sources.insert(.stti) }
+        if s.isKhpooDictEnabled { sources.insert(.khpoo) }
+        if s.isKhiinEnabled { sources.insert(.khiin) }
+        if s.isLkkDictEnabled { sources.insert(.lkk) }
         return sources
     }
 

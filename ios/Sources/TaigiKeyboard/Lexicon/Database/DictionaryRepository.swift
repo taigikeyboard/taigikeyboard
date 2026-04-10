@@ -25,18 +25,18 @@ final class DictionaryRepository: @unchecked Sendable {
         static func fromSettings() -> EnabledDictionaries {
             let settings = SharedSettings.shared
             return EnabledDictionaries(
-                kautian: settings.moeDictEnabled,
-                taigitv: settings.newwordDictEnabled,
-                kungge: settings.kunggeDictEnabled,
-                itaigi: settings.iTaigiDictEnabled,
-                taijit: settings.taiwanJapanDictEnabled,
-                taihoa: settings.taiHuaDictEnabled,
-                sitbut: settings.taiwanPlantDictEnabled,
-                stti: settings.sttiDictEnabled,
-                khpoo: settings.khpooDictEnabled,
-                variant: settings.variantEnabled,
-                khiin: settings.khiin,
-                lkk: settings.lkkDictEnabled,
+                kautian: settings.isMoeDictEnabled,
+                taigitv: settings.isNewwordDictEnabled,
+                kungge: settings.isKunggeDictEnabled,
+                itaigi: settings.isITaigiDictEnabled,
+                taijit: settings.isTaiwanJapanDictEnabled,
+                taihoa: settings.isTaiHuaDictEnabled,
+                sitbut: settings.isTaiwanPlantDictEnabled,
+                stti: settings.isSttiDictEnabled,
+                khpoo: settings.isKhpooDictEnabled,
+                variant: settings.isVariantEnabled,
+                khiin: settings.isKhiinEnabled,
+                lkk: settings.isLkkDictEnabled,
             )
         }
 
