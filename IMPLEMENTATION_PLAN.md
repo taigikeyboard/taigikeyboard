@@ -141,7 +141,37 @@ iOS keyboard extension 生命週期短（隨時被系統殺掉），auto-checkpo
 4. `c6261db` docs: Simplify CHANGELOG.md format — remove Current header and branch tags
 5. `03487ac` fix(iOS): Add 30K entry cap to custom dictionary — align with Android
 
-**Status**: Complete — PR #117 open，待手動 build 驗證 + merge
+**Status**: Complete — PR #117 merged
+
+---
+
+## Android App Size Reduction (branch: `refactor-android-reduce-size`)
+
+### Problem
+Android app 佔用 133MB，遠高於同類台語輸入法（Sushi 12MB、MOE 50MB）。
+分析發現 DEX 佔 70.7MB（18 個 dex 檔），主因是三個未使用/浪費的 dependency。
+
+### Root cause
+1. `material-icons-extended`：引入 11,000+ icon composable（~30-40MB DEX），實際只用 32 個
+2. `moshi-kotlin`（reflection）：間接拉入整個 `kotlin-reflect` runtime（~10MB DEX），僅 2 處 call site
+3. `kotlinx-serialization-json`：宣告了 plugin 和 dependency 但程式碼中零 import
+
+### Fix
+1. **移除 `material-icons-extended`**：改為顯式依賴 `material-icons-core`，21 個不在 core 的 icon 複製到本地 `TaigiIcons.kt`（pixel-identical vector 定義）
+2. **Moshi reflection → codegen**：用 KSP + `moshi-kotlin-codegen` 取代 `moshi-kotlin`，在 4 個 data class 加上 `@JsonClass(generateAdapter = true)`，移除 `KotlinJsonAdapterFactory()`
+3. **移除 `kotlinx-serialization`**：刪除未使用的 plugin 和 dependency
+
+### Results
+| | Before | After | Reduction |
+|---|---|---|---|
+| DEX | 70.7 MB (18 files) | 4.4 MB (1 file) | -94% |
+| APK | 110 MB | 37 MB | -66% |
+| Est. install size | ~133 MB | ~89 MB | -33% |
+
+### Commits (branch: `refactor-android-reduce-size`)
+1. `d82a694` refactor(Android): Remove unused dependencies to reduce APK size by 66%
+
+**Status**: PR open，待手動 device 驗證 + merge
 
 ---
 
