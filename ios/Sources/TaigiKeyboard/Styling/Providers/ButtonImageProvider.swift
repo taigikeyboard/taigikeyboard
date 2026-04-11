@@ -1,18 +1,22 @@
 import KeyboardKit
 import SwiftUI
 
-/// 按鈕圖片提供者
+/// Button image provider — first in the render chain.
 ///
-/// 回傳按鍵應顯示的圖示（SF Symbols）。回傳 nil 時由 ButtonTextProvider 處理。
-class ButtonImageProvider {
-
+/// Returns the SF Symbol image for a key. Returns nil to defer to `ButtonTextProvider`.
+/// Only handles keys with icon-based rendering: globe, return, settings, translate toggle.
+///
+/// Created by: `TaigiKeyboardView.RenderProviders`
+/// Queried by: `TaigiButtonContent.body` (first priority check)
+/// Depends on: `KeyboardContext` (composing state, translate toggle state)
+final class ButtonImageProvider {
     private let keyboardContext: KeyboardContext
 
     init(keyboardContext: KeyboardContext) {
         self.keyboardContext = keyboardContext
     }
 
-    /// 取得按鍵對應的圖示
+    /// Returns an SF Symbol image, or nil to defer to text rendering.
     func buttonImage(for action: KeyboardAction) -> Image? {
         switch action {
         case .nextKeyboard:
@@ -26,8 +30,8 @@ class ButtonImageProvider {
             switch name {
             case "translate":
                 let iconName = keyboardContext.isTranslateSwapped
-                    ? "character.square.fill"  // 啟用狀態：實心
-                    : "character.square"       // 預設狀態：空心
+                    ? "character.square.fill" // Active: filled
+                    : "character.square" // Default: outlined
                 return Image(systemName: iconName)
             default:
                 return nil

@@ -90,6 +90,7 @@ struct SettingsSnapshot {
     let inputMode: InputMode
     let fontType: FontType
     let keyboardLayoutType: KeyboardLayoutType
+    let isTranslateSwapped: Bool
     let keyFontSizeScale: CGFloat
     let keyCornerRadius: CGFloat
     let colorSettings: KeyboardColorSettings
