@@ -134,6 +134,133 @@ raw_key = utf8_key + \xff + uint32_le(rowid)
 
 ---
 
+## Migration Plan: Eliminate dictionary.db Copy
+
+### Problem
+
+Both `dictionary.db` and `dictionary.trie` are copied from assets to `files/` at runtime because Android's SQLite and mmap both require a filesystem path. This creates duplicate data on disk.
+
+| File | APK (assets) | files/ (copy) | Why copied |
+|------|-------------|---------------|------------|
+| `dictionary.db` | ~15-20 MB (compressed) | ~15-20 MB | SQLite needs file path |
+| `dictionary.trie` | ~3-4 MB (compressed) | ~3-4 MB | mmap needs file path |
+
+Since both files are **read-only**, neither needs to be in `files/`.
+
+### Current Architecture
+
+```
+User input → Trie(key → rowid[]) → SQLite(rowid → hanzi, tl, frequency, dict flags)
+               ↑ copied to files/     ↑ copied to files/
+```
+
+SQLite serves three purposes:
+
+| # | Purpose | Query | Call site |
+|---|---------|-------|-----------|
+| 1 | **Main lookup**: rowid → word data + dict filtering | `WHERE id IN (?) AND kautian=1 OR ...` | `LexiconService.search()` |
+| 2 | **Hanzi reverse lookup** (settings UI only) | `WHERE hanzi LIKE '%input%'` | `LexiconService.searchByHanzi()` → `DictionarySearchViewModel` |
+| 3 | **Word association** | `SELECT FROM word_association` | `NextWordService` |
+
+### Proposed Architecture
+
+Two changes: (A) encode dictionary data into trie value to eliminate SQLite, (B) mmap trie directly from APK to eliminate trie copy.
+
+#### A. Encode Data into Trie Value (eliminate dictionary.db)
+
+Instead of `key → rowid → SQLite lookup`, encode all data directly into the trie value:
+
+```
+Current:   trie key → rowid    → SQLite query → {hanzi, tl, frequency, flags}
+Proposed:  trie key → encoded value            → parse in memory → {hanzi, tl, frequency, bitmask}
+```
+
+Example trie entry:
+```
+key   = "hoo2boo5"
+value = "好無\t42\t0x005"    ← hanzi + frequency + bitmask
+```
+
+This is what mainstream IMEs do (AOSP LatinIME, mozc) — index and data in one file. No separate data store for read-only dictionary.
+
+**Dictionary bool flags → bitmask:**
+
+12 boolean columns + is_variant encoded as 16-bit int:
+
+```
+bit 0  = kautian    bit 4  = taihoa    bit 8  = khpoo
+bit 1  = taigitv    bit 5  = taijit    bit 9  = khiin
+bit 2  = itaigi     bit 6  = kungge    bit 10 = lkk
+bit 3  = sitbut     bit 7  = stti      bit 11 = dev
+bit 12 = is_variant
+```
+
+Filtering: `if (entry.bitmask and enabledMask != 0) → include`
+
+**Hanzi reverse lookup:** build a second hanzi-keyed trie for prefix matching (replaces `LIKE '%input%'`). Settings UI only — prefix search is sufficient.
+
+**Word association:** needs separate handling (binary format or small standalone file).
+
+#### B. noCompress + Direct mmap from APK (eliminate trie copy)
+
+Mainstream approach (used by AOSP LatinIME / Gboard):
+
+**Build time** — mark assets as uncompressed:
+```groovy
+// build.gradle
+androidResources {
+    noCompress ".trie"
+}
+```
+
+**Runtime** — get file descriptor + offset directly into APK:
+```kotlin
+val afd = context.assets.openFd("dictionary.trie")
+// afd.fileDescriptor → APK fd
+// afd.startOffset    → data offset within APK
+// afd.length         → data length
+```
+
+**Native** — mmap directly from APK, zero copy:
+```cpp
+void* ptr = mmap(nullptr, afd.length, PROT_READ, MAP_PRIVATE, fd, offset);
+```
+
+Trade-off: APK slightly larger (uncompressed asset) but no `files/` copy at all.
+
+Requires modifying MARISA-trie loading to accept fd + offset instead of file path.
+
+### Target Architecture
+
+```
+dictionary.trie (noCompress) → direct mmap from APK → key → {hanzi, freq, bitmask}
+hanzi.trie     (noCompress) → direct mmap from APK → hanzi prefix search (settings UI)
+user_frequency.db           → files/ (SQLite, user data, needs write)
+user_association.db         → files/ (SQLite, user data, needs write)
+custom_dictionary.db        → files/ (SQLite, user data, needs write)
+word_association            → TBD (binary format or standalone file)
+```
+
+**Principle:** read-only data shipped with app → binary format, direct mmap from APK. User-generated data needing writes → SQLite in `files/`.
+
+### Feasibility
+
+| Aspect | Assessment |
+|--------|------------|
+| Encode data in trie value | MARISA-trie supports string values; build script change |
+| Bitmask filtering | In-memory AND, nanosecond-level for ~100K entries |
+| Hanzi reverse lookup | Second trie with hanzi keys, prefix matching sufficient |
+| Word association | Needs separate solution |
+| noCompress + direct mmap | Requires JNI change to accept fd+offset; AOSP LatinIME proves this works |
+| Build tooling | Modify CSV → trie script to include data in value |
+| Disk savings | Eliminate ~15-20 MB (db) + ~3-4 MB (trie) from `files/` |
+
+### Status
+
+**Not started** — documenting for future implementation.
+
+---
+
 ## Debug
 
 ```bash
