@@ -246,6 +246,12 @@
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
 		};
+		F35BA8872F89F134004657F0 /* Assets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Assets;
+			path = Resources/Assets;
+			sourceTree = "<group>";
+		};
 		F361A88B2F85522D00682CC6 /* Overlays */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Overlays;
@@ -308,6 +314,7 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
@@ -376,6 +383,7 @@
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F35BA8872F89F134004657F0 /* Assets */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
@@ -416,6 +424,7 @@
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
+				F35BA8872F89F134004657F0 /* Assets */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,

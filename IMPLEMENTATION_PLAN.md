@@ -3,347 +3,87 @@
 ## Overview
 Cross-platform refactoring to reduce coupling, extract shared components, and improve code organization.
 This refactoring aims to build the right foundation for the future — do the correct thing now, handle it carefully.
-Branch: `rel-v3.4.8-bugfix`
 
 ---
 
-## iOS Refactoring
+## Completed (v3.4.8)
 
-### Stage 1: App/ folder cleanup ✅
-**Commits**: 893a629, 39e128f, 08e6352
-**What was done**:
-- Centralized AppStyle font size constants, removed FontManager from main app
-- Reorganized Tabs/ folder structure (Tab2/, Tab3/, Tab4/ subfolders)
-- Extracted shared components: CSVDocument, SearchBar, DictionaryInfo, KeyboardPreviewPanel
-- Removed dead code (unused state vars, methods, SectionHeader struct)
-- Merged headlineSize into sectionHeaderSize, removed redundant style modifiers
-- Converted all App/ comments to English
+### iOS
+- Stage 1: App/ folder cleanup
+- Stage 2: Extract Overlays from Autocomplete
+- Stage 3: Extract Phonetics from Input
+- Stage 4: Reduce Autocomplete cross-folder coupling
+- Stage 5: Unify DEBUG logging (DebugLogger)
+- Stage 6: KeyboardViewController review & cleanup
+- Stage 7: Actions/ review & cleanup
+- Stage 8: NextWord State deduplication
+- Stage 8b: App/ simplify scan fixes
+- Stage 9: Tab3 data view deduplication
+- Stage 10: NextWord decoupling from ActionHandler
+- Stage 11: Emojis/ cleanup
+- Stage 12: Callouts/ cleanup
+- Stage 13: Settings/ cleanup
+- Stage 13b: TPS bidirectional sync cleanup
+- Stage 14: Styling/ review & cleanup
+- Stage 14b: Move LayoutPreviewAssets to Resources/Assets
 
-### Stage 2: Extract Overlays from Autocomplete ✅
-**Goal**: Move overlay views out of Autocomplete/ into a dedicated folder
-**Why**: Autocomplete/ mixes candidate search logic with keyboard overlay UI (settings panel, layout picker, symbol grid, expanded candidates). These overlays are not autocomplete — they're keyboard UI panels.
-**Files moved**:
-- `Autocomplete/Views/SettingsSelectionOverlay.swift` → `Overlays/`
-- `Autocomplete/Views/LayoutSelectionOverlay.swift` → `Overlays/`
-- `Autocomplete/Views/SymbolSelectionOverlay.swift` → `Overlays/`
-- `Autocomplete/Views/ExpandedCandidateOverlay.swift` → `Overlays/`
-**Note**: Swift same-target files don't need import updates. User must update Xcode project groups manually.
-
-### Stage 3: Extract Phonetics from Input ✅
-**Goal**: Separate pure phonetics logic from input state management
-**Why**: Input/ mixes two concerns: (1) composition state (ComposingManager) and (2) phonetics/tone utilities (TaigiPhonetics, ToneConverter, ToneUtilities, ToneRestoration). The phonetics layer is pure logic with no dependencies — good candidate for isolation.
-**Files moved**:
-- `Input/Tone/TaigiPhonetics.swift` → `Phonetics/`
-- `Input/Tone/ToneConverter.swift` → `Phonetics/`
-- `Input/Tone/ToneRestoration.swift` → `Phonetics/`
-- `Input/Tone/ToneUtilities.swift` → `Phonetics/`
-- Removed empty `Input/Tone/` directory
-**Note**: User must update Xcode project groups manually.
-
-### Stage 4: Reduce Autocomplete cross-folder coupling ✅
-**Goal**: Remove unnecessary imports leaking into Autocomplete/
-**Analysis result**:
-- `Tab1Texts`–`Tab4Texts` in Autocomplete — **already resolved by Stage 2** (overlays moved to Overlays/, Autocomplete has zero TabNTexts references now)
-- `KeyboardModels.Fonts` in Autocomplete — **resolved in Stage 6**. Moved `_Keyboard/KeyboardModels.swift` → `Styling/KeyboardFonts.swift`, flattened `KeyboardModels.Fonts` → `KeyboardFonts` (removed unnecessary double namespace). Updated 30 references across 11 files. Eliminates reverse dependency from 5 folders (Settings, Autocomplete, Overlays, Styling, App) back to `_Keyboard/`.
-- Moved `DiagnosticService.swift` from `Diagnostics/` → `App/Tabs/Tab4/` (only consumer); removed empty `Diagnostics/` folder
-
-### Stage 5: Unify DEBUG logging pattern ✅
-**Goal**: Replace scattered `#if DEBUG` + `Logger` + `privacy: .public` with unified `DebugLogger` wrapper
-**What was done**:
-- Created `DebugLogger.swift` — `#if DEBUG` wraps real `os.Logger`, `#else` is no-op with `@autoclosure` (zero cost in release)
-- Migrated all 22 files from `Logger` to `DebugLogger`
-- Removed 87 `#if DEBUG` blocks → 1 remains (in `DebugLogger.swift` itself)
-- Removed 68 `privacy: .public` annotations from call sites (handled internally by wrapper)
-- Removed 21 `import OSLog` (only `DebugLogger.swift` imports it)
-- Removed instance counting dead code from `KeyboardViewController` and `CandidateExpandState`
-- Removed unused debug test methods (`insertTestData`, `testData`, debug `deleteDatabase`) from `UserFrequencyRepository` and `UserFrequencyService`
-- Updated `rules/security-rules.md` to reflect new `DebugLogger` convention
-- Removed `docs/debug-log.md` (redundant with security-rules.md), updated `docs/README.md`
-**New file**: `DebugLogger.swift` (root of TaigiKeyboard/)
-
-### Stage 6: KeyboardViewController review & cleanup ✅
-**Branch**: `refactor/ios-review`
-**Goal**: Review KeyboardViewController startup flow, fix issues found
-**Principle**: Follow clean code — extract repeated expressions, tighten access control, remove dead code
-**What was done**:
-- Removed boilerplate `init(nibName:bundle:)` and `init?(coder:)` — Swift inherits automatically
-- Fixed `setupServices`/`ensureEssentialServicesInitialized` merge — autocomplete service was created twice (KeyboardKit default then replaced); ActionHandler now gets the correct service directly
-- Removed redundant `ensureEssentialServicesInitialized()` — lazy var triggers already done in ActionHandler init
-- Removed redundant `ensureCleanState()` — state is already clean at `viewDidLoad` time
-- Removed redundant `ActionHandler.keyboardViewController` — replaced with inherited `keyboardController` (KeyboardKit's weak ref)
-- Removed redundant `setKeyboardCase` override — was pure debug log, no protection logic
-- Decoupled AutocompleteService from ActionHandler/ComposingManager — introduced `ComposingStateProvider` and `SelectionContextProvider` protocols
-- Migrated `settingsObserver` from NotificationCenter block to Combine — eliminated manual cleanup, removed `removeSettingsObserver()`, simplified `performCleanup()`
-- Removed dead code in `syncSettings()` — hardcoded KeyboardKit key read only used in log
-- Added FIXME markers on 2-layer auto-capitalization workaround
-- Updated deinit TODO (settingsObserver migration done)
-- viewDidAppear: guarded `isFullAccessEnabled` write to avoid unnecessary notification → double `syncSettings()`
-- syncSettings: removed `syncToKeyboardContext` (constant `spacebarLongPressBehavior` moved to one-time `setupServices()`); initialized `lastInputMode`/`lastKeyboardLayoutType` in `setupCoreServices()` to prevent redundant first-launch service rebuild; merged double `autocompleteContext.reset()` on TPS switch with `needsAutocompleteReset` flag
-- Removed `SharedSettings.syncToKeyboardContext` extension (no longer used)
-- viewWillSetupKeyboardView: removed redundant `controller` parameter and `as? KeyboardViewController` cast — unified to `[unowned self]` per ios-guidelines
-- Renamed `createQwertyKeyboardView` → `createKeyboardView` (handles all layout types, not just QWERTY)
-- createCalloutStyle: extracted `FontType.customFontName` computed property, eliminated duplicated `.openHuninn`/`.iansui` switch cases
-- Removed `viewDidDisappear` — redundant with `viewWillDisappear` + `deinit` (both call `performCleanup()` with `isCleanedUp` guard)
-- textDidChange: unified `actionHandler` access (removed `services.actionHandler as? ActionHandler` cast)
-- textDidChangeAsync: removed 6-line NextWord debug trace, kept 1-line auto-cap log
-**New file**: `AutocompleteProviders.swift` (ComposingStateProvider + SelectionContextProvider protocols)
-**Review criteria**: Remove redundant code, scrutinize necessity, eliminate duplication (logic & variables)
-**Review progress** (KeyboardViewController lifecycle):
-- [x] Properties
-- [x] Initialization (init/deinit)
-- [x] viewDidLoad → FontRegistration
-- [x] viewDidLoad → setupServices / setupCoreServices
-- [x] viewDidLoad → ensureCleanState (removed)
-- [x] viewDidLoad → setupSettingsObserver
-- [x] viewDidLoad → setupKeyboardCaseProtection (FIXME, workaround)
-- [x] viewDidAppear
-- [x] viewWillSetupKeyboardView / createKeyboardView / createCalloutStyle
-- [x] viewWillDisappear (viewDidDisappear removed)
-- [x] textDidChange / textDidChangeAsync
-- [x] autocompleteText
-- [x] syncSettings (auto-cap section) — clean, no issues
-- [x] setupKeyboardCaseProtection (FIXME) — necessarily complex, cannot simplify; removed ActionHandler `.keyboardType` debug trace (11 lines, purely diagnostic)
-- [x] EmojiDelegate — clean, no issues
-- [x] TextInput — clean; fixed `ComposingManager.selectSuggestion` duplicating `clearMarkedText()` logic
-- [x] TaigiKeyboardView — clean, no issues
-- [x] `_Keyboard/` folder review — moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift`, flattened namespace (30 refs updated, 11 files)
-- [x] ComposingManager decoupling — introduced `ComposingDelegate` protocol, replaced `weak var keyboardViewController: KeyboardViewController?` with `weak var delegate: (any ComposingDelegate)?`. Input/ no longer depends on _Keyboard/. Removed `deleteBackwardManually()` (replaced by protocol `deleteBackward()`)
-
-### Stage 7: Actions/ review & cleanup
-**Branch**: `refactor/ios-review-actions`
-**Goal**: Review ActionHandler and extensions — clean code, English comments, remove dead code
-**Principle**: Follow clean code — extract repeated expressions, tighten access control, remove dead code
-**What was done**:
-- Converted all Chinese comments to English (5 Actions/ files + 4 _Keyboard/ files, ~50 comments)
-- Removed redundant extension doc comments and inline comments that restated code
-- Removed dead constant `contextTimeoutMs` (unused, superseded by `contextTimeoutSeconds`)
-- Extracted `currentTimestampMs` computed property (was `Int64(Date()...* 1000)` repeated 4 times across 2 files)
-- `private(set)` on `lastSelectedRoman`, `lastSelectionTime`, `isShowingNextWord` — restrict external writes
-- Moved hardcoded punctuation string → `NextWordConstants.noisePunctuation`
-- Removed unused `rawInput _:` parameter from `handleNextWordPrediction` and `handleEnterNextWordPrediction`
-- Fixed `ComposingDelegate` conformance — moved `insertText`/`deleteBackward` overrides to class body (Swift requires override in class, not extension)
-- Fixed duplicate `// MARK: - Settings Observer` in KeyboardViewController
-- Replaced WHAT comments with WHY comments in TextInput (markedText cursor positioning, two-step UITextInput clear)
-- Ran simplify 3-agent review on both Actions/ and _Keyboard/ — fixed safe issues, noted future work
-- Build fix: reverted `private(set)` (Swift `private` is file-scoped, blocks cross-file extensions), removed dead `capturedRawInput` and stale caller `rawInput:` argument
-**Noted for future** (from simplify review):
-- Stringly-typed `additionalInfo` keys → needs separate PR (touches many files)
-- Panel bools → enum consolidation in TaigiKeyboardView
-- Prediction filtering → move from ActionHandler to NextWordService
-**Status**: ✅
-
-### Stage 8: NextWord State deduplication
-**Branch**: `refactor/ios-review-actions`
-**Goal**: Eliminate duplicated NextWord logic across 3 entry points
-**Principle**: One flow, one method — use parameters to control behavior variants
-**Rollback**: Each step = 1 commit, can `git revert` individually
-
-**Problem analysis** (5 issues identified):
-1. `handleNextWordPrediction` ≈ `handleEnterNextWordPrediction` (~90% identical code)
-2. `hanzi` parameter in `handleNextWordPrediction` is dead (unused in body)
-3. `updateNextWordState` vs `updateLastSelectedWord` — overlapping state updates
-4. `recordCompoundWordAssociations` called from 3 scattered locations
-5. Noise filtering logic duplicated across 3 entry points with slight variations
-
-**Steps**:
-
-- [ ] **Step A**: Remove dead `hanzi` parameter from `handleNextWordPrediction`
-  - Files: `ActionHandler+Suggestions.swift` (declaration + call site)
-  - Risk: Zero — parameter unused in body
-  - Commit separately
-
-- [ ] **Step B**: Unify `handleNextWordPrediction` + `handleEnterNextWordPrediction` into single method
-  - Signature: `processNextWord(text:roman:triggerPrediction:requireRomanMode:)`
-  - `handleNextWordPrediction` → `processNextWord(triggerPrediction: true, requireRomanMode: false)`
-  - `handleEnterNextWordPrediction` → `processNextWord(triggerPrediction: true, requireRomanMode: true)`
-  - Preserves sentence-end punctuation reset from original `handleNextWordPrediction`
-  - Files: `ActionHandler+Suggestions.swift`
-  - Risk: Low — same logic, just merged
-
-- [ ] **Step C**: Absorb `updateLastSelectedWord` into `processNextWord`
-  - Space path → `processNextWord(triggerPrediction: false, requireRomanMode: false)`
-  - Remove `updateLastSelectedWord`, remove `updateNextWordState` (inlined into `processNextWord`)
-  - Files: `ActionHandler.swift`, `ActionHandler+Suggestions.swift`, `ActionHandler+CharacterInput.swift`
-  - Risk: Medium — Space path semantics change slightly (adds TL normalization, consistent noise filtering)
-  - Verify: Space commit still records associations correctly
-
-**After completion**: 3 entry points → 1 method, ~50 lines removed
-
-**What was done**:
-- Removed dead `hanzi` parameter from `handleNextWordPrediction` (declaration + call site)
-- Replaced `handleNextWordPrediction` + `handleEnterNextWordPrediction` with unified `processNextWord(text:roman:requireRomanMode:triggerPrediction:)` in `ActionHandler+Suggestions.swift`
-- Replaced `updateLastSelectedWord` (Space path) call with `processNextWord(triggerPrediction: false)`
-- Removed `updateNextWordState` and `updateLastSelectedWord` from `ActionHandler.swift` (state update inlined into `processNextWord`)
-- Call sites updated: `ActionHandler+Suggestions.swift:86`, `ActionHandler+CharacterInput.swift:151,228`
-- AI-friendliness improvements:
-  - Added action flow overview to `ActionHandler` class doc (gesture → dispatch → handler → processNextWord → predict)
-  - Added file-level overview comments to all 4 extension files
-  - Added WHY comment on `handleBackspaceForNextWord` explaining why it bypasses `processNextWord` (backspace is not a word selection — no association/compound recording)
-  - Made FIXME cross-reference precise: "see KeyboardViewController.setupKeyboardCaseProtection() (Layer 2)"
-
-**Revert guide**:
-- All changes are in one commit on `refactor/ios-review-actions`
-- To revert NextWord dedup only: restore these 3 deleted methods and their call sites:
-  - `handleNextWordPrediction(displayText:roman:)` → private in `ActionHandler+Suggestions.swift`, called from `handleSuggestionSelection`
-  - `handleEnterNextWordPrediction(committedText:)` → func in `ActionHandler+Suggestions.swift`, called from `handleReturnAction`
-  - `updateNextWordState(selectedWord:roman:)` → func in `ActionHandler.swift`, called by the above two
-  - `updateLastSelectedWord(_:roman:)` → func in `ActionHandler.swift`, called from `handleSpaceAction`
-- Then remove `processNextWord` and update call sites back
-- Comment/doc changes are independent and safe to keep even if logic is reverted
-
-**Manual test results**: All 9 scenarios passed (candidate selection → predict, Enter → predict, Space → no predict, new letter clears, punctuation resets, digit clears, backspace re-predicts, "-" preserves, 30s timeout clears)
-**Status**: ✅
-
-### Stage 8b: App/ simplify scan fixes
-**Branch**: `refactor/ios-review-actions`
-**What was done**:
-- Unified 3 slider row methods → single `sliderRow(label:value:in:step:defaultValue:onChanged:)` in AppearanceSettingsView
-- Added spacing/cornerRadius constants to AppStyle: `horizontalPadding`(16), `innerHorizontalPadding`(12), `verticalPadding`(8), `cardCornerRadius`(12), `previewCornerRadius`(10), `smallCornerRadius`(8)
-- Replaced hardcoded values across 6 files: SearchBar, Tab2, Tab3, CustomDictionaryView, FAQDetailView, SetupGuideView
-- Fixed 3 empty `catch {}` blocks in Tab4 and FrequencyDataView → DebugLogger error logging
-**Status**: ✅
-
-### Stage 9: Tab3 data view deduplication
-**Branch**: `refactor/ios-review-actions`
-**Goal**: Extract shared import/export pattern from CustomDictionaryView, FrequencyDataView, AssociationDataView
-**Why**: 3 views share identical import/export state vars (8 each), alert chain (3 modifiers), file importer/exporter, export filename pattern, and import handler boilerplate
-**Approach**: Option B — `ImportExportHandler` (ObservableObject) + `ImportExportModifiers` (ViewModifier)
-
-**What was done**:
-- Created `ImportExportHandler.swift` — `@MainActor ObservableObject` holding 8 shared `@Published` state vars + `performExport()` + `handleFileImport()` + `exportFilename(prefix:)` utility
-- Created `ImportExportModifiers` ViewModifier — attaches `.fileImporter`, `.fileExporter`, and 3 `.alert` modifiers (import result, export success, error) in one call
-- Added `View.importExportModifiers(handler:...)` convenience extension
-- Updated `FrequencyDataView`: 8 `@State` → 1 `@StateObject`, 5 modifiers → 1, removed `exportFilename()` + `exportFrequencyCSV()` + `handleFrequencyImport()`, added `exportCSV()` (returns String) + `handleImport()` (delegates to handler)
-- Updated `AssociationDataView`: same pattern — 8 `@State` → 1 `@StateObject`, removed 3 methods, added 2 simplified methods
-- Updated `CustomDictionaryView`: same pattern — 8 `@State` → 1 `@StateObject`, removed `customDictExportFilename()` + `exportCSV()` + `handleFileImport()`, export now inlines `service.exportCSV()` directly
-**New file**: `ImportExportHandler.swift` (App/Tabs/Tab3/)
-**Net change**: ~−120 lines across 3 views, +120 lines in new file (zero duplication vs 3× duplication)
-**Status**: ✅
-
-### Stage 11: Emojis/ cleanup ✅
-**Branch**: `refactor/ios-emojis-cleanup`
-**Goal**: Simplify EmojiService — remove premature abstractions, tighten access control
-**What was done**:
-- Made `EmojiService` `final`
-- Changed `emojiView` from `var EmojiView?` to `let EmojiView` (non-optional) — always assigned in `init`, eliminates unreachable `EmptyView` fallback
-- Removed `Configuration` struct (18 lines, only `.default` ever used) — inlined settings directly in `init`
-- Removed double `setupEmojiView()` indirection (no-arg → with-arg) — single flat `init`
-- Renamed `getEmojiKeyboardView()` → computed property `emojiKeyboardView` (Swift naming convention)
-- Made `EmojiViewRepresentable` `private` (implementation detail)
-- Removed redundant `typealias UIViewType` (compiler-inferred)
-- Removed placeholder comment `// Update logic if needed`
-- Updated caller in `KeyboardViewController.swift`
-**Line count change**: 101 → 65 (−36 lines)
-**Status**: ✅
-
-### Stage 12: Callouts/ cleanup ✅
-**Branch**: `develop-Callouts`
-**Goal**: Eliminate code duplication in tone map builder, improve clarity and AI-friendliness
-**Principle**: Extract shared patterns, remove WHAT comments, add WHY comments
-**What was done**:
-- Extracted `combiningMark(for:mode:)` — eliminated 5× duplicated tone-mark selection logic; simplified POJ tone 9 (uses `toneNumToCombining["9"]` directly, no special case needed)
-- Extracted `buildVariations(base:suffix:toneNumbers:mode:)` — eliminated 5× duplicated tone-variation-building loops into single `compactMap`
-- `buildToneMap()` reduced from 93→42 lines — clear sequential structure: vowels → o͘/oo → n/m → ng → nasal
-- Cached `SharedSettings.shared.keyboardLayoutType` into local variable (1 read instead of 3)
-- Converted 3 layout-specific if-blocks → switch statement (explicit mutual exclusivity)
-- Removed WHAT comments, kept/added WHY comments (priority ordering, capitalization strategy)
-- Removed redundant doc comments
-**Line count change**: 335 → 290 (−45 lines)
-**Status**: ✅
-
-### Stage 13: Settings/ cleanup ✅
-**Branch**: `develop-settings`
-**Goal**: Review Settings/ folder for best practices, redundancy, naming, AI-friendliness
-**Principle**: Follow ios-guidelines naming conventions, single-responsibility file structure
-**What was done**:
-- Removed deprecated `userDefaults.synchronize()` from `isTranslateSwapped` setter
-- Simplified `sharedUserDefaults` from manual lazy init (7 lines, force unwrap) to `static let` (1 line)
-- Converted ~20 Chinese comments to English in SharedSettings.swift and InputMode.swift
-- Extracted model types (`InputMode`, `FontType`, `KeyboardLayoutType`, `CodableColor`, `KeyboardColorSettings`, `SettingsSnapshot`) from SharedSettings.swift → new `SettingsTypes.swift`; deleted `InputMode.swift` (content merged)
-- Renamed 20 Bool properties to follow ios-guidelines `is___` prefix convention across 18 consumer files (UserDefaults key strings unchanged for backward compat)
-- `khiin` → `isKhiinEnabled` (surgical rename preserving `.khiin` DictionarySource enum case)
-**Rename list**: `enableDoubleTapOO` → `isDoubleTapOOEnabled`, `enableDoubleTapNN` → `isDoubleTapNNEnabled`, `outputBothScripts` → `isOutputBothScripts`, `frequencyRecordingEnabled` → `isFrequencyRecordingEnabled`, `associationRecordingEnabled` → `isAssociationRecordingEnabled`, `customDictEnabled` → `isCustomDictEnabled`, 9 dict toggles → `is___DictEnabled`, `variantEnabled` → `isVariantEnabled`, `khiin` → `isKhiinEnabled`, `lkkDictEnabled` → `isLkkDictEnabled`, `tpsOrMapsToER` → `isTpsOrMappedToER`, `phahTaigiLayoutEnabled` → `isPhahTaigiLayoutEnabled`
-**New file**: `Settings/SettingsTypes.swift` (user must add to Xcode project)
-**Deleted file**: `Settings/InputMode.swift` (user must remove from Xcode project)
-**Line count change**: net −107 lines (19 files changed, 230 insertions, 337 deletions)
-**Additional commits**:
-- Made `SharedSettings` `final class`, `userDefaults` → `private let`, `getSharedContainerURL()` → computed property `sharedContainerURL` (3 consumer files updated)
-- Removed dead `isPhahTaigiLayoutEnabled` — write-only backward compat property with zero iOS readers; `keyboardLayoutType` getter uses its own default, never falls back to old key; Android has independent copy in SharedPreferences
-**Status**: ✅
-
-### Stage 13b: TPS bidirectional sync cleanup ✅
-**Branch**: `refactor-SharedSettings-tps`
-**Goal**: Replace fragile bidirectional setter sync with reentrancy guard pattern
-**Why**: `inputMode` setter bypassed `keyboardLayoutType` setter with direct `userDefaults.set(...)` to avoid recursion. Maintenance trap — future setter logic would be silently skipped. Asymmetric pattern hard to read.
-**What was done**:
-- Added `private var isSyncingTPS = false` reentrancy guard
-- Both setters now write to UserDefaults first, then use `guard !isSyncingTPS` + `defer` to prevent recursion
-- `inputMode` setter now calls `keyboardLayoutType = .tps` (real setter) instead of direct `userDefaults.set(...)`
-- `keyboardLayoutType` setter also writes UD first (moved from end to before guard), then syncs `inputMode`
-- Both setters are now symmetric: write own UD → guard → sync other property via real setter
-- Verified all 4 TPS transition scenarios: no recursion, correct save/restore behavior
-**Scope**: SharedSettings.swift only
-**Codex review**: Readability 6→8, Maintainability 4→8, Correctness 7→9. Recommended refactor.
-**Status**: ✅
+### Android
+- Stage 1: Cleanup & extract shared UI components
 
 ---
 
-## Android Refactoring
+## Bugfix: SQLite WAL storage bloat (separate branch)
 
-### Stage 1: Cleanup & extract shared UI components ✅
-**What was done**:
-- Removed unused imports (DetailScreen, InputModeScreen, FontPickerContent, DictionarySettingsScreen)
-- Removed unused `total` state var from AssociationDataScreen
-- Extracted `CsvUtils` to `util/` (shared CSV parse/escape)
-- Extracted `ConfirmationDialog`, `ResultDialog` to `ui/components/`
-- Fixed deprecated APIs (`largeTopAppBarColors`, `OpenInNew`)
-- Unified `SectionHeader` composable with default padding (13 inline patterns replaced)
-- Added spacing constants to `AppStyle`
-- Converted Chinese comments to English (Type.kt, InputSettingsScreen, DictionarySettingsScreen)
-**New files**: `CsvUtils.kt`, `ConfirmationDialog.kt`, `ResultDialog.kt`
+### Problem
+App「文件與資料」佔用 8.25GB。根因：4 個 SQLite 資料庫啟用 WAL 模式但**沒有 checkpoint 邏輯**。
 
-### Stage 2: (TBD — depends on Stage 1 completion)
+Keyboard extension 生命週期短（隨時被系統殺掉），SQLite 自動 checkpoint 來不及觸發，導致 `.db-wal` 檔案無限增長。
 
-### Stage 10: NextWord decoupling from ActionHandler ✅
-**Goal**: Extract NextWord prediction logic from ActionHandler into dedicated `NextWordController`
-**Why**: ActionHandler mixed two responsibilities — keyboard action dispatch and NextWord prediction control (~44% of code, ~340 lines). Violates SRP, hard to test NextWord logic independently.
-**What was done**:
-- Created `NextWord/NextWordController.swift` — holds all NextWord state (5 vars), constants, prediction logic, association recording, compound word handling, and timer management
-- Defined `AutocompleteContextUpdater` protocol — decouples UI state updates (`setNextWordSuggestions`/`resetNextWordSuggestions`) from KeyboardKit controller hierarchy
-- ActionHandler conforms to `AutocompleteContextUpdater`, forwarding to `keyboardController.state.autocompleteContext`
-- NextWordController conforms to `SelectionContextProvider` (moved from ActionHandler) — provides `lastSelectedWord` to AutocompleteService for context boost
-- Renamed `AutocompleteService.setActionHandler()` → `setSelectionContextProvider()` (clearer intent)
-- Updated all 4 ActionHandler entry points: select → `.process()`, space → `.process(triggerPrediction: false)`, return → `.process(requireRomanMode: true)`, backspace → `.rePredictAfterBackspace(lastChar:)` / `.resetAndClearUI()`
-- Updated `shouldSkipAutocomplete` and character input handlers to use `nextWordController.isShowing` / `.clearDisplay()`
-- Updated `KeyboardViewController.textDidChange` → `nextWordController.resetAndClearUI()`
-- Wired `nextWordController.contextUpdater = handler` in `setupCoreServices()`
-- Moved `AutocompleteContextUpdater` protocol to `AutocompleteProviders.swift` (alongside other decoupling protocols)
-- Updated `docs/file-structure.md` — NextWord handler row now points to `NextWordController.swift`
-- Post-review: tightened `isNoiseText`/`isSentenceEndPunctuation` to `private`; added `Called by:` annotations on 4 public methods; unified 3× `SharedSettings.shared` → `settings` in Suggestions
-**Line count change**: ActionHandler 300→168, +Suggestions 177→100, +KeyActions 252→239, new NextWordController 267
-**New file**: `NextWord/NextWordController.swift` (user must add to Xcode project)
-**Status**: ✅
+### Affected databases
+| 資料庫 | 用途 | 寫入頻率 |
+|--------|------|---------|
+| `dictionary.db` | 主詞庫（唯讀查詢） | 低 |
+| `user_frequency.db` | 使用頻率 | 每次打字 |
+| `user_association.db` | 詞彙關聯 | 每次選字 |
+| `custom_dictionary.db` | 自訂詞庫 | 使用者手動 |
+
+### Root cause
+- `SQLiteConnectionManager.configure()` 設定 `PRAGMA journal_mode=WAL;`
+- 整個 codebase **零** checkpoint 呼叫（`wal_checkpoint` / `wal_autocheckpoint` 搜尋結果為空）
+- Extension 反覆啟動/銷毀 → WAL 累積數月 → GB 級膨脹
+
+### Why WAL is wrong for keyboard extension
+WAL 優勢（並行讀寫、寫入速度）在 extension 場景幾乎無用：
+- 生命週期短（秒級~分鐘級）
+- 寫入量小（每次一筆頻率更新）
+- 讀寫幾乎不同時
+- 但 WAL 的代價（需要 checkpoint）在 extension 特別嚴重
+
+### Fix plan
+**Step 1**: 改 journal mode `WAL` → `DELETE`
+- `SQLiteConnectionManager.configure()` 中 `PRAGMA journal_mode=DELETE;`
+- DELETE 模式的 journal 檔每次交易後自動清除，不會累積
+
+**Step 2**: 一次性清理舊 WAL 檔（為現有用戶回收空間）
+- App 啟動時檢測 `.db-wal` 檔案是否存在
+- 若存在：先用 WAL 模式 open → `PRAGMA wal_checkpoint(TRUNCATE)` → close → 再用 DELETE 模式 open
+- 清理後 `.db-wal` 和 `.db-shm` 自動移除
+
+**Step 3**: 驗證
+- 確認新安裝不產生 WAL 檔
+- 確認升級用戶 WAL 被清理、空間回收
+- 確認讀寫功能正常（頻率記錄、自訂詞庫、關聯記錄）
+
+### Files to modify
+- `Lexicon/Database/SQLiteConnectionManager.swift` — journal mode + migration checkpoint
+- 可能需要 `KeyboardViewController` 或 `AppDelegate` 加啟動時 migration hook
+
+**Status**: Not Started
 
 ---
 
-## Session Log
-- **2026-04-06** (iOS): Completed Stage 1 — App/ folder cleanup (3 commits)
-- **2026-04-07** (Android): Stage 1 completed — cleanup, shared components, deprecated API fixes, SectionHeader unification
-- **2026-04-07** (iOS): Dependency analysis completed — identified Stages 2–5
-- **2026-04-07** (iOS): Stage 2 completed — moved 4 overlay files to Overlays/
-- **2026-04-07** (iOS): Stage 3 completed — moved 4 phonetics files to Phonetics/, removed Input/Tone/
-- **2026-04-07** (iOS): Stage 4 analyzed — Tab1-4Texts coupling already resolved by Stage 2; KeyboardModels.Fonts rename deferred (16 files, no coupling benefit); DiagnosticService moved to Tab4
-- **2026-04-08** (iOS): Stage 5 completed — DebugLogger wrapper, 87→1 #if DEBUG, removed instance counting & dead test code, updated docs
-- **2026-04-08** (iOS): Stage 6 in progress — KeyboardViewController review, fixed service init order, protocol decoupling, Combine migration, dead code removal
-- **2026-04-09** (iOS): Stage 6 continued — reviewed syncSettings auto-cap (clean), setupKeyboardCaseProtection (cannot simplify), removed ActionHandler `.keyboardType` debug trace; reviewed EmojiDelegate (clean), TextInput (fixed duplicated clearMarkedText in ComposingManager.selectSuggestion), TaigiKeyboardView (clean); `_Keyboard/` folder review: moved `KeyboardModels.swift` → `Styling/KeyboardFonts.swift` (flattened namespace, 30 refs across 11 files); decoupled ComposingManager from KeyboardViewController via `ComposingDelegate` protocol (Input/ no longer depends on _Keyboard/)
-- **2026-04-09** (iOS): _Keyboard/ comment & naming review — converted all Chinese comments to English (4 files), renamed `emojiSvc` → `emojiServiceStorage`, removed redundant doc comments that restated function names, trimmed verbose comments to keep only "why" context (net −29 lines)
-- **2026-04-09** (iOS): Stage 7 — Actions/ + _Keyboard/ review with simplify 3-agent scan. English comments, dead code removal (`contextTimeoutMs`, unused `rawInput` params), `private(set)` access control, `currentTimestampMs` helper, punctuation constant extraction, ComposingDelegate override fix, duplicate MARK fix
-- **2026-04-09** (iOS): Stage 8 — NextWord State deduplication. Merged 3 entry points (`handleNextWordPrediction`, `handleEnterNextWordPrediction`, `updateLastSelectedWord`) into unified `processNextWord`. Removed `updateNextWordState`. Added AI-friendly docs (action flow overview, extension file headers, WHY comments, precise FIXME refs). 9/9 manual tests passed
-- **2026-04-09** (iOS): Stage 8b — App/ simplify scan. Unified 3 slider rows in AppearanceSettingsView, added AppStyle spacing/cornerRadius constants (6 values), replaced hardcoded values across 6 files, fixed 3 empty catch blocks → DebugLogger. Recorded Stage 9 (Tab3 data view dedup) for future session
-- **2026-04-09** (iOS): Stage 9 — Tab3 data view deduplication. Created `ImportExportHandler` (ObservableObject + ViewModifier) extracting 8 shared @State vars, 5 shared modifiers, export/import flow. Updated CustomDictionaryView, FrequencyDataView, AssociationDataView. New file: `ImportExportHandler.swift`
-- **2026-04-10** (iOS): Stage 10 — NextWord decoupling from ActionHandler. Extracted `NextWordController` (273 lines) holding all NextWord state, prediction, association recording, timer management. ActionHandler reduced from 300→168 lines. Defined `AutocompleteContextUpdater` protocol for UI decoupling. Renamed `setActionHandler` → `setSelectionContextProvider`. Updated all 4 entry points + `textDidChange`
-- **2026-04-10** (iOS): Stage 11 — Emojis/ cleanup. Simplified EmojiService: removed unused Configuration struct, double setupEmojiView indirection, made emojiView non-optional, added final, tightened access control. 101→65 lines
-- **2026-04-10** (iOS): Stage 12 — Callouts/ cleanup. Extracted `combiningMark` + `buildVariations` helpers (5× duplication eliminated), `buildToneMap` 93→42 lines, cached layout type + switch, cleaned comments. 335→290 lines
-- **2026-04-10** (iOS): Stage 13 — Settings/ cleanup. Removed deprecated `.synchronize()`, simplified `sharedUserDefaults` init, Chinese→English comments, extracted model types to `SettingsTypes.swift`, renamed 20 Bool properties to `is___` prefix across 18 files. Net −107 lines
-- **2026-04-11** (iOS): Stage 13 continued — `final class`, `private let userDefaults`, `sharedContainerURL` rename, removed dead `isPhahTaigiLayoutEnabled`. Identified TPS bidirectional sync as next cleanup target (Stage 13b): replace direct UserDefaults writes with reentrancy guard pattern
-- **2026-04-11** (iOS): Stage 13b — TPS bidirectional sync cleanup. Added `isSyncingTPS` reentrancy guard, both setters now use real setter (no direct UD writes), symmetric pattern. Codex cross-review confirmed refactor value
+## Future
+
+### Android Stage 2: (TBD)
+**Goal**: TBD
+**Status**: Not Started

@@ -383,6 +383,7 @@ final class SharedSettings {
             inputMode: inputMode,
             fontType: fontType,
             keyboardLayoutType: keyboardLayoutType,
+            isTranslateSwapped: isTranslateSwapped,
             keyFontSizeScale: keyFontSizeScale,
             keyCornerRadius: keyCornerRadius,
             colorSettings: colorSettings,
