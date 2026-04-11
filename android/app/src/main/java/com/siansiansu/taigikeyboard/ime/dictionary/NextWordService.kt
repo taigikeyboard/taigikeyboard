@@ -453,22 +453,27 @@ object NextWordService {
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             } ?: return
 
-        if (journalMode.equals("wal", ignoreCase = true)) {
+        if (!journalMode.equals("wal", ignoreCase = true)) {
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[MIGRATE] WAL detected, performing checkpoint and switching to DELETE")
+                Log.d(TAG, "[MIGRATE] No WAL detected (journal_mode=$journalMode), skipping migration")
             }
-            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null)?.use { cursor ->
-                if (BuildConfig.DEBUG && cursor.moveToFirst()) {
-                    val busy = cursor.getInt(0)
-                    val log = cursor.getInt(1)
-                    val checkpointed = cursor.getInt(2)
-                    if (busy != 0 || log != checkpointed) {
-                        Log.w(TAG, "[MIGRATE] WAL checkpoint incomplete: busy=$busy, log=$log, checkpointed=$checkpointed")
-                    }
+            return
+        }
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[MIGRATE] WAL detected, performing checkpoint and switching to DELETE")
+        }
+        db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null)?.use { cursor ->
+            if (BuildConfig.DEBUG && cursor.moveToFirst()) {
+                val busy = cursor.getInt(0)
+                val log = cursor.getInt(1)
+                val checkpointed = cursor.getInt(2)
+                if (busy != 0 || log != checkpointed) {
+                    Log.w(TAG, "[MIGRATE] WAL checkpoint incomplete: busy=$busy, log=$log, checkpointed=$checkpointed")
                 }
             }
-            db.rawQuery("PRAGMA journal_mode=DELETE;", null)?.close()
         }
+        db.rawQuery("PRAGMA journal_mode=DELETE;", null)?.close()
     }
 
     /**

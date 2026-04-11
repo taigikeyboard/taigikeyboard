@@ -63,7 +63,10 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         guard flags & SQLITE_OPEN_READWRITE != 0 else { return }
 
         let walPath = path + "-wal"
-        guard FileManager.default.fileExists(atPath: walPath) else { return }
+        guard FileManager.default.fileExists(atPath: walPath) else {
+            logger.debug("[MIGRATE] No WAL file found, skipping migration")
+            return
+        }
 
         logger.debug("[MIGRATE] Found WAL file, performing checkpoint: \(walPath)")
 
