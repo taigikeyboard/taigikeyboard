@@ -7,7 +7,7 @@ import SQLite3
 /// - 選擇「早安」→ 用「安」查詢 → 預測下一個字
 ///
 /// 資料來源：
-/// - dictionary.db (word_association 表): 字典關聯（冷啟動）
+/// - association.bin (binary mmap): 字典關聯（冷啟動）
 /// - user_association.db: 使用者學習（個人化）
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants
@@ -50,7 +50,7 @@ final class NextWordService: @unchecked Sendable {
 
     static let shared = NextWordService()
 
-    private let dictConnectionManager: SQLiteConnectionManager
+    private let associationReader: AssociationBinaryReader?
     private let userConnectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "NextWordService")
 
@@ -58,12 +58,8 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    init() {
-        dictConnectionManager = SQLiteConnectionManager(
-            databasePath: Self.getDictDatabasePath,
-            queueLabel: "com.siansiansu.taigikeyboard.nextword.dict",
-            loggerCategory: "NextWordService.Dict",
-        )
+    init(associationReader: AssociationBinaryReader? = nil) {
+        self.associationReader = associationReader ?? AssociationBinaryReader()
 
         userConnectionManager = SQLiteConnectionManager(
             databasePath: Self.getUserDatabasePath,
@@ -73,17 +69,6 @@ final class NextWordService: @unchecked Sendable {
     }
 
     // MARK: - Database Paths
-
-    private static func getDictDatabasePath() throws -> String {
-        let bundle = ResourceBundleResolver.dictionaryBundle
-        guard let path = bundle.path(
-            forResource: LexiconConstants.Database.fileName,
-            ofType: LexiconConstants.Database.fileExtension,
-        ) else {
-            throw DictionaryError.databaseNotFound
-        }
-        return path
-    }
 
     private static func getUserDatabasePath() throws -> String {
         guard let containerURL = SharedSettings.sharedContainerURL else {
@@ -356,71 +341,39 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Private Methods
 
-    /// 查詢字典關聯
+    /// 查詢字典關聯（從 association.bin binary reader）
     private func queryDictAssociations(
         lastChar: String,
         limit: Int,
         results: inout [String: Prediction],
     ) async {
-        do {
-            try await dictConnectionManager.ensureInitialized(flags: SQLITE_OPEN_READONLY)
-
-            let dictResults = try await dictConnectionManager.execute { [weak self] db -> [Prediction] in
-                guard let self else { return [] }
-                return try queryDictAssociationsFromDB(db: db, lastChar: lastChar, limit: limit)
-            }
-
-            for prediction in dictResults {
-                let key = "\(prediction.hanzi)\t\(prediction.tl)"
-                results[key] = prediction
-            }
-        } catch {
-            logger.error("[DICT] Query failed: \(error.localizedDescription)")
+        guard let reader = associationReader else {
+            logger.warning("[DICT] Association binary reader not available")
+            return
         }
-    }
 
-    private func queryDictAssociationsFromDB(
-        db: OpaquePointer,
-        lastChar: String,
-        limit: Int,
-    ) throws -> [Prediction] {
-        // 建立詞庫過濾條件
-        let dictCondition = buildDictWhereCondition()
-
-        let sql = """
-            SELECT next_word, next_tl, count
-            FROM word_association
-            WHERE prev_word = ?
-            \(dictCondition)
-            ORDER BY count DESC
-            LIMIT ?
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed(errorMsg)
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        sqlite3_bind_text(stmt, 1, lastChar, -1, Constants.sqliteTransient)
         // Over-fetch 2x to account for deduplication when merging dict + user results
-        sqlite3_bind_int(stmt, 2, Int32(limit * 2))
+        let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
 
-        var predictions: [Prediction] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let nextWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-            let nextTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-            let count = sqlite3_column_int(stmt, 2)
+        // Apply dictionary source filter
+        let enabledMask = buildDictBitmask()
+        let allEnabled = enabledMask == 0x1FF // all 9 bits set
 
-            predictions.append(Prediction(
-                hanzi: nextWord,
-                tl: nextTl,
-                score: Double(count) * Constants.dictWeight,
-            ))
+        for entry in entries {
+            guard AssociationBinaryReader.passesFilter(
+                entryBitmask: entry.bitmask,
+                enabledMask: enabledMask,
+                allEnabled: allEnabled
+            ) else { continue }
+
+            let prediction = Prediction(
+                hanzi: entry.nextWord,
+                tl: entry.nextTl,
+                score: Double(entry.count) * Constants.dictWeight,
+            )
+            let key = "\(prediction.hanzi)\t\(prediction.tl)"
+            results[key] = prediction
         }
-
-        return predictions
     }
 
     /// Raw user association row from DB (hanzi, tl, count, lastUsedMs)
@@ -728,32 +681,20 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Dictionary Filter
 
-    /// 建立詞庫過濾 WHERE 條件
-    private func buildDictWhereCondition() -> String {
+    /// Build association source bitmask from settings
+    /// Bit layout matches association.bin: 0=kautian..8=khpoo (9 bits)
+    private func buildDictBitmask() -> UInt16 {
         let settings = SharedSettings.shared
-
-        let dictionaries: [(enabled: Bool, column: String)] = [
-            (settings.isMoeDictEnabled, "kautian"),
-            (settings.isNewwordDictEnabled, "taigitv"),
-            (settings.isITaigiDictEnabled, "itaigi"),
-            (settings.isTaiwanPlantDictEnabled, "sitbut"),
-            (settings.isTaiHuaDictEnabled, "taihoa"),
-            (settings.isTaiwanJapanDictEnabled, "taijit"),
-            (settings.isKunggeDictEnabled, "kungge"),
-            (settings.isSttiDictEnabled, "stti"),
-            (settings.isKhpooDictEnabled, "khpoo"),
-        ]
-
-        let conditions = dictionaries
-            .filter(\.enabled)
-            .map { "\($0.column) = 1" }
-
-        // All enabled: no filter needed
-        if conditions.count == dictionaries.count { return "" }
-
-        // All disabled: impossible condition
-        if conditions.isEmpty { return "AND 0" }
-
-        return "AND (\(conditions.joined(separator: " OR ")))"
+        var mask: UInt16 = 0
+        if settings.isMoeDictEnabled { mask |= 1 << 0 }
+        if settings.isNewwordDictEnabled { mask |= 1 << 1 }
+        if settings.isITaigiDictEnabled { mask |= 1 << 2 }
+        if settings.isTaiwanPlantDictEnabled { mask |= 1 << 3 }
+        if settings.isTaiHuaDictEnabled { mask |= 1 << 4 }
+        if settings.isTaiwanJapanDictEnabled { mask |= 1 << 5 }
+        if settings.isKunggeDictEnabled { mask |= 1 << 6 }
+        if settings.isSttiDictEnabled { mask |= 1 << 7 }
+        if settings.isKhpooDictEnabled { mask |= 1 << 8 }
+        return mask
     }
 }

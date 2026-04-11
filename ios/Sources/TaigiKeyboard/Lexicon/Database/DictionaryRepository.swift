@@ -1,135 +1,100 @@
 import Foundation
-import SQLite3
 
-/// 詞典資料庫 Repository
-/// 負責詞典資料的查詢與存取
-final class DictionaryRepository: @unchecked Sendable {
-    // MARK: - 詞庫開關設定
+/// 詞庫開關設定（從 SharedSettings 讀取）
+struct EnabledDictionaries {
+    let kautian: Bool   // 教育部臺灣台語常用詞辭典
+    let taigitv: Bool   // 台語新詞辭庫
+    let kungge: Bool    // 台語工藝詞庫
+    let itaigi: Bool    // iTaigi 華台對照典
+    let taijit: Bool    // 台日大辭典
+    let taihoa: Bool    // 台華線頂對照典
+    let sitbut: Bool    // 台灣植物名彙
+    let stti: Bool      // 學科術語辭典
+    let khpoo: Bool     // 腔口補充資料
+    let variant: Bool   // 異用字
+    let khiin: Bool     // 在來字
+    let lkk: Bool       // LKK漢羅合用建議用字
 
-    /// 詞庫開關設定結構
-    private struct EnabledDictionaries {
-        let kautian: Bool // 教育部臺灣台語常用詞辭典
-        let taigitv: Bool // 台語新詞辭庫
-        let kungge: Bool // 台語工藝詞庫
-        let itaigi: Bool // iTaigi 華台對照典
-        let taijit: Bool // 台日大辭典
-        let taihoa: Bool // 台華線頂對照典
-        let sitbut: Bool // 台灣植物名彙
-        let stti: Bool // 學科術語辭典
-        let khpoo: Bool // 腔口補充資料
-        let variant: Bool // 異用字
-        let khiin: Bool // 在來字
-        let lkk: Bool // LKK漢羅合用建議用字
-
-        /// 從 SharedSettings 讀取設定
-        static func fromSettings() -> EnabledDictionaries {
-            let settings = SharedSettings.shared
-            return EnabledDictionaries(
-                kautian: settings.isMoeDictEnabled,
-                taigitv: settings.isNewwordDictEnabled,
-                kungge: settings.isKunggeDictEnabled,
-                itaigi: settings.isITaigiDictEnabled,
-                taijit: settings.isTaiwanJapanDictEnabled,
-                taihoa: settings.isTaiHuaDictEnabled,
-                sitbut: settings.isTaiwanPlantDictEnabled,
-                stti: settings.isSttiDictEnabled,
-                khpoo: settings.isKhpooDictEnabled,
-                variant: settings.isVariantEnabled,
-                khiin: settings.isKhiinEnabled,
-                lkk: settings.isLkkDictEnabled,
-            )
-        }
-
-        /// 是否全部關閉
-        var allDisabled: Bool {
-            !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut && !stti && !khpoo && !lkk
-        }
-
-        /// 是否全部開啟
-        var allEnabled: Bool {
-            kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut && stti && khpoo && lkk
-        }
-
-        /// 建構 SQL WHERE 條件（使用 OR 邏輯）
-        func buildWhereCondition() -> String {
-            var result = ""
-
-            // 異用字過濾：關閉時只顯示非異用字
-            if !variant {
-                result += "AND is_variant = 0 "
-            }
-
-            // 在來字過濾：關閉時排除在來字
-            if !khiin {
-                result += "AND khiin = 0 "
-            }
-
-            // 全部開啟時不加詞庫過濾條件
-            if allEnabled { return result }
-
-            var conditions: [String] = []
-            if kautian { conditions.append("kautian = 1") }
-            if taigitv { conditions.append("taigitv = 1") }
-            if kungge { conditions.append("kungge = 1") }
-            if itaigi { conditions.append("itaigi = 1") }
-            if taijit { conditions.append("taijit = 1") }
-            if taihoa { conditions.append("taihoa = 1") }
-            if sitbut { conditions.append("sitbut = 1") }
-            if stti { conditions.append("stti = 1") }
-            if khpoo { conditions.append("khpoo = 1") }
-            if lkk { conditions.append("lkk = 1") }
-
-            // Always include dev supplement entries
-            conditions.append("dev = 1")
-
-            if !conditions.isEmpty {
-                result += "AND (" + conditions.joined(separator: " OR ") + ")"
-            }
-
-            return result
-        }
+    /// 從 SharedSettings 讀取設定
+    static func fromSettings() -> EnabledDictionaries {
+        let settings = SharedSettings.shared
+        return EnabledDictionaries(
+            kautian: settings.isMoeDictEnabled,
+            taigitv: settings.isNewwordDictEnabled,
+            kungge: settings.isKunggeDictEnabled,
+            itaigi: settings.isITaigiDictEnabled,
+            taijit: settings.isTaiwanJapanDictEnabled,
+            taihoa: settings.isTaiHuaDictEnabled,
+            sitbut: settings.isTaiwanPlantDictEnabled,
+            stti: settings.isSttiDictEnabled,
+            khpoo: settings.isKhpooDictEnabled,
+            variant: settings.isVariantEnabled,
+            khiin: settings.isKhiinEnabled,
+            lkk: settings.isLkkDictEnabled,
+        )
     }
 
+    /// 是否全部關閉
+    var allDisabled: Bool {
+        !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut && !stti && !khpoo && !lkk
+    }
+
+    /// 是否全部開啟
+    var allEnabled: Bool {
+        kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut && stti && khpoo && lkk
+    }
+
+    /// 轉換為 bitmask（bits 0-8 對應 9 個來源 + bit 9 lkk）
+    /// Bit layout 必須與 dictionary.bin 一致
+    func sourceBitmask() -> UInt16 {
+        var mask: UInt16 = 0
+        if kautian { mask |= 1 << 0 }
+        if taigitv { mask |= 1 << 1 }
+        if itaigi { mask |= 1 << 2 }
+        if sitbut { mask |= 1 << 3 }
+        if taihoa { mask |= 1 << 4 }
+        if taijit { mask |= 1 << 5 }
+        if kungge { mask |= 1 << 6 }
+        if stti { mask |= 1 << 7 }
+        if khpoo { mask |= 1 << 8 }
+        // khiin = bit 9 (handled separately in filter)
+        // dev = bit 10 (always included)
+        if lkk { mask |= 1 << 11 }
+        return mask
+    }
+}
+
+/// 詞典查詢（使用 binary mmap 格式）
+///
+/// 資料流：
+/// 1. Trie (key → rowid) — 搜尋索引
+/// 2. DictionaryBinaryReader (rowid → record) — 資料查詢
+/// 3. Bitmask filter — 來源過濾
+final class DictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
     static let shared = DictionaryRepository()
 
-    private let connectionManager: SQLiteConnectionManager
+    private let binaryReader: DictionaryBinaryReader?
     private let trieService: TrieService
+    private let hanziTrieService: TrieService?
     private let logger = DebugLogger(category: "DictionaryRepository")
 
     // MARK: - Initialization
 
     init(
-        connectionManager: SQLiteConnectionManager? = nil,
+        binaryReader: DictionaryBinaryReader? = nil,
         trieService: TrieService = .shared,
+        hanziTrieService: TrieService? = nil,
     ) {
-        self.connectionManager = connectionManager ?? SQLiteConnectionManager(
-            databasePath: Self.getDatabasePath,
-            queueLabel: "com.taigikeyboard.dictionary",
-            loggerCategory: "DictionaryRepository",
-        )
+        self.binaryReader = binaryReader ?? DictionaryBinaryReader()
         self.trieService = trieService
-    }
-
-    // MARK: - Database Path
-
-    private static func getDatabasePath() throws -> String {
-        let bundle = ResourceBundleResolver.dictionaryBundle
-        guard let path = bundle.path(
-            forResource: LexiconConstants.Database.fileName,
-            ofType: LexiconConstants.Database.fileExtension,
-        ) else {
-            throw DictionaryError.databaseNotFound
-        }
-        return path
+        self.hanziTrieService = hanziTrieService
     }
 
     // MARK: - Query Methods
 
-    /// 查詢詞典（使用 Trie 搜尋）
-    ///
-    /// - Throws: DictionaryError.trieNotLoaded 如果 Trie 未載入
+    /// 查詢詞典（使用 Trie 搜尋 + binary 資料查詢）
     func query(
         for input: String,
         inputType: InputType,
@@ -140,9 +105,10 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        try await connectionManager.ensureInitialized()
+        guard let reader = binaryReader else {
+            throw DictionaryError.databaseNotAvailable
+        }
 
-        // 確認 Trie 已載入
         guard trieService.isReady else {
             logger.error("[QUERY] Trie not loaded")
             throw DictionaryError.trieNotLoaded
@@ -154,29 +120,8 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        return try await queryWithTrie(
-            input: input,
-            inputMode: inputMode,
-            limit: limit,
-        )
-    }
-
-    // MARK: - Trie Query
-
-    /// 使用 Trie 查詢詞典
-    ///
-    /// 流程：
-    /// 1. 正規化輸入（調符→數字、小寫、去連字符）
-    /// 2. Trie 完全匹配 + 前綴搜尋取得 rowid
-    /// 3. SQLite 批次查詢完整資料
-    private func queryWithTrie(
-        input: String,
-        inputMode: InputMode,
-        limit: Int,
-    ) async throws -> [TaigiWord] {
-        // 正規化輸入（包含調符或 POJ 特殊字符時需要轉換）
+        // 正規化輸入
         let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
-
         logger.debug("[TRIE] input='\(input)' -> normalized='\(normalizedInput)'")
 
         guard !normalizedInput.isEmpty else {
@@ -185,14 +130,9 @@ final class DictionaryRepository: @unchecked Sendable {
 
         let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
 
-        // 1. 完全匹配（確保短詞不被遺漏）
+        // Trie 完全匹配 + 前綴搜尋
         let exactRowIds = trieService.lookup(trieKey)
-
-        // 2. 前綴搜尋（取較多結果以供後續排序）
-        let trieLimit = limit * 6
-        let prefixRowIds = trieService.prefixSearch(trieKey, limit: trieLimit)
-
-        // 3. 合併去重
+        let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
         let allRowIds = Array(Set(exactRowIds + prefixRowIds))
 
         logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
@@ -201,87 +141,30 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        // SQLite 批次查詢
-        return try await connectionManager.execute { db in
-            try self.queryByIds(
-                db: db,
-                ids: allRowIds,
-                inputMode: inputMode,
-                limit: limit,
-            )
-        }
-    }
-
-    /// 依 rowid 批次查詢 SQLite
-    private func queryByIds(
-        db: OpaquePointer,
-        ids: [Int],
-        inputMode: InputMode,
-        limit: Int,
-    ) throws -> [TaigiWord] {
-        guard !ids.isEmpty else { return [] }
-
-        // 讀取詞庫開關設定
+        // Binary 查詢 + 過濾
         let enabledDicts = EnabledDictionaries.fromSettings()
 
-        let dictCondition = enabledDicts.buildWhereCondition()
+        var results: [TaigiWord] = []
+        for rowId in allRowIds {
+            guard let record = reader.record(at: rowId) else { continue }
+            guard DictionaryBinaryReader.passesFilter(
+                recordBitmask: record.bitmask,
+                enabledDicts: enabledDicts
+            ) else { continue }
 
-        // 分批查詢（避免 SQL 太長）
-        let batchSize = 500
-        var allResults: [TaigiWord] = []
+            let roman = inputMode == .poj
+                ? RomanizationConverter.tlToPOJ(record.tl)
+                : record.tl
 
-        // 手動分批處理
-        var startIndex = 0
-        while startIndex < ids.count {
-            let endIndex = min(startIndex + batchSize, ids.count)
-            let batch = Array(ids[startIndex ..< endIndex])
-            startIndex = endIndex
-            let placeholders = batch.map { _ in "?" }.joined(separator: ",")
-
-            let sql = """
-                SELECT id, tl, hanzi, frequency
-                FROM dictionary
-                WHERE id IN (\(placeholders))
-                \(dictCondition)
-                ORDER BY frequency DESC
-                LIMIT ?
-            """
-
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                let errorMsg = String(cString: sqlite3_errmsg(db))
-                throw DictionaryError.queryPreparationFailed("Query prep failed: \(errorMsg)")
-            }
-            defer { sqlite3_finalize(stmt) }
-
-            // 綁定參數
-            for (index, id) in batch.enumerated() {
-                sqlite3_bind_int(stmt, Int32(index + 1), Int32(id))
-            }
-            sqlite3_bind_int(stmt, Int32(batch.count + 1), Int32(limit))
-
-            // 提取結果
-            while sqlite3_step(stmt) == SQLITE_ROW {
-                let id = Int(sqlite3_column_int(stmt, 0))
-                let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-                let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
-                let hanzi = hanziText?.isEmpty == false ? hanziText : nil
-                let frequency = Int(sqlite3_column_int(stmt, 3))
-
-                // Convert TL -> POJ for display in POJ mode
-                let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
-
-                allResults.append(TaigiWord(
-                    id: id,
-                    roman: roman,
-                    hanzi: hanzi,
-                    lengthScore: frequency,
-                ))
-            }
+            results.append(TaigiWord(
+                id: rowId,
+                roman: roman,
+                hanzi: record.hanzi,
+                lengthScore: Int(record.frequency),
+            ))
         }
 
-        // 按 frequency 排序並限制結果數
-        return allResults
+        return results
             .sorted { ($0.lengthScore ?? 0) > ($1.lengthScore ?? 0) }
             .prefix(limit)
             .map(\.self)
@@ -289,8 +172,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
     // MARK: - Search With Sources (for dictionary exploration)
 
-    /// Search dictionary and return results with source information.
-    /// Searches all sources (no dictionary filter) for exploration purposes.
+    /// Search dictionary and return results with source information
     func searchWithSources(
         input: String,
         inputMode: InputMode,
@@ -298,7 +180,9 @@ final class DictionaryRepository: @unchecked Sendable {
     ) async throws -> [DictionarySearchResult] {
         guard !input.isEmpty else { return [] }
 
-        try await connectionManager.ensureInitialized()
+        guard let reader = binaryReader else {
+            throw DictionaryError.databaseNotAvailable
+        }
 
         guard trieService.isReady else {
             logger.error("[SEARCH-SOURCES] Trie not loaded")
@@ -309,25 +193,21 @@ final class DictionaryRepository: @unchecked Sendable {
         guard !normalizedInput.isEmpty else { return [] }
 
         let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
-
         let exactRowIds = trieService.lookup(trieKey)
         let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
         let allRowIds = Array(Set(exactRowIds + prefixRowIds))
 
         guard !allRowIds.isEmpty else { return [] }
 
-        return try await connectionManager.execute { db in
-            try self.queryByIdsWithSources(
-                db: db,
-                ids: allRowIds,
-                inputMode: inputMode,
-                limit: limit,
-            )
-        }
+        return buildSearchResults(
+            reader: reader,
+            rowIds: allRowIds,
+            inputMode: inputMode,
+            limit: limit,
+        )
     }
 
-    /// Search dictionary by hanzi (漢字) and return results with source information.
-    /// Uses direct SQL LIKE query since hanzi is not indexed in the trie.
+    /// Search dictionary by hanzi prefix (漢字前綴搜尋)
     func searchByHanzi(
         query: String,
         inputMode: InputMode,
@@ -337,165 +217,78 @@ final class DictionaryRepository: @unchecked Sendable {
 
         logger.debug("[HANZI-SEARCH] query='\(query)' limit=\(limit)")
 
-        try await connectionManager.ensureInitialized()
-
-        let results = try await connectionManager.execute { db in
-            try self.queryByHanziLike(
-                db: db,
-                query: query,
-                inputMode: inputMode,
-                limit: limit,
-            )
+        guard let reader = binaryReader else {
+            throw DictionaryError.databaseNotAvailable
         }
+
+        // 使用 hanzi trie 做前綴搜尋
+        guard let hanziTrie = hanziTrieService, hanziTrie.isReady else {
+            logger.warning("[HANZI-SEARCH] Hanzi trie not available")
+            return []
+        }
+
+        let rowIds = hanziTrie.prefixSearch(query, limit: limit * 6)
+
+        logger.debug("[HANZI-SEARCH] trie returned \(rowIds.count) rowids")
+
+        guard !rowIds.isEmpty else { return [] }
+
+        let results = buildSearchResults(
+            reader: reader,
+            rowIds: rowIds,
+            inputMode: inputMode,
+            limit: limit,
+        )
 
         logger.debug("[HANZI-SEARCH] returned \(results.count) results")
-        if let first = results.first {
-            logger.debug("[HANZI-SEARCH] first: \(first.roman) / \(first.hanzi ?? "")")
-        }
 
         return results
-    }
-
-    /// Query SQLite with LIKE on hanzi column
-    private func queryByHanziLike(
-        db: OpaquePointer,
-        query: String,
-        inputMode: InputMode,
-        limit: Int,
-    ) throws -> [DictionarySearchResult] {
-        let enabledDicts = EnabledDictionaries.fromSettings()
-        let dictCondition = enabledDicts.buildWhereCondition()
-
-        let sql = """
-            SELECT id, tl, hanzi, frequency,
-                   kautian, taigitv, itaigi, sitbut, taihoa, taijit,
-                   kungge, stti, khpoo, khiin, lkk, dev
-            FROM dictionary
-            WHERE hanzi LIKE ?
-            \(dictCondition)
-            ORDER BY frequency DESC
-            LIMIT ?
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed("Hanzi query prep failed: \(errorMsg)")
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        let likePattern = "%\(query)%"
-        logger.debug("[HANZI-SQL] LIKE pattern='\(likePattern)'")
-        sqlite3_bind_text(stmt, 1, (likePattern as NSString).utf8String, -1, nil)
-        sqlite3_bind_int(stmt, 2, Int32(limit))
-
-        var results: [DictionarySearchResult] = []
-
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            results.append(parseSearchResult(from: stmt!, inputMode: inputMode))
-        }
-
-        return results
-    }
-
-    /// Query SQLite with source columns included
-    private func queryByIdsWithSources(
-        db: OpaquePointer,
-        ids: [Int],
-        inputMode: InputMode,
-        limit: Int,
-    ) throws -> [DictionarySearchResult] {
-        guard !ids.isEmpty else { return [] }
-
-        let batchSize = 500
-        var allResults: [DictionarySearchResult] = []
-
-        var startIndex = 0
-        while startIndex < ids.count {
-            let endIndex = min(startIndex + batchSize, ids.count)
-            let batch = Array(ids[startIndex ..< endIndex])
-            startIndex = endIndex
-            let placeholders = batch.map { _ in "?" }.joined(separator: ",")
-
-            let enabledDicts = EnabledDictionaries.fromSettings()
-            let dictCondition = enabledDicts.buildWhereCondition()
-
-            let sql = """
-                SELECT id, tl, hanzi, frequency,
-                       kautian, taigitv, itaigi, sitbut, taihoa, taijit,
-                       kungge, stti, khpoo, khiin, lkk, dev
-                FROM dictionary
-                WHERE id IN (\(placeholders))
-                \(dictCondition)
-                ORDER BY frequency DESC
-                LIMIT ?
-            """
-
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                let errorMsg = String(cString: sqlite3_errmsg(db))
-                throw DictionaryError.queryPreparationFailed("Query prep failed: \(errorMsg)")
-            }
-            defer { sqlite3_finalize(stmt) }
-
-            for (index, id) in batch.enumerated() {
-                sqlite3_bind_int(stmt, Int32(index + 1), Int32(id))
-            }
-            sqlite3_bind_int(stmt, Int32(batch.count + 1), Int32(limit))
-
-            while sqlite3_step(stmt) == SQLITE_ROW {
-                allResults.append(parseSearchResult(from: stmt!, inputMode: inputMode))
-            }
-        }
-
-        return allResults
-            .sorted { $0.frequency > $1.frequency }
-            .prefix(limit)
-            .map(\.self)
-    }
-
-    // MARK: - Row Parsing
-
-    /// All dictionary source columns in their SQL column order (starting at column index 4)
-    private static let sourceColumnOrder: [DictionarySource] = [
-        .kautian, .taigitv, .itaigi, .sitbut, .taihoa, .taijit,
-        .kungge, .stti, .khpoo, .khiin, .lkk, .dev,
-    ]
-
-    /// Parse a DictionarySearchResult from a prepared statement row.
-    /// Expects columns: id(0), tl(1), hanzi(2), frequency(3), source flags(4-15)
-    private func parseSearchResult(
-        from stmt: OpaquePointer,
-        inputMode: InputMode,
-    ) -> DictionarySearchResult {
-        let id = Int(sqlite3_column_int(stmt, 0))
-        let tlRoman = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-        let hanziText = sqlite3_column_text(stmt, 2).map(String.init(cString:))
-        let hanzi = hanziText?.isEmpty == false ? hanziText : nil
-        let frequency = Int(sqlite3_column_int(stmt, 3))
-
-        var sources: [DictionarySource] = []
-        for (offset, source) in Self.sourceColumnOrder.enumerated() {
-            if sqlite3_column_int(stmt, Int32(4 + offset)) == 1 {
-                sources.append(source)
-            }
-        }
-
-        let roman = inputMode == .poj ? RomanizationConverter.tlToPOJ(tlRoman) : tlRoman
-
-        return DictionarySearchResult(
-            id: id,
-            roman: roman,
-            tl: tlRoman,
-            hanzi: hanzi,
-            frequency: frequency,
-            sources: sources,
-        )
     }
 
     // MARK: - Connection Status
 
     func isConnected() -> Bool {
-        connectionManager.isConnected()
+        binaryReader != nil
+    }
+
+    // MARK: - Private Methods
+
+    /// Build DictionarySearchResult array from rowIds with filtering and sorting
+    private func buildSearchResults(
+        reader: DictionaryBinaryReader,
+        rowIds: [Int],
+        inputMode: InputMode,
+        limit: Int,
+    ) -> [DictionarySearchResult] {
+        let enabledDicts = EnabledDictionaries.fromSettings()
+
+        var results: [DictionarySearchResult] = []
+        for rowId in rowIds {
+            guard let record = reader.record(at: rowId) else { continue }
+            guard DictionaryBinaryReader.passesFilter(
+                recordBitmask: record.bitmask,
+                enabledDicts: enabledDicts
+            ) else { continue }
+
+            let roman = inputMode == .poj
+                ? RomanizationConverter.tlToPOJ(record.tl)
+                : record.tl
+
+            let sources = DictionaryBinaryReader.sourcesFromBitmask(record.bitmask)
+
+            results.append(DictionarySearchResult(
+                id: rowId,
+                roman: roman,
+                tl: record.tl,
+                hanzi: record.hanzi,
+                frequency: Int(record.frequency),
+                sources: sources,
+            ))
+        }
+
+        return results
+            .sorted { $0.frequency > $1.frequency }
+            .prefix(limit)
+            .map(\.self)
     }
 }

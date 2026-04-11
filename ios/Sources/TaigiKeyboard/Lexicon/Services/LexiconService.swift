@@ -10,21 +10,32 @@ class LexiconService: @unchecked Sendable {
     private let repository: DictionaryRepository
     private let userFrequencyService: UserFrequencyService
     private let trieService: TrieService
+    private let hanziTrieService: TrieService
     private let customDictionaryRepository: CustomDictionaryRepository
     private let logger = DebugLogger(category: "LexiconService")
 
     // MARK: - Initialization
 
     init(
-        repository: DictionaryRepository = .shared,
+        repository: DictionaryRepository? = nil,
         userFrequencyService: UserFrequencyService = .shared,
         trieService: TrieService = .shared,
         customDictionaryRepository: CustomDictionaryRepository = .shared,
     ) {
-        self.repository = repository
-        self.userFrequencyService = userFrequencyService
         self.trieService = trieService
+        self.hanziTrieService = TrieService(
+            fileName: "hanzi",
+            fileExtension: "trie",
+            logCategory: "HanziTrieService",
+        )
+        self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
+
+        // DictionaryRepository 使用 binary reader + hanzi trie
+        self.repository = repository ?? DictionaryRepository(
+            trieService: trieService,
+            hanziTrieService: hanziTrieService,
+        )
 
         // 初始化 Trie
         initializeTrie()
@@ -37,11 +48,20 @@ class LexiconService: @unchecked Sendable {
     /// 初始化 Trie（背景執行）
     private func initializeTrie() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let success = self?.trieService.initialize() ?? false
-            if success {
-                self?.logger.info("[INIT] Trie initialized successfully")
+            guard let self else { return }
+
+            let dictSuccess = self.trieService.initialize()
+            if dictSuccess {
+                self.logger.info("[INIT] Dictionary trie initialized successfully")
             } else {
-                self?.logger.warning("[INIT] Trie initialization failed, using fallback")
+                self.logger.warning("[INIT] Dictionary trie initialization failed")
+            }
+
+            let hanziSuccess = self.hanziTrieService.initialize()
+            if hanziSuccess {
+                self.logger.info("[INIT] Hanzi trie initialized successfully")
+            } else {
+                self.logger.warning("[INIT] Hanzi trie initialization failed")
             }
         }
     }
