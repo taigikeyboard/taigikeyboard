@@ -457,7 +457,16 @@ object NextWordService {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[MIGRATE] WAL detected, performing checkpoint and switching to DELETE")
             }
-            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null)?.close()
+            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null)?.use { cursor ->
+                if (BuildConfig.DEBUG && cursor.moveToFirst()) {
+                    val busy = cursor.getInt(0)
+                    val log = cursor.getInt(1)
+                    val checkpointed = cursor.getInt(2)
+                    if (busy != 0 || log != checkpointed) {
+                        Log.w(TAG, "[MIGRATE] WAL checkpoint incomplete: busy=$busy, log=$log, checkpointed=$checkpointed")
+                    }
+                }
+            }
             db.rawQuery("PRAGMA journal_mode=DELETE;", null)?.close()
         }
     }

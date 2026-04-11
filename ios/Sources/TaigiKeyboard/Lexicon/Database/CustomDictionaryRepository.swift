@@ -155,9 +155,21 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         try await ensureInitialized()
         try await connectionManager.execute { db in
             // 在同一個 execute block 內檢查容量，避免 TOCTOU race condition
-            var countStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &countStmt, nil) == SQLITE_OK {
-                if sqlite3_step(countStmt) == SQLITE_ROW {
+            // 更新既有 entry（同 id）不算新增，不受上限限制
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
+            var existsStmt: OpaquePointer?
+            var isUpdate = false
+            if sqlite3_prepare_v2(db, "SELECT 1 FROM custom_dictionary WHERE id = ? LIMIT 1;", -1, &existsStmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(existsStmt, 1, entry.id, -1, TRANSIENT)
+                isUpdate = sqlite3_step(existsStmt) == SQLITE_ROW
+            }
+            sqlite3_finalize(existsStmt)
+
+            if !isUpdate {
+                var countStmt: OpaquePointer?
+                if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &countStmt, nil) == SQLITE_OK,
+                   sqlite3_step(countStmt) == SQLITE_ROW
+                {
                     let currentCount = Int(sqlite3_column_int(countStmt, 0))
                     sqlite3_finalize(countStmt)
                     guard currentCount < Self.maxEntries else {
@@ -166,8 +178,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 } else {
                     sqlite3_finalize(countStmt)
                 }
-            } else {
-                sqlite3_finalize(countStmt)
             }
 
             let sql = """
@@ -193,7 +203,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
             let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
 
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)

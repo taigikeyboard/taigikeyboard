@@ -69,6 +69,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
         var db: OpaquePointer?
         guard sqlite3_open_v2(path, &db, flags, nil) == SQLITE_OK else {
+            logger.warning("[MIGRATE] Failed to open database for WAL checkpoint: \(path)")
             sqlite3_close(db)
             return
         }
