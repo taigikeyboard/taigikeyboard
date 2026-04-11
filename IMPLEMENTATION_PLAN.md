@@ -111,12 +111,37 @@ iOS keyboard extension 生命週期短（隨時被系統殺掉），auto-checkpo
 - [ ] 讀寫功能正常（頻率記錄、自訂詞庫、關聯記錄、下一字預測）
 - [ ] 無 SQLITE_BUSY crash（Android 特別注意）
 
+### Additional fix: iOS custom_dictionary.db 加入 30K 上限
+- 原本 iOS 無硬上限（Android 已有 `MAX_ENTRY_COUNT = 30_000`）
+- 新增 `CustomDictionaryRepository.maxEntries = 30_000`
+- `upsert()` 滿了 throw error
+- `batchImport()` 匯入前檢查剩餘容量，到上限自動停止
+- **修改檔案**: `ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift`
+
+### Storage growth audit（雙平台）
+全面檢查所有儲存是否有無限增長風險：
+- `user_frequency.db`：20K 上限 + 自動 prune ✅
+- `user_association.db`：50K 上限 + 自動 prune ✅
+- `custom_dictionary.db`：30K 上限（iOS 新增，Android 已有）✅
+- `dictionary.db`：唯讀，不增長 ✅
+- Log/Cache/UserDefaults/暫存檔：無風險 ✅
+- 無 VACUUM（已知，非 bug — row 數有上限，DB 檔案到頂後穩定）
+
+**極端場景估算**：使用者滿載所有資料庫，最大 user data ~20MB，總 app size ~115MB（< 150MB）
+
 ### Review notes (Codex)
 - 遷移順序是最高風險：必須先改 code 再跑 migration，否則 WAL 會被重新啟用
 - Android 的 SQLITE_BUSY 處理目前只有 broad `catch Exception`，這是**既有問題**，移除 WAL 不會惡化
 - 未發現多程序共用資料庫的風險
 
-**Status**: Complete — 待手動 build 驗證 + 上版
+### Commits (branch: `bugfix-wal`, PR #117)
+1. `800909c` fix: Remove WAL journal mode, switch to DELETE to prevent storage bloat
+2. `9389f1a` fix: Correct version references in WAL migration comments (v3.4.8)
+3. `ea42641` v3.4.8: Update changelog and version history — WAL storage bloat fix
+4. `c6261db` docs: Simplify CHANGELOG.md format — remove Current header and branch tags
+5. `03487ac` fix(iOS): Add 30K entry cap to custom dictionary — align with Android
+
+**Status**: Complete — PR #117 open，待手動 build 驗證 + merge
 
 ---
 
