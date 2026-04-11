@@ -4,7 +4,7 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
 }
 
 // 產生日期字串 (yyyyMMdd)
@@ -135,7 +135,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.activity:activity-compose:1.12.4")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-core")
 
     // Compose 偵錯工具
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -143,8 +143,9 @@ dependencies {
     // Flexbox（現有依賴）
     implementation("com.google.android.flexbox:flexbox:3.0.0")
 
-    // Moshi JSON
-    implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
+    // Moshi JSON (codegen — no kotlin-reflect needed)
+    implementation("com.squareup.moshi:moshi:1.15.2")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
@@ -152,9 +153,6 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.2.0")
-
-    // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
 
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")

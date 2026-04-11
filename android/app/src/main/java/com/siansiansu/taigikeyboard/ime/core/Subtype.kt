@@ -2,6 +2,7 @@
 package com.siansiansu.taigikeyboard.ime.core
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.siansiansu.taigikeyboard.util.LocaleUtils
 import java.util.*
 
@@ -54,9 +55,10 @@ data class Subtype(
     }
 }
 
+@JsonClass(generateAdapter = true)
 data class DefaultSubtype(
     var id: Int,
-    @param:Json(name = "languageTag")
+    @Json(name = "languageTag")
     var locale: Locale,
     var preferredLayout: String
 )

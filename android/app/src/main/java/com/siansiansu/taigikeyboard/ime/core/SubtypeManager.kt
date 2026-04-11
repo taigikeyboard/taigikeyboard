@@ -3,7 +3,6 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.siansiansu.taigikeyboard.util.LocaleUtils
 import kotlinx.coroutines.*
 
@@ -54,7 +53,6 @@ class SubtypeManager(
             null
         } ?: return TaigiKeyboard.ImeConfig(context.packageName)
         val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
             .add(LocaleUtils.JsonAdapter())
             .build()
         val layoutAdapter = moshi.adapter(TaigiKeyboard.ImeConfig::class.java)

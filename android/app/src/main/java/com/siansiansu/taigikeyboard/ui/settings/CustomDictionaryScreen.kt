@@ -29,9 +29,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material.icons.outlined.MenuBook
+import com.siansiansu.taigikeyboard.ui.components.FileDownload
+import com.siansiansu.taigikeyboard.ui.components.FileUpload
+import com.siansiansu.taigikeyboard.ui.components.MenuBook
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api

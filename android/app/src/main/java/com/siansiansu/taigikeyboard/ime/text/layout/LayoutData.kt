@@ -3,8 +3,10 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
+import com.squareup.moshi.JsonClass
 
 typealias LayoutDataArrangement = List<List<KeyData>>
+@JsonClass(generateAdapter = true)
 data class LayoutData(
     val type: LayoutType,
     val name: String,

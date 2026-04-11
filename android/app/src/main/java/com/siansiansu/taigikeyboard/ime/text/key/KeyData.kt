@@ -1,5 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.text.key
 
+import com.squareup.moshi.JsonClass
+
+@JsonClass(generateAdapter = true)
 data class KeyData(
     var code: Int,
     var label: String = "",

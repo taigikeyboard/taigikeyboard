@@ -24,6 +24,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
@@ -559,8 +560,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      * @property defaultSubtypes A list of predefined default subtypes. This subtypes are used to
      *  define which locales are supported and which layout is preferred for that locale.
      */
+    @JsonClass(generateAdapter = true)
     data class ImeConfig(
-        @param:Json(name = "package")
+        @Json(name = "package")
         val packageName: String,
         val characterLayouts: Map<String, String> = mapOf(),
         val defaultSubtypes: List<DefaultSubtype> = listOf()

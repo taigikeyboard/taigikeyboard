@@ -9,13 +9,9 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# Keep Kotlin metadata for Moshi reflection
+# Keep Kotlin metadata for Moshi codegen
 -keepattributes RuntimeVisibleAnnotations,AnnotationDefault
 -keepattributes Signature
--keep class kotlin.Metadata { *; }
-
-# Keep parameter names for constructors (required for Moshi Kotlin reflection)
--keepattributes MethodParameters
 
 # Keep InputMethodService implementation
 -keep public class * extends android.inputmethodservice.InputMethodService {
@@ -44,15 +40,9 @@
     public static ** bind(android.view.View);
 }
 
-# Moshi - Complete rules for Kotlin reflection support
-# Keep Moshi adapters
--keep class com.squareup.moshi.** { *; }
--keep interface com.squareup.moshi.** { *; }
+# Moshi codegen — keep generated adapters
+-keep class **JsonAdapter { *; }
 -dontwarn com.squareup.moshi.**
-
-# Keep Kotlin reflection for Moshi
--keep class kotlin.reflect.** { *; }
--keep class kotlin.Metadata { *; }
 
 # Keep all model classes used with Moshi (data classes for JSON parsing)
 -keep class com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard$ImeConfig { *; }
