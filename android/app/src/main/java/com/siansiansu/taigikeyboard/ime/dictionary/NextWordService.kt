@@ -438,9 +438,28 @@ object NextWordService {
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)",
         )
 
-        // 設定 WAL 模式（支援讀寫併發）
-        // PRAGMA 需要用 rawQuery 執行
-        db.rawQuery("PRAGMA journal_mode=WAL;", null)?.close()
+        // 一次性遷移：WAL → DELETE（v3.4.9）
+        // WAL 在 IME 場景無顯著優勢，DELETE mode 更簡單且不會產生 WAL 檔膨脹
+        migrateFromWAL(db)
+    }
+
+    /**
+     * 一次性 WAL → DELETE 遷移
+     * 若資料庫仍在 WAL 模式，執行 checkpoint 後切回 DELETE
+     */
+    private fun migrateFromWAL(db: SQLiteDatabase) {
+        val journalMode =
+            db.rawQuery("PRAGMA journal_mode;", null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            } ?: return
+
+        if (journalMode.equals("wal", ignoreCase = true)) {
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "[MIGRATE] WAL detected, performing checkpoint and switching to DELETE")
+            }
+            db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE);", null)?.close()
+            db.rawQuery("PRAGMA journal_mode=DELETE;", null)?.close()
+        }
     }
 
     /**

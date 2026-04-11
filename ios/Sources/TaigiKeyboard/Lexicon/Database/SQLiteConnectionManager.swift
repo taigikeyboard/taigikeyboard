@@ -39,6 +39,9 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     private func connect(flags: Int32 = SQLITE_OPEN_READWRITE) throws {
         let path = try databasePath()
 
+        // 一次性遷移：清理舊 WAL 檔（v3.4.8 → v3.4.9 升級用戶）
+        migrateFromWAL(path: path, flags: flags)
+
         guard sqlite3_open_v2(path, &connection, flags, nil) == SQLITE_OK else {
             let errorMsg = connection != nil
                 ? String(cString: sqlite3_errmsg(connection))
@@ -52,6 +55,27 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         try configure()
     }
 
+    /// 一次性 WAL → DELETE 遷移
+    /// 偵測舊 `.db-wal` 檔案，執行 checkpoint 後由 configure() 切換至 DELETE mode
+    private func migrateFromWAL(path: String, flags: Int32) {
+        let walPath = path + "-wal"
+        guard FileManager.default.fileExists(atPath: walPath) else { return }
+
+        logger.debug("[MIGRATE] Found WAL file, performing checkpoint: \(walPath)")
+
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(path, &db, flags, nil) == SQLITE_OK else {
+            sqlite3_close(db)
+            return
+        }
+
+        // Checkpoint：將 WAL 內容寫回主資料庫並截斷 WAL 檔
+        sqlite3_wal_checkpoint_v2(db, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil)
+        sqlite3_close(db)
+
+        logger.debug("[MIGRATE] WAL checkpoint completed")
+    }
+
     /// 配置資料庫 PRAGMA 設定
     private func configure() throws {
         guard let db = connection else {
@@ -59,7 +83,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
 
         let configurations = [
-            "PRAGMA journal_mode=WAL;",
+            "PRAGMA journal_mode=DELETE;",
             "PRAGMA synchronous=NORMAL;",
             "PRAGMA cache_size=10000;",
             "PRAGMA temp_store=MEMORY;",
