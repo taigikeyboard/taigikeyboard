@@ -1,14 +1,14 @@
 
 package com.siansiansu.taigikeyboard.ime.core
 
-import com.squareup.moshi.Json
 import com.siansiansu.taigikeyboard.util.LocaleUtils
+import com.squareup.moshi.Json
 import java.util.*
 
 data class Subtype(
     var id: Int,
     var locale: Locale,
-    var layout: String
+    var layout: String,
 ) {
     companion object {
         /**
@@ -31,14 +31,14 @@ data class Subtype(
             val data = string.split("/")
             if (data.size != 3) {
                 throw InvalidPropertiesFormatException(
-                    "Given string contains more or less than 3 properties..."
+                    "Given string contains more or less than 3 properties...",
                 )
             } else {
                 val locale = LocaleUtils.stringToLocale(data[1])
                 return Subtype(
                     data[0].toInt(),
                     locale,
-                    data[2]
+                    data[2],
                 )
             }
         }
@@ -58,5 +58,5 @@ data class DefaultSubtype(
     var id: Int,
     @param:Json(name = "languageTag")
     var locale: Locale,
-    var preferredLayout: String
+    var preferredLayout: String,
 )

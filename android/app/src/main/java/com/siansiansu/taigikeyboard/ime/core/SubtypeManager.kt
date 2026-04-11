@@ -2,18 +2,16 @@
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
+import com.siansiansu.taigikeyboard.util.LocaleUtils
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.siansiansu.taigikeyboard.util.LocaleUtils
 import kotlinx.coroutines.*
-
 
 @Suppress("SameParameterValue")
 class SubtypeManager(
     private val context: Context,
-    private val prefs: PrefHelper
+    private val prefs: PrefHelper,
 ) : CoroutineScope by MainScope() {
-
     companion object {
         const val IME_CONFIG_FILE_PATH = "ime/config.json"
         const val SUBTYPE_LIST_STR_DELIMITER = ";"
@@ -48,18 +46,24 @@ class SubtypeManager(
      * @returns The [TaigiKeyboard.ImeConfig] or a default config.
      */
     private fun loadImeConfig(path: String): TaigiKeyboard.ImeConfig {
-        val rawJsonData: String = try {
-            context.assets.open(path).bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            null
-        } ?: return TaigiKeyboard.ImeConfig(context.packageName)
-        val moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
-            .add(LocaleUtils.JsonAdapter())
-            .build()
+        val rawJsonData: String =
+            try {
+                context.assets
+                    .open(path)
+                    .bufferedReader()
+                    .use { it.readText() }
+            } catch (e: Exception) {
+                null
+            } ?: return TaigiKeyboard.ImeConfig(context.packageName)
+        val moshi =
+            Moshi
+                .Builder()
+                .add(KotlinJsonAdapterFactory())
+                .add(LocaleUtils.JsonAdapter())
+                .build()
         val layoutAdapter = moshi.adapter(TaigiKeyboard.ImeConfig::class.java)
         return layoutAdapter.fromJson(rawJsonData) ?: TaigiKeyboard.ImeConfig(
-            context.packageName
+            context.packageName,
         )
     }
 
@@ -118,7 +122,6 @@ class SubtypeManager(
         return null
     }
 
-
     /**
      * Removes a given [subtypeToRemove]. Nothing happens if the given [subtypeToRemove] does not
      * exist.
@@ -160,10 +163,11 @@ class SubtypeManager(
         if (triggerNextSubtype) {
             newActiveSubtype = subtypeList[0]
         }
-        prefs.activeSubtypeId = when (newActiveSubtype) {
-            null -> -1
-            else -> newActiveSubtype.id
-        }
+        prefs.activeSubtypeId =
+            when (newActiveSubtype) {
+                null -> -1
+                else -> newActiveSubtype.id
+            }
         return newActiveSubtype
     }
 }

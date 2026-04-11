@@ -3,15 +3,15 @@ package com.siansiansu.taigikeyboard.ime.media.emoji
 
 import android.annotation.SuppressLint
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EmojiEmotions
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.EmojiFlags
-import androidx.compose.material.icons.filled.EmojiFoodBeverage
-import androidx.compose.material.icons.filled.EmojiNature
-import androidx.compose.material.icons.filled.EmojiObjects
-import androidx.compose.material.icons.filled.EmojiPeople
-import androidx.compose.material.icons.filled.EmojiSymbols
-import androidx.compose.material.icons.filled.EmojiTransportation
+import com.siansiansu.taigikeyboard.ui.components.EmojiEmotions
+import com.siansiansu.taigikeyboard.ui.components.EmojiEvents
+import com.siansiansu.taigikeyboard.ui.components.EmojiFlags
+import com.siansiansu.taigikeyboard.ui.components.EmojiFoodBeverage
+import com.siansiansu.taigikeyboard.ui.components.EmojiNature
+import com.siansiansu.taigikeyboard.ui.components.EmojiObjects
+import com.siansiansu.taigikeyboard.ui.components.EmojiPeople
+import com.siansiansu.taigikeyboard.ui.components.EmojiSymbols
+import com.siansiansu.taigikeyboard.ui.components.EmojiTransportation
 import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class EmojiCategory {

@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 // 產生日期字串 (yyyyMMdd)
@@ -135,7 +134,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.activity:activity-compose:1.12.4")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.material:material-icons-core")
 
     // Compose 偵錯工具
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -152,9 +151,6 @@ dependencies {
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.2.0")
-
-    // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
 
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
