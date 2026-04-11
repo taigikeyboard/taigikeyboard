@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.4.8",
+                "2026/04/11",
+                listOf(
+                    LocalizedText(hanji = "Fixed an issue where app storage grew excessively over time."),
+                ),
+            ),
+            VersionEntry(
                 "3.4.7",
                 "2026/04/05",
                 listOf(

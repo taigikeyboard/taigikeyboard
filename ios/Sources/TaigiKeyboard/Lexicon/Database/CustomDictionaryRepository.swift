@@ -11,6 +11,9 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "CustomDictionaryRepository")
 
+    /// Maximum number of custom dictionary entries (aligned with Android MAX_ENTRY_COUNT)
+    static let maxEntries = 30000
+
     private var isTablesCreated = false
 
     // MARK: - Initialization
@@ -151,6 +154,32 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
+            // 在同一個 execute block 內檢查容量，避免 TOCTOU race condition
+            // 更新既有 entry（同 id）不算新增，不受上限限制
+            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
+            var existsStmt: OpaquePointer?
+            var isUpdate = false
+            if sqlite3_prepare_v2(db, "SELECT 1 FROM custom_dictionary WHERE id = ? LIMIT 1;", -1, &existsStmt, nil) == SQLITE_OK {
+                sqlite3_bind_text(existsStmt, 1, entry.id, -1, TRANSIENT)
+                isUpdate = sqlite3_step(existsStmt) == SQLITE_ROW
+            }
+            sqlite3_finalize(existsStmt)
+
+            if !isUpdate {
+                var countStmt: OpaquePointer?
+                if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &countStmt, nil) == SQLITE_OK,
+                   sqlite3_step(countStmt) == SQLITE_ROW
+                {
+                    let currentCount = Int(sqlite3_column_int(countStmt, 0))
+                    sqlite3_finalize(countStmt)
+                    guard currentCount < Self.maxEntries else {
+                        throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
+                    }
+                } else {
+                    sqlite3_finalize(countStmt)
+                }
+            }
+
             let sql = """
                 INSERT INTO custom_dictionary (id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -174,7 +203,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
             let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
 
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
             sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
@@ -363,9 +391,27 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     /// Batch import entries (used by CSV file import)
     /// Commits every 500 entries to avoid long-running transactions.
+    /// Stops importing when maxEntries is reached.
     func batchImport(_ entries: [CustomDictionaryEntry]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
+            // Check remaining capacity
+            var currentCount = 0
+            let countSql = "SELECT COUNT(*) FROM custom_dictionary;"
+            var countStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, countSql, -1, &countStmt, nil) == SQLITE_OK {
+                if sqlite3_step(countStmt) == SQLITE_ROW {
+                    currentCount = Int(sqlite3_column_int(countStmt, 0))
+                }
+            }
+            sqlite3_finalize(countStmt)
+
+            let remainingCapacity = Self.maxEntries - currentCount
+            guard remainingCapacity > 0 else {
+                self.logger.debug("[IMPORT] Custom dictionary is full (\(Self.maxEntries) entries)")
+                return 0
+            }
+
             // Build set of existing roman|hanzi keys for deduplication
             var existingKeys = Set<String>()
             let querySql = "SELECT roman, hanzi FROM custom_dictionary;"
@@ -403,6 +449,9 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 }
 
                 for i in batchStart ..< batchEnd {
+                    // Stop when capacity is reached
+                    if insertedCount >= remainingCapacity { break }
+
                     let entry = entries[i]
                     let key = "\(entry.roman)|\(entry.hanzi)"
                     if existingKeys.contains(key) {
@@ -441,6 +490,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
                     throw DictionaryError.queryExecutionFailed("Failed to commit batch transaction")
                 }
+
+                if insertedCount >= remainingCapacity { break }
             }
 
             return insertedCount
