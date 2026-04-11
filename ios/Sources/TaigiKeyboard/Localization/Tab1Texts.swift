@@ -58,6 +58,9 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.8", "2026/04/11", [
+            LocalizedText(hanji: "Fixed an issue where app storage grew excessively over time."),
+        ]),
         ("3.4.7", "2026/04/05", [
             LocalizedText(hanji: "Added globe key toggle to show or hide the keyboard switch key."),
             LocalizedText(hanji: "Added custom dictionary enable/disable toggle."),
