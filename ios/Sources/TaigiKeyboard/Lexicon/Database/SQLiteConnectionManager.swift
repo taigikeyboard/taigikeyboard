@@ -57,7 +57,11 @@ final class SQLiteConnectionManager: @unchecked Sendable {
 
     /// 一次性 WAL → DELETE 遷移
     /// 偵測舊 `.db-wal` 檔案，執行 checkpoint 後由 configure() 切換至 DELETE mode
+    /// 跳過唯讀資料庫（如 dictionary.db），因為它們不需要遷移
     private func migrateFromWAL(path: String, flags: Int32) {
+        // 唯讀資料庫不需要 WAL 遷移
+        guard flags & SQLITE_OPEN_READWRITE != 0 else { return }
+
         let walPath = path + "-wal"
         guard FileManager.default.fileExists(atPath: walPath) else { return }
 
@@ -70,10 +74,14 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         }
 
         // Checkpoint：將 WAL 內容寫回主資料庫並截斷 WAL 檔
-        sqlite3_wal_checkpoint_v2(db, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil)
+        let rc = sqlite3_wal_checkpoint_v2(db, nil, SQLITE_CHECKPOINT_TRUNCATE, nil, nil)
         sqlite3_close(db)
 
-        logger.debug("[MIGRATE] WAL checkpoint completed")
+        if rc == SQLITE_OK {
+            logger.debug("[MIGRATE] WAL checkpoint completed")
+        } else {
+            logger.warning("[MIGRATE] WAL checkpoint returned code \(rc), WAL may not be fully cleared")
+        }
     }
 
     /// 配置資料庫 PRAGMA 設定

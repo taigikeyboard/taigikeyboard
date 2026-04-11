@@ -153,11 +153,23 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Insert or update an entry (upsert by id)
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
-        let currentCount = try await count()
-        guard currentCount < Self.maxEntries else {
-            throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
-        }
         try await connectionManager.execute { db in
+            // 在同一個 execute block 內檢查容量，避免 TOCTOU race condition
+            var countStmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &countStmt, nil) == SQLITE_OK {
+                if sqlite3_step(countStmt) == SQLITE_ROW {
+                    let currentCount = Int(sqlite3_column_int(countStmt, 0))
+                    sqlite3_finalize(countStmt)
+                    guard currentCount < Self.maxEntries else {
+                        throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
+                    }
+                } else {
+                    sqlite3_finalize(countStmt)
+                }
+            } else {
+                sqlite3_finalize(countStmt)
+            }
+
             let sql = """
                 INSERT INTO custom_dictionary (id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
