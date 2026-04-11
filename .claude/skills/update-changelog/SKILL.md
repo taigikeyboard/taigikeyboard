@@ -1,7 +1,7 @@
 ---
 name: update-changelog
 description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history based on commits since main (last release). Run on develop branch when preparing a release.
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Release Prep
@@ -25,6 +25,12 @@ If the working tree is not clean (unstaged or uncommitted changes), ask the user
 ### 2. Update CHANGELOG.md and versionHistoryEntries
 
 Compare the current version's changelog file (e.g., `changelog/v3.4.8.md`) against the full diff to find missing entries. Add any changes not already documented. If this is a new version with no existing file, create a new file in `changelog/` and add it to the index in `CHANGELOG.md`.
+
+**CHANGELOG.md format**: Simple flat list of version links, newest first. No `## Current:` header, no branch tags. The top entry is always the current version.
+```
+- [v3.4.8](changelog/v3.4.8.md)
+- [v3.4.7](changelog/v3.4.7.md)
+```
 
 **Dedup rule**: Before adding an entry, check existing entries for semantic duplicates — if a change is already covered (even with different wording), skip it. Never create duplicate entries.
 
