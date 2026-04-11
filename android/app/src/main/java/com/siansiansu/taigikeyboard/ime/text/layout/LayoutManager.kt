@@ -16,6 +16,7 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 private typealias LTN = Pair<LayoutType, String>
 
 class LayoutManager(
@@ -29,6 +30,7 @@ class LayoutManager(
         private val moshi: Moshi =
             Moshi
                 .Builder()
+                .add(KotlinJsonAdapterFactory())
                 .add(LayoutTypeAdapter())
                 .add(KeyTypeAdapter())
                 .add(KeyVariationAdapter())

@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
 }
 
 // 產生日期字串 (yyyyMMdd)
@@ -143,9 +142,8 @@ dependencies {
     // Flexbox（現有依賴）
     implementation("com.google.android.flexbox:flexbox:3.0.0")
 
-    // Moshi JSON (codegen — no kotlin-reflect needed)
-    implementation("com.squareup.moshi:moshi:1.15.2")
-    ksp("com.squareup.moshi:moshi-kotlin-codegen:1.15.2")
+    // Moshi JSON
+    implementation("com.squareup.moshi:moshi-kotlin:1.15.2")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")

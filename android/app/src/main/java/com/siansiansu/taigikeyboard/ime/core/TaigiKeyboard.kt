@@ -14,8 +14,6 @@ import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -23,20 +21,21 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
+import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
-import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import com.siansiansu.taigikeyboard.util.*
+import com.squareup.moshi.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -96,29 +95,30 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         }
 
         @Synchronized
-        fun getInstance(): TaigiKeyboard {
-            return taigikeyboardInstance
+        fun getInstance(): TaigiKeyboard =
+            taigikeyboardInstance
                 ?: throw IllegalStateException("TaigiKeyboard not initialized")
-        }
     }
 
     override fun onCreate() {
         if (BuildConfig.DEBUG) {
             StrictMode.setThreadPolicy(
-                StrictMode.ThreadPolicy.Builder()
+                StrictMode.ThreadPolicy
+                    .Builder()
                     .detectDiskReads()
                     .detectDiskWrites()
                     .detectNetwork() // or .detectAll() for all detectable problems
                     .penaltyLog()
-                    .build()
+                    .build(),
             )
             StrictMode.setVmPolicy(
-                StrictMode.VmPolicy.Builder()
+                StrictMode.VmPolicy
+                    .Builder()
                     .detectLeakedSqlLiteObjects()
                     .detectLeakedClosableObjects()
                     .penaltyLog()
                     .penaltyDeath()
-                    .build()
+                    .build(),
             )
         }
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onCreate()")
@@ -221,7 +221,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
                         innerContainer.paddingLeft,
                         innerContainer.paddingTop,
                         innerContainer.paddingRight,
-                        adjustedHeight
+                        adjustedHeight,
                     )
                     innerContainer.requestLayout()
 
@@ -276,7 +276,10 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         mediaInputManager.onDestroy()
     }
 
-    override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
+    override fun onStartInputView(
+        info: EditorInfo?,
+        restarting: Boolean,
+    ) {
         currentInputConnection?.requestCursorUpdates(InputConnection.CURSOR_UPDATE_MONITOR)
 
         super.onStartInputView(info, restarting)
@@ -339,7 +342,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         newSelStart: Int,
         newSelEnd: Int,
         candidatesStart: Int,
-        candidatesEnd: Int
+        candidatesEnd: Int,
     ) {
         super.onUpdateSelection(
             oldSelStart,
@@ -347,7 +350,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             newSelStart,
             newSelEnd,
             candidatesStart,
-            candidatesEnd
+            candidatesEnd,
         )
         textInputManager.onUpdateSelection(
             oldSelStart,
@@ -355,7 +358,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             newSelStart,
             newSelEnd,
             candidatesStart,
-            candidatesEnd
+            candidatesEnd,
         )
         mediaInputManager.onUpdateSelection(
             oldSelStart,
@@ -363,7 +366,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             newSelStart,
             newSelEnd,
             candidatesStart,
-            candidatesEnd
+            candidatesEnd,
         )
     }
 
@@ -389,13 +392,17 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         outInsets?.touchableInsets = Insets.TOUCHABLE_INSETS_VISIBLE
     }
 
-    override fun onConfigureWindow(win: Window, isFullscreen: Boolean, isCandidatesOnly: Boolean) {
+    override fun onConfigureWindow(
+        win: Window,
+        isFullscreen: Boolean,
+        isCandidatesOnly: Boolean,
+    ) {
         super.onConfigureWindow(win, isFullscreen, isCandidatesOnly)
 
         // Follow fcitx5-android approach: set window to MATCH_PARENT
         win.setLayout(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            ViewGroup.LayoutParams.MATCH_PARENT,
         )
 
         if (BuildConfig.DEBUG) {
@@ -408,16 +415,17 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         // Follow fcitx5-android approach: set inputArea and inputView to MATCH_PARENT
         window?.window?.findViewById<View>(android.R.id.inputArea)?.let { inputArea ->
-            inputArea.layoutParams = inputArea.layoutParams.apply {
-                height = ViewGroup.LayoutParams.MATCH_PARENT
-            }
+            inputArea.layoutParams =
+                inputArea.layoutParams.apply {
+                    height = ViewGroup.LayoutParams.MATCH_PARENT
+                }
         }
 
         view.layoutParams = view.layoutParams?.apply {
             height = ViewGroup.LayoutParams.MATCH_PARENT
         } ?: ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT
+            ViewGroup.LayoutParams.MATCH_PARENT,
         )
 
         if (BuildConfig.DEBUG) {
@@ -444,12 +452,13 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      */
     fun keyPressSound(keyData: KeyData? = null) {
         if (!prefs.isSoundFeedbackEnabled) return
-        val effect = when (keyData?.code) {
-            KeyCode.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
-            KeyCode.DELETE -> AudioManager.FX_KEYPRESS_DELETE
-            KeyCode.ENTER -> AudioManager.FX_KEYPRESS_RETURN
-            else -> AudioManager.FX_KEYPRESS_STANDARD
-        }
+        val effect =
+            when (keyData?.code) {
+                KeyCode.SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
+                KeyCode.DELETE -> AudioManager.FX_KEYPRESS_DELETE
+                KeyCode.ENTER -> AudioManager.FX_KEYPRESS_RETURN
+                else -> AudioManager.FX_KEYPRESS_STANDARD
+            }
         audioManager?.playSoundEffect(effect)
     }
 
@@ -460,17 +469,15 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         requestHideSelf(0)
         val intent = Intent(this, SettingsMainActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                  Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                  Intent.FLAG_ACTIVITY_CLEAR_TOP
+            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+            Intent.FLAG_ACTIVITY_CLEAR_TOP
         startActivity(intent)
     }
 
     /**
      * @return If the language switch should be shown.
      */
-    fun shouldShowLanguageSwitch(): Boolean {
-        return subtypeManager.subtypes.size > 1
-    }
+    fun shouldShowLanguageSwitch(): Boolean = subtypeManager.subtypes.size > 1
 
     fun switchToNextSubtype() {
         activeSubtype = subtypeManager.switchToNextSubtype() ?: Subtype.DEFAULT
@@ -513,6 +520,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
                 inputView?.mainViewFlipper?.displayedChild =
                     inputView?.mainViewFlipper?.indexOfChild(textInputManager.textViewGroup) ?: 0
             }
+
             R.id.media_input -> {
                 inputView?.mainViewFlipper?.displayedChild =
                     inputView?.mainViewFlipper?.indexOfChild(mediaInputManager.mediaViewGroup) ?: 0
@@ -522,30 +530,41 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     interface EventListener {
         fun onCreate() {}
+
         fun onCreateInputView() {}
+
         fun onRegisterInputView(inputView: InputView) {}
+
         fun onDestroy() {}
 
-        fun onStartInputView(info: EditorInfo?, restarting: Boolean) {}
+        fun onStartInputView(
+            info: EditorInfo?,
+            restarting: Boolean,
+        ) {}
+
         fun onFinishInputView(finishingInput: Boolean) {}
 
         fun onWindowShown() {}
+
         fun onWindowHidden() {}
 
         fun onConfigurationChanged(newConfig: Configuration) {}
 
         fun onUpdateCursorAnchorInfo(cursorAnchorInfo: CursorAnchorInfo?) {}
+
         fun onUpdateSelection(
             oldSelStart: Int,
             oldSelEnd: Int,
             newSelStart: Int,
             newSelEnd: Int,
             candidatesStart: Int,
-            candidatesEnd: Int
+            candidatesEnd: Int,
         ) {}
 
         fun onSubtypeChanged(newSubtype: Subtype) {}
+
         fun onInputModeChanged(newInputMode: String) {}
+
         fun onKeyboardLayoutTypeChanged(newLayoutType: String) {}
     }
 
@@ -560,11 +579,10 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      * @property defaultSubtypes A list of predefined default subtypes. This subtypes are used to
      *  define which locales are supported and which layout is preferred for that locale.
      */
-    @JsonClass(generateAdapter = true)
     data class ImeConfig(
-        @Json(name = "package")
+        @param:Json(name = "package")
         val packageName: String,
         val characterLayouts: Map<String, String> = mapOf(),
-        val defaultSubtypes: List<DefaultSubtype> = listOf()
+        val defaultSubtypes: List<DefaultSubtype> = listOf(),
     )
 }

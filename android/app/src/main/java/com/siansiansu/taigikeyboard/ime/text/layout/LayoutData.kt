@@ -3,15 +3,13 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
-import com.squareup.moshi.JsonClass
-
 typealias LayoutDataArrangement = List<List<KeyData>>
-@JsonClass(generateAdapter = true)
+
 data class LayoutData(
     val type: LayoutType,
     val name: String,
     val direction: String,
-    val arrangement: LayoutDataArrangement = listOf()
+    val arrangement: LayoutDataArrangement = listOf(),
 ) {
     private fun getComputedLayoutDataArrangement(): ComputedLayoutDataArrangement {
         val ret = mutableListOf<MutableList<KeyData>>()
@@ -25,17 +23,20 @@ data class LayoutData(
         return ret
     }
 
-    fun toComputedLayoutData(keyboardMode: KeyboardMode): ComputedLayoutData {
-        return ComputedLayoutData(
-            keyboardMode, name, direction, getComputedLayoutDataArrangement()
+    fun toComputedLayoutData(keyboardMode: KeyboardMode): ComputedLayoutData =
+        ComputedLayoutData(
+            keyboardMode,
+            name,
+            direction,
+            getComputedLayoutDataArrangement(),
         )
-    }
 }
 
 typealias ComputedLayoutDataArrangement = MutableList<MutableList<KeyData>>
+
 data class ComputedLayoutData(
     val mode: KeyboardMode,
     val name: String,
     val direction: String,
-    val arrangement: ComputedLayoutDataArrangement = mutableListOf()
+    val arrangement: ComputedLayoutDataArrangement = mutableListOf(),
 )
