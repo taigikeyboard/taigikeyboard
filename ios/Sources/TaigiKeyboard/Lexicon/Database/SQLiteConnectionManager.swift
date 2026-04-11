@@ -39,7 +39,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     private func connect(flags: Int32 = SQLITE_OPEN_READWRITE) throws {
         let path = try databasePath()
 
-        // 一次性遷移：清理舊 WAL 檔（v3.4.8 → v3.4.9 升級用戶）
+        // 一次性遷移：清理舊 WAL 檔（v3.4.8 升級用戶）
         migrateFromWAL(path: path, flags: flags)
 
         guard sqlite3_open_v2(path, &connection, flags, nil) == SQLITE_OK else {

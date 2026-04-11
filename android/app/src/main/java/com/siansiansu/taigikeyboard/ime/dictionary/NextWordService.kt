@@ -438,7 +438,7 @@ object NextWordService {
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)",
         )
 
-        // 一次性遷移：WAL → DELETE（v3.4.9）
+        // 一次性遷移：WAL → DELETE（v3.4.8）
         // WAL 在 IME 場景無顯著優勢，DELETE mode 更簡單且不會產生 WAL 檔膨脹
         migrateFromWAL(db)
     }
