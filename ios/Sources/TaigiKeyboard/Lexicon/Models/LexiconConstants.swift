@@ -16,6 +16,7 @@ enum LexiconConstants {
     enum TriePrefix {
         static let tl = "tl:"
         static let poj = "poj:"
+        static let hanzi = "hanzi:"
 
         static func prefix(for mode: InputMode) -> String {
             switch mode {

@@ -10,7 +10,6 @@ class LexiconService: @unchecked Sendable {
     private let repository: DictionaryRepository
     private let userFrequencyService: UserFrequencyService
     private let trieService: TrieService
-    private let hanziTrieService: TrieService
     private let customDictionaryRepository: CustomDictionaryRepository
     private let logger = DebugLogger(category: "LexiconService")
 
@@ -23,18 +22,11 @@ class LexiconService: @unchecked Sendable {
         customDictionaryRepository: CustomDictionaryRepository = .shared,
     ) {
         self.trieService = trieService
-        self.hanziTrieService = TrieService(
-            fileName: "hanzi",
-            fileExtension: "trie",
-            logCategory: "HanziTrieService",
-        )
         self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
 
-        // DictionaryRepository 使用 binary reader + hanzi trie
         self.repository = repository ?? DictionaryRepository(
             trieService: trieService,
-            hanziTrieService: hanziTrieService,
         )
 
         // 初始化 Trie
@@ -50,18 +42,11 @@ class LexiconService: @unchecked Sendable {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
 
-            let dictSuccess = self.trieService.initialize()
-            if dictSuccess {
-                self.logger.info("[INIT] Dictionary trie initialized successfully")
+            let success = trieService.initialize()
+            if success {
+                logger.info("[INIT] Dictionary trie initialized successfully")
             } else {
-                self.logger.warning("[INIT] Dictionary trie initialization failed")
-            }
-
-            let hanziSuccess = self.hanziTrieService.initialize()
-            if hanziSuccess {
-                self.logger.info("[INIT] Hanzi trie initialized successfully")
-            } else {
-                self.logger.warning("[INIT] Hanzi trie initialization failed")
+                logger.warning("[INIT] Dictionary trie initialization failed")
             }
         }
     }

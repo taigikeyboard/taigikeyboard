@@ -82,7 +82,6 @@ final class DictionaryRepository: @unchecked Sendable {
 
     private let binaryReader: DictionaryBinaryReader?
     private let trieService: TrieService
-    private let hanziTrieService: TrieService?
     private let logger = DebugLogger(category: "DictionaryRepository")
 
     // MARK: - Initialization
@@ -90,11 +89,9 @@ final class DictionaryRepository: @unchecked Sendable {
     init(
         binaryReader: DictionaryBinaryReader? = nil,
         trieService: TrieService = .shared,
-        hanziTrieService: TrieService? = nil,
     ) {
         self.binaryReader = binaryReader ?? DictionaryBinaryReader()
         self.trieService = trieService
-        self.hanziTrieService = hanziTrieService
     }
 
     // MARK: - Query Methods
@@ -203,13 +200,14 @@ final class DictionaryRepository: @unchecked Sendable {
             throw DictionaryError.databaseNotAvailable
         }
 
-        // 使用 hanzi trie 做前綴搜尋
-        guard let hanziTrie = hanziTrieService, hanziTrie.isReady else {
-            logger.warning("[HANZI-SEARCH] Hanzi trie not available")
-            return []
+        guard trieService.isReady else {
+            logger.error("[HANZI-SEARCH] Trie not loaded")
+            throw DictionaryError.trieNotLoaded
         }
 
-        let rowIds = hanziTrie.prefixSearch(query, limit: limit * 6)
+        // 使用 hanzi: prefix 在主 trie 做前綴搜尋
+        let trieKey = LexiconConstants.TriePrefix.hanzi + query
+        let rowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
 
         logger.debug("[HANZI-SEARCH] trie returned \(rowIds.count) rowids")
 
