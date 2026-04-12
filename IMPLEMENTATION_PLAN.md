@@ -420,6 +420,65 @@ Post-cleanup 整體 review，記錄既有結構問題供後續改善參考。與
 
 ---
 
+## Stage 7: Merge hanzi.trie into dictionary.trie
+**Goal**: Eliminate separate hanzi.trie — merge into dictionary.trie with `hanzi:` prefix  
+**Status**: Complete  
+**Depends on**: Stage 6 (Cleanup)
+
+### Motivation
+
+hanzi.trie（1.1MB）是獨立的漢字前綴搜尋 trie，只有設定頁 Tab3 使用。它和 dictionary.trie 用相同的 RecordTrie 格式，但需要獨立的 build script、deploy 流程、TrieService instance。合併後統一 prefix pattern（`tl:` / `poj:` / `hanzi:`），消除 ~180 行程式碼，解決 Q2（TrieService singleton 混用）。
+
+### Design Decision
+
+`04_create_trie.py` 從 `dictionary.db` 讀取 hanzi 資料（第二個 DB connection），不修改 `trie.db` schema。理由：trie.db 是羅馬字專用的 staging table，加 hanzi 欄位會連帶影響 `03_create_trie_db.sh` 和 `08_split_packages.py`。
+
+### Steps
+
+**Build pipeline（Commit 1）：**
+
+1. **`04_create_trie.py`** — 加 `HANZI_PREFIX = "hanzi:"`，從 `dictionary.db` 讀 hanzi+rowid，用 `add_pair()` 加入 pairs。加測試查詢和 key count log。
+2. **`build.sh`** — 移除 `do_create_hanzi_trie()` 和呼叫，step 編號 11→10。
+3. **`06_deploy.sh`** — 移除 `HANZI_TRIE` 變數和 iOS deploy。
+4. **`12_create_hanzi_trie.py`** — 整個刪除。
+
+**iOS Swift（Commit 2）：**
+
+5. **`LexiconConstants.swift`** — `TriePrefix` 加 `static let hanzi = "hanzi:"`
+6. **`DictionaryRepository.swift`** — 刪除 `hanziTrieService` 屬性/參數，`searchByHanzi()` 改用 `trieService` + `hanzi:` prefix。
+7. **`LexiconService.swift`** — 刪除 `hanziTrieService` 相關程式碼。
+8. **`hanzi.trie`** — `git rm`。提醒使用者手動從 Xcode 移除 reference。
+
+### Files
+
+| File | Action |
+|------|--------|
+| `dictionaryv2/build/04_create_trie.py` | Modified — add hanzi key generation |
+| `dictionaryv2/build.sh` | Modified — remove step 8 |
+| `dictionaryv2/build/06_deploy.sh` | Modified — remove hanzi.trie deploy |
+| `dictionaryv2/build/12_create_hanzi_trie.py` | Deleted |
+| `ios/.../Models/LexiconConstants.swift` | Modified — add hanzi prefix |
+| `ios/.../Database/DictionaryRepository.swift` | Modified — remove hanziTrieService |
+| `ios/.../Services/LexiconService.swift` | Modified — remove hanziTrieService |
+| `ios/Resources/Dictionaries/hanzi.trie` | Deleted |
+
+### Verification
+
+- `python3 04_create_trie.py` → log 顯示 hanzi key count
+- `query_trie.py "hanzi:好"` → 回傳結果
+- `query_trie.py "tl:hoo2"` → 結果不變（romanization 不受影響）
+- iOS Tab3 漢字搜尋正常、打字候選詞正常
+
+### Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| 合併後 dictionary.trie 變大影響打字效能 | MARISA prefix search 是 O(key_length)，不會掃描 `hanzi:` subtree |
+| Android 使用更大的 dictionary.trie | `hanzi:` keys 是惰性的，Android 只查 `tl:`/`poj:`，不受影響 |
+| Xcode 需手動移除 hanzi.trie reference | 明確提醒使用者，即使不移除也只是多 1.1MB |
+
+---
+
 ## Future
 
 ### Android Migration
