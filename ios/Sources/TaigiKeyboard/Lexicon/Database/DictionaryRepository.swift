@@ -2,18 +2,18 @@ import Foundation
 
 /// 詞庫開關設定（從 SharedSettings 讀取）
 struct EnabledDictionaries {
-    let kautian: Bool   // 教育部臺灣台語常用詞辭典
-    let taigitv: Bool   // 台語新詞辭庫
-    let kungge: Bool    // 台語工藝詞庫
-    let itaigi: Bool    // iTaigi 華台對照典
-    let taijit: Bool    // 台日大辭典
-    let taihoa: Bool    // 台華線頂對照典
-    let sitbut: Bool    // 台灣植物名彙
-    let stti: Bool      // 學科術語辭典
-    let khpoo: Bool     // 腔口補充資料
-    let variant: Bool   // 異用字
-    let khiin: Bool     // 在來字
-    let lkk: Bool       // LKK漢羅合用建議用字
+    let kautian: Bool // 教育部臺灣台語常用詞辭典
+    let taigitv: Bool // 台語新詞辭庫
+    let kungge: Bool // 台語工藝詞庫
+    let itaigi: Bool // iTaigi 華台對照典
+    let taijit: Bool // 台日大辭典
+    let taihoa: Bool // 台華線頂對照典
+    let sitbut: Bool // 台灣植物名彙
+    let stti: Bool // 學科術語辭典
+    let khpoo: Bool // 腔口補充資料
+    let variant: Bool // 異用字
+    let khiin: Bool // 在來字
+    let lkk: Bool // LKK漢羅合用建議用字
 
     /// 從 SharedSettings 讀取設定
     static func fromSettings() -> EnabledDictionaries {
@@ -120,22 +120,7 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        // 正規化輸入
-        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
-        logger.debug("[TRIE] input='\(input)' -> normalized='\(normalizedInput)'")
-
-        guard !normalizedInput.isEmpty else {
-            return []
-        }
-
-        let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
-
-        // Trie 完全匹配 + 前綴搜尋
-        let exactRowIds = trieService.lookup(trieKey)
-        let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
-        let allRowIds = Array(Set(exactRowIds + prefixRowIds))
-
-        logger.debug("[TRIE] exact=\(exactRowIds.count) prefix=\(prefixRowIds.count) merged=\(allRowIds.count)")
+        let allRowIds = lookupRowIds(input: input, inputMode: inputMode, limit: limit)
 
         guard !allRowIds.isEmpty else {
             return []
@@ -149,7 +134,7 @@ final class DictionaryRepository: @unchecked Sendable {
             guard let record = reader.record(at: rowId) else { continue }
             guard DictionaryBinaryReader.passesFilter(
                 recordBitmask: record.bitmask,
-                enabledDicts: enabledDicts
+                enabledDicts: enabledDicts,
             ) else { continue }
 
             let roman = inputMode == .poj
@@ -164,10 +149,9 @@ final class DictionaryRepository: @unchecked Sendable {
             ))
         }
 
-        return results
+        return Array(results
             .sorted { ($0.lengthScore ?? 0) > ($1.lengthScore ?? 0) }
-            .prefix(limit)
-            .map(\.self)
+            .prefix(limit))
     }
 
     // MARK: - Search With Sources (for dictionary exploration)
@@ -189,14 +173,7 @@ final class DictionaryRepository: @unchecked Sendable {
             throw DictionaryError.trieNotLoaded
         }
 
-        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
-        guard !normalizedInput.isEmpty else { return [] }
-
-        let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
-        let exactRowIds = trieService.lookup(trieKey)
-        let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
-        let allRowIds = Array(Set(exactRowIds + prefixRowIds))
-
+        let allRowIds = lookupRowIds(input: input, inputMode: inputMode, limit: limit)
         guard !allRowIds.isEmpty else { return [] }
 
         return buildSearchResults(
@@ -253,6 +230,24 @@ final class DictionaryRepository: @unchecked Sendable {
 
     // MARK: - Private Methods
 
+    /// Look up rowIds from trie (exact match + prefix search, deduplicated)
+    private func lookupRowIds(
+        input: String,
+        inputMode: InputMode,
+        limit: Int,
+    ) -> [Int] {
+        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+        guard !normalizedInput.isEmpty else { return [] }
+
+        let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
+        let exactRowIds = trieService.lookup(trieKey)
+        let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
+
+        logger.debug("[TRIE] input='\(input)' exact=\(exactRowIds.count) prefix=\(prefixRowIds.count)")
+
+        return Array(Set(exactRowIds + prefixRowIds))
+    }
+
     /// Build DictionarySearchResult array from rowIds with filtering and sorting
     private func buildSearchResults(
         reader: DictionaryBinaryReader,
@@ -267,7 +262,7 @@ final class DictionaryRepository: @unchecked Sendable {
             guard let record = reader.record(at: rowId) else { continue }
             guard DictionaryBinaryReader.passesFilter(
                 recordBitmask: record.bitmask,
-                enabledDicts: enabledDicts
+                enabledDicts: enabledDicts,
             ) else { continue }
 
             let roman = inputMode == .poj
@@ -286,9 +281,8 @@ final class DictionaryRepository: @unchecked Sendable {
             ))
         }
 
-        return results
+        return Array(results
             .sorted { $0.frequency > $1.frequency }
-            .prefix(limit)
-            .map(\.self)
+            .prefix(limit))
     }
 }
