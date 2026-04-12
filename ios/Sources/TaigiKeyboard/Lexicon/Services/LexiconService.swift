@@ -2,7 +2,7 @@ import Foundation
 
 /// 詞典服務
 /// 提供台語詞彙搜尋功能
-class LexiconService: @unchecked Sendable {
+final class LexiconService: @unchecked Sendable {
     // MARK: - Properties
 
     static let shared = LexiconService()

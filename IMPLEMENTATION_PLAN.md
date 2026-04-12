@@ -479,6 +479,81 @@ hanzi.trie（1.1MB）是獨立的漢字前綴搜尋 trie，只有設定頁 Tab3 
 
 ---
 
+## Final Code Review (2026-04-12)
+
+### Methodology
+
+4 independent reviewers analyzed all 9 core files:
+
+| Reviewer | Focus |
+|----------|-------|
+| Claude (manual) | Data flow correctness, search integrity, SRP, naming |
+| Codex | Correctness, unsafe patterns, search regressions |
+| Code-simplifier | Redundancy, idioms, clean code, over-design |
+| Refactor-reviewer | Regressions, cross-platform alignment, style |
+
+### Search Functionality Verdict
+
+**No regressions found.** All search paths verified:
+- Romanization autocomplete: trie → binary reader → bitmask filter → sort → limit ✓
+- Hanzi reverse lookup (Tab3): `hanzi:` prefix → trie → binary reader ✓
+- NextWord prediction: binary search → association.bin → bitmask filter → merge with user ✓
+- Cross-platform: scoring constants identical, source filtering equivalent, no contract broken ✓
+
+### Confirmed Issues
+
+| # | Severity | Issue | Files | Flagged By |
+|---|----------|-------|-------|------------|
+| R1 | Medium | **TrieService: `@unchecked Sendable` with incomplete synchronization** — `isInitialized`/`handle` protected by `initQueue` in `initialize()`/`close()` but read without queue in `prefixSearch()`/`lookup()`/`isReady`/`deinit`. Technically a data race. | `TrieService.swift:31-32,87,109,44-46` | Codex, Simplifier, Refactor, Manual |
+| R2 | Medium | **NextWordService: `@unchecked Sendable` with unsynchronized mutable state** — `recordCounter` (line 57) and `isUserTablesCreated` (line 462) mutated from async contexts without synchronization. | `NextWordService.swift:57,162-164,462,476` | Codex, Simplifier, Manual |
+| R3 | Medium | **EnabledDictionaries misplaced** — Defined in `DictionaryRepository.swift` but used by 3 files across 2 directories. Should be in `Lexicon/Models/EnabledDictionaries.swift`. | `DictionaryRepository.swift:4-70` | Simplifier, Manual, Plan Q1 |
+| R4 | Medium | **LexiconConstants.Database dead code** — `fileName`/`fileExtension` for `dictionary.db` unused after SQLite removal. | `LexiconConstants.swift:3-6` | Codex, Simplifier, Refactor, Manual |
+| R5 | Medium | **`.map(\.self)` anti-pattern** — `.prefix(limit).map(\.self)` followed by `Array(sortedResults)` creates double copy. Use `Array(...)` directly. | `NextWordService.swift:123` | Simplifier, Manual |
+| R6 | Medium | **`sqliteTransient` duplicated** — Same constant defined in both `NextWordService.Constants` and `SQLiteConnectionManager`. All other files use the latter. | `NextWordService.swift:37`, `SQLiteConnectionManager.swift:224` | Simplifier |
+| R7 | Medium | **Inconsistent `passesFilter` API** — `DictionaryBinaryReader` takes `EnabledDictionaries`, `AssociationBinaryReader` takes raw primitives `(UInt16, UInt16, Bool)`. Caller must pre-compute mask. | `DictionaryBinaryReader.swift:170`, `AssociationBinaryReader.swift:199` | Simplifier |
+| R8 | Low | **LexiconService should be `final class`** — All other Lexicon services are `final class`. | `LexiconService.swift:5` | Simplifier |
+| R9 | Low | **Magic number 1000 in `lookup()`** — Duplicates `Constants.defaultSearchLimit`. | `TrieService.swift:119` | Simplifier |
+| R10 | Low | **Force unwrap `word.last!`** — Safe due to prior `guard !word.isEmpty`, but `guard let` more idiomatic. | `NextWordService.swift:103` | Simplifier |
+| R11 | Low | **Stale comment references `dictionary.db`** — Should say `dictionary.bin, association.bin, dictionary.trie`. | `ResourceBundleResolver.swift:5` | Refactor |
+| R12 | Low | **Invalid UTF-8 silently → `""`** — `nextWord`/`nextTl` default to `""` on decode failure. `DictionaryBinaryReader` returns `nil` instead. Inconsistent. | `AssociationBinaryReader.swift:172-173` | Codex |
+| R13 | Low | **Tautological `>= 0` checks** — `UInt32` cast to `Int` is always >= 0. | `AssociationBinaryReader.swift:112,153` | Simplifier |
+
+### Disputed / Not Actionable
+
+| Finding | Source | Verdict |
+|---------|--------|---------|
+| Hanzi autocomplete returns `[]` | Codex | **Pre-existing design** — autocomplete is for romanization input. Hanzi lookup goes through `searchByHanzi()` (Tab3 settings only). Not a regression. |
+| `prev_tl` excluded from UNIQUE constraint | Codex | **Intentional** — associations are by hanzi context, not romanization. Same character typed via TL/POJ/TPS should share predictions. |
+| `g_tries[]` thread safety | Simplifier | **Already accepted** (M5 in post-review cleanup) — trie creation happens on single DispatchQueue during init. |
+| Duplicated filter loop `query()` vs `buildSearchResults()` | Codex, Simplifier | **Already accepted** (Q5 in code quality notes) — different output types (`TaigiWord` vs `DictionarySearchResult`); forced unification hurts readability. |
+| `Set` dedup loses exact-match priority | Codex | **Not impactful** — results are re-sorted by frequency + user score downstream. Final ordering is deterministic via sort. |
+| Duplicated binary reader init (~30 lines) | Simplifier | **Acceptable** — 2 readers with different headers/magic. Shared base class would be over-engineering for this scale. |
+
+### Fixes Applied
+
+All 13 issues fixed in one pass.
+
+**Phase A** (quick cleanup):
+- ✅ R4 — Removed `LexiconConstants.Database` dead code
+- ✅ R5 — `.map(\.self)` → `Array(...)` in `NextWordService.predict()`
+- ✅ R6 — Removed duplicate `sqliteTransient`, now uses `SQLiteConnectionManager.sqliteTransient`
+- ✅ R8 — `LexiconService`: `class` → `final class`
+- ✅ R9 — `TrieService.lookup()`: magic 1000 → `Constants.defaultSearchLimit`
+- ✅ R10 — `word.last!` → `guard let last = word.last else { return [] }`
+- ✅ R11 — Updated `ResourceBundleResolver.swift` comment to reference `dictionary.bin, association.bin`
+- ✅ R13 — Removed tautological `>= 0` checks in `AssociationBinaryReader`
+
+**Phase B** (structural):
+- ✅ R3 — Extracted `EnabledDictionaries` to `Lexicon/Models/EnabledDictionaries.swift` (**needs Xcode target addition**)
+- ✅ R7 — Aligned `passesFilter` API: `AssociationBinaryReader` now takes `EnabledDictionaries` (matches `DictionaryBinaryReader`)
+- ✅ R12 — `AssociationBinaryReader`: invalid UTF-8 now skips record (`continue`) instead of defaulting to `""`
+
+**Phase C** (thread safety):
+- ✅ R1 — `TrieService`: renamed queue to `stateQueue`, all reads of `_isInitialized`/`_handle` now go through queue via `currentHandle` computed property. `deinit` also uses queue.
+- ✅ R2 — `NextWordService`: added `NSLock` (`stateLock`) protecting `_recordCounter` and `_isUserTablesCreated`. All access uses `stateLock.withLock { ... }`.
+
+---
+
 ## Future
 
 ### Android Migration

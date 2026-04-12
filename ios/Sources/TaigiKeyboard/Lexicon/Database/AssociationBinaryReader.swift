@@ -109,7 +109,7 @@ final class AssociationBinaryReader: @unchecked Sendable {
     /// Returns: negative if key < target, 0 if equal, positive if key > target
     private func compareKeyAt(index: Int, with target: [UInt8]) -> Int {
         let keyOffset = keyOffsetAt(index)
-        guard keyOffset >= 0, keyOffset < data.count else { return -1 }
+        guard keyOffset < data.count else { return -1 }
 
         let keyLen = Int(basePtr.load(fromByteOffset: keyOffset, as: UInt8.self))
         let keyStart = keyOffset + 1
@@ -148,7 +148,7 @@ final class AssociationBinaryReader: @unchecked Sendable {
         let entryOffset = Int(basePtr.loadUnaligned(fromByteOffset: metaPos, as: UInt32.self))
         let entryCount = Int(basePtr.loadUnaligned(fromByteOffset: metaPos + 4, as: UInt16.self))
 
-        guard entryOffset >= 0, entryOffset <= data.count else { return [] }
+        guard entryOffset <= data.count else { return [] }
 
         let readCount = min(entryCount, limit)
         var entries: [AssociationEntry] = []
@@ -169,16 +169,22 @@ final class AssociationBinaryReader: @unchecked Sendable {
 
             guard pos + nwLen + ntLen <= data.count else { break }
 
-            let nextWord = String(
+            guard let nextWord = String(
                 bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: nwLen),
                 encoding: .utf8,
-            ) ?? ""
+            ) else {
+                pos += nwLen + ntLen
+                continue
+            }
             pos += nwLen
 
-            let nextTl = String(
+            guard let nextTl = String(
                 bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: ntLen),
                 encoding: .utf8,
-            ) ?? ""
+            ) else {
+                pos += ntLen
+                continue
+            }
             pos += ntLen
 
             entries.append(AssociationEntry(
@@ -196,8 +202,9 @@ final class AssociationBinaryReader: @unchecked Sendable {
 
     /// Check if an association entry passes the dictionary source filter
     /// Association bitmask uses 9 bits (kautian..khpoo), same order as dictionary bits 0-8
-    static func passesFilter(entryBitmask: UInt16, enabledMask: UInt16, allEnabled: Bool) -> Bool {
-        if allEnabled { return true }
+    static func passesFilter(entryBitmask: UInt16, enabledDicts: EnabledDictionaries) -> Bool {
+        if enabledDicts.allAssociationSourcesEnabled { return true }
+        let enabledMask = enabledDicts.associationBitmask()
         if enabledMask == 0 { return false }
         return (entryBitmask & enabledMask) != 0
     }

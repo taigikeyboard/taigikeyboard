@@ -6,7 +6,7 @@ import Foundation
 /// 底層使用 C++ MARISA-trie library 透過 C 橋接層存取。
 ///
 /// 支援多實例：每個 TrieService 實例管理一個獨立的 trie handle。
-/// `.shared` 繼續管理 dictionary.trie（使用舊 global API 維持相容）。
+/// `.shared` 繼續管理 dictionary.trie。
 final class TrieService: @unchecked Sendable {
     // MARK: - Constants
 
@@ -26,12 +26,10 @@ final class TrieService: @unchecked Sendable {
     private let fileName: String
     private let fileExtension: String
 
-    /// 用於保護初始化的序列佇列
-    private let initQueue = DispatchQueue(label: "com.taigikeyboard.trie.init")
-    private var isInitialized = false
-
-    /// Handle-based trie（-1 = 未載入）
-    private var handle: trie_handle_t = -1
+    /// 用於保護 isInitialized / handle 的序列佇列
+    private let stateQueue = DispatchQueue(label: "com.taigikeyboard.trie.state")
+    private var _isInitialized = false
+    private var _handle: trie_handle_t = -1
 
     // MARK: - Initialization
 
@@ -42,9 +40,18 @@ final class TrieService: @unchecked Sendable {
     }
 
     deinit {
-        if isInitialized, handle >= 0 {
-            trie_h_close(handle)
+        stateQueue.sync {
+            if _isInitialized, _handle >= 0 {
+                trie_h_close(_handle)
+            }
         }
+    }
+
+    // MARK: - State Access
+
+    /// Read current handle atomically; returns -1 if not initialized
+    private var currentHandle: trie_handle_t {
+        stateQueue.sync { _isInitialized ? _handle : -1 }
     }
 
     // MARK: - Public API
@@ -53,8 +60,8 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 是否成功載入
     @discardableResult
     func initialize() -> Bool {
-        initQueue.sync {
-            if isInitialized {
+        stateQueue.sync {
+            if _isInitialized {
                 return true
             }
 
@@ -66,15 +73,15 @@ final class TrieService: @unchecked Sendable {
             let h = trie_create(path)
 
             if h >= 0 {
-                handle = h
-                isInitialized = true
+                _handle = h
+                _isInitialized = true
                 let keyCount = trie_h_get_key_count(h)
                 logger.info("[INIT] Trie loaded: \(fileName).\(fileExtension), keys=\(keyCount)")
             } else {
                 logger.error("[INIT] Failed to load trie: \(fileName).\(fileExtension)")
             }
 
-            return isInitialized
+            return _isInitialized
         }
     }
 
@@ -84,7 +91,8 @@ final class TrieService: @unchecked Sendable {
     ///   - limit: 最大結果數
     /// - Returns: 匹配的 rowid 列表
     func prefixSearch(_ prefix: String, limit: Int = Constants.defaultSearchLimit) -> [Int] {
-        guard isInitialized, handle >= 0 else {
+        let h = currentHandle
+        guard h >= 0 else {
             logger.warning("[SEARCH] Trie not initialized")
             return []
         }
@@ -94,7 +102,7 @@ final class TrieService: @unchecked Sendable {
         }
 
         var results = [Int32](repeating: 0, count: limit)
-        let count = trie_h_prefix_search(handle, prefix, &results, Int32(limit))
+        let count = trie_h_prefix_search(h, prefix, &results, Int32(limit))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }
@@ -107,7 +115,8 @@ final class TrieService: @unchecked Sendable {
     /// - Parameter key: 要查詢的 key
     /// - Returns: 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
     func lookup(_ key: String) -> [Int] {
-        guard isInitialized, handle >= 0 else {
+        let h = currentHandle
+        guard h >= 0 else {
             logger.warning("[LOOKUP] Trie not initialized")
             return []
         }
@@ -116,9 +125,8 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        let maxResults = 1000
-        var results = [Int32](repeating: 0, count: maxResults)
-        let count = trie_h_lookup(handle, key, &results, Int32(maxResults))
+        var results = [Int32](repeating: 0, count: Constants.defaultSearchLimit)
+        let count = trie_h_lookup(h, key, &results, Int32(Constants.defaultSearchLimit))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }
@@ -129,16 +137,17 @@ final class TrieService: @unchecked Sendable {
 
     /// 檢查是否已初始化
     var isReady: Bool {
-        isInitialized && trie_h_is_loaded(handle)
+        let h = currentHandle
+        return h >= 0 && trie_h_is_loaded(h)
     }
 
     /// 釋放資源
     func close() {
-        initQueue.sync {
-            if isInitialized {
-                trie_h_close(handle)
-                handle = -1
-                isInitialized = false
+        stateQueue.sync {
+            if _isInitialized {
+                trie_h_close(_handle)
+                _handle = -1
+                _isInitialized = false
                 logger.info("[CLOSE] Trie closed: \(fileName).\(fileExtension)")
             }
         }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves the bundle containing dictionary resources.
 ///
-/// Dictionary files (dictionary.db, dictionary.trie) live only in the
+/// Dictionary files (dictionary.bin, association.bin, dictionary.trie) live only in the
 /// keyboard extension bundle to avoid duplication. When running inside
 /// the main app, this resolver locates the embedded .appex bundle.
 /// When running inside the extension, it returns the extension's own bundle.
