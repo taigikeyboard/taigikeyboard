@@ -406,6 +406,20 @@ Code review by Claude + Codex identified 10 issues across 3 severity levels. All
 
 ---
 
+## Code Quality Notes (2026-04-12)
+
+Post-cleanup 整體 review，記錄既有結構問題供後續改善參考。與 binary migration 無直接關係。
+
+| # | 問題 | 位置 | 建議 |
+|---|------|------|------|
+| Q1 | `EnabledDictionaries` 放在 `DictionaryRepository.swift` 但被 3 個檔案使用 | `DictionaryRepository.swift:4-65` | 抽成獨立 `EnabledDictionaries.swift` |
+| Q2 | `TrieService` 同時被當 singleton (`.shared`) 和普通 instance (`hanziTrieService`) 使用，生命週期不一致 | `TrieService.swift:19`, `LexiconService.swift:26` | 考慮去掉 `.shared`，由 `LexiconService` 統一管理 |
+| Q3 | `NextWordService` 標 `@unchecked Sendable` 但有 mutable 狀態 (`recordCounter`, `isUserTablesCreated`) 無同步保護 | `NextWordService.swift:57,461` | 目前 async 環境不會出事，但不嚴謹 |
+| Q4 | `DictionaryBinaryReader`/`AssociationBinaryReader` failable init 失敗時無 logging | `DictionaryBinaryReader.swift:45-84` | 加 `os_log` 或 `DebugLogger`，否則線上查不到失敗原因 |
+| Q5 | `query()` 和 `buildSearchResults()` 的 record 遍歷+過濾仍有重複 | `DictionaryRepository.swift` | 可接受的重複——兩個產出型別不同，強行統一反而降低可讀性 |
+
+---
+
 ## Future
 
 ### Android Migration
