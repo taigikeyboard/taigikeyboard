@@ -109,7 +109,7 @@ def encode_entry(row):
     next_tl_bytes = next_tl.encode("utf-8")
 
     return struct.pack(
-        f"<HIbb{len(next_word_bytes)}s{len(next_tl_bytes)}s",
+        f"<HIBB{len(next_word_bytes)}s{len(next_tl_bytes)}s",
         bitmask,
         count,
         len(next_word_bytes),
@@ -205,7 +205,7 @@ def build(logger):
 
         # Key section
         for i, (kb, entry_count) in enumerate(key_entries_data):
-            f.write(struct.pack("b", len(kb)))
+            f.write(struct.pack("B", len(kb)))
             f.write(kb)
             f.write(struct.pack("<IH", key_entry_offsets[i], entry_count))
 
@@ -261,7 +261,7 @@ def verify(logger):
 
     for i in range(key_count):
         koff = key_offsets[i]
-        prev_word_len = struct.unpack_from("b", data, koff)[0]
+        prev_word_len = struct.unpack_from("B", data, koff)[0]
         prev_word = data[koff + 1 : koff + 1 + prev_word_len].decode("utf-8")
         e_offset, e_count = struct.unpack_from("<IH", data, koff + 1 + prev_word_len)
 
@@ -284,7 +284,7 @@ def verify(logger):
         # Parse and compare each entry
         pos = e_offset
         for j, db_row in enumerate(db_rows):
-            bitmask, count_val, nw_len, nt_len = struct.unpack_from("<HIbb", data, pos)
+            bitmask, count_val, nw_len, nt_len = struct.unpack_from("<HIBB", data, pos)
             pos += 8
             next_word = data[pos : pos + nw_len].decode("utf-8")
             pos += nw_len

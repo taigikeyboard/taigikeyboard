@@ -106,7 +106,7 @@ def encode_record(row):
     tl_bytes = row["tl"].encode("utf-8")
 
     return struct.pack(
-        f"<HIbb{len(hanzi_bytes)}s{len(tl_bytes)}s",
+        f"<HIBB{len(hanzi_bytes)}s{len(tl_bytes)}s",
         bitmask,
         frequency,
         len(hanzi_bytes),
@@ -241,7 +241,7 @@ def verify(logger):
         rec_data = data[offset:rec_end]
 
         # Parse record
-        bitmask, frequency, hanzi_len, tl_len = struct.unpack_from("<HIbb", rec_data, 0)
+        bitmask, frequency, hanzi_len, tl_len = struct.unpack_from("<HIBB", rec_data, 0)
         pos = 8
         hanzi_bytes = rec_data[pos : pos + hanzi_len]
         pos += hanzi_len
