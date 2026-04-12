@@ -136,6 +136,7 @@ def main():
     dict_conn.close()
 
     hanzi_count = len(pairs) - romanization_count
+    assert hanzi_count > 0, "No hanzi keys generated — dictionary.db may be missing hanzi data"
     logger.info(f"Hanzi pairs: {hanzi_count}")
     logger.info(f"Total pairs: {len(pairs)}")
 
