@@ -69,8 +69,9 @@ class AssociationBinaryReader private constructor(
         index: Int,
         target: ByteArray,
     ): Int {
-        val keyOffset = keyOffsetAt(index)
-        if (keyOffset >= buffer.capacity()) return -1
+        val keyOffsetLong = keyOffsetAt(index)
+        if (keyOffsetLong >= buffer.capacity()) return -1
+        val keyOffset = keyOffsetLong.toInt() // safe after bounds check
 
         val keyLen = buffer.get(keyOffset).toInt() and 0xFF
         val keyStart = keyOffset + 1
@@ -87,10 +88,10 @@ class AssociationBinaryReader private constructor(
         return keyLen - target.size
     }
 
-    /** Get the absolute file offset of the key entry at given index */
-    private fun keyOffsetAt(index: Int): Int {
+    /** Get the absolute file offset of the key entry at given index (unsigned u32) */
+    private fun keyOffsetAt(index: Int): Long {
         val pos = HEADER_SIZE + index * 4
-        return buffer.getInt(pos)
+        return buffer.getInt(pos).toLong() and 0xFFFFFFFFL
     }
 
     /** Read entries for the key at given index */
@@ -98,8 +99,9 @@ class AssociationBinaryReader private constructor(
         keyIndex: Int,
         limit: Int,
     ): List<AssociationEntry> {
-        val keyOffset = keyOffsetAt(keyIndex)
-        if (keyOffset < 0 || keyOffset >= buffer.capacity()) return emptyList()
+        val keyOffsetLong = keyOffsetAt(keyIndex)
+        if (keyOffsetLong >= buffer.capacity()) return emptyList()
+        val keyOffset = keyOffsetLong.toInt() // safe after bounds check
 
         val keyLen = buffer.get(keyOffset).toInt() and 0xFF
 
@@ -107,10 +109,11 @@ class AssociationBinaryReader private constructor(
         val metaPos = keyOffset + 1 + keyLen
         if (metaPos + 6 > buffer.capacity()) return emptyList()
 
-        val entryOffset = buffer.getInt(metaPos)
+        val entryOffsetLong = buffer.getInt(metaPos).toLong() and 0xFFFFFFFFL
         val entryCount = buffer.getShort(metaPos + 4).toInt() and 0xFFFF
 
-        if (entryOffset < 0 || entryOffset > buffer.capacity()) return emptyList()
+        if (entryOffsetLong > buffer.capacity()) return emptyList()
+        val entryOffset = entryOffsetLong.toInt() // safe after bounds check
 
         val readCount = minOf(entryCount, limit)
         val entries = ArrayList<AssociationEntry>(readCount)
@@ -165,10 +168,12 @@ class AssociationBinaryReader private constructor(
         private val MAGIC = byteArrayOf(0x54, 0x4B, 0x57, 0x41) // "TKWA"
         private const val HEADER_SIZE = 20
         private const val SUPPORTED_VERSION = 1
+
         /** Strict UTF-8 decode: returns null on invalid bytes (matches iOS behavior) */
         private fun decodeUtf8Strict(bytes: ByteArray): String? =
             try {
-                Charsets.UTF_8.newDecoder()
+                Charsets.UTF_8
+                    .newDecoder()
                     .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
                     .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
                     .decode(java.nio.ByteBuffer.wrap(bytes))

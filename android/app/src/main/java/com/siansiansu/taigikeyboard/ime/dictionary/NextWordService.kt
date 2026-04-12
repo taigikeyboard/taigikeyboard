@@ -57,9 +57,11 @@ object NextWordService {
     // 超過上限時，刪除最低分的 N 筆
     private const val PRUNE_BATCH_SIZE = 5_000
 
-    private var associationReader: AssociationBinaryReader? = null
-    private var userDatabase: SQLiteDatabase? = null
-    private var isInitialized = false
+    @Volatile private var associationReader: AssociationBinaryReader? = null
+
+    @Volatile private var userDatabase: SQLiteDatabase? = null
+
+    @Volatile private var isInitialized = false
     private val initMutex = Mutex()
 
     // 記錄計數器（用於觸發清理檢查，AtomicInteger for thread safety）
@@ -328,10 +330,21 @@ object NextWordService {
     }
 
     /**
-     * Ensure databases are initialized
+     * Ensure databases are initialized.
+     *
+     * If the association binary reader is null after initial setup (e.g. LexiconService
+     * hasn't copied association.bin yet), subsequent calls retry opening it. This avoids
+     * permanently losing dictionary bigram predictions due to init ordering.
      */
     private suspend fun ensureInitialized(context: Context) {
-        if (isInitialized) return
+        if (isInitialized) {
+            // Lazy retry: if association reader was null at init time (LexiconService
+            // hadn't copied the file yet), try again now. Once loaded, no further retries.
+            if (associationReader == null) {
+                initAssociationReader(context)
+            }
+            return
+        }
 
         initMutex.withLock {
             if (isInitialized) return
@@ -345,7 +358,7 @@ object NextWordService {
 
                 // Only mark initialized if at least user db is ready.
                 // Association reader may be null if LexiconService hasn't copied
-                // the file yet — predict() handles null gracefully.
+                // the file yet — the lazy retry above will pick it up later.
                 isInitialized = userDatabase != null
 
                 if (BuildConfig.DEBUG) {

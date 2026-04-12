@@ -29,7 +29,7 @@ SQLite remains only for user-writable data: `user_frequency.db`, `user_associati
 | # | Decision | Rationale |
 |---|----------|-----------|
 | 1 | **Full SQLite elimination** for read-only data | dictionary + word_association both move to binary |
-| 2 | **dictionaryv2 folder** for new build pipeline | Full copy of `dictionary/`. Replace original when done. Zero risk to existing builds. |
+| 2 | **Separate build folder during migration** | Started as `dictionaryv2/` (copy of `dictionary/`). Now merged back to `dictionary/`. |
 | 3 | **Flat binary + mmap** (not encode in trie values) | Each row has ~6 trie keys. Encoding data in values would duplicate 6×. |
 | 4 | **Offset table + variable-length records** | O(1) rowid access. ~4.4 MB vs ~9.4 MB if fixed-size. |
 | 5 | **16-bit bitmask** for source flags | 13 flags + is_variant packed into u16. Bitwise AND replaces SQL WHERE. |
@@ -131,17 +131,17 @@ Entry section (sorted by count DESC within each key group):
 
 ## Stages
 
-### Stage 1: dictionaryv2 Build Pipeline
+### Stage 1: Build Pipeline (binary format)
 **Goal**: Produce .bin + hanzi.trie alongside existing .db  
 **Status**: Complete
 
-1. `cp -r dictionary dictionaryv2`
-2. New scripts in `dictionaryv2/build/`:
+1. Created as `dictionaryv2/` (copy of `dictionary/`), now merged back to `dictionary/`
+2. New scripts in `dictionary/build/`:
    - `10_create_dictionary_bin.py` → `output/dictionary.bin`
    - `11_create_association_bin.py` → `output/association.bin`
    - `12_create_hanzi_trie.py` → `output/hanzi.trie`
-3. Update `dictionaryv2/build.sh` — add 3 new build steps
-4. Update `dictionaryv2/build/06_deploy.sh` — deploy new files to iOS, keep .db for Android
+3. Update `dictionary/build.sh` — add 3 new build steps
+4. Update `dictionary/build/06_deploy.sh` — deploy new files to iOS, keep .db for Android
 5. Each script includes `--verify` mode (round-trip check against SQLite)
 
 **Critical constraints** (from Codex review):
@@ -285,9 +285,9 @@ Stages 1 and 2 are independent (can develop in parallel).
 ### New files
 | File | Stage |
 |------|-------|
-| `dictionaryv2/build/10_create_dictionary_bin.py` | 1 |
-| `dictionaryv2/build/11_create_association_bin.py` | 1 |
-| `dictionaryv2/build/12_create_hanzi_trie.py` | 1 |
+| `dictionary/build/10_create_dictionary_bin.py` | 1 |
+| `dictionary/build/11_create_association_bin.py` | 1 |
+| `dictionary/build/12_create_hanzi_trie.py` | 1 |
 | `ios/Resources/Dictionaries/dictionary.bin` | 1 |
 | `ios/Resources/Dictionaries/association.bin` | 1 |
 | `ios/Resources/Dictionaries/hanzi.trie` | 1 |
@@ -297,8 +297,8 @@ Stages 1 and 2 are independent (can develop in parallel).
 ### Modified files
 | File | Stage |
 |------|-------|
-| `dictionaryv2/build.sh` | 1 |
-| `dictionaryv2/build/06_deploy.sh` | 1, 6 |
+| `dictionary/build.sh` | 1 |
+| `dictionary/build/06_deploy.sh` | 1, 6 |
 | `ios/.../Trie/marisa_bridge.h` | 2 |
 | `ios/.../Trie/marisa_bridge.cpp` | 2 |
 | `ios/.../Trie/TrieService.swift` | 3 |
@@ -363,7 +363,7 @@ NextWord prediction
 
 ### Key implementation details for Android port
 - **Binary formats are platform-independent** — same .bin/.trie files work on both platforms
-- **Build pipeline** (`dictionaryv2/`) already produces files for both platforms
+- **Build pipeline** (`dictionary/`) already produces files for both platforms
 - **C bridge** handle-based API already exists — Android JNI can use same pattern
 - **Android needs**: Kotlin equivalents of `DictionaryBinaryReader` and `AssociationBinaryReader`
   - Use `FileChannel.map()` for mmap (or `AssetFileDescriptor` for direct APK mmap)
@@ -431,7 +431,7 @@ hanzi.trie（1.1MB）是獨立的漢字前綴搜尋 trie，只有設定頁 Tab3 
 
 ### Design Decision
 
-`04_create_trie.py` 從 `dictionary.db` 讀取 hanzi 資料（第二個 DB connection），不修改 `trie.db` schema。理由：trie.db 是羅馬字專用的 staging table，加 hanzi 欄位會連帶影響 `03_create_trie_db.sh` 和 `08_split_packages.py`。
+`04_create_trie.py` 從 `dictionary.db` 讀取 hanzi 資料（第二個 DB connection），不修改 `trie.db` schema。理由：trie.db 是羅馬字專用的 staging table，加 hanzi 欄位會連帶影響 `03_create_trie_db.sh`。
 
 ### Steps
 
@@ -453,10 +453,10 @@ hanzi.trie（1.1MB）是獨立的漢字前綴搜尋 trie，只有設定頁 Tab3 
 
 | File | Action |
 |------|--------|
-| `dictionaryv2/build/04_create_trie.py` | Modified — add hanzi key generation |
-| `dictionaryv2/build.sh` | Modified — remove step 8 |
-| `dictionaryv2/build/06_deploy.sh` | Modified — remove hanzi.trie deploy |
-| `dictionaryv2/build/12_create_hanzi_trie.py` | Deleted |
+| `dictionary/build/04_create_trie.py` | Modified — add hanzi key generation |
+| `dictionary/build.sh` | Modified — remove step 8 |
+| `dictionary/build/06_deploy.sh` | Modified — remove hanzi.trie deploy |
+| `dictionary/build/12_create_hanzi_trie.py` | Deleted |
 | `ios/.../Models/LexiconConstants.swift` | Modified — add hanzi prefix |
 | `ios/.../Database/DictionaryRepository.swift` | Modified — remove hanziTrieService |
 | `ios/.../Services/LexiconService.swift` | Modified — remove hanziTrieService |

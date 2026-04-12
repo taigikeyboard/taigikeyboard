@@ -7,19 +7,22 @@
 2. 移除前綴連字符：--xxx -> xxx
 3. 移除省略號：tsû...... -> tsû
 4. 剔除俚語（漢字含全形標點符號）
-5. 剔除含非法字符的 TL（使用 KeSi kam_haphuat 驗證）
+5. 剔除含非法字符的 TL（嘗試 TL→POJ 轉換驗證）
 6. 剔除無效的 hanzi（含 '.'、連續空格、'?'、Tab、大括號、單獨括號）
 6.5. 清空包含羅馬字的 hanzi（含拉丁字母或台語聲調符號，保留該筆資料）
 7. 移除 tl 為空的列（保留 hanzi 為空的詞條，因為台語常見純羅馬字詞）
-8. 移除過長詞條（使用 KeSi thianji() 計算音節數，預設 4+ 音節）
+8. 移除過長詞條（預設 4+ 音節）
 9. 正規化羅馬字（空格轉連字符、轉小寫）
 10. 去重複（hanzi + tl）
-11. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
+11. 剔除漢羅字數不符的資料（漢字數 vs TL 音節數比對）
 """
 
 import re
+import unicodedata
+
 import pandas as pd
-from kesi import kam_haphuat, Ku, TuiBeTse, normalize_taibun
+
+from .taigi_bridge import is_valid_romanization, normalize_taibun
 
 BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]")
 PROVERB_PUNCTUATION = "，。！；？、"
@@ -30,16 +33,11 @@ BRACKET_COLUMNS = ["hanzi", "tl", "poj", "tl_num", "poj_num", "tl_notone", "poj_
 
 
 def count_syllables(text):
-    """使用 KeSi thianji() 計算音節數"""
+    """計算音節數（以連字符和空白分割）"""
     if pd.isna(text) or not str(text).strip():
         return 0
-    try:
-        ku = Ku(str(text).strip())
-        return len(list(ku.thianji()))
-    except Exception:
-        # KeSi 無法解析時，fallback 到簡單分割
-        syllables = re.split(r"[\s\-]+", str(text).strip())
-        return len([s for s in syllables if s])
+    syllables = re.split(r"[\s\-]+", str(text).strip())
+    return len([s for s in syllables if s])
 
 
 def clean_brackets(text):
@@ -81,7 +79,7 @@ def normalize_roman(text, preserve_spaces=False):
     """
     if pd.isna(text):
         return text
-    text = normalize_taibun(str(text))  # Unicode NFC + 教育部造字碼轉換
+    text = normalize_taibun(str(text))
     text = text.replace("\u3000", " " if preserve_spaces else "-")
     if not preserve_spaces:
         text = text.replace(" ", "-")
@@ -97,22 +95,17 @@ def is_proverb(hanzi):
 
 def is_valid_tl(text):
     """
-    使用 KeSi kam_haphuat 檢查 TL 欄位是否為合法羅馬字
-    支援 KIP、POJ、數字調
+    使用 taigi-converter parseSyllable 驗證 TL 是否為合法羅馬字
     """
     if pd.isna(text) or str(text).strip() == "":
         return False
-    # 分割音節後逐一驗證
-    for syllable in re.split(r"[\s\-]+", str(text).strip()):
-        if syllable and not kam_haphuat(syllable):
-            return False
-    return True
+    return is_valid_romanization(str(text).strip())
 
 
 def is_hanlo_matched(hanzi, tl):
     """
-    使用 KeSi 檢查漢字和羅馬字字數是否相符
-    若字數不符會拋出 TuiBeTse 例外
+    檢查漢字和羅馬字字數是否相符
+    漢字字數（不含標點空白）應等於 TL 音節數
     """
     if pd.isna(hanzi) or pd.isna(tl):
         return True
@@ -120,14 +113,12 @@ def is_hanlo_matched(hanzi, tl):
     tl_str = str(tl).strip()
     if hanzi_str == "" or tl_str == "":
         return True
-    try:
-        Ku(hanlo=hanzi_str, lomaji=tl_str)
-        return True
-    except TuiBeTse:
-        return False
-    except Exception:
-        # 其他例外（如格式錯誤）視為不符
-        return False
+    # 計算漢字字數（排除空白和連字符）
+    hanzi_chars = [c for c in hanzi_str if c not in " \u3000-"]
+    hanzi_count = len(hanzi_chars)
+    # 計算 TL 音節數
+    tl_count = count_syllables(tl_str)
+    return hanzi_count == tl_count
 
 
 def is_valid_hanzi(text):
@@ -304,7 +295,7 @@ def cleanup_dataframe(df, logger=None, max_syllables=DEFAULT_MAX_SYLLABLES, chec
     if removed > 0 and logger:
         logger.info(f"  Removed duplicates (hanzi+tl): {removed}")
 
-    # 11. 剔除漢羅字數不符的資料（使用 KeSi TuiBeTse 驗證）
+    # 11. 剔除漢羅字數不符的資料（漢字數 vs TL 音節數比對）
     hanlo_matched_mask = df.apply(lambda row: is_hanlo_matched(row["hanzi"], row["tl"]), axis=1)
     hanlo_mismatch_count = (~hanlo_matched_mask).sum()
     if hanlo_mismatch_count > 0 and logger:

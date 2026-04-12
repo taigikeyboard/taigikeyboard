@@ -51,7 +51,7 @@ class DictionaryBinaryReader private constructor(
                 buffer.capacity().toLong()
             }
 
-        if (recordOffset < 0 || recordEnd <= recordOffset || recordEnd > buffer.capacity()) {
+        if (recordEnd <= recordOffset || recordEnd > buffer.capacity()) {
             return null
         }
 
@@ -101,10 +101,12 @@ class DictionaryBinaryReader private constructor(
         private const val HEADER_SIZE = 16
         private const val SUPPORTED_VERSION = 1
         private const val MIN_RECORD_SIZE = 8 // bitmask(2) + frequency(4) + hanzi_len(1) + tl_len(1)
+
         /** Strict UTF-8 decode: returns null on invalid bytes (matches iOS behavior) */
         private fun decodeUtf8Strict(bytes: ByteArray): String? =
             try {
-                Charsets.UTF_8.newDecoder()
+                Charsets.UTF_8
+                    .newDecoder()
                     .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
                     .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
                     .decode(java.nio.ByteBuffer.wrap(bytes))

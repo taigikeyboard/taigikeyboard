@@ -3,7 +3,7 @@
 ## Context
 
 iOS binary migration is complete (Stages 1–7 + post-review). Bundle size: 48 MB → 12.7 MB (−73%).
-Build pipeline (`dictionaryv2/`) already produces all binary files.
+Build pipeline (`dictionary/`) already produces all binary files.
 Android currently still uses `dictionary.db` (44 MB SQLite) for read-only lookups.
 
 **Goal**: Port the binary mmap format to Android. Same binary files, same data flow, Kotlin equivalents.
@@ -88,7 +88,7 @@ Same as iOS — see `IOS_MIGRATION_PLAN.md` for full specs. Key points:
 **Status**: Complete
 **Depends on**: iOS Stage 1 (build pipeline, already complete)
 
-1. Update `dictionaryv2/build/06_deploy.sh`:
+1. Update `dictionary/build/06_deploy.sh`:
    - Add `cp dictionary.bin` and `cp association.bin` to Android assets
    - Keep `dictionary.db` for now (removed in Stage F)
    - Log file sizes for both platforms
@@ -102,7 +102,7 @@ Same as iOS — see `IOS_MIGRATION_PLAN.md` for full specs. Key points:
 **Test**: Run build. All 4 files present in Android assets. `dictionary.trie` has `hanzi:` keys.
 
 **Files**:
-- `dictionaryv2/build/06_deploy.sh`
+- `dictionary/build/06_deploy.sh`
 
 ---
 
@@ -292,7 +292,7 @@ fun sourceBitmask(): Int {
 1. Remove `dictionary.db` from `android/app/src/main/assets/`
 2. Remove dictionary.db asset copy logic from LexiconService (should already be done in Stage D)
 3. Remove dictionary.db version file (`dictionary_app_version.txt`) logic — replace with binary version file
-4. Update `dictionaryv2/build/06_deploy.sh`:
+4. Update `dictionary/build/06_deploy.sh`:
    - Remove `dictionary.db` copy to Android
    - Update comments
 5. Optional: Add `noCompress` to `build.gradle.kts` for `.bin` and `.trie` files:
@@ -307,7 +307,7 @@ fun sourceBitmask(): Int {
 
 **Files**:
 - `android/app/src/main/assets/dictionary.db` (DELETED)
-- `dictionaryv2/build/06_deploy.sh`
+- `dictionary/build/06_deploy.sh`
 - `android/app/build.gradle.kts` (optional noCompress)
 
 ---
@@ -348,7 +348,7 @@ Stage A (Deploy Files)       Stage B (EnabledDictionaries)
 ### Modified files
 | File | Stage |
 |------|-------|
-| `dictionaryv2/build/06_deploy.sh` | A, F |
+| `dictionary/build/06_deploy.sh` | A, F |
 | `android/.../dictionary/DictionaryConstants.kt` | B |
 | `android/.../dictionary/DictionaryModels.kt` | B |
 | `android/.../dictionary/LexiconService.kt` | B, D |
@@ -372,7 +372,7 @@ Stage A (Deploy Files)       Stage B (EnabledDictionaries)
 | Filter 3 layers | variant → khiin → source OR | variant → khiin → source OR | ✓ |
 | `limit * 2` over-fetch | Yes | Yes (preserved) | ✓ |
 | Binary format | platform-independent | same files | ✓ |
-| Build pipeline | dictionaryv2/ | dictionaryv2/ (same) | ✓ |
+| Build pipeline | dictionary/ | dictionary/ (same) | ✓ |
 
 ---
 
