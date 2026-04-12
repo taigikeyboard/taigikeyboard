@@ -9,9 +9,23 @@ for TL/POJ conversion and tone number operations.
 import json
 import os
 import subprocess
+import unicodedata
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 _BATCH_SCRIPT = os.path.join(_SCRIPT_DIR, "taigi_batch.js")
+
+# MOE 教育部造字碼 → Unicode 正式碼位（from KeSi normalize_kautian）
+_MOE_CHAR_MAP = {
+    "\uE701": "\U0002A736",  # 𪜶
+    "\uF5E9": "\U0002B74F",  # 𫝏
+    "\uE35C": "\U0002B75B",  # 𫝛
+    "\uF5EA": "\U0002B77A",  # 𫝺
+    "\uF5EE": "\U0002B77B",  # 𫝻
+    "\uE703": "\U0002B7BC",  # 𫞼
+    "\uF5EF": "\U0002B7C2",  # 𫟂
+    "\uE705": "\U0002C9B0",  # 𬦰
+    "\uF5E7": "\U000308FB",  # 𰣻
+}
 
 
 class TaigiConverter:
@@ -84,3 +98,19 @@ def to_tone_number(text: str, system: str = "tl") -> str:
         return _converter.to_tone_number(text, system)
     except Exception:
         return text
+
+
+def is_valid_romanization(text: str) -> bool:
+    """Check if text is valid TL/POJ romanization (phonological validation)."""
+    try:
+        result = _converter._call("validate", text=text)
+        return result.get("result", False)
+    except Exception:
+        return False
+
+
+def normalize_taibun(text: str) -> str:
+    """Unicode NFC normalization + MOE 教育部造字碼 remapping."""
+    for pua, uni in _MOE_CHAR_MAP.items():
+        text = text.replace(pua, uni)
+    return unicodedata.normalize("NFC", text)

@@ -22,7 +22,7 @@ import unicodedata
 
 import pandas as pd
 
-from .taigi_bridge import convert_tl_to_poj
+from .taigi_bridge import is_valid_romanization, normalize_taibun
 
 BRACKET_PATTERN = re.compile(r"[（(〈《「『【\[].*?[）)〉》」』】\]]")
 PROVERB_PUNCTUATION = "，。！；？、"
@@ -79,7 +79,7 @@ def normalize_roman(text, preserve_spaces=False):
     """
     if pd.isna(text):
         return text
-    text = unicodedata.normalize("NFC", str(text))
+    text = normalize_taibun(str(text))
     text = text.replace("\u3000", " " if preserve_spaces else "-")
     if not preserve_spaces:
         text = text.replace(" ", "-")
@@ -95,27 +95,11 @@ def is_proverb(hanzi):
 
 def is_valid_tl(text):
     """
-    檢查 TL 欄位是否為合法羅馬字
-    嘗試 TL→POJ 轉換，若結果不變且不含非羅馬字字元則為合法
+    使用 taigi-converter parseSyllable 驗證 TL 是否為合法羅馬字
     """
     if pd.isna(text) or str(text).strip() == "":
         return False
-    text = str(text).strip()
-    # 分割音節後逐一驗證：每個音節應只含 ASCII 字母、數字、或 TL 調號
-    for syllable in re.split(r"[\s\-]+", text):
-        if not syllable:
-            continue
-        # 嘗試轉換；若結果為空或 None 則無效
-        try:
-            result = convert_tl_to_poj(syllable)
-            if not result:
-                return False
-        except Exception:
-            return False
-        # 含有非拉丁字元（日文、中文等）則無效
-        if re.search(r"[\u3000-\u9fff\uf900-\ufaff]", syllable):
-            return False
-    return True
+    return is_valid_romanization(str(text).strip())
 
 
 def is_hanlo_matched(hanzi, tl):

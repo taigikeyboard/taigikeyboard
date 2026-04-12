@@ -2,13 +2,14 @@
  * Persistent Node.js subprocess for taigi-converter bridge.
  *
  * Protocol: reads one JSON line from stdin, writes one JSON line to stdout.
- * Operations: convert, toToneNumber
+ * Operations: convert, toToneNumber, validate
  */
 
-const { convert, toToneNumber } = require("../../taigi-converter/src/index.js");
-const readline = require("readline");
+import { convert, toToneNumber } from "../../taigi-converter/src/converter.js";
+import { parseSyllable } from "../../taigi-converter/src/phonetics.js";
+import { createInterface } from "readline";
 
-const rl = readline.createInterface({ input: process.stdin });
+const rl = createInterface({ input: process.stdin });
 
 rl.on("line", (line) => {
   try {
@@ -21,6 +22,20 @@ rl.on("line", (line) => {
       case "toToneNumber":
         result = toToneNumber(req.text, req.system || "tl");
         break;
+      case "validate": {
+        const syllables = req.text.split(/[\s-]+/).filter(Boolean);
+        let valid = syllables.length > 0;
+        for (const s of syllables) {
+          try {
+            parseSyllable(s);
+          } catch {
+            valid = false;
+            break;
+          }
+        }
+        result = valid;
+        break;
+      }
       default:
         result = req.text;
     }
