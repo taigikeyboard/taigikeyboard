@@ -379,6 +379,33 @@ NextWord prediction
 
 ---
 
+## Post-Review Cleanup (2026-04-12)
+
+Code review by Claude + Codex identified 10 issues across 3 severity levels. All fixed.
+
+### Fixes Applied
+
+| # | Severity | Fix | Commit |
+|---|----------|-----|--------|
+| H1 | High | AssociationBinaryReader: Add bounds validation for `keyOffset`, `metaPos`, `entryOffset` — prevents out-of-bounds on corrupt files | `7b8cc40` |
+| M1 | Medium | marisa_bridge: Remove dead global trie API (`g_trie`, `trie_load`, etc.) — 160 lines deleted, only handle-based API remains | `7b8cc40` |
+| M2+M3 | Medium | DictionaryRepository: Extract `lookupRowIds()` — eliminates duplicated trie lookup pattern between `query()` and `searchWithSources()` | `0fcaef5` |
+| M4 | Medium | Centralize bitmask: Add `EnabledDictionaries.associationBitmask()`, remove `NextWordService.buildDictBitmask()` duplicate | `0c93e93` |
+| M6 | Medium | Python build scripts: `struct.pack('b')` → `'B'` for length fields (signed → unsigned byte, matches u8 spec) | `a4f7780` |
+| L1 | Low | DictionaryBinaryReader: Name magic bitmask constants (`khiinBit`, `devBit`, `variantBit`) | `66b889f` |
+| L2 | Low | DictionaryRepository: `.map(\.self)` → `Array(...)` for ArraySlice conversion | `0fcaef5` |
+| L3 | Low | TrieService: Add `deinit` to release trie handle, prevents C bridge handle leak | `66b889f` |
+| L5 | Low | Remove unused `EnabledDictionaries.allDisabled` | `0c93e93` |
+
+### Not Fixed (acceptable as-is)
+
+| # | Issue | Reason |
+|---|-------|--------|
+| M5 | C bridge `g_tries[]` thread safety | Trie creation only happens on a single `DispatchQueue` during init — no real race condition |
+| L4 | Python `setup_logging()` / `get_build_timestamp()` duplication | Low impact, would require restructuring `common/` module for 3 scripts |
+
+---
+
 ## Future
 
 ### Android Migration
