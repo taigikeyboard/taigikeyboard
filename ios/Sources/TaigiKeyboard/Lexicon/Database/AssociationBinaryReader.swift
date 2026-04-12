@@ -50,8 +50,8 @@ final class AssociationBinaryReader: @unchecked Sendable {
             return nil
         }
 
-        self.data = mappedData
-        self.basePtr = (data as NSData).bytes
+        data = mappedData
+        basePtr = (data as NSData).bytes
 
         // Validate magic
         let magicBytes = UnsafeRawBufferPointer(start: basePtr, count: 4)
@@ -65,9 +65,9 @@ final class AssociationBinaryReader: @unchecked Sendable {
         }
 
         let kc = basePtr.loadUnaligned(fromByteOffset: 8, as: UInt32.self)
-        self.keyCount = Int(kc)
+        keyCount = Int(kc)
         // entry_count at offset 12 (not needed at runtime)
-        self.buildTimestamp = basePtr.loadUnaligned(fromByteOffset: 16, as: UInt32.self)
+        buildTimestamp = basePtr.loadUnaligned(fromByteOffset: 16, as: UInt32.self)
 
         let minSize = Self.headerSize + keyCount * 4
         guard data.count >= minSize else {
@@ -109,8 +109,12 @@ final class AssociationBinaryReader: @unchecked Sendable {
     /// Returns: negative if key < target, 0 if equal, positive if key > target
     private func compareKeyAt(index: Int, with target: [UInt8]) -> Int {
         let keyOffset = keyOffsetAt(index)
+        guard keyOffset >= 0, keyOffset < data.count else { return -1 }
+
         let keyLen = Int(basePtr.load(fromByteOffset: keyOffset, as: UInt8.self))
         let keyStart = keyOffset + 1
+
+        guard keyStart + keyLen <= data.count else { return -1 }
 
         // Compare byte by byte
         let cmpLen = min(keyLen, target.count)
@@ -133,12 +137,18 @@ final class AssociationBinaryReader: @unchecked Sendable {
     /// Read entries for the key at given index
     private func readEntries(atKeyIndex index: Int, limit: Int) -> [AssociationEntry] {
         let keyOffset = keyOffsetAt(index)
+        guard keyOffset >= 0, keyOffset < data.count else { return [] }
+
         let keyLen = Int(basePtr.load(fromByteOffset: keyOffset, as: UInt8.self))
 
         // After prev_word: entry_offset (u32) + entry_count (u16)
         let metaPos = keyOffset + 1 + keyLen
+        guard metaPos + 6 <= data.count else { return [] }
+
         let entryOffset = Int(basePtr.loadUnaligned(fromByteOffset: metaPos, as: UInt32.self))
         let entryCount = Int(basePtr.loadUnaligned(fromByteOffset: metaPos + 4, as: UInt16.self))
+
+        guard entryOffset >= 0, entryOffset <= data.count else { return [] }
 
         let readCount = min(entryCount, limit)
         var entries: [AssociationEntry] = []
@@ -161,13 +171,13 @@ final class AssociationBinaryReader: @unchecked Sendable {
 
             let nextWord = String(
                 bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: nwLen),
-                encoding: .utf8
+                encoding: .utf8,
             ) ?? ""
             pos += nwLen
 
             let nextTl = String(
                 bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: ntLen),
-                encoding: .utf8
+                encoding: .utf8,
             ) ?? ""
             pos += ntLen
 
