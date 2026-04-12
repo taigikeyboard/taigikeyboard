@@ -58,6 +58,9 @@ enum Tab1Texts {
     static let versionHistory = LocalizedText(hanji: "版本紀錄")
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [LocalizedText])] = [
+        ("3.4.9", "2026/04/12", [
+            LocalizedText(hanji: "Reduced iOS app size by 73% (48 MB → 13 MB)."),
+        ]),
         ("3.4.8", "2026/04/11", [
             LocalizedText(hanji: "Fixed an issue where app storage grew excessively over time."),
         ]),
