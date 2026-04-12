@@ -1,27 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 羅馬字轉換相關函數
+
+使用 taigi-converter (Node.js subprocess) 進行 TL↔POJ 轉換和聲調處理。
 """
 
-from kesi import Ku
-from kesi.susia.kongke import tsuan_sooji_tiau
-
-
-def convert_tl_to_poj(tl: str) -> str:
-    """
-    將 TL 轉換為 POJ
-
-    Args:
-        tl: TL 羅馬字
-
-    Returns:
-        POJ 羅馬字（轉換失敗時回傳原值）
-    """
-    try:
-        ku = Ku(tl)
-        return ku.POJ().hanlo
-    except Exception:
-        return tl
+from .taigi_bridge import convert_tl_to_poj, to_tone_number
 
 
 def normalize_roman(text: str, preserve_spaces: bool = False) -> str:
@@ -47,12 +31,13 @@ def _to_numeric_tone_word(roman: str, ascii_only: bool = False) -> str:
 
     Args:
         roman: 單一 word 的羅馬字（如 "m̄-bat" 或 "phàu"）
-        ascii_only: 是否只使用 ASCII 字元
+        ascii_only: 是否只使用 ASCII 字元（POJ 用）
 
     Returns:
         數字聲調版本（無連字符），如 "m7bat4" 或 "phau3"
     """
-    result = tsuan_sooji_tiau(roman, ascii=ascii_only).lower()
+    system = "poj" if ascii_only else "tl"
+    result = to_tone_number(roman, system=system).lower()
 
     # 分割音節，檢查每個音節是否有聲調數字
     syllables = result.split("-")
