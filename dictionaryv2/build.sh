@@ -54,67 +54,61 @@ do_clean() {
 
 # Step 1: Merge CSV
 do_merge_csv() {
-    print_step "Step 1/11: Merging dictionaries..."
+    print_step "Step 1/10: Merging dictionaries..."
     python3 "$BUILD_DIR/01_merge_csv.py"
 }
 
 # Step 2: Create App DB
 do_create_app_db() {
-    print_step "Step 2/11: Creating App SQLite database..."
+    print_step "Step 2/10: Creating App SQLite database..."
     bash "$BUILD_DIR/02_create_app_db.sh"
 }
 
 # Step 3: Generate Association
 do_generate_association() {
-    print_step "Step 3/11: Generating NextWord associations..."
+    print_step "Step 3/10: Generating NextWord associations..."
     python3 "$BUILD_DIR/05_generate_association.py"
 }
 
 # Step 4: Create Trie DB
 do_create_trie_db() {
-    print_step "Step 4/11: Creating Trie SQLite database..."
+    print_step "Step 4/10: Creating Trie SQLite database..."
     bash "$BUILD_DIR/03_create_trie_db.sh"
 }
 
 # Step 5: Create Trie
 do_create_trie() {
-    print_step "Step 5/11: Creating MARISA-trie..."
+    print_step "Step 5/10: Creating MARISA-trie..."
     python3 "$BUILD_DIR/04_create_trie.py"
 }
 
 # Step 6: Create dictionary.bin
 do_create_dictionary_bin() {
-    print_step "Step 6/11: Creating dictionary.bin..."
+    print_step "Step 6/10: Creating dictionary.bin..."
     python3 "$BUILD_DIR/10_create_dictionary_bin.py" --verify
 }
 
 # Step 7: Create association.bin
 do_create_association_bin() {
-    print_step "Step 7/11: Creating association.bin..."
+    print_step "Step 7/10: Creating association.bin..."
     python3 "$BUILD_DIR/11_create_association_bin.py" --verify
 }
 
-# Step 8: Create hanzi.trie
-do_create_hanzi_trie() {
-    print_step "Step 8/11: Creating hanzi.trie..."
-    python3 "$BUILD_DIR/12_create_hanzi_trie.py" --verify
-}
-
-# Step 9: Audit
+# Step 8: Audit
 do_audit() {
-    print_step "Step 9/11: Running audit report..."
+    print_step "Step 8/10: Running audit report..."
     python3 "$BUILD_DIR/07_audit.py"
 }
 
-# Step 10: Split Packages
+# Step 9: Split Packages
 do_split_packages() {
-    print_step "Step 10/11: Splitting into per-dictionary packages..."
+    print_step "Step 9/10: Splitting into per-dictionary packages..."
     python3 "$BUILD_DIR/08_split_packages.py"
 }
 
-# Step 11: Deploy
+# Step 10: Deploy
 do_deploy() {
-    print_step "Step 11/11: Deploying to Android/iOS..."
+    print_step "Step 10/10: Deploying to Android/iOS..."
     bash "$BUILD_DIR/06_deploy.sh"
 }
 
@@ -132,7 +126,6 @@ do_build() {
     do_create_trie
     do_create_dictionary_bin
     do_create_association_bin
-    do_create_hanzi_trie
     do_audit
     do_split_packages
 }

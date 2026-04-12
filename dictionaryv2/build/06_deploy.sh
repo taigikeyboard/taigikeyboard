@@ -4,10 +4,9 @@
 #
 # 輸入：
 #   - output/dictionary.db      (Android: 完整 DB / iOS: 暫時保留)
-#   - output/dictionary.trie    (雙平台共用)
+#   - output/dictionary.trie    (雙平台共用，含 tl:/poj:/hanzi: keys)
 #   - output/dictionary.bin     (iOS only: binary mmap 格式)
 #   - output/association.bin    (iOS only: word_association binary)
-#   - output/hanzi.trie         (iOS only: 漢字前綴搜尋)
 # 輸出：
 #   - android/app/src/main/assets/
 #   - ios/Resources/Dictionaries/
@@ -22,7 +21,6 @@ DB_FILE="$OUTPUT_DIR/dictionary.db"
 TRIE_FILE="$OUTPUT_DIR/dictionary.trie"
 DICT_BIN="$OUTPUT_DIR/dictionary.bin"
 ASSOC_BIN="$OUTPUT_DIR/association.bin"
-HANZI_TRIE="$OUTPUT_DIR/hanzi.trie"
 ANDROID_DEST="$BASE_DIR/../android/app/src/main/assets"
 IOS_DEST="$BASE_DIR/../ios/Resources/Dictionaries"
 
@@ -43,7 +41,7 @@ if [ ! -f "$TRIE_FILE" ]; then
     exit 1
 fi
 
-for f in "$DICT_BIN" "$ASSOC_BIN" "$HANZI_TRIE"; do
+for f in "$DICT_BIN" "$ASSOC_BIN"; do
     if [ ! -f "$f" ]; then
         echo "[ERROR] Binary file not found: $f"
         exit 1
@@ -80,9 +78,6 @@ echo "  - dictionary.bin   ($(du -h "$DICT_BIN" | cut -f1))"
 
 cp "$ASSOC_BIN" "$IOS_DEST/"
 echo "  - association.bin  ($(du -h "$ASSOC_BIN" | cut -f1))"
-
-cp "$HANZI_TRIE" "$IOS_DEST/"
-echo "  - hanzi.trie       ($(du -h "$HANZI_TRIE" | cut -f1))"
 
 echo ""
 echo "[INFO] Done!"

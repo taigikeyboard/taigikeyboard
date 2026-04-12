@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 trie.db 建立 MARISA-trie
+從 trie.db + dictionary.db 建立 MARISA-trie
 
-輸入：output/trie.db
+輸入：output/trie.db, output/dictionary.db
 輸出：output/dictionary.trie
 
 Key 格式（前綴式）：
@@ -13,6 +13,7 @@ Key 格式（前綴式）：
 - poj:<poj_notone>：POJ 去調（如 poj:ho-se）
 - tl:<tl_abbrev>：TL 縮寫（如 tl:hs）
 - poj:<poj_abbrev>：POJ 縮寫（如 poj:hs）
+- hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
 
 Value：SQLite rowid（對應 dictionary.db 的 id）
 """
@@ -30,6 +31,7 @@ BASE_DIR = os.path.dirname(SCRIPT_DIR)
 
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 DB_FILE = os.path.join(OUTPUT_DIR, "trie.db")
+DICT_DB_FILE = os.path.join(OUTPUT_DIR, "dictionary.db")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "dictionary.trie")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 SCRIPT_NAME = "03_create_trie"
@@ -81,6 +83,7 @@ def main():
     # 建立 key-value pairs（前綴式）
     TL_PREFIX = "tl:"
     POJ_PREFIX = "poj:"
+    HANZI_PREFIX = "hanzi:"
 
     pairs = []
     seen_keys = set()
@@ -108,7 +111,33 @@ def main():
                 if val:
                     add_pair(POJ_PREFIX + val, rowid)
 
-    logger.info(f"Generated {len(pairs)} key-value pairs")
+    romanization_count = len(pairs)
+    logger.info(f"Romanization pairs: {romanization_count}")
+
+    # Hanzi keys（from dictionary.db）
+    if not os.path.exists(DICT_DB_FILE):
+        logger.error(f"Dictionary database not found: {DICT_DB_FILE}")
+        sys.exit(1)
+
+    dict_conn = sqlite3.connect(DICT_DB_FILE)
+    dict_conn.row_factory = sqlite3.Row
+    dict_cursor = dict_conn.cursor()
+
+    dict_cursor.execute(
+        "SELECT id, hanzi FROM dictionary "
+        "WHERE hanzi IS NOT NULL AND hanzi != '' "
+        "ORDER BY id"
+    )
+    hanzi_rows = dict_cursor.fetchall()
+
+    for row in hanzi_rows:
+        add_pair(HANZI_PREFIX + row["hanzi"], row["id"])
+
+    dict_conn.close()
+
+    hanzi_count = len(pairs) - romanization_count
+    logger.info(f"Hanzi pairs: {hanzi_count}")
+    logger.info(f"Total pairs: {len(pairs)}")
 
     # 建立 MARISA-trie
     trie = marisa_trie.RecordTrie("<I", pairs)
@@ -124,7 +153,7 @@ def main():
 
     # 測試查詢
     logger.info(f"\n  [test queries]")
-    test_keys = ["tl:gua", "tl:gua2", "poj:goa", "poj:goa2", "tl:gh"]
+    test_keys = ["tl:gua", "tl:gua2", "poj:goa", "poj:goa2", "tl:gh", "hanzi:好", "hanzi:台"]
     for key in test_keys:
         if key in trie:
             results = trie[key]
