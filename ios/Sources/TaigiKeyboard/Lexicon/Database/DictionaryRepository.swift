@@ -34,17 +34,12 @@ struct EnabledDictionaries {
         )
     }
 
-    /// 是否全部關閉
-    var allDisabled: Bool {
-        !kautian && !taigitv && !kungge && !itaigi && !taijit && !taihoa && !sitbut && !stti && !khpoo && !lkk
-    }
-
-    /// 是否全部開啟
+    /// 是否全部開啟（9 個主要來源 + lkk）
     var allEnabled: Bool {
         kautian && taigitv && kungge && itaigi && taijit && taihoa && sitbut && stti && khpoo && lkk
     }
 
-    /// 轉換為 bitmask（bits 0-8 對應 9 個來源 + bit 9 lkk）
+    /// 轉換為 dictionary bitmask（bits 0-11）
     /// Bit layout 必須與 dictionary.bin 一致
     func sourceBitmask() -> UInt16 {
         var mask: UInt16 = 0
@@ -61,6 +56,16 @@ struct EnabledDictionaries {
         // dev = bit 10 (always included)
         if lkk { mask |= 1 << 11 }
         return mask
+    }
+
+    /// 轉換為 association bitmask（bits 0-8，對應 association.bin 的 9 個來源）
+    func associationBitmask() -> UInt16 {
+        sourceBitmask() & 0x1FF
+    }
+
+    /// association 的 9 個來源是否全部開啟
+    var allAssociationSourcesEnabled: Bool {
+        kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
     }
 }
 

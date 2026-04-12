@@ -356,14 +356,15 @@ final class NextWordService: @unchecked Sendable {
         let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
 
         // Apply dictionary source filter
-        let enabledMask = buildDictBitmask()
-        let allEnabled = enabledMask == 0x1FF // all 9 bits set
+        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledMask = enabledDicts.associationBitmask()
+        let allEnabled = enabledDicts.allAssociationSourcesEnabled
 
         for entry in entries {
             guard AssociationBinaryReader.passesFilter(
                 entryBitmask: entry.bitmask,
                 enabledMask: enabledMask,
-                allEnabled: allEnabled
+                allEnabled: allEnabled,
             ) else { continue }
 
             let prediction = Prediction(
@@ -677,24 +678,5 @@ final class NextWordService: @unchecked Sendable {
         } catch {
             logger.error("[PRUNE] Failed: \(error.localizedDescription)")
         }
-    }
-
-    // MARK: - Dictionary Filter
-
-    /// Build association source bitmask from settings
-    /// Bit layout matches association.bin: 0=kautian..8=khpoo (9 bits)
-    private func buildDictBitmask() -> UInt16 {
-        let settings = SharedSettings.shared
-        var mask: UInt16 = 0
-        if settings.isMoeDictEnabled { mask |= 1 << 0 }
-        if settings.isNewwordDictEnabled { mask |= 1 << 1 }
-        if settings.isITaigiDictEnabled { mask |= 1 << 2 }
-        if settings.isTaiwanPlantDictEnabled { mask |= 1 << 3 }
-        if settings.isTaiHuaDictEnabled { mask |= 1 << 4 }
-        if settings.isTaiwanJapanDictEnabled { mask |= 1 << 5 }
-        if settings.isKunggeDictEnabled { mask |= 1 << 6 }
-        if settings.isSttiDictEnabled { mask |= 1 << 7 }
-        if settings.isKhpooDictEnabled { mask |= 1 << 8 }
-        return mask
     }
 }
