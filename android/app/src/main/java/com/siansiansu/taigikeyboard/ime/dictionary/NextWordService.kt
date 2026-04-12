@@ -20,14 +20,14 @@ import kotlin.math.exp
  * - 選擇「早安」→ 用「安」查詢 → 預測下一個字
  *
  * 資料來源：
- * - dictionary.db (word_association 表): 字典關聯（由 LexiconService 複製）
+ * - association.bin (binary mmap): 字典關聯（read-only）
  * - user_association.db: 使用者學習（永久保留）
  *
  * Thread-safe singleton with lazy initialization
  */
+
 object NextWordService {
     private const val TAG = "NextWordService"
-    private const val DICT_DB_NAME = "dictionary.db"
     private const val USER_DB_NAME = "user_association.db"
     private const val DATABASE_VERSION = 4 // v4: added prev_tl column
     private const val DEFAULT_LIMIT = 30
@@ -57,18 +57,7 @@ object NextWordService {
     // 超過上限時，刪除最低分的 N 筆
     private const val PRUNE_BATCH_SIZE = 5_000
 
-    // 詞庫來源欄位名稱（對應 word_association 表）
-    private const val COL_KAUTIAN = "kautian"
-    private const val COL_TAIGITV = "taigitv"
-    private const val COL_ITAIGI = "itaigi"
-    private const val COL_SITBUT = "sitbut"
-    private const val COL_TAIHOA = "taihoa"
-    private const val COL_TAIJIT = "taijit"
-    private const val COL_KUNGGE = "kungge"
-    private const val COL_STTI = "stti"
-    private const val COL_KHPOO = "khpoo"
-
-    private var dictDatabase: SQLiteDatabase? = null
+    private var associationReader: AssociationBinaryReader? = null
     private var userDatabase: SQLiteDatabase? = null
     private var isInitialized = false
     private val initMutex = Mutex()
@@ -164,42 +153,32 @@ object NextWordService {
 
             val results = mutableMapOf<String, Prediction>()
 
-            // 1. 查詢字典關聯（Bigram：用最後一字查詢）
-            dictDatabase?.let { db ->
+            // 1. 查詢字典關聯（Bigram：用最後一字查詢 association.bin）
+            associationReader?.let { reader ->
                 try {
-                    // 建立詞庫過濾條件（atomic snapshot to avoid torn reads）
                     val prefHelper = prefs ?: PrefHelper(context)
-                    val dictWhereCondition = buildDictWhereCondition(prefHelper.snapshotEnabledDictionaries())
-
-                    val sql =
-                        """
-                        SELECT next_word, next_tl, count
-                        FROM word_association
-                        WHERE prev_word = ?
-                        $dictWhereCondition
-                        ORDER BY count DESC
-                        LIMIT ?
-                        """.trimIndent()
+                    val enabledDicts = EnabledDictionaries.fromSnapshot(prefHelper.snapshotEnabledDictionaries())
 
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[PREDICT] Dict query: prev_word='$lastChar', filter='$dictWhereCondition'")
+                        Log.d(TAG, "[PREDICT] Dict query: prev_word='$lastChar'")
                     }
 
-                    val cursor = db.rawQuery(sql, arrayOf(lastChar, (limit * 2).toString()))
-                    cursor.use {
-                        while (it.moveToNext()) {
-                            val nextWord = it.getString(0) ?: continue
-                            val nextTl = it.getString(1) ?: ""
-                            val count = it.getInt(2)
+                    // Over-fetch limit * 2 for dedup merging (matches iOS)
+                    val entries = reader.lookup(lastChar, limit * 2)
+                    for (entry in entries) {
+                        if (!AssociationBinaryReader.passesFilter(entry.bitmask, enabledDicts)) continue
 
-                            val key = "${nextWord}\t$nextTl"
-                            results[key] =
-                                Prediction(
-                                    hanzi = nextWord,
-                                    tl = nextTl,
-                                    score = count.toDouble() * DICT_WEIGHT,
-                                )
-                        }
+                        val key = "${entry.nextWord}\t${entry.nextTl}"
+                        results[key] =
+                            Prediction(
+                                hanzi = entry.nextWord,
+                                tl = entry.nextTl,
+                                score = entry.count.toDouble() * DICT_WEIGHT,
+                            )
+                    }
+
+                    if (BuildConfig.DEBUG) {
+                        Log.d(TAG, "[PREDICT] Dict: ${entries.size} raw -> ${results.size} after filter")
                     }
                 } catch (e: Exception) {
                     if (BuildConfig.DEBUG) {
@@ -358,16 +337,22 @@ object NextWordService {
             if (isInitialized) return
 
             try {
-                // 初始化字典關聯 db（從 assets 複製）
-                connectDictDb(context)
+                // 初始化字典關聯 binary reader（由 LexiconService 複製 association.bin）
+                initAssociationReader(context)
 
                 // 初始化使用者關聯 db（本地建立）
                 connectUserDb(context)
 
-                isInitialized = true
+                // Only mark initialized if at least user db is ready.
+                // Association reader may be null if LexiconService hasn't copied
+                // the file yet — predict() handles null gracefully.
+                isInitialized = userDatabase != null
 
                 if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[INIT] NextWord databases initialized")
+                    Log.i(
+                        TAG,
+                        "[INIT] NextWord initialized: assocReader=${associationReader != null}, userDb=${userDatabase != null}",
+                    )
                 }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
@@ -378,27 +363,26 @@ object NextWordService {
     }
 
     /**
-     * 連接字典關聯 db（使用 LexiconService 已複製的 dictionary.db）
+     * Initialize association binary reader (uses association.bin copied by LexiconService)
      */
-    private fun connectDictDb(context: Context) {
-        val dbFile = File(context.filesDir, DICT_DB_NAME)
+    private fun initAssociationReader(context: Context) {
+        val binFile = File(context.filesDir, DictionaryConstants.ASSOC_BIN_NAME)
 
-        if (!dbFile.exists()) {
+        if (!binFile.exists()) {
             if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[INIT] dictionary.db not found (LexiconService not initialized?)")
+                Log.e(TAG, "[INIT] association.bin not found (LexiconService not initialized?)")
             }
             return
         }
 
-        dictDatabase =
-            SQLiteDatabase.openDatabase(
-                dbFile.absolutePath,
-                null,
-                SQLiteDatabase.OPEN_READONLY,
-            )
+        associationReader = AssociationBinaryReader.open(binFile)
 
         if (BuildConfig.DEBUG) {
-            Log.i(TAG, "[INIT] Connected to dictionary.db for word_association")
+            if (associationReader != null) {
+                Log.i(TAG, "[INIT] Association binary reader loaded")
+            } else {
+                Log.e(TAG, "[INIT] Failed to open association.bin")
+            }
         }
     }
 
@@ -812,58 +796,16 @@ object NextWordService {
         }
 
     /**
-     * 建立詞庫過濾 WHERE 條件
-     *
-     * 使用 OR 邏輯：只要 Bigram 來自任一開啟的詞庫即可
-     * 全部開啟時返回空字串（不加過濾）
-     *
-     * @param snapshot atomic snapshot of dictionary enabled flags
-     */
-    private fun buildDictWhereCondition(snapshot: PrefHelper.DictEnabledSnapshot): String {
-        val conditions = mutableListOf<String>()
-
-        if (snapshot.moe) conditions.add("$COL_KAUTIAN = 1")
-        if (snapshot.newword) conditions.add("$COL_TAIGITV = 1")
-        if (snapshot.itaigi) conditions.add("$COL_ITAIGI = 1")
-        if (snapshot.taiwanPlant) conditions.add("$COL_SITBUT = 1")
-        if (snapshot.taiHua) conditions.add("$COL_TAIHOA = 1")
-        if (snapshot.taiwanJapan) conditions.add("$COL_TAIJIT = 1")
-        if (snapshot.kungge) conditions.add("$COL_KUNGGE = 1")
-        if (snapshot.stti) conditions.add("$COL_STTI = 1")
-        if (snapshot.khpoo) conditions.add("$COL_KHPOO = 1")
-
-        // 全部開啟時不加過濾條件
-        val allEnabled =
-            snapshot.moe && snapshot.newword &&
-                snapshot.itaigi && snapshot.taiwanPlant &&
-                snapshot.taiHua && snapshot.taiwanJapan &&
-                snapshot.kungge && snapshot.stti &&
-                snapshot.khpoo
-
-        if (allEnabled) {
-            return ""
-        }
-
-        // 全部關閉時返回不可能的條件（不顯示任何結果）
-        if (conditions.isEmpty()) {
-            return "AND 0"
-        }
-
-        return "AND (${conditions.joinToString(" OR ")})"
-    }
-
-    /**
-     * Close database connections
+     * Close resources
      */
     fun close() {
-        dictDatabase?.close()
-        dictDatabase = null
+        associationReader = null
         userDatabase?.close()
         userDatabase = null
         isInitialized = false
 
         if (BuildConfig.DEBUG) {
-            Log.i(TAG, "[CLOSE] Database connections closed")
+            Log.i(TAG, "[CLOSE] Resources released")
         }
     }
 }
