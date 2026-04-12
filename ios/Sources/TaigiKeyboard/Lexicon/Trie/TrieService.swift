@@ -38,7 +38,13 @@ final class TrieService: @unchecked Sendable {
     init(fileName: String, fileExtension: String, logCategory: String = "TrieService") {
         self.fileName = fileName
         self.fileExtension = fileExtension
-        self.logger = DebugLogger(category: logCategory)
+        logger = DebugLogger(category: logCategory)
+    }
+
+    deinit {
+        if isInitialized, handle >= 0 {
+            trie_h_close(handle)
+        }
     }
 
     // MARK: - Public API

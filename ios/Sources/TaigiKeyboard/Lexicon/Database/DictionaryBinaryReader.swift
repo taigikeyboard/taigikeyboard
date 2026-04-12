@@ -32,6 +32,11 @@ final class DictionaryBinaryReader: @unchecked Sendable {
         (8, .khpoo), (9, .khiin), (10, .dev), (11, .lkk),
     ]
 
+    /// Named bitmask constants for filter logic
+    private static let khiinBit: UInt16 = 1 << 9
+    private static let devBit: UInt16 = 1 << 10
+    private static let variantBit: UInt16 = 1 << 12
+
     // MARK: - Properties
 
     /// Strongly retained mmap'd data (must live as long as reads happen)
@@ -55,10 +60,10 @@ final class DictionaryBinaryReader: @unchecked Sendable {
             return nil
         }
 
-        self.data = mappedData
+        data = mappedData
 
         // Pin base pointer from retained Data
-        self.basePtr = (data as NSData).bytes
+        basePtr = (data as NSData).bytes
 
         // Validate magic
         let magicBytes = UnsafeRawBufferPointer(start: basePtr, count: 4)
@@ -73,8 +78,8 @@ final class DictionaryBinaryReader: @unchecked Sendable {
         }
 
         let count = basePtr.loadUnaligned(fromByteOffset: 8, as: UInt32.self)
-        self.recordCount = Int(count)
-        self.buildTimestamp = basePtr.loadUnaligned(fromByteOffset: 12, as: UInt32.self)
+        recordCount = Int(count)
+        buildTimestamp = basePtr.loadUnaligned(fromByteOffset: 12, as: UInt32.self)
 
         // Validate file size covers header + offset table
         let minSize = Self.headerSize + recordCount * 4
@@ -132,7 +137,7 @@ final class DictionaryBinaryReader: @unchecked Sendable {
         if hanziLen > 0 {
             hanzi = String(
                 bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: hanziLen),
-                encoding: .utf8
+                encoding: .utf8,
             )
             pos += hanziLen
         } else {
@@ -141,7 +146,7 @@ final class DictionaryBinaryReader: @unchecked Sendable {
 
         guard let tl = String(
             bytes: UnsafeRawBufferPointer(start: basePtr + pos, count: tlLen),
-            encoding: .utf8
+            encoding: .utf8,
         ) else {
             return nil
         }
@@ -164,21 +169,20 @@ final class DictionaryBinaryReader: @unchecked Sendable {
     /// Check if a record passes the dictionary filter
     static func passesFilter(
         recordBitmask: UInt16,
-        enabledDicts: EnabledDictionaries
+        enabledDicts: EnabledDictionaries,
     ) -> Bool {
         // Layer 1: variant exclusion
-        if !enabledDicts.variant, (recordBitmask & (1 << 12)) != 0 {
+        if !enabledDicts.variant, (recordBitmask & variantBit) != 0 {
             return false
         }
         // Layer 2: khiin exclusion
-        if !enabledDicts.khiin, (recordBitmask & (1 << 9)) != 0 {
+        if !enabledDicts.khiin, (recordBitmask & khiinBit) != 0 {
             return false
         }
         // Layer 3: source OR match (dev always included)
         if enabledDicts.allEnabled { return true }
 
         let enabledMask = enabledDicts.sourceBitmask()
-        let devBit: UInt16 = 1 << 10
         return (recordBitmask & enabledMask) != 0 || (recordBitmask & devBit) != 0
     }
 }
