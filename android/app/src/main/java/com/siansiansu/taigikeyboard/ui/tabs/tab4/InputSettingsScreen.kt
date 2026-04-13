@@ -121,7 +121,7 @@ fun InputSettingsScreen(
                     title = {
                         Text(
                             text = languageManager.text(Tab4Texts.tabTitle),
-                            fontSize = AppStyle.pageTitleFontSize,
+                            style = MaterialTheme.typography.headlineLarge,
                         )
                     },
                     expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
@@ -141,7 +141,7 @@ fun InputSettingsScreen(
                         .padding(innerPadding)
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp)
-                        .padding(bottom = 40.dp),
+                        .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
                 // Input mode card - navigates to sub-page
                 SettingsCard {
@@ -157,19 +157,19 @@ fun InputSettingsScreen(
                         Text(
                             text = languageManager.text(Tab4Texts.inputMode),
                             modifier = Modifier.weight(1f),
-                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
                             text = inputModeDisplayName(inputMode, languageManager),
-                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         Spacer(Modifier.width(8.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(AppStyle.trailingChevronSize),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }

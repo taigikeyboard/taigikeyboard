@@ -40,11 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +53,7 @@ fun SetupGuideScreen(
     isFullScreen: Boolean,
     onGoToSettings: () -> Unit,
     onClose: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
 
@@ -64,7 +64,7 @@ fun SetupGuideScreen(
                 title = {
                     Text(
                         text = languageManager.text(Tab1Texts.setupGuide),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 navigationIcon = {
@@ -73,31 +73,33 @@ fun SetupGuideScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 16.dp, bottom = 40.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 16.dp, bottom = AppStyle.scrollContentBottomPadding),
         ) {
             // Description
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideDescription),
-                fontSize = AppStyle.bodyFontSize,
                 lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
 
             Spacer(Modifier.height(24.dp))
@@ -106,7 +108,7 @@ fun SetupGuideScreen(
             StepCard(
                 stepNumber = 1,
                 title = languageManager.text(Tab1Texts.setupGuideStep1Settings),
-                imageResId = R.drawable.setup_step1
+                imageResId = R.drawable.setup_step1,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -115,7 +117,7 @@ fun SetupGuideScreen(
             StepCard(
                 stepNumber = 2,
                 title = languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard),
-                imageResId = R.drawable.setup_step2
+                imageResId = R.drawable.setup_step2,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -123,9 +125,9 @@ fun SetupGuideScreen(
             // Completed message
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideCompletedMessage),
-                fontSize = AppStyle.bodyFontSize,
                 lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -133,12 +135,12 @@ fun SetupGuideScreen(
             // Go to settings button
             Button(
                 onClick = onGoToSettings,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
                     text = languageManager.text(Tab1Texts.setupGuideGoToSettings),
-                    fontSize = AppStyle.bodyFontSize,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
 
@@ -158,20 +160,21 @@ fun SetupGuideScreen(
                 Button(
                     onClick = onClose,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                        ),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_close),
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onError
+                        tint = MaterialTheme.colorScheme.onError,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = languageManager.text(Tab1Texts.setupGuideCloseButton),
-                        color = MaterialTheme.colorScheme.onError
+                        color = MaterialTheme.colorScheme.onError,
                     )
                 }
             }
@@ -183,38 +186,39 @@ fun SetupGuideScreen(
 private fun StepCard(
     stepNumber: Int,
     title: String,
-    imageResId: Int
+    imageResId: Int,
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(16.dp)) {
             // Step number + title
             Row(
                 modifier = Modifier.padding(bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Number circle
                 Box(
-                    modifier = Modifier
-                        .size(22.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(22.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape,
+                            ),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "$stepNumber",
-                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(
                     text = title,
-                    fontSize = AppStyle.bodyFontSize,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
 
@@ -223,7 +227,7 @@ private fun StepCard(
                 painter = painterResource(imageResId),
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth(),
-                contentScale = ContentScale.FillWidth
+                contentScale = ContentScale.FillWidth,
             )
         }
     }
@@ -235,17 +239,18 @@ private fun WarningRow(text: String) {
         Icon(
             painter = painterResource(R.drawable.ic_warning),
             contentDescription = null,
-            modifier = Modifier
-                .size(16.dp)
-                .padding(top = 2.dp),
-            tint = AppStyle.warningOrange()
+            modifier =
+                Modifier
+                    .size(AppStyle.smallIconSize)
+                    .padding(top = 2.dp),
+            tint = AppStyle.warningOrange(),
         )
         Spacer(Modifier.width(8.dp))
         Text(
             text = text,
-            fontSize = AppStyle.bodyFontSize,
             lineHeight = 22.sp,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
         )
     }
 }

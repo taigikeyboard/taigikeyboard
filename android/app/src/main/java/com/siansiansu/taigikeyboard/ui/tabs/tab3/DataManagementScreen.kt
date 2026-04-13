@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import com.siansiansu.taigikeyboard.ui.components.FileDownload
-import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,9 +30,10 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
+import com.siansiansu.taigikeyboard.ui.components.FileDownload
+import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,9 +80,9 @@ fun DataManagementScreen(
                 SettingsCard {
                     Text(
                         text = languageManager.text(Tab3Texts.backupPrivacyWarning),
-                        fontSize = AppStyle.bodyFontSize,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             }
@@ -94,9 +93,9 @@ fun DataManagementScreen(
 
                 Text(
                     text = languageManager.text(Tab3Texts.backupRestore),
-                    fontSize = AppStyle.sectionHeaderFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                    style = MaterialTheme.typography.titleMedium,
                 )
 
                 SettingsCard {

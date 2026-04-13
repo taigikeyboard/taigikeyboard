@@ -78,7 +78,6 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -240,9 +239,9 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = languageManager.text(Tab3Texts.importExportTitle),
-                        fontSize = AppStyle.sectionHeaderFontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
                     )
 
                     SettingsCard {
@@ -259,9 +258,9 @@ fun CustomDictionaryScreen(
                         )
                         Text(
                             text = languageManager.text(Tab3Texts.customDictDescription),
-                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         SettingsDivider()
                         ActionRow(
@@ -320,7 +319,7 @@ fun CustomDictionaryScreen(
                     SettingsCard {
                         Text(
                             text = languageManager.text(Tab3Texts.customDictPrivacyWarning),
-                            fontSize = AppStyle.bodyFontSize,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
@@ -336,8 +335,8 @@ fun CustomDictionaryScreen(
                     ) {
                         Text(
                             text = languageManager.text(Tab3Texts.customDictionary),
-                            fontSize = AppStyle.sectionHeaderFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
                         SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
@@ -363,8 +362,8 @@ fun CustomDictionaryScreen(
                                 )
                                 Text(
                                     text = languageManager.text(Tab3Texts.customDictEmpty),
-                                    fontSize = AppStyle.bodyFontSize,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyLarge,
                                 )
                             }
                         }
@@ -374,9 +373,9 @@ fun CustomDictionaryScreen(
                         SettingsCard {
                             Text(
                                 text = languageManager.text(Tab3Texts.noResults),
-                                fontSize = AppStyle.bodyFontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                         }
                     }
@@ -396,8 +395,8 @@ fun CustomDictionaryScreen(
                         ) {
                             Text(
                                 text = "${entry.roman} → ${entry.hanzi}",
-                                fontSize = AppStyle.bodyFontSize,
                                 color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.bodyLarge,
                                 modifier =
                                     Modifier
                                         .weight(1f)

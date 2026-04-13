@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
@@ -30,35 +29,35 @@ fun ColorRow(
     label: String,
     color: Int?,
     onColorClick: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = AppStyle.bodyFontSize,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
         )
 
         // Color swatch
         Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(
-                    if (color != null) Color(color) else Color.LightGray
-                )
-                .border(
-                    width = if (color != null) 1.dp else 2.dp,
-                    color = if (color != null) Color.Gray else Color.DarkGray,
-                    shape = CircleShape
-                )
-                .clickable(onClick = onColorClick)
+            modifier =
+                Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (color != null) Color(color) else Color.LightGray,
+                    ).border(
+                        width = if (color != null) 1.dp else 2.dp,
+                        color = if (color != null) Color.Gray else Color.DarkGray,
+                        shape = CircleShape,
+                    ).clickable(onClick = onColorClick),
         )
 
         if (color != null) {
@@ -67,9 +66,10 @@ fun ColorRow(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = "Reset",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .size(20.dp)
-                    .clickable(onClick = onReset)
+                modifier =
+                    Modifier
+                        .size(AppStyle.selectionIconSize)
+                        .clickable(onClick = onReset),
             )
         }
     }

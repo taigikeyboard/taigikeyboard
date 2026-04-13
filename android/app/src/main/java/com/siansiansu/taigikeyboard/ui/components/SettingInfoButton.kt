@@ -44,9 +44,10 @@ fun SettingInfoButton(description: String) {
         painter = painterResource(id = R.drawable.ic_help),
         contentDescription = "Info",
         tint = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
-            .size(AppStyle.bodyFontSize.value.dp)
-            .clickable { showDialog = true }
+        modifier =
+            Modifier
+                .size(AppStyle.smallIconSize)
+                .clickable { showDialog = true },
     )
 
     if (showDialog) {
@@ -56,39 +57,41 @@ fun SettingInfoButton(description: String) {
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(8.dp))
 
                     Text(
                         text = description,
-                        fontSize = AppStyle.bodyFontSize,
                         color = MaterialTheme.colorScheme.onSurface,
-                        lineHeight = 26.sp
+                        lineHeight = 26.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = { showDialog = false },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 8.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ),
                 ) {
                     Text(
                         text = "OK",
-                        fontSize = AppStyle.bodyFontSize,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
-            }
+            },
         )
     }
 }

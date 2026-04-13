@@ -2,11 +2,44 @@ package com.siansiansu.taigikeyboard.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.R
 
+// ── Typography ──────────────────────────────────────────────────────────────
+// HuninnFontFamily applied to all slots. Four slots customized to align with iOS:
+//   headlineLarge = 34sp (page title),  titleMedium = 18sp (section header),
+//   bodyLarge     = 17sp (body text),   labelLarge  = 14sp (caption, M3 default)
+private val HuninnFontFamily = FontFamily(Font(R.font.jf_openhuninn_2_1))
+
+private val DefaultTypography = Typography()
+
+private val AppTypography =
+    Typography(
+        displayLarge = DefaultTypography.displayLarge.copy(fontFamily = HuninnFontFamily),
+        displayMedium = DefaultTypography.displayMedium.copy(fontFamily = HuninnFontFamily),
+        displaySmall = DefaultTypography.displaySmall.copy(fontFamily = HuninnFontFamily),
+        headlineLarge = DefaultTypography.headlineLarge.copy(fontFamily = HuninnFontFamily, fontSize = 34.sp),
+        headlineMedium = DefaultTypography.headlineMedium.copy(fontFamily = HuninnFontFamily),
+        headlineSmall = DefaultTypography.headlineSmall.copy(fontFamily = HuninnFontFamily),
+        titleLarge = DefaultTypography.titleLarge.copy(fontFamily = HuninnFontFamily),
+        titleMedium = DefaultTypography.titleMedium.copy(fontFamily = HuninnFontFamily, fontSize = 18.sp),
+        titleSmall = DefaultTypography.titleSmall.copy(fontFamily = HuninnFontFamily),
+        bodyLarge = DefaultTypography.bodyLarge.copy(fontFamily = HuninnFontFamily, fontSize = 17.sp),
+        bodyMedium = DefaultTypography.bodyMedium.copy(fontFamily = HuninnFontFamily),
+        bodySmall = DefaultTypography.bodySmall.copy(fontFamily = HuninnFontFamily),
+        labelLarge = DefaultTypography.labelLarge.copy(fontFamily = HuninnFontFamily),
+        labelMedium = DefaultTypography.labelMedium.copy(fontFamily = HuninnFontFamily),
+        labelSmall = DefaultTypography.labelSmall.copy(fontFamily = HuninnFontFamily),
+    )
+
+// ── Colors ──────────────────────────────────────────────────────────────────
 // Blue primary aligned with iOS .accentColor (#007AFF light / #0A84FF dark)
 // Surface container hierarchy follows iOS grouped-list pattern:
 //   screen bg = surfaceContainer (gray, 2 levels above surface)
@@ -107,7 +140,7 @@ fun TaigiKeyboardTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography,
         content = content,
     )
 }

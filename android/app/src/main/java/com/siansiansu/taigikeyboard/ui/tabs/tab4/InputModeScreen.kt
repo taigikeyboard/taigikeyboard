@@ -88,14 +88,14 @@ fun InputModeScreen(
                         Text(
                             text = languageManager.text(text),
                             modifier = Modifier.weight(1f),
-                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyLarge,
                         )
                         if (selectedMode == value) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(AppStyle.selectionIconSize),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
