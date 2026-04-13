@@ -1,5 +1,7 @@
 # Segmentation Score Tie Bug
 
+> **Status**: RESOLVED — Fix implemented via `WordPrefixChecker` closure injection. See `engine/segmentation.md` for current design.
+
 **File**: `ios/Sources/TaigiKeyboard/Input/SyllableSegmenter.swift`
 
 ## Problem
@@ -31,9 +33,13 @@ Tone digit makes `kin1` a 4-char segment (score 16), clearly beats `ki` (score 4
 - `ama`: `>` gives `a+ma` (阿媽, correct); `>=` gives `am+a` (wrong)
 - No universal tie-breaking rule works for all cases without frequency data
 
-## Proposed Fix Directions
-1. **Tie-breaker (Low risk)**: When DP scores tie, query dictionary via closure to see which segmentation forms a known word
-2. **Freq bonus in DP (Medium risk)**: Change scoring from `sum(len²)` to `sum(len² + freq_bonus)`
-3. **Word lattice (High risk)**: Unify segmentation + word selection into one step (see `khiin-lattice-research.md`)
+## Fix Applied
+**Approach 1 (tie-breaker)** implemented via `WordPrefixChecker` closure:
+- On score tie, reconstruct both candidate paths
+- Prefix-search MARISA dictionary trie for each path
+- Prefer the path with dictionary matches
+- Zero overhead for non-tie cases (ties are rare, only at CVC+V boundaries)
 
-Recommendation: Start with approach 1 (tie-breaker), lowest risk and solves known issues.
+Future directions (if needed):
+- **Freq bonus in DP**: `sum(len² + freq_bonus)` — medium risk
+- **Word lattice**: Unified segmentation + word selection (see `khiin-lattice-research.md`) — high risk

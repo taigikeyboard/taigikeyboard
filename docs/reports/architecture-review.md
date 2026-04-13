@@ -40,7 +40,7 @@ Key Press
       --> Display Derivation (ToneConverter --> TaigiPhonetics)
       --> Candidate Search (AutocompleteService --> LexiconService)
         --> Trie Prefix Search (TrieService: MARISA C++/JNI)
-        --> SQLite Batch Lookup (DictionaryRepository / direct SQLite)
+        --> Binary mmap Lookup + Bitmask Filter (DictionaryBinaryReader)
         --> Custom Dictionary Merge (CustomDictionaryService)
         --> User Frequency Scoring (UserFrequencyService)
         --> Next Word Context Boost (NextWordService)
@@ -58,12 +58,13 @@ Key Press
 **Strengths:**
 - Dual-state composing model (`rawInput` for search, `composingText` for display) is elegant and consistent across platforms
 - Async candidate search prevents UI blocking (iOS: async/await, Android: Coroutines + 50ms debounce)
-- Clear separation between trie prefix search and SQLite full-record lookup
+- Clear separation between trie prefix search and binary record lookup
 
 **Concerns:**
 - iOS custom dictionary is queried synchronously — potential bottleneck for large custom dictionaries
-- N+1 pattern in frequency batch lookup (100 individual SELECTs per autocomplete cycle)
-- NextWord prediction fires on every candidate selection, doubling DB access
+- NextWord prediction fires on every candidate selection
+
+> **Note (2026-04)**: SQLite batch lookup replaced by binary mmap + bitmask filter on both platforms. N+1 frequency lookup concern resolved.
 
 ---
 
@@ -85,8 +86,8 @@ Layer 3: Linguistic Engine
   Android: ime/dictionary/ (TaigiPhonetics, ToneConverter, TPSConverter, InputNormalizer)
 
 Layer 2: Data Access
-  iOS:     Lexicon/Database/, Lexicon/Services/
-  Android: ime/dictionary/ (LexiconService, TrieService, NextWordService, UserFrequencyService)
+  iOS:     Lexicon/Database/ (BinaryReaders + SQLite repos), Lexicon/Services/
+  Android: ime/dictionary/ (BinaryReaders, LexiconService, TrieService, NextWordService)
 
 Layer 1: Platform / Lifecycle
   iOS:     _Keyboard/KeyboardViewController
@@ -100,14 +101,15 @@ Layer 1: Platform / Lifecycle
 | UI / Presentation | Well-separated. SwiftUI views don't directly access DB. | Mostly good. **KeyView has tone logic** (SRP leak from Layer 3 into Layer 5). |
 | Business Logic | Good. ActionHandler extensions keep concerns modular. | **TextInputManager mixes too many concerns** (dispatch, caps, candidates, layout reload). |
 | Linguistic Engine | Excellent. Pure functions, no side effects. | Good. Same pure logic, but **InputNormalizer does both NFD and diacritics→digits**. |
-| Data Access | Good. Repository pattern with SQLiteConnectionManager. **NextWordService manages own connections** (inconsistent). | Good. Singleton services with SQLiteOpenHelper. |
+| Data Access | Good. Binary mmap readers for read-only data, SQLite for user data. | Good. Same pattern — binary readers + SQLite for user data. |
 | Platform | Good. Clean delegation to services. | Good. LifecycleInputMethodService enables Compose/ViewModel. |
 
 ### Critical Layer Violations
 
 1. **Android KeyView** — contains `adjustNasalMarkerCase()` tone logic (Layer 3 leaking into Layer 5)
 2. **Android TextInputManager** — acts as both key dispatcher (Layer 4) and layout reloader (Layer 5)
-3. **iOS NextWordService** — manages its own dual SQLite connection pools instead of using `SQLiteConnectionManager` (inconsistent with Layer 2 pattern)
+
+> **Note (2026-04)**: iOS NextWordService dual SQLite connection pools issue resolved — dict queries now use `AssociationBinaryReader` (binary mmap). Only user_association.db remains SQLite.
 
 ---
 

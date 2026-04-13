@@ -1,5 +1,7 @@
 # Codebase Health Check (2026-03-11)
 
+> **Note (2026-04)**: Pre-migration snapshot. dictionary.db eliminated since — file sizes and LOC counts may differ. See `architecture-review.md` for more recent structural analysis.
+
 **Codebase size**: iOS 97 Swift files (14,363 LOC) | Android 100+ Kotlin files (20,431+ LOC)
 
 ## Clean Areas
@@ -21,7 +23,7 @@ Recommendation: Split each into 2-3 single-responsibility components.
 
 | File | Lines | Note |
 |------|-------|------|
-| `NextWordService.swift` | 669 | Bigram + decay + SQLite |
+| `NextWordService.swift` | 669 | Bigram + decay + binary mmap (dict) + SQLite (user) |
 | `ExpandedCandidateOverlay.swift` | 539 | 12-level SwiftUI nesting |
 | `UserFrequencyRepository.swift` | 515 | SQL transaction handling |
 | `CustomDictionaryRepository.swift` | 463 | Custom dictionary CRUD |

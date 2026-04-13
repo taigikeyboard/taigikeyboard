@@ -21,6 +21,7 @@
 | `Composing` | `Input/` | `ime/text/composing/` |
 | `Autocomplete` | `Autocomplete/` | `ime/text/composing/` |
 | `Lexicon` | `Lexicon/` | `ime/dictionary/` |
+| `BinaryReader` | `Lexicon/Database/` | `ime/dictionary/` |
 | `Trie` | `Lexicon/Trie/` | `ime/dictionary/` |
 | `Tone` | `Input/Tone/` | `ime/dictionary/` |
 | `UserFrequency` | `Lexicon/` | `ime/text/composing/` |
@@ -73,6 +74,9 @@
 | Function | iOS | Android |
 |----------|-----|---------|
 | Dictionary service | `LexiconService.swift` | `LexiconService.kt` |
+| Dictionary binary reader | `DictionaryBinaryReader.swift` | `DictionaryBinaryReader.kt` |
+| Association binary reader | `AssociationBinaryReader.swift` | `AssociationBinaryReader.kt` |
+| Enabled dictionaries | `EnabledDictionaries.swift` | `EnabledDictionaries.kt` |
 | Trie service | `TrieService.swift` | `TrieService.kt` |
 | Input normalization | `InputNormalizer.swift` | `InputNormalizer.kt` |
 | Word model | `TaigiWord.swift` | `DictionaryModels.kt` |
@@ -207,10 +211,10 @@ TaigiKeyboard/
 │   └── Tone/        # Tone processing
 ├── Layout/          # Keyboard layout
 ├── Lexicon/         # Dictionary query
-│   ├── Database/    # SQLite repositories
-│   ├── Models/      # TaigiWord, CustomDictionaryEntry, etc.
+│   ├── Database/    # Binary readers (DictionaryBinaryReader, AssociationBinaryReader), SQLite repos
+│   ├── Models/      # TaigiWord, CustomDictionaryEntry, EnabledDictionaries, etc.
 │   ├── Services/    # LexiconService, NextWordService, CustomDictionaryService, BackupService
-│   ├── Trie/        # TrieService, InputNormalizer
+│   ├── Trie/        # TrieService (handle-based multi-trie), InputNormalizer
 │   └── Utils/       # TextProcessor, ResourceBundleResolver
 ├── Localization/    # Localization
 ├── Settings/        # SharedSettings, InputMode
@@ -252,21 +256,30 @@ taigikeyboard/
 
 ## Resource Files
 
-### iOS (`ios/Resources/`)
+### iOS (`ios/Resources/Dictionaries/`)
 
 | File | Size | Description |
 |------|------|-------------|
-| `dictionary.db` | ~40MB | SQLite dictionary |
-| `dictionary.trie` | ~4MB | MARISA Trie |
-| `Iansui-Regular.ttf` | ~9MB | Iansui font |
-| `jf-openhuninn-2.1.ttf` | ~5MB | jf-openhuninn font |
+| `dictionary.trie` | ~4.5 MB | MARISA trie (tl:/poj:/hanzi: keys → rowid) |
+| `dictionary.bin` | ~4.4 MB | Binary mmap dictionary (rowid → record) |
+| `association.bin` | ~3.1 MB | Binary mmap word associations |
+
+Fonts in `ios/Resources/`:
+| File | Size | Description |
+|------|------|-------------|
+| `Iansui-Regular.ttf` | ~9 MB | Iansui font |
+| `jf-openhuninn-2.1.ttf` | ~5 MB | jf-openhuninn font |
 
 ### Android (`android/app/src/main/assets/`)
 
-| File | Description |
-|------|-------------|
-| `dictionary.db` | SQLite dictionary |
-| `dictionary.trie` | MARISA Trie |
+| File | Size | Description |
+|------|------|-------------|
+| `dictionary.trie` | ~4.5 MB | MARISA trie (same as iOS) |
+| `dictionary.bin` | ~4.4 MB | Binary mmap dictionary (same as iOS) |
+| `association.bin` | ~3.1 MB | Binary mmap word associations (same as iOS) |
+
+Binary files are **platform-independent** — identical files on both platforms.
+SQLite only for writable user data: `user_frequency.db`, `user_association.db`, `custom_dictionary.db`.
 
 ---
 

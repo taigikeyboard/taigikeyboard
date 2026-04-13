@@ -1,5 +1,7 @@
 # Taigi Keyboard Audit Report — 2026-03-11
 
+> **Note (2026-04)**: Snapshot report. dictionary.db eliminated on both platforms (binary mmap migration complete). Many action items resolved — see individual reports for current status.
+
 Three audits performed: Documentation sync, codebase health, and architecture research.
 
 ---
@@ -80,9 +82,11 @@ composing, autocomplete, tone, sort, segmentation, trie, tps, flow, nextword, ke
 - More accurate but requires corpus-trained bigram data
 
 ### Current Taigi Keyboard Gap
-- Segmenter is syllable-level, no word frequency access
-- Frequency data locked in SQLite, not accessible to segmenter
-- Two-stage separation (segmenter → autocomplete) causes CVC+V tie bugs
+> **Note (2026-04)**: Segmenter removed in v3.4.6. Tie bug resolved via `WordPrefixChecker`. Frequency now in `dictionary.bin` (binary mmap).
+
+- ~~Segmenter is syllable-level, no word frequency access~~ (resolved)
+- ~~Frequency data locked in SQLite, not accessible to segmenter~~ (now in binary mmap)
+- ~~Two-stage separation (segmenter → autocomplete) causes CVC+V tie bugs~~ (resolved)
 
 ### Recommended Migration Path
 
@@ -102,12 +106,11 @@ Mobile keyboard processes 1-3 words at a time with candidate bar for correction.
 ### High Priority
 - [ ] Android: Break down 3 files >1200 lines into smaller components
 
-### Medium Priority
-- [ ] Fix `docs/file-structure.md` (missing Diagnostics dir, remove ThemeTokens reference)
-- [ ] Rewrite `docs/ui/theme.md` to match actual Styling implementation
-- [ ] Add doc for Custom Dictionary feature
+### Medium Priority (resolved 2026-04)
+- [x] Fix `docs/file-structure.md` — updated with binary mmap files
+- [x] Rewrite `docs/ui/theme.md` — matches actual implementation
+- [x] Add doc for Custom Dictionary feature — `engine/custom-dictionary.md`
+- [x] Add doc for Diagnostic Service — `engine/diagnostics.md`
 
 ### Low Priority
-- [ ] Add doc for Diagnostic Service
-- [ ] iOS: Extract shared SQLiteRepository protocol
 - [ ] Add integration tests for ActionHandler dispatch flow

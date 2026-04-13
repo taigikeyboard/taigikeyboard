@@ -7,41 +7,24 @@
 
 ## Summary
 
-- Ensure consistent implementation across iOS/Android platforms
+- Cross-platform reference for iOS/Android implementation alignment
 - Quick reference for Claude Code, bullet-point style, concise
-- **27 files** across 4 subfolders + root
-
----
-
-## Directory Structure
-
-```
-docs/
-├── engine/           ← IME core logic (11 files)
-├── ui/               ← Presentation & layout (6 files)
-├── references/       ← External IME research (5 files)
-├── reports/          ← Audit reports
-├── README.md
-├── keywords.md       ← Keyword glossary
-├── file-structure.md ← iOS/Android file mapping
-└── keywords.md       ← Keyword glossary
-```
 
 ---
 
 ## Document Index
 
-### `engine/` — IME Core Logic (11)
+### `engine/` — IME Core Logic
 
 | File | Description | Status |
 |------|-------------|--------|
 | `engine/composing.md` | Composing state management (`rawInput`, `composingText`) | Active |
-| `engine/autocomplete.md` | Candidate word search and suggestion pipeline | Active |
+| `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
 | `engine/tone.md` | Tone conversion and restoration (`ToneConverter`) | Active |
 | `engine/sort.md` | Candidate sorting with user frequency scoring | Active |
-| `engine/trie.md` | Trie-based dictionary indexing (`MARISA`, `InputNormalizer`) | Active |
+| `engine/trie.md` | Trie index + binary mmap readers (`MARISA`, `BinaryReader`, `Bitmask`) | Active |
 | `engine/flow.md` | iOS end-to-end data flow and action handling | Active |
-| `engine/nextword.md` | Next word prediction with bigram model | Active |
+| `engine/nextword.md` | Next word prediction (binary association + user learning) | Active |
 | `engine/segmentation.md` | Syllable segmentation (DAG+DP, onset atomicity) | Active |
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) | Active |
 | `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) | Active |
@@ -146,8 +129,9 @@ docs/
 | `Composing` | Composing management | `ComposingManager.swift` | `ComposingManager.kt` |
 | `Autocomplete` | Autocomplete | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
 | `Lexicon` | Dictionary query | `LexiconService.swift` | `LexiconService.kt` |
+| `BinaryReader` | Binary mmap dict/assoc | `DictionaryBinaryReader.swift` | `DictionaryBinaryReader.kt` |
 | `Trie` | Trie indexing | `TrieService.swift` | `TrieService.kt` |
-| `Segmentation` | Syllable segmentation | `SyllableSegmenter.swift` | `SyllableSegmenter.kt` |
+| ~~`Segmentation`~~ | ~~Syllable segmentation~~ (removed v3.4.6) | — | — |
 | `Tone` | Tone processing | `ToneConverter.swift` | `ToneConverter.kt` |
 | `UserFrequency` | User frequency | `UserFrequencyService.swift` | `UserFrequencyService.kt` |
 | `NextWord` | Next word prediction | `NextWordService.swift` | `NextWordService.kt` |

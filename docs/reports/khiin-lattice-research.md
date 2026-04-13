@@ -32,7 +32,7 @@
 | Model | Unigram + length bias | Bigram | Syllable DP + user freq sorting |
 
 Blockers:
-- No word-to-cost mapping accessible to segmenter (freq locked in SQLite)
+- No word-to-cost mapping accessible to segmenter (freq in dictionary.bin, not exposed to segmenter)
 - Syllable trie has ~1550 entries vs thousands of word edges needed
 - Memory overhead of loading all words + costs at init
 

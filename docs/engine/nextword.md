@@ -24,19 +24,17 @@
 | Dictionary | Last character of selected word | Bigram (1 char) + Phrase (2-3 chars) | Cold start |
 | User | Full selected word | Full word | After learning |
 
-### Database Schema
+### Storage
+
+**Dictionary associations** — `association.bin` (binary mmap, read-only)
+- Sorted key table with binary search by `prev_word` (single character)
+- Entries per key sorted by count DESC
+- Fields: bitmask (u16), count (u32), next_word, next_tl
+- Bitmask filter replaces SQL WHERE for dictionary source filtering
+
+**User learning** — `user_association.db` (SQLite, writable)
 
 ```sql
--- Dictionary associations (dictionary.db)
-CREATE TABLE word_association (
-    prev_word TEXT NOT NULL,   -- Previous character (single char)
-    next_word TEXT NOT NULL,   -- Next character (single char)
-    next_tl TEXT,
-    count INTEGER DEFAULT 1,
-    UNIQUE(prev_word, next_word)
-);
-
--- User learning (user_association.db)
 CREATE TABLE user_association (
     prev_word TEXT NOT NULL,   -- Previous word (full word)
     next_word TEXT NOT NULL,   -- Next word (full word)
@@ -57,8 +55,8 @@ User selects candidate
 Record association (if previous word exists and interval < 10 seconds)
     ↓
 Query predictions
-  ├─ Dictionary: WHERE prev_word = last character
-  └─ User: WHERE prev_word = full word
+  ├─ Dictionary: association.bin binary search (prev_word = last character) + bitmask filter
+  └─ User: user_association.db SQL query (prev_word = full word)
     ↓
 Time decay calculation
     ↓
@@ -138,7 +136,7 @@ Characters not recorded as associations:
 |-----------|---------|-----|
 | Service | `NextWordService.kt` | `NextWordService.swift` |
 | Manager | `SmartbarManager.kt` | `ActionHandler+NextWord.swift` |
-| Database | `dictionary.db` + `user_association.db` | Same |
+| Dict data | `association.bin` (binary mmap) + `user_association.db` (SQLite) | Same |
 
 ---
 
@@ -181,7 +179,7 @@ fun onWordSelected(word: String) {
 
 | | librime-predict | Taigi Keyboard |
 |--|-----------------|----------------|
-| Storage | DoubleArray Trie (mmap, read-only) | SQLite (read-write) |
+| Storage | DoubleArray Trie (mmap, read-only) | Binary mmap (dict) + SQLite (user) |
 | User learning | None | Yes |
 | Sentence-start | `$` symbol | Not yet |
 | Iteration limit | `max_iterations` config | Not yet (timeout only) |

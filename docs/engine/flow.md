@@ -80,8 +80,8 @@ Text output
 ### LexiconService.search()
 
 1. InputNormalizer normalizes
-2. TrieService prefix search
-3. SQLite batch query
+2. TrieService prefix search → rowid list
+3. DictionaryBinaryReader batch lookup + bitmask filter
 4. UserFrequency sort
 
 ---

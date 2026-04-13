@@ -11,12 +11,7 @@
 
 ### HIGH — Core Logic Risk
 
-#### 1. SyllableSegmenter: Trie Construction Duplication
-- **File**: `ios/Sources/TaigiKeyboard/Input/SyllableSegmenter.swift` (lines 29-75)
-- **Problem**: TL and POJ tries are built separately, then `combinedTrieRoot` rebuilds them again with nearly identical logic. `buildTrie()` helper is also duplicated in combined trie init.
-- **Risk**: Memory waste, maintenance burden — changing one trie misses the other
-- **Fix direction**: Build TL/POJ tries once, have combined builder reuse them
-- **Why risky**: Core segmentation logic; incorrect trie = wrong word boundaries
+#### ~~1. SyllableSegmenter~~ — REMOVED (v3.4.6)
 
 #### 2. SharedSettings: Bidirectional TPS ↔ InputMode Sync
 - **File**: `ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift` (lines 136-163, 234-257)
@@ -88,9 +83,9 @@
 ### MEDIUM — File Size & Architecture
 
 #### 3. LexiconService.kt Decomposition
-- **File**: `android/.../ime/dictionary/LexiconService.kt` (957 lines)
-- **Problem**: Single file handles trie queries, SQLite queries, deduplication, sorting, filtering
-- **Fix direction**: Split into `TrieQueryService`, `SQLiteQueryService`, `DictionaryResultProcessor`
+- **File**: `android/.../ime/dictionary/LexiconService.kt`
+- **Problem**: Single file handles trie queries, binary reader calls, deduplication, sorting, filtering
+- **Fix direction**: Split into `TrieQueryService`, `BinaryReaderService`, `DictionaryResultProcessor`
 - **Why risky**: Central dictionary lookup path; incorrect split = broken autocomplete
 
 #### 4. TextInputManager.kt Decomposition

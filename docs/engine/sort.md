@@ -10,7 +10,7 @@
 
 - User frequency dominates sorting (stability priority)
 - Recency and exact match only for fine-tuning
-- SQLite pre-sort + in-memory precise sort
+- Binary mmap lookup + in-memory sort
 
 ---
 
@@ -102,7 +102,7 @@ CREATE TABLE user_frequency (
 
 | Source | Database | Field | Description |
 |--------|----------|-------|-------------|
-| Dictionary frequency | `dictionary.db` | `frequency` | Static |
+| Dictionary frequency | `dictionary.bin` | `frequency` | Static (binary mmap) |
 | User frequency | `user_frequency.db` | `count` | Dynamic, incremented on selection |
 | Last used | `user_frequency.db` | `last_used` | Dynamic, updated on selection |
 
@@ -171,5 +171,5 @@ Result: `gua2-ho2` > `gua2` > `gua` (user frequency still dominates over penalty
 ### Solutions
 
 1. Combine exact match + prefix search
-2. SQLite sort by frequency preserves high-frequency words
+2. In-memory sort by frequency after binary mmap read
 3. notone index allows toneless words to exact match

@@ -24,7 +24,7 @@
 
 ### Why Dual-State?
 
-- Trie index format: `tl:gua2`, `poj:goa2`
+- Trie lookup uses prefixed keys: `tl:gua2`, `poj:goa2` (numeric tone, ASCII)
 - Users expect to see diacritics, not numbers
 
 ---

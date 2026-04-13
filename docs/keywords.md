@@ -38,11 +38,15 @@ Standardized keyword mapping for core input method functionality and UI componen
 ### 4. Dictionary & Trie (`engine/trie.md`, `engine/sort.md`)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
-| **MARISA Trie** | Compact prefix trie storing `key→rowid` mappings | `TrieService` |
+| **MARISA Trie** | Compact prefix trie storing `key→rowid` mappings with `tl:`/`poj:`/`hanzi:` prefixes | `TrieService` |
 | **prefixSearch** | Find all entries matching a key prefix | `TrieService.prefixSearch()` |
+| **DictionaryBinaryReader** | Binary mmap reader: rowid → {hanzi, tl, frequency, bitmask} | `DictionaryBinaryReader` |
+| **AssociationBinaryReader** | Binary mmap reader: prev_word → next_word predictions | `AssociationBinaryReader` |
+| **EnabledDictionaries** | Dictionary source toggle + bitmask generation for binary filter | `EnabledDictionaries` |
+| **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | `passesFilter()` |
 | **InputNormalizer** | Converts any input form to TL numeric tone format | `InputNormalizer.normalize()` |
-| **trieKey** | Normalized key format: lowercase, no hyphens, numeric tones (e.g. `gua2si7`) | `InputNormalizer` |
-| **scoringFormula** | `userFreqScore(×100) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | `calculateScore()` |
+| **trieKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | `InputNormalizer` |
+| **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | `calculateScore()` |
 | **userFrequency** | Per-word usage count, dominates ranking | `recordUsage()` |
 | **timeDecay** | Exponential decay with 1-week half-life for recency | `calculateWeight()` |
 
@@ -156,27 +160,3 @@ Standardized keyword mapping for core input method functionality and UI componen
 | **ButtonImageProvider** | SF Symbols images for special keys |
 | **deviceFont** | Font size scaled by device classification |
 
----
-
-## Cross-Reference: Spec File → Keywords
-
-| Spec File | Primary Keywords |
-|-----------|-----------------|
-| `engine/composing.md` | rawInput, composingText, ComposingState, markedText |
-| `engine/autocomplete.md` | Suggestion, InputType, composingTextSuggestion, contextBoost |
-| `engine/tone.md` | numericTone, toneMarks, tonePosition, toneRestoration |
-| `engine/trie.md` | MARISA Trie, prefixSearch, trieKey, InputNormalizer |
-| `engine/sort.md` | scoringFormula, userFrequency, timeDecay |
-| `engine/nextword.md` | bigram, userAssociation, phraseLearning, lastSelectedWord |
-| `engine/flow.md` | ActionHandler, characterInput, performAutocomplete |
-| `engine/segmentation.md` | ~~SyllableSegmenter~~ (archived, removed v3.4.6) |
-| `engine/tps.md` | TPSConverter, containsTPS, toTL, palatalization, nasalizedVowelAutoCorrect |
-| `engine/custom-dictionary.md` | CustomDictionaryEntry, notone, abbrev, batchImport, customWordMarker |
-| `engine/diagnostics.md` | DiagnosticInfo, diagnosticActions |
-| `ui/layout.md` | AlphaRow, SystemRow, TaigiLayouts, MOE layouts |
-| `ui/flick.md` | FlickCallout, FlickDirection, flickTone |
-| `ui/case.md` | KeyboardCase, CaseTransformer, autoCapitalization |
-| `ui/theme.md` | KeyboardColorSettings, ButtonFontProvider, deviceFont |
-| `ui/device.md` | phoneCompact/Regular/Large, pad |
-| `ui/app-ui.md` | HomeTab, LayoutTab, DictionaryTab, SettingsTab |
-| `file-structure.md` | Directory structure, file-to-service mapping |
