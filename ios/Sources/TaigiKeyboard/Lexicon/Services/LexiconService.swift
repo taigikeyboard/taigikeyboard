@@ -2,7 +2,7 @@ import Foundation
 
 /// 詞典服務
 /// 提供台語詞彙搜尋功能
-class LexiconService: @unchecked Sendable {
+final class LexiconService: @unchecked Sendable {
     // MARK: - Properties
 
     static let shared = LexiconService()
@@ -16,15 +16,18 @@ class LexiconService: @unchecked Sendable {
     // MARK: - Initialization
 
     init(
-        repository: DictionaryRepository = .shared,
+        repository: DictionaryRepository? = nil,
         userFrequencyService: UserFrequencyService = .shared,
         trieService: TrieService = .shared,
         customDictionaryRepository: CustomDictionaryRepository = .shared,
     ) {
-        self.repository = repository
-        self.userFrequencyService = userFrequencyService
         self.trieService = trieService
+        self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
+
+        self.repository = repository ?? DictionaryRepository(
+            trieService: trieService,
+        )
 
         // 初始化 Trie
         initializeTrie()
@@ -37,11 +40,13 @@ class LexiconService: @unchecked Sendable {
     /// 初始化 Trie（背景執行）
     private func initializeTrie() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let success = self?.trieService.initialize() ?? false
+            guard let self else { return }
+
+            let success = trieService.initialize()
             if success {
-                self?.logger.info("[INIT] Trie initialized successfully")
+                logger.info("[INIT] Dictionary trie initialized successfully")
             } else {
-                self?.logger.warning("[INIT] Trie initialization failed, using fallback")
+                logger.warning("[INIT] Dictionary trie initialization failed")
             }
         }
     }
@@ -113,15 +118,31 @@ class LexiconService: @unchecked Sendable {
         }
 
         // Query system dictionaries
-        let words = try await repository.query(
+        var systemWords = try await repository.query(
             for: input,
             inputType: inputType,
             inputMode: inputMode,
             limit: limit,
         )
 
+        // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
+        if let raw = rawInput, TPSConverter.containsTPS(raw),
+           SharedSettings.shared.isTpsOrMappedToER,
+           input.contains("er")
+        {
+            let orVariantKey = input.replacingOccurrences(of: "er", with: "or")
+            let orWords = try await repository.query(
+                for: orVariantKey,
+                inputType: inputType,
+                inputMode: inputMode,
+                limit: limit,
+            )
+            let existingIds = Set(systemWords.map(\.id))
+            systemWords += orWords.filter { !existingIds.contains($0.id) }
+        }
+
         // Process case for system results
-        let processedWords = words.map { word in
+        let processedWords = systemWords.map { word in
             let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
                 CandidateProcessor.capitalize(hanzi, basedOn: input)
             } else {

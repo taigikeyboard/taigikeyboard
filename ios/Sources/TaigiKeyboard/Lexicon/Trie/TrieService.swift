@@ -4,28 +4,49 @@ import Foundation
 ///
 /// 提供前綴搜尋和完全匹配功能，用於快速查詢詞典索引。
 /// 底層使用 C++ MARISA-trie library 透過 C 橋接層存取。
+///
+/// 支援多實例：每個 TrieService 實例管理一個獨立的 trie handle。
+/// `.shared` 繼續管理 dictionary.trie。
 final class TrieService: @unchecked Sendable {
-    // MARK: - Constants
-
-    private enum Constants {
-        static let trieFileName = "dictionary"
-        static let trieFileExtension = "trie"
-        static let defaultSearchLimit = 1000
-    }
-
     // MARK: - Properties
 
-    static let shared = TrieService()
+    static let shared = TrieService(
+        fileName: "dictionary",
+        fileExtension: "trie",
+        logCategory: "TrieService",
+    )
 
-    private let logger = DebugLogger(category: "TrieService")
+    private let logger: DebugLogger
+    private let fileName: String
+    private let fileExtension: String
 
-    /// 用於保護初始化的序列佇列
-    private let initQueue = DispatchQueue(label: "com.taigikeyboard.trie.init")
-    private var isInitialized = false
+    /// 用於保護 isInitialized / handle 的序列佇列
+    private let stateQueue = DispatchQueue(label: "com.taigikeyboard.trie.state")
+    private var _isInitialized = false
+    private var _handle: trie_handle_t = -1
 
     // MARK: - Initialization
 
-    private init() {}
+    init(fileName: String, fileExtension: String, logCategory: String = "TrieService") {
+        self.fileName = fileName
+        self.fileExtension = fileExtension
+        logger = DebugLogger(category: logCategory)
+    }
+
+    deinit {
+        stateQueue.sync {
+            if _isInitialized, _handle >= 0 {
+                trie_h_close(_handle)
+            }
+        }
+    }
+
+    // MARK: - State Access
+
+    /// Read current handle atomically; returns -1 if not initialized
+    private var currentHandle: trie_handle_t {
+        stateQueue.sync { _isInitialized ? _handle : -1 }
+    }
 
     // MARK: - Public API
 
@@ -33,37 +54,37 @@ final class TrieService: @unchecked Sendable {
     /// - Returns: 是否成功載入
     @discardableResult
     func initialize() -> Bool {
-        initQueue.sync {
-            if isInitialized {
+        stateQueue.sync {
+            if _isInitialized {
                 return true
             }
 
             guard let path = triePath else {
-                logger.error("[INIT] Trie file not found in bundle")
+                logger.error("[INIT] Trie file not found in bundle: \(fileName).\(fileExtension)")
                 return false
             }
 
-            let success = trie_load(path)
+            let h = trie_create(path)
 
-            if success {
-                isInitialized = true
-                let keyCount = trie_get_key_count()
-                logger.info("[INIT] Trie loaded, keys=\(keyCount)")
+            if h >= 0 {
+                _handle = h
+                _isInitialized = true
+                let keyCount = trie_h_get_key_count(h)
+                logger.info("[INIT] Trie loaded: \(fileName).\(fileExtension), keys=\(keyCount)")
             } else {
-                logger.error("[INIT] Failed to load trie")
+                logger.error("[INIT] Failed to load trie: \(fileName).\(fileExtension)")
             }
 
-            return success
+            return _isInitialized
         }
     }
 
-    /// 前綴搜尋
-    /// - Parameters:
-    ///   - prefix: 搜尋前綴
-    ///   - limit: 最大結果數
+    /// 前綴搜尋（回傳所有符合結果）
+    /// - Parameter prefix: 搜尋前綴
     /// - Returns: 匹配的 rowid 列表
-    func prefixSearch(_ prefix: String, limit: Int = Constants.defaultSearchLimit) -> [Int] {
-        guard isInitialized else {
+    func prefixSearch(_ prefix: String) -> [Int] {
+        let h = currentHandle
+        guard h >= 0 else {
             logger.warning("[SEARCH] Trie not initialized")
             return []
         }
@@ -72,9 +93,9 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        // 配置結果緩衝區
-        var results = [Int32](repeating: 0, count: limit)
-        let count = trie_prefix_search(prefix, &results, Int32(limit))
+        let bufferSize = max(Int(trie_h_get_key_count(h)), 1000)
+        var results = [Int32](repeating: 0, count: bufferSize)
+        let count = trie_h_prefix_search(h, prefix, &results, Int32(bufferSize))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }
@@ -87,7 +108,8 @@ final class TrieService: @unchecked Sendable {
     /// - Parameter key: 要查詢的 key
     /// - Returns: 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
     func lookup(_ key: String) -> [Int] {
-        guard isInitialized else {
+        let h = currentHandle
+        guard h >= 0 else {
             logger.warning("[LOOKUP] Trie not initialized")
             return []
         }
@@ -96,10 +118,9 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        // 配置結果緩衝區（notone key 可能對應數百個 rowid，需足夠大以避免截斷）
-        let maxResults = 1000
-        var results = [Int32](repeating: 0, count: maxResults)
-        let count = trie_lookup(key, &results, Int32(maxResults))
+        let bufferSize = max(Int(trie_h_get_key_count(h)), 1000)
+        var results = [Int32](repeating: 0, count: bufferSize)
+        let count = trie_h_lookup(h, key, &results, Int32(bufferSize))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }
@@ -110,16 +131,18 @@ final class TrieService: @unchecked Sendable {
 
     /// 檢查是否已初始化
     var isReady: Bool {
-        isInitialized && trie_is_loaded()
+        let h = currentHandle
+        return h >= 0 && trie_h_is_loaded(h)
     }
 
     /// 釋放資源
     func close() {
-        initQueue.sync {
-            if isInitialized {
-                trie_close()
-                isInitialized = false
-                logger.info("[CLOSE] Trie closed")
+        stateQueue.sync {
+            if _isInitialized {
+                trie_h_close(_handle)
+                _handle = -1
+                _isInitialized = false
+                logger.info("[CLOSE] Trie closed: \(fileName).\(fileExtension)")
             }
         }
     }
@@ -129,8 +152,8 @@ final class TrieService: @unchecked Sendable {
     /// 取得 trie 檔案路徑
     private var triePath: String? {
         ResourceBundleResolver.dictionaryBundle.path(
-            forResource: Constants.trieFileName,
-            ofType: Constants.trieFileExtension,
+            forResource: fileName,
+            ofType: fileExtension,
         )
     }
 }

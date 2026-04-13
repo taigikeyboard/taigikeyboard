@@ -1,0 +1,72 @@
+package com.siansiansu.taigikeyboard.ime.dictionary
+
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+
+/**
+ * 辭典開關設定（從 PrefHelper snapshot 建立）
+ *
+ * Bitmask bit layout must match dictionary.bin / association.bin:
+ *   0=kautian  1=taigitv  2=itaigi  3=sitbut  4=taihoa  5=taijit
+ *   6=kungge   7=stti     8=khpoo   9=khiin   10=dev    11=lkk
+ *   12=is_variant  13-15=reserved
+ */
+data class EnabledDictionaries(
+    val kautian: Boolean, // 教育部臺灣台語常用詞辭典
+    val taigitv: Boolean, // 台語新詞辭庫
+    val itaigi: Boolean, // iTaigi 華台對照典
+    val sitbut: Boolean, // 台灣植物名彙
+    val taihoa: Boolean, // 台華線頂對照典
+    val taijit: Boolean, // 台日大辭典
+    val kungge: Boolean, // 台語工藝詞庫
+    val stti: Boolean, // 學科術語辭典
+    val khpoo: Boolean, // 腔口補充資料
+    val variant: Boolean, // 異用字
+    val khiin: Boolean, // 在來字
+    val lkk: Boolean, // LKK漢羅合用建議用字
+) {
+    /** 是否全部開啟（10 個主要來源） */
+    fun allEnabled(): Boolean = kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo && lkk
+
+    /** 轉換為 dictionary bitmask（bits 0-11） */
+    fun sourceBitmask(): Int {
+        var mask = 0
+        if (kautian) mask = mask or (1 shl 0)
+        if (taigitv) mask = mask or (1 shl 1)
+        if (itaigi) mask = mask or (1 shl 2)
+        if (sitbut) mask = mask or (1 shl 3)
+        if (taihoa) mask = mask or (1 shl 4)
+        if (taijit) mask = mask or (1 shl 5)
+        if (kungge) mask = mask or (1 shl 6)
+        if (stti) mask = mask or (1 shl 7)
+        if (khpoo) mask = mask or (1 shl 8)
+        // khiin = bit 9 (handled separately in filter)
+        // dev = bit 10 (always included)
+        if (lkk) mask = mask or (1 shl 11)
+        return mask
+    }
+
+    /** 轉換為 association bitmask（bits 0-8，對應 association.bin 的 9 個來源） */
+    fun associationBitmask(): Int = sourceBitmask() and 0x1FF
+
+    /** association 的 9 個來源是否全部開啟 */
+    fun allAssociationSourcesEnabled(): Boolean = kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
+
+    companion object {
+        /** 從 PrefHelper snapshot 建立 */
+        fun fromSnapshot(snapshot: PrefHelper.DictEnabledSnapshot): EnabledDictionaries =
+            EnabledDictionaries(
+                kautian = snapshot.moe,
+                taigitv = snapshot.newword,
+                itaigi = snapshot.itaigi,
+                sitbut = snapshot.taiwanPlant,
+                taihoa = snapshot.taiHua,
+                taijit = snapshot.taiwanJapan,
+                kungge = snapshot.kungge,
+                stti = snapshot.stti,
+                khpoo = snapshot.khpoo,
+                variant = snapshot.variant,
+                khiin = snapshot.khiin,
+                lkk = snapshot.lkk,
+            )
+    }
+}

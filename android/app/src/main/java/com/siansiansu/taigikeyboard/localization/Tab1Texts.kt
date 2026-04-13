@@ -71,6 +71,14 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.4.9",
+                "2026/04/12",
+                listOf(
+                    LocalizedText(hanji = "Reduced Android app size by 75% (48 MB → 13 MB)."),
+                    LocalizedText(hanji = "Increased candidate display limit from 100 to 200."),
+                ),
+            ),
+            VersionEntry(
                 "3.4.8",
                 "2026/04/11",
                 listOf(

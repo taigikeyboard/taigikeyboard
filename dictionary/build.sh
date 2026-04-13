@@ -8,15 +8,15 @@
 #   3. generate_association - 產生 NextWord 詞彙關聯（加入 dictionary.db）
 #   4. create_trie_db       - 建立 Trie 建置用的 SQLite 資料庫
 #   5. create_trie          - 建立 MARISA-trie
-#   6. audit                - 產生審計報告
-#   7. split_packages       - 分拆為各辭典獨立 package
-#   8. deploy               - 複製到 Android/iOS 專案
+#   6. create_dictionary_bin - 建立 dictionary.bin (binary mmap)
+#   7. create_association_bin - 建立 association.bin (binary mmap)
+#   8. audit                - 產生審計報告
+#   9. deploy               - 複製到 Android/iOS 專案
 #
 # 用法：
 #   ./build.sh          # 完整建置（不含 deploy）
 #   ./build.sh all      # 完整建置 + deploy
 #   ./build.sh deploy   # 只執行 deploy
-#   ./build.sh publish  # 發布 packages 到 GitHub Release
 #   ./build.sh clean    # 清除 output/
 
 set -e
@@ -54,55 +54,56 @@ do_clean() {
 
 # Step 1: Merge CSV
 do_merge_csv() {
-    print_step "Step 1/8: Merging dictionaries..."
+    print_step "Step 1/9: Merging dictionaries..."
     python3 "$BUILD_DIR/01_merge_csv.py"
 }
 
 # Step 2: Create App DB
 do_create_app_db() {
-    print_step "Step 2/8: Creating App SQLite database..."
+    print_step "Step 2/9: Creating App SQLite database..."
     bash "$BUILD_DIR/02_create_app_db.sh"
 }
 
 # Step 3: Generate Association
 do_generate_association() {
-    print_step "Step 3/8: Generating NextWord associations..."
+    print_step "Step 3/9: Generating NextWord associations..."
     python3 "$BUILD_DIR/05_generate_association.py"
 }
 
 # Step 4: Create Trie DB
 do_create_trie_db() {
-    print_step "Step 4/8: Creating Trie SQLite database..."
+    print_step "Step 4/9: Creating Trie SQLite database..."
     bash "$BUILD_DIR/03_create_trie_db.sh"
 }
 
 # Step 5: Create Trie
 do_create_trie() {
-    print_step "Step 5/8: Creating MARISA-trie..."
+    print_step "Step 5/9: Creating MARISA-trie..."
     python3 "$BUILD_DIR/04_create_trie.py"
 }
 
-# Step 6: Audit
+# Step 6: Create dictionary.bin
+do_create_dictionary_bin() {
+    print_step "Step 6/9: Creating dictionary.bin..."
+    python3 "$BUILD_DIR/10_create_dictionary_bin.py" --verify
+}
+
+# Step 7: Create association.bin
+do_create_association_bin() {
+    print_step "Step 7/9: Creating association.bin..."
+    python3 "$BUILD_DIR/11_create_association_bin.py" --verify
+}
+
+# Step 8: Audit
 do_audit() {
-    print_step "Step 6/8: Running audit report..."
+    print_step "Step 8/9: Running audit report..."
     python3 "$BUILD_DIR/07_audit.py"
 }
 
-# Step 7: Split Packages
-do_split_packages() {
-    print_step "Step 7/8: Splitting into per-dictionary packages..."
-    python3 "$BUILD_DIR/08_split_packages.py"
-}
-
-# Step 8: Deploy
+# Step 9: Deploy
 do_deploy() {
-    print_step "Step 8/8: Deploying to Android/iOS..."
+    print_step "Step 9/9: Deploying to Android/iOS..."
     bash "$BUILD_DIR/06_deploy.sh"
-}
-
-# Publish packages to GitHub Release
-do_publish() {
-    bash "$BUILD_DIR/09_publish_release.sh"
 }
 
 # 完整建置（不含 deploy）
@@ -112,8 +113,9 @@ do_build() {
     do_generate_association
     do_create_trie_db
     do_create_trie
+    do_create_dictionary_bin
+    do_create_association_bin
     do_audit
-    do_split_packages
 }
 
 # 顯示用法
@@ -124,7 +126,6 @@ show_usage() {
     echo "  (none)    完整建置（不含 deploy）"
     echo "  all       完整建置 + deploy"
     echo "  deploy    只執行 deploy"
-    echo "  publish   發布 packages 到 GitHub Release"
     echo "  clean     清除 output/"
     echo ""
 }
@@ -147,9 +148,6 @@ case "${1:-}" in
         ;;
     "deploy")
         do_deploy
-        ;;
-    "publish")
-        do_publish
         ;;
     "clean")
         do_clean

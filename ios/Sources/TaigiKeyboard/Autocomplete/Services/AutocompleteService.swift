@@ -111,25 +111,10 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
             // Build search key for Trie search
             let searchInput = buildSearchKey(from: rawInput)
-            let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, limit: 100, rawInput: rawInput)
-
-            // TPS ㄜ expansion: also search "or" variant when toggle ON
-            var allWords = words
-            if TPSConverter.containsTPS(rawInput),
-               settings.isTpsOrMappedToER,
-               searchInput.contains("er")
-            {
-                let orVariantKey = searchInput.replacingOccurrences(of: "er", with: "or")
-                let orWords = try await lexiconService.search(
-                    for: orVariantKey, inputType: inputType,
-                    inputMode: inputMode, limit: 100, rawInput: rawInput,
-                )
-                let existingIds = Set(allWords.map(\.id))
-                allWords += orWords.filter { !existingIds.contains($0.id) }
-            }
+            let words = try await lexiconService.search(for: searchInput, inputType: inputType, inputMode: inputMode, rawInput: rawInput)
 
             // Apply context boost: promote candidates matching bigram predictions from lastSelectedWord
-            let contextBoostedWords = await applyContextBoost(words: allWords)
+            let contextBoostedWords = await applyContextBoost(words: words)
 
             // 將詞彙轉換為候選詞（不做大小寫轉換，由 SuggestionCaseTransformer 在 View 層處理）
             var suggestions = convertToSuggestions(contextBoostedWords)

@@ -67,15 +67,11 @@ object TrieService {
         }
 
     /**
-     * 前綴搜尋
+     * 前綴搜尋（回傳所有符合結果）
      * @param prefix 搜尋前綴
-     * @param limit 最大結果數
      * @return 匹配的 rowid 列表
      */
-    fun prefixSearch(
-        prefix: String,
-        limit: Int = 1000,
-    ): IntArray {
+    fun prefixSearch(prefix: String): IntArray {
         if (!isInitialized) {
             if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Trie not initialized")
             return IntArray(0)
@@ -83,7 +79,8 @@ object TrieService {
         if (prefix.isEmpty()) return IntArray(0)
 
         return try {
-            nativePrefixSearch(prefix, limit)
+            val bufferSize = maxOf(nativeGetKeyCount(), 1000)
+            nativePrefixSearch(prefix, bufferSize)
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Prefix search failed", e)
             IntArray(0)
@@ -91,15 +88,11 @@ object TrieService {
     }
 
     /**
-     * 完全匹配查詢
+     * 完全匹配查詢（回傳所有符合結果）
      * @param key 要查詢的 key
-     * @param maxResults 最大結果數（notone key 可能對應數百個 rowid，需足夠大以避免截斷）
      * @return 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
      */
-    fun lookup(
-        key: String,
-        maxResults: Int = 1000,
-    ): IntArray {
+    fun lookup(key: String): IntArray {
         if (!isInitialized) {
             if (BuildConfig.DEBUG) Log.w(TAG, "[LOOKUP] Trie not initialized")
             return IntArray(0)
@@ -107,8 +100,7 @@ object TrieService {
         if (key.isEmpty()) return IntArray(0)
 
         return try {
-            val results = nativeLookup(key)
-            if (results.size > maxResults) results.copyOf(maxResults) else results
+            nativeLookup(key)
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) Log.e(TAG, "[LOOKUP] Lookup failed", e)
             IntArray(0)

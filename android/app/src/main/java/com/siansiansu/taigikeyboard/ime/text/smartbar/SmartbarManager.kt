@@ -11,12 +11,12 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,12 +26,10 @@ import java.util.concurrent.atomic.AtomicReference
  * Smartbar 管理器
  *
  * 負責管理 Smartbar 的狀態與候選詞顯示
- * 支援動態生成候選詞按鈕，最多顯示 100 個候選詞
- * 候選詞數量由 LexiconService 控制（預設 limit = 100）
+ * 支援動態生成候選詞按鈕，最多顯示 200 個候選詞
+ * 候選詞數量由 LexiconService 控制（預設 limit = 200）
  */
-class SmartbarManager private constructor() :
-    TaigiKeyboard.EventListener {
-
+class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
     private val taigikeyboard: TaigiKeyboard = TaigiKeyboard.getInstance()
     private var isComposingEnabled: Boolean = false
     private val textInputManager: TextInputManager = TextInputManager.getInstance()
@@ -53,7 +51,9 @@ class SmartbarManager private constructor() :
     private val currentSuggestionsRef = AtomicReference<List<TaigiWord>>(emptyList())
     private inline var currentSuggestions: List<TaigiWord>
         get() = currentSuggestionsRef.get()
-        set(value) { currentSuggestionsRef.set(value) }
+        set(value) {
+            currentSuggestionsRef.set(value)
+        }
 
     // Expand/collapse state
     private var isExpanded: Boolean = false
@@ -71,59 +71,69 @@ class SmartbarManager private constructor() :
 
     // --- Delegated handlers ---
 
-    private val nextWordHandler = NextWordHandler(
-        scope = scope,
-        prefs = prefs,
-        taigikeyboard = taigikeyboard,
-        isTranslateSwapped = { cachedIsTranslateSwapped },
-        onUpdateCandidates = { updateCandidates(it) },
-        onClearCandidates = { clearCandidates() }
-    )
+    private val nextWordHandler =
+        NextWordHandler(
+            scope = scope,
+            prefs = prefs,
+            taigikeyboard = taigikeyboard,
+            isTranslateSwapped = { cachedIsTranslateSwapped },
+            onUpdateCandidates = { updateCandidates(it) },
+            onClearCandidates = { clearCandidates() },
+        )
 
-    private val toolbarManager = ToolbarManager(
-        prefs = prefs,
-        smartbarViewProvider = { smartbarView },
-        candidateOverlayViewProvider = { candidateOverlayView },
-        layoutSelectionOverlayViewProvider = { layoutSelectionOverlayView },
-        symbolSelectionOverlayViewProvider = { symbolSelectionOverlayView },
-        settingsSelectionOverlayViewProvider = { settingsSelectionOverlayView },
-        onInputModeChanged = { mode ->
-            when (mode) {
-                "emoji" -> taigikeyboard.setActiveInput(R.id.media_input)
-                "hide_self" -> taigikeyboard.requestHideSelf(0)
-            }
-        },
-        onLayoutSelected = { newLayoutType ->
-            textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
-        },
-        onActiveContainerChanged = { /* handled by toolbarManager.activeContainerId setter */ },
-        getKeyboardHeight = { keyboardHeight }
-    )
+    private val toolbarManager =
+        ToolbarManager(
+            prefs = prefs,
+            smartbarViewProvider = { smartbarView },
+            candidateOverlayViewProvider = { candidateOverlayView },
+            layoutSelectionOverlayViewProvider = { layoutSelectionOverlayView },
+            symbolSelectionOverlayViewProvider = { symbolSelectionOverlayView },
+            settingsSelectionOverlayViewProvider = { settingsSelectionOverlayView },
+            onInputModeChanged = { mode ->
+                when (mode) {
+                    "emoji" -> taigikeyboard.setActiveInput(R.id.media_input)
+                    "hide_self" -> taigikeyboard.requestHideSelf(0)
+                }
+            },
+            onLayoutSelected = { newLayoutType ->
+                textInputManager.onKeyboardLayoutTypeChanged(newLayoutType)
+            },
+            onActiveContainerChanged = { /* handled by toolbarManager.activeContainerId setter */ },
+            getKeyboardHeight = { keyboardHeight },
+        )
 
-    private val candidateClickHandler = CandidateClickHandler(
-        scope = scope,
-        prefs = prefs,
-        taigikeyboard = taigikeyboard,
-        getCurrentSuggestions = { currentSuggestions },
-        getIsTranslateSwapped = { cachedIsTranslateSwapped },
-        getOutputBothScripts = { cachedOutputBothScripts },
-        getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
-        onClearCandidates = { clearCandidates() },
-        onNextWordPrediction = { displayText, committedText, roman, hanzi, rawInput ->
-            handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
-        }
-    )
+    private val candidateClickHandler =
+        CandidateClickHandler(
+            scope = scope,
+            prefs = prefs,
+            taigikeyboard = taigikeyboard,
+            getCurrentSuggestions = { currentSuggestions },
+            getIsTranslateSwapped = { cachedIsTranslateSwapped },
+            getOutputBothScripts = { cachedOutputBothScripts },
+            getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
+            onClearCandidates = { clearCandidates() },
+            onNextWordPrediction = { displayText, committedText, roman, hanzi, rawInput ->
+                handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
+            },
+        )
 
     // --- Public delegation API (preserves original interface) ---
 
     var activeContainerId: Int
         get() = toolbarManager.activeContainerId
-        set(value) { toolbarManager.activeContainerId = value }
+        set(value) {
+            toolbarManager.activeContainerId = value
+        }
 
     fun isShowingNextWordCandidates(): Boolean = nextWordHandler.isShowingNextWordCandidates()
 
-    fun handleNextWordPrediction(displayText: String, committedText: String, roman: String, hanzi: String? = null, rawInput: String = "") =
-        nextWordHandler.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
+    fun handleNextWordPrediction(
+        displayText: String,
+        committedText: String,
+        roman: String,
+        hanzi: String? = null,
+        rawInput: String = "",
+    ) = nextWordHandler.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
 
     fun updateLastSelectedWord(word: String) = nextWordHandler.updateLastSelectedWord(word)
 
@@ -137,22 +147,24 @@ class SmartbarManager private constructor() :
 
     // --- Number row ---
 
-    private val numberRowButtonOnClickListener = View.OnClickListener { v ->
-        val keyData = when (v.id) {
-            R.id.number_row_0 -> KeyData(48, "0")
-            R.id.number_row_1 -> KeyData(49, "1")
-            R.id.number_row_2 -> KeyData(50, "2")
-            R.id.number_row_3 -> KeyData(51, "3")
-            R.id.number_row_4 -> KeyData(52, "4")
-            R.id.number_row_5 -> KeyData(53, "5")
-            R.id.number_row_6 -> KeyData(54, "6")
-            R.id.number_row_7 -> KeyData(55, "7")
-            R.id.number_row_8 -> KeyData(56, "8")
-            R.id.number_row_9 -> KeyData(57, "9")
-            else -> KeyData(0)
+    private val numberRowButtonOnClickListener =
+        View.OnClickListener { v ->
+            val keyData =
+                when (v.id) {
+                    R.id.number_row_0 -> KeyData(48, "0")
+                    R.id.number_row_1 -> KeyData(49, "1")
+                    R.id.number_row_2 -> KeyData(50, "2")
+                    R.id.number_row_3 -> KeyData(51, "3")
+                    R.id.number_row_4 -> KeyData(52, "4")
+                    R.id.number_row_5 -> KeyData(53, "5")
+                    R.id.number_row_6 -> KeyData(54, "6")
+                    R.id.number_row_7 -> KeyData(55, "7")
+                    R.id.number_row_8 -> KeyData(56, "8")
+                    R.id.number_row_9 -> KeyData(57, "9")
+                    else -> KeyData(0)
+                }
+            taigikeyboard.textInputManager.sendKeyPress(keyData)
         }
-        taigikeyboard.textInputManager.sendKeyPress(keyData)
-    }
 
     companion object {
         private const val TAG = "SmartbarManager"
@@ -197,23 +209,25 @@ class SmartbarManager private constructor() :
     private fun setupCandidateRecyclerView(smartbarView: SmartbarView) {
         val recyclerView = smartbarView.candidatesRecyclerView ?: return
 
-        val layoutManager = LinearLayoutManager(
-            taigikeyboard.context,
-            LinearLayoutManager.HORIZONTAL,
-            false
-        )
+        val layoutManager =
+            LinearLayoutManager(
+                taigikeyboard.context,
+                LinearLayoutManager.HORIZONTAL,
+                false,
+            )
         recyclerView.layoutManager = layoutManager
 
-        candidateAdapter = CandidateAdapter(
-            context = taigikeyboard.context,
-            isTranslateSwapped = { cachedIsTranslateSwapped },
-            fontType = { prefs.fontType },
-            layoutType = { prefs.keyboardLayoutType },
-            orMapsToER = { prefs.tpsOrMapsToER },
-            onCandidateClick = { word, index ->
-                candidateClickHandler.handleCandidateClick(word, index)
-            }
-        )
+        candidateAdapter =
+            CandidateAdapter(
+                context = taigikeyboard.context,
+                isTranslateSwapped = { cachedIsTranslateSwapped },
+                fontType = { prefs.fontType },
+                layoutType = { prefs.keyboardLayoutType },
+                orMapsToER = { prefs.tpsOrMapsToER },
+                onCandidateClick = { word, index ->
+                    candidateClickHandler.handleCandidateClick(word, index)
+                },
+            )
 
         recyclerView.adapter = candidateAdapter
         recyclerView.itemAnimator = null
@@ -269,13 +283,14 @@ class SmartbarManager private constructor() :
 
         overlayView.onOpenApp = {
             val context = overlayView.context
-            val intent = android.content.Intent(
-                context,
-                com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java
-            )
+            val intent =
+                android.content.Intent(
+                    context,
+                    com.siansiansu.taigikeyboard.settings.SettingsMainActivity::class.java,
+                )
             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                    android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
-                    android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
             context.startActivity(intent)
             taigikeyboard.requestHideSelf(0)
             settingsSelectionOverlayView?.hide()
@@ -310,7 +325,10 @@ class SmartbarManager private constructor() :
         instance = null
     }
 
-    fun onStartInputView(keyboardMode: KeyboardMode, isComposingEnabled: Boolean) {
+    fun onStartInputView(
+        keyboardMode: KeyboardMode,
+        isComposingEnabled: Boolean,
+    ) {
         this.isComposingEnabled = isComposingEnabled
 
         // Reset NextWord context (switching input fields)
@@ -322,10 +340,11 @@ class SmartbarManager private constructor() :
 
         when {
             keyboardMode == KeyboardMode.NUMERIC ||
-            keyboardMode == KeyboardMode.PHONE ||
-            keyboardMode == KeyboardMode.PHONE2 -> {
+                keyboardMode == KeyboardMode.PHONE ||
+                keyboardMode == KeyboardMode.PHONE2 -> {
                 smartbarView?.visibility = View.GONE
             }
+
             else -> {
                 smartbarView?.visibility = View.VISIBLE
                 layoutSelectionOverlayView?.hide()
@@ -352,24 +371,29 @@ class SmartbarManager private constructor() :
 
         val isNextWord = suggestions.firstOrNull()?.id?.let { it < 0 } ?: false
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'")
+            Log.d(
+                TAG,
+                "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'",
+            )
         }
 
         val (caps, capsLock) = textInputManager.getCapsState()
         val composingText = textInputManager.getComposingManager()?.getComposingText() ?: ""
-        val inputMode = when (prefs.inputMode) {
-            "poj" -> ToneConverterModels.InputMode.POJ
-            "tl", "tps" -> ToneConverterModels.InputMode.TL
-            else -> ToneConverterModels.InputMode.POJ
-        }
+        val inputMode =
+            when (prefs.inputMode) {
+                "poj" -> ToneConverterModels.InputMode.POJ
+                "tl", "tps" -> ToneConverterModels.InputMode.TL
+                else -> ToneConverterModels.InputMode.POJ
+            }
 
-        val transformedSuggestions = SuggestionCaseTransformer.transform(
-            suggestions = suggestions,
-            composingText = composingText,
-            caps = caps,
-            capsLock = capsLock,
-            inputMode = inputMode
-        )
+        val transformedSuggestions =
+            SuggestionCaseTransformer.transform(
+                suggestions = suggestions,
+                composingText = composingText,
+                caps = caps,
+                capsLock = capsLock,
+                inputMode = inputMode,
+            )
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'")
@@ -381,16 +405,19 @@ class SmartbarManager private constructor() :
 
         // Switch to candidates view (but don't force-switch from toolbar)
         if (activeContainerId != R.id.candidates_container &&
-            activeContainerId != R.id.toolbar_container) {
+            activeContainerId != R.id.toolbar_container
+        ) {
             activeContainerId = R.id.candidates_container
         }
 
         val res = taigikeyboard.context.resources
-        val smartbarHeight = view.height.takeIf { it > 0 }
-            ?: res.getDimension(R.dimen.smartbar_height).toInt()
+        val smartbarHeight =
+            view.height.takeIf { it > 0 }
+                ?: res.getDimension(R.dimen.smartbar_height).toInt()
         adapter.setTextSizeScale(prefs.candidateTextSizeScale)
-        val colorSettings = com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
-            .fromJson(prefs.colorSettings)
+        val colorSettings =
+            com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
+                .fromJson(prefs.colorSettings)
         adapter.setCustomTextColor(colorSettings.candidateTextColor)
         view.applyCustomBackgroundColor(colorSettings.candidateBackgroundColor)
         adapter.setTextSize(smartbarHeight)
@@ -400,15 +427,16 @@ class SmartbarManager private constructor() :
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[DEBUG] updateCandidates completed: itemCount=${adapter.itemCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}")
+            Log.d(
+                TAG,
+                "[DEBUG] updateCandidates completed: itemCount=${adapter.itemCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}",
+            )
         }
 
         updateExpandButtonVisibility()
     }
 
-    fun getCachedIsTranslateSwapped(): Boolean {
-        return cachedIsTranslateSwapped
-    }
+    fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
 
     fun toggleTranslateSwapped() {
         cachedIsTranslateSwapped = !cachedIsTranslateSwapped
@@ -428,7 +456,7 @@ class SmartbarManager private constructor() :
         textInputManager.reloadAllLayoutsInBackground()
         textInputManager.invalidateKeysByCode(
             com.siansiansu.taigikeyboard.ime.text.key.KeyCode.TRANSLATE,
-            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED
+            com.siansiansu.taigikeyboard.ime.text.key.KeyCode.VIEW_NUMERIC_ADVANCED,
         )
 
         if (BuildConfig.DEBUG) {
@@ -451,7 +479,8 @@ class SmartbarManager private constructor() :
         candidateAdapter?.submitList(emptyList())
 
         if (activeContainerId == R.id.candidates_container ||
-            activeContainerId == R.id.english_candidates_container) {
+            activeContainerId == R.id.english_candidates_container
+        ) {
             activeContainerId = R.id.candidates_container
         }
 
@@ -534,8 +563,9 @@ class SmartbarManager private constructor() :
         }
 
         val res = taigikeyboard.context.resources
-        val smartbarHeight = view.height.takeIf { it > 0 }
-            ?: res.getDimension(R.dimen.smartbar_height).toInt()
+        val smartbarHeight =
+            view.height.takeIf { it > 0 }
+                ?: res.getDimension(R.dimen.smartbar_height).toInt()
         val englishTextSizePx = smartbarHeight * 0.36f
         val scaledDensity = res.displayMetrics.density * res.configuration.fontScale
         val englishTextSizeSp = englishTextSizePx / scaledDensity

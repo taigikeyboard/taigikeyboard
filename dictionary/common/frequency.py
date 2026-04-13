@@ -78,7 +78,7 @@ def _load_khiin_frequency(freq_path: str, conv_path: str) -> dict:
     Returns:
         dict[(漢字, TL發音), 頻率]
     """
-    from kesi import Ku
+    from .taigi_bridge import convert_poj_to_tl
 
     # 載入詞頻
     freq = {}
@@ -110,8 +110,7 @@ def _load_khiin_frequency(freq_path: str, conv_path: str) -> dict:
             continue
 
         try:
-            ku = Ku(inp)
-            tl = ku.TL().hanlo.lower().replace(" ", "-")
+            tl = convert_poj_to_tl(inp).lower().replace(" ", "-")
         except Exception:
             continue
 
