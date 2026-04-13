@@ -1,99 +1,89 @@
-# Android Main App Tab1–Tab4 Review Plan
+# Android Review Plan
 
-Review date: 2026-04-13
+## Phase 1: Tab1–Tab4 Review (2026-04-13) — Complete (A–F5)
 
-## Review Goals
+## Phase 2: `ui/components/` Review (2026-04-14)
 
-1. **No redundant or duplicated code** — Eliminate identical strings, near-duplicate composables, and copy-paste patterns
-2. **Adheres to clean code principles** — Single responsibility, clear intent, no dead code
-3. **No over-engineering** — Only implement what's needed; don't merge distinct patterns into one overly-parameterized component
-4. **No impact on existing functionality** — All changes are refactor-only; runtime behavior must be preserved
-5. **Good readability, maintainability, and proper decoupling** — Centralize shared constants, reduce boilerplate where the benefit is clear
-6. **Clear and consistent variable and file naming** — Follow project naming conventions; rename only when the current name is genuinely misleading
+**Scope**: 14 files in `ui/components/` — shared composables, dialogs, icons
 
----
+### Review Summary
 
-## Completed Summary
+| # | Finding | Severity | Stage |
+|---|---------|----------|-------|
+| 1 | `SegmentedButtonRow.kt` is dead code (0 usages) | Medium | G1 |
+| 2 | Hardcoded "OK" button text in SettingInfoButton | Medium | G2 |
+| 3 | `ColorRow` and `SliderRow` missing `modifier` parameter | Low | G3 |
+| 4 | Row height inconsistency: ActionRow 56dp vs others 48dp | Note | — |
+| 5 | NavigationRow padding 16dp vs others 20dp | Note | — |
 
-### Stage A: Dead code removal, UI consistency fixes
-- Removed unused fields, overrides, imports, data entries
-- Unified trailing icons (`ArrowForward` → `KeyboardArrowRight`), section spacing, `SectionHeader` usage
-- Added error Toast for `resetAllSettings` failure
+### Finding Details
 
-### Stage B: Localization deduplication
-- Extracted 14 shared `LocalizedText` entries into `CommonTexts.kt`
-- Localized hard-coded English error strings
+**1. Dead code: `SegmentedButtonRow.kt`**
 
-### Stage C: Larger refactors — all DROPPED (no over-engineering)
+`SegmentedButtonRow` and `SegmentedOption` have zero usages. The only segmented button in the app (`ColorPickerDialog.kt:135`) uses `SingleChoiceSegmentedButtonRow` directly with custom content (`icon = {}`, `fontSize = 13.sp`) that doesn't match SegmentedButtonRow's API. Adapting the component to fit would add complexity for a single call site.
 
-### Stage D: Folder restructure `ui/settings/` → `ui/tabs/`
+**Action**: Delete `SegmentedButtonRow.kt`.
 
-### Stage E: Theme unification
-- Merged `Type.kt` into `Theme.kt` with iOS-aligned Typography (34/18/17/14sp)
-- Migrated 65+ call sites to `MaterialTheme.typography.*`
-- Deleted `Type.kt`; AppStyle narrowed to spacing + colors only
+**2. Hardcoded "OK" button text in SettingInfoButton**
 
-### Stage F (F1–F4): Style variable centralization
-- F1: Rewrote `ui-style-guide.md` to reflect current architecture
-- F2: Replaced hardcoded `14.sp` → `MaterialTheme.typography.labelLarge` (3 files)
-- F3: Extracted `AppStyle.scrollContentBottomPadding = 40.dp` (7 files)
-- F4: Collapsed icon tiers 16/17/20dp → `smallIconSize=16dp` + `selectionIconSize=20dp`; unified trailing chevron `trailingChevronSize=24dp`
+`SettingInfoButton.kt:88` — `"OK"` is a user-visible button label baked into the component. ContentDescription strings ("Reset"×2, "Info") are accessibility-only and follow the project-wide pattern of English contentDescription (also seen in "Back", "Close", "Clear", "Open" across all screens) — not a component-specific issue.
 
----
+**Action**: Add `dismissLabel: String = "OK"` parameter to `SettingInfoButton` (same pattern as `ConfirmationDialog`/`ResultDialog`). Add `CommonTexts.ok` so callers with `languageManager` can localize.
 
-## Pending: F5 — Shared Row Composables (under evaluation)
+**3. Missing `modifier` parameter**
 
-**Goal**: Absorb repeated inline `Row(heightIn=48.dp, padding=20/12dp)` patterns into shared composables
+`ColorRow` and `SliderRow` do not accept a `modifier: Modifier = Modifier` parameter, unlike every other row component (ActionRow, SwitchRow, NavigationRow, LoadingRow). This breaks composability — callers cannot apply padding, test tags, or accessibility modifiers.
 
-### Analysis
+**Action**: Add `modifier: Modifier = Modifier` parameter to both, thread it to the root composable.
 
-10 inline Row patterns using `heightIn(min = 48.dp)` outside of existing components:
+**4–5. Row dimension inconsistency (noted, no action)**
 
-| Category | Count | Files |
-|----------|-------|-------|
-| LoadingRow (centered spinner) | 4 | DataManagement, Frequency, Association, CustomDictionary |
-| SelectionRow (label + checkmark) | 2 | InputModeScreen, FontPickerContent |
-| ValueNavigationRow (label + value + chevron) | 2 | AppearanceSettings, InputSettings |
-| DataEntryRow (label + delete) | 1 | CustomDictionaryScreen |
-| ToggleRow (label + info + switch) | 1 | DictionarySettingsScreen |
+- **ActionRow** uses `heightIn(min = 56.dp)` while ColorRow/LoadingRow/SwitchRow use `48.dp`. This appears intentional — ActionRow is used for prominent action buttons that benefit from a larger touch target.
+- **NavigationRow** uses `padding(16.dp)` while others use `padding(horizontal = 20.dp, vertical = 12.dp)`. NavigationRow is only used in HomeScreen (tab-style navigation links) where tighter padding matches the visual density. Different from settings rows.
 
-### Evaluation
+Both patterns are intentional design choices, not bugs. No change needed.
 
-- `SelectionRow` and `ValueNavigationRow` each have only **2 usages** — premature abstraction
-- `LoadingRow` has **4 identical usages** — worth extracting
-- Creating 2–3 new components increases API surface without significant complexity reduction
-- **Alternative**: Extract `48.dp` / `20.dp` / `12.dp` as AppStyle constants (simpler, same single-source-of-truth benefit)
+### Items Reviewed — No Issues Found
 
-### Decision: Low priority, likely skip
-
-`SelectionRow`/`ValueNavigationRow` 各 2 次用量不值得抽元件。`LoadingRow` (4 次) 是唯一可能值得的。Theme review 已完成，F5 屬於 component 重構範疇，非 theme 相關。
+- **TaigiIcons.kt** (1173 lines, 21 icons): All icons used. 9 Filled emoji icons in `EmojiCategory.kt`, 5 Outlined icons used directly, 7 Outlined icons used via `SettingsIcons` facade. File is large but intentional (avoids `material-icons-extended` dependency).
+- **SettingsIcons.kt**: Clean facade, used in 2 files (InputSettingsScreen, SettingsOverlayContent) to sync icons between app and keyboard overlay.
+- **ConfirmationDialog / ResultDialog**: Clean, focused, properly used (4 / 24 usages respectively).
+- **SettingsCard / SettingsDivider**: Ubiquitous (58 / 49 usages), clean implementations.
+- **ActionRow vs NavigationRow**: Different purposes — ActionRow (optional ImageVector icon, haptic feedback, 56dp) for settings actions, NavigationRow (required Painter icon, no haptic, 16dp padding) for HomeScreen navigation. Keeping separate is correct.
+- **SwitchRow**: Clean composition with `SettingInfoButton`, `AppStyle.switchColors()`, `LocalMinimumInteractiveComponentSize`. 24 usages.
+- **LoadingRow**: Clean extraction from F5 refactor. 4 usages.
 
 ---
 
-## Pre-existing issues (noted, not yet addressed)
+### Stages
+
+#### Stage G1: Dead code removal — Complete
+**Changes**: Deleted `SegmentedButtonRow.kt` (0 usages)
+
+#### Stage G2: Parameterize hardcoded "OK" button — Complete
+**Changes**:
+- Added `CommonTexts.ok = LocalizedText(hanji = "好")`
+- Added `dismissLabel: String = "OK"` parameter to `SettingInfoButton`
+- Internal usage now references `dismissLabel` instead of hardcoded `"OK"`
+
+#### Stage G3: Add missing `modifier` parameters — Complete
+**Changes**:
+- `ColorRow.kt`: Added `modifier: Modifier = Modifier`, threaded to root `Row`
+- `SliderRow.kt`: Added `modifier: Modifier = Modifier`, threaded to root `Column`
+
+---
+
+### Tests
+
+**Current state**: Zero component tests exist. All 10 existing Android tests are in `ime/dictionary/` (engine logic). No `androidTest/` tests at all.
+
+**Assessment**: Compose UI testing (snapshot/interaction) requires `compose-ui-test` dependency and `androidTest` source set — a setup change beyond this review's scope. The G1–G3 changes are purely mechanical (delete dead code, string replacement, add defaulted parameter) with no behavioral risk, so new tests are not required for this phase.
+
+**Existing tests**: Run `cd android && ./gradlew test` to verify no regressions from G1–G3 changes.
+
+---
+
+## Pre-existing issues (from Phase 1, not yet addressed)
 
 - `HomeScreen.kt:62` — `externalLink` variable defined but never used (dead code)
 - `SettingsMainActivity.kt:187` — `// Handle exception` comment in `openUrl` catch block does nothing
-
----
-
-## Current Architecture (for next session reference)
-
-```
-ui/theme/
-├── Theme.kt      ← M3 ColorScheme (Light/Dark) + AppTypography (HuninnFontFamily + iOS-aligned sizes)
-└── AppStyle.kt   ← Icon sizes, spacing, dimensions, non-M3 colors (warningOrange, switchColors), SectionHeader
-```
-
-**Typography** → `MaterialTheme.typography.*` (headlineLarge=34sp, titleMedium=18sp, bodyLarge=17sp, labelLarge=14sp)
-**Colors** → `MaterialTheme.colorScheme.*` + `AppStyle.warningOrange()` / `AppStyle.switchColors()`
-**Icon sizes** → `AppStyle.trailingChevronSize(24dp)`, `smallIconSize(16dp)`, `selectionIconSize(20dp)`
-**Spacing** → `AppStyle.sectionSpacing(24dp)`, `scrollContentBottomPadding(40dp)`, `sectionHeaderBottomPadding(6dp)`
-
-## Verification (pending user testing)
-
-- [ ] `cd android && ./gradlew assembleDebug` compiles
-- [ ] Tab1–Tab4 screens render correctly
-- [ ] Body text 18→17sp, section header 19→18sp visual change confirmed (iOS alignment)
-- [ ] Trailing chevron icons uniformly 24dp across all tabs
-- [ ] Info help icon renders at 16dp (was 17dp)

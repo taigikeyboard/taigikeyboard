@@ -22,6 +22,10 @@ object CommonTexts {
     val sttiDict = LocalizedText(hanji = "教育部學科術語臺灣台語對譯")
     val khpooDict = LocalizedText(hanji = "腔口差")
 
+    // MARK: - 通用 UI
+
+    val ok = LocalizedText(hanji = "好")
+
     // MARK: - 錯誤訊息
 
     val exportFailed = LocalizedText(hanji = "匯出失敗")
