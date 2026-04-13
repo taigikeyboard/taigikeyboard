@@ -5,7 +5,7 @@ enum LexiconConstants {
     }
 
     enum Search {
-        static let defaultLimit = 100
+        static let defaultLimit = 200
     }
 
     enum TriePrefix {

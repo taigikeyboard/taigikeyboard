@@ -6,7 +6,7 @@ import SwiftUI
 enum CandidateViewModels {
     enum UI {
         static let buttonSpacing: CGFloat = 14
-        static let maxDisplayCount: Int = 100
+        static let maxDisplayCount: Int = 200
         static let baseHeight: CGFloat = 50
         /// Extra height to prevent bottom clipping from content offset
         private static let bottomPadding: CGFloat = 6
@@ -21,10 +21,10 @@ enum CandidateViewModels {
         /// 主標題字體大小（根據螢幕尺寸自適應 + user scale）
         static var primaryFontSize: CGFloat {
             let base: CGFloat = switch ScreenSizeClass.current {
-            case .phoneCompact:  basePrimaryFontSize
-            case .phoneRegular:  21
-            case .phoneLarge:    basePrimaryFontSize
-            case .pad:           23
+            case .phoneCompact: basePrimaryFontSize
+            case .phoneRegular: 21
+            case .phoneLarge: basePrimaryFontSize
+            case .pad: 23
             }
             return base * SharedSettings.shared.candidateTextSizeScale
         }
@@ -32,10 +32,10 @@ enum CandidateViewModels {
         /// 副標題字體大小（根據螢幕尺寸自適應 + user scale）
         static var secondaryFontSize: CGFloat {
             let base: CGFloat = switch ScreenSizeClass.current {
-            case .phoneCompact:  baseSecondaryFontSize
-            case .phoneRegular:  16
-            case .phoneLarge:    baseSecondaryFontSize
-            case .pad:           17
+            case .phoneCompact: baseSecondaryFontSize
+            case .phoneRegular: 16
+            case .phoneLarge: baseSecondaryFontSize
+            case .pad: 17
             }
             return base * SharedSettings.shared.candidateTextSizeScale
         }

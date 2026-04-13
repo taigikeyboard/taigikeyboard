@@ -8,12 +8,6 @@ import Foundation
 /// 支援多實例：每個 TrieService 實例管理一個獨立的 trie handle。
 /// `.shared` 繼續管理 dictionary.trie。
 final class TrieService: @unchecked Sendable {
-    // MARK: - Constants
-
-    private enum Constants {
-        static let defaultSearchLimit = 1000
-    }
-
     // MARK: - Properties
 
     static let shared = TrieService(
@@ -85,12 +79,10 @@ final class TrieService: @unchecked Sendable {
         }
     }
 
-    /// 前綴搜尋
-    /// - Parameters:
-    ///   - prefix: 搜尋前綴
-    ///   - limit: 最大結果數
+    /// 前綴搜尋（回傳所有符合結果）
+    /// - Parameter prefix: 搜尋前綴
     /// - Returns: 匹配的 rowid 列表
-    func prefixSearch(_ prefix: String, limit: Int = Constants.defaultSearchLimit) -> [Int] {
+    func prefixSearch(_ prefix: String) -> [Int] {
         let h = currentHandle
         guard h >= 0 else {
             logger.warning("[SEARCH] Trie not initialized")
@@ -101,8 +93,9 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        var results = [Int32](repeating: 0, count: limit)
-        let count = trie_h_prefix_search(h, prefix, &results, Int32(limit))
+        let bufferSize = max(Int(trie_h_get_key_count(h)), 1000)
+        var results = [Int32](repeating: 0, count: bufferSize)
+        let count = trie_h_prefix_search(h, prefix, &results, Int32(bufferSize))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }
@@ -125,8 +118,9 @@ final class TrieService: @unchecked Sendable {
             return []
         }
 
-        var results = [Int32](repeating: 0, count: Constants.defaultSearchLimit)
-        let count = trie_h_lookup(h, key, &results, Int32(Constants.defaultSearchLimit))
+        let bufferSize = max(Int(trie_h_get_key_count(h)), 1000)
+        var results = [Int32](repeating: 0, count: bufferSize)
+        let count = trie_h_lookup(h, key, &results, Int32(bufferSize))
 
         if count > 0 {
             return results.prefix(Int(count)).map { Int($0) }

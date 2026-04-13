@@ -53,7 +53,7 @@ final class DictionaryRepository: @unchecked Sendable {
             return []
         }
 
-        let allRowIds = lookupRowIds(input: input, inputMode: inputMode, limit: limit)
+        let allRowIds = lookupRowIds(input: input, inputMode: inputMode)
 
         guard !allRowIds.isEmpty else {
             return []
@@ -106,7 +106,7 @@ final class DictionaryRepository: @unchecked Sendable {
             throw DictionaryError.trieNotLoaded
         }
 
-        let allRowIds = lookupRowIds(input: input, inputMode: inputMode, limit: limit)
+        let allRowIds = lookupRowIds(input: input, inputMode: inputMode)
         guard !allRowIds.isEmpty else { return [] }
 
         return buildSearchResults(
@@ -138,7 +138,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
         // 使用 hanzi: prefix 在主 trie 做前綴搜尋
         let trieKey = LexiconConstants.TriePrefix.hanzi + query
-        let rowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
+        let rowIds = trieService.prefixSearch(trieKey)
 
         logger.debug("[HANZI-SEARCH] trie returned \(rowIds.count) rowids")
 
@@ -164,18 +164,17 @@ final class DictionaryRepository: @unchecked Sendable {
 
     // MARK: - Private Methods
 
-    /// Look up rowIds from trie (exact match + prefix search, deduplicated)
+    /// Look up rowIds from trie (exact match + prefix search, deduplicated, no artificial limit)
     private func lookupRowIds(
         input: String,
         inputMode: InputMode,
-        limit: Int,
     ) -> [Int] {
         let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
         guard !normalizedInput.isEmpty else { return [] }
 
         let trieKey = LexiconConstants.TriePrefix.prefix(for: inputMode) + normalizedInput
         let exactRowIds = trieService.lookup(trieKey)
-        let prefixRowIds = trieService.prefixSearch(trieKey, limit: limit * 6)
+        let prefixRowIds = trieService.prefixSearch(trieKey)
 
         logger.debug("[TRIE] input='\(input)' exact=\(exactRowIds.count) prefix=\(prefixRowIds.count)")
 

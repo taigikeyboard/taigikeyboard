@@ -118,15 +118,31 @@ final class LexiconService: @unchecked Sendable {
         }
 
         // Query system dictionaries
-        let words = try await repository.query(
+        var systemWords = try await repository.query(
             for: input,
             inputType: inputType,
             inputMode: inputMode,
             limit: limit,
         )
 
+        // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
+        if let raw = rawInput, TPSConverter.containsTPS(raw),
+           SharedSettings.shared.isTpsOrMappedToER,
+           input.contains("er")
+        {
+            let orVariantKey = input.replacingOccurrences(of: "er", with: "or")
+            let orWords = try await repository.query(
+                for: orVariantKey,
+                inputType: inputType,
+                inputMode: inputMode,
+                limit: limit,
+            )
+            let existingIds = Set(systemWords.map(\.id))
+            systemWords += orWords.filter { !existingIds.contains($0.id) }
+        }
+
         // Process case for system results
-        let processedWords = words.map { word in
+        let processedWords = systemWords.map { word in
             let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
                 CandidateProcessor.capitalize(hanzi, basedOn: input)
             } else {

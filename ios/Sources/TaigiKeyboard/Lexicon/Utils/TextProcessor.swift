@@ -77,6 +77,23 @@ enum CandidateProcessor {
         }
     }
 
+    // MARK: - Score Breakdown
+
+    /// Breakdown of candidate score components (single source of truth).
+    /// Used by both sorting and debug logging — no recalculation needed.
+    struct ScoreBreakdown {
+        let userFreqScore: Int
+        let recencyBonus: Int
+        let exactBonus: Int
+        let completionPenalty: Int
+        let closenessBonus: Int
+        let baseFreqScore: Int
+
+        var total: Int {
+            userFreqScore + recencyBonus + exactBonus + completionPenalty + closenessBonus + baseFreqScore
+        }
+    }
+
     // MARK: - Sorting
 
     /// 計算候選詞排序分數
@@ -93,12 +110,13 @@ enum CandidateProcessor {
     ///   - word: 候選詞
     ///   - normalizedInput: 正規化後的輸入（小寫、去連字符）
     ///   - frequencyData: 使用者頻率資料（包含 count 和 lastUsedMillis）
-    /// - Returns: 排序分數（越高越優先）
+    /// - Returns: 分數分解（ScoreBreakdown）
     static func calculateScore(
         word: TaigiWord,
         normalizedInput: String,
         frequencyData: UserFrequencyService.FrequencyData,
-    ) -> Int {
+        currentTime: Int64,
+    ) -> ScoreBreakdown {
         // Normalize both sides to base form (no tones, no hyphens) for comparison
         let candidateBase = romanToBase(word.roman)
         let inputBase = inputToBase(normalizedInput)
@@ -108,7 +126,6 @@ enum CandidateProcessor {
         let userFreqScore = cappedUserFreq * 100
 
         // Recency 加分（微調，最近 1 小時內用過 +200）
-        let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
         let oneHourMillis: Int64 = 60 * 60 * 1000
         let recencyBonus = if frequencyData.lastUsedMillis > 0 &&
             (currentTime - frequencyData.lastUsedMillis) < oneHourMillis
@@ -135,7 +152,14 @@ enum CandidateProcessor {
         // 詞庫頻率（新詞 fallback，約 0-100）
         let baseFreqScore = (word.lengthScore ?? 0) / 10
 
-        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore + completionPenalty
+        return ScoreBreakdown(
+            userFreqScore: userFreqScore,
+            recencyBonus: recencyBonus,
+            exactBonus: exactBonus,
+            completionPenalty: completionPenalty,
+            closenessBonus: closenessBonus,
+            baseFreqScore: baseFreqScore,
+        )
     }
 
     // MARK: - Base Form Helpers
@@ -176,41 +200,32 @@ enum CandidateProcessor {
         normalizedInput: String,
         frequencyDataMap: [String: UserFrequencyService.FrequencyData],
     ) -> [TaigiWord] {
-        let scored = words.map { word -> (TaigiWord, Int) in
-            let freq = frequencyDataMap[word.displayText] ?? .empty
-            let score = calculateScore(word: word, normalizedInput: normalizedInput, frequencyData: freq)
-            return (word, score)
-        }
-        let sorted = scored.sorted { $0.1 > $1.1 }
+        let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
 
-        logScoreDetails(sorted: sorted, normalizedInput: normalizedInput, frequencyDataMap: frequencyDataMap)
+        let scored = words.map { word -> (TaigiWord, ScoreBreakdown) in
+            let freq = frequencyDataMap[word.displayText] ?? .empty
+            let breakdown = calculateScore(
+                word: word, normalizedInput: normalizedInput,
+                frequencyData: freq, currentTime: currentTime,
+            )
+            return (word, breakdown)
+        }
+        let sorted = scored.sorted { $0.1.total > $1.1.total }
+
+        #if DEBUG
+            logScoreDetails(sorted: sorted, normalizedInput: normalizedInput)
+        #endif
 
         return sorted.map(\.0)
     }
 
     /// Log score breakdown for each candidate (visible in Console.app)
     private static func logScoreDetails(
-        sorted: [(TaigiWord, Int)],
+        sorted: [(TaigiWord, ScoreBreakdown)],
         normalizedInput: String,
-        frequencyDataMap: [String: UserFrequencyService.FrequencyData],
     ) {
-        let inputBase = inputToBase(normalizedInput)
-        let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
-        let oneHourMillis: Int64 = 60 * 60 * 1000
-
-        for (word, total) in sorted {
-            let freq = frequencyDataMap[word.displayText] ?? .empty
-            let candidateBase = romanToBase(word.roman)
-            let userFreqScore = min(freq.count, 100) * 100
-            let recency = (freq.lastUsedMillis > 0 && (currentTime - freq.lastUsedMillis) < oneHourMillis) ? 200 : 0
-            let exact = (candidateBase == inputBase) ? 100 : 0
-            let completion = (candidateBase != inputBase) ? -1000 : 0
-            let inputLen = max(inputBase.count, 1)
-            let candidateLen = max(candidateBase.count, 1)
-            let closeness = Int(Double(min(inputLen, candidateLen)) / Double(max(inputLen, candidateLen)) * 500)
-            let base = (word.lengthScore ?? 0) / 10
-
-            logger.debug("[SCORE] input='\(normalizedInput)' | \(word.roman) \(word.hanzi ?? ""): user=\(userFreqScore) recency=\(recency) exact=\(exact) close=\(closeness) base=\(base) completion=\(completion) total=\(total)")
+        for (word, b) in sorted {
+            logger.debug("[SCORE] input='\(normalizedInput)' | \(word.roman) \(word.hanzi ?? ""): user=\(b.userFreqScore) recency=\(b.recencyBonus) exact=\(b.exactBonus) close=\(b.closenessBonus) base=\(b.baseFreqScore) completion=\(b.completionPenalty) total=\(b.total)")
         }
     }
 }

@@ -202,7 +202,7 @@ object LexiconService {
             Log.d(TAG, "[TRIE] trieKey='$trieKey', TrieService.isReady=${TrieService.isReady}, keyCount=${TrieService.getKeyCount()}")
         }
 
-        val rowIds = lookupRowIds(trieKey, limit)
+        val rowIds = lookupRowIds(trieKey)
         if (rowIds.isEmpty()) {
             if (BuildConfig.DEBUG) Log.d(TAG, "[TRIE] No results for: $trieKey")
             return emptyList()
@@ -239,15 +239,12 @@ object LexiconService {
     }
 
     /**
-     * Trie lookup: exact match + prefix search, merged and deduplicated.
-     * Shared between searchWithTrie() and searchWithSources().
+     * Trie lookup: exact match + prefix search, merged and deduplicated (no artificial limit).
+     * Shared between searchWithTrie(), searchWithSources(), and searchByHanzi().
      */
-    private fun lookupRowIds(
-        trieKey: String,
-        limit: Int,
-    ): List<Int> {
+    private fun lookupRowIds(trieKey: String): List<Int> {
         val exactRowIds = TrieService.lookup(trieKey)
-        val prefixRowIds = TrieService.prefixSearch(trieKey, limit * 6)
+        val prefixRowIds = TrieService.prefixSearch(trieKey)
         return (exactRowIds.toList() + prefixRowIds.toList()).distinct()
     }
 
@@ -272,7 +269,7 @@ object LexiconService {
             if (normalizedInput.isEmpty()) return@withContext emptyList()
 
             val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
-            val rowIds = lookupRowIds(trieKey, limit)
+            val rowIds = lookupRowIds(trieKey)
             if (rowIds.isEmpty()) return@withContext emptyList()
 
             val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(context).snapshotEnabledDictionaries())
@@ -342,7 +339,7 @@ object LexiconService {
             if (!TrieService.isReady) throw DictionaryError.TrieNotLoaded
 
             val trieKey = DictionaryConstants.TRIE_PREFIX_HANZI + input
-            val rowIds = lookupRowIds(trieKey, limit)
+            val rowIds = lookupRowIds(trieKey)
 
             if (rowIds.isEmpty()) {
                 if (BuildConfig.DEBUG) Log.d(TAG, "[HANZI-SEARCH] No trie results for: $trieKey")
@@ -488,14 +485,14 @@ object LexiconService {
         word: TaigiWord,
         normalizedInput: String,
         frequencyData: UserFrequencyService.FrequencyData,
-    ): Int {
+        currentTime: Long,
+    ): ScoreBreakdown {
         val candidateBase = romanToBase(word.roman)
         val inputBase = inputToBase(normalizedInput)
 
         val cappedUserFreq = minOf(frequencyData.count, 100)
         val userFreqScore = cappedUserFreq * 100
 
-        val currentTime = System.currentTimeMillis()
         val oneHourMillis = 60 * 60 * 1000L
         val recencyBonus =
             if (frequencyData.lastUsedMillis > 0 &&
@@ -516,7 +513,14 @@ object LexiconService {
 
         val baseFreqScore = (word.lengthScore ?: 0) / 10
 
-        return userFreqScore + recencyBonus + exactBonus + closenessBonus + baseFreqScore + completionPenalty
+        return ScoreBreakdown(
+            userFreqScore = userFreqScore,
+            recencyBonus = recencyBonus,
+            exactBonus = exactBonus,
+            completionPenalty = completionPenalty,
+            closenessBonus = closenessBonus,
+            baseFreqScore = baseFreqScore,
+        )
     }
 
     private fun romanToBase(roman: String): String {
@@ -536,64 +540,37 @@ object LexiconService {
     private suspend fun sortByScore(
         words: List<TaigiWord>,
         normalizedInput: String,
-    ): List<TaigiWord> =
-        withContext(Dispatchers.IO) {
-            try {
-                val wordTexts = words.map { it.displayText }.distinct()
-                val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
+    ): List<TaigiWord> {
+        val currentTime = System.currentTimeMillis()
+        val wordTexts = words.map { it.displayText }.distinct()
+        val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
 
-                val sorted =
-                    words
-                        .map { word ->
-                            val freqData =
-                                frequencyDataMap[word.displayText]
-                                    ?: UserFrequencyService.FrequencyData(0, 0)
-                            word to calculateScore(word, normalizedInput, freqData)
-                        }.sortedByDescending { it.second }
+        val sorted =
+            words
+                .map { word ->
+                    val freqData =
+                        frequencyDataMap[word.displayText]
+                            ?: UserFrequencyService.FrequencyData(0, 0)
+                    word to calculateScore(word, normalizedInput, freqData, currentTime)
+                }.sortedByDescending { it.second.total }
 
-                if (BuildConfig.DEBUG) {
-                    logScoreDetails(sorted, normalizedInput, frequencyDataMap)
-                }
-
-                sorted.map { it.first }
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.w(TAG, "[SORT] Scored sort failed, using original order", e)
-                }
-                words
-            }
+        if (BuildConfig.DEBUG) {
+            logScoreDetails(sorted, normalizedInput)
         }
 
+        return sorted.map { it.first }
+    }
+
     private fun logScoreDetails(
-        sorted: List<Pair<TaigiWord, Int>>,
+        sorted: List<Pair<TaigiWord, ScoreBreakdown>>,
         normalizedInput: String,
-        frequencyDataMap: Map<String, UserFrequencyService.FrequencyData>,
     ) {
-        val inputBase = inputToBase(normalizedInput)
-        val currentTime = System.currentTimeMillis()
-        val oneHourMillis = 60 * 60 * 1000L
-
-        for ((word, total) in sorted) {
-            val freq =
-                frequencyDataMap[word.displayText]
-                    ?: UserFrequencyService.FrequencyData(0, 0)
-            val candidateBase = romanToBase(word.roman)
-            val userFreqScore = minOf(freq.count, 100) * 100
-            val recency = if (freq.lastUsedMillis > 0 && (currentTime - freq.lastUsedMillis) < oneHourMillis) 200 else 0
-            val exact = if (candidateBase == inputBase) 100 else 0
-            val completion = if (candidateBase != inputBase) -1000 else 0
-            val inputLen = maxOf(inputBase.length, 1)
-            val candidateLen = maxOf(candidateBase.length, 1)
-            val closeness = (minOf(inputLen, candidateLen).toDouble() / maxOf(inputLen, candidateLen).toDouble() * 500).toInt()
-            val base = (word.lengthScore ?: 0) / 10
+        for ((word, b) in sorted) {
             val hanzi = word.hanzi ?: ""
-
-            if (BuildConfig.DEBUG) {
-                Log.d(
-                    TAG,
-                    "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=$userFreqScore recency=$recency exact=$exact close=$closeness base=$base completion=$completion total=$total",
-                )
-            }
+            Log.d(
+                TAG,
+                "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=${b.userFreqScore} recency=${b.recencyBonus} exact=${b.exactBonus} close=${b.closenessBonus} base=${b.baseFreqScore} completion=${b.completionPenalty} total=${b.total}",
+            )
         }
     }
 
