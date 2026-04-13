@@ -212,20 +212,16 @@ object Tab1Texts {
 
     val copyrightNotice = LocalizedText(hanji = "致謝")
     val viewLicense = LocalizedText(hanji = "授權條款")
-    val viewWebsite = LocalizedText(hanji = "官方網站")
 
     // 教育部臺灣台語常用詞辭典
-    val moeDict = LocalizedText(hanji = "教育部臺灣台語常用詞辭典")
     val moeCopyright = LocalizedText(hanji = "© 教育部")
     val ccLicense = LocalizedText(hanji = "CC BY-ND 3.0 TW")
 
     // iTaigi 華台辭典
-    val iTaigiDict = LocalizedText(hanji = "iTaigi愛台語")
     val iTaigiCopyright = LocalizedText(hanji = "© iTaigi愛台語")
     val cc0License = LocalizedText(hanji = "CC0")
 
     // 台語新詞辭庫
-    val newwordDict = LocalizedText(hanji = "公視台語台台語新詞辭庫")
     val newwordCopyright = LocalizedText(hanji = "© 公視台語台")
     val ccBy4License = LocalizedText(hanji = "CC BY 4.0")
 
@@ -240,30 +236,24 @@ object Tab1Texts {
     val silOpenFontLicense11 = LocalizedText(hanji = "SIL Open Font License 1.1")
 
     // 台灣植物名彙
-    val taiwanPlantDict = LocalizedText(hanji = "台灣植物名彙")
     val taiwanPlantCopyright = LocalizedText(hanji = "© 佐佐木舜一")
     val ccBySA4License = LocalizedText(hanji = "CC BY-SA 4.0")
 
     // 台華線頂對照典
-    val taiHuaDict = LocalizedText(hanji = "台華線頂對照典")
     val taiHuaCopyright = LocalizedText(hanji = "© 鄭良偉")
 
     // 台日大辭典
-    val taiwanJapanDict = LocalizedText(hanji = "臺日大辭典台語譯本")
     val taiwanJapanCopyright = LocalizedText(hanji = "© 小川尚義")
     val ccByNcSA3License = LocalizedText(hanji = "CC BY-NC-SA 3.0 TW")
 
     // 台語工藝詞庫
-    val kunggeDict = LocalizedText(hanji = "工藝中心臺灣台語工藝詞庫")
     val kunggeCopyright = LocalizedText(hanji = "© 國立臺灣工藝研究發展中心")
     val ccByNcLicense = LocalizedText(hanji = "CC BY-NC 4.0")
 
     // 學科術語辭典
-    val sttiDict = LocalizedText(hanji = "教育部學科術語臺灣台語對譯")
     val sttiCopyright = LocalizedText(hanji = "© 教育部")
     val ogdlTaiwanLicense = LocalizedText(hanji = "OGDL-Taiwan-1.0")
 
     // 腔口差
-    val accentDict = LocalizedText(hanji = "腔口差")
     val accentDictCredit = LocalizedText(hanji = "「實齋」整理、提供")
 }

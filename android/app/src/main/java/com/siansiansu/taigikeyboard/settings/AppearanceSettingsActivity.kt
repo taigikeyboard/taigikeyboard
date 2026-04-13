@@ -5,7 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.ui.settings.AppearanceSettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab2.AppearanceSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 

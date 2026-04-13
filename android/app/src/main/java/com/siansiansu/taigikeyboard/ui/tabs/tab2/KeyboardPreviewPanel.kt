@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab2
 
 import android.view.ContextThemeWrapper
 import androidx.compose.foundation.background

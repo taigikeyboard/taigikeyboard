@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.diagnostics
+package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
 import android.content.Context
 import android.os.Build

@@ -14,19 +14,18 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.SubtypeManager
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
-import com.siansiansu.taigikeyboard.ui.settings.DictionarySearchViewModel
-import com.siansiansu.taigikeyboard.ui.settings.DictionarySettingsScreen
-import com.siansiansu.taigikeyboard.ui.settings.HomeScreen
-import com.siansiansu.taigikeyboard.ui.settings.InputSettingsScreen
-import com.siansiansu.taigikeyboard.ui.settings.LayoutScreen
-import com.siansiansu.taigikeyboard.ui.settings.MainSettingsScreen
-import com.siansiansu.taigikeyboard.ui.settings.TabItem
+import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.TabItem
+import com.siansiansu.taigikeyboard.ui.tabs.tab1.HomeScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab2.LayoutScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySearchViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import com.siansiansu.taigikeyboard.util.PackageManagerUtils
@@ -34,7 +33,6 @@ import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
 
 class SettingsMainActivity : AppCompatActivity() {
-
     companion object {
         const val EXTRA_START_TAB = "extra_start_tab"
 
@@ -46,7 +44,6 @@ class SettingsMainActivity : AppCompatActivity() {
     }
 
     lateinit var prefs: PrefHelper
-    lateinit var subtypeManager: SubtypeManager
 
     private val searchViewModel: DictionarySearchViewModel by viewModels()
     private var resetCounter by mutableIntStateOf(0)
@@ -61,14 +58,13 @@ class SettingsMainActivity : AppCompatActivity() {
             startActivity(SetupGuideActivity.createIntent(this, isFullScreen = true))
         }
 
-        subtypeManager = SubtypeManager(this, prefs)
-
-        val mode = when (prefs.settingsTheme) {
-            "light" -> AppCompatDelegate.MODE_NIGHT_NO
-            "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            "auto" -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-            else -> AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
-        }
+        val mode =
+            when (prefs.settingsTheme) {
+                "light" -> AppCompatDelegate.MODE_NIGHT_NO
+                "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+                "auto" -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                else -> AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
+            }
         AppCompatDelegate.setDefaultNightMode(mode)
 
         setupEdgeToEdge()
@@ -78,85 +74,96 @@ class SettingsMainActivity : AppCompatActivity() {
         val languageManager = LanguageManager.getInstance(this)
         val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME)
 
-        val versionName = try {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
-        } catch (e: Exception) {
-            "1.0"
-        }
+        val versionName =
+            try {
+                packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+            } catch (e: Exception) {
+                "1.0"
+            }
 
         setContent {
             TaigiKeyboardTheme {
                 MainSettingsScreen(
-                    tabs = listOf(
-                        TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
-                        TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
-                        TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
-                        TabItem(R.drawable.ic_settings, getString(R.string.tab_settings))
-                    ),
-                    initialTab = initialTab
+                    tabs =
+                        listOf(
+                            TabItem(R.drawable.ic_home, getString(R.string.tab_home)),
+                            TabItem(R.drawable.keyboard_24, getString(R.string.tab_layout)),
+                            TabItem(R.drawable.dictionary_24, getString(R.string.tab_dictionary)),
+                            TabItem(R.drawable.ic_settings, getString(R.string.tab_settings)),
+                        ),
+                    initialTab = initialTab,
                 ) { selectedTab ->
                     when (selectedTab) {
-                        TAB_HOME -> HomeScreen(
-                            languageManager = languageManager,
-                            versionName = versionName,
-                            onSetupGuide = {
-                                startActivity(Intent(this, SetupGuideActivity::class.java))
-                            },
-                            onFeatureClick = { titleKey, contentType, contentKeys ->
-                                openDetailActivity(titleKey, contentType, contentKeys)
-                            },
-                            onUrlClick = ::openUrl,
-                            onCopyright = {
-                                startActivity(Intent(this, CopyrightActivity::class.java))
-                            },
-                            onFeedback = {
-                                openDetailActivity(
-                                    "contact_us", "feedback",
-                                    arrayOf("feedback_email")
-                                )
-                            },
-                            onVersionHistory = {
-                                openDetailActivity("version_history", "version", emptyArray())
-                            },
-                            onFaqClick = { titleKey, contentKeys ->
-                                openDetailActivity(titleKey, "faq", contentKeys)
-                            }
-                        )
+                        TAB_HOME -> {
+                            HomeScreen(
+                                languageManager = languageManager,
+                                versionName = versionName,
+                                onSetupGuide = {
+                                    startActivity(Intent(this, SetupGuideActivity::class.java))
+                                },
+                                onFeatureClick = { titleKey, contentType, contentKeys ->
+                                    openDetailActivity(titleKey, contentType, contentKeys)
+                                },
+                                onUrlClick = ::openUrl,
+                                onCopyright = {
+                                    startActivity(Intent(this, CopyrightActivity::class.java))
+                                },
+                                onFeedback = {
+                                    openDetailActivity(
+                                        "contact_us",
+                                        "feedback",
+                                        arrayOf("feedback_email"),
+                                    )
+                                },
+                                onVersionHistory = {
+                                    openDetailActivity("version_history", "version", emptyArray())
+                                },
+                                onFaqClick = { titleKey, contentKeys ->
+                                    openDetailActivity(titleKey, "faq", contentKeys)
+                                },
+                            )
+                        }
 
-                        TAB_LAYOUT -> LayoutScreen(
-                            languageManager = languageManager,
-                            prefs = prefs,
-                            onAppearanceSettings = {
-                                startActivity(
-                                    Intent(this, AppearanceSettingsActivity::class.java)
-                                )
-                            }
-                        )
+                        TAB_LAYOUT -> {
+                            LayoutScreen(
+                                languageManager = languageManager,
+                                prefs = prefs,
+                                onAppearanceSettings = {
+                                    startActivity(
+                                        Intent(this, AppearanceSettingsActivity::class.java),
+                                    )
+                                },
+                            )
+                        }
 
-                        TAB_DICTIONARY -> DictionarySettingsScreen(
-                            languageManager = languageManager,
-                            prefs = prefs,
-                            onCustomDictionary = {
-                                startActivity(CustomDictionaryActivity.createIntent(this))
-                            },
-                            onNavigateToFrequency = {
-                                startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
-                            },
-                            onNavigateToAssociation = {
-                                startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
-                            },
-                            onBackupRestore = {
-                                startActivity(DataManagementActivity.createIntent(this))
-                            },
-                            searchViewModel = searchViewModel
-                        )
+                        TAB_DICTIONARY -> {
+                            DictionarySettingsScreen(
+                                languageManager = languageManager,
+                                prefs = prefs,
+                                onCustomDictionary = {
+                                    startActivity(CustomDictionaryActivity.createIntent(this))
+                                },
+                                onNavigateToFrequency = {
+                                    startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
+                                },
+                                onNavigateToAssociation = {
+                                    startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
+                                },
+                                onBackupRestore = {
+                                    startActivity(DataManagementActivity.createIntent(this))
+                                },
+                                searchViewModel = searchViewModel,
+                            )
+                        }
 
-                        TAB_SETTINGS -> InputSettingsScreen(
-                            languageManager = languageManager,
-                            prefs = prefs,
-                            onResetSettings = ::resetAllSettings,
-                            resetCounter = resetCounter
-                        )
+                        TAB_SETTINGS -> {
+                            InputSettingsScreen(
+                                languageManager = languageManager,
+                                prefs = prefs,
+                                onResetSettings = ::resetAllSettings,
+                                resetCounter = resetCounter,
+                            )
+                        }
                     }
                 }
             }
@@ -166,10 +173,10 @@ class SettingsMainActivity : AppCompatActivity() {
     private fun openDetailActivity(
         titleKey: String,
         contentType: String,
-        contentKeys: Array<String>
+        contentKeys: Array<String>,
     ) {
         startActivity(
-            DetailActivity.createIntent(this, titleKey, contentType, contentKeys)
+            DetailActivity.createIntent(this, titleKey, contentType, contentKeys),
         )
     }
 
@@ -189,13 +196,19 @@ class SettingsMainActivity : AppCompatActivity() {
                 UserFrequencyService.deleteDatabase()
                 NextWordService.clearAllAssociations(this@SettingsMainActivity)
                 resetCounter++
-                Toast.makeText(
-                    this@SettingsMainActivity,
-                    languageManager.text(Tab4Texts.resetSuccess),
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast
+                    .makeText(
+                        this@SettingsMainActivity,
+                        languageManager.text(Tab4Texts.resetSuccess),
+                        Toast.LENGTH_SHORT,
+                    ).show()
             } catch (_: Exception) {
-                // Handle exception silently
+                Toast
+                    .makeText(
+                        this@SettingsMainActivity,
+                        languageManager.text(Tab4Texts.resetFailed),
+                        Toast.LENGTH_SHORT,
+                    ).show()
             }
         }
     }
@@ -208,20 +221,8 @@ class SettingsMainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        // Note: tab switching via intent is handled by Compose's rememberSaveable
-    }
-
     override fun onPause() {
         updateLauncherIconStatus()
         super.onPause()
     }
-
-    override fun onDestroy() {
-        updateLauncherIconStatus()
-        super.onDestroy()
-    }
-
 }

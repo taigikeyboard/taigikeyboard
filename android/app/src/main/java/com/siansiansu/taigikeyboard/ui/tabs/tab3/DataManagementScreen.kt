@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab3
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row

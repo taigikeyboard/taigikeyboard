@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab2
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Canvas

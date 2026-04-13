@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -21,8 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import com.siansiansu.taigikeyboard.ui.components.ContentCopy
-import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
@@ -42,14 +40,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.diagnostics.DiagnosticService
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.DiagnosticTexts
+import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.ContentCopy
+import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -309,10 +308,10 @@ fun InputSettingsScreen(
                 Spacer(Modifier.height(24.dp))
 
                 // Diagnostic info card
-                SectionHeader(languageManager.text(DiagnosticTexts.sectionTitle))
+                SectionHeader(languageManager.text(Tab4Texts.diagnosticSectionTitle))
                 SettingsCard {
                     ActionRow(
-                        label = languageManager.text(DiagnosticTexts.copy),
+                        label = languageManager.text(Tab4Texts.diagnosticCopy),
                         icon = Icons.Outlined.ContentCopy,
                         onClick = {
                             scope.launch {
@@ -321,13 +320,13 @@ fun InputSettingsScreen(
                                 clipboard.setPrimaryClip(
                                     ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted()),
                                 )
-                                Toast.makeText(context, languageManager.text(DiagnosticTexts.copied), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, languageManager.text(Tab4Texts.diagnosticCopied), Toast.LENGTH_SHORT).show()
                             }
                         },
                     )
                     SettingsDivider()
                     ActionRow(
-                        label = languageManager.text(DiagnosticTexts.share),
+                        label = languageManager.text(Tab4Texts.diagnosticShare),
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
@@ -345,7 +344,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     ActionRow(
-                        label = languageManager.text(DiagnosticTexts.email),
+                        label = languageManager.text(Tab4Texts.diagnosticEmail),
                         icon = Icons.AutoMirrored.Outlined.OpenInNew,
                         textColor = MaterialTheme.colorScheme.primary,
                         onClick = {
@@ -357,7 +356,7 @@ fun InputSettingsScreen(
                                 try {
                                     context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
                                 } catch (_: Exception) {
-                                    Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, languageManager.text(Tab4Texts.noEmailApp), Toast.LENGTH_SHORT).show()
                                 }
                             }
                         },
@@ -382,7 +381,7 @@ fun InputSettingsScreen(
                 title = languageManager.text(Tab4Texts.resetSettings),
                 message = languageManager.text(Tab4Texts.resetSettingsMessage),
                 confirmLabel = languageManager.text(Tab4Texts.reset),
-                dismissLabel = languageManager.text(Tab4Texts.cancel),
+                dismissLabel = languageManager.text(CommonTexts.cancel),
                 onConfirm = {
                     showResetDialog = false
                     onResetSettings()

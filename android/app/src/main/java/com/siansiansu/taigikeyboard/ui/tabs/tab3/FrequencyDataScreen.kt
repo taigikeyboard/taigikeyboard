@@ -1,11 +1,9 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab3
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,20 +17,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import com.siansiansu.taigikeyboard.ui.components.FileDownload
-import com.siansiansu.taigikeyboard.ui.components.FileUpload
-import com.siansiansu.taigikeyboard.ui.components.MenuBook
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -42,9 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -56,76 +44,97 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
+import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.FileDownload
+import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
+import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomDictionaryScreen(
+fun FrequencyDataScreen(
     languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val displayLimit = 100
 
-    var entries by remember { mutableStateOf<List<CustomDictionaryService.Entry>>(emptyList()) }
-    var showEditDialog by remember { mutableStateOf(false) }
-    var editingEntry by remember { mutableStateOf<CustomDictionaryService.Entry?>(null) }
-    var showDeleteAllDialog by remember { mutableStateOf(false) }
+    var allData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var showClearDialog by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
 
-    val filteredEntries =
+    val filteredData =
         if (filterText.isEmpty()) {
-            entries.take(100)
+            allData.take(displayLimit)
         } else {
             val query = filterText.lowercase()
-            entries.filter {
-                it.roman.lowercase().contains(query) ||
-                    it.hanzi.lowercase().contains(query)
+            allData.filter { it.first.lowercase().contains(query) }
+        }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            allData = UserFrequencyService.getAllFrequencies(context)
+        }
+    }
+
+    val exportLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.CreateDocument("text/csv"),
+        ) { uri: Uri? ->
+            uri ?: return@rememberLauncherForActivityResult
+            scope.launch {
+                try {
+                    val allData =
+                        withContext(Dispatchers.IO) {
+                            UserFrequencyService.getAllFrequencies(context)
+                        }
+                    val csv =
+                        buildString {
+                            for ((word, count) in allData) {
+                                append("${CsvUtils.escape(word)},$count\n")
+                            }
+                        }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use {
+                            it.write(csv.toByteArray(Charsets.UTF_8))
+                        }
+                    }
+                    resultMessage = languageManager.text(Tab3Texts.exportSuccess)
+                    showResultDialog = true
+                } catch (e: Exception) {
+                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.exportFailed)
+                    showResultDialog = true
+                }
             }
         }
 
-    fun reload() {
-        scope.launch { entries = CustomDictionaryService.fetchAll() }
-    }
-
-    LaunchedEffect(Unit) {
-        reload()
-    }
-
-    // File import launcher
     val importLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocument(),
@@ -134,47 +143,34 @@ fun CustomDictionaryScreen(
             isImporting = true
             scope.launch {
                 try {
-                    val result = CustomDictionaryService.importFromFile(context, uri)
+                    val csvString =
+                        withContext(Dispatchers.IO) {
+                            context.contentResolver.openInputStream(uri)?.use {
+                                it.bufferedReader(Charsets.UTF_8).readText()
+                            } ?: throw Exception("Cannot read file")
+                        }
+                    val entries = parseFrequencyCSV(csvString)
+                    val imported =
+                        withContext(Dispatchers.IO) {
+                            UserFrequencyService.batchImportMerge(context, entries)
+                        }
+                    val skipped = entries.size - imported
                     resultMessage =
                         String.format(
-                            languageManager.text(Tab3Texts.importResult),
-                            result.imported,
-                            result.skipped,
+                            languageManager.text(Tab3Texts.frequencyImportResult),
+                            imported,
+                            skipped,
                         )
                     showResultDialog = true
-                    reload()
+                    // Reload data
+                    withContext(Dispatchers.IO) {
+                        allData = UserFrequencyService.getAllFrequencies(context)
+                    }
                 } catch (e: Exception) {
-                    resultMessage =
-                        when {
-                            e.message == "fileTooLarge" -> languageManager.text(Tab3Texts.fileTooLarge)
-                            e.message == "tooManyEntries" -> languageManager.text(Tab3Texts.tooManyEntries)
-                            e.message?.contains("格式") == true -> languageManager.text(Tab3Texts.invalidCSVFormat)
-                            else -> e.localizedMessage ?: "Import failed"
-                        }
+                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.importFailed)
                     showResultDialog = true
                 } finally {
                     isImporting = false
-                }
-            }
-        }
-
-    // File export launcher
-    val exportLauncher =
-        rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.CreateDocument("text/csv"),
-        ) { uri: Uri? ->
-            uri ?: return@rememberLauncherForActivityResult
-            scope.launch {
-                try {
-                    val csv = CustomDictionaryService.exportCSV()
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(csv.toByteArray(Charsets.UTF_8))
-                    }
-                    resultMessage = languageManager.text(Tab3Texts.exportSuccess)
-                    showResultDialog = true
-                } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: "Export failed"
-                    showResultDialog = true
                 }
             }
         }
@@ -184,21 +180,13 @@ fun CustomDictionaryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.customDictionary),
+                        text = languageManager.text(Tab3Texts.frequencyManagement),
                         fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        editingEntry = null
-                        showEditDialog = true
-                    }) {
-                        Icon(Icons.Default.Add, contentDescription = null)
                     }
                 },
                 colors =
@@ -221,20 +209,20 @@ fun CustomDictionaryScreen(
                         .weight(1f)
                         .padding(horizontal = 20.dp),
             ) {
-                // Enable/Disable toggle
+                // Toggle
                 item {
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = languageManager.text(Tab3Texts.customDictEnabled),
-                            checked = prefs.customDictEnabled,
-                            infoText = languageManager.text(Tab3Texts.customDictEnabledInfo),
-                            onCheckedChange = { prefs.customDictEnabled = it },
+                            label = languageManager.text(Tab3Texts.frequencyRecordingEnabled),
+                            checked = prefs.frequencyRecordingEnabled,
+                            infoText = languageManager.text(Tab3Texts.frequencyRecordingEnabledInfo),
+                            onCheckedChange = { prefs.frequencyRecordingEnabled = it },
                         )
                     }
                 }
 
-                // Import/Export + Delete
+                // Import/Export
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
@@ -243,32 +231,20 @@ fun CustomDictionaryScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     )
-
                     SettingsCard {
-                        Image(
-                            painter = painterResource(R.drawable.csv_example),
-                            contentDescription = null,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
-                                    .padding(top = 16.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.FillWidth,
-                        )
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictDescription),
+                            text = languageManager.text(Tab3Texts.frequencyDescription),
                             fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.exportCSV),
+                            label = languageManager.text(Tab3Texts.frequencyExportCSV),
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                    exportLauncher.launch("自訂詞庫_$dateStr.csv")
+                                    exportLauncher.launch("詞頻紀錄_$dateStr.csv")
                                 }
                             },
                             icon = Icons.Outlined.FileUpload,
@@ -285,14 +261,11 @@ fun CustomDictionaryScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center,
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                )
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                             }
                         } else {
                             ActionRow(
-                                label = languageManager.text(Tab3Texts.importCSV),
+                                label = languageManager.text(Tab3Texts.frequencyImportCSV),
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -301,13 +274,13 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                // Delete all
+                // Clear button
                 item {
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.deleteAll),
-                            onClick = { if (!isImporting) showDeleteAllDialog = true },
+                            label = languageManager.text(Tab3Texts.clearAllFrequency),
+                            onClick = { showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -318,7 +291,7 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictPrivacyWarning),
+                            text = languageManager.text(Tab3Texts.frequencyPrivacyWarning),
                             fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -326,15 +299,15 @@ fun CustomDictionaryScreen(
                     }
                 }
 
-                // Entry list header
+                // Data list
                 item {
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(16.dp))
                     Row(
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictionary),
+                            text = languageManager.text(Tab3Texts.frequencyManagement),
                             fontSize = AppStyle.sectionHeaderFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -342,33 +315,23 @@ fun CustomDictionaryScreen(
                         SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
                     }
                 }
-
-                if (entries.isEmpty()) {
+                if (allData.isEmpty()) {
                     item {
                         SettingsCard {
-                            Column(
+                            Row(
                                 modifier =
                                     Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.MenuBook,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
                                 Text(
-                                    text = languageManager.text(Tab3Texts.customDictEmpty),
-                                    fontSize = AppStyle.bodyFontSize,
+                                    text = languageManager.text(Tab3Texts.noData),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
-                } else if (filterText.isNotEmpty() && filteredEntries.isEmpty()) {
+                } else if (filterText.isNotEmpty() && filteredData.isEmpty()) {
                     item {
                         SettingsCard {
                             Text(
@@ -381,35 +344,34 @@ fun CustomDictionaryScreen(
                     }
                 } else {
                     itemsIndexed(
-                        items = filteredEntries,
-                        key = { _, entry -> entry.id },
-                    ) { index, entry ->
+                        items = filteredData,
+                        key = { _, (word, _) -> word },
+                    ) { index, (word, count) ->
                         Row(
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .background(MaterialTheme.colorScheme.surface)
-                                    .heightIn(min = 48.dp)
                                     .padding(start = 20.dp, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "${entry.roman} → ${entry.hanzi}",
+                                text = word,
                                 fontSize = AppStyle.bodyFontSize,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier =
-                                    Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            editingEntry = entry
-                                            showEditDialog = true
-                                        }.padding(vertical = 12.dp),
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                text = "$count",
+                                fontSize = AppStyle.captionFontSize,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        CustomDictionaryService.delete(entry.id)
-                                        reload()
+                                        withContext(Dispatchers.IO) {
+                                            UserFrequencyService.deleteWord(context, word)
+                                        }
+                                        allData = allData.filter { it.first != word }
                                     }
                                 },
                             ) {
@@ -420,7 +382,7 @@ fun CustomDictionaryScreen(
                                 )
                             }
                         }
-                        if (index < filteredEntries.lastIndex) {
+                        if (index < filteredData.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 20.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -478,41 +440,23 @@ fun CustomDictionaryScreen(
         }
     }
 
-    // Edit/Add dialog
-    if (showEditDialog) {
-        EditEntryDialog(
-            languageManager = languageManager,
-            entry = editingEntry,
-            onDismiss = { showEditDialog = false },
-            onSave = { entry ->
-                scope.launch {
-                    CustomDictionaryService.save(entry)
-                    reload()
-                }
-                showEditDialog = false
-            },
-        )
-    }
-
-    // Delete all confirmation
-    if (showDeleteAllDialog) {
+    if (showClearDialog) {
         ConfirmationDialog(
-            title = languageManager.text(Tab3Texts.deleteAll),
-            message = languageManager.text(Tab3Texts.deleteAllMessage),
+            title = languageManager.text(Tab3Texts.clearAllFrequency),
+            message = languageManager.text(Tab3Texts.clearFrequencyMessage),
             confirmLabel = languageManager.text(Tab3Texts.clear),
-            dismissLabel = languageManager.text(Tab3Texts.cancel),
+            dismissLabel = languageManager.text(CommonTexts.cancel),
             onConfirm = {
-                showDeleteAllDialog = false
+                showClearDialog = false
                 scope.launch {
-                    CustomDictionaryService.deleteAll()
-                    reload()
+                    withContext(Dispatchers.IO) { UserFrequencyService.deleteDatabase() }
+                    allData = emptyList()
                 }
             },
-            onDismiss = { showDeleteAllDialog = false },
+            onDismiss = { showClearDialog = false },
         )
     }
 
-    // Result dialog
     if (showResultDialog) {
         ResultDialog(
             message = resultMessage,
@@ -522,67 +466,17 @@ fun CustomDictionaryScreen(
     }
 }
 
-@Composable
-private fun EditEntryDialog(
-    languageManager: LanguageManager,
-    entry: CustomDictionaryService.Entry?,
-    onDismiss: () -> Unit,
-    onSave: (CustomDictionaryService.Entry) -> Unit,
-) {
-    var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
-    var hanzi by remember(entry) { mutableStateOf(entry?.hanzi ?: "") }
-    val isEditing = entry != null
-    val canSave = roman.isNotBlank() && hanzi.isNotBlank()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                languageManager.text(
-                    if (isEditing) Tab3Texts.editEntry else Tab3Texts.addEntry,
-                ),
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = roman,
-                    onValueChange = { roman = it },
-                    label = { Text(languageManager.text(Tab3Texts.romanLabel)) },
-                    placeholder = { Text(languageManager.text(Tab3Texts.romanPlaceholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = hanzi,
-                    onValueChange = { hanzi = it },
-                    label = { Text(languageManager.text(Tab3Texts.hanziLabel)) },
-                    placeholder = { Text(languageManager.text(Tab3Texts.hanziPlaceholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val saved =
-                        CustomDictionaryService.Entry(
-                            id = entry?.id ?: UUID.randomUUID().toString(),
-                            roman = roman.trim(),
-                            hanzi = hanzi.trim(),
-                        )
-                    onSave(saved)
-                },
-                enabled = canSave,
-            ) {
-                Text(languageManager.text(Tab3Texts.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(languageManager.text(Tab3Texts.cancel))
-            }
-        },
-    )
+private fun parseFrequencyCSV(csv: String): List<Pair<String, Int>> {
+    val entries = mutableListOf<Pair<String, Int>>()
+    for (line in csv.split("\n")) {
+        val trimmed = line.trim()
+        if (trimmed.isEmpty()) continue
+        val columns = CsvUtils.parseLine(trimmed)
+        if (columns.size < 2) continue
+        val word = columns[0].trim()
+        val count = columns[1].trim().toIntOrNull() ?: continue
+        if (word.isEmpty() || count <= 0) continue
+        entries.add(word to count)
+    }
+    return entries
 }

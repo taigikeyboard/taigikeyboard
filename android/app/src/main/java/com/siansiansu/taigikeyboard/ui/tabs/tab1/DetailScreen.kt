@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab1
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image

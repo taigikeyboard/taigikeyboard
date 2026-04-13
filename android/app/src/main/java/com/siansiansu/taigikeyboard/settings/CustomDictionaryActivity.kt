@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.ui.settings.CustomDictionaryScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.CustomDictionaryScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 

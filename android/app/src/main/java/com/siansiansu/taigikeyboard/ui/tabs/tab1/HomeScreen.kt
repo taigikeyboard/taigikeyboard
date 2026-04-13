@@ -1,6 +1,5 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab1
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
@@ -39,6 +37,7 @@ import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
+import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -108,7 +107,7 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(AppStyle.sectionSpacing))
 
             val context = LocalContext.current
             val features = remember { FeatureContentLoader.loadFeatures(context) }
@@ -142,7 +141,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(AppStyle.sectionSpacing))
 
             // Section 3: Features & settings (remaining features)
             SectionHeader(languageManager.text(Tab1Texts.newFeatures))
@@ -170,7 +169,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(AppStyle.sectionSpacing))
 
             // Section 3: Resources & links
             val linkBlue = MaterialTheme.colorScheme.primary
@@ -247,7 +246,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(AppStyle.sectionSpacing))
 
             // Section 4: FAQ (data-driven from tab1-faq.json)
             SectionHeader(languageManager.text(Tab1Texts.faq))

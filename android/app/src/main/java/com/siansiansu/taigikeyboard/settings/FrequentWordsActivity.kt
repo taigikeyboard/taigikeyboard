@@ -7,8 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.ui.settings.AssociationDataScreen
-import com.siansiansu.taigikeyboard.ui.settings.FrequencyDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.AssociationDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 

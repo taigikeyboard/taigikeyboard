@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab3
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -23,8 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import com.siansiansu.taigikeyboard.ui.components.FileDownload
-import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -50,13 +48,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
+import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
+import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.FileDownload
+import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
@@ -73,7 +73,7 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FrequencyDataScreen(
+fun AssociationDataScreen(
     languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
@@ -82,7 +82,7 @@ fun FrequencyDataScreen(
     val scope = rememberCoroutineScope()
     val displayLimit = 100
 
-    var allData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var allData by remember { mutableStateOf<List<NextWordService.AssociationEntry>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
     var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
@@ -94,12 +94,18 @@ fun FrequencyDataScreen(
             allData.take(displayLimit)
         } else {
             val query = filterText.lowercase()
-            allData.filter { it.first.lowercase().contains(query) }
+            allData.filter {
+                it.prevWord.lowercase().contains(query) ||
+                    it.prevTl.lowercase().contains(query) ||
+                    it.nextWord.lowercase().contains(query) ||
+                    it.nextTl.lowercase().contains(query)
+            }
         }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            allData = UserFrequencyService.getAllFrequencies(context)
+            val assoc = NextWordService.allAssociations(context)
+            allData = assoc
         }
     }
 
@@ -112,12 +118,18 @@ fun FrequencyDataScreen(
                 try {
                     val allData =
                         withContext(Dispatchers.IO) {
-                            UserFrequencyService.getAllFrequencies(context)
+                            NextWordService.allAssociations(context)
                         }
                     val csv =
                         buildString {
-                            for ((word, count) in allData) {
-                                append("${CsvUtils.escape(word)},$count\n")
+                            for (entry in allData) {
+                                append(
+                                    "${CsvUtils.escape(
+                                        entry.prevWord,
+                                    )},${CsvUtils.escape(
+                                        entry.prevTl,
+                                    )},${CsvUtils.escape(entry.nextWord)},${CsvUtils.escape(entry.nextTl)},${entry.count}\n",
+                                )
                             }
                         }
                     withContext(Dispatchers.IO) {
@@ -128,7 +140,7 @@ fun FrequencyDataScreen(
                     resultMessage = languageManager.text(Tab3Texts.exportSuccess)
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: "Export failed"
+                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.exportFailed)
                     showResultDialog = true
                 }
             }
@@ -148,25 +160,26 @@ fun FrequencyDataScreen(
                                 it.bufferedReader(Charsets.UTF_8).readText()
                             } ?: throw Exception("Cannot read file")
                         }
-                    val entries = parseFrequencyCSV(csvString)
+                    val entries = parseAssociationCSV(csvString)
                     val imported =
                         withContext(Dispatchers.IO) {
-                            UserFrequencyService.batchImportMerge(context, entries)
+                            NextWordService.batchImportAssociations(context, entries)
                         }
                     val skipped = entries.size - imported
                     resultMessage =
                         String.format(
-                            languageManager.text(Tab3Texts.frequencyImportResult),
+                            languageManager.text(Tab3Texts.associationImportResult),
                             imported,
                             skipped,
                         )
                     showResultDialog = true
                     // Reload data
                     withContext(Dispatchers.IO) {
-                        allData = UserFrequencyService.getAllFrequencies(context)
+                        val assoc = NextWordService.allAssociations(context)
+                        allData = assoc
                     }
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: "Import failed"
+                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.importFailed)
                     showResultDialog = true
                 } finally {
                     isImporting = false
@@ -179,7 +192,7 @@ fun FrequencyDataScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.frequencyManagement),
+                        text = languageManager.text(Tab3Texts.associationManagement),
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -213,10 +226,10 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = languageManager.text(Tab3Texts.frequencyRecordingEnabled),
-                            checked = prefs.frequencyRecordingEnabled,
-                            infoText = languageManager.text(Tab3Texts.frequencyRecordingEnabledInfo),
-                            onCheckedChange = { prefs.frequencyRecordingEnabled = it },
+                            label = languageManager.text(Tab3Texts.associationRecordingEnabled),
+                            checked = prefs.associationRecordingEnabled,
+                            infoText = languageManager.text(Tab3Texts.associationRecordingEnabledInfo),
+                            onCheckedChange = { prefs.associationRecordingEnabled = it },
                         )
                     }
                 }
@@ -232,18 +245,18 @@ fun FrequencyDataScreen(
                     )
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyDescription),
+                            text = languageManager.text(Tab3Texts.associationDescription),
                             fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.frequencyExportCSV),
+                            label = languageManager.text(Tab3Texts.associationExportCSV),
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-                                    exportLauncher.launch("詞頻紀錄_$dateStr.csv")
+                                    exportLauncher.launch("詞關聯紀錄_$dateStr.csv")
                                 }
                             },
                             icon = Icons.Outlined.FileUpload,
@@ -264,7 +277,7 @@ fun FrequencyDataScreen(
                             }
                         } else {
                             ActionRow(
-                                label = languageManager.text(Tab3Texts.frequencyImportCSV),
+                                label = languageManager.text(Tab3Texts.associationImportCSV),
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -278,7 +291,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.clearAllFrequency),
+                            label = languageManager.text(Tab3Texts.clearAllAssociation),
                             onClick = { showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -290,7 +303,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyPrivacyWarning),
+                            text = languageManager.text(Tab3Texts.associationPrivacyWarning),
                             fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -306,7 +319,7 @@ fun FrequencyDataScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyManagement),
+                            text = languageManager.text(Tab3Texts.associationManagement),
                             fontSize = AppStyle.sectionHeaderFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -344,8 +357,8 @@ fun FrequencyDataScreen(
                 } else {
                     itemsIndexed(
                         items = filteredData,
-                        key = { _, (word, _) -> word },
-                    ) { index, (word, count) ->
+                        key = { _, entry -> "${entry.prevWord}\t${entry.prevTl}\t${entry.nextWord}\t${entry.nextTl}" },
+                    ) { index, entry ->
                         Row(
                             modifier =
                                 Modifier
@@ -354,13 +367,15 @@ fun FrequencyDataScreen(
                                     .padding(start = 20.dp, end = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            val prev = if (entry.prevTl.isEmpty()) entry.prevWord else "(${entry.prevTl}, ${entry.prevWord})"
+                            val next = if (entry.nextTl.isEmpty()) entry.nextWord else "(${entry.nextTl}, ${entry.nextWord})"
                             Text(
-                                text = word,
+                                text = "$prev → $next",
                                 fontSize = AppStyle.bodyFontSize,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
-                                text = "$count",
+                                text = "${entry.count}",
                                 fontSize = AppStyle.captionFontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -368,9 +383,16 @@ fun FrequencyDataScreen(
                                 onClick = {
                                     scope.launch {
                                         withContext(Dispatchers.IO) {
-                                            UserFrequencyService.deleteWord(context, word)
+                                            NextWordService.deleteAssociation(context, entry)
                                         }
-                                        allData = allData.filter { it.first != word }
+                                        allData =
+                                            allData.filter {
+                                                !(
+                                                    it.prevWord == entry.prevWord && it.prevTl == entry.prevTl &&
+                                                        it.nextWord == entry.nextWord &&
+                                                        it.nextTl == entry.nextTl
+                                                )
+                                            }
                                     }
                                 },
                             ) {
@@ -441,14 +463,14 @@ fun FrequencyDataScreen(
 
     if (showClearDialog) {
         ConfirmationDialog(
-            title = languageManager.text(Tab3Texts.clearAllFrequency),
-            message = languageManager.text(Tab3Texts.clearFrequencyMessage),
+            title = languageManager.text(Tab3Texts.clearAllAssociation),
+            message = languageManager.text(Tab3Texts.clearAssociationMessage),
             confirmLabel = languageManager.text(Tab3Texts.clear),
-            dismissLabel = languageManager.text(Tab3Texts.cancel),
+            dismissLabel = languageManager.text(CommonTexts.cancel),
             onConfirm = {
                 showClearDialog = false
                 scope.launch {
-                    withContext(Dispatchers.IO) { UserFrequencyService.deleteDatabase() }
+                    withContext(Dispatchers.IO) { NextWordService.clearAllAssociations(context) }
                     allData = emptyList()
                 }
             },
@@ -465,17 +487,20 @@ fun FrequencyDataScreen(
     }
 }
 
-private fun parseFrequencyCSV(csv: String): List<Pair<String, Int>> {
-    val entries = mutableListOf<Pair<String, Int>>()
+private fun parseAssociationCSV(csv: String): List<NextWordService.AssociationEntry> {
+    val entries = mutableListOf<NextWordService.AssociationEntry>()
     for (line in csv.split("\n")) {
         val trimmed = line.trim()
         if (trimmed.isEmpty()) continue
         val columns = CsvUtils.parseLine(trimmed)
-        if (columns.size < 2) continue
-        val word = columns[0].trim()
-        val count = columns[1].trim().toIntOrNull() ?: continue
-        if (word.isEmpty() || count <= 0) continue
-        entries.add(word to count)
+        if (columns.size < 5) continue
+        val prevWord = columns[0].trim()
+        val prevTl = columns[1].trim()
+        val nextWord = columns[2].trim()
+        val nextTl = columns[3].trim()
+        val count = columns[4].trim().toIntOrNull() ?: continue
+        if (nextWord.isEmpty() || count <= 0) continue
+        entries.add(NextWordService.AssociationEntry(prevWord, prevTl, nextWord, nextTl, count))
     }
     return entries
 }

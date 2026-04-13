@@ -1,11 +1,10 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab3
 
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -25,7 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -63,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
+import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -79,28 +79,8 @@ private data class DictionaryInfo(
     val websiteURL: String? = null,
 )
 
-// Static dictionary info
+// Static dictionary info (used by DictionaryInfoSwitch rows)
 private object DictionaryInfoData {
-    val moe =
-        DictionaryInfo(
-            description = "教育部編纂，收錄台語常用詞。",
-            websiteURL = "https://sutian.moe.edu.tw/",
-        )
-    val stti =
-        DictionaryInfo(
-            description = "教育部提供逐學科專業術語ê台語對譯。",
-            websiteURL = "https://stti.moe.edu.tw/",
-        )
-    val newword =
-        DictionaryInfo(
-            description = "公視台語台整理ê台語新詞。",
-            websiteURL = "https://www.taigitv.org.tw/taigi-words",
-        )
-    val kungge =
-        DictionaryInfo(
-            description = "國立臺灣工藝研究發展中心收錄ê台語工藝相關台語詞。",
-            websiteURL = "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
-        )
     val iTaigi =
         DictionaryInfo(
             description = "一个群眾編輯ê開放台語辭典",
@@ -134,11 +114,6 @@ private object DictionaryInfoData {
     val khiin =
         DictionaryInfo(
             description = "「水台文」、「台字田」用字",
-            websiteURL = null,
-        )
-    val lkk =
-        DictionaryInfo(
-            description = "李江却台語文教基金會漢羅合用建議用字。",
             websiteURL = null,
         )
 }
@@ -206,25 +181,25 @@ fun DictionarySettingsScreen(
                     ActionRow(
                         label = languageManager.text(Tab3Texts.customDictionary),
                         onClick = onCustomDictionary,
-                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(Tab3Texts.frequencyManagement),
                         onClick = onNavigateToFrequency,
-                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(Tab3Texts.associationManagement),
                         onClick = onNavigateToAssociation,
-                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
                     ActionRow(
                         label = languageManager.text(Tab3Texts.backupRestore),
                         onClick = onBackupRestore,
-                        trailingIcon = Icons.AutoMirrored.Filled.ArrowForward,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                 }
 
@@ -235,7 +210,7 @@ fun DictionarySettingsScreen(
 
                 SettingsCard {
                     DictRowWithDescription(
-                        label = languageManager.text(Tab3Texts.moeDict),
+                        label = languageManager.text(CommonTexts.moeDict),
                         checked = prefs.moeDictEnabled,
                         description = "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
                         url = "https://sutian.moe.edu.tw/",
@@ -243,7 +218,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictRowWithDescription(
-                        label = languageManager.text(Tab3Texts.newwordDict),
+                        label = languageManager.text(CommonTexts.newwordDict),
                         checked = prefs.newwordDictEnabled,
                         description = "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
                         url = "https://www.taigitv.org.tw/taigi-words",
@@ -251,7 +226,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictRowWithDescription(
-                        label = languageManager.text(Tab3Texts.sttiDict),
+                        label = languageManager.text(CommonTexts.sttiDict),
                         checked = prefs.sttiDictEnabled,
                         description = "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
                         url = "https://stti.moe.edu.tw/index.html?lang=sutgi",
@@ -259,7 +234,7 @@ fun DictionarySettingsScreen(
                     )
                     SettingsDivider()
                     DictRowWithDescription(
-                        label = languageManager.text(Tab3Texts.kunggeDict),
+                        label = languageManager.text(CommonTexts.kunggeDict),
                         checked = prefs.kunggeDictEnabled,
                         description = "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項。",
                         url = "https://kanggesu.ntcri.org.tw",
@@ -274,7 +249,7 @@ fun DictionarySettingsScreen(
 
                 SettingsCard {
                     DictionaryInfoSwitch(
-                        languageManager.text(Tab3Texts.iTaigiDict),
+                        languageManager.text(CommonTexts.iTaigiDict),
                         prefs.itaigiDictEnabled,
                         DictionaryInfoData.iTaigi,
                         languageManager,
@@ -283,7 +258,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        languageManager.text(Tab3Texts.taiwanJapanDict),
+                        languageManager.text(CommonTexts.taiwanJapanDict),
                         prefs.taiwanJapanDictEnabled,
                         DictionaryInfoData.taiwanJapan,
                         languageManager,
@@ -292,7 +267,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        languageManager.text(Tab3Texts.taiHuaDict),
+                        languageManager.text(CommonTexts.taiHuaDict),
                         prefs.taiHuaDictEnabled,
                         DictionaryInfoData.taiHua,
                         languageManager,
@@ -301,7 +276,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        languageManager.text(Tab3Texts.taiwanPlantDict),
+                        languageManager.text(CommonTexts.taiwanPlantDict),
                         prefs.taiwanPlantDictEnabled,
                         DictionaryInfoData.taiwanPlant,
                         languageManager,
@@ -330,7 +305,7 @@ fun DictionarySettingsScreen(
                     }
                     SettingsDivider()
                     DictionaryInfoSwitch(
-                        languageManager.text(Tab3Texts.khpooDict),
+                        languageManager.text(CommonTexts.khpooDict),
                         prefs.khpooDictEnabled,
                         DictionaryInfoData.khpoo,
                         languageManager,

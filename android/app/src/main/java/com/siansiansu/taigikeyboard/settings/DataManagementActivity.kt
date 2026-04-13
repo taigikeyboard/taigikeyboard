@@ -13,9 +13,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
-import com.siansiansu.taigikeyboard.ui.settings.DataManagementScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
@@ -35,13 +36,13 @@ class DataManagementActivity : ComponentActivity() {
             uri ?: return@registerForActivityResult
             isProcessing = true
             lifecycleScope.launch {
+                val lm = LanguageManager.getInstance(this@DataManagementActivity)
                 try {
                     val json = BackupService.exportAll(this@DataManagementActivity)
                     contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
-                    val lm = LanguageManager.getInstance(this@DataManagementActivity)
                     Toast.makeText(this@DataManagementActivity, lm.text(Tab3Texts.exportBackupSuccess), Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this@DataManagementActivity, "Export failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, lm.text(CommonTexts.exportFailed), Toast.LENGTH_SHORT).show()
                 } finally {
                     isProcessing = false
                 }
@@ -67,7 +68,7 @@ class DataManagementActivity : ComponentActivity() {
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this@DataManagementActivity, "Import failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, lm.text(CommonTexts.importFailed), Toast.LENGTH_SHORT).show()
                 } finally {
                     isProcessing = false
                 }

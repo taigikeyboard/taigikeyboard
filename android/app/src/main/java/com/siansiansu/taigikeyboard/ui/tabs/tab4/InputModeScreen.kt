@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable

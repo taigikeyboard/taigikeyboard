@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.ui.settings
+package com.siansiansu.taigikeyboard.ui.tabs.tab3
 
 import android.app.Application
 import android.util.Log
@@ -38,12 +38,14 @@ class DictionarySearchViewModel(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val prefs = PrefHelper(application)
+
     init {
         observeSearchText()
     }
 
-    // / Build set of enabled dictionary sources from current preferences
-    private fun buildEnabledSources(prefs: PrefHelper): Set<DictionarySource> {
+    // Build set of enabled dictionary sources from current preferences
+    private fun buildEnabledSources(): Set<DictionarySource> {
         val sources = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
         if (prefs.moeDictEnabled) sources.add(DictionarySource.KAUTIAN)
         if (prefs.newwordDictEnabled) sources.add(DictionarySource.TAIGITV)
@@ -85,7 +87,6 @@ class DictionarySearchViewModel(
         _isSearching.value = true
         try {
             val context = getApplication<Application>()
-            val prefs = PrefHelper(context)
             val inputMode =
                 when (prefs.inputMode) {
                     "poj" -> ToneConverterModels.InputMode.POJ
@@ -168,7 +169,7 @@ class DictionarySearchViewModel(
                         .thenByDescending { it.frequency },
                 )
             // Filter source tags to only show enabled dictionaries
-            val enabledSources = buildEnabledSources(prefs)
+            val enabledSources = buildEnabledSources()
             val filtered =
                 sorted.map { result ->
                     result.copy(sources = result.sources.filter { it in enabledSources })
