@@ -28,7 +28,6 @@ fun ActionRow(
     modifier: Modifier = Modifier,
     textColor: Color = MaterialTheme.colorScheme.onSurface,
     icon: ImageVector? = null,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
     trailingIcon: ImageVector? = null,
 ) {
     val view = LocalView.current
@@ -48,7 +47,7 @@ fun ActionRow(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = iconTint,
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(12.dp))
         }

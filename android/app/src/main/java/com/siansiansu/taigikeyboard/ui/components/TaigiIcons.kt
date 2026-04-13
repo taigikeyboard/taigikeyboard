@@ -16,6 +16,13 @@
 
 // Icon definitions extracted from androidx.compose.material:material-icons-extended
 // to eliminate the large transitive dependency. Path data is identical to the originals.
+//
+// Icons in this file (21 total):
+//   Filled: EmojiEmotions, EmojiEvents, EmojiFlags, EmojiFoodBeverage, EmojiNature,
+//           EmojiObjects, EmojiPeople, EmojiSymbols, EmojiTransportation
+//   Outlined: ContentCopy, FileDownload, FileUpload, FormatSize, Language,
+//             MenuBook, SpaceBar, Translate, Vibration, ViewStream
+//   AutoMirrored.Outlined: OpenInNew, VolumeUp
 
 package com.siansiansu.taigikeyboard.ui.components
 

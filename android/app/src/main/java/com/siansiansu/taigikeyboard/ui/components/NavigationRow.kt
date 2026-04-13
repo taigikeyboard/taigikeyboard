@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
@@ -29,7 +28,6 @@ fun NavigationRow(
     trailingIcon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
     labelColor: Color = MaterialTheme.colorScheme.onSurface,
-    trailingIconSize: Dp = AppStyle.trailingChevronSize,
 ) {
     Row(
         modifier =
@@ -59,7 +57,7 @@ fun NavigationRow(
             Icon(
                 imageVector = trailingIcon,
                 contentDescription = null,
-                modifier = Modifier.size(trailingIconSize),
+                modifier = Modifier.size(AppStyle.trailingChevronSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
