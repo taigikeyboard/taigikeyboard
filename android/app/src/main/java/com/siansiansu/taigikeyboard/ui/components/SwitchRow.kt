@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
@@ -55,9 +54,9 @@ fun SwitchRow(
         }
         Text(
             text = label,
-            fontSize = AppStyle.bodyFontSize,
             color = labelColor,
             fontFamily = fontFamily,
+            style = MaterialTheme.typography.bodyLarge,
         )
         if (infoText != null) {
             Spacer(Modifier.width(6.dp))

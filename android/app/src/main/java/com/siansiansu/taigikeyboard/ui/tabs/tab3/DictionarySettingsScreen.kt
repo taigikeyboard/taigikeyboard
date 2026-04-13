@@ -150,7 +150,7 @@ fun DictionarySettingsScreen(
                 title = {
                     Text(
                         text = languageManager.text(Tab3Texts.tabTitle),
-                        fontSize = AppStyle.pageTitleFontSize,
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
@@ -172,7 +172,7 @@ fun DictionarySettingsScreen(
                         .verticalScroll(rememberScrollState())
                         .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } }
                         .padding(horizontal = 20.dp)
-                        .padding(bottom = 40.dp),
+                        .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
                 // Data management
                 SectionHeader(languageManager.text(Tab3Texts.dataManagement))
@@ -331,8 +331,8 @@ fun DictionarySettingsScreen(
                         if (searchResults.isEmpty() && !isSearching) {
                             Text(
                                 text = languageManager.text(Tab3Texts.noResults),
-                                fontSize = AppStyle.bodyFontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyLarge,
                                 modifier =
                                     Modifier
                                         .padding(horizontal = 20.dp)
@@ -439,15 +439,15 @@ private fun SearchResultRow(
         ) {
             Text(
                 text = result.roman,
-                fontSize = AppStyle.bodyFontSize,
                 color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
             if (!result.hanzi.isNullOrEmpty()) {
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = result.hanzi,
-                    fontSize = AppStyle.bodyFontSize,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
             result.sources.map { it.displayName }.filter { it.isNotEmpty() }.distinct().forEach { tag ->
@@ -458,7 +458,7 @@ private fun SearchResultRow(
                 ) {
                     Text(
                         text = tag,
-                        fontSize = AppStyle.captionFontSize,
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                     )
@@ -470,7 +470,7 @@ private fun SearchResultRow(
                     painter = painterResource(id = R.drawable.ic_open_in_new),
                     contentDescription = "Open",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(AppStyle.smallIconSize),
                 )
             }
         }
@@ -497,7 +497,7 @@ private fun SearchResultRow(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_open_in_new),
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(AppStyle.smallIconSize),
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(languageManager.text(Tab3Texts.lookupMoe))
@@ -514,7 +514,7 @@ private fun SearchResultRow(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_open_in_new),
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(AppStyle.smallIconSize),
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(languageManager.text(Tab3Texts.lookupChhoe))
@@ -547,8 +547,8 @@ private fun DictionaryInfoSwitch(
     ) {
         Text(
             text = label,
-            fontSize = AppStyle.bodyFontSize,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(modifier = Modifier.width(6.dp))
         SettingInfoButton(description = info.description)
@@ -600,14 +600,14 @@ private fun DictRowWithDescription(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_open_in_new),
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(AppStyle.smallIconSize),
                     tint = linkBlue,
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = label,
-                    fontSize = AppStyle.bodyFontSize,
                     color = linkBlue,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
@@ -622,8 +622,8 @@ private fun DictRowWithDescription(
         }
         Text(
             text = description,
-            fontSize = AppStyle.bodyFontSize,
             color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
         )
     }
 }

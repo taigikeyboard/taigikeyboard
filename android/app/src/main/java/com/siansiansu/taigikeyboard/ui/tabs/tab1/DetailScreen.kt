@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +49,7 @@ import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.FeatureContent
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.model.ParagraphAttachment
+import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
@@ -170,7 +170,7 @@ fun DetailScreen(
                     start = 20.dp,
                     end = 20.dp,
                     top = 16.dp,
-                    bottom = 40.dp,
+                    bottom = AppStyle.scrollContentBottomPadding,
                 ),
         ) {
             itemsIndexed(items) { index, item ->
@@ -255,10 +255,10 @@ private fun ParagraphCard(
         Text(
             text = text,
             modifier = Modifier.padding(16.dp),
-            fontSize = AppStyle.bodyFontSize,
             fontFamily = fontFamily,
             lineHeight = 24.sp,
             color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
         )
     }
 }
@@ -330,14 +330,14 @@ private fun NavigationLinkCard(
             Text(
                 text = text,
                 modifier = Modifier.weight(1f),
-                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(AppStyle.trailingChevronSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -371,9 +371,9 @@ private fun ExternalLinkCard(
             Text(
                 text = text,
                 modifier = Modifier.weight(1f),
-                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
@@ -403,16 +403,16 @@ private fun VersionEntryCard(
                 Text(
                     text = "v$version",
                     modifier = Modifier.weight(1f),
-                    fontSize = AppStyle.bodyFontSize,
                     fontWeight = FontWeight.Bold,
                     fontFamily = fontFamily,
                     color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyLarge,
                 )
                 Text(
                     text = date,
-                    fontSize = AppStyle.captionFontSize,
                     fontFamily = fontFamily,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
 
@@ -423,15 +423,15 @@ private fun VersionEntryCard(
                 Row(modifier = Modifier.padding(bottom = 8.dp)) {
                     Text(
                         text = "\u2022",
-                        fontSize = AppStyle.bodyFontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = languageManager.text(change),
-                        fontSize = AppStyle.bodyFontSize,
                         fontFamily = fontFamily,
                         color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                 }
             }

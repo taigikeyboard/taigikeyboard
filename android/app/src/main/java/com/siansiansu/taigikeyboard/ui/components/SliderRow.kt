@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -14,9 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import androidx.compose.foundation.layout.size
 
 @Composable
 fun SliderRow(
@@ -26,27 +25,28 @@ fun SliderRow(
     valueTo: Float,
     stepSize: Float,
     defaultValue: Float? = null,
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = label,
-                fontSize = AppStyle.bodyFontSize,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
             )
             if (defaultValue != null && value != defaultValue) {
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Reset",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { onValueChange(defaultValue) }
+                    modifier =
+                        Modifier
+                            .size(AppStyle.selectionIconSize)
+                            .clickable { onValueChange(defaultValue) },
                 )
             }
         }
@@ -55,7 +55,7 @@ fun SliderRow(
             onValueChange = onValueChange,
             valueRange = valueFrom..valueTo,
             steps = ((valueTo - valueFrom) / stepSize).toInt() - 1,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,13 +32,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightButton
 import com.siansiansu.taigikeyboard.model.CopyrightPage
+import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
+import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +48,7 @@ fun CopyrightScreen(
     languageManager: LanguageManager,
     fontFamily: FontFamily,
     onButtonClick: (String) -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
 
@@ -59,7 +59,7 @@ fun CopyrightScreen(
                 title = {
                     Text(
                         text = languageManager.text(Tab1Texts.copyrightNotice),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 navigationIcon = {
@@ -67,33 +67,36 @@ fun CopyrightScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    ),
             )
-        }
+        },
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
-                top = 16.dp,
-                bottom = 40.dp
-            )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            contentPadding =
+                PaddingValues(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 16.dp,
+                    bottom = AppStyle.scrollContentBottomPadding,
+                ),
         ) {
             items(copyrightPages, key = { it.id }) { page ->
                 CopyrightCard(
                     page = page,
                     languageManager = languageManager,
                     fontFamily = fontFamily,
-                    onButtonClick = onButtonClick
+                    onButtonClick = onButtonClick,
                 )
                 Spacer(Modifier.height(16.dp))
             }
@@ -106,17 +109,17 @@ private fun CopyrightCard(
     page: CopyrightPage,
     languageManager: LanguageManager,
     fontFamily: FontFamily,
-    onButtonClick: (String) -> Unit
+    onButtonClick: (String) -> Unit,
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(20.dp)) {
             // Title
             Text(
                 text = languageManager.text(page.title),
-                fontSize = AppStyle.bodyFontSize,
                 fontWeight = FontWeight.Bold,
                 fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge,
             )
 
             Spacer(Modifier.height(4.dp))
@@ -124,9 +127,9 @@ private fun CopyrightCard(
             // Description (copyright holder)
             Text(
                 text = languageManager.text(page.description),
-                fontSize = AppStyle.bodyFontSize,
                 fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyLarge,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -134,10 +137,10 @@ private fun CopyrightCard(
             // License
             Text(
                 text = languageManager.text(page.license),
-                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
 
@@ -149,7 +152,7 @@ private fun CopyrightCard(
                     button = button,
                     languageManager = languageManager,
                     fontFamily = fontFamily,
-                    onClick = { onButtonClick(button.url) }
+                    onClick = { onButtonClick(button.url) },
                 )
                 if (index < page.buttons.size - 1) {
                     SettingsDivider()
@@ -164,21 +167,22 @@ private fun CopyrightActionButton(
     button: CopyrightButton,
     languageManager: LanguageManager,
     fontFamily: FontFamily,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = languageManager.text(button.text),
             modifier = Modifier.weight(1f),
-            fontSize = 14.sp,
             fontFamily = fontFamily,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.labelLarge,
         )
 
         Spacer(Modifier.width(8.dp))
@@ -186,8 +190,8 @@ private fun CopyrightActionButton(
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = MaterialTheme.colorScheme.primary
+            modifier = Modifier.size(AppStyle.smallIconSize),
+            tint = MaterialTheme.colorScheme.primary,
         )
     }
 }

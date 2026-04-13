@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,12 +57,12 @@ import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
+import com.siansiansu.taigikeyboard.ui.components.LoadingRow
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -227,15 +226,15 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = languageManager.text(Tab3Texts.importExportTitle),
-                        fontSize = AppStyle.sectionHeaderFontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
                     )
                     SettingsCard {
                         Text(
                             text = languageManager.text(Tab3Texts.frequencyDescription),
-                            fontSize = AppStyle.bodyFontSize,
                             color = MaterialTheme.colorScheme.onSurface,
+                            style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
@@ -252,17 +251,7 @@ fun FrequencyDataScreen(
                         )
                         SettingsDivider()
                         if (isImporting) {
-                            Row(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 48.dp)
-                                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            }
+                            LoadingRow()
                         } else {
                             ActionRow(
                                 label = languageManager.text(Tab3Texts.frequencyImportCSV),
@@ -292,7 +281,7 @@ fun FrequencyDataScreen(
                     SettingsCard {
                         Text(
                             text = languageManager.text(Tab3Texts.frequencyPrivacyWarning),
-                            fontSize = AppStyle.bodyFontSize,
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
@@ -308,8 +297,8 @@ fun FrequencyDataScreen(
                     ) {
                         Text(
                             text = languageManager.text(Tab3Texts.frequencyManagement),
-                            fontSize = AppStyle.sectionHeaderFontSize,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
                         SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
@@ -336,7 +325,7 @@ fun FrequencyDataScreen(
                         SettingsCard {
                             Text(
                                 text = languageManager.text(Tab3Texts.noResults),
-                                fontSize = AppStyle.bodyFontSize,
+                                style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                             )
@@ -357,13 +346,13 @@ fun FrequencyDataScreen(
                         ) {
                             Text(
                                 text = word,
-                                fontSize = AppStyle.bodyFontSize,
                                 modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
                                 text = "$count",
-                                fontSize = AppStyle.captionFontSize,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.labelLarge,
                             )
                             IconButton(
                                 onClick = {

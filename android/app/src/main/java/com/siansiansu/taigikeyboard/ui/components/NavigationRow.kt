@@ -16,8 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
 @Composable
@@ -29,20 +29,21 @@ fun NavigationRow(
     trailingIcon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
     labelColor: Color = MaterialTheme.colorScheme.onSurface,
-    trailingIconSize: Int = 24
+    trailingIconSize: Dp = AppStyle.trailingChevronSize,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             painter = icon,
             contentDescription = null,
             modifier = Modifier.size(24.dp),
-            tint = iconTint
+            tint = iconTint,
         )
 
         Spacer(Modifier.width(12.dp))
@@ -50,16 +51,16 @@ fun NavigationRow(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = AppStyle.bodyFontSize,
-            color = labelColor
+            color = labelColor,
+            style = MaterialTheme.typography.bodyLarge,
         )
 
         if (trailingIcon != null) {
             Icon(
                 imageVector = trailingIcon,
                 contentDescription = null,
-                modifier = Modifier.size(trailingIconSize.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                modifier = Modifier.size(trailingIconSize),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

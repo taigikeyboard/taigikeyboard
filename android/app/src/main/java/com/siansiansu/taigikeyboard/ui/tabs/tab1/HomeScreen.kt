@@ -72,7 +72,7 @@ fun HomeScreen(
                 title = {
                     Text(
                         text = languageManager.text(Tab1Texts.appHeaderTitle),
-                        fontSize = AppStyle.pageTitleFontSize,
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
@@ -92,7 +92,7 @@ fun HomeScreen(
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
-                    .padding(bottom = 40.dp),
+                    .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
             // Section 1: Setup keyboard
             SectionHeader(languageManager.text(Tab1Texts.setupKeyboard))
@@ -235,13 +235,13 @@ fun HomeScreen(
                     Text(
                         text = languageManager.text(Tab1Texts.version),
                         modifier = Modifier.weight(1f),
-                        fontSize = AppStyle.bodyFontSize,
                         color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         text = versionName,
-                        fontSize = AppStyle.captionFontSize,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
             }

@@ -116,14 +116,14 @@ private fun FontPickerRow(
         Text(
             text = label,
             modifier = Modifier.weight(1f),
-            fontSize = AppStyle.bodyFontSize,
             color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.bodyLarge,
         )
         if (isSelected) {
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(AppStyle.selectionIconSize),
                 tint = MaterialTheme.colorScheme.primary,
             )
         }

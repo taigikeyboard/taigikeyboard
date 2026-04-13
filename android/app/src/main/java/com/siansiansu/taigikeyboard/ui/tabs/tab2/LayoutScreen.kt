@@ -96,7 +96,7 @@ fun LayoutScreen(
                 title = {
                     Text(
                         text = languageManager.text(Tab2Texts.tabTitle),
-                        fontSize = AppStyle.pageTitleFontSize,
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                 },
                 expandedHeight = AppStyle.largeTopAppBarExpandedHeight,
@@ -115,7 +115,7 @@ fun LayoutScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = 40.dp),
+                    .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
             // Appearance settings card
             SettingsCard(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -254,7 +254,7 @@ private fun LayoutCard(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(AppStyle.smallIconSize),
                             tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
@@ -266,10 +266,10 @@ private fun LayoutCard(
 
         Text(
             text = label,
-            fontSize = AppStyle.captionFontSize,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.labelLarge,
         )
     }
 }
