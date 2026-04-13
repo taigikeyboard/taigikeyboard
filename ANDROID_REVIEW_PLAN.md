@@ -64,12 +64,9 @@ Review date: 2026-04-13
 - Creating 2–3 new components increases API surface without significant complexity reduction
 - **Alternative**: Extract `48.dp` / `20.dp` / `12.dp` as AppStyle constants (simpler, same single-source-of-truth benefit)
 
-### Decision: TBD
+### Decision: Low priority, likely skip
 
-Options:
-1. **Extract only `LoadingRow`** (4 usages) + raw constants for 48/20/12dp
-2. **Skip entirely** — the remaining duplication is manageable
-3. **Full extraction** — all 3 composables (highest churn)
+`SelectionRow`/`ValueNavigationRow` 各 2 次用量不值得抽元件。`LoadingRow` (4 次) 是唯一可能值得的。Theme review 已完成，F5 屬於 component 重構範疇，非 theme 相關。
 
 ---
 
@@ -79,6 +76,19 @@ Options:
 - `SettingsMainActivity.kt:187` — `// Handle exception` comment in `openUrl` catch block does nothing
 
 ---
+
+## Current Architecture (for next session reference)
+
+```
+ui/theme/
+├── Theme.kt      ← M3 ColorScheme (Light/Dark) + AppTypography (HuninnFontFamily + iOS-aligned sizes)
+└── AppStyle.kt   ← Icon sizes, spacing, dimensions, non-M3 colors (warningOrange, switchColors), SectionHeader
+```
+
+**Typography** → `MaterialTheme.typography.*` (headlineLarge=34sp, titleMedium=18sp, bodyLarge=17sp, labelLarge=14sp)
+**Colors** → `MaterialTheme.colorScheme.*` + `AppStyle.warningOrange()` / `AppStyle.switchColors()`
+**Icon sizes** → `AppStyle.trailingChevronSize(24dp)`, `smallIconSize(16dp)`, `selectionIconSize(20dp)`
+**Spacing** → `AppStyle.sectionSpacing(24dp)`, `scrollContentBottomPadding(40dp)`, `sectionHeaderBottomPadding(6dp)`
 
 ## Verification (pending user testing)
 
