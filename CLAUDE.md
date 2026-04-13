@@ -18,7 +18,8 @@ taigikeyboard/
 ├── rules/             # Mandatory rules (must read before relevant changes)
 │   ├── ui-style-guide.md   # Cross-platform UI styling spec
 │   ├── security-rules.md   # Logging, SQL, network, data storage rules
-│   └── ios-guidelines.md   # SourceKit, KeyboardKit, memory, naming, tests
+│   ├── ios-guidelines.md   # SourceKit, KeyboardKit, memory, naming, tests
+│   └── ai-friendly-code.md # Naming, comments, function design for AI readability
 ├── dictionary/        # Dictionary data files
 ├── scripts/           # Build and utility scripts
 └── references/        # External repos (gitignored — don't place tracked content here)
@@ -35,6 +36,7 @@ taigikeyboard/
 7. **UI Style Guide** — Before modifying app UI, **must** read `rules/ui-style-guide.md`
 8. **Security Rules** — Before adding logging, SQL, network, or storage code, **must** read `rules/security-rules.md`
 9. **iOS Guidelines** — Before modifying iOS code, **must** read `rules/ios-guidelines.md`
+10. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
 
 ## Build & Test
 

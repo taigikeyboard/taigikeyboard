@@ -37,7 +37,10 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
  * Style matches the existing dictionary info buttons in DictionarySettingsScreen.
  */
 @Composable
-fun SettingInfoButton(description: String) {
+fun SettingInfoButton(
+    description: String,
+    dismissLabel: String = "OK",
+) {
     var showDialog by remember { mutableStateOf(false) }
 
     Icon(
@@ -85,7 +88,7 @@ fun SettingInfoButton(description: String) {
                         ),
                 ) {
                     Text(
-                        text = "OK",
+                        text = dismissLabel,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(vertical = 4.dp),
                         style = MaterialTheme.typography.bodyLarge,

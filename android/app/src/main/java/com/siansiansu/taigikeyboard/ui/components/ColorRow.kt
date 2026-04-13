@@ -30,10 +30,11 @@ fun ColorRow(
     color: Int?,
     onColorClick: () -> Unit,
     onReset: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically,

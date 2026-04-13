@@ -26,8 +26,9 @@ fun SliderRow(
     stepSize: Float,
     defaultValue: Float? = null,
     onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
