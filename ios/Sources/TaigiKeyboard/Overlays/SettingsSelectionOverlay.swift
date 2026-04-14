@@ -63,8 +63,6 @@ struct SettingsSelectionOverlay: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: geometry.size.height - toolbarHeight)
                 }
-            } else {
-                EmptyView()
             }
         }
     }
@@ -76,40 +74,40 @@ struct SettingsSelectionOverlay: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
-                    settingsToggle(Tab4Texts.isOutputBothScripts.hanji, isOn: $isOutputBothScripts, icon: Tab4Texts.isOutputBothScriptsIcon) {
+                    settingsToggle(Tab4Texts.isOutputBothScripts, isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
                         SharedSettings.shared.isOutputBothScripts = $0
                     }
-                    settingsToggle(Tab4Texts.autoCapitalization.hanji, isOn: $autoCapitalizationEnabled, icon: Tab4Texts.autoCapitalizationIcon) {
+                    settingsToggle(Tab4Texts.autoCapitalization, isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
                     }
-                    settingsToggle(Tab4Texts.autoSpace.hanji, isOn: $autoSpaceEnabled, icon: Tab4Texts.autoSpaceIcon) {
+                    settingsToggle(Tab4Texts.autoSpace, isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
                     }
-                    settingsToggle(Tab4Texts.toolbarAutoCollapse.hanji, isOn: $toolbarAutoCollapse, icon: Tab4Texts.toolbarIcon) {
+                    settingsToggle(Tab4Texts.toolbarAutoCollapse, isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
                         SharedSettings.shared.isToolbarAutoCollapse = $0
                     }
-                    settingsToggle(Tab4Texts.globeKey.hanji, isOn: $isGlobeKeyEnabled, icon: Tab4Texts.globeKeyIcon) {
+                    settingsToggle(Tab4Texts.globeKey, isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
                     // Feedback settings
-                    settingsToggle(Tab4Texts.soundFeedback.hanji, isOn: $isAudioFeedbackEnabled, icon: Tab4Texts.soundFeedbackIcon) {
+                    settingsToggle(Tab4Texts.soundFeedback, isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
                     }
-                    settingsToggle(Tab4Texts.vibrationFeedback.hanji, isOn: $isHapticFeedbackEnabled, icon: Tab4Texts.vibrationFeedbackIcon) {
+                    settingsToggle(Tab4Texts.vibrationFeedback, isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
                     // POJ settings
-                    settingsToggle(Tab4Texts.doubleTapOO.hanji, isOn: $isDoubleTapOOEnabled) {
+                    settingsToggle(Tab4Texts.doubleTapOO, isOn: $isDoubleTapOOEnabled) {
                         SharedSettings.shared.isDoubleTapOOEnabled = $0
                     }
-                    settingsToggle(Tab4Texts.doubleTapNN.hanji, isOn: $isDoubleTapNNEnabled) {
+                    settingsToggle(Tab4Texts.doubleTapNN, isOn: $isDoubleTapNNEnabled) {
                         SharedSettings.shared.isDoubleTapNNEnabled = $0
                     }
 
                     // TPS settings
-                    settingsToggle(Tab4Texts.isTpsOrMappedToER.hanji, isOn: $isTpsOrMappedToER) {
+                    settingsToggle(Tab4Texts.isTpsOrMappedToER, isOn: $isTpsOrMappedToER) {
                         SharedSettings.shared.isTpsOrMappedToER = $0
                     }
 
@@ -173,7 +171,7 @@ struct SettingsSelectionOverlay: View {
             onOpenApp()
             onDismiss()
         }) {
-            Text(Tab4Texts.openApp.hanji)
+            Text(Tab4Texts.openApp)
                 .font(KeyboardFonts.globalFont(size: 15))
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity)

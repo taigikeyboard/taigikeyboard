@@ -6,8 +6,6 @@ import UIKit
 ///
 /// Input mode, typing options, keyboard toggles, feedback, and diagnostics.
 struct Tab4: View {
-    @StateObject private var languageManager = LanguageManager.shared
-
     private let settings = SharedSettings.shared
 
     @State private var selectedInputMode: InputMode
@@ -69,7 +67,7 @@ struct Tab4: View {
                         )
                     } label: {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.inputMode))
+                            Text(Tab4Texts.inputMode)
                             Spacer()
                             Text(inputModeDisplayName(selectedInputMode))
                                 .foregroundColor(.secondary)
@@ -81,7 +79,7 @@ struct Tab4: View {
                 Section {
                     Toggle(isOn: $isOutputBothScripts) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.isOutputBothScripts))
+                            Text(Tab4Texts.isOutputBothScripts)
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
@@ -91,14 +89,14 @@ struct Tab4: View {
 
                     Toggle(isOn: $autoCapitalizationEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.autoCapitalization))
+                            Text(Tab4Texts.autoCapitalization)
                             SettingInfoButton(description: featureSummary("caseSwitch"))
                         }
                     }
 
                     Toggle(isOn: $autoSpaceEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.autoSpace))
+                            Text(Tab4Texts.autoSpace)
                             SettingInfoButton(description: featureSummary("hanloDesign"))
                         }
                     }
@@ -106,7 +104,7 @@ struct Tab4: View {
                         settings.isAutoSpaceEnabled = newValue
                     }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.typingSectionTitle))
+                    Text(Tab4Texts.typingSectionTitle)
                 }
 
                 // Keyboard settings
@@ -114,12 +112,12 @@ struct Tab4: View {
                     Toggle(isOn: $toolbarAutoCollapse) {
                         HStack {
                             Label {
-                                Text(languageManager.text(Tab4Texts.toolbarAutoCollapse))
+                                Text(Tab4Texts.toolbarAutoCollapse)
                             } icon: {
-                                Image(systemName: Tab4Texts.toolbarIcon)
+                                Image(systemName: SettingsIcons.toolbar)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
-                            SettingInfoButton(description: languageManager.text(Tab4Texts.toolbarAutoCollapseInfo))
+                            SettingInfoButton(description: Tab4Texts.toolbarAutoCollapseInfo)
                         }
                     }
                     .onChange(of: toolbarAutoCollapse) { _, newValue in
@@ -129,48 +127,48 @@ struct Tab4: View {
                     Toggle(isOn: $isGlobeKeyEnabled) {
                         HStack {
                             Label {
-                                Text(languageManager.text(Tab4Texts.globeKey))
+                                Text(Tab4Texts.globeKey)
                             } icon: {
-                                Image(systemName: Tab4Texts.globeKeyIcon)
+                                Image(systemName: SettingsIcons.globeKey)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
-                            SettingInfoButton(description: languageManager.text(Tab4Texts.globeKeyInfo))
+                            SettingInfoButton(description: Tab4Texts.globeKeyInfo)
                         }
                     }
                     .onChange(of: isGlobeKeyEnabled) { _, newValue in
                         settings.isGlobeKeyEnabled = newValue
                     }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.keyboardSectionTitle))
+                    Text(Tab4Texts.keyboardSectionTitle)
                 }
 
                 // Feedback
                 Section {
                     Toggle(isOn: $isAudioFeedbackEnabled) {
-                        Label(languageManager.text(Tab4Texts.soundFeedback), systemImage: Tab4Texts.soundFeedbackIcon)
+                        Label(Tab4Texts.soundFeedback, systemImage: SettingsIcons.soundFeedback)
                     }
 
                     Toggle(isOn: $isHapticFeedbackEnabled) {
-                        Label(languageManager.text(Tab4Texts.vibrationFeedback), systemImage: Tab4Texts.vibrationFeedbackIcon)
+                        Label(Tab4Texts.vibrationFeedback, systemImage: SettingsIcons.vibrationFeedback)
                     }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.feedbackSectionTitle))
+                    Text(Tab4Texts.feedbackSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // POJ settings
                 Section {
-                    Toggle(languageManager.text(Tab4Texts.doubleTapOO), isOn: $isDoubleTapOOEnabled)
+                    Toggle(Tab4Texts.doubleTapOO, isOn: $isDoubleTapOOEnabled)
                         .onChange(of: isDoubleTapOOEnabled) { _, newValue in
                             settings.isDoubleTapOOEnabled = newValue
                         }
 
-                    Toggle(languageManager.text(Tab4Texts.doubleTapNN), isOn: $isDoubleTapNNEnabled)
+                    Toggle(Tab4Texts.doubleTapNN, isOn: $isDoubleTapNNEnabled)
                         .onChange(of: isDoubleTapNNEnabled) { _, newValue in
                             settings.isDoubleTapNNEnabled = newValue
                         }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
+                    Text(Tab4Texts.pojSettingsSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -178,15 +176,15 @@ struct Tab4: View {
                 Section {
                     Toggle(isOn: $isTpsOrMappedToER) {
                         HStack {
-                            Text(languageManager.text(Tab4Texts.isTpsOrMappedToER))
-                            SettingInfoButton(description: languageManager.text(Tab4Texts.isTpsOrMappedToERInfo))
+                            Text(Tab4Texts.isTpsOrMappedToER)
+                            SettingInfoButton(description: Tab4Texts.isTpsOrMappedToERInfo)
                         }
                     }
                     .onChange(of: isTpsOrMappedToER) { _, newValue in
                         settings.isTpsOrMappedToER = newValue
                     }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
+                    Text(Tab4Texts.tpsSettingsSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -202,8 +200,8 @@ struct Tab4: View {
                     } label: {
                         Label(
                             diagnosticCopied
-                                ? languageManager.text(Tab4Texts.diagnosticCopied)
-                                : languageManager.text(Tab4Texts.diagnosticCopy),
+                                ? Tab4Texts.diagnosticCopied
+                                : Tab4Texts.diagnosticCopy,
                             systemImage: diagnosticCopied ? "checkmark" : "doc.on.doc",
                         )
                         .foregroundColor(.primary)
@@ -214,7 +212,7 @@ struct Tab4: View {
                         subject: Text("台語齒盤 Bug 回報"),
                         message: Text(diagnosticText),
                     ) {
-                        Label(languageManager.text(Tab4Texts.diagnosticShare), systemImage: "arrow.up.forward.square")
+                        Label(Tab4Texts.diagnosticShare, systemImage: "arrow.up.forward.square")
                     }
 
                     Button {
@@ -227,10 +225,10 @@ struct Tab4: View {
                             openURL(url)
                         }
                     } label: {
-                        Label(languageManager.text(Tab4Texts.diagnosticEmail), systemImage: "arrow.up.forward.square")
+                        Label(Tab4Texts.diagnosticEmail, systemImage: "arrow.up.forward.square")
                     }
                 } header: {
-                    Text(languageManager.text(Tab4Texts.diagnosticSectionTitle))
+                    Text(Tab4Texts.diagnosticSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -239,24 +237,24 @@ struct Tab4: View {
                     Button(role: .destructive) {
                         showResetSettingsAlert = true
                     } label: {
-                        Text(languageManager.text(Tab4Texts.resetSettings))
+                        Text(Tab4Texts.resetSettings)
                     }
                 }
             }
-            .navigationTitle(languageManager.text(Tab4Texts.tabTitle))
+            .navigationTitle(Tab4Texts.tabTitle)
             .navigationBarTitleDisplayMode(.large)
             .onAppear {
                 selectedInputMode = settings.inputMode
                 diagnosticText = DiagnosticService.gather().formatted()
             }
         }
-        .alert(languageManager.text(Tab4Texts.resetSettings), isPresented: $showResetSettingsAlert) {
-            Button(languageManager.text(Tab4Texts.cancel), role: .cancel) {}
-            Button(languageManager.text(Tab4Texts.reset), role: .destructive) {
+        .alert(Tab4Texts.resetSettings, isPresented: $showResetSettingsAlert) {
+            Button(Tab4Texts.cancel, role: .cancel) {}
+            Button(Tab4Texts.reset, role: .destructive) {
                 resetAllSettings()
             }
         } message: {
-            Text(languageManager.text(Tab4Texts.resetSettingsMessage))
+            Text(Tab4Texts.resetSettingsMessage)
         }
     }
 
@@ -266,18 +264,17 @@ struct Tab4: View {
         FeatureContentLoader.features
             .first(where: { $0.id == featureId })?
             .summary?
-            .asLocalizedText
-            .hanji ?? ""
+            .asString ?? ""
     }
 
     // MARK: - Display Name Helpers
 
     private func inputModeDisplayName(_ mode: InputMode) -> String {
         switch mode {
-        case .poj: languageManager.text(Tab4Texts.pojMode)
-        case .tl: languageManager.text(Tab4Texts.tlMode)
-        case .english: languageManager.text(Tab4Texts.englishMode)
-        case .tps: languageManager.text(Tab4Texts.tpsMode)
+        case .poj: Tab4Texts.pojMode
+        case .tl: Tab4Texts.tlMode
+        case .english: Tab4Texts.englishMode
+        case .tps: Tab4Texts.tpsMode
         }
     }
 
@@ -321,11 +318,10 @@ struct Tab4: View {
 // MARK: - Input Mode Picker Subpage
 
 private struct InputModePickerView: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @Binding var selectedMode: InputMode
     var onChange: (InputMode) -> Void
 
-    private let options: [(mode: InputMode, text: LocalizedText)] = [
+    private let options: [(mode: InputMode, text: String)] = [
         (.poj, Tab4Texts.pojMode),
         (.tl, Tab4Texts.tlMode),
         (.english, Tab4Texts.englishMode),
@@ -341,7 +337,7 @@ private struct InputModePickerView: View {
                         onChange(option.mode)
                     } label: {
                         HStack {
-                            Text(languageManager.text(option.text))
+                            Text(option.text)
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedMode == option.mode {
@@ -353,7 +349,7 @@ private struct InputModePickerView: View {
                 }
             }
         }
-        .navigationTitle(languageManager.text(Tab4Texts.inputMode))
+        .navigationTitle(Tab4Texts.inputMode)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

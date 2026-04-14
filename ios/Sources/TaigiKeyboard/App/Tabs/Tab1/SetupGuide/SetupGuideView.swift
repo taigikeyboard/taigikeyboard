@@ -5,7 +5,6 @@ import SwiftUI
 /// Shows activation steps. Shared between full-screen onboarding and Tab1 navigation.
 struct SetupGuideView: View {
     @ObservedObject var viewModel: SetupGuideViewModel
-    @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.openURL) private var openURL
 
     /// Full-screen mode (matches Android SetupGuideActivity.isFullScreen).
@@ -19,7 +18,7 @@ struct SetupGuideView: View {
             // Full-screen title
             if isFullScreen {
                 Section {
-                    Text(languageManager.text(Tab1Texts.setupGuide))
+                    Text(Tab1Texts.setupGuide)
                         .font(AppStyle.appFont(size: AppStyle.navBarLargeTitleSize))
                         .fontWeight(.bold)
                 }
@@ -27,7 +26,7 @@ struct SetupGuideView: View {
 
             // Description
             Section {
-                Text(languageManager.text(Tab1Texts.setupGuideDescription))
+                Text(Tab1Texts.setupGuideDescription)
                     .lineSpacing(4)
             }
 
@@ -35,20 +34,20 @@ struct SetupGuideView: View {
             Section {
                 SetupGuideStepRow(
                     stepNumber: 1,
-                    title: languageManager.text(Tab1Texts.setupGuideStep1Settings),
+                    title: Tab1Texts.setupGuideStep1Settings,
                     screenshotName: "setup_step1",
                 )
 
                 SetupGuideStepRow(
                     stepNumber: 2,
-                    title: languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard),
+                    title: Tab1Texts.setupGuideStep2AddKeyboard,
                     screenshotName: "setup_step2",
                 )
             }
 
             // Completion message
             Section {
-                Text(languageManager.text(Tab1Texts.setupGuideCompletedMessage))
+                Text(Tab1Texts.setupGuideCompletedMessage)
             }
 
             // Open Settings button
@@ -58,7 +57,7 @@ struct SetupGuideView: View {
                         openURL(url)
                     }
                 } label: {
-                    Label(languageManager.text(Tab1Texts.setupGuideGoToSettings), systemImage: "gearshape.fill")
+                    Label(Tab1Texts.setupGuideGoToSettings, systemImage: "gearshape.fill")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
@@ -66,7 +65,7 @@ struct SetupGuideView: View {
             // Warnings
             Section {
                 Label {
-                    Text(languageManager.text(Tab1Texts.setupInfoMessage))
+                    Text(Tab1Texts.setupInfoMessage)
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -74,7 +73,7 @@ struct SetupGuideView: View {
                 }
 
                 Label {
-                    Text(languageManager.text(Tab1Texts.setupBrandWarning))
+                    Text(Tab1Texts.setupBrandWarning)
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -88,13 +87,13 @@ struct SetupGuideView: View {
                     Button(role: .destructive) {
                         onComplete()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.setupGuideCloseButton), systemImage: "xmark")
+                        Label(Tab1Texts.setupGuideCloseButton, systemImage: "xmark")
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
             }
         }
-        .navigationTitle(isFullScreen ? "" : languageManager.text(Tab1Texts.setupGuide))
+        .navigationTitle(isFullScreen ? "" : Tab1Texts.setupGuide)
         .navigationBarTitleDisplayMode(.large)
         .navigationBarHidden(isFullScreen)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in

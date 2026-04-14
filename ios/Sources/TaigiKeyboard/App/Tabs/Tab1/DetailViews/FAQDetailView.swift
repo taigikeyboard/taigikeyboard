@@ -6,7 +6,6 @@ import SwiftUI
 struct FAQDetailView: View {
     let faq: FeatureContent
     @ObservedObject var viewModel: SetupGuideViewModel
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
@@ -24,7 +23,7 @@ struct FAQDetailView: View {
                             navigationDestination(destination)
                         } label: {
                             Label(
-                                languageManager.text(navText.asLocalizedText),
+                                navText.asString,
                                 systemImage: navIcon.ios,
                             )
                         }
@@ -32,7 +31,7 @@ struct FAQDetailView: View {
                 }
             }
         }
-        .navigationTitle(languageManager.text(faq.title.asLocalizedText))
+        .navigationTitle(faq.title.asString)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -62,7 +61,7 @@ struct FAQDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(languageManager.text(paragraph.text.asLocalizedText))
+        Text(paragraph.text.asString)
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

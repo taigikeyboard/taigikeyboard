@@ -29,8 +29,6 @@ struct LayoutSelectionOverlay: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: geometry.size.height - toolbarHeight)
                 }
-            } else {
-                EmptyView()
             }
         }
     }
@@ -42,21 +40,21 @@ struct LayoutSelectionOverlay: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Section 1: Romanization keyboards
                 layoutSection(
-                    header: Tab2Texts.romanizationKeyboard.hanji,
+                    header: Tab2Texts.romanizationKeyboard,
                     layouts: [
-                        (.phahTaigi, Tab2Texts.phahTaigiLayout.hanji, "layout_phahtaigi_preview", false),
-                        (.qwerty, Tab2Texts.standardLayout.hanji, "layout_standard_preview", false),
-                        (.moe1, Tab2Texts.moe1Layout.hanji, "layout_moe1_preview", false),
-                        (.moe2, Tab2Texts.moe2Layout.hanji, "layout_moe2_preview", false),
-                    ]
+                        (.phahTaigi, Tab2Texts.phahTaigiLayout, "layout_phahtaigi_preview", false),
+                        (.qwerty, Tab2Texts.standardLayout, "layout_standard_preview", false),
+                        (.moe1, Tab2Texts.moe1Layout, "layout_moe1_preview", false),
+                        (.moe2, Tab2Texts.moe2Layout, "layout_moe2_preview", false),
+                    ],
                 )
 
                 // Section 2: Taigi phonetic
                 layoutSection(
-                    header: Tab2Texts.taigiPhonetic.hanji,
+                    header: Tab2Texts.taigiPhonetic,
                     layouts: [
-                        (.tps, Tab2Texts.tpsLayout.hanji, "layout_tps_preview", Self.tpsDisabled),
-                    ]
+                        (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", Self.tpsDisabled),
+                    ],
                 )
             }
             .padding(.top, 10)
@@ -71,10 +69,9 @@ struct LayoutSelectionOverlay: View {
 
     // MARK: - Section
 
-    @ViewBuilder
     private func layoutSection(
         header: String,
-        layouts: [(KeyboardLayoutType, String, String?, Bool)]
+        layouts: [(KeyboardLayoutType, String, String?, Bool)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(header)
@@ -86,13 +83,13 @@ struct LayoutSelectionOverlay: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(layouts, id: \.0) { (layoutType, name, imageName, isDisabled) in
+                    ForEach(layouts, id: \.0) { layoutType, name, imageName, isDisabled in
                         LayoutCard(
                             name: name,
                             previewImageName: imageName,
                             isSelected: selectedLayout == layoutType,
                             isDisabled: isDisabled,
-                            action: { selectLayout(layoutType) }
+                            action: { selectLayout(layoutType) },
                         )
                     }
                 }
@@ -141,7 +138,7 @@ private struct LayoutCard: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.black.opacity(0.5))
 
-                        Text(Tab2Texts.comingSoon.hanji)
+                        Text(Tab2Texts.comingSoon)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -158,13 +155,13 @@ private struct LayoutCard: View {
                             .overlay(
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.white),
                             )
                     }
                 }
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected && !isDisabled ? Color.accentColor : Color.clear, lineWidth: 2)
+                        .stroke(isSelected && !isDisabled ? Color.accentColor : Color.clear, lineWidth: 2),
                 )
                 .frame(width: cardWidth)
 
@@ -200,7 +197,7 @@ private struct LayoutCard: View {
                         Text(name)
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                    }
+                    },
                 )
         }
     }

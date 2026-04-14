@@ -5,7 +5,6 @@ import UIKit
 ///
 /// Manage dictionary toggles, custom dictionary, frequency/association data, and search.
 struct Tab3: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var searchVM = DictionarySearchViewModel()
 
     private let settings = SharedSettings.shared
@@ -53,69 +52,69 @@ struct Tab3: View {
                 // Data management
                 Section {
                     NavigationLink(destination: CustomDictionaryView()) {
-                        Text(languageManager.text(Tab3Texts.customDictionary))
+                        Text(Tab3Texts.customDictionary)
                     }
                     NavigationLink(destination: FrequencyDataView()) {
-                        Text(languageManager.text(Tab3Texts.frequencyManagement))
+                        Text(Tab3Texts.frequencyManagement)
                     }
                     NavigationLink(destination: AssociationDataView()) {
-                        Text(languageManager.text(Tab3Texts.associationManagement))
+                        Text(Tab3Texts.associationManagement)
                     }
                     NavigationLink(destination: DataManagementView()) {
-                        Text(languageManager.text(Tab3Texts.backupRestore))
+                        Text(Tab3Texts.backupRestore)
                     }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.dataManagement))
+                    Text(Tab3Texts.dataManagement)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // MOE dictionaries (教育部)
                 Section {
                     dictToggleWithDescription(
-                        title: Tab3Texts.moeDict,
+                        title: CommonTexts.moeDict,
                         url: "https://sutian.moe.edu.tw/",
                         isOn: $isMoeDictEnabled,
                         description: "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
                     ) { settings.isMoeDictEnabled = $0 }
                     dictToggleWithDescription(
-                        title: Tab3Texts.newwordDict,
+                        title: CommonTexts.newwordDict,
                         url: "https://www.taigitv.org.tw/taigi-words",
                         isOn: $isNewwordDictEnabled,
                         description: "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
                     ) { settings.isNewwordDictEnabled = $0 }
                     dictToggleWithDescription(
-                        title: Tab3Texts.sttiDict,
+                        title: CommonTexts.sttiDict,
                         url: "https://stti.moe.edu.tw/index.html?lang=sutgi",
                         isOn: $isSttiDictEnabled,
                         description: "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
                     ) { settings.isSttiDictEnabled = $0 }
                     dictToggleWithDescription(
-                        title: Tab3Texts.kunggeDict,
+                        title: CommonTexts.kunggeDict,
                         url: "https://kanggesu.ntcri.org.tw",
                         isOn: $isKunggeDictEnabled,
                         description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
                     ) { settings.isKunggeDictEnabled = $0 }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.moeSectionTitle))
+                    Text(Tab3Texts.moeSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // Other dictionaries
                 Section {
-                    dictionaryToggle(Tab3Texts.iTaigiDict, isOn: $isITaigiDictEnabled, info: .iTaigi) {
+                    dictionaryToggle(CommonTexts.iTaigiDict, isOn: $isITaigiDictEnabled, info: .iTaigi) {
                         settings.isITaigiDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiwanJapanDict, isOn: $isTaiwanJapanDictEnabled, info: .taiwanJapan) {
+                    dictionaryToggle(CommonTexts.taiwanJapanDict, isOn: $isTaiwanJapanDictEnabled, info: .taiwanJapan) {
                         settings.isTaiwanJapanDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiHuaDict, isOn: $isTaiHuaDictEnabled, info: .taiHua) {
+                    dictionaryToggle(CommonTexts.taiHuaDict, isOn: $isTaiHuaDictEnabled, info: .taiHua) {
                         settings.isTaiHuaDictEnabled = $0
                     }
-                    dictionaryToggle(Tab3Texts.taiwanPlantDict, isOn: $isTaiwanPlantDictEnabled, info: .taiwanPlant) {
+                    dictionaryToggle(CommonTexts.taiwanPlantDict, isOn: $isTaiwanPlantDictEnabled, info: .taiwanPlant) {
                         settings.isTaiwanPlantDictEnabled = $0
                     }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.otherSectionTitle))
+                    Text(Tab3Texts.otherSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -129,7 +128,7 @@ struct Tab3: View {
                         settings.isKhiinEnabled = $0
                     }
 
-                    dictionaryToggle(Tab3Texts.khpooDict, isOn: $isKhpooDictEnabled, info: .khpoo) {
+                    dictionaryToggle(CommonTexts.accentDict, isOn: $isKhpooDictEnabled, info: .khpoo) {
                         settings.isKhpooDictEnabled = $0
                     }
 
@@ -140,11 +139,11 @@ struct Tab3: View {
                         description: "李江却台語文教基金會漢羅合用建議用字。",
                     ) { settings.isLkkDictEnabled = $0 }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.supplementSectionTitle))
+                    Text(Tab3Texts.supplementSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(languageManager.text(Tab3Texts.tabTitle))
+            .navigationTitle(Tab3Texts.tabTitle)
             .navigationBarTitleDisplayMode(.large)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
@@ -153,7 +152,7 @@ struct Tab3: View {
                     // Search results above search bar
                     if !searchVM.searchText.isEmpty {
                         if searchVM.results.isEmpty, !searchVM.isSearching {
-                            Text(languageManager.text(Tab3Texts.noResults))
+                            Text(Tab3Texts.noResults)
                                 .font(AppStyle.captionFont)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,7 +181,7 @@ struct Tab3: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField(
-                            languageManager.text(Tab3Texts.searchPlaceholder),
+                            Tab3Texts.searchPlaceholder,
                             text: $searchVM.searchText,
                         )
                         .focused($isSearchFocused)
@@ -214,17 +213,17 @@ struct Tab3: View {
         .confirmationDialog("", isPresented: $showLookupDialog) {
             if let result = selectedResult {
                 if let moeURL = result.moeURL {
-                    Button(languageManager.text(Tab3Texts.lookupMoe)) {
+                    Button(Tab3Texts.lookupMoe) {
                         UIApplication.shared.open(moeURL)
                     }
                 }
                 if let chhoeURL = result.chhoeURL {
-                    Button(languageManager.text(Tab3Texts.lookupChhoe)) {
+                    Button(Tab3Texts.lookupChhoe) {
                         UIApplication.shared.open(chhoeURL)
                     }
                 }
             }
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
+            Button(CommonTexts.cancel, role: .cancel) {}
         }
     }
 
@@ -273,7 +272,7 @@ struct Tab3: View {
     // MARK: - Dictionary Toggle with Description + Link
 
     private func dictToggleWithDescription(
-        title: LocalizedText,
+        title: String,
         url: String,
         isOn: Binding<Bool>,
         description: String,
@@ -289,7 +288,7 @@ struct Tab3: View {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.forward.square")
                             .font(.subheadline)
-                        Text(languageManager.text(title))
+                        Text(title)
                     }
                     .foregroundColor(AppStyle.accentBlue)
                 }
@@ -310,14 +309,14 @@ struct Tab3: View {
     // MARK: - Dictionary Toggle with Info Button
 
     private func dictionaryToggle(
-        _ text: LocalizedText,
+        _ text: String,
         isOn: Binding<Bool>,
         info: DictionaryInfo,
         onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
             HStack {
-                Text(languageManager.text(text))
+                Text(text)
                 SettingInfoButton(description: info.description)
             }
         }

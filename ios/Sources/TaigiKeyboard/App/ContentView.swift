@@ -7,7 +7,6 @@ import SwiftUI
 struct ContentView: View {
     @State private var selectedTab: TabType = .home
     @ObservedObject var viewModel: SetupGuideViewModel
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -15,7 +14,7 @@ struct ContentView: View {
             Tab1(viewModel: viewModel)
                 .tabItem {
                     Label {
-                        Text(languageManager.text(TabType.home.title))
+                        Text(TabType.home.title)
                     } icon: {
                         Image(systemName: TabType.home.icon)
                     }
@@ -26,7 +25,7 @@ struct ContentView: View {
             Tab2()
                 .tabItem {
                     Label {
-                        Text(languageManager.text(TabType.layout.title))
+                        Text(TabType.layout.title)
                     } icon: {
                         Image(systemName: TabType.layout.icon)
                     }
@@ -37,7 +36,7 @@ struct ContentView: View {
             Tab3()
                 .tabItem {
                     Label {
-                        Text(languageManager.text(TabType.dictionary.title))
+                        Text(TabType.dictionary.title)
                     } icon: {
                         Image(systemName: TabType.dictionary.icon)
                     }
@@ -48,7 +47,7 @@ struct ContentView: View {
             Tab4()
                 .tabItem {
                     Label {
-                        Text(languageManager.text(TabType.settings.title))
+                        Text(TabType.settings.title)
                     } icon: {
                         Image(systemName: TabType.settings.icon)
                     }

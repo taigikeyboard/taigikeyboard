@@ -34,7 +34,6 @@ struct TaigiKeyboardApp: App {
     var body: some Scene {
         WindowGroup {
             AppRootView(keyboardStatus: keyboardStatus)
-                .withLanguageEnvironment()
         }
     }
 }

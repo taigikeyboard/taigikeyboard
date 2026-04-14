@@ -5,7 +5,6 @@ import SwiftUI
 /// JSON-driven display with text, images, slideshows, and external links.
 struct FeatureDetailView: View {
     let feature: FeatureContent
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
@@ -20,13 +19,13 @@ struct FeatureDetailView: View {
                 if case let .link(linkText, url) = paragraph.attachment {
                     Section {
                         Link(destination: URL(string: url)!) {
-                            Label(languageManager.text(linkText.asLocalizedText), systemImage: "arrow.up.right.square")
+                            Label(linkText.asString, systemImage: "arrow.up.right.square")
                         }
                     }
                 }
             }
         }
-        .navigationTitle(languageManager.text(feature.title.asLocalizedText))
+        .navigationTitle(feature.title.asString)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -55,7 +54,7 @@ struct FeatureDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(languageManager.text(paragraph.text.asLocalizedText))
+        Text(paragraph.text.asString)
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

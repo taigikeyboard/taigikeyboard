@@ -27,12 +27,12 @@ struct FeatureParagraph: Codable {
     let attachment: ParagraphAttachment?
 }
 
-/// Codable wrapper for localized text (mirrors LocalizedText).
+/// Codable wrapper for localized text loaded from JSON.
 struct LocalizedTextData: Codable {
     let hanji: String
 
-    var asLocalizedText: LocalizedText {
-        LocalizedText(hanji: hanji)
+    var asString: String {
+        hanji
     }
 }
 
@@ -79,7 +79,7 @@ enum ParagraphAttachment: Codable {
         default:
             throw DecodingError.dataCorruptedError(
                 forKey: .type, in: container,
-                debugDescription: "Unknown attachment type: \(type)"
+                debugDescription: "Unknown attachment type: \(type)",
             )
         }
     }
@@ -87,18 +87,18 @@ enum ParagraphAttachment: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .slideshow(let images, let interval):
+        case let .slideshow(images, interval):
             try container.encode("slideshow", forKey: .type)
             try container.encode(images, forKey: .images)
             try container.encode(interval, forKey: .interval)
-        case .image(let name):
+        case let .image(name):
             try container.encode("image", forKey: .type)
             try container.encode(name, forKey: .name)
-        case .link(let text, let url):
+        case let .link(text, url):
             try container.encode("link", forKey: .type)
             try container.encode(text, forKey: .text)
             try container.encode(url, forKey: .url)
-        case .navigation(let text, let destination, let icon):
+        case let .navigation(text, destination, icon):
             try container.encode("navigation", forKey: .type)
             try container.encode(text, forKey: .text)
             try container.encode(destination, forKey: .destination)

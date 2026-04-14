@@ -246,11 +246,11 @@ enum CustomDictionaryError: LocalizedError {
         case .invalidCSVData:
             "Invalid CSV data"
         case .invalidCSVFormat:
-            LanguageManager.shared.text(Tab3Texts.invalidCSVFormat)
+            Tab3Texts.invalidCSVFormat
         case .fileTooLarge:
-            LanguageManager.shared.text(Tab3Texts.fileTooLarge)
+            Tab3Texts.fileTooLarge
         case .tooManyEntries:
-            LanguageManager.shared.text(Tab3Texts.tooManyEntries)
+            Tab3Texts.tooManyEntries
         }
     }
 }

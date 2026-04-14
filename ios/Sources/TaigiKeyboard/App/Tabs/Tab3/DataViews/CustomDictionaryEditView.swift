@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Add/Edit form for a custom dictionary entry
 struct CustomDictionaryEditView: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var roman: String
@@ -11,16 +10,18 @@ struct CustomDictionaryEditView: View {
     private let existingEntry: CustomDictionaryEntry?
     private let onSave: (CustomDictionaryEntry) -> Void
 
-    private var isEditing: Bool { existingEntry != nil }
+    private var isEditing: Bool {
+        existingEntry != nil
+    }
 
     private var canSave: Bool {
         !roman.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !hanzi.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            !hanzi.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Create mode
     init(onSave: @escaping (CustomDictionaryEntry) -> Void) {
-        self.existingEntry = nil
+        existingEntry = nil
         self.onSave = onSave
         _roman = State(initialValue: "")
         _hanzi = State(initialValue: "")
@@ -28,7 +29,7 @@ struct CustomDictionaryEditView: View {
 
     /// Edit mode
     init(entry: CustomDictionaryEntry, onSave: @escaping (CustomDictionaryEntry) -> Void) {
-        self.existingEntry = entry
+        existingEntry = entry
         self.onSave = onSave
         _roman = State(initialValue: entry.roman)
         _hanzi = State(initialValue: entry.hanzi)
@@ -39,36 +40,36 @@ struct CustomDictionaryEditView: View {
             Form {
                 Section {
                     TextField(
-                        languageManager.text(Tab3Texts.romanPlaceholder),
-                        text: $roman
+                        Tab3Texts.romanPlaceholder,
+                        text: $roman,
                     )
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 } header: {
-                    Text(languageManager.text(Tab3Texts.romanLabel))
+                    Text(Tab3Texts.romanLabel)
                 }
 
                 Section {
                     TextField(
-                        languageManager.text(Tab3Texts.hanziPlaceholder),
-                        text: $hanzi
+                        Tab3Texts.hanziPlaceholder,
+                        text: $hanzi,
                     )
                 } header: {
-                    Text(languageManager.text(Tab3Texts.hanziLabel))
+                    Text(Tab3Texts.hanziLabel)
                 }
             }
             .navigationTitle(
-                languageManager.text(isEditing ? Tab3Texts.editEntry : Tab3Texts.addEntry)
+                isEditing ? Tab3Texts.editEntry : Tab3Texts.addEntry,
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(languageManager.text(Tab3Texts.cancel)) {
+                    Button(CommonTexts.cancel) {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(languageManager.text(Tab3Texts.save)) {
+                    Button(Tab3Texts.save) {
                         saveEntry()
                     }
                     .disabled(!canSave)
@@ -81,19 +82,18 @@ struct CustomDictionaryEditView: View {
         let trimmedRoman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedHanzi = hanzi.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let entry: CustomDictionaryEntry
-        if let existing = existingEntry {
-            entry = CustomDictionaryEntry(
+        let entry = if let existing = existingEntry {
+            CustomDictionaryEntry(
                 id: existing.id,
                 roman: trimmedRoman,
                 hanzi: trimmedHanzi,
                 createdAt: existing.createdAt,
-                updatedAt: Date()
+                updatedAt: Date(),
             )
         } else {
-            entry = CustomDictionaryEntry(
+            CustomDictionaryEntry(
                 roman: trimmedRoman,
-                hanzi: trimmedHanzi
+                hanzi: trimmedHanzi,
             )
         }
 
