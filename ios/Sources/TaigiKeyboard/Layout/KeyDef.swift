@@ -1,10 +1,4 @@
-/// 鍵盤按鍵定義
-///
-/// 用於定義鍵盤佈局中的每個按鍵，支援：
-/// - 字符按鍵（可帶全形版本）
-/// - 功能鍵（shift、backspace、space、return、translate）
-/// - 鍵盤切換鍵（numeric、symbolic、alphabetic）
-/// - 系統按鍵（globe、emoji）
+/// Keyboard key definition for layout composition
 enum KeyDef {
     // MARK: - 字符按鍵
 
@@ -24,12 +18,12 @@ enum KeyDef {
 
     // MARK: - 鍵盤切換
 
-    case numeric      // 切換到數字鍵盤
-    case symbolic     // 切換到符號鍵盤
-    case alphabetic   // 切換回字母鍵盤
+    case numeric // 切換到數字鍵盤
+    case symbolic // 切換到符號鍵盤
+    case alphabetic // 切換回字母鍵盤
 
     // MARK: - 系統按鍵
 
-    case globe        // 切換輸入法
-    case emoji        // 切換到表情符號
+    case globe // 切換輸入法
+    case emoji // 切換到表情符號
 }
