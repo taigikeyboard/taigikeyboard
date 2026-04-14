@@ -18,7 +18,7 @@ enum TabType: Int, CaseIterable, Hashable {
     }
 
     /// Localized tab title.
-    var title: LocalizedText {
+    var title: String {
         switch self {
         case .home: Tab1Texts.tabTitle
         case .layout: Tab2Texts.tabBarTitle

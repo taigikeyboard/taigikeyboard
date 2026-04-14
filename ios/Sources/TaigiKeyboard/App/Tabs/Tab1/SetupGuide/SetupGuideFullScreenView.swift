@@ -4,7 +4,6 @@ import SwiftUI
 /// Full-screen setup guide shown on first launch.
 struct SetupGuideFullScreenView: View {
     @StateObject private var viewModel = SetupGuideViewModel()
-    @StateObject private var languageManager = LanguageManager.shared
 
     let onComplete: () -> Void
 
@@ -18,7 +17,6 @@ struct SetupGuideFullScreenView: View {
             isFullScreen: true,
             onComplete: onComplete,
         )
-        .environmentObject(languageManager)
         .task {
             viewModel.refresh()
             // Auto-dismiss if setup already complete

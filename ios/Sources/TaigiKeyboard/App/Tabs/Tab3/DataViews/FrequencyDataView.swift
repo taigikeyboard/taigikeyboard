@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 /// Frequency data sub-page
 /// Shows top word frequency list with toggle, import/export, and clear option
 struct FrequencyDataView: View {
-    @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isFrequencyRecordingEnabled: Bool
     @State private var allData: [(word: String, count: Int)] = []
@@ -41,8 +40,8 @@ struct FrequencyDataView: View {
                 Section {
                     Toggle(isOn: $isFrequencyRecordingEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.isFrequencyRecordingEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.isFrequencyRecordingEnabledInfo))
+                            Text(Tab3Texts.isFrequencyRecordingEnabled)
+                            SettingInfoButton(description: Tab3Texts.isFrequencyRecordingEnabledInfo)
                         }
                     }
                     .onChange(of: isFrequencyRecordingEnabled) { _, newValue in
@@ -52,13 +51,13 @@ struct FrequencyDataView: View {
 
                 // Import/Export
                 Section {
-                    Text(languageManager.text(Tab3Texts.frequencyDescription))
+                    Text(Tab3Texts.frequencyDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await exportCSV() }
                     } label: {
                         Label(
-                            languageManager.text(Tab3Texts.frequencyExportCSV),
+                            Tab3Texts.frequencyExportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -71,13 +70,13 @@ struct FrequencyDataView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                languageManager.text(Tab3Texts.frequencyImportCSV),
+                                Tab3Texts.frequencyImportCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.importExportTitle))
+                    Text(Tab3Texts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -86,22 +85,22 @@ struct FrequencyDataView: View {
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
-                        Text(languageManager.text(Tab3Texts.clearAllFrequency))
+                        Text(Tab3Texts.clearAllFrequency)
                     }
                 }
 
                 // Privacy warning
                 Section {
-                    Text(languageManager.text(Tab3Texts.frequencyPrivacyWarning))
+                    Text(Tab3Texts.frequencyPrivacyWarning)
                 }
 
                 // Data list
                 Section {
                     if allData.isEmpty {
-                        Text(languageManager.text(Tab3Texts.noData))
+                        Text(Tab3Texts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
-                        Text(languageManager.text(Tab3Texts.noResults))
+                        Text(Tab3Texts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredData, id: \.word) { item in
@@ -126,33 +125,33 @@ struct FrequencyDataView: View {
                     }
                 } header: {
                     HStack {
-                        Text(languageManager.text(Tab3Texts.frequencyManagement))
+                        Text(Tab3Texts.frequencyManagement)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description: Tab3Texts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: languageManager.text(Tab3Texts.searchPlaceholder))
+            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
         }
-        .navigationTitle(languageManager.text(Tab3Texts.frequencyManagement))
+        .navigationTitle(Tab3Texts.frequencyManagement)
         .navigationBarTitleDisplayMode(.large)
-        .alert(languageManager.text(Tab3Texts.clearAllFrequency), isPresented: $showClearAlert) {
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
-            Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
+        .alert(Tab3Texts.clearAllFrequency, isPresented: $showClearAlert) {
+            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(Tab3Texts.clear, role: .destructive) {
                 clearData()
             }
         } message: {
-            Text(languageManager.text(Tab3Texts.clearFrequencyMessage))
+            Text(Tab3Texts.clearFrequencyMessage)
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: languageManager.text(Tab3Texts.frequencyImportCSV),
-            exportAlertTitle: languageManager.text(Tab3Texts.frequencyExportCSV),
+            importAlertTitle: Tab3Texts.frequencyImportCSV,
+            exportAlertTitle: Tab3Texts.frequencyExportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞頻紀錄") },
-            okText: languageManager.text(Tab3Texts.ok),
-            exportSuccessText: languageManager.text(Tab3Texts.exportSuccess),
+            okText: Tab3Texts.ok,
+            exportSuccessText: Tab3Texts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
         .task {
@@ -205,7 +204,7 @@ struct FrequencyDataView: View {
                 let imported = try await UserFrequencyRepository.shared.batchImportMerge(entries: entries)
                 return (imported: imported, skipped: entries.count - imported)
             },
-            resultFormat: languageManager.text(Tab3Texts.frequencyImportResult),
+            resultFormat: Tab3Texts.importResultFormat,
             onComplete: { await loadData() },
         )
     }

@@ -6,7 +6,6 @@ import SwiftUI
 /// Provides font selection, 4 sliders for key height, key font size, candidate text size,
 /// and key corner radius, with a keyboard preview anchored at the bottom.
 struct AppearanceSettingsView: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
     private let settings = SharedSettings.shared
@@ -83,7 +82,7 @@ struct AppearanceSettingsView: View {
                         )
                     } label: {
                         HStack {
-                            Text(languageManager.text(Tab2Texts.customFont))
+                            Text(Tab2Texts.customFont)
                             Spacer()
                             Text(fontDisplayName(selectedFontType))
                                 .foregroundColor(.secondary)
@@ -92,15 +91,15 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Keyboard overall: background color + height
-                Section(header: Text(languageManager.text(Tab2Texts.keyboardSection))) {
+                Section(header: Text(Tab2Texts.keyboardSection)) {
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorKeyboardBackground),
+                        label: Tab2Texts.colorKeyboardBackground,
                         color: $keyboardBackground,
                         defaultColor: Self.defaultKeyboardBackground,
                         keyPath: \.backgroundColor,
                     )
                     sliderRow(
-                        label: languageManager.text(Tab2Texts.keyHeight),
+                        label: Tab2Texts.keyHeight,
                         value: $keyHeightScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyHeightScale,
@@ -109,41 +108,41 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Key section: colors + font size + corner radius + border width
-                Section(header: Text(languageManager.text(Tab2Texts.colorKeySection))) {
+                Section(header: Text(Tab2Texts.colorKeySection)) {
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorKeyText),
+                        label: Tab2Texts.colorKeyText,
                         color: $keyText,
                         defaultColor: Self.defaultKeyText,
                         keyPath: \.keyTextColor,
                     )
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorNormalKeyFill),
+                        label: Tab2Texts.colorNormalKeyFill,
                         color: $normalKeyFill,
                         defaultColor: Self.defaultNormalKeyFill,
                         keyPath: \.normalKeyFillColor,
                     )
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorSpecialKeyFill),
+                        label: Tab2Texts.colorSpecialKeyFill,
                         color: $specialKeyFill,
                         defaultColor: Self.defaultSpecialKeyFill,
                         keyPath: \.specialKeyFillColor,
                     )
                     sliderRow(
-                        label: languageManager.text(Tab2Texts.keyFontSize),
+                        label: Tab2Texts.keyFontSize,
                         value: $keyFontSizeScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultKeyFontSizeScale,
                         onChanged: { settings.keyFontSizeScale = $0 },
                     )
                     sliderRow(
-                        label: languageManager.text(Tab2Texts.keyCornerRadius),
+                        label: Tab2Texts.keyCornerRadius,
                         value: $keyCornerRadius,
                         in: radiusRange, step: radiusStep,
                         defaultValue: Self.defaultKeyCornerRadius,
                         onChanged: { settings.keyCornerRadius = $0 },
                     )
                     sliderRow(
-                        label: languageManager.text(Tab2Texts.keyBorderWidth),
+                        label: Tab2Texts.keyBorderWidth,
                         value: $keyBorderWidth,
                         in: borderWidthRange, step: borderWidthStep,
                         defaultValue: Self.defaultKeyBorderWidth,
@@ -152,21 +151,21 @@ struct AppearanceSettingsView: View {
                 }
 
                 // Candidate section: colors + text size
-                Section(header: Text(languageManager.text(Tab2Texts.candidateSection))) {
+                Section(header: Text(Tab2Texts.candidateSection)) {
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorCandidateText),
+                        label: Tab2Texts.colorCandidateText,
                         color: $candidateText,
                         defaultColor: Self.defaultCandidateText,
                         keyPath: \.candidateTextColor,
                     )
                     colorRow(
-                        label: languageManager.text(Tab2Texts.colorCandidateBackground),
+                        label: Tab2Texts.colorCandidateBackground,
                         color: $candidateBackground,
                         defaultColor: Self.defaultCandidateBackground,
                         keyPath: \.candidateBackgroundColor,
                     )
                     sliderRow(
-                        label: languageManager.text(Tab2Texts.candidateTextSize),
+                        label: Tab2Texts.candidateTextSize,
                         value: $candidateTextSizeScale,
                         in: scaleRange, step: scaleStep,
                         defaultValue: Self.defaultCandidateTextSizeScale,
@@ -180,7 +179,7 @@ struct AppearanceSettingsView: View {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         resetAllAppearance()
                     } label: {
-                        Text(languageManager.text(Tab2Texts.appearanceResetAll))
+                        Text(Tab2Texts.appearanceResetAll)
                     }
                 }
             }
@@ -195,7 +194,7 @@ struct AppearanceSettingsView: View {
                 colorScheme: colorScheme,
             )
         }
-        .navigationTitle(languageManager.text(Tab2Texts.appearanceSettings))
+        .navigationTitle(Tab2Texts.appearanceSettings)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -235,9 +234,9 @@ struct AppearanceSettingsView: View {
 
     private func fontDisplayName(_ font: FontType) -> String {
         switch font {
-        case .system: languageManager.text(Tab2Texts.fontSystemDefault)
-        case .openHuninn: languageManager.text(Tab2Texts.fontOpenHuninn)
-        case .iansui: languageManager.text(Tab2Texts.fontIansui)
+        case .system: Tab2Texts.fontSystemDefault
+        case .openHuninn: CommonTexts.fontOpenHuninn
+        case .iansui: CommonTexts.fontIansui
         }
     }
 
@@ -308,14 +307,13 @@ struct AppearanceSettingsView: View {
 // MARK: - Font Picker Subpage
 
 private struct AppearanceFontPickerView: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @Binding var selectedFont: FontType
     var onChange: (FontType) -> Void
 
-    private let options: [(font: FontType, text: LocalizedText)] = [
+    private let options: [(font: FontType, text: String)] = [
         (.system, Tab2Texts.fontSystemDefault),
-        (.openHuninn, Tab2Texts.fontOpenHuninn),
-        (.iansui, Tab2Texts.fontIansui),
+        (.openHuninn, CommonTexts.fontOpenHuninn),
+        (.iansui, CommonTexts.fontIansui),
     ]
 
     var body: some View {
@@ -327,7 +325,7 @@ private struct AppearanceFontPickerView: View {
                         onChange(option.font)
                     } label: {
                         HStack {
-                            Text(languageManager.text(option.text))
+                            Text(option.text)
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedFont == option.font {
@@ -339,7 +337,7 @@ private struct AppearanceFontPickerView: View {
                 }
             }
         }
-        .navigationTitle(languageManager.text(Tab2Texts.customFont))
+        .navigationTitle(Tab2Texts.customFont)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

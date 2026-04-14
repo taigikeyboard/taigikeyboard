@@ -2,7 +2,6 @@ package com.siansiansu.taigikeyboard.ui.tabs.tab1
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +45,7 @@ import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
+// Tab1 setup guide: step-by-step keyboard activation instructions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupGuideScreen(
@@ -94,7 +94,6 @@ fun SetupGuideScreen(
                     .padding(horizontal = 24.dp)
                     .padding(top = 16.dp, bottom = AppStyle.scrollContentBottomPadding),
         ) {
-            // Description
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideDescription),
                 lineHeight = 22.sp,
@@ -104,7 +103,6 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Step 1 card
             StepCard(
                 stepNumber = 1,
                 title = languageManager.text(Tab1Texts.setupGuideStep1Settings),
@@ -113,7 +111,6 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Step 2 card
             StepCard(
                 stepNumber = 2,
                 title = languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard),
@@ -122,7 +119,6 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Completed message
             Text(
                 text = languageManager.text(Tab1Texts.setupGuideCompletedMessage),
                 lineHeight = 22.sp,
@@ -132,7 +128,6 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Go to settings button
             Button(
                 onClick = onGoToSettings,
                 modifier = Modifier.fillMaxWidth(),
@@ -146,15 +141,12 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Warning: privacy message
             WarningRow(languageManager.text(Tab1Texts.setupInfoMessage))
 
             Spacer(Modifier.height(12.dp))
 
-            // Warning: brand differences
             WarningRow(languageManager.text(Tab1Texts.setupBrandWarning))
 
-            // Close button (full screen mode only)
             if (isFullScreen) {
                 Spacer(Modifier.height(24.dp))
                 Button(
@@ -190,12 +182,10 @@ private fun StepCard(
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Step number + title
             Row(
                 modifier = Modifier.padding(bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Number circle
                 Box(
                     modifier =
                         Modifier
@@ -222,7 +212,6 @@ private fun StepCard(
                 )
             }
 
-            // Screenshot
             Image(
                 painter = painterResource(imageResId),
                 contentDescription = null,

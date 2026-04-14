@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 /// Custom dictionary subpage
 /// Lists all user-added entries with add/edit/delete and import/export
 struct CustomDictionaryView: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @State private var isCustomDictEnabled: Bool
 
     @State private var entries: [CustomDictionaryEntry] = []
@@ -48,8 +47,8 @@ struct CustomDictionaryView: View {
                 Section {
                     Toggle(isOn: $isCustomDictEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.isCustomDictEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.isCustomDictEnabledInfo))
+                            Text(Tab3Texts.isCustomDictEnabled)
+                            SettingInfoButton(description: Tab3Texts.isCustomDictEnabledInfo)
                         }
                     }
                     .onChange(of: isCustomDictEnabled) { _, newValue in
@@ -64,13 +63,13 @@ struct CustomDictionaryView: View {
                         .aspectRatio(contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
                         .listRowSeparator(.hidden)
-                    Text(languageManager.text(Tab3Texts.customDictDescription))
+                    Text(Tab3Texts.customDictDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await service.exportCSV() }
                     } label: {
                         Label(
-                            languageManager.text(Tab3Texts.exportCSV),
+                            Tab3Texts.exportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -83,13 +82,13 @@ struct CustomDictionaryView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                languageManager.text(Tab3Texts.importCSV),
+                                Tab3Texts.importCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.importExportTitle))
+                    Text(Tab3Texts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -98,14 +97,14 @@ struct CustomDictionaryView: View {
                     Button(role: .destructive) {
                         showDeleteAllAlert = true
                     } label: {
-                        Text(languageManager.text(Tab3Texts.deleteAll))
+                        Text(Tab3Texts.deleteAll)
                     }
                     .disabled(importExport.isImporting)
                 }
 
                 // Privacy warning
                 Section {
-                    Text(languageManager.text(Tab3Texts.customDictPrivacyWarning))
+                    Text(Tab3Texts.customDictPrivacyWarning)
                 }
 
                 // Entry list
@@ -115,13 +114,13 @@ struct CustomDictionaryView: View {
                             Image(systemName: "book.closed")
                                 .font(AppStyle.appFont(size: 48))
                                 .foregroundColor(.secondary)
-                            Text(languageManager.text(Tab3Texts.customDictEmpty))
+                            Text(Tab3Texts.customDictEmpty)
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else if !filterText.isEmpty, filteredEntries.isEmpty {
-                        Text(languageManager.text(Tab3Texts.noResults))
+                        Text(Tab3Texts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredEntries) { entry in
@@ -155,17 +154,17 @@ struct CustomDictionaryView: View {
                     }
                 } header: {
                     HStack {
-                        Text(languageManager.text(Tab3Texts.customDictionary))
+                        Text(Tab3Texts.customDictionary)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description: Tab3Texts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: languageManager.text(Tab3Texts.searchPlaceholder))
+            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
         }
-        .navigationTitle(languageManager.text(Tab3Texts.customDictionary))
+        .navigationTitle(Tab3Texts.customDictionary)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -180,39 +179,39 @@ struct CustomDictionaryView: View {
             }
         }
         .alert(
-            languageManager.text(editingEntry != nil ? Tab3Texts.editEntry : Tab3Texts.addEntry),
+            editingEntry != nil ? Tab3Texts.editEntry : Tab3Texts.addEntry,
             isPresented: $showEntryAlert,
         ) {
-            TextField(languageManager.text(Tab3Texts.romanPlaceholder), text: $romanInput)
+            TextField(Tab3Texts.romanPlaceholder, text: $romanInput)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            TextField(languageManager.text(Tab3Texts.hanziPlaceholder), text: $hanziInput)
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {
+            TextField(Tab3Texts.hanziPlaceholder, text: $hanziInput)
+            Button(CommonTexts.cancel, role: .cancel) {
                 editingEntry = nil
             }
-            Button(languageManager.text(Tab3Texts.save)) {
+            Button(Tab3Texts.save) {
                 saveEntryFromAlert()
             }
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: languageManager.text(Tab3Texts.importCSV),
-            exportAlertTitle: languageManager.text(Tab3Texts.exportCSV),
+            importAlertTitle: Tab3Texts.importCSV,
+            exportAlertTitle: Tab3Texts.exportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
-            okText: languageManager.text(Tab3Texts.ok),
-            exportSuccessText: languageManager.text(Tab3Texts.exportSuccess),
+            okText: Tab3Texts.ok,
+            exportSuccessText: Tab3Texts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
-        .alert(languageManager.text(Tab3Texts.deleteAll), isPresented: $showDeleteAllAlert) {
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
-            Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
+        .alert(Tab3Texts.deleteAll, isPresented: $showDeleteAllAlert) {
+            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(Tab3Texts.clear, role: .destructive) {
                 Task {
                     try? await service.deleteAll()
                     await loadEntries()
                 }
             }
         } message: {
-            Text(languageManager.text(Tab3Texts.deleteAllMessage))
+            Text(Tab3Texts.deleteAllMessage)
         }
         .task {
             await loadEntries()
@@ -262,7 +261,7 @@ struct CustomDictionaryView: View {
                 let result = try await service.importFromFile(url: url)
                 return (imported: result.imported, skipped: result.skipped)
             },
-            resultFormat: languageManager.text(Tab3Texts.importResult),
+            resultFormat: Tab3Texts.importResultFormat,
             onComplete: { await loadEntries() },
         )
     }

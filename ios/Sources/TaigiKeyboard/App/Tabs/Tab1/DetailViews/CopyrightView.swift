@@ -2,13 +2,12 @@ import SwiftUI
 
 /// Copyright notices for dictionaries and open-source projects.
 struct CopyrightView: View {
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
             // Open Huninn (粉圓體)
             CopyrightSection(
-                title: Tab1Texts.openFontTitle,
+                title: CommonTexts.fontOpenHuninn,
                 description: Tab1Texts.openFontCopyright,
                 license: Tab1Texts.silOpenFontLicense,
                 licenseURL: "https://openfontlicense.org/",
@@ -17,7 +16,7 @@ struct CopyrightView: View {
 
             // Iansui (芫荽體)
             CopyrightSection(
-                title: Tab1Texts.iansuiFontTitle,
+                title: CommonTexts.fontIansui,
                 description: Tab1Texts.iansuiFontCopyright,
                 license: Tab1Texts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
@@ -26,7 +25,7 @@ struct CopyrightView: View {
 
             // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)
             CopyrightSection(
-                title: Tab1Texts.moeDict,
+                title: CommonTexts.moeDict,
                 description: Tab1Texts.moeCopyright,
                 license: Tab1Texts.ccLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nd/3.0/tw/",
@@ -35,7 +34,7 @@ struct CopyrightView: View {
 
             // New Words Dictionary (新詞新語)
             CopyrightSection(
-                title: Tab1Texts.newwordDict,
+                title: CommonTexts.newwordDict,
                 description: Tab1Texts.newwordCopyright,
                 license: Tab1Texts.ccBy4License,
                 licenseURL: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
@@ -44,7 +43,7 @@ struct CopyrightView: View {
 
             // Craft Dictionary (工藝詞庫)
             CopyrightSection(
-                title: Tab1Texts.kunggeDict,
+                title: CommonTexts.kunggeDict,
                 description: Tab1Texts.kunggeCopyright,
                 license: Tab1Texts.ccByNcLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
@@ -53,7 +52,7 @@ struct CopyrightView: View {
 
             // iTaigi
             CopyrightSection(
-                title: Tab1Texts.iTaigiDict,
+                title: CommonTexts.iTaigiDict,
                 description: Tab1Texts.iTaigiCopyright,
                 license: Tab1Texts.cc0License,
                 licenseURL: "https://creativecommons.org/public-domain/cc0/",
@@ -62,7 +61,7 @@ struct CopyrightView: View {
 
             // Taiwan-Japan Dictionary (台日大辭典)
             CopyrightSection(
-                title: Tab1Texts.taiwanJapanDict,
+                title: CommonTexts.taiwanJapanDict,
                 description: Tab1Texts.taiwanJapanCopyright,
                 license: Tab1Texts.ccByNcSA3License,
                 licenseURL: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
@@ -71,7 +70,7 @@ struct CopyrightView: View {
 
             // Tai-Hua Dictionary (台華線頂辭典)
             CopyrightSection(
-                title: Tab1Texts.taiHuaDict,
+                title: CommonTexts.taiHuaDict,
                 description: Tab1Texts.taiHuaCopyright,
                 license: Tab1Texts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
@@ -80,7 +79,7 @@ struct CopyrightView: View {
 
             // Taiwan Plant Dictionary (台灣植物名彙)
             CopyrightSection(
-                title: Tab1Texts.taiwanPlantDict,
+                title: CommonTexts.taiwanPlantDict,
                 description: Tab1Texts.taiwanPlantCopyright,
                 license: Tab1Texts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
@@ -89,7 +88,7 @@ struct CopyrightView: View {
 
             // Subject Terminology Dictionary (學科術語)
             CopyrightSection(
-                title: Tab1Texts.sttiDict,
+                title: CommonTexts.sttiDict,
                 description: Tab1Texts.sttiCopyright,
                 license: Tab1Texts.ogdlTaiwanLicense,
                 licenseURL: "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
@@ -99,15 +98,15 @@ struct CopyrightView: View {
             // Accent/dialect supplementary data (腔口補充)
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(languageManager.text(Tab1Texts.accentDict))
+                    Text(CommonTexts.accentDict)
                         .font(AppStyle.headlineFont)
 
-                    Text(languageManager.text(Tab1Texts.accentDictCredit))
+                    Text(Tab1Texts.accentDictCredit)
                         .foregroundColor(.secondary)
                 }
             }
         }
-        .navigationTitle(languageManager.text(Tab1Texts.copyrightNotice))
+        .navigationTitle(Tab1Texts.copyrightNotice)
         .navigationBarTitleDisplayMode(.large)
     }
 }
@@ -115,36 +114,34 @@ struct CopyrightView: View {
 // MARK: - Copyright Section
 
 private struct CopyrightSection: View {
-    let title: LocalizedText
-    let description: LocalizedText
-    let license: LocalizedText
+    let title: String
+    let description: String
+    let license: String
     let licenseURL: String
     let websiteURL: String?
-
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Text(languageManager.text(title))
+                Text(title)
                     .font(AppStyle.headlineFont)
 
-                Text(languageManager.text(description))
+                Text(description)
                     .foregroundColor(.secondary)
 
-                Text(languageManager.text(license))
+                Text(license)
                     .font(AppStyle.captionFont)
                     .foregroundColor(.secondary)
                     .italic()
             }
 
             Link(destination: URL(string: licenseURL)!) {
-                Label(languageManager.text(Tab1Texts.viewLicense), systemImage: "doc.text")
+                Label(Tab1Texts.viewLicense, systemImage: "doc.text")
             }
 
             if let websiteURL {
                 Link(destination: URL(string: websiteURL)!) {
-                    Label(languageManager.text(Tab1Texts.viewWebsite), systemImage: "globe")
+                    Label(CommonTexts.viewWebsite, systemImage: "globe")
                 }
             }
         }

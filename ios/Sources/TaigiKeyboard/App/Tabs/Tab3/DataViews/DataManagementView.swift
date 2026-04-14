@@ -5,7 +5,6 @@ import UniformTypeIdentifiers
 /// Backup/Restore sub-page
 /// Provides export and import of all user data
 struct DataManagementView: View {
-    @StateObject private var languageManager = LanguageManager.shared
 
     // Backup/Restore state
     @State private var showBackupExporter = false
@@ -23,7 +22,7 @@ struct DataManagementView: View {
         List {
             // Privacy warning
             Section {
-                Text(languageManager.text(Tab3Texts.backupPrivacyWarning))
+                Text(Tab3Texts.backupPrivacyWarning)
             }
 
             // Backup/Restore
@@ -32,7 +31,7 @@ struct DataManagementView: View {
                     exportBackup()
                 } label: {
                     Label(
-                        languageManager.text(Tab3Texts.exportBackup),
+                        Tab3Texts.exportBackup,
                         systemImage: "square.and.arrow.up",
                     )
                 }
@@ -45,14 +44,14 @@ struct DataManagementView: View {
                         showBackupImporter = true
                     } label: {
                         Label(
-                            languageManager.text(Tab3Texts.importBackup),
+                            Tab3Texts.importBackup,
                             systemImage: "square.and.arrow.down",
                         )
                     }
                 }
             }
         }
-        .navigationTitle(languageManager.text(Tab3Texts.backupRestore))
+        .navigationTitle(Tab3Texts.backupRestore)
         .navigationBarTitleDisplayMode(.large)
         .fileExporter(
             isPresented: $showBackupExporter,
@@ -71,18 +70,18 @@ struct DataManagementView: View {
         ) { result in
             handleBackupImport(result)
         }
-        .alert(languageManager.text(Tab3Texts.exportBackup), isPresented: $showExportSuccessAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
+        .alert(Tab3Texts.exportBackup, isPresented: $showExportSuccessAlert) {
+            Button(Tab3Texts.ok) {}
         } message: {
-            Text(languageManager.text(Tab3Texts.exportBackupSuccess))
+            Text(Tab3Texts.exportBackupSuccess)
         }
-        .alert(languageManager.text(Tab3Texts.importBackup), isPresented: $showBackupResultAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
+        .alert(Tab3Texts.importBackup, isPresented: $showBackupResultAlert) {
+            Button(Tab3Texts.ok) {}
         } message: {
             Text(backupResultMessage)
         }
         .alert("Error", isPresented: $showBackupErrorAlert) {
-            Button(languageManager.text(Tab3Texts.ok)) {}
+            Button(Tab3Texts.ok) {}
         } message: {
             Text(backupErrorMessage)
         }
@@ -131,7 +130,7 @@ struct DataManagementView: View {
                     let importResult = try await BackupService.shared.importAll(from: data)
                     await MainActor.run {
                         backupResultMessage = String(
-                            format: languageManager.text(Tab3Texts.importBackupResult),
+                            format: Tab3Texts.importBackupResult,
                             importResult.customDict,
                             importResult.frequency,
                             importResult.association,

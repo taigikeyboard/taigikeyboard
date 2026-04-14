@@ -31,18 +31,22 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
+import com.siansiansu.taigikeyboard.model.ContentType
+import com.siansiansu.taigikeyboard.model.FeatureContent
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
-import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
+import com.siansiansu.taigikeyboard.util.resolveDrawableResId
 
+private val chevronRight = Icons.AutoMirrored.Filled.KeyboardArrowRight
+
+// Tab1 home screen: setup guide, features, links, FAQ sections
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -58,8 +62,6 @@ fun HomeScreen(
 ) {
     val language by languageManager.currentLanguageFlow.collectAsState()
 
-    val chevronRight = Icons.AutoMirrored.Filled.KeyboardArrowRight
-    val externalLink = Icons.AutoMirrored.Outlined.OpenInNew
     val featureIconTint = AppStyle.warningOrange()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -94,7 +96,6 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
-            // Section 1: Setup keyboard
             SectionHeader(languageManager.text(Tab1Texts.setupKeyboard))
             Spacer(Modifier.height(8.dp))
 
@@ -114,64 +115,36 @@ fun HomeScreen(
             val typingGuideFeatures = features.take(6)
             val settingsFeatures = features.drop(6)
 
-            // Section 2: Typing guide (first 6 features)
             SectionHeader(languageManager.text(Tab1Texts.typingGuide))
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
-                typingGuideFeatures.forEachIndexed { index, feature ->
-                    val iconResId =
-                        context.resources.getIdentifier(
-                            feature.icon.android,
-                            "drawable",
-                            context.packageName,
-                        )
-                    NavigationRow(
-                        icon = painterResource(if (iconResId != 0) iconResId else R.drawable.lightbulb_24),
-                        label = languageManager.text(feature.title),
-                        trailingIcon = chevronRight,
-                        iconTint = featureIconTint,
-                        onClick = {
-                            onFeatureClick(feature.id, "feature", arrayOf(feature.id))
-                        },
-                    )
-                    if (index < typingGuideFeatures.lastIndex) {
-                        SettingsDivider(Modifier.padding(horizontal = 16.dp))
-                    }
-                }
+                FeatureList(
+                    features = typingGuideFeatures,
+                    context = context,
+                    languageManager = languageManager,
+                    onFeatureClick = onFeatureClick,
+                    iconTint = featureIconTint,
+                )
             }
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            // Section 3: Features & settings (remaining features)
             SectionHeader(languageManager.text(Tab1Texts.newFeatures))
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
-                settingsFeatures.forEachIndexed { index, feature ->
-                    val iconResId =
-                        context.resources.getIdentifier(
-                            feature.icon.android,
-                            "drawable",
-                            context.packageName,
-                        )
-                    NavigationRow(
-                        icon = painterResource(if (iconResId != 0) iconResId else R.drawable.lightbulb_24),
-                        label = languageManager.text(feature.title),
-                        trailingIcon = chevronRight,
-                        onClick = {
-                            onFeatureClick(feature.id, "feature", arrayOf(feature.id))
-                        },
-                    )
-                    if (index < settingsFeatures.lastIndex) {
-                        SettingsDivider(Modifier.padding(horizontal = 16.dp))
-                    }
-                }
+                FeatureList(
+                    features = settingsFeatures,
+                    context = context,
+                    languageManager = languageManager,
+                    onFeatureClick = onFeatureClick,
+                )
             }
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            // Section 3: Resources & links
+            // Section 4: Resources & links
             val linkBlue = MaterialTheme.colorScheme.primary
             SettingsCard {
                 NavigationRow(
@@ -217,7 +190,6 @@ fun HomeScreen(
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
 
-                // Version info row (not clickable)
                 Row(
                     modifier =
                         Modifier
@@ -248,7 +220,6 @@ fun HomeScreen(
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            // Section 4: FAQ (data-driven from tab1-faq.json)
             SectionHeader(languageManager.text(Tab1Texts.faq))
             Spacer(Modifier.height(8.dp))
 
@@ -256,14 +227,8 @@ fun HomeScreen(
 
             SettingsCard {
                 faqs.forEachIndexed { index, faq ->
-                    val iconResId =
-                        context.resources.getIdentifier(
-                            faq.icon.android,
-                            "drawable",
-                            context.packageName,
-                        )
                     NavigationRow(
-                        icon = painterResource(if (iconResId != 0) iconResId else R.drawable.keyboard_24),
+                        icon = painterResource(resolveDrawableResId(context, faq.icon.android, R.drawable.keyboard_24)),
                         label = languageManager.text(faq.title),
                         trailingIcon = chevronRight,
                         onClick = {
@@ -275,6 +240,28 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FeatureList(
+    features: List<FeatureContent>,
+    context: android.content.Context,
+    languageManager: LanguageManager,
+    onFeatureClick: (String, String, Array<String>) -> Unit,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+) {
+    features.forEachIndexed { index, feature ->
+        NavigationRow(
+            icon = painterResource(resolveDrawableResId(context, feature.icon.android, R.drawable.lightbulb_24)),
+            label = languageManager.text(feature.title),
+            trailingIcon = chevronRight,
+            iconTint = iconTint,
+            onClick = { onFeatureClick(feature.id, ContentType.FEATURE, arrayOf(feature.id)) },
+        )
+        if (index < features.lastIndex) {
+            SettingsDivider(Modifier.padding(horizontal = 16.dp))
         }
     }
 }

@@ -4,12 +4,11 @@ import SwiftUI
 ///
 /// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
 struct Tab2: View {
-    @StateObject private var languageManager = LanguageManager.shared
     @State private var selectedLayout: KeyboardLayoutType
 
     private let settings = SharedSettings.shared
 
-    private static let tpsEntry: (KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool) =
+    private static let tpsEntry: (KeyboardLayoutType, String, String, String?, Bool) =
         (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", nil, false)
 
     init() {
@@ -25,7 +24,7 @@ struct Tab2: View {
                         AppearanceSettingsView()
                     } label: {
                         HStack {
-                            Text(languageManager.text(Tab2Texts.appearanceSettings))
+                            Text(Tab2Texts.appearanceSettings)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(AppStyle.captionFont)
@@ -40,7 +39,7 @@ struct Tab2: View {
 
                     // Section 1: Romanization keyboards
                     layoutSection(
-                        header: languageManager.text(Tab2Texts.romanizationKeyboard),
+                        header: Tab2Texts.romanizationKeyboard,
                         layouts: [
                             (.phahTaigi, Tab2Texts.phahTaigiLayout, "layout_phahtaigi_preview", nil, false),
                             (.qwerty, Tab2Texts.standardLayout, "layout_standard_preview", nil, false),
@@ -51,7 +50,7 @@ struct Tab2: View {
 
                     // Section 2: Taigi phonetic
                     layoutSection(
-                        header: languageManager.text(Tab2Texts.taigiPhonetic),
+                        header: Tab2Texts.taigiPhonetic,
                         layouts: [Self.tpsEntry],
                     )
                 }
@@ -59,7 +58,7 @@ struct Tab2: View {
                 .padding(.bottom)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(languageManager.text(Tab2Texts.tabTitle))
+            .navigationTitle(Tab2Texts.tabTitle)
             .navigationBarTitleDisplayMode(.large)
         }
     }
@@ -68,7 +67,7 @@ struct Tab2: View {
 
     private func layoutSection(
         header: String,
-        layouts: [(KeyboardLayoutType, LocalizedText, String, LocalizedText?, Bool)],
+        layouts: [(KeyboardLayoutType, String, String, String?, Bool)],
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(header)
@@ -80,8 +79,8 @@ struct Tab2: View {
                 HStack(spacing: 12) {
                     ForEach(layouts, id: \.0) { layoutType, titleText, imageName, subtitleText, isDisabled in
                         LayoutOptionCard(
-                            title: languageManager.text(titleText),
-                            subtitle: subtitleText.map { languageManager.text($0) },
+                            title: titleText,
+                            subtitle: subtitleText.map(\.self),
                             previewImageName: imageName,
                             isSelected: selectedLayout == layoutType,
                             isDisabled: isDisabled,

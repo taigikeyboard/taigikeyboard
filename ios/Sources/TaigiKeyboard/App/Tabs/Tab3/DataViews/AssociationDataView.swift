@@ -4,7 +4,6 @@ import UniformTypeIdentifiers
 /// Association data sub-page
 /// Shows word association list with toggle, import/export, and clear option
 struct AssociationDataView: View {
-    @StateObject private var languageManager = LanguageManager.shared
 
     @State private var isAssociationRecordingEnabled: Bool
     @State private var allData: [NextWordService.AssociationEntry] = []
@@ -46,8 +45,8 @@ struct AssociationDataView: View {
                 Section {
                     Toggle(isOn: $isAssociationRecordingEnabled) {
                         HStack {
-                            Text(languageManager.text(Tab3Texts.isAssociationRecordingEnabled))
-                            SettingInfoButton(description: languageManager.text(Tab3Texts.isAssociationRecordingEnabledInfo))
+                            Text(Tab3Texts.isAssociationRecordingEnabled)
+                            SettingInfoButton(description: Tab3Texts.isAssociationRecordingEnabledInfo)
                         }
                     }
                     .onChange(of: isAssociationRecordingEnabled) { _, newValue in
@@ -57,13 +56,13 @@ struct AssociationDataView: View {
 
                 // Import/Export
                 Section {
-                    Text(languageManager.text(Tab3Texts.associationDescription))
+                    Text(Tab3Texts.associationDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await exportCSV() }
                     } label: {
                         Label(
-                            languageManager.text(Tab3Texts.associationExportCSV),
+                            Tab3Texts.associationExportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -76,13 +75,13 @@ struct AssociationDataView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                languageManager.text(Tab3Texts.associationImportCSV),
+                                Tab3Texts.associationImportCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab3Texts.importExportTitle))
+                    Text(Tab3Texts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -91,22 +90,22 @@ struct AssociationDataView: View {
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
-                        Text(languageManager.text(Tab3Texts.clearAllAssociation))
+                        Text(Tab3Texts.clearAllAssociation)
                     }
                 }
 
                 // Privacy warning
                 Section {
-                    Text(languageManager.text(Tab3Texts.associationPrivacyWarning))
+                    Text(Tab3Texts.associationPrivacyWarning)
                 }
 
                 // Data list
                 Section {
                     if allData.isEmpty {
-                        Text(languageManager.text(Tab3Texts.noData))
+                        Text(Tab3Texts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
-                        Text(languageManager.text(Tab3Texts.noResults))
+                        Text(Tab3Texts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredData, id: \.id) { item in
@@ -131,33 +130,33 @@ struct AssociationDataView: View {
                     }
                 } header: {
                     HStack {
-                        Text(languageManager.text(Tab3Texts.associationManagement))
+                        Text(Tab3Texts.associationManagement)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description: Tab3Texts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: languageManager.text(Tab3Texts.searchPlaceholder))
+            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
         }
-        .navigationTitle(languageManager.text(Tab3Texts.associationManagement))
+        .navigationTitle(Tab3Texts.associationManagement)
         .navigationBarTitleDisplayMode(.large)
-        .alert(languageManager.text(Tab3Texts.clearAllAssociation), isPresented: $showClearAlert) {
-            Button(languageManager.text(Tab3Texts.cancel), role: .cancel) {}
-            Button(languageManager.text(Tab3Texts.clear), role: .destructive) {
+        .alert(Tab3Texts.clearAllAssociation, isPresented: $showClearAlert) {
+            Button(CommonTexts.cancel, role: .cancel) {}
+            Button(Tab3Texts.clear, role: .destructive) {
                 clearData()
             }
         } message: {
-            Text(languageManager.text(Tab3Texts.clearAssociationMessage))
+            Text(Tab3Texts.clearAssociationMessage)
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: languageManager.text(Tab3Texts.associationImportCSV),
-            exportAlertTitle: languageManager.text(Tab3Texts.associationExportCSV),
+            importAlertTitle: Tab3Texts.associationImportCSV,
+            exportAlertTitle: Tab3Texts.associationExportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞關聯紀錄") },
-            okText: languageManager.text(Tab3Texts.ok),
-            exportSuccessText: languageManager.text(Tab3Texts.exportSuccess),
+            okText: Tab3Texts.ok,
+            exportSuccessText: Tab3Texts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
         .task {
@@ -217,7 +216,7 @@ struct AssociationDataView: View {
                 })
                 return (imported: imported, skipped: entries.count - imported)
             },
-            resultFormat: languageManager.text(Tab3Texts.associationImportResult),
+            resultFormat: Tab3Texts.importResultFormat,
             onComplete: { await loadData() },
         )
     }

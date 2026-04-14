@@ -35,59 +35,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.LocalizedText
-import com.siansiansu.taigikeyboard.localization.Tab1Texts
-import com.siansiansu.taigikeyboard.model.FeatureContent
+import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
-import com.siansiansu.taigikeyboard.model.ParagraphAttachment
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import kotlinx.coroutines.delay
 
-// Content item types for the detail screen
-sealed interface DetailItem {
-    data class Paragraph(
-        val text: LocalizedText,
-    ) : DetailItem
-
-    data class ImageCard(
-        @param:DrawableRes val imageResId: Int,
-    ) : DetailItem
-
-    data class Slideshow(
-        val imageResIds: List<Int>,
-        val intervalMs: Long = 1500L,
-    ) : DetailItem
-
-    data class NavigationLink(
-        val text: LocalizedText,
-        @param:DrawableRes val iconResId: Int,
-        val action: String,
-    ) : DetailItem
-
-    data class ExternalLink(
-        val text: LocalizedText,
-        @param:DrawableRes val iconResId: Int,
-        val url: String,
-    ) : DetailItem
-
-    data class VersionCard(
-        val version: String,
-        val date: String,
-        val changes: List<LocalizedText>,
-    ) : DetailItem
-}
-
+// Tab1 detail screen: renders content items in a scrollable list with top app bar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
@@ -104,15 +70,15 @@ fun DetailScreen(
 
     val context = LocalContext.current
 
-    // For feature/faq content types, load from JSON; otherwise use existing key-based resolution
+    // Load from JSON for feature/faq; fall back to key-based resolution for other types
     val contentItem =
         remember(contentType, contentKeys) {
             if (contentKeys.isEmpty()) {
                 null
             } else {
                 when (contentType) {
-                    "feature" -> FeatureContentLoader.loadFeatures(context).find { it.id == contentKeys[0] }
-                    "faq" -> FeatureContentLoader.loadFAQs(context).find { it.id == contentKeys[0] }
+                    ContentType.FEATURE -> FeatureContentLoader.loadFeatures(context).find { it.id == contentKeys[0] }
+                    ContentType.FAQ -> FeatureContentLoader.loadFAQs(context).find { it.id == contentKeys[0] }
                     else -> null
                 }
             }
@@ -217,18 +183,21 @@ private fun DetailItemContent(
         }
 
         is DetailItem.NavigationLink -> {
-            NavigationLinkCard(
+            LinkCard(
                 text = languageManager.text(item.text),
                 iconResId = item.iconResId,
+                trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 fontFamily = fontFamily,
                 onClick = { onNavigationAction(item.action) },
             )
         }
 
         is DetailItem.ExternalLink -> {
-            ExternalLinkCard(
+            LinkCard(
                 text = languageManager.text(item.text),
                 iconResId = item.iconResId,
+                trailingIcon = Icons.AutoMirrored.Outlined.OpenInNew,
+                trailingIconSize = AppStyle.smallIconSize,
                 fontFamily = fontFamily,
                 onClick = { onExternalUrl(item.url) },
             )
@@ -282,10 +251,10 @@ private fun SlideshowCard(
     imageResIds: List<Int>,
     intervalMs: Long,
 ) {
-    var currentIndex by remember { mutableIntStateOf(0) }
+    var currentIndex by remember(imageResIds) { mutableIntStateOf(0) }
 
     if (imageResIds.size > 1) {
-        LaunchedEffect(imageResIds) {
+        LaunchedEffect(imageResIds, intervalMs) {
             while (true) {
                 delay(intervalMs)
                 currentIndex = (currentIndex + 1) % imageResIds.size
@@ -304,11 +273,13 @@ private fun SlideshowCard(
 }
 
 @Composable
-private fun NavigationLinkCard(
+private fun LinkCard(
     text: String,
     @DrawableRes iconResId: Int,
+    trailingIcon: ImageVector,
     fontFamily: FontFamily,
     onClick: () -> Unit,
+    trailingIconSize: Dp = AppStyle.trailingChevronSize,
 ) {
     SettingsCard {
         Row(
@@ -319,12 +290,11 @@ private fun NavigationLinkCard(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val iconBlue = MaterialTheme.colorScheme.primary
             Icon(
                 painter = painterResource(iconResId),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = iconBlue,
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(12.dp))
             Text(
@@ -335,50 +305,9 @@ private fun NavigationLinkCard(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = trailingIcon,
                 contentDescription = null,
-                modifier = Modifier.size(AppStyle.trailingChevronSize),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun ExternalLinkCard(
-    text: String,
-    @DrawableRes iconResId: Int,
-    fontFamily: FontFamily,
-    onClick: () -> Unit,
-) {
-    SettingsCard {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick)
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            val iconBlue = MaterialTheme.colorScheme.primary
-            Icon(
-                painter = painterResource(iconResId),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = iconBlue,
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = text,
-                modifier = Modifier.weight(1f),
-                fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                contentDescription = null,
-                modifier = Modifier.size(12.dp),
+                modifier = Modifier.size(trailingIconSize),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -395,7 +324,6 @@ private fun VersionEntryCard(
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Version + date header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -418,7 +346,6 @@ private fun VersionEntryCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // Change list
             changes.forEach { change ->
                 Row(modifier = Modifier.padding(bottom = 8.dp)) {
                     Text(
@@ -438,122 +365,3 @@ private fun VersionEntryCard(
         }
     }
 }
-
-// --- Content building ---
-
-private fun buildDetailItems(
-    contentType: String,
-    contentKeys: Array<String>,
-    languageManager: LanguageManager,
-): List<DetailItem> =
-    when (contentType) {
-        "feedback" -> buildFeedbackItems()
-        "version" -> buildVersionItems()
-        else -> buildGenericItems(contentKeys, languageManager)
-    }
-
-private fun buildFeedbackItems(): List<DetailItem> =
-    listOf(
-        DetailItem.Paragraph(Tab1Texts.emailContact),
-        DetailItem.ExternalLink(
-            Tab1Texts.supportUs,
-            R.drawable.ic_open_in_new,
-            "https://p.ecpay.com.tw/AA663DE",
-        ),
-        DetailItem.Paragraph(Tab1Texts.freePromise),
-    )
-
-private fun buildVersionItems(): List<DetailItem> =
-    Tab1Texts.versionHistoryEntries.map { entry ->
-        DetailItem.VersionCard(entry.version, entry.date, entry.changes)
-    }
-
-private fun buildContentItems(
-    content: FeatureContent,
-    context: android.content.Context,
-): List<DetailItem> {
-    val items = mutableListOf<DetailItem>()
-
-    content.paragraphs.forEach { paragraph ->
-        items.add(DetailItem.Paragraph(paragraph.text))
-
-        when (val attachment = paragraph.attachment) {
-            is ParagraphAttachment.Slideshow -> {
-                val resIds =
-                    attachment.images
-                        .map { name ->
-                            context.resources.getIdentifier(name, "drawable", context.packageName)
-                        }.filter { it != 0 }
-                if (resIds.isNotEmpty()) {
-                    items.add(DetailItem.Slideshow(resIds, (attachment.interval * 1000).toLong()))
-                }
-            }
-
-            is ParagraphAttachment.Image -> {
-                val resId =
-                    context.resources.getIdentifier(
-                        attachment.name,
-                        "drawable",
-                        context.packageName,
-                    )
-                if (resId != 0) {
-                    items.add(DetailItem.ImageCard(resId))
-                }
-            }
-
-            is ParagraphAttachment.Link -> {
-                items.add(
-                    DetailItem.ExternalLink(
-                        attachment.text,
-                        R.drawable.ic_open_in_new,
-                        attachment.url,
-                    ),
-                )
-            }
-
-            is ParagraphAttachment.Navigation -> {
-                val iconResId =
-                    context.resources.getIdentifier(
-                        attachment.icon.android,
-                        "drawable",
-                        context.packageName,
-                    )
-                items.add(
-                    DetailItem.NavigationLink(
-                        attachment.text,
-                        if (iconResId != 0) iconResId else R.drawable.keyboard_24,
-                        attachment.destination,
-                    ),
-                )
-            }
-
-            null -> { /* text only */ }
-        }
-    }
-
-    return items
-}
-
-private fun buildGenericItems(
-    contentKeys: Array<String>,
-    languageManager: LanguageManager,
-): List<DetailItem> {
-    val items = mutableListOf<DetailItem>()
-
-    contentKeys.forEach { key ->
-        val localizedText = getLocalizedTextByKey(key)
-        if (localizedText != null) {
-            items.add(DetailItem.Paragraph(localizedText))
-        }
-    }
-
-    return items
-}
-
-private fun getLocalizedTextByKey(key: String): LocalizedText? =
-    when (key) {
-        "contact_us" -> Tab1Texts.contactUs
-        "feedback_email" -> Tab1Texts.emailContact
-        "version_history" -> Tab1Texts.versionHistory
-        else -> null
-    }

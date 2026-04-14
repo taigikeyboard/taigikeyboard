@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Version history page showing app update changelog.
 struct VersionHistoryDetailView: View {
-    @StateObject private var languageManager = LanguageManager.shared
 
     var body: some View {
         Form {
@@ -29,7 +28,7 @@ struct VersionHistoryDetailView: View {
                                 HStack(alignment: .top, spacing: 8) {
                                     Text("•")
                                         .foregroundColor(.secondary)
-                                    Text(languageManager.text(entry.changes[changeIndex]))
+                                    Text(entry.changes[changeIndex])
                                 }
                             }
                         }
@@ -37,7 +36,7 @@ struct VersionHistoryDetailView: View {
                 }
             }
         }
-        .navigationTitle(languageManager.text(Tab1Texts.versionHistory))
+        .navigationTitle(Tab1Texts.versionHistory)
         .navigationBarTitleDisplayMode(.large)
     }
 }

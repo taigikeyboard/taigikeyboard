@@ -6,7 +6,6 @@ import SwiftUI
 /// Setup guide, typing guides, feature settings, links, and FAQ.
 struct Tab1: View {
     @ObservedObject var viewModel: SetupGuideViewModel
-    @StateObject private var languageManager = LanguageManager.shared
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
@@ -20,10 +19,10 @@ struct Tab1: View {
                     NavigationLink {
                         SetupGuideView(viewModel: viewModel)
                     } label: {
-                        Label(languageManager.text(Tab1Texts.setupGuide), systemImage: "keyboard.badge.ellipsis")
+                        Label(Tab1Texts.setupGuide, systemImage: "keyboard.badge.ellipsis")
                     }
                 } header: {
-                    Text(languageManager.text(Tab1Texts.setupKeyboard))
+                    Text(Tab1Texts.setupKeyboard)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -34,7 +33,7 @@ struct Tab1: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(languageManager.text(feature.title.asLocalizedText))
+                                Text(feature.title.asString)
                             } icon: {
                                 Image(systemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.warningOrange)
@@ -42,7 +41,7 @@ struct Tab1: View {
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab1Texts.typingGuide))
+                    Text(Tab1Texts.typingGuide)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -53,7 +52,7 @@ struct Tab1: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(languageManager.text(feature.title.asLocalizedText))
+                                Text(feature.title.asString)
                             } icon: {
                                 Image(systemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.accentBlue)
@@ -61,7 +60,7 @@ struct Tab1: View {
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab1Texts.newFeatures))
+                    Text(Tab1Texts.newFeatures)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -69,39 +68,39 @@ struct Tab1: View {
                 Section {
                     // External links
                     Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
-                        Label(languageManager.text(Tab1Texts.userGuide), systemImage: "arrow.up.right.square")
+                        Label(Tab1Texts.userGuide, systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://taigikeyboard.tw/privacypolicy")!) {
-                        Label(languageManager.text(Tab1Texts.privacyPolicy), systemImage: "arrow.up.right.square")
+                        Label(Tab1Texts.privacyPolicy, systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://apps.apple.com/app/id6751871806?action=write-review")!) {
-                        Label(languageManager.text(Tab1Texts.rateUs), systemImage: "arrow.up.right.square")
+                        Label(Tab1Texts.rateUs, systemImage: "arrow.up.right.square")
                     }
 
                     // In-app navigation
                     NavigationLink {
                         CopyrightView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.copyrightNotice), systemImage: "doc.text")
+                        Label(Tab1Texts.copyrightNotice, systemImage: "doc.text")
                     }
 
                     NavigationLink {
                         FeedbackDetailView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.contactUs), systemImage: "heart")
+                        Label(Tab1Texts.contactUs, systemImage: "heart")
                     }
 
                     NavigationLink {
                         VersionHistoryDetailView()
                     } label: {
-                        Label(languageManager.text(Tab1Texts.versionHistory), systemImage: "clock.arrow.circlepath")
+                        Label(Tab1Texts.versionHistory, systemImage: "clock.arrow.circlepath")
                     }
 
                     // Version info
                     HStack {
-                        Label(languageManager.text(Tab1Texts.version), systemImage: "info.circle")
+                        Label(Tab1Texts.version, systemImage: "info.circle")
                         Spacer()
                         Text(appVersion)
                             .foregroundColor(.secondary)
@@ -115,18 +114,18 @@ struct Tab1: View {
                             FAQDetailView(faq: faq, viewModel: viewModel)
                         } label: {
                             Label {
-                                Text(languageManager.text(faq.title.asLocalizedText))
+                                Text(faq.title.asString)
                             } icon: {
                                 Image(systemName: faq.icon.ios)
                             }
                         }
                     }
                 } header: {
-                    Text(languageManager.text(Tab1Texts.faq))
+                    Text(Tab1Texts.faq)
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(languageManager.text(Tab1Texts.appHeaderTitle))
+            .navigationTitle(Tab1Texts.appHeaderTitle)
             .navigationBarTitleDisplayMode(.large)
         }
     }

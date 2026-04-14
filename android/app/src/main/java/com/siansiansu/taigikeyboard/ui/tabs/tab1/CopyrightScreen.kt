@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightButton
@@ -41,6 +40,7 @@ import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
+// Tab1 copyright screen: displays open-source licenses and attribution
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CopyrightScreen(
@@ -113,7 +113,6 @@ private fun CopyrightCard(
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(20.dp)) {
-            // Title
             Text(
                 text = languageManager.text(page.title),
                 fontWeight = FontWeight.Bold,
@@ -124,7 +123,6 @@ private fun CopyrightCard(
 
             Spacer(Modifier.height(4.dp))
 
-            // Description (copyright holder)
             Text(
                 text = languageManager.text(page.description),
                 fontFamily = fontFamily,
@@ -134,7 +132,6 @@ private fun CopyrightCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // License
             Text(
                 text = languageManager.text(page.license),
                 fontWeight = FontWeight.Bold,
@@ -154,7 +151,7 @@ private fun CopyrightCard(
                     fontFamily = fontFamily,
                     onClick = { onButtonClick(button.url) },
                 )
-                if (index < page.buttons.size - 1) {
+                if (index < page.buttons.lastIndex) {
                     SettingsDivider()
                 }
             }
