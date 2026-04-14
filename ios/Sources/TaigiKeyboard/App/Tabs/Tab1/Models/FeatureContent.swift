@@ -12,27 +12,47 @@ struct FAQsFile: Codable {
     let faqs: [FeatureContent]
 }
 
+/// JSON stores localized text as {"hanji": "..."} for cross-platform compatibility.
+/// iOS only uses the hanji value, so we decode it into a plain String.
+private struct HanjiText: Decodable {
+    let hanji: String
+}
+
 /// A single feature description entry.
 struct FeatureContent: Codable, Identifiable {
     let id: String
-    let title: LocalizedTextData
+    let title: String
     let icon: PlatformIcon
-    let summary: LocalizedTextData?
+    let summary: String?
     let paragraphs: [FeatureParagraph]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, icon, summary, paragraphs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(HanjiText.self, forKey: .title).hanji
+        icon = try container.decode(PlatformIcon.self, forKey: .icon)
+        summary = try container.decodeIfPresent(HanjiText.self, forKey: .summary)?.hanji
+        paragraphs = try container.decode([FeatureParagraph].self, forKey: .paragraphs)
+    }
 }
 
 /// A paragraph with optional media attachment.
 struct FeatureParagraph: Codable {
-    let text: LocalizedTextData
+    let text: String
     let attachment: ParagraphAttachment?
-}
 
-/// Codable wrapper for localized text loaded from JSON.
-struct LocalizedTextData: Codable {
-    let hanji: String
+    private enum CodingKeys: String, CodingKey {
+        case text, attachment
+    }
 
-    var asString: String {
-        hanji
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        text = try container.decode(HanjiText.self, forKey: .text).hanji
+        attachment = try container.decodeIfPresent(ParagraphAttachment.self, forKey: .attachment)
     }
 }
 
@@ -46,8 +66,8 @@ struct PlatformIcon: Codable {
 enum ParagraphAttachment: Codable {
     case slideshow(images: [String], interval: Double)
     case image(name: String)
-    case link(text: LocalizedTextData, url: String)
-    case navigation(text: LocalizedTextData, destination: String, icon: PlatformIcon)
+    case link(text: String, url: String)
+    case navigation(text: String, destination: String, icon: PlatformIcon)
 
     // MARK: - Codable
 
@@ -68,11 +88,11 @@ enum ParagraphAttachment: Codable {
             let name = try container.decode(String.self, forKey: .name)
             self = .image(name: name)
         case "link":
-            let text = try container.decode(LocalizedTextData.self, forKey: .text)
+            let text = try container.decode(HanjiText.self, forKey: .text).hanji
             let url = try container.decode(String.self, forKey: .url)
             self = .link(text: text, url: url)
         case "navigation":
-            let text = try container.decode(LocalizedTextData.self, forKey: .text)
+            let text = try container.decode(HanjiText.self, forKey: .text).hanji
             let destination = try container.decode(String.self, forKey: .destination)
             let icon = try container.decode(PlatformIcon.self, forKey: .icon)
             self = .navigation(text: text, destination: destination, icon: icon)

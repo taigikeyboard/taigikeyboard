@@ -57,7 +57,30 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.siansiansu.taigikeyboard.localization.Tab2Texts
 import kotlin.math.roundToInt
+
+// Bottom-sheet color picker with grid, spectrum, and RGB slider tabs
+
+private val DEFAULT_PICKER_COLOR = android.graphics.Color.rgb(213, 214, 221)
+private const val SWATCHES_PER_ROW = 12
+private const val SPECTRUM_BITMAP_WIDTH = 200
+private const val SPECTRUM_BITMAP_HEIGHT = 360
+private const val DEFAULT_TAB_INDEX = 1 // Spectrum tab
+
+// Spectrum selector ring dimensions
+private val SELECTOR_OUTER_RADIUS = 10.dp
+private val SELECTOR_OUTER_STROKE = 1.5.dp
+private val SELECTOR_INNER_RADIUS = 8.5.dp
+private val SELECTOR_INNER_STROKE = 2.dp
+
+// RGB slider dimensions
+private val SLIDER_LABEL_WIDTH = 40.dp
+private val SLIDER_HEIGHT = 36.dp
+private val GRADIENT_TRACK_HEIGHT = 10.dp
+private val THUMB_RADIUS = 11.dp
+private const val THUMB_SHADOW_COLOR = 0x30000000
+private const val THUMB_INNER_RATIO = 0.7f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,20 +90,19 @@ fun ColorPickerDialog(
     onDismiss: () -> Unit,
     onColorSelected: (Int?) -> Unit,
 ) {
-    val defaultColor = android.graphics.Color.rgb(213, 214, 221)
     val initialHsv =
         remember {
             floatArrayOf(0f, 0f, 0f).also { hsv ->
-                android.graphics.Color.colorToHSV(currentColor ?: defaultColor, hsv)
+                android.graphics.Color.colorToHSV(currentColor ?: DEFAULT_PICKER_COLOR, hsv)
             }
         }
     var hue by remember { mutableFloatStateOf(initialHsv[0]) }
     var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
     var brightness by remember { mutableFloatStateOf(initialHsv[2]) }
     var hexInput by remember {
-        mutableStateOf(String.format("#%06X", 0xFFFFFF and (currentColor ?: defaultColor)))
+        mutableStateOf(String.format("#%06X", 0xFFFFFF and (currentColor ?: DEFAULT_PICKER_COLOR)))
     }
-    var selectedTab by remember { mutableIntStateOf(1) } // default: Spectrum
+    var selectedTab by remember { mutableIntStateOf(DEFAULT_TAB_INDEX) }
 
     fun currentColorInt(): Int = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))
 
@@ -105,7 +127,6 @@ fun ColorPickerDialog(
         tonalElevation = 6.dp,
     ) {
         Column(modifier = Modifier.padding(horizontal = 24.dp).padding(bottom = 24.dp)) {
-            // Title row with close button
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -131,7 +152,12 @@ fun ColorPickerDialog(
             Spacer(Modifier.height(16.dp))
 
             // iOS-style segmented tabs
-            val tabLabels = listOf("格仔", "光譜", "滑桿")
+            val tabLabels =
+                listOf(
+                    Tab2Texts.colorPickerGrid,
+                    Tab2Texts.colorPickerSpectrum,
+                    Tab2Texts.colorPickerSliders,
+                )
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 tabLabels.forEachIndexed { index, label ->
                     SegmentedButton(
@@ -145,7 +171,6 @@ fun ColorPickerDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // Tab content (fixed height)
             Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
                 when (selectedTab) {
                     0 -> {
@@ -186,7 +211,6 @@ fun ColorPickerDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // Preview swatch + hex input
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -229,28 +253,27 @@ fun ColorPickerDialog(
     }
 }
 
-// ============= Tab 1: Preset color swatches =============
+// Preset color swatches (grid)
 
 private val presetColors: List<Int> =
     buildList {
-        // 12 hues: evenly spaced 285° arc
         val hues = listOf(195f, 221f, 247f, 273f, 299f, 325f, 351f, 17f, 43f, 69f, 95f, 121f)
-        // Row 1: Grayscale (12 swatches)
+        // Row 1: Grayscale
         for (i in 0..11) {
             val v = 255 - (i * 255 / 11)
             add(android.graphics.Color.rgb(v, v, v))
         }
-        // Rows 2-9: 12 hues × 8 lightness levels (light → dark)
+        // Rows 2-9: 12 hues x 8 lightness levels (light to dark)
         val levels =
             listOf(
-                1.00f to 0.40f, // very dark
-                1.00f to 0.60f, // dark
-                1.00f to 0.80f, // medium
-                1.00f to 1.00f, // vivid
-                0.75f to 1.00f, // bright
-                0.50f to 1.00f, // medium light
-                0.30f to 1.00f, // light pastel
-                0.15f to 1.00f, // very light pastel
+                1.00f to 0.40f,
+                1.00f to 0.60f,
+                1.00f to 0.80f,
+                1.00f to 1.00f,
+                0.75f to 1.00f,
+                0.50f to 1.00f,
+                0.30f to 1.00f,
+                0.15f to 1.00f,
             )
         for ((s, v) in levels) {
             for (h in hues) {
@@ -262,7 +285,7 @@ private val presetColors: List<Int> =
 @Composable
 private fun ColorGridContent(onColorSelected: (Int) -> Unit) {
     Column(modifier = Modifier.fillMaxSize()) {
-        presetColors.chunked(12).forEach { row ->
+        presetColors.chunked(SWATCHES_PER_ROW).forEach { row ->
             Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 row.forEach { color ->
                     Box(
@@ -279,7 +302,7 @@ private fun ColorGridContent(onColorSelected: (Int) -> Unit) {
     }
 }
 
-// ============= Tab 2: Spectrum (rotated 90° CCW: X=lightness, Y=hue) =============
+// Spectrum: X-axis is lightness (white to black), Y-axis is hue (0-360 degrees)
 
 @Composable
 private fun ColorSpectrumContent(
@@ -288,15 +311,16 @@ private fun ColorSpectrumContent(
     brightness: Float,
     onHsvChanged: (h: Float, s: Float, v: Float) -> Unit,
 ) {
-    // Pre-render spectrum bitmap (rotated 90° CCW): X=lightness(white→black), Y=hue(360°→0°)
     val spectrumBitmap =
         remember {
-            val w = 200
-            val h = 360
+            val w = SPECTRUM_BITMAP_WIDTH
+            val h = SPECTRUM_BITMAP_HEIGHT
             val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
             val hsv = floatArrayOf(0f, 0f, 0f)
             for (x in 0 until w) {
                 val ratio = x.toFloat() / (w - 1)
+                // Left half: increasing saturation at full brightness
+                // Right half: full saturation with decreasing brightness
                 if (ratio <= 0.5f) {
                     hsv[1] = ratio * 2f
                     hsv[2] = 1f
@@ -312,7 +336,6 @@ private fun ColorSpectrumContent(
             bitmap.asImageBitmap()
         }
 
-    // Selector position from HSV (rotated: X=lightness, Y=hue inverted)
     val selectorNormX =
         if (brightness >= 0.99f) {
             saturation * 0.5f
@@ -363,15 +386,14 @@ private fun ColorSpectrumContent(
             dstOffset = IntOffset.Zero,
             dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
         )
-        // Selector: white ring + black outline (visible on any background)
         val sx = selectorNormX * size.width
         val sy = selectorNormY * size.height
-        drawCircle(Color.Black, 10.dp.toPx(), Offset(sx, sy), style = Stroke(1.5.dp.toPx()))
-        drawCircle(Color.White, 8.5.dp.toPx(), Offset(sx, sy), style = Stroke(2.dp.toPx()))
+        drawCircle(Color.Black, SELECTOR_OUTER_RADIUS.toPx(), Offset(sx, sy), style = Stroke(SELECTOR_OUTER_STROKE.toPx()))
+        drawCircle(Color.White, SELECTOR_INNER_RADIUS.toPx(), Offset(sx, sy), style = Stroke(SELECTOR_INNER_STROKE.toPx()))
     }
 }
 
-// ============= Tab 3: RGB Sliders (ported from flutter_colorpicker) =============
+// RGB sliders (ported from flutter_colorpicker)
 
 @Composable
 private fun ColorSlidersContent(
@@ -386,9 +408,8 @@ private fun ColorSlidersContent(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // R slider
         GradientColorSlider(
-            label = "紅色",
+            label = Tab2Texts.colorRed,
             value = r / 255f,
             trackColors =
                 listOf(
@@ -398,9 +419,8 @@ private fun ColorSlidersContent(
             thumbColor = Color(colorInt),
             onValueChange = { onColorChanged(android.graphics.Color.rgb((it * 255).toInt(), g, b)) },
         )
-        // G slider
         GradientColorSlider(
-            label = "綠色",
+            label = Tab2Texts.colorGreen,
             value = g / 255f,
             trackColors =
                 listOf(
@@ -410,9 +430,8 @@ private fun ColorSlidersContent(
             thumbColor = Color(colorInt),
             onValueChange = { onColorChanged(android.graphics.Color.rgb(r, (it * 255).toInt(), b)) },
         )
-        // B slider
         GradientColorSlider(
-            label = "藍色",
+            label = Tab2Texts.colorBlue,
             value = b / 255f,
             trackColors =
                 listOf(
@@ -425,7 +444,7 @@ private fun ColorSlidersContent(
     }
 }
 
-/** Custom gradient slider ported from flutter_colorpicker TrackPainter + ThumbPainter */
+// Custom gradient slider with thumb, ported from flutter_colorpicker TrackPainter + ThumbPainter
 @Composable
 private fun GradientColorSlider(
     label: String,
@@ -443,13 +462,13 @@ private fun GradientColorSlider(
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.width(40.dp),
+            modifier = Modifier.width(SLIDER_LABEL_WIDTH),
         )
         Canvas(
             modifier =
                 Modifier
                     .weight(1f)
-                    .height(36.dp)
+                    .height(SLIDER_HEIGHT)
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown()
@@ -468,11 +487,10 @@ private fun GradientColorSlider(
                         }
                     },
         ) {
-            val trackHeight = 10.dp.toPx()
+            val trackHeight = GRADIENT_TRACK_HEIGHT.toPx()
             val trackY = (size.height - trackHeight) / 2f
-            val thumbRadius = 11.dp.toPx()
+            val thumbRadius = THUMB_RADIUS.toPx()
 
-            // Gradient track (from TrackPainter)
             drawRoundRect(
                 brush = Brush.horizontalGradient(trackColors),
                 topLeft = Offset(0f, trackY),
@@ -482,12 +500,11 @@ private fun GradientColorSlider(
                 cornerRadius = CornerRadius(trackHeight / 2f),
             )
 
-            // Thumb (from ThumbPainter): shadow → white fill → color fill
             val thumbX = value * size.width
             val thumbCenter = Offset(thumbX, size.height / 2f)
-            drawCircle(Color(0x30000000), thumbRadius + 2.dp.toPx(), thumbCenter)
+            drawCircle(Color(THUMB_SHADOW_COLOR), thumbRadius + 2.dp.toPx(), thumbCenter)
             drawCircle(Color.White, thumbRadius, thumbCenter)
-            drawCircle(thumbColor, thumbRadius * 0.7f, thumbCenter)
+            drawCircle(thumbColor, thumbRadius * THUMB_INNER_RATIO, thumbCenter)
         }
         Text(
             text = "${(value * 255).toInt()}",

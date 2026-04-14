@@ -28,8 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -40,7 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
@@ -49,21 +46,18 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetupGuideScreen(
-    languageManager: LanguageManager,
     isFullScreen: Boolean,
     onGoToSettings: () -> Unit,
     onClose: () -> Unit,
     onNavigateBack: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab1Texts.setupGuide),
+                        text = Tab1Texts.setupGuide,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
@@ -95,7 +89,7 @@ fun SetupGuideScreen(
                     .padding(top = 16.dp, bottom = AppStyle.scrollContentBottomPadding),
         ) {
             Text(
-                text = languageManager.text(Tab1Texts.setupGuideDescription),
+                text = Tab1Texts.setupGuideDescription,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -105,7 +99,7 @@ fun SetupGuideScreen(
 
             StepCard(
                 stepNumber = 1,
-                title = languageManager.text(Tab1Texts.setupGuideStep1Settings),
+                title = Tab1Texts.setupGuideStep1Settings,
                 imageResId = R.drawable.setup_step1,
             )
 
@@ -113,14 +107,14 @@ fun SetupGuideScreen(
 
             StepCard(
                 stepNumber = 2,
-                title = languageManager.text(Tab1Texts.setupGuideStep2AddKeyboard),
+                title = Tab1Texts.setupGuideStep2AddKeyboard,
                 imageResId = R.drawable.setup_step2,
             )
 
             Spacer(Modifier.height(16.dp))
 
             Text(
-                text = languageManager.text(Tab1Texts.setupGuideCompletedMessage),
+                text = Tab1Texts.setupGuideCompletedMessage,
                 lineHeight = 22.sp,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
@@ -133,7 +127,7 @@ fun SetupGuideScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = languageManager.text(Tab1Texts.setupGuideGoToSettings),
+                    text = Tab1Texts.setupGuideGoToSettings,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                 )
@@ -141,11 +135,11 @@ fun SetupGuideScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            WarningRow(languageManager.text(Tab1Texts.setupInfoMessage))
+            WarningRow(Tab1Texts.setupInfoMessage)
 
             Spacer(Modifier.height(12.dp))
 
-            WarningRow(languageManager.text(Tab1Texts.setupBrandWarning))
+            WarningRow(Tab1Texts.setupBrandWarning)
 
             if (isFullScreen) {
                 Spacer(Modifier.height(24.dp))
@@ -165,7 +159,7 @@ fun SetupGuideScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = languageManager.text(Tab1Texts.setupGuideCloseButton),
+                        text = Tab1Texts.setupGuideCloseButton,
                         color = MaterialTheme.colorScheme.onError,
                     )
                 }

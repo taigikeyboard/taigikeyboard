@@ -21,57 +21,63 @@ import com.google.android.flexbox.FlexboxLayout
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
-import com.siansiansu.taigikeyboard.util.getColorFromAttr
-import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
-import com.siansiansu.taigikeyboard.localization.DisplayLanguage
-import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
+import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
+import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
+import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.util.getColorFromAttr
+import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
 import java.util.Locale
 
 @SuppressLint("ViewConstructor")
 class KeyView(
     private val keyboardView: KeyboardView,
-    val data: KeyData
+    val data: KeyData,
 ) : View(keyboardView.context) {
-
     companion object {
         // 共享 Paint 物件以減少記憶體使用
-        private val sharedLabelPaint: Paint = Paint().apply {
-            alpha = 255
-            color = 0
-            isAntiAlias = true
-            isFakeBoldText = false
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT
-        }
+        private val sharedLabelPaint: Paint =
+            Paint().apply {
+                alpha = 255
+                color = 0
+                isAntiAlias = true
+                isFakeBoldText = false
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT
+            }
+
         // Shared Paint for tone hint diacritics on number keys
-        private val sharedHintPaint: Paint = Paint().apply {
-            alpha = 150
-            color = 0
-            isAntiAlias = true
-            isFakeBoldText = false
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.DEFAULT
-        }
+        private val sharedHintPaint: Paint =
+            Paint().apply {
+                alpha = 150
+                color = 0
+                isAntiAlias = true
+                isFakeBoldText = false
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.DEFAULT
+            }
 
         // Tone number → standalone diacritic mapping (POJ and TL share all except tone 9)
-        private val toneHints = mapOf(
-            49 to "\u02CA",   // 1 → space (no mark), handled below
-            50 to "\u02CA",   // 2 → ˊ MODIFIER LETTER ACUTE ACCENT
-            51 to "\u02CB",   // 3 → ˋ MODIFIER LETTER GRAVE ACCENT
-            53 to "\u02C6",   // 5 → ˆ MODIFIER LETTER CIRCUMFLEX ACCENT
-            54 to "\u02C7",   // 6 → ˇ CARON
-            55 to "\u02C9",   // 7 → ˉ MODIFIER LETTER MACRON
-            56 to "\u02C8",   // 8 → ˈ MODIFIER LETTER VERTICAL LINE
-        )
+        private val toneHints =
+            mapOf(
+                49 to "\u02CA", // 1 → space (no mark), handled below
+                50 to "\u02CA", // 2 → ˊ MODIFIER LETTER ACUTE ACCENT
+                51 to "\u02CB", // 3 → ˋ MODIFIER LETTER GRAVE ACCENT
+                53 to "\u02C6", // 5 → ˆ MODIFIER LETTER CIRCUMFLEX ACCENT
+                54 to "\u02C7", // 6 → ˇ CARON
+                55 to "\u02C9", // 7 → ˉ MODIFIER LETTER MACRON
+                56 to "\u02C8", // 8 → ˈ MODIFIER LETTER VERTICAL LINE
+            )
+
         // Keys with no tone mark — use space placeholder for consistent layout
-        private val noToneHintCodes = setOf(48, 49, 52)  // 0, 1, 4
+        private val noToneHintCodes = setOf(48, 49, 52) // 0, 1, 4
 
         /** Returns the tone hint diacritic for a number key, or null if not applicable. */
-        fun toneHintForCode(code: Int, inputMode: String?): String? {
+        fun toneHintForCode(
+            code: Int,
+            inputMode: String?,
+        ): String? {
             if (inputMode == "english") return null
             if (code == 57) {
                 // Tone 9: POJ uses breve, TL uses double acute
@@ -82,16 +88,15 @@ class KeyView(
         }
 
         // MOE1 layout: punctuation key hints
-        private val moe1Hints = mapOf(
-            45 to "@",    // - → @
-            44 to ":;",   // , (，) → :;
-            46 to "!?",   // . (。) → !?
-        )
+        private val moe1Hints =
+            mapOf(
+                45 to "@", // - → @
+                44 to ":;", // , (，) → :;
+                46 to "!?", // . (。) → !?
+            )
 
         /** Returns the hint for MOE1 punctuation keys, or null if not applicable. */
-        fun moe1HintForCode(code: Int): String? {
-            return moe1Hints[code]
-        }
+        fun moe1HintForCode(code: Int): String? = moe1Hints[code]
     }
 
     private var isKeyPressed: Boolean = false
@@ -122,58 +127,82 @@ class KeyView(
     var touchHitBox: Rect = Rect(-1, -1, -1, -1)
 
     init {
-        layoutParams = FlexboxLayout.LayoutParams(
-            FlexboxLayout.LayoutParams.WRAP_CONTENT, FlexboxLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            setMargins(
-                resources.getDimension((R.dimen.key_marginH)).toInt(),
-                resources.getDimension(R.dimen.key_marginV).toInt(),
-                resources.getDimension((R.dimen.key_marginH)).toInt(),
-                resources.getDimension(R.dimen.key_marginV).toInt()
-            )
-            flexShrink = when (keyboardView.computedLayout?.mode) {
-                KeyboardMode.NUMERIC,
-                KeyboardMode.NUMERIC_ADVANCED,
-                KeyboardMode.PHONE,
-                KeyboardMode.PHONE2 -> 1.0f
-                else -> when (data.code) {
-                    KeyCode.SHIFT,
-                    KeyCode.VIEW_CHARACTERS,
-                    KeyCode.VIEW_SYMBOLS,
-                    KeyCode.VIEW_SYMBOLS2,
-                    KeyCode.DELETE,
-                    KeyCode.ENTER,
-                    KeyCode.TRANSLATE -> 0.0f
-                    else -> 1.0f
+        layoutParams =
+            FlexboxLayout
+                .LayoutParams(
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                ).apply {
+                    setMargins(
+                        resources.getDimension((R.dimen.key_marginH)).toInt(),
+                        resources.getDimension(R.dimen.key_marginV).toInt(),
+                        resources.getDimension((R.dimen.key_marginH)).toInt(),
+                        resources.getDimension(R.dimen.key_marginV).toInt(),
+                    )
+                    flexShrink =
+                        when (keyboardView.computedLayout?.mode) {
+                            KeyboardMode.NUMERIC,
+                            KeyboardMode.NUMERIC_ADVANCED,
+                            KeyboardMode.PHONE,
+                            KeyboardMode.PHONE2,
+                            -> {
+                                1.0f
+                            }
+
+                            else -> {
+                                when (data.code) {
+                                    KeyCode.SHIFT,
+                                    KeyCode.VIEW_CHARACTERS,
+                                    KeyCode.VIEW_SYMBOLS,
+                                    KeyCode.VIEW_SYMBOLS2,
+                                    KeyCode.DELETE,
+                                    KeyCode.ENTER,
+                                    KeyCode.TRANSLATE,
+                                    -> 0.0f
+
+                                    else -> 1.0f
+                                }
+                            }
+                        }
+                    flexGrow =
+                        when (keyboardView.computedLayout?.mode) {
+                            KeyboardMode.NUMERIC,
+                            KeyboardMode.PHONE,
+                            KeyboardMode.PHONE2,
+                            -> {
+                                0.0f
+                            }
+
+                            KeyboardMode.NUMERIC_ADVANCED -> {
+                                when (data.type) {
+                                    KeyType.NUMERIC -> 1.0f
+                                    else -> 0.0f
+                                }
+                            }
+
+                            else -> {
+                                when (data.code) {
+                                    KeyCode.SPACE -> 1.0f
+                                    else -> 0.0f
+                                }
+                            }
+                        }
                 }
-            }
-            flexGrow = when (keyboardView.computedLayout?.mode) {
-                KeyboardMode.NUMERIC,
-                KeyboardMode.PHONE,
-                KeyboardMode.PHONE2 -> 0.0f
-                KeyboardMode.NUMERIC_ADVANCED -> when (data.type) {
-                    KeyType.NUMERIC -> 1.0f
-                    else -> 0.0f
-                }
-                else -> when (data.code) {
-                    KeyCode.SPACE -> 1.0f
-                    else -> 0.0f
-                }
-            }
-        }
         setPadding(0, 0, 0, 0)
 
         // 根據按鍵類型設定對應的背景 selector
-        val isFunctionKey = data.type == KeyType.MODIFIER || data.type == KeyType.ENTER_EDITING
-                || data.code == KeyCode.DELETE || data.code == KeyCode.SHIFT
-                || data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.VIEW_NUMERIC_ADVANCED
-                || data.code == KeyCode.VIEW_SYMBOLS || data.code == KeyCode.VIEW_SYMBOLS2
-                || data.code == KeyCode.VIEW_CHARACTERS
-        background = when {
-            data.code == KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
-            isFunctionKey -> getDrawable(context, R.drawable.key_function_background_selector)
-            else -> getDrawable(context, R.drawable.key_background_selector)
-        }
+        val isFunctionKey =
+            data.type == KeyType.MODIFIER || data.type == KeyType.ENTER_EDITING ||
+                data.code == KeyCode.DELETE || data.code == KeyCode.SHIFT ||
+                data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.VIEW_NUMERIC_ADVANCED ||
+                data.code == KeyCode.VIEW_SYMBOLS || data.code == KeyCode.VIEW_SYMBOLS2 ||
+                data.code == KeyCode.VIEW_CHARACTERS
+        background =
+            when {
+                data.code == KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+                isFunctionKey -> getDrawable(context, R.drawable.key_function_background_selector)
+                else -> getDrawable(context, R.drawable.key_background_selector)
+            }
         // Apply corner radius and border width from appearance settings to background drawable
         val radiusPx = keyboardView.prefs.keyCornerRadius * resources.displayMetrics.density
         val borderWidthPx = (keyboardView.prefs.keyBorderWidth * resources.displayMetrics.density).toInt()
@@ -196,11 +225,14 @@ class KeyView(
 
         // Apply custom fill color if set in appearance settings
         val colors = keyboardView.getColorSettings()
-        val isSpecialKey = isFunctionKey
-                || data.code == KeyCode.ENTER
+        val isSpecialKey =
+            isFunctionKey ||
+                data.code == KeyCode.ENTER
         val customFill = if (isSpecialKey) colors.specialKeyFillColor else colors.normalKeyFillColor
         if (customFill != null) {
-            backgroundTintList = android.content.res.ColorStateList.valueOf(customFill)
+            backgroundTintList =
+                android.content.res.ColorStateList
+                    .valueOf(customFill)
         }
 
         if (!keyboardView.isPreviewMode) {
@@ -227,12 +259,14 @@ class KeyView(
         }
         // Use label if it's different from code (for multi-codepoint characters like o͘)
         // Otherwise use code for standard single characters
-        val baseLabel = if (keyData.label.isNotEmpty() &&
-            keyData.label != keyData.code.toChar().toString()) {
-            keyData.label
-        } else {
-            keyData.code.toChar().toString()
-        }
+        val baseLabel =
+            if (keyData.label.isNotEmpty() &&
+                keyData.label != keyData.code.toChar().toString()
+            ) {
+                keyData.label
+            } else {
+                keyData.code.toChar().toString()
+            }
 
         // Display override: "˙" → "·" (middle dot, more visible)
         if (baseLabel == "˙") return "·"
@@ -244,21 +278,24 @@ class KeyView(
         }
 
         // 使用對照表正確轉換聲調字母（如 á → Á）
-        val inputMode = when (taigikeyboard?.prefs?.inputMode) {
-            "poj" -> ToneConverterModels.InputMode.POJ
-            "tl", "tps" -> ToneConverterModels.InputMode.TL
-            else -> ToneConverterModels.InputMode.POJ
-        }
+        val inputMode =
+            when (taigikeyboard?.prefs?.inputMode) {
+                "poj" -> ToneConverterModels.InputMode.POJ
+                "tl", "tps" -> ToneConverterModels.InputMode.TL
+                else -> ToneConverterModels.InputMode.POJ
+            }
 
         return when {
             taigikeyboard?.textInputManager?.capsLock == true -> {
                 // Caps Lock: fully uppercase ("tsh" → "TSH")
                 ToneUtilities.fullUppercaseToneLetter(baseLabel, inputMode)
             }
+
             taigikeyboard?.textInputManager?.caps == true -> {
                 // Sentence case: first letter only ("tsh" → "Tsh")
                 ToneUtilities.uppercaseToneLetter(baseLabel, inputMode)
             }
+
             else -> {
                 ToneUtilities.lowercaseToneLetter(baseLabel, inputMode)
             }
@@ -280,9 +317,7 @@ class KeyView(
      * @see [onFlorisTouchEvent] for an explanation why.
      */
     @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        return false
-    }
+    override fun onTouchEvent(event: MotionEvent?): Boolean = false
 
     /**
      * Basically the same as [onTouchEvent], but is only called by the parent [KeyboardView].
@@ -311,14 +346,15 @@ class KeyView(
                 }
                 if (data.code == KeyCode.DELETE && data.type == KeyType.ENTER_EDITING) {
                     // 使用 Handler 替代 Timer，確保回調在主執行緒執行
-                    val repeatDelete = object : Runnable {
-                        override fun run() {
-                            if (isKeyPressed) {
-                                taigikeyboard?.textInputManager?.sendKeyPress(data)
-                                osHandler?.postDelayed(this, 50)
+                    val repeatDelete =
+                        object : Runnable {
+                            override fun run() {
+                                if (isKeyPressed) {
+                                    taigikeyboard?.textInputManager?.sendKeyPress(data)
+                                    osHandler?.postDelayed(this, 50)
+                                }
                             }
                         }
-                    }
                     osHandler?.postDelayed(repeatDelete, 500)
                 }
                 val delayMillis = keyboardView.prefs.longPressDelay
@@ -330,8 +366,8 @@ class KeyView(
                         taigikeyboard?.textInputManager?.sendKeyPress(
                             KeyData(
                                 KeyCode.SHOW_INPUT_METHOD_PICKER,
-                                type = KeyType.FUNCTION
-                            )
+                                type = KeyType.FUNCTION,
+                            ),
                         )
                         shouldBlockNextKeyCode = true
                     }
@@ -340,13 +376,14 @@ class KeyView(
                         taigikeyboard?.textInputManager?.sendKeyPress(
                             KeyData(
                                 KeyCode.SHOW_INPUT_METHOD_PICKER,
-                                type = KeyType.FUNCTION
-                            )
+                                type = KeyType.FUNCTION,
+                            ),
                         )
                         shouldBlockNextKeyCode = true
                     }
                 }, delayMillis.toLong())
             }
+
             MotionEvent.ACTION_MOVE -> {
                 if (keyboardView.popupManager.isShowingExtendedPopup) {
                     val isPointerWithinBounds =
@@ -356,10 +393,10 @@ class KeyView(
                     }
                 } else {
                     val parent = parent as ViewGroup
-                    if ((event.x < -0.1f * measuredWidth && parent.children.first() != this)
-                        || (event.x > 1.1f * measuredWidth && parent.children.last() != this)
-                        || event.y < -0.35f * measuredHeight
-                        || event.y > 1.35f * measuredHeight
+                    if ((event.x < -0.1f * measuredWidth && parent.children.first() != this) ||
+                        (event.x > 1.1f * measuredWidth && parent.children.last() != this) ||
+                        event.y < -0.35f * measuredHeight ||
+                        event.y > 1.35f * measuredHeight
                     ) {
                         if (!shouldBlockNextKeyCode) {
                             keyboardView.dismissActiveKeyViewReference()
@@ -367,6 +404,7 @@ class KeyView(
                     }
                 }
             }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isKeyPressed = false
                 osHandler?.removeCallbacksAndMessages(null)
@@ -374,22 +412,31 @@ class KeyView(
                 keyboardView.popupManager.hide()
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && !shouldBlockNextKeyCode && retData != null) {
                     if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
-                        android.util.Log.d("KeyView", "[TOUCH] UP → sendKeyPress: " +
-                            "code=${retData.code} (${retData.label})")
+                        android.util.Log.d(
+                            "KeyView",
+                            "[TOUCH] UP → sendKeyPress: " +
+                                "code=${retData.code} (${retData.label})",
+                        )
                     }
                     taigikeyboard?.textInputManager?.sendKeyPress(retData)
                     performClick()
                 } else {
                     if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
-                        android.util.Log.w("KeyView", "[TOUCH] UP → BLOCKED: " +
-                            "code=${data.code} (${data.label}), " +
-                            "cancel=${event.actionMasked == MotionEvent.ACTION_CANCEL}, " +
-                            "blocked=$shouldBlockNextKeyCode, retData=${retData != null}")
+                        android.util.Log.w(
+                            "KeyView",
+                            "[TOUCH] UP → BLOCKED: " +
+                                "code=${data.code} (${data.label}), " +
+                                "cancel=${event.actionMasked == MotionEvent.ACTION_CANCEL}, " +
+                                "blocked=$shouldBlockNextKeyCode, retData=${retData != null}",
+                        )
                     }
                     shouldBlockNextKeyCode = false
                 }
             }
-            else -> return false
+
+            else -> {
+                return false
+            }
         }
         return true
     }
@@ -400,37 +447,61 @@ class KeyView(
      *  https://stackoverflow.com/a/12267248/6801193
      *  by Devunwired
      */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val desiredWidth = when (keyboardView.computedLayout?.mode) {
-            KeyboardMode.NUMERIC,
-            KeyboardMode.PHONE,
-            KeyboardMode.PHONE2 -> (keyboardView.desiredKeyWidth * 2.68f).toInt()
-            KeyboardMode.NUMERIC_ADVANCED -> when (data.code) {
-                44, 46 -> keyboardView.desiredKeyWidth
-                KeyCode.VIEW_SYMBOLS, 61 -> (keyboardView.desiredKeyWidth * 1.34f).toInt()
-                else -> (keyboardView.desiredKeyWidth * 1.56f).toInt()
-            }
-            else -> when (data.code) {
-                KeyCode.SHIFT,
-                KeyCode.VIEW_CHARACTERS,
-                KeyCode.VIEW_SYMBOLS,
-                KeyCode.VIEW_SYMBOLS2,
-                KeyCode.DELETE,
-                KeyCode.ENTER -> (keyboardView.desiredKeyWidth * 1.56f).toInt()
-                KeyCode.TRANSLATE -> {
-                    val scale = when (keyboardView.prefs.keyboardLayoutType) {
-                        "phahTaigi", "moe1" -> 2.0f
-                        else -> 1.5f
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int,
+    ) {
+        val desiredWidth =
+            when (keyboardView.computedLayout?.mode) {
+                KeyboardMode.NUMERIC,
+                KeyboardMode.PHONE,
+                KeyboardMode.PHONE2,
+                -> {
+                    (keyboardView.desiredKeyWidth * 2.68f).toInt()
+                }
+
+                KeyboardMode.NUMERIC_ADVANCED -> {
+                    when (data.code) {
+                        44, 46 -> keyboardView.desiredKeyWidth
+                        KeyCode.VIEW_SYMBOLS, 61 -> (keyboardView.desiredKeyWidth * 1.34f).toInt()
+                        else -> (keyboardView.desiredKeyWidth * 1.56f).toInt()
                     }
-                    (keyboardView.desiredKeyWidth * scale).toInt()
                 }
-                KeyCode.SPACE -> when (keyboardView.computedLayout?.mode) {
-                    KeyboardMode.SYMBOLS -> (keyboardView.desiredKeyWidth * 0.56f).toInt()
-                    else -> keyboardView.desiredKeyWidth
+
+                else -> {
+                    when (data.code) {
+                        KeyCode.SHIFT,
+                        KeyCode.VIEW_CHARACTERS,
+                        KeyCode.VIEW_SYMBOLS,
+                        KeyCode.VIEW_SYMBOLS2,
+                        KeyCode.DELETE,
+                        KeyCode.ENTER,
+                        -> {
+                            (keyboardView.desiredKeyWidth * 1.56f).toInt()
+                        }
+
+                        KeyCode.TRANSLATE -> {
+                            val scale =
+                                when (keyboardView.prefs.keyboardLayoutType) {
+                                    "phahTaigi", "moe1" -> 2.0f
+                                    else -> 1.5f
+                                }
+                            (keyboardView.desiredKeyWidth * scale).toInt()
+                        }
+
+                        KeyCode.SPACE -> {
+                            when (keyboardView.computedLayout?.mode) {
+                                KeyboardMode.SYMBOLS -> (keyboardView.desiredKeyWidth * 0.56f).toInt()
+                                else -> keyboardView.desiredKeyWidth
+                            }
+                        }
+
+                        else -> {
+                            keyboardView.desiredKeyWidth
+                        }
+                    }
                 }
-                else -> keyboardView.desiredKeyWidth
             }
-        }
         val desiredHeight = keyboardView.desiredKeyHeight
 
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
@@ -439,36 +510,42 @@ class KeyView(
         val heightSize = MeasureSpec.getSize(heightMeasureSpec)
 
         // Measure Width
-        val width = when (widthMode) {
-            MeasureSpec.EXACTLY -> {
-                // Must be this size
-                widthSize
+        val width =
+            when (widthMode) {
+                MeasureSpec.EXACTLY -> {
+                    // Must be this size
+                    widthSize
+                }
+
+                MeasureSpec.AT_MOST -> {
+                    // Can't be bigger than...
+                    desiredWidth.coerceAtMost(widthSize)
+                }
+
+                else -> {
+                    // Be whatever you want
+                    desiredWidth
+                }
             }
-            MeasureSpec.AT_MOST -> {
-                // Can't be bigger than...
-                desiredWidth.coerceAtMost(widthSize)
-            }
-            else -> {
-                // Be whatever you want
-                desiredWidth
-            }
-        }
 
         // Measure Height
-        val height = when (heightMode) {
-            MeasureSpec.EXACTLY -> {
-                // Must be this size
-                heightSize
+        val height =
+            when (heightMode) {
+                MeasureSpec.EXACTLY -> {
+                    // Must be this size
+                    heightSize
+                }
+
+                MeasureSpec.AT_MOST -> {
+                    // Can't be bigger than...
+                    desiredHeight.coerceAtMost(heightSize)
+                }
+
+                else -> {
+                    // Be whatever you want
+                    desiredHeight
+                }
             }
-            MeasureSpec.AT_MOST -> {
-                // Can't be bigger than...
-                desiredHeight.coerceAtMost(heightSize)
-            }
-            else -> {
-                // Be whatever you want
-                desiredHeight
-            }
-        }
 
         drawablePadding = (0.15f * height).toInt()
 
@@ -476,12 +553,23 @@ class KeyView(
         setMeasuredDimension(width, height)
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+    override fun onLayout(
+        changed: Boolean,
+        left: Int,
+        top: Int,
+        right: Int,
+        bottom: Int,
+    ) {
         super.onLayout(changed, left, top, right, bottom)
         updateTouchHitBox()
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+    override fun onSizeChanged(
+        w: Int,
+        h: Int,
+        oldw: Int,
+        oldh: Int,
+    ) {
         super.onSizeChanged(w, h, oldw, oldh)
         outlineProvider = KeyViewOutline(w, h, keyboardView.prefs.keyCornerRadius)
     }
@@ -498,8 +586,11 @@ class KeyView(
     private fun updateKeyPressedBackground() {
         // 檢查是否為 translate 按鍵且處於 swapped 狀態
         // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
-        val isTranslateSwapped = data.code == KeyCode.TRANSLATE &&
-            com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+        val isTranslateSwapped =
+            data.code == KeyCode.TRANSLATE &&
+                com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+                    .getInstance()
+                    .getCachedIsTranslateSwapped()
 
         // 只有 translate 按鍵在 swapped 狀態時需要特殊處理
         // 其他按鍵（包括 ENTER、DELETE）的觸擊效果由 selector 自動處理
@@ -520,8 +611,8 @@ class KeyView(
             needsRedraw = true
         }
 
-        if (data.type == KeyType.CHARACTER && data.code != KeyCode.SPACE
-            || data.type == KeyType.NUMERIC
+        if (data.type == KeyType.CHARACTER && data.code != KeyCode.SPACE ||
+            data.type == KeyType.NUMERIC
         ) {
             label = getComputedLetter()
             drawable = null
@@ -532,11 +623,13 @@ class KeyView(
                     drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                     label = null
                 }
+
                 KeyCode.DELETE -> {
                     drawable = getDrawable(context, R.drawable.ic_backspace)
                     drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                     label = null
                 }
+
                 KeyCode.ENTER -> {
                     // Preview mode: always show return icon
                     if (keyboardView.isPreviewMode) {
@@ -557,15 +650,12 @@ class KeyView(
                         }
 
                         if (isComposing) {
-                            // 組字模式：只顯示「確定」文字
-                            // showHanjiMode 固定為 true
-                            val displayLanguage = when {
-                                keyboardView.prefs.inputMode == "tps" -> DisplayLanguage.HANJI
-                                keyboardView.prefs.isTranslateSwapped -> DisplayLanguage.HANJI
-                                keyboardView.prefs.inputMode == "poj" -> DisplayLanguage.POJ
-                                else -> DisplayLanguage.TL
-                            }
-                            label = Tab4Texts.confirmKey.text(displayLanguage)
+                            // 組字模式：依輸入模式顯示對應確認文字（選/soán/suán）
+                            label =
+                                Tab4Texts.confirmKeyLabel(
+                                    keyboardView.prefs.inputMode,
+                                    keyboardView.prefs.isTranslateSwapped,
+                                )
                             drawable = null
                         } else {
                             // 非組字模式：只顯示圖示
@@ -578,16 +668,20 @@ class KeyView(
                             val needUpdateDrawable = (cachedImeAction != action) || (composingStateChanged && !isComposing)
                             if (needUpdateDrawable) {
                                 cachedImeAction = action
-                                drawable = getDrawable(context, when (action and EditorInfo.IME_MASK_ACTION) {
-                                    EditorInfo.IME_ACTION_DONE -> R.drawable.ic_done
-                                    EditorInfo.IME_ACTION_GO -> R.drawable.ic_arrow_right_alt
-                                    EditorInfo.IME_ACTION_NEXT -> R.drawable.ic_arrow_right_alt
-                                    EditorInfo.IME_ACTION_NONE -> R.drawable.ic_keyboard_return
-                                    EditorInfo.IME_ACTION_PREVIOUS -> R.drawable.ic_arrow_right_alt
-                                    EditorInfo.IME_ACTION_SEARCH -> R.drawable.ic_search
-                                    EditorInfo.IME_ACTION_SEND -> R.drawable.ic_send
-                                    else -> R.drawable.ic_arrow_right_alt
-                                })
+                                drawable =
+                                    getDrawable(
+                                        context,
+                                        when (action and EditorInfo.IME_MASK_ACTION) {
+                                            EditorInfo.IME_ACTION_DONE -> R.drawable.ic_done
+                                            EditorInfo.IME_ACTION_GO -> R.drawable.ic_arrow_right_alt
+                                            EditorInfo.IME_ACTION_NEXT -> R.drawable.ic_arrow_right_alt
+                                            EditorInfo.IME_ACTION_NONE -> R.drawable.ic_keyboard_return
+                                            EditorInfo.IME_ACTION_PREVIOUS -> R.drawable.ic_arrow_right_alt
+                                            EditorInfo.IME_ACTION_SEARCH -> R.drawable.ic_search
+                                            EditorInfo.IME_ACTION_SEND -> R.drawable.ic_send
+                                            else -> R.drawable.ic_arrow_right_alt
+                                        },
+                                    )
                                 drawableColor = getColorFromAttr(context, R.attr.key_enter_fgColor)
                                 if (action and EditorInfo.IME_FLAG_NO_ENTER_ACTION > 0) {
                                     drawable = getDrawable(context, R.drawable.ic_keyboard_return)
@@ -596,81 +690,104 @@ class KeyView(
                         }
                     }
                 }
+
                 KeyCode.LANGUAGE_SWITCH -> {
                     drawable = getDrawable(context, R.drawable.ic_language)
                     drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                     label = null
                 }
+
                 KeyCode.PHONE_PAUSE -> {
                     label = resources.getString(R.string.key__phone_pause)
                     drawable = null
                 }
+
                 KeyCode.PHONE_WAIT -> {
                     label = resources.getString(R.string.key__phone_wait)
                     drawable = null
                 }
+
                 KeyCode.SHIFT -> {
                     label = null
                     val isCaps = taigikeyboard?.textInputManager?.caps ?: false
                     val isCapsLock = taigikeyboard?.textInputManager?.capsLock ?: false
-                    drawable = getDrawable(context, when {
-                        isCaps && isCapsLock -> {
-                            drawableColor = getColorFromAttr(context, R.attr.colorAccent)
-                            R.drawable.ic_keyboard_capslock
-                        }
-                        isCaps && !isCapsLock -> {
-                            drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
-                            R.drawable.ic_keyboard_capslock
-                        }
-                        else -> {
-                            drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
-                            R.drawable.ic_keyboard_arrow_up
-                        }
-                    })
+                    drawable =
+                        getDrawable(
+                            context,
+                            when {
+                                isCaps && isCapsLock -> {
+                                    drawableColor = getColorFromAttr(context, R.attr.colorAccent)
+                                    R.drawable.ic_keyboard_capslock
+                                }
+
+                                isCaps && !isCapsLock -> {
+                                    drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
+                                    R.drawable.ic_keyboard_capslock
+                                }
+
+                                else -> {
+                                    drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
+                                    R.drawable.ic_keyboard_arrow_up
+                                }
+                            },
+                        )
                 }
+
                 KeyCode.SPACE -> {
                     when (keyboardView.computedLayout?.mode) {
                         KeyboardMode.NUMERIC,
                         KeyboardMode.NUMERIC_ADVANCED,
                         KeyboardMode.PHONE,
-                        KeyboardMode.PHONE2 -> {
+                        KeyboardMode.PHONE2,
+                        -> {
                             drawable = getDrawable(context, R.drawable.ic_space_bar)
                             drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                             label = null
                         }
+
                         KeyboardMode.CHARACTERS -> {
                             drawable = null
-                            label = when (keyboardView.prefs.inputMode) {
-                                "poj" -> "POJ"
-                                "tl" -> "TL"
-                                "tps" -> "TPS"
-                                "english" -> "EN"
-                                else -> null
-                            }
+                            label =
+                                when (keyboardView.prefs.inputMode) {
+                                    "poj" -> "POJ"
+                                    "tl" -> "TL"
+                                    "tps" -> "TPS"
+                                    "english" -> "EN"
+                                    else -> null
+                                }
                         }
+
                         else -> {
                             drawable = null
                             label = null
                         }
                     }
                 }
+
                 KeyCode.SWITCH_TO_MEDIA_CONTEXT -> {
                     drawable = getDrawable(context, R.drawable.ic_sentiment_satisfied)
                     drawableColor = getColorFromAttr(context, R.attr.key_fgColor)
                     label = null
                 }
+
                 KeyCode.SWITCH_TO_TEXT_CONTEXT,
-                KeyCode.VIEW_CHARACTERS -> {
+                KeyCode.VIEW_CHARACTERS,
+                -> {
                     label = resources.getString(R.string.key__view_characters)
                     drawable = null
                 }
+
                 KeyCode.VIEW_NUMERIC -> {
                     label = resources.getString(R.string.key__view_numeric)
                     drawable = null
                 }
+
                 KeyCode.VIEW_NUMERIC_ADVANCED -> {
                     // 在 symbol 鍵盤中，根據 isTranslateSwapped 狀態決定顯示內容
-                    val isTranslateSwapped = com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager.getInstance().getCachedIsTranslateSwapped()
+                    val isTranslateSwapped =
+                        com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+                            .getInstance()
+                            .getCachedIsTranslateSwapped()
                     if (isTranslateSwapped && keyboardView.computedLayout?.mode == KeyboardMode.SYMBOLS) {
                         label = "、"
                         drawable = null
@@ -679,18 +796,22 @@ class KeyView(
                         drawable = null
                     }
                 }
+
                 KeyCode.VIEW_PHONE -> {
                     label = resources.getString(R.string.key__view_phone)
                     drawable = null
                 }
+
                 KeyCode.VIEW_PHONE2 -> {
                     label = resources.getString(R.string.key__view_phone2)
                     drawable = null
                 }
+
                 KeyCode.VIEW_SYMBOLS -> {
                     label = resources.getString(R.string.key__view_symbols)
                     drawable = null
                 }
+
                 KeyCode.VIEW_SYMBOLS2 -> {
                     label = resources.getString(R.string.key__view_symbols2)
                     drawable = null
@@ -712,14 +833,16 @@ class KeyView(
             val keyMarginV = resources.getDimension((R.dimen.key_marginV)).toInt()
 
             touchHitBox.apply {
-                left = when (this@KeyView) {
-                    parent.children.first() -> 0
-                    else -> (parent.x + x - keyMarginH).toInt()
-                }
-                right = when (this@KeyView) {
-                    parent.children.last() -> keyboardView.measuredWidth
-                    else -> (parent.x + x + measuredWidth + keyMarginH).toInt()
-                }
+                left =
+                    when (this@KeyView) {
+                        parent.children.first() -> 0
+                        else -> (parent.x + x - keyMarginH).toInt()
+                    }
+                right =
+                    when (this@KeyView) {
+                        parent.children.last() -> keyboardView.measuredWidth
+                        else -> (parent.x + x + measuredWidth + keyMarginH).toInt()
+                    }
                 top = (parent.y + y - keyMarginV).toInt()
                 bottom = (parent.y + y + measuredHeight + keyMarginV).toInt()
             }
@@ -733,26 +856,36 @@ class KeyView(
     fun updateVisibility() {
         when (data.code) {
             // SWITCH_TO_MEDIA_CONTEXT 和 LANGUAGE_SWITCH 不再互斥，都保持可見
-            else -> if (data.variation != KeyVariation.ALL) {
-                val keyVariation = taigikeyboard?.textInputManager?.keyVariation ?: KeyVariation.NORMAL
-                val newVisibility =
-                    if (data.variation == KeyVariation.NORMAL && (keyVariation == KeyVariation.NORMAL
-                                || keyVariation == KeyVariation.PASSWORD)
-                    ) {
-                        VISIBLE
-                    } else if (data.variation == keyVariation) {
-                        VISIBLE
-                    } else {
-                        GONE
+            else -> {
+                if (data.variation != KeyVariation.ALL) {
+                    val keyVariation = taigikeyboard?.textInputManager?.keyVariation ?: KeyVariation.NORMAL
+                    val newVisibility =
+                        if (data.variation == KeyVariation.NORMAL && (
+                                keyVariation == KeyVariation.NORMAL ||
+                                    keyVariation == KeyVariation.PASSWORD
+                            )
+                        ) {
+                            VISIBLE
+                        } else if (data.variation == keyVariation) {
+                            VISIBLE
+                        } else {
+                            GONE
+                        }
+                    if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
+                        android.util.Log.d(
+                            "KeyView",
+                            "Hyphen key updateVisibility: variation=${data.variation}, keyVariation=$keyVariation, newVisibility=$newVisibility",
+                        )
                     }
-                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
-                    android.util.Log.d("KeyView", "Hyphen key updateVisibility: variation=${data.variation}, keyVariation=$keyVariation, newVisibility=$newVisibility")
+                    visibility = newVisibility
+                    if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
+                        android.util.Log.d(
+                            "KeyView",
+                            "Hyphen key after set: visibility=$visibility, width=$width, height=$height, measuredWidth=$measuredWidth, isShown=$isShown",
+                        )
+                    }
+                    updateTouchHitBox()
                 }
-                visibility = newVisibility
-                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG && data.label == "-" && data.code == 45) {
-                    android.util.Log.d("KeyView", "Hyphen key after set: visibility=$visibility, width=$width, height=$height, measuredWidth=$measuredWidth, isShown=$isShown")
-                }
-                updateTouchHitBox()
             }
         }
     }
@@ -785,17 +918,20 @@ class KeyView(
                 marginH + drawablePadding,
                 marginV + drawablePadding,
                 measuredWidth - marginH - drawablePadding,
-                measuredHeight - marginV - drawablePadding)
-            // Apply custom key text color to icons (except ENTER which keeps its own color)
-            val effectiveDrawableColor = if (data.code != KeyCode.ENTER) {
-                keyboardView.getColorSettings().keyTextColor ?: drawableColor
-            } else {
-                drawableColor
-            }
-            drawable.colorFilter = BlendModeColorFilterCompat.createBlendModeColorFilterCompat(
-                effectiveDrawableColor,
-                BlendModeCompat.SRC_ATOP
+                measuredHeight - marginV - drawablePadding,
             )
+            // Apply custom key text color to icons (except ENTER which keeps its own color)
+            val effectiveDrawableColor =
+                if (data.code != KeyCode.ENTER) {
+                    keyboardView.getColorSettings().keyTextColor ?: drawableColor
+                } else {
+                    drawableColor
+                }
+            drawable.colorFilter =
+                BlendModeColorFilterCompat.createBlendModeColorFilterCompat(
+                    effectiveDrawableColor,
+                    BlendModeCompat.SRC_ATOP,
+                )
             drawable.draw(canvas)
         }
 
@@ -806,46 +942,71 @@ class KeyView(
             // Dynamically calculate text size: based on key height × ratio, adapts to different screen sizes
             val fontSizeScale = keyboardView.prefs.keyFontSizeScale
             val baseTextSize = measuredHeight * 0.58f * fontSizeScale
-            sharedLabelPaint.textSize = when {
-                // ?123 key uses smaller font
-                data.code == KeyCode.VIEW_SYMBOLS -> baseTextSize * 0.80f
-                // Enter key in composing mode uses smaller font for confirmation text
-                data.code == KeyCode.ENTER && label.isNotEmpty() -> baseTextSize * 0.85f
-                // VIEW_NUMERIC_ADVANCED: determine font size based on display content
-                data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
-                    // If showing "、" symbol, use normal key size; otherwise use number key size
-                    if (label == "、") baseTextSize else baseTextSize * 0.55f
+            sharedLabelPaint.textSize =
+                when {
+                    // ?123 key uses smaller font
+                    data.code == KeyCode.VIEW_SYMBOLS -> {
+                        baseTextSize * 0.80f
+                    }
+
+                    // Enter key in composing mode uses smaller font for confirmation text
+                    data.code == KeyCode.ENTER && label.isNotEmpty() -> {
+                        baseTextSize * 0.85f
+                    }
+
+                    // VIEW_NUMERIC_ADVANCED: determine font size based on display content
+                    data.code == KeyCode.VIEW_NUMERIC_ADVANCED -> {
+                        // If showing "、" symbol, use normal key size; otherwise use number key size
+                        if (label == "、") baseTextSize else baseTextSize * 0.55f
+                    }
+
+                    // Number key and space key
+                    data.code == KeyCode.VIEW_NUMERIC ||
+                        data.code == KeyCode.SPACE -> {
+                        baseTextSize * 0.55f
+                    }
+
+                    // MOE2 layout: only shrink 3+ char keys (tsh/chh) to fit within key width
+                    data.type == KeyType.CHARACTER && keyboardView.prefs.keyboardLayoutType == "moe2" && label.length >= 3 -> {
+                        baseTextSize *
+                            0.75f
+                    }
+
+                    // Normal keys
+                    else -> {
+                        baseTextSize
+                    }
                 }
-                // Number key and space key
-                data.code == KeyCode.VIEW_NUMERIC ||
-                data.code == KeyCode.SPACE -> baseTextSize * 0.55f
-                // MOE2 layout: only shrink 3+ char keys (tsh/chh) to fit within key width
-                data.type == KeyType.CHARACTER && keyboardView.prefs.keyboardLayoutType == "moe2" && label.length >= 3 -> baseTextSize * 0.75f
-                // Normal keys
-                else -> baseTextSize
-            }
 
             // Set typeface based on user settings (cached at KeyboardView level)
             sharedLabelPaint.typeface = keyboardView.getTypeface()
 
             // Enter key always uses its dedicated color; other keys use custom color if set
             val customKeyTextColor = keyboardView.getColorSettings().keyTextColor
-            sharedLabelPaint.color = if (data.code == KeyCode.ENTER) {
-                getColorFromAttr(context, R.attr.key_enter_fgColor)
-            } else {
-                customKeyTextColor ?: getColorFromAttr(context, R.attr.key_fgColor)
-            }
+            sharedLabelPaint.color =
+                if (data.code == KeyCode.ENTER) {
+                    getColorFromAttr(context, R.attr.key_enter_fgColor)
+                } else {
+                    customKeyTextColor ?: getColorFromAttr(context, R.attr.key_fgColor)
+                }
 
-            sharedLabelPaint.alpha = if (keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS &&
-                data.code == KeyCode.SPACE) { 120 } else { 255 }
+            sharedLabelPaint.alpha =
+                if (keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS &&
+                    data.code == KeyCode.SPACE
+                ) {
+                    120
+                } else {
+                    255
+                }
 
             val centerX = measuredWidth / 2.0f
             val centerY = measuredHeight / 2.0f + (sharedLabelPaint.textSize - sharedLabelPaint.descent()) / 2
 
             // TPS layout: show main char + first popup variant stacked vertically
             // Only for TPS phonetic characters (code 0), not punctuation like comma
-            val isTpsWithPopup = keyboardView.prefs.keyboardLayoutType == "tps" &&
-                data.type == KeyType.CHARACTER && data.code == 0 && data.popup.isNotEmpty()
+            val isTpsWithPopup =
+                keyboardView.prefs.keyboardLayoutType == "tps" &&
+                    data.type == KeyType.CHARACTER && data.code == 0 && data.popup.isNotEmpty()
 
             if (isTpsWithPopup) {
                 // Main char: larger, at bottom
@@ -861,7 +1022,15 @@ class KeyView(
                     sharedHintPaint.textSize = baseTextSize * 0.48f
                     val padding = measuredWidth * 0.12f
                     canvas.drawText(data.popup[0].label, padding, topY, sharedHintPaint.apply { textAlign = Paint.Align.LEFT })
-                    canvas.drawText(data.popup[1].label, measuredWidth - padding, topY, sharedHintPaint.apply { textAlign = Paint.Align.RIGHT })
+                    canvas.drawText(
+                        data.popup[1].label,
+                        measuredWidth - padding,
+                        topY,
+                        sharedHintPaint.apply {
+                            textAlign =
+                                Paint.Align.RIGHT
+                        },
+                    )
                     sharedHintPaint.textAlign = Paint.Align.CENTER
                 } else {
                     sharedHintPaint.textSize = baseTextSize * 0.52f
@@ -880,7 +1049,8 @@ class KeyView(
             // TPS layout: show popup hint above punctuation keys (e.g., "。" above "，")
             if (keyboardView.prefs.keyboardLayoutType == "tps" &&
                 keyboardView.computedLayout?.mode == KeyboardMode.CHARACTERS &&
-                data.type == KeyType.CHARACTER && data.code != 0 && data.popup.isNotEmpty()) {
+                data.type == KeyType.CHARACTER && data.code != 0 && data.popup.isNotEmpty()
+            ) {
                 val hintLabel = data.popup[0].label
                 sharedHintPaint.textSize = baseTextSize * 0.52f
                 sharedHintPaint.color = sharedLabelPaint.color
@@ -892,12 +1062,14 @@ class KeyView(
 
             // Draw hint above keys (tone diacritics on number keys, punctuation hints on MOE1)
             if (data.type == KeyType.CHARACTER &&
-                keyboardView.prefs.keyboardLayoutType != "tps") {
+                keyboardView.prefs.keyboardLayoutType != "tps"
+            ) {
                 val layoutType = keyboardView.prefs.keyboardLayoutType
                 // Tone hints for number keys (all layouts except TPS)
-                val hint = toneHintForCode(data.code, keyboardView.prefs.inputMode)
-                // MOE1/MOE2 punctuation hints
-                    ?: if (layoutType == "moe1" || layoutType == "moe2") moe1HintForCode(data.code) else null
+                val hint =
+                    toneHintForCode(data.code, keyboardView.prefs.inputMode)
+                        // MOE1/MOE2 punctuation hints
+                        ?: if (layoutType == "moe1" || layoutType == "moe2") moe1HintForCode(data.code) else null
 
                 if (hint != null && hint != " ") {
                     val isMoe1TextHint = (layoutType == "moe1" || layoutType == "moe2") && moe1HintForCode(data.code) != null
@@ -922,17 +1094,20 @@ class KeyView(
     private class KeyViewOutline(
         private val width: Int,
         private val height: Int,
-        private val cornerRadiusDp: Float = -1f
+        private val cornerRadiusDp: Float = -1f,
     ) : ViewOutlineProvider() {
-
-        override fun getOutline(view: View?, outline: Outline?) {
+        override fun getOutline(
+            view: View?,
+            outline: Outline?,
+        ) {
             view ?: return
             outline ?: return
-            val radius = if (cornerRadiusDp >= 0f) {
-                cornerRadiusDp * view.resources.displayMetrics.density
-            } else {
-                view.resources.getDimension(R.dimen.key_borderRadius)
-            }
+            val radius =
+                if (cornerRadiusDp >= 0f) {
+                    cornerRadiusDp * view.resources.displayMetrics.density
+                } else {
+                    view.resources.getDimension(R.dimen.key_borderRadius)
+                }
             outline.setRoundRect(0, 0, width, height, radius)
         }
     }

@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
@@ -74,7 +73,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FrequencyDataScreen(
-    languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
 ) {
@@ -125,10 +123,10 @@ fun FrequencyDataScreen(
                             it.write(csv.toByteArray(Charsets.UTF_8))
                         }
                     }
-                    resultMessage = languageManager.text(Tab3Texts.exportSuccess)
+                    resultMessage = Tab3Texts.exportSuccess
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.exportFailed)
+                    resultMessage = e.localizedMessage ?: CommonTexts.exportFailed
                     showResultDialog = true
                 }
             }
@@ -156,7 +154,7 @@ fun FrequencyDataScreen(
                     val skipped = entries.size - imported
                     resultMessage =
                         String.format(
-                            languageManager.text(Tab3Texts.frequencyImportResult),
+                            Tab3Texts.frequencyImportResult,
                             imported,
                             skipped,
                         )
@@ -166,7 +164,7 @@ fun FrequencyDataScreen(
                         allData = UserFrequencyService.getAllFrequencies(context)
                     }
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.importFailed)
+                    resultMessage = e.localizedMessage ?: CommonTexts.importFailed
                     showResultDialog = true
                 } finally {
                     isImporting = false
@@ -179,7 +177,7 @@ fun FrequencyDataScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.frequencyManagement),
+                        text = Tab3Texts.frequencyManagement,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -213,9 +211,9 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = languageManager.text(Tab3Texts.frequencyRecordingEnabled),
+                            label = Tab3Texts.frequencyRecordingEnabled,
                             checked = prefs.frequencyRecordingEnabled,
-                            infoText = languageManager.text(Tab3Texts.frequencyRecordingEnabledInfo),
+                            infoText = Tab3Texts.frequencyRecordingEnabledInfo,
                             onCheckedChange = { prefs.frequencyRecordingEnabled = it },
                         )
                     }
@@ -225,21 +223,21 @@ fun FrequencyDataScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = languageManager.text(Tab3Texts.importExportTitle),
+                        text = Tab3Texts.importExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyDescription),
+                            text = Tab3Texts.frequencyDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.frequencyExportCSV),
+                            label = Tab3Texts.frequencyExportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -254,7 +252,7 @@ fun FrequencyDataScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = languageManager.text(Tab3Texts.frequencyImportCSV),
+                                label = Tab3Texts.frequencyImportCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -268,7 +266,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.clearAllFrequency),
+                            label = Tab3Texts.clearAllFrequency,
                             onClick = { showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -280,7 +278,7 @@ fun FrequencyDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyPrivacyWarning),
+                            text = Tab3Texts.frequencyPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -296,12 +294,12 @@ fun FrequencyDataScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab3Texts.frequencyManagement),
+                            text = Tab3Texts.frequencyManagement,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description = Tab3Texts.filterHint)
                     }
                 }
                 if (allData.isEmpty()) {
@@ -314,7 +312,7 @@ fun FrequencyDataScreen(
                                         .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = languageManager.text(Tab3Texts.noData),
+                                    text = Tab3Texts.noData,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -324,7 +322,7 @@ fun FrequencyDataScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = languageManager.text(Tab3Texts.noResults),
+                                text = Tab3Texts.noResults,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -366,7 +364,7 @@ fun FrequencyDataScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = languageManager.text(Tab3Texts.delete),
+                                    contentDescription = Tab3Texts.delete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -395,7 +393,7 @@ fun FrequencyDataScreen(
                     onValueChange = { filterText = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
-                        Text(languageManager.text(Tab3Texts.searchPlaceholder))
+                        Text(Tab3Texts.searchPlaceholder)
                     },
                     leadingIcon = {
                         Icon(
@@ -431,10 +429,10 @@ fun FrequencyDataScreen(
 
     if (showClearDialog) {
         ConfirmationDialog(
-            title = languageManager.text(Tab3Texts.clearAllFrequency),
-            message = languageManager.text(Tab3Texts.clearFrequencyMessage),
-            confirmLabel = languageManager.text(Tab3Texts.clear),
-            dismissLabel = languageManager.text(CommonTexts.cancel),
+            title = Tab3Texts.clearAllFrequency,
+            message = Tab3Texts.clearFrequencyMessage,
+            confirmLabel = Tab3Texts.clear,
+            dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showClearDialog = false
                 scope.launch {
@@ -449,7 +447,7 @@ fun FrequencyDataScreen(
     if (showResultDialog) {
         ResultDialog(
             message = resultMessage,
-            confirmLabel = languageManager.text(Tab3Texts.ok),
+            confirmLabel = CommonTexts.ok,
             onDismiss = { showResultDialog = false },
         )
     }

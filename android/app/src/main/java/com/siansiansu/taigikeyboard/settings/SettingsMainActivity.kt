@@ -17,7 +17,6 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
@@ -72,7 +71,6 @@ class SettingsMainActivity : AppCompatActivity() {
 
         AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
 
-        val languageManager = LanguageManager.getInstance(this)
         val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME)
 
         val versionName =
@@ -97,7 +95,6 @@ class SettingsMainActivity : AppCompatActivity() {
                     when (selectedTab) {
                         TAB_HOME -> {
                             HomeScreen(
-                                languageManager = languageManager,
                                 versionName = versionName,
                                 onSetupGuide = {
                                     startActivity(Intent(this, SetupGuideActivity::class.java))
@@ -127,7 +124,6 @@ class SettingsMainActivity : AppCompatActivity() {
 
                         TAB_LAYOUT -> {
                             LayoutScreen(
-                                languageManager = languageManager,
                                 prefs = prefs,
                                 onAppearanceSettings = {
                                     startActivity(
@@ -139,7 +135,6 @@ class SettingsMainActivity : AppCompatActivity() {
 
                         TAB_DICTIONARY -> {
                             DictionarySettingsScreen(
-                                languageManager = languageManager,
                                 prefs = prefs,
                                 onCustomDictionary = {
                                     startActivity(CustomDictionaryActivity.createIntent(this))
@@ -159,7 +154,6 @@ class SettingsMainActivity : AppCompatActivity() {
 
                         TAB_SETTINGS -> {
                             InputSettingsScreen(
-                                languageManager = languageManager,
                                 prefs = prefs,
                                 onResetSettings = ::resetAllSettings,
                                 resetCounter = resetCounter,
@@ -190,7 +184,6 @@ class SettingsMainActivity : AppCompatActivity() {
     }
 
     private fun resetAllSettings() {
-        val languageManager = LanguageManager.getInstance(this)
         lifecycleScope.launch {
             try {
                 prefs.resetToDefaults()
@@ -200,14 +193,14 @@ class SettingsMainActivity : AppCompatActivity() {
                 Toast
                     .makeText(
                         this@SettingsMainActivity,
-                        languageManager.text(Tab4Texts.resetSuccess),
+                        Tab4Texts.resetSuccess,
                         Toast.LENGTH_SHORT,
                     ).show()
             } catch (_: Exception) {
                 Toast
                     .makeText(
                         this@SettingsMainActivity,
-                        languageManager.text(Tab4Texts.resetFailed),
+                        Tab4Texts.resetFailed,
                         Toast.LENGTH_SHORT,
                     ).show()
             }

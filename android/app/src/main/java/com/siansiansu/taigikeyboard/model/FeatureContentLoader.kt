@@ -1,7 +1,6 @@
 package com.siansiansu.taigikeyboard.model
 
 import android.content.Context
-import com.siansiansu.taigikeyboard.localization.LocalizedText
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -47,13 +46,13 @@ object FeatureContentLoader {
         val iconObj = obj.getJSONObject("icon")
         return FeatureContent(
             id = obj.getString("id"),
-            title = parseLocalizedText(obj.getJSONObject("title")),
+            title = obj.getJSONObject("title").getString("hanji"),
             icon =
                 PlatformIcon(
                     ios = iconObj.getString("ios"),
                     android = iconObj.getString("android"),
                 ),
-            summary = if (obj.has("summary")) parseLocalizedText(obj.getJSONObject("summary")) else null,
+            summary = if (obj.has("summary")) obj.getJSONObject("summary").getString("hanji") else null,
             paragraphs = parseParagraphs(obj.getJSONArray("paragraphs")),
         )
     }
@@ -62,7 +61,7 @@ object FeatureContentLoader {
         (0 until array.length()).map { i ->
             val obj = array.getJSONObject(i)
             FeatureParagraph(
-                text = parseLocalizedText(obj.getJSONObject("text")),
+                text = obj.getJSONObject("text").getString("hanji"),
                 attachment = if (obj.has("attachment")) parseAttachment(obj.getJSONObject("attachment")) else null,
             )
         }
@@ -83,7 +82,7 @@ object FeatureContentLoader {
 
             "link" -> {
                 ParagraphAttachment.Link(
-                    text = parseLocalizedText(obj.getJSONObject("text")),
+                    text = obj.getJSONObject("text").getString("hanji"),
                     url = obj.getString("url"),
                 )
             }
@@ -91,7 +90,7 @@ object FeatureContentLoader {
             "navigation" -> {
                 val iconObj = obj.getJSONObject("icon")
                 ParagraphAttachment.Navigation(
-                    text = parseLocalizedText(obj.getJSONObject("text")),
+                    text = obj.getJSONObject("text").getString("hanji"),
                     destination = obj.getString("destination"),
                     icon =
                         PlatformIcon(
@@ -105,13 +104,4 @@ object FeatureContentLoader {
                 throw IllegalArgumentException("Unknown attachment type: $type")
             }
         }
-
-    private fun parseLocalizedText(obj: JSONObject): LocalizedText {
-        val hanji = obj.getString("hanji")
-        return LocalizedText(
-            hanji = hanji,
-            poj = obj.optString("poj", hanji),
-            tl = obj.optString("tl", hanji),
-        )
-    }
 }

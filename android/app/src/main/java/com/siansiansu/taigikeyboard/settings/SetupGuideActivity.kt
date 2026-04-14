@@ -7,7 +7,6 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.ui.tabs.tab1.SetupGuideScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
@@ -18,15 +17,16 @@ import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
  * Controlled by isFullScreen parameter
  */
 class SetupGuideActivity : ComponentActivity() {
-
     companion object {
         const val EXTRA_IS_FULL_SCREEN = "extra_is_full_screen"
 
-        fun createIntent(context: Context, isFullScreen: Boolean = false): Intent {
-            return Intent(context, SetupGuideActivity::class.java).apply {
+        fun createIntent(
+            context: Context,
+            isFullScreen: Boolean = false,
+        ): Intent =
+            Intent(context, SetupGuideActivity::class.java).apply {
                 putExtra(EXTRA_IS_FULL_SCREEN, isFullScreen)
             }
-        }
     }
 
     private var hasNavigatedToSettings: Boolean = false
@@ -34,7 +34,6 @@ class SetupGuideActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val languageManager = LanguageManager.getInstance(this)
         val isFullScreen = intent.getBooleanExtra(EXTRA_IS_FULL_SCREEN, false)
 
         setupEdgeToEdge()
@@ -42,7 +41,6 @@ class SetupGuideActivity : ComponentActivity() {
         setContent {
             TaigiKeyboardTheme {
                 SetupGuideScreen(
-                    languageManager = languageManager,
                     isFullScreen = isFullScreen,
                     onGoToSettings = {
                         hasNavigatedToSettings = true
@@ -53,7 +51,7 @@ class SetupGuideActivity : ComponentActivity() {
                     },
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()
-                    }
+                    },
                 )
             }
         }

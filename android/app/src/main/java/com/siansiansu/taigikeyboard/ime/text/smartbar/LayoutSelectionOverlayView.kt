@@ -53,16 +53,16 @@ class LayoutSelectionOverlayView : FrameLayout {
 
     private val romanizationLayouts: List<LayoutOption> by lazy {
         listOf(
-            LayoutOption("phahTaigi", { Tab2Texts.phahTaigiLayout.hanji }, R.drawable.layout_phahtaigi_preview),
-            LayoutOption("qwerty", { Tab2Texts.standardLayout.hanji }, R.drawable.layout_standard_preview),
-            LayoutOption("moe1", { Tab2Texts.moe1Layout.hanji }, R.drawable.layout_moe1_preview),
-            LayoutOption("moe2", { Tab2Texts.moe2Layout.hanji }, R.drawable.layout_moe2_preview),
+            LayoutOption("phahTaigi", { Tab2Texts.phahTaigiLayout }, R.drawable.layout_phahtaigi_preview),
+            LayoutOption("qwerty", { Tab2Texts.standardLayout }, R.drawable.layout_standard_preview),
+            LayoutOption("moe1", { Tab2Texts.moe1Layout }, R.drawable.layout_moe1_preview),
+            LayoutOption("moe2", { Tab2Texts.moe2Layout }, R.drawable.layout_moe2_preview),
         )
     }
 
     private val phoneticLayouts: List<LayoutOption> by lazy {
         listOf(
-            LayoutOption("tps", { Tab2Texts.tpsLayout.hanji }, R.drawable.layout_tps_preview),
+            LayoutOption("tps", { Tab2Texts.tpsLayout }, R.drawable.layout_tps_preview),
         )
     }
 
@@ -83,9 +83,9 @@ class LayoutSelectionOverlayView : FrameLayout {
 
         // Set section headers
         findViewById<TextView>(R.id.layout_overlay_romanization_header)?.text =
-            Tab2Texts.romanizationKeyboard.hanji
+            Tab2Texts.romanizationKeyboard
         findViewById<TextView>(R.id.layout_overlay_phonetic_header)?.text =
-            Tab2Texts.taigiPhonetic.hanji
+            Tab2Texts.taigiPhonetic
     }
 
     /**
@@ -247,7 +247,7 @@ class LayoutSelectionOverlayView : FrameLayout {
                             FrameLayout.LayoutParams.WRAP_CONTENT,
                             Gravity.CENTER,
                         )
-                    text = Tab2Texts.comingSoon.hanji
+                    text = Tab2Texts.comingSoon
                     setTextColor(resolveForegroundColor())
                     textSize = 11f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)

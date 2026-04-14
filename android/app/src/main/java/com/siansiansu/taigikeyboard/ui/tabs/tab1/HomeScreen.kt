@@ -21,8 +21,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.model.FeatureContent
@@ -50,7 +47,6 @@ private val chevronRight = Icons.AutoMirrored.Filled.KeyboardArrowRight
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    languageManager: LanguageManager,
     versionName: String,
     onSetupGuide: () -> Unit,
     onFeatureClick: (titleKey: String, contentType: String, contentKeys: Array<String>) -> Unit,
@@ -60,8 +56,6 @@ fun HomeScreen(
     onVersionHistory: () -> Unit,
     onFaqClick: (titleKey: String, contentKeys: Array<String>) -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     val featureIconTint = AppStyle.warningOrange()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -73,7 +67,7 @@ fun HomeScreen(
             LargeTopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab1Texts.appHeaderTitle),
+                        text = Tab1Texts.appHeaderTitle,
                         style = MaterialTheme.typography.headlineLarge,
                     )
                 },
@@ -96,13 +90,13 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp)
                     .padding(bottom = AppStyle.scrollContentBottomPadding),
         ) {
-            SectionHeader(languageManager.text(Tab1Texts.setupKeyboard))
+            SectionHeader(Tab1Texts.setupKeyboard)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
                 NavigationRow(
                     icon = painterResource(R.drawable.keyboard_24),
-                    label = languageManager.text(Tab1Texts.setupGuide),
+                    label = Tab1Texts.setupGuide,
                     trailingIcon = chevronRight,
                     onClick = onSetupGuide,
                 )
@@ -115,14 +109,13 @@ fun HomeScreen(
             val typingGuideFeatures = features.take(6)
             val settingsFeatures = features.drop(6)
 
-            SectionHeader(languageManager.text(Tab1Texts.typingGuide))
+            SectionHeader(Tab1Texts.typingGuide)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
                 FeatureList(
                     features = typingGuideFeatures,
                     context = context,
-                    languageManager = languageManager,
                     onFeatureClick = onFeatureClick,
                     iconTint = featureIconTint,
                 )
@@ -130,14 +123,13 @@ fun HomeScreen(
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            SectionHeader(languageManager.text(Tab1Texts.newFeatures))
+            SectionHeader(Tab1Texts.newFeatures)
             Spacer(Modifier.height(8.dp))
 
             SettingsCard {
                 FeatureList(
                     features = settingsFeatures,
                     context = context,
-                    languageManager = languageManager,
                     onFeatureClick = onFeatureClick,
                 )
             }
@@ -149,42 +141,42 @@ fun HomeScreen(
             SettingsCard {
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = languageManager.text(Tab1Texts.userGuide),
+                    label = Tab1Texts.userGuide,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://www.taigikeyboard.tw/") },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = languageManager.text(Tab1Texts.privacyPolicy),
+                    label = Tab1Texts.privacyPolicy,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://taigikeyboard.tw/privacypolicy.html") },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_open_in_new),
-                    label = languageManager.text(Tab1Texts.rateUs),
+                    label = Tab1Texts.rateUs,
                     labelColor = linkBlue,
                     onClick = { onUrlClick("https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard") },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_document),
-                    label = languageManager.text(Tab1Texts.copyrightNotice),
+                    label = Tab1Texts.copyrightNotice,
                     trailingIcon = chevronRight,
                     onClick = onCopyright,
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_heart),
-                    label = languageManager.text(Tab1Texts.contactUs),
+                    label = Tab1Texts.contactUs,
                     trailingIcon = chevronRight,
                     onClick = onFeedback,
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
                     icon = painterResource(R.drawable.ic_history),
-                    label = languageManager.text(Tab1Texts.versionHistory),
+                    label = Tab1Texts.versionHistory,
                     trailingIcon = chevronRight,
                     onClick = onVersionHistory,
                 )
@@ -205,7 +197,7 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = languageManager.text(Tab1Texts.version),
+                        text = Tab1Texts.version,
                         modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,
@@ -220,7 +212,7 @@ fun HomeScreen(
 
             Spacer(Modifier.height(AppStyle.sectionSpacing))
 
-            SectionHeader(languageManager.text(Tab1Texts.faq))
+            SectionHeader(Tab1Texts.faq)
             Spacer(Modifier.height(8.dp))
 
             val faqs = remember { FeatureContentLoader.loadFAQs(context) }
@@ -229,7 +221,7 @@ fun HomeScreen(
                 faqs.forEachIndexed { index, faq ->
                     NavigationRow(
                         icon = painterResource(resolveDrawableResId(context, faq.icon.android, R.drawable.keyboard_24)),
-                        label = languageManager.text(faq.title),
+                        label = faq.title,
                         trailingIcon = chevronRight,
                         onClick = {
                             onFaqClick(faq.id, arrayOf(faq.id))
@@ -248,14 +240,13 @@ fun HomeScreen(
 private fun FeatureList(
     features: List<FeatureContent>,
     context: android.content.Context,
-    languageManager: LanguageManager,
     onFeatureClick: (String, String, Array<String>) -> Unit,
     iconTint: Color = MaterialTheme.colorScheme.primary,
 ) {
     features.forEachIndexed { index, feature ->
         NavigationRow(
             icon = painterResource(resolveDrawableResId(context, feature.icon.android, R.drawable.lightbulb_24)),
-            label = languageManager.text(feature.title),
+            label = feature.title,
             trailingIcon = chevronRight,
             iconTint = iconTint,
             onClick = { onFeatureClick(feature.id, ContentType.FEATURE, arrayOf(feature.id)) },

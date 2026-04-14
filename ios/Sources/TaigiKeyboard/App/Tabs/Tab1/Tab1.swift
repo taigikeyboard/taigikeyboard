@@ -33,7 +33,7 @@ struct Tab1: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(feature.title.asString)
+                                Text(feature.title)
                             } icon: {
                                 Image(systemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.warningOrange)
@@ -52,7 +52,7 @@ struct Tab1: View {
                             FeatureDetailView(feature: feature)
                         } label: {
                             Label {
-                                Text(feature.title.asString)
+                                Text(feature.title)
                             } icon: {
                                 Image(systemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.accentBlue)
@@ -114,7 +114,7 @@ struct Tab1: View {
                             FAQDetailView(faq: faq, viewModel: viewModel)
                         } label: {
                             Label {
-                                Text(faq.title.asString)
+                                Text(faq.title)
                             } icon: {
                                 Image(systemName: faq.icon.ios)
                             }

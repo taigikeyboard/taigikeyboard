@@ -24,14 +24,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.CopyrightButton
 import com.siansiansu.taigikeyboard.model.CopyrightPage
@@ -45,20 +42,17 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 @Composable
 fun CopyrightScreen(
     copyrightPages: List<CopyrightPage>,
-    languageManager: LanguageManager,
     fontFamily: FontFamily,
     onButtonClick: (String) -> Unit,
     onNavigateBack: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainer,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab1Texts.copyrightNotice),
+                        text = Tab1Texts.copyrightNotice,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
@@ -94,7 +88,6 @@ fun CopyrightScreen(
             items(copyrightPages, key = { it.id }) { page ->
                 CopyrightCard(
                     page = page,
-                    languageManager = languageManager,
                     fontFamily = fontFamily,
                     onButtonClick = onButtonClick,
                 )
@@ -107,14 +100,13 @@ fun CopyrightScreen(
 @Composable
 private fun CopyrightCard(
     page: CopyrightPage,
-    languageManager: LanguageManager,
     fontFamily: FontFamily,
     onButtonClick: (String) -> Unit,
 ) {
     SettingsCard {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = languageManager.text(page.title),
+                text = page.title,
                 fontWeight = FontWeight.Bold,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -124,7 +116,7 @@ private fun CopyrightCard(
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = languageManager.text(page.description),
+                text = page.description,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyLarge,
@@ -133,7 +125,7 @@ private fun CopyrightCard(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = languageManager.text(page.license),
+                text = page.license,
                 fontWeight = FontWeight.Bold,
                 fontFamily = fontFamily,
                 color = MaterialTheme.colorScheme.primary,
@@ -147,7 +139,6 @@ private fun CopyrightCard(
             page.buttons.forEachIndexed { index, button ->
                 CopyrightActionButton(
                     button = button,
-                    languageManager = languageManager,
                     fontFamily = fontFamily,
                     onClick = { onButtonClick(button.url) },
                 )
@@ -162,7 +153,6 @@ private fun CopyrightCard(
 @Composable
 private fun CopyrightActionButton(
     button: CopyrightButton,
-    languageManager: LanguageManager,
     fontFamily: FontFamily,
     onClick: () -> Unit,
 ) {
@@ -175,7 +165,7 @@ private fun CopyrightActionButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = languageManager.text(button.text),
+            text = button.text,
             modifier = Modifier.weight(1f),
             fontFamily = fontFamily,
             color = MaterialTheme.colorScheme.primary,

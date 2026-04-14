@@ -20,13 +20,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
@@ -35,19 +31,16 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputModeScreen(
-    languageManager: LanguageManager,
     selectedMode: String,
     onModeSelected: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageManager.text(Tab4Texts.inputMode)) },
+                title = { Text(Tab4Texts.inputMode) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -86,7 +79,7 @@ fun InputModeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(text),
+                            text = text,
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,

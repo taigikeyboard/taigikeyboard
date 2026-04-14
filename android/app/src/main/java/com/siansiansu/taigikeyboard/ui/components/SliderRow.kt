@@ -26,6 +26,7 @@ fun SliderRow(
     stepSize: Float,
     defaultValue: Float? = null,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -54,6 +55,7 @@ fun SliderRow(
         Slider(
             value = value.coerceIn(valueFrom, valueTo),
             onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = valueFrom..valueTo,
             steps = ((valueTo - valueFrom) / stepSize).toInt() - 1,
             modifier = Modifier.fillMaxWidth(),

@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
@@ -36,13 +35,12 @@ class DataManagementActivity : ComponentActivity() {
             uri ?: return@registerForActivityResult
             isProcessing = true
             lifecycleScope.launch {
-                val lm = LanguageManager.getInstance(this@DataManagementActivity)
                 try {
                     val json = BackupService.exportAll(this@DataManagementActivity)
                     contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
-                    Toast.makeText(this@DataManagementActivity, lm.text(Tab3Texts.exportBackupSuccess), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, Tab3Texts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this@DataManagementActivity, lm.text(CommonTexts.exportFailed), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, CommonTexts.exportFailed, Toast.LENGTH_SHORT).show()
                 } finally {
                     isProcessing = false
                 }
@@ -56,7 +54,6 @@ class DataManagementActivity : ComponentActivity() {
         ) { uri ->
             uri ?: return@registerForActivityResult
             isProcessing = true
-            val lm = LanguageManager.getInstance(this@DataManagementActivity)
             lifecycleScope.launch {
                 try {
                     val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@launch
@@ -64,11 +61,11 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            String.format(lm.text(Tab3Texts.importBackupResult), result.customDict, result.frequency, result.association),
+                            String.format(Tab3Texts.importBackupResult, result.customDict, result.frequency, result.association),
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this@DataManagementActivity, lm.text(CommonTexts.importFailed), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, CommonTexts.importFailed, Toast.LENGTH_SHORT).show()
                 } finally {
                     isProcessing = false
                 }
@@ -79,14 +76,12 @@ class DataManagementActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         CustomDictionaryService.init(this)
-        val languageManager = LanguageManager.getInstance(this)
 
         setupEdgeToEdge()
 
         setContent {
             TaigiKeyboardTheme {
                 DataManagementScreen(
-                    languageManager = languageManager,
                     isProcessing = isProcessing,
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()

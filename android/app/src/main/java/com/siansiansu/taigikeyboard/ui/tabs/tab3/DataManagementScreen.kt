@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
@@ -39,7 +38,6 @@ import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataManagementScreen(
-    languageManager: LanguageManager,
     isProcessing: Boolean = false,
     onNavigateBack: () -> Unit,
     onExportBackup: () -> Unit,
@@ -50,7 +48,7 @@ fun DataManagementScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.backupRestore),
+                        text = Tab3Texts.backupRestore,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -79,7 +77,7 @@ fun DataManagementScreen(
                 Spacer(Modifier.height(8.dp))
                 SettingsCard {
                     Text(
-                        text = languageManager.text(Tab3Texts.backupPrivacyWarning),
+                        text = Tab3Texts.backupPrivacyWarning,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         style = MaterialTheme.typography.bodyLarge,
@@ -92,7 +90,7 @@ fun DataManagementScreen(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = languageManager.text(Tab3Texts.backupRestore),
+                    text = Tab3Texts.backupRestore,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                     style = MaterialTheme.typography.titleMedium,
@@ -100,7 +98,7 @@ fun DataManagementScreen(
 
                 SettingsCard {
                     ActionRow(
-                        label = languageManager.text(Tab3Texts.exportBackup),
+                        label = Tab3Texts.exportBackup,
                         onClick = { if (!isProcessing) onExportBackup() },
                         icon = Icons.Outlined.FileUpload,
                         textColor = MaterialTheme.colorScheme.primary,
@@ -110,7 +108,7 @@ fun DataManagementScreen(
                         LoadingRow()
                     } else {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.importBackup),
+                            label = Tab3Texts.importBackup,
                             onClick = onImportBackup,
                             icon = Icons.Outlined.FileDownload,
                             textColor = MaterialTheme.colorScheme.primary,

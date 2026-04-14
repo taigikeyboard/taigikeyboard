@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab2Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ColorRow
@@ -48,48 +47,65 @@ import com.siansiansu.taigikeyboard.ui.components.SliderRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
+// Appearance settings screen: font, color, and slider customization with live keyboard preview
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearanceSettingsScreen(
-    languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
     onFontChanged: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
-    // Font type state
     var fontType by remember { mutableStateOf(prefs.fontType) }
-
-    // Font picker sub-page state
     var showFontPicker by remember { mutableStateOf(false) }
-
-    // Slider states
     var keyHeight by remember { mutableFloatStateOf(prefs.keyHeightScale) }
     var keyFontSize by remember { mutableFloatStateOf(prefs.keyFontSizeScale) }
     var candidateTextSize by remember { mutableFloatStateOf(prefs.candidateTextSizeScale) }
     var cornerRadius by remember { mutableFloatStateOf(prefs.keyCornerRadius) }
     var borderWidth by remember { mutableFloatStateOf(prefs.keyBorderWidth) }
-
-    // Color settings state
     var colorSettings by remember {
         mutableStateOf(KeyboardColorSettings.fromJson(prefs.colorSettings))
     }
-
-    // Color picker dialog state
     var colorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
 
-    // Preview refresh counter — increment to force KeyboardView recreation
+    // Increment to force KeyboardView recreation in preview
     var previewKey by remember { mutableIntStateOf(0) }
 
-    // Observe layout type so preview updates when user changes layout
     val currentLayoutType by prefs
         .observeKeyboardLayoutType()
         .collectAsState(initial = prefs.keyboardLayoutType)
 
+    // Helper: creates a ColorRow wired to the color picker dialog and prefs persistence.
+    @Composable
+    fun colorSettingRow(
+        label: String,
+        currentColor: Int?,
+        onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
+    ) {
+        ColorRow(
+            label = label,
+            color = currentColor,
+            onColorClick = {
+                colorPickerTarget =
+                    ColorPickerTarget(
+                        label = label,
+                        currentColor = currentColor,
+                        onColorSelected = { newColor ->
+                            colorSettings = onUpdate(colorSettings, newColor)
+                            prefs.colorSettings = colorSettings.toJson()
+                        },
+                    )
+            },
+            onReset = {
+                colorSettings = onUpdate(colorSettings, null)
+                prefs.colorSettings = colorSettings.toJson()
+                previewKey++
+            },
+        )
+    }
+
     if (showFontPicker) {
         FontPickerContent(
-            languageManager = languageManager,
             fontType = fontType,
             onFontSelected = { selected ->
                 fontType = selected
@@ -105,7 +121,7 @@ fun AppearanceSettingsScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = languageManager.text(Tab2Texts.appearanceSettings),
+                            text = Tab2Texts.appearanceSettings,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                     },
@@ -131,7 +147,6 @@ fun AppearanceSettingsScreen(
                         .fillMaxSize()
                         .padding(innerPadding),
             ) {
-                // Scrollable settings area
                 Column(
                     modifier =
                         Modifier
@@ -140,7 +155,7 @@ fun AppearanceSettingsScreen(
                             .padding(horizontal = 20.dp)
                             .padding(top = 16.dp, bottom = 24.dp),
                 ) {
-                    // Card 1: Font — navigation to sub-page
+                    // Font navigation row
                     SettingsCard {
                         Row(
                             modifier =
@@ -152,13 +167,13 @@ fun AppearanceSettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = languageManager.text(Tab2Texts.customFont),
+                                text = Tab2Texts.customFont,
                                 modifier = Modifier.weight(1f),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
-                                text = fontDisplayName(fontType, languageManager),
+                                text = fontDisplayName(fontType),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
@@ -174,41 +189,25 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Card 2: Keyboard (齒盤介面)
-                    SectionHeader(languageManager.text(Tab2Texts.keyboardSection))
+                    // Keyboard section
+                    SectionHeader(Tab2Texts.keyboardSection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorKeyboardBackground),
-                                color = colorSettings.backgroundColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorKeyboardBackground),
-                                            currentColor = colorSettings.backgroundColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(backgroundColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(backgroundColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorKeyboardBackground,
+                                colorSettings.backgroundColor,
+                            ) { settings, color -> settings.copy(backgroundColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
-                                label = languageManager.text(Tab2Texts.keyHeight),
+                                label = Tab2Texts.keyHeight,
                                 value = keyHeight,
                                 valueFrom = 0.85f,
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
-                                defaultValue = 1.0f,
-                                onValueChange = {
-                                    keyHeight = it
-                                    prefs.keyHeightScale = it
+                                defaultValue = PrefHelper.DEFAULT_KEY_HEIGHT_SCALE,
+                                onValueChange = { keyHeight = it },
+                                onValueChangeFinished = {
+                                    prefs.keyHeightScale = keyHeight
                                     previewKey++
                                 },
                             )
@@ -217,111 +216,63 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Card 3: Key (揤鈕介面)
-                    SectionHeader(languageManager.text(Tab2Texts.colorKeySection))
+                    // Key section
+                    SectionHeader(Tab2Texts.colorKeySection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorKeyText),
-                                color = colorSettings.keyTextColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorKeyText),
-                                            currentColor = colorSettings.keyTextColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(keyTextColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(keyTextColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorKeyText,
+                                colorSettings.keyTextColor,
+                            ) { settings, color -> settings.copy(keyTextColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorNormalKeyFill),
-                                color = colorSettings.normalKeyFillColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorNormalKeyFill),
-                                            currentColor = colorSettings.normalKeyFillColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(normalKeyFillColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(normalKeyFillColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorNormalKeyFill,
+                                colorSettings.normalKeyFillColor,
+                            ) { settings, color -> settings.copy(normalKeyFillColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorSpecialKeyFill),
-                                color = colorSettings.specialKeyFillColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorSpecialKeyFill),
-                                            currentColor = colorSettings.specialKeyFillColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(specialKeyFillColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(specialKeyFillColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorSpecialKeyFill,
+                                colorSettings.specialKeyFillColor,
+                            ) { settings, color -> settings.copy(specialKeyFillColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
-                                label = languageManager.text(Tab2Texts.keyFontSize),
+                                label = Tab2Texts.keyFontSize,
                                 value = keyFontSize,
                                 valueFrom = 0.85f,
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
-                                defaultValue = 1.0f,
-                                onValueChange = {
-                                    keyFontSize = it
-                                    prefs.keyFontSizeScale = it
+                                defaultValue = PrefHelper.DEFAULT_KEY_FONT_SIZE_SCALE,
+                                onValueChange = { keyFontSize = it },
+                                onValueChangeFinished = {
+                                    prefs.keyFontSizeScale = keyFontSize
                                     previewKey++
                                 },
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
-                                label = languageManager.text(Tab2Texts.keyCornerRadius),
+                                label = Tab2Texts.keyCornerRadius,
                                 value = cornerRadius,
                                 valueFrom = 0f,
                                 valueTo = 15f,
                                 stepSize = 0.5f,
-                                defaultValue = 6.0f,
-                                onValueChange = {
-                                    cornerRadius = it
-                                    prefs.keyCornerRadius = it
+                                defaultValue = PrefHelper.DEFAULT_KEY_CORNER_RADIUS,
+                                onValueChange = { cornerRadius = it },
+                                onValueChangeFinished = {
+                                    prefs.keyCornerRadius = cornerRadius
                                     previewKey++
                                 },
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
-                                label = languageManager.text(Tab2Texts.keyBorderWidth),
+                                label = Tab2Texts.keyBorderWidth,
                                 value = borderWidth,
                                 valueFrom = 0f,
                                 valueTo = 3f,
                                 stepSize = 0.5f,
-                                defaultValue = 0.0f,
-                                onValueChange = {
-                                    borderWidth = it
-                                    prefs.keyBorderWidth = it
+                                defaultValue = PrefHelper.DEFAULT_KEY_BORDER_WIDTH,
+                                onValueChange = { borderWidth = it },
+                                onValueChangeFinished = {
+                                    prefs.keyBorderWidth = borderWidth
                                     previewKey++
                                 },
                             )
@@ -330,62 +281,30 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Card 4: Candidate (候選詞介面)
-                    SectionHeader(languageManager.text(Tab2Texts.candidateSection))
+                    // Candidate section
+                    SectionHeader(Tab2Texts.candidateSection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorCandidateText),
-                                color = colorSettings.candidateTextColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorCandidateText),
-                                            currentColor = colorSettings.candidateTextColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(candidateTextColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(candidateTextColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorCandidateText,
+                                colorSettings.candidateTextColor,
+                            ) { settings, color -> settings.copy(candidateTextColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            ColorRow(
-                                label = languageManager.text(Tab2Texts.colorCandidateBackground),
-                                color = colorSettings.candidateBackgroundColor,
-                                onColorClick = {
-                                    colorPickerTarget =
-                                        ColorPickerTarget(
-                                            label = languageManager.text(Tab2Texts.colorCandidateBackground),
-                                            currentColor = colorSettings.candidateBackgroundColor,
-                                            onColorSelected = { newColor ->
-                                                colorSettings = colorSettings.copy(candidateBackgroundColor = newColor)
-                                                prefs.colorSettings = colorSettings.toJson()
-                                            },
-                                        )
-                                },
-                                onReset = {
-                                    colorSettings = colorSettings.copy(candidateBackgroundColor = null)
-                                    prefs.colorSettings = colorSettings.toJson()
-                                    previewKey++
-                                },
-                            )
+                            colorSettingRow(
+                                Tab2Texts.colorCandidateBackground,
+                                colorSettings.candidateBackgroundColor,
+                            ) { settings, color -> settings.copy(candidateBackgroundColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
-                                label = languageManager.text(Tab2Texts.candidateTextSize),
+                                label = Tab2Texts.candidateTextSize,
                                 value = candidateTextSize,
                                 valueFrom = 0.85f,
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
-                                defaultValue = 1.0f,
-                                onValueChange = {
-                                    candidateTextSize = it
-                                    prefs.candidateTextSizeScale = it
+                                defaultValue = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE,
+                                onValueChange = { candidateTextSize = it },
+                                onValueChangeFinished = {
+                                    prefs.candidateTextSizeScale = candidateTextSize
                                     previewKey++
                                 },
                             )
@@ -394,25 +313,24 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Card 5: Reset
+                    // Reset all
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab2Texts.appearanceResetAll),
+                            label = Tab2Texts.appearanceResetAll,
                             onClick = {
-                                prefs.keyHeightScale = 1.0f
-                                prefs.keyFontSizeScale = 1.0f
-                                prefs.candidateTextSizeScale = 1.0f
-                                prefs.keyCornerRadius = 6.0f
-                                prefs.keyBorderWidth = 0.0f
-                                prefs.colorSettings = "{}"
-                                prefs.fontType = "openHuninn"
-                                // Update all states
-                                fontType = "openHuninn"
-                                keyHeight = 1.0f
-                                keyFontSize = 1.0f
-                                candidateTextSize = 1.0f
-                                cornerRadius = 6.0f
-                                borderWidth = 0.0f
+                                prefs.keyHeightScale = PrefHelper.DEFAULT_KEY_HEIGHT_SCALE
+                                prefs.keyFontSizeScale = PrefHelper.DEFAULT_KEY_FONT_SIZE_SCALE
+                                prefs.candidateTextSizeScale = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
+                                prefs.keyCornerRadius = PrefHelper.DEFAULT_KEY_CORNER_RADIUS
+                                prefs.keyBorderWidth = PrefHelper.DEFAULT_KEY_BORDER_WIDTH
+                                prefs.colorSettings = PrefHelper.DEFAULT_COLOR_SETTINGS
+                                prefs.fontType = PrefHelper.DEFAULT_FONT_TYPE
+                                fontType = PrefHelper.DEFAULT_FONT_TYPE
+                                keyHeight = PrefHelper.DEFAULT_KEY_HEIGHT_SCALE
+                                keyFontSize = PrefHelper.DEFAULT_KEY_FONT_SIZE_SCALE
+                                candidateTextSize = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
+                                cornerRadius = PrefHelper.DEFAULT_KEY_CORNER_RADIUS
+                                borderWidth = PrefHelper.DEFAULT_KEY_BORDER_WIDTH
                                 colorSettings = KeyboardColorSettings()
                                 previewKey++
                                 onFontChanged()
@@ -422,7 +340,6 @@ fun AppearanceSettingsScreen(
                     }
                 }
 
-                // Keyboard preview anchored at bottom
                 HorizontalDivider()
                 KeyboardPreviewPanel(
                     prefs = prefs,
@@ -432,9 +349,8 @@ fun AppearanceSettingsScreen(
                     candidateTextSizeScale = candidateTextSize,
                     fontType = fontType,
                 )
-            } // outer Column
+            }
 
-            // Color picker dialog
             colorPickerTarget?.let { target ->
                 ColorPickerDialog(
                     title = target.label,

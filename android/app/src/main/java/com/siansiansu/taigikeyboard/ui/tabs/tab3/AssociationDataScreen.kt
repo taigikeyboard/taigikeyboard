@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
@@ -73,7 +72,6 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssociationDataScreen(
-    languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
 ) {
@@ -136,10 +134,10 @@ fun AssociationDataScreen(
                             it.write(csv.toByteArray(Charsets.UTF_8))
                         }
                     }
-                    resultMessage = languageManager.text(Tab3Texts.exportSuccess)
+                    resultMessage = Tab3Texts.exportSuccess
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.exportFailed)
+                    resultMessage = e.localizedMessage ?: CommonTexts.exportFailed
                     showResultDialog = true
                 }
             }
@@ -167,7 +165,7 @@ fun AssociationDataScreen(
                     val skipped = entries.size - imported
                     resultMessage =
                         String.format(
-                            languageManager.text(Tab3Texts.associationImportResult),
+                            Tab3Texts.associationImportResult,
                             imported,
                             skipped,
                         )
@@ -178,7 +176,7 @@ fun AssociationDataScreen(
                         allData = assoc
                     }
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.importFailed)
+                    resultMessage = e.localizedMessage ?: CommonTexts.importFailed
                     showResultDialog = true
                 } finally {
                     isImporting = false
@@ -191,7 +189,7 @@ fun AssociationDataScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.associationManagement),
+                        text = Tab3Texts.associationManagement,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -225,9 +223,9 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = languageManager.text(Tab3Texts.associationRecordingEnabled),
+                            label = Tab3Texts.associationRecordingEnabled,
                             checked = prefs.associationRecordingEnabled,
-                            infoText = languageManager.text(Tab3Texts.associationRecordingEnabledInfo),
+                            infoText = Tab3Texts.associationRecordingEnabledInfo,
                             onCheckedChange = { prefs.associationRecordingEnabled = it },
                         )
                     }
@@ -237,21 +235,21 @@ fun AssociationDataScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = languageManager.text(Tab3Texts.importExportTitle),
+                        text = Tab3Texts.importExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.associationDescription),
+                            text = Tab3Texts.associationDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.associationExportCSV),
+                            label = Tab3Texts.associationExportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -266,7 +264,7 @@ fun AssociationDataScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = languageManager.text(Tab3Texts.associationImportCSV),
+                                label = Tab3Texts.associationImportCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -280,7 +278,7 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.clearAllAssociation),
+                            label = Tab3Texts.clearAllAssociation,
                             onClick = { showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -292,7 +290,7 @@ fun AssociationDataScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.associationPrivacyWarning),
+                            text = Tab3Texts.associationPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -308,12 +306,12 @@ fun AssociationDataScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab3Texts.associationManagement),
+                            text = Tab3Texts.associationManagement,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description = Tab3Texts.filterHint)
                     }
                 }
                 if (allData.isEmpty()) {
@@ -326,7 +324,7 @@ fun AssociationDataScreen(
                                         .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = languageManager.text(Tab3Texts.noData),
+                                    text = Tab3Texts.noData,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -336,7 +334,7 @@ fun AssociationDataScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = languageManager.text(Tab3Texts.noResults),
+                                text = Tab3Texts.noResults,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -387,7 +385,7 @@ fun AssociationDataScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = languageManager.text(Tab3Texts.delete),
+                                    contentDescription = Tab3Texts.delete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -416,7 +414,7 @@ fun AssociationDataScreen(
                     onValueChange = { filterText = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = {
-                        Text(languageManager.text(Tab3Texts.searchPlaceholder))
+                        Text(Tab3Texts.searchPlaceholder)
                     },
                     leadingIcon = {
                         Icon(
@@ -452,10 +450,10 @@ fun AssociationDataScreen(
 
     if (showClearDialog) {
         ConfirmationDialog(
-            title = languageManager.text(Tab3Texts.clearAllAssociation),
-            message = languageManager.text(Tab3Texts.clearAssociationMessage),
-            confirmLabel = languageManager.text(Tab3Texts.clear),
-            dismissLabel = languageManager.text(CommonTexts.cancel),
+            title = Tab3Texts.clearAllAssociation,
+            message = Tab3Texts.clearAssociationMessage,
+            confirmLabel = Tab3Texts.clear,
+            dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showClearDialog = false
                 scope.launch {
@@ -470,7 +468,7 @@ fun AssociationDataScreen(
     if (showResultDialog) {
         ResultDialog(
             message = resultMessage,
-            confirmLabel = languageManager.text(Tab3Texts.ok),
+            confirmLabel = CommonTexts.ok,
             onDismiss = { showResultDialog = false },
         )
     }

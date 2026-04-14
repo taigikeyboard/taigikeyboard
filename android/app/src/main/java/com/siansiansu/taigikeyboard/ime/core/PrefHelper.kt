@@ -3,13 +3,13 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
-import com.siansiansu.taigikeyboard.util.AppVersionUtils
-import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -20,10 +20,19 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class PrefHelper(
-    private val context: Context
+    private val context: Context,
 ) {
     companion object {
         private const val TAG = "PrefHelper"
+
+        // Appearance default values — single source of truth for getters, reset, and UI
+        const val DEFAULT_KEY_HEIGHT_SCALE = 1.0f
+        const val DEFAULT_KEY_FONT_SIZE_SCALE = 1.0f
+        const val DEFAULT_CANDIDATE_TEXT_SIZE_SCALE = 1.0f
+        const val DEFAULT_KEY_CORNER_RADIUS = 6.0f
+        const val DEFAULT_KEY_BORDER_WIDTH = 0.0f
+        const val DEFAULT_FONT_TYPE = "openHuninn"
+        const val DEFAULT_COLOR_SETTINGS = "{}"
     }
 
     private val dataStore = context.preferencesDataStore
@@ -74,7 +83,10 @@ class PrefHelper(
         }
     }
 
-    private fun <T> updateCacheAndPersist(key: Preferences.Key<T>, value: T) {
+    private fun <T> updateCacheAndPersist(
+        key: Preferences.Key<T>,
+        value: T,
+    ) {
         synchronized(lock) {
             pendingKeys[key] = value
             cachedPrefs?.toMutablePreferences()?.let { mutable ->
@@ -108,7 +120,10 @@ class PrefHelper(
         }
     }
 
-    private fun <T> cached(key: Preferences.Key<T>, default: T): T {
+    private fun <T> cached(
+        key: Preferences.Key<T>,
+        default: T,
+    ): T {
         val snapshot = cachedPrefs
         return if (snapshot != null) {
             snapshot[key] ?: default
@@ -120,44 +135,61 @@ class PrefHelper(
     // Advanced settings
     var settingsTheme: String
         get() = cached(PreferenceKeys.SETTINGS_THEME, "auto")
-        private set(value) { updateCacheAndPersist(PreferenceKeys.SETTINGS_THEME, value) }
+        private set(value) {
+            updateCacheAndPersist(PreferenceKeys.SETTINGS_THEME, value)
+        }
 
     var showAppIcon: Boolean
         get() = cached(PreferenceKeys.SHOW_APP_ICON, true)
-        private set(value) { updateCacheAndPersist(PreferenceKeys.SHOW_APP_ICON, value) }
+        private set(value) {
+            updateCacheAndPersist(PreferenceKeys.SHOW_APP_ICON, value)
+        }
 
     // Correction settings
     var doubleSpacePeriod: Boolean
         get() = cached(PreferenceKeys.DOUBLE_SPACE_PERIOD, true)
-        private set(value) { updateCacheAndPersist(PreferenceKeys.DOUBLE_SPACE_PERIOD, value) }
+        private set(value) {
+            updateCacheAndPersist(PreferenceKeys.DOUBLE_SPACE_PERIOD, value)
+        }
 
     // Internal settings
     var versionOnInstall: String
         get() = cached(PreferenceKeys.VERSION_ON_INSTALL, AppVersionUtils.DEFAULT_VERSION_RAW)
-        set(value) { updateCacheAndPersist(PreferenceKeys.VERSION_ON_INSTALL, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.VERSION_ON_INSTALL, value)
+        }
 
     var versionLastUse: String
         get() = cached(PreferenceKeys.VERSION_LAST_USE, AppVersionUtils.DEFAULT_VERSION_RAW)
-        set(value) { updateCacheAndPersist(PreferenceKeys.VERSION_LAST_USE, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.VERSION_LAST_USE, value)
+        }
 
     // Keyboard settings
     var activeSubtypeId: Int
         get() = cached(PreferenceKeys.ACTIVE_SUBTYPE_ID, -1)
-        set(value) { updateCacheAndPersist(PreferenceKeys.ACTIVE_SUBTYPE_ID, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.ACTIVE_SUBTYPE_ID, value)
+        }
 
     var subtypes: String
         get() = cached(PreferenceKeys.SUBTYPES, "")
-        set(value) { updateCacheAndPersist(PreferenceKeys.SUBTYPES, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.SUBTYPES, value)
+        }
 
     // Looknfeel settings
     var heightFactor: String
         get() = cached(PreferenceKeys.HEIGHT_FACTOR, "normal")
-        private set(value) { updateCacheAndPersist(PreferenceKeys.HEIGHT_FACTOR, value) }
+        private set(value) {
+            updateCacheAndPersist(PreferenceKeys.HEIGHT_FACTOR, value)
+        }
 
     var longPressDelay: Int
         get() = cached(PreferenceKeys.LONG_PRESS_DELAY, 300)
-        private set(value) { updateCacheAndPersist(PreferenceKeys.LONG_PRESS_DELAY, value) }
-
+        private set(value) {
+            updateCacheAndPersist(PreferenceKeys.LONG_PRESS_DELAY, value)
+        }
 
     // Language settings
     var inputMode: String
@@ -170,10 +202,12 @@ class PrefHelper(
             if (value == "tps" && oldValue != "tps") {
                 if (keyboardLayoutType != "tps") {
                     layoutBeforeTps = keyboardLayoutType
-                    updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
-                        Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "tps"),
-                        Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, false)
-                    ))
+                    updateCacheBatch(
+                        mapOf<Preferences.Key<*>, Any>(
+                            Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "tps"),
+                            Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, false),
+                        ),
+                    )
                     scope.launch {
                         dataStore.edit { prefs ->
                             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "tps"
@@ -184,10 +218,12 @@ class PrefHelper(
             } else if (value != "tps" && oldValue == "tps") {
                 if (keyboardLayoutType == "tps") {
                     val restored = layoutBeforeTps
-                    updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
-                        Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, restored),
-                        Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, restored == "phahTaigi")
-                    ))
+                    updateCacheBatch(
+                        mapOf<Preferences.Key<*>, Any>(
+                            Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, restored),
+                            Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, restored == "phahTaigi"),
+                        ),
+                    )
                     scope.launch {
                         dataStore.edit { prefs ->
                             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = restored
@@ -208,7 +244,9 @@ class PrefHelper(
 
     var isTranslateSwapped: Boolean
         get() = cached(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.IS_TRANSLATE_SWAPPED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.IS_TRANSLATE_SWAPPED, value)
+        }
 
     var outputBothScripts: Boolean
         get() = cached(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
@@ -266,12 +304,16 @@ class PrefHelper(
         }
 
     var fontType: String
-        get() = cached(PreferenceKeys.FONT_TYPE, "openHuninn")
-        set(value) { updateCacheAndPersist(PreferenceKeys.FONT_TYPE, value) }
+        get() = cached(PreferenceKeys.FONT_TYPE, DEFAULT_FONT_TYPE)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.FONT_TYPE, value)
+        }
 
     var phahTaigiLayoutEnabled: Boolean
         get() = cached(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value)
+        }
 
     // 鍵盤佈局類型：phahTaigi, qwerty, moe1, moe2, tps
     var keyboardLayoutType: String
@@ -301,10 +343,12 @@ class PrefHelper(
                 }
             }
             // Sync cache + persist layout type
-            updateCacheBatch(mapOf<Preferences.Key<*>, Any>(
-                Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, value),
-                Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value == "phahTaigi")
-            ))
+            updateCacheBatch(
+                mapOf<Preferences.Key<*>, Any>(
+                    Pair(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, value),
+                    Pair(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, value == "phahTaigi"),
+                ),
+            )
             scope.launch {
                 dataStore.edit { prefs ->
                     prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = value
@@ -317,12 +361,16 @@ class PrefHelper(
     // Stores the inputMode before switching to TPS, so it can be restored when leaving TPS
     private var inputModeBeforeTps: String
         get() = cached(PreferenceKeys.INPUT_MODE_BEFORE_TPS, "tl")
-        set(value) { updateCacheAndPersist(PreferenceKeys.INPUT_MODE_BEFORE_TPS, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.INPUT_MODE_BEFORE_TPS, value)
+        }
 
     // Stores the layout before switching to TPS, so it can be restored when leaving TPS
     private var layoutBeforeTps: String
         get() = cached(PreferenceKeys.LAYOUT_BEFORE_TPS, "phahTaigi")
-        set(value) { updateCacheAndPersist(PreferenceKeys.LAYOUT_BEFORE_TPS, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.LAYOUT_BEFORE_TPS, value)
+        }
 
     // TPS settings
     var tpsOrMapsToER: Boolean
@@ -334,103 +382,145 @@ class PrefHelper(
     // 詞頻紀錄開關（預設開啟）
     var frequencyRecordingEnabled: Boolean
         get() = cached(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, value)
+        }
 
     // 詞關聯紀錄開關（預設開啟）
     var associationRecordingEnabled: Boolean
         get() = cached(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, value)
+        }
 
     // 自訂詞庫開關（預設開啟）
     var customDictEnabled: Boolean
         get() = cached(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.CUSTOM_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.CUSTOM_DICT_ENABLED, value)
+        }
 
     // 詞庫開關設定
     // 教育部臺灣台語常用詞辭典（kautian）
     var moeDictEnabled: Boolean
         get() = cached(PreferenceKeys.MOE_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.MOE_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.MOE_DICT_ENABLED, value)
+        }
 
     // 台語新詞辭庫（taigitv）
     var newwordDictEnabled: Boolean
         get() = cached(PreferenceKeys.NEWWORD_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.NEWWORD_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.NEWWORD_DICT_ENABLED, value)
+        }
 
     // iTaigi 華台對照典（itaigi）- 預設關閉
     var itaigiDictEnabled: Boolean
         get() = cached(PreferenceKeys.ITAIGI_DICT_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.ITAIGI_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.ITAIGI_DICT_ENABLED, value)
+        }
 
     // 台灣植物名彙（sitbut）
     var taiwanPlantDictEnabled: Boolean
         get() = cached(PreferenceKeys.SITBUT_DICT_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.SITBUT_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.SITBUT_DICT_ENABLED, value)
+        }
 
     // 台華線頂對照典（taihoa）
     var taiHuaDictEnabled: Boolean
         get() = cached(PreferenceKeys.TAIHOA_DICT_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.TAIHOA_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.TAIHOA_DICT_ENABLED, value)
+        }
 
     // 台日大辭典（taijit）
     var taiwanJapanDictEnabled: Boolean
         get() = cached(PreferenceKeys.TAIJIT_DICT_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.TAIJIT_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.TAIJIT_DICT_ENABLED, value)
+        }
 
     // 台語工藝詞庫（kungge）
     var kunggeDictEnabled: Boolean
         get() = cached(PreferenceKeys.KUNGGE_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KUNGGE_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KUNGGE_DICT_ENABLED, value)
+        }
 
     // 學科術語辭典（stti）
     var sttiDictEnabled: Boolean
         get() = cached(PreferenceKeys.STTI_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.STTI_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.STTI_DICT_ENABLED, value)
+        }
 
     // 腔口補充資料（khpoo）
     var khpooDictEnabled: Boolean
         get() = cached(PreferenceKeys.KHPOO_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KHPOO_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KHPOO_DICT_ENABLED, value)
+        }
 
     // LKK漢羅合用建議用字（預設開啟）
     var lkkDictEnabled: Boolean
         get() = cached(PreferenceKeys.LKK_DICT_ENABLED, true)
-        set(value) { updateCacheAndPersist(PreferenceKeys.LKK_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.LKK_DICT_ENABLED, value)
+        }
 
     // Appearance settings
     var keyHeightScale: Float
-        get() = cached(PreferenceKeys.KEY_HEIGHT_SCALE, 1.0f)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_HEIGHT_SCALE, value) }
+        get() = cached(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KEY_HEIGHT_SCALE, value)
+        }
 
     var keyFontSizeScale: Float
-        get() = cached(PreferenceKeys.KEY_FONT_SIZE_SCALE, 1.0f)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_FONT_SIZE_SCALE, value) }
+        get() = cached(PreferenceKeys.KEY_FONT_SIZE_SCALE, DEFAULT_KEY_FONT_SIZE_SCALE)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KEY_FONT_SIZE_SCALE, value)
+        }
 
     var candidateTextSizeScale: Float
-        get() = cached(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, 1.0f)
-        set(value) { updateCacheAndPersist(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, value) }
+        get() = cached(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, DEFAULT_CANDIDATE_TEXT_SIZE_SCALE)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, value)
+        }
 
     var keyCornerRadius: Float
-        get() = cached(PreferenceKeys.KEY_CORNER_RADIUS, 6.0f)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_CORNER_RADIUS, value) }
+        get() = cached(PreferenceKeys.KEY_CORNER_RADIUS, DEFAULT_KEY_CORNER_RADIUS)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KEY_CORNER_RADIUS, value)
+        }
 
     var keyBorderWidth: Float
-        get() = cached(PreferenceKeys.KEY_BORDER_WIDTH, 0.0f)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KEY_BORDER_WIDTH, value) }
+        get() = cached(PreferenceKeys.KEY_BORDER_WIDTH, DEFAULT_KEY_BORDER_WIDTH)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KEY_BORDER_WIDTH, value)
+        }
 
     var colorSettings: String
-        get() = cached(PreferenceKeys.COLOR_SETTINGS, "{}")
-        set(value) { updateCacheAndPersist(PreferenceKeys.COLOR_SETTINGS, value) }
+        get() = cached(PreferenceKeys.COLOR_SETTINGS, DEFAULT_COLOR_SETTINGS)
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.COLOR_SETTINGS, value)
+        }
 
     // 異用字開關（預設關閉）
     var variantEnabled: Boolean
         get() = cached(PreferenceKeys.VARIANT_DICT_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.VARIANT_DICT_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.VARIANT_DICT_ENABLED, value)
+        }
 
     // 在來字開關（預設關閉）
     var khiin: Boolean
         get() = cached(PreferenceKeys.KHIIN_ENABLED, false)
-        set(value) { updateCacheAndPersist(PreferenceKeys.KHIIN_ENABLED, value) }
+        set(value) {
+            updateCacheAndPersist(PreferenceKeys.KHIIN_ENABLED, value)
+        }
 
     /**
      * Snapshot of all dictionary-enabled flags, captured atomically from a single
@@ -448,7 +538,7 @@ class PrefHelper(
         val khpoo: Boolean,
         val variant: Boolean,
         val khiin: Boolean,
-        val lkk: Boolean
+        val lkk: Boolean,
     )
 
     fun snapshotEnabledDictionaries(): DictEnabledSnapshot {
@@ -466,7 +556,7 @@ class PrefHelper(
                 khpoo = snapshot[PreferenceKeys.KHPOO_DICT_ENABLED] ?: true,
                 variant = snapshot[PreferenceKeys.VARIANT_DICT_ENABLED] ?: false,
                 khiin = snapshot[PreferenceKeys.KHIIN_ENABLED] ?: false,
-                lkk = snapshot[PreferenceKeys.LKK_DICT_ENABLED] ?: true
+                lkk = snapshot[PreferenceKeys.LKK_DICT_ENABLED] ?: true,
             )
         } else {
             DictEnabledSnapshot(
@@ -481,29 +571,32 @@ class PrefHelper(
                 khpoo = khpooDictEnabled,
                 variant = variantEnabled,
                 khiin = khiin,
-                lkk = lkkDictEnabled
+                lkk = lkkDictEnabled,
             )
         }
     }
 
     // Flow-based API for reactive observations
+
     /**
      * Observes input mode changes as a Flow.
      * Emits "tl" or "poj" whenever the value changes in DataStore.
      */
     fun observeInputMode(): Flow<String> =
-        dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.INPUT_MODE] ?: "tl"
-        }.distinctUntilChanged()
+        dataStore.data
+            .map { prefs ->
+                prefs[PreferenceKeys.INPUT_MODE] ?: "tl"
+            }.distinctUntilChanged()
 
     /**
      * Observes keyboardLayoutType changes as a Flow.
      * Emits the layout type string whenever the value changes in DataStore.
      */
     fun observeKeyboardLayoutType(): Flow<String> =
-        dataStore.data.map { prefs ->
-            prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] ?: "phahTaigi"
-        }.distinctUntilChanged()
+        dataStore.data
+            .map { prefs ->
+                prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] ?: "phahTaigi"
+            }.distinctUntilChanged()
 
     /**
      * Migrates data from SharedPreferences to DataStore.
@@ -532,10 +625,10 @@ class PrefHelper(
                 // Internal settings
                 prefs[PreferenceKeys.VERSION_ON_INSTALL] =
                     sharedPrefs.getString("internal__version_on_install", AppVersionUtils.DEFAULT_VERSION_RAW)
-                    ?: AppVersionUtils.DEFAULT_VERSION_RAW
+                        ?: AppVersionUtils.DEFAULT_VERSION_RAW
                 prefs[PreferenceKeys.VERSION_LAST_USE] =
                     sharedPrefs.getString("internal__version_last_use", AppVersionUtils.DEFAULT_VERSION_RAW)
-                    ?: AppVersionUtils.DEFAULT_VERSION_RAW
+                        ?: AppVersionUtils.DEFAULT_VERSION_RAW
 
                 // Keyboard settings
                 prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] =
@@ -554,7 +647,7 @@ class PrefHelper(
                     sharedPrefs.getBoolean("taigi__auto_capitalization_enabled", true)
                 prefs[PreferenceKeys.AUTO_SPACE_ENABLED] =
                     sharedPrefs.getBoolean("taigi__auto_space_enabled", false)
-                prefs[PreferenceKeys.FONT_TYPE] = "openHuninn"
+                prefs[PreferenceKeys.FONT_TYPE] = DEFAULT_FONT_TYPE
                 prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] =
                     sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", true)
 
@@ -605,16 +698,16 @@ class PrefHelper(
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_NN] = true
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true
             prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
-            prefs[PreferenceKeys.FONT_TYPE] = "openHuninn"
+            prefs[PreferenceKeys.FONT_TYPE] = DEFAULT_FONT_TYPE
             prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = true
             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "phahTaigi"
             prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
             prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
-            prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = 1.0f
-            prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = 1.0f
-            prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = 1.0f
-            prefs[PreferenceKeys.KEY_CORNER_RADIUS] = 6.0f
-            prefs[PreferenceKeys.KEY_BORDER_WIDTH] = 0.0f
+            prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = DEFAULT_KEY_HEIGHT_SCALE
+            prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = DEFAULT_KEY_FONT_SIZE_SCALE
+            prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
+            prefs[PreferenceKeys.KEY_CORNER_RADIUS] = DEFAULT_KEY_CORNER_RADIUS
+            prefs[PreferenceKeys.KEY_BORDER_WIDTH] = DEFAULT_KEY_BORDER_WIDTH
             prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = true
             prefs[PreferenceKeys.TOOLBAR_AUTO_COLLAPSE] = true
             prefs[PreferenceKeys.GLOBE_KEY_ENABLED] = true
