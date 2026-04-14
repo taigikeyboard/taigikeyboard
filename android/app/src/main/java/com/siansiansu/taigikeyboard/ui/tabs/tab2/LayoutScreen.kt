@@ -4,6 +4,8 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -70,6 +72,11 @@ private val romanizationLayouts =
         LayoutOption("qwerty", Tab2Texts.standardLayout, R.drawable.layout_standard_preview),
         LayoutOption("moe1", Tab2Texts.moe1Layout, R.drawable.layout_moe1_preview),
         LayoutOption("moe2", Tab2Texts.moe2Layout, R.drawable.layout_moe2_preview),
+    )
+
+private val phoneticLayouts =
+    listOf(
+        LayoutOption("tps", Tab2Texts.tpsLayout, R.drawable.layout_tps_preview),
     )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -154,17 +161,22 @@ fun LayoutScreen(
             Row(
                 modifier = Modifier.padding(horizontal = 20.dp),
             ) {
-                LayoutCard(
-                    label = Tab2Texts.tpsLayout,
-                    previewRes = R.drawable.layout_tps_preview,
-                    isSelected = selectedLayout == "tps",
-                    onClick = {
-                        if (selectedLayout != "tps") {
-                            selectedLayout = "tps"
-                            prefs.keyboardLayoutType = "tps"
-                        }
-                    },
-                )
+                phoneticLayouts.forEachIndexed { index, layout ->
+                    LayoutCard(
+                        label = layout.label,
+                        previewRes = layout.previewRes,
+                        isSelected = selectedLayout == layout.key,
+                        onClick = {
+                            if (selectedLayout != layout.key) {
+                                selectedLayout = layout.key
+                                prefs.keyboardLayoutType = layout.key
+                            }
+                        },
+                    )
+                    if (index < phoneticLayouts.size - 1) {
+                        Spacer(Modifier.width(12.dp))
+                    }
+                }
             }
         }
     }
@@ -203,13 +215,13 @@ private fun LayoutCard(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             border =
                 if (isSelected) {
-                    androidx.compose.foundation.BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
+                    BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
                 } else {
                     null
                 },
         ) {
             Box {
-                androidx.compose.foundation.Image(
+                Image(
                     painter = painterResource(previewRes),
                     contentDescription = label,
                     modifier = Modifier.fillMaxWidth(),

@@ -75,9 +75,8 @@ fun AppearanceSettingsScreen(
         .observeKeyboardLayoutType()
         .collectAsState(initial = prefs.keyboardLayoutType)
 
-    // Helper: creates a ColorRow wired to the color picker dialog and prefs persistence.
     @Composable
-    fun colorSettingRow(
+    fun ColorSettingRow(
         label: String,
         currentColor: Int?,
         onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
@@ -155,7 +154,6 @@ fun AppearanceSettingsScreen(
                             .padding(horizontal = 20.dp)
                             .padding(top = 16.dp, bottom = 24.dp),
                 ) {
-                    // Font navigation row
                     SettingsCard {
                         Row(
                             modifier =
@@ -189,11 +187,10 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Keyboard section
                     SectionHeader(Tab2Texts.keyboardSection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorKeyboardBackground,
                                 colorSettings.backgroundColor,
                             ) { settings, color -> settings.copy(backgroundColor = color) }
@@ -216,21 +213,20 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Key section
                     SectionHeader(Tab2Texts.colorKeySection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorKeyText,
                                 colorSettings.keyTextColor,
                             ) { settings, color -> settings.copy(keyTextColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorNormalKeyFill,
                                 colorSettings.normalKeyFillColor,
                             ) { settings, color -> settings.copy(normalKeyFillColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorSpecialKeyFill,
                                 colorSettings.specialKeyFillColor,
                             ) { settings, color -> settings.copy(specialKeyFillColor = color) }
@@ -281,16 +277,15 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Candidate section
                     SectionHeader(Tab2Texts.candidateSection)
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorCandidateText,
                                 colorSettings.candidateTextColor,
                             ) { settings, color -> settings.copy(candidateTextColor = color) }
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
-                            colorSettingRow(
+                            ColorSettingRow(
                                 Tab2Texts.colorCandidateBackground,
                                 colorSettings.candidateBackgroundColor,
                             ) { settings, color -> settings.copy(candidateBackgroundColor = color) }
@@ -313,7 +308,6 @@ fun AppearanceSettingsScreen(
 
                     Spacer(Modifier.height(24.dp))
 
-                    // Reset all
                     SettingsCard {
                         ActionRow(
                             label = Tab2Texts.appearanceResetAll,

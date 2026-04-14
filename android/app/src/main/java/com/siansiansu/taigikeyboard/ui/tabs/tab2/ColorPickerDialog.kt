@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -59,22 +60,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.localization.Tab2Texts
 import kotlin.math.roundToInt
+import android.graphics.Color as AndroidColor
 
 // Bottom-sheet color picker with grid, spectrum, and RGB slider tabs
 
-private val DEFAULT_PICKER_COLOR = android.graphics.Color.rgb(213, 214, 221)
+private val DEFAULT_PICKER_COLOR = AndroidColor.rgb(213, 214, 221)
 private const val SWATCHES_PER_ROW = 12
 private const val SPECTRUM_BITMAP_WIDTH = 200
 private const val SPECTRUM_BITMAP_HEIGHT = 360
-private const val DEFAULT_TAB_INDEX = 1 // Spectrum tab
+private const val TAB_GRID = 0
+private const val TAB_SPECTRUM = 1
+private const val TAB_SLIDERS = 2
 
-// Spectrum selector ring dimensions
 private val SELECTOR_OUTER_RADIUS = 10.dp
 private val SELECTOR_OUTER_STROKE = 1.5.dp
 private val SELECTOR_INNER_RADIUS = 8.5.dp
 private val SELECTOR_INNER_STROKE = 2.dp
 
-// RGB slider dimensions
 private val SLIDER_LABEL_WIDTH = 40.dp
 private val SLIDER_HEIGHT = 36.dp
 private val GRADIENT_TRACK_HEIGHT = 10.dp
@@ -93,7 +95,7 @@ fun ColorPickerDialog(
     val initialHsv =
         remember {
             floatArrayOf(0f, 0f, 0f).also { hsv ->
-                android.graphics.Color.colorToHSV(currentColor ?: DEFAULT_PICKER_COLOR, hsv)
+                AndroidColor.colorToHSV(currentColor ?: DEFAULT_PICKER_COLOR, hsv)
             }
         }
     var hue by remember { mutableFloatStateOf(initialHsv[0]) }
@@ -102,13 +104,13 @@ fun ColorPickerDialog(
     var hexInput by remember {
         mutableStateOf(String.format("#%06X", 0xFFFFFF and (currentColor ?: DEFAULT_PICKER_COLOR)))
     }
-    var selectedTab by remember { mutableIntStateOf(DEFAULT_TAB_INDEX) }
+    var selectedTab by remember { mutableIntStateOf(TAB_SPECTRUM) }
 
-    fun currentColorInt(): Int = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))
+    fun currentColorInt(): Int = AndroidColor.HSVToColor(floatArrayOf(hue, saturation, brightness))
 
     fun updateFromColor(color: Int) {
         val hsv = floatArrayOf(0f, 0f, 0f)
-        android.graphics.Color.colorToHSV(color, hsv)
+        AndroidColor.colorToHSV(color, hsv)
         hue = hsv[0]
         saturation = hsv[1]
         brightness = hsv[2]
@@ -151,7 +153,6 @@ fun ColorPickerDialog(
 
             Spacer(Modifier.height(16.dp))
 
-            // iOS-style segmented tabs
             val tabLabels =
                 listOf(
                     Tab2Texts.colorPickerGrid,
@@ -173,7 +174,7 @@ fun ColorPickerDialog(
 
             Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
                 when (selectedTab) {
-                    0 -> {
+                    TAB_GRID -> {
                         ColorGridContent(
                             onColorSelected = {
                                 updateFromColor(it)
@@ -182,7 +183,7 @@ fun ColorPickerDialog(
                         )
                     }
 
-                    1 -> {
+                    TAB_SPECTRUM -> {
                         ColorSpectrumContent(
                             hue = hue,
                             saturation = saturation,
@@ -197,7 +198,7 @@ fun ColorPickerDialog(
                         )
                     }
 
-                    2 -> {
+                    TAB_SLIDERS -> {
                         ColorSlidersContent(
                             colorInt = currentColorInt(),
                             onColorChanged = {
@@ -231,11 +232,11 @@ fun ColorPickerDialog(
                         try {
                             val hex = input.trim()
                             val parsed =
-                                android.graphics.Color.parseColor(
+                                AndroidColor.parseColor(
                                     if (hex.startsWith("#")) hex else "#$hex",
                                 )
                             val hsv = floatArrayOf(0f, 0f, 0f)
-                            android.graphics.Color.colorToHSV(parsed, hsv)
+                            AndroidColor.colorToHSV(parsed, hsv)
                             hue = hsv[0]
                             saturation = hsv[1]
                             brightness = hsv[2]
@@ -253,15 +254,13 @@ fun ColorPickerDialog(
     }
 }
 
-// Preset color swatches (grid)
-
 private val presetColors: List<Int> =
     buildList {
         val hues = listOf(195f, 221f, 247f, 273f, 299f, 325f, 351f, 17f, 43f, 69f, 95f, 121f)
         // Row 1: Grayscale
         for (i in 0..11) {
             val v = 255 - (i * 255 / 11)
-            add(android.graphics.Color.rgb(v, v, v))
+            add(AndroidColor.rgb(v, v, v))
         }
         // Rows 2-9: 12 hues x 8 lightness levels (light to dark)
         val levels =
@@ -277,7 +276,7 @@ private val presetColors: List<Int> =
             )
         for ((s, v) in levels) {
             for (h in hues) {
-                add(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v)))
+                add(AndroidColor.HSVToColor(floatArrayOf(h, s, v)))
             }
         }
     }
@@ -301,8 +300,6 @@ private fun ColorGridContent(onColorSelected: (Int) -> Unit) {
         }
     }
 }
-
-// Spectrum: X-axis is lightness (white to black), Y-axis is hue (0-360 degrees)
 
 @Composable
 private fun ColorSpectrumContent(
@@ -330,7 +327,7 @@ private fun ColorSpectrumContent(
                 }
                 for (y in 0 until h) {
                     hsv[0] = y.toFloat() / (h - 1) * 360f
-                    bitmap.setPixel(x, y, android.graphics.Color.HSVToColor(hsv))
+                    bitmap.setPixel(x, y, AndroidColor.HSVToColor(hsv))
                 }
             }
             bitmap.asImageBitmap()
@@ -393,8 +390,6 @@ private fun ColorSpectrumContent(
     }
 }
 
-// RGB sliders (ported from flutter_colorpicker)
-
 @Composable
 private fun ColorSlidersContent(
     colorInt: Int,
@@ -413,38 +408,37 @@ private fun ColorSlidersContent(
             value = r / 255f,
             trackColors =
                 listOf(
-                    Color(android.graphics.Color.rgb(0, g, b)),
-                    Color(android.graphics.Color.rgb(255, g, b)),
+                    Color(AndroidColor.rgb(0, g, b)),
+                    Color(AndroidColor.rgb(255, g, b)),
                 ),
             thumbColor = Color(colorInt),
-            onValueChange = { onColorChanged(android.graphics.Color.rgb((it * 255).toInt(), g, b)) },
+            onValueChange = { onColorChanged(AndroidColor.rgb((it * 255).toInt(), g, b)) },
         )
         GradientColorSlider(
             label = Tab2Texts.colorGreen,
             value = g / 255f,
             trackColors =
                 listOf(
-                    Color(android.graphics.Color.rgb(r, 0, b)),
-                    Color(android.graphics.Color.rgb(r, 255, b)),
+                    Color(AndroidColor.rgb(r, 0, b)),
+                    Color(AndroidColor.rgb(r, 255, b)),
                 ),
             thumbColor = Color(colorInt),
-            onValueChange = { onColorChanged(android.graphics.Color.rgb(r, (it * 255).toInt(), b)) },
+            onValueChange = { onColorChanged(AndroidColor.rgb(r, (it * 255).toInt(), b)) },
         )
         GradientColorSlider(
             label = Tab2Texts.colorBlue,
             value = b / 255f,
             trackColors =
                 listOf(
-                    Color(android.graphics.Color.rgb(r, g, 0)),
-                    Color(android.graphics.Color.rgb(r, g, 255)),
+                    Color(AndroidColor.rgb(r, g, 0)),
+                    Color(AndroidColor.rgb(r, g, 255)),
                 ),
             thumbColor = Color(colorInt),
-            onValueChange = { onColorChanged(android.graphics.Color.rgb(r, g, (it * 255).toInt())) },
+            onValueChange = { onColorChanged(AndroidColor.rgb(r, g, (it * 255).toInt())) },
         )
     }
 }
 
-// Custom gradient slider with thumb, ported from flutter_colorpicker TrackPainter + ThumbPainter
 @Composable
 private fun GradientColorSlider(
     label: String,
@@ -494,9 +488,7 @@ private fun GradientColorSlider(
             drawRoundRect(
                 brush = Brush.horizontalGradient(trackColors),
                 topLeft = Offset(0f, trackY),
-                size =
-                    androidx.compose.ui.geometry
-                        .Size(size.width, trackHeight),
+                size = Size(size.width, trackHeight),
                 cornerRadius = CornerRadius(trackHeight / 2f),
             )
 

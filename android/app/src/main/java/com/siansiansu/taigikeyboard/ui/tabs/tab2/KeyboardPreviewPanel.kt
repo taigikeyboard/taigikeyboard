@@ -1,5 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab2
 
+import android.content.Context
 import android.view.ContextThemeWrapper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -37,6 +38,7 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.util.FontUtils
+import com.siansiansu.taigikeyboard.util.getColorFromAttr
 
 // Live keyboard preview panel with candidate bar for appearance settings
 
@@ -81,9 +83,7 @@ fun KeyboardPreviewPanel(
     }
 }
 
-// Candidate bar preview (matches actual Smartbar styling)
-
-internal data class SampleCandidate(
+private data class SampleCandidate(
     val roman: String,
     val hanzi: String,
 )
@@ -95,14 +95,12 @@ private val sampleCandidates =
         SampleCandidate("gîm-á", "砛仔"),
     )
 
-internal fun resolveKeyboardThemeColor(
-    context: android.content.Context,
+private fun resolveKeyboardThemeColor(
+    context: Context,
     attrId: Int,
 ): Color {
-    val themed = android.view.ContextThemeWrapper(context, R.style.KeyboardTheme)
-    val tv = android.util.TypedValue()
-    themed.theme.resolveAttribute(attrId, tv, true)
-    return Color(tv.data)
+    val themed = ContextThemeWrapper(context, R.style.KeyboardTheme)
+    return Color(getColorFromAttr(themed, attrId))
 }
 
 @Composable
