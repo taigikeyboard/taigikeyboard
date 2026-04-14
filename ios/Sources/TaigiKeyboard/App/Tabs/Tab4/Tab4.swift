@@ -249,7 +249,7 @@ struct Tab4: View {
             }
         }
         .alert(Tab4Texts.resetSettings, isPresented: $showResetSettingsAlert) {
-            Button(Tab4Texts.cancel, role: .cancel) {}
+            Button(CommonTexts.cancel, role: .cancel) {}
             Button(Tab4Texts.reset, role: .destructive) {
                 resetAllSettings()
             }
