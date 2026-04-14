@@ -19,6 +19,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
 import com.siansiansu.taigikeyboard.ui.tabs.tab1.HomeScreen
@@ -111,15 +112,15 @@ class SettingsMainActivity : AppCompatActivity() {
                                 onFeedback = {
                                     openDetailActivity(
                                         "contact_us",
-                                        "feedback",
+                                        ContentType.FEEDBACK,
                                         arrayOf("feedback_email"),
                                     )
                                 },
                                 onVersionHistory = {
-                                    openDetailActivity("version_history", "version", emptyArray())
+                                    openDetailActivity("version_history", ContentType.VERSION, emptyArray())
                                 },
                                 onFaqClick = { titleKey, contentKeys ->
-                                    openDetailActivity(titleKey, "faq", contentKeys)
+                                    openDetailActivity(titleKey, ContentType.FAQ, contentKeys)
                                 },
                             )
                         }
