@@ -1,12 +1,14 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab2
 
+import android.content.Context
 import android.view.ContextThemeWrapper
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -36,6 +38,9 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.util.FontUtils
+import com.siansiansu.taigikeyboard.util.getColorFromAttr
+
+// Live keyboard preview panel with candidate bar for appearance settings
 
 @Composable
 fun KeyboardPreviewPanel(
@@ -44,122 +49,121 @@ fun KeyboardPreviewPanel(
     layoutType: String,
     colorSettings: KeyboardColorSettings,
     candidateTextSizeScale: Float,
-    fontType: String
+    fontType: String,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // Candidate bar preview (matches iOS KeyboardPreviewPanel sample suggestions)
         CandidatePreviewRow(
             colorSettings = colorSettings,
             candidateTextSizeScale = candidateTextSizeScale,
-            fontType = fontType
+            fontType = fontType,
         )
 
-        // Use key() to force full AndroidView recreation when previewKey or layoutType changes.
-        // This recomputes the layout from current prefs (layout type, height, colors, etc.)
-        // matching iOS KeyboardPreviewPanel which re-evaluates on every state change.
+        // key() forces full AndroidView recreation when previewKey or layoutType changes,
+        // recomputing the layout from current prefs (matching iOS KeyboardPreviewPanel behavior)
         key(previewKey, layoutType) {
             AndroidView(
                 factory = { ctx ->
                     val themedContext = ContextThemeWrapper(ctx, R.style.KeyboardTheme)
                     val layoutManager = LayoutManager(themedContext, prefs)
-                    // Always show Taigi layout in preview (match iOS KeyboardPreviewPanel behavior)
-                    // Use overrideInputMode to avoid showing English layout
-                    val layout = layoutManager.fetchComputedLayoutForPreview(
-                        KeyboardMode.CHARACTERS,
-                        Subtype.DEFAULT
-                    )
+                    val layout =
+                        layoutManager.fetchComputedLayoutForPreview(
+                            KeyboardMode.CHARACTERS,
+                            Subtype.DEFAULT,
+                        )
                     KeyboardView(themedContext).apply {
                         this.prefs = prefs
                         this.isPreviewMode = true
                         this.computedLayout = layout
-                        // Filter keys by variation (hides duplicate TRANSLATE keys etc.)
                         updateVisibility()
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 }
 
-// ============= Candidate Bar Preview (matches actual Smartbar styling) =============
-
-internal data class SampleCandidate(val roman: String, val hanzi: String)
-
-private val sampleCandidates = listOf(
-    SampleCandidate("mī-tê", "麵茶"),
-    SampleCandidate("kú-nî", "久年"),
-    SampleCandidate("gîm-á", "砛仔")
+private data class SampleCandidate(
+    val roman: String,
+    val hanzi: String,
 )
 
-/** Resolve a color attribute from KeyboardTheme (single source of truth: themes.xml). */
-internal fun resolveKeyboardThemeColor(context: android.content.Context, attrId: Int): Color {
-    val themed = android.view.ContextThemeWrapper(context, R.style.KeyboardTheme)
-    val tv = android.util.TypedValue()
-    themed.theme.resolveAttribute(attrId, tv, true)
-    return Color(tv.data)
+private val sampleCandidates =
+    listOf(
+        SampleCandidate("mī-tê", "麵茶"),
+        SampleCandidate("kú-nî", "久年"),
+        SampleCandidate("gîm-á", "砛仔"),
+    )
+
+private fun resolveKeyboardThemeColor(
+    context: Context,
+    attrId: Int,
+): Color {
+    val themed = ContextThemeWrapper(context, R.style.KeyboardTheme)
+    return Color(getColorFromAttr(themed, attrId))
 }
 
 @Composable
 private fun CandidatePreviewRow(
     colorSettings: KeyboardColorSettings,
     candidateTextSizeScale: Float,
-    fontType: String
+    fontType: String,
 ) {
     val context = LocalContext.current
-    val typeface = remember(fontType) {
-        FontUtils.getTypefaceByType(fontType, context)
-    }
+    val typeface =
+        remember(fontType) {
+            FontUtils.getTypefaceByType(fontType, context)
+        }
     val fontFamily = remember(typeface) { FontFamily(typeface) }
 
-    // Resolve default colors from KeyboardTheme (auto light/dark via DayNight parent)
-    val defaultBgColor = remember { resolveKeyboardThemeColor(context, R.attr.smartbar_bgColor) }
-    val defaultTextColor = remember { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_fgColor) }
-    val subtitleColor = remember { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_subtitle_fgColor) }
-    val composingBgColor = remember { resolveKeyboardThemeColor(context, R.attr.semiTransparentColor) }
-    // Icon tint: matches smartbar toolbar_toggle_button and expand_toggle_button tint
-    val iconTint = remember { resolveKeyboardThemeColor(context, R.attr.smartbar_fgColor) }
+    // Key on isDarkTheme so colors refresh on light/dark mode changes
+    val isDarkTheme = isSystemInDarkTheme()
+    val defaultBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_bgColor) }
+    val defaultTextColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_fgColor) }
+    val subtitleColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_subtitle_fgColor) }
+    val composingBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.semiTransparentColor) }
+    val iconTint = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_fgColor) }
 
     val bgColor = colorSettings.candidateBackgroundColor?.let { Color(it) } ?: defaultBgColor
     val textColor = colorSettings.candidateTextColor?.let { Color(it) } ?: defaultTextColor
     val effectiveSubtitleColor = colorSettings.candidateTextColor?.let { Color(it) } ?: subtitleColor
 
-    // Text size: smartbarHeight(50dp) * 0.38 = 19sp, scaled by user preference
     val titleSizeSp = 19.sp * candidateTextSizeScale
     val subtitleSizeSp = titleSizeSp * 0.70f
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .background(bgColor),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .background(bgColor),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // "+" toolbar toggle button (left side, matches smartbar.xml toolbar_toggle_button)
         Icon(
             painter = painterResource(R.drawable.ic_add),
             contentDescription = null,
-            modifier = Modifier
-                .width(36.dp)
-                .padding(start = 2.dp)
-                .padding(6.dp),
-            tint = iconTint
+            modifier =
+                Modifier
+                    .width(36.dp)
+                    .padding(start = 2.dp)
+                    .padding(6.dp),
+            tint = iconTint,
         )
 
-        // Candidate items (fill remaining space, vertically stacked title+subtitle)
         Row(
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             sampleCandidates.forEachIndexed { index, candidate ->
                 // First candidate has composing background (matches candidate_composing_background)
                 val itemBg = if (index == 0) composingBgColor else Color.Transparent
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .background(itemBg, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                    modifier =
+                        Modifier
+                            .background(itemBg, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
                 ) {
                     Text(
                         text = candidate.roman,
@@ -167,7 +171,7 @@ private fun CandidatePreviewRow(
                         color = textColor,
                         fontFamily = fontFamily,
                         maxLines = 1,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                     Text(
                         text = candidate.hanzi,
@@ -175,33 +179,32 @@ private fun CandidatePreviewRow(
                         color = effectiveSubtitleColor,
                         fontFamily = fontFamily,
                         maxLines = 1,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                 }
-                // Add spacing between items (matching margin * 5 = 5dp each side)
                 if (index < sampleCandidates.size - 1) {
                     Spacer(Modifier.width(10.dp))
                 }
             }
         }
 
-        // Vertical divider (matches smartbar.xml candidate_divider)
         Box(
-            modifier = Modifier
-                .width(1.dp)
-                .height(32.dp)
-                .background(iconTint.copy(alpha = 0.3f))
+            modifier =
+                Modifier
+                    .width(1.dp)
+                    .height(32.dp)
+                    .background(iconTint.copy(alpha = 0.3f)),
         )
 
-        // Expand/collapse chevron (right side, matches smartbar.xml expand_toggle_button)
         Icon(
             painter = painterResource(R.drawable.ic_keyboard_arrow_down),
             contentDescription = null,
-            modifier = Modifier
-                .width(48.dp)
-                .padding(end = 4.dp)
-                .padding(2.dp),
-            tint = iconTint
+            modifier =
+                Modifier
+                    .width(48.dp)
+                    .padding(end = 4.dp)
+                    .padding(2.dp),
+            tint = iconTint,
         )
     }
 }

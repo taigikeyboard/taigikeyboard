@@ -28,7 +28,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -44,8 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.localization.LocalizedText
 import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
@@ -60,14 +57,11 @@ fun DetailScreen(
     titleKey: String,
     contentType: String,
     contentKeys: Array<String>,
-    languageManager: LanguageManager,
     fontFamily: FontFamily,
     onNavigationAction: (String) -> Unit,
     onExternalUrl: (String) -> Unit,
     onNavigateBack: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     val context = LocalContext.current
 
     // Load from JSON for feature/faq; fall back to key-based resolution for other types
@@ -85,18 +79,18 @@ fun DetailScreen(
         }
 
     val title =
-        remember(language, titleKey, contentItem) {
-            contentItem?.let { languageManager.text(it.title) }
-                ?: getLocalizedTextByKey(titleKey)?.let { languageManager.text(it) }
+        remember(titleKey, contentItem) {
+            contentItem?.title
+                ?: getTextByKey(titleKey)
                 ?: ""
         }
 
     val items =
-        remember(language, contentType, contentKeys, contentItem) {
+        remember(contentType, contentKeys, contentItem) {
             if (contentItem != null) {
                 buildContentItems(contentItem, context)
             } else {
-                buildDetailItems(contentType, contentKeys, languageManager)
+                buildDetailItems(contentType, contentKeys)
             }
         }
 
@@ -145,7 +139,6 @@ fun DetailScreen(
                 }
                 DetailItemContent(
                     item = item,
-                    languageManager = languageManager,
                     fontFamily = fontFamily,
                     onNavigationAction = onNavigationAction,
                     onExternalUrl = onExternalUrl,
@@ -158,7 +151,6 @@ fun DetailScreen(
 @Composable
 private fun DetailItemContent(
     item: DetailItem,
-    languageManager: LanguageManager,
     fontFamily: FontFamily,
     onNavigationAction: (String) -> Unit,
     onExternalUrl: (String) -> Unit,
@@ -166,7 +158,7 @@ private fun DetailItemContent(
     when (item) {
         is DetailItem.Paragraph -> {
             ParagraphCard(
-                text = languageManager.text(item.text),
+                text = item.text,
                 fontFamily = fontFamily,
             )
         }
@@ -184,7 +176,7 @@ private fun DetailItemContent(
 
         is DetailItem.NavigationLink -> {
             LinkCard(
-                text = languageManager.text(item.text),
+                text = item.text,
                 iconResId = item.iconResId,
                 trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 fontFamily = fontFamily,
@@ -194,7 +186,7 @@ private fun DetailItemContent(
 
         is DetailItem.ExternalLink -> {
             LinkCard(
-                text = languageManager.text(item.text),
+                text = item.text,
                 iconResId = item.iconResId,
                 trailingIcon = Icons.AutoMirrored.Outlined.OpenInNew,
                 trailingIconSize = AppStyle.smallIconSize,
@@ -208,7 +200,6 @@ private fun DetailItemContent(
                 version = item.version,
                 date = item.date,
                 changes = item.changes,
-                languageManager = languageManager,
                 fontFamily = fontFamily,
             )
         }
@@ -318,8 +309,7 @@ private fun LinkCard(
 private fun VersionEntryCard(
     version: String,
     date: String,
-    changes: List<LocalizedText>,
-    languageManager: LanguageManager,
+    changes: List<String>,
     fontFamily: FontFamily,
 ) {
     SettingsCard {
@@ -355,7 +345,7 @@ private fun VersionEntryCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = languageManager.text(change),
+                        text = change,
                         fontFamily = fontFamily,
                         color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodyLarge,

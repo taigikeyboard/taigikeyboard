@@ -1,19 +1,18 @@
 package com.siansiansu.taigikeyboard.model
 
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LocalizedText
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 
 data class CopyrightPage(
     val id: Int,
-    val title: LocalizedText,
-    val description: LocalizedText,
-    val license: LocalizedText,
+    val title: String,
+    val description: String,
+    val license: String,
     val buttons: List<CopyrightButton>,
 )
 
 data class CopyrightButton(
-    val text: LocalizedText,
+    val text: String,
     val url: String,
 )
 
@@ -183,7 +182,7 @@ object CopyrightDataSource {
                 id = 9,
                 title = CommonTexts.khpooDict,
                 description = Tab1Texts.accentDictCredit,
-                license = LocalizedText(hanji = ""),
+                license = "",
                 buttons = emptyList(),
             ),
         )

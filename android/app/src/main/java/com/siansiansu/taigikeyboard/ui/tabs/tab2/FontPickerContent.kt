@@ -23,18 +23,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab2Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+import com.siansiansu.taigikeyboard.util.FontUtils.FontType
 
-// Font picker sub-page (mimics iOS NavigationLink behavior)
+// Font selection sub-page for choosing keyboard typeface
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FontPickerContent(
-    languageManager: LanguageManager,
     fontType: String,
     onFontSelected: (String) -> Unit,
     onNavigateBack: () -> Unit,
@@ -45,7 +44,7 @@ fun FontPickerContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab2Texts.customFont),
+                        text = Tab2Texts.customFont,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
@@ -76,21 +75,21 @@ fun FontPickerContent(
             SettingsCard {
                 Column {
                     FontPickerRow(
-                        label = languageManager.text(Tab2Texts.fontSystemDefault),
-                        isSelected = fontType == "system",
-                        onClick = { onFontSelected("system") },
+                        label = Tab2Texts.fontSystemDefault,
+                        isSelected = fontType == FontType.SYSTEM.value,
+                        onClick = { onFontSelected(FontType.SYSTEM.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = languageManager.text(Tab2Texts.fontOpenHuninn),
-                        isSelected = fontType == "openHuninn",
-                        onClick = { onFontSelected("openHuninn") },
+                        label = Tab2Texts.fontOpenHuninn,
+                        isSelected = fontType == FontType.OPEN_HUNINN.value,
+                        onClick = { onFontSelected(FontType.OPEN_HUNINN.value) },
                     )
                     SettingsDivider()
                     FontPickerRow(
-                        label = languageManager.text(Tab2Texts.fontIansui),
-                        isSelected = fontType == "iansui",
-                        onClick = { onFontSelected("iansui") },
+                        label = Tab2Texts.fontIansui,
+                        isSelected = fontType == FontType.IANSUI.value,
+                        onClick = { onFontSelected(FontType.IANSUI.value) },
                     )
                 }
             }
@@ -130,13 +129,10 @@ private fun FontPickerRow(
     }
 }
 
-internal fun fontDisplayName(
-    fontType: String,
-    languageManager: LanguageManager,
-): String =
+internal fun fontDisplayName(fontType: String): String =
     when (fontType) {
-        "system" -> languageManager.text(Tab2Texts.fontSystemDefault)
-        "openHuninn" -> languageManager.text(Tab2Texts.fontOpenHuninn)
-        "iansui" -> languageManager.text(Tab2Texts.fontIansui)
+        FontType.SYSTEM.value -> Tab2Texts.fontSystemDefault
+        FontType.OPEN_HUNINN.value -> Tab2Texts.fontOpenHuninn
+        FontType.IANSUI.value -> Tab2Texts.fontIansui
         else -> fontType
     }

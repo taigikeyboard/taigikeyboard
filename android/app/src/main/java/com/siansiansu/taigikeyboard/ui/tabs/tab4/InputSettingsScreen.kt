@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
+// Main settings screen (Tab4) — input mode, typing, keyboard, feedback, diagnostics, reset.
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -29,7 +31,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,14 +43,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
-import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
@@ -58,51 +57,41 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import kotlinx.coroutines.launch
 
+private const val FEATURE_ID_HANLO_DESIGN = "hanloDesign"
+private const val FEATURE_ID_CASE_SWITCH = "caseSwitch"
+private const val DIAGNOSTIC_CLIP_LABEL = "Taigi Keyboard Diagnostic"
+private const val DIAGNOSTIC_MIME_TYPE = "text/plain"
+private const val DIAGNOSTIC_EMAIL = "info@taigikeyboard.tw"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputSettingsScreen(
-    languageManager: LanguageManager,
     prefs: PrefHelper,
     onResetSettings: () -> Unit,
     resetCounter: Int,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var showResetDialog by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
-    // Force recomposition when resetCounter changes (after settings reset)
-    val currentInputMode = remember(resetCounter) { prefs.inputMode }
-    val currentOutputBoth = remember(resetCounter) { prefs.outputBothScripts }
-    val currentAutoCap = remember(resetCounter) { prefs.autoCapitalizationEnabled }
-    val currentAutoSpace = remember(resetCounter) { prefs.isAutoSpaceEnabled }
-    val currentDoubleOO = remember(resetCounter) { prefs.enableDoubleTapOO }
-    val currentDoubleNN = remember(resetCounter) { prefs.enableDoubleTapNN }
-
-    var inputMode by remember(currentInputMode) { mutableStateOf(currentInputMode) }
-    var outputBoth by remember(currentOutputBoth) { mutableStateOf(currentOutputBoth) }
-    var autoCap by remember(currentAutoCap) { mutableStateOf(currentAutoCap) }
-    var autoSpace by remember(currentAutoSpace) { mutableStateOf(currentAutoSpace) }
-    var doubleOO by remember(currentDoubleOO) { mutableStateOf(currentDoubleOO) }
-    var doubleNN by remember(currentDoubleNN) { mutableStateOf(currentDoubleNN) }
-    val currentToolbarAutoCollapse = remember(resetCounter) { prefs.isToolbarAutoCollapse }
-    var toolbarAutoCollapse by remember(currentToolbarAutoCollapse) { mutableStateOf(currentToolbarAutoCollapse) }
-    val currentGlobeKey = remember(resetCounter) { prefs.isGlobeKeyEnabled }
-    var isGlobeKeyEnabled by remember(currentGlobeKey) { mutableStateOf(currentGlobeKey) }
-    val currentSoundFeedback = remember(resetCounter) { prefs.isSoundFeedbackEnabled }
-    var soundFeedback by remember(currentSoundFeedback) { mutableStateOf(currentSoundFeedback) }
-    val currentVibrationFeedback = remember(resetCounter) { prefs.isVibrationFeedbackEnabled }
-    var vibrationFeedback by remember(currentVibrationFeedback) { mutableStateOf(currentVibrationFeedback) }
-    val currentTpsOrMapsToER = remember(resetCounter) { prefs.tpsOrMapsToER }
-    var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
+    // Each state re-reads from prefs when resetCounter changes (after settings reset)
+    var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
+    var outputBoth by remember(resetCounter) { mutableStateOf(prefs.outputBothScripts) }
+    var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
+    var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
+    var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
+    var doubleNN by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapNN) }
+    var toolbarAutoCollapse by remember(resetCounter) { mutableStateOf(prefs.isToolbarAutoCollapse) }
+    var isGlobeKeyEnabled by remember(resetCounter) { mutableStateOf(prefs.isGlobeKeyEnabled) }
+    var soundFeedback by remember(resetCounter) { mutableStateOf(prefs.isSoundFeedbackEnabled) }
+    var vibrationFeedback by remember(resetCounter) { mutableStateOf(prefs.isVibrationFeedbackEnabled) }
+    var tpsOrMapsToER by remember(resetCounter) { mutableStateOf(prefs.tpsOrMapsToER) }
 
     val features = remember { FeatureContentLoader.loadFeatures(context) }
 
-    fun featureSummary(id: String): String? = features.firstOrNull { it.id == id }?.summary?.let { languageManager.text(it) }
+    fun featureSummary(featureId: String): String? = features.firstOrNull { it.id == featureId }?.summary
 
     if (showInputModePicker) {
         InputModeScreen(
-            languageManager = languageManager,
             selectedMode = inputMode,
             onModeSelected = {
                 inputMode = it
@@ -120,7 +109,7 @@ fun InputSettingsScreen(
                 LargeTopAppBar(
                     title = {
                         Text(
-                            text = languageManager.text(Tab4Texts.tabTitle),
+                            text = Tab4Texts.tabTitle,
                             style = MaterialTheme.typography.headlineLarge,
                         )
                     },
@@ -143,7 +132,6 @@ fun InputSettingsScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
-                // Input mode card - navigates to sub-page
                 SettingsCard {
                     Row(
                         modifier =
@@ -155,13 +143,13 @@ fun InputSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab4Texts.inputMode),
+                            text = Tab4Texts.inputMode,
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         Text(
-                            text = inputModeDisplayName(inputMode, languageManager),
+                            text = inputModeDisplayName(inputMode),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyLarge,
                         )
@@ -177,13 +165,13 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Typing settings
-                SectionHeader(languageManager.text(Tab4Texts.typingSectionTitle))
+                SectionHeader(Tab4Texts.typingSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.outputBothScripts),
+                        label = Tab4Texts.outputBothScripts,
                         checked = outputBoth,
-                        infoText = featureSummary("hanloDesign"),
+                        icon = SettingsIcons.outputBothScripts,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             outputBoth = it
                             prefs.outputBothScripts = it
@@ -191,9 +179,10 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.autoCapitalization),
+                        label = Tab4Texts.autoCapitalization,
                         checked = autoCap,
-                        infoText = featureSummary("caseSwitch"),
+                        icon = SettingsIcons.autoCapitalization,
+                        infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
                         onCheckedChange = {
                             autoCap = it
                             prefs.autoCapitalizationEnabled = it
@@ -201,9 +190,10 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.autoSpace),
+                        label = Tab4Texts.autoSpace,
                         checked = autoSpace,
-                        infoText = featureSummary("hanloDesign"),
+                        icon = SettingsIcons.autoSpace,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it
@@ -213,14 +203,13 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Keyboard settings
-                SectionHeader(languageManager.text(Tab4Texts.keyboardSectionTitle))
+                SectionHeader(Tab4Texts.keyboardSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.toolbarAutoCollapse),
+                        label = Tab4Texts.toolbarAutoCollapse,
                         checked = toolbarAutoCollapse,
                         icon = SettingsIcons.toolbar,
-                        infoText = languageManager.text(Tab4Texts.toolbarAutoCollapseInfo),
+                        infoText = Tab4Texts.toolbarAutoCollapseInfo,
                         onCheckedChange = {
                             toolbarAutoCollapse = it
                             prefs.isToolbarAutoCollapse = it
@@ -228,10 +217,10 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.globeKey),
+                        label = Tab4Texts.globeKey,
                         checked = isGlobeKeyEnabled,
                         icon = SettingsIcons.globe,
-                        infoText = languageManager.text(Tab4Texts.globeKeyInfo),
+                        infoText = Tab4Texts.globeKeyInfo,
                         onCheckedChange = {
                             isGlobeKeyEnabled = it
                             prefs.isGlobeKeyEnabled = it
@@ -241,11 +230,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Feedback settings card
-                SectionHeader(languageManager.text(Tab4Texts.feedbackSectionTitle))
+                SectionHeader(Tab4Texts.feedbackSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.soundFeedback),
+                        label = Tab4Texts.soundFeedback,
                         checked = soundFeedback,
                         icon = SettingsIcons.sound,
                         onCheckedChange = {
@@ -255,7 +243,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.vibrationFeedback),
+                        label = Tab4Texts.vibrationFeedback,
                         checked = vibrationFeedback,
                         icon = SettingsIcons.vibration,
                         onCheckedChange = {
@@ -267,11 +255,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // POJ settings card
-                SectionHeader(languageManager.text(Tab4Texts.pojSettingsSectionTitle))
+                SectionHeader(Tab4Texts.pojSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.doubleTapOO),
+                        label = Tab4Texts.doubleTapOO,
                         checked = doubleOO,
                         onCheckedChange = {
                             doubleOO = it
@@ -280,7 +267,7 @@ fun InputSettingsScreen(
                     )
                     SettingsDivider()
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.doubleTapNN),
+                        label = Tab4Texts.doubleTapNN,
                         checked = doubleNN,
                         onCheckedChange = {
                             doubleNN = it
@@ -291,13 +278,12 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // TPS settings card
-                SectionHeader(languageManager.text(Tab4Texts.tpsSettingsSectionTitle))
+                SectionHeader(Tab4Texts.tpsSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
-                        label = languageManager.text(Tab4Texts.tpsOrMapsToER),
+                        label = Tab4Texts.tpsOrMapsToER,
                         checked = tpsOrMapsToER,
-                        infoText = languageManager.text(Tab4Texts.tpsOrMapsToERInfo),
+                        infoText = Tab4Texts.tpsOrMapsToERInfo,
                         onCheckedChange = {
                             tpsOrMapsToER = it
                             prefs.tpsOrMapsToER = it
@@ -307,68 +293,13 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Diagnostic info card
-                SectionHeader(languageManager.text(Tab4Texts.diagnosticSectionTitle))
-                SettingsCard {
-                    ActionRow(
-                        label = languageManager.text(Tab4Texts.diagnosticCopy),
-                        icon = Icons.Outlined.ContentCopy,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(
-                                    ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted()),
-                                )
-                                Toast.makeText(context, languageManager.text(Tab4Texts.diagnosticCopied), Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    ActionRow(
-                        label = languageManager.text(Tab4Texts.diagnosticShare),
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        textColor = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val sendIntent =
-                                    Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, info.formatted())
-                                        type = "text/plain"
-                                    }
-                                context.startActivity(Intent.createChooser(sendIntent, null))
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    ActionRow(
-                        label = languageManager.text(Tab4Texts.diagnosticEmail),
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        textColor = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
-                                val body = Uri.encode(info.formatted())
-                                val uri = Uri.parse("mailto:info@taigikeyboard.tw?subject=$subject&body=$body")
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
-                                } catch (_: Exception) {
-                                    Toast.makeText(context, languageManager.text(Tab4Texts.noEmailApp), Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                    )
-                }
+                DiagnosticSection()
 
                 Spacer(Modifier.height(24.dp))
 
-                // Reset settings card
                 SettingsCard {
                     ActionRow(
-                        label = languageManager.text(Tab4Texts.resetSettings),
+                        label = Tab4Texts.resetSettings,
                         onClick = { showResetDialog = true },
                         textColor = MaterialTheme.colorScheme.error,
                     )
@@ -378,10 +309,10 @@ fun InputSettingsScreen(
 
         if (showResetDialog) {
             ConfirmationDialog(
-                title = languageManager.text(Tab4Texts.resetSettings),
-                message = languageManager.text(Tab4Texts.resetSettingsMessage),
-                confirmLabel = languageManager.text(Tab4Texts.reset),
-                dismissLabel = languageManager.text(CommonTexts.cancel),
+                title = Tab4Texts.resetSettings,
+                message = Tab4Texts.resetSettingsMessage,
+                confirmLabel = Tab4Texts.reset,
+                dismissLabel = CommonTexts.cancel,
                 onConfirm = {
                     showResetDialog = false
                     onResetSettings()
@@ -392,14 +323,62 @@ fun InputSettingsScreen(
     }
 }
 
-private fun inputModeDisplayName(
-    mode: String,
-    languageManager: LanguageManager,
-): String =
-    when (mode) {
-        "poj" -> languageManager.text(Tab4Texts.pojMode)
-        "tl" -> languageManager.text(Tab4Texts.tlMode)
-        "english" -> languageManager.text(Tab4Texts.englishMode)
-        "tps" -> languageManager.text(Tab4Texts.tpsMode)
-        else -> languageManager.text(Tab4Texts.tlMode)
+@Composable
+private fun DiagnosticSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    SectionHeader(Tab4Texts.diagnosticSectionTitle)
+    SettingsCard {
+        ActionRow(
+            label = Tab4Texts.diagnosticCopy,
+            icon = Icons.Outlined.ContentCopy,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText(DIAGNOSTIC_CLIP_LABEL, info.formatted()),
+                    )
+                    Toast.makeText(context, Tab4Texts.diagnosticCopied, Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+        SettingsDivider()
+        ActionRow(
+            label = Tab4Texts.diagnosticShare,
+            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+            textColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, info.formatted())
+                            type = DIAGNOSTIC_MIME_TYPE
+                        }
+                    context.startActivity(Intent.createChooser(sendIntent, null))
+                }
+            },
+        )
+        SettingsDivider()
+        ActionRow(
+            label = Tab4Texts.diagnosticEmail,
+            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+            textColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
+                    val body = Uri.encode(info.formatted())
+                    val uri = Uri.parse("mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body")
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                    } catch (_: Exception) {
+                        Toast.makeText(context, Tab4Texts.noEmailApp, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+        )
     }
+}

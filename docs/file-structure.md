@@ -154,7 +154,7 @@
 
 | iOS File | Android File | Content |
 |----------|--------------|---------|
-| `LocalizedText.swift` | `LocalizedText.kt` | Core structure |
+| - | `LocalizedText.kt` | Core structure (Android only) |
 | - | `DisplayLanguage.kt` | Display language enum |
 | - | `LanguageManager.kt` | Language management (StateFlow) |
 | `Tab1Texts.swift` | `Tab1Texts.kt` | Tab1 text |

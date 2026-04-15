@@ -263,8 +263,7 @@ struct Tab4: View {
     private func featureSummary(_ featureId: String) -> String {
         FeatureContentLoader.features
             .first(where: { $0.id == featureId })?
-            .summary?
-            .asString ?? ""
+            .summary ?? ""
     }
 
     // MARK: - Display Name Helpers

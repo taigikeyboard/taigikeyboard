@@ -23,7 +23,7 @@ struct FAQDetailView: View {
                             navigationDestination(destination)
                         } label: {
                             Label(
-                                navText.asString,
+                                navText,
                                 systemImage: navIcon.ios,
                             )
                         }
@@ -31,7 +31,7 @@ struct FAQDetailView: View {
                 }
             }
         }
-        .navigationTitle(faq.title.asString)
+        .navigationTitle(faq.title)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -61,7 +61,7 @@ struct FAQDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(paragraph.text.asString)
+        Text(paragraph.text)
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

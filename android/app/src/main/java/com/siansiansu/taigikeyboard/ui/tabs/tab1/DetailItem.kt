@@ -2,8 +2,6 @@ package com.siansiansu.taigikeyboard.ui.tabs.tab1
 
 import androidx.annotation.DrawableRes
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.localization.LanguageManager
-import com.siansiansu.taigikeyboard.localization.LocalizedText
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.model.FeatureContent
@@ -13,7 +11,7 @@ import com.siansiansu.taigikeyboard.util.resolveDrawableResId
 // Detail screen data model and content builders for feature/FAQ/feedback/version pages
 sealed interface DetailItem {
     data class Paragraph(
-        val text: LocalizedText,
+        val text: String,
     ) : DetailItem
 
     data class ImageCard(
@@ -26,13 +24,13 @@ sealed interface DetailItem {
     ) : DetailItem
 
     data class NavigationLink(
-        val text: LocalizedText,
+        val text: String,
         @param:DrawableRes val iconResId: Int,
         val action: String,
     ) : DetailItem
 
     data class ExternalLink(
-        val text: LocalizedText,
+        val text: String,
         @param:DrawableRes val iconResId: Int,
         val url: String,
     ) : DetailItem
@@ -40,19 +38,18 @@ sealed interface DetailItem {
     data class VersionCard(
         val version: String,
         val date: String,
-        val changes: List<LocalizedText>,
+        val changes: List<String>,
     ) : DetailItem
 }
 
 internal fun buildDetailItems(
     contentType: String,
     contentKeys: Array<String>,
-    languageManager: LanguageManager,
 ): List<DetailItem> =
     when (contentType) {
         ContentType.FEEDBACK -> buildFeedbackItems()
         ContentType.VERSION -> buildVersionItems()
-        else -> buildGenericItems(contentKeys, languageManager)
+        else -> buildGenericItems(contentKeys)
     }
 
 internal fun buildContentItems(
@@ -110,7 +107,7 @@ internal fun buildContentItems(
     return items
 }
 
-internal fun getLocalizedTextByKey(key: String): LocalizedText? =
+internal fun getTextByKey(key: String): String? =
     when (key) {
         "contact_us" -> Tab1Texts.contactUs
         "feedback_email" -> Tab1Texts.emailContact
@@ -134,16 +131,13 @@ private fun buildVersionItems(): List<DetailItem> =
         DetailItem.VersionCard(entry.version, entry.date, entry.changes)
     }
 
-private fun buildGenericItems(
-    contentKeys: Array<String>,
-    languageManager: LanguageManager,
-): List<DetailItem> {
+private fun buildGenericItems(contentKeys: Array<String>): List<DetailItem> {
     val items = mutableListOf<DetailItem>()
 
     contentKeys.forEach { key ->
-        val localizedText = getLocalizedTextByKey(key)
-        if (localizedText != null) {
-            items.add(DetailItem.Paragraph(localizedText))
+        val text = getTextByKey(key)
+        if (text != null) {
+            items.add(DetailItem.Paragraph(text))
         }
     }
 

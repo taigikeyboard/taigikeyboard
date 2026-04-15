@@ -87,7 +87,7 @@ fun SettingsOverlayContent(
     ) {
         // General settings
         SwitchRow(
-            label = Tab4Texts.outputBothScripts.hanji,
+            label = Tab4Texts.outputBothScripts,
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
@@ -100,7 +100,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.autoCapitalization.hanji,
+            label = Tab4Texts.autoCapitalization,
             checked = autoCap,
             icon = SettingsIcons.autoCapitalization,
             iconTint = iconTint,
@@ -113,7 +113,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.autoSpace.hanji,
+            label = Tab4Texts.autoSpace,
             checked = autoSpace,
             icon = SettingsIcons.autoSpace,
             iconTint = iconTint,
@@ -126,7 +126,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.toolbarAutoCollapse.hanji,
+            label = Tab4Texts.toolbarAutoCollapse,
             checked = toolbarAutoCollapse,
             icon = SettingsIcons.toolbar,
             iconTint = iconTint,
@@ -139,7 +139,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.globeKey.hanji,
+            label = Tab4Texts.globeKey,
             checked = isGlobeKeyEnabled,
             icon = SettingsIcons.globe,
             iconTint = iconTint,
@@ -154,7 +154,7 @@ fun SettingsOverlayContent(
 
         // Feedback settings
         SwitchRow(
-            label = Tab4Texts.soundFeedback.hanji,
+            label = Tab4Texts.soundFeedback,
             checked = soundFeedback,
             icon = SettingsIcons.sound,
             iconTint = iconTint,
@@ -167,7 +167,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.vibrationFeedback.hanji,
+            label = Tab4Texts.vibrationFeedback,
             checked = vibrationFeedback,
             icon = SettingsIcons.vibration,
             iconTint = iconTint,
@@ -182,7 +182,7 @@ fun SettingsOverlayContent(
 
         // POJ settings
         SwitchRow(
-            label = Tab4Texts.doubleTapOO.hanji,
+            label = Tab4Texts.doubleTapOO,
             checked = doubleOO,
             onCheckedChange = {
                 doubleOO = it
@@ -193,7 +193,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.doubleTapNN.hanji,
+            label = Tab4Texts.doubleTapNN,
             checked = doubleNN,
             onCheckedChange = {
                 doubleNN = it
@@ -206,7 +206,7 @@ fun SettingsOverlayContent(
 
         // TPS settings
         SwitchRow(
-            label = Tab4Texts.tpsOrMapsToER.hanji,
+            label = Tab4Texts.tpsOrMapsToER,
             checked = tpsOrER,
             onCheckedChange = {
                 tpsOrER = it
@@ -228,7 +228,7 @@ fun SettingsOverlayContent(
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text(
-                text = Tab4Texts.openApp.hanji,
+                text = Tab4Texts.openApp,
                 fontFamily = fontFamily,
             )
         }

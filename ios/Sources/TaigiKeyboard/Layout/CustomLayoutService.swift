@@ -55,7 +55,7 @@ class CustomLayoutService {
     private func needsGlobeKey(for context: KeyboardContext) -> Bool {
         let settings = SharedSettings.shared
         if context.keyboardType == .alphabetic, settings.inputMode == .english {
-            let device = DeviceConfiguration(context: context)
+            let device = DeviceConfiguration()
             return device.isIPad || device.isSmallIPhone
         }
         // TPS layout has more keys — never show globe key
@@ -68,42 +68,42 @@ class CustomLayoutService {
         settings: SharedSettings,
         needsGlobe: Bool,
     ) -> [[KeyDef]] {
-        let A = TaigiLayouts.Alphabetic.self
+        let layouts = TaigiLayouts.Alphabetic.self
 
         // English mode (Apple standard English keyboard)
         if settings.inputMode == .english {
-            return resolveLayout(withGlobe: A.qwerty_English_withGlobe, iPhone: A.qwerty_English_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.qwerty_English_withGlobe, iPhone: layouts.qwerty_English_iPhone, needsGlobe: needsGlobe)
         }
 
         // TPS mode — inputMode takes priority over keyboardLayoutType
         if settings.inputMode == .tps {
-            return resolveLayout(withGlobe: A.tps_withGlobe, iPhone: A.tps_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
         }
 
         switch settings.keyboardLayoutType {
         case .tps:
-            return resolveLayout(withGlobe: A.tps_withGlobe, iPhone: A.tps_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.tps_withGlobe, iPhone: layouts.tps_iPhone, needsGlobe: needsGlobe)
 
         case .phahTaigi:
-            return resolveLayout(withGlobe: A.phahTaigi_withGlobe, iPhone: A.phahTaigi_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.phahTaigi_withGlobe, iPhone: layouts.phahTaigi_iPhone, needsGlobe: needsGlobe)
 
         case .moe1:
             if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: A.moe1_POJ_withGlobe, iPhone: A.moe1_POJ_iPhone, needsGlobe: needsGlobe)
+                return resolveLayout(withGlobe: layouts.moe1_POJ_withGlobe, iPhone: layouts.moe1_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            return resolveLayout(withGlobe: A.moe1_TL_withGlobe, iPhone: A.moe1_TL_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.moe1_TL_withGlobe, iPhone: layouts.moe1_TL_iPhone, needsGlobe: needsGlobe)
 
         case .moe2:
             if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: A.moe2_POJ_withGlobe, iPhone: A.moe2_POJ_iPhone, needsGlobe: needsGlobe)
+                return resolveLayout(withGlobe: layouts.moe2_POJ_withGlobe, iPhone: layouts.moe2_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            return resolveLayout(withGlobe: A.moe2_TL_withGlobe, iPhone: A.moe2_TL_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.moe2_TL_withGlobe, iPhone: layouts.moe2_TL_iPhone, needsGlobe: needsGlobe)
 
         case .qwerty:
             if settings.inputMode == .poj {
-                return resolveLayout(withGlobe: A.qwerty_POJ_withGlobe, iPhone: A.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
+                return resolveLayout(withGlobe: layouts.qwerty_POJ_withGlobe, iPhone: layouts.qwerty_POJ_iPhone, needsGlobe: needsGlobe)
             }
-            return resolveLayout(withGlobe: A.qwerty_TL_withGlobe, iPhone: A.qwerty_TL_iPhone, needsGlobe: needsGlobe)
+            return resolveLayout(withGlobe: layouts.qwerty_TL_withGlobe, iPhone: layouts.qwerty_TL_iPhone, needsGlobe: needsGlobe)
         }
     }
 }

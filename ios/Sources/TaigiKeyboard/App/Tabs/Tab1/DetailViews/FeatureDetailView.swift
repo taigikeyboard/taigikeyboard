@@ -19,13 +19,13 @@ struct FeatureDetailView: View {
                 if case let .link(linkText, url) = paragraph.attachment {
                     Section {
                         Link(destination: URL(string: url)!) {
-                            Label(linkText.asString, systemImage: "arrow.up.right.square")
+                            Label(linkText, systemImage: "arrow.up.right.square")
                         }
                     }
                 }
             }
         }
-        .navigationTitle(feature.title.asString)
+        .navigationTitle(feature.title)
         .navigationBarTitleDisplayMode(.large)
     }
 
@@ -54,7 +54,7 @@ struct FeatureDetailView: View {
     }
 
     private func paragraphText(_ paragraph: FeatureParagraph) -> some View {
-        Text(paragraph.text.asString)
+        Text(paragraph.text)
             .lineSpacing(6)
             .fixedSize(horizontal: false, vertical: true)
     }

@@ -116,7 +116,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 | File | Purpose |
 |------|---------|
-| `LocalizedText.swift` / `.kt` | Core structure |
+| `LocalizedText.kt` | Core structure (Android only) |
 | `Tab1Texts.swift` / `.kt` | Tab1 text |
 | `Tab2Texts.swift` / `.kt` | Tab2 text |
 | `Tab3Texts.swift` / `.kt` | Tab3 text |
@@ -178,7 +178,7 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 |-----------|------|
 | Tab container | `ContentView.swift` |
 | Theme colors | KeyboardKit adaptive colors + `SharedSettings.colorSettings` |
-| Localization | `LocalizedText.swift` |
+| Localization | `CommonTexts.swift`, `Tab*Texts.swift` |
 | Image assets | `Assets.xcassets/` |
 
 ### Android

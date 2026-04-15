@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
+// Sub-screen for selecting the active input mode (POJ / TL / English / TPS).
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -20,34 +22,38 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 
+// Shared input mode key→label pairs, used by InputModeScreen and InputSettingsScreen
+val inputModeOptions =
+    listOf(
+        "poj" to Tab4Texts.pojMode,
+        "tl" to Tab4Texts.tlMode,
+        "english" to Tab4Texts.englishMode,
+        "tps" to Tab4Texts.tpsMode,
+    )
+
+fun inputModeDisplayName(mode: String): String = inputModeOptions.firstOrNull { it.first == mode }?.second ?: Tab4Texts.tlMode
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InputModeScreen(
-    languageManager: LanguageManager,
     selectedMode: String,
     onModeSelected: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    val language by languageManager.currentLanguageFlow.collectAsState()
-
     BackHandler(onBack = onBack)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(languageManager.text(Tab4Texts.inputMode)) },
+                title = { Text(Tab4Texts.inputMode) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -66,16 +72,8 @@ fun InputModeScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            val options =
-                listOf(
-                    "poj" to Tab4Texts.pojMode,
-                    "tl" to Tab4Texts.tlMode,
-                    "english" to Tab4Texts.englishMode,
-                    "tps" to Tab4Texts.tpsMode,
-                )
-
             SettingsCard {
-                options.forEachIndexed { index, (value, text) ->
+                inputModeOptions.forEachIndexed { index, (value, text) ->
                     Row(
                         modifier =
                             Modifier
@@ -86,7 +84,7 @@ fun InputModeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(text),
+                            text = text,
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
@@ -100,7 +98,7 @@ fun InputModeScreen(
                             )
                         }
                     }
-                    if (index < options.lastIndex) {
+                    if (index < inputModeOptions.lastIndex) {
                         SettingsDivider()
                     }
                 }

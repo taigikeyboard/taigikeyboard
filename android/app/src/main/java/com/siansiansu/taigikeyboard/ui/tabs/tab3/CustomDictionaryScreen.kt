@@ -19,28 +19,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -53,24 +43,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.LanguageManager
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
+import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.LoadingRow
 import com.siansiansu.taigikeyboard.ui.components.MenuBook
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
@@ -78,19 +65,19 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
+private const val DISPLAY_LIMIT = 100
+
+// Custom dictionary management — add, edit, import/export, and delete entries
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomDictionaryScreen(
-    languageManager: LanguageManager,
     prefs: PrefHelper,
     onNavigateBack: () -> Unit,
 ) {
@@ -108,7 +95,7 @@ fun CustomDictionaryScreen(
 
     val filteredEntries =
         if (filterText.isEmpty()) {
-            entries.take(100)
+            entries.take(DISPLAY_LIMIT)
         } else {
             val query = filterText.lowercase()
             entries.filter {
@@ -137,7 +124,7 @@ fun CustomDictionaryScreen(
                     val result = CustomDictionaryService.importFromFile(context, uri)
                     resultMessage =
                         String.format(
-                            languageManager.text(Tab3Texts.importResult),
+                            Tab3Texts.importResult,
                             result.imported,
                             result.skipped,
                         )
@@ -146,10 +133,10 @@ fun CustomDictionaryScreen(
                 } catch (e: Exception) {
                     resultMessage =
                         when {
-                            e.message == "fileTooLarge" -> languageManager.text(Tab3Texts.fileTooLarge)
-                            e.message == "tooManyEntries" -> languageManager.text(Tab3Texts.tooManyEntries)
-                            e.message?.contains("格式") == true -> languageManager.text(Tab3Texts.invalidCSVFormat)
-                            else -> e.localizedMessage ?: languageManager.text(CommonTexts.importFailed)
+                            e.message == "fileTooLarge" -> Tab3Texts.fileTooLarge
+                            e.message == "tooManyEntries" -> Tab3Texts.tooManyEntries
+                            e.message?.contains("格式") == true -> Tab3Texts.invalidCSVFormat
+                            else -> e.localizedMessage ?: CommonTexts.importFailed
                         }
                     showResultDialog = true
                 } finally {
@@ -170,10 +157,10 @@ fun CustomDictionaryScreen(
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         outputStream.write(csv.toByteArray(Charsets.UTF_8))
                     }
-                    resultMessage = languageManager.text(Tab3Texts.exportSuccess)
+                    resultMessage = Tab3Texts.exportSuccess
                     showResultDialog = true
                 } catch (e: Exception) {
-                    resultMessage = e.localizedMessage ?: languageManager.text(CommonTexts.exportFailed)
+                    resultMessage = e.localizedMessage ?: CommonTexts.exportFailed
                     showResultDialog = true
                 }
             }
@@ -184,7 +171,7 @@ fun CustomDictionaryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = languageManager.text(Tab3Texts.customDictionary),
+                        text = Tab3Texts.customDictionary,
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -226,9 +213,9 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(8.dp))
                     SettingsCard {
                         SwitchRow(
-                            label = languageManager.text(Tab3Texts.customDictEnabled),
+                            label = Tab3Texts.customDictEnabled,
                             checked = prefs.customDictEnabled,
-                            infoText = languageManager.text(Tab3Texts.customDictEnabledInfo),
+                            infoText = Tab3Texts.customDictEnabledInfo,
                             onCheckedChange = { prefs.customDictEnabled = it },
                         )
                     }
@@ -238,7 +225,7 @@ fun CustomDictionaryScreen(
                 item {
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        text = languageManager.text(Tab3Texts.importExportTitle),
+                        text = Tab3Texts.importExportTitle,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         style = MaterialTheme.typography.titleMedium,
@@ -257,14 +244,14 @@ fun CustomDictionaryScreen(
                             contentScale = ContentScale.FillWidth,
                         )
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictDescription),
+                            text = Tab3Texts.customDictDescription,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                             style = MaterialTheme.typography.bodyLarge,
                         )
                         SettingsDivider()
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.exportCSV),
+                            label = Tab3Texts.exportCSV,
                             onClick = {
                                 if (!isImporting) {
                                     val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -279,7 +266,7 @@ fun CustomDictionaryScreen(
                             LoadingRow()
                         } else {
                             ActionRow(
-                                label = languageManager.text(Tab3Texts.importCSV),
+                                label = Tab3Texts.importCSV,
                                 onClick = { importLauncher.launch(arrayOf("text/*")) },
                                 icon = Icons.Outlined.FileDownload,
                                 textColor = MaterialTheme.colorScheme.primary,
@@ -293,7 +280,7 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         ActionRow(
-                            label = languageManager.text(Tab3Texts.deleteAll),
+                            label = Tab3Texts.deleteAll,
                             onClick = { if (!isImporting) showDeleteAllDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
@@ -305,7 +292,7 @@ fun CustomDictionaryScreen(
                     Spacer(Modifier.height(16.dp))
                     SettingsCard {
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictPrivacyWarning),
+                            text = Tab3Texts.customDictPrivacyWarning,
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -321,12 +308,12 @@ fun CustomDictionaryScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = languageManager.text(Tab3Texts.customDictionary),
+                            text = Tab3Texts.customDictionary,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Spacer(Modifier.width(6.dp))
-                        SettingInfoButton(description = languageManager.text(Tab3Texts.filterHint))
+                        SettingInfoButton(description = Tab3Texts.filterHint)
                     }
                 }
 
@@ -348,7 +335,7 @@ fun CustomDictionaryScreen(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Text(
-                                    text = languageManager.text(Tab3Texts.customDictEmpty),
+                                    text = Tab3Texts.customDictEmpty,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
@@ -359,7 +346,7 @@ fun CustomDictionaryScreen(
                     item {
                         SettingsCard {
                             Text(
-                                text = languageManager.text(Tab3Texts.noResults),
+                                text = Tab3Texts.noResults,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -402,7 +389,7 @@ fun CustomDictionaryScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
-                                    contentDescription = languageManager.text(Tab3Texts.delete),
+                                    contentDescription = Tab3Texts.delete,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -420,55 +407,17 @@ fun CustomDictionaryScreen(
             }
 
             // Filter (anchored at bottom)
-            SettingsCard(
-                modifier =
-                    Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 8.dp, bottom = 8.dp),
-            ) {
-                OutlinedTextField(
-                    value = filterText,
-                    onValueChange = { filterText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(languageManager.text(Tab3Texts.searchPlaceholder))
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    trailingIcon = {
-                        if (filterText.isNotEmpty()) {
-                            IconButton(onClick = { filterText = "" }) {
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    },
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true,
-                )
-            }
+            FilterSearchBar(
+                value = filterText,
+                onValueChange = { filterText = it },
+                placeholder = Tab3Texts.searchPlaceholder,
+            )
         }
     }
 
     // Edit/Add dialog
     if (showEditDialog) {
         EditEntryDialog(
-            languageManager = languageManager,
             entry = editingEntry,
             onDismiss = { showEditDialog = false },
             onSave = { entry ->
@@ -484,10 +433,10 @@ fun CustomDictionaryScreen(
     // Delete all confirmation
     if (showDeleteAllDialog) {
         ConfirmationDialog(
-            title = languageManager.text(Tab3Texts.deleteAll),
-            message = languageManager.text(Tab3Texts.deleteAllMessage),
-            confirmLabel = languageManager.text(Tab3Texts.clear),
-            dismissLabel = languageManager.text(CommonTexts.cancel),
+            title = Tab3Texts.deleteAll,
+            message = Tab3Texts.deleteAllMessage,
+            confirmLabel = Tab3Texts.clear,
+            dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showDeleteAllDialog = false
                 scope.launch {
@@ -503,73 +452,8 @@ fun CustomDictionaryScreen(
     if (showResultDialog) {
         ResultDialog(
             message = resultMessage,
-            confirmLabel = languageManager.text(Tab3Texts.ok),
+            confirmLabel = CommonTexts.ok,
             onDismiss = { showResultDialog = false },
         )
     }
-}
-
-@Composable
-private fun EditEntryDialog(
-    languageManager: LanguageManager,
-    entry: CustomDictionaryService.Entry?,
-    onDismiss: () -> Unit,
-    onSave: (CustomDictionaryService.Entry) -> Unit,
-) {
-    var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
-    var hanzi by remember(entry) { mutableStateOf(entry?.hanzi ?: "") }
-    val isEditing = entry != null
-    val canSave = roman.isNotBlank() && hanzi.isNotBlank()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                languageManager.text(
-                    if (isEditing) Tab3Texts.editEntry else Tab3Texts.addEntry,
-                ),
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = roman,
-                    onValueChange = { roman = it },
-                    label = { Text(languageManager.text(Tab3Texts.romanLabel)) },
-                    placeholder = { Text(languageManager.text(Tab3Texts.romanPlaceholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = hanzi,
-                    onValueChange = { hanzi = it },
-                    label = { Text(languageManager.text(Tab3Texts.hanziLabel)) },
-                    placeholder = { Text(languageManager.text(Tab3Texts.hanziPlaceholder)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val saved =
-                        CustomDictionaryService.Entry(
-                            id = entry?.id ?: UUID.randomUUID().toString(),
-                            roman = roman.trim(),
-                            hanzi = hanzi.trim(),
-                        )
-                    onSave(saved)
-                },
-                enabled = canSave,
-            ) {
-                Text(languageManager.text(Tab3Texts.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(languageManager.text(CommonTexts.cancel))
-            }
-        },
-    )
 }
