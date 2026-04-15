@@ -109,9 +109,9 @@ internal fun buildContentItems(
 
 internal fun getTextByKey(key: String): String? =
     when (key) {
-        "contact_us" -> Tab1Texts.contactUs
-        "feedback_email" -> Tab1Texts.emailContact
-        "version_history" -> Tab1Texts.versionHistory
+        ContentType.KEY_CONTACT_US -> Tab1Texts.contactUs
+        ContentType.KEY_FEEDBACK_EMAIL -> Tab1Texts.emailContact
+        ContentType.KEY_VERSION_HISTORY -> Tab1Texts.versionHistory
         else -> null
     }
 

@@ -11,11 +11,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab1.SetupGuideScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
-/**
- * Setup guide page
- * Shared between Tab1 sub-page and full-screen mode (first launch)
- * Controlled by isFullScreen parameter
- */
+// Setup guide for enabling the keyboard — shared between Tab1 sub-page and first-launch full-screen mode
 class SetupGuideActivity : ComponentActivity() {
     companion object {
         const val EXTRA_IS_FULL_SCREEN = "extra_is_full_screen"

@@ -8,6 +8,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab2.AppearanceSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
+// Keyboard appearance and font settings
 class AppearanceSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

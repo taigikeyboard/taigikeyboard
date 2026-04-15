@@ -11,9 +11,10 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
+// Viewer for user frequency and word association data
 class FrequentWordsActivity : ComponentActivity() {
     companion object {
-        private const val EXTRA_TYPE = "type"
+        private const val EXTRA_TYPE = "extra_type"
         const val TYPE_FREQUENCY = "frequency"
         const val TYPE_ASSOCIATION = "association"
 
