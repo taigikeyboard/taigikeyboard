@@ -73,30 +73,18 @@ fun InputSettingsScreen(
     val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
-    // Force recomposition when resetCounter changes (after settings reset)
-    val currentInputMode = remember(resetCounter) { prefs.inputMode }
-    val currentOutputBoth = remember(resetCounter) { prefs.outputBothScripts }
-    val currentAutoCap = remember(resetCounter) { prefs.autoCapitalizationEnabled }
-    val currentAutoSpace = remember(resetCounter) { prefs.isAutoSpaceEnabled }
-    val currentDoubleOO = remember(resetCounter) { prefs.enableDoubleTapOO }
-    val currentDoubleNN = remember(resetCounter) { prefs.enableDoubleTapNN }
-
-    var inputMode by remember(currentInputMode) { mutableStateOf(currentInputMode) }
-    var outputBoth by remember(currentOutputBoth) { mutableStateOf(currentOutputBoth) }
-    var autoCap by remember(currentAutoCap) { mutableStateOf(currentAutoCap) }
-    var autoSpace by remember(currentAutoSpace) { mutableStateOf(currentAutoSpace) }
-    var doubleOO by remember(currentDoubleOO) { mutableStateOf(currentDoubleOO) }
-    var doubleNN by remember(currentDoubleNN) { mutableStateOf(currentDoubleNN) }
-    val currentToolbarAutoCollapse = remember(resetCounter) { prefs.isToolbarAutoCollapse }
-    var toolbarAutoCollapse by remember(currentToolbarAutoCollapse) { mutableStateOf(currentToolbarAutoCollapse) }
-    val currentGlobeKey = remember(resetCounter) { prefs.isGlobeKeyEnabled }
-    var isGlobeKeyEnabled by remember(currentGlobeKey) { mutableStateOf(currentGlobeKey) }
-    val currentSoundFeedback = remember(resetCounter) { prefs.isSoundFeedbackEnabled }
-    var soundFeedback by remember(currentSoundFeedback) { mutableStateOf(currentSoundFeedback) }
-    val currentVibrationFeedback = remember(resetCounter) { prefs.isVibrationFeedbackEnabled }
-    var vibrationFeedback by remember(currentVibrationFeedback) { mutableStateOf(currentVibrationFeedback) }
-    val currentTpsOrMapsToER = remember(resetCounter) { prefs.tpsOrMapsToER }
-    var tpsOrMapsToER by remember(currentTpsOrMapsToER) { mutableStateOf(currentTpsOrMapsToER) }
+    // Each state re-reads from prefs when resetCounter changes (after settings reset)
+    var inputMode by remember(resetCounter) { mutableStateOf(prefs.inputMode) }
+    var outputBoth by remember(resetCounter) { mutableStateOf(prefs.outputBothScripts) }
+    var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
+    var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
+    var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
+    var doubleNN by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapNN) }
+    var toolbarAutoCollapse by remember(resetCounter) { mutableStateOf(prefs.isToolbarAutoCollapse) }
+    var isGlobeKeyEnabled by remember(resetCounter) { mutableStateOf(prefs.isGlobeKeyEnabled) }
+    var soundFeedback by remember(resetCounter) { mutableStateOf(prefs.isSoundFeedbackEnabled) }
+    var vibrationFeedback by remember(resetCounter) { mutableStateOf(prefs.isVibrationFeedbackEnabled) }
+    var tpsOrMapsToER by remember(resetCounter) { mutableStateOf(prefs.tpsOrMapsToER) }
 
     val features = remember { FeatureContentLoader.loadFeatures(context) }
 

@@ -23,20 +23,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -49,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -64,6 +57,7 @@ import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
+import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.LoadingRow
 import com.siansiansu.taigikeyboard.ui.components.MenuBook
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
@@ -77,7 +71,6 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 private const val DISPLAY_LIMIT = 100
 
@@ -414,48 +407,11 @@ fun CustomDictionaryScreen(
             }
 
             // Filter (anchored at bottom)
-            SettingsCard(
-                modifier =
-                    Modifier
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 8.dp, bottom = 8.dp),
-            ) {
-                OutlinedTextField(
-                    value = filterText,
-                    onValueChange = { filterText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(Tab3Texts.searchPlaceholder)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    trailingIcon = {
-                        if (filterText.isNotEmpty()) {
-                            IconButton(onClick = { filterText = "" }) {
-                                Icon(
-                                    Icons.Default.Clear,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    },
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        ),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true,
-                )
-            }
+            FilterSearchBar(
+                value = filterText,
+                onValueChange = { filterText = it },
+                placeholder = Tab3Texts.searchPlaceholder,
+            )
         }
     }
 
@@ -500,66 +456,4 @@ fun CustomDictionaryScreen(
             onDismiss = { showResultDialog = false },
         )
     }
-}
-
-@Composable
-private fun EditEntryDialog(
-    entry: CustomDictionaryService.Entry?,
-    onDismiss: () -> Unit,
-    onSave: (CustomDictionaryService.Entry) -> Unit,
-) {
-    var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
-    var hanzi by remember(entry) { mutableStateOf(entry?.hanzi ?: "") }
-    val isEditing = entry != null
-    val canSave = roman.isNotBlank() && hanzi.isNotBlank()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (isEditing) Tab3Texts.editEntry else Tab3Texts.addEntry,
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = roman,
-                    onValueChange = { roman = it },
-                    label = { Text(Tab3Texts.romanLabel) },
-                    placeholder = { Text(Tab3Texts.romanPlaceholder) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = hanzi,
-                    onValueChange = { hanzi = it },
-                    label = { Text(Tab3Texts.hanziLabel) },
-                    placeholder = { Text(Tab3Texts.hanziPlaceholder) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val saved =
-                        CustomDictionaryService.Entry(
-                            id = entry?.id ?: UUID.randomUUID().toString(),
-                            roman = roman.trim(),
-                            hanzi = hanzi.trim(),
-                        )
-                    onSave(saved)
-                },
-                enabled = canSave,
-            ) {
-                Text(Tab3Texts.save)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(CommonTexts.cancel)
-            }
-        },
-    )
 }

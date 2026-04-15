@@ -75,33 +75,12 @@ fun AppearanceSettingsScreen(
         .observeKeyboardLayoutType()
         .collectAsState(initial = prefs.keyboardLayoutType)
 
-    @Composable
-    fun ColorSettingRow(
-        label: String,
-        currentColor: Int?,
-        onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
-    ) {
-        ColorRow(
-            label = label,
-            color = currentColor,
-            onColorClick = {
-                colorPickerTarget =
-                    ColorPickerTarget(
-                        label = label,
-                        currentColor = currentColor,
-                        onColorSelected = { newColor ->
-                            colorSettings = onUpdate(colorSettings, newColor)
-                            prefs.colorSettings = colorSettings.toJson()
-                        },
-                    )
-            },
-            onReset = {
-                colorSettings = onUpdate(colorSettings, null)
-                prefs.colorSettings = colorSettings.toJson()
-                previewKey++
-            },
-        )
+    val onColorSettingsChanged: (KeyboardColorSettings) -> Unit = { updated ->
+        colorSettings = updated
+        prefs.colorSettings = updated.toJson()
     }
+    val onPickerOpen: (ColorPickerTarget) -> Unit = { colorPickerTarget = it }
+    val onPreviewRefresh: () -> Unit = { previewKey++ }
 
     if (showFontPicker) {
         FontPickerContent(
@@ -191,9 +170,14 @@ fun AppearanceSettingsScreen(
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
                             ColorSettingRow(
-                                Tab2Texts.colorKeyboardBackground,
-                                colorSettings.backgroundColor,
-                            ) { settings, color -> settings.copy(backgroundColor = color) }
+                                label = Tab2Texts.colorKeyboardBackground,
+                                currentColor = colorSettings.backgroundColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(backgroundColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
                                 label = Tab2Texts.keyHeight,
@@ -217,19 +201,34 @@ fun AppearanceSettingsScreen(
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
                             ColorSettingRow(
-                                Tab2Texts.colorKeyText,
-                                colorSettings.keyTextColor,
-                            ) { settings, color -> settings.copy(keyTextColor = color) }
+                                label = Tab2Texts.colorKeyText,
+                                currentColor = colorSettings.keyTextColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(keyTextColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
-                                Tab2Texts.colorNormalKeyFill,
-                                colorSettings.normalKeyFillColor,
-                            ) { settings, color -> settings.copy(normalKeyFillColor = color) }
+                                label = Tab2Texts.colorNormalKeyFill,
+                                currentColor = colorSettings.normalKeyFillColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(normalKeyFillColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
-                                Tab2Texts.colorSpecialKeyFill,
-                                colorSettings.specialKeyFillColor,
-                            ) { settings, color -> settings.copy(specialKeyFillColor = color) }
+                                label = Tab2Texts.colorSpecialKeyFill,
+                                currentColor = colorSettings.specialKeyFillColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(specialKeyFillColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
                                 label = Tab2Texts.keyFontSize,
@@ -281,14 +280,24 @@ fun AppearanceSettingsScreen(
                     SettingsCard {
                         Column(modifier = Modifier.padding(24.dp)) {
                             ColorSettingRow(
-                                Tab2Texts.colorCandidateText,
-                                colorSettings.candidateTextColor,
-                            ) { settings, color -> settings.copy(candidateTextColor = color) }
+                                label = Tab2Texts.colorCandidateText,
+                                currentColor = colorSettings.candidateTextColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(candidateTextColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
-                                Tab2Texts.colorCandidateBackground,
-                                colorSettings.candidateBackgroundColor,
-                            ) { settings, color -> settings.copy(candidateBackgroundColor = color) }
+                                label = Tab2Texts.colorCandidateBackground,
+                                currentColor = colorSettings.candidateBackgroundColor,
+                                colorSettings = colorSettings,
+                                onUpdate = { s, c -> s.copy(candidateBackgroundColor = c) },
+                                onColorSettingsChanged = onColorSettingsChanged,
+                                onPickerOpen = onPickerOpen,
+                                onPreviewRefresh = onPreviewRefresh,
+                            )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
                                 label = Tab2Texts.candidateTextSize,
@@ -358,6 +367,37 @@ fun AppearanceSettingsScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ColorSettingRow(
+    label: String,
+    currentColor: Int?,
+    colorSettings: KeyboardColorSettings,
+    onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
+    onColorSettingsChanged: (KeyboardColorSettings) -> Unit,
+    onPickerOpen: (ColorPickerTarget) -> Unit,
+    onPreviewRefresh: () -> Unit,
+) {
+    ColorRow(
+        label = label,
+        color = currentColor,
+        onColorClick = {
+            onPickerOpen(
+                ColorPickerTarget(
+                    label = label,
+                    currentColor = currentColor,
+                    onColorSelected = { newColor ->
+                        onColorSettingsChanged(onUpdate(colorSettings, newColor))
+                    },
+                ),
+            )
+        },
+        onReset = {
+            onColorSettingsChanged(onUpdate(colorSettings, null))
+            onPreviewRefresh()
+        },
+    )
 }
 
 private data class ColorPickerTarget(
