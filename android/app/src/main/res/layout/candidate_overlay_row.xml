@@ -17,6 +17,6 @@
         android:id="@+id/row_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#4D000000" />
+        android:background="?semiTransparentColor" />
 
 </LinearLayout>
