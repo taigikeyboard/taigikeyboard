@@ -2,10 +2,10 @@ package com.siansiansu.taigikeyboard.ui.tabs.tab1
 
 import androidx.annotation.DrawableRes
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.content.FeatureContent
+import com.siansiansu.taigikeyboard.content.ParagraphAttachment
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
-import com.siansiansu.taigikeyboard.model.ContentType
-import com.siansiansu.taigikeyboard.model.FeatureContent
-import com.siansiansu.taigikeyboard.model.ParagraphAttachment
 import com.siansiansu.taigikeyboard.util.resolveDrawableResId
 
 // Detail screen data model and content builders for feature/FAQ/feedback/version pages

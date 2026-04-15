@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 import android.content.Context
 import org.json.JSONArray

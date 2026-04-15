@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab1Texts

@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 // Tab1 content models (parsed from tab1-features.json / tab1-faq.json)
 

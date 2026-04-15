@@ -6,8 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
+import com.siansiansu.taigikeyboard.content.CopyrightDataSource
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.model.CopyrightDataSource
 import com.siansiansu.taigikeyboard.ui.tabs.tab1.CopyrightScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.FontUtils
