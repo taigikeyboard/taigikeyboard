@@ -28,7 +28,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
-import com.siansiansu.taigikeyboard.util.PackageManagerUtils
+import com.siansiansu.taigikeyboard.util.LauncherIconUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
 
@@ -215,9 +215,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
     private fun updateLauncherIconStatus() {
         if (prefs.showAppIcon) {
-            PackageManagerUtils.showAppIcon(this)
+            LauncherIconUtils.showAppIcon(this)
         } else {
-            PackageManagerUtils.hideAppIcon(this)
+            LauncherIconUtils.hideAppIcon(this)
         }
     }
 

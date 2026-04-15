@@ -1,38 +1,19 @@
-
 package com.siansiansu.taigikeyboard.util
 
 import com.squareup.moshi.FromJson
 import com.squareup.moshi.ToJson
-import java.util.*
+import java.util.Locale
 
+// Converts locale strings (both underscore and hyphen formats) to Locale objects
 object LocaleUtils {
-    private val DELIMITER = """[_-]""".toRegex()
+    fun stringToLocale(string: String): Locale = Locale.forLanguageTag(string.replace('_', '-'))
 
-    fun stringToLocale(string: String): Locale {
-        return when {
-            string.contains(DELIMITER) -> {
-                val lc = string.split(DELIMITER)
-                Locale.Builder()
-                    .setLanguage(lc[0])
-                    .setRegion(lc[1])
-                    .build()
-            }
-            else -> {
-                Locale.Builder()
-                    .setLanguage(string)
-                    .build()
-            }
-        }
-    }
-
-    class JsonAdapter() {
+    // Moshi needs a custom adapter because Locale has no built-in JSON mapping
+    class JsonAdapter {
         @FromJson
-        fun fromJson(raw: String): Locale {
-            return stringToLocale(raw)
-        }
+        fun fromJson(raw: String): Locale = stringToLocale(raw)
+
         @ToJson
-        fun toJson(raw: Locale): String {
-            return raw.toString()
-        }
+        fun toJson(raw: Locale): String = raw.toString()
     }
 }

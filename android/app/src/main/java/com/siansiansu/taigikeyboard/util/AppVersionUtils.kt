@@ -1,24 +1,28 @@
-
 package com.siansiansu.taigikeyboard.util
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 
+// Reads and tracks app version info for install/last-use preferences
 object AppVersionUtils {
     const val DEFAULT_VERSION_RAW: String = "0.0.0"
 
-    fun getRawVersionName(context: Context): String {
-        return try {
+    @Suppress("DEPRECATION")
+    fun getRawVersionName(context: Context): String =
+        try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "undefined"
         } catch (e: Exception) {
             "undefined"
         }
-    }
 
-    fun updateVersionOnInstallAndLastUse(context: Context, prefs: PrefHelper) {
+    fun updateVersionOnInstallAndLastUse(
+        context: Context,
+        prefs: PrefHelper,
+    ) {
+        val currentVersion = getRawVersionName(context)
         if (prefs.versionOnInstall == DEFAULT_VERSION_RAW) {
-            prefs.versionOnInstall = getRawVersionName(context)
+            prefs.versionOnInstall = currentVersion
         }
-        prefs.versionLastUse = getRawVersionName(context)
+        prefs.versionLastUse = currentVersion
     }
 }
