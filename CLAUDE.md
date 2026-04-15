@@ -50,7 +50,9 @@ taigikeyboard/
 
 ## Communication
 
-- Think and write in English. Use Taiwanese Mandarin only for proper nouns or clarification
+- Reply in **Taiwanese Mandarin** (台灣華語)
+- Concise, bullet-point, key points only — no filler words, minimize token usage
+- Documentation and code comments remain in **English**
 - Analyze problems first, provide solution options for user to choose
 - Explain scope of impact before making changes
 
