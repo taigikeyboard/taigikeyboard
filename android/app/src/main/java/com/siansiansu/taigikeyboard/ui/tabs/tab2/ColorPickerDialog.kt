@@ -229,19 +229,15 @@ fun ColorPickerDialog(
                     value = hexInput,
                     onValueChange = { input ->
                         hexInput = input
-                        try {
-                            val hex = input.trim()
-                            val parsed =
-                                AndroidColor.parseColor(
-                                    if (hex.startsWith("#")) hex else "#$hex",
-                                )
+                        val hex = input.trim().removePrefix("#")
+                        if (hex.length == 6 && hex.all { it.digitToIntOrNull(16) != null }) {
+                            val parsed = AndroidColor.parseColor("#$hex")
                             val hsv = floatArrayOf(0f, 0f, 0f)
                             AndroidColor.colorToHSV(parsed, hsv)
                             hue = hsv[0]
                             saturation = hsv[1]
                             brightness = hsv[2]
                             onColorSelected(currentColorInt())
-                        } catch (_: Exception) {
                         }
                     },
                     label = { Text("#RRGGBB") },

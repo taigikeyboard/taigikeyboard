@@ -35,10 +35,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -85,7 +83,9 @@ fun LayoutScreen(
     prefs: PrefHelper,
     onAppearanceSettings: () -> Unit,
 ) {
-    var selectedLayout by remember { mutableStateOf(prefs.keyboardLayoutType) }
+    val selectedLayout by prefs
+        .observeKeyboardLayoutType()
+        .collectAsState(initial = prefs.keyboardLayoutType)
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -128,55 +128,59 @@ fun LayoutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            SectionHeader(Tab2Texts.romanizationKeyboard)
-
-            Row(
-                modifier =
-                    Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp),
-            ) {
-                romanizationLayouts.forEachIndexed { index, layout ->
-                    LayoutCard(
-                        label = layout.label,
-                        previewRes = layout.previewRes,
-                        isSelected = selectedLayout == layout.key,
-                        onClick = {
-                            if (selectedLayout != layout.key) {
-                                selectedLayout = layout.key
-                                prefs.keyboardLayoutType = layout.key
-                            }
-                        },
-                    )
-                    if (index < romanizationLayouts.size - 1) {
-                        Spacer(Modifier.width(12.dp))
-                    }
-                }
-            }
+            LayoutSection(
+                title = Tab2Texts.romanizationKeyboard,
+                layouts = romanizationLayouts,
+                selectedLayout = selectedLayout,
+                onLayoutSelected = { prefs.keyboardLayoutType = it },
+                horizontalScroll = true,
+            )
 
             Spacer(Modifier.height(24.dp))
 
-            SectionHeader(Tab2Texts.taigiPhonetic)
+            LayoutSection(
+                title = Tab2Texts.taigiPhonetic,
+                layouts = phoneticLayouts,
+                selectedLayout = selectedLayout,
+                onLayoutSelected = { prefs.keyboardLayoutType = it },
+            )
+        }
+    }
+}
 
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
-            ) {
-                phoneticLayouts.forEachIndexed { index, layout ->
-                    LayoutCard(
-                        label = layout.label,
-                        previewRes = layout.previewRes,
-                        isSelected = selectedLayout == layout.key,
-                        onClick = {
-                            if (selectedLayout != layout.key) {
-                                selectedLayout = layout.key
-                                prefs.keyboardLayoutType = layout.key
-                            }
-                        },
-                    )
-                    if (index < phoneticLayouts.size - 1) {
-                        Spacer(Modifier.width(12.dp))
+@Composable
+private fun LayoutSection(
+    title: String,
+    layouts: List<LayoutOption>,
+    selectedLayout: String,
+    onLayoutSelected: (String) -> Unit,
+    horizontalScroll: Boolean = false,
+) {
+    SectionHeader(title)
+    val scrollModifier =
+        if (horizontalScroll) {
+            Modifier.horizontalScroll(rememberScrollState())
+        } else {
+            Modifier
+        }
+    Row(
+        modifier =
+            scrollModifier
+                .padding(horizontal = 20.dp),
+    ) {
+        layouts.forEachIndexed { index, layout ->
+            LayoutCard(
+                label = layout.label,
+                previewRes = layout.previewRes,
+                isSelected = selectedLayout == layout.key,
+                onClick = {
+                    if (selectedLayout != layout.key) {
+                        onLayoutSelected(layout.key)
                     }
-                }
+                },
+            )
+            if (index < layouts.size - 1) {
+                Spacer(Modifier.width(12.dp))
             }
         }
     }

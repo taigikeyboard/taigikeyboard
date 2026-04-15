@@ -317,7 +317,8 @@ fun AppearanceSettingsScreen(
                                 prefs.candidateTextSizeScale = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
                                 prefs.keyCornerRadius = PrefHelper.DEFAULT_KEY_CORNER_RADIUS
                                 prefs.keyBorderWidth = PrefHelper.DEFAULT_KEY_BORDER_WIDTH
-                                prefs.colorSettings = PrefHelper.DEFAULT_COLOR_SETTINGS
+                                colorSettings = KeyboardColorSettings()
+                                prefs.colorSettings = colorSettings.toJson()
                                 prefs.fontType = PrefHelper.DEFAULT_FONT_TYPE
                                 fontType = PrefHelper.DEFAULT_FONT_TYPE
                                 keyHeight = PrefHelper.DEFAULT_KEY_HEIGHT_SCALE
@@ -325,7 +326,6 @@ fun AppearanceSettingsScreen(
                                 candidateTextSize = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
                                 cornerRadius = PrefHelper.DEFAULT_KEY_CORNER_RADIUS
                                 borderWidth = PrefHelper.DEFAULT_KEY_BORDER_WIDTH
-                                colorSettings = KeyboardColorSettings()
                                 previewKey++
                                 onFontChanged()
                             },
