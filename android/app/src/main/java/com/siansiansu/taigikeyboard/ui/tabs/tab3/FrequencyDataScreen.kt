@@ -4,16 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -47,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
@@ -70,6 +66,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private const val DISPLAY_LIMIT = 100
+
+// Frequency data management — view, import/export, and clear word frequency records
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FrequencyDataScreen(
@@ -78,7 +77,6 @@ fun FrequencyDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val displayLimit = 100
 
     var allData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -89,7 +87,7 @@ fun FrequencyDataScreen(
 
     val filteredData =
         if (filterText.isEmpty()) {
-            allData.take(displayLimit)
+            allData.take(DISPLAY_LIMIT)
         } else {
             val query = filterText.lowercase()
             allData.filter { it.first.lowercase().contains(query) }
@@ -108,13 +106,13 @@ fun FrequencyDataScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val allData =
+                    val exportData =
                         withContext(Dispatchers.IO) {
                             UserFrequencyService.getAllFrequencies(context)
                         }
                     val csv =
                         buildString {
-                            for ((word, count) in allData) {
+                            for ((word, count) in exportData) {
                                 append("${CsvUtils.escape(word)},$count\n")
                             }
                         }
@@ -267,7 +265,7 @@ fun FrequencyDataScreen(
                     SettingsCard {
                         ActionRow(
                             label = Tab3Texts.clearAllFrequency,
-                            onClick = { showClearDialog = true },
+                            onClick = { if (!isImporting) showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
                     }

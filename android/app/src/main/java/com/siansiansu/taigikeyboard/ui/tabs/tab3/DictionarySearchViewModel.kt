@@ -19,14 +19,14 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel for dictionary search in Tab 3 (詞庫)
- */
+// ViewModel for dictionary search in Tab 3 (詞庫)
 class DictionarySearchViewModel(
     application: Application,
 ) : AndroidViewModel(application) {
     companion object {
         private const val TAG = "DictionarySearchVM"
+        private const val SEARCH_DEBOUNCE_MILLIS = 300L
+        private const val SEARCH_RESULT_LIMIT = 20
     }
 
     private val _searchText = MutableStateFlow("")
@@ -69,7 +69,7 @@ class DictionarySearchViewModel(
     private fun observeSearchText() {
         viewModelScope.launch {
             _searchText
-                .debounce(300L)
+                .debounce(SEARCH_DEBOUNCE_MILLIS)
                 .distinctUntilChanged()
                 .collect { query ->
                     val trimmed = query.trim()
@@ -93,7 +93,6 @@ class DictionarySearchViewModel(
                     else -> ToneConverterModels.InputMode.TL
                 }
 
-            // Detect CJK input and use hanzi search path
             val isCJK = query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }
 
             if (BuildConfig.DEBUG) {
@@ -105,14 +104,14 @@ class DictionarySearchViewModel(
                     LexiconService.searchByHanzi(
                         input = query,
                         inputMode = inputMode,
-                        limit = 20,
+                        limit = SEARCH_RESULT_LIMIT,
                         context = context,
                     )
                 } else {
                     LexiconService.searchWithSources(
                         input = query,
                         inputMode = inputMode,
-                        limit = 20,
+                        limit = SEARCH_RESULT_LIMIT,
                         context = context,
                     )
                 }
@@ -121,42 +120,7 @@ class DictionarySearchViewModel(
                 Log.d(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${searchResults.size} results")
             }
 
-            // Search custom dictionary for non-CJK input (matching iOS behavior)
-            val customResults =
-                if (isCJK) {
-                    emptyList()
-                } else {
-                    try {
-                        CustomDictionaryService.init(context)
-                        val isToneAware = query.any { it.isDigit() }
-                        val searchPrefix =
-                            if (isToneAware) {
-                                query.lowercase().replace("-", "").replace(" ", "")
-                            } else {
-                                CustomDictionaryService.generateNotone(query)
-                            }
-                        CustomDictionaryService
-                            .search(
-                                prefix = searchPrefix,
-                                isToneAware = isToneAware,
-                                limit = 20,
-                            ).map { entry ->
-                                DictionarySearchResult(
-                                    id = -2,
-                                    roman = entry.roman,
-                                    tl = entry.roman,
-                                    hanzi = entry.hanzi,
-                                    frequency = Int.MAX_VALUE,
-                                    sources = listOf(DictionarySource.CUSTOM),
-                                )
-                            }
-                    } catch (e: Exception) {
-                        if (BuildConfig.DEBUG) {
-                            Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
-                        }
-                        emptyList()
-                    }
-                }
+            val customResults = searchCustomDictionary(query, isCJK, context)
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[SEARCH] custom dictionary returned ${customResults.size} results")
@@ -168,7 +132,6 @@ class DictionarySearchViewModel(
                     compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }
                         .thenByDescending { it.frequency },
                 )
-            // Filter source tags to only show enabled dictionaries
             val enabledSources = buildEnabledSources()
             val filtered =
                 sorted.map { result ->
@@ -182,6 +145,45 @@ class DictionarySearchViewModel(
             }
             _results.value = emptyList()
             _isSearching.value = false
+        }
+    }
+
+    // Non-CJK custom dictionary search (matching iOS behavior)
+    private suspend fun searchCustomDictionary(
+        query: String,
+        isCJK: Boolean,
+        context: Application,
+    ): List<DictionarySearchResult> {
+        if (isCJK) return emptyList()
+        return try {
+            CustomDictionaryService.init(context)
+            val isToneAware = query.any { it.isDigit() }
+            val searchPrefix =
+                if (isToneAware) {
+                    query.lowercase().replace("-", "").replace(" ", "")
+                } else {
+                    CustomDictionaryService.generateNotone(query)
+                }
+            CustomDictionaryService
+                .search(
+                    prefix = searchPrefix,
+                    isToneAware = isToneAware,
+                    limit = SEARCH_RESULT_LIMIT,
+                ).map { entry ->
+                    DictionarySearchResult(
+                        id = -2,
+                        roman = entry.roman,
+                        tl = entry.roman,
+                        hanzi = entry.hanzi,
+                        frequency = Int.MAX_VALUE,
+                        sources = listOf(DictionarySource.CUSTOM),
+                    )
+                }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
+            }
+            emptyList()
         }
     }
 }

@@ -4,16 +4,13 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -69,6 +66,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private const val DISPLAY_LIMIT = 100
+
+// Association data management — view, import/export, and clear word association records
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssociationDataScreen(
@@ -77,7 +77,6 @@ fun AssociationDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val displayLimit = 100
 
     var allData by remember { mutableStateOf<List<NextWordService.AssociationEntry>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -88,7 +87,7 @@ fun AssociationDataScreen(
 
     val filteredData =
         if (filterText.isEmpty()) {
-            allData.take(displayLimit)
+            allData.take(DISPLAY_LIMIT)
         } else {
             val query = filterText.lowercase()
             allData.filter {
@@ -101,8 +100,7 @@ fun AssociationDataScreen(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val assoc = NextWordService.allAssociations(context)
-            allData = assoc
+            allData = NextWordService.allAssociations(context)
         }
     }
 
@@ -113,13 +111,13 @@ fun AssociationDataScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val allData =
+                    val exportData =
                         withContext(Dispatchers.IO) {
                             NextWordService.allAssociations(context)
                         }
                     val csv =
                         buildString {
-                            for (entry in allData) {
+                            for (entry in exportData) {
                                 append(
                                     "${CsvUtils.escape(
                                         entry.prevWord,
@@ -170,10 +168,8 @@ fun AssociationDataScreen(
                             skipped,
                         )
                     showResultDialog = true
-                    // Reload data
                     withContext(Dispatchers.IO) {
-                        val assoc = NextWordService.allAssociations(context)
-                        allData = assoc
+                        allData = NextWordService.allAssociations(context)
                     }
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: CommonTexts.importFailed
@@ -279,7 +275,7 @@ fun AssociationDataScreen(
                     SettingsCard {
                         ActionRow(
                             label = Tab3Texts.clearAllAssociation,
-                            onClick = { showClearDialog = true },
+                            onClick = { if (!isImporting) showClearDialog = true },
                             textColor = MaterialTheme.colorScheme.error,
                         )
                     }

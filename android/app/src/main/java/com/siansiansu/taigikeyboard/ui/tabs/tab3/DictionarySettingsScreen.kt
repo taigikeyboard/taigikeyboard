@@ -7,8 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,8 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,7 +53,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -68,56 +63,28 @@ import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
-import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 
-// Dictionary info data model
+private const val MAX_VISIBLE_SEARCH_RESULTS = 5
+private val SEARCH_RESULTS_MAX_HEIGHT = 200.dp
+
 private data class DictionaryInfo(
     val description: String,
-    val websiteURL: String? = null,
 )
 
-// Static dictionary info (used by DictionaryInfoSwitch rows)
 private object DictionaryInfoData {
-    val iTaigi =
-        DictionaryInfo(
-            description = "一个群眾編輯ê開放台語辭典",
-            websiteURL = "https://itaigi.tw/",
-        )
-    val taiwanJapan =
-        DictionaryInfo(
-            description = "日本時代小川尚義編纂ê台語辭典。",
-            websiteURL = "http://taigi.fhl.net/dict/",
-        )
-    val taiHua =
-        DictionaryInfo(
-            description = "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修",
-            websiteURL = null,
-        )
-    val taiwanPlant =
-        DictionaryInfo(
-            description = "日本時代佐佐木舜一整理ê台灣植物台語名。",
-            websiteURL = "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106",
-        )
-    val variant =
-        DictionaryInfo(
-            description = "依據教典資料標示台語異用字。",
-            websiteURL = null,
-        )
-    val khpoo =
-        DictionaryInfo(
-            description = "補充在地腔口差異",
-            websiteURL = null,
-        )
-    val khiin =
-        DictionaryInfo(
-            description = "「水台文」、「台字田」用字",
-            websiteURL = null,
-        )
+    val iTaigi = DictionaryInfo(description = "一个群眾編輯ê開放台語辭典")
+    val taiwanJapan = DictionaryInfo(description = "日本時代小川尚義編纂ê台語辭典。")
+    val taiHua = DictionaryInfo(description = "「台華線頂辭典」是鄭良偉教授提供資料、楊允言教授編修")
+    val taiwanPlant = DictionaryInfo(description = "日本時代佐佐木舜一整理ê台灣植物台語名。")
+    val variant = DictionaryInfo(description = "依據教典資料標示台語異用字。")
+    val khpoo = DictionaryInfo(description = "補充在地腔口差異")
+    val khiin = DictionaryInfo(description = "「水台文」、「台字田」用字")
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+// Dictionary settings screen — dictionary toggles, search, data management navigation
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DictionarySettingsScreen(
     prefs: PrefHelper,
@@ -205,7 +172,7 @@ fun DictionarySettingsScreen(
                 SectionHeader(Tab3Texts.moeSectionTitle)
 
                 SettingsCard {
-                    DictRowWithDescription(
+                    DictionaryRowWithDescription(
                         label = CommonTexts.moeDict,
                         checked = prefs.moeDictEnabled,
                         description = "提供臺灣台語搜尋及華語搜尋，可聆聽詞目和例句發音，方便學習。附有分類索引、部首筆劃索引及附錄。",
@@ -213,7 +180,7 @@ fun DictionarySettingsScreen(
                         onCheckedChange = { prefs.moeDictEnabled = it },
                     )
                     SettingsDivider()
-                    DictRowWithDescription(
+                    DictionaryRowWithDescription(
                         label = CommonTexts.newwordDict,
                         checked = prefs.newwordDictEnabled,
                         description = "台語台邀請專家學者，定期召開會議，討論新興詞彙的適當台語講法，建立詞庫予民眾查詢使用。",
@@ -221,7 +188,7 @@ fun DictionarySettingsScreen(
                         onCheckedChange = { prefs.newwordDictEnabled = it },
                     )
                     SettingsDivider()
-                    DictRowWithDescription(
+                    DictionaryRowWithDescription(
                         label = CommonTexts.sttiDict,
                         checked = prefs.sttiDictEnabled,
                         description = "於106 年起進行語文、數學、社會、自然科學、藝術、綜合活動、科技、健康與體育等8大領域學科術語之台語編譯。",
@@ -229,7 +196,7 @@ fun DictionarySettingsScreen(
                         onCheckedChange = { prefs.sttiDictEnabled = it },
                     )
                     SettingsDivider()
-                    DictRowWithDescription(
+                    DictionaryRowWithDescription(
                         label = CommonTexts.kunggeDict,
                         checked = prefs.kunggeDictEnabled,
                         description = "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項。",
@@ -303,7 +270,7 @@ fun DictionarySettingsScreen(
                         prefs.khpooDictEnabled = it
                     }
                     SettingsDivider()
-                    DictRowWithDescription(
+                    DictionaryRowWithDescription(
                         label = Tab3Texts.lkkDict,
                         checked = prefs.lkkDictEnabled,
                         description = "李江却台語文教基金會漢羅合用建議用字。",
@@ -334,9 +301,9 @@ fun DictionarySettingsScreen(
                                     Modifier
                                         .padding(horizontal = 20.dp)
                                         .padding(bottom = 8.dp)
-                                        .heightIn(max = 200.dp),
+                                        .heightIn(max = SEARCH_RESULTS_MAX_HEIGHT),
                             ) {
-                                val visible = searchResults.take(5)
+                                val visible = searchResults.take(MAX_VISIBLE_SEARCH_RESULTS)
                                 LazyColumn {
                                     itemsIndexed(visible) { index, result ->
                                         SearchResultRow(
@@ -379,7 +346,7 @@ fun DictionarySettingsScreen(
                                     }) {
                                         Icon(
                                             Icons.Default.Clear,
-                                            contentDescription = "Clear",
+                                            contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
@@ -402,7 +369,6 @@ fun DictionarySettingsScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SearchResultRow(
     result: DictionarySearchResult,
@@ -457,7 +423,7 @@ private fun SearchResultRow(
             if (!isExpanded) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_open_in_new),
-                    contentDescription = "Open",
+                    contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(AppStyle.smallIconSize),
                 )
@@ -522,7 +488,6 @@ private fun DictionaryInfoSwitch(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    var isChecked by remember(checked) { mutableStateOf(checked) }
     val contentAlpha = if (enabled) 1f else 0.38f
 
     Row(
@@ -542,26 +507,22 @@ private fun DictionaryInfoSwitch(
         SettingInfoButton(description = info.description)
         Spacer(modifier = Modifier.weight(1f))
         Switch(
-            checked = isChecked,
+            checked = checked,
             enabled = enabled,
-            onCheckedChange = {
-                isChecked = it
-                onCheckedChange(it)
-            },
+            onCheckedChange = onCheckedChange,
             colors = AppStyle.switchColors(),
         )
     }
 }
 
 @Composable
-private fun DictRowWithDescription(
+private fun DictionaryRowWithDescription(
     label: String,
     checked: Boolean,
     description: String,
     url: String,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    var isChecked by remember(checked) { mutableStateOf(checked) }
     val context = LocalContext.current
 
     Column(
@@ -584,27 +545,24 @@ private fun DictRowWithDescription(
                         }
                     },
             ) {
-                val linkBlue = MaterialTheme.colorScheme.primary
+                val linkColor = MaterialTheme.colorScheme.primary
                 Icon(
                     painter = painterResource(id = R.drawable.ic_open_in_new),
                     contentDescription = null,
                     modifier = Modifier.size(AppStyle.smallIconSize),
-                    tint = linkBlue,
+                    tint = linkColor,
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = label,
-                    color = linkBlue,
+                    color = linkColor,
                     style = MaterialTheme.typography.bodyLarge,
                 )
             }
             Spacer(modifier = Modifier.weight(1f))
             Switch(
-                checked = isChecked,
-                onCheckedChange = {
-                    isChecked = it
-                    onCheckedChange(it)
-                },
+                checked = checked,
+                onCheckedChange = onCheckedChange,
                 colors = AppStyle.switchColors(),
             )
         }
