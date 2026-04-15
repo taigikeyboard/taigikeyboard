@@ -29,9 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.content.CopyrightButton
+import com.siansiansu.taigikeyboard.content.CopyrightPage
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
-import com.siansiansu.taigikeyboard.model.CopyrightButton
-import com.siansiansu.taigikeyboard.model.CopyrightPage
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider

@@ -8,6 +8,7 @@ import android.net.Uri
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -245,7 +246,7 @@ object CustomDictionaryService {
             val entries = fetchAll()
             val sb = StringBuilder()
             for (entry in entries) {
-                sb.append("${csvEscape(entry.roman)},${csvEscape(entry.hanzi)}\n")
+                sb.append("${CsvUtils.escape(entry.roman)},${CsvUtils.escape(entry.hanzi)}\n")
             }
             sb.toString()
         }
@@ -448,7 +449,7 @@ object CustomDictionaryService {
             val line = lines[i].trim()
             if (line.isEmpty()) continue
 
-            val columns = parseCSVLine(line)
+            val columns = CsvUtils.parseLine(line)
             if (columns.size < 2) continue
 
             val roman = columns[0].trim()
@@ -460,38 +461,6 @@ object CustomDictionaryService {
 
         return entries
     }
-
-    private fun parseCSVLine(line: String): List<String> {
-        val fields = mutableListOf<String>()
-        val current = StringBuilder()
-        var inQuotes = false
-
-        for (char in line) {
-            when {
-                char == '"' -> {
-                    inQuotes = !inQuotes
-                }
-
-                char == ',' && !inQuotes -> {
-                    fields.add(current.toString())
-                    current.clear()
-                }
-
-                else -> {
-                    current.append(char)
-                }
-            }
-        }
-        fields.add(current.toString())
-        return fields
-    }
-
-    private fun csvEscape(field: String): String =
-        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
-            "\"${field.replace("\"", "\"\"")}\""
-        } else {
-            field
-        }
 
     // MARK: - DatabaseHelper
 

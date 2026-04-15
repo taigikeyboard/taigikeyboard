@@ -1,10 +1,7 @@
 <resources>
     <string name="app_name">Tâi-gí Khí-pôaⁿ</string>
-    <string name="app_header_title">Android 台語齒盤</string>
 
-    <string name="taigikeyboard__repo_url" translatable="false">https://github.com/siansiansu/TaigiKeyboard</string>
-    <string name="taigikeyboard__privacy_policy_url" translatable="false">https://taigikeyboard.tw/privacypolicy.html</string>
-
+    <!-- Key labels (referenced by KeyView and layout XML) -->
     <string name="key__phone_pause">Pause</string>
     <string name="key__phone_wait">Wait</string>
     <string name="key__view_characters">ABC</string>
@@ -16,225 +13,37 @@
 
     <string name="key_popup__threedots_alt">Three-dot icon. If visible, indicates that more letters can be used if longer pressed.</string>
 
-    <!-- Emoji strings -->
-    <string name="emoji__category__smileys_emotion">Smileys &amp; Emotions</string>
-    <string name="emoji__category__people_body">People &amp; Body</string>
-    <string name="emoji__category__animals_nature">Animals &amp; Nature</string>
-    <string name="emoji__category__food_drink">Food &amp; Drink</string>
-    <string name="emoji__category__travel_places">Travel &amp; Places</string>
-    <string name="emoji__category__activities">Activities</string>
-    <string name="emoji__category__objects">Objects</string>
-    <string name="emoji__category__symbols">Symbols</string>
-    <string name="emoji__category__flags">Flags</string>
-
-    <!-- Smartbar strings -->
+    <!-- Smartbar -->
     <string name="smartbar__expand_toggle__alt">展開或收合候選詞列表</string>
-    <string name="smartbar__quick_action__open_settings">Open settings.</string>
 
-    <!-- Overlay strings -->
+    <!-- Overlay -->
     <string name="overlay__page_up">上一頁</string>
     <string name="overlay__page_down">下一頁</string>
     <string name="overlay__translate_toggle">切換翻譯</string>
 
-    <!-- Tab titles -->
+    <!-- Tab titles (referenced by SettingsMainActivity) -->
     <string name="tab_home">頭頁</string>
     <string name="tab_layout">齒佈</string>
     <string name="tab_dictionary">詞庫</string>
     <string name="tab_settings">設定</string>
 
-    <!-- Settings UI strings -->
+    <!-- Settings (referenced by AndroidManifest and menu XML) -->
     <string name="settings__title">設定</string>
     <string name="settings__menu">More options</string>
     <string name="settings__menu_about">About</string>
     <string name="settings__menu_help">Help &amp; feedback</string>
-    <string name="settings__navigation__home">Home</string>
-    <string name="settings__navigation__keyboard">Keyboard</string>
-    <string name="settings__navigation__looknfeel">Look &amp; feel</string>
-    <string name="settings__navigation__advanced">Advanced</string>
 
-    <!-- Home Screen strings - Hanzi (Default) -->
-    <string name="home__app_title">台語齒盤</string>
-
-    <!-- Navigation Section -->
-    <string name="home__nav__setup_guide">啟用方法</string>
-    <string name="home__nav__keyboard_settings">齒盤設定</string>
-    <string name="home__nav__dictionary_settings">詞庫管理</string>
-    <string name="home__nav__copyright">版權聲明</string>
-
-    <!-- Resources Section -->
-    <string name="home__resource__contact">意見回饋</string>
-    <string name="home__resource__rate">為阮評分</string>
-    <string name="home__resource__share">推薦予朋友</string>
-
-    <!-- Footer Section -->
-    <string name="home__footer__tagline">寫予每一个堅持講台語 ê 台灣人</string>
-    <string name="home__footer__copyright">© 2025 Bîn-hiân</string>
-
-    <!-- Share content -->
-    <string name="home__share__title">台語齒盤 - 台語輸入法</string>
-    <string name="home__share__url">https://taigikeyboard.tw/</string>
-
-    <!-- Copyright Screen - AndroidManifest only -->
+    <!-- AndroidManifest activity label -->
     <string name="copyright__title">版權聲明</string>
 
-    <!-- Dictionary Settings strings -->
-    <string name="dictionary_settings__title">詞庫管理</string>
-
-    <!-- Keyboard Settings strings -->
-    <string name="keyboard_settings__title">齒盤設定</string>
-    <string name="keyboard_settings__input_mode">輸入模式</string>
-    <string name="keyboard_settings__poj_mode">白話字 (POJ)</string>
-    <string name="keyboard_settings__tl_mode">台羅 (TL)</string>
-    <string name="keyboard_settings__input_settings">拍字設定</string>
-    <string name="keyboard_settings__layout_settings">佈局設定</string>
-    <string name="keyboard_settings__show_hanji">顯示漢字</string>
-    <string name="keyboard_settings__auto_tone_conversion">自動聲調轉換</string>
-    <string name="keyboard_settings__auto_capitalization">自動大寫</string>
-    <string name="keyboard_settings__show_hyphen_key">顯示連字號按鍵</string>
-    <string name="keyboard_settings__show_emoji_key">顯示表情符號按鍵</string>
-    <string name="keyboard_settings__custom_font">自訂字體</string>
-    <string name="keyboard_settings__phah_taigi_layout">拍台語佈局</string>
-    <string name="keyboard_settings__double_tap_combination">雙擊組合</string>
-    <string name="keyboard_settings__double_tap_oo">雙擊 OO → Ó͘</string>
-    <string name="keyboard_settings__double_tap_nn">雙擊 NN → ⁿ</string>
-    <string name="keyboard_settings__clear_cache">清除快取</string>
-    <string name="keyboard_settings__reset_settings">重置設定</string>
-    <string name="keyboard_settings__clear_cache_message">將清除使用者詞頻資料庫</string>
-    <string name="keyboard_settings__reset_settings_message">將重置所有設定為預設值</string>
-    <string name="keyboard_settings__cancel">取消</string>
-    <string name="keyboard_settings__confirm">確認</string>
-
-    <!-- Tab1: 頭頁 Section Headers -->
-    <string name="home__section__setup_keyboard">齒盤愛拍開才會當使用</string>
-    <string name="home__section__typing_guide">拍字說明</string>
-    <string name="home__section__new_features">功能設定</string>
-    <string name="home__section__known_issues">當 leh 修理 ê 問題</string>
-    <string name="home__section__upcoming_features">未來安排欲做 ê 功能</string>
-    <string name="home__section__faq">捷問 ê 問題</string>
-
-    <!-- Tab1: 啟用方法 -->
-    <string name="home__setup__title">啟用方法</string>
-    <string name="home__setup__description">手機仔系統規定第三方齒盤愛手動啟用才會當使用，請照下跤 ê 說明完成設定。</string>
-    <string name="home__setup__step1">點揤「語言和輸入」</string>
-    <string name="home__setup__step2">點揤「螢幕鍵盤」、「管理鍵盤」</string>
-    <string name="home__setup__step3">開啟「台語鍵盤」</string>
-    <string name="home__setup__completed_message">完成了後，佇會當拍字 ê 所在，揤牢地球圖示切去台語齒盤</string>
-    <string name="home__setup__go_to_settings">去設定頁</string>
-    <string name="home__setup__info_message">「允准完整取用」意思是予齒盤會當捌你揤 ê 動作，成做你拍 ê 字。請放心，App 袂紀錄你 ê 資料。</string>
-
-    <!-- Tab1: 新功能 -->
-    <string name="home__feature__next_word">連紲建議詞</string>
-    <string name="home__feature__next_word_detail">拍字會連紲建議，譬如講拍「皮」，會出現連紲適合 ê 詞「皮」 -> 「蛋 」、「皮」 -> 「鞋」，毋免去想 2 个以上 ê 音節按怎拍。</string>
-    <string name="home__feature__variant">異用字開關</string>
-    <string name="home__feature__variant_detail">依據教典 ê 資料標示台語異用字，譬如：「人」->「儂」、「生」->「青」，這个開關預設是關起來。</string>
-    <string name="home__feature__custom_font">詞庫管理</string>
-    <string name="home__feature__custom_font_detail">佇「詞庫」頁面會使選拍字使用 ê 詞庫，無仝詞庫收錄 ê 字有依家己 ê 特色，愛會記得調整。</string>
-    <string name="home__feature__go_to_dictionary">來去「詞庫」頁面調整</string>
-    <string name="home__feature__user_dict">拍字記持詞庫</string>
-    <string name="home__feature__case_switch">3段式大小寫切換</string>
-
-    <!-- Tab1: 處理中的問題 -->
-    <string name="home__issue__1">齒盤 ê 字小可仔閘到</string>
-    <string name="home__issue__1_detail">有 ê Android 手機仔牌子，齒盤 ê 字小可仔閘到。</string>
-    <string name="home__issue__2">詞庫有欠字</string>
-    <string name="home__issue__2_detail">揣無 bàng-gà 這个字。</string>
-    <string name="home__issue__3">聲調轉換有 ê 字有問題</string>
-    <string name="home__issue__3_detail">1 拍 Tâig 會出現 台語 的選項 毋過紲落去拍 i (Tâigi ) 台語的選項 就無去。</string>
-
-    <!-- Tab1: 預計新功能 -->
-    <string name="home__upcoming__1">支持其他齒佈</string>
-    <string name="home__upcoming__1_detail">這馬干焦有「標準齒佈」和「PhahTaigi 齒佈」，未來會支持其他無仝 ê 齒佈通選。</string>
-    <string name="home__upcoming__2">自訂詞庫匯入匯出</string>
-    <string name="home__upcoming__2_detail">佇手機仔加字。匯出/匯入家己 ê 詞庫。</string>
-    <string name="home__upcoming__3">連紲拍字</string>
-    <string name="home__upcoming__3_detail">直接拍 goa2siunn7behtsiah8png7 會變 -> 「góa siūⁿ beh chia̍h pn̄g」抑是變成「我想欲食飯」</string>
-
-    <!-- Tab1: 資源連結 -->
-    <string name="home__resource__website">網站紹介</string>
-    <string name="home__resource__privacy">隱私權政策</string>
-    <string name="home__resource__version_history">版本紀錄</string>
-    <string name="home__resource__version">當前版本</string>
-
-    <!-- Tab1: 問題回報 -->
-    <string name="home__feedback__description">無論是使用上拄著 ê 問題、感覺好用 ê 所在，抑是會當改進 ê 建議，攏歡迎寫落來！</string>
-    <string name="home__feedback__google_form">揤遮去 Google 表單</string>
-    <string name="home__feedback__email">嘛會使直接寄批去 info@taigikeyboard.tw</string>
-    <string name="home__feedback__support">支持台語齒盤</string>
-
-    <!-- Tab1: FAQ -->
-    <string name="home__faq__1_question">齒盤裝好了後無出現</string>
-    <string name="home__faq__1_answer">檢查齒盤敢有照「啟用方法」的方式拍開。紲落來請重開你目前使用 ê APP，予 APP 載入新 ê 齒盤清單。</string>
-    <string name="home__faq__go_to_setup">揤遮去看「啟用方法」</string>
-    <string name="home__faq__2_question">回報 ê 問題無消息</string>
-    <string name="home__faq__2_answer">因為這个 APP 干焦我 1 個人 leh 做，可能無小心會落勾，會使 koh 回報 1 遍。</string>
-    <string name="home__faq__go_to_feedback">問題回報</string>
-    <string name="home__faq__3_question">按怎拍聲調 1, 4</string>
-    <string name="home__faq__3_answer">拍聲調 1，會正確出現無聲調符號 ê 字。拍尾溜是 -p, -t, -k, -h ê 字加聲調 4，會正確出現無聲調符號 ê 字。</string>
-
-    <!-- Tab1: 版本紀錄 -->
-    <string name="home__version__3_3_8">v3.3.8 – 2025/12/24</string>
-    <string name="home__version__3_3_8_changes">• 新功能：連紲建議詞\n• 新功能：異用字開關\n• 改善：詞庫管理介面</string>
-
-    <!-- Tab2: 齒佈 -->
-    <string name="layout__description">揀選你慣勢使用 ê 齒佈</string>
-    <string name="layout__standard">Lohankha</string>
-    <string name="layout__phahtaigi">PhahTaigi</string>
-
-    <!-- Tab3: 詞庫 -->
-    <string name="dict__moe">台語常用詞辭典 - 教育部</string>
-
-    <!-- Tab4: 設定 -->
-    <string name="settings__input_mode">輸入模式</string>
-    <string name="settings__poj_mode">白話字</string>
-    <string name="settings__tl_mode">台羅</string>
-    <string name="settings__english_mode">英文</string>
-    <string name="settings__custom_font">字骨設定</string>
-    <string name="settings__font_system">系統</string>
-    <string name="settings__font_open_huninn">粉圓</string>
-    <string name="settings__font_iansui">芫荽</string>
-    <string name="settings__output_both_scripts">括號標註</string>
-    <string name="settings__auto_capitalization">自動大寫</string>
-    <string name="settings__auto_space">自動空白</string>
-    <string name="settings__double_tap_oo">連紲拍 oo → o͘</string>
-    <string name="settings__double_tap_nn">連紲拍 nn → ⁿ</string>
-    <string name="settings__reset_settings">恢復設定</string>
-    <string name="settings__reset_settings_message">這个動作會恢復所有設定，閣會清除所有記錄。敢欲繼續？</string>
-    <string name="settings__reset_success">設定已重置</string>
-    <string name="settings__debug_zone">Debug Zone</string>
-    <string name="dict__newword">台語新詞辭庫 - 公視台語台</string>
-    <string name="dict__kungge">台語工藝詞庫 - 工藝中心</string>
-    <string name="dict__itaigi">iTaigi愛台語 - 群眾台語辭典</string>
-    <string name="dict__taiwan_japan">台日大辭典</string>
-    <string name="dict__tai_hua">台華線頂對照典</string>
-    <string name="dict__taiwan_plant">台灣植物名彙</string>
-    <string name="dict__variant">異用字</string>
-    <string name="dict__custom">自訂詞庫</string>
-    <string name="dict__coming_soon">當 leh 開發</string>
-    <string name="dict__clear_cache">挕掉捷用詞紀錄</string>
-    <string name="dict__clear_cache_message">這个動作會挕掉所有捷用詞 ê 記錄。敢欲繼續？</string>
-    <string name="dict__clear_success">已清除快取</string>
-
-    <!-- URLs -->
-    <string name="url_website" translatable="false">https://www.taigikeyboard.tw/</string>
-    <string name="url_privacy" translatable="false">https://taigikeyboard.tw/privacypolicy.html</string>
-    <string name="url_rate" translatable="false">https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard</string>
-    <string name="url_google_form" translatable="false">https://docs.google.com/forms/d/e/1FAIpQLSd7PEppQ9MdAptvoY-PaaXDlbbL9Gq9Y4lFjgU9sLz4ENiPoA/viewform?usp=header</string>
-    <string name="url_support" translatable="false">https://p.ecpay.com.tw/AA663DE</string>
-
     <!-- Content Descriptions for Accessibility -->
-    <string name="content_desc__icon_keyboard">鍵盤圖示</string>
-    <string name="content_desc__icon_numbers">數字圖示</string>
-    <string name="content_desc__icon_font">字體圖示</string>
     <string name="content_desc__icon_delete">刪除圖示</string>
-    <string name="content_desc__icon_minus">減少圖示</string>
-    <string name="content_desc__icon_refresh">重新整理圖示</string>
-    <string name="content_desc__icon_settings">設定圖示</string>
     <string name="content_desc__icon_arrow_forward">前往圖示</string>
-    <string name="content_desc__icon_share">分享圖示</string>
-    <string name="content_desc__icon_email">電子郵件圖示</string>
-    <string name="content_desc__icon_close">關閉圖示</string>
-    <string name="content_desc__icon_warning">警告圖示</string>
-    <string name="content_desc__step1_screenshot">步驟一截圖</string>
-    <string name="content_desc__step2_screenshot">步驟二截圖</string>
+    <string name="content_desc__toggle_toolbar">展開或收合工具列</string>
+    <string name="content_desc__symbol_panel">符號面板</string>
+    <string name="content_desc__switch_layout">切換齒佈</string>
+    <string name="content_desc__switch_input_method">切換輸入法</string>
+    <string name="content_desc__dismiss_keyboard">收合齒盤</string>
+    <string name="content_desc__settings">設定</string>
 
 </resources>

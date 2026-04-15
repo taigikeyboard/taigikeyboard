@@ -44,7 +44,7 @@
             android:hapticFeedbackEnabled="false"
             android:src="@drawable/ic_backspace"
             app:tint="?android:textColor"
-            android:contentDescription="TODO"/>
+            android:contentDescription="@string/content_desc__icon_delete"/>
 
     </LinearLayout>
 

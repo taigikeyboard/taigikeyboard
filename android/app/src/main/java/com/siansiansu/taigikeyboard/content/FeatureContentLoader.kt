@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 import android.content.Context
 import org.json.JSONArray
@@ -6,32 +6,39 @@ import org.json.JSONObject
 
 // Loads Tab1 content from bundled JSON assets.
 object FeatureContentLoader {
+    private const val FEATURES_ASSET = "tab1-features.json"
+    private const val FAQS_ASSET = "tab1-faq.json"
+    private const val JSON_KEY_FEATURES = "features"
+    private const val JSON_KEY_FAQS = "faqs"
+    private const val JSON_KEY_HANJI = "hanji"
+
     @Volatile private var cachedFeatures: List<FeatureContent>? = null
 
     @Volatile private var cachedFAQs: List<FeatureContent>? = null
 
     fun loadFeatures(context: Context): List<FeatureContent> {
         cachedFeatures?.let { return it }
-        val json =
-            context.assets
-                .open("tab1-features.json")
-                .bufferedReader()
-                .use { it.readText() }
-        val features = parseContentArray(JSONObject(json), "features")
-        cachedFeatures = features
-        return features
+        return loadAndParseAsset(context, FEATURES_ASSET, JSON_KEY_FEATURES)
+            .also { cachedFeatures = it }
     }
 
     fun loadFAQs(context: Context): List<FeatureContent> {
         cachedFAQs?.let { return it }
+        return loadAndParseAsset(context, FAQS_ASSET, JSON_KEY_FAQS)
+            .also { cachedFAQs = it }
+    }
+
+    private fun loadAndParseAsset(
+        context: Context,
+        assetFileName: String,
+        rootKey: String,
+    ): List<FeatureContent> {
         val json =
             context.assets
-                .open("tab1-faq.json")
+                .open(assetFileName)
                 .bufferedReader()
                 .use { it.readText() }
-        val faqs = parseContentArray(JSONObject(json), "faqs")
-        cachedFAQs = faqs
-        return faqs
+        return parseContentArray(JSONObject(json), rootKey)
     }
 
     private fun parseContentArray(
@@ -42,26 +49,26 @@ object FeatureContentLoader {
         return (0 until array.length()).map { parseFeature(array.getJSONObject(it)) }
     }
 
-    private fun parseFeature(obj: JSONObject): FeatureContent {
-        val iconObj = obj.getJSONObject("icon")
-        return FeatureContent(
+    private fun parseFeature(obj: JSONObject): FeatureContent =
+        FeatureContent(
             id = obj.getString("id"),
-            title = obj.getJSONObject("title").getString("hanji"),
-            icon =
-                PlatformIcon(
-                    ios = iconObj.getString("ios"),
-                    android = iconObj.getString("android"),
-                ),
-            summary = if (obj.has("summary")) obj.getJSONObject("summary").getString("hanji") else null,
+            title = obj.getJSONObject("title").getString(JSON_KEY_HANJI),
+            icon = parseIcon(obj.getJSONObject("icon")),
+            summary = if (obj.has("summary")) obj.getJSONObject("summary").getString(JSON_KEY_HANJI) else null,
             paragraphs = parseParagraphs(obj.getJSONArray("paragraphs")),
         )
-    }
+
+    private fun parseIcon(obj: JSONObject): PlatformIcon =
+        PlatformIcon(
+            ios = obj.getString("ios"),
+            android = obj.getString("android"),
+        )
 
     private fun parseParagraphs(array: JSONArray): List<FeatureParagraph> =
         (0 until array.length()).map { i ->
             val obj = array.getJSONObject(i)
             FeatureParagraph(
-                text = obj.getJSONObject("text").getString("hanji"),
+                text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
                 attachment = if (obj.has("attachment")) parseAttachment(obj.getJSONObject("attachment")) else null,
             )
         }
@@ -72,7 +79,7 @@ object FeatureContentLoader {
                 val images = obj.getJSONArray("images")
                 ParagraphAttachment.Slideshow(
                     images = (0 until images.length()).map { images.getString(it) },
-                    interval = obj.optDouble("interval", 2.0),
+                    interval = obj.optDouble("interval", DEFAULT_SLIDESHOW_INTERVAL_SECONDS),
                 )
             }
 
@@ -82,21 +89,16 @@ object FeatureContentLoader {
 
             "link" -> {
                 ParagraphAttachment.Link(
-                    text = obj.getJSONObject("text").getString("hanji"),
+                    text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
                     url = obj.getString("url"),
                 )
             }
 
             "navigation" -> {
-                val iconObj = obj.getJSONObject("icon")
                 ParagraphAttachment.Navigation(
-                    text = obj.getJSONObject("text").getString("hanji"),
+                    text = obj.getJSONObject("text").getString(JSON_KEY_HANJI),
                     destination = obj.getString("destination"),
-                    icon =
-                        PlatformIcon(
-                            ios = iconObj.getString("ios"),
-                            android = iconObj.getString("android"),
-                        ),
+                    icon = parseIcon(obj.getJSONObject("icon")),
                 )
             }
 

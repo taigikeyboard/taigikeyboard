@@ -9,23 +9,12 @@
 
     <dimen name="key_borderRadius">6dp</dimen>
 
-    <dimen name="key_textSize">20sp</dimen>
-    <dimen name="key_numeric_textSize">12sp</dimen>
     <dimen name="key_popup_textSize">21sp</dimen>
-    <dimen name="key_enter_confirm_textSize">18sp</dimen>
-    <dimen name="key_symbols_textSize">17sp</dimen>
 
     <dimen name="media_bottom_button_width">60dp</dimen>
     <dimen name="media_bottom_button_height">@dimen/key_height</dimen>
-    <dimen name="media_tab_paddingH">6dp</dimen>
 
     <dimen name="smartbar_height">56dp</dimen>
     <dimen name="smartbar_button_margin">1dp</dimen>
     <dimen name="smartbar_button_padding">6dp</dimen>
-
-    <dimen name="card_margin">16dp</dimen>
-    <dimen name="card_corner_radius">12dp</dimen>
-
-    <!-- Bottom Navigation - Material Design 3 建議 80dp -->
-    <dimen name="bottom_nav_height">80dp</dimen>
 </resources>

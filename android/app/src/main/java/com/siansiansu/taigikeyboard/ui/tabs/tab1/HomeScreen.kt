@@ -30,10 +30,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.content.FeatureContent
+import com.siansiansu.taigikeyboard.content.FeatureContentLoader
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
-import com.siansiansu.taigikeyboard.model.ContentType
-import com.siansiansu.taigikeyboard.model.FeatureContent
-import com.siansiansu.taigikeyboard.model.FeatureContentLoader
 import com.siansiansu.taigikeyboard.ui.components.NavigationRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider

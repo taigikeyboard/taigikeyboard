@@ -58,7 +58,5 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="ContactActivityTheme" parent="SettingsTheme">
-    </style>
 
 </resources>

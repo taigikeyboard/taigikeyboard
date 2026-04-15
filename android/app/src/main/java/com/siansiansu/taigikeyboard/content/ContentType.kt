@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 // Navigation content type and key constants for Tab1 detail routing
 object ContentType {

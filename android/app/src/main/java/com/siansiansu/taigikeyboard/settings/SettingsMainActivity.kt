@@ -13,12 +13,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
-import com.siansiansu.taigikeyboard.model.ContentType
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
 import com.siansiansu.taigikeyboard.ui.tabs.tab1.HomeScreen
@@ -28,7 +28,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
-import com.siansiansu.taigikeyboard.util.PackageManagerUtils
+import com.siansiansu.taigikeyboard.util.LauncherIconUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
 
@@ -215,9 +215,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
     private fun updateLauncherIconStatus() {
         if (prefs.showAppIcon) {
-            PackageManagerUtils.showAppIcon(this)
+            LauncherIconUtils.showAppIcon(this)
         } else {
-            PackageManagerUtils.hideAppIcon(this)
+            LauncherIconUtils.hideAppIcon(this)
         }
     }
 

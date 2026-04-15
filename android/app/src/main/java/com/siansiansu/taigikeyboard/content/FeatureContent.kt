@@ -1,6 +1,8 @@
-package com.siansiansu.taigikeyboard.model
+package com.siansiansu.taigikeyboard.content
 
 // Tab1 content models (parsed from tab1-features.json / tab1-faq.json)
+
+internal const val DEFAULT_SLIDESHOW_INTERVAL_SECONDS = 2.0
 
 data class FeatureContent(
     val id: String,
@@ -23,7 +25,7 @@ data class PlatformIcon(
 sealed interface ParagraphAttachment {
     data class Slideshow(
         val images: List<String>,
-        val interval: Double = 2.0,
+        val interval: Double = DEFAULT_SLIDESHOW_INTERVAL_SECONDS,
     ) : ParagraphAttachment
 
     data class Image(

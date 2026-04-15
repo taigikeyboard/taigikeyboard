@@ -2,9 +2,6 @@
 <resources>
 
     <declare-styleable name="KeyboardTheme">
-        <attr name="keyboardViewStyle" format="reference" />
-        <attr name="keyboardRowViewStyle" format="reference" />
-
         <attr name="semiTransparentColor" format="color" />
 
         <attr name="key_bgColor" format="color" />
