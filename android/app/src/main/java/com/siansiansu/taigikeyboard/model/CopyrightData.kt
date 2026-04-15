@@ -3,6 +3,12 @@ package com.siansiansu.taigikeyboard.model
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab1Texts
 
+// Static copyright data for fonts, dictionaries, and data sources displayed in Tab1
+
+private const val SIL_OFL_LICENSE_URL = "https://openfontlicense.org/"
+private const val CC_BY_SA_4_LICENSE_URL =
+    "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW"
+
 data class CopyrightPage(
     val id: Int,
     val title: String,
@@ -29,7 +35,7 @@ object CopyrightDataSource {
                     listOf(
                         CopyrightButton(
                             text = Tab1Texts.viewLicense,
-                            url = "https://openfontlicense.org/",
+                            url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
                             text = CommonTexts.viewWebsite,
@@ -46,7 +52,7 @@ object CopyrightDataSource {
                     listOf(
                         CopyrightButton(
                             text = Tab1Texts.viewLicense,
-                            url = "https://openfontlicense.org/",
+                            url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
                             text = CommonTexts.viewWebsite,
@@ -155,7 +161,7 @@ object CopyrightDataSource {
                     listOf(
                         CopyrightButton(
                             text = Tab1Texts.viewLicense,
-                            url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
+                            url = CC_BY_SA_4_LICENSE_URL,
                         ),
                     ),
             ),
@@ -169,7 +175,7 @@ object CopyrightDataSource {
                     listOf(
                         CopyrightButton(
                             text = Tab1Texts.viewLicense,
-                            url = "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
+                            url = CC_BY_SA_4_LICENSE_URL,
                         ),
                         CopyrightButton(
                             text = CommonTexts.viewWebsite,
