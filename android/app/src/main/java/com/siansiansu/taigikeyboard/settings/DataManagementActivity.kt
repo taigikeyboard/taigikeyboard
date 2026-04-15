@@ -19,9 +19,15 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+// Backup export and import for user dictionary data
 class DataManagementActivity : ComponentActivity() {
     companion object {
+        private const val BACKUP_DATE_FORMAT = "yyyy-MM-dd"
+
         fun createIntent(context: Context): Intent = Intent(context, DataManagementActivity::class.java)
     }
 
@@ -87,7 +93,7 @@ class DataManagementActivity : ComponentActivity() {
                         onBackPressedDispatcher.onBackPressed()
                     },
                     onExportBackup = {
-                        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                        val dateStr = SimpleDateFormat(BACKUP_DATE_FORMAT, Locale.US).format(Date())
                         exportBackupLauncher.launch("備份復原_$dateStr.taigi")
                     },
                     onImportBackup = {

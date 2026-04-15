@@ -32,15 +32,21 @@ import com.siansiansu.taigikeyboard.util.PackageManagerUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.launch
 
+// Main settings host — tabbed UI for home, layout, dictionary, and input settings
 class SettingsMainActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_START_TAB = "extra_start_tab"
 
-        // Tab indices
         private const val TAB_HOME = 0
         private const val TAB_LAYOUT = 1
         private const val TAB_DICTIONARY = 2
         private const val TAB_SETTINGS = 3
+
+        private const val THEME_LIGHT = "light"
+        private const val THEME_DARK = "dark"
+        private const val THEME_AUTO = "auto"
+
+        private const val FALLBACK_VERSION = "1.0"
     }
 
     lateinit var prefs: PrefHelper
@@ -53,16 +59,16 @@ class SettingsMainActivity : AppCompatActivity() {
 
         prefs = PrefHelper(this)
 
-        // Check if keyboard is enabled; show setup guide if not
+        // If IME is not enabled, launch setup guide (activity continues to render main UI)
         if (!TaigiKeyboard.checkIfImeIsEnabled(this)) {
             startActivity(SetupGuideActivity.createIntent(this, isFullScreen = true))
         }
 
         val mode =
             when (prefs.settingsTheme) {
-                "light" -> AppCompatDelegate.MODE_NIGHT_NO
-                "dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                "auto" -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+                THEME_DARK -> AppCompatDelegate.MODE_NIGHT_YES
+                THEME_AUTO -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 else -> AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
             }
         AppCompatDelegate.setDefaultNightMode(mode)
@@ -75,9 +81,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
         val versionName =
             try {
-                packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
-            } catch (e: Exception) {
-                "1.0"
+                packageManager.getPackageInfo(packageName, 0).versionName ?: FALLBACK_VERSION
+            } catch (_: Exception) {
+                FALLBACK_VERSION
             }
 
         setContent {
@@ -108,13 +114,13 @@ class SettingsMainActivity : AppCompatActivity() {
                                 },
                                 onFeedback = {
                                     openDetailActivity(
-                                        "contact_us",
+                                        ContentType.KEY_CONTACT_US,
                                         ContentType.FEEDBACK,
-                                        arrayOf("feedback_email"),
+                                        arrayOf(ContentType.KEY_FEEDBACK_EMAIL),
                                     )
                                 },
                                 onVersionHistory = {
-                                    openDetailActivity("version_history", ContentType.VERSION, emptyArray())
+                                    openDetailActivity(ContentType.KEY_VERSION_HISTORY, ContentType.VERSION, emptyArray())
                                 },
                                 onFaqClick = { titleKey, contentKeys ->
                                     openDetailActivity(titleKey, ContentType.FAQ, contentKeys)
@@ -179,7 +185,7 @@ class SettingsMainActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
-            // Handle exception
+            // No browser available to handle the URL
         }
     }
 

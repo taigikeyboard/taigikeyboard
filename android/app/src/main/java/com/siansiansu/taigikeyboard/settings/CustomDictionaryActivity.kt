@@ -11,6 +11,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.CustomDictionaryScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
+// Custom dictionary management
 class CustomDictionaryActivity : ComponentActivity() {
     companion object {
         fun createIntent(context: Context): Intent = Intent(context, CustomDictionaryActivity::class.java)
@@ -20,15 +21,15 @@ class CustomDictionaryActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         CustomDictionaryService.init(this)
-        val prefHelper = PrefHelper(this)
-        prefHelper.warmUp()
+        val prefs = PrefHelper(this)
+        prefs.warmUp()
 
         setupEdgeToEdge()
 
         setContent {
             TaigiKeyboardTheme {
                 CustomDictionaryScreen(
-                    prefs = prefHelper,
+                    prefs = prefs,
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()
                     },
