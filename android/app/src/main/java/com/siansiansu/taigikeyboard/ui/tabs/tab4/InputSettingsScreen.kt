@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
+// Main settings screen (Tab4) — input mode, typing, keyboard, feedback, diagnostics, reset.
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -47,7 +49,6 @@ import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
 import com.siansiansu.taigikeyboard.ui.components.OpenInNew
-import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
@@ -55,6 +56,12 @@ import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
 import kotlinx.coroutines.launch
+
+private const val FEATURE_ID_HANLO_DESIGN = "hanloDesign"
+private const val FEATURE_ID_CASE_SWITCH = "caseSwitch"
+private const val DIAGNOSTIC_CLIP_LABEL = "Taigi Keyboard Diagnostic"
+private const val DIAGNOSTIC_MIME_TYPE = "text/plain"
+private const val DIAGNOSTIC_EMAIL = "info@taigikeyboard.tw"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +71,6 @@ fun InputSettingsScreen(
     resetCounter: Int,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var showResetDialog by remember { mutableStateOf(false) }
     var showInputModePicker by remember { mutableStateOf(false) }
     // Force recomposition when resetCounter changes (after settings reset)
@@ -94,7 +100,7 @@ fun InputSettingsScreen(
 
     val features = remember { FeatureContentLoader.loadFeatures(context) }
 
-    fun featureSummary(id: String): String? = features.firstOrNull { it.id == id }?.summary
+    fun featureSummary(featureId: String): String? = features.firstOrNull { it.id == featureId }?.summary
 
     if (showInputModePicker) {
         InputModeScreen(
@@ -138,7 +144,6 @@ fun InputSettingsScreen(
                         .padding(horizontal = 20.dp)
                         .padding(bottom = AppStyle.scrollContentBottomPadding),
             ) {
-                // Input mode card - navigates to sub-page
                 SettingsCard {
                     Row(
                         modifier =
@@ -172,13 +177,13 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Typing settings
                 SectionHeader(Tab4Texts.typingSectionTitle)
                 SettingsCard {
                     SwitchRow(
                         label = Tab4Texts.outputBothScripts,
                         checked = outputBoth,
-                        infoText = featureSummary("hanloDesign"),
+                        icon = SettingsIcons.outputBothScripts,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             outputBoth = it
                             prefs.outputBothScripts = it
@@ -188,7 +193,8 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = Tab4Texts.autoCapitalization,
                         checked = autoCap,
-                        infoText = featureSummary("caseSwitch"),
+                        icon = SettingsIcons.autoCapitalization,
+                        infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
                         onCheckedChange = {
                             autoCap = it
                             prefs.autoCapitalizationEnabled = it
@@ -198,7 +204,8 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = Tab4Texts.autoSpace,
                         checked = autoSpace,
-                        infoText = featureSummary("hanloDesign"),
+                        icon = SettingsIcons.autoSpace,
+                        infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             autoSpace = it
                             prefs.isAutoSpaceEnabled = it
@@ -208,7 +215,6 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Keyboard settings
                 SectionHeader(Tab4Texts.keyboardSectionTitle)
                 SettingsCard {
                     SwitchRow(
@@ -236,7 +242,6 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Feedback settings card
                 SectionHeader(Tab4Texts.feedbackSectionTitle)
                 SettingsCard {
                     SwitchRow(
@@ -262,7 +267,6 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // POJ settings card
                 SectionHeader(Tab4Texts.pojSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
@@ -286,7 +290,6 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // TPS settings card
                 SectionHeader(Tab4Texts.tpsSettingsSectionTitle)
                 SettingsCard {
                     SwitchRow(
@@ -302,65 +305,10 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Diagnostic info card
-                SectionHeader(Tab4Texts.diagnosticSectionTitle)
-                SettingsCard {
-                    ActionRow(
-                        label = Tab4Texts.diagnosticCopy,
-                        icon = Icons.Outlined.ContentCopy,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                clipboard.setPrimaryClip(
-                                    ClipData.newPlainText("Taigi Keyboard Diagnostic", info.formatted()),
-                                )
-                                Toast.makeText(context, Tab4Texts.diagnosticCopied, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    ActionRow(
-                        label = Tab4Texts.diagnosticShare,
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        textColor = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val sendIntent =
-                                    Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, info.formatted())
-                                        type = "text/plain"
-                                    }
-                                context.startActivity(Intent.createChooser(sendIntent, null))
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    ActionRow(
-                        label = Tab4Texts.diagnosticEmail,
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
-                        textColor = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            scope.launch {
-                                val info = DiagnosticService.gather(context)
-                                val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
-                                val body = Uri.encode(info.formatted())
-                                val uri = Uri.parse("mailto:info@taigikeyboard.tw?subject=$subject&body=$body")
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
-                                } catch (_: Exception) {
-                                    Toast.makeText(context, Tab4Texts.noEmailApp, Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                    )
-                }
+                DiagnosticSection()
 
                 Spacer(Modifier.height(24.dp))
 
-                // Reset settings card
                 SettingsCard {
                     ActionRow(
                         label = Tab4Texts.resetSettings,
@@ -387,11 +335,62 @@ fun InputSettingsScreen(
     }
 }
 
-private fun inputModeDisplayName(mode: String): String =
-    when (mode) {
-        "poj" -> Tab4Texts.pojMode
-        "tl" -> Tab4Texts.tlMode
-        "english" -> Tab4Texts.englishMode
-        "tps" -> Tab4Texts.tpsMode
-        else -> Tab4Texts.tlMode
+@Composable
+private fun DiagnosticSection() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    SectionHeader(Tab4Texts.diagnosticSectionTitle)
+    SettingsCard {
+        ActionRow(
+            label = Tab4Texts.diagnosticCopy,
+            icon = Icons.Outlined.ContentCopy,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText(DIAGNOSTIC_CLIP_LABEL, info.formatted()),
+                    )
+                    Toast.makeText(context, Tab4Texts.diagnosticCopied, Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+        SettingsDivider()
+        ActionRow(
+            label = Tab4Texts.diagnosticShare,
+            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+            textColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, info.formatted())
+                            type = DIAGNOSTIC_MIME_TYPE
+                        }
+                    context.startActivity(Intent.createChooser(sendIntent, null))
+                }
+            },
+        )
+        SettingsDivider()
+        ActionRow(
+            label = Tab4Texts.diagnosticEmail,
+            icon = Icons.AutoMirrored.Outlined.OpenInNew,
+            textColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                scope.launch {
+                    val info = DiagnosticService.gather(context)
+                    val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
+                    val body = Uri.encode(info.formatted())
+                    val uri = Uri.parse("mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body")
+                    try {
+                        context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                    } catch (_: Exception) {
+                        Toast.makeText(context, Tab4Texts.noEmailApp, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+        )
     }
+}

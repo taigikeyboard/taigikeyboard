@@ -1,5 +1,7 @@
 package com.siansiansu.taigikeyboard.ui.tabs.tab4
 
+// Sub-screen for selecting the active input mode (POJ / TL / English / TPS).
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,17 @@ import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
+
+// Shared input mode key→label pairs, used by InputModeScreen and InputSettingsScreen
+val inputModeOptions =
+    listOf(
+        "poj" to Tab4Texts.pojMode,
+        "tl" to Tab4Texts.tlMode,
+        "english" to Tab4Texts.englishMode,
+        "tps" to Tab4Texts.tpsMode,
+    )
+
+fun inputModeDisplayName(mode: String): String = inputModeOptions.firstOrNull { it.first == mode }?.second ?: Tab4Texts.tlMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,16 +72,8 @@ fun InputModeScreen(
                     .padding(innerPadding)
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            val options =
-                listOf(
-                    "poj" to Tab4Texts.pojMode,
-                    "tl" to Tab4Texts.tlMode,
-                    "english" to Tab4Texts.englishMode,
-                    "tps" to Tab4Texts.tpsMode,
-                )
-
             SettingsCard {
-                options.forEachIndexed { index, (value, text) ->
+                inputModeOptions.forEachIndexed { index, (value, text) ->
                     Row(
                         modifier =
                             Modifier
@@ -93,7 +98,7 @@ fun InputModeScreen(
                             )
                         }
                     }
-                    if (index < options.lastIndex) {
+                    if (index < inputModeOptions.lastIndex) {
                         SettingsDivider()
                     }
                 }
