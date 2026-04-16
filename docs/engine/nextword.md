@@ -32,18 +32,24 @@
 - Fields: bitmask (u16), count (u32), next_word, next_tl
 - Bitmask filter replaces SQL WHERE for dictionary source filtering
 
-**User learning** — `user_association.db` (SQLite, writable)
+**User learning** — `user_association.db` (SQLite, writable, schema v4)
 
 ```sql
 CREATE TABLE user_association (
-    prev_word TEXT NOT NULL,   -- Previous word (full word)
-    next_word TEXT NOT NULL,   -- Next word (full word)
-    next_tl TEXT,
+    prev_word TEXT NOT NULL,   -- Previous word (full word, hanzi)
+    prev_tl TEXT DEFAULT '',   -- Previous word TL (added in v4)
+    next_word TEXT NOT NULL,   -- Next word (full word, hanzi)
+    next_tl TEXT,              -- Next word TL
     count INTEGER DEFAULT 1,
     last_used TIMESTAMP,
-    UNIQUE(prev_word, next_word)
+    UNIQUE(prev_word, next_word, next_tl)
 );
+CREATE INDEX idx_user_prev_word_tl ON user_association(prev_word, prev_tl);
 ```
+
+**Migration history**:
+- v0 → v3: `UNIQUE(prev_word, next_word)` → `UNIQUE(prev_word, next_word, next_tl)` (drop + recreate)
+- v3 → v4: `ALTER TABLE ... ADD COLUMN prev_tl TEXT DEFAULT ''` + new index
 
 ---
 

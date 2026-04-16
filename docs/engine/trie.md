@@ -51,15 +51,22 @@ Input mode determines prefix: TL/TPS → `tl:`, POJ → `poj:`, Hanzi → `hanzi
 ```
 Input "goa2" (POJ mode)
   → InputNormalizer.normalize(mode: .poj)
-    → diacritics→digits: "goa2"
-    → POJ→TL: "gua2" (only for TL prefix)
-  → TrieService.prefixSearch("poj:goa2") or ("tl:gua2")
+    → TPS preprocessing (if needed)
+    → lowercase + hyphen split
+    → per-syllable: diacritics → numeric tone digits
+    → result: "goa2" (POJ-form preserved, NOT converted to TL here)
+  → Search key construction (caller adds trie prefix):
+    - iOS: AutocompleteService.buildSearchKey() prepends "poj:" + may also build "tl:gua2" via RomanizationConverter.pojInputToTL()
+    - Android: LexiconService picks prefix from InputMode; prepends "poj:" or "tl:"
+  → TrieService.prefixSearch("poj:goa2") and/or ("tl:gua2")
   → rowid list
   → DictionaryBinaryReader.record(rowId) for each
   → Bitmask filter (bitwise AND, replaces SQL WHERE)
   → Sort by frequency
   → Display conversion (TL→POJ if POJ mode)
 ```
+
+**Important**: `InputNormalizer.normalize()` does NOT perform POJ→TL spelling conversion on either platform. POJ→TL is done at the search-key construction layer, by `RomanizationConverter.pojInputToTL()` (iOS) or equivalent caller-side logic.
 
 ### Hanzi Reverse Lookup (Settings Tab3)
 
@@ -95,12 +102,17 @@ bit 0=kautian  1=taigitv  2=itaigi  3=sitbut  4=taihoa  5=taijit
 
 1. TPS detection → convert to TL if needed
 2. Convert to lowercase
-3. Split by hyphens, per-syllable:
+3. Split by hyphens / spaces, per-syllable:
    - Convert nasal markers (`ⁿ`/`ᴺ` → `nn`)
    - Convert `o͘` (U+0358) → `oo`
    - Strip combining diacritics → numeric tone digit
    - Auto-assign default tone (1 or 4) if other syllables have tones
-4. If POJ mode: convert POJ spelling → TL via `RomanizationConverter.pojInputToTL()`
+
+**POJ→TL spelling conversion is NOT done here.** It is done at the search-key construction site:
+- iOS: `RomanizationConverter.pojInputToTL()` invoked by `AutocompleteService.buildSearchKey()` when building the `tl:` variant
+- Android: handled in `LexiconService` / search-key building when needed
+
+The iOS POJ→TL substitutions (only applied when building a TL-prefixed query):
 
 ### POJ→TL Spelling Conversion (POJ mode only)
 
