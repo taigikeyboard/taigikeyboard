@@ -84,14 +84,10 @@ object InputNormalizer {
     ): String {
         if (syllable.isEmpty()) return ""
 
-        // 轉換 POJ 鼻音符號 ⁿ (U+207F) / ᴺ (U+1D3A) → nn
-        val withNasalConverted = syllable.replace("\u207F", "nn").replace("\u1D3A", "nn")
-
-        // NFD 分解 + 轉換 POJ o͘ (U+0358) → oo
-        // 必須在數字聲調檢查前處理，否則 "ho͘2"（齒盤輸入）會帶 U+0358 直接返回，
-        // 導致 trie 查詢失敗（trie 用 ASCII "hoo2"）
-        val nfd = Normalizer.normalize(withNasalConverted, Normalizer.Form.NFD)
-        val withOoConverted = nfd.replace("\u0358", "o")
+        // Nasal + NFD + o͘→o. Must run BEFORE the digit-tone check below,
+        // otherwise "ho͘2" (POJ picker input) returns with U+0358 attached
+        // and trie lookup (ASCII "hoo2") fails.
+        val withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
 
         // 檢查是否已有數字聲調（如 hoo2）
         val existingTone = withOoConverted.lastOrNull()?.takeIf { it.isDigit() }

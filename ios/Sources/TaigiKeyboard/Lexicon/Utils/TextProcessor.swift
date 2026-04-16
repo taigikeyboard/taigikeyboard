@@ -167,13 +167,10 @@ enum CandidateProcessor {
     /// Strip roman to base form for matching (no tones, no hyphens/spaces, lowercase)
     /// "tāi-tsì" → "taitsi", "m̄ bat" → "mbat"
     private static func romanToBase(_ roman: String) -> String {
-        let noHyphens = roman.replacingOccurrences(of: "-", with: "")
+        let noHyphens = roman
+            .replacingOccurrences(of: "-", with: "")
             .replacingOccurrences(of: " ", with: "")
-        let withNasal = noHyphens
-            .replacingOccurrences(of: "\u{207F}", with: "nn")
-            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
-        let nfd = withNasal.decomposedStringWithCanonicalMapping
-        let withOo = nfd.replacingOccurrences(of: "\u{0358}", with: "o")
+        let withOo = TaigiUnicode.nfdPreprocessed(noHyphens)
         // Strip combining marks (tone diacritics) and tone digits
         let stripped = withOo.unicodeScalars.filter {
             $0.properties.generalCategory != .nonspacingMark

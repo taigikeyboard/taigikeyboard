@@ -2,36 +2,36 @@ import Foundation
 
 /// Dictionary source enum matching DB column names
 enum DictionarySource: String, CaseIterable {
-    case kautian    // 教育部臺灣台語常用詞辭典
-    case taigitv    // 台語新詞辭庫
-    case itaigi     // iTaigi 華台對照典
-    case sitbut     // 台灣植物名彙
-    case taihoa     // 台華線頂對照典
-    case taijit     // 台日大辭典
-    case kungge     // 台語工藝詞庫
-    case stti       // 學科術語辭典
-    case khpoo      // 腔口補充資料
-    case khiin      // 在來字
-    case lkk        // LKK漢羅合用建議用字
-    case dev        // 開發補充資料
-    case custom     // 自訂詞庫
+    case kautian // 教育部臺灣台語常用詞辭典
+    case taigitv // 台語新詞辭庫
+    case itaigi // iTaigi 華台對照典
+    case sitbut // 台灣植物名彙
+    case taihoa // 台華線頂對照典
+    case taijit // 台日大辭典
+    case kungge // 台語工藝詞庫
+    case stti // 學科術語辭典
+    case khpoo // 腔口補充資料
+    case khiin // 在來字
+    case lkk // LKK漢羅合用建議用字
+    case dev // 開發補充資料
+    case custom // 自訂詞庫
 
     /// Short display name for badge
     var displayName: String {
         switch self {
-        case .kautian: return "教典"
-        case .taigitv: return "台語新詞"
-        case .itaigi:  return "iTaigi"
-        case .sitbut:  return "植物名彙"
-        case .taihoa:  return "台華對照"
-        case .taijit:  return "臺日"
-        case .kungge:  return "工藝辭典"
-        case .stti:    return "學科術語"
-        case .khpoo:   return "補充資料"
-        case .khiin:   return "補充資料"
-        case .lkk:     return "漢羅合用"
-        case .dev:     return "補充資料"
-        case .custom:  return "補充資料"
+        case .kautian: "教典"
+        case .taigitv: "台語新詞"
+        case .itaigi: "iTaigi"
+        case .sitbut: "植物名彙"
+        case .taihoa: "台華對照"
+        case .taijit: "臺日"
+        case .kungge: "工藝辭典"
+        case .stti: "學科術語"
+        case .khpoo: "補充資料"
+        case .khiin: "補充資料"
+        case .lkk: "漢羅合用"
+        case .dev: "補充資料"
+        case .custom: "補充資料"
         }
     }
 }
@@ -39,8 +39,8 @@ enum DictionarySource: String, CaseIterable {
 /// Search result with source information for dictionary exploration
 struct DictionarySearchResult {
     let id: Int
-    let roman: String       // Display form (POJ or TL based on user setting)
-    let tl: String          // Raw TL from database (for Chhoe Taigi URL)
+    let roman: String // Display form (POJ or TL based on user setting)
+    let tl: String // Raw TL from database (for Chhoe Taigi URL)
     let hanzi: String?
     let frequency: Int
     let sources: [DictionarySource]
@@ -79,11 +79,14 @@ struct DictionarySearchResult {
     private static func normalizeSyllableToDigit(_ syllable: String) -> String {
         guard !syllable.isEmpty else { return "" }
 
+        // Quick path: already-digit-toned input keeps the digit (or strips
+        // tone 1 / 4 for external dictionary URL semantics). Note: we
+        // intentionally check the digit on the *raw* input — only the
+        // nasal-marker substitution matters for the digit-strip branch,
+        // and the full preprocessing happens below for the diacritic path.
         let withNasalConverted = syllable
             .replacingOccurrences(of: "\u{207F}", with: "nn")
             .replacingOccurrences(of: "\u{1D3A}", with: "nn")
-
-        // Already has digit tone — strip tone 1 and 4 for external dictionary URLs
         if let lastChar = withNasalConverted.last, lastChar.isNumber {
             let tone = String(lastChar)
             if tone == "1" || tone == "4" {
@@ -92,8 +95,7 @@ struct DictionarySearchResult {
             return withNasalConverted
         }
 
-        let nfd = withNasalConverted.decomposedStringWithCanonicalMapping
-        let withOoConverted = nfd.replacingOccurrences(of: "\u{0358}", with: "o")
+        let withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
 
         var toneNumber = ""
         var withoutTone = ""

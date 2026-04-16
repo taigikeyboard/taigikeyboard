@@ -525,9 +525,7 @@ object LexiconService {
 
     private fun romanToBase(roman: String): String {
         val noHyphens = roman.replace("-", "").replace(" ", "")
-        val withNasal = noHyphens.replace("\u207F", "nn").replace("\u1D3A", "nn")
-        val nfd = Normalizer.normalize(withNasal, Normalizer.Form.NFD)
-        val withOo = nfd.replace("\u0358", "o")
+        val withOo = TaigiUnicode.nfdPreprocessed(noHyphens)
         return withOo
             .filter {
                 Character.getType(it) != Character.NON_SPACING_MARK.toInt()

@@ -78,20 +78,18 @@ data class DictionarySearchResult(
         private fun normalizeSyllableToDigit(syllable: String): String {
             if (syllable.isEmpty()) return ""
 
-            val withNasalConverted =
-                syllable
-                    .replace("\u207F", "nn")
-                    .replace("\u1D3A", "nn")
-
-            // Already has digit tone — strip tone 1 and 4 for external dictionary URLs
+            // Quick path: already-digit-toned input keeps the digit (or strips
+            // tone 1 / 4 for external dictionary URL semantics). Nasal-only
+            // substitution suffices for the digit branch; full preprocessing
+            // happens below for the diacritic path.
+            val withNasalConverted = syllable.replace("\u207F", "nn").replace("\u1D3A", "nn")
             if (withNasalConverted.last().isDigit()) {
                 val tone = withNasalConverted.last().toString()
                 if (tone == "1" || tone == "4") return withNasalConverted.dropLast(1)
                 return withNasalConverted
             }
 
-            val nfd = Normalizer.normalize(withNasalConverted, Normalizer.Form.NFD)
-            val withOoConverted = nfd.replace("\u0358", "o")
+            val withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
 
             var toneNumber = ""
             val withoutTone = StringBuilder()
