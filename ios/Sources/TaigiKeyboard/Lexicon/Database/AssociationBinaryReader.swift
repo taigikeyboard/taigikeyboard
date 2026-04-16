@@ -202,6 +202,12 @@ final class AssociationBinaryReader: @unchecked Sendable {
 
     /// Check if an association entry passes the dictionary source filter
     /// Association bitmask uses 9 bits (kautian..khpoo), same order as dictionary bits 0-8
+    ///
+    /// CROSS-PLATFORM INVARIANT — must stay in sync with
+    /// Android `AssociationBinaryReader.passesFilter()`. Deliberately different
+    /// from `DictionaryBinaryReader.passesFilter` (no variant/khiin/dev layers
+    /// — those bits do not exist in association entries). See
+    /// `docs/engine/binary-format.md` §4.3.
     static func passesFilter(entryBitmask: UInt16, enabledDicts: EnabledDictionaries) -> Bool {
         if enabledDicts.allAssociationSourcesEnabled { return true }
         let enabledMask = enabledDicts.associationBitmask()

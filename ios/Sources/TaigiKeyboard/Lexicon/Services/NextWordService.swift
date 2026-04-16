@@ -12,14 +12,20 @@ import SQLite3
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants
 
+    //
+    // CROSS-PLATFORM INVARIANT — the scoring constants below
+    // (userWeight, dictWeight, decayHalfLifeHours, learningBonus,
+    // *DecayFloor, *Threshold) MUST mirror Android NextWordService.kt.
+    // Drift causes silent ranking divergence between platforms.
+
     private enum Constants {
         static let defaultLimit = 30
 
-        // 權重設定
+        // Source weights
         static let userWeight: Double = 50.0
         static let dictWeight: Double = 1.0
 
-        /// 時間衰減：半衰期 168 小時（一週）
+        /// Time decay: half-life 168 hours (1 week)
         static let decayHalfLifeHours: Double = 168.0
 
         // Memory strength: ensures user entries rank above dict entries
@@ -28,7 +34,7 @@ final class NextWordService: @unchecked Sendable {
         static let lowUsageDecayFloor: Double = 0.3 // count < 3: prevents full decay
         static let highUsageThreshold: Int = 3
 
-        // 使用者關聯上限
+        // User-association capacity
         static let maxUserAssociations = 50000
         static let pruneCheckInterval = 100
         static let pruneBatchSize = 5000

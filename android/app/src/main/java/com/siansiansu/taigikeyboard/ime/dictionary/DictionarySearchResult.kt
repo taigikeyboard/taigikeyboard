@@ -4,22 +4,26 @@ import java.net.URLEncoder
 import java.text.Normalizer
 
 /**
- * Dictionary source enum matching DB column names
+ * Dictionary source enum used for search-result attribution.
+ * (Bit positions are owned by EnabledDictionaries / DictionaryBinaryReader;
+ *  see docs/engine/binary-format.md §4.)
  */
-enum class DictionarySource(val columnName: String, val displayName: String) {
-    KAUTIAN("kautian", "教典"),
-    TAIGITV("taigitv", "台語新詞"),
-    ITAIGI("itaigi", "iTaigi"),
-    SITBUT("sitbut", "植物名彙"),
-    TAIHOA("taihoa", "台華對照"),
-    TAIJIT("taijit", "臺日"),
-    KUNGGE("kungge", "工藝辭典"),
-    STTI("stti", "學科術語"),
-    KHPOO("khpoo", "補充資料"),
-    KHIIN("khiin", "補充資料"),
-    LKK("lkk", "漢羅合用"),
-    DEV("dev", "補充資料"),
-    CUSTOM("custom", "補充資料");
+enum class DictionarySource(
+    val displayName: String,
+) {
+    KAUTIAN("教典"),
+    TAIGITV("台語新詞"),
+    ITAIGI("iTaigi"),
+    SITBUT("植物名彙"),
+    TAIHOA("台華對照"),
+    TAIJIT("臺日"),
+    KUNGGE("工藝辭典"),
+    STTI("學科術語"),
+    KHPOO("補充資料"),
+    KHIIN("補充資料"),
+    LKK("漢羅合用"),
+    DEV("補充資料"),
+    CUSTOM("補充資料"),
 }
 
 /**
@@ -27,11 +31,11 @@ enum class DictionarySource(val columnName: String, val displayName: String) {
  */
 data class DictionarySearchResult(
     val id: Int,
-    val roman: String,          // Display form (POJ or TL based on user setting)
-    val tl: String,             // Raw TL from database (for Chhoe Taigi URL)
+    val roman: String, // Display form (POJ or TL based on user setting)
+    val tl: String, // Raw TL from database (for Chhoe Taigi URL)
     val hanzi: String?,
     val frequency: Int,
-    val sources: List<DictionarySource>
+    val sources: List<DictionarySource>,
 ) {
     /**
      * Build Chhoe Taigi lookup URL using TL digit form
@@ -74,9 +78,10 @@ data class DictionarySearchResult(
         private fun normalizeSyllableToDigit(syllable: String): String {
             if (syllable.isEmpty()) return ""
 
-            val withNasalConverted = syllable
-                .replace("\u207F", "nn")
-                .replace("\u1D3A", "nn")
+            val withNasalConverted =
+                syllable
+                    .replace("\u207F", "nn")
+                    .replace("\u1D3A", "nn")
 
             // Already has digit tone — strip tone 1 and 4 for external dictionary URLs
             if (withNasalConverted.last().isDigit()) {

@@ -32,29 +32,31 @@ object NextWordService {
     private const val DATABASE_VERSION = 4 // v4: added prev_tl column
     private const val DEFAULT_LIMIT = 30
 
-    // 使用者來源權重（相對於字典來源）
-    // USER_WEIGHT 較高，讓使用者學習的關聯更有競爭力
+    // CROSS-PLATFORM INVARIANT — the scoring constants below
+    // (USER_WEIGHT, DICT_WEIGHT, DECAY_HALF_LIFE_HOURS, LEARNING_BONUS,
+    // *_DECAY_FLOOR, *_THRESHOLD) MUST mirror iOS NextWordService.swift.
+    // Drift causes silent ranking divergence between platforms.
+
+    // Source weights — USER_WEIGHT > DICT_WEIGHT so learned entries rank above dict
     private const val USER_WEIGHT = 50
     private const val DICT_WEIGHT = 1
 
-    // 時間衰減參數（參考 RIME 的指數衰減公式）
-    // 半衰期：168 小時（一週），超過一週的關聯權重減半
+    // Time decay (RIME-style exponential decay): half-life 168h (1 week)
     private const val DECAY_HALF_LIFE_HOURS = 168.0
 
     // Memory strength: ensures user entries rank above dict entries
-    // Matches iOS NextWordService scoring constants
     private const val LEARNING_BONUS = 300.0
     private const val HIGH_USAGE_DECAY_FLOOR = 0.95 // count >= 3: near-permanent retention
     private const val LOW_USAGE_DECAY_FLOOR = 0.3 // count < 3: prevents full decay (~1 month visible)
     private const val HIGH_USAGE_THRESHOLD = 3
 
-    // 使用者關聯數量上限（防止資料庫無限增長）
+    // User-association capacity (prevents unbounded DB growth)
     private const val MAX_USER_ASSOCIATIONS = 50_000
 
-    // 每 N 次記錄後檢查是否需要清理
+    // After every N records, check whether pruning is needed
     private const val PRUNE_CHECK_INTERVAL = 100
 
-    // 超過上限時，刪除最低分的 N 筆
+    // When over capacity, delete the N lowest-scoring entries
     private const val PRUNE_BATCH_SIZE = 5_000
 
     @Volatile private var associationReader: AssociationBinaryReader? = null
