@@ -40,22 +40,66 @@ Cross-platform symmetry, package reorganization, and shared utility extraction a
 
 ## Active Stage Tracker
 
-**Current stage**: Stage 0 (Baseline) — in progress.
+**Last updated**: 2026-04-17 (end of session).
+**Current state**: Stage 1 done; Stage 0 still partly open.
 
-| Stage 0 item | Status | Notes |
+### Stage 1 ✅ DONE
+
+Committed on `refactor-core-engine`, in PR #129:
+
+| Commit | Item |
+|---|---|
+| `6a4a269` | Cross-ref invariant comments on scoring constants (iOS+Android `NextWordService` Constants) |
+| `6a4a269` | Cross-ref invariant comments on `passesFilter` (iOS+Android, both `DictionaryBinaryReader` and `AssociationBinaryReader`) |
+| `6a4a269` | Drop dead `DictionarySource.columnName` (Android) |
+| `6a4a269` | Translate touched-region Chinese comments to English |
+| `b810195` | Extract `TaigiUnicode.nfdPreprocessed` utility (new files: `Lexicon/Utils/TaigiUnicode.swift` + `dictionary/TaigiUnicode.kt`); 6 callers updated (3 per platform) |
+
+**Skipped** (intentional, with rationale):
+- Date formatter centralization — phantom finding; iOS only had 1 use site (`CustomDictionaryRepository`), no duplication.
+- SQL bind helper (`sqlite3_bind_text`) — file-local extension would not be true dedup (each file would still own its own extension). The real fix is migrating to a Swift SQLite wrapper (GRDB / SQLite.swift) but that is an architecture change, deferred to the post-refactor architecture review. Raw C API is the keyboard-extension-environment "tax".
+
+**Deferred to Stage 3 (SRP):**
+- Android `InputNormalizer.normalize()` and `buildSearchKey()` `mode` parameters are unused but kept for API symmetry with iOS. Removing requires signature change touching ~16 callers; bundle into the SRP service-split work.
+
+### ⚠️ Pending verification before next stage
+
+`b810195` modified the runtime hot path (`InputNormalizer.normalizeSyllable` + `DictionarySearchResult.normalizeSyllableToDigit` + `TextProcessor.romanToBase` on iOS, mirror on Android). Behaviour was traced manually for digit-tone, combining-tone, and nasal-marker cases, all equivalent.
+
+**User must run tests before Stage 2 starts:**
+- iOS: Xcode → run `TaigiKeyboardTests` (esp. `InputNormalizerTests` ~600 cases, `DictionaryContentTests`, `EngineIntegrationTests`).
+- Android: `cd android && ./gradlew test` (esp. `InputNormalizerTest`, `DictionaryCoverageTest`, `EngineIntegrationTest`).
+
+If anything fails: revert `b810195`, investigate trace gap.
+
+### Stage 0 — still open
+
+| Item | Status | Notes |
 |---|---|---|
-| Plan v0.3 (Codex over-engineering audit applied) | ✅ done | This document |
-| Engine doc fixes (`trie.md`, `nextword.md`, `binary-format.md`) | ✅ done | Committed in PR #129 |
-| P0-A characterization tests — Android (narrowed scope per v0.3) | ⏳ pending | Hot-zone files only; idempotence only at known concurrency hotspots |
+| Plan v0.3 | ✅ done | This document |
+| Engine doc fixes (`trie.md`, `nextword.md`, `binary-format.md`) | ✅ done | PR #129 |
+| P0-A characterization tests — Android (narrowed) | ⏳ pending | Hot-zone files only; idempotence only at known concurrency hotspots; clock injection only at decay sites |
 | P0-A characterization tests — iOS | ⏳ pending | Same scope |
-| P0-C build-pipeline audit (read-only) | ⏳ pending | Awaits Q7 confirmation |
-| P0-D asset freshness fix (`build_ts` gate) | ⏳ pending | Awaits Q7 + Q8 |
+| P0-C build-pipeline audit (read-only) | ⏳ pending | Q7 ✅ answered (can edit `dictionary/build/` on this branch) |
+| P0-D asset freshness fix (`build_ts` gate) | ⏳ pending | Q7 ✅; Q8 still open (which platform first) |
 | P0-E `LexiconService.ensureAssetsCopied()` static method + explicit call from `NextWordService.init()` | ⏳ pending | Replaces v0.2's `AssetBootstrap` class |
-| P0-F cross-platform fixture corpus (search + nextword only) | ⏳ pending | 2 corpora, not 4 |
+| P0-F cross-platform fixture corpus (search + nextword) | ⏳ pending | 2 corpora, not 4 |
 
-**Outstanding open questions** (block Stage 0 completion): Q3, Q4, Q7, Q8 — see §9.
+### Open questions (block Stage 0 completion)
 
-When Stage 0 closes: update this table to "✅ Stage 0 complete", change "Current stage" to Stage 1, and start a Stage 1 sub-table.
+- Q3 (`taigi-converter` submodule status) — not blocking until Stage 2 (`TaigiPhonetics` work).
+- Q4 (scoring constants — locked spec or per-platform tunable?) — not blocking until Stage 4 (`NextWord` split).
+- ~~Q5 (iOS test target manual)~~ ✅ resolved (PBX synchronized group auto-tracks new files).
+- Q6 (behaviour-equivalence bar for hot zones without tests) — implicitly resolved: characterization tests required for hot zones.
+- ~~Q7 (build-pipeline edits in this branch?)~~ ✅ resolved (yes, on this branch).
+- Q8 (asset-bootstrap platform priority — iOS or Android first?) — needed before P0-D / P0-E start.
+
+### Suggested next session entry point
+
+After tests pass on `b810195`:
+1. **C — characterization tests (P0-A)** — zero-behaviour-risk; gives a safety net before P0-D/E.
+2. Then **B — asset freshness (P0-D)** + AssetBootstrap (P0-E) — needs Q8 answer (which platform first).
+3. **D — Stage 2 best-practices cleanup** (Chinese→English comments, naming, force-unwrap audit, async patterns) — zero/low risk, last because it's the most "scattered".
 
 ---
 
@@ -557,7 +601,7 @@ Before starting Stage 0:
 4. **Scoring constants**: are `USER_WEIGHT` / `DICT_WEIGHT` / `LEARNING_BONUS` / decay half-life intentionally tunable per-platform, or should they be locked to a shared spec? If locked, where does the spec live?
 5. ~~**Test target on iOS**~~: ✅ resolved (Codex Low 29) — iOS uses `PBXFileSystemSynchronizedRootGroup`; new test files are auto-tracked. No manual Xcode action needed.
 6. **Behaviour-equivalence bar**: for hot zones without tests (e.g. `BackupService`), the bar is **characterization tests required** per P0-A; backup specifically is now in scope (Codex Med 25). Confirm this raises the Stage 0 effort estimate appropriately.
-7. **Build pipeline edits in this branch**: Codex finding 6 says build pipeline (`dictionary/build/`) is part of the source-of-truth surface. Are build-script edits ALLOWED in this branch (e.g. to add `build_ts` consistency checks), or must any pipeline change be a separate branch / approval gate?
+7. ~~**Build pipeline edits in this branch**~~ ✅ resolved 2026-04-17 — yes, this branch may edit `dictionary/build/` Python pipeline.
 8. **Asset bootstrap ownership (P0-E)**: which platform should lead — iOS first (smaller diff) or Android (where the version-code-only gate bug lives today)?
 
 ---
