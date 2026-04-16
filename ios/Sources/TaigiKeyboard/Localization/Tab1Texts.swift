@@ -167,6 +167,9 @@ enum Tab1Texts {
     static let iansuiFontCopyright = "© ButTaiwan"
     static let silOpenFontLicense11 = "SIL Open Font License 1.1"
 
+    /// ButTaiwan 字型（源樣明體、源樣黑體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
+    static let butTaiwanCopyright = "© ButTaiwan"
+
     // 台灣植物名彙
     static let taiwanPlantCopyright = "© 佐佐木舜一"
     static let ccBySA4License = "CC BY-SA 4.0"

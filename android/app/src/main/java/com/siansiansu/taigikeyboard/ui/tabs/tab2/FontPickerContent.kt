@@ -91,6 +91,18 @@ fun FontPickerContent(
                         isSelected = fontType == FontType.IANSUI.value,
                         onClick = { onFontSelected(FontType.IANSUI.value) },
                     )
+                    SettingsDivider()
+                    FontPickerRow(
+                        label = Tab2Texts.fontGenYoMin,
+                        isSelected = fontType == FontType.GEN_YO_MIN.value,
+                        onClick = { onFontSelected(FontType.GEN_YO_MIN.value) },
+                    )
+                    SettingsDivider()
+                    FontPickerRow(
+                        label = Tab2Texts.fontGenYoGothic,
+                        isSelected = fontType == FontType.GEN_YO_GOTHIC.value,
+                        onClick = { onFontSelected(FontType.GEN_YO_GOTHIC.value) },
+                    )
                 }
             }
         }
@@ -134,5 +146,7 @@ internal fun fontDisplayName(fontType: String): String =
         FontType.SYSTEM.value -> Tab2Texts.fontSystemDefault
         FontType.OPEN_HUNINN.value -> Tab2Texts.fontOpenHuninn
         FontType.IANSUI.value -> Tab2Texts.fontIansui
+        FontType.GEN_YO_MIN.value -> Tab2Texts.fontGenYoMin
+        FontType.GEN_YO_GOTHIC.value -> Tab2Texts.fontGenYoGothic
         else -> fontType
     }

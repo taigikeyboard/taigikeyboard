@@ -237,6 +237,8 @@ struct AppearanceSettingsView: View {
         case .system: Tab2Texts.fontSystemDefault
         case .openHuninn: CommonTexts.fontOpenHuninn
         case .iansui: CommonTexts.fontIansui
+        case .genYoMin: CommonTexts.fontGenYoMin
+        case .genYoGothic: CommonTexts.fontGenYoGothic
         }
     }
 
@@ -314,6 +316,8 @@ private struct AppearanceFontPickerView: View {
         (.system, Tab2Texts.fontSystemDefault),
         (.openHuninn, CommonTexts.fontOpenHuninn),
         (.iansui, CommonTexts.fontIansui),
+        (.genYoMin, CommonTexts.fontGenYoMin),
+        (.genYoGothic, CommonTexts.fontGenYoGothic),
     ]
 
     var body: some View {

@@ -11,6 +11,8 @@ enum FontRegistration {
     private static let fontFileNames = [
         "jf-openhuninn-2.1.ttf",
         "Iansui-Regular.ttf",
+        "GenYoMin2TW-R.otf",
+        "GenYoGothic2TW-R.otf",
     ]
 
     /// Registers fonts from the containing app bundle.

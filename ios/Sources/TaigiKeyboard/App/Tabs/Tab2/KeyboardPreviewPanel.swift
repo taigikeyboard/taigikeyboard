@@ -67,6 +67,12 @@ struct KeyboardPreviewPanel: View {
                 actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
                 inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
             )
+        case .genYoMin, .genYoGothic:
+            let name = fontType.customFontName!
+            return Callouts.CalloutStyle(
+                actionItemFont: KeyboardFont.custom(name, size: 20, weight: .regular),
+                inputItemFont: KeyboardFont.custom(name, size: 32, weight: .light),
+            )
         }
     }
 }

@@ -121,6 +121,17 @@
 			);
 			target = F34AE2912EEE7CE000859124 /* TaigiKeyboardTests */;
 		};
+		F381AC952F912283001F9F48 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"GenKiGothic2TW-R.otf",
+				"GenKiMin2TW-R.otf",
+				"GenSekiGothic2TW-R.otf",
+				"GenSenRounded2TW-R.otf",
+				"GenWanMin2TW-R.otf",
+			);
+			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
+		};
 		F3949A962F8ACF4400814165 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -145,6 +156,13 @@
 		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"GenKiGothic2TW-R.otf",
+				"GenKiMin2TW-R.otf",
+				"GenSekiGothic2TW-R.otf",
+				"GenSenRounded2TW-R.otf",
+				"GenWanMin2TW-R.otf",
+				"GenYoGothic2TW-R.otf",
+				"GenYoMin2TW-R.otf",
 				"Iansui-Regular.ttf",
 				"jf-openhuninn-2.1.ttf",
 			);
@@ -240,6 +258,7 @@
 		F35436232E5C43680004DFAB /* Resources/Fonts */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				F381AC952F912283001F9F48 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */,
 				F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */,
 			);
 			path = Resources/Fonts;

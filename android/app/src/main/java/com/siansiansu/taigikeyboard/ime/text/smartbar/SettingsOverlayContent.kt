@@ -50,6 +50,8 @@ fun SettingsOverlayContent(
             when (prefs.fontType) {
                 "openHuninn" -> FontFamily(Font(R.font.jf_openhuninn_2_1))
                 "iansui" -> FontFamily(Font(R.font.iansui_regular))
+                "genYoMin" -> FontFamily(Font(R.font.genyomin2tw_r))
+                "genYoGothic" -> FontFamily(Font(R.font.genyogothic2tw_r))
                 else -> FontFamily.Default
             }
         }
