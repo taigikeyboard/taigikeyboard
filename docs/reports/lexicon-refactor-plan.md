@@ -23,16 +23,41 @@
 | Untested critical files | ~10 | ~9 |
 | Singleton coupling | Heavy | Heavy |
 
-**Top three refactor levers** (cross-platform):
-1. Split the four 500+ LoC services (`NextWordService`, `CustomDictionaryService` / `Repository`, `LexiconService`, Android `TPSConverter`)
-2. Reorganize Android into subpackages mirroring iOS structure
-3. Extract shared concerns (scoring, tone-stripping, SQL helpers, bitmask filter) into focused utilities
+**Top two refactor levers** (revised v0.3 per Codex audit — cross-platform alignment is no longer a top lever):
+1. **Behaviour preservation**: characterization tests on hot zones, asset freshness fix, init-order race fix.
+2. **Local clarity**: split the 500+ LoC services into focused responsibilities — but prefer same-file `private` types/functions over new files unless the new home materially reduces review scope.
+
+Cross-platform symmetry, package reorganization, and shared utility extraction are pursued only when they solve a concrete maintenance problem — not as ends in themselves.
 
 **Hard constraint**: 6 files are on the runtime hot path AND lack unit tests. Any change to them requires either (a) adding tests first, or (b) behaviour-equivalence verification by hand. See §6.
 
 > **Plan revision history**
 > - 2026-04-17 v0.1 — initial deep-read pass.
 > - 2026-04-17 v0.2 — incorporated independent Codex review (32 findings); §0.1 below.
+> - 2026-04-17 v0.3 — incorporated Codex over-engineering audit (30 findings); §0.2 below. **Net effect**: ~50% fewer new files, ~50% fewer new abstractions, stage count 7 → 5, "no skipped low-priority" rule retired.
+
+---
+
+## Active Stage Tracker
+
+**Current stage**: Stage 0 (Baseline) — in progress.
+
+| Stage 0 item | Status | Notes |
+|---|---|---|
+| Plan v0.3 (Codex over-engineering audit applied) | ✅ done | This document |
+| Engine doc fixes (`trie.md`, `nextword.md`, `binary-format.md`) | ✅ done | Committed in PR #129 |
+| P0-A characterization tests — Android (narrowed scope per v0.3) | ⏳ pending | Hot-zone files only; idempotence only at known concurrency hotspots |
+| P0-A characterization tests — iOS | ⏳ pending | Same scope |
+| P0-C build-pipeline audit (read-only) | ⏳ pending | Awaits Q7 confirmation |
+| P0-D asset freshness fix (`build_ts` gate) | ⏳ pending | Awaits Q7 + Q8 |
+| P0-E `LexiconService.ensureAssetsCopied()` static method + explicit call from `NextWordService.init()` | ⏳ pending | Replaces v0.2's `AssetBootstrap` class |
+| P0-F cross-platform fixture corpus (search + nextword only) | ⏳ pending | 2 corpora, not 4 |
+
+**Outstanding open questions** (block Stage 0 completion): Q3, Q4, Q7, Q8 — see §9.
+
+When Stage 0 closes: update this table to "✅ Stage 0 complete", change "Current stage" to Stage 1, and start a Stage 1 sub-table.
+
+---
 
 ### 0.1 Critical risks added by Codex review
 
@@ -42,6 +67,44 @@ These are blockers that must be resolved within Stage 0, before any other work:
 - **`NextWordService` has an undocumented init-order dependency on `LexiconService`**: `NextWordService` reads `association.bin` from `filesDir`, but `copyAssetsIfNeeded()` lives inside `LexiconService.init()`. If `NextWordService.init()` runs first (or in parallel without sequencing), its reader is null. **Fix prerequisite**: make asset-copy ownership explicit (a single `AssetBootstrap` step that both services depend on) before any `NextWordService` split.
 - **Build pipeline (`dictionary/build/`) was incorrectly listed as out-of-scope.** It is the source-of-truth for every cross-platform invariant in §4 of `binary-format.md`. **Fix prerequisite**: add a Stage 0 audit pass over the 11 build steps to confirm they match the documented formats.
 - **Existing engine docs are out of date**: `nextword.md` and `trie.md` documented the wrong schema / wrong POJ→TL location; both have been corrected on this branch (2026-04-17). Treat docs as suspect until each one has been audited against current code.
+
+### 0.2 v0.3 calibration shift (Codex over-engineering audit)
+
+A second Codex pass — narrowly targeted at "is this overshooting?" — surfaced 30 findings: 9 DROP, 13 SIMPLIFY, 1 KEEP, 7 already aligned. Headlines:
+
+**Dropped from this branch (cargo-cult / noun inflation / process scaffolding):**
+- `AssetBootstrap` and `LexiconBootstrap` as separate classes — replaced by `LexiconService.ensureAssetsCopied()` static method that `NextWordService.init()` calls explicitly. Solves the same race without a new noun.
+- `BitmaskFilter` shared primitives — the two `passesFilter` paths are deliberately different; cross-reference comment cheaper than abstraction.
+- iOS `SuggestionCaseTransformer` extraction "for parity with Android" — file-shape symmetry is not a maintenance win.
+- Android `LexiconConstants` extraction "for parity with iOS" — same critique.
+- Android `SQLiteConnectionManager` "for parity with iOS" — speculative; no demonstrated Android problem.
+- `IMPLEMENTATION_PLAN.md` as a separate file — duplicates §8 / §9; folded into "Active Stage" pointer at top.
+- Startup sentinel assertion (P0-B) — duplicates fixture tests.
+- "Symmetric file inventory" as a Done-criterion — symmetry-for-symmetry, not product quality.
+- "No skipped low-priority items" rule — actively *anti-prioritization*; retains abstractions that should be cut. Replaced by "low-priority items may defer to follow-up branch with explicit rationale".
+
+**Simplified scopes:**
+- `SearchOrchestrator` / `CandidateRanker` / `TPSExpansion` → become `private func` inside `LexiconService` instead of new types.
+- iOS `TextProcessor` split → just rename to `CandidateProcessor.swift`; do NOT further split into `ScoringCalculator` + `TextClassifier`.
+- `CustomDictionarySchema` / `CustomDictionaryBatchImporter` / `CsvDictionaryImporter` → start as same-file `private` sections; only extract to new files if any one stays >150 LoC after isolation.
+- iOS SQL bind helper → file-local extension, not cross-file utility.
+- Cross-platform fixture corpus → narrow to **search + nextword** only (not all four corpora upfront).
+- Init-idempotence test matrix → only services with known concurrency hotspots (per §2.5 / §3.5), not every service.
+- Clock injection → only decay-sensitive paths, not all of `PredictionScorer` + `CandidateProcessor`.
+- Per-stage Codex+simplify ritual → once per stage at the boundary, not per sub-item.
+- Android subpackage reorg → only move files whose new home materially reduces review scope; defer broad moves until after service splits land.
+- Cross-platform alignment audit (§4) demoted from "top-3 lever" to "secondary, opportunistic".
+
+**KEPT (Codex agreed):**
+- `ToneStripper.stripCombiningDiacritics()` (P2-C narrowed) — three callers do identical NFD/drop-combining/NFC; copy-paste fragility cost > tiny abstraction cost.
+- All P0 baseline items (asset freshness, characterization tests, build-pipeline audit, fixture corpus) — but with narrowed breadth as listed above.
+- NextWord 3-way split target — but execute as same-file private types first; only extract to separate files when each section stays substantial after isolation.
+
+**Net effect:**
+- Stage count: 7 → 5 (collapse Stage 1 cleanup with Stage 3 reorg into a single "symmetry & cleanup" pass; merge 5b back into Stage 5).
+- New files projected: ~25 → ~12.
+- New types/abstractions projected: ~30 → ~15.
+- Process overhead per stage cut roughly in half.
 
 ---
 
@@ -317,18 +380,18 @@ Each item is **review-first**: run Codex (`codex:rescue`) + `simplify` skill on 
 
 Per Codex findings 7, 15, 16: golden snapshots alone are insufficient. P0-A must cover four behaviour categories.
 
-**P0-A. Characterization tests for hot zones — four categories.**
+**P0-A. Characterization tests for hot zones — narrowed scopes (v0.3).**
 - **(a) Search/predict golden snapshots** — `LexiconService.search()`, `NextWordService.predict()`, `TrieService.lookup/prefixSearch`, `DictionaryRepository.query`. Same on both platforms.
-- **(b) Init idempotence and ordering** — calling `init()` twice / concurrently must not double-create tables, double-copy assets, or race the connection manager.
-- **(c) Migration paths** — for each schema version transition (user_association v0→v3→v4, custom_dictionary v1→v5), assert no data loss and correct UNIQUE constraints. iOS `SQLiteConnectionManager.initialize` is also in scope.
-- **(d) Clock-injected ranking** — `PredictionScorer` and `CandidateProcessor.calculateScore` currently call `Date()` / `System.currentTimeMillis()` directly. Tests must inject `currentTime` to deterministically pin decay/recency behaviour. (This may require small surface-preserving edits to make `currentTime` an injected parameter; that edit is part of P0.)
-- Risk: Medium (some refactor of clock APIs to make code testable). Effort: 6–10h per platform.
+- **(b) Init idempotence — only known-concurrency-hotspot services** (per §2.5 / §3.5): `SQLiteConnectionManager.initialize`, `NextWordService` `_recordCounter` / `_isUserTablesCreated`, `CustomDictionaryRepository.isTablesCreated`. NOT every service blanket-tested.
+- **(c) Migration paths** — for each schema version transition (user_association v0→v3→v4, custom_dictionary v1→v5), assert no data loss and correct UNIQUE constraints.
+- **(d) Clock-injected ranking — only decay-sensitive paths.** `PredictionScorer.calculateDecay` and the recency-decay branch of `CandidateProcessor.calculateScore`. Other scoring branches (user-freq cap, length, exact match) stay clock-free; do NOT widen the whole API just to pass `currentTime`.
+- Risk: Medium (small surface-preserving edits to inject clock at the two decay sites). Effort: 4–6h per platform (down from 6–10h in v0.2).
 
-**P0-B. Document the bitmask & trie-key contracts.** ✅ partially done (2026-04-17)
+**P0-B. Document the bitmask & trie-key contracts.** ✅ done (2026-04-17)
 - `docs/engine/binary-format.md` written.
 - `docs/engine/trie.md` corrected (POJ→TL location).
 - `docs/engine/nextword.md` corrected (schema v4).
-- Still TODO: add startup assertion (debug only) that round-trips a sentinel key through `TrieService.lookup` + `DictionaryBinaryReader.record`.
+- ~~Startup sentinel assertion~~ — **dropped in v0.3** (Codex audit: duplicates fixture tests, adds another startup path to maintain).
 
 **P0-C. Build-pipeline audit.** *(new — Codex finding 6)*
 - Walk `dictionary/build/` 01–11 steps; confirm they emit the byte layouts and sort orders documented in `binary-format.md` §1, §2, §3, §4.
@@ -340,59 +403,72 @@ Per Codex findings 7, 15, 16: golden snapshots alone are insufficient. P0-A must
 - Mirror the gate on iOS bundle resolution if there's an analogous staleness path.
 - Risk: Medium (touches asset boot path). Effort: 3–4h. Required before any binary-format change ships.
 
-**P0-E. Asset bootstrap ownership.** *(new — Codex Critical 2)*
-- Extract a single `AssetBootstrap` (or equivalent) that owns asset-copy and is the explicit dependency of both `LexiconService` and `NextWordService` (both platforms).
-- Eliminates the current "if NextWord initialized first, reader is null" race.
-- Risk: Medium-High (rewires init order). Effort: 4–6h per platform. Required before P1-A (NextWord split).
+**P0-E. Make asset-copy ownership explicit (no new class).** *(v0.3 simplification)*
+- Expose `LexiconService.ensureAssetsCopied(context)` as a `static`/class method.
+- `NextWordService.init()` calls it explicitly at the top of its init path.
+- No new `AssetBootstrap` / `LexiconBootstrap` types — the race is solved by making the dependency explicit, not by adding a noun.
+- Risk: Low (one method extraction + one explicit call). Effort: 1–2h per platform. Required before P1-A.
 
-**P0-F. Cross-platform fixture corpus.** *(new — Codex High 17/18)*
-- Add `tests/fixtures/cross-platform/` with the four corpora listed in §4.3.
+**P0-F. Cross-platform fixture corpus — narrowed to 2 corpora (v0.3).**
+- Add `tests/fixtures/cross-platform/`:
+  - `search-corpus.json` — ~15 inputs across TL/POJ/TPS/Hanji.
+  - `nextword-corpus.json` — ~10 prev_word seeds.
+- ~~`custom-dict-corpus.json`~~ and ~~`backup-roundtrip.json`~~ deferred — neither is on the runtime hot path; add later only if Stages 4–5 surface drift in those areas.
 - Both platforms load and assert against the same JSON.
-- Required gate for Stages 4 / 5 / 6.
+- Required gate for Stages 4 / 5.
 
 ### P1 — High-value structural refactors (per platform, mirrored)
 
-**P1-A. Split `NextWordService` → 3 types.** (iOS 684, Android 824)
+**P1-A. Split `NextWordService` — same-file types first, separate files only when justified (v0.3).** (iOS 684, Android 824)
 
-*(Revised per Codex Med 20: pruning shares DB/threshold/transaction context with `recordAssociation`, so it folds into `UserAssociationStore` instead of being its own type.)*
+*(Revised per Codex audit item 11: avoid turning `NextWordService` into a thin shell. Start by isolating responsibilities as `private` types/sections within the same file, then only extract to separate files when a section remains substantial after isolation.)*
 
-- `AssociationDictPredictor` — wraps `AssociationBinaryReader`, returns dict-side predictions.
-- `UserAssociationStore` — schema, migrations, query, write, **and pruning** (shares same DB/transaction).
-- `PredictionScorer` — `calculateUserScore`, `calculateDecay`; weights and clock as injected config (per P0-A category d).
-- Public `NextWordService` becomes a thin coordinator.
-- Risk: **High** — needs P0-A, P0-E, P0-F first.
+Step 1 (in-file isolation):
+- `private struct/class AssociationDictPredictor` — wraps `AssociationBinaryReader`, returns dict-side predictions.
+- `private struct/class UserAssociationStore` — schema, migrations, query, write, pruning (shares same DB/transaction; pruning folded in per Codex Med 20).
+- `private enum/class PredictionScorer` — `calculateUserScore`, `calculateDecay`; clock injected only at the decay site.
+- Public `NextWordService` orchestrates; remains the only file initially.
 
-**P1-B. Split `CustomDictionaryService` / `Repository`.**
-- iOS: `CustomDictionarySchema`, `CustomDictionaryBatchImporter`, slim `Repository`, slim `Service`.
-- Android: pull `DatabaseHelper` inner class out; extract `CsvDictionaryImporter`.
+Step 2 (only if needed): extract any private type to its own file when it stays >200 LoC after isolation. Goal is fewer god-files; **not** maximizing file count.
+
+- Risk: High — needs P0-A, P0-E, P0-F first.
+
+**P1-B. Slim `CustomDictionaryService` / `Repository` — same-file isolation first (v0.3).**
+- iOS: isolate schema methods as `private` section in `CustomDictionaryRepository.swift`; isolate batch-import logic as a `private` section. Only extract to `CustomDictionarySchema.swift` / `CustomDictionaryBatchImporter.swift` if either stays >150 LoC after isolation.
+- Android: same approach — keep `DatabaseHelper` inside the file but as a `private inner class`; isolate CSV parsing as `private` section. Only extract to separate files if the size justifies.
 - Risk: Medium.
 
-**P1-C. Split `LexiconService`.**
+**P1-C. Slim `LexiconService` — private functions, no new types (v0.3).**
 
-*(Revised per Codex High 13: Android `LexiconService` also owns asset copy + binary-reader init. Lifecycle/bootstrap must split out FIRST, separate from query orchestration.)*
+*(Revised per Codex audit items 4, 7, 9, 10: do NOT extract `LexiconBootstrap` / `SearchOrchestrator` / `CandidateRanker` / `TPSExpansion` as new classes/types. Each becomes a `private func` inside `LexiconService` with the same single-responsibility benefit and zero new files.)*
 
-- **Step 1** (both platforms): extract `LexiconBootstrap` — owns asset copy / binary reader init / dependency wiring. Public surface unchanged.
-- **Step 2** (both platforms): extract `SearchOrchestrator.merge(custom, system)`, `TPSExpansion`, `CandidateRanker` (delegating to `CandidateProcessor`).
-- Inline TPS / capitalization branches become testable units.
-- Risk: Medium-High (orchestration code on hot path).
+- Lifecycle: `private func ensureAssetsCopied()` (already factored out per P0-E), `private func ensureReadersLoaded()`, `private func ensureUserConnections()`.
+- Search orchestration: `private func mergeCustomAndSystem(...)`, `private func expandTPS(...)`, `private func rankCandidates(...)` (delegates to `CandidateProcessor`).
+- Inline TPS / capitalization branches become callable units (testable when `LexiconService` exposes a focused public API).
+- Risk: Medium (orchestration code on hot path; private-method extraction is lower risk than new-type extraction).
 
-**P1-D. Rename and split `TextProcessor` (iOS).**
-- Rename file → `CandidateProcessor.swift`.
-- Split scoring → `ScoringCalculator`, classification → `TextClassifier`, base-stripping → reuse `ToneStripper` (see P2-C).
-- Risk: Low-Medium.
+**P1-D. Rename `TextProcessor` → `CandidateProcessor` (iOS) — no further split (v0.3).**
+
+*(Revised per Codex audit item 14: the rename captures most of the value at 231 LoC; further splitting into `ScoringCalculator` + `TextClassifier` is premature SRP purity for a file this size.)*
+
+- Rename file → `CandidateProcessor.swift`. Type was already `CandidateProcessor` — only the file name was misaligned.
+- Reuse `ToneStripper.stripCombiningDiacritics` for the `romanToBase` / `inputToBase` Unicode work (see P2-C).
+- Risk: Low (pure rename + Unicode helper swap).
 
 ### P2 — Shared utilities (eliminate duplication)
 
-**P2-A. Extract bitmask `mask-building` primitives only — NOT a unified filter.**
+**P2-A. ~~Extract bitmask primitives~~ — DROPPED in v0.3.**
 
-*(Revised per Codex Med 23: dictionary filter has 3 layers (variant/khiin/source), association filter only has source-OR. They are deliberately different. A unified filter would erase real semantic differences.)*
+*(Codex audit item 2: extracting only `bitForSource` / `enabledMask` for two ~10-line callers is still abstraction tax. Leave both `passesFilter` functions duplicated, add cross-reference comment in each header.)*
 
-- Share only: `bitForSource(DictionarySource) -> Int`, `enabledMask(EnabledDictionaries) -> Int`.
-- Both `passesFilter` functions stay separate, but call the shared mask builder.
-- Risk: Low.
+Action: add `// MUST stay in sync with AssociationBinaryReader.passesFilter` to `DictionaryBinaryReader.passesFilter` (and vice versa) on both platforms. No code extraction.
 
-**P2-B. Extract SQL bind / prepared-statement helper (iOS).**
-- Reduce 40+ repetitions of `sqlite3_bind_text(stmt, n, x, -1, sqliteTransient)`.
+**P2-B. SQL bind helper as file-local extension (iOS) — narrowed (v0.3).**
+
+*(Codex audit item 15: a cross-file SQLite bind utility is too much abstraction. Prefer a file-local helper or extension placed near the repositories that need it.)*
+
+- Add `private extension OpaquePointer { func bindText(_ index: Int32, _ value: String) }` (or similar) inside each repository file that needs it.
+- No shared cross-file `SQLitePreparer` class.
 - Risk: Low.
 
 **P2-C. Share LOW-LEVEL diacritic stripping only — do NOT unify tone-mark extraction.**
@@ -403,41 +479,43 @@ Per Codex findings 7, 15, 16: golden snapshots alone are insufficient. P0-A must
 - Each caller continues to own the higher-level "what to do with the stripped form" logic (assign default tone vs append digit vs build URL).
 - Risk: Low.
 
-**P2-D. Centralize date formatter and scoring constants.**
-- iOS: move `DateFormatter` to `LexiconConstants`; same for any scoring weights.
-- Android: same; document cross-platform invariant.
+**P2-D. Date formatter + scoring constants — minimal centralization (v0.3).**
+
+*(Codex audit item 16: avoid documentation process around a handful of numbers. Constants stay close to the scorer; one cross-reference comment is enough where drift risk is real.)*
+
+- iOS: move duplicated `DateFormatter` to `LexiconConstants` (one constant, two callers).
+- Scoring weights stay where they're used (inside `PredictionScorer` / `CandidateProcessor`). Add one comment block at each platform's scorer that lists the values and links to the other platform's file. No central spec doc.
 - Risk: Trivial.
 
-### P3 — Structural alignment
+### P3 — Structural alignment (heavily reduced in v0.3)
 
-**P3-A. Reorganize Android into idiomatic Kotlin subpackages.**
+**P3-A. Android subpackage reorg — selective, AFTER service splits land (v0.3).**
 
-*(Revised per Codex Med 22 / Low 32: do NOT mirror iOS `Database/Models/Services/Trie/Utils` PascalCase. Existing repo uses lowercase functional packages like `ime/core`, `ime/text/smartbar`. Stay consistent.)*
+*(Revised per Codex audit items 18, 30: broad package churn in a legacy refactor adds rename noise + merge pain without reducing risk. Defer until after Stage 4/5 service splits are in.)*
 
-- Suggested lowercase subpackages: `dictionary.core` (Lexicon, NextWord, Backup), `dictionary.phonetics` (TaigiPhonetics, ToneConverter, ToneRestoration, ToneUtilities, TPSConverter, InputNormalizer, SuggestionCaseTransformer), `dictionary.models`, `dictionary.persistence` (CustomDictionary, repositories), `dictionary.storage` (binary readers, TrieService).
-- Pure file moves + import updates. No DI framework or reflection-package-scanning to worry about.
+- Move only files where the new home **materially reduces review scope** for a subsequent change.
+- Suggested initial moves: phonetics group only (`TaigiPhonetics`, `ToneConverter`, `ToneRestoration`, `ToneUtilities`, `TPSConverter`, `InputNormalizer`) → `dictionary.phonetics`. Everything else stays put.
+- No five-subpackage rewrite up-front.
 - Risk: Low (compile-time churn only).
 
-**P3-B. Extract iOS `SuggestionCaseTransformer` / add Android `LexiconConstants`.**
+**P3-B. ~~iOS `SuggestionCaseTransformer` / Android `LexiconConstants`~~ — DROPPED in v0.3.**
 
-*(Promoted per Codex Med 28: iOS case-transform logic is currently mixed into `TextProcessor` / `CandidateProcessor`. Android already has a dedicated `SuggestionCaseTransformer`. Pulling iOS's case logic into a sibling module makes the cross-platform shape match — and is also a prerequisite for the iOS `TextProcessor` rename / split in P1-D.)*
-
-- iOS: extract case transformation from `TextProcessor` into `SuggestionCaseTransformer.swift`.
-- Android: extract `LexiconConstants` from `DictionaryModels.kt` for parity.
-- Risk: Low.
+*(Codex audit items 5, 17: both items justified primarily on cross-platform parity, which is cargo-cult absent a concrete maintenance problem. iOS case logic stays inside `CandidateProcessor`; Android constants stay inside `DictionaryModels.kt`.)*
 
 **P3-C. Drop iOS `RomanizationConverter` facade.**
 - Risk: Trivial.
 
-### P4 — Smaller cleanups (must still be done — no deferral)
+### P4 — Smaller cleanups (priority-aware in v0.3 — low items may defer)
+
+*(Revised per Codex audit item 26: the v0.2 "no skipped low-priority items" rule is anti-prioritization and tends to retain abstractions that should be cut. v0.3 rule: low-priority items may be deferred to a follow-up branch with explicit rationale logged in the commit.)*
 
 - iOS `TrieService` — drop unused multi-instance API.
-- iOS `SQLiteConnectionManager` — collapse sync vs async API to async-only; drop unused flag parameters. **Defer until after iOS service splits** (Codex High 3): `LexiconService.search()` and `DictionarySearchViewModel` still call sync APIs on the hot path; remove sync callers first.
+- iOS `SQLiteConnectionManager` — collapse sync vs async API to async-only; drop unused flag parameters. **Deferred until after iOS service splits** (Codex v0.2 High 3): `LexiconService.search()` and `DictionarySearchViewModel` still call sync APIs on the hot path; remove sync callers first.
 - iOS `EnabledDictionaries.allEnabled` — derive from a single source list.
 - Android `EnabledDictionaries.allAssociationSourcesEnabled()` — verify usage; remove if dead.
 - Android `final_` naming — rename to `ending` or `coda`.
-- ~~Magic-byte literal in `DictionaryBinaryReader`~~ — **already commented inline** as `// "TKDB"` (Codex Low 31). Skip.
-- ~~iOS `RomanizationConverter` facade removal~~ — 2 pass-through methods, stateless (Codex Low 30); inline opportunistically, not a stage slot.
+- ~~Magic-byte literal in `DictionaryBinaryReader`~~ — already commented inline; skip (Codex v0.2 Low 31).
+- ~~iOS `RomanizationConverter` facade removal~~ — inline opportunistically, not a stage slot (Codex v0.2 Low 30).
 - Translate Chinese-only comments in `marisa_bridge.cpp` and `InputNormalizer.kt` to English (per CLAUDE.md "documentation in English").
 
 ---
@@ -446,27 +524,26 @@ Per Codex findings 7, 15, 16: golden snapshots alone are insufficient. P0-A must
 
 > Staging groups items so that each stage ends with a green build and passing tests. Each stage = one PR off `refactor-core-engine`.
 
+**v0.3 staging — collapsed from 7 stages to 5.** Active stage tracker lives at the top of this document (no separate `IMPLEMENTATION_PLAN.md`).
+
 | Stage | Scope | Items | Stop-line |
 |---|---|---|---|
-| **0** | Baseline | P0-A (4 categories), P0-B, P0-C, P0-D, P0-E, P0-F; create `IMPLEMENTATION_PLAN.md` | All hot-zone characterization tests green (incl. init/migration/concurrency/clock); engine docs accurate; build pipeline audited; asset freshness fixed; AssetBootstrap extracted; cross-platform fixture corpus committed |
-| **1** | Symmetry & cleanup | P3-B (incl. iOS case-transform extraction), P4 (most — exclude iOS sync→async collapse) | Inventory aligned; no dead code; no Chinese comments outside data files |
-| **2** | Shared utilities (narrow scopes) | P2-A (mask primitives only), P2-B, P2-C (diacritic stripping only), P2-D | Targeted duplication eliminated; tests still green |
-| **3** | Android reorg | P3-A (lowercase packages) | Subpackages introduced; everything compiles |
-| **4** | iOS service splits | P1-D, P1-B (iOS), P1-C (iOS Step 1 lifecycle then Step 2 query) | Cross-platform fixture corpus passes both platforms before & after |
-| **5** | Android service splits | P1-B (Android), P1-C (Android Step 1 lifecycle then Step 2 query) | Cross-platform fixture corpus passes both platforms before & after |
-| **5b** | iOS sync→async collapse (deferred from P4) | iOS `SQLiteConnectionManager` async-only, `LexiconService.search` async path | Hot path no longer has sync DB access |
-| **6** | NextWord split (highest risk last) | P1-A (3-way split, iOS then Android) | Cross-platform fixture corpus passes both platforms before & after |
+| **0** | Baseline | P0-A (narrowed: 2 services for idempotence, 2 sites for clock injection), P0-B (✅ done), P0-C, P0-D, P0-E (static method, not new class), P0-F (2 corpora) | Hot-zone characterization tests green; engine docs accurate; build pipeline audited; asset freshness fixed; explicit `ensureAssetsCopied()` call from `NextWordService.init()`; search + nextword fixture corpus committed |
+| **1** | Cleanup + targeted shared utility | P2-A (drop — comment only), P2-B (file-local), P2-C (`ToneStripper.stripCombiningDiacritics` only), P2-D (DateFormatter + scoring cross-ref comments), P4 (priority-aware; low items may defer) | Targeted duplication eliminated; dead code removed; no Chinese comments outside data files |
+| **2** | iOS service work | P1-D (rename only), P1-B iOS (same-file isolation first), P1-C iOS (private functions, no new types) | iOS public surface unchanged; cross-platform fixture corpus passes before & after |
+| **3** | Android service work + selective reorg | P1-B Android (same-file), P1-C Android (private functions), P3-A (only phonetics group moves to `dictionary.phonetics`) | Android public surface unchanged; cross-platform fixture corpus passes |
+| **4** | NextWord split (highest risk last) | P1-A (in-file isolation Step 1; file extraction Step 2 only if any private type stays >200 LoC) | Both platforms ship; cross-platform fixture corpus passes; iOS sync→async collapse done as part of NextWord touch on iOS side |
 
-**Per-stage workflow** (per `feedback_review_before_impl`):
-1. Write stage-specific TODO list inside `IMPLEMENTATION_PLAN.md`.
-2. Codex review of *plan + relevant current code*.
-3. Run `simplify` skill on relevant files (read-only mode) → list findings.
-4. **Fix every finding (incl. low priority).**
-5. Implement.
-6. Re-run `simplify` to verify.
-7. Manual build + test (user runs Xcode + gradle per `feedback_manual_build_test`).
-8. Commit per logical scope, concise messages.
-9. PR open against `develop` (per `feedback_branching`).
+**Per-stage workflow** (v0.3 — lighter than v0.2 per Codex audit item 23):
+
+1. Write stage-specific TODO list as a section in this plan (no separate file).
+2. **Once per stage** (at the start): Codex review of relevant current code; `simplify` scan of files in scope.
+3. Triage findings: HIGH+ → fix in this stage; LOW → defer with rationale comment.
+4. Implement in commits sized for review (NOT one commit per micro-item — Codex audit item 24).
+5. Manual build + test at the stage boundary (user runs Xcode + gradle per `feedback_manual_build_test`).
+6. PR open against `main` (per `feedback_branching` — direct-to-main flow).
+
+`feedback_review_before_impl` still applies; v0.3 changes the *cadence* (per stage, not per item), not the principle.
 
 ---
 
@@ -497,13 +574,13 @@ Before starting Stage 0:
 
 ## 11. Done Definition
 
-This refactor is complete when:
-- Every P0–P4 item is closed (no skipped low-priority items).
+This refactor is complete when (v0.3):
+- Every HIGH and MED priority item across P0–P4 is closed; LOW items may be deferred with a rationale logged.
 - All existing tests still pass on both platforms.
-- New characterization tests for hot zones exist and pass — covering all 4 P0-A categories (golden snapshot, init idempotence, migration, clock-injected ranking).
-- Cross-platform fixture corpus (§4.3) passes on both platforms with identical output assertions.
-- `docs/engine/` reflects new module names and binary-format contracts; build-pipeline doc lists each step's responsibility.
-- A final cross-platform diff (iOS Lexicon vs Android dictionary) shows symmetric file inventory and matching public-API names.
-- `simplify` skill returns no findings on the touched files.
-- Asset freshness (P0-D) verified by toggling a `build_ts` and confirming app picks up new assets without `versionCode` bump.
-- Manual smoke test of: TL/POJ/TPS input, custom dictionary CRUD, next-word prediction, backup/restore — passes on both platforms.
+- Hot-zone characterization tests (golden snapshot + idempotence at known concurrency hotspots + migration + clock-injected decay) exist and pass.
+- Cross-platform fixture corpus (search + nextword) passes on both platforms with identical output assertions.
+- `docs/engine/` reflects current binary-format contracts; build-pipeline section lists each step (already done 2026-04-17).
+- ~~Final cross-platform diff shows symmetric file inventory~~ — **dropped**: symmetry-for-symmetry is not a product-quality metric (Codex audit item 25). Use cross-platform fixture parity as the alignment gate instead.
+- `simplify` skill returns no HIGH/MED findings on the touched files. (Low-priority findings allowed if logged.)
+- Asset freshness (P0-D) verified by toggling a `build_ts` and confirming the app picks up new assets without a `versionCode` bump.
+- Manual smoke test of TL/POJ/TPS input, custom dictionary CRUD, next-word prediction, backup/restore — passes on both platforms.
