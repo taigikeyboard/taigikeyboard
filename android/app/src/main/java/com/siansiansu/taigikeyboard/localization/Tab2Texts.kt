@@ -13,7 +13,7 @@ object Tab2Texts {
     const val moe2Layout = "教育部輸入法齒佈2"
     const val comingSoon = "連鞭上市"
 
-    const val customFont = "字骨設定"
+    const val customFont = "字型設定"
     const val fontSystemDefault = "系統"
     const val fontOpenHuninn = "粉圓"
     const val fontIansui = "芫荽"
