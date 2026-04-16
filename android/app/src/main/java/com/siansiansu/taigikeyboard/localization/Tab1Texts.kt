@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.0",
+                "2026/04/16",
+                listOf(
+                    "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+                ),
+            ),
+            VersionEntry(
                 "3.4.9",
                 "2026/04/12",
                 listOf(
@@ -234,6 +241,11 @@ object Tab1Texts {
     const val iansuiFontTitle = "芫荽"
     const val iansuiFontCopyright = "© ButTaiwan"
     const val silOpenFontLicense11 = "SIL Open Font License 1.1"
+
+    // ButTaiwan 字型（源樣明體、源樣黑體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
+    const val butTaiwanCopyright = "© ButTaiwan"
+    const val genYoMinFontTitle = "源樣明體"
+    const val genYoGothicFontTitle = "源樣黑體"
 
     // 台灣植物名彙
     const val taiwanPlantCopyright = "© 佐佐木舜一"

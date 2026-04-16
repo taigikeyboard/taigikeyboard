@@ -14,6 +14,8 @@ object FontUtils {
         SYSTEM("system"),
         OPEN_HUNINN("openHuninn"),
         IANSUI("iansui"),
+        GEN_YO_MIN("genYoMin"),
+        GEN_YO_GOTHIC("genYoGothic"),
     }
 
     private fun loadTypeface(
@@ -30,6 +32,10 @@ object FontUtils {
 
     private fun getIansuiTypeface(context: Context): Typeface = loadTypeface(context, R.font.iansui_regular)
 
+    private fun getGenYoMinTypeface(context: Context): Typeface = loadTypeface(context, R.font.genyomin2tw_r)
+
+    private fun getGenYoGothicTypeface(context: Context): Typeface = loadTypeface(context, R.font.genyogothic2tw_r)
+
     fun getTypefaceByType(
         fontType: String,
         context: Context,
@@ -40,6 +46,10 @@ object FontUtils {
             FontType.OPEN_HUNINN.value -> getOpenHuninnTypeface(context)
 
             FontType.IANSUI.value -> getIansuiTypeface(context)
+
+            FontType.GEN_YO_MIN.value -> getGenYoMinTypeface(context)
+
+            FontType.GEN_YO_GOTHIC.value -> getGenYoGothicTypeface(context)
 
             // Default to OpenHuninn for unrecognized values from preferences
             else -> getOpenHuninnTypeface(context)

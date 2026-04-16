@@ -6,6 +6,8 @@
 	<array>
 		<string>jf-openhuninn-2.1.ttf</string>
 		<string>Iansui-Regular.ttf</string>
+		<string>GenYoMin2TW-R.otf</string>
+		<string>GenYoGothic2TW-R.otf</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>

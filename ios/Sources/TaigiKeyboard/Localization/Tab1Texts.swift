@@ -55,6 +55,9 @@ enum Tab1Texts {
     static let versionHistory = "版本紀錄"
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.0", "2026/04/16", [
+            "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+        ]),
         ("3.4.9", "2026/04/12", [
             "Reduced iOS app size by 73% (48 MB → 13 MB).",
             "Increased candidate display limit from 100 to 200.",
@@ -166,6 +169,9 @@ enum Tab1Texts {
     // 芫荽字型
     static let iansuiFontCopyright = "© ButTaiwan"
     static let silOpenFontLicense11 = "SIL Open Font License 1.1"
+
+    /// ButTaiwan 字型（源樣明體、源樣黑體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
+    static let butTaiwanCopyright = "© ButTaiwan"
 
     // 台灣植物名彙
     static let taiwanPlantCopyright = "© 佐佐木舜一"

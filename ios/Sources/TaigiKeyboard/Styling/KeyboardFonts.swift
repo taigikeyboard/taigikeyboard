@@ -19,6 +19,10 @@ enum KeyboardFonts {
     static let openHuninnFontName = "jf-openhuninn-2.1"
     /// PostScript font name for Iansui (芫荽)
     static let iansuiFontName = "Iansui-Regular"
+    /// PostScript font name for GenYoMin (源樣明體)
+    static let genYoMinFontName = "GenYoMin2TW-R"
+    /// PostScript font name for GenYoGothic (源樣黑體)
+    static let genYoGothicFontName = "GenYoGothic2TW-R"
 
     /// SwiftUI Font based on the user's font setting.
     /// Used by toolbar buttons and candidate views (not keyboard keys).

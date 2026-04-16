@@ -22,7 +22,7 @@ enum Tab2Texts {
 
     // MARK: - 字體設定
 
-    static let customFont = "字骨設定"
+    static let customFont = "字型設定"
     static let fontSystemDefault = "系統"
 
     // MARK: - 外觀設定

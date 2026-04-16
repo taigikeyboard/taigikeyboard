@@ -76,7 +76,7 @@ object Tab3Texts {
 
     // MARK: - 詞庫名稱 (Tab3-only)
 
-    const val lkkDict = "LKK漢羅合用建議用字"
+    const val lkkDict = "漢羅合用建議用字"
 
     // MARK: - 詞庫搜尋
 

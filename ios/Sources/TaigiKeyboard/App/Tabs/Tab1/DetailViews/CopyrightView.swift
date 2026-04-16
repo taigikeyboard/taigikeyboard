@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Copyright notices for dictionaries and open-source projects.
 struct CopyrightView: View {
-
     var body: some View {
         Form {
             // Open Huninn (粉圓體)
@@ -21,6 +20,24 @@ struct CopyrightView: View {
                 license: Tab1Texts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/iansui",
+            )
+
+            // GenYoMin (源樣明體)
+            CopyrightSection(
+                title: CommonTexts.fontGenYoMin,
+                description: Tab1Texts.butTaiwanCopyright,
+                license: Tab1Texts.silOpenFontLicense11,
+                licenseURL: "https://openfontlicense.org/",
+                websiteURL: "https://github.com/ButTaiwan/genyo-font",
+            )
+
+            // GenYoGothic (源樣黑體)
+            CopyrightSection(
+                title: CommonTexts.fontGenYoGothic,
+                description: Tab1Texts.butTaiwanCopyright,
+                license: Tab1Texts.silOpenFontLicense11,
+                licenseURL: "https://openfontlicense.org/",
+                websiteURL: "https://github.com/ButTaiwan/genyog-font",
             )
 
             // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)

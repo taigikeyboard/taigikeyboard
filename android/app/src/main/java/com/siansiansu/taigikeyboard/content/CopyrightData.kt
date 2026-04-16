@@ -60,10 +60,46 @@ object CopyrightDataSource {
                         ),
                     ),
             ),
+            // 源樣明體
+            CopyrightPage(
+                id = 2,
+                title = Tab1Texts.genYoMinFontTitle,
+                description = Tab1Texts.butTaiwanCopyright,
+                license = Tab1Texts.silOpenFontLicense11,
+                buttons =
+                    listOf(
+                        CopyrightButton(
+                            text = Tab1Texts.viewLicense,
+                            url = SIL_OFL_LICENSE_URL,
+                        ),
+                        CopyrightButton(
+                            text = CommonTexts.viewWebsite,
+                            url = "https://github.com/ButTaiwan/genyo-font",
+                        ),
+                    ),
+            ),
+            // 源樣黑體
+            CopyrightPage(
+                id = 3,
+                title = Tab1Texts.genYoGothicFontTitle,
+                description = Tab1Texts.butTaiwanCopyright,
+                license = Tab1Texts.silOpenFontLicense11,
+                buttons =
+                    listOf(
+                        CopyrightButton(
+                            text = Tab1Texts.viewLicense,
+                            url = SIL_OFL_LICENSE_URL,
+                        ),
+                        CopyrightButton(
+                            text = CommonTexts.viewWebsite,
+                            url = "https://github.com/ButTaiwan/genyog-font",
+                        ),
+                    ),
+            ),
             // 辭典
             // 1. 教育部臺灣台語常用詞辭典
             CopyrightPage(
-                id = 2,
+                id = 4,
                 title = CommonTexts.moeDict,
                 description = Tab1Texts.moeCopyright,
                 license = Tab1Texts.ccLicense,
@@ -81,7 +117,7 @@ object CopyrightDataSource {
             ),
             // 2. 台語新詞辭庫
             CopyrightPage(
-                id = 3,
+                id = 5,
                 title = CommonTexts.newwordDict,
                 description = Tab1Texts.newwordCopyright,
                 license = Tab1Texts.ccBy4License,
@@ -99,7 +135,7 @@ object CopyrightDataSource {
             ),
             // 3. 台語工藝詞庫
             CopyrightPage(
-                id = 4,
+                id = 6,
                 title = CommonTexts.kunggeDict,
                 description = Tab1Texts.kunggeCopyright,
                 license = Tab1Texts.ccByNcLicense,
@@ -117,7 +153,7 @@ object CopyrightDataSource {
             ),
             // 4. iTaigi 華台對照典
             CopyrightPage(
-                id = 5,
+                id = 7,
                 title = CommonTexts.iTaigiDict,
                 description = Tab1Texts.iTaigiCopyright,
                 license = Tab1Texts.cc0License,
@@ -135,7 +171,7 @@ object CopyrightDataSource {
             ),
             // 5. 台日大辭典
             CopyrightPage(
-                id = 6,
+                id = 8,
                 title = CommonTexts.taiwanJapanDict,
                 description = Tab1Texts.taiwanJapanCopyright,
                 license = Tab1Texts.ccByNcSA3License,
@@ -153,7 +189,7 @@ object CopyrightDataSource {
             ),
             // 6. 台華線頂對照典
             CopyrightPage(
-                id = 7,
+                id = 9,
                 title = CommonTexts.taiHuaDict,
                 description = Tab1Texts.taiHuaCopyright,
                 license = Tab1Texts.ccBySA4License,
@@ -167,7 +203,7 @@ object CopyrightDataSource {
             ),
             // 7. 台灣植物名彙
             CopyrightPage(
-                id = 8,
+                id = 10,
                 title = CommonTexts.taiwanPlantDict,
                 description = Tab1Texts.taiwanPlantCopyright,
                 license = Tab1Texts.ccBySA4License,
@@ -185,7 +221,7 @@ object CopyrightDataSource {
             ),
             // 8. 腔口補充資料
             CopyrightPage(
-                id = 9,
+                id = 11,
                 title = CommonTexts.khpooDict,
                 description = Tab1Texts.accentDictCredit,
                 license = "",
