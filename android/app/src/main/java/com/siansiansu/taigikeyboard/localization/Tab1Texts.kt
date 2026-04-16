@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.0",
+                "2026/04/16",
+                listOf(
+                    "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+                ),
+            ),
+            VersionEntry(
                 "3.4.9",
                 "2026/04/12",
                 listOf(
