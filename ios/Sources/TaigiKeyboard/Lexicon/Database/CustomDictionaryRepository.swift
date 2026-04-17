@@ -1,6 +1,13 @@
 import Foundation
 import SQLite3
 
+/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
+private extension OpaquePointer? {
+    func bindText(_ index: Int32, _ value: String) {
+        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
+    }
+}
+
 /// Repository for user custom dictionary entries
 /// Stores data in App Group shared container (accessible by Keyboard Extension)
 final class CustomDictionaryRepository: @unchecked Sendable {
@@ -102,7 +109,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 let checkSQL = "SELECT COUNT(*) FROM pragma_table_info('custom_dictionary') WHERE name = ?;"
                 var columnExists = false
                 if sqlite3_prepare_v2(db, checkSQL, -1, &checkStmt, nil) == SQLITE_OK {
-                    sqlite3_bind_text(checkStmt, 1, column, -1, SQLiteConnectionManager.sqliteTransient)
+                    checkStmt.bindText(1, column)
                     if sqlite3_step(checkStmt) == SQLITE_ROW {
                         columnExists = sqlite3_column_int(checkStmt, 0) > 0
                     }
@@ -123,7 +130,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let backfillSQL = "SELECT id, roman FROM custom_dictionary;"
             var backfillStmt: OpaquePointer?
             if sqlite3_prepare_v2(db, backfillSQL, -1, &backfillStmt, nil) == SQLITE_OK {
-                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
                 while sqlite3_step(backfillStmt) == SQLITE_ROW {
                     let id = String(cString: sqlite3_column_text(backfillStmt, 0))
                     let roman = String(cString: sqlite3_column_text(backfillStmt, 1))
@@ -133,10 +139,10 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     let updateSQL = "UPDATE custom_dictionary SET notone = ?, abbrev = ?, roman_num = ? WHERE id = ?;"
                     var updateStmt: OpaquePointer?
                     if sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK {
-                        sqlite3_bind_text(updateStmt, 1, notone, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 2, abbrev, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 3, romanNum, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 4, id, -1, TRANSIENT)
+                        updateStmt.bindText(1, notone)
+                        updateStmt.bindText(2, abbrev)
+                        updateStmt.bindText(3, romanNum)
+                        updateStmt.bindText(4, id)
                         sqlite3_step(updateStmt)
                         sqlite3_finalize(updateStmt)
                     }
@@ -156,11 +162,10 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         try await connectionManager.execute { db in
             // 在同一個 execute block 內檢查容量，避免 TOCTOU race condition
             // 更新既有 entry（同 id）不算新增，不受上限限制
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             var existsStmt: OpaquePointer?
             var isUpdate = false
             if sqlite3_prepare_v2(db, "SELECT 1 FROM custom_dictionary WHERE id = ? LIMIT 1;", -1, &existsStmt, nil) == SQLITE_OK {
-                sqlite3_bind_text(existsStmt, 1, entry.id, -1, TRANSIENT)
+                existsStmt.bindText(1, entry.id)
                 isUpdate = sqlite3_step(existsStmt) == SQLITE_ROW
             }
             sqlite3_finalize(existsStmt)
@@ -203,17 +208,14 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
             let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
 
-            sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 4, notone, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 5, abbrev, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 6, romanNum, -1, TRANSIENT)
-
-            let createdStr = Self.dateFormatter.string(from: entry.createdAt)
-            let updatedStr = Self.dateFormatter.string(from: entry.updatedAt)
-            sqlite3_bind_text(stmt, 7, createdStr, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 8, updatedStr, -1, TRANSIENT)
+            stmt.bindText(1, entry.id)
+            stmt.bindText(2, entry.roman)
+            stmt.bindText(3, entry.hanzi)
+            stmt.bindText(4, notone)
+            stmt.bindText(5, abbrev)
+            stmt.bindText(6, romanNum)
+            stmt.bindText(7, Self.dateFormatter.string(from: entry.createdAt))
+            stmt.bindText(8, Self.dateFormatter.string(from: entry.updatedAt))
 
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
@@ -274,10 +276,9 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
             defer { sqlite3_finalize(stmt) }
 
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
             let lowered = prefix.lowercased()
-            sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 2, lowered, -1, TRANSIENT)
+            stmt.bindText(1, lowered)
+            stmt.bindText(2, lowered)
             sqlite3_bind_int(stmt, 3, Int32(limit))
 
             var results: [CustomDictionaryEntry] = []
@@ -323,10 +324,9 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 }
                 defer { sqlite3_finalize(stmt) }
 
-                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
                 let lowered = prefix.lowercased()
-                sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
-                sqlite3_bind_text(stmt, 2, lowered, -1, TRANSIENT)
+                stmt.bindText(1, lowered)
+                stmt.bindText(2, lowered)
                 sqlite3_bind_int(stmt, 3, Int32(limit))
 
                 var results: [CustomDictionaryEntry] = []
@@ -353,8 +353,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
             defer { sqlite3_finalize(stmt) }
 
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-            sqlite3_bind_text(stmt, 1, id, -1, TRANSIENT)
+            stmt.bindText(1, id)
             sqlite3_step(stmt)
         }
     }
@@ -438,7 +437,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             """
 
             var insertedCount = 0
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
 
             // Process in batches to avoid long-running single transaction
             for batchStart in stride(from: 0, to: entries.count, by: Self.importBatchSize) {
@@ -468,17 +466,14 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
                     let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
 
-                    sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 4, notone, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 5, abbrev, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 6, romanNum, -1, TRANSIENT)
-
-                    let createdStr = Self.dateFormatter.string(from: entry.createdAt)
-                    let updatedStr = Self.dateFormatter.string(from: entry.updatedAt)
-                    sqlite3_bind_text(stmt, 7, createdStr, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 8, updatedStr, -1, TRANSIENT)
+                    stmt.bindText(1, entry.id)
+                    stmt.bindText(2, entry.roman)
+                    stmt.bindText(3, entry.hanzi)
+                    stmt.bindText(4, notone)
+                    stmt.bindText(5, abbrev)
+                    stmt.bindText(6, romanNum)
+                    stmt.bindText(7, Self.dateFormatter.string(from: entry.createdAt))
+                    stmt.bindText(8, Self.dateFormatter.string(from: entry.updatedAt))
 
                     if sqlite3_step(stmt) == SQLITE_DONE {
                         existingKeys.insert(key)

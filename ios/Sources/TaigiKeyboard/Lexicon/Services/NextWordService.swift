@@ -1,6 +1,13 @@
 import Foundation
 import SQLite3
 
+/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
+private extension OpaquePointer? {
+    func bindText(_ index: Int32, _ value: String) {
+        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
+    }
+}
+
 /// NextWord 下一詞預測服務
 ///
 /// 使用「相鄰字 Bigram」模型預測下一個字：
@@ -206,10 +213,10 @@ final class NextWordService: @unchecked Sendable {
                 var stmt: OpaquePointer?
                 defer { sqlite3_finalize(stmt) }
                 guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+                stmt.bindText(1, entry.prevWord)
+                stmt.bindText(2, entry.prevTl)
+                stmt.bindText(3, entry.nextWord)
+                stmt.bindText(4, entry.nextTl)
                 sqlite3_step(stmt)
             }
         } catch {
@@ -249,10 +256,10 @@ final class NextWordService: @unchecked Sendable {
                 sqlite3_reset(stmt)
                 sqlite3_clear_bindings(stmt)
 
-                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+                stmt.bindText(1, entry.prevWord)
+                stmt.bindText(2, entry.prevTl)
+                stmt.bindText(3, entry.nextWord)
+                stmt.bindText(4, entry.nextTl)
                 sqlite3_bind_int(stmt, 5, Int32(entry.count))
 
                 if sqlite3_step(stmt) == SQLITE_DONE {
@@ -447,8 +454,8 @@ final class NextWordService: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, roman, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, word)
+        stmt.bindText(2, roman)
         // Over-fetch 2x to account for deduplication when merging dict + user results
         sqlite3_bind_int(stmt, 3, Int32(limit * 2))
 
@@ -607,10 +614,10 @@ final class NextWordService: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, prev, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 3, nextHanzi, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 4, nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, prev)
+        stmt.bindText(2, prevTl)
+        stmt.bindText(3, nextHanzi)
+        stmt.bindText(4, nextTl)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             let errorMsg = String(cString: sqlite3_errmsg(db))

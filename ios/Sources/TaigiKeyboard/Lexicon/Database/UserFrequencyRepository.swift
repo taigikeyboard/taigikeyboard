@@ -1,6 +1,13 @@
 import Foundation
 import SQLite3
 
+/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
+private extension OpaquePointer? {
+    func bindText(_ index: Int32, _ value: String) {
+        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
+    }
+}
+
 /// 使用者詞頻資料庫 Repository
 /// 負責使用者詞頻資料的存取與管理
 final class UserFrequencyRepository: @unchecked Sendable {
@@ -167,8 +174,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
             return // Ignore metadata insertion errors
         }
 
-        let version = getVersion()
-        sqlite3_bind_text(stmt, 1, version, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, getVersion())
         sqlite3_step(stmt)
         sqlite3_finalize(stmt)
     }
@@ -217,7 +223,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, word)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             logger.error("[RECORD] Failed to record usage for: \(word)")
@@ -260,7 +266,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, word)
 
         if sqlite3_step(stmt) == SQLITE_ROW {
             let count = Int(sqlite3_column_int(stmt, 0))
@@ -300,7 +306,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
 
         for (index, word) in words.enumerated() {
-            sqlite3_bind_text(stmt, Int32(index + 1), word, -1, SQLiteConnectionManager.sqliteTransient)
+            stmt.bindText(Int32(index + 1), word)
         }
 
         var result: [String: FrequencyData] = [:]
@@ -435,7 +441,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 }
                 defer { sqlite3_finalize(stmt) }
 
-                sqlite3_bind_text(stmt, 1, entry.word, -1, SQLiteConnectionManager.sqliteTransient)
+                stmt.bindText(1, entry.word)
                 sqlite3_bind_int(stmt, 2, Int32(entry.count))
 
                 if sqlite3_step(stmt) == SQLITE_DONE {
@@ -456,7 +462,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
             defer { sqlite3_finalize(stmt) }
-            sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
+            stmt.bindText(1, word)
             sqlite3_step(stmt)
         }
     }
