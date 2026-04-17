@@ -68,6 +68,13 @@ final class LexiconService: @unchecked Sendable {
     // MARK: - Public API
 
     /// 搜尋詞彙
+    ///
+    /// Orchestrates four search phases:
+    /// 1. Custom dictionary lookup (user-added entries, highest priority)
+    /// 2. System dictionary query (with optional TPS `er`↔`or` expansion)
+    /// 3. Merge + dedup + case processing
+    /// 4. Rank by user frequency (if available)
+    ///
     /// - Parameters:
     ///   - input: Segmented search key for system dictionary (e.g. "li-ho")
     ///   - rawInput: Unsegmented input for custom dictionary (e.g. "liho"). Falls back to `input` if nil.
@@ -78,48 +85,90 @@ final class LexiconService: @unchecked Sendable {
         limit: Int = LexiconConstants.Search.defaultLimit,
         rawInput: String? = nil,
     ) async throws -> [TaigiWord] {
-        guard !input.isEmpty else {
-            return []
-        }
+        guard !input.isEmpty else { return [] }
 
-        // Query custom dictionary by unsegmented input (highest priority)
-        // Tone-aware: match roman_num column; toneless: match notone column
-        let customWords: [TaigiWord]
-        if SharedSettings.shared.isCustomDictEnabled {
-            let customSearchKey = rawInput ?? input
-            let isToneAware = customSearchKey.contains { $0.isNumber }
-            let searchPrefix = isToneAware
-                ? customSearchKey.lowercased()
-                .replacingOccurrences(of: "-", with: "")
-                .replacingOccurrences(of: " ", with: "")
-                : CustomDictionaryService.generateNotone(customSearchKey)
-            let customEntries = customDictionaryRepository.searchSync(
-                prefix: searchPrefix,
-                isToneAware: isToneAware,
-                limit: 20,
-            )
-            logger.debug("[SEARCH] customDict key='\(customSearchKey)' prefix='\(searchPrefix)' toneAware=\(isToneAware) segmented='\(input)' results=\(customEntries.count)")
-            customWords = customEntries.map { entry in
-                let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: input)
-                let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
-                    CandidateProcessor.capitalize(entry.hanzi, basedOn: input)
-                } else {
-                    entry.hanzi
-                }
-                return TaigiWord(
-                    id: -2, // Custom dictionary marker
-                    roman: processedRoman,
-                    hanzi: processedHanzi,
-                    lengthScore: nil,
-                )
+        let customWords = lookupCustomDictionary(rawInput: rawInput, segmentedInput: input)
+
+        let systemWords = try await querySystemDictionaries(
+            segmentedInput: input,
+            inputType: inputType,
+            inputMode: inputMode,
+            limit: limit,
+            rawInput: rawInput,
+        )
+
+        let processedSystem = applyCaseProcessing(systemWords, basedOn: input)
+        let uniqueWords = CandidateProcessor.removeDuplicates(customWords + processedSystem)
+
+        let ranked = await rankByFrequency(uniqueWords, segmentedInput: input, inputMode: inputMode)
+
+        // TPS mode: remove visual duplicates (same hanzi, different roman)
+        if inputMode == .tps {
+            return CandidateProcessor.removeDisplayDuplicates(ranked)
+        }
+        return ranked
+    }
+
+    // MARK: - Connection Status
+
+    func isConnected() -> Bool {
+        repository.isConnected()
+    }
+
+    // MARK: - Search Pipeline
+
+    /// Look up user-added custom dictionary entries by unsegmented input.
+    ///
+    /// Tone-aware inputs (contain a digit) match the `roman_num` column; toneless
+    /// inputs match the `notone` column. Returns `[]` when the feature is disabled.
+    private func lookupCustomDictionary(
+        rawInput: String?,
+        segmentedInput: String,
+    ) -> [TaigiWord] {
+        guard SharedSettings.shared.isCustomDictEnabled else { return [] }
+
+        let customSearchKey = rawInput ?? segmentedInput
+        let isToneAware = customSearchKey.contains { $0.isNumber }
+        let searchPrefix = isToneAware
+            ? customSearchKey.lowercased()
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+            : CustomDictionaryService.generateNotone(customSearchKey)
+
+        let customEntries = customDictionaryRepository.searchSync(
+            prefix: searchPrefix,
+            isToneAware: isToneAware,
+            limit: 20,
+        )
+        logger.debug("[SEARCH] customDict key='\(customSearchKey)' prefix='\(searchPrefix)' toneAware=\(isToneAware) segmented='\(segmentedInput)' results=\(customEntries.count)")
+
+        return customEntries.map { entry in
+            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: segmentedInput)
+            let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
+                CandidateProcessor.capitalize(entry.hanzi, basedOn: segmentedInput)
+            } else {
+                entry.hanzi
             }
-        } else {
-            customWords = []
+            return TaigiWord(
+                id: -2, // Custom dictionary marker
+                roman: processedRoman,
+                hanzi: processedHanzi,
+                lengthScore: nil,
+            )
         }
+    }
 
-        // Query system dictionaries
+    /// Query system dictionaries for the segmented input, with optional TPS
+    /// `er`↔`or` variant expansion when the user has that toggle on.
+    private func querySystemDictionaries(
+        segmentedInput: String,
+        inputType: InputType,
+        inputMode: InputMode,
+        limit: Int,
+        rawInput: String?,
+    ) async throws -> [TaigiWord] {
         var systemWords = try await repository.query(
-            for: input,
+            for: segmentedInput,
             inputType: inputType,
             inputMode: inputMode,
             limit: limit,
@@ -128,9 +177,9 @@ final class LexiconService: @unchecked Sendable {
         // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
         if let raw = rawInput, TPSConverter.containsTPS(raw),
            SharedSettings.shared.isTpsOrMappedToER,
-           input.contains("er")
+           segmentedInput.contains("er")
         {
-            let orVariantKey = input.replacingOccurrences(of: "er", with: "or")
+            let orVariantKey = segmentedInput.replacingOccurrences(of: "er", with: "or")
             let orWords = try await repository.query(
                 for: orVariantKey,
                 inputType: inputType,
@@ -141,14 +190,20 @@ final class LexiconService: @unchecked Sendable {
             systemWords += orWords.filter { !existingIds.contains($0.id) }
         }
 
-        // Process case for system results
-        let processedWords = systemWords.map { word in
+        return systemWords
+    }
+
+    /// Apply auto-capitalization to roman and hanzi forms based on the input shape.
+    private func applyCaseProcessing(
+        _ words: [TaigiWord],
+        basedOn input: String,
+    ) -> [TaigiWord] {
+        words.map { word in
             let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
                 CandidateProcessor.capitalize(hanzi, basedOn: input)
             } else {
                 word.hanzi
             }
-
             return TaigiWord(
                 id: word.id,
                 roman: CandidateProcessor.capitalize(word.roman, basedOn: input),
@@ -156,46 +211,31 @@ final class LexiconService: @unchecked Sendable {
                 lengthScore: word.lengthScore,
             )
         }
+    }
 
-        // Merge: custom words first, then system words
-        let mergedWords = customWords + processedWords
-
-        // Deduplicate
-        let uniqueWords = CandidateProcessor.removeDuplicates(mergedWords)
-
+    /// Rank candidates by user frequency. Lazily initialises the frequency DB
+    /// on first use; returns `words` unchanged when the DB is not available.
+    private func rankByFrequency(
+        _ words: [TaigiWord],
+        segmentedInput: String,
+        inputMode: InputMode,
+    ) async -> [TaigiWord] {
         // Ensure user frequency DB is initialized (lazy: first search triggers connection)
         if !userFrequencyService.isConnected() {
             try? await UserFrequencyRepository.shared.ensureInitialized()
         }
+        guard userFrequencyService.isConnected() else { return words }
 
-        // 收集頻率資料並排序
-        guard userFrequencyService.isConnected() else {
-            return uniqueWords
-        }
-
-        // 批次查詢使用者頻率資料（包含 count 和 lastUsed）
-        let wordTexts = uniqueWords.compactMap(\.displayText)
+        let wordTexts = words.compactMap(\.displayText)
         let frequencyDataMap = userFrequencyService.frequencyDataBatch(for: wordTexts)
 
         // 正規化輸入用於完全匹配判斷（包含調符或 POJ 特殊字符時需要轉換）
-        let normalizedInput = InputNormalizer.normalize(input, mode: inputMode)
+        let normalizedInput = InputNormalizer.normalize(segmentedInput, mode: inputMode)
 
-        let sortedWords = CandidateProcessor.sortByScore(
-            uniqueWords,
+        return CandidateProcessor.sortByScore(
+            words,
             normalizedInput: normalizedInput,
             frequencyDataMap: frequencyDataMap,
         )
-
-        // TPS mode: remove visual duplicates (same hanzi, different roman)
-        if inputMode == .tps {
-            return CandidateProcessor.removeDisplayDuplicates(sortedWords)
-        }
-        return sortedWords
-    }
-
-    // MARK: - Connection Status
-
-    func isConnected() -> Bool {
-        repository.isConnected()
     }
 }
