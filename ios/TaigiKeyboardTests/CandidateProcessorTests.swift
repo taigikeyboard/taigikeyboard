@@ -1,9 +1,8 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// CandidateProcessor unit tests
-final class TextProcessorTests: XCTestCase {
-
+final class CandidateProcessorTests: XCTestCase {
     // MARK: - isHanzi
 
     func testIsHanzi_cjkMainRange() {
@@ -58,7 +57,7 @@ final class TextProcessorTests: XCTestCase {
         ]
         let result = CandidateProcessor.removeDuplicates(words)
         XCTAssertEqual(result.count, 2,
-            "Tone variants with same hanzi must both be preserved: got \(result.map(\.roman))")
+                       "Tone variants with same hanzi must both be preserved: got \(result.map(\.roman))")
     }
 
     func testRemoveDuplicates_differentHanziPreserved() {
