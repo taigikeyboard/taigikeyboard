@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteStatement
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -12,6 +13,20 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.exp
+
+private fun SQLiteStatement.bindArgs(vararg args: Any?) {
+    clearBindings()
+    args.forEachIndexed { index, arg ->
+        val i = index + 1
+        when (arg) {
+            null -> bindNull(i)
+            is String -> bindString(i, arg)
+            is Long -> bindLong(i, arg)
+            is Int -> bindLong(i, arg.toLong())
+            else -> throw IllegalArgumentException("Unsupported bind type: ${arg::class}")
+        }
+    }
+}
 
 /**
  * NextWord 下一詞預測服務
@@ -687,12 +702,13 @@ object NextWordService {
                 try {
                     val stmt = db.compileStatement(sql)
                     for (entry in entries) {
-                        stmt.clearBindings()
-                        stmt.bindString(1, entry.prevWord)
-                        stmt.bindString(2, entry.prevTl)
-                        stmt.bindString(3, entry.nextWord)
-                        stmt.bindString(4, entry.nextTl)
-                        stmt.bindLong(5, entry.count.toLong())
+                        stmt.bindArgs(
+                            entry.prevWord,
+                            entry.prevTl,
+                            entry.nextWord,
+                            entry.nextTl,
+                            entry.count.toLong(),
+                        )
                         stmt.executeInsert()
                         imported++
                     }

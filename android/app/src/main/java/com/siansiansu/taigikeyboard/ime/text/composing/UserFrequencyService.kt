@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.database.sqlite.SQLiteStatement
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -11,6 +12,20 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+
+private fun SQLiteStatement.bindArgs(vararg args: Any?) {
+    clearBindings()
+    args.forEachIndexed { index, arg ->
+        val i = index + 1
+        when (arg) {
+            null -> bindNull(i)
+            is String -> bindString(i, arg)
+            is Long -> bindLong(i, arg)
+            is Int -> bindLong(i, arg.toLong())
+            else -> throw IllegalArgumentException("Unsupported bind type: ${arg::class}")
+        }
+    }
+}
 
 /**
  * 使用者詞彙頻率服務
@@ -438,9 +453,7 @@ object UserFrequencyService {
                 try {
                     val stmt = db.compileStatement(sql)
                     for ((word, count) in entries) {
-                        stmt.clearBindings()
-                        stmt.bindString(1, word)
-                        stmt.bindLong(2, count.toLong())
+                        stmt.bindArgs(word, count.toLong())
                         stmt.executeInsert()
                         imported++
                     }
