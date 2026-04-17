@@ -191,9 +191,10 @@ enum CandidateProcessor {
     ///   - words: 要排序的詞彙陣列
     ///   - normalizedInput: 正規化後的輸入（用於完全匹配判斷）
     ///   - frequencyDataMap: 詞彙頻率資料字典
-    ///   - currentTime: Unix millis reference time used for the recency
-    ///     bonus. Injected so tests can pin the recency window; callers
-    ///     that do not care default to `Date()`.
+    ///   - currentTime: Unix millis used for the recency-bonus window.
+    ///     Swift evaluates default arguments at **call time**, so production
+    ///     callers get the current clock without supplying a value; tests
+    ///     should pass a fixed value to pin the window deterministically.
     /// - Returns: 排序後的詞彙陣列
     static func sortByScore(
         _ words: [TaigiWord],

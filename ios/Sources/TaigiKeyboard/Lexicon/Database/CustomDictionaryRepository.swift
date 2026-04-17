@@ -316,31 +316,30 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Re-derive notone/abbrev/roman_num for every row so values always match
-    /// the current generation logic (cheap even for large tables; runs once).
+    /// the current generation logic. Prepares the UPDATE statement once and
+    /// reuses it across rows (reset + clear bindings per iteration).
     private static func backfillDerivedColumns(db: OpaquePointer) {
-        let selectSQL = "SELECT id, roman FROM custom_dictionary;"
         var selectStmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, selectSQL, -1, &selectStmt, nil) == SQLITE_OK else { return }
+        guard sqlite3_prepare_v2(db, "SELECT id, roman FROM custom_dictionary;", -1, &selectStmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(selectStmt) }
 
+        var updateStmt: OpaquePointer?
         let updateSQL = "UPDATE custom_dictionary SET notone = ?, abbrev = ?, roman_num = ? WHERE id = ?;"
+        guard sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(updateStmt) }
 
         while sqlite3_step(selectStmt) == SQLITE_ROW {
             let id = String(cString: sqlite3_column_text(selectStmt, 0))
             let roman = String(cString: sqlite3_column_text(selectStmt, 1))
-            let notone = CustomDictionaryService.generateNotone(roman)
-            let abbrev = CustomDictionaryService.generateAbbrev(roman)
-            let romanNum = CustomDictionaryService.generateRomanNum(roman)
 
-            var updateStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK {
-                updateStmt.bindText(1, notone)
-                updateStmt.bindText(2, abbrev)
-                updateStmt.bindText(3, romanNum)
-                updateStmt.bindText(4, id)
-                sqlite3_step(updateStmt)
-                sqlite3_finalize(updateStmt)
-            }
+            sqlite3_reset(updateStmt)
+            sqlite3_clear_bindings(updateStmt)
+
+            updateStmt.bindText(1, CustomDictionaryService.generateNotone(roman))
+            updateStmt.bindText(2, CustomDictionaryService.generateAbbrev(roman))
+            updateStmt.bindText(3, CustomDictionaryService.generateRomanNum(roman))
+            updateStmt.bindText(4, id)
+            sqlite3_step(updateStmt)
         }
     }
 

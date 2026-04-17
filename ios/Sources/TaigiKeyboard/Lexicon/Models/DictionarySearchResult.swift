@@ -1,9 +1,6 @@
 import Foundation
 
 /// Search result with source information for dictionary exploration (Tab 3).
-///
-/// Pure data — URL building logic lives in `ExternalLookupURLBuilder`, and
-/// the `DictionarySource` enum lives in its own file.
 struct DictionarySearchResult {
     let id: Int
     let roman: String // Display form (POJ or TL based on user setting)

@@ -28,8 +28,6 @@ enum ExternalLookupURLBuilder {
             .joined(separator: "-")
     }
 
-    // MARK: - Private
-
     private static func encodedTLDigit(_ tl: String) -> String? {
         let digit = toTLDigit(tl)
         guard !digit.isEmpty else { return nil }
