@@ -1,33 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import java.net.URLEncoder
-import java.text.Normalizer
-
 /**
- * Dictionary source enum used for search-result attribution.
- * (Bit positions are owned by EnabledDictionaries / DictionaryBinaryReader;
- *  see docs/engine/binary-format.md §4.)
- */
-enum class DictionarySource(
-    val displayName: String,
-) {
-    KAUTIAN("教典"),
-    TAIGITV("台語新詞"),
-    ITAIGI("iTaigi"),
-    SITBUT("植物名彙"),
-    TAIHOA("台華對照"),
-    TAIJIT("臺日"),
-    KUNGGE("工藝辭典"),
-    STTI("學科術語"),
-    KHPOO("補充資料"),
-    KHIIN("補充資料"),
-    LKK("漢羅合用"),
-    DEV("補充資料"),
-    CUSTOM("補充資料"),
-}
-
-/**
- * Search result with source information for dictionary exploration
+ * Search result with source information for dictionary exploration.
+ *
+ * URL helpers (`chhoeUrl()` / `moeUrl()`) delegate to
+ * [ExternalLookupURLBuilder] so that URL-formatting logic has one home.
  */
 data class DictionarySearchResult(
     val id: Int,
@@ -37,78 +14,7 @@ data class DictionarySearchResult(
     val frequency: Int,
     val sources: List<DictionarySource>,
 ) {
-    /**
-     * Build Chhoe Taigi lookup URL using TL digit form
-     */
-    fun chhoeUrl(): String? {
-        val tlDigit = toTLDigit(tl)
-        if (tlDigit.isEmpty()) return null
-        val encoded = URLEncoder.encode(tlDigit, "UTF-8")
-        return "https://chhoe.taigi.info/s?s=su&f=e&lmjf=ki&lmj=$encoded"
-    }
+    fun chhoeUrl(): String? = ExternalLookupURLBuilder.chhoeURL(tl)
 
-    /**
-     * Build MOE Dictionary lookup URL using TL digit form
-     */
-    fun moeUrl(): String? {
-        val tlDigit = toTLDigit(tl)
-        if (tlDigit.isEmpty()) return null
-        val encoded = URLEncoder.encode(tlDigit, "UTF-8")
-        return "https://sutian.moe.edu.tw/zh-hant/tshiau/?lui=tai_su&tsha=$encoded"
-    }
-
-    companion object {
-        // Tone mark map from TaigiPhonetics
-        private val toneMarkToNumber: Map<Char, String> =
-            TaigiPhonetics.combiningToToneNum.mapKeys { (codePoint, _) -> codePoint.toChar() }
-
-        private val checkedEndings = setOf('p', 't', 'k', 'h')
-
-        /**
-         * Convert TL display form (with diacritics) to TL digit form for URL
-         * e.g. "tāi-tsì" → "tai7-tsi3"
-         */
-        fun toTLDigit(tl: String): String {
-            val syllables = tl.lowercase().split("-")
-            return syllables.joinToString("-") { syllable ->
-                normalizeSyllableToDigit(syllable)
-            }
-        }
-
-        private fun normalizeSyllableToDigit(syllable: String): String {
-            if (syllable.isEmpty()) return ""
-
-            // Quick path: already-digit-toned input keeps the digit (or strips
-            // tone 1 / 4 for external dictionary URL semantics). Nasal-only
-            // substitution suffices for the digit branch; full preprocessing
-            // happens below for the diacritic path.
-            val withNasalConverted = syllable.replace("\u207F", "nn").replace("\u1D3A", "nn")
-            if (withNasalConverted.last().isDigit()) {
-                val tone = withNasalConverted.last().toString()
-                if (tone == "1" || tone == "4") return withNasalConverted.dropLast(1)
-                return withNasalConverted
-            }
-
-            val withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
-
-            var toneNumber = ""
-            val withoutTone = StringBuilder()
-
-            for (char in withOoConverted) {
-                val tone = toneMarkToNumber[char]
-                if (tone != null) {
-                    toneNumber = tone
-                } else {
-                    withoutTone.append(char)
-                }
-            }
-
-            // Tone 1 (open) and 4 (checked) are omitted in external dictionary URLs
-            if (toneNumber.isEmpty() || toneNumber == "1" || toneNumber == "4") {
-                return withoutTone.toString()
-            }
-
-            return withoutTone.toString() + toneNumber
-        }
-    }
+    fun moeUrl(): String? = ExternalLookupURLBuilder.moeURL(tl)
 }
