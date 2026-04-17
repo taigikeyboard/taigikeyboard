@@ -237,7 +237,15 @@ class AssociationBinaryReader private constructor(
             }
         }
 
-        /** Check if an association entry passes the dictionary source filter */
+        /**
+         * Check if an association entry passes the dictionary source filter.
+         *
+         * CROSS-PLATFORM INVARIANT — must stay in sync with
+         * iOS `AssociationBinaryReader.passesFilter()`. Deliberately different
+         * from `DictionaryBinaryReader.passesFilter` (no variant/khiin/dev
+         * layers — those bits do not exist in association entries). See
+         * `docs/engine/binary-format.md` §4.3.
+         */
         fun passesFilter(
             entryBitmask: Int,
             enabledDicts: EnabledDictionaries,

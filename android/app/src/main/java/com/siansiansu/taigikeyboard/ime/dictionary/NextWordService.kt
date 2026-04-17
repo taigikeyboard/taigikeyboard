@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteStatement
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -13,6 +14,20 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.exp
 
+private fun SQLiteStatement.bindArgs(vararg args: Any?) {
+    clearBindings()
+    args.forEachIndexed { index, arg ->
+        val i = index + 1
+        when (arg) {
+            null -> bindNull(i)
+            is String -> bindString(i, arg)
+            is Long -> bindLong(i, arg)
+            is Int -> bindLong(i, arg.toLong())
+            else -> throw IllegalArgumentException("Unsupported bind type: ${arg::class}")
+        }
+    }
+}
+
 /**
  * NextWord 下一詞預測服務
  *
@@ -23,39 +38,72 @@ import kotlin.math.exp
  * - association.bin (binary mmap): 字典關聯（read-only）
  * - user_association.db: 使用者學習（永久保留）
  *
- * Thread-safe singleton with lazy initialization
+ * Thread-safe singleton with lazy initialization.
+ *
+ * File layout: Constants · Types · Properties · Init · Public API
+ * (Prediction / Recording / Queries) · Lifecycle · User DB Schema ·
+ * Scoring · Pruning.
  */
-
 object NextWordService {
+    // ------------------------------------------------------------------ //
+    // Constants
+    // ------------------------------------------------------------------ //
+
     private const val TAG = "NextWordService"
     private const val USER_DB_NAME = "user_association.db"
     private const val DATABASE_VERSION = 4 // v4: added prev_tl column
     private const val DEFAULT_LIMIT = 30
 
-    // 使用者來源權重（相對於字典來源）
-    // USER_WEIGHT 較高，讓使用者學習的關聯更有競爭力
+    // CROSS-PLATFORM INVARIANT — the scoring constants below
+    // (USER_WEIGHT, DICT_WEIGHT, DECAY_HALF_LIFE_HOURS, LEARNING_BONUS,
+    // *_DECAY_FLOOR, *_THRESHOLD) MUST mirror iOS NextWordService.swift.
+    // Drift causes silent ranking divergence between platforms.
+
+    // Source weights — USER_WEIGHT > DICT_WEIGHT so learned entries rank above dict
     private const val USER_WEIGHT = 50
     private const val DICT_WEIGHT = 1
 
-    // 時間衰減參數（參考 RIME 的指數衰減公式）
-    // 半衰期：168 小時（一週），超過一週的關聯權重減半
+    // Time decay (RIME-style exponential decay): half-life 168h (1 week)
     private const val DECAY_HALF_LIFE_HOURS = 168.0
 
     // Memory strength: ensures user entries rank above dict entries
-    // Matches iOS NextWordService scoring constants
     private const val LEARNING_BONUS = 300.0
     private const val HIGH_USAGE_DECAY_FLOOR = 0.95 // count >= 3: near-permanent retention
     private const val LOW_USAGE_DECAY_FLOOR = 0.3 // count < 3: prevents full decay (~1 month visible)
     private const val HIGH_USAGE_THRESHOLD = 3
 
-    // 使用者關聯數量上限（防止資料庫無限增長）
+    // User-association capacity (prevents unbounded DB growth)
     private const val MAX_USER_ASSOCIATIONS = 50_000
 
-    // 每 N 次記錄後檢查是否需要清理
+    // After every N records, check whether pruning is needed
     private const val PRUNE_CHECK_INTERVAL = 100
 
-    // 超過上限時，刪除最低分的 N 筆
+    // When over capacity, delete the N lowest-scoring entries
     private const val PRUNE_BATCH_SIZE = 5_000
+
+    // ------------------------------------------------------------------ //
+    // Public types
+    // ------------------------------------------------------------------ //
+
+    /** NextWord 預測結果 */
+    data class Prediction(
+        val hanzi: String, // 預測的下一個字
+        val tl: String, // TL 羅馬字
+        val score: Double, // 排序分數（Double 以支援時間衰減）
+    )
+
+    /** 使用者關聯資料（Debug 用） */
+    data class AssociationEntry(
+        val prevWord: String,
+        val prevTl: String = "",
+        val nextWord: String,
+        val nextTl: String,
+        val count: Int,
+    )
+
+    // ------------------------------------------------------------------ //
+    // Properties
+    // ------------------------------------------------------------------ //
 
     @Volatile private var associationReader: AssociationBinaryReader? = null
 
@@ -67,63 +115,101 @@ object NextWordService {
     // 記錄計數器（用於觸發清理檢查，AtomicInteger for thread safety）
     private val recordCounter = AtomicInteger(0)
 
-    /**
-     * NextWord 預測結果
-     */
-    data class Prediction(
-        val hanzi: String, // 預測的下一個字
-        val tl: String, // TL 羅馬字
-        val score: Double, // 排序分數（Double 以支援時間衰減）
-    )
+    // ------------------------------------------------------------------ //
+    // Init
+    // ------------------------------------------------------------------ //
 
     /**
-     * 計算時間衰減因子
+     * Ensure databases are initialized.
      *
-     * 使用指數衰減公式（參考 RIME）：
-     * decay = exp(-ageHours / halfLifeHours * ln(2))
-     *
-     * 效果：
-     * - 剛使用：decay ≈ 1.0
-     * - 1 週後：decay ≈ 0.5
-     * - 2 週後：decay ≈ 0.25
-     * - 1 月後：decay ≈ 0.06
-     *
-     * @param lastUsedMs 上次使用時間（毫秒）
-     * @return 衰減因子（0.0 ~ 1.0）
+     * If the association binary reader is null after initial setup (e.g. LexiconService
+     * hasn't copied association.bin yet), subsequent calls retry opening it. This avoids
+     * permanently losing dictionary bigram predictions due to init ordering.
      */
-    private fun calculateDecay(lastUsedMs: Long): Double {
-        val now = System.currentTimeMillis()
-        val ageHours = (now - lastUsedMs) / 3600000.0
-        // ln(2) ≈ 0.693，用於半衰期計算
-        return exp(-ageHours / DECAY_HALF_LIFE_HOURS * 0.693)
-    }
-
-    /**
-     * Calculate user-layer score with decay floor + learning bonus
-     *
-     * Ensures user entries always rank above dict entries (learningBonus = 300).
-     * High-usage entries (count >= 3) get near-permanent retention via decay floor.
-     * Matches iOS NextWordService.calculateUserScore().
-     *
-     * @param count usage count
-     * @param lastUsedMs last used time in milliseconds
-     * @return weighted score
-     */
-    private fun calculateUserScore(
-        count: Int,
-        lastUsedMs: Long,
-    ): Double {
-        val decay = calculateDecay(lastUsedMs)
-        val rawScore = count.toDouble() * USER_WEIGHT
-        val decayFloor =
-            if (count >= HIGH_USAGE_THRESHOLD) {
-                HIGH_USAGE_DECAY_FLOOR
-            } else {
-                LOW_USAGE_DECAY_FLOOR
+    private suspend fun ensureInitialized(context: Context) {
+        if (isInitialized) {
+            // Lazy retry: if association reader was null at init time (LexiconService
+            // hadn't copied the file yet), try again now. Once loaded, no further retries.
+            if (associationReader == null) {
+                initAssociationReader(context)
             }
-        val effectiveDecay = maxOf(decayFloor, decay)
-        return rawScore * effectiveDecay + LEARNING_BONUS
+            return
+        }
+
+        initMutex.withLock {
+            if (isInitialized) return
+
+            try {
+                // 初始化字典關聯 binary reader（由 LexiconService 複製 association.bin）
+                initAssociationReader(context)
+
+                // 初始化使用者關聯 db（本地建立）
+                connectUserDb(context)
+
+                // Only mark initialized if at least user db is ready.
+                // Association reader may be null if LexiconService hasn't copied
+                // the file yet — the lazy retry above will pick it up later.
+                isInitialized = userDatabase != null
+
+                if (BuildConfig.DEBUG) {
+                    Log.i(
+                        TAG,
+                        "[INIT] NextWord initialized: assocReader=${associationReader != null}, userDb=${userDatabase != null}",
+                    )
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[INIT] Initialization failed", e)
+                }
+            }
+        }
     }
+
+    /** Initialize association binary reader (uses association.bin copied by LexiconService) */
+    private fun initAssociationReader(context: Context) {
+        val binFile = File(context.filesDir, DictionaryConstants.ASSOC_BIN_NAME)
+
+        if (!binFile.exists()) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[INIT] association.bin not found (LexiconService not initialized?)")
+            }
+            return
+        }
+
+        associationReader = AssociationBinaryReader.open(binFile)
+
+        if (BuildConfig.DEBUG) {
+            if (associationReader != null) {
+                Log.i(TAG, "[INIT] Association binary reader loaded")
+            } else {
+                Log.e(TAG, "[INIT] Failed to open association.bin")
+            }
+        }
+    }
+
+    /** 連接使用者關聯 db（本地建立，永久保留） */
+    private fun connectUserDb(context: Context) {
+        val dbFile = File(context.filesDir, USER_DB_NAME)
+
+        userDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+
+        val db = userDatabase ?: return
+
+        // Check and apply schema migrations
+        migrateUserDb(db)
+
+        // 建立表格與索引（如果不存在）
+        createUserAssocTable(db)
+        createUserAssocIndexes(db)
+
+        // 一次性遷移：WAL → DELETE（v3.4.8）
+        // WAL 在 IME 場景無顯著優勢，DELETE mode 更簡單且不會產生 WAL 檔膨脹
+        migrateFromWAL(db)
+    }
+
+    // ------------------------------------------------------------------ //
+    // Public API — Prediction
+    // ------------------------------------------------------------------ //
 
     /**
      * 預測下一個字
@@ -208,6 +294,9 @@ object NextWordService {
                         Log.d(TAG, "[PREDICT] User query: prev_word='$word', prev_tl='$roman'")
                     }
 
+                    // Single clock read per prediction batch — all rows score
+                    // against the same "now" for consistent ranking.
+                    val nowMs = System.currentTimeMillis()
                     val cursor = db.rawQuery(sql, arrayOf(word, roman, (limit * 2).toString()))
                     var userCount = 0
                     cursor.use {
@@ -219,10 +308,10 @@ object NextWordService {
                             userCount++
 
                             // Calculate score with learning bonus and decay floors
-                            val userScore = calculateUserScore(count, lastUsedMs)
+                            val userScore = calculateUserScore(count, lastUsedMs, nowMs)
 
                             if (BuildConfig.DEBUG) {
-                                val decay = calculateDecay(lastUsedMs)
+                                val decay = calculateDecay(lastUsedMs, nowMs)
                                 Log.d(
                                     TAG,
                                     "[PREDICT] User found: '$word' -> '$nextWord' (count=$count, decay=%.3f, score=%.1f)".format(
@@ -274,6 +363,10 @@ object NextWordService {
 
             sortedResults
         }
+
+    // ------------------------------------------------------------------ //
+    // Public API — Recording
+    // ------------------------------------------------------------------ //
 
     /**
      * 記錄使用者選詞關聯（Bigram）
@@ -329,90 +422,161 @@ object NextWordService {
         }
     }
 
-    /**
-     * Ensure databases are initialized.
-     *
-     * If the association binary reader is null after initial setup (e.g. LexiconService
-     * hasn't copied association.bin yet), subsequent calls retry opening it. This avoids
-     * permanently losing dictionary bigram predictions due to init ordering.
-     */
-    private suspend fun ensureInitialized(context: Context) {
-        if (isInitialized) {
-            // Lazy retry: if association reader was null at init time (LexiconService
-            // hadn't copied the file yet), try again now. Once loaded, no further retries.
-            if (associationReader == null) {
-                initAssociationReader(context)
+    /** Batch import association entries with merge strategy: keep higher count. */
+    @Suppress("SqlResolve")
+    suspend fun batchImportAssociations(
+        context: Context,
+        entries: List<AssociationEntry>,
+    ): Int =
+        withContext(Dispatchers.IO) {
+            try {
+                ensureInitialized(context)
+                val db = userDatabase ?: return@withContext 0
+
+                val sql =
+                    """
+                    INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                    ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
+                        prev_tl = excluded.prev_tl,
+                        count = MAX(count, excluded.count),
+                        last_used = datetime('now')
+                    """.trimIndent()
+
+                db.beginTransaction()
+                var imported = 0
+                try {
+                    val stmt = db.compileStatement(sql)
+                    for (entry in entries) {
+                        stmt.bindArgs(
+                            entry.prevWord,
+                            entry.prevTl,
+                            entry.nextWord,
+                            entry.nextTl,
+                            entry.count.toLong(),
+                        )
+                        stmt.executeInsert()
+                        imported++
+                    }
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
+                imported
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[BATCH_IMPORT] Association import failed", e)
+                }
+                0
             }
-            return
         }
 
-        initMutex.withLock {
-            if (isInitialized) return
+    /** Delete a single user association entry */
+    suspend fun deleteAssociation(
+        context: Context,
+        entry: AssociationEntry,
+    ) = withContext(Dispatchers.IO) {
+        try {
+            ensureInitialized(context)
+            val db = userDatabase ?: return@withContext
 
+            db.execSQL(
+                "DELETE FROM user_association WHERE prev_word = ? AND prev_tl = ? AND next_word = ? AND next_tl = ?",
+                arrayOf(entry.prevWord, entry.prevTl, entry.nextWord, entry.nextTl),
+            )
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[DELETE] Failed to delete association", e)
+            }
+        }
+    }
+
+    /** 清除所有使用者關聯資料 */
+    suspend fun clearAllAssociations(context: Context) =
+        withContext(Dispatchers.IO) {
             try {
-                // 初始化字典關聯 binary reader（由 LexiconService 複製 association.bin）
-                initAssociationReader(context)
+                ensureInitialized(context)
+                val db = userDatabase ?: return@withContext
 
-                // 初始化使用者關聯 db（本地建立）
-                connectUserDb(context)
-
-                // Only mark initialized if at least user db is ready.
-                // Association reader may be null if LexiconService hasn't copied
-                // the file yet — the lazy retry above will pick it up later.
-                isInitialized = userDatabase != null
+                db.execSQL("DELETE FROM user_association")
 
                 if (BuildConfig.DEBUG) {
-                    Log.i(
-                        TAG,
-                        "[INIT] NextWord initialized: assocReader=${associationReader != null}, userDb=${userDatabase != null}",
-                    )
+                    Log.i(TAG, "[CLEAR] All user associations cleared")
                 }
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[INIT] Initialization failed", e)
+                    Log.e(TAG, "[CLEAR] Failed to clear associations", e)
                 }
             }
         }
-    }
 
-    /**
-     * Initialize association binary reader (uses association.bin copied by LexiconService)
-     */
-    private fun initAssociationReader(context: Context) {
-        val binFile = File(context.filesDir, DictionaryConstants.ASSOC_BIN_NAME)
+    // ------------------------------------------------------------------ //
+    // Public API — Queries
+    // ------------------------------------------------------------------ //
 
-        if (!binFile.exists()) {
-            if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[INIT] association.bin not found (LexiconService not initialized?)")
+    /** 取得所有使用者關聯資料（Debug 用） */
+    suspend fun allAssociations(context: Context): List<AssociationEntry> =
+        withContext(Dispatchers.IO) {
+            try {
+                ensureInitialized(context)
+                val db = userDatabase ?: return@withContext emptyList()
+                fetchAllAssociations(db)
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "[QUERY] Failed to get all associations", e)
+                }
+                emptyList()
             }
-            return
         }
 
-        associationReader = AssociationBinaryReader.open(binFile)
+    private fun fetchAllAssociations(db: SQLiteDatabase): List<AssociationEntry> {
+        val cursor =
+            db.rawQuery(
+                """
+                SELECT prev_word, prev_tl, next_word, next_tl, count
+                FROM user_association
+                ORDER BY count DESC, last_used DESC
+                """.trimIndent(),
+                null,
+            )
+        val results = mutableListOf<AssociationEntry>()
+        cursor.use {
+            while (it.moveToNext()) {
+                results.add(
+                    AssociationEntry(
+                        prevWord = it.getString(0) ?: "",
+                        prevTl = it.getString(1) ?: "",
+                        nextWord = it.getString(2) ?: "",
+                        nextTl = it.getString(3) ?: "",
+                        count = it.getInt(4),
+                    ),
+                )
+            }
+        }
+        return results
+    }
+
+    // ------------------------------------------------------------------ //
+    // Lifecycle
+    // ------------------------------------------------------------------ //
+
+    /** Close resources */
+    fun close() {
+        associationReader = null
+        userDatabase?.close()
+        userDatabase = null
+        isInitialized = false
 
         if (BuildConfig.DEBUG) {
-            if (associationReader != null) {
-                Log.i(TAG, "[INIT] Association binary reader loaded")
-            } else {
-                Log.e(TAG, "[INIT] Failed to open association.bin")
-            }
+            Log.i(TAG, "[CLOSE] Resources released")
         }
     }
 
-    /**
-     * 連接使用者關聯 db（本地建立，永久保留）
-     */
-    private fun connectUserDb(context: Context) {
-        val dbFile = File(context.filesDir, USER_DB_NAME)
+    // ------------------------------------------------------------------ //
+    // User DB — Schema, Indexes, Migrations
+    // ------------------------------------------------------------------ //
 
-        userDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
-
-        val db = userDatabase ?: return
-
-        // Check and apply schema migrations
-        migrateUserDb(db)
-
-        // 建立表格（如果不存在）
+    private fun createUserAssocTable(db: SQLiteDatabase) {
         db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS user_association (
@@ -427,17 +591,15 @@ object NextWordService {
             )
         """,
         )
+    }
 
+    private fun createUserAssocIndexes(db: SQLiteDatabase) {
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)",
         )
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)",
         )
-
-        // 一次性遷移：WAL → DELETE（v3.4.8）
-        // WAL 在 IME 場景無顯著優勢，DELETE mode 更簡單且不會產生 WAL 檔膨脹
-        migrateFromWAL(db)
     }
 
     /**
@@ -476,9 +638,8 @@ object NextWordService {
     /**
      * Migrate user_association.db schema to current DATABASE_VERSION.
      *
-     * v2: Removed next_poj and delimiter columns (align with iOS schema).
-     * SQLite < 3.35 does not support DROP COLUMN, so we recreate the table
-     * and copy existing data.
+     * Each version step is delegated to a named migration function so
+     * the overall shape is legible at a glance.
      */
     private fun migrateUserDb(db: SQLiteDatabase) {
         val cursor = db.rawQuery("PRAGMA user_version;", null)
@@ -493,262 +654,180 @@ object NextWordService {
             Log.i(TAG, "[MIGRATE] user_association.db v$currentVersion -> v$DATABASE_VERSION")
         }
 
-        // v0/v1 -> v2: remove next_poj and delimiter columns
-        if (currentVersion < 2) {
-            // Only migrate if old table actually exists with the old columns
-            val hasOldTable =
-                try {
-                    val ti =
-                        db.rawQuery(
-                            "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
-                            null,
-                        )
-                    val exists = ti.use { it.moveToFirst() }
-                    exists
-                } catch (_: Exception) {
-                    false
-                }
-
-            if (hasOldTable) {
-                try {
-                    db.beginTransaction()
-                    // Recreate table without next_poj and delimiter
-                    db.execSQL("ALTER TABLE user_association RENAME TO user_association_old")
-                    db.execSQL(
-                        """
-                        CREATE TABLE user_association (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            prev_word TEXT NOT NULL,
-                            next_word TEXT NOT NULL,
-                            next_tl TEXT DEFAULT '',
-                            count INTEGER DEFAULT 1,
-                            last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            UNIQUE(prev_word, next_word, next_tl)
-                        )
-                    """,
-                    )
-                    db.execSQL(
-                        """
-                        INSERT INTO user_association (prev_word, next_word, next_tl, count, last_used)
-                        SELECT prev_word, next_word, COALESCE(next_tl, ''), count, last_used
-                        FROM user_association_old
-                    """,
-                    )
-                    db.execSQL("DROP TABLE user_association_old")
-                    db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)")
-                    db.setTransactionSuccessful()
-                } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) {
-                        Log.e(TAG, "[MIGRATE] Failed to migrate user_association", e)
-                    }
-                } finally {
-                    db.endTransaction()
-                }
-            }
-        }
-
-        // v2 -> v3: UNIQUE(prev_word, next_word) -> UNIQUE(prev_word, next_word, next_tl) (drop+recreate)
-        if (currentVersion in 2 until 3) {
-            val hasTable =
-                try {
-                    val ti =
-                        db.rawQuery(
-                            "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
-                            null,
-                        )
-                    ti.use { it.moveToFirst() }
-                } catch (_: Exception) {
-                    false
-                }
-
-            if (hasTable) {
-                try {
-                    db.beginTransaction()
-                    db.execSQL("DROP TABLE user_association")
-                    db.execSQL("DROP INDEX IF EXISTS idx_user_prev_word")
-                    db.setTransactionSuccessful()
-                    if (BuildConfig.DEBUG) {
-                        Log.i(TAG, "[MIGRATE] Recreated user_association with UNIQUE(prev_word, next_word, next_tl)")
-                    }
-                } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) {
-                        Log.e(TAG, "[MIGRATE] v2->v3 migration failed", e)
-                    }
-                } finally {
-                    db.endTransaction()
-                }
-            }
-        }
-
-        // v3 -> v4: add prev_tl column (ALTER TABLE, no data loss)
-        if (currentVersion in 3 until 4) {
-            try {
-                db.beginTransaction()
-                db.execSQL("ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
-                db.setTransactionSuccessful()
-                if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[MIGRATE] Added prev_tl column to user_association")
-                }
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[MIGRATE] v3->v4 migration failed", e)
-                }
-            } finally {
-                db.endTransaction()
-            }
-        }
+        if (currentVersion < 2) migrateV0ToV2(db)
+        if (currentVersion in 2 until 3) migrateV2ToV3(db)
+        if (currentVersion in 3 until 4) migrateV3ToV4(db)
 
         // Stamp the new version
         db.execSQL("PRAGMA user_version = $DATABASE_VERSION;")
     }
 
-    /**
-     * 使用者關聯資料（Debug 用）
-     */
-    data class AssociationEntry(
-        val prevWord: String,
-        val prevTl: String = "",
-        val nextWord: String,
-        val nextTl: String,
-        val count: Int,
-    )
-
-    /**
-     * 取得所有使用者關聯資料（Debug 用）
-     */
-    suspend fun allAssociations(context: Context): List<AssociationEntry> =
-        withContext(Dispatchers.IO) {
+    /** v0/v1 → v2: remove next_poj and delimiter columns (align with iOS schema). */
+    private fun migrateV0ToV2(db: SQLiteDatabase) {
+        // Only migrate if old table actually exists with the old columns
+        val hasOldTable =
             try {
-                ensureInitialized(context)
-                val db = userDatabase ?: return@withContext emptyList()
-
-                val cursor =
+                val ti =
                     db.rawQuery(
-                        """
-                        SELECT prev_word, prev_tl, next_word, next_tl, count
-                        FROM user_association
-                        ORDER BY count DESC, last_used DESC
-                        """.trimIndent(),
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
                         null,
                     )
-
-                val results = mutableListOf<AssociationEntry>()
-                cursor.use {
-                    while (it.moveToNext()) {
-                        results.add(
-                            AssociationEntry(
-                                prevWord = it.getString(0) ?: "",
-                                prevTl = it.getString(1) ?: "",
-                                nextWord = it.getString(2) ?: "",
-                                nextTl = it.getString(3) ?: "",
-                                count = it.getInt(4),
-                            ),
-                        )
-                    }
-                }
-
-                results
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[QUERY] Failed to get all associations", e)
-                }
-                emptyList()
+                ti.use { it.moveToFirst() }
+            } catch (_: Exception) {
+                false
             }
-        }
 
-    /**
-     * Batch import association entries with merge strategy: keep higher count.
-     */
-    @Suppress("SqlResolve")
-    suspend fun batchImportAssociations(
-        context: Context,
-        entries: List<AssociationEntry>,
-    ): Int =
-        withContext(Dispatchers.IO) {
-            try {
-                ensureInitialized(context)
-                val db = userDatabase ?: return@withContext 0
+        if (!hasOldTable) return
 
-                val sql =
-                    """
-                    INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
-                    VALUES (?, ?, ?, ?, ?, datetime('now'))
-                    ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
-                        prev_tl = excluded.prev_tl,
-                        count = MAX(count, excluded.count),
-                        last_used = datetime('now')
-                    """.trimIndent()
-
-                db.beginTransaction()
-                var imported = 0
-                try {
-                    val stmt = db.compileStatement(sql)
-                    for (entry in entries) {
-                        stmt.clearBindings()
-                        stmt.bindString(1, entry.prevWord)
-                        stmt.bindString(2, entry.prevTl)
-                        stmt.bindString(3, entry.nextWord)
-                        stmt.bindString(4, entry.nextTl)
-                        stmt.bindLong(5, entry.count.toLong())
-                        stmt.executeInsert()
-                        imported++
-                    }
-                    db.setTransactionSuccessful()
-                } finally {
-                    db.endTransaction()
-                }
-                imported
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[BATCH_IMPORT] Association import failed", e)
-                }
-                0
-            }
-        }
-
-    /**
-     * Delete a single user association entry
-     */
-    suspend fun deleteAssociation(
-        context: Context,
-        entry: AssociationEntry,
-    ) = withContext(Dispatchers.IO) {
         try {
-            ensureInitialized(context)
-            val db = userDatabase ?: return@withContext
-
+            db.beginTransaction()
+            // Recreate table without next_poj and delimiter
+            db.execSQL("ALTER TABLE user_association RENAME TO user_association_old")
             db.execSQL(
-                "DELETE FROM user_association WHERE prev_word = ? AND prev_tl = ? AND next_word = ? AND next_tl = ?",
-                arrayOf(entry.prevWord, entry.prevTl, entry.nextWord, entry.nextTl),
+                """
+                CREATE TABLE user_association (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    prev_word TEXT NOT NULL,
+                    next_word TEXT NOT NULL,
+                    next_tl TEXT DEFAULT '',
+                    count INTEGER DEFAULT 1,
+                    last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(prev_word, next_word, next_tl)
+                )
+            """,
             )
+            db.execSQL(
+                """
+                INSERT INTO user_association (prev_word, next_word, next_tl, count, last_used)
+                SELECT prev_word, next_word, COALESCE(next_tl, ''), count, last_used
+                FROM user_association_old
+            """,
+            )
+            db.execSQL("DROP TABLE user_association_old")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word)")
+            db.setTransactionSuccessful()
         } catch (e: Exception) {
             if (BuildConfig.DEBUG) {
-                Log.e(TAG, "[DELETE] Failed to delete association", e)
+                Log.e(TAG, "[MIGRATE] Failed to migrate user_association", e)
             }
+        } finally {
+            db.endTransaction()
         }
     }
 
-    /**
-     * 清除所有使用者關聯資料
-     */
-    suspend fun clearAllAssociations(context: Context) =
-        withContext(Dispatchers.IO) {
+    /** v2 → v3: UNIQUE(prev_word, next_word) → UNIQUE(prev_word, next_word, next_tl) (drop+recreate). */
+    private fun migrateV2ToV3(db: SQLiteDatabase) {
+        val hasTable =
             try {
-                ensureInitialized(context)
-                val db = userDatabase ?: return@withContext
-
-                db.execSQL("DELETE FROM user_association")
-
-                if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[CLEAR] All user associations cleared")
-                }
-            } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[CLEAR] Failed to clear associations", e)
-                }
+                val ti =
+                    db.rawQuery(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_association'",
+                        null,
+                    )
+                ti.use { it.moveToFirst() }
+            } catch (_: Exception) {
+                false
             }
+
+        if (!hasTable) return
+
+        try {
+            db.beginTransaction()
+            db.execSQL("DROP TABLE user_association")
+            db.execSQL("DROP INDEX IF EXISTS idx_user_prev_word")
+            db.setTransactionSuccessful()
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[MIGRATE] Recreated user_association with UNIQUE(prev_word, next_word, next_tl)")
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[MIGRATE] v2->v3 migration failed", e)
+            }
+        } finally {
+            db.endTransaction()
         }
+    }
+
+    /** v3 → v4: add prev_tl column (ALTER TABLE, no data loss). */
+    private fun migrateV3ToV4(db: SQLiteDatabase) {
+        try {
+            db.beginTransaction()
+            db.execSQL("ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
+            db.setTransactionSuccessful()
+            if (BuildConfig.DEBUG) {
+                Log.i(TAG, "[MIGRATE] Added prev_tl column to user_association")
+            }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "[MIGRATE] v3->v4 migration failed", e)
+            }
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Scoring
+    // ------------------------------------------------------------------ //
+
+    /**
+     * 計算時間衰減因子
+     *
+     * 使用指數衰減公式（參考 RIME）：
+     * decay = exp(-ageHours / halfLifeHours * ln(2))
+     *
+     * 效果：
+     * - 剛使用：decay ≈ 1.0
+     * - 1 週後：decay ≈ 0.5
+     * - 2 週後：decay ≈ 0.25
+     * - 1 月後：decay ≈ 0.06
+     *
+     * @param lastUsedMs 上次使用時間（毫秒）
+     * @param nowMs 當下時間（毫秒）— caller passes a batch-level clock read
+     * @return 衰減因子（0.0 ~ 1.0）
+     */
+    private fun calculateDecay(
+        lastUsedMs: Long,
+        nowMs: Long,
+    ): Double {
+        val ageHours = (nowMs - lastUsedMs) / 3600000.0
+        // ln(2) ≈ 0.693，用於半衰期計算
+        return exp(-ageHours / DECAY_HALF_LIFE_HOURS * 0.693)
+    }
+
+    /**
+     * Calculate user-layer score with decay floor + learning bonus
+     *
+     * Ensures user entries always rank above dict entries (learningBonus = 300).
+     * High-usage entries (count >= 3) get near-permanent retention via decay floor.
+     * Matches iOS NextWordService.calculateUserScore().
+     *
+     * @param count usage count
+     * @param lastUsedMs last used time in milliseconds
+     * @param nowMs current time in milliseconds (batch-level, injected for determinism)
+     * @return weighted score
+     */
+    private fun calculateUserScore(
+        count: Int,
+        lastUsedMs: Long,
+        nowMs: Long,
+    ): Double {
+        val decay = calculateDecay(lastUsedMs, nowMs)
+        val rawScore = count.toDouble() * USER_WEIGHT
+        val decayFloor =
+            if (count >= HIGH_USAGE_THRESHOLD) {
+                HIGH_USAGE_DECAY_FLOOR
+            } else {
+                LOW_USAGE_DECAY_FLOOR
+            }
+        val effectiveDecay = maxOf(decayFloor, decay)
+        return rawScore * effectiveDecay + LEARNING_BONUS
+    }
+
+    // ------------------------------------------------------------------ //
+    // Pruning
+    // ------------------------------------------------------------------ //
 
     /**
      * 清理舊的使用者關聯（當超過上限時）
@@ -807,18 +886,4 @@ object NextWordService {
                 }
             }
         }
-
-    /**
-     * Close resources
-     */
-    fun close() {
-        associationReader = null
-        userDatabase?.close()
-        userDatabase = null
-        isInitialized = false
-
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "[CLOSE] Resources released")
-        }
-    }
 }

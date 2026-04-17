@@ -20,7 +20,8 @@ taigikeyboard/
 │   ├── security-rules.md   # Logging, SQL, network, data storage rules
 │   ├── ios-guidelines.md   # SourceKit, KeyboardKit, memory, naming, tests
 │   ├── ai-friendly-code.md # Naming, comments, function design for AI readability
-│   └── code-review-rules.md # Code review checklist (best practices, regression, scope)
+│   ├── code-review-rules.md # Code review checklist (best practices, regression, scope)
+│   └── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
 ├── dictionary/        # Dictionary data files
 ├── scripts/           # Build and utility scripts
 └── references/        # External repos (gitignored — don't place tracked content here)
@@ -39,6 +40,7 @@ taigikeyboard/
 9. **iOS Guidelines** — Before modifying iOS code, **must** read `rules/ios-guidelines.md`
 10. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
 11. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
+12. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
 
 ## Build & Test
 
@@ -55,6 +57,8 @@ taigikeyboard/
 - Documentation and code comments remain in **English**
 - Analyze problems first, provide solution options for user to choose
 - Explain scope of impact before making changes
+- **Batch clarifying questions in the first turn** — ask everything upfront, avoid piecemeal multi-turn Q&A
+- **Match response length to task** — short for simple lookups, detailed for cross-platform analysis. Honor explicit length requests from the user
 
 ## Key References
 

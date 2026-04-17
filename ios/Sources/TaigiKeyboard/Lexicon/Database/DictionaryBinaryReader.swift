@@ -167,6 +167,12 @@ final class DictionaryBinaryReader: @unchecked Sendable {
     }
 
     /// Check if a record passes the dictionary filter
+    ///
+    /// CROSS-PLATFORM INVARIANT — must stay in sync with
+    /// Android `DictionaryBinaryReader.passesFilter()`. The two filters
+    /// are deliberately different from `AssociationBinaryReader.passesFilter`
+    /// (this one has 3 layers: variant, khiin, source-OR-with-dev; association
+    /// has 1 layer: source-OR). See `docs/engine/binary-format.md` §4.
     static func passesFilter(
         recordBitmask: UInt16,
         enabledDicts: EnabledDictionaries,

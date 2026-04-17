@@ -5,7 +5,6 @@ import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -13,7 +12,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.text.Normalizer
 
 /**
  * Service for querying Taigi dictionary
@@ -54,102 +52,28 @@ object LexiconService {
     ): List<TaigiWord> =
         withContext(Dispatchers.IO) {
             val searchStart = System.currentTimeMillis()
-            if (input.isEmpty()) {
-                return@withContext emptyList()
-            }
-
+            if (input.isEmpty()) return@withContext emptyList()
             // Hanzi input cannot be searched via trie (matching iOS guard)
-            if (inputType is InputType.Hanzi) {
-                return@withContext emptyList()
-            }
+            if (inputType is InputType.Hanzi) return@withContext emptyList()
 
             val initStart = System.currentTimeMillis()
             ensureInitialized(context)
             if (BuildConfig.DEBUG) Log.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
 
             val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
-
             // 讀取搜尋設定（atomic snapshot to avoid torn reads across multiple getters）
             val prefHelper = prefs ?: PrefHelper(context)
             val enabledDicts = EnabledDictionaries.fromSnapshot(prefHelper.snapshotEnabledDictionaries())
 
             try {
-                // Query custom dictionary by prefix (highest priority, matching iOS)
-                val customWords =
-                    if (prefHelper.customDictEnabled) {
-                        val isToneAware = input.any { it.isDigit() }
-                        val searchPrefix =
-                            if (isToneAware) {
-                                input.lowercase().replace("-", "").replace(" ", "")
-                            } else {
-                                CustomDictionaryService.generateNotone(input)
-                            }
-                        try {
-                            CustomDictionaryService
-                                .search(prefix = searchPrefix, isToneAware = isToneAware, limit = 20)
-                                .also { entries ->
-                                    if (BuildConfig.DEBUG) {
-                                        Log.d(
-                                            TAG,
-                                            "[SEARCH] customDict prefix='$searchPrefix' toneAware=$isToneAware results=${entries.size}",
-                                        )
-                                    }
-                                }.map { entry ->
-                                    TaigiWord(
-                                        id = -2,
-                                        roman = entry.roman,
-                                        hanzi = entry.hanzi,
-                                        lengthScore = null,
-                                    )
-                                }
-                        } catch (e: Exception) {
-                            if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
-                            emptyList()
-                        }
-                    } else {
-                        emptyList()
-                    }
-
-                // 使用 Trie + Binary Reader 查詢
-                val trieStart = System.currentTimeMillis()
-                val words = searchWithTrie(reader, input, inputMode, limit, enabledDicts)
-                if (BuildConfig.DEBUG) {
-                    Log.d(
-                        "PERF",
-                        "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms",
-                    )
-                }
-
-                // TPS ㄜ expansion: also search "or" variant when toggle ON
-                val allSystemWords =
-                    if (TPSConverter.containsTPS(input) && prefHelper.tpsOrMapsToER) {
-                        val tlInput = TPSConverter.toTL(input)
-                        if (tlInput.contains("er")) {
-                            val orVariant = tlInput.replace("er", "or")
-                            val orWords = searchWithTrie(reader, orVariant, inputMode, limit, enabledDicts)
-                            val existingIds = words.map { it.id }.toSet()
-                            words + orWords.filter { it.id !in existingIds }
-                        } else {
-                            words
-                        }
-                    } else {
-                        words
-                    }
-
+                val customWords = lookupCustomDictionary(input, prefHelper)
+                val systemWords = querySystemDictionaries(reader, input, inputMode, limit, enabledDicts, prefHelper)
                 // Merge: custom words first, then system words (matching iOS)
-                val mergedWords = customWords + allSystemWords
+                val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
-                val uniqueWords = removeDuplicates(mergedWords)
-                val normalizedInput = InputNormalizer.normalize(input, inputMode)
-                val sorted = sortByScore(uniqueWords, normalizedInput)
-                // TPS mode: remove visual duplicates (same hanzi, different roman)
-                val result =
-                    if (prefs?.inputMode == "tps") {
-                        removeDisplayDuplicates(sorted)
-                    } else {
-                        sorted
-                    }
+                val ranked = rankByFrequency(merged, input, inputMode)
+                val result = applyDisplayDedup(ranked, prefs)
                 if (BuildConfig.DEBUG) {
                     Log.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
                     Log.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
@@ -158,12 +82,102 @@ object LexiconService {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) {
-                    Log.e(TAG, "[SEARCH] Query failed", e)
-                }
+                if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Query failed", e)
                 throw DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error")
             }
         }
+
+    /**
+     * Phase 1: query the custom user dictionary by prefix.
+     * Returns early if the custom-dict toggle is off.
+     */
+    private suspend fun lookupCustomDictionary(
+        input: String,
+        prefHelper: PrefHelper,
+    ): List<TaigiWord> {
+        if (!prefHelper.customDictEnabled) return emptyList()
+
+        val isToneAware = input.any { it.isDigit() }
+        val searchPrefix =
+            if (isToneAware) {
+                input.lowercase().replace("-", "").replace(" ", "")
+            } else {
+                CustomDictionaryService.generateNotone(input)
+            }
+        return try {
+            CustomDictionaryService
+                .search(prefix = searchPrefix, isToneAware = isToneAware, limit = 20)
+                .also { entries ->
+                    if (BuildConfig.DEBUG) {
+                        Log.d(
+                            TAG,
+                            "[SEARCH] customDict prefix='$searchPrefix' toneAware=$isToneAware results=${entries.size}",
+                        )
+                    }
+                }.map { entry ->
+                    TaigiWord(id = -2, roman = entry.roman, hanzi = entry.hanzi, lengthScore = null)
+                }
+        } catch (e: Exception) {
+            if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * Phase 2: query the system trie + binary reader, including the TPS
+     * er↔or variant expansion when the toggle is on. Preserves
+     * existingIds-based dedup with the primary result set.
+     */
+    private fun querySystemDictionaries(
+        reader: DictionaryBinaryReader,
+        input: String,
+        inputMode: InputMode,
+        limit: Int,
+        enabledDicts: EnabledDictionaries,
+        prefHelper: PrefHelper,
+    ): List<TaigiWord> {
+        val trieStart = System.currentTimeMillis()
+        val words = searchWithTrie(reader, input, inputMode, limit, enabledDicts)
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                "PERF",
+                "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms",
+            )
+        }
+
+        // TPS ㄜ expansion: also search "or" variant when toggle is ON
+        if (!(TPSConverter.containsTPS(input) && prefHelper.tpsOrMapsToER)) return words
+        val tlInput = TPSConverter.toTL(input)
+        if (!tlInput.contains("er")) return words
+
+        val orVariant = tlInput.replace("er", "or")
+        val orWords = searchWithTrie(reader, orVariant, inputMode, limit, enabledDicts)
+        val existingIds = words.map { it.id }.toSet()
+        return words + orWords.filter { it.id !in existingIds }
+    }
+
+    /**
+     * Phase 3: dedup + score-based ordering. Normalizes the input once
+     * for scoring and delegates ranking to CandidateProcessor.
+     */
+    private suspend fun rankByFrequency(
+        merged: List<TaigiWord>,
+        input: String,
+        inputMode: InputMode,
+    ): List<TaigiWord> {
+        val uniqueWords = CandidateProcessor.removeDuplicates(merged)
+        val normalizedInput = InputNormalizer.normalize(input, inputMode)
+        return CandidateProcessor.sortByScore(uniqueWords, normalizedInput)
+    }
+
+    /**
+     * Phase 4: TPS mode hides visual duplicates (same hanzi, different
+     * roman). Non-TPS modes return the ranked list unchanged.
+     */
+    private fun applyDisplayDedup(
+        ranked: List<TaigiWord>,
+        prefs: PrefHelper?,
+    ): List<TaigiWord> = if (prefs?.inputMode == "tps") CandidateProcessor.removeDisplayDuplicates(ranked) else ranked
 
     /**
      * Search using Trie exact match + prefix match + binary reader
@@ -450,127 +464,6 @@ object LexiconService {
             if (BuildConfig.DEBUG) {
                 Log.i(TAG, "[UPDATE] Dictionary assets updated from v$lastCopiedVersion to v$currentAppVersion")
             }
-        }
-    }
-
-    // --- Scoring & Sorting (unchanged) ---
-
-    private fun removeDuplicates(words: List<TaigiWord>): List<TaigiWord> {
-        val seen = mutableSetOf<String>()
-        val result = mutableListOf<TaigiWord>()
-
-        for (word in words) {
-            val key = "${word.roman}|${word.hanzi ?: ""}"
-            if (key in seen) continue
-            seen.add(key)
-            result.add(word)
-        }
-
-        return result
-    }
-
-    private fun removeDisplayDuplicates(words: List<TaigiWord>): List<TaigiWord> {
-        val seenHanzi = mutableSetOf<String>()
-        return words.filter { word ->
-            val hanzi = word.hanzi
-            if (hanzi.isNullOrEmpty()) {
-                true
-            } else {
-                seenHanzi.add(hanzi)
-            }
-        }
-    }
-
-    private fun calculateScore(
-        word: TaigiWord,
-        normalizedInput: String,
-        frequencyData: UserFrequencyService.FrequencyData,
-        currentTime: Long,
-    ): ScoreBreakdown {
-        val candidateBase = romanToBase(word.roman)
-        val inputBase = inputToBase(normalizedInput)
-
-        val cappedUserFreq = minOf(frequencyData.count, 100)
-        val userFreqScore = cappedUserFreq * 100
-
-        val oneHourMillis = 60 * 60 * 1000L
-        val recencyBonus =
-            if (frequencyData.lastUsedMillis > 0 &&
-                (currentTime - frequencyData.lastUsedMillis) < oneHourMillis
-            ) {
-                200
-            } else {
-                0
-            }
-
-        val exactBonus = if (candidateBase == inputBase) 100 else 0
-        val completionPenalty = if (candidateBase != inputBase) -1000 else 0
-
-        val inputLen = maxOf(inputBase.length, 1)
-        val candidateLen = maxOf(candidateBase.length, 1)
-        val matchRatio = minOf(inputLen, candidateLen).toDouble() / maxOf(inputLen, candidateLen).toDouble()
-        val closenessBonus = (matchRatio * 500).toInt()
-
-        val baseFreqScore = (word.lengthScore ?: 0) / 10
-
-        return ScoreBreakdown(
-            userFreqScore = userFreqScore,
-            recencyBonus = recencyBonus,
-            exactBonus = exactBonus,
-            completionPenalty = completionPenalty,
-            closenessBonus = closenessBonus,
-            baseFreqScore = baseFreqScore,
-        )
-    }
-
-    private fun romanToBase(roman: String): String {
-        val noHyphens = roman.replace("-", "").replace(" ", "")
-        val withNasal = noHyphens.replace("\u207F", "nn").replace("\u1D3A", "nn")
-        val nfd = Normalizer.normalize(withNasal, Normalizer.Form.NFD)
-        val withOo = nfd.replace("\u0358", "o")
-        return withOo
-            .filter {
-                Character.getType(it) != Character.NON_SPACING_MARK.toInt()
-            }.filter { !it.isDigit() }
-            .lowercase()
-    }
-
-    private fun inputToBase(normalizedInput: String): String = normalizedInput.filter { !it.isDigit() }.lowercase()
-
-    private suspend fun sortByScore(
-        words: List<TaigiWord>,
-        normalizedInput: String,
-    ): List<TaigiWord> {
-        val currentTime = System.currentTimeMillis()
-        val wordTexts = words.map { it.displayText }.distinct()
-        val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
-
-        val sorted =
-            words
-                .map { word ->
-                    val freqData =
-                        frequencyDataMap[word.displayText]
-                            ?: UserFrequencyService.FrequencyData(0, 0)
-                    word to calculateScore(word, normalizedInput, freqData, currentTime)
-                }.sortedByDescending { it.second.total }
-
-        if (BuildConfig.DEBUG) {
-            logScoreDetails(sorted, normalizedInput)
-        }
-
-        return sorted.map { it.first }
-    }
-
-    private fun logScoreDetails(
-        sorted: List<Pair<TaigiWord, ScoreBreakdown>>,
-        normalizedInput: String,
-    ) {
-        for ((word, b) in sorted) {
-            val hanzi = word.hanzi ?: ""
-            Log.d(
-                TAG,
-                "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=${b.userFreqScore} recency=${b.recencyBonus} exact=${b.exactBonus} close=${b.closenessBonus} base=${b.baseFreqScore} completion=${b.completionPenalty} total=${b.total}",
-            )
         }
     }
 

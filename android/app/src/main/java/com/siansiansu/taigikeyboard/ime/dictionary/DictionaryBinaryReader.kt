@@ -198,7 +198,16 @@ class DictionaryBinaryReader private constructor(
                 if ((bitmask and (1 shl bit)) != 0) source else null
             }
 
-        /** Check if a record passes the dictionary filter (3-layer, matches iOS) */
+        /**
+         * Check if a record passes the dictionary filter (3-layer).
+         *
+         * CROSS-PLATFORM INVARIANT — must stay in sync with
+         * iOS `DictionaryBinaryReader.passesFilter()`. The two filters are
+         * deliberately different from `AssociationBinaryReader.passesFilter`
+         * (this one has 3 layers: variant, khiin, source-OR-with-dev;
+         * association has 1 layer: source-OR). See
+         * `docs/engine/binary-format.md` §4.
+         */
         fun passesFilter(
             recordBitmask: Int,
             enabledDicts: EnabledDictionaries,

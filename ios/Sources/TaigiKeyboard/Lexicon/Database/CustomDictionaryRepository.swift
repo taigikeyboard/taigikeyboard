@@ -1,18 +1,29 @@
 import Foundation
 import SQLite3
 
-/// Repository for user custom dictionary entries
-/// Stores data in App Group shared container (accessible by Keyboard Extension)
+/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
+private extension OpaquePointer? {
+    func bindText(_ index: Int32, _ value: String) {
+        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
+    }
+}
+
+/// Repository for user custom dictionary entries.
+///
+/// Stores data in the App Group shared container so the keyboard extension
+/// can read it. Public API covers CRUD, search (async + sync hot path), and
+/// batched CSV import. Schema management is encapsulated in the `Schema`
+/// section below and runs on first use.
 final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
     static let shared = CustomDictionaryRepository()
 
+    /// Maximum number of custom dictionary entries (aligned with Android MAX_ENTRY_COUNT).
+    static let maxEntries = 30000
+
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "CustomDictionaryRepository")
-
-    /// Maximum number of custom dictionary entries (aligned with Android MAX_ENTRY_COUNT)
-    static let maxEntries = 30000
 
     private var isTablesCreated = false
 
@@ -26,24 +37,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         )
     }
 
-    // MARK: - Database Path
-
-    private static func getDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw DictionaryError.databaseNotFound
-        }
-
-        try FileManager.default.createDirectory(
-            at: containerURL,
-            withIntermediateDirectories: true,
-        )
-
-        let databaseURL = containerURL.appendingPathComponent("custom_dictionary.db")
-        return databaseURL.path
-    }
-
-    // MARK: - Initialization
-
     func ensureInitialized() async throws {
         try await connectionManager.ensureInitialized(
             flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
@@ -51,169 +44,30 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         try await createTablesIfNeeded()
     }
 
-    private func createTablesIfNeeded() async throws {
-        if isTablesCreated { return }
+    // MARK: - CRUD
 
-        try await connectionManager.execute { db in
-            let sql = """
-                CREATE TABLE IF NOT EXISTS custom_dictionary (
-                    id TEXT PRIMARY KEY,
-                    roman TEXT NOT NULL,
-                    hanzi TEXT NOT NULL,
-                    notone TEXT DEFAULT '',
-                    abbrev TEXT DEFAULT '',
-                    roman_num TEXT DEFAULT '',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """
-
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                let errorMsg = String(cString: sqlite3_errmsg(db))
-                throw DictionaryError.queryPreparationFailed("Create custom_dictionary table failed: \(errorMsg)")
-            }
-
-            guard sqlite3_step(stmt) == SQLITE_DONE else {
-                let errorMsg = String(cString: sqlite3_errmsg(db))
-                sqlite3_finalize(stmt)
-                throw DictionaryError.queryExecutionFailed("Create custom_dictionary table failed: \(errorMsg)")
-            }
-            sqlite3_finalize(stmt)
-
-            // Create indexes for prefix search
-            for indexSQL in [
-                "CREATE INDEX IF NOT EXISTS idx_custom_roman ON custom_dictionary(roman);",
-                "CREATE INDEX IF NOT EXISTS idx_custom_notone ON custom_dictionary(notone);",
-                "CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON custom_dictionary(abbrev);",
-                "CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON custom_dictionary(roman_num);",
-            ] {
-                var indexStmt: OpaquePointer?
-                if sqlite3_prepare_v2(db, indexSQL, -1, &indexStmt, nil) == SQLITE_OK {
-                    sqlite3_step(indexStmt)
-                    sqlite3_finalize(indexStmt)
-                }
-            }
-
-            // Migration: add notone/abbrev columns if they don't exist (for existing databases)
-            let allowedColumns: Set = ["notone", "abbrev", "roman_num"]
-            for column in allowedColumns {
-                var checkStmt: OpaquePointer?
-                let checkSQL = "SELECT COUNT(*) FROM pragma_table_info('custom_dictionary') WHERE name = ?;"
-                var columnExists = false
-                if sqlite3_prepare_v2(db, checkSQL, -1, &checkStmt, nil) == SQLITE_OK {
-                    sqlite3_bind_text(checkStmt, 1, column, -1, SQLiteConnectionManager.sqliteTransient)
-                    if sqlite3_step(checkStmt) == SQLITE_ROW {
-                        columnExists = sqlite3_column_int(checkStmt, 0) > 0
-                    }
-                    sqlite3_finalize(checkStmt)
-                }
-                if !columnExists {
-                    // DDL cannot use parameterized column names; allowedColumns whitelist ensures safety
-                    var migStmt: OpaquePointer?
-                    let migrationSQL = "ALTER TABLE custom_dictionary ADD COLUMN \(column) TEXT DEFAULT '';"
-                    if sqlite3_prepare_v2(db, migrationSQL, -1, &migStmt, nil) == SQLITE_OK {
-                        sqlite3_step(migStmt)
-                        sqlite3_finalize(migStmt)
-                    }
-                }
-            }
-
-            // Regenerate notone/abbrev/roman_num for all entries (ensures values match current generation logic)
-            let backfillSQL = "SELECT id, roman FROM custom_dictionary;"
-            var backfillStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, backfillSQL, -1, &backfillStmt, nil) == SQLITE_OK {
-                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-                while sqlite3_step(backfillStmt) == SQLITE_ROW {
-                    let id = String(cString: sqlite3_column_text(backfillStmt, 0))
-                    let roman = String(cString: sqlite3_column_text(backfillStmt, 1))
-                    let notone = CustomDictionaryService.generateNotone(roman)
-                    let abbrev = CustomDictionaryService.generateAbbrev(roman)
-                    let romanNum = CustomDictionaryService.generateRomanNum(roman)
-                    let updateSQL = "UPDATE custom_dictionary SET notone = ?, abbrev = ?, roman_num = ? WHERE id = ?;"
-                    var updateStmt: OpaquePointer?
-                    if sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK {
-                        sqlite3_bind_text(updateStmt, 1, notone, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 2, abbrev, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 3, romanNum, -1, TRANSIENT)
-                        sqlite3_bind_text(updateStmt, 4, id, -1, TRANSIENT)
-                        sqlite3_step(updateStmt)
-                        sqlite3_finalize(updateStmt)
-                    }
-                }
-                sqlite3_finalize(backfillStmt)
-            }
-        }
-
-        isTablesCreated = true
-    }
-
-    // MARK: - CRUD Operations
-
-    /// Insert or update an entry (upsert by id)
+    /// Insert or update an entry (upsert by id).
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
-            // 在同一個 execute block 內檢查容量，避免 TOCTOU race condition
-            // 更新既有 entry（同 id）不算新增，不受上限限制
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-            var existsStmt: OpaquePointer?
-            var isUpdate = false
-            if sqlite3_prepare_v2(db, "SELECT 1 FROM custom_dictionary WHERE id = ? LIMIT 1;", -1, &existsStmt, nil) == SQLITE_OK {
-                sqlite3_bind_text(existsStmt, 1, entry.id, -1, TRANSIENT)
-                isUpdate = sqlite3_step(existsStmt) == SQLITE_ROW
-            }
-            sqlite3_finalize(existsStmt)
-
-            if !isUpdate {
-                var countStmt: OpaquePointer?
-                if sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &countStmt, nil) == SQLITE_OK,
-                   sqlite3_step(countStmt) == SQLITE_ROW
-                {
-                    let currentCount = Int(sqlite3_column_int(countStmt, 0))
-                    sqlite3_finalize(countStmt)
-                    guard currentCount < Self.maxEntries else {
-                        throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
-                    }
-                } else {
-                    sqlite3_finalize(countStmt)
+            // Capacity guard: check inside the same execute block to avoid
+            // a TOCTOU race with concurrent writers. Updating an existing
+            // entry (same id) does not count as a new insert.
+            if !Self.entryExists(db: db, id: entry.id) {
+                let currentCount = Self.currentEntryCount(db: db)
+                guard currentCount < Self.maxEntries else {
+                    throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
                 }
             }
 
-            let sql = """
-                INSERT INTO custom_dictionary (id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    roman = excluded.roman,
-                    hanzi = excluded.hanzi,
-                    notone = excluded.notone,
-                    abbrev = excluded.abbrev,
-                    roman_num = excluded.roman_num,
-                    updated_at = excluded.updated_at;
-            """
-
             var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
                 throw DictionaryError.queryPreparationFailed("Upsert failed: \(errorMsg)")
             }
             defer { sqlite3_finalize(stmt) }
 
-            let notone = CustomDictionaryService.generateNotone(entry.roman)
-            let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
-            let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
-
-            sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 4, notone, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 5, abbrev, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 6, romanNum, -1, TRANSIENT)
-
-            let createdStr = Self.dateFormatter.string(from: entry.createdAt)
-            let updatedStr = Self.dateFormatter.string(from: entry.updatedAt)
-            sqlite3_bind_text(stmt, 7, createdStr, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 8, updatedStr, -1, TRANSIENT)
+            Self.bindEntry(stmt, entry)
 
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
@@ -222,7 +76,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    /// Fetch all entries ordered by updated_at descending
+    /// Fetch all entries ordered by updated_at descending.
     func fetchAll() async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -243,204 +97,83 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    /// Search entries by prefix (for autocomplete integration)
+    /// Search entries by prefix (for autocomplete integration).
     /// - Parameters:
-    ///   - prefix: Preprocessed search prefix (roman_num key for toned, notone key for toneless)
-    ///   - isToneAware: If true, matches against roman_num column; if false, matches against notone column
+    ///   - prefix: Preprocessed search prefix (roman_num key for toned, notone key for toneless).
+    ///   - isToneAware: When true, matches `roman_num`; otherwise matches `notone`.
     func search(prefix: String, isToneAware: Bool, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
-            let sql = isToneAware
-                ? """
-                    SELECT id, roman, hanzi, created_at, updated_at
-                    FROM custom_dictionary
-                    WHERE roman_num LIKE ? || '%'
-                       OR abbrev LIKE ? || '%'
-                    ORDER BY roman
-                    LIMIT ?;
-                """
-                : """
-                    SELECT id, roman, hanzi, created_at, updated_at
-                    FROM custom_dictionary
-                    WHERE notone LIKE ? || '%'
-                       OR abbrev LIKE ? || '%'
-                    ORDER BY roman
-                    LIMIT ?;
-                """
-
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                return []
-            }
-            defer { sqlite3_finalize(stmt) }
-
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-            let lowered = prefix.lowercased()
-            sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
-            sqlite3_bind_text(stmt, 2, lowered, -1, TRANSIENT)
-            sqlite3_bind_int(stmt, 3, Int32(limit))
-
-            var results: [CustomDictionaryEntry] = []
-            while sqlite3_step(stmt) == SQLITE_ROW {
-                if let entry = Self.readEntry(from: stmt) {
-                    results.append(entry)
-                }
-            }
-            return results
+            Self.runPrefixSearch(db: db, prefix: prefix, isToneAware: isToneAware, limit: limit)
         }
     }
 
-    /// Search entries synchronously (for keyboard extension hot path)
-    /// - Parameters:
-    ///   - prefix: Preprocessed search prefix (roman_num key for toned, notone key for toneless)
-    ///   - isToneAware: If true, matches against roman_num column; if false, matches against notone column
+    /// Search entries synchronously (for the keyboard extension hot path).
+    /// Returns `[]` when the DB is not yet connected — callers must accept empty
+    /// results on the very first keystroke rather than blocking on init.
     func searchSync(prefix: String, isToneAware: Bool, limit: Int = 50) -> [CustomDictionaryEntry] {
         guard connectionManager.isConnected() else { return [] }
-
         do {
             return try connectionManager.executeSync { db in
-                let sql = isToneAware
-                    ? """
-                        SELECT id, roman, hanzi, created_at, updated_at
-                        FROM custom_dictionary
-                        WHERE roman_num LIKE ? || '%'
-                           OR abbrev LIKE ? || '%'
-                        ORDER BY roman
-                        LIMIT ?;
-                    """
-                    : """
-                        SELECT id, roman, hanzi, created_at, updated_at
-                        FROM custom_dictionary
-                        WHERE notone LIKE ? || '%'
-                           OR abbrev LIKE ? || '%'
-                        ORDER BY roman
-                        LIMIT ?;
-                    """
-
-                var stmt: OpaquePointer?
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                    return []
-                }
-                defer { sqlite3_finalize(stmt) }
-
-                let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-                let lowered = prefix.lowercased()
-                sqlite3_bind_text(stmt, 1, lowered, -1, TRANSIENT)
-                sqlite3_bind_text(stmt, 2, lowered, -1, TRANSIENT)
-                sqlite3_bind_int(stmt, 3, Int32(limit))
-
-                var results: [CustomDictionaryEntry] = []
-                while sqlite3_step(stmt) == SQLITE_ROW {
-                    if let entry = Self.readEntry(from: stmt) {
-                        results.append(entry)
-                    }
-                }
-                return results
+                Self.runPrefixSearch(db: db, prefix: prefix, isToneAware: isToneAware, limit: limit)
             }
         } catch {
             return []
         }
     }
 
-    /// Delete an entry by id
+    /// Delete an entry by id.
     func delete(id: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
             let sql = "DELETE FROM custom_dictionary WHERE id = ?;"
             var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                return
-            }
+            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
             defer { sqlite3_finalize(stmt) }
 
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
-            sqlite3_bind_text(stmt, 1, id, -1, TRANSIENT)
+            stmt.bindText(1, id)
             sqlite3_step(stmt)
         }
     }
 
-    /// Delete all entries
+    /// Delete all entries.
     func deleteAll() async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
-            let sql = "DELETE FROM custom_dictionary;"
             var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                return
-            }
+            guard sqlite3_prepare_v2(db, "DELETE FROM custom_dictionary;", -1, &stmt, nil) == SQLITE_OK else { return }
             defer { sqlite3_finalize(stmt) }
             sqlite3_step(stmt)
         }
     }
 
-    /// Get total entry count
+    /// Total entry count.
     func count() async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
-            let sql = "SELECT COUNT(*) FROM custom_dictionary;"
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                return 0
-            }
-            defer { sqlite3_finalize(stmt) }
-            return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+            Self.currentEntryCount(db: db)
         }
     }
 
+    // MARK: - Batch Import
+
     private static let importBatchSize = 500
 
-    /// Batch import entries (used by CSV file import)
-    /// Commits every 500 entries to avoid long-running transactions.
-    /// Stops importing when maxEntries is reached.
+    /// Import a CSV-sourced batch. Commits every `importBatchSize` entries so a
+    /// single transaction can never hold locks for long, and stops early when
+    /// `maxEntries` is reached. Duplicates (same `roman|hanzi` key) are skipped.
     func batchImport(_ entries: [CustomDictionaryEntry]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
-            // Check remaining capacity
-            var currentCount = 0
-            let countSql = "SELECT COUNT(*) FROM custom_dictionary;"
-            var countStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, countSql, -1, &countStmt, nil) == SQLITE_OK {
-                if sqlite3_step(countStmt) == SQLITE_ROW {
-                    currentCount = Int(sqlite3_column_int(countStmt, 0))
-                }
-            }
-            sqlite3_finalize(countStmt)
-
-            let remainingCapacity = Self.maxEntries - currentCount
+            let remainingCapacity = Self.maxEntries - Self.currentEntryCount(db: db)
             guard remainingCapacity > 0 else {
                 self.logger.debug("[IMPORT] Custom dictionary is full (\(Self.maxEntries) entries)")
                 return 0
             }
 
-            // Build set of existing roman|hanzi keys for deduplication
-            var existingKeys = Set<String>()
-            let querySql = "SELECT roman, hanzi FROM custom_dictionary;"
-            var queryStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, querySql, -1, &queryStmt, nil) == SQLITE_OK {
-                while sqlite3_step(queryStmt) == SQLITE_ROW {
-                    let roman = String(cString: sqlite3_column_text(queryStmt, 0))
-                    let hanzi = String(cString: sqlite3_column_text(queryStmt, 1))
-                    existingKeys.insert("\(roman)|\(hanzi)")
-                }
-            }
-            sqlite3_finalize(queryStmt)
-
-            let sql = """
-                INSERT INTO custom_dictionary (id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    roman = excluded.roman,
-                    hanzi = excluded.hanzi,
-                    notone = excluded.notone,
-                    abbrev = excluded.abbrev,
-                    roman_num = excluded.roman_num,
-                    updated_at = excluded.updated_at;
-            """
-
+            var existingKeys = Self.existingRomanHanziKeys(db: db)
             var insertedCount = 0
-            let TRANSIENT = SQLiteConnectionManager.sqliteTransient
 
-            // Process in batches to avoid long-running single transaction
             for batchStart in stride(from: 0, to: entries.count, by: Self.importBatchSize) {
                 let batchEnd = min(batchStart + Self.importBatchSize, entries.count)
 
@@ -449,36 +182,17 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 }
 
                 for i in batchStart ..< batchEnd {
-                    // Stop when capacity is reached
                     if insertedCount >= remainingCapacity { break }
 
                     let entry = entries[i]
                     let key = "\(entry.roman)|\(entry.hanzi)"
-                    if existingKeys.contains(key) {
-                        continue
-                    }
+                    if existingKeys.contains(key) { continue }
 
                     var stmt: OpaquePointer?
-                    guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                        continue
-                    }
+                    guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else { continue }
                     defer { sqlite3_finalize(stmt) }
 
-                    let notone = CustomDictionaryService.generateNotone(entry.roman)
-                    let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
-                    let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
-
-                    sqlite3_bind_text(stmt, 1, entry.id, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 2, entry.roman, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 3, entry.hanzi, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 4, notone, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 5, abbrev, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 6, romanNum, -1, TRANSIENT)
-
-                    let createdStr = Self.dateFormatter.string(from: entry.createdAt)
-                    let updatedStr = Self.dateFormatter.string(from: entry.updatedAt)
-                    sqlite3_bind_text(stmt, 7, createdStr, -1, TRANSIENT)
-                    sqlite3_bind_text(stmt, 8, updatedStr, -1, TRANSIENT)
+                    Self.bindEntry(stmt, entry)
 
                     if sqlite3_step(stmt) == SQLITE_DONE {
                         existingKeys.insert(key)
@@ -498,7 +212,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    // MARK: - Database Management
+    // MARK: - Lifecycle
 
     func deleteDatabase() throws {
         connectionManager.close()
@@ -514,7 +228,228 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         connectionManager.isConnected()
     }
 
-    // MARK: - Helpers
+    // MARK: - Database Path
+
+    private static func getDatabasePath() throws -> String {
+        guard let containerURL = SharedSettings.sharedContainerURL else {
+            throw DictionaryError.databaseNotFound
+        }
+        try FileManager.default.createDirectory(
+            at: containerURL,
+            withIntermediateDirectories: true,
+        )
+        return containerURL.appendingPathComponent("custom_dictionary.db").path
+    }
+
+    // MARK: - Schema
+
+    private func createTablesIfNeeded() async throws {
+        if isTablesCreated { return }
+
+        try await connectionManager.execute { db in
+            try Self.createMainTable(db: db)
+            Self.createIndexes(db: db)
+            Self.migrateAddMissingColumns(db: db)
+            Self.backfillDerivedColumns(db: db)
+        }
+
+        isTablesCreated = true
+    }
+
+    private static func createMainTable(db: OpaquePointer) throws {
+        let sql = """
+            CREATE TABLE IF NOT EXISTS custom_dictionary (
+                id TEXT PRIMARY KEY,
+                roman TEXT NOT NULL,
+                hanzi TEXT NOT NULL,
+                notone TEXT DEFAULT '',
+                abbrev TEXT DEFAULT '',
+                roman_num TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            let errorMsg = String(cString: sqlite3_errmsg(db))
+            throw DictionaryError.queryPreparationFailed("Create custom_dictionary table failed: \(errorMsg)")
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            let errorMsg = String(cString: sqlite3_errmsg(db))
+            throw DictionaryError.queryExecutionFailed("Create custom_dictionary table failed: \(errorMsg)")
+        }
+    }
+
+    private static func createIndexes(db: OpaquePointer) {
+        let indexSQLs = [
+            "CREATE INDEX IF NOT EXISTS idx_custom_roman ON custom_dictionary(roman);",
+            "CREATE INDEX IF NOT EXISTS idx_custom_notone ON custom_dictionary(notone);",
+            "CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON custom_dictionary(abbrev);",
+            "CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON custom_dictionary(roman_num);",
+        ]
+        for sql in indexSQLs {
+            var stmt: OpaquePointer?
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_step(stmt)
+                sqlite3_finalize(stmt)
+            }
+        }
+    }
+
+    /// Add derived columns that may be missing on databases created before they
+    /// existed. The whitelist of column names is required because SQLite DDL
+    /// cannot parameterize column identifiers.
+    private static func migrateAddMissingColumns(db: OpaquePointer) {
+        let allowedColumns: Set = ["notone", "abbrev", "roman_num"]
+        for column in allowedColumns {
+            if columnExists(db: db, column: column) { continue }
+            var stmt: OpaquePointer?
+            let sql = "ALTER TABLE custom_dictionary ADD COLUMN \(column) TEXT DEFAULT '';"
+            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                sqlite3_step(stmt)
+                sqlite3_finalize(stmt)
+            }
+        }
+    }
+
+    /// Re-derive notone/abbrev/roman_num for every row so values always match
+    /// the current generation logic. Prepares the UPDATE statement once and
+    /// reuses it across rows (reset + clear bindings per iteration).
+    private static func backfillDerivedColumns(db: OpaquePointer) {
+        var selectStmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT id, roman FROM custom_dictionary;", -1, &selectStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(selectStmt) }
+
+        var updateStmt: OpaquePointer?
+        let updateSQL = "UPDATE custom_dictionary SET notone = ?, abbrev = ?, roman_num = ? WHERE id = ?;"
+        guard sqlite3_prepare_v2(db, updateSQL, -1, &updateStmt, nil) == SQLITE_OK else { return }
+        defer { sqlite3_finalize(updateStmt) }
+
+        while sqlite3_step(selectStmt) == SQLITE_ROW {
+            let id = String(cString: sqlite3_column_text(selectStmt, 0))
+            let roman = String(cString: sqlite3_column_text(selectStmt, 1))
+
+            sqlite3_reset(updateStmt)
+            sqlite3_clear_bindings(updateStmt)
+
+            updateStmt.bindText(1, CustomDictionaryService.generateNotone(roman))
+            updateStmt.bindText(2, CustomDictionaryService.generateAbbrev(roman))
+            updateStmt.bindText(3, CustomDictionaryService.generateRomanNum(roman))
+            updateStmt.bindText(4, id)
+            sqlite3_step(updateStmt)
+        }
+    }
+
+    private static func columnExists(db: OpaquePointer, column: String) -> Bool {
+        let sql = "SELECT COUNT(*) FROM pragma_table_info('custom_dictionary') WHERE name = ?;"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+        stmt.bindText(1, column)
+        return sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_int(stmt, 0) > 0
+    }
+
+    // MARK: - Query Helpers
+
+    private static let upsertEntrySQL = """
+        INSERT INTO custom_dictionary (id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            roman = excluded.roman,
+            hanzi = excluded.hanzi,
+            notone = excluded.notone,
+            abbrev = excluded.abbrev,
+            roman_num = excluded.roman_num,
+            updated_at = excluded.updated_at;
+    """
+
+    private static func bindEntry(_ stmt: OpaquePointer?, _ entry: CustomDictionaryEntry) {
+        let notone = CustomDictionaryService.generateNotone(entry.roman)
+        let abbrev = CustomDictionaryService.generateAbbrev(entry.roman)
+        let romanNum = CustomDictionaryService.generateRomanNum(entry.roman)
+
+        stmt.bindText(1, entry.id)
+        stmt.bindText(2, entry.roman)
+        stmt.bindText(3, entry.hanzi)
+        stmt.bindText(4, notone)
+        stmt.bindText(5, abbrev)
+        stmt.bindText(6, romanNum)
+        stmt.bindText(7, dateFormatter.string(from: entry.createdAt))
+        stmt.bindText(8, dateFormatter.string(from: entry.updatedAt))
+    }
+
+    private static func runPrefixSearch(
+        db: OpaquePointer,
+        prefix: String,
+        isToneAware: Bool,
+        limit: Int,
+    ) -> [CustomDictionaryEntry] {
+        let column = isToneAware ? "roman_num" : "notone"
+        let sql = """
+            SELECT id, roman, hanzi, created_at, updated_at
+            FROM custom_dictionary
+            WHERE \(column) LIKE ? || '%'
+               OR abbrev LIKE ? || '%'
+            ORDER BY roman
+            LIMIT ?;
+        """
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        let lowered = prefix.lowercased()
+        stmt.bindText(1, lowered)
+        stmt.bindText(2, lowered)
+        sqlite3_bind_int(stmt, 3, Int32(limit))
+
+        var results: [CustomDictionaryEntry] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let entry = readEntry(from: stmt) {
+                results.append(entry)
+            }
+        }
+        return results
+    }
+
+    private static func entryExists(db: OpaquePointer, id: String) -> Bool {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "SELECT 1 FROM custom_dictionary WHERE id = ? LIMIT 1;", -1, &stmt, nil) == SQLITE_OK else {
+            return false
+        }
+        stmt.bindText(1, id)
+        return sqlite3_step(stmt) == SQLITE_ROW
+    }
+
+    private static func currentEntryCount(db: OpaquePointer) -> Int {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM custom_dictionary;", -1, &stmt, nil) == SQLITE_OK else {
+            return 0
+        }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+    }
+
+    private static func existingRomanHanziKeys(db: OpaquePointer) -> Set<String> {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "SELECT roman, hanzi FROM custom_dictionary;", -1, &stmt, nil) == SQLITE_OK else {
+            return []
+        }
+        var keys = Set<String>()
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let roman = String(cString: sqlite3_column_text(stmt, 0))
+            let hanzi = String(cString: sqlite3_column_text(stmt, 1))
+            keys.insert("\(roman)|\(hanzi)")
+        }
+        return keys
+    }
+
+    // MARK: - Row Reader
 
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()

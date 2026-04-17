@@ -57,14 +57,9 @@ enum InputNormalizer {
     private static func normalizeSyllable(_ syllable: String, addDefaultTone: Bool) -> String {
         guard !syllable.isEmpty else { return "" }
 
-        let withNasalConverted = syllable
-            .replacingOccurrences(of: "\u{207F}", with: "nn")
-            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
-
-        // NFD + convert o͘ (U+0358) → oo before digit check,
-        // so "ho͘2" from the POJ keyboard picker normalizes to "hoo2"
-        let nfd = withNasalConverted.decomposedStringWithCanonicalMapping
-        let withOoConverted = nfd.replacingOccurrences(of: "\u{0358}", with: "o")
+        // Nasal + NFD + o͘→o (so "ho͘2" from the POJ picker normalizes to "hoo2"
+        // BEFORE the digit-tone check below).
+        let withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
 
         if let lastChar = withOoConverted.last, lastChar.isNumber {
             return withOoConverted

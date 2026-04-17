@@ -46,6 +46,37 @@ object CustomDictionaryService {
     private val initMutex = Mutex()
     private var isInitialized = false
 
+    /**
+     * UPSERT template shared between save() and importFromFile().
+     * Both previously duplicated this SQL block verbatim (runtime-identical
+     * after trimIndent()). Single source of truth now.
+     */
+    private val UPSERT_SQL =
+        """
+        INSERT INTO ${Table.NAME} (${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.CREATED_AT}, ${Table.UPDATED_AT})
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(${Table.ID}) DO UPDATE SET
+            ${Table.ROMAN} = excluded.${Table.ROMAN},
+            ${Table.HANZI} = excluded.${Table.HANZI},
+            ${Table.NOTONE} = excluded.${Table.NOTONE},
+            ${Table.ABBREV} = excluded.${Table.ABBREV},
+            ${Table.ROMAN_NUM} = excluded.${Table.ROMAN_NUM},
+            ${Table.UPDATED_AT} = CURRENT_TIMESTAMP
+        """.trimIndent()
+
+    private fun executeUpsert(
+        db: SQLiteDatabase,
+        entry: Entry,
+    ) {
+        val notone = generateNotone(entry.roman)
+        val abbrev = generateAbbrev(entry.roman)
+        val romanNum = generateRomanNum(entry.roman)
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "[UPSERT] roman='${entry.roman}' notone='$notone' abbrev='$abbrev' romanNum='$romanNum'")
+        }
+        db.execSQL(UPSERT_SQL, arrayOf(entry.id, entry.roman, entry.hanzi, notone, abbrev, romanNum))
+    }
+
     fun init(context: Context) {
         appContext = context.applicationContext
     }
@@ -148,24 +179,7 @@ object CustomDictionaryService {
             try {
                 initialize()
                 val db = dbHelper?.writableDatabase ?: return@withContext
-                val notone = generateNotone(entry.roman)
-                val abbrev = generateAbbrev(entry.roman)
-                val romanNum = generateRomanNum(entry.roman)
-                if (BuildConfig.DEBUG) Log.d(TAG, "[SAVE] roman='${entry.roman}' notone='$notone' abbrev='$abbrev' romanNum='$romanNum'")
-                db.execSQL(
-                    """
-                    INSERT INTO ${Table.NAME} (${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.CREATED_AT}, ${Table.UPDATED_AT})
-                    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                    ON CONFLICT(${Table.ID}) DO UPDATE SET
-                        ${Table.ROMAN} = excluded.${Table.ROMAN},
-                        ${Table.HANZI} = excluded.${Table.HANZI},
-                        ${Table.NOTONE} = excluded.${Table.NOTONE},
-                        ${Table.ABBREV} = excluded.${Table.ABBREV},
-                        ${Table.ROMAN_NUM} = excluded.${Table.ROMAN_NUM},
-                        ${Table.UPDATED_AT} = CURRENT_TIMESTAMP
-                    """.trimIndent(),
-                    arrayOf(entry.id, entry.roman, entry.hanzi, notone, abbrev, romanNum),
-                )
+                executeUpsert(db, entry)
             } catch (e: Exception) {
                 if (BuildConfig.DEBUG) Log.e(TAG, "[SAVE] Failed", e)
             }
@@ -319,23 +333,7 @@ object CustomDictionaryService {
                             continue
                         }
                         try {
-                            val notone = generateNotone(entry.roman)
-                            val abbrev = generateAbbrev(entry.roman)
-                            val romanNum = generateRomanNum(entry.roman)
-                            db.execSQL(
-                                """
-                                INSERT INTO ${Table.NAME} (${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.CREATED_AT}, ${Table.UPDATED_AT})
-                                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                ON CONFLICT(${Table.ID}) DO UPDATE SET
-                                    ${Table.ROMAN} = excluded.${Table.ROMAN},
-                                    ${Table.HANZI} = excluded.${Table.HANZI},
-                                    ${Table.NOTONE} = excluded.${Table.NOTONE},
-                                    ${Table.ABBREV} = excluded.${Table.ABBREV},
-                                    ${Table.ROMAN_NUM} = excluded.${Table.ROMAN_NUM},
-                                    ${Table.UPDATED_AT} = CURRENT_TIMESTAMP
-                                """.trimIndent(),
-                                arrayOf(entry.id, entry.roman, entry.hanzi, notone, abbrev, romanNum),
-                            )
+                            executeUpsert(db, entry)
                             existingKeys.add(key)
                             importedCount++
                         } catch (e: Exception) {
@@ -498,70 +496,64 @@ object CustomDictionaryService {
             oldVersion: Int,
             newVersion: Int,
         ) {
-            if (oldVersion < 2) {
-                db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.NOTONE} TEXT DEFAULT '';")
-                db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.ABBREV} TEXT DEFAULT '';")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_notone ON ${Table.NAME}(${Table.NOTONE});")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON ${Table.NAME}(${Table.ABBREV});")
-                // Backfill existing entries
-                val cursor = db.rawQuery("SELECT ${Table.ID}, ${Table.ROMAN} FROM ${Table.NAME}", null)
-                cursor.use {
-                    while (it.moveToNext()) {
-                        val id = it.getString(0)
-                        val roman = it.getString(1)
-                        db.execSQL(
-                            "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ?, ${Table.ABBREV} = ? WHERE ${Table.ID} = ?",
-                            arrayOf(generateNotone(roman), generateAbbrev(roman), id),
-                        )
-                    }
-                }
-            }
-            // v3: Regenerate notone to strip spaces (generateNotone now removes spaces)
-            if (oldVersion < 3) {
-                val cursor = db.rawQuery("SELECT ${Table.ID}, ${Table.ROMAN} FROM ${Table.NAME}", null)
-                cursor.use {
-                    while (it.moveToNext()) {
-                        val id = it.getString(0)
-                        val roman = it.getString(1)
-                        db.execSQL(
-                            "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ? WHERE ${Table.ID} = ?",
-                            arrayOf(generateNotone(roman), id),
-                        )
-                    }
-                }
-            }
-            // v4: Regenerate notone to handle POJ nasal ⁿ (U+207F)
-            if (oldVersion < 4) {
-                val cursor = db.rawQuery("SELECT ${Table.ID}, ${Table.ROMAN} FROM ${Table.NAME}", null)
-                cursor.use {
-                    while (it.moveToNext()) {
-                        val id = it.getString(0)
-                        val roman = it.getString(1)
-                        db.execSQL(
-                            "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ? WHERE ${Table.ID} = ?",
-                            arrayOf(generateNotone(roman), id),
-                        )
-                    }
-                }
-            }
-            // v5: Add roman_num column for tone-aware search
-            if (oldVersion < 5) {
-                db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.ROMAN_NUM} TEXT DEFAULT '';")
-                db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON ${Table.NAME}(${Table.ROMAN_NUM});")
-                val cursor = db.rawQuery("SELECT ${Table.ID}, ${Table.ROMAN} FROM ${Table.NAME}", null)
-                cursor.use {
-                    while (it.moveToNext()) {
-                        val id = it.getString(0)
-                        val roman = it.getString(1)
-                        db.execSQL(
-                            "UPDATE ${Table.NAME} SET ${Table.ROMAN_NUM} = ? WHERE ${Table.ID} = ?",
-                            arrayOf(generateRomanNum(roman), id),
-                        )
-                    }
-                }
-            }
+            if (oldVersion < 2) migrateV1ToV2(db)
+            if (oldVersion < 3) migrateV2ToV3(db)
+            if (oldVersion < 4) migrateV3ToV4(db)
+            if (oldVersion < 5) migrateV4ToV5(db)
             if (BuildConfig.DEBUG) {
                 Log.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
+            }
+        }
+
+        /** v1 → v2: add notone/abbrev columns and backfill existing rows. */
+        private fun migrateV1ToV2(db: SQLiteDatabase) {
+            db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.NOTONE} TEXT DEFAULT '';")
+            db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.ABBREV} TEXT DEFAULT '';")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_notone ON ${Table.NAME}(${Table.NOTONE});")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON ${Table.NAME}(${Table.ABBREV});")
+            forEachRomanRow(db) { id, roman ->
+                db.execSQL(
+                    "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ?, ${Table.ABBREV} = ? WHERE ${Table.ID} = ?",
+                    arrayOf(generateNotone(roman), generateAbbrev(roman), id),
+                )
+            }
+        }
+
+        /** v2 → v3: regenerate notone (generateNotone now strips spaces). */
+        private fun migrateV2ToV3(db: SQLiteDatabase) = regenerateNotone(db)
+
+        /** v3 → v4: regenerate notone to handle POJ nasal ⁿ (U+207F). */
+        private fun migrateV3ToV4(db: SQLiteDatabase) = regenerateNotone(db)
+
+        /** v4 → v5: add roman_num column for tone-aware search and backfill. */
+        private fun migrateV4ToV5(db: SQLiteDatabase) {
+            db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.ROMAN_NUM} TEXT DEFAULT '';")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON ${Table.NAME}(${Table.ROMAN_NUM});")
+            forEachRomanRow(db) { id, roman ->
+                db.execSQL(
+                    "UPDATE ${Table.NAME} SET ${Table.ROMAN_NUM} = ? WHERE ${Table.ID} = ?",
+                    arrayOf(generateRomanNum(roman), id),
+                )
+            }
+        }
+
+        private fun regenerateNotone(db: SQLiteDatabase) {
+            forEachRomanRow(db) { id, roman ->
+                db.execSQL(
+                    "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ? WHERE ${Table.ID} = ?",
+                    arrayOf(generateNotone(roman), id),
+                )
+            }
+        }
+
+        private inline fun forEachRomanRow(
+            db: SQLiteDatabase,
+            action: (id: String, roman: String) -> Unit,
+        ) {
+            db.rawQuery("SELECT ${Table.ID}, ${Table.ROMAN} FROM ${Table.NAME}", null).use {
+                while (it.moveToNext()) {
+                    action(it.getString(0), it.getString(1))
+                }
             }
         }
     }

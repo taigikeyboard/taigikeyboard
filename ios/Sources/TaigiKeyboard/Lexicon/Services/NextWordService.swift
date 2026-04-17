@@ -1,25 +1,41 @@
 import Foundation
 import SQLite3
 
+/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
+private extension OpaquePointer? {
+    func bindText(_ index: Int32, _ value: String) {
+        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
+    }
+}
+
 /// NextWord 下一詞預測服務
 ///
 /// 使用「相鄰字 Bigram」模型預測下一個字：
 /// - 選擇「早安」→ 用「安」查詢 → 預測下一個字
 ///
 /// 資料來源：
-/// - association.bin (binary mmap): 字典關聯（冷啟動）
-/// - user_association.db: 使用者學習（個人化）
+/// - `association.bin` (binary mmap): 字典關聯（冷啟動）
+/// - `user_association.db`: 使用者學習（個人化）
+///
+/// 檔案內部分成四個段落：公開 API、預測流程（字典端 / 使用者端）、
+/// user DB schema + 遷移、評分 + 衰減 + 清理。各段以 `// MARK:` 區隔。
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants
 
+    ///
+    /// CROSS-PLATFORM INVARIANT — the scoring constants below
+    /// (userWeight, dictWeight, decayHalfLifeHours, learningBonus,
+    /// *DecayFloor, *Threshold) MUST mirror Android NextWordService.kt.
+    /// Drift causes silent ranking divergence between platforms.
+    ///
     private enum Constants {
         static let defaultLimit = 30
 
-        // 權重設定
+        // Source weights
         static let userWeight: Double = 50.0
         static let dictWeight: Double = 1.0
 
-        /// 時間衰減：半衰期 168 小時（一週）
+        /// Time decay: half-life 168 hours (1 week)
         static let decayHalfLifeHours: Double = 168.0
 
         // Memory strength: ensures user entries rank above dict entries
@@ -28,19 +44,31 @@ final class NextWordService: @unchecked Sendable {
         static let lowUsageDecayFloor: Double = 0.3 // count < 3: prevents full decay
         static let highUsageThreshold: Int = 3
 
-        // 使用者關聯上限
+        // User-association capacity
         static let maxUserAssociations = 50000
         static let pruneCheckInterval = 100
         static let pruneBatchSize = 5000
     }
 
-    // MARK: - Prediction Result
+    /// Schema version for `user_association.db` (mirrors Android's DATABASE_VERSION).
+    private static let userSchemaVersion = 4
+
+    // MARK: - Public Types
 
     /// NextWord 預測結果
     struct Prediction {
         let hanzi: String // 預測的下一個字/詞
         let tl: String // TL 羅馬字
         let score: Double // 排序分數
+    }
+
+    /// 使用者關聯資料。UI (Tab3 AssociationDataView) 依賴此公開型別。
+    struct AssociationEntry {
+        let prevWord: String
+        let prevTl: String
+        let nextWord: String
+        let nextTl: String
+        let count: Int
     }
 
     // MARK: - Properties
@@ -51,9 +79,10 @@ final class NextWordService: @unchecked Sendable {
     private let userConnectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "NextWordService")
 
-    /// Lock protecting mutable state (recordCounter, isUserTablesCreated)
+    /// Lock protecting mutable state (`_recordCounter`, `_isUserTablesCreated`).
     private let stateLock = NSLock()
     private var _recordCounter = 0
+    private var _isUserTablesCreated = false
 
     // MARK: - Initialization
 
@@ -67,23 +96,7 @@ final class NextWordService: @unchecked Sendable {
         )
     }
 
-    // MARK: - Database Paths
-
-    private static func getUserDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw DictionaryError.databaseNotFound
-        }
-
-        try FileManager.default.createDirectory(
-            at: containerURL,
-            withIntermediateDirectories: true,
-        )
-
-        let databaseURL = containerURL.appendingPathComponent("user_association.db")
-        return databaseURL.path
-    }
-
-    // MARK: - Public API
+    // MARK: - Public API: Prediction
 
     /// 預測下一個詞
     ///
@@ -97,8 +110,6 @@ final class NextWordService: @unchecked Sendable {
     /// - Returns: 預測結果列表
     func predict(word: String, roman: String = "", limit: Int = Constants.defaultLimit) async -> [Prediction] {
         guard !word.isEmpty else { return [] }
-
-        // Bigram 模型：使用最後一字作為字典查詢 key
         guard let last = word.last else { return [] }
         let lastChar = String(last)
 
@@ -106,33 +117,24 @@ final class NextWordService: @unchecked Sendable {
 
         var results: [String: Prediction] = [:]
 
-        // 1. 查詢字典關聯（用最後一字）
         await queryDictAssociations(lastChar: lastChar, limit: limit, results: &results)
         let dictCount = results.count
         logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar)'")
 
-        // 2. 查詢使用者關聯（用完整詞 + 羅馬字 context）
         await queryUserAssociations(word: word, roman: roman, limit: limit, results: &results)
         let totalCount = results.count
         logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word)'")
 
-        // 3. 按分數排序，返回結果
         let sortedResults = Array(results.values
             .sorted { $0.score > $1.score }
             .prefix(limit))
-
         logger.debug("[PREDICT] '\(word)' -> \(sortedResults.count) results")
-
         return sortedResults
     }
 
+    // MARK: - Public API: Recording
+
     /// 記錄使用者選詞關聯
-    ///
-    /// - Parameters:
-    ///   - prev: 前一個選中的詞（漢字）
-    ///   - prevTl: 前一個選中的詞（TL）
-    ///   - nextHanzi: 當前選中的詞（漢字）
-    ///   - nextTl: 當前選中的詞（TL）
     func recordAssociation(
         prev: String,
         prevTl: String = "",
@@ -143,18 +145,12 @@ final class NextWordService: @unchecked Sendable {
 
         do {
             try await ensureUserTablesCreated()
-
-            try await userConnectionManager.execute { [weak self] db in
-                guard let self else { return }
-                try insertOrUpdateAssociation(
-                    db: db,
-                    prev: prev,
-                    prevTl: prevTl,
-                    nextHanzi: nextHanzi,
-                    nextTl: nextTl,
+            try await userConnectionManager.execute { db in
+                try Self.insertOrUpdateAssociation(
+                    db: db, prev: prev, prevTl: prevTl,
+                    nextHanzi: nextHanzi, nextTl: nextTl,
                 )
             }
-
             logger.debug("[RECORD] '\(prev)' -> '\(nextHanzi)'")
 
             // 定期檢查是否需要清理
@@ -191,7 +187,7 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// Delete a single user association entry
+    /// Delete a single user association entry.
     func deleteAssociation(_ entry: AssociationEntry) async {
         do {
             try await ensureUserTablesCreated()
@@ -200,10 +196,10 @@ final class NextWordService: @unchecked Sendable {
                 var stmt: OpaquePointer?
                 defer { sqlite3_finalize(stmt) }
                 guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+                stmt.bindText(1, entry.prevWord)
+                stmt.bindText(2, entry.prevTl)
+                stmt.bindText(3, entry.nextWord)
+                stmt.bindText(4, entry.nextTl)
                 sqlite3_step(stmt)
             }
         } catch {
@@ -211,7 +207,7 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// Import association entries with merge strategy: keep higher count
+    /// Import association entries with merge-by-max strategy: keep the higher count.
     func batchImportAssociations(
         entries: [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)],
     ) async throws -> Int {
@@ -226,9 +222,7 @@ final class NextWordService: @unchecked Sendable {
                     last_used = CURRENT_TIMESTAMP;
             """
 
-            if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK {
-                return 0
-            }
+            if sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) != SQLITE_OK { return 0 }
 
             // Prepare statement once and reuse for all entries
             var stmt: OpaquePointer?
@@ -243,10 +237,10 @@ final class NextWordService: @unchecked Sendable {
                 sqlite3_reset(stmt)
                 sqlite3_clear_bindings(stmt)
 
-                sqlite3_bind_text(stmt, 1, entry.prevWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 2, entry.prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 3, entry.nextWord, -1, SQLiteConnectionManager.sqliteTransient)
-                sqlite3_bind_text(stmt, 4, entry.nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+                stmt.bindText(1, entry.prevWord)
+                stmt.bindText(2, entry.prevTl)
+                stmt.bindText(3, entry.nextWord)
+                stmt.bindText(4, entry.nextTl)
                 sqlite3_bind_int(stmt, 5, Int32(entry.count))
 
                 if sqlite3_step(stmt) == SQLITE_DONE {
@@ -259,84 +253,24 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// 刪除使用者關聯資料庫
-    static func deleteUserDatabase() throws {
-        // 關閉連接
-        shared.userConnectionManager.close()
-        shared.stateLock.withLock { shared._isUserTablesCreated = false }
-
-        // 刪除檔案
-        let path = try getUserDatabasePath()
-        if FileManager.default.fileExists(atPath: path) {
-            try FileManager.default.removeItem(atPath: path)
-        }
-    }
-
     /// 取得使用者關聯數量
     func associationCount() async -> Int {
         do {
             try await ensureUserTablesCreated()
             return try await userConnectionManager.execute { db in
-                var stmt: OpaquePointer?
-                defer { sqlite3_finalize(stmt) }
-
-                guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM user_association", -1, &stmt, nil) == SQLITE_OK else {
-                    return 0
-                }
-
-                if sqlite3_step(stmt) == SQLITE_ROW {
-                    return Int(sqlite3_column_int(stmt, 0))
-                }
-                return 0
+                Self.countRows(db: db)
             }
         } catch {
             return 0
         }
     }
 
-    /// 使用者關聯資料
-    struct AssociationEntry {
-        let prevWord: String
-        let prevTl: String
-        let nextWord: String
-        let nextTl: String
-        let count: Int
-    }
-
-    /// 取得所有使用者關聯
+    /// 取得所有使用者關聯（for backup / UI listing）
     func allAssociations() async -> [AssociationEntry] {
         do {
             try await ensureUserTablesCreated()
             return try await userConnectionManager.execute { db in
-                let sql = """
-                    SELECT prev_word, prev_tl, next_word, next_tl, count
-                    FROM user_association
-                    ORDER BY count DESC, last_used DESC
-                """
-
-                var stmt: OpaquePointer?
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-                    return []
-                }
-                defer { sqlite3_finalize(stmt) }
-
-                var results: [AssociationEntry] = []
-                while sqlite3_step(stmt) == SQLITE_ROW {
-                    let prevWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-                    let prevTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-                    let nextWord = sqlite3_column_text(stmt, 2).map(String.init(cString:)) ?? ""
-                    let nextTl = sqlite3_column_text(stmt, 3).map(String.init(cString:)) ?? ""
-                    let count = Int(sqlite3_column_int(stmt, 4))
-
-                    results.append(AssociationEntry(
-                        prevWord: prevWord,
-                        prevTl: prevTl,
-                        nextWord: nextWord,
-                        nextTl: nextTl,
-                        count: count,
-                    ))
-                }
-                return results
+                Self.fetchAllAssociations(db: db)
             }
         } catch {
             logger.error("[USER] allAssociations failed: \(error.localizedDescription)")
@@ -344,9 +278,23 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    // MARK: - Private Methods
+    // MARK: - Lifecycle
 
-    /// 查詢字典關聯（從 association.bin binary reader）
+    /// 刪除使用者關聯資料庫
+    static func deleteUserDatabase() throws {
+        shared.userConnectionManager.close()
+        shared.stateLock.withLock { shared._isUserTablesCreated = false }
+
+        let path = try getUserDatabasePath()
+        if FileManager.default.fileExists(atPath: path) {
+            try FileManager.default.removeItem(atPath: path)
+        }
+    }
+
+    // MARK: - Prediction Pipeline
+
+    /// Dict-side prediction — reads from the shared `association.bin` mmap,
+    /// applies the user's enabled-dictionary bitmask filter.
     private func queryDictAssociations(
         lastChar: String,
         limit: Int,
@@ -359,8 +307,6 @@ final class NextWordService: @unchecked Sendable {
 
         // Over-fetch 2x to account for deduplication when merging dict + user results
         let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
-
-        // Apply dictionary source filter
         let enabledDicts = EnabledDictionaries.fromSettings()
 
         for entry in entries {
@@ -374,15 +320,15 @@ final class NextWordService: @unchecked Sendable {
                 tl: entry.nextTl,
                 score: Double(entry.count) * Constants.dictWeight,
             )
-            let key = "\(prediction.hanzi)\t\(prediction.tl)"
-            results[key] = prediction
+            results["\(prediction.hanzi)\t\(prediction.tl)"] = prediction
         }
     }
 
-    /// Raw user association row from DB (hanzi, tl, count, lastUsedMs)
+    /// Raw user-association row from DB (hanzi, tl, count, lastUsedMs).
     private typealias UserAssociationRow = (hanzi: String, tl: String, count: Int, lastUsedMs: Int64)
 
-    /// 查詢使用者關聯
+    /// User-side prediction — reads from `user_association.db` and merges
+    /// (adding scores) with any dict-side predictions already in `results`.
     private func queryUserAssociations(
         word: String,
         roman: String = "",
@@ -392,13 +338,13 @@ final class NextWordService: @unchecked Sendable {
         do {
             try await ensureUserTablesCreated()
 
-            let userResults = try await userConnectionManager.execute { [weak self] db -> [UserAssociationRow] in
-                guard let self else { return [] }
-                return try queryUserAssociationsFromDB(db: db, word: word, roman: roman, limit: limit)
+            let userResults = try await userConnectionManager.execute { db -> [UserAssociationRow] in
+                Self.fetchUserAssociationRows(db: db, word: word, roman: roman, limit: limit)
             }
 
+            let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
             for row in userResults {
-                let userScore = calculateUserScore(count: row.count, lastUsedMs: row.lastUsedMs)
+                let userScore = Self.calculateUserScore(count: row.count, lastUsedMs: row.lastUsedMs, nowMs: nowMs)
                 let key = "\(row.hanzi)\t\(row.tl)"
 
                 if let existing = results[key] {
@@ -408,11 +354,7 @@ final class NextWordService: @unchecked Sendable {
                         score: existing.score + userScore,
                     )
                 } else {
-                    results[key] = Prediction(
-                        hanzi: row.hanzi,
-                        tl: row.tl,
-                        score: userScore,
-                    )
+                    results[key] = Prediction(hanzi: row.hanzi, tl: row.tl, score: userScore)
                 }
             }
         } catch {
@@ -420,48 +362,7 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    private func queryUserAssociationsFromDB(
-        db: OpaquePointer,
-        word: String,
-        roman: String = "",
-        limit: Int,
-    ) throws -> [UserAssociationRow] {
-        let sql = """
-            SELECT next_word, next_tl, count,
-                   strftime('%s', last_used) * 1000 AS last_used_ms
-            FROM user_association
-            WHERE prev_word = ? AND (prev_tl = ? OR prev_tl = '')
-            ORDER BY count DESC
-            LIMIT ?
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            return []
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        sqlite3_bind_text(stmt, 1, word, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, roman, -1, SQLiteConnectionManager.sqliteTransient)
-        // Over-fetch 2x to account for deduplication when merging dict + user results
-        sqlite3_bind_int(stmt, 3, Int32(limit * 2))
-
-        var results: [UserAssociationRow] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            let nextWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
-            let nextTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
-            let count = Int(sqlite3_column_int(stmt, 2))
-            let lastUsedMs = sqlite3_column_int64(stmt, 3)
-
-            results.append((hanzi: nextWord, tl: nextTl, count: count, lastUsedMs: lastUsedMs))
-        }
-
-        return results
-    }
-
-    // MARK: - User Database Management
-
-    private var _isUserTablesCreated = false
+    // MARK: - User DB Schema & Queries
 
     private func ensureUserTablesCreated() async throws {
         if stateLock.withLock({ _isUserTablesCreated }) { return }
@@ -470,17 +371,16 @@ final class NextWordService: @unchecked Sendable {
             flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
         )
 
-        try await userConnectionManager.execute { [weak self] db in
-            guard let self else { return }
-            try createUserTables(db: db)
+        try await userConnectionManager.execute { [logger] db in
+            try Self.createUserTables(db: db, logger: logger)
         }
 
         stateLock.withLock { _isUserTablesCreated = true }
     }
 
-    private func createUserTables(db: OpaquePointer) throws {
-        // Migrate: if old table exists with UNIQUE(prev_word, next_word), recreate it
-        try migrateUserTables(db: db)
+    private static func createUserTables(db: OpaquePointer, logger: DebugLogger) throws {
+        // Migrate first — drops incompatible v<3 schemas before the CREATE below.
+        try migrateUserTables(db: db, logger: logger)
 
         let createTable = """
             CREATE TABLE IF NOT EXISTS user_association (
@@ -500,13 +400,12 @@ final class NextWordService: @unchecked Sendable {
             let errorMsg = String(cString: sqlite3_errmsg(db))
             throw DictionaryError.queryPreparationFailed(errorMsg)
         }
+        defer { sqlite3_finalize(stmt) }
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            sqlite3_finalize(stmt)
             throw DictionaryError.queryExecutionFailed(errorMsg)
         }
-        sqlite3_finalize(stmt)
 
         // 建立索引
         for indexSQL in [
@@ -521,14 +420,11 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
-    /// Schema version for user_association.db (mirrors Android's DATABASE_VERSION)
-    private static let userSchemaVersion = 4
-
-    /// Migrate user_association.db to current schema version using PRAGMA user_version.
-    /// v3: UNIQUE(prev_word, next_word) → UNIQUE(prev_word, next_word, next_tl)
-    /// v4: Add prev_tl column (ALTER TABLE, preserves data)
-    private func migrateUserTables(db: OpaquePointer) throws {
-        // Read current schema version
+    /// Migrate `user_association.db` forward to the current schema version using
+    /// `PRAGMA user_version`. Transitions:
+    /// - v<3 → v3: DROP + CREATE (old schema incompatible).
+    /// - v3 → v4: ALTER TABLE adds `prev_tl` (data preserved).
+    private static func migrateUserTables(db: OpaquePointer, logger: DebugLogger) throws {
         var versionStmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &versionStmt, nil) == SQLITE_OK else { return }
         let currentVersion = sqlite3_step(versionStmt) == SQLITE_ROW
@@ -536,49 +432,45 @@ final class NextWordService: @unchecked Sendable {
             : 0
         sqlite3_finalize(versionStmt)
 
-        guard currentVersion < Self.userSchemaVersion else { return }
+        guard currentVersion < userSchemaVersion else { return }
 
-        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(Self.userSchemaVersion)")
+        logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(userSchemaVersion)")
 
         if currentVersion < 3 {
-            // v0/v1/v2 → v3: DROP + CREATE (old schema incompatible)
-            var dropStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, "DROP TABLE IF EXISTS user_association", -1, &dropStmt, nil) == SQLITE_OK {
-                sqlite3_step(dropStmt)
-                sqlite3_finalize(dropStmt)
-            }
-
-            var dropIdxStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, "DROP INDEX IF EXISTS idx_user_prev_word", -1, &dropIdxStmt, nil) == SQLITE_OK {
-                sqlite3_step(dropIdxStmt)
-                sqlite3_finalize(dropIdxStmt)
+            for sql in [
+                "DROP TABLE IF EXISTS user_association",
+                "DROP INDEX IF EXISTS idx_user_prev_word",
+            ] {
+                var stmt: OpaquePointer?
+                if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                    sqlite3_step(stmt)
+                    sqlite3_finalize(stmt)
+                }
             }
         }
 
         if currentVersion >= 3, currentVersion < 4 {
-            // v3 → v4: Add prev_tl column (preserves existing data)
-            var alterStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''", -1, &alterStmt, nil) == SQLITE_OK {
-                sqlite3_step(alterStmt)
-                sqlite3_finalize(alterStmt)
-            }
-
-            var indexStmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)", -1, &indexStmt, nil) == SQLITE_OK {
-                sqlite3_step(indexStmt)
-                sqlite3_finalize(indexStmt)
+            for sql in [
+                "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''",
+                "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)",
+            ] {
+                var stmt: OpaquePointer?
+                if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
+                    sqlite3_step(stmt)
+                    sqlite3_finalize(stmt)
+                }
             }
         }
 
         // Stamp new version
         var stampStmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "PRAGMA user_version = \(Self.userSchemaVersion)", -1, &stampStmt, nil) == SQLITE_OK {
+        if sqlite3_prepare_v2(db, "PRAGMA user_version = \(userSchemaVersion)", -1, &stampStmt, nil) == SQLITE_OK {
             sqlite3_step(stampStmt)
             sqlite3_finalize(stampStmt)
         }
     }
 
-    private func insertOrUpdateAssociation(
+    private static func insertOrUpdateAssociation(
         db: OpaquePointer,
         prev: String,
         prevTl: String,
@@ -601,10 +493,10 @@ final class NextWordService: @unchecked Sendable {
         }
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, prev, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 2, prevTl, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 3, nextHanzi, -1, SQLiteConnectionManager.sqliteTransient)
-        sqlite3_bind_text(stmt, 4, nextTl, -1, SQLiteConnectionManager.sqliteTransient)
+        stmt.bindText(1, prev)
+        stmt.bindText(2, prevTl)
+        stmt.bindText(3, nextHanzi)
+        stmt.bindText(4, nextTl)
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             let errorMsg = String(cString: sqlite3_errmsg(db))
@@ -612,14 +504,89 @@ final class NextWordService: @unchecked Sendable {
         }
     }
 
+    private static func fetchUserAssociationRows(
+        db: OpaquePointer,
+        word: String,
+        roman: String,
+        limit: Int,
+    ) -> [UserAssociationRow] {
+        let sql = """
+            SELECT next_word, next_tl, count,
+                   strftime('%s', last_used) * 1000 AS last_used_ms
+            FROM user_association
+            WHERE prev_word = ? AND (prev_tl = ? OR prev_tl = '')
+            ORDER BY count DESC
+            LIMIT ?
+        """
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        stmt.bindText(1, word)
+        stmt.bindText(2, roman)
+        // Over-fetch 2x to account for deduplication when merging dict + user results
+        sqlite3_bind_int(stmt, 3, Int32(limit * 2))
+
+        var results: [UserAssociationRow] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let nextWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
+            let nextTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+            let count = Int(sqlite3_column_int(stmt, 2))
+            let lastUsedMs = sqlite3_column_int64(stmt, 3)
+            results.append((hanzi: nextWord, tl: nextTl, count: count, lastUsedMs: lastUsedMs))
+        }
+        return results
+    }
+
+    private static func fetchAllAssociations(db: OpaquePointer) -> [AssociationEntry] {
+        let sql = """
+            SELECT prev_word, prev_tl, next_word, next_tl, count
+            FROM user_association
+            ORDER BY count DESC, last_used DESC
+        """
+
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var results: [AssociationEntry] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let prevWord = sqlite3_column_text(stmt, 0).map(String.init(cString:)) ?? ""
+            let prevTl = sqlite3_column_text(stmt, 1).map(String.init(cString:)) ?? ""
+            let nextWord = sqlite3_column_text(stmt, 2).map(String.init(cString:)) ?? ""
+            let nextTl = sqlite3_column_text(stmt, 3).map(String.init(cString:)) ?? ""
+            let count = Int(sqlite3_column_int(stmt, 4))
+            results.append(AssociationEntry(
+                prevWord: prevWord, prevTl: prevTl,
+                nextWord: nextWord, nextTl: nextTl,
+                count: count,
+            ))
+        }
+        return results
+    }
+
+    private static func countRows(db: OpaquePointer) -> Int {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM user_association", -1, &stmt, nil) == SQLITE_OK else {
+            return 0
+        }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+    }
+
     // MARK: - Scoring
 
-    /// Calculate user-layer score with decay floor + learning bonus
+    /// Calculate user-layer score with decay floor + learning bonus.
     ///
     /// Ensures user entries always rank above dict entries (max ~300).
     /// High-usage entries (count >= 3) get near-permanent retention.
-    private func calculateUserScore(count: Int, lastUsedMs: Int64) -> Double {
-        let decay = calculateDecay(lastUsedMs: lastUsedMs)
+    ///
+    /// `nowMs` is injected at the call site so tests can pin the decay window
+    /// without reaching for a global clock (per Codex v1.1 guidance — clock
+    /// injection only at the decay-sensitive site).
+    private static func calculateUserScore(count: Int, lastUsedMs: Int64, nowMs: Int64) -> Double {
+        let decay = calculateDecay(lastUsedMs: lastUsedMs, nowMs: nowMs)
         let rawScore = Double(count) * Constants.userWeight
         let decayFloor = count >= Constants.highUsageThreshold
             ? Constants.highUsageDecayFloor
@@ -628,15 +595,12 @@ final class NextWordService: @unchecked Sendable {
         return rawScore * effectiveDecay + Constants.learningBonus
     }
 
-    // MARK: - Time Decay
-
     /// 計算時間衰減因子
     ///
-    /// 使用指數衰減公式（參考 RIME）：
-    /// decay = exp(-ageHours / halfLifeHours * ln(2))
-    private func calculateDecay(lastUsedMs: Int64) -> Double {
-        let now = Int64(Date().timeIntervalSince1970 * 1000)
-        let ageHours = Double(now - lastUsedMs) / 3_600_000.0
+    /// 指數衰減公式（參考 RIME）:
+    ///   decay = exp(-ageHours / halfLifeHours * ln(2))
+    private static func calculateDecay(lastUsedMs: Int64, nowMs: Int64) -> Double {
+        let ageHours = Double(nowMs - lastUsedMs) / 3_600_000.0
         // ln(2) ≈ 0.693
         return exp(-ageHours / Constants.decayHalfLifeHours * 0.693)
     }
@@ -644,10 +608,11 @@ final class NextWordService: @unchecked Sendable {
     // MARK: - Pruning
 
     /// 清理舊的使用者關聯（當超過上限時）
+    /// Over-deletes by `pruneBatchSize` so the table sits below the cap between
+    /// prune runs instead of oscillating around it.
     private func pruneOldAssociations() async {
         do {
             let currentCount = await associationCount()
-
             guard currentCount > Constants.maxUserAssociations else {
                 logger.debug("[PRUNE] No pruning needed: \(currentCount) <= \(Constants.maxUserAssociations)")
                 return
@@ -680,5 +645,18 @@ final class NextWordService: @unchecked Sendable {
         } catch {
             logger.error("[PRUNE] Failed: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Database Path
+
+    private static func getUserDatabasePath() throws -> String {
+        guard let containerURL = SharedSettings.sharedContainerURL else {
+            throw DictionaryError.databaseNotFound
+        }
+        try FileManager.default.createDirectory(
+            at: containerURL,
+            withIntermediateDirectories: true,
+        )
+        return containerURL.appendingPathComponent("user_association.db").path
     }
 }
