@@ -191,14 +191,16 @@ enum CandidateProcessor {
     ///   - words: 要排序的詞彙陣列
     ///   - normalizedInput: 正規化後的輸入（用於完全匹配判斷）
     ///   - frequencyDataMap: 詞彙頻率資料字典
+    ///   - currentTime: Unix millis reference time used for the recency
+    ///     bonus. Injected so tests can pin the recency window; callers
+    ///     that do not care default to `Date()`.
     /// - Returns: 排序後的詞彙陣列
     static func sortByScore(
         _ words: [TaigiWord],
         normalizedInput: String,
         frequencyDataMap: [String: UserFrequencyService.FrequencyData],
+        currentTime: Int64 = Int64(Date().timeIntervalSince1970 * 1000),
     ) -> [TaigiWord] {
-        let currentTime = Int64(Date().timeIntervalSince1970 * 1000)
-
         let scored = words.map { word -> (TaigiWord, ScoreBreakdown) in
             let freq = frequencyDataMap[word.displayText] ?? .empty
             let breakdown = calculateScore(
