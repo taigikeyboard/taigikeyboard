@@ -106,11 +106,14 @@ object NextWordService {
      * - 1 月後：decay ≈ 0.06
      *
      * @param lastUsedMs 上次使用時間（毫秒）
+     * @param nowMs 當下時間（毫秒）— caller passes a batch-level clock read
      * @return 衰減因子（0.0 ~ 1.0）
      */
-    private fun calculateDecay(lastUsedMs: Long): Double {
-        val now = System.currentTimeMillis()
-        val ageHours = (now - lastUsedMs) / 3600000.0
+    private fun calculateDecay(
+        lastUsedMs: Long,
+        nowMs: Long,
+    ): Double {
+        val ageHours = (nowMs - lastUsedMs) / 3600000.0
         // ln(2) ≈ 0.693，用於半衰期計算
         return exp(-ageHours / DECAY_HALF_LIFE_HOURS * 0.693)
     }
@@ -124,13 +127,15 @@ object NextWordService {
      *
      * @param count usage count
      * @param lastUsedMs last used time in milliseconds
+     * @param nowMs current time in milliseconds (batch-level, injected for determinism)
      * @return weighted score
      */
     private fun calculateUserScore(
         count: Int,
         lastUsedMs: Long,
+        nowMs: Long,
     ): Double {
-        val decay = calculateDecay(lastUsedMs)
+        val decay = calculateDecay(lastUsedMs, nowMs)
         val rawScore = count.toDouble() * USER_WEIGHT
         val decayFloor =
             if (count >= HIGH_USAGE_THRESHOLD) {
@@ -225,6 +230,9 @@ object NextWordService {
                         Log.d(TAG, "[PREDICT] User query: prev_word='$word', prev_tl='$roman'")
                     }
 
+                    // Single clock read per prediction batch — all rows score
+                    // against the same "now" for consistent ranking.
+                    val nowMs = System.currentTimeMillis()
                     val cursor = db.rawQuery(sql, arrayOf(word, roman, (limit * 2).toString()))
                     var userCount = 0
                     cursor.use {
@@ -236,10 +244,10 @@ object NextWordService {
                             userCount++
 
                             // Calculate score with learning bonus and decay floors
-                            val userScore = calculateUserScore(count, lastUsedMs)
+                            val userScore = calculateUserScore(count, lastUsedMs, nowMs)
 
                             if (BuildConfig.DEBUG) {
-                                val decay = calculateDecay(lastUsedMs)
+                                val decay = calculateDecay(lastUsedMs, nowMs)
                                 Log.d(
                                     TAG,
                                     "[PREDICT] User found: '$word' -> '$nextWord' (count=$count, decay=%.3f, score=%.1f)".format(

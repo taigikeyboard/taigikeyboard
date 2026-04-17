@@ -99,11 +99,15 @@ object CandidateProcessor {
         )
     }
 
+    /**
+     * Sort candidate words by score. Reads the clock once by default; callers
+     * (e.g. tests) may pin [currentTime] for deterministic ranking.
+     */
     suspend fun sortByScore(
         words: List<TaigiWord>,
         normalizedInput: String,
+        currentTime: Long = System.currentTimeMillis(),
     ): List<TaigiWord> {
-        val currentTime = System.currentTimeMillis()
         val wordTexts = words.map { it.displayText }.distinct()
         val frequencyDataMap = UserFrequencyService.frequencyDataBatch(wordTexts)
 
