@@ -1,13 +1,6 @@
 import Foundation
 import SQLite3
 
-/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
-private extension OpaquePointer? {
-    func bindText(_ index: Int32, _ value: String) {
-        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
-    }
-}
-
 /// NextWord 下一詞預測服務
 ///
 /// 使用「相鄰字 Bigram」模型預測下一個字：

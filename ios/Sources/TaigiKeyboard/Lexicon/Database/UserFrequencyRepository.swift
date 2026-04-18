@@ -1,13 +1,6 @@
 import Foundation
 import SQLite3
 
-/// File-local helper to reduce `sqlite3_bind_text(_, _, _, -1, TRANSIENT)` boilerplate.
-private extension OpaquePointer? {
-    func bindText(_ index: Int32, _ value: String) {
-        sqlite3_bind_text(self, index, value, -1, SQLiteConnectionManager.sqliteTransient)
-    }
-}
-
 /// User frequency repository.
 ///
 /// Tracks per-word usage counts so the ranker (`CandidateProcessor.sortByScore`)
