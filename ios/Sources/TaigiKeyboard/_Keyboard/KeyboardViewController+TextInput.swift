@@ -1,5 +1,6 @@
 import Foundation
 import KeyboardKit
+import UIKit
 
 // MARK: - ComposingDelegate
 

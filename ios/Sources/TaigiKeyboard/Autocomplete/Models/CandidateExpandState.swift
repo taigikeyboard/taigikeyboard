@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// 候選詞展開狀態

@@ -79,9 +79,17 @@
 
 | Item | iOS | Android |
 |------|-----|---------|
-| Composing manager | `ComposingManager.swift` | `ComposingManager.kt` |
-| Tone converter | `ToneConverter.swift` | `ToneConverter.kt` |
-| Phonetics engine | `TaigiPhonetics.swift` | `TaigiPhonetics.kt` |
+| Composing manager | `Input/Composing/ComposingManager.swift` | `ime/text/composing/ComposingManager.kt` |
+| Delegate protocol | `Input/Composing/ComposingDelegate.swift` | (inline `InputConnection` calls — no protocol) |
+| Tone converter | `Phonetics/ToneConverter.swift` | `ime/dictionary/ToneConverter.kt` |
+| Phonetics engine | `Phonetics/TaigiPhonetics.swift` | `ime/dictionary/TaigiPhonetics.kt` |
+| TPS pipeline glue | `Input/CharacterInputPipeline.swift` | (inline in `TextInputManager.handleTaigiInput()`) |
+
+## Tests
+
+| Platform | File | Coverage |
+|----------|------|----------|
+| iOS | `TaigiKeyboardTests/ComposingManagerTests.swift` | State + delegate-call order per operation |
 
 ---
 
