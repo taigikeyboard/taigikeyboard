@@ -77,7 +77,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 return false
             }
             if shouldPrune {
-                try? await connectionManager.execute { db in
+                _ = try? await connectionManager.execute { db in
                     UserFrequencyPruner.pruneIfNeeded(db: db, logger: self.logger)
                 }
             }
