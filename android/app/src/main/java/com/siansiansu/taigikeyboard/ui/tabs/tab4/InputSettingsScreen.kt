@@ -170,7 +170,6 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = Tab4Texts.outputBothScripts,
                         checked = outputBoth,
-                        icon = SettingsIcons.outputBothScripts,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             outputBoth = it
@@ -181,7 +180,6 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = Tab4Texts.autoCapitalization,
                         checked = autoCap,
-                        icon = SettingsIcons.autoCapitalization,
                         infoText = featureSummary(FEATURE_ID_CASE_SWITCH),
                         onCheckedChange = {
                             autoCap = it
@@ -192,7 +190,6 @@ fun InputSettingsScreen(
                     SwitchRow(
                         label = Tab4Texts.autoSpace,
                         checked = autoSpace,
-                        icon = SettingsIcons.autoSpace,
                         infoText = featureSummary(FEATURE_ID_HANLO_DESIGN),
                         onCheckedChange = {
                             autoSpace = it
