@@ -1,0 +1,44 @@
+import Foundation
+
+// MARK: - Input Mode
+
+/// Input mode
+enum InputMode: String, CaseIterable {
+    case poj // Pe̍h-ōe-jī
+    case tl // Tâi-lô
+    case english
+    case tps // Taiwanese Phonetic Symbols
+}
+
+// MARK: - Font Type
+
+/// Font type
+enum FontType: String, CaseIterable {
+    case system
+    case openHuninn // jf open 粉圓
+    case iansui // 芫荽
+    case genYoMin // 源樣明體
+    case genYoGothic // 源樣黑體
+
+    /// PostScript font name for custom fonts, nil for system
+    var customFontName: String? {
+        switch self {
+        case .system: nil
+        case .openHuninn: KeyboardFonts.openHuninnFontName
+        case .iansui: KeyboardFonts.iansuiFontName
+        case .genYoMin: KeyboardFonts.genYoMinFontName
+        case .genYoGothic: KeyboardFonts.genYoGothicFontName
+        }
+    }
+}
+
+// MARK: - Keyboard Layout Type
+
+/// Keyboard layout type
+enum KeyboardLayoutType: String, CaseIterable {
+    case phahTaigi
+    case qwerty
+    case tps // Taiwanese Phonetic Symbols
+    case moe1 // MOE input method layout 1
+    case moe2 // MOE input method layout 2
+}
