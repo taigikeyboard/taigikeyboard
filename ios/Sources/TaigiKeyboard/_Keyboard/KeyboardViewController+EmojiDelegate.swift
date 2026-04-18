@@ -1,4 +1,5 @@
 import KeyboardKit
+import UIKit
 
 // MARK: - EmojiServiceDelegate
 

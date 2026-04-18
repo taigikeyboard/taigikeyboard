@@ -1,5 +1,6 @@
 import KeyboardKit
 import SwiftUI
+import UIKit
 
 // MARK: - Setup & Configuration
 
@@ -53,10 +54,7 @@ extension KeyboardViewController {
         handler.nextWordController.contextUpdater = handler
 
         // 4. Connect Taigi AutocompleteService with handler (requires handler already created)
-        if let taigiService = services.autocompleteService as? AutocompleteService {
-            taigiService.setComposingManager(handler.composingManager)
-            taigiService.setSelectionContextProvider(handler.nextWordController)
-        }
+        wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
         // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         let settings = SharedSettings.shared
@@ -75,15 +73,32 @@ extension KeyboardViewController {
             let autocompleteService = AutocompleteService()
             services.autocompleteService = autocompleteService
 
-            // Connect AutocompleteService with ComposingManager / NextWordController
+            // Settings 變更路徑：ActionHandler 已存在，直接以 helper 連線。
+            // 初始建構路徑：ActionHandler 尚未建立，setupCoreServices() 會在
+            // handler 建好後再呼叫 wireTaigiAutocompleteProviders 補上 provider。
             if let handler = actionHandler {
-                autocompleteService.setComposingManager(handler.composingManager)
-                autocompleteService.setSelectionContextProvider(handler.nextWordController)
+                wireTaigiAutocompleteProviders(from: autocompleteService, to: handler)
             }
             setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(settings.inputMode.rawValue)")
         }
         // Note: KeyboardKit's services.autocompleteService didSet automatically
         // syncs handler.autocompleteService — no manual sync needed.
+    }
+
+    /// 將 Taigi 專用的 composing / selection provider 接上 AutocompleteService。
+    ///
+    /// 兩個呼叫路徑共用：
+    /// - `setupCoreServices()` 建立 handler 後初始連線
+    /// - `setupAutocompleteServiceForCurrentMode()` 在 settings 變更時重建 service 後重新連線
+    ///
+    /// service 為 `EnglishAutocompleteService` 或其它非 Taigi 實作時，直接略過。
+    func wireTaigiAutocompleteProviders(
+        from service: any KeyboardKit.AutocompleteService,
+        to handler: ActionHandler,
+    ) {
+        guard let taigiService = service as? AutocompleteService else { return }
+        taigiService.setComposingManager(handler.composingManager)
+        taigiService.setSelectionContextProvider(handler.nextWordController)
     }
 
     /// Re-read settings from App Group UserDefaults.

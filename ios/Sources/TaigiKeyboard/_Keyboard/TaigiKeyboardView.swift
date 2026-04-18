@@ -52,20 +52,22 @@ struct TaigiKeyboardView: View {
             keyboardCase: keyboardContext.keyboardCase,
             inputMode: p.settings.inputMode,
         )
-        let frequentWords = CandidateView.getSharedFrequentWords(in: suggestions)
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
         let candidateStyle = Self.candidateStyle(for: keyboardContext, colorSettings: colorSettings)
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
             && colorSettings.backgroundColor == nil
+        let isTPSLayout = p.settings.keyboardLayoutType == .tps
+        let orMapsToER = p.settings.isTpsOrMappedToER
 
         keyboardWithOverlays(
             p: p,
             suggestions: suggestions,
-            frequentWords: frequentWords,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
             candidateStyle: candidateStyle,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
         )
         .keyboardToolbarStyle(
             Keyboard.ToolbarStyle(
@@ -120,25 +122,26 @@ struct TaigiKeyboardView: View {
     private func keyboardWithOverlays(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
-        frequentWords: Set<String>,
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
     ) -> some View {
         coreKeyboard(
             p: p,
             suggestions: suggestions,
-            frequentWords: frequentWords,
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
             candidateStyle: candidateStyle,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
         )
         .overlay(
             Group {
                 if expandState.isExpanded {
                     ExpandedCandidateOverlay(
                         suggestions: suggestions,
-                        frequentWords: frequentWords,
                         selectedCandidateIndex: selectedCandidateIndex,
                         onSuggestionTap: onSuggestionTap,
                         isTranslateSwapped: isTranslateSwapped,
@@ -147,6 +150,8 @@ struct TaigiKeyboardView: View {
                             expandState.collapse()
                         },
                         isExpanded: true,
+                        isTPSLayout: isTPSLayout,
+                        orMapsToER: orMapsToER,
                     )
                     .candidateViewStyle(candidateStyle)
                     .offset(y: 2)
@@ -226,10 +231,11 @@ struct TaigiKeyboardView: View {
     private func coreKeyboard(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
-        frequentWords: Set<String>,
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
     ) -> some View {
         // KeyboardKit 10: uses layout: and services: parameters
         KeyboardView(
@@ -269,7 +275,6 @@ struct TaigiKeyboardView: View {
                 // Unified CandidateView; English mode passes in KeyboardKit's default view
                 CandidateView(
                     suggestions: suggestions,
-                    frequentWords: frequentWords,
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
@@ -304,6 +309,8 @@ struct TaigiKeyboardView: View {
                     },
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
                     isComposing: composingManager.isComposing,
+                    isTPSLayout: isTPSLayout,
+                    orMapsToER: orMapsToER,
                 )
                 .environmentObject(expandState)
                 .candidateViewStyle(candidateStyle)

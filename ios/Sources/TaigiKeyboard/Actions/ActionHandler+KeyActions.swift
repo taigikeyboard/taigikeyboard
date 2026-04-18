@@ -26,23 +26,17 @@ extension ActionHandler {
             inputMode: settings.inputMode,
         )
 
-        // TPS layout: context-aware character adjustments
-        let finalChar: String
-        if settings.inputMode == .tps {
-            var adjusted = TPSConverter.adjustTPSInitialKey(processedChar, afterRawInput: composingManager.rawInput)
-            adjusted = TPSConverter.adjustTPSNasalizedVowelKey(adjusted, afterRawInput: composingManager.rawInput)
-            // Syllabic nasal auto-correct: ㄇ+tone → ㆬ, ㄫ+tone → ㆭ
-            if let nasalReplacement = TPSConverter.syllabicNasalReplacement(forIncoming: adjusted, lastRawChar: composingManager.rawInput.last) {
-                composingManager.replaceLastCharacter(with: nasalReplacement)
-            }
-            // Palatalization auto-correct: ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ → ㄐ/ㄑ/ㄒ/ㆢ
-            if let replacement = TPSConverter.palatalizationReplacement(forIncoming: adjusted, lastRawChar: composingManager.rawInput.last) {
-                composingManager.replaceLastCharacter(with: replacement)
-            }
-            finalChar = adjusted
-        } else {
-            finalChar = processedChar
+        // TPS key-level adjustments via pure pipeline (returns adjusted char +
+        // optional retroactive replacement for the last raw-input char).
+        let adjustment = CharacterInputPipeline.adjust(
+            processedChar,
+            inputMode: settings.inputMode,
+            rawInput: composingManager.rawInput,
+        )
+        if let replacement = adjustment.replaceLast {
+            composingManager.replaceLastCharacter(with: replacement)
         }
+        let finalChar = adjustment.char
 
         logger.debug("[AUTOCAP][INPUT] processedChar='\(finalChar)'")
 
@@ -133,7 +127,7 @@ extension ActionHandler {
         // If the syllable already has a tone mark or ends with space, fall through to commit.
         if settings.inputMode == .tps, composingManager.isComposing {
             if let lastChar = composingManager.rawInput.last,
-               !TPSConverter.isTPSToneMark(lastChar), lastChar != " "
+               !TPSTables.isTPSToneMark(lastChar), lastChar != " "
             {
                 composingManager.appendCharacter(" ")
                 return true

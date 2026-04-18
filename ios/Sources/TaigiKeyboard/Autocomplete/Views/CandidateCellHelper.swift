@@ -3,34 +3,36 @@ import SwiftUI
 
 /// 候選詞單元格輔助工具
 ///
-/// 封裝候選詞顯示和處理的共用邏輯。
-/// 支援 TPS（方音符號）模式：羅馬字會轉換為方音符號顯示。
+/// 封裝候選詞顯示 / commit 文字 / 寬度量測等純函式邏輯。
+/// TPS（方音符號）模式與翻譯漢羅交換皆由呼叫端以參數傳入，不在此直接讀 `SharedSettings`，
+/// 以利單元測試並避免隱式耦合。
 enum CandidateCellHelper {
-    // MARK: - 顯示文字計算
+    // MARK: - 常數
 
-    /// 檢查是否為 TPS 佈局模式
-    private static var isTPSLayout: Bool {
-        SharedSettings.shared.keyboardLayoutType == .tps
-    }
+    static let minimumCellWidth: CGFloat = 44
+    private static let cellHorizontalPadding: CGFloat = 20
+
+    // MARK: - 顯示文字
 
     /// 計算顯示的主標題
     ///
-    /// TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）
-    ///
-    /// 一般模式：
-    /// - isTranslateSwapped = false：羅馬字為主標題
-    /// - isTranslateSwapped = true：漢字為主標題
-    static func displayTitle(for suggestion: Autocomplete.Suggestion, isTranslateSwapped: Bool) -> String {
-        // TPS mode: always show hanzi as title (fallback to TPS symbols if no hanzi)
+    /// - TPS 模式：漢字為主標題（無漢字時 fallback 為方音符號）
+    /// - 一般模式：`isTranslateSwapped` 決定羅馬字 / 漢字順序
+    static func displayTitle(
+        for suggestion: Autocomplete.Suggestion,
+        isTranslateSwapped: Bool,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
+    ) -> String {
         if isTPSLayout {
             if let subtitle = suggestion.subtitle, !subtitle.isEmpty {
                 return subtitle
             }
-            return TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER)
+            return tpsFallback(for: suggestion, orMapsToER: orMapsToER)
         }
 
         if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
-            return subtitle // 漢字為主標題
+            return subtitle
         }
 
         return suggestion.text
@@ -38,129 +40,91 @@ enum CandidateCellHelper {
 
     /// 計算顯示的副標題
     ///
-    /// TPS 模式：無副標題（只顯示漢字）
-    ///
-    /// 一般模式：
-    /// - isTranslateSwapped = false：漢字為副標題
-    /// - isTranslateSwapped = true：羅馬字為副標題
-    static func displaySubtitle(for suggestion: Autocomplete.Suggestion, isTranslateSwapped: Bool) -> String? {
-        // TPS mode: no subtitle (hanzi-only display)
+    /// - TPS 模式：無副標題
+    /// - 一般模式：`isTranslateSwapped` 決定副標題是羅馬字或漢字
+    static func displaySubtitle(
+        for suggestion: Autocomplete.Suggestion,
+        isTranslateSwapped: Bool,
+        isTPSLayout: Bool,
+    ) -> String? {
         if isTPSLayout {
             return nil
         }
-
-        if isTranslateSwapped {
-            return suggestion.text // 羅馬字為副標題
-        }
-        return suggestion.subtitle // 漢字為副標題
+        return isTranslateSwapped ? suggestion.text : suggestion.subtitle
     }
 
-    // MARK: - 建議處理
+    // MARK: - Commit 建議
 
-    /// 建立要處理的建議（處理漢羅交換和 TPS 模式）
+    /// 依 layout / translate 狀態決定實際 commit 給 textProxy 的 suggestion
     ///
-    /// TPS 模式：輸出漢字（無漢字時 fallback 為方音符號）
-    ///
-    /// 一般模式：
-    /// - isTranslateSwapped = false：輸出羅馬字
-    /// - isTranslateSwapped = true：輸出漢字
-    static func suggestionToHandle(for suggestion: Autocomplete.Suggestion, isTranslateSwapped: Bool) -> Autocomplete.Suggestion {
-        // TPS mode: always output hanzi (fallback to TPS symbols if no hanzi)
+    /// - TPS 模式：優先輸出漢字；無漢字則輸出 TPS 符號 fallback
+    /// - 一般模式：`isTranslateSwapped = true` 輸出漢字；否則輸出羅馬字
+    static func suggestionToHandle(
+        for suggestion: Autocomplete.Suggestion,
+        isTranslateSwapped: Bool,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
+    ) -> Autocomplete.Suggestion {
         if isTPSLayout,
            let subtitle = suggestion.subtitle,
            !subtitle.isEmpty
         {
-            let additionalDeleteCount = max(0, suggestion.text.count - subtitle.count)
-            return Autocomplete.Suggestion(
-                text: subtitle,
-                title: subtitle,
-                subtitle: suggestion.text,
-                additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo,
-            )
+            return replacingCommitText(of: suggestion, with: subtitle)
         }
 
-        // 漢字優先模式：輸出漢字
         if isTranslateSwapped,
            let subtitle = suggestion.subtitle,
            !subtitle.isEmpty
         {
-            let additionalDeleteCount = max(0, suggestion.text.count - subtitle.count)
-            return Autocomplete.Suggestion(
-                text: subtitle,
-                title: subtitle,
-                subtitle: suggestion.text,
-                additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo,
-            )
+            return replacingCommitText(of: suggestion, with: subtitle)
         }
 
-        // TPS fallback: output TPS symbols when no hanzi
         if isTPSLayout {
-            let tpsText = TPSConverter.toTPS(suggestion.text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER)
-            let additionalDeleteCount = max(0, suggestion.text.count - tpsText.count)
-            return Autocomplete.Suggestion(
-                text: tpsText,
-                title: tpsText,
-                subtitle: suggestion.subtitle,
-                additionalDeleteCount: additionalDeleteCount,
-                additionalInfo: suggestion.additionalInfo,
-            )
+            let tpsText = tpsFallback(for: suggestion, orMapsToER: orMapsToER)
+            return replacingCommitText(of: suggestion, with: tpsText, keepOriginalSubtitle: true)
         }
 
-        // 一般模式：輸出羅馬字
         return suggestion
     }
 
-    // MARK: - 字體大小計算
+    // MARK: - 字體大小
 
-    /// 計算主標題字體大小
-    ///
-    /// TPS 模式顯示漢字，使用正常字體大小
-    static func titleFontSize(isTranslateSwapped _: Bool) -> CGFloat {
-        // TPS mode: displaying hanzi, use normal font size
-        if isTPSLayout {
-            return CandidateViewModels.UI.primaryFontSize
-        }
-        return CandidateViewModels.UI.primaryFontSize
+    static var titleFontSize: CGFloat {
+        CandidateViewModels.UI.primaryFontSize
     }
 
-    /// 計算副標題字體大小
-    ///
-    /// TPS 模式無副標題，使用正常字體大小
-    static func subtitleFontSize(isTranslateSwapped _: Bool) -> CGFloat {
-        // TPS mode: no subtitle, use normal font size
-        if isTPSLayout {
-            return CandidateViewModels.UI.secondaryFontSize
-        }
-        return CandidateViewModels.UI.secondaryFontSize
+    static var subtitleFontSize: CGFloat {
+        CandidateViewModels.UI.secondaryFontSize
     }
 
-    // MARK: - Pixel-based cell width measurement
+    // MARK: - Cell 寬度量測
 
-    static let minimumCellWidth: CGFloat = 44
-    private static let cellHorizontalPadding: CGFloat = 20
-
-    /// Measures both title and subtitle at their respective font sizes,
-    /// returns max width + padding. Always measures both regardless of
-    /// isTranslateSwapped so layout doesn't reflow on translate toggle.
-    static func measuredCellWidth(for suggestion: Autocomplete.Suggestion) -> CGFloat {
-        let titleFont = KeyboardFonts.globalUIFont(size: CandidateViewModels.UI.primaryFontSize)
-        let subtitleFont = KeyboardFonts.globalUIFont(size: CandidateViewModels.UI.secondaryFontSize)
+    /// 量測 title 與 subtitle 於對應字體大小的寬度，回傳 max + padding
+    /// 一律兩者都量，避免 translate toggle 時佈局 reflow。
+    static func measuredCellWidth(
+        for suggestion: Autocomplete.Suggestion,
+        isTPSLayout: Bool,
+        orMapsToER: Bool,
+    ) -> CGFloat {
+        let titleFont = KeyboardFonts.globalUIFont(size: titleFontSize)
+        let subtitleFont = KeyboardFonts.globalUIFont(size: subtitleFontSize)
 
         let text = suggestion.text
         let subtitle = suggestion.subtitle ?? ""
 
-        if SharedSettings.shared.keyboardLayoutType == .tps {
-            // TPS: only hanzi title (or TPS-converted fallback), no subtitle
-            let titleText = subtitle.isEmpty ? TPSConverter.toTPS(text, orMapsToER: SharedSettings.shared.isTpsOrMappedToER) : subtitle
-            let w = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
-            return max(minimumCellWidth, w + cellHorizontalPadding)
+        if isTPSLayout {
+            let titleText = subtitle.isEmpty
+                ? tpsFallback(for: suggestion, orMapsToER: orMapsToER)
+                : subtitle
+            let width = (titleText as NSString).size(withAttributes: [.font: titleFont]).width
+            return max(minimumCellWidth, width + cellHorizontalPadding)
         }
 
-        let textW = (text as NSString).size(withAttributes: [.font: titleFont]).width
-        let subtitleW = subtitle.isEmpty ? 0 : (subtitle as NSString).size(withAttributes: [.font: subtitleFont]).width
-        return max(minimumCellWidth, max(textW, subtitleW) + cellHorizontalPadding)
+        let textWidth = (text as NSString).size(withAttributes: [.font: titleFont]).width
+        let subtitleWidth = subtitle.isEmpty
+            ? 0
+            : (subtitle as NSString).size(withAttributes: [.font: subtitleFont]).width
+        return max(minimumCellWidth, max(textWidth, subtitleWidth) + cellHorizontalPadding)
     }
 
     // MARK: - 樣式判斷
@@ -168,5 +132,33 @@ enum CandidateCellHelper {
     /// 判斷是否啟用 Liquid Glass 效果
     static func isLiquidGlassEnabled(cornerRadius: CGFloat?) -> Bool {
         cornerRadius == 9
+    }
+
+    // MARK: - Private
+
+    /// TPS fallback：把羅馬字轉為方音符號顯示。
+    private static func tpsFallback(
+        for suggestion: Autocomplete.Suggestion,
+        orMapsToER: Bool,
+    ) -> String {
+        TLToTPS.convert(suggestion.text, orMapsToER: orMapsToER)
+    }
+
+    /// 以 `newText` 取代原本的 commit text，並把原本的 text 移到 subtitle 以保留 hint。
+    /// `keepOriginalSubtitle = true` 時 subtitle 保留原值（TPS 無漢字 fallback 的情境）。
+    private static func replacingCommitText(
+        of suggestion: Autocomplete.Suggestion,
+        with newText: String,
+        keepOriginalSubtitle: Bool = false,
+    ) -> Autocomplete.Suggestion {
+        let additionalDeleteCount = max(0, suggestion.text.count - newText.count)
+        let subtitle = keepOriginalSubtitle ? suggestion.subtitle : suggestion.text
+        return Autocomplete.Suggestion(
+            text: newText,
+            title: newText,
+            subtitle: subtitle,
+            additionalDeleteCount: additionalDeleteCount,
+            additionalInfo: suggestion.additionalInfo,
+        )
     }
 }

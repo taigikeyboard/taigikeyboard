@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import KeyboardKit
 import ObjectiveC
@@ -7,7 +8,6 @@ import SwiftUI
 ///
 /// 使用 Associated Object 為 KeyboardContext 添加組字狀態屬性。
 extension KeyboardContext {
-
     private static var isComposingTextKey: UInt8 = 0
 
     /// 是否正在組字中
