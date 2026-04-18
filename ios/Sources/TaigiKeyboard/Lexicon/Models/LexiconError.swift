@@ -4,6 +4,9 @@ import Foundation
 /// shared infrastructure). Named after the module, not any single data
 /// source — these surface from `DictionaryRepository`, `CustomDictionaryRepository`,
 /// `UserFrequencyRepository`, `NextWordService`, and `TrieService` alike.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum LexiconError: LocalizedError {
     case databaseNotFound
     case databaseNotAvailable

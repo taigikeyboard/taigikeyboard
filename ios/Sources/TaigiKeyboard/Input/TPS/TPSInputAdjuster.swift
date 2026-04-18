@@ -11,6 +11,9 @@ import Foundation
 /// Each function is a pure query over the raw-input buffer — no side effects.
 /// The caller (`CharacterInputPipeline`) orchestrates application order and
 /// issues `replaceLastCharacter` calls when needed.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TPSInputAdjuster {
     // MARK: - Palatalization (ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ)
 

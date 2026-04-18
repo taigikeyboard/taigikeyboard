@@ -5,6 +5,9 @@ import Foundation
 /// CROSS-PLATFORM INVARIANT — semantics must match Android
 /// `TaigiUnicode.kt` `nfdPreprocessed`. Both implementations are exact-equivalent
 /// preprocessing for tone-mark / combining-character analysis.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TaigiUnicode {
     /// Apply Taigi-specific Unicode preprocessing:
     /// 1. POJ nasal markers `ⁿ` (U+207F) / `ᴺ` (U+1D3A) → `"nn"`

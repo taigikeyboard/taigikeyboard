@@ -4,6 +4,9 @@ import Foundation
 ///
 /// Used for candidate display: dictionary entries are stored as TL romanization,
 /// but must be shown as TPS (方音符號) when the user's input is TPS.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TLToTPS {
     /// Convert a TL string to TPS.
     ///

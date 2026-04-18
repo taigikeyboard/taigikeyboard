@@ -3,6 +3,9 @@ import Foundation
 /// Tone utilities
 ///
 /// Provides tone letter case conversion for POJ/TL special characters.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum ToneUtilities {
 
     /// Uppercase a tone letter. Swift's built-in uppercased() handles combining marks correctly.

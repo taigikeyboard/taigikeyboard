@@ -53,12 +53,12 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 |----------------------------|----------|---------------------------------------------------|
 | `Phonetics/`               | Engine   | All files Foundation-only                         |
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
-| `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API)     |
+| `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API). `LexiconService`, `NextWordService`, `DictionaryRepository` all inject `EngineSettingsProvider`. |
 | `NextWord/`                | Engine   | After Phase 5 restructure                         |
-| `Autocomplete/Services/`   | Engine   | After Phase 4 KK removal                          |
+| `Autocomplete/Services/`   | Mixed    | `AutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` and `AutocompleteContextBooster` (moved to `NextWord/`) are engine-pure. Treat subclass files as Platform-in-Engine-folder. |
 | `Settings/` (non-UI parts) | Engine   | `EngineSettings`, `EngineSettingsProvider`, etc.  |
 | `Settings/` (UI parts)     | Platform | `KeyboardColorSettings` (UIColor), `CodableColor` |
-| `Actions/`                 | Platform | Also hosts KK adapter code                        |
+| `Actions/`                 | Platform | Hosts KK adapters: `ActionHandler*`, `KeyboardCaseAdapter`, `KeyboardContext+Composing`, `KeyboardContext+Translate` |
 | `KeyboardExtension/`       | Platform | (renamed from `_Keyboard/` in Phase 1; extension target host: `KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj`) |
 | `Callouts/`                | Platform |                                                   |
 | `Emojis/`, `Layout/`       | Platform |                                                   |

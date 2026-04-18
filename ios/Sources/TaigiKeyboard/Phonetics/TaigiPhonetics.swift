@@ -5,6 +5,9 @@ import Foundation
 /// Ported from `references/taigi-converter/src/` (tables.js, phonetics.js, tl.js, poj.js).
 /// Replaces ToneMappings, VowelAnalyzer, POJToneConverter, TLToneConverter with
 /// a single NFD/NFC-based pipeline: parse syllable -> place combining mark -> normalize.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TaigiPhonetics {
     // MARK: - Data Tables
 

@@ -1,5 +1,8 @@
 import Foundation
 
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
 private let toneLogger = DebugLogger(category: "ToneConverter")
 
 /// Tone converter

@@ -6,6 +6,9 @@ import Foundation
 /// see `TPSToTL` (TPS→TL), `TLToTPS` (TL→TPS), `TPSInputAdjuster` (key-level auto-adjust).
 ///
 /// Reference: https://github.com/leechunhoe/Tailo-TPS-Converter
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TPSTables {
     // MARK: - TPS → TL Tables
 
