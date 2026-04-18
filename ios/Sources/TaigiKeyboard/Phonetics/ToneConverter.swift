@@ -1,7 +1,8 @@
 import Foundation
 
-// MARK: - Shared-Core Candidate
-// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+// NOTE: Not shared-core — `preprocessPojInput` reads `SharedSettings.shared`
+// directly (oo↔o͘ / nn↔ⁿ toggles). Before extraction, the caller must inject
+// the two booleans as parameters so this file becomes Foundation-pure.
 
 private let toneLogger = DebugLogger(category: "ToneConverter")
 

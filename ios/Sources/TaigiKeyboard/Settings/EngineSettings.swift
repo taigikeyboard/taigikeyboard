@@ -1,5 +1,8 @@
 import Foundation
 
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
 /// Read-only view of the settings the lexicon / input engine needs to
 /// make decisions during candidate search, composing, and suggestion
 /// ranking. Supplied to engine services via `EngineSettingsProvider`.

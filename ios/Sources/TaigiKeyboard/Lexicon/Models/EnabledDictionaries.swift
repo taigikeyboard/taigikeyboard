@@ -1,10 +1,10 @@
 import Foundation
 
-// MARK: - Shared-Core Candidate
-
-// Pure logic, Foundation-only. Eligible for cross-platform extraction.
-
-/// Dictionary-source toggles captured as a value.
+// NOTE: Not yet shared-core — mechanically Foundation-only, but the bitmask
+// layout and `enabledSources` enumeration are tightly coupled to
+// `DictionarySource` and the iOS `dictionary.bin` binary format. Android
+// still computes enabled sources inline in its VM; extraction is blocked on
+// Android aligning to this centralised form (tracked in Phase 10 follow-ups).
 ///
 /// Previously `EnabledDictionaries.fromSettings()` reached into
 /// `SharedSettings.shared`; this form accepts any `EngineSettings`

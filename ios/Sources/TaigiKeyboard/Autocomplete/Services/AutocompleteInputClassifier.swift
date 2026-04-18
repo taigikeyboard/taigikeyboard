@@ -1,5 +1,9 @@
 import Foundation
 
+// MARK: - Shared-Core Candidate
+
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
 /// 依 rawInput 判斷輸入型別並建立 Trie 搜尋鍵。
 ///
 /// 命名對齊 Android `TaigiAutocompleteService`（`determineInputType` /
