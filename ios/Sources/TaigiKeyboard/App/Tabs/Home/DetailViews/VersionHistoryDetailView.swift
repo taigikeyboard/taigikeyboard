@@ -5,8 +5,8 @@ struct VersionHistoryDetailView: View {
 
     var body: some View {
         Form {
-            ForEach(Tab1Texts.versionHistoryEntries.indices, id: \.self) { index in
-                let entry = Tab1Texts.versionHistoryEntries[index]
+            ForEach(HomeTexts.versionHistoryEntries.indices, id: \.self) { index in
+                let entry = HomeTexts.versionHistoryEntries[index]
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
                         // Version number and date
@@ -36,7 +36,7 @@ struct VersionHistoryDetailView: View {
                 }
             }
         }
-        .navigationTitle(Tab1Texts.versionHistory)
+        .navigationTitle(HomeTexts.versionHistory)
         .navigationBarTitleDisplayMode(.large)
     }
 }

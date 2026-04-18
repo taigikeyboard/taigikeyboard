@@ -4,7 +4,7 @@ import SwiftUI
 /// Home tab.
 ///
 /// Setup guide, typing guides, feature settings, links, and FAQ.
-struct Tab1: View {
+struct HomeTab: View {
     @ObservedObject var viewModel: SetupGuideViewModel
 
     private var appVersion: String {
@@ -19,10 +19,10 @@ struct Tab1: View {
                     NavigationLink {
                         SetupGuideView(viewModel: viewModel)
                     } label: {
-                        Label(Tab1Texts.setupGuide, systemImage: "keyboard.badge.ellipsis")
+                        Label(HomeTexts.setupGuide, systemImage: "keyboard.badge.ellipsis")
                     }
                 } header: {
-                    Text(Tab1Texts.setupKeyboard)
+                    Text(HomeTexts.setupKeyboard)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -41,7 +41,7 @@ struct Tab1: View {
                         }
                     }
                 } header: {
-                    Text(Tab1Texts.typingGuide)
+                    Text(HomeTexts.typingGuide)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -60,7 +60,7 @@ struct Tab1: View {
                         }
                     }
                 } header: {
-                    Text(Tab1Texts.newFeatures)
+                    Text(HomeTexts.newFeatures)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -68,39 +68,39 @@ struct Tab1: View {
                 Section {
                     // External links
                     Link(destination: URL(string: "https://www.taigikeyboard.tw/")!) {
-                        Label(Tab1Texts.userGuide, systemImage: "arrow.up.right.square")
+                        Label(HomeTexts.userGuide, systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://taigikeyboard.tw/privacypolicy")!) {
-                        Label(Tab1Texts.privacyPolicy, systemImage: "arrow.up.right.square")
+                        Label(HomeTexts.privacyPolicy, systemImage: "arrow.up.right.square")
                     }
 
                     Link(destination: URL(string: "https://apps.apple.com/app/id6751871806?action=write-review")!) {
-                        Label(Tab1Texts.rateUs, systemImage: "arrow.up.right.square")
+                        Label(HomeTexts.rateUs, systemImage: "arrow.up.right.square")
                     }
 
                     // In-app navigation
                     NavigationLink {
                         CopyrightView()
                     } label: {
-                        Label(Tab1Texts.copyrightNotice, systemImage: "doc.text")
+                        Label(HomeTexts.copyrightNotice, systemImage: "doc.text")
                     }
 
                     NavigationLink {
                         FeedbackDetailView()
                     } label: {
-                        Label(Tab1Texts.contactUs, systemImage: "heart")
+                        Label(HomeTexts.contactUs, systemImage: "heart")
                     }
 
                     NavigationLink {
                         VersionHistoryDetailView()
                     } label: {
-                        Label(Tab1Texts.versionHistory, systemImage: "clock.arrow.circlepath")
+                        Label(HomeTexts.versionHistory, systemImage: "clock.arrow.circlepath")
                     }
 
                     // Version info
                     HStack {
-                        Label(Tab1Texts.version, systemImage: "info.circle")
+                        Label(HomeTexts.version, systemImage: "info.circle")
                         Spacer()
                         Text(appVersion)
                             .foregroundColor(.secondary)
@@ -121,11 +121,11 @@ struct Tab1: View {
                         }
                     }
                 } header: {
-                    Text(Tab1Texts.faq)
+                    Text(HomeTexts.faq)
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(Tab1Texts.appHeaderTitle)
+            .navigationTitle(HomeTexts.appHeaderTitle)
             .navigationBarTitleDisplayMode(.large)
         }
     }

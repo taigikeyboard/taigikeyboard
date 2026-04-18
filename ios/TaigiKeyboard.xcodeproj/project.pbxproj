@@ -98,7 +98,7 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */ = {
+		2A28832B2EAF0E2B00AE3C75 /* Exceptions for "KeyboardExtension" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"/Localized: InfoPlist.strings",
@@ -106,7 +106,7 @@
 			);
 			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
 		};
-		2A28832C2EAF0E2C00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */ = {
+		2A28832C2EAF0E2C00AE3C75 /* Exceptions for "KeyboardExtension" folder in "TaigiKeyboard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				"/Localized: InfoPlist.strings",
@@ -155,14 +155,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		2A2882BA2EAF0CE100AE3C75 /* _Keyboard */ = {
+		2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				2A28832C2EAF0E2C00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboard" target */,
-				2A28832B2EAF0E2B00AE3C75 /* Exceptions for "_Keyboard" folder in "TaigiKeyboardExtension" target */,
+				2A28832C2EAF0E2C00AE3C75 /* Exceptions for "KeyboardExtension" folder in "TaigiKeyboard" target */,
+				2A28832B2EAF0E2B00AE3C75 /* Exceptions for "KeyboardExtension" folder in "TaigiKeyboardExtension" target */,
 			);
-			name = _Keyboard;
-			path = Sources/TaigiKeyboard/_Keyboard;
+			name = KeyboardExtension;
+			path = Sources/TaigiKeyboard/KeyboardExtension;
 			sourceTree = "<group>";
 		};
 		2A2882C02EAF0D0500AE3C75 /* Actions */ = {
@@ -207,10 +207,10 @@
 			path = Sources/TaigiKeyboard/Lexicon;
 			sourceTree = "<group>";
 		};
-		2A2883032EAF0DBE00AE3C75 /* Localization */ = {
+		2A2883032EAF0DBE00AE3C75 /* Strings */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Localization;
-			path = Sources/TaigiKeyboard/Localization;
+			name = Strings;
+			path = Sources/TaigiKeyboard/Strings;
 			sourceTree = "<group>";
 		};
 		2A28831B2EAF0DDE00AE3C75 /* Settings */ = {
@@ -329,7 +329,7 @@
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
-				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
+				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A4FAF492EAF137B006E37A8 /* App */,
 				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
@@ -338,7 +338,7 @@
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
-				2A2883032EAF0DBE00AE3C75 /* Localization */,
+				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
@@ -380,7 +380,7 @@
 				F32651B02E524AA8002E99A4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
+				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
@@ -388,7 +388,7 @@
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
-				2A2883032EAF0DBE00AE3C75 /* Localization */,
+				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
@@ -421,7 +421,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				2A2882BA2EAF0CE100AE3C75 /* _Keyboard */,
+				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
@@ -429,7 +429,7 @@
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
-				2A2883032EAF0DBE00AE3C75 /* Localization */,
+				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
@@ -860,7 +860,7 @@
 					"$(SRCROOT)/../libs/marisa-trie/lib",
 					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
 				);
-				INFOPLIST_FILE = Sources/TaigiKeyboard/_Keyboard/Info.plist;
+				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -892,7 +892,7 @@
 					"$(SRCROOT)/../libs/marisa-trie/lib",
 					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
 				);
-				INFOPLIST_FILE = Sources/TaigiKeyboard/_Keyboard/Info.plist;
+				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (

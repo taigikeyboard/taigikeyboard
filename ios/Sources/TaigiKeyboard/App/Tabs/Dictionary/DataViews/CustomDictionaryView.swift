@@ -47,8 +47,8 @@ struct CustomDictionaryView: View {
                 Section {
                     Toggle(isOn: $isCustomDictEnabled) {
                         HStack {
-                            Text(Tab3Texts.isCustomDictEnabled)
-                            SettingInfoButton(description: Tab3Texts.isCustomDictEnabledInfo)
+                            Text(DictionaryTexts.isCustomDictEnabled)
+                            SettingInfoButton(description: DictionaryTexts.isCustomDictEnabledInfo)
                         }
                     }
                     .onChange(of: isCustomDictEnabled) { _, newValue in
@@ -63,13 +63,13 @@ struct CustomDictionaryView: View {
                         .aspectRatio(contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius))
                         .listRowSeparator(.hidden)
-                    Text(Tab3Texts.customDictDescription)
+                    Text(DictionaryTexts.customDictDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await service.exportCSV() }
                     } label: {
                         Label(
-                            Tab3Texts.exportCSV,
+                            DictionaryTexts.exportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -82,13 +82,13 @@ struct CustomDictionaryView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                Tab3Texts.importCSV,
+                                DictionaryTexts.importCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(Tab3Texts.importExportTitle)
+                    Text(DictionaryTexts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -97,14 +97,14 @@ struct CustomDictionaryView: View {
                     Button(role: .destructive) {
                         showDeleteAllAlert = true
                     } label: {
-                        Text(Tab3Texts.deleteAll)
+                        Text(DictionaryTexts.deleteAll)
                     }
                     .disabled(importExport.isImporting)
                 }
 
                 // Privacy warning
                 Section {
-                    Text(Tab3Texts.customDictPrivacyWarning)
+                    Text(DictionaryTexts.customDictPrivacyWarning)
                 }
 
                 // Entry list
@@ -114,13 +114,13 @@ struct CustomDictionaryView: View {
                             Image(systemName: "book.closed")
                                 .font(AppStyle.appFont(size: 48))
                                 .foregroundColor(.secondary)
-                            Text(Tab3Texts.customDictEmpty)
+                            Text(DictionaryTexts.customDictEmpty)
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 32)
                     } else if !filterText.isEmpty, filteredEntries.isEmpty {
-                        Text(Tab3Texts.noResults)
+                        Text(DictionaryTexts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredEntries) { entry in
@@ -154,17 +154,17 @@ struct CustomDictionaryView: View {
                     }
                 } header: {
                     HStack {
-                        Text(Tab3Texts.customDictionary)
+                        Text(DictionaryTexts.customDictionary)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: Tab3Texts.filterHint)
+                        SettingInfoButton(description: DictionaryTexts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
+            SearchBar(text: $filterText, placeholder: DictionaryTexts.searchPlaceholder)
         }
-        .navigationTitle(Tab3Texts.customDictionary)
+        .navigationTitle(DictionaryTexts.customDictionary)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -179,39 +179,39 @@ struct CustomDictionaryView: View {
             }
         }
         .alert(
-            editingEntry != nil ? Tab3Texts.editEntry : Tab3Texts.addEntry,
+            editingEntry != nil ? DictionaryTexts.editEntry : DictionaryTexts.addEntry,
             isPresented: $showEntryAlert,
         ) {
-            TextField(Tab3Texts.romanPlaceholder, text: $romanInput)
+            TextField(DictionaryTexts.romanPlaceholder, text: $romanInput)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            TextField(Tab3Texts.hanziPlaceholder, text: $hanziInput)
+            TextField(DictionaryTexts.hanziPlaceholder, text: $hanziInput)
             Button(CommonTexts.cancel, role: .cancel) {
                 editingEntry = nil
             }
-            Button(Tab3Texts.save) {
+            Button(DictionaryTexts.save) {
                 saveEntryFromAlert()
             }
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: Tab3Texts.importCSV,
-            exportAlertTitle: Tab3Texts.exportCSV,
+            importAlertTitle: DictionaryTexts.importCSV,
+            exportAlertTitle: DictionaryTexts.exportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "自訂詞庫") },
-            okText: Tab3Texts.ok,
-            exportSuccessText: Tab3Texts.exportSuccess,
+            okText: DictionaryTexts.ok,
+            exportSuccessText: DictionaryTexts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
-        .alert(Tab3Texts.deleteAll, isPresented: $showDeleteAllAlert) {
+        .alert(DictionaryTexts.deleteAll, isPresented: $showDeleteAllAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
-            Button(Tab3Texts.clear, role: .destructive) {
+            Button(DictionaryTexts.clear, role: .destructive) {
                 Task {
                     try? await service.deleteAll()
                     await loadEntries()
                 }
             }
         } message: {
-            Text(Tab3Texts.deleteAllMessage)
+            Text(DictionaryTexts.deleteAllMessage)
         }
         .task {
             await loadEntries()
@@ -261,7 +261,7 @@ struct CustomDictionaryView: View {
                 let result = try await service.importFromFile(url: url)
                 return (imported: result.imported, skipped: result.skipped)
             },
-            resultFormat: Tab3Texts.importResultFormat,
+            resultFormat: DictionaryTexts.importResultFormat,
             onComplete: { await loadEntries() },
         )
     }

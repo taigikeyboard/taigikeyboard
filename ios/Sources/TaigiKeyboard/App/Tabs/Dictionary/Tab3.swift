@@ -4,7 +4,7 @@ import UIKit
 /// Dictionary tab.
 ///
 /// Manage dictionary toggles, custom dictionary, frequency/association data, and search.
-struct Tab3: View {
+struct DictionaryTab: View {
     @StateObject private var searchVM = DictionarySearchViewModel()
 
     private let settings = SharedSettings.shared
@@ -52,19 +52,19 @@ struct Tab3: View {
                 // Data management
                 Section {
                     NavigationLink(destination: CustomDictionaryView()) {
-                        Text(Tab3Texts.customDictionary)
+                        Text(DictionaryTexts.customDictionary)
                     }
                     NavigationLink(destination: FrequencyDataView()) {
-                        Text(Tab3Texts.frequencyManagement)
+                        Text(DictionaryTexts.frequencyManagement)
                     }
                     NavigationLink(destination: AssociationDataView()) {
-                        Text(Tab3Texts.associationManagement)
+                        Text(DictionaryTexts.associationManagement)
                     }
                     NavigationLink(destination: DataManagementView()) {
-                        Text(Tab3Texts.backupRestore)
+                        Text(DictionaryTexts.backupRestore)
                     }
                 } header: {
-                    Text(Tab3Texts.dataManagement)
+                    Text(DictionaryTexts.dataManagement)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -95,7 +95,7 @@ struct Tab3: View {
                         description: "收錄多達一千兩百組關鍵台語工藝詞彙，涵蓋陶瓷、木藝、金工、竹藤、纖維、玻璃、漆藝、石藝、皮革、紙藝等十一項工藝類別。",
                     ) { settings.isKunggeDictEnabled = $0 }
                 } header: {
-                    Text(Tab3Texts.moeSectionTitle)
+                    Text(DictionaryTexts.moeSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -114,17 +114,17 @@ struct Tab3: View {
                         settings.isTaiwanPlantDictEnabled = $0
                     }
                 } header: {
-                    Text(Tab3Texts.otherSectionTitle)
+                    Text(DictionaryTexts.otherSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
                 // Variant characters / legacy characters / accent data
                 Section {
-                    dictionaryToggle(Tab3Texts.variantDictionary, isOn: $isVariantEnabled, info: .variant) {
+                    dictionaryToggle(DictionaryTexts.variantDictionary, isOn: $isVariantEnabled, info: .variant) {
                         settings.isVariantEnabled = $0
                     }
 
-                    dictionaryToggle(Tab3Texts.khiin, isOn: $isKhiinEnabled, info: .khiin) {
+                    dictionaryToggle(DictionaryTexts.khiin, isOn: $isKhiinEnabled, info: .khiin) {
                         settings.isKhiinEnabled = $0
                     }
 
@@ -133,17 +133,17 @@ struct Tab3: View {
                     }
 
                     dictToggleWithDescription(
-                        title: Tab3Texts.lkkDict,
+                        title: DictionaryTexts.lkkDict,
                         url: "https://docs.google.com/spreadsheets/d/1ICPcP3PuEdLirax-HBLtewiOz53KzAfpme9sjmoIO-w/edit?usp=sharing",
                         isOn: $isLkkDictEnabled,
                         description: "李江却台語文教基金會漢羅合用建議用字。",
                     ) { settings.isLkkDictEnabled = $0 }
                 } header: {
-                    Text(Tab3Texts.supplementSectionTitle)
+                    Text(DictionaryTexts.supplementSectionTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
-            .navigationTitle(Tab3Texts.tabTitle)
+            .navigationTitle(DictionaryTexts.tabTitle)
             .navigationBarTitleDisplayMode(.large)
             .scrollDismissesKeyboard(.interactively)
             .safeAreaInset(edge: .bottom) {
@@ -152,7 +152,7 @@ struct Tab3: View {
                     // Search results above search bar
                     if !searchVM.searchText.isEmpty {
                         if searchVM.results.isEmpty, !searchVM.isSearching {
-                            Text(Tab3Texts.noResults)
+                            Text(DictionaryTexts.noResults)
                                 .font(AppStyle.captionFont)
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,7 +181,7 @@ struct Tab3: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField(
-                            Tab3Texts.searchPlaceholder,
+                            DictionaryTexts.searchPlaceholder,
                             text: $searchVM.searchText,
                         )
                         .focused($isSearchFocused)
@@ -213,12 +213,12 @@ struct Tab3: View {
         .confirmationDialog("", isPresented: $showLookupDialog) {
             if let result = selectedResult {
                 if let moeURL = result.moeURL {
-                    Button(Tab3Texts.lookupMoe) {
+                    Button(DictionaryTexts.lookupMoe) {
                         UIApplication.shared.open(moeURL)
                     }
                 }
                 if let chhoeURL = result.chhoeURL {
-                    Button(Tab3Texts.lookupChhoe) {
+                    Button(DictionaryTexts.lookupChhoe) {
                         UIApplication.shared.open(chhoeURL)
                     }
                 }

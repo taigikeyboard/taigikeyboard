@@ -1,6 +1,6 @@
 import Foundation
 
-/// Dictionary metadata for info buttons in Tab3.
+/// Dictionary metadata for info buttons in DictionaryTab.
 struct DictionaryInfo {
     let description: String
     let websiteURL: URL?

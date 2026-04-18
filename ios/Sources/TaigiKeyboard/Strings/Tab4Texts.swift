@@ -1,8 +1,8 @@
-// MARK: - Tab4 設定文字
+// MARK: - SettingsTab 設定文字
 
 // 包含：鍵盤設定頁面
 
-enum Tab4Texts {
+enum SettingsTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "齒盤設定"

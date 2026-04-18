@@ -40,26 +40,26 @@ struct CustomDictionaryEditView: View {
             Form {
                 Section {
                     TextField(
-                        Tab3Texts.romanPlaceholder,
+                        DictionaryTexts.romanPlaceholder,
                         text: $roman,
                     )
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 } header: {
-                    Text(Tab3Texts.romanLabel)
+                    Text(DictionaryTexts.romanLabel)
                 }
 
                 Section {
                     TextField(
-                        Tab3Texts.hanziPlaceholder,
+                        DictionaryTexts.hanziPlaceholder,
                         text: $hanzi,
                     )
                 } header: {
-                    Text(Tab3Texts.hanziLabel)
+                    Text(DictionaryTexts.hanziLabel)
                 }
             }
             .navigationTitle(
-                isEditing ? Tab3Texts.editEntry : Tab3Texts.addEntry,
+                isEditing ? DictionaryTexts.editEntry : DictionaryTexts.addEntry,
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -69,7 +69,7 @@ struct CustomDictionaryEditView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(Tab3Texts.save) {
+                    Button(DictionaryTexts.save) {
                         saveEntry()
                     }
                     .disabled(!canSave)

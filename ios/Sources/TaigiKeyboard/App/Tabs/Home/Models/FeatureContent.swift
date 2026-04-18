@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Tab1 content models (parsed from tab1-features.json / tab1-faq.json)
+// MARK: - HomeTab content models (parsed from tab1-features.json / tab1-faq.json)
 
 /// Root container for the features JSON file.
 struct FeaturesFile: Codable {

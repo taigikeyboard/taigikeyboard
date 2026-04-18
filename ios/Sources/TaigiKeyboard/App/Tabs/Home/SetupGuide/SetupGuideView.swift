@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Keyboard setup guide.
 ///
-/// Shows activation steps. Shared between full-screen onboarding and Tab1 navigation.
+/// Shows activation steps. Shared between full-screen onboarding and HomeTab navigation.
 struct SetupGuideView: View {
     @ObservedObject var viewModel: SetupGuideViewModel
     @Environment(\.openURL) private var openURL
@@ -18,7 +18,7 @@ struct SetupGuideView: View {
             // Full-screen title
             if isFullScreen {
                 Section {
-                    Text(Tab1Texts.setupGuide)
+                    Text(HomeTexts.setupGuide)
                         .font(AppStyle.appFont(size: AppStyle.navBarLargeTitleSize))
                         .fontWeight(.bold)
                 }
@@ -26,7 +26,7 @@ struct SetupGuideView: View {
 
             // Description
             Section {
-                Text(Tab1Texts.setupGuideDescription)
+                Text(HomeTexts.setupGuideDescription)
                     .lineSpacing(4)
             }
 
@@ -34,20 +34,20 @@ struct SetupGuideView: View {
             Section {
                 SetupGuideStepRow(
                     stepNumber: 1,
-                    title: Tab1Texts.setupGuideStep1Settings,
+                    title: HomeTexts.setupGuideStep1Settings,
                     screenshotName: "setup_step1",
                 )
 
                 SetupGuideStepRow(
                     stepNumber: 2,
-                    title: Tab1Texts.setupGuideStep2AddKeyboard,
+                    title: HomeTexts.setupGuideStep2AddKeyboard,
                     screenshotName: "setup_step2",
                 )
             }
 
             // Completion message
             Section {
-                Text(Tab1Texts.setupGuideCompletedMessage)
+                Text(HomeTexts.setupGuideCompletedMessage)
             }
 
             // Open Settings button
@@ -57,7 +57,7 @@ struct SetupGuideView: View {
                         openURL(url)
                     }
                 } label: {
-                    Label(Tab1Texts.setupGuideGoToSettings, systemImage: "gearshape.fill")
+                    Label(HomeTexts.setupGuideGoToSettings, systemImage: "gearshape.fill")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
@@ -65,7 +65,7 @@ struct SetupGuideView: View {
             // Warnings
             Section {
                 Label {
-                    Text(Tab1Texts.setupInfoMessage)
+                    Text(HomeTexts.setupInfoMessage)
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -73,7 +73,7 @@ struct SetupGuideView: View {
                 }
 
                 Label {
-                    Text(Tab1Texts.setupBrandWarning)
+                    Text(HomeTexts.setupBrandWarning)
                         .lineSpacing(4)
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -87,13 +87,13 @@ struct SetupGuideView: View {
                     Button(role: .destructive) {
                         onComplete()
                     } label: {
-                        Label(Tab1Texts.setupGuideCloseButton, systemImage: "xmark")
+                        Label(HomeTexts.setupGuideCloseButton, systemImage: "xmark")
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
             }
         }
-        .navigationTitle(isFullScreen ? "" : Tab1Texts.setupGuide)
+        .navigationTitle(isFullScreen ? "" : HomeTexts.setupGuide)
         .navigationBarTitleDisplayMode(.large)
         .navigationBarHidden(isFullScreen)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in

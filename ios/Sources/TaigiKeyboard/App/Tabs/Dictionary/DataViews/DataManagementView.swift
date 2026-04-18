@@ -22,7 +22,7 @@ struct DataManagementView: View {
         List {
             // Privacy warning
             Section {
-                Text(Tab3Texts.backupPrivacyWarning)
+                Text(DictionaryTexts.backupPrivacyWarning)
             }
 
             // Backup/Restore
@@ -31,7 +31,7 @@ struct DataManagementView: View {
                     exportBackup()
                 } label: {
                     Label(
-                        Tab3Texts.exportBackup,
+                        DictionaryTexts.exportBackup,
                         systemImage: "square.and.arrow.up",
                     )
                 }
@@ -44,14 +44,14 @@ struct DataManagementView: View {
                         showBackupImporter = true
                     } label: {
                         Label(
-                            Tab3Texts.importBackup,
+                            DictionaryTexts.importBackup,
                             systemImage: "square.and.arrow.down",
                         )
                     }
                 }
             }
         }
-        .navigationTitle(Tab3Texts.backupRestore)
+        .navigationTitle(DictionaryTexts.backupRestore)
         .navigationBarTitleDisplayMode(.large)
         .fileExporter(
             isPresented: $showBackupExporter,
@@ -70,18 +70,18 @@ struct DataManagementView: View {
         ) { result in
             handleBackupImport(result)
         }
-        .alert(Tab3Texts.exportBackup, isPresented: $showExportSuccessAlert) {
-            Button(Tab3Texts.ok) {}
+        .alert(DictionaryTexts.exportBackup, isPresented: $showExportSuccessAlert) {
+            Button(DictionaryTexts.ok) {}
         } message: {
-            Text(Tab3Texts.exportBackupSuccess)
+            Text(DictionaryTexts.exportBackupSuccess)
         }
-        .alert(Tab3Texts.importBackup, isPresented: $showBackupResultAlert) {
-            Button(Tab3Texts.ok) {}
+        .alert(DictionaryTexts.importBackup, isPresented: $showBackupResultAlert) {
+            Button(DictionaryTexts.ok) {}
         } message: {
             Text(backupResultMessage)
         }
         .alert("Error", isPresented: $showBackupErrorAlert) {
-            Button(Tab3Texts.ok) {}
+            Button(DictionaryTexts.ok) {}
         } message: {
             Text(backupErrorMessage)
         }
@@ -130,7 +130,7 @@ struct DataManagementView: View {
                     let importResult = try await BackupService.shared.importAll(from: data)
                     await MainActor.run {
                         backupResultMessage = String(
-                            format: Tab3Texts.importBackupResult,
+                            format: DictionaryTexts.importBackupResult,
                             importResult.customDict,
                             importResult.frequency,
                             importResult.association,

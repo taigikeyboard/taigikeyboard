@@ -10,8 +10,8 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab1: Home
-            Tab1(viewModel: viewModel)
+            // HomeTab: Home
+            HomeTab(viewModel: viewModel)
                 .tabItem {
                     Label {
                         Text(TabType.home.title)
@@ -21,8 +21,8 @@ struct ContentView: View {
                 }
                 .tag(TabType.home)
 
-            // Tab2: Layout
-            Tab2()
+            // LayoutTab: Layout
+            LayoutTab()
                 .tabItem {
                     Label {
                         Text(TabType.layout.title)
@@ -32,8 +32,8 @@ struct ContentView: View {
                 }
                 .tag(TabType.layout)
 
-            // Tab3: Dictionary
-            Tab3()
+            // DictionaryTab: Dictionary
+            DictionaryTab()
                 .tabItem {
                     Label {
                         Text(TabType.dictionary.title)
@@ -43,8 +43,8 @@ struct ContentView: View {
                 }
                 .tag(TabType.dictionary)
 
-            // Tab4: Settings
-            Tab4()
+            // SettingsTab: Settings
+            SettingsTab()
                 .tabItem {
                     Label {
                         Text(TabType.settings.title)

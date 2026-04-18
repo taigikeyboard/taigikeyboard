@@ -1,8 +1,8 @@
-// MARK: - Tab3 詞庫文字
+// MARK: - DictionaryTab 詞庫文字
 
 // 包含：詞庫管理頁面
 
-enum Tab3Texts {
+enum DictionaryTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "詞庫管理"

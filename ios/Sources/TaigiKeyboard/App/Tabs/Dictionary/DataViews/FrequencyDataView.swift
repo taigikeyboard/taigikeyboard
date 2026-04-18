@@ -40,8 +40,8 @@ struct FrequencyDataView: View {
                 Section {
                     Toggle(isOn: $isFrequencyRecordingEnabled) {
                         HStack {
-                            Text(Tab3Texts.isFrequencyRecordingEnabled)
-                            SettingInfoButton(description: Tab3Texts.isFrequencyRecordingEnabledInfo)
+                            Text(DictionaryTexts.isFrequencyRecordingEnabled)
+                            SettingInfoButton(description: DictionaryTexts.isFrequencyRecordingEnabledInfo)
                         }
                     }
                     .onChange(of: isFrequencyRecordingEnabled) { _, newValue in
@@ -51,13 +51,13 @@ struct FrequencyDataView: View {
 
                 // Import/Export
                 Section {
-                    Text(Tab3Texts.frequencyDescription)
+                    Text(DictionaryTexts.frequencyDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await exportCSV() }
                     } label: {
                         Label(
-                            Tab3Texts.frequencyExportCSV,
+                            DictionaryTexts.frequencyExportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -70,13 +70,13 @@ struct FrequencyDataView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                Tab3Texts.frequencyImportCSV,
+                                DictionaryTexts.frequencyImportCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(Tab3Texts.importExportTitle)
+                    Text(DictionaryTexts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -85,22 +85,22 @@ struct FrequencyDataView: View {
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
-                        Text(Tab3Texts.clearAllFrequency)
+                        Text(DictionaryTexts.clearAllFrequency)
                     }
                 }
 
                 // Privacy warning
                 Section {
-                    Text(Tab3Texts.frequencyPrivacyWarning)
+                    Text(DictionaryTexts.frequencyPrivacyWarning)
                 }
 
                 // Data list
                 Section {
                     if allData.isEmpty {
-                        Text(Tab3Texts.noData)
+                        Text(DictionaryTexts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
-                        Text(Tab3Texts.noResults)
+                        Text(DictionaryTexts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredData, id: \.word) { item in
@@ -125,33 +125,33 @@ struct FrequencyDataView: View {
                     }
                 } header: {
                     HStack {
-                        Text(Tab3Texts.frequencyManagement)
+                        Text(DictionaryTexts.frequencyManagement)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: Tab3Texts.filterHint)
+                        SettingInfoButton(description: DictionaryTexts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
+            SearchBar(text: $filterText, placeholder: DictionaryTexts.searchPlaceholder)
         }
-        .navigationTitle(Tab3Texts.frequencyManagement)
+        .navigationTitle(DictionaryTexts.frequencyManagement)
         .navigationBarTitleDisplayMode(.large)
-        .alert(Tab3Texts.clearAllFrequency, isPresented: $showClearAlert) {
+        .alert(DictionaryTexts.clearAllFrequency, isPresented: $showClearAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
-            Button(Tab3Texts.clear, role: .destructive) {
+            Button(DictionaryTexts.clear, role: .destructive) {
                 clearData()
             }
         } message: {
-            Text(Tab3Texts.clearFrequencyMessage)
+            Text(DictionaryTexts.clearFrequencyMessage)
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: Tab3Texts.frequencyImportCSV,
-            exportAlertTitle: Tab3Texts.frequencyExportCSV,
+            importAlertTitle: DictionaryTexts.frequencyImportCSV,
+            exportAlertTitle: DictionaryTexts.frequencyExportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞頻紀錄") },
-            okText: Tab3Texts.ok,
-            exportSuccessText: Tab3Texts.exportSuccess,
+            okText: DictionaryTexts.ok,
+            exportSuccessText: DictionaryTexts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
         .task {
@@ -204,7 +204,7 @@ struct FrequencyDataView: View {
                 let imported = try await UserFrequencyRepository.shared.batchImportMerge(entries: entries)
                 return (imported: imported, skipped: entries.count - imported)
             },
-            resultFormat: Tab3Texts.importResultFormat,
+            resultFormat: DictionaryTexts.importResultFormat,
             onComplete: { await loadData() },
         )
     }

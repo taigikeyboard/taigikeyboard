@@ -1,9 +1,9 @@
-// MARK: - Tab1 頭頁文字
+// MARK: - HomeTab 頭頁文字
 
 // 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、問題回報、版權聲明
-// 對應 Android Tab1Texts.kt
+// 對應 Android HomeTexts.kt
 
-enum Tab1Texts {
+enum HomeTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "頭頁"

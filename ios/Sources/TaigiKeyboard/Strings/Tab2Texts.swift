@@ -1,8 +1,8 @@
-// MARK: - Tab2 齒佈文字
+// MARK: - LayoutTab 齒佈文字
 
 // 包含：齒佈選擇頁面
 
-enum Tab2Texts {
+enum LayoutTexts {
     // MARK: - Tab 標題
 
     static let tabTitle = "齒盤佈局"

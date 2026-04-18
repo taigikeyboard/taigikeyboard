@@ -62,7 +62,7 @@ final class NextWordService: @unchecked Sendable {
         let score: Double // 排序分數
     }
 
-    /// 使用者關聯資料。UI (Tab3 AssociationDataView) 依賴此公開型別。
+    /// 使用者關聯資料。UI (DictionaryTab AssociationDataView) 依賴此公開型別。
     struct AssociationEntry {
         let prevWord: String
         let prevTl: String

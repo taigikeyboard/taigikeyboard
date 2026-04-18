@@ -40,20 +40,20 @@ struct LayoutSelectionOverlay: View {
             VStack(alignment: .leading, spacing: 12) {
                 // Section 1: Romanization keyboards
                 layoutSection(
-                    header: Tab2Texts.romanizationKeyboard,
+                    header: LayoutTexts.romanizationKeyboard,
                     layouts: [
-                        (.phahTaigi, Tab2Texts.phahTaigiLayout, "layout_phahtaigi_preview", false),
-                        (.qwerty, Tab2Texts.standardLayout, "layout_standard_preview", false),
-                        (.moe1, Tab2Texts.moe1Layout, "layout_moe1_preview", false),
-                        (.moe2, Tab2Texts.moe2Layout, "layout_moe2_preview", false),
+                        (.phahTaigi, LayoutTexts.phahTaigiLayout, "layout_phahtaigi_preview", false),
+                        (.qwerty, LayoutTexts.standardLayout, "layout_standard_preview", false),
+                        (.moe1, LayoutTexts.moe1Layout, "layout_moe1_preview", false),
+                        (.moe2, LayoutTexts.moe2Layout, "layout_moe2_preview", false),
                     ],
                 )
 
                 // Section 2: Taigi phonetic
                 layoutSection(
-                    header: Tab2Texts.taigiPhonetic,
+                    header: LayoutTexts.taigiPhonetic,
                     layouts: [
-                        (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", Self.tpsDisabled),
+                        (.tps, LayoutTexts.tpsLayout, "layout_tps_preview", Self.tpsDisabled),
                     ],
                 )
             }
@@ -138,7 +138,7 @@ private struct LayoutCard: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.black.opacity(0.5))
 
-                        Text(Tab2Texts.comingSoon)
+                        Text(LayoutTexts.comingSoon)
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundColor(.white)
@@ -185,7 +185,7 @@ private struct LayoutCard: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
         } else {
-            // Fallback: keyboard icon + name (matches Tab2's fallback)
+            // Fallback: keyboard icon + name (matches LayoutTab's fallback)
             Rectangle()
                 .fill(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray6))
                 .aspectRatio(1.8, contentMode: .fit)

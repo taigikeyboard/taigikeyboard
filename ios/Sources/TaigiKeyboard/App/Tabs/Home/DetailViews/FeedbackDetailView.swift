@@ -8,22 +8,22 @@ struct FeedbackDetailView: View {
     var body: some View {
         Form {
             Section {
-                Text(Tab1Texts.emailContact)
+                Text(HomeTexts.emailContact)
                     .lineSpacing(6)
             }
 
             Section {
                 Link(destination: URL(string: supportURL)!) {
-                    Label(Tab1Texts.supportUs, systemImage: "arrow.up.right.square")
+                    Label(HomeTexts.supportUs, systemImage: "arrow.up.right.square")
                 }
             }
 
             Section {
-                Text(Tab1Texts.freePromise)
+                Text(HomeTexts.freePromise)
                     .lineSpacing(6)
             }
         }
-        .navigationTitle(Tab1Texts.contactUs)
+        .navigationTitle(HomeTexts.contactUs)
         .navigationBarTitleDisplayMode(.large)
     }
 }

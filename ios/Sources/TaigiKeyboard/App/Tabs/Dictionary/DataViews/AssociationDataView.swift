@@ -45,8 +45,8 @@ struct AssociationDataView: View {
                 Section {
                     Toggle(isOn: $isAssociationRecordingEnabled) {
                         HStack {
-                            Text(Tab3Texts.isAssociationRecordingEnabled)
-                            SettingInfoButton(description: Tab3Texts.isAssociationRecordingEnabledInfo)
+                            Text(DictionaryTexts.isAssociationRecordingEnabled)
+                            SettingInfoButton(description: DictionaryTexts.isAssociationRecordingEnabledInfo)
                         }
                     }
                     .onChange(of: isAssociationRecordingEnabled) { _, newValue in
@@ -56,13 +56,13 @@ struct AssociationDataView: View {
 
                 // Import/Export
                 Section {
-                    Text(Tab3Texts.associationDescription)
+                    Text(DictionaryTexts.associationDescription)
                         .font(AppStyle.bodyFont)
                     Button {
                         importExport.performExport { try await exportCSV() }
                     } label: {
                         Label(
-                            Tab3Texts.associationExportCSV,
+                            DictionaryTexts.associationExportCSV,
                             systemImage: "square.and.arrow.up",
                         )
                     }
@@ -75,13 +75,13 @@ struct AssociationDataView: View {
                             importExport.showFileImporter = true
                         } label: {
                             Label(
-                                Tab3Texts.associationImportCSV,
+                                DictionaryTexts.associationImportCSV,
                                 systemImage: "square.and.arrow.down",
                             )
                         }
                     }
                 } header: {
-                    Text(Tab3Texts.importExportTitle)
+                    Text(DictionaryTexts.importExportTitle)
                         .font(AppStyle.sectionHeaderFont)
                 }
 
@@ -90,22 +90,22 @@ struct AssociationDataView: View {
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
-                        Text(Tab3Texts.clearAllAssociation)
+                        Text(DictionaryTexts.clearAllAssociation)
                     }
                 }
 
                 // Privacy warning
                 Section {
-                    Text(Tab3Texts.associationPrivacyWarning)
+                    Text(DictionaryTexts.associationPrivacyWarning)
                 }
 
                 // Data list
                 Section {
                     if allData.isEmpty {
-                        Text(Tab3Texts.noData)
+                        Text(DictionaryTexts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
-                        Text(Tab3Texts.noResults)
+                        Text(DictionaryTexts.noResults)
                             .foregroundColor(.secondary)
                     } else {
                         ForEach(filteredData, id: \.id) { item in
@@ -130,33 +130,33 @@ struct AssociationDataView: View {
                     }
                 } header: {
                     HStack {
-                        Text(Tab3Texts.associationManagement)
+                        Text(DictionaryTexts.associationManagement)
                             .font(AppStyle.sectionHeaderFont)
-                        SettingInfoButton(description: Tab3Texts.filterHint)
+                        SettingInfoButton(description: DictionaryTexts.filterHint)
                     }
                 }
             }
         }
         .safeAreaInset(edge: .bottom) {
-            SearchBar(text: $filterText, placeholder: Tab3Texts.searchPlaceholder)
+            SearchBar(text: $filterText, placeholder: DictionaryTexts.searchPlaceholder)
         }
-        .navigationTitle(Tab3Texts.associationManagement)
+        .navigationTitle(DictionaryTexts.associationManagement)
         .navigationBarTitleDisplayMode(.large)
-        .alert(Tab3Texts.clearAllAssociation, isPresented: $showClearAlert) {
+        .alert(DictionaryTexts.clearAllAssociation, isPresented: $showClearAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
-            Button(Tab3Texts.clear, role: .destructive) {
+            Button(DictionaryTexts.clear, role: .destructive) {
                 clearData()
             }
         } message: {
-            Text(Tab3Texts.clearAssociationMessage)
+            Text(DictionaryTexts.clearAssociationMessage)
         }
         .importExportModifiers(
             handler: importExport,
-            importAlertTitle: Tab3Texts.associationImportCSV,
-            exportAlertTitle: Tab3Texts.associationExportCSV,
+            importAlertTitle: DictionaryTexts.associationImportCSV,
+            exportAlertTitle: DictionaryTexts.associationExportCSV,
             exportFilename: { ImportExportHandler.exportFilename(prefix: "詞關聯紀錄") },
-            okText: Tab3Texts.ok,
-            exportSuccessText: Tab3Texts.exportSuccess,
+            okText: DictionaryTexts.ok,
+            exportSuccessText: DictionaryTexts.exportSuccess,
             onFileImport: { handleImport($0) },
         )
         .task {
@@ -216,7 +216,7 @@ struct AssociationDataView: View {
                 })
                 return (imported: imported, skipped: entries.count - imported)
             },
-            resultFormat: Tab3Texts.importResultFormat,
+            resultFormat: DictionaryTexts.importResultFormat,
             onComplete: { await loadData() },
         )
     }

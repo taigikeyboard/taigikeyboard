@@ -7,8 +7,8 @@ struct CopyrightView: View {
             // Open Huninn (粉圓體)
             CopyrightSection(
                 title: CommonTexts.fontOpenHuninn,
-                description: Tab1Texts.openFontCopyright,
-                license: Tab1Texts.silOpenFontLicense,
+                description: HomeTexts.openFontCopyright,
+                license: HomeTexts.silOpenFontLicense,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://justfont.com/huninn/",
             )
@@ -16,8 +16,8 @@ struct CopyrightView: View {
             // Iansui (芫荽體)
             CopyrightSection(
                 title: CommonTexts.fontIansui,
-                description: Tab1Texts.iansuiFontCopyright,
-                license: Tab1Texts.silOpenFontLicense11,
+                description: HomeTexts.iansuiFontCopyright,
+                license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/iansui",
             )
@@ -25,8 +25,8 @@ struct CopyrightView: View {
             // GenYoMin (源樣明體)
             CopyrightSection(
                 title: CommonTexts.fontGenYoMin,
-                description: Tab1Texts.butTaiwanCopyright,
-                license: Tab1Texts.silOpenFontLicense11,
+                description: HomeTexts.butTaiwanCopyright,
+                license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/genyo-font",
             )
@@ -34,8 +34,8 @@ struct CopyrightView: View {
             // GenYoGothic (源樣黑體)
             CopyrightSection(
                 title: CommonTexts.fontGenYoGothic,
-                description: Tab1Texts.butTaiwanCopyright,
-                license: Tab1Texts.silOpenFontLicense11,
+                description: HomeTexts.butTaiwanCopyright,
+                license: HomeTexts.silOpenFontLicense11,
                 licenseURL: "https://openfontlicense.org/",
                 websiteURL: "https://github.com/ButTaiwan/genyog-font",
             )
@@ -43,8 +43,8 @@ struct CopyrightView: View {
             // MOE Taiwanese Dictionary (教育部臺灣台語常用詞辭典)
             CopyrightSection(
                 title: CommonTexts.moeDict,
-                description: Tab1Texts.moeCopyright,
-                license: Tab1Texts.ccLicense,
+                description: HomeTexts.moeCopyright,
+                license: HomeTexts.ccLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nd/3.0/tw/",
                 websiteURL: "https://sutian.moe.edu.tw/",
             )
@@ -52,8 +52,8 @@ struct CopyrightView: View {
             // New Words Dictionary (新詞新語)
             CopyrightSection(
                 title: CommonTexts.newwordDict,
-                description: Tab1Texts.newwordCopyright,
-                license: Tab1Texts.ccBy4License,
+                description: HomeTexts.newwordCopyright,
+                license: HomeTexts.ccBy4License,
                 licenseURL: "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
                 websiteURL: "https://www.taigitv.org.tw/taigi-words",
             )
@@ -61,8 +61,8 @@ struct CopyrightView: View {
             // Craft Dictionary (工藝詞庫)
             CopyrightSection(
                 title: CommonTexts.kunggeDict,
-                description: Tab1Texts.kunggeCopyright,
-                license: Tab1Texts.ccByNcLicense,
+                description: HomeTexts.kunggeCopyright,
+                license: HomeTexts.ccByNcLicense,
                 licenseURL: "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
                 websiteURL: "https://kanggesu.ntcri.org.tw/NTCRI_TaigiWebSite",
             )
@@ -70,8 +70,8 @@ struct CopyrightView: View {
             // iTaigi
             CopyrightSection(
                 title: CommonTexts.iTaigiDict,
-                description: Tab1Texts.iTaigiCopyright,
-                license: Tab1Texts.cc0License,
+                description: HomeTexts.iTaigiCopyright,
+                license: HomeTexts.cc0License,
                 licenseURL: "https://creativecommons.org/public-domain/cc0/",
                 websiteURL: "https://itaigi.tw/",
             )
@@ -79,8 +79,8 @@ struct CopyrightView: View {
             // Taiwan-Japan Dictionary (台日大辭典)
             CopyrightSection(
                 title: CommonTexts.taiwanJapanDict,
-                description: Tab1Texts.taiwanJapanCopyright,
-                license: Tab1Texts.ccByNcSA3License,
+                description: HomeTexts.taiwanJapanCopyright,
+                license: HomeTexts.ccByNcSA3License,
                 licenseURL: "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
                 websiteURL: "http://taigi.fhl.net/dict/",
             )
@@ -88,8 +88,8 @@ struct CopyrightView: View {
             // Tai-Hua Dictionary (台華線頂辭典)
             CopyrightSection(
                 title: CommonTexts.taiHuaDict,
-                description: Tab1Texts.taiHuaCopyright,
-                license: Tab1Texts.ccBySA4License,
+                description: HomeTexts.taiHuaCopyright,
+                license: HomeTexts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
                 websiteURL: nil,
             )
@@ -97,8 +97,8 @@ struct CopyrightView: View {
             // Taiwan Plant Dictionary (台灣植物名彙)
             CopyrightSection(
                 title: CommonTexts.taiwanPlantDict,
-                description: Tab1Texts.taiwanPlantCopyright,
-                license: Tab1Texts.ccBySA4License,
+                description: HomeTexts.taiwanPlantCopyright,
+                license: HomeTexts.ccBySA4License,
                 licenseURL: "https://creativecommons.org/licenses/by-sa/4.0/deed.zh_TW",
                 websiteURL: "https://tai2.ntu.edu.tw/ebooks/ListPlFormosSasaki/0/106",
             )
@@ -106,8 +106,8 @@ struct CopyrightView: View {
             // Subject Terminology Dictionary (學科術語)
             CopyrightSection(
                 title: CommonTexts.sttiDict,
-                description: Tab1Texts.sttiCopyright,
-                license: Tab1Texts.ogdlTaiwanLicense,
+                description: HomeTexts.sttiCopyright,
+                license: HomeTexts.ogdlTaiwanLicense,
                 licenseURL: "https://spdx.org/licenses/OGDL-Taiwan-1.0.html",
                 websiteURL: "https://stti.moe.edu.tw/",
             )
@@ -118,12 +118,12 @@ struct CopyrightView: View {
                     Text(CommonTexts.accentDict)
                         .font(AppStyle.headlineFont)
 
-                    Text(Tab1Texts.accentDictCredit)
+                    Text(HomeTexts.accentDictCredit)
                         .foregroundColor(.secondary)
                 }
             }
         }
-        .navigationTitle(Tab1Texts.copyrightNotice)
+        .navigationTitle(HomeTexts.copyrightNotice)
         .navigationBarTitleDisplayMode(.large)
     }
 }
@@ -153,7 +153,7 @@ private struct CopyrightSection: View {
             }
 
             Link(destination: URL(string: licenseURL)!) {
-                Label(Tab1Texts.viewLicense, systemImage: "doc.text")
+                Label(HomeTexts.viewLicense, systemImage: "doc.text")
             }
 
             if let websiteURL {

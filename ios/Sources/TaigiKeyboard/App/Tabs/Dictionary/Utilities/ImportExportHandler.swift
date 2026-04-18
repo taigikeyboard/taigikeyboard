@@ -2,7 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Manages import/export state and flow for data management views.
-/// Each Tab3 data view (CustomDictionary, Frequency, Association) creates
+/// Each DictionaryTab data view (CustomDictionary, Frequency, Association) creates
 /// its own instance to handle file import/export, progress tracking, and alerts.
 @MainActor
 final class ImportExportHandler: ObservableObject {

@@ -3,13 +3,13 @@ import SwiftUI
 /// Layout tab.
 ///
 /// Keyboard layout selection (PhahTaigi, QWERTY, MOE, TPS) with horizontal swipe cards.
-struct Tab2: View {
+struct LayoutTab: View {
     @State private var selectedLayout: KeyboardLayoutType
 
     private let settings = SharedSettings.shared
 
     private static let tpsEntry: (KeyboardLayoutType, String, String, String?, Bool) =
-        (.tps, Tab2Texts.tpsLayout, "layout_tps_preview", nil, false)
+        (.tps, LayoutTexts.tpsLayout, "layout_tps_preview", nil, false)
 
     init() {
         _selectedLayout = State(initialValue: SharedSettings.shared.keyboardLayoutType)
@@ -24,7 +24,7 @@ struct Tab2: View {
                         AppearanceSettingsView()
                     } label: {
                         HStack {
-                            Text(Tab2Texts.appearanceSettings)
+                            Text(LayoutTexts.appearanceSettings)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(AppStyle.captionFont)
@@ -39,18 +39,18 @@ struct Tab2: View {
 
                     // Section 1: Romanization keyboards
                     layoutSection(
-                        header: Tab2Texts.romanizationKeyboard,
+                        header: LayoutTexts.romanizationKeyboard,
                         layouts: [
-                            (.phahTaigi, Tab2Texts.phahTaigiLayout, "layout_phahtaigi_preview", nil, false),
-                            (.qwerty, Tab2Texts.standardLayout, "layout_standard_preview", nil, false),
-                            (.moe1, Tab2Texts.moe1Layout, "layout_moe1_preview", nil, false),
-                            (.moe2, Tab2Texts.moe2Layout, "layout_moe2_preview", nil, false),
+                            (.phahTaigi, LayoutTexts.phahTaigiLayout, "layout_phahtaigi_preview", nil, false),
+                            (.qwerty, LayoutTexts.standardLayout, "layout_standard_preview", nil, false),
+                            (.moe1, LayoutTexts.moe1Layout, "layout_moe1_preview", nil, false),
+                            (.moe2, LayoutTexts.moe2Layout, "layout_moe2_preview", nil, false),
                         ],
                     )
 
                     // Section 2: Taigi phonetic
                     layoutSection(
-                        header: Tab2Texts.taigiPhonetic,
+                        header: LayoutTexts.taigiPhonetic,
                         layouts: [Self.tpsEntry],
                     )
                 }
@@ -58,7 +58,7 @@ struct Tab2: View {
                 .padding(.bottom)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle(Tab2Texts.tabTitle)
+            .navigationTitle(LayoutTexts.tabTitle)
             .navigationBarTitleDisplayMode(.large)
         }
     }

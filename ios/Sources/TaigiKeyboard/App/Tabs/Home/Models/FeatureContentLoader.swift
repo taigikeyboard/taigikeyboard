@@ -1,6 +1,6 @@
 import Foundation
 
-/// Loads Tab1 content from bundled JSON files.
+/// Loads HomeTab content from bundled JSON files.
 enum FeatureContentLoader {
 
     /// Cached features, loaded once from JSON.
