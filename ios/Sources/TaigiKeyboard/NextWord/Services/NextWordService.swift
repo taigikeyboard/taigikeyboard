@@ -43,6 +43,22 @@ final class NextWordService: @unchecked Sendable {
         let nextWord: String
         let nextTl: String
         let count: Int
+
+        init(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int) {
+            self.prevWord = prevWord
+            self.prevTl = prevTl
+            self.nextWord = nextWord
+            self.nextTl = nextTl
+            self.count = count
+        }
+
+        init(row: NextWordRepository.AssociationRow) {
+            self.init(
+                prevWord: row.prevWord, prevTl: row.prevTl,
+                nextWord: row.nextWord, nextTl: row.nextTl,
+                count: row.count,
+            )
+        }
     }
 
     // MARK: - Properties
@@ -200,13 +216,7 @@ final class NextWordService: @unchecked Sendable {
         do {
             try await ensureUserTablesCreated()
             return try await userConnectionManager.execute { db in
-                NextWordRepository.fetchAllRows(db: db).map { row in
-                    AssociationEntry(
-                        prevWord: row.prevWord, prevTl: row.prevTl,
-                        nextWord: row.nextWord, nextTl: row.nextTl,
-                        count: row.count,
-                    )
-                }
+                NextWordRepository.fetchAllRows(db: db).map(AssociationEntry.init(row:))
             }
         } catch {
             logger.error("[USER] allAssociations failed: \(error.localizedDescription)")
