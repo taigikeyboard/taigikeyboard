@@ -114,24 +114,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		F32A225A2F82324A00FCC5B3 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				dictionary.db,
-			);
-			target = F34AE2912EEE7CE000859124 /* TaigiKeyboardTests */;
-		};
-		F381AC952F912283001F9F48 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"GenKiGothic2TW-R.otf",
-				"GenKiMin2TW-R.otf",
-				"GenSekiGothic2TW-R.otf",
-				"GenSenRounded2TW-R.otf",
-				"GenWanMin2TW-R.otf",
-			);
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
 		F3949A962F8ACF4400814165 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -153,14 +135,16 @@
 			};
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
+		F3EFDAC52F92AEB300696406 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				dictionary.db,
+			);
+			target = F34AE2912EEE7CE000859124 /* TaigiKeyboardTests */;
+		};
 		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				"GenKiGothic2TW-R.otf",
-				"GenKiMin2TW-R.otf",
-				"GenSekiGothic2TW-R.otf",
-				"GenSenRounded2TW-R.otf",
-				"GenWanMin2TW-R.otf",
 				"GenYoGothic2TW-R.otf",
 				"GenYoMin2TW-R.otf",
 				"Iansui-Regular.ttf",
@@ -258,7 +242,6 @@
 		F35436232E5C43680004DFAB /* Resources/Fonts */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				F381AC952F912283001F9F48 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboard" target */,
 				F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */,
 			);
 			path = Resources/Fonts;
@@ -268,7 +251,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				F3949A962F8ACF4400814165 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardExtension" target */,
-				F32A225A2F82324A00FCC5B3 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */,
+				F3EFDAC52F92AEB300696406 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */,
 			);
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
@@ -481,6 +464,8 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */,
+				F35436232E5C43680004DFAB /* Resources/Fonts */,
+				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 			);
 			name = TaigiKeyboardTests;
 			packageProductDependencies = (
