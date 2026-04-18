@@ -69,7 +69,7 @@ struct SettingsTab: View {
                         HStack {
                             Text(SettingsTexts.inputMode)
                             Spacer()
-                            Text(inputModeDisplayName(selectedInputMode))
+                            Text(selectedInputMode.displayName)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -266,35 +266,11 @@ struct SettingsTab: View {
             .summary ?? ""
     }
 
-    // MARK: - Display Name Helpers
-
-    private func inputModeDisplayName(_ mode: InputMode) -> String {
-        switch mode {
-        case .poj: SettingsTexts.pojMode
-        case .tl: SettingsTexts.tlMode
-        case .english: SettingsTexts.englishMode
-        case .tps: SettingsTexts.tpsMode
-        }
-    }
-
     // MARK: - Actions
 
     private func resetAllSettings() {
         SettingsResetCoordinator.resetAll()
-
-        // Clear user frequency data
-        do {
-            try UserFrequencyService.deleteUserDatabase()
-        } catch {
-            DebugLogger(category: "SettingsTab").error("Failed to delete frequency database: \(error)")
-        }
-
-        // Clear user association data
-        do {
-            try NextWordService.deleteUserDatabase()
-        } catch {
-            DebugLogger(category: "SettingsTab").error("Failed to delete association database: \(error)")
-        }
+        SettingsResetCoordinator.resetAllUserData()
 
         // Sync local state
         selectedInputMode = settings.inputMode
@@ -311,44 +287,5 @@ struct SettingsTab: View {
 
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
-    }
-}
-
-// MARK: - Input Mode Picker Subpage
-
-private struct InputModePickerView: View {
-    @Binding var selectedMode: InputMode
-    var onChange: (InputMode) -> Void
-
-    private let options: [(mode: InputMode, text: String)] = [
-        (.poj, SettingsTexts.pojMode),
-        (.tl, SettingsTexts.tlMode),
-        (.english, SettingsTexts.englishMode),
-        (.tps, SettingsTexts.tpsMode),
-    ]
-
-    var body: some View {
-        Form {
-            Section {
-                ForEach(options, id: \.mode) { option in
-                    Button {
-                        selectedMode = option.mode
-                        onChange(option.mode)
-                    } label: {
-                        HStack {
-                            Text(option.text)
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if selectedMode == option.mode {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(AppStyle.accentBlue)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .navigationTitle(SettingsTexts.inputMode)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

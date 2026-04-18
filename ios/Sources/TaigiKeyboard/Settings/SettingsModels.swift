@@ -8,6 +8,15 @@ enum InputMode: String, CaseIterable {
     case tl // Tâi-lô
     case english
     case tps // Taiwanese Phonetic Symbols
+
+    var displayName: String {
+        switch self {
+        case .poj: SettingsTexts.pojMode
+        case .tl: SettingsTexts.tlMode
+        case .english: SettingsTexts.englishMode
+        case .tps: SettingsTexts.tpsMode
+        }
+    }
 }
 
 // MARK: - Font Type
