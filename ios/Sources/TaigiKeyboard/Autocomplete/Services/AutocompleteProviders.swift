@@ -1,5 +1,9 @@
 import Foundation
 
+// MARK: - Shared-Core Candidate
+
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
 /// Provides composing state for autocomplete without coupling to ComposingManager.
 protocol ComposingStateProvider: AnyObject {
     var isComposing: Bool { get }

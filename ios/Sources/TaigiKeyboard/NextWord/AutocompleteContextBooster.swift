@@ -1,5 +1,8 @@
 import Foundation
 
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
 /// Reorders candidate words to surface those whose first character matches
 /// a next-word prediction bigram. The predictions are computed elsewhere
 /// (`NextWordService`) and passed in as a set of first-character strings,

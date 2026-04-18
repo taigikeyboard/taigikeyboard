@@ -2,7 +2,7 @@
 
 Mandatory architectural contract for the iOS target. Read before any non-trivial structural change. This document is the judge for the 11-phase refactor in `/Users/alexsu/.claude/plans/tender-zooming-steele.md`.
 
-Last updated: 2026-04-18 (Phase 0, post Codex review).
+Last updated: 2026-04-19 (Phase 11 shared-core audit complete).
 
 ---
 
@@ -142,11 +142,11 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 ## 4. Shared-Core Candidates
 
-"Shared-core candidate" = a file eligible for future cross-platform extraction (iOS ↔ Android). Marking a file as a candidate is a **contract** about its dependencies, not a promise to extract it.
+"Shared-core candidate" = a file eligible for future cross-platform extraction (iOS ↔ Android). Marking a file is a **contract** about its dependencies, not a promise to extract it.
 
 ### Criteria — ALL must hold
 
-1. Only `import Foundation` (no `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`).
+1. Only `import Foundation` (no `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`).
 2. No global singleton dependency (no `SharedSettings.shared`, no `KeyboardSettings.store`, no `*.shared` access).
 3. No DB / App Group container / `FileManager` / file-system access — data is injected.
 4. No app-specific URL generation (e.g., `iTaigi://...`, `moedict://...`) or external service integration.
@@ -162,38 +162,17 @@ Every file that satisfies the criteria begins with:
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 ```
 
-### Candidate roster (target state after Phase 11)
+Files that are engine-layer but **do not** qualify should begin with a one-line `// NOTE: Not shared-core — <reason>` comment so the audit state stays visible at the top of the file.
 
-File-by-file evaluation is required. Candidates known today:
+### Candidate roster (Phase 11, 2026-04-19)
 
-- `Phonetics/Tables/*`, `Phonetics/Parser/*`, `Phonetics/Formatter/*`, `Phonetics/Converter/*`
-- `Phonetics/ToneRestoration.swift`, `Phonetics/ToneUtilities.swift`
-- `Input/TPS/TPSConverter.swift`, `TPSTables.swift`, `TPSInputAdjuster.swift`, `TPSToTL.swift`, `TLToTPS.swift`
-- `Input/CharacterInputPipeline.swift`
-- `Input/CaseTransformer.swift` (after Phase 4 KK removal)
-- `Lexicon/Trie/InputNormalizer.swift`, `TrieService.swift`
-- `Lexicon/Models/TaigiWord.swift`, `Lexicon/Models/InputType.swift`
-- `Lexicon/Processor/CandidateProcessor.swift`, `CandidateCaseTransformer.swift`
-- `Lexicon/Utils/TaigiUnicode.swift`
-- `NextWord/NextWordScorer.swift`
-- `Overlays/CandidateRowLayoutEngine.swift`
+33 files, ~2341 LOC across Phonetics (9), Input (7), Lexicon (10), NextWord (3), Autocomplete (2), Settings contracts (2). **Authoritative table with LOC, notes, dependency graph, and verification script: `docs/engine/shared-core-readiness.md`.** Do not re-enumerate here — update the readiness doc and point back.
 
-### Known exclusions (evaluated, do NOT mark)
+### Exclusions, soft dependencies, verification
 
-- `Lexicon/Models/EnabledDictionaries.swift` — reads `SharedSettings.shared` (violates criterion 2).
-- `Lexicon/Models/DictionarySearchResult.swift` — computed property builds app-specific lookup URL (violates criterion 4).
-- Any `*Service.swift` — coordinates side effects / DB access.
-- Any SQLite-using file — SQLite is a runtime dep per criterion 3 (repositories stay engine-layer but are not shared-core candidates).
+See `docs/engine/shared-core-readiness.md` §Exclusions, §Blockers, §Verification. Those are the single source of truth; do not duplicate the tables here.
 
-### Verification (Phase 11)
-
-```sh
-# All candidates must import Foundation, and nothing else of consequence
-grep -L "import Foundation" $(cat shared-core-list.txt)                                # -> empty
-grep -l "import KeyboardKit\|import UIKit\|import SwiftUI\|import Combine" $(cat shared-core-list.txt)   # -> empty
-grep -l "SharedSettings.shared\|KeyboardSettings.store\|\.shared" $(cat shared-core-list.txt)            # -> empty
-grep -l "URL(string:\|FileManager\|DispatchQueue\|@Published\|ObservableObject\|NotificationCenter" $(cat shared-core-list.txt)   # -> empty
-```
+Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`; `EnginePrediction` documents that it does *not* `import KeyboardKit`).
 
 ---
 

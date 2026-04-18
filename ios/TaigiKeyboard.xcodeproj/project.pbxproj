@@ -114,13 +114,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		F3949A962F8ACF4400814165 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				dictionary.db,
-			);
-			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
-		};
 		F3ECE8862EFFFD5B002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			additionalCompilerFlagsByRelativePath = {
@@ -134,13 +127,6 @@
 				"grimoire/vector/bit-vector.cc" = "-Wno-shorten-64-to-32";
 			};
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
-		F3EFDAC52F92AEB300696406 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				dictionary.db,
-			);
-			target = F34AE2912EEE7CE000859124 /* TaigiKeyboardTests */;
 		};
 		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -249,10 +235,6 @@
 		};
 		F354362F2E5C437C0004DFAB /* Resources/Dictionaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				F3949A962F8ACF4400814165 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardExtension" target */,
-				F3EFDAC52F92AEB300696406 /* Exceptions for "Resources/Dictionaries" folder in "TaigiKeyboardTests" target */,
-			);
 			path = Resources/Dictionaries;
 			sourceTree = "<group>";
 		};
@@ -790,7 +772,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/../libs/marisa-trie/include",
 					"$(SRCROOT)/../libs/marisa-trie/lib",
@@ -828,7 +810,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/../libs/marisa-trie/include",
 					"$(SRCROOT)/../libs/marisa-trie/lib",
