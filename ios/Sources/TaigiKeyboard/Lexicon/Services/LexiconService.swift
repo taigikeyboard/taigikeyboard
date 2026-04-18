@@ -11,6 +11,7 @@ final class LexiconService: @unchecked Sendable {
     private let userFrequencyService: UserFrequencyService
     private let trieService: TrieService
     private let customDictionaryRepository: CustomDictionaryRepository
+    private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "LexiconService")
 
     // MARK: - Initialization
@@ -20,10 +21,12 @@ final class LexiconService: @unchecked Sendable {
         userFrequencyService: UserFrequencyService = .shared,
         trieService: TrieService = .shared,
         customDictionaryRepository: CustomDictionaryRepository = .shared,
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.trieService = trieService
         self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
+        self.settingsProvider = settingsProvider
 
         self.repository = repository ?? DictionaryRepository(
             trieService: trieService,
@@ -54,7 +57,7 @@ final class LexiconService: @unchecked Sendable {
     /// 初始化 Custom Dictionary DB（背景執行）
     /// searchSync doesn't call ensureInitialized, so we must initialize eagerly
     private func initializeCustomDictionary() {
-        guard SharedSettings.shared.isCustomDictEnabled else { return }
+        guard settingsProvider.current.isCustomDictEnabled else { return }
         Task {
             do {
                 try await customDictionaryRepository.ensureInitialized()
@@ -87,7 +90,7 @@ final class LexiconService: @unchecked Sendable {
     ) async throws -> [TaigiWord] {
         guard !input.isEmpty else { return [] }
 
-        let customWords = lookupCustomDictionary(rawInput: rawInput, segmentedInput: input)
+        let customWords = lookupCustomDictionary(rawInput: rawInput, segmentedInput: input, inputMode: inputMode)
 
         let systemWords = try await querySystemDictionaries(
             segmentedInput: input,
@@ -97,7 +100,7 @@ final class LexiconService: @unchecked Sendable {
             rawInput: rawInput,
         )
 
-        let processedSystem = applyCaseProcessing(systemWords, basedOn: input)
+        let processedSystem = applyCaseProcessing(systemWords, basedOn: input, inputMode: inputMode)
         let uniqueWords = CandidateProcessor.removeDuplicates(customWords + processedSystem)
 
         let ranked = await rankByFrequency(uniqueWords, segmentedInput: input, inputMode: inputMode)
@@ -124,8 +127,9 @@ final class LexiconService: @unchecked Sendable {
     private func lookupCustomDictionary(
         rawInput: String?,
         segmentedInput: String,
+        inputMode _: InputMode,
     ) -> [TaigiWord] {
-        guard SharedSettings.shared.isCustomDictEnabled else { return [] }
+        guard settingsProvider.current.isCustomDictEnabled else { return [] }
 
         let customSearchKey = rawInput ?? segmentedInput
         let isToneAware = customSearchKey.contains { $0.isNumber }
@@ -143,9 +147,9 @@ final class LexiconService: @unchecked Sendable {
         logger.debug("[SEARCH] customDict key='\(customSearchKey)' prefix='\(searchPrefix)' toneAware=\(isToneAware) segmented='\(segmentedInput)' results=\(customEntries.count)")
 
         return customEntries.map { entry in
-            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: segmentedInput)
+            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: segmentedInput, inputMode: inputMode)
             let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
-                CandidateProcessor.capitalize(entry.hanzi, basedOn: segmentedInput)
+                CandidateProcessor.capitalize(entry.hanzi, basedOn: segmentedInput, inputMode: inputMode)
             } else {
                 entry.hanzi
             }
@@ -176,7 +180,7 @@ final class LexiconService: @unchecked Sendable {
 
         // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
         if let raw = rawInput, TPSTables.containsTPS(raw),
-           SharedSettings.shared.isTpsOrMappedToER,
+           settingsProvider.current.isTpsOrMappedToER,
            segmentedInput.contains("er")
         {
             let orVariantKey = segmentedInput.replacingOccurrences(of: "er", with: "or")
@@ -197,16 +201,17 @@ final class LexiconService: @unchecked Sendable {
     private func applyCaseProcessing(
         _ words: [TaigiWord],
         basedOn input: String,
+        inputMode: InputMode,
     ) -> [TaigiWord] {
         words.map { word in
             let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
-                CandidateProcessor.capitalize(hanzi, basedOn: input)
+                CandidateProcessor.capitalize(hanzi, basedOn: input, inputMode: inputMode)
             } else {
                 word.hanzi
             }
             return TaigiWord(
                 id: word.id,
-                roman: CandidateProcessor.capitalize(word.roman, basedOn: input),
+                roman: CandidateProcessor.capitalize(word.roman, basedOn: input, inputMode: inputMode),
                 hanzi: processedHanzi,
                 lengthScore: word.lengthScore,
             )

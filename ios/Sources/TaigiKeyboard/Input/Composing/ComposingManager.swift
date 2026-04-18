@@ -33,13 +33,17 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     private weak var keyboardContext: KeyboardContext?
     weak var delegate: (any ComposingDelegate)?
 
+    private let settingsProvider: EngineSettingsProvider
+
     private var inputMode: InputMode {
-        SharedSettings.shared.inputMode
+        settingsProvider.current.inputMode
     }
 
     // MARK: - Init
 
-    public init() {}
+    public init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+        self.settingsProvider = settingsProvider
+    }
 
     public func setKeyboardContext(_ context: KeyboardContext) {
         keyboardContext = context

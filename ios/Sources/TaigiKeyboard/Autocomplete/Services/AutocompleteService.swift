@@ -44,7 +44,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - 核心屬性
 
     private let lexiconService = LexiconService.shared
-    private let settings = SharedSettings.shared
+    private let settingsProvider: EngineSettingsProvider = SharedSettings.shared
 
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
@@ -107,7 +107,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         try await lexiconService.search(
             for: classification.searchKey,
             inputType: classification.inputType,
-            inputMode: settings.inputMode,
+            inputMode: settingsProvider.current.inputMode,
             rawInput: rawInput,
         )
     }
