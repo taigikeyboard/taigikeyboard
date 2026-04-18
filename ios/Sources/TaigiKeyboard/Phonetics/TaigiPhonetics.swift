@@ -6,7 +6,6 @@ import Foundation
 /// Replaces ToneMappings, VowelAnalyzer, POJToneConverter, TLToneConverter with
 /// a single NFD/NFC-based pipeline: parse syllable -> place combining mark -> normalize.
 enum TaigiPhonetics {
-
     // MARK: - Data Tables
 
     static let tlInitials: Set<String> = [
@@ -48,14 +47,14 @@ enum TaigiPhonetics {
 
     /// Combining mark -> tone number (reverse of toneNumToCombining, plus POJ breve and TL double acute)
     static let combiningToToneNum: [Unicode.Scalar: String] = [
-        "\u{0301}": "2",  // COMBINING ACUTE ACCENT
-        "\u{0300}": "3",  // COMBINING GRAVE ACCENT
-        "\u{0302}": "5",  // COMBINING CIRCUMFLEX ACCENT
-        "\u{030C}": "6",  // COMBINING CARON
-        "\u{0304}": "7",  // COMBINING MACRON
-        "\u{030D}": "8",  // COMBINING VERTICAL LINE ABOVE
-        "\u{0306}": "9",  // COMBINING BREVE (POJ tone 9)
-        "\u{030B}": "9",  // COMBINING DOUBLE ACUTE ACCENT (TL tone 9)
+        "\u{0301}": "2", // COMBINING ACUTE ACCENT
+        "\u{0300}": "3", // COMBINING GRAVE ACCENT
+        "\u{0302}": "5", // COMBINING CIRCUMFLEX ACCENT
+        "\u{030C}": "6", // COMBINING CARON
+        "\u{0304}": "7", // COMBINING MACRON
+        "\u{030D}": "8", // COMBINING VERTICAL LINE ABOVE
+        "\u{0306}": "9", // COMBINING BREVE (POJ tone 9)
+        "\u{030B}": "9", // COMBINING DOUBLE ACUTE ACCENT (TL tone 9)
     ]
 
     /// All combining scalars we recognize as tone marks
@@ -66,8 +65,8 @@ enum TaigiPhonetics {
 
     /// TL final -> POJ final substitutions (order matters: nn before oo)
     static let pojFinalSubstitutions: [(tl: String, poj: String)] = [
-        ("nn", "\u{207F}"),    // nn -> ⁿ
-        ("oo", "o\u{0358}"),   // oo -> o͘
+        ("nn", "\u{207F}"), // nn -> ⁿ
+        ("oo", "o\u{0358}"), // oo -> o͘
         ("ua", "oa"),
         ("ue", "oe"),
         ("ing", "eng"),
@@ -97,7 +96,7 @@ enum TaigiPhonetics {
         }
 
         // No combining mark — check trailing digit
-        if let last = text.last, let digit = Int(String(last)), (1...9).contains(digit) {
+        if let last = text.last, let digit = Int(String(last)), (1 ... 9).contains(digit) {
             let bare = String(text.dropLast())
             return (bare.precomposedStringWithCanonicalMapping, String(digit))
         }
@@ -130,7 +129,7 @@ enum TaigiPhonetics {
 
     /// Split bare TL text into (initial, final) by iterating prefixes.
     static func splitInitialFinal(_ text: String) -> (initial: String, final: String)? {
-        for i in 0...text.count {
+        for i in 0 ... text.count {
             let initial = String(text.prefix(i))
             if tlInitials.contains(initial) {
                 let final = String(text.dropFirst(i))
@@ -188,7 +187,7 @@ enum TaigiPhonetics {
         let pojInitial = pojInitialFromTL[initial] ?? initial
         let pojFinal = tlFinalToPOJ(final)
         var mark = toneNumToCombining[tone] ?? ""
-        if tone == "9" { mark = "\u{0306}" }  // POJ uses breve for tone 9
+        if tone == "9" { mark = "\u{0306}" } // POJ uses breve for tone 9
         let markedFinal = placePOJToneMark(pojFinal, mark: mark)
         return (pojInitial + markedFinal).precomposedStringWithCanonicalMapping
     }
@@ -229,8 +228,9 @@ enum TaigiPhonetics {
                 target = first
             } else if final.count == 2 {
                 target = first
-            } else if (final.hasSuffix("\u{207F}") || final.hasSuffix("\u{1D3A}"))
-                        && !final.hasSuffix("h\u{207F}") && !final.hasSuffix("h\u{1D3A}") {
+            } else if final.hasSuffix("\u{207F}") || final.hasSuffix("\u{1D3A}"),
+                      !final.hasSuffix("h\u{207F}"), !final.hasSuffix("h\u{1D3A}")
+            {
                 target = first
             } else {
                 let afterSecond = final.index(start, offsetBy: 2)
@@ -267,7 +267,7 @@ enum TaigiPhonetics {
     static func convertSyllable(_ syllable: String, mode: InputMode) -> String {
         guard let last = syllable.last,
               let tone = Int(String(last)),
-              (1...9).contains(tone)
+              (1 ... 9).contains(tone)
         else {
             return syllable
         }
@@ -427,18 +427,6 @@ enum TaigiPhonetics {
                 result += token.separator
             }
         }
-        return result
-    }
-}
-
-// MARK: - String Helper
-
-private extension String {
-    /// Replace first occurrence of `target` with `replacement`.
-    func replacingFirst(of target: String, with replacement: String) -> String {
-        guard let range = self.range(of: target) else { return self }
-        var result = self
-        result.replaceSubrange(range, with: replacement)
         return result
     }
 }
