@@ -21,15 +21,19 @@ final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Init
 
     init(
-        repository: DictionaryRepository = .shared,
+        repository: DictionaryRepository? = nil,
         customDictionaryRepository: CustomDictionaryRepository = .shared,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
-        self.repository = repository
         self.customDictionaryRepository = customDictionaryRepository
         self.settingsProvider = settingsProvider
-        // Bootstrap Trie + custom dictionary via the shared lexicon service so a
-        // fresh launch straight into Dictionary has the indexes ready.
+        // Build a repository that shares the injected settings provider so
+        // DB-layer filtering agrees with the service's enabled-source view.
+        self.repository = repository ?? DictionaryRepository(
+            settingsProvider: settingsProvider,
+        )
+        // Bootstrap Trie + custom dictionary via the shared lexicon service so
+        // a fresh launch straight into Dictionary has the indexes ready.
         _ = LexiconService.shared
     }
 

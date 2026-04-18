@@ -30,6 +30,7 @@ final class LexiconService: @unchecked Sendable {
 
         self.repository = repository ?? DictionaryRepository(
             trieService: trieService,
+            settingsProvider: settingsProvider,
         )
 
         // 初始化 Trie
