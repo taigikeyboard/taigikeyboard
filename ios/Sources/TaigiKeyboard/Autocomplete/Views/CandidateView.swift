@@ -7,8 +7,6 @@ import SwiftUI
 struct CandidateView: View {
     /// 候選詞建議列表
     let suggestions: [Autocomplete.Suggestion]
-    /// 常用詞集合（用於優先顯示）
-    let frequentWords: Set<String>
     /// 當前選中的候選詞索引
     let selectedCandidateIndex: Int
     /// 點擊候選詞時的回調
@@ -33,6 +31,10 @@ struct CandidateView: View {
     let englishAutocompleteView: AnyView?
     /// Whether the engine is currently composing (used to auto-collapse toolbar)
     let isComposing: Bool
+    /// 是否為 TPS 佈局模式（影響候選詞顯示與 commit 邏輯）
+    let isTPSLayout: Bool
+    /// TPS 模式下 `or` 是否映射為 ㄜ
+    let orMapsToER: Bool
     /// 展開狀態（從環境物件取得）
     @EnvironmentObject private var expandState: CandidateExpandState
     /// 工具快捷鍵（輸入模式切換）是否展開
@@ -121,6 +123,8 @@ struct CandidateView: View {
                                         CandidateButtonView(
                                             suggestion: suggestion,
                                             isTranslateSwapped: isTranslateSwapped,
+                                            isTPSLayout: isTPSLayout,
+                                            orMapsToER: orMapsToER,
                                             isSelected: selectedCandidateIndex == index,
                                             onTap: onSuggestionTap,
                                         )
@@ -359,38 +363,12 @@ struct CandidateView: View {
 }
 
 extension CandidateView {
-    /// 計算候選詞中的常用詞集合
-    /// 根據使用頻率動態計算閾值，選出最常用的詞彙
-    /// - Parameter suggestions: 候選詞列表
-    /// - Returns: 常用詞的集合
-    static func getSharedFrequentWords(in suggestions: [Autocomplete.Suggestion]) -> Set<String> {
-        guard !suggestions.isEmpty else { return Set<String>() }
-
-        let frequencies = suggestions.map { suggestion in
-            (suggestion.text, UserFrequencyService.frequency(for: suggestion.text))
-        }
-
-        let candidatesWithMinFreq = frequencies.filter { $0.1 >= 2 }
-        guard !candidatesWithMinFreq.isEmpty else { return Set<String>() }
-
-        let allFreqs = frequencies.map(\.1)
-        let maxFreq = allFreqs.max() ?? 0
-        let avgFreq = allFreqs.reduce(0, +) / max(1, allFreqs.count)
-
-        let threshold = max(2, min(avgFreq, maxFreq / 3))
-
-        let frequentCandidates = candidatesWithMinFreq.filter { $0.1 >= threshold }
-
-        let maxFrequentCount = max(1, min(3, suggestions.count / 2))
-        let sortedFrequent = frequentCandidates.sorted { $0.1 > $1.1 }
-
-        return Set(sortedFrequent.prefix(maxFrequentCount).map(\.0))
-    }
-
     /// 單個候選詞按鈕視圖
     private struct CandidateButtonView: View {
         let suggestion: Autocomplete.Suggestion
         let isTranslateSwapped: Bool
+        let isTPSLayout: Bool
+        let orMapsToER: Bool
         let isSelected: Bool
         let onTap: (Autocomplete.Suggestion) -> Void
 
@@ -399,11 +377,20 @@ extension CandidateView {
         @Environment(\.candidateViewStyle) private var style
 
         private var displayTitle: String {
-            CandidateCellHelper.displayTitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+            CandidateCellHelper.displayTitle(
+                for: suggestion,
+                isTranslateSwapped: isTranslateSwapped,
+                isTPSLayout: isTPSLayout,
+                orMapsToER: orMapsToER,
+            )
         }
 
         private var displaySubtitle: String? {
-            CandidateCellHelper.displaySubtitle(for: suggestion, isTranslateSwapped: isTranslateSwapped)
+            CandidateCellHelper.displaySubtitle(
+                for: suggestion,
+                isTranslateSwapped: isTranslateSwapped,
+                isTPSLayout: isTPSLayout,
+            )
         }
 
         private var backgroundColor: Color {
@@ -421,22 +408,23 @@ extension CandidateView {
 
         var body: some View {
             Button(action: {
-                onTap(CandidateCellHelper.suggestionToHandle(for: suggestion, isTranslateSwapped: isTranslateSwapped))
+                onTap(CandidateCellHelper.suggestionToHandle(
+                    for: suggestion,
+                    isTranslateSwapped: isTranslateSwapped,
+                    isTPSLayout: isTPSLayout,
+                    orMapsToER: orMapsToER,
+                ))
             }) {
                 VStack(alignment: .center, spacing: 0) {
                     Text(displayTitle)
-                        .font(KeyboardFonts.globalFont(
-                            size: CandidateCellHelper.titleFontSize(isTranslateSwapped: isTranslateSwapped),
-                        ))
+                        .font(KeyboardFonts.globalFont(size: CandidateCellHelper.titleFontSize))
                         .fontWeight(.regular)
                         .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
                         .lineLimit(1)
 
                     if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                         Text(subtitle)
-                            .font(KeyboardFonts.globalFont(
-                                size: CandidateCellHelper.subtitleFontSize(isTranslateSwapped: isTranslateSwapped),
-                            ))
+                            .font(KeyboardFonts.globalFont(size: CandidateCellHelper.subtitleFontSize))
                             .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
                             .lineLimit(1)
                     }

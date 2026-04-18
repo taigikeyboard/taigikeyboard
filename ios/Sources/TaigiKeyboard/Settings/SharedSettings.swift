@@ -384,6 +384,7 @@ final class SharedSettings {
             fontType: fontType,
             keyboardLayoutType: keyboardLayoutType,
             isTranslateSwapped: isTranslateSwapped,
+            isTpsOrMappedToER: isTpsOrMappedToER,
             keyFontSizeScale: keyFontSizeScale,
             keyCornerRadius: keyCornerRadius,
             colorSettings: colorSettings,

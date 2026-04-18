@@ -95,6 +95,7 @@ struct SettingsSnapshot {
     let fontType: FontType
     let keyboardLayoutType: KeyboardLayoutType
     let isTranslateSwapped: Bool
+    let isTpsOrMappedToER: Bool
     let keyFontSizeScale: CGFloat
     let keyCornerRadius: CGFloat
     let colorSettings: KeyboardColorSettings
