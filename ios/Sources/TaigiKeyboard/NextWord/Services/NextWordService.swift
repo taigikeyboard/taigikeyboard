@@ -70,6 +70,7 @@ final class NextWordService: @unchecked Sendable {
 
     private let associationReader: AssociationBinaryReader?
     private let userConnectionManager: SQLiteConnectionManager
+    private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "NextWordService")
 
     /// Lock protecting mutable state (`_recordCounter`, `_isUserTablesCreated`).
@@ -79,8 +80,12 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Initialization
 
-    init(associationReader: AssociationBinaryReader? = nil) {
+    init(
+        associationReader: AssociationBinaryReader? = nil,
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
+    ) {
         self.associationReader = associationReader ?? AssociationBinaryReader()
+        self.settingsProvider = settingsProvider
 
         userConnectionManager = SQLiteConnectionManager(
             databasePath: Self.getUserDatabasePath,
@@ -300,7 +305,7 @@ final class NextWordService: @unchecked Sendable {
 
         // Over-fetch 2x to account for deduplication when merging dict + user results
         let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
-        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
         for entry in entries {
             guard AssociationBinaryReader.passesFilter(

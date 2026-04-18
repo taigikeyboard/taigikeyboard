@@ -13,6 +13,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
     private let binaryReader: DictionaryBinaryReader?
     private let trieService: TrieService
+    private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionaryRepository")
 
     // MARK: - Initialization
@@ -20,9 +21,11 @@ final class DictionaryRepository: @unchecked Sendable {
     init(
         binaryReader: DictionaryBinaryReader? = nil,
         trieService: TrieService = .shared,
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.binaryReader = binaryReader ?? DictionaryBinaryReader()
         self.trieService = trieService
+        self.settingsProvider = settingsProvider
     }
 
     // MARK: - Query Methods
@@ -60,7 +63,7 @@ final class DictionaryRepository: @unchecked Sendable {
         }
 
         // Binary 查詢 + 過濾
-        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
         var results: [TaigiWord] = []
         for rowId in allRowIds {
@@ -188,7 +191,7 @@ final class DictionaryRepository: @unchecked Sendable {
         inputMode: InputMode,
         limit: Int,
     ) -> [DictionarySearchResult] {
-        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
         var results: [DictionarySearchResult] = []
         for rowId in rowIds {
