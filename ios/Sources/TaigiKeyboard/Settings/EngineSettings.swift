@@ -8,6 +8,7 @@ import Foundation
 /// files can depend on this protocol without pulling platform frameworks.
 protocol EngineSettings {
     var inputMode: InputMode { get }
+    var isAutoCap: Bool { get }
 
     var isCustomDictEnabled: Bool { get }
     var isTpsOrMappedToER: Bool { get }

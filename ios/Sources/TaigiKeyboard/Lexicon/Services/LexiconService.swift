@@ -131,6 +131,7 @@ final class LexiconService: @unchecked Sendable {
     ) -> [TaigiWord] {
         guard settingsProvider.current.isCustomDictEnabled else { return [] }
 
+        let isAutoCap = settingsProvider.current.isAutoCap
         let customSearchKey = rawInput ?? segmentedInput
         let isToneAware = customSearchKey.contains { $0.isNumber }
         let searchPrefix = isToneAware
@@ -147,9 +148,9 @@ final class LexiconService: @unchecked Sendable {
         logger.debug("[SEARCH] customDict key='\(customSearchKey)' prefix='\(searchPrefix)' toneAware=\(isToneAware) segmented='\(segmentedInput)' results=\(customEntries.count)")
 
         return customEntries.map { entry in
-            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: segmentedInput, inputMode: inputMode)
+            let processedRoman = CandidateProcessor.capitalize(entry.roman, basedOn: segmentedInput, inputMode: inputMode, isAutoCap: isAutoCap)
             let processedHanzi: String? = if CandidateProcessor.startsWithRomanLetter(entry.hanzi) {
-                CandidateProcessor.capitalize(entry.hanzi, basedOn: segmentedInput, inputMode: inputMode)
+                CandidateProcessor.capitalize(entry.hanzi, basedOn: segmentedInput, inputMode: inputMode, isAutoCap: isAutoCap)
             } else {
                 entry.hanzi
             }
@@ -203,15 +204,16 @@ final class LexiconService: @unchecked Sendable {
         basedOn input: String,
         inputMode: InputMode,
     ) -> [TaigiWord] {
-        words.map { word in
+        let isAutoCap = settingsProvider.current.isAutoCap
+        return words.map { word in
             let processedHanzi: String? = if let hanzi = word.hanzi, CandidateProcessor.startsWithRomanLetter(hanzi) {
-                CandidateProcessor.capitalize(hanzi, basedOn: input, inputMode: inputMode)
+                CandidateProcessor.capitalize(hanzi, basedOn: input, inputMode: inputMode, isAutoCap: isAutoCap)
             } else {
                 word.hanzi
             }
             return TaigiWord(
                 id: word.id,
-                roman: CandidateProcessor.capitalize(word.roman, basedOn: input, inputMode: inputMode),
+                roman: CandidateProcessor.capitalize(word.roman, basedOn: input, inputMode: inputMode, isAutoCap: isAutoCap),
                 hanzi: processedHanzi,
                 lengthScore: word.lengthScore,
             )

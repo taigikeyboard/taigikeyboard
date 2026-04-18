@@ -1,4 +1,5 @@
 import Foundation
+import KeyboardKit
 
 final class SharedSettings {
     private let userDefaults: UserDefaults
@@ -416,10 +417,22 @@ final class SharedSettings {
 
 // MARK: - EngineSettings Conformance
 
-/// SharedSettings already exposes every property `EngineSettings` requires.
-/// An empty conformance is sufficient — reads go through the same
-/// `UserDefaults`-backed getters, so engine services see live values.
-extension SharedSettings: EngineSettings {}
+/// SharedSettings bridges the engine's settings needs to two stores:
+/// its own `UserDefaults` (App Group container) for app-owned settings,
+/// and `KeyboardSettings.store` (KeyboardKit-owned) for the shift-state
+/// / auto-capitalization toggle. Engine-layer code cannot touch
+/// `KeyboardSettings.store` directly (no `import KeyboardKit` allowed),
+/// so this conformance bridges the two behind one protocol.
+extension SharedSettings: EngineSettings {
+    /// Mirrors KeyboardKit's `isAutocapitalizationEnabled` setting so
+    /// engine-layer code (e.g. `CandidateProcessor.capitalize`) can read
+    /// it through `EngineSettings` without importing KeyboardKit.
+    var isAutoCap: Bool {
+        KeyboardSettings.store.bool(
+            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
+        )
+    }
+}
 
 // MARK: - EngineSettingsProvider Conformance
 
