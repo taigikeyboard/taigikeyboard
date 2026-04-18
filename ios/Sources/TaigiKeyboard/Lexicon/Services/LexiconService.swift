@@ -127,7 +127,7 @@ final class LexiconService: @unchecked Sendable {
     private func lookupCustomDictionary(
         rawInput: String?,
         segmentedInput: String,
-        inputMode _: InputMode,
+        inputMode: InputMode,
     ) -> [TaigiWord] {
         guard settingsProvider.current.isCustomDictEnabled else { return [] }
 
