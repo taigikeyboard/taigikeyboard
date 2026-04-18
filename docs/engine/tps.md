@@ -16,21 +16,40 @@
 
 ## File Structure
 
+### iOS — TPS modules (split by responsibility)
+
+| File | Responsibility |
+|------|----------------|
+| `Input/TPS/TPSTables.swift` | Mapping tables (consonants/vowels/tones) + membership queries (`containsTPS`, `isTPSToneMark`) |
+| `Input/TPS/TPSToTL.swift` | TPS → TL parser (`convert`, `convertMultiSyllable`) |
+| `Input/TPS/TLToTPS.swift` | TL → TPS parser (`convert`, `convertFromDisplay`) |
+| `Input/TPS/TPSInputAdjuster.swift` | Key-level auto-adjust (positional, palatalization, syllabic nasal, ㆮ/ㆯ) |
+| `Input/CharacterInputPipeline.swift` | Pure-function pipeline gluing adjusters into a single `adjust(_:inputMode:rawInput:)` call |
+| `Input/TPS/TPSConverter.swift` | Thin facade re-exporting the above for test-only callers (deprecated) |
+
+### iOS — Other TPS-aware files
+
 | File | Description |
 |------|-------------|
-| `Input/TPSConverter.swift` | TPS ↔ TL bidirectional converter |
 | `Layout/TaigiLayouts.swift` | TPS layout definition |
 | `Settings/SharedSettings.swift` | `.tps` layout type |
 | `Layout/CustomLayoutService.swift` | TPS layout selection |
 | `Lexicon/Trie/InputNormalizer.swift` | TPS input normalization |
 | `Autocomplete/Views/CandidateCellHelper.swift` | Candidate TPS display |
 
+### Android
+
+| File | Responsibility |
+|------|----------------|
+| `ime/dictionary/TPSConverter.kt` | Still monolithic — planned to mirror the iOS split |
+| `ime/text/composing/ComposingManager.kt` | Composing state |
+
 ---
 
 ## Conversion Flow
 
 ```
-User input → TPS detection → TPSConverter.toTL() → InputNormalizer → Trie search
+User input → TPS detection → TPSToTL.convert() → InputNormalizer → Trie search
      ↓              ↓                ↓                ↓              ↓
   ㄉㄧㄠˊ    →   Is TPS    →      tiau5       →     tiau5    →  Found word
 ```
@@ -177,30 +196,53 @@ Entering tone codas (ㆴ/ㆵ/ㆻ/ㆷ) are accessed via **long-press popups**:
 
 ## Core API
 
-### TPSConverter
+### Detection — `TPSTables`
 
 ```swift
-// Check if contains TPS characters
-TPSConverter.containsTPS("ㄉㄧㄠˊ") // true
+TPSTables.containsTPS("ㄉㄧㄠˊ")       // true
+TPSTables.isTPSToneMark("ˋ")          // true
+```
 
-// TPS → TL conversion (for Trie search)
-TPSConverter.toTL("ㄉㄧㄠˊ") // "tiau5"
+### TPS → TL — `TPSToTL`
 
-// TL → TPS conversion (for candidate display)
-TPSConverter.toTPS("tiau5") // "ㄉㄧㄠˊ"
+```swift
+TPSToTL.convert("ㄉㄧㄠˊ")              // "tiau5"
+TPSToTL.convertMultiSyllable("ㄉㄧㄠ ㄙㄨˊ") // "tiau su5"
+```
 
-// Multi-syllable conversion
-TPSConverter.toTLMultiSyllable("ㄉㄧㄠ ㄙㄨˊ") // "tiau su5"
+### TL → TPS — `TLToTPS`
+
+```swift
+TLToTPS.convert("tiau5")               // "ㄉㄧㄠˊ"
+TLToTPS.convertFromDisplay("guá")      // "ㄍㄨㄚˋ"
+```
+
+### Key-level adjustments — `TPSInputAdjuster`
+
+```swift
+TPSInputAdjuster.adjustInitialKey("ㄇ", afterRawInput: "ㄅㄚ")           // "ㆬ"
+TPSInputAdjuster.adjustNasalizedVowelKey("ㆮ", afterRawInput: "ㄧ")     // "ㆯ"
+TPSInputAdjuster.palatalizationReplacement(forIncoming: "ㄧ", lastRawChar: "ㄗ") // "ㄐ"
+TPSInputAdjuster.syllabicNasalReplacement(forIncoming: "ˊ", lastRawChar: "ㄫ")  // "ㆭ"
+```
+
+### Pipeline — `CharacterInputPipeline`
+
+Used by `ActionHandler+KeyActions.handleCharacterInput` to apply all key-level
+adjustments in one call. Pure function — no hidden side effects.
+
+```swift
+let result = CharacterInputPipeline.adjust(
+    "ㄇ", inputMode: .tps, rawInput: "ㄅㄚ",
+)
+// result.char = "ㆬ", result.replaceLast = nil
 ```
 
 ### InputNormalizer Integration
 
 ```swift
-// Auto-detect and convert TPS
-InputNormalizer.normalize("ㄉㄧㄠˊ", mode: .tl) // "tiau5"
-
-// Check if input contains TPS symbols
-TPSConverter.containsTPS("ㄅㄚ") // true
+InputNormalizer.normalize("ㄉㄧㄠˊ", mode: .tl)  // "tiau5"
+TPSTables.containsTPS("ㄅㄚ")                    // true
 ```
 
 ---
@@ -324,7 +366,7 @@ When the user taps ㄇ or ㄫ, `adjustTPSInitialKey()` checks the last character
 
 | Platform | Helper | Call site |
 |----------|--------|-----------|
-| iOS | `TPSConverter.adjustTPSInitialKey(_:afterRawInput:)` | `ActionHandler+CharacterInput.swift` |
+| iOS | `TPSInputAdjuster.adjustInitialKey(_:afterRawInput:)` (via `CharacterInputPipeline.adjust`) | `ActionHandler+KeyActions.handleCharacterInput` |
 | Android | `TPSConverter.adjustTPSInitialKey(char, afterRawInput)` | `TextInputManager.handleTaigiInput()` |
 
 ### Syllabic Nasal Tone-Triggered Correction (v3.4.7)
@@ -336,7 +378,7 @@ When a tone mark follows bare ㄇ or ㄫ at syllable start, the consonant is ret
 | ㄇ + ˫ | ㆬ + ˫ | m7 |
 | ㄫ + ˊ | ㆭ + ˊ | ng5 |
 
-**Implementation**: `TPSConverter.syllabicNasalReplacement(forIncoming:lastRawChar:)`
+**Implementation**: `TPSInputAdjuster.syllabicNasalReplacement(forIncoming:lastRawChar:)`
 
 ---
 
@@ -400,7 +442,7 @@ Non-palatalized affricates (ㄗ/ㄘ/ㄙ/ㆡ) followed by ㄧ or ㆪ are auto-cor
 | ㄙ + ㄧ | ㄒ + ㄧ | si |
 | ㆡ + ㄧ | ㆢ + ㄧ | ji |
 
-**Implementation**: `TPSConverter.palatalizationReplacement(forIncoming:lastRawChar:)`
+**Implementation**: `TPSInputAdjuster.palatalizationReplacement(forIncoming:lastRawChar:)`
 
 Called from:
 - iOS: `ActionHandler+CharacterInput.swift`
@@ -414,13 +456,13 @@ Called from:
 |----------------|-------------------|---------------|
 | ㄧ + ㆮ | ㄧ + ㆯ | iaunn |
 
-**Implementation**: `TPSConverter.adjustTPSNasalizedVowelKey(_:afterRawInput:)`
+**Implementation**: `TPSInputAdjuster.adjustNasalizedVowelKey(_:afterRawInput:)`
 
 ### Multi-Syllable Boundary Detection (v3.4.7)
 
 TPS multi-syllable input inserts automatic spaces at syllable boundaries when a tone mark or entering tone coda is followed by a new consonant or vowel.
 
-**Implementation**: Space insertion logic in `TPSConverter.toTLMultiSyllable()` uses tone marks (ˋ ˪ ˊ ˇ ˫ ˙) and entering tone codas (ㆴ ㆵ ㆻ ㆷ) as boundary signals.
+**Implementation**: Space insertion logic in `TPSToTL.convert()` / `convertMultiSyllable()` uses tone marks (ˋ ˪ ˊ ˇ ˫ ˙) and entering tone codas (ㆴ ㆵ ㆻ ㆷ) as boundary signals.
 
 ---
 
@@ -480,6 +522,38 @@ Stripping 1/4 = removing tones that TPS users physically cannot type, while pres
 - Trie size: ~50% more keys (~3 per entry added to existing 6).
 - MARISA-trie is highly compressed — estimated ~1-2 MB increase.
 - Zero impact on POJ/TL (they continue using `tl:`/`poj:` prefix).
+
+---
+
+## Pure Core vs Platform Glue
+
+The split modules are organized so that the "pure logic" layer can later be
+extracted into a cross-platform shared core (SwiftPM module), leaving only the
+platform-specific glue in the keyboard extension.
+
+### Pure logic (candidates for a shared core)
+
+| File | Why it's portable |
+|------|-------------------|
+| `Input/TPS/TPSTables.swift` | Pure data — string → string mappings, no framework imports |
+| `Input/TPS/TPSToTL.swift` | Pure string transforms, no platform APIs |
+| `Input/TPS/TLToTPS.swift` | Same |
+| `Input/TPS/TPSInputAdjuster.swift` | Pure queries over a `String` buffer |
+| `Input/CharacterInputPipeline.swift` | Composes adjusters; returns a plain struct, no side effects |
+
+### Platform glue (stays in keyboard extension)
+
+| File | Why it's platform-bound |
+|------|--------------------------|
+| `Input/Composing/ComposingManager.swift` | Uses `@Published` / `ObservableObject` / `KeyboardContext` (KeyboardKit) |
+| `Input/Composing/ComposingDelegate.swift` | Protocol bridging to `UITextDocumentProxy` through `KeyboardViewController` |
+| `Input/KeyboardContext+Composing.swift` | Obj-C associated object on `KeyboardContext` |
+| `Input/CaseTransformer.swift` | Mixed — transform logic is pure, but takes `Keyboard.KeyboardCase` (KeyboardKit) |
+
+Android has the same pure/platform split conceptually; its `ComposingManager.kt`
+talks directly to `InputConnection` instead of going through a delegate.
+Extracting the pure core would let both platforms share one implementation of
+the tables + parsers + adjusters, keeping only thin platform adapters.
 
 ---
 

@@ -22,8 +22,8 @@ enum InputNormalizer {
     static func normalize(_ input: String, mode _: InputMode) -> String {
         guard !input.isEmpty else { return "" }
 
-        let processedInput = TPSConverter.containsTPS(input)
-            ? TPSConverter.toTL(input)
+        let processedInput = TPSTables.containsTPS(input)
+            ? TPSToTL.convert(input)
             : input
 
         let lowercased = processedInput.lowercased()
