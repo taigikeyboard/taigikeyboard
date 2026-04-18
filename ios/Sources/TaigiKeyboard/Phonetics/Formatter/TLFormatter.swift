@@ -10,8 +10,7 @@ import Foundation
 enum TLFormatter {
     /// Assemble a TL syllable from initial + final + tone number.
     static func toTL(initial: String, final: String, tone: String) -> String {
-        var mark = PhoneticsTables.toneNumToCombining[tone] ?? ""
-        if tone == "9" { mark = PhoneticsTables.tlTone9Combining }
+        let mark = PhoneticsTables.tlToneMark(for: tone)
         let markedFinal = placeTLToneMark(final, mark: mark)
         return (initial + markedFinal).precomposedStringWithCanonicalMapping
     }

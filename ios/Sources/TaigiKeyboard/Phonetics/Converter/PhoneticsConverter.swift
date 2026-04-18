@@ -35,8 +35,6 @@ enum PhoneticsConverter {
         }
 
         let toneStr = String(tone)
-
-        // Assemble with tone marks, preserving original case
         let assembled: String
         switch mode {
         case .poj:
@@ -47,11 +45,7 @@ enum PhoneticsConverter {
             return syllable
         }
 
-        // Restore case: if original starts uppercase, capitalize result
-        if let firstOrig = baseForm.first, firstOrig.isUppercase {
-            return assembled.prefix(1).uppercased() + assembled.dropFirst()
-        }
-        return assembled
+        return restoreLeadingCase(of: baseForm, on: assembled)
     }
 
     /// Convert hyphen-separated input to tone marks.
@@ -65,8 +59,8 @@ enum PhoneticsConverter {
     }
 
     /// Convert POJ display text (with diacritics) to TL display text.
-    /// Splits by "-" and " " (word boundary); for each syllable: strip tone → normalizeToTL → toTL.
-    /// Preserves original separators (space = word boundary, hyphen = syllable boundary).
+    /// Splits by "-" and " " (word boundary); for each syllable delegates to `SyllableParser.parseSyllable`.
+    /// Preserves original separators (space = word boundary, hyphen = syllable boundary, "--" = 輕聲).
     static func pojDisplayToTLDisplay(_ text: String) -> String {
         convertDisplay(text, formatter: { initial, final, tone in
             TLFormatter.toTL(initial: initial, final: final, tone: tone)
@@ -86,7 +80,24 @@ enum PhoneticsConverter {
     ) -> String {
         guard !text.isEmpty else { return "" }
 
-        // Split while preserving separators (space and hyphen)
+        var result = ""
+        for token in splitPreservingSeparators(text) {
+            let s = token.text
+            if !s.isEmpty {
+                if let parsed = SyllableParser.parseSyllable(s) {
+                    let assembled = formatter(parsed.initial, parsed.final, parsed.tone)
+                    result += restoreLeadingCase(of: s, on: assembled)
+                } else {
+                    result += s
+                }
+            }
+            result += token.separator
+        }
+        return result
+    }
+
+    /// Split `text` by hyphen or space into `(text, separator)` tokens. Last token has empty separator.
+    private static func splitPreservingSeparators(_ text: String) -> [(text: String, separator: String)] {
         var tokens: [(text: String, separator: String)] = []
         var current = ""
         for char in text {
@@ -98,42 +109,13 @@ enum PhoneticsConverter {
             }
         }
         tokens.append((text: current, separator: ""))
+        return tokens
+    }
 
-        var result = ""
-        for (i, token) in tokens.enumerated() {
-            let s = token.text
-            if s.isEmpty {
-                // Preserve separator (e.g., "--" for 輕聲)
-                if i < tokens.count - 1 || !token.separator.isEmpty {
-                    result += token.separator
-                }
-                continue
-            }
-
-            let (bare, toneNum) = SyllableParser.stripToneMark(s)
-            let converted: String
-            if bare.isEmpty {
-                converted = s
-            } else {
-                let normalized = SyllableParser.normalizeToTL(bare.lowercased())
-                if let (initial, final) = SyllableParser.splitInitialFinal(normalized) {
-                    let tone = toneNum.isEmpty ? (SyllableParser.isStopTone(final) ? "4" : "1") : toneNum
-                    let assembled = formatter(initial, final, tone)
-                    if let first = s.first, first.isUppercase {
-                        converted = assembled.prefix(1).uppercased() + assembled.dropFirst()
-                    } else {
-                        converted = assembled
-                    }
-                } else {
-                    converted = s
-                }
-            }
-
-            result += converted
-            if !token.separator.isEmpty {
-                result += token.separator
-            }
-        }
-        return result
+    /// If `source` starts with an uppercase letter, uppercase the first character of `assembled`.
+    /// Shared by `convertSyllable` and `convertDisplay` to keep case-restoration rules in one place.
+    private static func restoreLeadingCase(of source: String, on assembled: String) -> String {
+        guard let first = source.first, first.isUppercase else { return assembled }
+        return assembled.prefix(1).uppercased() + assembled.dropFirst()
     }
 }

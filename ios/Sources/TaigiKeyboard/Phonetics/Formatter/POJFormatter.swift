@@ -12,8 +12,7 @@ enum POJFormatter {
     static func toPOJ(initial: String, final: String, tone: String) -> String {
         let pojInitial = PhoneticsTables.pojInitialFromTL[initial] ?? initial
         let pojFinal = tlFinalToPOJ(final)
-        var mark = PhoneticsTables.toneNumToCombining[tone] ?? ""
-        if tone == "9" { mark = "\u{0306}" } // POJ uses breve for tone 9
+        let mark = PhoneticsTables.pojToneMark(for: tone)
         let markedFinal = placePOJToneMark(pojFinal, mark: mark)
         return (pojInitial + markedFinal).precomposedStringWithCanonicalMapping
     }

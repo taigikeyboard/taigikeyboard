@@ -37,6 +37,7 @@ enum PhoneticsTables {
     ]
 
     /// Tone number -> combining mark (NFD). Tones 1 and 4 have no mark.
+    /// Tone 9 entry here is POJ (breve); TL overrides via `tlToneMark(for:)`.
     static let toneNumToCombining: [String: String] = [
         "1": "", "2": "\u{0301}", "3": "\u{0300}", "4": "",
         "5": "\u{0302}", "6": "\u{030C}", "7": "\u{0304}", "8": "\u{030D}", "9": "\u{0306}",
@@ -44,6 +45,16 @@ enum PhoneticsTables {
 
     /// TL tone 9 uses double acute accent (U+030B) instead of breve.
     static let tlTone9Combining = "\u{030B}"
+
+    /// Resolve combining mark for TL tone digit. Tone 9 is TL-specific (double acute).
+    static func tlToneMark(for tone: String) -> String {
+        tone == "9" ? tlTone9Combining : toneNumToCombining[tone] ?? ""
+    }
+
+    /// Resolve combining mark for POJ tone digit. Tone 9 already maps to breve.
+    static func pojToneMark(for tone: String) -> String {
+        toneNumToCombining[tone] ?? ""
+    }
 
     /// Combining mark -> tone number. Includes POJ breve and TL double acute for tone 9.
     static let combiningToToneNum: [Unicode.Scalar: String] = [

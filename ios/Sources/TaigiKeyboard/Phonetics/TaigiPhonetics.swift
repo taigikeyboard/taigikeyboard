@@ -17,14 +17,6 @@ import Foundation
 enum TaigiPhonetics {
     // MARK: - Data Tables (re-export)
 
-    static var tlInitials: Set<String> {
-        PhoneticsTables.tlInitials
-    }
-
-    static var tlFinals: Set<String> {
-        PhoneticsTables.tlFinals
-    }
-
     static var toneNumToCombining: [String: String] {
         PhoneticsTables.toneNumToCombining
     }
@@ -35,14 +27,6 @@ enum TaigiPhonetics {
 
     static var combiningToToneNum: [Unicode.Scalar: String] {
         PhoneticsTables.combiningToToneNum
-    }
-
-    static var pojInitialFromTL: [String: String] {
-        PhoneticsTables.pojInitialFromTL
-    }
-
-    static var pojFinalSubstitutions: [(tl: String, poj: String)] {
-        PhoneticsTables.pojFinalSubstitutions
     }
 
     // MARK: - Parsing
@@ -75,10 +59,6 @@ enum TaigiPhonetics {
 
     static func toPOJ(initial: String, final: String, tone: String) -> String {
         POJFormatter.toPOJ(initial: initial, final: final, tone: tone)
-    }
-
-    static func tlFinalToPOJ(_ final: String) -> String {
-        POJFormatter.tlFinalToPOJ(final)
     }
 
     // MARK: - High-Level API

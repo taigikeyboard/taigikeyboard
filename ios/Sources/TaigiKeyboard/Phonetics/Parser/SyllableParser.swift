@@ -12,16 +12,8 @@ enum SyllableParser {
     /// Recognizes both combining diacritics and trailing digit.
     static func stripToneMark(_ text: String) -> (bare: String, tone: String) {
         let decomposed = text.decomposedStringWithCanonicalMapping
-        var foundMark: Unicode.Scalar?
 
-        for scalar in decomposed.unicodeScalars {
-            if PhoneticsTables.combiningScalars.contains(scalar) {
-                foundMark = scalar
-                break
-            }
-        }
-
-        if let mark = foundMark {
+        if let mark = decomposed.unicodeScalars.first(where: PhoneticsTables.combiningScalars.contains) {
             let toneNum = PhoneticsTables.combiningToToneNum[mark] ?? ""
             let bare = decomposed.unicodeScalars.filter { $0 != mark }
             let bareStr = String(String.UnicodeScalarView(bare))
@@ -37,27 +29,31 @@ enum SyllableParser {
         return (text.precomposedStringWithCanonicalMapping, "")
     }
 
+    /// POJ→TL spelling substitutions applied by `normalizeToTL`. Order matters.
+    private static let pojToTLSubstitutions: [(from: String, to: String)] = [
+        ("ch", "ts"),
+        ("ou", "oo"),
+        ("o\u{0358}", "oo"),
+        ("\u{207F}", "nn"),
+        ("\u{1D3A}", "nn"),
+        ("oa", "ua"),
+        ("oe", "ue"),
+        ("eng", "ing"),
+        ("ek", "ik"),
+        ("oonn", "onn"),
+    ]
+
     /// Normalize text to TL spelling (lowercase). Replaces POJ conventions with TL equivalents.
     static func normalizeToTL(_ text: String) -> String {
-        var result = text
-        result = result.replacingOccurrences(of: "ch", with: "ts")
-        result = result.replacingOccurrences(of: "ou", with: "oo")
-        result = result.replacingOccurrences(of: "o\u{0358}", with: "oo")
-        result = result.replacingOccurrences(of: "\u{207F}", with: "nn")
-        result = result.replacingOccurrences(of: "\u{1D3A}", with: "nn")
-        result = result.replacingOccurrences(of: "oa", with: "ua")
-        result = result.replacingOccurrences(of: "oe", with: "ue")
-        result = result.replacingOccurrences(of: "eng", with: "ing")
-        result = result.replacingOccurrences(of: "ek", with: "ik")
-        result = result.replacingOccurrences(of: "oonn", with: "onn")
-        return result
+        pojToTLSubstitutions.reduce(text) { acc, rule in
+            acc.replacingOccurrences(of: rule.from, with: rule.to)
+        }
     }
 
     /// Check if a final ends in a stop consonant (p, t, k, h), ignoring trailing nn.
     static func isStopTone(_ final: String) -> Bool {
         let cleaned = final.lowercased().replacingOccurrences(of: "nn", with: "")
-        return cleaned.hasSuffix("p") || cleaned.hasSuffix("t")
-            || cleaned.hasSuffix("k") || cleaned.hasSuffix("h")
+        return cleaned.last.map { "ptkh".contains($0) } ?? false
     }
 
     /// Split bare TL text into (initial, final) by iterating prefixes.
