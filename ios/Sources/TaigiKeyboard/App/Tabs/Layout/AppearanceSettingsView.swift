@@ -7,40 +7,7 @@ import SwiftUI
 /// and key corner radius, with a keyboard preview anchored at the bottom.
 struct AppearanceSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
-
-    private let settings = SharedSettings.shared
-
-    @State private var keyHeightScale: Double
-    @State private var keyFontSizeScale: Double
-    @State private var candidateTextSizeScale: Double
-    @State private var keyCornerRadius: Double
-    @State private var keyBorderWidth: Double
-    @State private var selectedFontType: FontType
-
-    // Color state
-    @State private var keyboardBackground: Color
-    @State private var keyText: Color
-    @State private var normalKeyFill: Color
-    @State private var specialKeyFill: Color
-    @State private var candidateText: Color
-    @State private var candidateBackground: Color
-
-    /// Tracks which colors have been explicitly customized (non-nil = customized).
-    @State private var savedColors: KeyboardColorSettings
-
-    private static let defaultKeyboardBackground = Color.keyboardBackground
-    private static let defaultKeyText = Color.keyboardButtonForeground
-    private static let defaultNormalKeyFill = Color.keyboardButtonBackground
-    private static let defaultSpecialKeyFill = Color.keyboardDarkButtonBackground
-    private static let defaultCandidateText = Color(.label)
-    private static let defaultCandidateBackground = Color.keyboardBackground
-
-    private static let defaultKeyHeightScale: Double = 1.0
-    private static let defaultKeyFontSizeScale: Double = 1.0
-    private static let defaultCandidateTextSizeScale: Double = 1.0
-    private static let defaultKeyCornerRadius: Double = 6.0
-    private static let defaultKeyBorderWidth: Double = 0
-    private static let defaultFontType: FontType = .openHuninn
+    @StateObject private var viewModel = AppearanceSettingsViewModel()
 
     private let scaleRange: ClosedRange<Double> = 0.85 ... 1.15
     private let scaleStep: Double = 0.01
@@ -49,25 +16,6 @@ struct AppearanceSettingsView: View {
     private let borderWidthRange: ClosedRange<Double> = 0 ... 3
     private let borderWidthStep: Double = 0.5
 
-    init() {
-        let s = SharedSettings.shared
-        _keyHeightScale = State(initialValue: s.keyHeightScale)
-        _keyFontSizeScale = State(initialValue: s.keyFontSizeScale)
-        _candidateTextSizeScale = State(initialValue: s.candidateTextSizeScale)
-        _keyCornerRadius = State(initialValue: s.keyCornerRadius)
-        _keyBorderWidth = State(initialValue: s.keyBorderWidth)
-        _selectedFontType = State(initialValue: s.fontType)
-
-        let c = s.colorSettings
-        _keyboardBackground = State(initialValue: c.backgroundColor?.color ?? Self.defaultKeyboardBackground)
-        _keyText = State(initialValue: c.keyTextColor?.color ?? Self.defaultKeyText)
-        _normalKeyFill = State(initialValue: c.normalKeyFillColor?.color ?? Self.defaultNormalKeyFill)
-        _specialKeyFill = State(initialValue: c.specialKeyFillColor?.color ?? Self.defaultSpecialKeyFill)
-        _candidateText = State(initialValue: c.candidateTextColor?.color ?? Self.defaultCandidateText)
-        _candidateBackground = State(initialValue: c.candidateBackgroundColor?.color ?? Self.defaultCandidateBackground)
-        _savedColors = State(initialValue: c)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             Form {
@@ -75,16 +23,14 @@ struct AppearanceSettingsView: View {
                 Section {
                     NavigationLink {
                         AppearanceFontPickerView(
-                            selectedFont: $selectedFontType,
-                            onChange: { newValue in
-                                settings.fontType = newValue
-                            },
+                            selectedFont: $viewModel.selectedFontType,
+                            onChange: { viewModel.setFontType($0) },
                         )
                     } label: {
                         HStack {
                             Text(LayoutTexts.customFont)
                             Spacer()
-                            Text(fontDisplayName(selectedFontType))
+                            Text(fontDisplayName(viewModel.selectedFontType))
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -94,16 +40,16 @@ struct AppearanceSettingsView: View {
                 Section(header: Text(LayoutTexts.keyboardSection)) {
                     colorRow(
                         label: LayoutTexts.colorKeyboardBackground,
-                        color: $keyboardBackground,
-                        defaultColor: Self.defaultKeyboardBackground,
+                        color: $viewModel.keyboardBackground,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.keyboardBackground,
                         keyPath: \.backgroundColor,
                     )
                     sliderRow(
                         label: LayoutTexts.keyHeight,
-                        value: $keyHeightScale,
+                        value: $viewModel.keyHeightScale,
                         in: scaleRange, step: scaleStep,
-                        defaultValue: Self.defaultKeyHeightScale,
-                        onChanged: { settings.keyHeightScale = $0 },
+                        defaultValue: AppearanceSettingsViewModel.Defaults.keyHeightScale,
+                        onChanged: { viewModel.setKeyHeightScale($0) },
                     )
                 }
 
@@ -111,42 +57,42 @@ struct AppearanceSettingsView: View {
                 Section(header: Text(LayoutTexts.colorKeySection)) {
                     colorRow(
                         label: LayoutTexts.colorKeyText,
-                        color: $keyText,
-                        defaultColor: Self.defaultKeyText,
+                        color: $viewModel.keyText,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.keyText,
                         keyPath: \.keyTextColor,
                     )
                     colorRow(
                         label: LayoutTexts.colorNormalKeyFill,
-                        color: $normalKeyFill,
-                        defaultColor: Self.defaultNormalKeyFill,
+                        color: $viewModel.normalKeyFill,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.normalKeyFill,
                         keyPath: \.normalKeyFillColor,
                     )
                     colorRow(
                         label: LayoutTexts.colorSpecialKeyFill,
-                        color: $specialKeyFill,
-                        defaultColor: Self.defaultSpecialKeyFill,
+                        color: $viewModel.specialKeyFill,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.specialKeyFill,
                         keyPath: \.specialKeyFillColor,
                     )
                     sliderRow(
                         label: LayoutTexts.keyFontSize,
-                        value: $keyFontSizeScale,
+                        value: $viewModel.keyFontSizeScale,
                         in: scaleRange, step: scaleStep,
-                        defaultValue: Self.defaultKeyFontSizeScale,
-                        onChanged: { settings.keyFontSizeScale = $0 },
+                        defaultValue: AppearanceSettingsViewModel.Defaults.keyFontSizeScale,
+                        onChanged: { viewModel.setKeyFontSizeScale($0) },
                     )
                     sliderRow(
                         label: LayoutTexts.keyCornerRadius,
-                        value: $keyCornerRadius,
+                        value: $viewModel.keyCornerRadius,
                         in: radiusRange, step: radiusStep,
-                        defaultValue: Self.defaultKeyCornerRadius,
-                        onChanged: { settings.keyCornerRadius = $0 },
+                        defaultValue: AppearanceSettingsViewModel.Defaults.keyCornerRadius,
+                        onChanged: { viewModel.setKeyCornerRadius($0) },
                     )
                     sliderRow(
                         label: LayoutTexts.keyBorderWidth,
-                        value: $keyBorderWidth,
+                        value: $viewModel.keyBorderWidth,
                         in: borderWidthRange, step: borderWidthStep,
-                        defaultValue: Self.defaultKeyBorderWidth,
-                        onChanged: { settings.keyBorderWidth = $0 },
+                        defaultValue: AppearanceSettingsViewModel.Defaults.keyBorderWidth,
+                        onChanged: { viewModel.setKeyBorderWidth($0) },
                     )
                 }
 
@@ -154,22 +100,22 @@ struct AppearanceSettingsView: View {
                 Section(header: Text(LayoutTexts.candidateSection)) {
                     colorRow(
                         label: LayoutTexts.colorCandidateText,
-                        color: $candidateText,
-                        defaultColor: Self.defaultCandidateText,
+                        color: $viewModel.candidateText,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.candidateText,
                         keyPath: \.candidateTextColor,
                     )
                     colorRow(
                         label: LayoutTexts.colorCandidateBackground,
-                        color: $candidateBackground,
-                        defaultColor: Self.defaultCandidateBackground,
+                        color: $viewModel.candidateBackground,
+                        defaultColor: AppearanceSettingsViewModel.Defaults.candidateBackground,
                         keyPath: \.candidateBackgroundColor,
                     )
                     sliderRow(
                         label: LayoutTexts.candidateTextSize,
-                        value: $candidateTextSizeScale,
+                        value: $viewModel.candidateTextSizeScale,
                         in: scaleRange, step: scaleStep,
-                        defaultValue: Self.defaultCandidateTextSizeScale,
-                        onChanged: { settings.candidateTextSizeScale = $0 },
+                        defaultValue: AppearanceSettingsViewModel.Defaults.candidateTextSizeScale,
+                        onChanged: { viewModel.setCandidateTextSizeScale($0) },
                     )
                 }
 
@@ -177,7 +123,7 @@ struct AppearanceSettingsView: View {
                 Section {
                     Button(role: .destructive) {
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                        resetAllAppearance()
+                        viewModel.resetAllAppearance()
                     } label: {
                         Text(LayoutTexts.appearanceResetAll)
                     }
@@ -186,11 +132,11 @@ struct AppearanceSettingsView: View {
 
             // Keyboard preview anchored at bottom
             KeyboardPreviewPanel(
-                keyHeightScale: keyHeightScale,
-                keyFontSizeScale: keyFontSizeScale,
-                candidateTextSizeScale: candidateTextSizeScale,
-                keyCornerRadius: keyCornerRadius,
-                fontType: selectedFontType,
+                keyHeightScale: viewModel.keyHeightScale,
+                keyFontSizeScale: viewModel.keyFontSizeScale,
+                candidateTextSizeScale: viewModel.candidateTextSizeScale,
+                keyCornerRadius: viewModel.keyCornerRadius,
+                fontType: viewModel.selectedFontType,
                 colorScheme: colorScheme,
             )
         }
@@ -253,19 +199,13 @@ struct AppearanceSettingsView: View {
         HStack {
             ColorPicker(label, selection: color, supportsOpacity: false)
                 .onChange(of: color.wrappedValue) { _, newValue in
-                    var cs = settings.colorSettings
-                    cs[keyPath: keyPath] = CodableColor(newValue)
-                    settings.colorSettings = cs
-                    savedColors = cs
+                    viewModel.applyColorChange(keyPath, to: newValue)
                 }
 
-            if savedColors[keyPath: keyPath] != nil {
+            if viewModel.savedColors[keyPath: keyPath] != nil {
                 Button {
                     color.wrappedValue = defaultColor
-                    var cs = settings.colorSettings
-                    cs[keyPath: keyPath] = nil
-                    settings.colorSettings = cs
-                    savedColors = cs
+                    viewModel.resetColor(keyPath)
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                         .foregroundColor(.secondary)
@@ -273,36 +213,6 @@ struct AppearanceSettingsView: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-
-    // MARK: - Reset All
-
-    private func resetAllAppearance() {
-        // Reset font
-        selectedFontType = Self.defaultFontType
-        settings.fontType = Self.defaultFontType
-
-        // Reset sliders
-        keyHeightScale = Self.defaultKeyHeightScale
-        settings.keyHeightScale = Self.defaultKeyHeightScale
-        keyFontSizeScale = Self.defaultKeyFontSizeScale
-        settings.keyFontSizeScale = Self.defaultKeyFontSizeScale
-        candidateTextSizeScale = Self.defaultCandidateTextSizeScale
-        settings.candidateTextSizeScale = Self.defaultCandidateTextSizeScale
-        keyCornerRadius = Self.defaultKeyCornerRadius
-        settings.keyCornerRadius = Self.defaultKeyCornerRadius
-        keyBorderWidth = Self.defaultKeyBorderWidth
-        settings.keyBorderWidth = Self.defaultKeyBorderWidth
-
-        // Reset colors
-        keyboardBackground = Self.defaultKeyboardBackground
-        keyText = Self.defaultKeyText
-        normalKeyFill = Self.defaultNormalKeyFill
-        specialKeyFill = Self.defaultSpecialKeyFill
-        candidateText = Self.defaultCandidateText
-        candidateBackground = Self.defaultCandidateBackground
-        settings.colorSettings = .default
-        savedColors = .default
     }
 }
 
