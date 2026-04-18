@@ -47,8 +47,6 @@ struct CandidateView: View {
     /// 系統顏色模式（淺色/深色）
     @Environment(\.colorScheme) private var colorScheme
 
-    private let logger = DebugLogger(category: "CandidateView")
-
     /// iOS 版本兼容的候選詞列上邊距
     /// iOS 26+ 使用較大負偏移，舊版本使用較小負偏移以避免顯示問題
     private var topOffset: CGFloat {
@@ -134,7 +132,6 @@ struct CandidateView: View {
                                 .padding(.horizontal, CandidateViewModels.Spacing.small)
                                 .onChange(of: selectedCandidateIndex) { _, newIndex in
                                     if newIndex >= 0 {
-                                        logger.debug("[SCROLL] scrollTo candidate index: \(newIndex)")
                                         let animationDuration = if #available(iOS 16.0, *) { 0.25 } else { 0.15 }
                                         withAnimation(.easeInOut(duration: animationDuration)) {
                                             proxy.scrollTo("candidate_\(newIndex)", anchor: .center)
