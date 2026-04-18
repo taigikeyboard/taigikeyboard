@@ -57,15 +57,14 @@ final class AppearanceSettingsViewModel: ObservableObject {
     // MARK: - Init
 
     init() {
-        let s = SharedSettings.shared
-        keyHeightScale = s.keyHeightScale
-        keyFontSizeScale = s.keyFontSizeScale
-        candidateTextSizeScale = s.candidateTextSizeScale
-        keyCornerRadius = s.keyCornerRadius
-        keyBorderWidth = s.keyBorderWidth
-        selectedFontType = s.fontType
+        keyHeightScale = settings.keyHeightScale
+        keyFontSizeScale = settings.keyFontSizeScale
+        candidateTextSizeScale = settings.candidateTextSizeScale
+        keyCornerRadius = settings.keyCornerRadius
+        keyBorderWidth = settings.keyBorderWidth
+        selectedFontType = settings.fontType
 
-        let c = s.colorSettings
+        let c = settings.colorSettings
         keyboardBackground = c.backgroundColor?.color ?? Defaults.keyboardBackground
         keyText = c.keyTextColor?.color ?? Defaults.keyText
         normalKeyFill = c.normalKeyFillColor?.color ?? Defaults.normalKeyFill

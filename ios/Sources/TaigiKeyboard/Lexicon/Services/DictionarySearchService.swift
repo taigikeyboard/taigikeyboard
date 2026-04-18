@@ -28,6 +28,9 @@ final class DictionarySearchService: @unchecked Sendable {
         self.repository = repository
         self.customDictionaryRepository = customDictionaryRepository
         self.settingsProvider = settingsProvider
+        // Bootstrap Trie + custom dictionary via the shared lexicon service so a
+        // fresh launch straight into Dictionary has the indexes ready.
+        _ = LexiconService.shared
     }
 
     // MARK: - Public API
@@ -77,6 +80,7 @@ final class DictionarySearchService: @unchecked Sendable {
     }
 
     private func lookupCustomDictionary(query: String) -> [DictionarySearchResult] {
+        guard settingsProvider.current.isCustomDictEnabled else { return [] }
         let (prefix, isToneAware) = CustomDictionaryDerivation.searchPrefix(for: query)
         let entries = customDictionaryRepository.searchSync(
             prefix: prefix,

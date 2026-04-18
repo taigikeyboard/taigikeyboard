@@ -16,10 +16,6 @@ final class DictionarySearchViewModel: ObservableObject {
 
     init(service: DictionarySearchService = DictionarySearchService()) {
         self.service = service
-        // Eager-init Trie + custom dictionary via the shared lexicon bootstrap,
-        // so a fresh app launch that opens Dictionary before the keyboard still
-        // has the indexes ready.
-        _ = LexiconService.shared
     }
 
     /// Debounce 300ms then run the search.

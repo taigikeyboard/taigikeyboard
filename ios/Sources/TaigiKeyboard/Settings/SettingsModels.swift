@@ -39,6 +39,16 @@ enum FontType: String, CaseIterable {
         case .genYoGothic: KeyboardFonts.genYoGothicFontName
         }
     }
+
+    var displayName: String {
+        switch self {
+        case .system: LayoutTexts.fontSystemDefault
+        case .openHuninn: CommonTexts.fontOpenHuninn
+        case .iansui: CommonTexts.fontIansui
+        case .genYoMin: CommonTexts.fontGenYoMin
+        case .genYoGothic: CommonTexts.fontGenYoGothic
+        }
+    }
 }
 
 // MARK: - Keyboard Layout Type

@@ -43,7 +43,7 @@ struct SettingsTab: View {
     init() {
         let settings = SharedSettings.shared
 
-        _selectedInputMode = State(initialValue: InputMode(rawValue: settings.inputMode.rawValue) ?? InputMode.tl)
+        _selectedInputMode = State(initialValue: settings.inputMode)
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
         _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)

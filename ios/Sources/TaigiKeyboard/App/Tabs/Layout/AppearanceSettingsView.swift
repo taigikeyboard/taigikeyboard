@@ -30,7 +30,7 @@ struct AppearanceSettingsView: View {
                         HStack {
                             Text(LayoutTexts.customFont)
                             Spacer()
-                            Text(fontDisplayName(viewModel.selectedFontType))
+                            Text(viewModel.selectedFontType.displayName)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -176,18 +176,6 @@ struct AppearanceSettingsView: View {
         }
     }
 
-    // MARK: - Helpers
-
-    private func fontDisplayName(_ font: FontType) -> String {
-        switch font {
-        case .system: LayoutTexts.fontSystemDefault
-        case .openHuninn: CommonTexts.fontOpenHuninn
-        case .iansui: CommonTexts.fontIansui
-        case .genYoMin: CommonTexts.fontGenYoMin
-        case .genYoGothic: CommonTexts.fontGenYoGothic
-        }
-    }
-
     // MARK: - Color Row
 
     private func colorRow(
@@ -222,27 +210,19 @@ private struct AppearanceFontPickerView: View {
     @Binding var selectedFont: FontType
     var onChange: (FontType) -> Void
 
-    private let options: [(font: FontType, text: String)] = [
-        (.system, LayoutTexts.fontSystemDefault),
-        (.openHuninn, CommonTexts.fontOpenHuninn),
-        (.iansui, CommonTexts.fontIansui),
-        (.genYoMin, CommonTexts.fontGenYoMin),
-        (.genYoGothic, CommonTexts.fontGenYoGothic),
-    ]
-
     var body: some View {
         Form {
             Section {
-                ForEach(options, id: \.font) { option in
+                ForEach(FontType.allCases, id: \.self) { font in
                     Button {
-                        selectedFont = option.font
-                        onChange(option.font)
+                        selectedFont = font
+                        onChange(font)
                     } label: {
                         HStack {
-                            Text(option.text)
+                            Text(font.displayName)
                                 .foregroundColor(.primary)
                             Spacer()
-                            if selectedFont == option.font {
+                            if selectedFont == font {
                                 Image(systemName: "checkmark")
                                     .foregroundColor(AppStyle.accentBlue)
                             }
