@@ -23,7 +23,7 @@ struct ExpandedCandidateOverlay: View {
     @State private var isTranslateButtonPressed: Bool = false
 
     private var isLiquidGlassEnabled: Bool {
-        style.itemStyle.cornerRadius == 9 && style.backgroundColor == nil
+        style.isLiquidGlassEnabled
     }
 
     private let logger = DebugLogger(category: "ExpandedCandidateOverlay")
@@ -335,7 +335,7 @@ struct ExpandedCandidateGridCell: View {
             for: colorScheme,
             isSelected: isSelected,
             isPressed: isPressed,
-            isLiquidGlassEnabled: CandidateCellHelper.isLiquidGlassEnabled(cornerRadius: style.itemStyle.cornerRadius),
+            isLiquidGlassEnabled: style.isLiquidGlassEnabled,
         )
     }
 

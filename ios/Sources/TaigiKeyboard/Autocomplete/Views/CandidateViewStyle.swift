@@ -105,21 +105,6 @@ extension CandidateView.ItemStyle {
     }
 }
 
-extension EnvironmentValues {
-    // 候選詞視圖樣式
-    @Entry var candidateViewStyle: CandidateView.Style = .standard
-}
-
-extension View {
-    /// 套用候選詞視圖樣式
-    ///
-    /// - Parameter style: 要套用的樣式
-    /// - Returns: 套用樣式後的視圖
-    func candidateViewStyle(_ style: CandidateView.Style) -> some View {
-        environment(\.candidateViewStyle, style)
-    }
-}
-
 // MARK: - 樣式工具
 
 extension CandidateView.Style {
@@ -133,6 +118,24 @@ extension CandidateView.Style {
         } else {
             .standard
         }
+    }
+
+    /// 是否啟用 iOS 26 Liquid Glass 模式
+    ///
+    /// 以 `itemStyle.cornerRadius == 9 && backgroundColor == nil` 作為單一判斷來源，
+    /// 供 `CandidateView` / `ExpandedCandidateOverlay` / `CandidateButtonView` 共用，
+    /// 避免同一規則散落各處。
+    var isLiquidGlassEnabled: Bool {
+        itemStyle.cornerRadius == 9 && backgroundColor == nil
+    }
+
+    /// 解析候選詞列的背景色（支援 iOS 26 Liquid Glass 透明效果）
+    func resolvedBarBackground(for colorScheme: ColorScheme) -> Color {
+        if isLiquidGlassEnabled {
+            // iOS 26 Liquid Glass：使用極低透明度保持觸控功能，同時讓系統 Liquid Glass 透出
+            return Color.white.opacity(0.001)
+        }
+        return backgroundColor ?? Color.keyboardBackground(for: colorScheme)
     }
 }
 
