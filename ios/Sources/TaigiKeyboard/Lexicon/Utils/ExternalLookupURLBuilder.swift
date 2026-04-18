@@ -57,23 +57,16 @@ enum ExternalLookupURLBuilder {
             return withNasalConverted
         }
 
-        let withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
-
-        var toneNumber = ""
-        var withoutTone = ""
-
-        for scalar in withOoConverted.unicodeScalars {
-            if let tone = TaigiPhonetics.combiningToToneNum[scalar] {
-                toneNumber = tone
-            } else {
-                withoutTone.append(String(scalar))
-            }
-        }
+        // Diacritic path: apply Taigi preprocessing (nasal / o͘ normalization)
+        // then reuse the shared tone-stripping helper so all call sites share
+        // one implementation.
+        let preprocessed = TaigiUnicode.nfdPreprocessed(syllable)
+        let (bare, tone) = TaigiPhonetics.stripToneMark(preprocessed)
 
         // Tone 1 (open) and 4 (checked) are omitted in external dictionary URLs.
-        if toneNumber.isEmpty || toneNumber == "1" || toneNumber == "4" {
-            return withoutTone
+        if tone.isEmpty || tone == "1" || tone == "4" {
+            return bare
         }
-        return withoutTone + toneNumber
+        return bare + tone
     }
 }
