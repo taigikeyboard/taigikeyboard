@@ -18,10 +18,11 @@ extension ActionHandler {
             return false
         }
 
-        // Unified case transformation
+        // Unified case transformation.
+        // Adapter: KK's Keyboard.KeyboardCase → engine's LetterCase.
         let processedChar = CaseTransformer.transformForInput(
             char,
-            keyboardCase: currentCase,
+            letterCase: currentCase.asLetterCase,
             isAutoCapitalizationEnabled: autoCap,
             inputMode: settings.inputMode,
         )
@@ -213,9 +214,10 @@ extension ActionHandler {
                 composingManager.commitRawInput()
                 nextWordController.process(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
             } else {
-                // Non-zero index: confirm selected candidate
-                let suggestions = keyboardController?.state.autocompleteContext.suggestions ?? []
-                _ = composingManager.confirmSelectedCandidate(availableSuggestions: suggestions)
+                // Non-zero index: confirm selected candidate.
+                // Strip KK type at the boundary; ComposingManager is engine-pure.
+                let texts = (keyboardController?.state.autocompleteContext.suggestions ?? []).map(\.text)
+                _ = composingManager.confirmSelectedCandidate(availableTexts: texts)
             }
 
             // Romanization mode: auto-space (unless trailing hyphen)

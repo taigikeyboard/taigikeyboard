@@ -13,9 +13,14 @@ final class AutocompleteInputClassifierTests: XCTestCase {
         XCTAssertEqual(AutocompleteInputClassifier.determineInputType("guá"), .romanWithTone)
     }
 
-    func testDetermineInputType_romanWithNumericTone() {
-        XCTAssertEqual(AutocompleteInputClassifier.determineInputType("gua2"), .romanWithTone)
-        XCTAssertEqual(AutocompleteInputClassifier.determineInputType("tsiah8"), .romanWithTone)
+    func testDetermineInputType_numericToneDigits() {
+        for tone in ["2", "3", "5", "6", "7", "8", "9"] {
+            XCTAssertEqual(
+                AutocompleteInputClassifier.determineInputType("gua\(tone)"),
+                .romanWithTone,
+                "tone digit \(tone) should classify as romanWithTone",
+            )
+        }
     }
 
     func testDetermineInputType_tone1And4AreNotTone() {
@@ -24,29 +29,16 @@ final class AutocompleteInputClassifierTests: XCTestCase {
         XCTAssertEqual(AutocompleteInputClassifier.determineInputType("peh4"), .romanWithoutTone)
     }
 
+    func testDetermineInputType_tone0IsNotTone() {
+        XCTAssertEqual(AutocompleteInputClassifier.determineInputType("foo0"), .romanWithoutTone)
+    }
+
     func testDetermineInputType_romanWithoutTone() {
         XCTAssertEqual(AutocompleteInputClassifier.determineInputType("gua"), .romanWithoutTone)
     }
 
-    // MARK: - containsNumericTone
-
-    func testContainsNumericTone_includesToneDigits() {
-        for tone in ["2", "3", "5", "6", "7", "8", "9"] {
-            XCTAssertTrue(
-                AutocompleteInputClassifier.containsNumericTone("gua\(tone)"),
-                "tone digit \(tone) should count as numeric tone",
-            )
-        }
-    }
-
-    func testContainsNumericTone_excludesTone1And4AndZero() {
-        XCTAssertFalse(AutocompleteInputClassifier.containsNumericTone("soo1"))
-        XCTAssertFalse(AutocompleteInputClassifier.containsNumericTone("peh4"))
-        XCTAssertFalse(AutocompleteInputClassifier.containsNumericTone("foo0"))
-    }
-
-    func testContainsNumericTone_empty() {
-        XCTAssertFalse(AutocompleteInputClassifier.containsNumericTone(""))
+    func testDetermineInputType_emptyString() {
+        XCTAssertEqual(AutocompleteInputClassifier.determineInputType(""), .romanWithoutTone)
     }
 
     // MARK: - buildSearchKey

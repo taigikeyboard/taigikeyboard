@@ -1,5 +1,4 @@
 import Foundation
-import KeyboardKit
 
 /// Provides composing state for autocomplete without coupling to ComposingManager.
 protocol ComposingStateProvider: AnyObject {
@@ -13,8 +12,11 @@ protocol SelectionContextProvider: AnyObject {
     var lastSelectedWord: String? { get }
 }
 
-/// Abstracts autocomplete context updates so NextWordController doesn't depend on KeyboardKit's controller hierarchy.
+/// Abstracts autocomplete context updates so NextWordController doesn't depend
+/// on KeyboardKit's controller hierarchy. The conforming adapter (`ActionHandler`)
+/// translates engine-layer `EnginePrediction` values into KeyboardKit
+/// `Autocomplete.Suggestion`s at the boundary.
 protocol AutocompleteContextUpdater: AnyObject {
-    func setNextWordSuggestions(_ suggestions: [Autocomplete.Suggestion])
+    func setNextWordPredictions(_ predictions: [EnginePrediction])
     func resetNextWordSuggestions()
 }

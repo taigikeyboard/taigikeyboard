@@ -1,6 +1,14 @@
+import Combine
 import Foundation
-import KeyboardKit
-import SwiftUI
+
+/// A minimal write-only view of the composing-context state that the
+/// keyboard extension needs updated when composing starts/stops. The
+/// KeyboardKit `KeyboardContext` conforms to this (see
+/// `KeyboardContext+Composing`), so ComposingManager stays
+/// Foundation-only.
+protocol ComposingContextSink: AnyObject {
+    var isComposingText: Bool { get set }
+}
 
 /// Manages Taigi input composing state with `rawInput` as the single source of truth.
 ///
@@ -25,24 +33,27 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     @Published public private(set) var isComposing: Bool = false
     @Published public private(set) var composingText: String = ""
     @Published public private(set) var rawInput: String = ""
-    @Published public var suggestions: [Autocomplete.Suggestion] = []
     @Published public var selectedCandidateIndex: Int = 0
 
     // MARK: - Collaborators
 
-    private weak var keyboardContext: KeyboardContext?
+    private weak var contextSink: ComposingContextSink?
     weak var delegate: (any ComposingDelegate)?
 
+    private let settingsProvider: EngineSettingsProvider
+
     private var inputMode: InputMode {
-        SharedSettings.shared.inputMode
+        settingsProvider.current.inputMode
     }
 
     // MARK: - Init
 
-    public init() {}
+    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+        self.settingsProvider = settingsProvider
+    }
 
-    public func setKeyboardContext(_ context: KeyboardContext) {
-        keyboardContext = context
+    func setContextSink(_ sink: ComposingContextSink) {
+        contextSink = sink
     }
 
     // MARK: - Composing Operations
@@ -105,7 +116,11 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         commit(text: rawInput)
     }
 
-    public func selectSuggestion(_ suggestion: Autocomplete.Suggestion) {
+    /// Commit the given candidate text and leave composing state.
+    ///
+    /// Takes a raw `String` rather than `Autocomplete.Suggestion` so this
+    /// file stays engine-pure. The KK adapter side passes `suggestion.text`.
+    public func selectSuggestion(text: String) {
         guard isComposing else { return }
 
         // Ordering contract with the text document proxy:
@@ -115,7 +130,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         // re-trigger `clearMarkedText` after `insertText`, which duplicates work
         // and resets autocomplete in the wrong order.
         delegate?.clearMarkedText()
-        delegate?.insertText(suggestion.text)
+        delegate?.insertText(text)
 
         state = .idle
         syncStateToProperties()
@@ -124,13 +139,16 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         delegate?.resetAutocompleteContext()
     }
 
-    public func confirmSelectedCandidate(availableSuggestions: [Autocomplete.Suggestion]) -> Bool {
+    /// Commit the currently-selected candidate, given only the visible
+    /// candidate text strings. KK-side callers pass
+    /// `suggestions.map(\.text)` at the boundary.
+    public func confirmSelectedCandidate(availableTexts: [String]) -> Bool {
         guard isComposing,
               selectedCandidateIndex >= 0,
-              selectedCandidateIndex < availableSuggestions.count
+              selectedCandidateIndex < availableTexts.count
         else { return false }
 
-        selectSuggestion(availableSuggestions[selectedCandidateIndex])
+        selectSuggestion(text: availableTexts[selectedCandidateIndex])
         return true
     }
 
@@ -154,7 +172,6 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
 
     private func clearSelectionAndSuggestions() {
         selectedCandidateIndex = -1
-        suggestions = []
     }
 
     /// Derive display text from raw input.
@@ -184,7 +201,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             delegate?.setMarkedText(display)
         }
 
-        keyboardContext?.isComposingText = isComposing
+        contextSink?.isComposingText = isComposing
     }
 
     /// Unified state transition. The enum didSet triggers `syncStateToProperties()`,

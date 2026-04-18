@@ -180,57 +180,6 @@ final class CustomDictionaryService: @unchecked Sendable {
         }
         return field
     }
-
-    // MARK: - Notone / Abbrev Generation
-
-    /// Generate toneless form from romanization.
-    /// Strips tone diacritics (via NFD), trailing digits, hyphens, and spaces.
-    static func generateNotone(_ roman: String) -> String {
-        // Convert POJ nasal markers ⁿ (U+207F) / ᴺ (U+1D3A) → nn
-        let withNasalConverted = roman.lowercased()
-            .replacingOccurrences(of: "\u{207F}", with: "nn")
-            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
-        let decomposed = withNasalConverted.decomposedStringWithCanonicalMapping
-        var result = ""
-        for scalar in decomposed.unicodeScalars {
-            // Skip combining marks (Unicode category Mn)
-            if scalar.properties.generalCategory == .nonspacingMark { continue }
-            // Skip digits
-            if scalar.value >= 0x30 && scalar.value <= 0x39 { continue }
-            // Skip hyphens and spaces
-            if scalar == "-" || scalar == " " { continue }
-            result.unicodeScalars.append(scalar)
-        }
-        return result.precomposedStringWithCanonicalMapping
-    }
-
-    /// Generate abbreviation from romanization.
-    /// Takes first letter of each syllable (split by - or space), removes diacritics.
-    /// Returns empty string if fewer than 2 syllables.
-    static func generateAbbrev(_ roman: String) -> String {
-        let syllables = roman.lowercased()
-            .components(separatedBy: CharacterSet(charactersIn: "- "))
-            .filter { !$0.isEmpty }
-        guard syllables.count >= 2 else { return "" }
-        return syllables.map { syllable in
-            let first = String(syllable.prefix(1))
-            let decomposed = first.decomposedStringWithCanonicalMapping
-            var bare = ""
-            for scalar in decomposed.unicodeScalars {
-                if scalar.properties.generalCategory != .nonspacingMark {
-                    bare.unicodeScalars.append(scalar)
-                }
-            }
-            return bare.precomposedStringWithCanonicalMapping
-        }.joined()
-    }
-
-    /// Generate numeric-toned form from romanization (for tone-aware search).
-    /// Converts diacritics to tone digits and strips hyphens.
-    /// Example: "gâu-tsá" → "gau5tsa2"
-    static func generateRomanNum(_ roman: String) -> String {
-        InputNormalizer.normalize(roman, mode: .tl)
-    }
 }
 
 // MARK: - Custom Dictionary Errors
@@ -246,11 +195,11 @@ enum CustomDictionaryError: LocalizedError {
         case .invalidCSVData:
             "Invalid CSV data"
         case .invalidCSVFormat:
-            Tab3Texts.invalidCSVFormat
+            DictionaryTexts.invalidCSVFormat
         case .fileTooLarge:
-            Tab3Texts.fileTooLarge
+            DictionaryTexts.fileTooLarge
         case .tooManyEntries:
-            Tab3Texts.tooManyEntries
+            DictionaryTexts.tooManyEntries
         }
     }
 }

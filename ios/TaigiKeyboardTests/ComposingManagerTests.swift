@@ -1,11 +1,10 @@
-import KeyboardKit
 @testable import TaigiKeyboard
 import XCTest
 
 /// Tests for ComposingManager: published state transitions + ComposingDelegate call order.
 ///
 /// Focus:
-/// - State contract (isComposing / rawInput / selectedCandidateIndex / suggestions)
+/// - State contract (isComposing / rawInput / selectedCandidateIndex)
 /// - Delegate call ORDER — this is the behavioral contract with KeyboardViewController
 /// - Idle ↔ composing transitions
 ///
@@ -80,7 +79,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
-        XCTAssertTrue(manager.suggestions.isEmpty)
         XCTAssertEqual(manager.selectedCandidateIndex, 0)
         XCTAssertEqual(spy.events, [])
     }
@@ -195,7 +193,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        XCTAssertTrue(manager.suggestions.isEmpty)
 
         // Contract ordering: idle transition (clearMarkedText + resetAutocomplete)
         // must happen BEFORE delegate?.deleteBackward() — the markedText must be
@@ -220,9 +217,6 @@ final class ComposingManagerTests: XCTestCase {
         manager.startComposing(with: "a")
         let committedText = manager.composingText
         manager.selectedCandidateIndex = 2
-        manager.suggestions = [
-            Autocomplete.Suggestion(text: "x"),
-        ]
         spy.events.removeAll()
 
         manager.commitComposition()
@@ -230,7 +224,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        XCTAssertTrue(manager.suggestions.isEmpty)
 
         // Contract ordering: state → idle (clearMarkedText + resetAutocomplete)
         // → insertText → resetAutocompleteContext
@@ -257,7 +250,6 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        XCTAssertTrue(manager.suggestions.isEmpty)
 
         XCTAssertEqual(spy.events, [
             .clearMarkedText,
@@ -278,13 +270,11 @@ final class ComposingManagerTests: XCTestCase {
         manager.startComposing(with: "a")
         spy.events.removeAll()
 
-        let suggestion = Autocomplete.Suggestion(text: "picked")
-        manager.selectSuggestion(suggestion)
+        manager.selectSuggestion(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        XCTAssertTrue(manager.suggestions.isEmpty)
 
         // Contract ordering: clearMarkedText → insertText → resetAutocomplete →
         // resetAutocompleteContext. NOTE: this ordering differs from commitComposition
@@ -300,8 +290,7 @@ final class ComposingManagerTests: XCTestCase {
     }
 
     func testSelectSuggestion_whenIdle_isNoop() {
-        let suggestion = Autocomplete.Suggestion(text: "picked")
-        manager.selectSuggestion(suggestion)
+        manager.selectSuggestion(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(spy.events, [])
@@ -314,11 +303,7 @@ final class ComposingManagerTests: XCTestCase {
         manager.selectedCandidateIndex = 1
         spy.events.removeAll()
 
-        let suggestions = [
-            Autocomplete.Suggestion(text: "zero"),
-            Autocomplete.Suggestion(text: "one"),
-        ]
-        let confirmed = manager.confirmSelectedCandidate(availableSuggestions: suggestions)
+        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["zero", "one"])
 
         XCTAssertTrue(confirmed)
         XCTAssertFalse(manager.isComposing)
@@ -331,8 +316,7 @@ final class ComposingManagerTests: XCTestCase {
         manager.selectedCandidateIndex = 5
         spy.events.removeAll()
 
-        let suggestions = [Autocomplete.Suggestion(text: "only")]
-        let confirmed = manager.confirmSelectedCandidate(availableSuggestions: suggestions)
+        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
 
         XCTAssertFalse(confirmed)
         XCTAssertTrue(manager.isComposing)
@@ -344,16 +328,14 @@ final class ComposingManagerTests: XCTestCase {
         manager.selectedCandidateIndex = -1
         spy.events.removeAll()
 
-        let suggestions = [Autocomplete.Suggestion(text: "only")]
-        let confirmed = manager.confirmSelectedCandidate(availableSuggestions: suggestions)
+        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
 
         XCTAssertFalse(confirmed)
         XCTAssertEqual(spy.events, [])
     }
 
     func testConfirmSelectedCandidate_whenIdle_returnsFalse() {
-        let suggestions = [Autocomplete.Suggestion(text: "only")]
-        let confirmed = manager.confirmSelectedCandidate(availableSuggestions: suggestions)
+        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
 
         XCTAssertFalse(confirmed)
         XCTAssertEqual(spy.events, [])
@@ -364,7 +346,6 @@ final class ComposingManagerTests: XCTestCase {
     func testReset_whenComposing_returnsToIdleWithoutInserting() {
         manager.startComposing(with: "abc")
         manager.selectedCandidateIndex = 2
-        manager.suggestions = [Autocomplete.Suggestion(text: "x")]
         spy.events.removeAll()
 
         manager.reset()
@@ -373,7 +354,6 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        XCTAssertTrue(manager.suggestions.isEmpty)
 
         // No text should have been inserted or deleted
         XCTAssertFalse(spy.events.contains { event in

@@ -4,6 +4,9 @@ import Foundation
 ///
 /// The ordering of `allCases` is authoritative for the bitmask layout used by
 /// `DictionaryBinaryReader` — do not reorder without updating the binary format.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum DictionarySource: String, CaseIterable {
     case kautian // 教育部臺灣台語常用詞辭典
     case taigitv // 台語新詞辭庫

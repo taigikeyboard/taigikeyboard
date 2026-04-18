@@ -3,7 +3,6 @@
 // ActionHandler dispatches keyboard actions, NextWordController manages word prediction.
 
 import Foundation
-import KeyboardKit
 
 /// Controls NextWord prediction lifecycle: record associations, update state, trigger predictions.
 ///
@@ -20,8 +19,17 @@ final class NextWordController: SelectionContextProvider {
 
     // MARK: - Dependencies
 
-    private let settings = SharedSettings.shared
+    private let settingsProvider: EngineSettingsProvider
+    private let nextWordService: NextWordService
     weak var contextUpdater: AutocompleteContextUpdater?
+
+    init(
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
+        nextWordService: NextWordService = .shared,
+    ) {
+        self.settingsProvider = settingsProvider
+        self.nextWordService = nextWordService
+    }
 
     // MARK: - State
 
@@ -52,7 +60,7 @@ final class NextWordController: SelectionContextProvider {
     /// - `triggerPrediction`: when false, only record + update state (Space path)
     func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
         if requireRomanMode {
-            guard !settings.isTranslateSwapped else { return }
+            guard !settingsProvider.current.isTranslateSwapped else { return }
         }
 
         guard !text.isEmpty, !isNoiseText(text) else {
@@ -67,10 +75,10 @@ final class NextWordController: SelectionContextProvider {
         let textTl = RomanizationConverter.pojToTL(roman)
         let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        if settings.isAssociationRecordingEnabled {
+        if settingsProvider.current.isAssociationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-                Task {
-                    await NextWordService.shared.recordAssociation(
+                Task { [nextWordService] in
+                    await nextWordService.recordAssociation(
                         prev: prevWord,
                         prevTl: prevTl,
                         nextHanzi: text,
@@ -166,8 +174,8 @@ final class NextWordController: SelectionContextProvider {
     private func triggerPrediction(for word: String, roman: String = "") {
         logger.debug("[TRIGGER] querying for word='\(word)'")
 
-        Task { @MainActor in
-            let predictions = await NextWordService.shared.predict(word: word, roman: roman)
+        Task { @MainActor [nextWordService] in
+            let predictions = await nextWordService.predict(word: word, roman: roman)
             logger.debug("[TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
 
             if predictions.isEmpty {
@@ -176,23 +184,26 @@ final class NextWordController: SelectionContextProvider {
                 return
             }
 
-            let suggestions = makeSuggestions(from: predictions)
-            logger.debug("[TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
+            let enginePredictions = makePredictions(from: predictions)
+            logger.debug("[TRIGGER] after filter: predictions.count=\(enginePredictions.count) (from \(predictions.count) predictions)")
 
-            if suggestions.isEmpty {
+            if enginePredictions.isEmpty {
                 isShowing = false
                 contextUpdater?.resetNextWordSuggestions()
             } else {
-                contextUpdater?.setNextWordSuggestions(suggestions)
+                contextUpdater?.setNextWordPredictions(enginePredictions)
                 isShowing = true
                 startContextTimeoutTimer()
             }
         }
     }
 
-    /// Convert NextWord predictions to autocomplete suggestions, filtering empty TL in romanization mode
-    private func makeSuggestions(from predictions: [NextWordService.Prediction]) -> [Autocomplete.Suggestion] {
-        predictions.compactMap { prediction in
+    /// Convert NextWord raw predictions to engine-layer `EnginePrediction`
+    /// values. The KK boundary (`ActionHandler`) is the only place that
+    /// turns these into `Autocomplete.Suggestion`s.
+    private func makePredictions(from predictions: [NextWordService.Prediction]) -> [EnginePrediction] {
+        let settings = settingsProvider.current
+        return predictions.compactMap { prediction in
             if !settings.isTranslateSwapped && prediction.tl.isEmpty {
                 logger.debug("[FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
                 return nil
@@ -204,16 +215,11 @@ final class NextWordController: SelectionContextProvider {
             let text = roman.isEmpty ? prediction.hanzi : roman
             let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
 
-            return Autocomplete.Suggestion(
+            return EnginePrediction(
                 text: text,
-                title: text,
                 subtitle: subtitle,
-                additionalInfo: [
-                    "isNextWord": "true",
-                    "hanzi": prediction.hanzi,
-                    "tl": prediction.tl,
-                    "displayText": prediction.hanzi,
-                ],
+                hanzi: prediction.hanzi,
+                tl: prediction.tl,
             )
         }
     }
@@ -252,14 +258,14 @@ final class NextWordController: SelectionContextProvider {
 
         guard parts.count > 1 else { return }
 
-        Task {
+        Task { [nextWordService] in
             for i in 0 ..< (parts.count - 1) {
                 let prevPart = parts[i]
                 let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
                 let nextPart = parts[i + 1]
                 let nextRoman = romanParts.indices.contains(i + 1) ? romanParts[i + 1] : ""
 
-                await NextWordService.shared.recordAssociation(
+                await nextWordService.recordAssociation(
                     prev: prevPart,
                     prevTl: prevPartRoman,
                     nextHanzi: nextPart,

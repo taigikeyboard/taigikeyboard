@@ -20,10 +20,10 @@ enum TabType: Int, CaseIterable, Hashable {
     /// Localized tab title.
     var title: String {
         switch self {
-        case .home: Tab1Texts.tabTitle
-        case .layout: Tab2Texts.tabBarTitle
-        case .dictionary: Tab3Texts.tabBarTitle
-        case .settings: Tab4Texts.tabBarTitle
+        case .home: HomeTexts.tabTitle
+        case .layout: LayoutTexts.tabBarTitle
+        case .dictionary: DictionaryTexts.tabBarTitle
+        case .settings: SettingsTexts.tabBarTitle
         }
     }
 }

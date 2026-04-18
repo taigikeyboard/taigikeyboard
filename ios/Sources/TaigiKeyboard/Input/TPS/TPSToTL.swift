@@ -4,6 +4,9 @@ import Foundation
 ///
 /// Used by Trie search: the dictionary stores romanization with numeric tones,
 /// so TPS input must be normalized to TL (e.g. "ㄉㄧㄠˊ" → "tiau5") before lookup.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TPSToTL {
     /// Convert a TPS string to TL.
     ///

@@ -127,13 +127,6 @@ enum CandidateCellHelper {
         return max(minimumCellWidth, max(textWidth, subtitleWidth) + cellHorizontalPadding)
     }
 
-    // MARK: - 樣式判斷
-
-    /// 判斷是否啟用 Liquid Glass 效果
-    static func isLiquidGlassEnabled(cornerRadius: CGFloat?) -> Bool {
-        cornerRadius == 9
-    }
-
     // MARK: - Private
 
     /// TPS fallback：把羅馬字轉為方音符號顯示。

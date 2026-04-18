@@ -8,6 +8,9 @@ import Foundation
 /// when `replaceLast` is non-nil — no hidden mutations happen inside the pipeline.
 ///
 /// Non-TPS input modes pass through unchanged.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum CharacterInputPipeline {
     /// Result of TPS key-level adjustment.
     struct Adjustment {

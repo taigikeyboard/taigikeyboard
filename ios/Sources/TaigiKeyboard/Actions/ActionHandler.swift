@@ -158,7 +158,23 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 // MARK: - AutocompleteContextUpdater
 
 extension ActionHandler: AutocompleteContextUpdater {
-    func setNextWordSuggestions(_ suggestions: [Autocomplete.Suggestion]) {
+    /// Engine-side predictions arrive here and are mapped to KeyboardKit
+    /// `Autocomplete.Suggestion` values. This is the only place the
+    /// engine's `EnginePrediction` touches KeyboardKit types.
+    func setNextWordPredictions(_ predictions: [EnginePrediction]) {
+        let suggestions = predictions.map { prediction in
+            Autocomplete.Suggestion(
+                text: prediction.text,
+                title: prediction.text,
+                subtitle: prediction.subtitle,
+                additionalInfo: [
+                    "isNextWord": "true",
+                    "hanzi": prediction.hanzi,
+                    "tl": prediction.tl,
+                    "displayText": prediction.hanzi,
+                ],
+            )
+        }
         keyboardController?.state.autocompleteContext.suggestionsFromService = suggestions
     }
 

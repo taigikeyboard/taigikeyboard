@@ -1,19 +1,17 @@
-import KeyboardKit
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// CaseTransformer 測試
 final class CaseTransformerTests: XCTestCase {
-
     // MARK: - transformForInput Tests
 
     /// 測試大寫狀態下的一般字母轉換
     func testTransformForInput_uppercased_normalLetter() {
         let result = CaseTransformer.transformForInput(
             "a",
-            keyboardCase: .uppercased,
+            letterCase: .uppercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "A")
     }
@@ -22,9 +20,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_lowercased_normalLetter() {
         let result = CaseTransformer.transformForInput(
             "A",
-            keyboardCase: .lowercased,
+            letterCase: .lowercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "a")
     }
@@ -33,9 +31,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_capsLocked_normalLetter() {
         let result = CaseTransformer.transformForInput(
             "a",
-            keyboardCase: .capsLocked,
+            letterCase: .capsLocked,
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "A")
     }
@@ -44,9 +42,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_uppercased_toneLetter_POJ() {
         let result = CaseTransformer.transformForInput(
             "á",
-            keyboardCase: .uppercased,
+            letterCase: .uppercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "Á")
     }
@@ -55,9 +53,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_lowercased_toneLetter_POJ() {
         let result = CaseTransformer.transformForInput(
             "Á",
-            keyboardCase: .lowercased,
+            letterCase: .lowercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "á")
     }
@@ -66,9 +64,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_uppercased_toneLetter_TL() {
         let result = CaseTransformer.transformForInput(
             "ê",
-            keyboardCase: .uppercased,
+            letterCase: .uppercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .tl
+            inputMode: .tl,
         )
         XCTAssertEqual(result, "Ê")
     }
@@ -77,9 +75,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_lowercased_toneLetter_TL() {
         let result = CaseTransformer.transformForInput(
             "Ê",
-            keyboardCase: .lowercased,
+            letterCase: .lowercased,
             isAutoCapitalizationEnabled: true,
-            inputMode: .tl
+            inputMode: .tl,
         )
         XCTAssertEqual(result, "ê")
     }
@@ -90,9 +88,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_autoCapOff_lowercased() {
         let result = CaseTransformer.transformForInput(
             "a",
-            keyboardCase: .lowercased,
+            letterCase: .lowercased,
             isAutoCapitalizationEnabled: false,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "a")
     }
@@ -101,9 +99,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_autoCapOff_manualShift() {
         let result = CaseTransformer.transformForInput(
             "a",
-            keyboardCase: .uppercased,
+            letterCase: .uppercased,
             isAutoCapitalizationEnabled: false,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "A")
     }
@@ -112,9 +110,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_autoCapOff_capsLock() {
         let result = CaseTransformer.transformForInput(
             "a",
-            keyboardCase: .capsLocked,
+            letterCase: .capsLocked,
             isAutoCapitalizationEnabled: false,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "A")
     }
@@ -123,9 +121,9 @@ final class CaseTransformerTests: XCTestCase {
     func testTransformForInput_autoCapOff_manualShift_toneLetter() {
         let result = CaseTransformer.transformForInput(
             "ô",
-            keyboardCase: .uppercased,
+            letterCase: .uppercased,
             isAutoCapitalizationEnabled: false,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "Ô")
     }
@@ -138,7 +136,7 @@ final class CaseTransformerTests: XCTestCase {
             "tâi-gí",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "Tâi-gí")
     }
@@ -149,7 +147,7 @@ final class CaseTransformerTests: XCTestCase {
             "tâi-gí",
             basedOn: "tai",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "tâi-gí")
     }
@@ -160,7 +158,7 @@ final class CaseTransformerTests: XCTestCase {
             "tâi-gí",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: false,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "tâi-gí")
     }
@@ -171,7 +169,7 @@ final class CaseTransformerTests: XCTestCase {
             "tâi-gí",
             basedOn: "",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "tâi-gí")
     }
@@ -182,7 +180,7 @@ final class CaseTransformerTests: XCTestCase {
             "",
             basedOn: "Tai",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "")
     }
@@ -193,7 +191,7 @@ final class CaseTransformerTests: XCTestCase {
             "ô-pêh-sai",
             basedOn: "O",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "Ô-pêh-sai")
     }
@@ -204,7 +202,7 @@ final class CaseTransformerTests: XCTestCase {
             "123abc",
             basedOn: "A",
             isAutoCapitalizationEnabled: true,
-            inputMode: .poj
+            inputMode: .poj,
         )
         XCTAssertEqual(result, "123abc")
     }
@@ -233,9 +231,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .uppercased,
+                letterCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .poj
+                inputMode: .poj,
             )
             XCTAssertEqual(result, expected, "POJ uppercase: \(input) should be \(expected), got \(result)")
         }
@@ -263,9 +261,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .lowercased,
+                letterCase: .lowercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .poj
+                inputMode: .poj,
             )
             XCTAssertEqual(result, expected, "POJ lowercase: \(input) should be \(expected), got \(result)")
         }
@@ -285,9 +283,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .uppercased,
+                letterCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .tl
+                inputMode: .tl,
             )
             XCTAssertEqual(result, expected, "TL uppercase: \(input) should be \(expected), got \(result)")
         }
@@ -305,9 +303,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .lowercased,
+                letterCase: .lowercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .tl
+                inputMode: .tl,
             )
             XCTAssertEqual(result, expected, "TL lowercase: \(input) should be \(expected), got \(result)")
         }
@@ -324,9 +322,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .uppercased,
+                letterCase: .uppercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .poj
+                inputMode: .poj,
             )
             XCTAssertEqual(result, expected, "POJ o͘ uppercase: \(input) should be \(expected), got \(result)")
         }
@@ -341,9 +339,9 @@ final class CaseTransformerTests: XCTestCase {
         for (input, expected) in testCases {
             let result = CaseTransformer.transformForInput(
                 input,
-                keyboardCase: .lowercased,
+                letterCase: .lowercased,
                 isAutoCapitalizationEnabled: true,
-                inputMode: .poj
+                inputMode: .poj,
             )
             XCTAssertEqual(result, expected, "POJ o͘ lowercase: \(input) should be \(expected), got \(result)")
         }

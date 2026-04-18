@@ -9,6 +9,9 @@ import Foundation
 /// - `TPSInputAdjuster` — key-level auto-adjust (positional, palatalization, syllabic nasal)
 ///
 /// TODO: migrate `TPSConverterTests` to the new modules and delete this file.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum TPSConverter {
     // MARK: - Detection (→ TPSTables)
 

@@ -74,40 +74,40 @@ struct SettingsSelectionOverlay: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
-                    settingsToggle(Tab4Texts.isOutputBothScripts, isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
+                    settingsToggle(SettingsTexts.isOutputBothScripts, isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
                         SharedSettings.shared.isOutputBothScripts = $0
                     }
-                    settingsToggle(Tab4Texts.autoCapitalization, isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
+                    settingsToggle(SettingsTexts.autoCapitalization, isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
                     }
-                    settingsToggle(Tab4Texts.autoSpace, isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
+                    settingsToggle(SettingsTexts.autoSpace, isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
                     }
-                    settingsToggle(Tab4Texts.toolbarAutoCollapse, isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
+                    settingsToggle(SettingsTexts.toolbarAutoCollapse, isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
                         SharedSettings.shared.isToolbarAutoCollapse = $0
                     }
-                    settingsToggle(Tab4Texts.globeKey, isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
+                    settingsToggle(SettingsTexts.globeKey, isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
                     // Feedback settings
-                    settingsToggle(Tab4Texts.soundFeedback, isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
+                    settingsToggle(SettingsTexts.soundFeedback, isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
                     }
-                    settingsToggle(Tab4Texts.vibrationFeedback, isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
+                    settingsToggle(SettingsTexts.vibrationFeedback, isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
                     // POJ settings
-                    settingsToggle(Tab4Texts.doubleTapOO, isOn: $isDoubleTapOOEnabled) {
+                    settingsToggle(SettingsTexts.doubleTapOO, isOn: $isDoubleTapOOEnabled) {
                         SharedSettings.shared.isDoubleTapOOEnabled = $0
                     }
-                    settingsToggle(Tab4Texts.doubleTapNN, isOn: $isDoubleTapNNEnabled) {
+                    settingsToggle(SettingsTexts.doubleTapNN, isOn: $isDoubleTapNNEnabled) {
                         SharedSettings.shared.isDoubleTapNNEnabled = $0
                     }
 
                     // TPS settings
-                    settingsToggle(Tab4Texts.isTpsOrMappedToER, isOn: $isTpsOrMappedToER) {
+                    settingsToggle(SettingsTexts.isTpsOrMappedToER, isOn: $isTpsOrMappedToER) {
                         SharedSettings.shared.isTpsOrMappedToER = $0
                     }
 
@@ -171,7 +171,7 @@ struct SettingsSelectionOverlay: View {
             onOpenApp()
             onDismiss()
         }) {
-            Text(Tab4Texts.openApp)
+            Text(SettingsTexts.openApp)
                 .font(KeyboardFonts.globalFont(size: 15))
                 .foregroundColor(.accentColor)
                 .frame(maxWidth: .infinity)

@@ -44,7 +44,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - 核心屬性
 
     private let lexiconService = LexiconService.shared
-    private let settings = SharedSettings.shared
+    private let settingsProvider: EngineSettingsProvider = SharedSettings.shared
 
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
@@ -107,7 +107,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         try await lexiconService.search(
             for: classification.searchKey,
             inputType: classification.inputType,
-            inputMode: settings.inputMode,
+            inputMode: settingsProvider.current.inputMode,
             rawInput: rawInput,
         )
     }
@@ -165,84 +165,5 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                 additionalInfo: ["displayText": word.displayText],
             )
         }
-    }
-}
-
-// MARK: - Pure-logic phase types
-
-//
-// 下列型別皆為純函式，不依賴 KeyboardKit / service state，可獨立單元測試，
-// 命名與 Android `TaigiAutocompleteService` 對應（determineInputType / applyContextBoost）
-// 以便後續抽取共用核心。
-
-/// 依 rawInput 判斷輸入型別並建立 Trie 搜尋鍵。
-enum AutocompleteInputClassifier {
-    struct Classification: Equatable {
-        let inputType: InputType
-        let searchKey: String
-    }
-
-    /// `classify` 把 rawInput 轉成 `(inputType, searchKey)` 對。
-    /// - rawInput 例：`gua2` / `guá` / `我` / TPS 符號
-    static func classify(rawInput: String) -> Classification {
-        Classification(
-            inputType: determineInputType(rawInput),
-            searchKey: buildSearchKey(from: rawInput),
-        )
-    }
-
-    /// 判斷輸入文字的類型（漢字 / 帶聲調羅馬字 / 無聲調羅馬字）。
-    static func determineInputType(_ text: String) -> InputType {
-        if CandidateProcessor.isHanzi(text) {
-            return .hanzi
-        }
-        if InputNormalizer.hasToneMarks(text) {
-            return .romanWithTone
-        }
-        if containsNumericTone(text) {
-            return .romanWithTone
-        }
-        return .romanWithoutTone
-    }
-
-    /// 檢查文字是否包含數字聲調（2, 3, 5, 6, 7, 8, 9）。
-    /// 排除 1, 4, 0：1 / 4 是無調號聲調，0 是無效輸入。
-    static func containsNumericTone(_ text: String) -> Bool {
-        text.contains { char in
-            char.isNumber && char != "1" && char != "4" && char != "0"
-        }
-    }
-
-    /// Build a Trie-compatible search key from raw input.
-    /// TPS 輸入先轉為 TL 羅馬字；其他原樣輸出。
-    static func buildSearchKey(from rawInput: String) -> String {
-        TPSTables.containsTPS(rawInput)
-            ? TPSToTL.convert(rawInput)
-            : rawInput
-    }
-}
-
-/// Context-boost 的純分區邏輯：predictions 由呼叫端查好並傳入，
-/// booster 只負責把首字匹配的候選詞拉到前面，保留原順序。
-enum AutocompleteContextBooster {
-    /// - Parameters:
-    ///   - words: 候選詞列表（已排序）
-    ///   - predictedFirstChars: 由上一個選字的 bigram 預測出的首字集合
-    /// - Returns: boosted 區段 + 其餘（各自保留原順序）
-    static func boost(words: [TaigiWord], predictedFirstChars: Set<String>) -> [TaigiWord] {
-        guard !predictedFirstChars.isEmpty else { return words }
-
-        var boosted: [TaigiWord] = []
-        var rest: [TaigiWord] = []
-        for word in words {
-            if let firstChar = word.displayText.first,
-               predictedFirstChars.contains(String(firstChar))
-            {
-                boosted.append(word)
-            } else {
-                rest.append(word)
-            }
-        }
-        return boosted + rest
     }
 }

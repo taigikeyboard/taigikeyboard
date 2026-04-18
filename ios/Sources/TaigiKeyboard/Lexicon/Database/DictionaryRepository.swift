@@ -13,6 +13,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
     private let binaryReader: DictionaryBinaryReader?
     private let trieService: TrieService
+    private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionaryRepository")
 
     // MARK: - Initialization
@@ -20,9 +21,11 @@ final class DictionaryRepository: @unchecked Sendable {
     init(
         binaryReader: DictionaryBinaryReader? = nil,
         trieService: TrieService = .shared,
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.binaryReader = binaryReader ?? DictionaryBinaryReader()
         self.trieService = trieService
+        self.settingsProvider = settingsProvider
     }
 
     // MARK: - Query Methods
@@ -39,12 +42,12 @@ final class DictionaryRepository: @unchecked Sendable {
         }
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[QUERY] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         // 漢字輸入暫不支援
@@ -60,7 +63,7 @@ final class DictionaryRepository: @unchecked Sendable {
         }
 
         // Binary 查詢 + 過濾
-        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
         var results: [TaigiWord] = []
         for rowId in allRowIds {
@@ -98,12 +101,12 @@ final class DictionaryRepository: @unchecked Sendable {
         guard !input.isEmpty else { return [] }
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[SEARCH-SOURCES] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         let allRowIds = lookupRowIds(input: input, inputMode: inputMode)
@@ -128,12 +131,12 @@ final class DictionaryRepository: @unchecked Sendable {
         logger.debug("[HANZI-SEARCH] query='\(query)' limit=\(limit)")
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[HANZI-SEARCH] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         // 使用 hanzi: prefix 在主 trie 做前綴搜尋
@@ -188,7 +191,7 @@ final class DictionaryRepository: @unchecked Sendable {
         inputMode: InputMode,
         limit: Int,
     ) -> [DictionarySearchResult] {
-        let enabledDicts = EnabledDictionaries.fromSettings()
+        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
         var results: [DictionarySearchResult] = []
         for rowId in rowIds {

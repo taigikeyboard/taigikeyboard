@@ -1,6 +1,9 @@
 import Foundation
 
 /// Custom dictionary entry model
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 struct CustomDictionaryEntry: Identifiable, Equatable {
     let id: String
     var roman: String

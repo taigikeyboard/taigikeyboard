@@ -4,6 +4,9 @@ import Foundation
 ///
 /// Restores tone-marked characters to their base form for backspace operations.
 /// Uses NFD decomposition instead of lookup tables.
+
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum ToneRestoration {
 
     /// Attempt to restore tone marks in text

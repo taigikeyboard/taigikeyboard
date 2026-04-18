@@ -1,5 +1,8 @@
 import Foundation
-import KeyboardKit
+
+// MARK: - Shared-Core Candidate
+
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 /// Candidate processing utilities
 ///
@@ -25,17 +28,17 @@ enum CandidateProcessor {
     // MARK: - Capitalization
 
     /// 根據輸入文字的大小寫狀態，處理目標文字的大小寫
-    static func capitalize(_ text: String, basedOn input: String) -> String {
-        // 從 KeyboardKit 的持久化設定讀取
-        let isAutoCap = KeyboardSettings.store.bool(
-            forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
-        )
-
-        return CaseTransformer.capitalizeCandidate(
+    ///
+    /// Both `inputMode` and `isAutoCap` are supplied by the caller
+    /// (typically forwarded from `LexiconService.search`) so this function
+    /// stays Foundation-pure — no `SharedSettings.shared`, no
+    /// `KeyboardSettings.store`.
+    static func capitalize(_ text: String, basedOn input: String, inputMode: InputMode, isAutoCap: Bool) -> String {
+        CaseTransformer.capitalizeCandidate(
             text,
             basedOn: input,
             isAutoCapitalizationEnabled: isAutoCap,
-            inputMode: SharedSettings.shared.inputMode,
+            inputMode: inputMode,
         )
     }
 

@@ -1,6 +1,15 @@
 import Foundation
 
-/// 詞庫開關設定（從 SharedSettings 讀取）
+// MARK: - Shared-Core Candidate
+
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
+/// Dictionary-source toggles captured as a value.
+///
+/// Previously `EnabledDictionaries.fromSettings()` reached into
+/// `SharedSettings.shared`; this form accepts any `EngineSettings`
+/// provider so callers (engine services with an injected provider,
+/// tests with a stub) fully own the source of truth.
 struct EnabledDictionaries {
     let kautian: Bool // 教育部臺灣台語常用詞辭典
     let taigitv: Bool // 台語新詞辭庫
@@ -15,23 +24,20 @@ struct EnabledDictionaries {
     let khiin: Bool // 在來字
     let lkk: Bool // LKK漢羅合用建議用字
 
-    /// 從 SharedSettings 讀取設定
-    static func fromSettings() -> EnabledDictionaries {
-        let settings = SharedSettings.shared
-        return EnabledDictionaries(
-            kautian: settings.isMoeDictEnabled,
-            taigitv: settings.isNewwordDictEnabled,
-            kungge: settings.isKunggeDictEnabled,
-            itaigi: settings.isITaigiDictEnabled,
-            taijit: settings.isTaiwanJapanDictEnabled,
-            taihoa: settings.isTaiHuaDictEnabled,
-            sitbut: settings.isTaiwanPlantDictEnabled,
-            stti: settings.isSttiDictEnabled,
-            khpoo: settings.isKhpooDictEnabled,
-            variant: settings.isVariantEnabled,
-            khiin: settings.isKhiinEnabled,
-            lkk: settings.isLkkDictEnabled,
-        )
+    /// Build from an `EngineSettings` snapshot.
+    init(from settings: EngineSettings) {
+        kautian = settings.isMoeDictEnabled
+        taigitv = settings.isNewwordDictEnabled
+        kungge = settings.isKunggeDictEnabled
+        itaigi = settings.isITaigiDictEnabled
+        taijit = settings.isTaiwanJapanDictEnabled
+        taihoa = settings.isTaiHuaDictEnabled
+        sitbut = settings.isTaiwanPlantDictEnabled
+        stti = settings.isSttiDictEnabled
+        khpoo = settings.isKhpooDictEnabled
+        variant = settings.isVariantEnabled
+        khiin = settings.isKhiinEnabled
+        lkk = settings.isLkkDictEnabled
     }
 
     /// 是否全部開啟（9 個主要來源 + lkk）
@@ -66,5 +72,24 @@ struct EnabledDictionaries {
     /// association 的 9 個來源是否全部開啟
     var allAssociationSourcesEnabled: Bool {
         kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
+    }
+
+    /// Enabled sources as a `Set<DictionarySource>`, suitable for filtering
+    /// `DictionarySearchResult.sources` badges. `.dev` and `.custom` are always
+    /// included (non-toggleable); `.variant` is not a `DictionarySource` case.
+    var enabledSources: Set<DictionarySource> {
+        var set: Set<DictionarySource> = [.dev, .custom]
+        if kautian { set.insert(.kautian) }
+        if taigitv { set.insert(.taigitv) }
+        if kungge { set.insert(.kungge) }
+        if itaigi { set.insert(.itaigi) }
+        if taijit { set.insert(.taijit) }
+        if taihoa { set.insert(.taihoa) }
+        if sitbut { set.insert(.sitbut) }
+        if stti { set.insert(.stti) }
+        if khpoo { set.insert(.khpoo) }
+        if khiin { set.insert(.khiin) }
+        if lkk { set.insert(.lkk) }
+        return set
     }
 }

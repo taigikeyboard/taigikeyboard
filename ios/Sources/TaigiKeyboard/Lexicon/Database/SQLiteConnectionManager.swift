@@ -49,7 +49,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
             logger.error("[INIT] Failed to open: \(errorMsg)")
             sqlite3_close(connection)
             connection = nil
-            throw DictionaryError.databaseConnectionFailed(errorMsg)
+            throw LexiconError.databaseConnectionFailed(errorMsg)
         }
 
         try configure()
@@ -91,7 +91,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     /// 配置資料庫 PRAGMA 設定
     private func configure() throws {
         guard let db = connection else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         let configurations = [
@@ -195,7 +195,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             queue.async { [weak self] in
                 guard let self else {
-                    continuation.resume(throwing: DictionaryError.databaseNotAvailable)
+                    continuation.resume(throwing: LexiconError.databaseNotAvailable)
                     return
                 }
 
@@ -232,7 +232,7 @@ final class SQLiteConnectionManager: @unchecked Sendable {
         return try await withCheckedThrowingContinuation { continuation in
             queue.async { [weak self] in
                 guard let self, let db = connection else {
-                    continuation.resume(throwing: DictionaryError.databaseNotAvailable)
+                    continuation.resume(throwing: LexiconError.databaseNotAvailable)
                     return
                 }
 
@@ -249,12 +249,12 @@ final class SQLiteConnectionManager: @unchecked Sendable {
     /// 同步執行資料庫操作（用於已確保初始化的情況）
     func executeSync<T>(_ operation: @escaping (OpaquePointer) throws -> T) throws -> T {
         guard isInitialized else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         return try queue.sync { [weak self] in
             guard let self, let db = connection else {
-                throw DictionaryError.databaseNotAvailable
+                throw LexiconError.databaseNotAvailable
             }
             return try operation(db)
         }
