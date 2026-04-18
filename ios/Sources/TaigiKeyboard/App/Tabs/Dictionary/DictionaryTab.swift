@@ -241,15 +241,7 @@ struct DictionaryTab: View {
                     Text(hanzi)
                         .foregroundStyle(.primary)
                 }
-                let uniqueTags: [String] = {
-                    var seen = Set<String>()
-                    return result.sources.compactMap { source in
-                        let name = source.displayName
-                        guard !name.isEmpty, seen.insert(name).inserted else { return nil }
-                        return name
-                    }
-                }()
-                ForEach(uniqueTags, id: \.self) { tag in
+                ForEach(result.uniqueTagNames, id: \.self) { tag in
                     Text(tag)
                         .font(AppStyle.captionFont)
                         .foregroundStyle(.secondary)
