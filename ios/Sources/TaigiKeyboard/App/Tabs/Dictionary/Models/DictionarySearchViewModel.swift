@@ -92,7 +92,7 @@ final class DictionarySearchViewModel: ObservableObject {
                         ? query.lowercased()
                         .replacingOccurrences(of: "-", with: "")
                         .replacingOccurrences(of: " ", with: "")
-                        : CustomDictionaryService.generateNotone(query)
+                        : CustomDictionaryDerivation.generateNotone(query)
                     let customEntries = CustomDictionaryRepository.shared.searchSync(
                         prefix: searchPrefix,
                         isToneAware: isToneAware,

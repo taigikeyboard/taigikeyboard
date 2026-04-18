@@ -138,7 +138,7 @@ final class LexiconService: @unchecked Sendable {
             ? customSearchKey.lowercased()
             .replacingOccurrences(of: "-", with: "")
             .replacingOccurrences(of: " ", with: "")
-            : CustomDictionaryService.generateNotone(customSearchKey)
+            : CustomDictionaryDerivation.generateNotone(customSearchKey)
 
         let customEntries = customDictionaryRepository.searchSync(
             prefix: searchPrefix,
