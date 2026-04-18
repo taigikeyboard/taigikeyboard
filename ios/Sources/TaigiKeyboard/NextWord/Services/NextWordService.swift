@@ -12,7 +12,7 @@ import SQLite3
 ///
 /// Facade 責任：
 /// - 持有 public API、concurrency state、capacity policy、wiring。
-/// - Schema (`NextWordSchemaManager`)、CRUD (`NextWordRepository`)、
+/// - Schema (`NextWordSchema`)、CRUD (`NextWordRepository`)、
 ///   ranking (`NextWordScorer`) 各司其職。
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants (capacity policy)
@@ -333,7 +333,7 @@ final class NextWordService: @unchecked Sendable {
                     flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
                 )
                 try await connection.execute { db in
-                    try NextWordSchemaManager.ensureTables(db: db, logger: logger)
+                    try NextWordSchema.ensureTables(db: db, logger: logger)
                 }
             }
             _tableCreationTask = new
@@ -384,13 +384,6 @@ final class NextWordService: @unchecked Sendable {
     // MARK: - Database Path
 
     private static func getUserDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw LexiconError.databaseNotFound
-        }
-        try FileManager.default.createDirectory(
-            at: containerURL,
-            withIntermediateDirectories: true,
-        )
-        return containerURL.appendingPathComponent("user_association.db").path
+        try SharedDatabasePath.resolve(filename: "user_association.db")
     }
 }

@@ -6,7 +6,7 @@ import SQLite3
 /// Owns the `PRAGMA user_version` contract for `user_association.db`.
 /// DDL only — no pruning, capacity, or scoring policy.
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
-enum NextWordSchemaManager {
+enum NextWordSchema {
     /// Schema version for `user_association.db` (mirrors Android's DATABASE_VERSION).
     static let schemaVersion = 4
 
@@ -48,7 +48,7 @@ enum NextWordSchemaManager {
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word ON user_association(prev_word);",
             "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl);",
         ] {
-            execSimple(db: db, indexSQL)
+            sqliteExecSimple(db: db, indexSQL)
         }
     }
 
@@ -67,22 +67,14 @@ enum NextWordSchemaManager {
         logger.info("[MIGRATE] user_association.db v\(currentVersion) -> v\(schemaVersion)")
 
         if currentVersion < 3 {
-            execSimple(db: db, "DROP TABLE IF EXISTS user_association")
-            execSimple(db: db, "DROP INDEX IF EXISTS idx_user_prev_word")
+            sqliteExecSimple(db: db, "DROP TABLE IF EXISTS user_association")
+            sqliteExecSimple(db: db, "DROP INDEX IF EXISTS idx_user_prev_word")
         }
         if currentVersion >= 3, currentVersion < 4 {
-            execSimple(db: db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
-            execSimple(db: db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
+            sqliteExecSimple(db: db, "ALTER TABLE user_association ADD COLUMN prev_tl TEXT DEFAULT ''")
+            sqliteExecSimple(db: db, "CREATE INDEX IF NOT EXISTS idx_user_prev_word_tl ON user_association(prev_word, prev_tl)")
         }
 
-        execSimple(db: db, "PRAGMA user_version = \(schemaVersion)")
-    }
-
-    private static func execSimple(db: OpaquePointer, _ sql: String) {
-        var stmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
-        }
+        sqliteExecSimple(db: db, "PRAGMA user_version = \(schemaVersion)")
     }
 }

@@ -32,15 +32,23 @@ final class UserFrequencyRepository: @unchecked Sendable {
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "UserFrequencyRepository")
 
-    private var isTablesCreated = false
-    private var tableCreationTask: Task<Void, Error>?
-    private var recordCounter = 0
+    /// Lock protecting mutable state (`_tableCreationTask`,
+    /// `_tableCreationGeneration`, `_recordCounter`).
+    private let stateLock = NSLock()
+    /// Async-once gate for schema creation/migration — concurrent callers
+    /// await the same `Task`; nil cache on failure allows retry.
+    private var _tableCreationTask: Task<Void, Error>?
+    /// Bumped every time `_tableCreationTask` is replaced. Used instead of
+    /// identity comparison (Task is a struct, `===` unavailable) to ensure
+    /// error handlers only clear the cache they created.
+    private var _tableCreationGeneration: UInt64 = 0
+    private var _recordCounter = 0
 
     // MARK: - Initialization
 
     init(connectionManager: SQLiteConnectionManager? = nil) {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
-            databasePath: Self.getDatabasePath,
+            databasePath: { try SharedDatabasePath.resolve(filename: "user_frequency.db") },
             queueLabel: "com.siansiansu.taigikeyboard.userfrequency",
             loggerCategory: "UserFrequencyRepository",
         )
@@ -66,9 +74,15 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 try Self.insertOrUpdateWord(db: db, word: word, logger: self.logger)
             }
 
-            recordCounter += 1
-            if recordCounter >= Constants.pruneCheckInterval {
-                recordCounter = 0
+            let shouldPrune: Bool = stateLock.withLock {
+                _recordCounter += 1
+                if _recordCounter >= Constants.pruneCheckInterval {
+                    _recordCounter = 0
+                    return true
+                }
+                return false
+            }
+            if shouldPrune {
                 await pruneOldEntries()
             }
         } catch {
@@ -185,9 +199,13 @@ final class UserFrequencyRepository: @unchecked Sendable {
     /// Close the connection and remove the on-disk file.
     func deleteDatabase() throws {
         connectionManager.close()
-        isTablesCreated = false
+        stateLock.withLock {
+            _tableCreationTask = nil
+            _tableCreationGeneration &+= 1
+            _recordCounter = 0
+        }
 
-        let path = try Self.getDatabasePath()
+        let path = try SharedDatabasePath.resolve(filename: "user_frequency.db")
         if FileManager.default.fileExists(atPath: path) {
             try FileManager.default.removeItem(atPath: path)
         }
@@ -209,44 +227,42 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    // MARK: - Database Path
+    // MARK: - Schema (async-once gate)
 
-    private static func getDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw LexiconError.databaseNotFound
-        }
-        try FileManager.default.createDirectory(
-            at: containerURL,
-            withIntermediateDirectories: true,
-        )
-        return containerURL.appendingPathComponent("user_frequency.db").path
-    }
-
-    // MARK: - Schema
-
+    /// Single-flight schema initialization. Concurrent callers await the
+    /// same `Task`; once it succeeds subsequent calls await a completed
+    /// task (near-free). Failures clear the cache so the next caller retries.
     private func createTablesIfNeeded() async throws {
-        if isTablesCreated { return }
-        if let existingTask = tableCreationTask {
-            try await existingTask.value
-            return
-        }
-
-        let task = Task {
-            try await connectionManager.execute { db in
-                try Self.createFrequencyTable(db: db)
-                Self.createFrequencyIndexes(db: db)
-                Self.createMetadataTable(db: db)
-                Self.seedMetadata(db: db)
+        let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
+            if let existing = _tableCreationTask {
+                return (existing, _tableCreationGeneration)
             }
-
-            await MainActor.run {
-                self.isTablesCreated = true
-                self.tableCreationTask = nil
+            _tableCreationGeneration &+= 1
+            let gen = _tableCreationGeneration
+            let connection = self.connectionManager
+            let new = Task {
+                try await connection.execute { db in
+                    try Self.createFrequencyTable(db: db)
+                    Self.createFrequencyIndexes(db: db)
+                    Self.createMetadataTable(db: db)
+                    Self.seedMetadata(db: db)
+                }
             }
+            _tableCreationTask = new
+            return (new, gen)
         }
-
-        tableCreationTask = task
-        try await task.value
+        do {
+            try await task.value
+        } catch {
+            stateLock.withLock {
+                // Only clear if we still own the cached task generation —
+                // avoids wiping a newer task that a later caller installed.
+                if _tableCreationGeneration == generation {
+                    _tableCreationTask = nil
+                }
+            }
+            throw error
+        }
     }
 
     private static func createFrequencyTable(db: OpaquePointer) throws {
@@ -274,32 +290,22 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     private static func createFrequencyIndexes(db: OpaquePointer) {
-        let indexSQLs = [
+        for sql in [
             "CREATE INDEX IF NOT EXISTS idx_word ON user_frequency(word);",
             "CREATE INDEX IF NOT EXISTS idx_count ON user_frequency(count DESC);",
             "CREATE INDEX IF NOT EXISTS idx_last_used ON user_frequency(last_used DESC);",
-        ]
-        for sql in indexSQLs {
-            var stmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_step(stmt)
-                sqlite3_finalize(stmt)
-            }
+        ] {
+            sqliteExecSimple(db: db, sql)
         }
     }
 
     private static func createMetadataTable(db: OpaquePointer) {
-        let sql = """
+        sqliteExecSimple(db: db, """
             CREATE TABLE IF NOT EXISTS metadata (
                 key TEXT PRIMARY KEY,
                 value TEXT
             );
-        """
-        var stmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
-        }
+        """)
     }
 
     private static func seedMetadata(db: OpaquePointer) {

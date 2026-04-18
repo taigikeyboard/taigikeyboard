@@ -24,7 +24,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     init(connectionManager: SQLiteConnectionManager? = nil) {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
-            databasePath: Self.getDatabasePath,
+            databasePath: { try SharedDatabasePath.resolve(filename: "custom_dictionary.db") },
             queueLabel: "com.siansiansu.taigikeyboard.customdictionary",
             loggerCategory: "CustomDictionaryRepository",
         )
@@ -211,7 +211,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         connectionManager.close()
         isTablesCreated = false
 
-        let path = try Self.getDatabasePath()
+        let path = try SharedDatabasePath.resolve(filename: "custom_dictionary.db")
         if FileManager.default.fileExists(atPath: path) {
             try FileManager.default.removeItem(atPath: path)
         }
@@ -219,19 +219,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     func isConnected() -> Bool {
         connectionManager.isConnected()
-    }
-
-    // MARK: - Database Path
-
-    private static func getDatabasePath() throws -> String {
-        guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw LexiconError.databaseNotFound
-        }
-        try FileManager.default.createDirectory(
-            at: containerURL,
-            withIntermediateDirectories: true,
-        )
-        return containerURL.appendingPathComponent("custom_dictionary.db").path
     }
 
     // MARK: - Schema
@@ -277,18 +264,13 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     private static func createIndexes(db: OpaquePointer) {
-        let indexSQLs = [
+        for sql in [
             "CREATE INDEX IF NOT EXISTS idx_custom_roman ON custom_dictionary(roman);",
             "CREATE INDEX IF NOT EXISTS idx_custom_notone ON custom_dictionary(notone);",
             "CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON custom_dictionary(abbrev);",
             "CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON custom_dictionary(roman_num);",
-        ]
-        for sql in indexSQLs {
-            var stmt: OpaquePointer?
-            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_step(stmt)
-                sqlite3_finalize(stmt)
-            }
+        ] {
+            sqliteExecSimple(db: db, sql)
         }
     }
 
@@ -299,12 +281,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         let allowedColumns: Set = ["notone", "abbrev", "roman_num"]
         for column in allowedColumns {
             if columnExists(db: db, column: column) { continue }
-            var stmt: OpaquePointer?
-            let sql = "ALTER TABLE custom_dictionary ADD COLUMN \(column) TEXT DEFAULT '';"
-            if sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK {
-                sqlite3_step(stmt)
-                sqlite3_finalize(stmt)
-            }
+            sqliteExecSimple(db: db, "ALTER TABLE custom_dictionary ADD COLUMN \(column) TEXT DEFAULT '';")
         }
     }
 

@@ -5,7 +5,7 @@ import SQLite3
 ///
 /// All methods take a live `OpaquePointer`. Callers are responsible for:
 /// - serializing DB access (typically via `SQLiteConnectionManager.execute`),
-/// - ensuring tables exist (via `NextWordSchemaManager.ensureTables`).
+/// - ensuring tables exist (via `NextWordSchema.ensureTables`).
 enum NextWordRepository {
     /// Raw user-association row for prediction scoring.
     struct UserRow {
