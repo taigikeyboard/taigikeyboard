@@ -9,7 +9,6 @@ struct ExpandedCandidateOverlay: View {
     let isTranslateSwapped: Bool
     let onTranslateToggle: () -> Void
     let onCollapse: () -> Void
-    let isExpanded: Bool
     /// 是否為 TPS 佈局模式
     let isTPSLayout: Bool
     /// TPS 模式下 `or` 是否映射為 ㄜ
@@ -22,16 +21,14 @@ struct ExpandedCandidateOverlay: View {
     @State private var isTranslateButtonPressed: Bool = false
 
     var body: some View {
-        if isExpanded {
-            GeometryReader { geometry in
-                candidateGridContent
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: geometry.size.height,
-                        maxHeight: .infinity,
-                    )
-                    .padding(.top, -4)
-            }
+        GeometryReader { geometry in
+            candidateGridContent
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: geometry.size.height,
+                    maxHeight: .infinity,
+                )
+                .padding(.top, -4)
         }
     }
 
@@ -66,9 +63,6 @@ struct ExpandedCandidateOverlay: View {
             }
         }
         .onAppear { currentPage = 0 }
-        .onChange(of: isExpanded) { _, expanded in
-            if expanded { currentPage = 0 }
-        }
         .background(backgroundView)
         .overlay(
             FixedColumnDivider()

@@ -32,7 +32,6 @@ extension View {
                         isTranslateSwapped: isTranslateSwapped,
                         onTranslateToggle: onTranslateToggle,
                         onCollapse: { expandState.collapse() },
-                        isExpanded: true,
                         isTPSLayout: isTPSLayout,
                         orMapsToER: orMapsToER,
                     )
