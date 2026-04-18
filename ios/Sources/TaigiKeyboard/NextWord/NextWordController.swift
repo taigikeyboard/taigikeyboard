@@ -3,7 +3,6 @@
 // ActionHandler dispatches keyboard actions, NextWordController manages word prediction.
 
 import Foundation
-import KeyboardKit
 
 /// Controls NextWord prediction lifecycle: record associations, update state, trigger predictions.
 ///
@@ -20,8 +19,12 @@ final class NextWordController: SelectionContextProvider {
 
     // MARK: - Dependencies
 
-    private let settings = SharedSettings.shared
+    private let settingsProvider: EngineSettingsProvider
     weak var contextUpdater: AutocompleteContextUpdater?
+
+    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+        self.settingsProvider = settingsProvider
+    }
 
     // MARK: - State
 
@@ -52,7 +55,7 @@ final class NextWordController: SelectionContextProvider {
     /// - `triggerPrediction`: when false, only record + update state (Space path)
     func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
         if requireRomanMode {
-            guard !settings.isTranslateSwapped else { return }
+            guard !settingsProvider.current.isTranslateSwapped else { return }
         }
 
         guard !text.isEmpty, !isNoiseText(text) else {
@@ -67,7 +70,7 @@ final class NextWordController: SelectionContextProvider {
         let textTl = RomanizationConverter.pojToTL(roman)
         let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
 
-        if settings.isAssociationRecordingEnabled {
+        if settingsProvider.current.isAssociationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
                 Task {
                     await NextWordService.shared.recordAssociation(
@@ -176,23 +179,26 @@ final class NextWordController: SelectionContextProvider {
                 return
             }
 
-            let suggestions = makeSuggestions(from: predictions)
-            logger.debug("[TRIGGER] after filter: suggestions.count=\(suggestions.count) (from \(predictions.count) predictions)")
+            let enginePredictions = makePredictions(from: predictions)
+            logger.debug("[TRIGGER] after filter: predictions.count=\(enginePredictions.count) (from \(predictions.count) predictions)")
 
-            if suggestions.isEmpty {
+            if enginePredictions.isEmpty {
                 isShowing = false
                 contextUpdater?.resetNextWordSuggestions()
             } else {
-                contextUpdater?.setNextWordSuggestions(suggestions)
+                contextUpdater?.setNextWordPredictions(enginePredictions)
                 isShowing = true
                 startContextTimeoutTimer()
             }
         }
     }
 
-    /// Convert NextWord predictions to autocomplete suggestions, filtering empty TL in romanization mode
-    private func makeSuggestions(from predictions: [NextWordService.Prediction]) -> [Autocomplete.Suggestion] {
-        predictions.compactMap { prediction in
+    /// Convert NextWord raw predictions to engine-layer `EnginePrediction`
+    /// values. The KK boundary (`ActionHandler`) is the only place that
+    /// turns these into `Autocomplete.Suggestion`s.
+    private func makePredictions(from predictions: [NextWordService.Prediction]) -> [EnginePrediction] {
+        let settings = settingsProvider.current
+        return predictions.compactMap { prediction in
             if !settings.isTranslateSwapped && prediction.tl.isEmpty {
                 logger.debug("[FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
                 return nil
@@ -204,16 +210,11 @@ final class NextWordController: SelectionContextProvider {
             let text = roman.isEmpty ? prediction.hanzi : roman
             let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
 
-            return Autocomplete.Suggestion(
+            return EnginePrediction(
                 text: text,
-                title: text,
                 subtitle: subtitle,
-                additionalInfo: [
-                    "isNextWord": "true",
-                    "hanzi": prediction.hanzi,
-                    "tl": prediction.tl,
-                    "displayText": prediction.hanzi,
-                ],
+                hanzi: prediction.hanzi,
+                tl: prediction.tl,
             )
         }
     }

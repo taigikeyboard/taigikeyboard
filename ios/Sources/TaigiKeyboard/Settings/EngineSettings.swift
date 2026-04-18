@@ -9,6 +9,8 @@ import Foundation
 protocol EngineSettings {
     var inputMode: InputMode { get }
     var isAutoCap: Bool { get }
+    var isTranslateSwapped: Bool { get }
+    var isAssociationRecordingEnabled: Bool { get }
 
     var isCustomDictEnabled: Bool { get }
     var isTpsOrMappedToER: Bool { get }
