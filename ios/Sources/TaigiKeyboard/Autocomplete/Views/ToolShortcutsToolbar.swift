@@ -114,22 +114,11 @@ struct ToolShortcutsToolbar: View {
     /// 切換鍵盤的 globe 按鈕（tap: 下一個鍵盤, long-press: 鍵盤選擇器）
     private var globeButton: some View {
         Keyboard.NextKeyboardButton {
-            iconContent(systemName: "globe")
+            ToolShortcutIcon(systemName: "globe")
         }
         .frame(maxWidth: .infinity)
         .accessibilityLabel("切換鍵盤")
         .accessibilityHint("點擊切換下一個鍵盤，長按選取鍵盤")
-    }
-
-    /// Globe 按鈕使用的 icon 排版（與 `ToolShortcutButton` 保持視覺一致）
-    private func iconContent(systemName: String) -> some View {
-        Image(systemName: systemName)
-            .font(KeyboardFonts.globalFont(size: 18))
-            .fontWeight(.light)
-            .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-            .scaleEffect(1.2)
-            .frame(width: 30, height: CandidateViewModels.UI.height)
-            .contentShape(Rectangle())
     }
 }
 
@@ -144,18 +133,27 @@ private struct ToolShortcutButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(KeyboardFonts.globalFont(size: 18))
-                .fontWeight(.light)
-                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
-                .scaleEffect(1.2)
-                .frame(width: 30, height: CandidateViewModels.UI.height)
-                .contentShape(Rectangle())
+            ToolShortcutIcon(systemName: systemName)
         }
         .buttonStyle(ToolShortcutButtonStyle())
         .frame(maxWidth: .infinity)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
+    }
+}
+
+/// 共用 icon 排版：`ToolShortcutButton` 與 globe `NextKeyboardButton` 共用視覺。
+private struct ToolShortcutIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(KeyboardFonts.globalFont(size: 18))
+            .fontWeight(.light)
+            .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+            .scaleEffect(1.2)
+            .frame(width: 30, height: CandidateViewModels.UI.height)
+            .contentShape(Rectangle())
     }
 }
 

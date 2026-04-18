@@ -1,17 +1,9 @@
 import Foundation
 
-// Pure-logic phase types for AutocompleteService.
-//
-// These types are stateless and do not depend on KeyboardKit or service
-// state, so they can be unit-tested independently. Naming mirrors the
-// Android `TaigiAutocompleteService` (`determineInputType` /
-// `applyContextBoost`) to ease future shared-core extraction.
-//
-// Note: not a shared-core candidate — still depends on `InputType`,
-// `CandidateProcessor.isHanzi`, `InputNormalizer.hasToneMarks`,
-// `TPSTables.containsTPS`, and `TPSToTL.convert`.
-
 /// 依 rawInput 判斷輸入型別並建立 Trie 搜尋鍵。
+///
+/// 命名對齊 Android `TaigiAutocompleteService`（`determineInputType` /
+/// `applyContextBoost`）以利未來共用核心抽取。
 enum AutocompleteInputClassifier {
     struct Classification: Equatable {
         let inputType: InputType
@@ -43,7 +35,7 @@ enum AutocompleteInputClassifier {
 
     /// 檢查文字是否包含數字聲調（2, 3, 5, 6, 7, 8, 9）。
     /// 排除 1, 4, 0：1 / 4 是無調號聲調，0 是無效輸入。
-    static func containsNumericTone(_ text: String) -> Bool {
+    private static func containsNumericTone(_ text: String) -> Bool {
         text.contains { char in
             char.isNumber && char != "1" && char != "4" && char != "0"
         }

@@ -15,8 +15,6 @@ struct CandidateView: View {
     let onSuggestionTap: (Autocomplete.Suggestion) -> Void
     /// 是否交換漢字與羅馬字顯示位置
     let isTranslateSwapped: Bool
-    /// 切換翻譯模式的回調
-    let onTranslateToggle: () -> Void
     /// 點擊設定按鈕的回調
     let onSettingsTap: () -> Void
     /// 點擊佈局選擇按鈕的回調

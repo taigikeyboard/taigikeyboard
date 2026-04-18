@@ -278,7 +278,6 @@ struct TaigiKeyboardView: View {
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
-                    onTranslateToggle: onTranslateToggle,
                     onSettingsTap: {
                         let wasOpen = isSettingsPanelExpanded
                         closeAllOverlayPanels()

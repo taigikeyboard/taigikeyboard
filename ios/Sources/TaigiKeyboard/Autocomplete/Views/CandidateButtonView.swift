@@ -31,15 +31,6 @@ struct CandidateButtonView: View {
         )
     }
 
-    private var commitSuggestion: Autocomplete.Suggestion {
-        CandidateCellHelper.suggestionToHandle(
-            for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
-            isTPSLayout: isTPSLayout,
-            orMapsToER: orMapsToER,
-        )
-    }
-
     private var backgroundColor: Color {
         style.itemStyle.resolvedBackgroundColor(
             for: colorScheme,
@@ -54,7 +45,14 @@ struct CandidateButtonView: View {
     }
 
     var body: some View {
-        Button(action: { onTap(commitSuggestion) }) {
+        Button(action: {
+            onTap(CandidateCellHelper.suggestionToHandle(
+                for: suggestion,
+                isTranslateSwapped: isTranslateSwapped,
+                isTPSLayout: isTPSLayout,
+                orMapsToER: orMapsToER,
+            ))
+        }) {
             VStack(alignment: .center, spacing: 0) {
                 Text(displayTitle)
                     .font(KeyboardFonts.globalFont(size: CandidateCellHelper.titleFontSize))
@@ -78,7 +76,7 @@ struct CandidateButtonView: View {
                 .padding(.horizontal, -2)
                 .padding(.vertical, -4),
         )
-        .offset(y: 5)
+        .offset(y: 5) // 讓整個候選詞項目背景往下移動，與候選列下沿對齊
         .scaleEffect(isPressed ? 0.95 : 1.0)
         .buttonStyle(PlainButtonStyle())
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
