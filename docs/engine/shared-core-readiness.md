@@ -216,22 +216,22 @@ ios/Sources/TaigiKeyboard/Settings/EngineSettingsProvider.swift
 EOF
 
 # 1. Every candidate must import Foundation (and nothing else heavy)
-grep -L "import Foundation" $(cat /tmp/shared-core-list.txt)
+grep -L "^import Foundation" $(cat /tmp/shared-core-list.txt)
 
-# 2. No disallowed imports
-grep -l "import KeyboardKit\|import UIKit\|import SwiftUI\|import Combine\|import OSLog" $(cat /tmp/shared-core-list.txt)
+# 2. No disallowed imports (anchor to line start so doc-comment mentions do not match)
+grep -lE "^import (KeyboardKit|UIKit|SwiftUI|Combine|OSLog)" $(cat /tmp/shared-core-list.txt)
 
-# 3. No singleton reads
-grep -En "SharedSettings\.shared|KeyboardSettings\.store|\b[A-Z][A-Za-z]+\.shared\b" $(cat /tmp/shared-core-list.txt)
+# 3. No singleton reads (exclude `///` doc-comment mentions)
+grep -En "SharedSettings\.shared|KeyboardSettings\.store|\b[A-Z][A-Za-z]+\.shared\b" $(cat /tmp/shared-core-list.txt) | grep -v '///'
 
-# 4. No platform side effects / URL / file system
-grep -En "URL\(string:|FileManager|DispatchQueue|@Published|ObservableObject|NotificationCenter|Timer\.scheduledTimer|@MainActor" $(cat /tmp/shared-core-list.txt)
+# 4. No platform side effects / URL / file system (exclude `///` doc-comment mentions)
+grep -En "URL\(string:|FileManager|DispatchQueue|@Published|ObservableObject|NotificationCenter|Timer\.scheduledTimer|@MainActor" $(cat /tmp/shared-core-list.txt) | grep -v '///'
 
 # 5. Every candidate carries the marker
 grep -L "Shared-Core Candidate" $(cat /tmp/shared-core-list.txt)
 ```
 
-Each of the five greps should produce no output. `grep -En` queries may legitimately match the strings inside doc comments (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`) — inspect each hit; if the match is inside a `///` line, it is informational, not a violation.
+Each of the five greps should produce no output. The import check (grep 2) is anchored to line start, so doc-comment text like `EnginePrediction`'s note that it does *not* `import KeyboardKit` is excluded. Greps 3 and 4 pipe through `grep -v '///'` for the same reason on singleton/side-effect text mentioned inside Swift doc comments.
 
 ---
 
