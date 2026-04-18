@@ -413,3 +413,22 @@ final class SharedSettings {
         // `SettingsResetCoordinator.resetAll()` when you need both sides.
     }
 }
+
+// MARK: - EngineSettings Conformance
+
+/// SharedSettings already exposes every property `EngineSettings` requires.
+/// An empty conformance is sufficient — reads go through the same
+/// `UserDefaults`-backed getters, so engine services see live values.
+extension SharedSettings: EngineSettings {}
+
+// MARK: - EngineSettingsProvider Conformance
+
+extension SharedSettings: EngineSettingsProvider {
+    /// Returns `self` as `EngineSettings`. Each property access on the
+    /// returned value re-reads `UserDefaults`, so the engine always sees
+    /// the most recent values (critical for in-app setting changes to
+    /// propagate without restarting the keyboard extension).
+    var current: EngineSettings {
+        self
+    }
+}
