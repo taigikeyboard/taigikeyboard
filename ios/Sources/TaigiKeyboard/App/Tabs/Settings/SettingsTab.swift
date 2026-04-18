@@ -280,7 +280,7 @@ struct SettingsTab: View {
     // MARK: - Actions
 
     private func resetAllSettings() {
-        settings.resetToDefaults()
+        SettingsResetCoordinator.resetAll()
 
         // Clear user frequency data
         do {

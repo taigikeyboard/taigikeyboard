@@ -1,7 +1,4 @@
 import Foundation
-import KeyboardKit
-import LocalAuthentication
-import UIKit
 
 final class SharedSettings {
     private let userDefaults: UserDefaults
@@ -60,8 +57,9 @@ final class SharedSettings {
 
     static let shared = SharedSettings()
 
-    /// Prevents infinite recursion when inputMode and keyboardLayoutType setters sync each other.
-    private var isSyncingTPS = false
+    /// Guards the mutual recursion between inputMode and keyboardLayoutType
+    /// setters when TPS ↔ layout auto-sync fires.
+    private let tpsSync = TPSSyncCoordinator()
 
     private init() {
         userDefaults = Self.sharedUserDefaults
@@ -76,19 +74,16 @@ final class SharedSettings {
             let oldValue = inputMode
             userDefaults.set(newValue.rawValue, forKey: Keys.inputMode)
 
-            // TPS ↔ layout 1:1 sync
-            guard !isSyncingTPS else { return }
-            isSyncingTPS = true
-            defer { isSyncingTPS = false }
-
-            if newValue == .tps, oldValue != .tps {
-                if keyboardLayoutType != .tps {
-                    layoutBeforeTps = keyboardLayoutType
-                    keyboardLayoutType = .tps
-                }
-            } else if newValue != .tps, oldValue == .tps {
-                if keyboardLayoutType == .tps {
-                    keyboardLayoutType = layoutBeforeTps
+            tpsSync.sync {
+                if newValue == .tps, oldValue != .tps {
+                    if keyboardLayoutType != .tps {
+                        layoutBeforeTps = keyboardLayoutType
+                        keyboardLayoutType = .tps
+                    }
+                } else if newValue != .tps, oldValue == .tps {
+                    if keyboardLayoutType == .tps {
+                        keyboardLayoutType = layoutBeforeTps
+                    }
                 }
             }
         }
@@ -161,19 +156,16 @@ final class SharedSettings {
             let oldValue = keyboardLayoutType
             userDefaults.set(newValue.rawValue, forKey: Keys.keyboardLayoutType)
 
-            // TPS ↔ inputMode 1:1 sync
-            guard !isSyncingTPS else { return }
-            isSyncingTPS = true
-            defer { isSyncingTPS = false }
-
-            if newValue == .tps, oldValue != .tps {
-                let currentInputMode = inputMode
-                if currentInputMode != .tps {
-                    inputModeBeforeTps = currentInputMode
+            tpsSync.sync {
+                if newValue == .tps, oldValue != .tps {
+                    let currentInputMode = inputMode
+                    if currentInputMode != .tps {
+                        inputModeBeforeTps = currentInputMode
+                    }
+                    inputMode = .tps
+                } else if newValue != .tps, oldValue == .tps {
+                    inputMode = inputModeBeforeTps
                 }
-                inputMode = .tps
-            } else if newValue != .tps, oldValue == .tps {
-                inputMode = inputModeBeforeTps
             }
         }
     }
@@ -310,21 +302,11 @@ final class SharedSettings {
     var isGlobeKeyEnabled: Bool {
         get {
             guard let stored = userDefaults.object(forKey: Keys.isGlobeKeyEnabled) as? Bool else {
-                return Self.defaultGlobeKeyEnabled
+                return DeviceCapabilities.prefersGlobeKeyByDefault
             }
             return stored
         }
         set { userDefaults.set(newValue, forKey: Keys.isGlobeKeyEnabled) }
-    }
-
-    /// Device-based default: iPad or iPhone SE (Touch ID) = true, otherwise false
-    private static var defaultGlobeKeyEnabled: Bool {
-        if UIDevice.current.userInterfaceIdiom == .pad { return true }
-        guard UIDevice.current.userInterfaceIdiom == .phone else { return false }
-        let laContext = LAContext()
-        var error: NSError?
-        _ = laContext.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
-        return laContext.biometryType == .touchID
     }
 
     // MARK: - TPS Settings
@@ -427,9 +409,7 @@ final class SharedSettings {
         keyBorderWidth = 0
         colorSettings = .default
 
-        // Reset KeyboardKit settings
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled")
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled")
-        KeyboardSettings.store.set(true, forKey: "com.keyboardkit.settings.feedback.isHapticFeedbackEnabled")
+        // KeyboardKit-owned defaults live in a separate store; reset via
+        // `SettingsResetCoordinator.resetAll()` when you need both sides.
     }
 }
