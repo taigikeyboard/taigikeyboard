@@ -41,7 +41,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
 
     // MARK: - Init
 
-    public init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
         self.settingsProvider = settingsProvider
     }
 
