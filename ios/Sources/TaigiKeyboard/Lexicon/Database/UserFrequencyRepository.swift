@@ -4,17 +4,11 @@ import SQLite3
 /// User frequency repository.
 ///
 /// Tracks per-word usage counts so the ranker (`CandidateProcessor.sortByScore`)
-/// can bias recently- and often-used words toward the top. Runs capped at
-/// `Constants.maxEntries`; least-used rows are pruned in the background.
+/// can bias recently- and often-used words toward the top.
+/// Split responsibilities:
+/// - `UserFrequencySchema`: DDL (CREATE TABLE / CREATE INDEX / metadata seed)
+/// - `UserFrequencyPruner`: capacity (`maxEntries`) + delete-oldest algorithm
 final class UserFrequencyRepository: @unchecked Sendable {
-    // MARK: - Constants
-
-    private enum Constants {
-        static let maxEntries = 20000
-        static let pruneCheckInterval = 100
-        static let pruneBatchSize = 2000
-    }
-
     // MARK: - Types
 
     /// Per-word frequency snapshot (count + last-used timestamp).
@@ -64,9 +58,9 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     // MARK: - Recording
 
-    /// Record a word usage. Periodically triggers background pruning once every
-    /// `pruneCheckInterval` records so the table stays under capacity without
-    /// adding latency to every single write.
+    /// Record a word usage. Periodically triggers background pruning once
+    /// every `UserFrequencyPruner.recordCheckInterval` records so the table
+    /// stays under capacity without adding latency to every single write.
     func recordWord(_ word: String) async {
         do {
             try await ensureInitialized()
@@ -76,14 +70,14 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
             let shouldPrune: Bool = stateLock.withLock {
                 _recordCounter += 1
-                if _recordCounter >= Constants.pruneCheckInterval {
+                if _recordCounter >= UserFrequencyPruner.recordCheckInterval {
                     _recordCounter = 0
                     return true
                 }
                 return false
             }
             if shouldPrune {
-                await pruneOldEntries()
+                await UserFrequencyPruner.pruneIfNeeded(connection: connectionManager, logger: logger)
             }
         } catch {
             logger.error("[RECORD] Failed to record usage for: \(word)")
@@ -154,7 +148,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
             let sql = """
-                INSERT INTO user_frequency (word, count, last_used)
+                INSERT INTO \(UserFrequencySchema.tableName) (word, count, last_used)
                 VALUES (?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(word) DO UPDATE SET
                     count = MAX(count, excluded.count),
@@ -187,7 +181,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
         try await ensureInitialized()
         try await connectionManager.execute { db in
             var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, "DELETE FROM user_frequency WHERE word = ?", -1, &stmt, nil) == SQLITE_OK else { return }
+            guard sqlite3_prepare_v2(
+                db,
+                "DELETE FROM \(UserFrequencySchema.tableName) WHERE word = ?",
+                -1, &stmt, nil,
+            ) == SQLITE_OK else { return }
             defer { sqlite3_finalize(stmt) }
             stmt.bindText(1, word)
             sqlite3_step(stmt)
@@ -220,7 +218,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         guard connectionManager.isConnected() else { return -1 }
         do {
             return try connectionManager.executeSync { db in
-                Self.countRows(db: db)
+                UserFrequencyPruner.rowCount(db: db)
             }
         } catch {
             return -1
@@ -242,10 +240,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
             let connection = self.connectionManager
             let new = Task {
                 try await connection.execute { db in
-                    try Self.createFrequencyTable(db: db)
-                    Self.createFrequencyIndexes(db: db)
-                    Self.createMetadataTable(db: db)
-                    Self.seedMetadata(db: db)
+                    try UserFrequencySchema.ensureTables(db: db)
                 }
             }
             _tableCreationTask = new
@@ -255,8 +250,6 @@ final class UserFrequencyRepository: @unchecked Sendable {
             try await task.value
         } catch {
             stateLock.withLock {
-                // Only clear if we still own the cached task generation —
-                // avoids wiping a newer task that a later caller installed.
                 if _tableCreationGeneration == generation {
                     _tableCreationTask = nil
                 }
@@ -265,75 +258,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
         }
     }
 
-    private static func createFrequencyTable(db: OpaquePointer) throws {
-        let sql = """
-            CREATE TABLE IF NOT EXISTS user_frequency (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                word TEXT NOT NULL UNIQUE,
-                count INTEGER DEFAULT 1,
-                last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw LexiconError.queryPreparationFailed("Create user_frequency table failed: \(errorMsg)")
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        guard sqlite3_step(stmt) == SQLITE_DONE else {
-            let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw LexiconError.queryExecutionFailed("Create user_frequency table failed: \(errorMsg)")
-        }
-    }
-
-    private static func createFrequencyIndexes(db: OpaquePointer) {
-        for sql in [
-            "CREATE INDEX IF NOT EXISTS idx_word ON user_frequency(word);",
-            "CREATE INDEX IF NOT EXISTS idx_count ON user_frequency(count DESC);",
-            "CREATE INDEX IF NOT EXISTS idx_last_used ON user_frequency(last_used DESC);",
-        ] {
-            sqliteExecSimple(db: db, sql)
-        }
-    }
-
-    private static func createMetadataTable(db: OpaquePointer) {
-        sqliteExecSimple(db: db, """
-            CREATE TABLE IF NOT EXISTS metadata (
-                key TEXT PRIMARY KEY,
-                value TEXT
-            );
-        """)
-    }
-
-    private static func seedMetadata(db: OpaquePointer) {
-        let sql = """
-            INSERT OR IGNORE INTO metadata (key, value) VALUES
-            ('app_version', ?),
-            ('schema_version', '1.0'),
-            ('created_date', datetime('now')),
-            ('last_modified', datetime('now'));
-        """
-
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-        defer { sqlite3_finalize(stmt) }
-
-        stmt.bindText(1, appVersion())
-        sqlite3_step(stmt)
-    }
-
-    private static func appVersion() -> String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"
-    }
-
     // MARK: - Query Helpers
 
     private static func insertOrUpdateWord(db: OpaquePointer, word: String, logger: DebugLogger) throws {
         let sql = """
-            INSERT INTO user_frequency (word, count, last_used)
+            INSERT INTO \(UserFrequencySchema.tableName) (word, count, last_used)
             VALUES (?, 1, CURRENT_TIMESTAMP)
             ON CONFLICT(word) DO UPDATE SET
                 count = count + 1,
@@ -355,7 +284,11 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     private static func queryFrequencyData(db: OpaquePointer, word: String) -> FrequencyData {
-        let sql = "SELECT count, strftime('%s', last_used) * 1000 FROM user_frequency WHERE word = ?;"
+        let sql = """
+            SELECT count, strftime('%s', last_used) * 1000
+            FROM \(UserFrequencySchema.tableName)
+            WHERE word = ?;
+        """
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return .empty }
         defer { sqlite3_finalize(stmt) }
@@ -374,7 +307,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
         let placeholders = words.map { _ in "?" }.joined(separator: ",")
         let sql = """
             SELECT word, count, strftime('%s', last_used) * 1000
-            FROM user_frequency
+            FROM \(UserFrequencySchema.tableName)
             WHERE word IN (\(placeholders));
         """
 
@@ -398,7 +331,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     private static func queryTopWords(db: OpaquePointer, limit: Int) -> [(word: String, count: Int)] {
         let sql = """
-            SELECT word, count FROM user_frequency
+            SELECT word, count FROM \(UserFrequencySchema.tableName)
             ORDER BY count DESC, last_used DESC
             LIMIT ?;
         """
@@ -416,53 +349,5 @@ final class UserFrequencyRepository: @unchecked Sendable {
             results.append((word: word, count: count))
         }
         return results
-    }
-
-    private static func countRows(db: OpaquePointer) -> Int {
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        guard sqlite3_prepare_v2(db, "SELECT COUNT(*) FROM user_frequency;", -1, &stmt, nil) == SQLITE_OK else {
-            return -1
-        }
-        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : -1
-    }
-
-    // MARK: - Pruning
-
-    /// Delete the least-used rows when the table exceeds `maxEntries`.
-    /// Over-deletes by `pruneBatchSize` so the table sits well below the
-    /// cap between prune runs instead of oscillating around it.
-    private func pruneOldEntries() async {
-        do {
-            let currentCount = try await connectionManager.execute { db in
-                Self.countRows(db: db)
-            }
-            guard currentCount > Constants.maxEntries else { return }
-
-            let deleteCount = min(
-                Constants.pruneBatchSize,
-                currentCount - Constants.maxEntries + Constants.pruneBatchSize,
-            )
-
-            try await connectionManager.execute { db in
-                let sql = """
-                    DELETE FROM user_frequency
-                    WHERE id IN (
-                        SELECT id FROM user_frequency
-                        ORDER BY count ASC, last_used ASC
-                        LIMIT ?
-                    )
-                """
-                var stmt: OpaquePointer?
-                guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-                defer { sqlite3_finalize(stmt) }
-                sqlite3_bind_int(stmt, 1, Int32(deleteCount))
-                sqlite3_step(stmt)
-            }
-
-            logger.info("[PRUNE] Deleted \(deleteCount) frequency entries (was \(currentCount))")
-        } catch {
-            logger.error("[PRUNE] Failed: \(error.localizedDescription)")
-        }
     }
 }
