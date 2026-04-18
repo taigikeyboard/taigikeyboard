@@ -20,9 +20,7 @@ struct TaigiKeyboardView: View {
     @State private var colorSettings: KeyboardColorSettings = SharedSettings.shared.colorSettings
     @State private var keyFontSizeScale: CGFloat = SharedSettings.shared.keyFontSizeScale
     @State private var keyBorderWidth: CGFloat = SharedSettings.shared.keyBorderWidth
-    @State private var isLayoutPanelExpanded = false
-    @State private var isSymbolPanelExpanded = false
-    @State private var isSettingsPanelExpanded = false
+    @State private var panels = OverlayPanelState()
 
     /// Per-render-cycle cached settings and providers.
     /// Created once per body evaluation to avoid repeated UserDefaults reads.
@@ -140,90 +138,33 @@ struct TaigiKeyboardView: View {
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
         )
-        .overlay(
-            Group {
-                if expandState.isExpanded {
-                    ExpandedCandidateOverlay(
-                        suggestions: suggestions,
-                        selectedCandidateIndex: selectedCandidateIndex,
-                        onSuggestionTap: onSuggestionTap,
-                        isTranslateSwapped: isTranslateSwapped,
-                        onTranslateToggle: onTranslateToggle,
-                        onCollapse: {
-                            expandState.collapse()
-                        },
-                        isExpanded: true,
-                        isTPSLayout: isTPSLayout,
-                        orMapsToER: orMapsToER,
-                    )
-                    .candidateViewStyle(candidateStyle)
-                    .offset(y: 2)
-                }
+        .withKeyboardOverlays(
+            panels: $panels,
+            expandState: expandState,
+            suggestions: suggestions,
+            selectedCandidateIndex: selectedCandidateIndex,
+            onSuggestionTap: onSuggestionTap,
+            isTranslateSwapped: isTranslateSwapped,
+            onTranslateToggle: onTranslateToggle,
+            candidateStyle: candidateStyle,
+            isTPSLayout: isTPSLayout,
+            orMapsToER: orMapsToER,
+            onSymbolInsert: { [keyboardContext] symbol in
+                keyboardContext.textDocumentProxy.insertText(symbol)
             },
-            alignment: .topLeading,
-        )
-        .overlay(
-            Group {
-                if isLayoutPanelExpanded {
-                    LayoutSelectionOverlay(
-                        isExpanded: true,
-                        onDismiss: {
-                            isLayoutPanelExpanded = false
-                        },
-                    )
-                    .offset(y: CandidateViewModels.UI.height)
-                }
+            onOpenSettingsApp: { [unowned services] in
+                services.actionHandler.handle(.settings)
             },
-            alignment: .topLeading,
-        )
-        .overlay(
-            Group {
-                if isSymbolPanelExpanded {
-                    SymbolSelectionOverlay(
-                        isExpanded: true,
-                        onSymbolInsert: { symbol in
-                            keyboardContext.textDocumentProxy.insertText(symbol)
-                        },
-                        onDismiss: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isSymbolPanelExpanded = false
-                            }
-                        },
-                    )
-                    .offset(y: CandidateViewModels.UI.height)
-                }
-            },
-            alignment: .topLeading,
-        )
-        .overlay(
-            Group {
-                if isSettingsPanelExpanded {
-                    SettingsSelectionOverlay(
-                        isExpanded: true,
-                        onDismiss: {
-                            isSettingsPanelExpanded = false
-                        },
-                        onOpenApp: { [unowned services] in
-                            services.actionHandler.handle(.settings)
-                        },
-                    )
-                    .offset(y: CandidateViewModels.UI.height)
-                }
-            },
-            alignment: .topLeading,
         )
         .onChange(of: expandState.isExpanded) { _, isExpanded in
             if isExpanded {
-                closeAllOverlayPanels()
+                panels.closeAll()
             }
         }
         .onChange(of: composingManager.isComposing) { _, isComposing in
-            if isComposing, isSymbolPanelExpanded {
-                isSymbolPanelExpanded = false
-            }
-            if isComposing, isSettingsPanelExpanded {
-                isSettingsPanelExpanded = false
-            }
+            guard isComposing else { return }
+            if panels.isSymbolExpanded { panels.isSymbolExpanded = false }
+            if panels.isSettingsExpanded { panels.isSettingsExpanded = false }
         }
     }
 
@@ -282,32 +223,32 @@ struct TaigiKeyboardView: View {
                     onSuggestionTap: onSuggestionTap,
                     isTranslateSwapped: isTranslateSwapped,
                     onSettingsTap: {
-                        let wasOpen = isSettingsPanelExpanded
-                        closeAllOverlayPanels()
+                        let wasOpen = panels.isSettingsExpanded
+                        panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { isSettingsPanelExpanded = true }
+                        if !wasOpen { panels.isSettingsExpanded = true }
                     },
                     onLayoutTap: {
-                        let wasOpen = isLayoutPanelExpanded
-                        closeAllOverlayPanels()
+                        let wasOpen = panels.isLayoutExpanded
+                        panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { isLayoutPanelExpanded = true }
+                        if !wasOpen { panels.isLayoutExpanded = true }
                     },
                     onSymbolTap: {
-                        let wasOpen = isSymbolPanelExpanded
-                        closeAllOverlayPanels()
+                        let wasOpen = panels.isSymbolExpanded
+                        panels.closeAll()
                         expandState.collapse()
-                        if !wasOpen { isSymbolPanelExpanded = true }
+                        if !wasOpen { panels.isSymbolExpanded = true }
                     },
                     onDismissKeyboard: { [unowned services] in
-                        closeAllOverlayPanels()
+                        panels.closeAll()
                         services.actionHandler.handle(.dismissKeyboard)
                     },
                     currentInputMode: currentInputMode,
                     onInputModeChange: { newMode in
                         currentInputMode = newMode
                         SharedSettings.shared.inputMode = newMode
-                        closeAllOverlayPanels()
+                        panels.closeAll()
                     },
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,
                     isComposing: composingManager.isComposing,
@@ -353,16 +294,6 @@ struct TaigiKeyboardView: View {
         }
         .keyboardCalloutActions(Callouts.taigiCalloutActions)
         .keyboardCalloutStyle(calloutStyle)
-    }
-
-    // MARK: - Panel Management
-
-    /// Close all overlay panels (settings, layout, symbol).
-    /// Centralizes panel state to avoid missed resets when adding new panels.
-    private func closeAllOverlayPanels() {
-        isLayoutPanelExpanded = false
-        isSymbolPanelExpanded = false
-        isSettingsPanelExpanded = false
     }
 
     private static func candidateStyle(
