@@ -77,7 +77,9 @@ final class UserFrequencyRepository: @unchecked Sendable {
                 return false
             }
             if shouldPrune {
-                await UserFrequencyPruner.pruneIfNeeded(connection: connectionManager, logger: logger)
+                try? await connectionManager.execute { db in
+                    UserFrequencyPruner.pruneIfNeeded(db: db, logger: self.logger)
+                }
             }
         } catch {
             logger.error("[RECORD] Failed to record usage for: \(word)")
@@ -196,12 +198,18 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     /// Close the connection and remove the on-disk file.
     func deleteDatabase() throws {
-        connectionManager.close()
-        stateLock.withLock {
+        // Cancel the in-flight init Task (if any) BEFORE closing the
+        // connection so it bails out rather than racing against a fresh
+        // Task installed by the next caller.
+        let priorTask = stateLock.withLock { () -> Task<Void, Error>? in
+            let task = _tableCreationTask
             _tableCreationTask = nil
             _tableCreationGeneration &+= 1
             _recordCounter = 0
+            return task
         }
+        priorTask?.cancel()
+        connectionManager.close()
 
         let path = try SharedDatabasePath.resolve(filename: "user_frequency.db")
         if FileManager.default.fileExists(atPath: path) {

@@ -15,12 +15,6 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     static let shared = CustomDictionaryRepository()
 
-    /// Re-exported so existing callers continue to work without depending
-    /// on `CustomDictionaryCapacityPolicy` directly.
-    static var maxEntries: Int {
-        CustomDictionaryCapacityPolicy.maxEntries
-    }
-
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "CustomDictionaryRepository")
 
@@ -220,11 +214,17 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Lifecycle
 
     func deleteDatabase() throws {
-        connectionManager.close()
-        stateLock.withLock {
+        // Cancel the in-flight init Task (if any) BEFORE closing the
+        // connection so it bails out rather than racing against a fresh
+        // Task installed by the next caller.
+        let priorTask = stateLock.withLock { () -> Task<Void, Error>? in
+            let task = _tableCreationTask
             _tableCreationTask = nil
             _tableCreationGeneration &+= 1
+            return task
         }
+        priorTask?.cancel()
+        connectionManager.close()
 
         let path = try SharedDatabasePath.resolve(filename: "custom_dictionary.db")
         if FileManager.default.fileExists(atPath: path) {
@@ -249,10 +249,11 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             _tableCreationGeneration &+= 1
             let gen = _tableCreationGeneration
             let connection = self.connectionManager
+            let logger = self.logger
             let new = Task {
                 try await connection.execute { db in
                     try CustomDictionarySchema.ensureTables(db: db)
-                    CustomDictionaryMigrator.run(db: db)
+                    CustomDictionaryMigrator.runIfNeeded(db: db, logger: logger)
                 }
             }
             _tableCreationTask = new

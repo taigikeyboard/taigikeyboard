@@ -11,6 +11,15 @@ import SQLite3
 enum CustomDictionarySchema {
     static let tableName = "custom_dictionary"
 
+    /// Bump when `CustomDictionaryDerivation` logic changes or new derived
+    /// columns are added — `CustomDictionaryMigrator` re-runs ALTER + backfill
+    /// against any DB whose `PRAGMA user_version` is below this value.
+    static let schemaVersion = 1
+
+    /// Derived column names backed by `CustomDictionaryDerivation`.
+    /// Single source of truth for the `ALTER TABLE` migrator.
+    static let derivedColumns = ["notone", "abbrev", "roman_num"]
+
     /// Create the primary table + all indexes. Idempotent via `IF NOT EXISTS`.
     static func ensureTables(db: OpaquePointer) throws {
         try createMainTable(db: db)

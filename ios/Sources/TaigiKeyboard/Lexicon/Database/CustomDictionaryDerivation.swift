@@ -38,22 +38,26 @@ enum CustomDictionaryDerivation {
             .components(separatedBy: CharacterSet(charactersIn: "- "))
             .filter { !$0.isEmpty }
         guard syllables.count >= 2 else { return "" }
-        return syllables.map { syllable in
-            let first = String(syllable.prefix(1))
-            let decomposed = first.decomposedStringWithCanonicalMapping
-            var bare = ""
-            for scalar in decomposed.unicodeScalars {
-                if scalar.properties.generalCategory != .nonspacingMark {
-                    bare.unicodeScalars.append(scalar)
-                }
-            }
-            return bare.precomposedStringWithCanonicalMapping
-        }.joined()
+        return syllables.map { stripCombiningMarks(String($0.prefix(1))) }.joined()
     }
 
     /// Numeric-toned form for tone-aware search — diacritics converted to
     /// tone digits, hyphens removed. Example: `"gâu-tsá" → "gau5tsa2"`.
     static func generateRomanNum(_ roman: String) -> String {
         InputNormalizer.normalize(roman, mode: .tl)
+    }
+
+    // MARK: - Private
+
+    /// Decompose then drop Unicode `Mn` (nonspacing marks). Used by
+    /// `generateAbbrev`; `generateNotone` open-codes its own loop because
+    /// it layers additional digit/hyphen/space filters on the same pass.
+    private static func stripCombiningMarks(_ s: String) -> String {
+        let decomposed = s.decomposedStringWithCanonicalMapping
+        var result = ""
+        for scalar in decomposed.unicodeScalars where scalar.properties.generalCategory != .nonspacingMark {
+            result.unicodeScalars.append(scalar)
+        }
+        return result.precomposedStringWithCanonicalMapping
     }
 }

@@ -232,11 +232,17 @@ final class NextWordService: @unchecked Sendable {
 
     /// 刪除使用者關聯資料庫
     static func deleteUserDatabase() throws {
-        shared.userConnectionManager.close()
-        shared.stateLock.withLock {
+        // Cancel the in-flight init Task (if any) BEFORE closing the
+        // connection so it bails out rather than racing against a fresh
+        // Task installed by the next caller.
+        let priorTask = shared.stateLock.withLock { () -> Task<Void, Error>? in
+            let task = shared._tableCreationTask
             shared._tableCreationTask = nil
             shared._tableCreationGeneration &+= 1
+            return task
         }
+        priorTask?.cancel()
+        shared.userConnectionManager.close()
 
         let path = try getUserDatabasePath()
         if FileManager.default.fileExists(atPath: path) {

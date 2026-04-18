@@ -1,31 +1,52 @@
 import Foundation
 import SQLite3
 
-/// Custom-dictionary data migrations.
+/// Custom-dictionary forward data migrations, gated by `PRAGMA user_version`.
 ///
-/// Forward data migrations that are not DDL:
+/// Owns version-gated forward migrations that are not DDL:
 /// 1. Add derived columns (`notone` / `abbrev` / `roman_num`) to databases
 ///    created before those columns existed.
-/// 2. Re-derive every row's derived columns so values always match the
-///    current `CustomDictionaryDerivation` logic (cheap: a single prepared
-///    UPDATE reused across rows).
+/// 2. Re-derive every row's derived columns so values match the current
+///    `CustomDictionaryDerivation` logic (cheap: a single prepared UPDATE
+///    reused across rows).
 ///
 /// Runs after `CustomDictionarySchema.ensureTables`; callers must serialize
 /// access (typically via `SQLiteConnectionManager.execute`).
+/// No-op once `PRAGMA user_version` matches `CustomDictionarySchema.schemaVersion`,
+/// so the O(N) backfill happens at most once per derivation-logic change
+/// instead of on every cold start.
 enum CustomDictionaryMigrator {
-    /// Apply all forward data migrations. Safe to call repeatedly.
-    static func run(db: OpaquePointer) {
-        addMissingDerivedColumns(db: db)
-        backfillDerivedColumns(db: db)
+    /// Apply pending forward migrations. Safe to call repeatedly — fast-path
+    /// returns immediately when `PRAGMA user_version` is already current.
+    static func runIfNeeded(db: OpaquePointer, logger: DebugLogger) {
+        let currentVersion = readUserVersion(db: db)
+        guard currentVersion < CustomDictionarySchema.schemaVersion else { return }
+
+        logger.info("[MIGRATE] custom_dictionary.db v\(currentVersion) -> v\(CustomDictionarySchema.schemaVersion)")
+
+        if currentVersion < 1 {
+            addMissingDerivedColumns(db: db)
+            backfillDerivedColumns(db: db)
+        }
+
+        sqliteExecSimple(db: db, "PRAGMA user_version = \(CustomDictionarySchema.schemaVersion)")
     }
 
     // MARK: - Private
 
+    private static func readUserVersion(db: OpaquePointer) -> Int {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+    }
+
     /// Add derived columns via `ALTER TABLE` when missing. The whitelist is
     /// required because SQLite DDL cannot parameterize column identifiers.
     private static func addMissingDerivedColumns(db: OpaquePointer) {
-        let allowedColumns: Set = ["notone", "abbrev", "roman_num"]
-        for column in allowedColumns where !CustomDictionarySchema.columnExists(db: db, column: column) {
+        for column in CustomDictionarySchema.derivedColumns
+            where !CustomDictionarySchema.columnExists(db: db, column: column)
+        {
             sqliteExecSimple(
                 db: db,
                 "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) TEXT DEFAULT '';",

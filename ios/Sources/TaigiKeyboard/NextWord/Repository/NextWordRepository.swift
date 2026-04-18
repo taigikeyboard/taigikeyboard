@@ -118,11 +118,7 @@ enum NextWordRepository {
 
     /// Delete all rows.
     static func deleteAll(db: OpaquePointer) {
-        var stmt: OpaquePointer?
-        if sqlite3_prepare_v2(db, "DELETE FROM user_association", -1, &stmt, nil) == SQLITE_OK {
-            sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
-        }
+        sqliteExecSimple(db: db, "DELETE FROM user_association")
     }
 
     /// Delete the oldest/lowest-count rows up to `limit`.
