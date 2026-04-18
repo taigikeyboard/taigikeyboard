@@ -20,10 +20,15 @@ final class NextWordController: SelectionContextProvider {
     // MARK: - Dependencies
 
     private let settingsProvider: EngineSettingsProvider
+    private let nextWordService: NextWordService
     weak var contextUpdater: AutocompleteContextUpdater?
 
-    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+    init(
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
+        nextWordService: NextWordService = .shared,
+    ) {
         self.settingsProvider = settingsProvider
+        self.nextWordService = nextWordService
     }
 
     // MARK: - State
@@ -72,8 +77,8 @@ final class NextWordController: SelectionContextProvider {
 
         if settingsProvider.current.isAssociationRecordingEnabled {
             if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-                Task {
-                    await NextWordService.shared.recordAssociation(
+                Task { [nextWordService] in
+                    await nextWordService.recordAssociation(
                         prev: prevWord,
                         prevTl: prevTl,
                         nextHanzi: text,
@@ -169,8 +174,8 @@ final class NextWordController: SelectionContextProvider {
     private func triggerPrediction(for word: String, roman: String = "") {
         logger.debug("[TRIGGER] querying for word='\(word)'")
 
-        Task { @MainActor in
-            let predictions = await NextWordService.shared.predict(word: word, roman: roman)
+        Task { @MainActor [nextWordService] in
+            let predictions = await nextWordService.predict(word: word, roman: roman)
             logger.debug("[TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
 
             if predictions.isEmpty {
@@ -253,14 +258,14 @@ final class NextWordController: SelectionContextProvider {
 
         guard parts.count > 1 else { return }
 
-        Task {
+        Task { [nextWordService] in
             for i in 0 ..< (parts.count - 1) {
                 let prevPart = parts[i]
                 let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
                 let nextPart = parts[i + 1]
                 let nextRoman = romanParts.indices.contains(i + 1) ? romanParts[i + 1] : ""
 
-                await NextWordService.shared.recordAssociation(
+                await nextWordService.recordAssociation(
                     prev: prevPart,
                     prevTl: prevPartRoman,
                     nextHanzi: nextPart,

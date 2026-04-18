@@ -32,9 +32,26 @@ final class DictionarySearchService: @unchecked Sendable {
         self.repository = repository ?? DictionaryRepository(
             settingsProvider: settingsProvider,
         )
-        // Bootstrap Trie + custom dictionary via the shared lexicon service so
-        // a fresh launch straight into Dictionary has the indexes ready.
-        _ = LexiconService.shared
+        bootstrapIndexes()
+    }
+
+    /// Warm up Trie + custom-dictionary DB so a fresh launch straight into the
+    /// Dictionary tab has the indexes ready. Bootstraps against the injected
+    /// `settingsProvider`, not the global `LexiconService.shared`, so non-default
+    /// providers (tests, stubs) get a service in sync with their settings.
+    private func bootstrapIndexes() {
+        DispatchQueue.global(qos: .userInitiated).async {
+            _ = TrieService.shared.initialize()
+        }
+        guard settingsProvider.current.isCustomDictEnabled else { return }
+        Task { [customDictionaryRepository, logger] in
+            do {
+                try await customDictionaryRepository.ensureInitialized()
+                logger.info("[INIT] Custom dictionary initialized")
+            } catch {
+                logger.warning("[INIT] Custom dictionary init failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - Public API
