@@ -35,8 +35,7 @@ final class DictionarySearchViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
 
             do {
-                let inputMode = SharedSettings.shared.inputMode
-                let newResults = try await service.search(query: query, inputMode: inputMode)
+                let newResults = try await service.search(query: query)
                 guard !Task.isCancelled else { return }
                 results = newResults
                 isSearching = false

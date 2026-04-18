@@ -18,6 +18,10 @@ final class DictionarySearchService: @unchecked Sendable {
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionarySearchService")
 
+    /// Trie bootstrap task — awaited before every search so a user who types
+    /// right after opening the Dictionary tab doesn't see a false empty state.
+    private let trieBootstrap: Task<Void, Never>
+
     // MARK: - Init
 
     init(
@@ -32,17 +36,19 @@ final class DictionarySearchService: @unchecked Sendable {
         self.repository = repository ?? DictionaryRepository(
             settingsProvider: settingsProvider,
         )
-        bootstrapIndexes()
-    }
-
-    /// Warm up Trie + custom-dictionary DB so a fresh launch straight into the
-    /// Dictionary tab has the indexes ready. Bootstraps against the injected
-    /// `settingsProvider`, not the global `LexiconService.shared`, so non-default
-    /// providers (tests, stubs) get a service in sync with their settings.
-    private func bootstrapIndexes() {
-        DispatchQueue.global(qos: .userInitiated).async {
+        // Kick off Trie load on a detached task we can await from search().
+        // TrieService.initialize() is idempotent, so this is a no-op when the
+        // shared keyboard-side LexiconService has already loaded it.
+        trieBootstrap = Task.detached(priority: .userInitiated) {
             _ = TrieService.shared.initialize()
         }
+        bootstrapCustomDictionary()
+    }
+
+    /// Eagerly open the custom-dictionary DB when the injected settings enable
+    /// it, so `searchSync` has a live connection the moment a search arrives.
+    /// Failures are logged and left to graceful degradation at lookup time.
+    private func bootstrapCustomDictionary() {
         guard settingsProvider.current.isCustomDictEnabled else { return }
         Task { [customDictionaryRepository, logger] in
             do {
@@ -60,14 +66,17 @@ final class DictionarySearchService: @unchecked Sendable {
     ///
     /// Hanzi queries use the CJK path; roman queries also consult the user's
     /// custom dictionary. Results are sorted with kautian (教育部) first, then
-    /// by frequency; custom-dict hits lead the list.
+    /// by frequency; custom-dict hits lead the list. Awaits Trie readiness so
+    /// searches arriving during the bootstrap window don't return empty.
     func search(
         query: String,
-        inputMode: InputMode,
         limit: Int = 20,
     ) async throws -> [DictionarySearchResult] {
         guard !query.isEmpty else { return [] }
 
+        await trieBootstrap.value
+
+        let inputMode = settingsProvider.current.inputMode
         let isCJK = CandidateProcessor.isHanzi(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
