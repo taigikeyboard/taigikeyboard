@@ -49,7 +49,7 @@ extension KeyboardViewController {
         services.actionHandler = handler
         actionHandler = handler
 
-        handler.composingManager.setKeyboardContext(state.keyboardContext)
+        handler.composingManager.setContextSink(state.keyboardContext)
         handler.composingManager.delegate = self
         handler.nextWordController.contextUpdater = handler
 

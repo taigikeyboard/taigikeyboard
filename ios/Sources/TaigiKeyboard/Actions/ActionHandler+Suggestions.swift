@@ -83,18 +83,14 @@ extension ActionHandler {
         }
     }
 
-    /// Commit text via proxy (NextWord) or composing manager (regular candidate)
-    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion: Autocomplete.Suggestion) {
+    /// Commit text via proxy (NextWord) or composing manager (regular candidate).
+    /// The `suggestion` parameter is kept for future telemetry/logging use
+    /// but ComposingManager only needs the candidate text.
+    private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: Autocomplete.Suggestion) {
         if isNextWord {
             keyboardContext.textDocumentProxy.insertText(text)
         } else {
-            let modifiedSuggestion = Autocomplete.Suggestion(
-                text: text,
-                title: suggestion.title,
-                subtitle: suggestion.subtitle,
-                additionalInfo: suggestion.additionalInfo,
-            )
-            composingManager.selectSuggestion(modifiedSuggestion)
+            composingManager.selectSuggestion(text: text)
         }
     }
 }

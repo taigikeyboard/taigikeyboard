@@ -7,7 +7,7 @@ import SwiftUI
 /// KeyboardContext 組字狀態擴展
 ///
 /// 使用 Associated Object 為 KeyboardContext 添加組字狀態屬性。
-extension KeyboardContext {
+extension KeyboardContext: ComposingContextSink {
     private static var isComposingTextKey: UInt8 = 0
 
     /// 是否正在組字中
