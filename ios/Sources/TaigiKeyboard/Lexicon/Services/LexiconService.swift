@@ -133,12 +133,7 @@ final class LexiconService: @unchecked Sendable {
 
         let isAutoCap = settingsProvider.current.isAutoCap
         let customSearchKey = rawInput ?? segmentedInput
-        let isToneAware = customSearchKey.contains { $0.isNumber }
-        let searchPrefix = isToneAware
-            ? customSearchKey.lowercased()
-            .replacingOccurrences(of: "-", with: "")
-            .replacingOccurrences(of: " ", with: "")
-            : CustomDictionaryDerivation.generateNotone(customSearchKey)
+        let (searchPrefix, isToneAware) = CustomDictionaryDerivation.searchPrefix(for: customSearchKey)
 
         let customEntries = customDictionaryRepository.searchSync(
             prefix: searchPrefix,

@@ -47,6 +47,23 @@ enum CustomDictionaryDerivation {
         InputNormalizer.normalize(roman, mode: .tl)
     }
 
+    /// Build the custom-dictionary prefix-search key for `roman`.
+    ///
+    /// Selects the column strategy by input shape:
+    /// - tone-aware (contains a digit) → lowercase, strip `-` / spaces, match `roman_num`.
+    /// - toneless → strip diacritics/digits/separators via `generateNotone`, match `notone`.
+    static func searchPrefix(for roman: String) -> (key: String, isToneAware: Bool) {
+        let isToneAware = roman.contains { $0.isNumber }
+        let key: String = if isToneAware {
+            roman.lowercased()
+                .replacingOccurrences(of: "-", with: "")
+                .replacingOccurrences(of: " ", with: "")
+        } else {
+            generateNotone(roman)
+        }
+        return (key, isToneAware)
+    }
+
     // MARK: - Private
 
     /// Decompose then drop Unicode `Mn` (nonspacing marks). Used by

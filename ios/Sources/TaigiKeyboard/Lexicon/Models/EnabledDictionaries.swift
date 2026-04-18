@@ -73,4 +73,23 @@ struct EnabledDictionaries {
     var allAssociationSourcesEnabled: Bool {
         kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
     }
+
+    /// Enabled sources as a `Set<DictionarySource>`, suitable for filtering
+    /// `DictionarySearchResult.sources` badges. `.dev` and `.custom` are always
+    /// included (non-toggleable); `.variant` is not a `DictionarySource` case.
+    var enabledSources: Set<DictionarySource> {
+        var set: Set<DictionarySource> = [.dev, .custom]
+        if kautian { set.insert(.kautian) }
+        if taigitv { set.insert(.taigitv) }
+        if kungge { set.insert(.kungge) }
+        if itaigi { set.insert(.itaigi) }
+        if taijit { set.insert(.taijit) }
+        if taihoa { set.insert(.taihoa) }
+        if sitbut { set.insert(.sitbut) }
+        if stti { set.insert(.stti) }
+        if khpoo { set.insert(.khpoo) }
+        if khiin { set.insert(.khiin) }
+        if lkk { set.insert(.lkk) }
+        return set
+    }
 }
