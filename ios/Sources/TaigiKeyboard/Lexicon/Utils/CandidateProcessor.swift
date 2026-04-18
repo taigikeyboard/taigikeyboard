@@ -8,7 +8,9 @@ import Foundation
 ///
 /// Provides capitalization, deduplication, scoring, and text classification.
 enum CandidateProcessor {
-    private static let logger = DebugLogger(category: "CandidateProcessor")
+    private static var logger: LoggerBackend {
+        LoggerFactory.make(category: "CandidateProcessor")
+    }
 
     // MARK: - Text Classification
 
@@ -117,7 +119,7 @@ enum CandidateProcessor {
     static func calculateScore(
         word: TaigiWord,
         normalizedInput: String,
-        frequencyData: UserFrequencyService.FrequencyData,
+        frequencyData: FrequencyData,
         currentTime: Int64,
     ) -> ScoreBreakdown {
         // Normalize both sides to base form (no tones, no hyphens) for comparison
@@ -202,7 +204,7 @@ enum CandidateProcessor {
     static func sortByScore(
         _ words: [TaigiWord],
         normalizedInput: String,
-        frequencyDataMap: [String: UserFrequencyService.FrequencyData],
+        frequencyDataMap: [String: FrequencyData],
         currentTime: Int64 = Int64(Date().timeIntervalSince1970 * 1000),
     ) -> [TaigiWord] {
         let scored = words.map { word -> (TaigiWord, ScoreBreakdown) in

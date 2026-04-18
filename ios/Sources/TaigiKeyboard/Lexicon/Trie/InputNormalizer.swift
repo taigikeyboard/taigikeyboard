@@ -1,9 +1,8 @@
 import Foundation
 
 // MARK: - Shared-Core Candidate
-// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
-private let normalizerLogger = DebugLogger(category: "InputNormalizer")
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 /// Input normalizer
 ///
@@ -19,6 +18,10 @@ private let normalizerLogger = DebugLogger(category: "InputNormalizer")
 ///
 /// Pipeline: TPS conversion → split syllables → per-syllable (diacritics→digits) → join
 enum InputNormalizer {
+    private static var logger: LoggerBackend {
+        LoggerFactory.make(category: "InputNormalizer")
+    }
+
     // MARK: - Public API
 
     /// Normalize input to Trie query format (TL numeric tones)
@@ -39,9 +42,11 @@ enum InputNormalizer {
 
         let normalized = result.joined()
 
-        if input != normalized {
-            normalizerLogger.debug("[NORMALIZE] input='\(input)' -> '\(normalized)'")
-        }
+        #if DEBUG
+            if input != normalized {
+                logger.debug("[NORMALIZE] input='\(input)' -> '\(normalized)'")
+            }
+        #endif
 
         return normalized
     }

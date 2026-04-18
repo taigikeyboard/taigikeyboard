@@ -1,14 +1,10 @@
 import Foundation
 
-// MARK: - Input Mode
+// MARK: - Input Mode Display Name
 
-/// Input mode
-enum InputMode: String, CaseIterable {
-    case poj // Pe̍h-ōe-jī
-    case tl // Tâi-lô
-    case english
-    case tps // Taiwanese Phonetic Symbols
-
+/// Platform-side localization for `InputMode` (defined in `InputMode.swift`
+/// as a Foundation-only shared-core candidate).
+extension InputMode {
     var displayName: String {
         switch self {
         case .poj: SettingsTexts.pojMode

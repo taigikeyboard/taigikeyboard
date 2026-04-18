@@ -9,16 +9,6 @@ import SQLite3
 /// - `UserFrequencySchema`: DDL (CREATE TABLE / CREATE INDEX / metadata seed)
 /// - `UserFrequencyPruner`: capacity (`maxEntries`) + delete-oldest algorithm
 final class UserFrequencyRepository: @unchecked Sendable {
-    // MARK: - Types
-
-    /// Per-word frequency snapshot (count + last-used timestamp).
-    struct FrequencyData {
-        let count: Int
-        let lastUsedMillis: Int64 // Unix timestamp in milliseconds
-
-        static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
-    }
-
     // MARK: - Properties
 
     static let shared = UserFrequencyRepository()

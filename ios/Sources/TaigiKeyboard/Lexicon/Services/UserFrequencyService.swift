@@ -16,10 +16,6 @@ final class UserFrequencyService: @unchecked Sendable {
         self.repository = repository
     }
 
-    // MARK: - Type Alias
-
-    typealias FrequencyData = UserFrequencyRepository.FrequencyData
-
     // MARK: - Public API
 
     /// 記錄詞彙使用

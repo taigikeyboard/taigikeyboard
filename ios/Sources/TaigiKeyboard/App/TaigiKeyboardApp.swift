@@ -9,6 +9,10 @@ struct TaigiKeyboardApp: App {
     )
 
     init() {
+        // Install the shared-core logging backend so engine candidates
+        // (CandidateProcessor / InputNormalizer) route logs through DebugLogger.
+        LoggerFactory.install { DebugLogger(category: $0) }
+
         // Configure KeyboardKit to persist settings via App Group.
         // Must be called before any @AppStorage access.
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)

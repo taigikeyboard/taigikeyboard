@@ -47,6 +47,10 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        // Install the shared-core logging backend so engine candidates
+        // (CandidateProcessor / InputNormalizer) route logs through DebugLogger.
+        LoggerFactory.install { DebugLogger(category: $0) }
+
         // Register custom fonts from containing app bundle (extension only)
         FontRegistration.registerFontsIfNeeded()
 

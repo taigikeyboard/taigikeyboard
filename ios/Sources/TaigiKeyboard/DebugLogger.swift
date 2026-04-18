@@ -8,7 +8,7 @@ import Foundation
     /// All messages use `privacy: .public` for Xcode console visibility.
     /// In release builds, every method is a no-op and `@autoclosure` ensures
     /// the message string is never constructed.
-    struct DebugLogger {
+    struct DebugLogger: LoggerBackend {
         private let logger: Logger
 
         init(category: String) {
@@ -39,7 +39,7 @@ import Foundation
         }
     }
 #else
-    struct DebugLogger {
+    struct DebugLogger: LoggerBackend {
         init(category _: String) {}
         @inline(__always) func debug(_: @autoclosure () -> String) {}
         @inline(__always) func info(_: @autoclosure () -> String) {}
