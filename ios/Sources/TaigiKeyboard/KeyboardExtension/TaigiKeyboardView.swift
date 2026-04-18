@@ -55,6 +55,9 @@ struct TaigiKeyboardView: View {
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
         let candidateStyle = Self.candidateStyle(for: keyboardContext, colorSettings: colorSettings)
+        // Distinct from `candidateStyle.isLiquidGlassEnabled`: that flag checks the
+        // *candidate bar* background (`candidateBackgroundColor`); this flag checks
+        // the *root keyboard* background (`backgroundColor`). Keep them independent.
         let useLiquidGlassBg = keyboardContext.isLiquidGlassEnabled
             && colorSettings.backgroundColor == nil
         let isTPSLayout = p.settings.keyboardLayoutType == .tps
