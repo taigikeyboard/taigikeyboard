@@ -18,10 +18,11 @@ extension ActionHandler {
             return false
         }
 
-        // Unified case transformation
+        // Unified case transformation.
+        // Adapter: KK's Keyboard.KeyboardCase → engine's LetterCase.
         let processedChar = CaseTransformer.transformForInput(
             char,
-            keyboardCase: currentCase,
+            letterCase: currentCase.asLetterCase,
             isAutoCapitalizationEnabled: autoCap,
             inputMode: settings.inputMode,
         )

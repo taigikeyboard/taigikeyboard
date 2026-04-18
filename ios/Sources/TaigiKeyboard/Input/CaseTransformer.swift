@@ -1,5 +1,18 @@
 import Foundation
-import KeyboardKit
+
+// MARK: - Shared-Core Candidate
+
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+
+/// Three-state shift / case indicator used by the engine layer.
+/// The KK-aware layer (`Actions/ActionHandler`) maps between
+/// `Keyboard.KeyboardCase` and this enum; engine code never sees
+/// the KeyboardKit type.
+enum LetterCase {
+    case lowercased
+    case uppercased // one-shot shift — next letter upper, rest lower
+    case capsLocked // every letter upper
+}
 
 /// 大小寫轉換服務
 ///
@@ -7,28 +20,24 @@ import KeyboardKit
 /// - 使用者輸入時的字元轉換
 /// - 候選詞的首字母大寫
 /// - 聲調字母的正確轉換（POJ/TL）
-///
-/// 大小寫狀態完全由 KeyboardKit 管理，本服務只負責字元轉換。
 enum CaseTransformer {
-
     // MARK: - Public API
 
     /// 輸入時轉換字元（ActionHandler 使用）
     ///
     /// - Parameters:
     ///   - char: 要轉換的字元
-    ///   - keyboardCase: 當前鍵盤大小寫狀態（由 KeyboardKit 管理）
+    ///   - letterCase: 當前大小寫狀態（由 ActionHandler 從 KeyboardKit 轉入）
     ///   - isAutoCapitalizationEnabled: 是否啟用自動大寫（未使用，保留供未來擴展）
     ///   - inputMode: 輸入模式（POJ/TL）
     /// - Returns: 轉換後的字元
     static func transformForInput(
         _ char: String,
-        keyboardCase: Keyboard.KeyboardCase,
-        isAutoCapitalizationEnabled: Bool,
-        inputMode: InputMode
+        letterCase: LetterCase,
+        isAutoCapitalizationEnabled _: Bool,
+        inputMode: InputMode,
     ) -> String {
-        // 直接使用 KeyboardKit 管理的 keyboardCase 狀態
-        return transform(char, to: keyboardCase, mode: inputMode)
+        transform(char, to: letterCase, mode: inputMode)
     }
 
     /// 候選詞首字母大寫（AutocompleteService 使用）
@@ -43,7 +52,7 @@ enum CaseTransformer {
         _ text: String,
         basedOn input: String,
         isAutoCapitalizationEnabled: Bool,
-        inputMode: InputMode
+        inputMode: InputMode,
     ) -> String {
         guard isAutoCapitalizationEnabled else {
             return text
@@ -65,7 +74,7 @@ enum CaseTransformer {
 
         let capitalizedFirst = ToneUtilities.uppercaseToneLetter(
             String(firstTextChar),
-            mode: inputMode
+            mode: inputMode,
         )
         let rest = String(text.dropFirst())
 
@@ -77,20 +86,18 @@ enum CaseTransformer {
     /// 統一的字元轉換（使用聲調對照表）
     private static func transform(
         _ char: String,
-        to targetCase: Keyboard.KeyboardCase,
-        mode: InputMode
+        to targetCase: LetterCase,
+        mode: InputMode,
     ) -> String {
         switch targetCase {
         case .capsLocked:
             // Caps Lock：全部大寫（如 "tsh" → "TSH"）
-            return ToneUtilities.uppercaseToneLetter(char, mode: mode)
+            ToneUtilities.uppercaseToneLetter(char, mode: mode)
         case .uppercased:
             // 句首大寫：僅首字母大寫（如 "tsh" → "Tsh"）
-            return capitalizeFirstLetter(char, mode: mode)
+            capitalizeFirstLetter(char, mode: mode)
         case .lowercased:
-            return ToneUtilities.lowercaseToneLetter(char, mode: mode)
-        @unknown default:
-            return char.lowercased()
+            ToneUtilities.lowercaseToneLetter(char, mode: mode)
         }
     }
 
