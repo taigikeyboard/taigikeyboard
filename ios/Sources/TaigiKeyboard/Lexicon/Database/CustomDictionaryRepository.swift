@@ -49,14 +49,14 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             if !Self.entryExists(db: db, id: entry.id) {
                 let currentCount = Self.currentEntryCount(db: db)
                 guard currentCount < Self.maxEntries else {
-                    throw DictionaryError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
+                    throw LexiconError.queryExecutionFailed("Custom dictionary is full (max \(Self.maxEntries) entries)")
                 }
             }
 
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
-                throw DictionaryError.queryPreparationFailed("Upsert failed: \(errorMsg)")
+                throw LexiconError.queryPreparationFailed("Upsert failed: \(errorMsg)")
             }
             defer { sqlite3_finalize(stmt) }
 
@@ -64,7 +64,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
             guard sqlite3_step(stmt) == SQLITE_DONE else {
                 let errorMsg = String(cString: sqlite3_errmsg(db))
-                throw DictionaryError.queryExecutionFailed("Upsert failed: \(errorMsg)")
+                throw LexiconError.queryExecutionFailed("Upsert failed: \(errorMsg)")
             }
         }
     }
@@ -171,7 +171,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                 let batchEnd = min(batchStart + Self.importBatchSize, entries.count)
 
                 guard sqlite3_exec(db, "BEGIN TRANSACTION;", nil, nil, nil) == SQLITE_OK else {
-                    throw DictionaryError.queryExecutionFailed("Failed to begin transaction")
+                    throw LexiconError.queryExecutionFailed("Failed to begin transaction")
                 }
 
                 for i in batchStart ..< batchEnd {
@@ -195,7 +195,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
                 guard sqlite3_exec(db, "COMMIT;", nil, nil, nil) == SQLITE_OK else {
                     sqlite3_exec(db, "ROLLBACK;", nil, nil, nil)
-                    throw DictionaryError.queryExecutionFailed("Failed to commit batch transaction")
+                    throw LexiconError.queryExecutionFailed("Failed to commit batch transaction")
                 }
 
                 if insertedCount >= remainingCapacity { break }
@@ -225,7 +225,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     private static func getDatabasePath() throws -> String {
         guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw DictionaryError.databaseNotFound
+            throw LexiconError.databaseNotFound
         }
         try FileManager.default.createDirectory(
             at: containerURL,
@@ -266,13 +266,13 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed("Create custom_dictionary table failed: \(errorMsg)")
+            throw LexiconError.queryPreparationFailed("Create custom_dictionary table failed: \(errorMsg)")
         }
         defer { sqlite3_finalize(stmt) }
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryExecutionFailed("Create custom_dictionary table failed: \(errorMsg)")
+            throw LexiconError.queryExecutionFailed("Create custom_dictionary table failed: \(errorMsg)")
         }
     }
 

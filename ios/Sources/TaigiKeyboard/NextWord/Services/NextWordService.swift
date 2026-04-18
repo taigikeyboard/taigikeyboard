@@ -391,13 +391,13 @@ final class NextWordService: @unchecked Sendable {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, createTable, -1, &stmt, nil) == SQLITE_OK else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed(errorMsg)
+            throw LexiconError.queryPreparationFailed(errorMsg)
         }
         defer { sqlite3_finalize(stmt) }
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryExecutionFailed(errorMsg)
+            throw LexiconError.queryExecutionFailed(errorMsg)
         }
 
         // 建立索引
@@ -482,7 +482,7 @@ final class NextWordService: @unchecked Sendable {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed(errorMsg)
+            throw LexiconError.queryPreparationFailed(errorMsg)
         }
         defer { sqlite3_finalize(stmt) }
 
@@ -493,7 +493,7 @@ final class NextWordService: @unchecked Sendable {
 
         if sqlite3_step(stmt) != SQLITE_DONE {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryExecutionFailed(errorMsg)
+            throw LexiconError.queryExecutionFailed(errorMsg)
         }
     }
 
@@ -644,7 +644,7 @@ final class NextWordService: @unchecked Sendable {
 
     private static func getUserDatabasePath() throws -> String {
         guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw DictionaryError.databaseNotFound
+            throw LexiconError.databaseNotFound
         }
         try FileManager.default.createDirectory(
             at: containerURL,

@@ -213,7 +213,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     private static func getDatabasePath() throws -> String {
         guard let containerURL = SharedSettings.sharedContainerURL else {
-            throw DictionaryError.databaseNotFound
+            throw LexiconError.databaseNotFound
         }
         try FileManager.default.createDirectory(
             at: containerURL,
@@ -263,13 +263,13 @@ final class UserFrequencyRepository: @unchecked Sendable {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryPreparationFailed("Create user_frequency table failed: \(errorMsg)")
+            throw LexiconError.queryPreparationFailed("Create user_frequency table failed: \(errorMsg)")
         }
         defer { sqlite3_finalize(stmt) }
 
         guard sqlite3_step(stmt) == SQLITE_DONE else {
             let errorMsg = String(cString: sqlite3_errmsg(db))
-            throw DictionaryError.queryExecutionFailed("Create user_frequency table failed: \(errorMsg)")
+            throw LexiconError.queryExecutionFailed("Create user_frequency table failed: \(errorMsg)")
         }
     }
 

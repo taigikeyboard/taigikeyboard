@@ -1,7 +1,10 @@
 import Foundation
 
-/// 詞典相關錯誤
-enum DictionaryError: LocalizedError {
+/// Errors raised by the lexicon engine (SQLite repositories, trie loader,
+/// shared infrastructure). Named after the module, not any single data
+/// source — these surface from `DictionaryRepository`, `CustomDictionaryRepository`,
+/// `UserFrequencyRepository`, `NextWordService`, and `TrieService` alike.
+enum LexiconError: LocalizedError {
     case databaseNotFound
     case databaseNotAvailable
     case databaseConnectionFailed(String)
@@ -12,9 +15,9 @@ enum DictionaryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .databaseNotFound:
-            "Dictionary database file not found"
+            "Database file not found"
         case .databaseNotAvailable:
-            "Dictionary database is not available"
+            "Database is not available"
         case let .databaseConnectionFailed(message):
             "Failed to connect to database: \(message)"
         case let .queryExecutionFailed(message):

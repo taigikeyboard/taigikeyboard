@@ -39,12 +39,12 @@ final class DictionaryRepository: @unchecked Sendable {
         }
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[QUERY] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         // 漢字輸入暫不支援
@@ -98,12 +98,12 @@ final class DictionaryRepository: @unchecked Sendable {
         guard !input.isEmpty else { return [] }
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[SEARCH-SOURCES] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         let allRowIds = lookupRowIds(input: input, inputMode: inputMode)
@@ -128,12 +128,12 @@ final class DictionaryRepository: @unchecked Sendable {
         logger.debug("[HANZI-SEARCH] query='\(query)' limit=\(limit)")
 
         guard let reader = binaryReader else {
-            throw DictionaryError.databaseNotAvailable
+            throw LexiconError.databaseNotAvailable
         }
 
         guard trieService.isReady else {
             logger.error("[HANZI-SEARCH] Trie not loaded")
-            throw DictionaryError.trieNotLoaded
+            throw LexiconError.trieNotLoaded
         }
 
         // 使用 hanzi: prefix 在主 trie 做前綴搜尋

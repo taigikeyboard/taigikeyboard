@@ -290,6 +290,12 @@
 			path = Sources/TaigiKeyboard/NextWord;
 			sourceTree = "<group>";
 		};
+		F3EFE0DB2F93656800696406 /* Common */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Common;
+			path = Sources/TaigiKeyboard/Common;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -324,6 +330,7 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F3EFE0DB2F93656800696406 /* Common */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
@@ -398,6 +405,7 @@
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 				F3E176912F8824050017FB6D /* NextWord */,
+				F3EFE0DB2F93656800696406 /* Common */,
 			);
 			name = TaigiKeyboard;
 			packageProductDependencies = (
@@ -439,6 +447,7 @@
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 				F3E176912F8824050017FB6D /* NextWord */,
+				F3EFE0DB2F93656800696406 /* Common */,
 			);
 			name = TaigiKeyboardExtension;
 			packageProductDependencies = (
