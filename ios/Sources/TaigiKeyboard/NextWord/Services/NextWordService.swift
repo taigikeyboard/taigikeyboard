@@ -76,6 +76,10 @@ final class NextWordService: @unchecked Sendable {
     /// Async-once gate for schema creation/migration — concurrent callers
     /// await the same `Task`; nil cache on failure allows retry.
     private var _tableCreationTask: Task<Void, Error>?
+    /// Bumped every time `_tableCreationTask` is replaced. Used instead of
+    /// identity comparison (Task is a struct, `===` unavailable) to ensure
+    /// error handlers only clear the cache they created.
+    private var _tableCreationGeneration: UInt64 = 0
 
     // MARK: - Initialization
 
@@ -229,7 +233,10 @@ final class NextWordService: @unchecked Sendable {
     /// 刪除使用者關聯資料庫
     static func deleteUserDatabase() throws {
         shared.userConnectionManager.close()
-        shared.stateLock.withLock { shared._tableCreationTask = nil }
+        shared.stateLock.withLock {
+            shared._tableCreationTask = nil
+            shared._tableCreationGeneration &+= 1
+        }
 
         let path = try getUserDatabasePath()
         if FileManager.default.fileExists(atPath: path) {
@@ -313,10 +320,12 @@ final class NextWordService: @unchecked Sendable {
     /// Single-flight schema initialization. Concurrent callers await the
     /// same `Task`; failures clear the cache so the next caller retries.
     private func ensureUserTablesCreated() async throws {
-        let task = stateLock.withLock { () -> Task<Void, Error> in
+        let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
             if let existing = _tableCreationTask {
-                return existing
+                return (existing, _tableCreationGeneration)
             }
+            _tableCreationGeneration &+= 1
+            let gen = _tableCreationGeneration
             let logger = self.logger
             let connection = self.userConnectionManager
             let new = Task {
@@ -328,13 +337,15 @@ final class NextWordService: @unchecked Sendable {
                 }
             }
             _tableCreationTask = new
-            return new
+            return (new, gen)
         }
         do {
             try await task.value
         } catch {
             stateLock.withLock {
-                if _tableCreationTask === task {
+                // Only clear if we still own the cached task generation —
+                // avoids wiping a newer task that a later caller installed.
+                if _tableCreationGeneration == generation {
                     _tableCreationTask = nil
                 }
             }
