@@ -26,18 +26,18 @@ Pre-work for the shared-core extraction roadmap. Produced 2026-04-19 after PR #1
 
 Each group is independently mergeable. Estimates assume single-phase focus.
 
-### G0 · Baseline capture + Phase 0 invariants doc (NEW, S — ~2–3 hr)
+### G0 · Phase 0 invariants doc + qualitative perf gate (S — ~1–2 hr)
 
-**Problem**: Phase I must not regress latency or memory. Without a baseline number, the gate is rhetorical. Also surfaces the cost of any protocol-dispatch or DI indirection introduced by later groups.
+**Problem**: Phase I must not regress perceived latency or cause memory-related extension termination. The cost of a full quantitative baseline (Instruments signposts, P50/P95 capture, per-refactor re-measurement) is not justified for a solo-dev IME — the user is the QA, and perceptible regression on S1/S2/S3 sequences is the acceptance criterion.
 
-**Deliverable**:
-- `docs/perf/keyboard-baseline-2026-04.md` — P50 / P95 keystroke latency on an iPhone 12 or similar, measured on at least 3 representative input sequences (POJ diacritics, TPS composition, Hanji candidate scroll). Methodology documented (signpost-based or Xcode Instruments).
-- `docs/perf/extension-memory-2026-04.md` — peak resident memory during the same sequences; headroom vs 64MB iOS extension cap.
-- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the 36 candidates must uphold (TL↔POJ round-trip, segmentation tie rules, NFD normalization, candidate dedup, scoring determinism, decay math). Each invariant references a named test case (may be TODO in G9).
+**Deliverable (revised 2026-04-19)**:
+- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the 36 candidates must uphold (TL↔POJ round-trip, segmentation tie rules, NFD normalization, candidate dedup, scoring determinism, decay math). Each invariant references a named test case (may be TODO in G9). **Status: authored 2026-04-19.**
+- `docs/perf/keyboard-baseline-2026-04.md` and `docs/perf/extension-memory-2026-04.md` — quantitative methodology **deferred** (kept as optional future work for when CI perf lane / team workflow makes numbers worth the overhead). Files retained; header annotated `deferred`.
+- **Qualitative gate** in place of quantitative baseline: after G2 / G4-impl / G5-impl, user dogfoods S1/S2/S3 sequences (same three defined in the perf methodology docs) on real device. Pass = no perceptible typing latency regression, no keyboard dismiss (64 MB termination signal), no progressive memory growth during extended typing session (sanity check for leaks only — refactor does not add features, so steady-state capacity is unchanged).
 
-**Why before the rest**: defines the measurable contract Phase I maintains; shapes G4/G5 boundary design.
+**Why qualitative**: refactor-only scope means total memory footprint should not grow. The dogfooding gate catches leaks and architectural regressions that actually affect users; Instruments numbers catch microsecond-level regressions that would not.
 
-**Risk**: low (measurement + doc only, no code changes).
+**Risk**: low (doc only). Risk of missing a microsecond-level regression is accepted as a known trade-off.
 
 ---
 
@@ -57,7 +57,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 
 **Deliverable**: introduce a `KeyboardEnvironment` (or reuse `EngineSettingsProvider`) passed through `@Environment` / init. Views take the protocol; only the extension's composition root binds to `SharedSettings.shared`.
 
-**Risk**: medium — touches keyboard extension hot path. Need careful testing of settings live-sync via Darwin notifications. Latency/memory gate applies.
+**Risk**: medium — touches keyboard extension hot path. Need careful testing of settings live-sync via Darwin notifications. Dogfooding pass required (S1/S2/S3: no perceptible latency regression, no keyboard dismiss, no memory leak during extended session).
 
 ---
 
@@ -180,7 +180,7 @@ G6 (Autocomplete + CandidateVM)
    ↓
 G3 (Dictionary tab VMs) ─── UI pattern template
    ↓
-G2 (Keyboard extension env) ─── hottest path; enforce latency gate
+G2 (Keyboard extension env) ─── hottest path; dogfooding pass required
    ↓
 G5-impl (NextWordController split) ─── unlocks one more candidate
    ↓
@@ -206,8 +206,8 @@ Advance to Phase II when ALL of:
 3. **Exclusions shrunk**: `ComposingManager`, `NextWordController` are split; shared-core roster grows to ≥40 candidates.
 4. **Doc parity**: `docs/architecture/ios-exemplar.md` AND `docs/architecture/behavioral-invariants.md` exist.
 5. **Test baseline**: G9's 10-candidate coverage ≥ 70% with named invariant tests referenced from Phase 0 doc.
-6. **Latency gate** (NEW): P95 keystroke latency on the G0 benchmark sequences is ≤ the G0 baseline (no regression).
-7. **Memory gate** (NEW): keyboard extension peak resident memory is ≤ the G0 baseline (no regression).
+6. **Latency dogfooding pass** (revised 2026-04-19): S1 (POJ diacritics) / S2 (TPS composition) / S3 (Hanji candidate scroll) on real device show no user-perceptible typing latency regression after G2 / G4-impl / G5-impl land.
+7. **Memory leak / stability pass** (revised 2026-04-19): no keyboard extension dismiss observed (64 MB termination signal), no progressive memory growth during extended typing session. Refactor does not add features, so steady-state capacity is unchanged; gate is leak-free, not a number.
 8. **Data artifact audit** (NEW): `docs/architecture/data-artifacts-portability.md` exists and lists open decisions (not all need resolution yet — but they must be catalogued).
 
 ---

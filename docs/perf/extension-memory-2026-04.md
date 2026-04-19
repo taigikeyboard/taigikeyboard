@@ -1,8 +1,12 @@
 # Keyboard Extension Memory Baseline — 2026-04
 
-**Status**: methodology frozen 2026-04-19 as Phase I G0 deliverable. Numbers filled in **per manual testing session**; the first captured run is the baseline for Phase I gating signal #7.
+**Status** (revised 2026-04-19): methodology frozen, **quantitative capture deferred**. Phase I G0 adopts a qualitative gate (see `docs/architecture/ios-exemplar-plan.md` §G0, §Phase I gating signal #7): no keyboard dismiss (the 64 MB termination signal), and no progressive memory growth during an extended typing session. Since Phase I is refactor-only (no new features), steady-state capacity should not change — so the gate is leak-free, not a number.
 
-**Gating signal** (Phase I → Phase II): peak resident memory on every sequence below must be **≤ the baseline**. The iOS keyboard extension is hard-capped at **~64 MB** (system terminates the extension above the cap); we track both peak RSS and headroom relative to that cap.
+**Why deferred**: solo-dev IME cadence. The iOS platform already enforces a hard 64 MB cap on keyboard extensions — if a refactor breaks capacity headroom, the keyboard visibly dismisses and the user notices immediately. Persistent Instruments capture adds overhead without catching anything the platform cap does not already catch.
+
+**When to revive this doc**: a specific memory regression is suspected, OR the extension approaches the cap from eager loading, OR team workflow justifies the Allocations capture cost.
+
+**Original gating signal** (kept for reference; currently inactive): peak resident memory on every sequence below must be ≤ the baseline. Track both peak RSS and headroom relative to the 64 MB cap.
 
 **Device contract**: baseline is captured on a **real iOS device** (simulator memory accounting is misleading for extensions). Record device + iOS version; re-measure only on the same device class when comparing.
 

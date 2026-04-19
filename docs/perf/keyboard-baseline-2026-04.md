@@ -1,8 +1,12 @@
 # Keyboard Keystroke Latency Baseline — 2026-04
 
-**Status**: methodology frozen 2026-04-19 as Phase I G0 deliverable. Numbers filled in **per manual testing session**; the first captured run is the baseline for Phase I gating signal #6.
+**Status** (revised 2026-04-19): methodology frozen, **quantitative capture deferred**. Phase I G0 adopts a qualitative dogfooding gate (see `docs/architecture/ios-exemplar-plan.md` §G0, §Phase I gating signal #6) instead of P50/P95 numbers. This document is retained as a template for a future CI perf lane / team workflow where Instruments numbers become worth the capture overhead.
 
-**Gating signal** (Phase I → Phase II): P95 keystroke latency on every sequence below must be **≤ the baseline**. A refactor that regresses any P95 by more than the documented noise band fails the gate.
+**Why deferred**: solo-dev IME cadence — the user is the QA, perceptible regression on S1/S2/S3 is the acceptance criterion. Instruments signposts + per-refactor re-measurement cost exceeds the benefit of catching microsecond-level regressions the user cannot feel.
+
+**When to revive this doc**: CI perf runner is added, OR team grows past 1 developer, OR a specific regression is suspected and needs a number to confirm.
+
+**Original gating signal** (kept for reference; currently inactive): P95 keystroke latency on every sequence below must be ≤ the baseline. A refactor that regresses any P95 by more than the documented noise band fails the gate.
 
 **Device contract**: baseline is captured on a **real iOS device** (not simulator — simulator latency is not representative for keyboard extension cost). Record device model + iOS version + low-power / performance mode state; re-measure only on the same device class when comparing.
 
