@@ -4,8 +4,6 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.dictionary.InputNormalizer
-import com.siansiansu.taigikeyboard.ime.dictionary.InputType
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -48,7 +46,7 @@ class TaigiAutocompleteService(
 
         return try {
             val determineStart = System.currentTimeMillis()
-            val inputType = determineInputType(rawInput)
+            val inputType = AutocompleteInputClassifier.determineInputType(rawInput)
 
             if (BuildConfig.DEBUG) {
                 logger.d("PERF", "[3-a] determineInputType: ${System.currentTimeMillis() - determineStart}ms")
@@ -103,22 +101,12 @@ class TaigiAutocompleteService(
         )
 
     /**
-     * Classify [text] into [InputType]. Uses shared helpers:
-     * - [ToneConverterModels.isHanzi] for the broader CJK range.
-     * - [InputNormalizer.hasToneMarks] for NFD-based diacritic detection.
-     */
-    private fun determineInputType(text: String): InputType =
-        when {
-            ToneConverterModels.isHanzi(text) -> InputType.Hanzi
-            InputNormalizer.hasToneMarks(text) -> InputType.RomanWithTone
-            containsNumericTone(text) -> InputType.RomanWithTone
-            else -> InputType.RomanWithoutTone
-        }
-
-    /**
      * Float candidates whose display-text begins with a bigram-predicted
      * character to the front. Preserves original order within each
-     * partition. Mirrors iOS `AutocompleteService.applyContextBoost`.
+     * partition. Pure reordering is delegated to [AutocompleteContextBooster];
+     * this method owns the I/O (calling [NextWordService.predict]) and
+     * then hands the word list + predicted first-char set to the booster.
+     * Mirrors iOS `AutocompleteService.applyContextBoost`.
      */
     private suspend fun applyContextBoost(
         words: List<TaigiWord>,
@@ -135,29 +123,6 @@ class TaigiAutocompleteService(
         if (predictions.isEmpty()) return words
 
         val contextSet = predictions.map { it.hanzi }.toSet()
-
-        val boosted = mutableListOf<TaigiWord>()
-        val rest = mutableListOf<TaigiWord>()
-
-        for (word in words) {
-            val display = word.displayText
-            val firstChar = display.firstOrNull()?.toString()
-            if (firstChar != null && firstChar in contextSet) {
-                boosted.add(word)
-            } else {
-                rest.add(word)
-            }
-        }
-
-        return boosted + rest
+        return AutocompleteContextBooster.boost(words, contextSet)
     }
-
-    /**
-     * Tones 1 and 4 are unmarked in Taiwanese, so their digit form alone
-     * does not indicate a toned input. 0 is reserved for the current slot.
-     */
-    private fun containsNumericTone(text: String): Boolean =
-        text.any { char ->
-            char.isDigit() && char != '1' && char != '4' && char != '0'
-        }
 }
