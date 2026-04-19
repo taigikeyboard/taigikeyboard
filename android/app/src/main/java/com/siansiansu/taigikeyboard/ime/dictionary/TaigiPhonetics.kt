@@ -1,65 +1,198 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import java.text.Normalizer
 
-/// Unified Taigi phonetics engine
-///
-/// Ported from `references/taigi-converter/src/` (tables.js, phonetics.js, tl.js, poj.js).
-/// Replaces ToneMappings, VowelAnalyzer, POJToneConverter, TLToneConverter with
-/// a single NFD/NFC-based pipeline: parse syllable -> place combining mark -> normalize.
+// / Unified Taigi phonetics engine
+// /
+// / Ported from `references/taigi-converter/src/` (tables.js, phonetics.js, tl.js, poj.js).
+// / Replaces ToneMappings, VowelAnalyzer, POJToneConverter, TLToneConverter with
+// / a single NFD/NFC-based pipeline: parse syllable -> place combining mark -> normalize.
 object TaigiPhonetics {
-
     // MARK: - Data Tables
 
-    val tlInitials: Set<String> = setOf(
-        "p", "ph", "m", "b", "t", "th", "n", "l", "k", "kh", "ng", "g",
-        "ts", "tsh", "s", "j", "h", "",
-    )
+    val tlInitials: Set<String> =
+        setOf(
+            "p",
+            "ph",
+            "m",
+            "b",
+            "t",
+            "th",
+            "n",
+            "l",
+            "k",
+            "kh",
+            "ng",
+            "g",
+            "ts",
+            "tsh",
+            "s",
+            "j",
+            "h",
+            "",
+        )
 
-    val tlFinals: Set<String> = setOf(
-        "a", "ah", "ap", "at", "ak", "ann", "annh", "am", "an", "ang",
-        "e", "eh", "enn", "ennh",
-        "i", "ih", "ip", "it", "ik", "inn", "innh", "im", "in", "ing",
-        "o", "oh", "oo", "ooh", "op", "ok", "om", "ong", "onn", "onnh",
-        "u", "uh", "ut", "un",
-        "ai", "aih", "ainn", "ainnh", "au", "auh", "aunn", "aunnh",
-        "ia", "iah", "iap", "iat", "iak", "iam", "ian", "iang", "iann", "iannh",
-        "io", "ioh", "iok", "iong", "ionn",
-        "iu", "iuh", "iut", "iunn", "iunnh",
-        "ua", "uah", "uat", "uak", "uan", "uann", "uannh",
-        "ue", "ueh", "uenn", "uennh",
-        "ui", "uih", "uinn", "uinnh",
-        "iau", "iauh", "iaunn", "iaunnh",
-        "uai", "uaih", "uainn", "uainnh",
-        "m", "mh", "ng", "ngh",
-        "ioo", "iooh", "iai", "iaih",
-        "er", "erh", "erk", "erm", "ere", "ereh", "eng",
-        "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "iri", "ie",
-        "or", "orh", "ior", "iorh",
-        "uang", "oi", "oih", "ee", "eeh",
-    )
+    val tlFinals: Set<String> =
+        setOf(
+            "a",
+            "ah",
+            "ap",
+            "at",
+            "ak",
+            "ann",
+            "annh",
+            "am",
+            "an",
+            "ang",
+            "e",
+            "eh",
+            "enn",
+            "ennh",
+            "i",
+            "ih",
+            "ip",
+            "it",
+            "ik",
+            "inn",
+            "innh",
+            "im",
+            "in",
+            "ing",
+            "o",
+            "oh",
+            "oo",
+            "ooh",
+            "op",
+            "ok",
+            "om",
+            "ong",
+            "onn",
+            "onnh",
+            "u",
+            "uh",
+            "ut",
+            "un",
+            "ai",
+            "aih",
+            "ainn",
+            "ainnh",
+            "au",
+            "auh",
+            "aunn",
+            "aunnh",
+            "ia",
+            "iah",
+            "iap",
+            "iat",
+            "iak",
+            "iam",
+            "ian",
+            "iang",
+            "iann",
+            "iannh",
+            "io",
+            "ioh",
+            "iok",
+            "iong",
+            "ionn",
+            "iu",
+            "iuh",
+            "iut",
+            "iunn",
+            "iunnh",
+            "ua",
+            "uah",
+            "uat",
+            "uak",
+            "uan",
+            "uann",
+            "uannh",
+            "ue",
+            "ueh",
+            "uenn",
+            "uennh",
+            "ui",
+            "uih",
+            "uinn",
+            "uinnh",
+            "iau",
+            "iauh",
+            "iaunn",
+            "iaunnh",
+            "uai",
+            "uaih",
+            "uainn",
+            "uainnh",
+            "m",
+            "mh",
+            "ng",
+            "ngh",
+            "ioo",
+            "iooh",
+            "iai",
+            "iaih",
+            "er",
+            "erh",
+            "erk",
+            "erm",
+            "ere",
+            "ereh",
+            "eng",
+            "ir",
+            "irh",
+            "irp",
+            "irt",
+            "irk",
+            "irm",
+            "irn",
+            "irng",
+            "irinn",
+            "iri",
+            "ie",
+            "or",
+            "orh",
+            "ior",
+            "iorh",
+            "uang",
+            "oi",
+            "oih",
+            "ee",
+            "eeh",
+        )
 
     /** Tone number -> combining mark (NFD). Tones 1 and 4 have no mark. */
-    val toneNumToCombining: Map<String, String> = mapOf(
-        "1" to "", "2" to "\u0301", "3" to "\u0300", "4" to "",
-        "5" to "\u0302", "6" to "\u030C", "7" to "\u0304", "8" to "\u030D", "9" to "\u0306",
-    )
+    val toneNumToCombining: Map<String, String> =
+        mapOf(
+            "1" to "",
+            "2" to "\u0301",
+            "3" to "\u0300",
+            "4" to "",
+            "5" to "\u0302",
+            "6" to "\u030C",
+            "7" to "\u0304",
+            "8" to "\u030D",
+            "9" to "\u0306",
+        )
 
     /** TL tone 9 uses double acute accent (U+030B) instead of breve */
     val tlTone9Combining = "\u030B"
 
     /** Combining mark code point -> tone number (reverse of toneNumToCombining, plus POJ breve and TL double acute) */
-    val combiningToToneNum: Map<Int, String> = mapOf(
-        0x0301 to "2",  // COMBINING ACUTE ACCENT
-        0x0300 to "3",  // COMBINING GRAVE ACCENT
-        0x0302 to "5",  // COMBINING CIRCUMFLEX ACCENT
-        0x030C to "6",  // COMBINING CARON
-        0x0304 to "7",  // COMBINING MACRON
-        0x030D to "8",  // COMBINING VERTICAL LINE ABOVE
-        0x0306 to "9",  // COMBINING BREVE (POJ tone 9)
-        0x030B to "9",  // COMBINING DOUBLE ACUTE ACCENT (TL tone 9)
-    )
+    val combiningToToneNum: Map<Int, String> =
+        mapOf(
+            0x0301 to "2", // COMBINING ACUTE ACCENT
+            0x0300 to "3", // COMBINING GRAVE ACCENT
+            0x0302 to "5", // COMBINING CIRCUMFLEX ACCENT
+            0x030C to "6", // COMBINING CARON
+            0x0304 to "7", // COMBINING MACRON
+            0x030D to "8", // COMBINING VERTICAL LINE ABOVE
+            0x0306 to "9", // COMBINING BREVE (POJ tone 9)
+            0x030B to "9", // COMBINING DOUBLE ACUTE ACCENT (TL tone 9)
+        )
 
     /** All combining code points we recognize as tone marks */
     private val combiningCodePoints: Set<Int> = combiningToToneNum.keys
@@ -72,14 +205,15 @@ object TaigiPhonetics {
     val pojInitialFromTL: Map<String, String> = mapOf("ts" to "ch", "tsh" to "chh")
 
     /** TL final -> POJ final substitutions (order matters: nn before oo) */
-    val pojFinalSubstitutions: List<Pair<String, String>> = listOf(
-        "nn" to "\u207F",       // nn -> ⁿ
-        "oo" to "o\u0358",      // oo -> o͘
-        "ua" to "oa",
-        "ue" to "oe",
-        "ing" to "eng",
-        "ik" to "ek",
-    )
+    val pojFinalSubstitutions: List<Pair<String, String>> =
+        listOf(
+            "nn" to "\u207F", // nn -> ⁿ
+            "oo" to "o\u0358", // oo -> o͘
+            "ua" to "oa",
+            "ue" to "oe",
+            "ing" to "eng",
+            "ik" to "ek",
+        )
 
     // MARK: - Core Parsing (from phonetics.js)
 
@@ -98,13 +232,14 @@ object TaigiPhonetics {
 
         if (foundMark != null) {
             val toneNum = combiningToToneNum[foundMark] ?: ""
-            val bare = buildString {
-                for (cp in decomposed.codePoints().toArray()) {
-                    if (cp != foundMark) {
-                        appendCodePoint(cp)
+            val bare =
+                buildString {
+                    for (cp in decomposed.codePoints().toArray()) {
+                        if (cp != foundMark) {
+                            appendCodePoint(cp)
+                        }
                     }
                 }
-            }
             val bareNfc = Normalizer.normalize(bare, Normalizer.Form.NFC)
             return Pair(bareNfc, toneNum)
         }
@@ -130,7 +265,7 @@ object TaigiPhonetics {
         result = result.replace("ou", "oo")
         result = result.replace("o\u0358", "oo")
         result = result.replace("\u207F", "nn")
-        result = result.replace("\u1D3A", "nn")    // uppercase nasal marker
+        result = result.replace("\u1D3A", "nn") // uppercase nasal marker
         result = result.replace("oa", "ua")
         result = result.replace("oe", "ue")
         result = result.replace("eng", "ing")
@@ -142,8 +277,8 @@ object TaigiPhonetics {
     /** Check if a final ends in a stop consonant (p, t, k, h), ignoring trailing nn. */
     fun isStopTone(final_: String): Boolean {
         val cleaned = final_.lowercase().replace("nn", "")
-        return cleaned.endsWith("p") || cleaned.endsWith("t")
-                || cleaned.endsWith("k") || cleaned.endsWith("h")
+        return cleaned.endsWith("p") || cleaned.endsWith("t") ||
+            cleaned.endsWith("k") || cleaned.endsWith("h")
     }
 
     /** Split bare TL text into (initial, final) by iterating prefixes. */
@@ -174,7 +309,11 @@ object TaigiPhonetics {
     // MARK: - TL Assembly (from tl.js)
 
     /** Assemble a TL syllable from initial + final + tone number. */
-    fun toTL(initial: String, final_: String, tone: String): String {
+    fun toTL(
+        initial: String,
+        final_: String,
+        tone: String,
+    ): String {
         var mark = toneNumToCombining[tone] ?: ""
         if (tone == "9") mark = tlTone9Combining
         val markedFinal = placeTLToneMark(final_, mark)
@@ -183,7 +322,10 @@ object TaigiPhonetics {
 
     /** Place tone mark on the correct vowel in a TL final.
      *  Rule priority: a > oo > ere > e > o > ui→i > iu→u > iri > i > u > ng > m */
-    private fun placeTLToneMark(f: String, mark: String): String {
+    private fun placeTLToneMark(
+        f: String,
+        mark: String,
+    ): String {
         if (mark.isEmpty()) return f
         if ("a" in f) return f.replaceFirst("a", "a$mark")
         if ("oo" in f) return f.replaceFirst("oo", "o${mark}o")
@@ -203,11 +345,15 @@ object TaigiPhonetics {
     // MARK: - POJ Assembly (from poj.js)
 
     /** Assemble a POJ syllable from TL initial + final + tone number. */
-    fun toPOJ(initial: String, final_: String, tone: String): String {
+    fun toPOJ(
+        initial: String,
+        final_: String,
+        tone: String,
+    ): String {
         val pojInitial = pojInitialFromTL[initial] ?: initial
         val pojFinal = tlFinalToPOJ(final_)
         var mark = toneNumToCombining[tone] ?: ""
-        if (tone == "9") mark = "\u0306"  // POJ uses breve for tone 9
+        if (tone == "9") mark = "\u0306" // POJ uses breve for tone 9
         val markedFinal = placePOJToneMark(pojFinal, mark)
         return Normalizer.normalize(pojInitial + markedFinal, Normalizer.Form.NFC)
     }
@@ -222,7 +368,10 @@ object TaigiPhonetics {
     }
 
     /** Place tone mark on the correct vowel in a POJ final. */
-    private fun placePOJToneMark(f: String, mark: String): String {
+    private fun placePOJToneMark(
+        f: String,
+        mark: String,
+    ): String {
         if (mark.isEmpty()) return f
 
         // o͘ (o + U+0358) gets mark between o and combining dot
@@ -249,18 +398,20 @@ object TaigiPhonetics {
                 target = first
             } else if (f.length == 2) {
                 target = first
-            } else if ((f.endsWith("\u207F") || f.endsWith("\u1D3A"))
-                        && !f.endsWith("h\u207F") && !f.endsWith("h\u1D3A")) {
+            } else if ((f.endsWith("\u207F") || f.endsWith("\u1D3A")) &&
+                !f.endsWith("h\u207F") && !f.endsWith("h\u1D3A")
+            ) {
                 target = first
             } else {
                 val afterSecondIdx = matchStart + 2
                 if (afterSecondIdx < f.length) {
                     val suffix = f[afterSecondIdx]
-                    target = if ("nmgptkh\u207F\u1D3A".contains(suffix)) {
-                        second
-                    } else {
-                        first
-                    }
+                    target =
+                        if ("nmgptkh\u207F\u1D3A".contains(suffix)) {
+                            second
+                        } else {
+                            first
+                        }
                 } else {
                     target = first
                 }
@@ -285,7 +436,10 @@ object TaigiPhonetics {
 
     /** Convert a single syllable (with trailing tone digit) to tone-marked form.
      *  Keyboard-specific: tones 1/4 keep the trailing digit (e.g. "gua1" stays "gua1"). */
-    fun convertSyllable(syllable: String, mode: InputMode): String {
+    fun convertSyllable(
+        syllable: String,
+        mode: InputMode,
+    ): String {
         if (syllable.isEmpty()) return syllable
 
         val last = syllable.last()
@@ -307,11 +461,12 @@ object TaigiPhonetics {
         val toneStr = tone.toString()
 
         // Assemble with tone marks, preserving original case
-        val assembled = when (mode) {
-            InputMode.POJ -> toPOJ(initial = initial, final_ = final_, tone = toneStr)
-            InputMode.TL -> toTL(initial = initial, final_ = final_, tone = toneStr)
-            InputMode.ENGLISH -> return syllable
-        }
+        val assembled =
+            when (mode) {
+                InputMode.POJ -> toPOJ(initial = initial, final_ = final_, tone = toneStr)
+                InputMode.TL -> toTL(initial = initial, final_ = final_, tone = toneStr)
+                InputMode.ENGLISH -> return syllable
+            }
 
         // Restore case: if original starts uppercase, capitalize result
         if (baseForm.first().isUpperCase()) {
@@ -322,11 +477,15 @@ object TaigiPhonetics {
 
     /** Convert hyphen-separated input to tone marks.
      *  Splits by "-", converts each syllable, rejoins with "-". */
-    fun convertToToneMarks(input: String, mode: InputMode): String {
+    fun convertToToneMarks(
+        input: String,
+        mode: InputMode,
+    ): String {
         val syllables = input.split("-")
-        val converted = syllables.map { syllable ->
-            if (syllable.isEmpty()) "" else convertSyllable(syllable, mode)
-        }
+        val converted =
+            syllables.map { syllable ->
+                if (syllable.isEmpty()) "" else convertSyllable(syllable, mode)
+            }
         return converted.joinToString("-")
     }
 
@@ -361,24 +520,25 @@ object TaigiPhonetics {
             }
 
             val (bare, toneNum) = stripToneMark(s)
-            val converted = if (bare.isEmpty()) {
-                s
-            } else {
-                val normalized = normalizeToTL(bare.lowercase())
-                val split = splitInitialFinal(normalized)
-                if (split != null) {
-                    val (initial, final_) = split
-                    val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
-                    val tlResult = toTL(initial = initial, final_ = final_, tone = tone)
-                    if (s.first().isUpperCase()) {
-                        tlResult.substring(0, 1).uppercase() + tlResult.substring(1)
-                    } else {
-                        tlResult
-                    }
-                } else {
+            val converted =
+                if (bare.isEmpty()) {
                     s
+                } else {
+                    val normalized = normalizeToTL(bare.lowercase())
+                    val split = splitInitialFinal(normalized)
+                    if (split != null) {
+                        val (initial, final_) = split
+                        val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
+                        val tlResult = toTL(initial = initial, final_ = final_, tone = tone)
+                        if (s.first().isUpperCase()) {
+                            tlResult.substring(0, 1).uppercase() + tlResult.substring(1)
+                        } else {
+                            tlResult
+                        }
+                    } else {
+                        s
+                    }
                 }
-            }
 
             result.append(converted)
             if (separator.isNotEmpty()) {
@@ -419,24 +579,25 @@ object TaigiPhonetics {
             }
 
             val (bare, toneNum) = stripToneMark(s)
-            val converted = if (bare.isEmpty()) {
-                s
-            } else {
-                val normalized = normalizeToTL(bare.lowercase())
-                val split = splitInitialFinal(normalized)
-                if (split != null) {
-                    val (initial, final_) = split
-                    val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
-                    val pojResult = toPOJ(initial = initial, final_ = final_, tone = tone)
-                    if (s.first().isUpperCase()) {
-                        pojResult.substring(0, 1).uppercase() + pojResult.substring(1)
-                    } else {
-                        pojResult
-                    }
-                } else {
+            val converted =
+                if (bare.isEmpty()) {
                     s
+                } else {
+                    val normalized = normalizeToTL(bare.lowercase())
+                    val split = splitInitialFinal(normalized)
+                    if (split != null) {
+                        val (initial, final_) = split
+                        val tone = if (toneNum.isEmpty()) (if (isStopTone(final_)) "4" else "1") else toneNum
+                        val pojResult = toPOJ(initial = initial, final_ = final_, tone = tone)
+                        if (s.first().isUpperCase()) {
+                            pojResult.substring(0, 1).uppercase() + pojResult.substring(1)
+                        } else {
+                            pojResult
+                        }
+                    } else {
+                        s
+                    }
                 }
-            }
 
             result.append(converted)
             if (separator.isNotEmpty()) {

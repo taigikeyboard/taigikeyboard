@@ -1,3 +1,6 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**
@@ -8,7 +11,6 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * - 即將輸入的字元大小寫（shift/caps lock 狀態）
  */
 object SuggestionCaseTransformer {
-
     /**
      * 根據 caps/capsLock 狀態轉換候選詞列表
      *
@@ -24,12 +26,11 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode
-    ): List<TaigiWord> {
-        return suggestions.map { word ->
+        inputMode: ToneConverterModels.InputMode,
+    ): List<TaigiWord> =
+        suggestions.map { word ->
             transformWord(word, composingText, caps, capsLock, inputMode)
         }
-    }
 
     /**
      * 轉換單個候選詞
@@ -39,7 +40,7 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode
+        inputMode: ToneConverterModels.InputMode,
     ): TaigiWord {
         // NextWord / English suggestions (id < 0) skip case transform,
         // but custom dictionary entries (id == -2) should be transformed
@@ -54,15 +55,16 @@ object SuggestionCaseTransformer {
             return word
         }
 
-        val transformedRoman = ToneUtilities.adjustNasalMarkerCase(
-            transformText(
-                originalText = word.roman,
-                composingText = composingText,
-                caps = caps,
-                capsLock = capsLock,
-                inputMode = inputMode
+        val transformedRoman =
+            ToneUtilities.adjustNasalMarkerCase(
+                transformText(
+                    originalText = word.roman,
+                    composingText = composingText,
+                    caps = caps,
+                    capsLock = capsLock,
+                    inputMode = inputMode,
+                ),
             )
-        )
 
         return word.copy(roman = transformedRoman)
     }
@@ -80,7 +82,7 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode
+        inputMode: ToneConverterModels.InputMode,
     ): String {
         // Caps Lock：全部大寫
         if (capsLock) {
@@ -101,31 +103,34 @@ object SuggestionCaseTransformer {
             return matchCase(
                 target = originalText,
                 source = composingText,
-                inputMode = inputMode
+                inputMode = inputMode,
             )
         }
 
         // 分割：已輸入部分 vs 未輸入部分
-        val (typedPortion, remainingPortion) = splitByLetterCount(
-            originalText,
-            typedLetterCount
-        )
+        val (typedPortion, remainingPortion) =
+            splitByLetterCount(
+                originalText,
+                typedLetterCount,
+            )
 
         // 已輸入部分：保持與 composingText 相同的大小寫
-        val preservedTyped = matchCase(
-            target = typedPortion,
-            source = composingText,
-            inputMode = inputMode
-        )
+        val preservedTyped =
+            matchCase(
+                target = typedPortion,
+                source = composingText,
+                inputMode = inputMode,
+            )
 
         // 未輸入部分：根據 caps 狀態決定
-        val transformedRemaining = if (caps) {
-            // 下一個字母大寫，其餘小寫
-            capitalizeFirstLetter(remainingPortion, inputMode)
-        } else {
-            // 一般模式：全部小寫
-            toLowercase(remainingPortion, inputMode)
-        }
+        val transformedRemaining =
+            if (caps) {
+                // 下一個字母大寫，其餘小寫
+                capitalizeFirstLetter(remainingPortion, inputMode)
+            } else {
+                // 一般模式：全部小寫
+                toLowercase(remainingPortion, inputMode)
+            }
 
         return preservedTyped + transformedRemaining
     }
@@ -135,9 +140,7 @@ object SuggestionCaseTransformer {
     /**
      * 計算字串中的字母數量（排除數字和符號）
      */
-    private fun countLetters(text: String): Int {
-        return text.count { it.isLetter() }
-    }
+    private fun countLetters(text: String): Int = text.count { it.isLetter() }
 
     /**
      * 根據字母數量分割字串
@@ -146,7 +149,10 @@ object SuggestionCaseTransformer {
      * @param letterCount 第一部分應包含的字母數量
      * @return Pair(第一部分, 第二部分)
      */
-    private fun splitByLetterCount(text: String, letterCount: Int): Pair<String, String> {
+    private fun splitByLetterCount(
+        text: String,
+        letterCount: Int,
+    ): Pair<String, String> {
         var count = 0
         var splitIndex = 0
 
@@ -176,7 +182,7 @@ object SuggestionCaseTransformer {
     private fun matchCase(
         target: String,
         source: String,
-        inputMode: ToneConverterModels.InputMode
+        inputMode: ToneConverterModels.InputMode,
     ): String {
         val result = StringBuilder()
         val sourceLetters = source.filter { it.isLetter() }.toMutableList()
@@ -202,7 +208,7 @@ object SuggestionCaseTransformer {
      */
     private fun capitalizeFirstLetter(
         text: String,
-        inputMode: ToneConverterModels.InputMode
+        inputMode: ToneConverterModels.InputMode,
     ): String {
         val result = StringBuilder()
         var isFirstLetter = true
@@ -226,18 +232,24 @@ object SuggestionCaseTransformer {
     /**
      * 全部轉大寫
      */
-    private fun toUppercase(text: String, inputMode: ToneConverterModels.InputMode): String {
-        return text.map { char ->
-            ToneUtilities.uppercaseToneLetter(char.toString(), inputMode)
-        }.joinToString("")
-    }
+    private fun toUppercase(
+        text: String,
+        inputMode: ToneConverterModels.InputMode,
+    ): String =
+        text
+            .map { char ->
+                ToneUtilities.uppercaseToneLetter(char.toString(), inputMode)
+            }.joinToString("")
 
     /**
      * 全部轉小寫
      */
-    private fun toLowercase(text: String, inputMode: ToneConverterModels.InputMode): String {
-        return text.map { char ->
-            ToneUtilities.lowercaseToneLetter(char.toString(), inputMode)
-        }.joinToString("")
-    }
+    private fun toLowercase(
+        text: String,
+        inputMode: ToneConverterModels.InputMode,
+    ): String =
+        text
+            .map { char ->
+                ToneUtilities.lowercaseToneLetter(char.toString(), inputMode)
+            }.joinToString("")
 }
