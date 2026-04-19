@@ -1,5 +1,7 @@
 # Khiin/RIME Word Lattice Architecture Research (2026-03-11)
 
+> **Status (2026-04-19)**: Retained as architectural reference. The problem statements below (syllable-level segmenter, CVC+V tie bugs, exposing frequency to a segmenter) **no longer apply** — `SyllableSegmenter` was removed entirely in v3.4.6 and the IME now relies on user-supplied hyphenation instead of continuous auto-segmentation. The Khiin / RIME architectural descriptions and the Stage 2 / Stage 3 migration options remain valid reading if word-lattice-style sentence input ever becomes a feature request; treat the "Current Taigi Keyboard Gap" and "Stage 1" sections as historical.
+
 ## Khiin's Approach: Word-Level DP
 
 - **Unified** segmentation + word selection in one step

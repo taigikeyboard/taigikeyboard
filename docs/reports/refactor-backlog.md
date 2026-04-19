@@ -119,4 +119,4 @@
 1. **One module per session** — each item above is a self-contained refactor
 2. **Write tests first** for the affected behavior before changing structure
 3. **iOS and Android in parallel** for items that mirror each other (TPS sync, PrefHelper/SharedSettings)
-4. **Prioritize by user impact**: Segmenter trie (1) > PrefHelper boilerplate (A1) > ActionHandler long functions (5) > rest
+4. **Prioritize by user impact**: PrefHelper boilerplate (A1) > ActionHandler long functions (5) > rest. (Item 1, Segmenter trie, no longer applies — `SyllableSegmenter` removed in v3.4.6.)

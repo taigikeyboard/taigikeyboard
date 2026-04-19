@@ -82,18 +82,20 @@ composing, autocomplete, tone, sort, segmentation, trie, tps, flow, nextword, ke
 - More accurate but requires corpus-trained bigram data
 
 ### Current Taigi Keyboard Gap
-> **Note (2026-04)**: Segmenter removed in v3.4.6. Tie bug resolved via `WordPrefixChecker`. Frequency now in `dictionary.bin` (binary mmap).
+> **Note (2026-04-19)**: `SyllableSegmenter` was removed entirely in v3.4.6 — continuous auto-segmentation is no longer part of the IME, so the CVC+V tie scenarios described below cannot occur. Frequency also moved to `dictionary.bin` (binary mmap) as part of the lexicon refactor.
 
-- ~~Segmenter is syllable-level, no word frequency access~~ (resolved)
-- ~~Frequency data locked in SQLite, not accessible to segmenter~~ (now in binary mmap)
-- ~~Two-stage separation (segmenter → autocomplete) causes CVC+V tie bugs~~ (resolved)
+- ~~Segmenter is syllable-level, no word frequency access~~ (resolved — segmenter removed)
+- ~~Frequency data locked in SQLite, not accessible to segmenter~~ (frequency now in dictionary.bin; no segmenter to expose it to)
+- ~~Two-stage separation (segmenter → autocomplete) causes CVC+V tie bugs~~ (resolved — no segmentation stage)
 
 ### Recommended Migration Path
 
+> **Obsolete (2026-04-19)**: Stage 1 below assumed a segmenter existed to receive the frequency closure. With the segmenter gone, Stage 1 no longer applies. Stage 2 / Stage 3 remain valid reference material only if sentence-level continuous input ever becomes a feature request.
+
 | Stage | Content | Risk | When |
 |-------|---------|------|------|
-| **1** | Expose word frequency to segmenter via closure for tie-breaking | Low | Next version |
-| **2** | Word-level DP with cost map (Khiin-style) | Medium | If ties persist or sentence input needed |
+| ~~**1**~~ | ~~Expose word frequency to segmenter via closure for tie-breaking~~ | — | **Obsolete** — no segmenter |
+| **2** | Word-level DP with cost map (Khiin-style) | Medium | If sentence input becomes a feature |
 | **3** | Bigram + Viterbi (RIME-style) | High | Long-term, requires corpus |
 
 ### Key Insight
