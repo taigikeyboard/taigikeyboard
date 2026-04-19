@@ -2,6 +2,7 @@ import KeyboardKit
 import SwiftUI
 
 struct TaigiKeyboardView: View {
+    let settings: any KeyboardEnvironment
     let services: Keyboard.Services
     let layout: KeyboardLayout
     let emojiKeyboardView: () -> AnyView
@@ -16,12 +17,43 @@ struct TaigiKeyboardView: View {
     var initialInputMode: InputMode?
 
     @StateObject private var expandState = CandidateExpandState()
-    @State private var currentInputMode: InputMode = SharedSettings.shared.inputMode
-    @State private var colorSettings: KeyboardColorSettings = SharedSettings.shared.colorSettings
-    @State private var keyFontSizeScale: CGFloat = SharedSettings.shared.keyFontSizeScale
-    @State private var keyBorderWidth: CGFloat = SharedSettings.shared.keyBorderWidth
-    @State private var candidateTextSizeScale: CGFloat = SharedSettings.shared.candidateTextSizeScale
+    @State private var currentInputMode: InputMode
+    @State private var colorSettings: KeyboardColorSettings
+    @State private var keyFontSizeScale: CGFloat
+    @State private var keyBorderWidth: CGFloat
+    @State private var candidateTextSizeScale: CGFloat
     @State private var panels = OverlayPanelState()
+
+    init(
+        settings: any KeyboardEnvironment,
+        services: Keyboard.Services,
+        layout: KeyboardLayout,
+        emojiKeyboardView: @escaping () -> AnyView,
+        calloutStyle: Callouts.CalloutStyle,
+        autocompleteContext: AutocompleteContext,
+        keyboardContext: KeyboardContext,
+        composingManager: ComposingManager,
+        onSuggestionTap: @escaping (Autocomplete.Suggestion) -> Void,
+        onTranslateToggle: @escaping () -> Void,
+        initialInputMode: InputMode? = nil,
+    ) {
+        self.settings = settings
+        self.services = services
+        self.layout = layout
+        self.emojiKeyboardView = emojiKeyboardView
+        self.calloutStyle = calloutStyle
+        self.autocompleteContext = autocompleteContext
+        self.keyboardContext = keyboardContext
+        self.composingManager = composingManager
+        self.onSuggestionTap = onSuggestionTap
+        self.onTranslateToggle = onTranslateToggle
+        self.initialInputMode = initialInputMode
+        _currentInputMode = State(initialValue: settings.inputMode)
+        _colorSettings = State(initialValue: settings.colorSettings)
+        _keyFontSizeScale = State(initialValue: settings.keyFontSizeScale)
+        _keyBorderWidth = State(initialValue: settings.keyBorderWidth)
+        _candidateTextSizeScale = State(initialValue: settings.candidateTextSizeScale)
+    }
 
     /// Per-render-cycle cached settings and providers.
     /// Created once per body evaluation to avoid repeated UserDefaults reads.
@@ -32,8 +64,8 @@ struct TaigiKeyboardView: View {
         let text: ButtonTextProvider
         let image: ButtonImageProvider
 
-        init(keyboardContext: KeyboardContext) {
-            settings = SharedSettings.shared.snapshot()
+        init(keyboardContext: KeyboardContext, settings: SettingsSnapshot) {
+            self.settings = settings
             keyTextColor = settings.colorSettings.keyTextColor?.color ?? Color(.label)
             font = ButtonFontProvider(keyboardContext: keyboardContext, settings: settings)
             text = ButtonTextProvider(keyboardContext: keyboardContext, settings: settings)
@@ -42,7 +74,7 @@ struct TaigiKeyboardView: View {
     }
 
     var body: some View {
-        let p = RenderProviders(keyboardContext: keyboardContext)
+        let p = RenderProviders(keyboardContext: keyboardContext, settings: settings.snapshot())
 
         // Transform candidate case based on keyboardCase
         let suggestions = SuggestionCaseTransformer.transform(
@@ -112,19 +144,19 @@ struct TaigiKeyboardView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-            let latest = SharedSettings.shared.colorSettings
+            let latest = settings.colorSettings
             if colorSettings != latest {
                 colorSettings = latest
             }
-            let latestScale = SharedSettings.shared.keyFontSizeScale
+            let latestScale = settings.keyFontSizeScale
             if keyFontSizeScale != latestScale {
                 keyFontSizeScale = latestScale
             }
-            let latestBorderWidth = SharedSettings.shared.keyBorderWidth
+            let latestBorderWidth = settings.keyBorderWidth
             if keyBorderWidth != latestBorderWidth {
                 keyBorderWidth = latestBorderWidth
             }
-            let latestCandidateScale = SharedSettings.shared.candidateTextSizeScale
+            let latestCandidateScale = settings.candidateTextSizeScale
             if candidateTextSizeScale != latestCandidateScale {
                 candidateTextSizeScale = latestCandidateScale
             }
@@ -264,7 +296,7 @@ struct TaigiKeyboardView: View {
                     currentInputMode: currentInputMode,
                     onInputModeChange: { newMode in
                         currentInputMode = newMode
-                        SharedSettings.shared.inputMode = newMode
+                        settings.inputMode = newMode
                         panels.closeAll()
                     },
                     englishAutocompleteView: currentInputMode == .english ? AnyView(params.view) : nil,

@@ -7,6 +7,10 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
 
     let logger = DebugLogger(category: "KeyboardViewController")
 
+    /// DI seam. Default retains existing process-wide singleton behavior;
+    /// tests (and future composition roots) can substitute a stub.
+    let keyboardSettings: any KeyboardEnvironment = SharedSettings.shared
+
     var emojiServiceStorage: EmojiService?
     weak var actionHandler: ActionHandler?
     var isCleanedUp = false
@@ -69,8 +73,8 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // Update full access status (read by main app's SetupGuide).
         // Guard to avoid unnecessary UserDefaults write → didChangeNotification → double syncSettings().
         let currentFullAccess = hasFullAccess
-        if SharedSettings.shared.isFullAccessEnabled != currentFullAccess {
-            SharedSettings.shared.isFullAccessEnabled = currentFullAccess
+        if keyboardSettings.isFullAccessEnabled != currentFullAccess {
+            keyboardSettings.isFullAccessEnabled = currentFullAccess
         }
 
         syncSettings()
@@ -95,6 +99,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         let layout = layoutService.keyboardLayout(for: state.keyboardContext)
 
         return TaigiKeyboardView(
+            settings: keyboardSettings,
             services: services,
             layout: layout,
             emojiKeyboardView: { [unowned self] in
@@ -230,7 +235,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     private func setupSettingsObserver() {
         NotificationCenter.default.publisher(
             for: UserDefaults.didChangeNotification,
-            object: SharedSettings.sharedUserDefaults,
+            object: keyboardSettings.settingsUserDefaults,
         )
         .receive(on: DispatchQueue.main)
         .sink { [weak self] _ in

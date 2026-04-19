@@ -57,16 +57,13 @@ extension KeyboardViewController {
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
         // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
-        let settings = SharedSettings.shared
-        lastInputMode = settings.inputMode
-        lastKeyboardLayoutType = settings.keyboardLayoutType
+        lastInputMode = keyboardSettings.inputMode
+        lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.
     func setupAutocompleteServiceForCurrentMode() {
-        let settings = SharedSettings.shared
-
-        if settings.inputMode == .english {
+        if keyboardSettings.inputMode == .english {
             services.autocompleteService = EnglishAutocompleteService()
             setupLogger.debug("[AUTOCOMPLETE] Using EnglishAutocompleteService")
         } else {
@@ -79,7 +76,7 @@ extension KeyboardViewController {
             if let handler = actionHandler {
                 wireTaigiAutocompleteProviders(from: autocompleteService, to: handler)
             }
-            setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(settings.inputMode.rawValue)")
+            setupLogger.debug("[AUTOCOMPLETE] Using TaigiAutocompleteService for mode: \(keyboardSettings.inputMode.rawValue)")
         }
         // Note: KeyboardKit's services.autocompleteService didSet automatically
         // syncs handler.autocompleteService — no manual sync needed.
@@ -105,11 +102,10 @@ extension KeyboardViewController {
     /// @AppStorage didSet doesn't fire for changes from an external process,
     /// so this is triggered via UserDefaults.didChangeNotification.
     func syncSettings() {
-        let settings = SharedSettings.shared
         var needsAutocompleteReset = false
 
         // Check if input mode changed; if so, recreate AutocompleteService
-        let currentInputMode = settings.inputMode
+        let currentInputMode = keyboardSettings.inputMode
         if lastInputMode != currentInputMode {
             let previousMode = lastInputMode?.rawValue ?? "nil"
             setupLogger.debug("[SETTINGS] InputMode changed: \(previousMode) -> \(currentInputMode.rawValue)")
@@ -119,7 +115,7 @@ extension KeyboardViewController {
         }
 
         // Check if keyboard layout type changed
-        let currentLayoutType = settings.keyboardLayoutType
+        let currentLayoutType = keyboardSettings.keyboardLayoutType
         if lastKeyboardLayoutType != currentLayoutType {
             let previousLayout = lastKeyboardLayoutType.map { String(describing: $0) } ?? "nil"
             setupLogger.debug("[SETTINGS] LayoutType changed: \(previousLayout) -> \(String(describing: currentLayoutType))")
@@ -153,7 +149,7 @@ extension KeyboardViewController {
     }
 
     func createCalloutStyle() -> Callouts.CalloutStyle {
-        guard let fontName = SharedSettings.shared.fontType.customFontName else {
+        guard let fontName = keyboardSettings.fontType.customFontName else {
             return Callouts.CalloutStyle.standard
         }
 

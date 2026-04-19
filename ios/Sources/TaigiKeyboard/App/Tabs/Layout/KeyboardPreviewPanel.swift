@@ -3,7 +3,8 @@ import SwiftUI
 
 /// A display-only keyboard preview that renders the real `TaigiKeyboardView`.
 /// All appearance settings (key height, font size, candidate text size, corner radius, font)
-/// propagate automatically through `SharedSettings` → `CustomLayoutService` / `ButtonFontProvider`.
+/// propagate automatically through the injected `KeyboardEnvironment` →
+/// `CustomLayoutService` / `ButtonFontProvider`.
 struct KeyboardPreviewPanel: View {
     let keyHeightScale: Double
     let keyFontSizeScale: Double
@@ -19,8 +20,10 @@ struct KeyboardPreviewPanel: View {
         let services = Keyboard.Services(state: previewState)
         let layout = CustomLayoutService()
             .keyboardLayout(for: previewState.keyboardContext)
+        let settings = SharedSettings.shared
 
         TaigiKeyboardView(
+            settings: settings,
             services: services,
             layout: layout,
             emojiKeyboardView: { AnyView(EmptyView()) },
@@ -30,7 +33,7 @@ struct KeyboardPreviewPanel: View {
             composingManager: composingManager,
             onSuggestionTap: { _ in },
             onTranslateToggle: {},
-            initialInputMode: SharedSettings.shared.inputMode == .english ? .tl : nil,
+            initialInputMode: settings.inputMode == .english ? .tl : nil,
         )
         .keyboardState(previewState)
         .onAppear { configurePreviewContext() }
