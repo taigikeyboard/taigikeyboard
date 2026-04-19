@@ -1,6 +1,6 @@
 # Segmentation Score Tie Bug
 
-> **Status**: RESOLVED — Fix implemented via `WordPrefixChecker` closure injection. See `engine/segmentation.md` for current design.
+> **Status**: OBSOLETE (v3.4.6) — the entire `SyllableSegmenter` component was removed; continuous auto-segmentation is no longer part of the IME, so the CVC+V tie scenarios described here cannot occur. Retained as historical analysis only.
 
 **File**: `ios/Sources/TaigiKeyboard/Input/SyllableSegmenter.swift`
 

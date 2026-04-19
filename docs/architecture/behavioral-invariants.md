@@ -155,7 +155,7 @@ baseFreqScore  (~0 … +100)       fallback
 - `cappedUserFreq = min(count, 100)` — per-word count saturates at 100; never uncapped.
 - Recency window is exactly 1 hour (`60 * 60 * 1000` ms); boundary condition `(currentTime - lastUsedMillis) < oneHourMillis` is strict `<`.
 - `romanToBase` must strip hyphens, spaces, NFD combining marks, and digits in that order.
-- Sort is stable on ties in the sense that the original array order is preserved when `total` ties (Swift `sorted(by:)` is not guaranteed stable — this is a documented weakness; see `docs/reports/segmentation-tie-bug.md`).
+- Sort is stable on ties in the sense that the original array order is preserved when `total` ties (Swift `sorted(by:)` is not guaranteed stable — documented weakness; ordering fallback currently relies on the pre-sort input order).
 
 **Test labels**:
 - `INVARIANT_score_is_deterministic`

@@ -25,7 +25,7 @@
 | `engine/trie.md` | Trie index + binary mmap readers (`MARISA`, `BinaryReader`, `Bitmask`) | Active |
 | `engine/flow.md` | iOS end-to-end data flow and action handling | Active |
 | `engine/nextword.md` | Next word prediction (binary association + user learning) | Active |
-| `engine/segmentation.md` | Syllable segmentation (DAG+DP, onset atomicity) | Active |
+| `engine/segmentation.md` | Syllable segmentation (DAG+DP, onset atomicity) — historical only | Archived (v3.4.6) |
 | `engine/tps.md` | TPS Taiwanese Phonetic Symbols (方音符號) | Active |
 | `engine/custom-dictionary.md` | User-defined dictionary (CRUD, CSV import/export) | Active |
 | `engine/diagnostics.md` | Device info collection for bug reporting | Active |
@@ -60,7 +60,7 @@
 | `reports/codebase-health.md` | Code quality metrics and health check | Reference |
 | `reports/docs-audit.md` | Documentation accuracy verification | Reference |
 | `reports/khiin-lattice-research.md` | Word lattice architecture research | Reference |
-| `reports/segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis | Reference |
+| `reports/segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis — obsolete, segmenter removed v3.4.6 | Archived |
 | `reports/2026-03-11-audit-report.md` | Combined audit report (docs, health, research) | Reference |
 
 ### Root — Guides & Planning (4)

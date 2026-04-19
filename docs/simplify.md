@@ -6,6 +6,8 @@ Batch-by-batch codebase review using `/simplify`. Each batch is scoped to fit in
 
 **Scope**: This is not limited to recent changes. Deep-scan all code in each batch for reuse, quality, and efficiency issues.
 
+> **Historical note**: This plan was executed against a pre-v3.4.6 codebase snapshot. Batches A2 and I2 list `SyllableSegmenter` among their targets — that component was removed in v3.4.6 and no longer exists. The review findings captured in the Status lines below reflect code that existed at the time of review.
+
 ---
 
 ## Android (109 .kt files, 14 batches)

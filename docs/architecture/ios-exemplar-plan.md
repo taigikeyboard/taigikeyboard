@@ -31,7 +31,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 **Problem**: Phase I must not regress perceived latency or cause memory-related extension termination. The cost of a full quantitative baseline (Instruments signposts, P50/P95 capture, per-refactor re-measurement) is not justified for a solo-dev IME — the user is the QA, and perceptible regression on S1/S2/S3 sequences is the acceptance criterion.
 
 **Deliverable (revised 2026-04-19)**:
-- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the 36 candidates must uphold (TL↔POJ round-trip, segmentation tie rules, NFD normalization, candidate dedup, scoring determinism, decay math). Each invariant references a named test case (may be TODO in G9). **Status: authored 2026-04-19.**
+- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the 36 candidates must uphold (TL↔POJ round-trip, NFD normalization, candidate dedup, scoring determinism, decay math, composing state transitions). Each invariant references a named test case (may be TODO in G9). **Status: authored 2026-04-19.**
 - `docs/perf/keyboard-baseline-2026-04.md` and `docs/perf/extension-memory-2026-04.md` — quantitative methodology **deferred** (kept as optional future work for when CI perf lane / team workflow makes numbers worth the overhead). Files retained; header annotated `deferred`.
 - **Qualitative gate** in place of quantitative baseline: after G2 / G4-impl / G5-impl, user dogfoods S1/S2/S3 sequences (same three defined in the perf methodology docs) on real device. Pass = no perceptible typing latency regression, no keyboard dismiss (64 MB termination signal), no progressive memory growth during extended typing session (sanity check for leaks only — refactor does not add features, so steady-state capacity is unchanged).
 
@@ -151,7 +151,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 
 **Deliverable**:
 - Add or audit unit tests for the top 10 most-depended-on candidates: `PhoneticsConverter`, `SyllableParser`, `TPSToTL`, `TLToTPS`, `InputNormalizer`, `CandidateProcessor`, `NextWordScorer`, `AutocompleteContextBooster`, `CaseTransformer`, `CustomDictionaryDerivation`.
-- Target ≥ 70% line coverage with named invariant tests matching Phase 0 labels (e.g. `INVARIANT_tl_to_poj_roundtrip_is_lossless`, `INVARIANT_segmentation_tie_break_is_deterministic`).
+- Target ≥ 70% line coverage with named invariant tests matching Phase 0 labels (e.g. `INVARIANT_tl_to_poj_roundtrip_is_lossless`, `INVARIANT_case_transformer_is_deterministic`).
 - Tests must be runnable via `xcodebuild test` (i.e., wired to the test target).
 
 **Risk**: low (tests only) but can expose pre-existing bugs.
