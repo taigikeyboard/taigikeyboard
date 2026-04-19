@@ -161,7 +161,7 @@ Output a structured report:
 
 | #  | Category       | Term           | Issue                                    | Proposed Fix                    |
 |----|----------------|----------------|------------------------------------------|---------------------------------|
-| 1  | Missing term   | segmentation   | Used in SyllableSegmenter but not in glossary | Add definition                |
+| 1  | Missing term   | tone sandhi    | Used in `ToneConverter` but not in glossary | Add definition                |
 | 2  | Wrong mapping  | trieKey        | Maps to `TrieNode.key` but renamed to `TrieNode.searchKey` | Update mapping   |
 
 #### [docs/file-structure.md]

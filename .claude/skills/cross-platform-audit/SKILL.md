@@ -104,9 +104,9 @@ Example of what to catch:
 
 Example of what to catch:
 ```
-| iOS buildSearchKey()                         | Android buildSearchKey()                    |
+| iOS LexiconService.search()                  | Android LexiconService.search()             |
 |----------------------------------------------|---------------------------------------------|
-| SyllableSegmenter.segment(input, mode: mode) | SyllableSegmenter.segment(input)       ❌   |
+| InputNormalizer.normalize(input, mode: mode) | InputNormalizer.normalize(input)       ❌   |
 |                                              | ↳ `mode` exists but not passed              |
 ```
 

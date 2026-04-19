@@ -41,8 +41,8 @@ Names must convey purpose without needing a comment. A good name eliminates the 
 | Boolean vars/props | `is`/`has`/`can`/`should` prefix | `isExpanded`, `hasFrequencyData` |
 | Functions | verb + noun, describe what it does | `fetchCandidates()`, `buildSyllableGraph()` |
 | Constants | describe the value's role, not its content | `maxCandidateCount` not `TWENTY` |
-| Files | match primary class/struct name | `SyllableSegmenter.swift` for `SyllableSegmenter` |
-| Test files | `{Subject}Tests` | `SyllableSegmenterTests.swift` |
+| Files | match primary class/struct name | `CandidateProcessor.swift` for `CandidateProcessor` |
+| Test files | `{Subject}Tests` | `CandidateProcessorTests.swift` |
 
 ### Abbreviations
 
@@ -56,10 +56,11 @@ Names must convey purpose without needing a comment. A good name eliminates the 
 
 Comment only **non-obvious decisions** — the "why", not the "what".
 
-```kotlin
-// Greedy left-to-right: longer syllables score higher via len^2,
-// so we prefer "kin + a2" over "ki + na2" when scores tie
-if (newScore >= bestScore[end]) { ... }
+```swift
+// Recency window is strict `<`: a selection exactly one hour old must
+// drop out of the boost. Using `<=` would pin a sticky candidate at
+// the boundary and regress the 1-hour decay invariant.
+guard (currentTime - lastUsedMillis) < oneHourMillis else { return baseScore }
 ```
 
 ### What NOT to Comment
@@ -86,7 +87,7 @@ Functions should be understandable from their signature alone:
 
 ```swift
 // Good: signature tells the full story
-func segmentSyllables(from input: String, usingTone toneMode: ToneMode) -> [Syllable]
+func capitalizeCandidate(_ text: String, basedOn input: String, isAutoCapitalizationEnabled: Bool, inputMode: InputMode) -> String
 
 // Bad: requires reading the body to understand
 func process(_ s: String, _ m: Int) -> [Any]

@@ -11,7 +11,7 @@ Match thinking depth to task class. Do not overthink simple work.
 |------------|-------------------|
 | Single-file small edit, lookup, status question | Short, direct answer. No extended reasoning |
 | Cross-platform alignment (iOS + Android) | Deep reasoning; state behavior first, then per-platform notes |
-| Multi-file refactor, engine/segmentation changes | Deep reasoning + staged plan (`IMPLEMENTATION_PLAN.md`) |
+| Multi-file refactor, engine (next-word / composing-state / phonetics) changes | Deep reasoning + staged plan (`IMPLEMENTATION_PLAN.md`) |
 | Ambiguous debugging, regression hunts | Deep reasoning; enumerate hypotheses before tool calls |
 | Code review | Follow `rules/code-review-rules.md`; depth matches diff scope |
 
