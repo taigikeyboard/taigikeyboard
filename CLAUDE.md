@@ -21,7 +21,8 @@ taigikeyboard/
 │   ├── ios-guidelines.md   # SourceKit, KeyboardKit, memory, naming, tests
 │   ├── ai-friendly-code.md # Naming, comments, function design for AI readability
 │   ├── code-review-rules.md # Code review checklist (best practices, regression, scope)
-│   └── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
+│   ├── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
+│   └── cross-platform-alignment.md # Refactor-freeze, divergence docs, Phase II end gate
 ├── dictionary/        # Dictionary data files
 ├── scripts/           # Build and utility scripts
 └── references/        # External repos (gitignored — don't place tracked content here)
@@ -41,6 +42,7 @@ taigikeyboard/
 10. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
 11. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
 12. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
+13. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
 
 ## Build & Test
 
