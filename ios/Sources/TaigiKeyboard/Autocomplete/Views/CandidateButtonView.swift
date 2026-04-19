@@ -13,6 +13,7 @@ struct CandidateButtonView: View {
     @State private var isPressed = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.candidateViewStyle) private var style
+    @Environment(\.candidateTheme) private var theme
 
     private var displayTitle: String {
         CandidateCellHelper.displayTitle(
@@ -55,15 +56,15 @@ struct CandidateButtonView: View {
         }) {
             VStack(alignment: .center, spacing: 0) {
                 Text(displayTitle)
-                    .font(KeyboardFonts.globalFont(size: CandidateCellHelper.titleFontSize))
+                    .font(KeyboardFonts.globalFont(size: theme.primaryFontSize))
                     .fontWeight(.regular)
-                    .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                    .foregroundColor(theme.primaryTextColor)
                     .lineLimit(1)
 
                 if let subtitle = displaySubtitle, !subtitle.isEmpty, subtitle != displayTitle {
                     Text(subtitle)
-                        .font(KeyboardFonts.globalFont(size: CandidateCellHelper.subtitleFontSize))
-                        .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
+                        .font(KeyboardFonts.globalFont(size: theme.secondaryFontSize))
+                        .foregroundColor(theme.secondaryTextColor)
                         .lineLimit(1)
                 }
             }

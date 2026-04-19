@@ -220,4 +220,4 @@ Advance to Phase II when ALL of:
 - Android work (Phase II).
 - `/shared-core-confidence` skill build (Phase II/III).
 - `SharedSettings.resetAppearanceToDefaults()` abstraction (previously flagged Phase 10 MED — addressable in G2 if convenient, but not blocking).
-- `ToneConverter.preprocessPojInput` parameterization — tiny follow-up; do it any time, independent of this plan.
+- `ToneConverter.preprocessPojInput` parameterization — **upgraded to G4-impl precondition** after the 2026-04-19 docs-review cycle (Codex C1). `ComposingState.derivedDisplay` needs Foundation-pure tone conversion; G4-impl folds the parameterization in or lands it as a separate prerequisite PR. See `composing-state-boundary.md` §Precondition.

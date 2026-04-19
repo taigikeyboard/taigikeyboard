@@ -17,6 +17,7 @@ extension View {
         isTranslateSwapped: Bool,
         onTranslateToggle: @escaping () -> Void,
         candidateStyle: CandidateView.Style,
+        candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
         orMapsToER: Bool,
         onSymbolInsert: @escaping (String) -> Void,
@@ -48,7 +49,7 @@ extension View {
                         isExpanded: true,
                         onDismiss: { panels.wrappedValue.isLayoutExpanded = false },
                     )
-                    .offset(y: CandidateViewModels.UI.height)
+                    .offset(y: candidateTheme.height)
                 }
             },
             alignment: .topLeading,
@@ -65,7 +66,7 @@ extension View {
                             }
                         },
                     )
-                    .offset(y: CandidateViewModels.UI.height)
+                    .offset(y: candidateTheme.height)
                 }
             },
             alignment: .topLeading,
@@ -78,7 +79,7 @@ extension View {
                         onDismiss: { panels.wrappedValue.isSettingsExpanded = false },
                         onOpenApp: onOpenSettingsApp,
                     )
-                    .offset(y: CandidateViewModels.UI.height)
+                    .offset(y: candidateTheme.height)
                 }
             },
             alignment: .topLeading,

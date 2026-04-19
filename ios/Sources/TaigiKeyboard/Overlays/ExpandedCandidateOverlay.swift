@@ -15,6 +15,7 @@ struct ExpandedCandidateOverlay: View {
     let orMapsToER: Bool
 
     @Environment(\.candidateViewStyle) private var style
+    @Environment(\.candidateTheme) private var theme
     @State private var currentPage: Int = 0
     @State private var isUpButtonPressed: Bool = false
     @State private var isDownButtonPressed: Bool = false
@@ -48,6 +49,8 @@ struct ExpandedCandidateOverlay: View {
                     for: suggestion,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,
+                    titleFontSize: theme.primaryFontSize,
+                    subtitleFontSize: theme.secondaryFontSize,
                 )
             },
         )
@@ -130,7 +133,7 @@ struct ExpandedCandidateOverlay: View {
             Button(action: { onCollapse() }) {
                 Image(systemName: "chevron.up")
                     .font(KeyboardFonts.globalFont(size: 20))
-                    .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                    .foregroundColor(theme.primaryTextColor)
                     .frame(width: 60, height: 56, alignment: .center)
                     .background(Color.clear)
                     .contentShape(Rectangle())

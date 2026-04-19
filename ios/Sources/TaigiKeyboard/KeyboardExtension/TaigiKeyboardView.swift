@@ -20,6 +20,7 @@ struct TaigiKeyboardView: View {
     @State private var colorSettings: KeyboardColorSettings = SharedSettings.shared.colorSettings
     @State private var keyFontSizeScale: CGFloat = SharedSettings.shared.keyFontSizeScale
     @State private var keyBorderWidth: CGFloat = SharedSettings.shared.keyBorderWidth
+    @State private var candidateTextSizeScale: CGFloat = SharedSettings.shared.candidateTextSizeScale
     @State private var panels = OverlayPanelState()
 
     /// Per-render-cycle cached settings and providers.
@@ -52,7 +53,15 @@ struct TaigiKeyboardView: View {
         )
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
         let selectedCandidateIndex = composingManager.selectedCandidateIndex
-        let candidateStyle = Self.candidateStyle(for: keyboardContext, colorSettings: colorSettings)
+        let theme = CandidateTheme.resolved(
+            candidateTextSizeScale: candidateTextSizeScale,
+            colorSettings: colorSettings,
+        )
+        let candidateStyle = Self.candidateStyle(
+            for: keyboardContext,
+            colorSettings: colorSettings,
+            height: theme.height,
+        )
         // Distinct from `candidateStyle.isLiquidGlassEnabled`: that flag checks the
         // *candidate bar* background (`candidateBackgroundColor`); this flag checks
         // the *root keyboard* background (`backgroundColor`). Keep them independent.
@@ -67,9 +76,11 @@ struct TaigiKeyboardView: View {
             selectedCandidateIndex: selectedCandidateIndex,
             isTranslateSwapped: isTranslateSwapped,
             candidateStyle: candidateStyle,
+            candidateTheme: theme,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
         )
+        .candidateTheme(theme)
         .keyboardToolbarStyle(
             Keyboard.ToolbarStyle(
                 // Use Liquid Glass pass-through only when enabled AND
@@ -113,6 +124,10 @@ struct TaigiKeyboardView: View {
             if keyBorderWidth != latestBorderWidth {
                 keyBorderWidth = latestBorderWidth
             }
+            let latestCandidateScale = SharedSettings.shared.candidateTextSizeScale
+            if candidateTextSizeScale != latestCandidateScale {
+                candidateTextSizeScale = latestCandidateScale
+            }
         }
     }
 
@@ -126,6 +141,7 @@ struct TaigiKeyboardView: View {
         selectedCandidateIndex: Int,
         isTranslateSwapped: Bool,
         candidateStyle: CandidateView.Style,
+        candidateTheme: CandidateTheme,
         isTPSLayout: Bool,
         orMapsToER: Bool,
     ) -> some View {
@@ -147,6 +163,7 @@ struct TaigiKeyboardView: View {
             isTranslateSwapped: isTranslateSwapped,
             onTranslateToggle: onTranslateToggle,
             candidateStyle: candidateStyle,
+            candidateTheme: candidateTheme,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             onSymbolInsert: { [keyboardContext] symbol in
@@ -299,8 +316,10 @@ struct TaigiKeyboardView: View {
     private static func candidateStyle(
         for context: KeyboardContext,
         colorSettings: KeyboardColorSettings,
+        height: CGFloat,
     ) -> CandidateView.Style {
         var style = CandidateView.Style.adaptive(for: context)
+        style.height = height
         if let bg = colorSettings.candidateBackgroundColor?.color {
             style.backgroundColor = bg
         }

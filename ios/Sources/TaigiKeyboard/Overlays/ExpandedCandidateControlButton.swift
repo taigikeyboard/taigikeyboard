@@ -7,11 +7,13 @@ struct ExpandedCandidateControlButton: View {
     @Binding var isPressed: Bool
     let action: () -> Void
 
+    @Environment(\.candidateTheme) private var theme
+
     var body: some View {
         Button(action: action) {
             Image(systemName: iconName)
                 .font(KeyboardFonts.globalFont(size: 20))
-                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(theme.primaryTextColor)
                 .frame(width: 45, height: 45, alignment: .center)
                 .background(isPressed ? Color.gray.opacity(0.3) : Color.clear)
                 .scaleEffect(isPressed ? 0.95 : 1.0)

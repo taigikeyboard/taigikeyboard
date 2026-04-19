@@ -9,7 +9,24 @@ final class BackupService: @unchecked Sendable {
 
     static let shared = BackupService()
 
+    // MARK: - Dependencies
+
+    private let customDictionaryService: CustomDictionaryService
+    private let userFrequencyRepository: UserFrequencyRepository
+    private let nextWordService: NextWordService
     private let logger = DebugLogger(category: "BackupService")
+
+    // MARK: - Initialization
+
+    init(
+        customDictionaryService: CustomDictionaryService = .shared,
+        userFrequencyRepository: UserFrequencyRepository = .shared,
+        nextWordService: NextWordService = .shared,
+    ) {
+        self.customDictionaryService = customDictionaryService
+        self.userFrequencyRepository = userFrequencyRepository
+        self.nextWordService = nextWordService
+    }
 
     // MARK: - Models
 
@@ -52,9 +69,9 @@ final class BackupService: @unchecked Sendable {
     // MARK: - Export
 
     func exportAll() async throws -> Data {
-        let customEntries = try await CustomDictionaryService.shared.fetchAll()
-        let frequencyData = await UserFrequencyRepository.shared.topWordsAsync(limit: Int.max)
-        let associationData = await NextWordService.shared.allAssociations()
+        let customEntries = try await customDictionaryService.fetchAll()
+        let frequencyData = await userFrequencyRepository.topWordsAsync(limit: Int.max)
+        let associationData = await nextWordService.allAssociations()
 
         let appVersion = Bundle.main.object(
             forInfoDictionaryKey: "CFBundleShortVersionString",
@@ -114,7 +131,7 @@ final class BackupService: @unchecked Sendable {
     // MARK: - Private Import Helpers
 
     private func importCustomDictionary(_ entries: [CustomDictEntry]) async throws -> Int {
-        let existing = try await CustomDictionaryService.shared.fetchAll()
+        let existing = try await customDictionaryService.fetchAll()
         let existingPairs = Set(existing.map { "\($0.roman)\t\($0.hanzi)" })
 
         var imported = 0
@@ -123,7 +140,7 @@ final class BackupService: @unchecked Sendable {
             guard !existingPairs.contains(key) else { continue }
 
             let newEntry = CustomDictionaryEntry(roman: entry.roman, hanzi: entry.hanzi)
-            try await CustomDictionaryService.shared.save(newEntry)
+            try await customDictionaryService.save(newEntry)
             imported += 1
         }
         return imported
@@ -132,8 +149,8 @@ final class BackupService: @unchecked Sendable {
     private func importFrequency(_ entries: [FrequencyEntry]) async -> Int {
         guard !entries.isEmpty else { return 0 }
         do {
-            try await UserFrequencyRepository.shared.ensureInitialized()
-            return try await UserFrequencyRepository.shared.batchImportMerge(entries: entries.map {
+            try await userFrequencyRepository.ensureInitialized()
+            return try await userFrequencyRepository.batchImportMerge(entries: entries.map {
                 (word: $0.word, count: $0.count)
             })
         } catch {
@@ -146,7 +163,7 @@ final class BackupService: @unchecked Sendable {
         guard !entries.isEmpty else { return 0 }
         do {
             // Normalize prevTl/nextTl to TL format (old backups or cross-platform may contain POJ)
-            return try await NextWordService.shared.batchImportAssociations(entries: entries.map {
+            return try await nextWordService.batchImportAssociations(entries: entries.map {
                 (prevWord: $0.prevWord,
                  prevTl: RomanizationConverter.pojToTL($0.prevTl ?? ""),
                  nextWord: $0.nextWord,

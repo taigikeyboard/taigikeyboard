@@ -87,24 +87,18 @@ enum CandidateCellHelper {
         return suggestion
     }
 
-    // MARK: - 字體大小
-
-    static var titleFontSize: CGFloat {
-        CandidateViewModels.UI.primaryFontSize
-    }
-
-    static var subtitleFontSize: CGFloat {
-        CandidateViewModels.UI.secondaryFontSize
-    }
-
     // MARK: - Cell 寬度量測
 
     /// 量測 title 與 subtitle 於對應字體大小的寬度，回傳 max + padding
     /// 一律兩者都量，避免 translate toggle 時佈局 reflow。
+    ///
+    /// 字體大小由呼叫端從 `CandidateTheme` 環境傳入，避免這裡依賴 `SharedSettings`。
     static func measuredCellWidth(
         for suggestion: Autocomplete.Suggestion,
         isTPSLayout: Bool,
         orMapsToER: Bool,
+        titleFontSize: CGFloat,
+        subtitleFontSize: CGFloat,
     ) -> CGFloat {
         let titleFont = KeyboardFonts.globalUIFont(size: titleFontSize)
         let subtitleFont = KeyboardFonts.globalUIFont(size: subtitleFontSize)

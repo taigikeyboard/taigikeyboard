@@ -1,0 +1,348 @@
+# G5-design — NextWord Engine / Platform Boundary
+
+**Status**: design-only deliverable for Phase I G5, authored 2026-04-19 alongside G4-design. Revised same day after Codex + Gemini review of the G4/G5/G8 docs cycle. Implementation (G5-impl) runs after G4-impl — this doc commits the scheduling contract early so later groups do not encode Timer-specific or DTO-leak assumptions.
+
+**Goal**: split `NextWord/NextWordController.swift` into
+
+1. **`NextWordEngine`** — pure Foundation-only logic (validate input, decide whether to record / reset / predict, normalize romanization, filter compound-word emissions), shared-core candidate.
+2. **`NextWordController`** — iOS platform executor: owns the `Timer` for context timeout, `@MainActor` hops for UI updates, `DispatchQueue.main` dispatch, settings snapshot, and query-generation bookkeeping.
+
+…without changing decay math, association-window semantics, or the user-perceived prediction lifecycle.
+
+**Non-goal**: do not implement here. G5-impl takes this sketch, writes code, and G9 wires scheduling-parity tests against it.
+
+---
+
+## 1. What exists today
+
+`NextWordController.swift` mixes:
+
+| Concern | Evidence |
+|---|---|
+| **Pure decision logic** | `isNoiseText`, `isSentenceEndPunctuation`, `shouldRecordAssociation`, `splitCompoundWord`, `recordCompoundWordAssociations` plumbing, `makePredictions` filter/convert. |
+| **Romanization normalization** | `RomanizationConverter.pojToTL` usage, already a candidate. |
+| **Platform time source** | `Self.currentTimestampMs = Int64(Date().timeIntervalSince1970 * 1000)` — read at **two** places per `process` call (once inside `shouldRecordAssociation`, once when assigning `lastSelectionTime`). G5-impl normalizes these into one intent timestamp. |
+| **Platform scheduling** | `Timer.scheduledTimer` for 30 s context timeout, `Task { @MainActor … }` for prediction query, `DispatchQueue.main.async` on timeout fan-out. |
+| **Platform settings read** | `settingsProvider.current` inside `process` and `makePredictions`. |
+| **Service I/O** | `nextWordService.recordAssociation`, `nextWordService.predict` (SQLite + binary mmap). Raw prediction rows are currently typed as `NextWordService.Prediction` — platform-bound DTO that leaks into any pure code consuming it. G5-impl introduces a shared-core DTO (see §2.4). |
+| **UI fan-out** | `contextUpdater?.setNextWordPredictions / resetNextWordSuggestions`. |
+
+Only the first two columns are Foundation-pure. The rest block `NextWordController` from the roster (see Exclusions: *Timer, DispatchQueue.main, @MainActor, SharedSettings.shared*).
+
+**Timing contracts that must survive the split** (non-obvious):
+
+- **10 s association window** (`associationTimeoutMs`): currently read with two separate `currentTimestampMs` calls per `process`. G5-impl intentionally normalizes to a single `nowMs` captured at intent entry. This is a **behavior clarification**, not strict preservation — the 1–2 ms gap between the two reads was never observable, but the tests in §10 pin the behavior at boundaries.
+- **30 s context timeout**: fires on the Timer, resets state, optionally clears UI suggestions. The Timer is rescheduled at every successful `process` / `triggerPrediction`. Keep the rescheduling order: stop → start. A missed stop leaks timers.
+- **`@MainActor` hop for prediction** — the actual prediction query happens off-main (`NextWordService` is an async API); the UI update happens on main. G5-impl must preserve this threading — pure engine must not force main-thread usage.
+- **Compound-word associations fire inside a single `Task`** — today `recordCompoundWordAssociations` loops `await nextWordService.recordAssociation` sequentially. Keep sequential ordering; parallel `Task`s would race on the SQLite UNIQUE constraint.
+- **Stale-prediction race** — a prediction Task in flight may resolve *after* a context timeout or `resetFull` clears state. Today the code accepts this race (late predictions leak onto the UI). G5-impl **eliminates** the race via query generations, not deferred (§3).
+
+---
+
+## 2. Target shape
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Platform executor (iOS): NextWordController                         │
+│  - Owns the Timer (context timeout) + invalidate / reschedule        │
+│  - Owns @MainActor Task dispatch for UI updates                      │
+│  - Owns settingsProvider.current reads                               │
+│  - Owns currentGeneration counter (monotonic)                         │
+│  - Per intent: snapshot settings, clock, generation → DecisionInput  │
+│  - Calls NextWordEngine.decide(intent:state:input:)                  │
+│  - Interprets engine-returned Effects                                │
+│  - After prediction Task resolves: compare resolved generation       │
+│    against current; drop if stale.                                   │
+└──────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  NextWordEngine (Foundation-only, shared-core candidate)             │
+│  - decide(intent:state:input:) → NextWordOutcome                     │
+│  - filterPredictions(_:[RawNextWordPrediction], settings:) → [EP]    │
+│  - Pure validation + pure association-window check                   │
+│  - Pure compound-word split                                          │
+│  - Takes currentTimeMs + generation from caller; never reads clock,  │
+│    never mutates the counter.                                        │
+│  - Takes EngineSettings snapshot by value (no provider protocol).    │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.1 Intent values
+
+```swift
+public enum NextWordIntent: Equatable {
+    case wordSelected(text: String, roman: String, requireRomanMode: Bool, triggerPrediction: Bool)
+    case backspace(lastChar: String)
+    case contextTimeoutFired
+    case clearForNewComposing   // user started typing again
+    case resetFull              // sentence-end / textDidChange empty
+}
+```
+
+### 2.2 State + decision input (split, per review)
+
+`NextWordPersistedState` is the long-lived state the engine mutates; `NextWordDecisionInput` is the per-call snapshot the executor supplies. The previous draft conflated these into one `NextWordContext`, which invited the executor to persist stale `nowMs` / `settings`.
+
+```swift
+public struct NextWordPersistedState: Equatable {
+    public var lastSelectedWord: String?
+    public var lastSelectedRoman: String?        // normalized to TL already
+    public var lastSelectionTimeMs: Int64
+    public var isShowing: Bool
+    public var currentGeneration: UInt64         // monotonic; bumped on every state-mutating intent
+}
+
+public struct NextWordDecisionInput: Equatable {
+    public let nowMs: Int64                      // supplied by executor at intent entry
+    public let settings: EngineSettings          // value snapshot
+}
+```
+
+### 2.3 Outcome values
+
+```swift
+public struct NextWordOutcome: Equatable {
+    public enum Effect: Equatable {
+        case rescheduleContextTimeout(after: TimeInterval)
+        case cancelContextTimeout
+        case recordAssociation(prev: String, prevTl: String, next: String, nextTl: String)
+        case recordCompoundAssociations([(prev: String, prevTl: String, next: String, nextTl: String)])
+        case queryPredictions(word: String, roman: String, generation: UInt64)
+        case clearPredictionsUI(generation: UInt64)
+    }
+
+    public let newState: NextWordPersistedState   // lastSelected* / isShowing / currentGeneration updated
+    public let effects: [Effect]                  // order matters; executor runs sequentially
+}
+```
+
+**`generation` on `queryPredictions` and `clearPredictionsUI`** is the mechanism that eliminates the stale-prediction race. When the executor receives the async query result back, it compares the result's generation against `persistedState.currentGeneration`. A mismatch = the intent that started this query has been superseded; drop the result.
+
+### 2.4 Prediction-result step (separate entry point) — with shared DTO
+
+Prediction query happens asynchronously on the platform side. The service returns rows in a platform-bound type (`NextWordService.Prediction`); the executor must convert to a shared-core DTO at the boundary, then pass that to the engine. **Defining this DTO in shared-core is what eliminates the previous Codex finding that `filterPredictions` depended on a platform-service type.**
+
+```swift
+// Foundation-only, shared-core candidate — new file.
+public struct RawNextWordPrediction: Equatable {
+    public let hanzi: String
+    public let tl: String
+    public let count: Int
+    public let source: Source    // .user | .dict
+    public enum Source: Equatable { case user, dict }
+}
+```
+
+Service mapping: `NextWordService.Prediction` → `RawNextWordPrediction` happens in `NextWordService` itself (platform side) before results cross into the engine.
+
+Engine signature:
+
+```swift
+public static func filterPredictions(
+    _ raw: [RawNextWordPrediction],
+    settings: EngineSettings
+) -> [EnginePrediction]
+```
+
+This is exactly today's `makePredictions(from:)` extracted as a pure static, but typed on the shared DTO. Platform executor calls it after `await nextWordService.predict(...)` and the generation check, then interprets either `setPredictions` or `clearPredictionsUI(generation:)` based on the returned count.
+
+### 2.5 Setting predictions on the UI (clarifying §2 diagram)
+
+The previous diagram listed a `setPredictions([EnginePrediction])` output but the `Effect` enum omitted it. Reason: prediction results are computed on the platform side (after the async query resolves), so they are not part of an `Outcome.Effect` list returned from `decide`. Instead, the executor has a **second code path** for prediction resolution:
+
+```
+executor.handleQueryResult(raw: [RawNextWordPrediction], generation: UInt64) {
+    guard generation == state.currentGeneration else { return }   // stale, drop
+    let predictions = NextWordEngine.filterPredictions(raw, settings: currentSettings)
+    if predictions.isEmpty {
+        contextUpdater?.resetNextWordSuggestions()
+        state.isShowing = false
+    } else {
+        contextUpdater?.setNextWordPredictions(predictions)
+        state.isShowing = true
+        // reschedule context timer — same as today
+    }
+}
+```
+
+`setNextWordPredictions` is **not** an engine-emitted Effect because the engine never sees the prediction list. Diagram updated accordingly.
+
+---
+
+## 3. Scheduling contract + race elimination
+
+`NextWordEngine` never touches time or Timers. The executor owns scheduling. The engine describes *when* via effect values:
+
+- `rescheduleContextTimeout(after: 30)` — executor cancels existing Timer, schedules a new one; on fire, executor re-enters the engine with `NextWordIntent.contextTimeoutFired`.
+- `cancelContextTimeout` — executor invalidates, no new Timer.
+
+**Clock source ownership**: the executor is the single place that reads `Date().timeIntervalSince1970 * 1000`. It supplies `nowMs` on every `NextWordEngine.decide` call via `NextWordDecisionInput`. Tests call `decide` with a pinned `nowMs` and assert output — zero flakiness.
+
+**Timer identity**: executor keeps a single `Timer` reference. Rescheduling = invalidate old + store new. No queue of pending Timers — matches current behavior. G9 mandates an explicit test: issue 100 rapid `wordSelected` intents, assert executor ends with exactly one live Timer reference.
+
+**Query generation (race elimination)**: every `wordSelected` / `backspace` intent bumps `currentGeneration`. The `queryPredictions(..., generation:)` Effect carries the bumped value. When the async query resolves, the executor checks current generation before applying results. A timeout firing between query dispatch and query resolution bumps generation (via `contextTimeoutFired` emitting a state change) — the late result is then dropped. This is no longer deferred "if observable" work; it is part of the boundary contract.
+
+Rule: **any state transition that invalidates a pending prediction query must bump `currentGeneration`**. The invariant is local to `decide`:
+
+```
+let shouldBumpGeneration = (
+    intent is .wordSelected || .backspace || .clearForNewComposing ||
+    .resetFull || .contextTimeoutFired
+)
+var newState = state
+if shouldBumpGeneration { newState.currentGeneration &+= 1 }   // wrapping ok; 2^64 is plenty
+```
+
+---
+
+## 4. Decision table (engine-side, pure)
+
+For `wordSelected(text, roman, requireRomanMode, triggerPrediction)`:
+
+| Condition | Outcome effects | newState mutation |
+|---|---|---|
+| `requireRomanMode && settings.isTranslateSwapped` | `[]` | unchanged |
+| `text` empty | `[]` | unchanged |
+| `text` is noise punctuation, NOT sentence-end | `[]` | unchanged |
+| `text` is sentence-end punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
+| `settings.isAssociationRecordingEnabled && shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` | `[recordAssociation(...), recordCompoundAssociations(...)]` (append) | — |
+| Always (for valid text) | append `[rescheduleContextTimeout(30)]` | `lastSelectedWord/Roman = ...`, `lastSelectionTimeMs = nowMs`, bump generation |
+| `triggerPrediction == true` | append `[queryPredictions(textTl, romanTl, newGen)]` | — |
+
+For `backspace(lastChar)`:
+
+- `newState.lastSelectedWord = lastChar`, `lastSelectedRoman = nil`, `lastSelectionTimeMs = nowMs`, bump generation.
+- `effects = [queryPredictions(lastChar, "", newGen)]`.
+- Critically: does **NOT** emit `recordAssociation` or `recordCompoundAssociations`. This is today's `rePredictAfterBackspace` invariant — backspace is not a word selection.
+
+For `contextTimeoutFired`:
+
+- If `state.isShowing` true at time of fire → `[clearPredictionsUI(newGen)]`, else `[]`.
+- `newState` resets to defaults; bump generation (so any prediction query still in flight is invalidated).
+
+For `clearForNewComposing`:
+
+- `[clearPredictionsUI(newGen)]` if `isShowing`.
+- `newState.isShowing = false`; association state left intact; bump generation (today's `clearDisplay` semantics preserved; the added generation bump drops any in-flight prediction).
+
+For `resetFull`:
+
+- `[cancelContextTimeout] + [clearPredictionsUI(newGen) if isShowing]`.
+- `newState` zeroed; bump generation.
+
+---
+
+## 5. `shouldRecordAssociation` as a pure function
+
+```swift
+static func shouldRecordAssociation(_ state: NextWordPersistedState, nowMs: Int64) -> Bool {
+    guard state.lastSelectedWord != nil else { return false }
+    return (nowMs - state.lastSelectionTimeMs) < 10_000
+}
+```
+
+Strict `<` boundary preserved. 10 s constant lives in `NextWordEngine` alongside 30 s context timeout.
+
+**Boundary tests mandated in G9**:
+- `nowMs - lastSelectionTimeMs == 9_999` → `true`
+- `nowMs - lastSelectionTimeMs == 10_000` → `false`
+- `nowMs - lastSelectionTimeMs < 0` (clock skew / wrapped) → `false` (do not record against a future-relative negative age).
+
+The third case is a new assertion — today's implementation returns `true` for a negative delta, which is almost certainly wrong. G5-impl closes this with an explicit `max(0, nowMs - lastSelectionTimeMs)` or a `nowMs >= lastSelectionTimeMs` precondition, documented in the test.
+
+---
+
+## 6. Compound-word splitting preserved
+
+```swift
+static func splitCompound(_ word: String) -> [String] {
+    word.isEmpty ? [] : word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
+}
+
+static func compoundAssociationPairs(displayText: String, roman: String)
+    -> [(prev: String, prevTl: String, next: String, nextTl: String)]
+```
+
+Executor's `recordCompoundAssociations` effect feeds straight into a single `Task` that loops `await nextWordService.recordAssociation` in order — same sequential shape as today, preventing UNIQUE-constraint races.
+
+---
+
+## 7. Settings access — snapshot-per-intent (with live live-read at executor)
+
+`NextWordController` today reads `settingsProvider.current` twice in `process` (for `isTranslateSwapped` and `isAssociationRecordingEnabled`) and once in `makePredictions`. Between those reads, a settings change could technically flip the answer — though in practice settings updates during a single `process` call are not observed.
+
+**Decision**: executor reads `settingsProvider.current` once at the start of `process` and snapshots it into `NextWordDecisionInput.settings`, then passes the value to `decide`. Prediction-filter step gets its own snapshot at query-resolve time (Task boundary). This matches *per-keystroke live* semantics without forcing the engine to query a provider.
+
+Invariant §11 (engine settings are live-read) still holds at the executor level; engine functions receive a snapshot, which is the correct shape for deterministic testing.
+
+---
+
+## 8. What becomes a shared-core candidate
+
+| File | Role | Candidate? |
+|---|---|---|
+| `NextWord/NextWordEngine.swift` *(new)* | Pure decide + pure filter | **Yes** — adds to roster. |
+| `NextWord/NextWordOutcome.swift` *(new)* | `Intent` / `PersistedState` / `DecisionInput` / `Outcome` / `Effect` types | **Yes**. |
+| `NextWord/RawNextWordPrediction.swift` *(new)* | Shared-core prediction DTO (replaces platform-bound `NextWordService.Prediction` at the boundary) | **Yes**. |
+| `NextWord/NextWordController.swift` *(reduced)* | iOS Timer + @MainActor + settings read + service I/O + UI fan-out + generation bookkeeping | No — platform executor. Stays in Exclusions. |
+| `NextWord/Services/NextWordService.swift` *(updated)* | Adds mapping `Prediction → RawNextWordPrediction` at service boundary | No — SQLite + file manager + shared singleton. Stays in Exclusions. |
+| `NextWord/NextWordScorer.swift` | Pure ranking constants | Already a candidate. |
+
+Net: roster **+3 files** (NextWordEngine, NextWordOutcome, RawNextWordPrediction).
+
+---
+
+## 9. Risks + mitigations
+
+| Risk | Mitigation |
+|---|---|
+| Decay math changes because engine recomputes `nowMs` differently from platform `Self.currentTimestampMs`. | Engine never reads clock — executor supplies `nowMs` once per intent. Invariant §7 tests assert decay = f(`lastUsedMs`, `nowMs`). |
+| Timer leak if executor's reschedule path doesn't invalidate on every `rescheduleContextTimeout` effect. | G9 adds **mandated** unit test: sequence of 100 `wordSelected` intents → executor state shows exactly one live Timer reference at the end. No longer optional. |
+| `recordCompoundAssociations` emitted as pairs could shuffle if executor reconstructs from `splitCompoundWord` twice. | `Outcome.Effect.recordCompoundAssociations` carries the full pair list from the engine; executor loops them verbatim. No re-split on executor side. |
+| ~~Context timeout fires during a prediction `Task` → races `setPredictions` with `clearPredictionsUI`.~~ | **Eliminated** by `currentGeneration` in §3. Any invalidating intent bumps the generation; late query results compare against current generation and drop on mismatch. G9 test `INVARIANT_nextword_late_prediction_is_discarded` covers this. |
+| `NextWordService.Prediction` DTO leaks into engine signature. | **Eliminated** by `RawNextWordPrediction` in shared-core (§2.4). Service maps at the boundary. |
+| Settings change between snapshot and prediction-filter re-read produces inconsistent `isTranslateSwapped` usage. | Executor takes a fresh settings snapshot at query-resolve time; engine never crosses that boundary twice. Documented, no new failure mode. |
+| Negative `nowMs - lastSelectionTimeMs` (clock skew) returns `true` today. | New invariant: strict `< 10_000` and `>= 0`. G9 boundary tests cover it. |
+
+---
+
+## 10. Test hooks for G9
+
+- `INVARIANT_nextword_association_window_strict_lt_10s` — boundary tests: 9_999 → true, 10_000 → false, negative delta → false.
+- `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never includes `recordAssociation` or `recordCompoundAssociations` effects.
+- `INVARIANT_nextword_sentence_end_resets_context` — `decide(.wordSelected(text: "。", …))` yields `cancelContextTimeout` + clears state + bumps generation.
+- `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a-b-c"`, `compoundAssociationPairs` returns `[(a, b), (b, c)]` in that order.
+- `INVARIANT_nextword_no_clock_read_in_engine` — static analysis / code review gate: `NextWordEngine` file must not reference `Date()`, `CFAbsoluteTimeGetCurrent`, `ProcessInfo.systemUptime`, `DispatchTime.now`.
+- `INVARIANT_nextword_prediction_filter_hides_empty_tl_in_roman_mode` — `filterPredictions` drops entries with empty `tl` when `settings.isTranslateSwapped == false`.
+- `INVARIANT_nextword_late_prediction_is_discarded` — platform-side integration test: dispatch `queryPredictions(gen=N)`, then fire `contextTimeoutFired` (bumps to N+1), then resolve the query → `setNextWordPredictions` is NOT called.
+- `INVARIANT_nextword_generation_bumps_on_invalidating_intents` — every invalidating intent produces `newState.currentGeneration > state.currentGeneration`.
+- `INVARIANT_nextword_rescheduling_leaks_no_timer` — platform-side: 100 rapid rescheduling intents → exactly one live Timer.
+
+Pure-state tests runnable without simulator; the last two require iOS + Android platform harnesses.
+
+---
+
+## 11. Decisions deferred to G5-impl
+
+- Whether `NextWordEngine` is an `enum` (static-only, pure-function namespace like `NextWordScorer`) or a `struct` holding `state`. Lean **enum** — matches scorer, no state to own.
+- Whether the executor wraps engine calls in a `@MainActor` func. Lean **no** — engine is thread-agnostic; executor's main-thread needs are explicit.
+- Whether `NextWordOutcome.Effect` should be a sealed hierarchy (class-ish with associated values) or the flat enum above. Lean **flat enum** — matches `ComposingTransition.Effect` in G4-design.
+
+Already decided (moved out of "deferred" after review cycle):
+
+- `NextWordPersistedState` vs `NextWordDecisionInput` split — **not deferred**, design above.
+- `RawNextWordPrediction` DTO — **not deferred**, design above.
+- Query generation for race elimination — **not deferred**, design above.
+- Negative-delta fix in `shouldRecordAssociation` — **not deferred**, boundary test above.
+
+---
+
+## 12. Cross-references
+
+- Phase I plan: `ios-exemplar-plan.md` §G5.
+- G4-design counterpart (same pattern for SwiftUI-scheduled state): `composing-state-boundary.md`.
+- Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§7, 8, 11.
+- Shared-core readiness contract: `../engine/shared-core-readiness.md`.
+- Codex review (roadmap-level): `codex-review-2026-04-19.md`.
+- Docs-review cycle (2026-04-19, same day): findings incorporated above.

@@ -11,6 +11,7 @@ struct SymbolSelectionOverlay: View {
     let onDismiss: () -> Void
 
     @State private var selectedTab: SymbolCategory = .fullWidth
+    @Environment(\.candidateTheme) private var theme
 
     /// Grid columns based on selected tab's column count.
     private var columns: [GridItem] {
@@ -30,7 +31,7 @@ struct SymbolSelectionOverlay: View {
         Group {
             if isExpanded {
                 GeometryReader { geometry in
-                    let toolbarHeight = CandidateViewModels.UI.height
+                    let toolbarHeight = theme.height
                     contentView
                         .frame(maxWidth: .infinity)
                         .frame(height: geometry.size.height - toolbarHeight)
@@ -82,7 +83,7 @@ struct SymbolSelectionOverlay: View {
             Text(category.label)
                 .font(KeyboardFonts.globalFont(size: 13))
                 .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(isSelected ? .white : theme.primaryTextColor)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
@@ -101,7 +102,7 @@ struct SymbolSelectionOverlay: View {
         }) {
             Text(symbol)
                 .font(.system(size: selectedTab.fontSize))
-                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(theme.primaryTextColor)
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .contentShape(Rectangle())
         }

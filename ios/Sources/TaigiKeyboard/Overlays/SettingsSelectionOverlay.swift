@@ -26,6 +26,7 @@ struct SettingsSelectionOverlay: View {
     @State private var isReady = false
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.candidateTheme) private var theme
 
     private static let autoCapKey = "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled"
     private static let audioFeedbackKey = "com.keyboardkit.settings.feedback.isAudioFeedbackEnabled"
@@ -58,7 +59,7 @@ struct SettingsSelectionOverlay: View {
         Group {
             if isExpanded {
                 GeometryReader { geometry in
-                    let toolbarHeight = CandidateViewModels.UI.height
+                    let toolbarHeight = theme.height
                     contentView
                         .frame(maxWidth: .infinity)
                         .frame(height: geometry.size.height - toolbarHeight)
@@ -157,7 +158,7 @@ struct SettingsSelectionOverlay: View {
             }
         }
         .font(KeyboardFonts.globalFont(size: 15))
-        .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+        .foregroundColor(theme.primaryTextColor)
         .tint(.accentColor)
         .frame(height: 44)
         .onChange(of: isOn.wrappedValue) { _, newValue in

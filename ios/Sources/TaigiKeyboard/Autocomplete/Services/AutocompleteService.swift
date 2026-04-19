@@ -43,8 +43,9 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - 核心屬性
 
-    private let lexiconService = LexiconService.shared
-    private let settingsProvider: EngineSettingsProvider = SharedSettings.shared
+    private let lexiconService: LexiconService
+    private let settingsProvider: EngineSettingsProvider
+    private let nextWordService: NextWordService
 
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
@@ -53,6 +54,18 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     private weak var selectionContext: (any SelectionContextProvider)?
 
     let logger = DebugLogger(category: "AutocompleteService")
+
+    // MARK: - Initialization
+
+    init(
+        lexiconService: LexiconService = .shared,
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
+        nextWordService: NextWordService = .shared,
+    ) {
+        self.lexiconService = lexiconService
+        self.settingsProvider = settingsProvider
+        self.nextWordService = nextWordService
+    }
 
     // MARK: - 公開介面
 
@@ -120,7 +133,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             return words
         }
 
-        let predictions = await NextWordService.shared.predict(word: lastWord, limit: 30)
+        let predictions = await nextWordService.predict(word: lastWord, limit: 30)
         guard !predictions.isEmpty else { return words }
 
         let contextSet = Set(predictions.map(\.hanzi))

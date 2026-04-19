@@ -14,6 +14,8 @@ struct ToolShortcutsToolbar: View {
     let onDismissKeyboard: () -> Void
     let onSettingsTap: () -> Void
 
+    @Environment(\.candidateTheme) private var theme
+
     var body: some View {
         HStack(spacing: 0) {
             toggleButton
@@ -35,10 +37,10 @@ struct ToolShortcutsToolbar: View {
             Image(systemName: "plus")
                 .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(.light)
-                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(theme.primaryTextColor)
                 .rotationEffect(.degrees(isExpanded ? 45 : 0))
                 .animation(.easeInOut(duration: 0.2), value: isExpanded)
-                .frame(width: 36, height: CandidateViewModels.UI.height)
+                .frame(width: 36, height: theme.height)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -94,7 +96,7 @@ struct ToolShortcutsToolbar: View {
             Text(label)
                 .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? .white : CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(isSelected ? .white : theme.primaryTextColor)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 6)
@@ -146,13 +148,15 @@ private struct ToolShortcutButton: View {
 private struct ToolShortcutIcon: View {
     let systemName: String
 
+    @Environment(\.candidateTheme) private var theme
+
     var body: some View {
         Image(systemName: systemName)
             .font(KeyboardFonts.globalFont(size: 18))
             .fontWeight(.light)
-            .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+            .foregroundColor(theme.primaryTextColor)
             .scaleEffect(1.2)
-            .frame(width: 30, height: CandidateViewModels.UI.height)
+            .frame(width: 30, height: theme.height)
             .contentShape(Rectangle())
     }
 }

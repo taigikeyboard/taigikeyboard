@@ -11,6 +11,7 @@ struct LayoutSelectionOverlay: View {
 
     @State private var selectedLayout: KeyboardLayoutType
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.candidateTheme) private var theme
 
     private static let tpsDisabled = false
 
@@ -24,7 +25,7 @@ struct LayoutSelectionOverlay: View {
         Group {
             if isExpanded {
                 GeometryReader { geometry in
-                    let toolbarHeight = CandidateViewModels.UI.height
+                    let toolbarHeight = theme.height
                     contentView
                         .frame(maxWidth: .infinity)
                         .frame(height: geometry.size.height - toolbarHeight)
@@ -77,7 +78,7 @@ struct LayoutSelectionOverlay: View {
             Text(header)
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(CandidateViewModels.Colors.secondaryTextColor)
+                .foregroundColor(theme.secondaryTextColor)
                 .textCase(.uppercase)
                 .padding(.horizontal, 12)
 
@@ -125,6 +126,7 @@ private struct LayoutCard: View {
     private let cardWidth: CGFloat = 120
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.candidateTheme) private var theme
 
     var body: some View {
         Button(action: action) {
@@ -169,7 +171,7 @@ private struct LayoutCard: View {
                 Text(name)
                     .font(.caption2)
                     .fontWeight(.medium)
-                    .foregroundColor(isDisabled ? CandidateViewModels.Colors.secondaryTextColor : CandidateViewModels.Colors.primaryTextColor)
+                    .foregroundColor(isDisabled ? theme.secondaryTextColor : theme.primaryTextColor)
                     .lineLimit(1)
             }
         }

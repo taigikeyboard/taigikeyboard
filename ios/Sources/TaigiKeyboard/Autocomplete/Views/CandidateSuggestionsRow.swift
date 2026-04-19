@@ -16,6 +16,7 @@ struct CandidateSuggestionsRow: View {
     let englishAutocompleteView: AnyView?
 
     @EnvironmentObject private var expandState: CandidateExpandState
+    @Environment(\.candidateTheme) private var theme
 
     var body: some View {
         HStack(spacing: 0) {
@@ -88,9 +89,9 @@ struct CandidateSuggestionsRow: View {
         Button(action: { expandState.toggle() }) {
             Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
                 .font(KeyboardFonts.globalFont(size: 18))
-                .foregroundColor(CandidateViewModels.Colors.primaryTextColor)
+                .foregroundColor(theme.primaryTextColor)
                 .scaleEffect(1.2)
-                .frame(width: 42, height: CandidateViewModels.UI.height)
+                .frame(width: 42, height: theme.height)
                 .contentShape(Rectangle())
                 .offset(y: 7)
         }

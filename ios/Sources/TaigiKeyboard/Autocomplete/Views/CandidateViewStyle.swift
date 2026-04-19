@@ -13,11 +13,11 @@ extension CandidateView {
         /// 創建自訂候選詞樣式
         ///
         /// - Parameters:
-        ///   - height: 候選詞列高度，預設 48
+        ///   - height: 候選詞列高度，預設為 `CandidateTheme.standard.height`
         ///   - backgroundColor: 背景色，預設自適應
         ///   - itemStyle: 候選詞項目樣式
         init(
-            height: CGFloat = CandidateViewModels.UI.height,
+            height: CGFloat = CandidateTheme.standard.height,
             backgroundColor: Color? = nil,
             itemStyle: ItemStyle = .standard,
         ) {
