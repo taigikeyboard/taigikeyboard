@@ -356,3 +356,140 @@ Already decided (moved out of "deferred" after review cycle):
 - Shared-core readiness contract: `../engine/shared-core-readiness.md`.
 - Codex review (roadmap-level): `codex-review-2026-04-19.md`.
 - Docs-review cycle (2026-04-19, same day): findings incorporated above.
+
+---
+
+## 13. Android Binding Addendum
+
+**Status**: A5-design deliverable for Phase II, authored 2026-04-20 on branch `phase2/a4a5-design-android-binding`. Pairs with `composing-state-boundary.md` §11. Codex pre + post reviewed.
+
+**Purpose**: lock Android-specific binding contract for the `NextWordEngine` / `NextWordOutcome` shape defined in §§2–7 before A5-impl lands. iOS-authored §§1–12 stay platform-neutral in intent; this addendum captures clock injection, Kotlin coroutine scheduling, and the cross-Service clock path the iOS doc could not.
+
+**Scope**: binding contract only. A5-impl writes the code that honors the contract.
+
+### 13.1 Current Android state (pre-A5-impl)
+
+`android/app/.../ime/text/smartbar/NextWordHandler.kt`:
+
+- Constructor-injected `CoroutineScope` (supplied by `SmartbarManager` at line 50 as `CoroutineScope(SupervisorJob() + Dispatchers.Main)`). Note: `SmartbarManager.onDestroy()` does NOT cancel this scope today — A5-impl MUST either inherit from `TaigiKeyboard.serviceScope` (cancelled in IME `onDestroy`) or add explicit cancellation in the wrapper's teardown path.
+- Reads `System.currentTimeMillis()` inline at `handleNextWordPrediction` (line 64), `updateLastSelectedWord` (line 187), and `handleBackspaceForNextWord` (line 222).
+- Constants `ASSOCIATION_TIMEOUT_MS = 10_000L`, `CONTEXT_TIMEOUT_MS = 30_000L` at the companion object. Neither carries the `// CROSS-PLATFORM INVARIANT` marker today.
+- **Context-timeout is passive**: the 30 s window is checked inside `shouldReset` on the NEXT intent entry. No scheduled task proactively fires a timeout.
+- **No generation counter**: late `nextWord.predict(...)` results reach `updateCandidatesWithPredictions` even if the user has moved on (typed a new character, committed a different word, or 30 s has elapsed).
+- Direct callbacks (`onUpdateCandidates: (List<TaigiWord>) -> Unit`, `onClearCandidates: () -> Unit`) — no `StateFlow`.
+
+`NextWordService.predict(...)` ALSO reads `System.currentTimeMillis()` internally at line 270 for user-row decay scoring. The clock path touches both files — §13.3 covers the full path.
+
+### 13.2 Binding decisions
+
+| Decision | Choice |
+|---|---|
+| Section placement | Append at end (§13). Audit §7 A5-design's "§3" reference is stale. |
+| Context-timeout model | **Option A — active**. Port iOS `Timer.scheduledTimer` to a coroutine-scheduled `delay` (see §13.5). |
+| `RawNextWordPrediction` package | **New** `ime/core/nextword/` package — groups shared-core candidates away from platform I/O (`ime/dictionary/`). Service maps `NextWordService.Prediction → ime.core.nextword.RawNextWordPrediction` at the boundary. |
+| Generation counter | Port iOS pattern as a parity correction in A5-impl (see §13.6). |
+| `StateFlow` on executor | Not required — same reasoning as composing §11.4. |
+
+### 13.3 Clock injection — full path
+
+`NextWordEngine` takes `nowMs: Long` on every decision entry point. For the prediction-filter path, the clock also reaches the scoring function inside `NextWordService.predict(...)`:
+
+- Executor reads `System.currentTimeMillis()` once per intent entry, stores it in `NextWordDecisionInput.nowMs`.
+- Executor passes the same `nowMs` into `nextWord.predict(word, roman, settings, nowMs)` — `NextWordService.predict` stops reading the clock internally (line 270 deleted) and uses the supplied value for `calculateUserScore(count, lastUsedMs, nowMs)` / `calculateDecay(lastUsedMs, nowMs)`.
+- Result: the engine and the prediction query use ONE consistent `nowMs` per intent — no 1–2 ms drift between "should record association?" check and user-row decay scoring.
+
+Engine-side forbidden calls (per `rules/android-guidelines.md` §1 criterion 3): `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`. Note: `kotlinx.coroutines.delay` (top-level suspend function) is also forbidden inside the engine — all scheduling lives in the platform executor.
+
+### 13.4 Settings access
+
+Executor reads `EngineSettingsProvider.current` once at intent entry, passes value to `NextWordEngine.decide(...)` via `NextWordDecisionInput.settings`. Prediction-filter step takes a fresh snapshot at query-resolve time (coroutine boundary after `nextWord.predict` completes), same as iOS §7. Live-read semantics from `EngineSettings.kt` are preserved — see `rules/android-guidelines.md` §6.
+
+### 13.5 Active context-timeout — coroutine binding
+
+Android's current passive model is a documented divergence from the iOS boundary contract (§3: "rescheduleContextTimeout(after: 30)" is an active effect). A5-impl ports to an active model using coroutine scheduling. Binding pattern (illustrative — class layout is A5-impl's choice):
+
+- Executor holds a single `Job` reference. Reschedule = cancel old + `scope.launch { delay(30_000); onContextTimeoutFired() }`.
+- Cancel = invalidate and clear the reference. No queue of pending jobs — matches iOS single-Timer identity.
+- On fire, executor re-enters `NextWordEngine.decide(.contextTimeoutFired, …)`; engine emits `clearPredictionsUI` effect if `state.isShowing`, resets state, bumps generation.
+- Scope choice: IME-lifecycle scope (`TaigiKeyboard.serviceScope` or equivalent cancelled in `onDestroy`). A scope that outlives the IME leaks pending timeouts across input sessions — the `SmartbarManager` own-scope pattern must not be extended here.
+
+A5-impl MAY rename this "delay" / "scheduled coroutine" if a Kotlin-idiomatic name fits better; the boundary contract is "single stored Job, cancel-then-schedule".
+
+### 13.6 Generation counter — parity correction
+
+Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions can update UI even after state invalidation. A5-impl lands this as a **parity correction** per `rules/cross-platform-alignment.md` §1b:
+
+- `NextWordPersistedState.currentGeneration: Long` (wrapping `Long` ≈ iOS `UInt64` for practical purposes — 2^63 wall-clock-ms is plenty).
+- Every invalidating intent bumps generation (see §3 rule).
+- `Outcome.Effect.queryPredictions(... generation: Long)` carries the bumped value; executor passes it to the coroutine issuing `nextWord.predict`.
+- On `predict` resumption, executor compares against current generation; mismatch drops the result silently.
+- Test pins post-correction behavior: `INVARIANT_nextword_late_prediction_is_discarded` (§10).
+
+### 13.7 Cross-platform invariant constants
+
+After A5-impl lands `NextWordEngine.kt` / equivalent, A8-sweep adds Kotlin `// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordEngine.swift:<line>. Drift causes silent divergence.` comments to:
+
+- `ASSOCIATION_TIMEOUT_MS = 10_000L`
+- `CONTEXT_TIMEOUT_MS = 30_000L` (or whatever the post-split constant name becomes)
+
+per `rules/cross-platform-alignment.md` §3a + `rules/android-guidelines.md` §2. A5-design does not move these constants; A8-sweep applies the marker. Listed here for round-to-round hand-off.
+
+### 13.8 Strict-less-than boundary + negative-delta guard
+
+Port iOS §5 verbatim:
+
+```kotlin
+internal fun shouldRecordAssociation(state: NextWordPersistedState, nowMs: Long): Boolean {
+    val last = state.lastSelectedWord ?: return false
+    val delta = nowMs - state.lastSelectionTimeMs
+    return delta in 0 until 10_000L   // strict <10_000, and >= 0 drops negative clock skew
+}
+```
+
+A5-impl test covers: `delta == 9_999 → true`, `delta == 10_000 → false`, `delta == -1 → false`. Today's Kotlin code returns `true` for a negative delta (same bug as iOS pre-fix); A5-impl closes it as part of the parity-correction batch.
+
+### 13.9 Compound-association pair shape
+
+Effect carries `List<AssociationPair>` already assembled by the engine:
+
+```kotlin
+data class AssociationPair(val prev: String, val prevTl: String, val next: String, val nextTl: String)
+sealed class Effect {
+    data class RecordCompoundAssociations(val pairs: List<AssociationPair>) : Effect()
+    // …
+}
+```
+
+Executor runs the pairs sequentially inside a single `scope.launch { pairs.forEach { nextWord.recordAssociation(...) } }` — same shape as today's loop (NextWordHandler lines 107–119). Sequential ordering is mandatory: parallel coroutines would race on the SQLite `UNIQUE(prev_word, next_word, next_tl)` constraint declared in `NextWordService.kt`'s `user_association` table.
+
+### 13.10 Shared-core candidate roster delta (Android-side)
+
+A5-impl adds the following Android files to the roster (mirroring §8 iOS columns):
+
+| iOS file (§8) | Android file (target) | Shared-Core Candidate marker? |
+|---|---|---|
+| `NextWord/NextWordEngine.swift` | `ime/core/nextword/NextWordEngine.kt` *(new)* | Yes |
+| `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
+| `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
+| `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordHandler.kt` (reduced wrapper) | No — platform executor. |
+| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (adds `.Prediction → RawNextWordPrediction` mapping, `nowMs` parameter on `predict`) | No — SQLite + file manager. |
+
+A8-sweep adds the `// region Shared-Core Candidate` header to each new file, plus the `// CROSS-PLATFORM INVARIANT` comments from §13.7. A5-impl does not pre-empt A8-sweep.
+
+### 13.11 Out of scope for A5-design
+
+- `NextWordEngine` as `object` (static namespace) vs `class` — A5-impl decides, same as iOS G5-impl §11 leans `enum` (Kotlin `object`).
+- Exact Kotlin names for `Outcome.Effect` variants — A5-impl aligns case-for-case with iOS §2.3.
+- Concrete executor class layout (owned-Job field name, `handleQueryResult` entry-point naming) — A5-impl picks.
+- `NextWordService.predict` full signature change (adding `nowMs`) — folded into A5-impl PR as the clock-injection step, not a separate PR.
+- StateFlow migration — deferred per §13.2 table.
+- A9 `INVARIANT_*` test wiring — deferred by A0 decision; A5-impl dogfoods S1/S2/S3 per `android-g9-coverage-matrix.md`.
+
+### 13.12 Cross-references
+
+- iOS boundary contract: §§1–12 above.
+- A5-impl deliverable: `android-state-audit.md` §7 A5-impl.
+- Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
+- Android guidelines (shared-core purity, clock, coroutines): `rules/android-guidelines.md` §§1, 5.
+- Engine settings live-read rule: `rules/android-guidelines.md` §6 + `ios-exemplar.md` §3.
+- Behavioral invariants (decay half-life + user>dict weighting): `behavioral-invariants.md` §§7, 8.

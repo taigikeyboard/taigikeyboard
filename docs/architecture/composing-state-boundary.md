@@ -311,3 +311,107 @@ Already decided (moved out of "deferred" after review cycle):
 - Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§1–3, 9, 11.
 - Codex review (roadmap-level, 2026-04-19): `codex-review-2026-04-19.md`.
 - Docs-review cycle (2026-04-19, same day): findings incorporated above.
+
+---
+
+## 11. Android Binding Addendum
+
+**Status**: A4-design deliverable for Phase II, authored 2026-04-20 on branch `phase2/a4a5-design-android-binding`. Pairs with `nextword-engine-boundary.md` §13. Codex pre + post reviewed.
+
+**Purpose**: lock Android-specific binding contract for the `Effect` enum defined in §2.2 before A4-impl lands. iOS-authored §§1–10 stay platform-neutral in intent; this addendum captures the Kotlin / `InputConnection` / coroutine details the iOS doc could not.
+
+**Scope**: binding contract only. A4-impl writes the code that honors the contract.
+
+### 11.1 Current Android state (pre-A4-impl)
+
+`android/app/.../ime/text/composing/ComposingManager.kt` is a single `class` with direct `InputConnection` side effects inline. No `Effect` enum, no delegate abstraction, no owned `CoroutineScope`. Background display derivation is driven externally by `CandidateUpdateCoordinator` and applied back via `ComposingManager.applyDerivedDisplay(derivedText, ic)`.
+
+Observable Android ↔ iOS divergence today:
+
+| Path | Today (Android) | Honors `clearPreeditWithoutCommit`? |
+|---|---|---|
+| `deleteBackward` empty-raw path | `ic.setComposingText("", 1)` → `reset(ic)` → `ic.finishComposingText()` | Yes — zero-then-finish order satisfied. |
+| `reset(ic)` called directly (external, e.g. subtype switch, session end with pending preedit) | `ic.finishComposingText()` only — no pre-zero | **No — silently commits preedit.** |
+| `commitComposition(ic)` | sync fallback derive + `ic.setComposingText(composingText, 1)` + `ic.finishComposingText()` | Intended commit path — pre-zero not applicable. |
+| `selectSuggestion(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
+
+The `reset(ic)` external-call path is the A4-impl **parity-correction** target (see §11.6).
+
+### 11.2 Effect → `InputConnection` binding rules
+
+Android wrapper's `execute(Effect)` implements §2.2 table column 3 verbatim. Additional Android-only contract:
+
+1. **Zero-then-finish is mandatory** for `clearPreeditWithoutCommit`. `InputConnection.finishComposingText()` commits the current composing region by default; binding MUST issue `ic.setComposingText("", 1)` before `ic.finishComposingText()` or the preedit is silently committed. Same caveat applies at every site that clears preedit — not just the Effect binding.
+2. **Atomic commit — do not pre-finish.** For `commitTextReplacingPreedit(text)`, call `ic.commitText(text, 1)` directly. Do NOT call `ic.finishComposingText()` first — `commitText` atomically replaces the composing region and clears it; a prior `finishComposingText` would commit the old preedit and then `commitText` would insert the new text, producing a double-commit.
+3. **Ordering: document ops after preedit ops.** `deleteBackwardFromDocument` issues `ic.deleteSurroundingText(1, 0)` AFTER any pending `commitText` / `finishComposingText` for the same intent. Mirrors iOS `UITextDocumentProxy.deleteBackward()` ordering.
+4. **Engine-side effects** (`resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`) touch only engine state — no `InputConnection` calls — matching iOS.
+
+### 11.3 Threading
+
+- Android IME framework delivers key events on the main thread. `InputConnection` is usable from the IME main thread only.
+- The wrapper runs `execute(Effect)` synchronously from the IME main-thread entry point (key press, tap). No dispatcher hop required in the common case.
+- Any coroutine boundary inside the wrapper (e.g. async display derivation) MUST `withContext(Dispatchers.Main.immediate) { … }` before touching `InputConnection`. Candidate scoring / trie lookup stays on `Dispatchers.Default`; `InputConnection` work is always main.
+
+### 11.4 Observable state fan-out — no `StateFlow` required
+
+iOS §2.4 uses `@Published` guarded-inequality writes to batch UI updates inside one synchronous call. Android equivalent:
+
+- Wrapper does NOT expose a `StateFlow<ComposingState>`; the executor interprets `Effect` synchronously, same flow as iOS Phase 1 / Phase 2 split.
+- Existing callbacks (`onUpdateCandidates`, `onClearCandidates` style — see `NextWordHandler`) stay function types. No migration to `StateFlow` in A4-impl.
+- If Compose UI later needs observability, a `StateFlow` wrapper can be layered on top without changing the `Effect` contract. Out of scope for A4-impl.
+
+Reason: adding `StateFlow` inside the executor would force every `Effect` list into an async recomposition cycle, breaking iOS §2.4's "single synchronous call" property.
+
+### 11.5 Lifecycle scope ownership
+
+If A4-impl's `ComposingManager` owns a `CoroutineScope` (e.g. for background display derivation currently co-located in `CandidateUpdateCoordinator`), that scope MUST:
+
+- Be constructed with `SupervisorJob() + Dispatchers.Main.immediate`.
+- Be owned by an IME-lifecycle object (`TaigiKeyboard.serviceScope` on the IME service, or a new scope cancelled explicitly in the wrapper's teardown path).
+- Be cancelled when the owner's lifecycle ends (service `onDestroy`, or wrapper disposal) — a scope that outlives the IME leaks pending derivations.
+
+Today's state for reference: `ComposingManager` owns no scope; `SmartbarManager` at line 50 owns a `CoroutineScope(SupervisorJob() + Dispatchers.Main)` that is NOT cancelled in its teardown path. A4-impl MUST NOT copy that pattern — new wrapper scopes must be cancellation-bound to an IME lifecycle.
+
+### 11.6 Parity-correction flag — `reset(ic)` pre-zero
+
+Current `ComposingManager.reset(ic)` calls `ic.finishComposingText()` without a prior `ic.setComposingText("", 1)`. External callers invoking `reset` with a non-empty preedit silently commit that preedit. iOS `commitManager.reset()` does not — it clears without committing.
+
+This parity correction lands in an **isolated PR before A4-impl** per `rules/cross-platform-alignment.md` §1b ("Not be bundled with unrelated refactor work — a parity correction is its own observable change and deserves an isolated review"). Requirements:
+
+- Title prefix `parity:`.
+- Scope = add `ic.setComposingText("", 1)` before `ic.finishComposingText()` inside `ComposingManager.reset(ic)` + a regression test pinning no-commit semantics on both platforms (`INVARIANT_composing_clear_preedit_does_not_commit` from §8).
+- Before / after behavior documented in the PR description for both iOS and Android.
+- A4-impl lands subsequently as pure refactor (Effect-enum split) on top of the corrected behavior.
+
+### 11.7 Clock and settings at the boundary
+
+`ComposingState` is clock-free (the state machine has no time-dependent transitions). Settings enter per §3: wrapper reads `EngineSettingsProvider.current.inputMode` + `.toneToggles` at each `apply(intent)` call. `ToneToggles` already exists at `ime/core/settings/ToneToggles.kt` (data class mirroring iOS). `ToneConverter.convertToToneMarks` currently takes two `Boolean` parameters; A4-impl wraps them at the `ComposingState.derivedDisplay(...)` boundary and updates `ToneConverter`'s signature to accept `ToneToggles` directly.
+
+### 11.8 Shared-core candidate roster delta (Android-side)
+
+A4-impl adds the following Android files to the roster (mirroring §6 iOS columns):
+
+| iOS file (§6) | Android file (target) | Shared-Core Candidate marker? |
+|---|---|---|
+| `Input/Composing/ComposingState.swift` | `ime/text/composing/ComposingState.kt` *(new)* | Yes |
+| `Input/Composing/ComposingTransition.swift` | `ime/text/composing/ComposingTransition.kt` *(new)* | Yes |
+| `Settings/ToneToggles.swift` | `ime/core/settings/ToneToggles.kt` *(already exists, add marker)* | Yes |
+| `Phonetics/ToneConverter.swift` (parameterized) | `ime/dictionary/ToneConverter.kt` — NOT yet shared-core pure (imports `android.util.Log`, `BuildConfig`). A4-impl signature migration takes `ToneToggles`; A8-sweep strips the logging + `BuildConfig` references to promote. | Deferred to A8-sweep |
+| `Input/Composing/ComposingManager.swift` (reduced wrapper) | `ime/text/composing/ComposingManager.kt` (reduced wrapper) | No — platform. |
+
+A8-sweep adds the `// region Shared-Core Candidate` header per `rules/android-guidelines.md` §1 to each new file. A4-impl does not pre-empt A8-sweep — it just creates the files with correct purity.
+
+### 11.9 Out of scope for A4-design
+
+- Wrapper API shape (single `execute(Effect)` vs one method per effect) — A4-impl decides, same as iOS G4-impl §9.
+- `ComposingState` as `data class` vs `class` — A4-impl picks `data class` by default for `equals()` snapshot testing.
+- StateFlow migration — deferred per §11.4.
+- `ToneConverter.convertToToneMarks` signature migration — A4-impl precondition, folded into the same PR.
+
+### 11.10 Cross-references
+
+- iOS boundary contract: §§1–10 above.
+- A4-impl deliverable: `android-state-audit.md` §7 A4-impl.
+- Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
+- Android guidelines (IME, DI, coroutines): `rules/android-guidelines.md` §§4, 5, 8.
+- `clearPreeditWithoutCommit` test label: §8 test hooks in this doc (no counterpart in `behavioral-invariants.md` — the invariant is binding-specific, not engine-observable).
