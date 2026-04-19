@@ -462,4 +462,45 @@ final class TaigiPhoneticsTests: XCTestCase {
         let result = TaigiPhonetics.pojDisplayToTLDisplay("sa\u{207F}") // saⁿ
         XCTAssertTrue(result.contains("nn"), "Nasal ⁿ should become nn: got \(result)")
     }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §1
+
+    /// Pairs are (TL, POJ) display strings that must round-trip losslessly.
+    private static let tlPojFixtures: [(tl: String, poj: String)] = [
+        ("t\u{00E2}i", "t\u{00E2}i"), // tâi — no script-specific glyph
+        ("ts\u{00E1}i", "ch\u{00E1}i"), // tsái ↔ chái — ts↔ch
+        ("T\u{00E2}i-g\u{00ED}", "T\u{00E2}i-g\u{00ED}"), // capital + hyphen preserved
+    ]
+
+    func test_INVARIANT_tl_to_poj_roundtrip_is_lossless() {
+        for (tl, _) in Self.tlPojFixtures {
+            let back = TaigiPhonetics.pojDisplayToTLDisplay(TaigiPhonetics.tlDisplayToPOJDisplay(tl))
+            XCTAssertEqual(back, tl, "TL→POJ→TL drift on \(tl): got \(back)")
+        }
+    }
+
+    func test_INVARIANT_poj_to_tl_roundtrip_is_lossless() {
+        for (_, poj) in Self.tlPojFixtures {
+            let back = TaigiPhonetics.tlDisplayToPOJDisplay(TaigiPhonetics.pojDisplayToTLDisplay(poj))
+            XCTAssertEqual(back, poj, "POJ→TL→POJ drift on \(poj): got \(back)")
+        }
+    }
+
+    func test_INVARIANT_oo_combining_form_roundtrips() {
+        // TL `oo` ↔ POJ `o` + U+0358 combining — both representations must round-trip.
+        let tl = "h\u{00F4}o" // hôo (TL)
+        let poj = TaigiPhonetics.tlDisplayToPOJDisplay(tl)
+        XCTAssertTrue(poj.unicodeScalars.contains { $0 == "\u{0358}" }, "POJ form must carry U+0358")
+        XCTAssertEqual(TaigiPhonetics.pojDisplayToTLDisplay(poj), tl)
+    }
+
+    func test_INVARIANT_nasal_marker_variants_collapse_on_parse() {
+        // Three POJ nasal representations (ⁿ U+207F, ᴺ U+1D3A, `nn`) must all produce
+        // the same TL form `sann`.
+        let viaSuperscript = TaigiPhonetics.pojDisplayToTLDisplay("sa\u{207F}")
+        let viaSmallCaps = TaigiPhonetics.pojDisplayToTLDisplay("sa\u{1D3A}")
+        let viaLiteralNN = TaigiPhonetics.pojDisplayToTLDisplay("sann")
+        XCTAssertEqual(viaSuperscript, viaSmallCaps)
+        XCTAssertEqual(viaSuperscript, viaLiteralNN)
+    }
 }

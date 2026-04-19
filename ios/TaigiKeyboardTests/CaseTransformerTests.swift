@@ -346,4 +346,47 @@ final class CaseTransformerTests: XCTestCase {
             XCTAssertEqual(result, expected, "POJ o͘ lowercase: \(input) should be \(expected), got \(result)")
         }
     }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §9
+
+    func test_INVARIANT_case_transformer_is_deterministic() {
+        // Non-determinism (e.g. reading global settings) would break cross-platform parity.
+        let fixtures: [(text: String, input: String, autoCap: Bool, mode: InputMode)] = [
+            ("台語", "T", true, .tl),
+            ("tâi-gí", "t", false, .tl),
+            ("Guá", "G", true, .poj),
+            ("hō-gē", "H", true, .poj),
+        ]
+        for (text, input, autoCap, mode) in fixtures {
+            let first = CaseTransformer.capitalizeCandidate(
+                text,
+                basedOn: input,
+                isAutoCapitalizationEnabled: autoCap,
+                inputMode: mode,
+            )
+            let second = CaseTransformer.capitalizeCandidate(
+                text,
+                basedOn: input,
+                isAutoCapitalizationEnabled: autoCap,
+                inputMode: mode,
+            )
+            XCTAssertEqual(first, second, "Non-determinism on (\(text), \(input), \(autoCap), \(mode))")
+        }
+    }
+
+    func test_INVARIANT_case_transformer_honors_auto_cap_flag() {
+        let on = CaseTransformer.capitalizeCandidate(
+            "tâi-gí",
+            basedOn: "T",
+            isAutoCapitalizationEnabled: true,
+            inputMode: .tl,
+        )
+        let off = CaseTransformer.capitalizeCandidate(
+            "tâi-gí",
+            basedOn: "T",
+            isAutoCapitalizationEnabled: false,
+            inputMode: .tl,
+        )
+        XCTAssertNotEqual(on, off, "autoCap flag must change output when input signals capitalization")
+    }
 }

@@ -879,4 +879,52 @@ final class TPSConverterTests: XCTestCase {
     func testSyllabicNasalReplacement_nilLastChar() {
         XCTAssertNil(TPSConverter.syllabicNasalReplacement(forIncoming: "˫", lastRawChar: nil))
     }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §3
+
+    /// Fixture pairs selected to exercise the documented adjustments in
+    /// `TPSInputAdjuster` (nasal, stop-tone, palatalization) and ordinary
+    /// non-stop tones. Each case must round-trip in both directions.
+    private static let tpsTlRoundTripFixtures: [(tps: String, tl: String)] = [
+        ("ㄍㄨㄚˋ", "kua2"), // ordinary tone 2
+        ("ㄉㄧㄠˊ", "tiau5"), // tone 5 triphthong
+        ("ㄍㄚㆻ˙", "kak8"), // entering tone 8 with -k coda
+    ]
+
+    func test_INVARIANT_tps_to_tl_roundtrip() {
+        for (tps, expectedTl) in Self.tpsTlRoundTripFixtures {
+            XCTAssertEqual(TPSConverter.toTL(tps), expectedTl)
+            XCTAssertEqual(TPSConverter.toTPS(TPSConverter.toTL(tps)), tps,
+                           "TPS→TL→TPS drift on \(tps)")
+        }
+    }
+
+    func test_INVARIANT_tl_to_tps_roundtrip() {
+        for (tps, tl) in Self.tpsTlRoundTripFixtures {
+            XCTAssertEqual(TPSConverter.toTPS(tl), tps)
+            XCTAssertEqual(TPSConverter.toTL(TPSConverter.toTPS(tl)), tl,
+                           "TL→TPS→TL drift on \(tl)")
+        }
+    }
+
+    func test_INVARIANT_tps_adjuster_is_idempotent() {
+        // `adjustTPSInitialKey` is applied to each typed character with the raw-input
+        // context up to that point. Applying it twice with the same context must be
+        // the same as applying it once.
+        let probes: [(incoming: String, raw: String)] = [
+            ("ㄇ", ""), ("ㄇ", "ㄍㄚ"), ("ㄫ", "ㄍㄧ"),
+            ("ㄋ", ""), ("ㄋ", "ㄍㄚ"),
+            ("ㄆ", ""), ("ㄆ", "ㄍㄚ"),
+            ("ㄉ", "ㄍㄚ"), ("ㄍ", "ㄍㄚ"), ("ㄏ", "ㄍㄚ"),
+        ]
+        for (incoming, raw) in probes {
+            let once = TPSConverter.adjustTPSInitialKey(incoming, afterRawInput: raw)
+            let twice = TPSConverter.adjustTPSInitialKey(once, afterRawInput: raw)
+            XCTAssertEqual(
+                once,
+                twice,
+                "adjustTPSInitialKey is not idempotent for (\(incoming), raw=\(raw))",
+            )
+        }
+    }
 }

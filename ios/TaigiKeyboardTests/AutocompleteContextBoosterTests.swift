@@ -67,4 +67,36 @@ final class AutocompleteContextBoosterTests: XCTestCase {
 
         XCTAssertEqual(result.map(\.id), [2, 1])
     }
+
+    func testBoost_emptyHanziStringStillFallsBackToRoman() {
+        // `displayText` returns `roman` when hanzi is empty OR nil — both branches must work.
+        let words = [
+            word(id: 1, roman: "alpha", hanzi: ""),
+            word(id: 2, roman: "beta", hanzi: ""),
+        ]
+        let result = AutocompleteContextBooster.boost(words: words, predictedFirstChars: ["b"])
+        XCTAssertEqual(result.map(\.id), [2, 1])
+    }
+
+    func testBoost_noMatchesReturnsInputOrderUnchanged() {
+        let words = [
+            word(id: 1, roman: "a", hanzi: "一"),
+            word(id: 2, roman: "b", hanzi: "二"),
+        ]
+        // Predicted chars don't match any candidate — partitioning must be a no-op.
+        let result = AutocompleteContextBooster.boost(words: words, predictedFirstChars: ["九"])
+        XCTAssertEqual(result.map(\.id), [1, 2])
+    }
+
+    func testBoost_stablePartitionOnLargeInput() {
+        let total = 100
+        let words = (0 ..< total).map { idx in
+            word(id: idx, roman: "w\(idx)", hanzi: idx.isMultiple(of: 2) ? "偶" : "奇")
+        }
+        let result = AutocompleteContextBooster.boost(words: words, predictedFirstChars: ["偶"])
+        let evenIds = result.prefix(total / 2).map(\.id)
+        let oddIds = result.suffix(total / 2).map(\.id)
+        XCTAssertEqual(evenIds, stride(from: 0, to: total, by: 2).map(\.self))
+        XCTAssertEqual(oddIds, stride(from: 1, to: total, by: 2).map(\.self))
+    }
 }

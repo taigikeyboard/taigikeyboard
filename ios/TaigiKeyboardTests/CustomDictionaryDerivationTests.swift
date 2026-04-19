@@ -60,4 +60,52 @@ final class CustomDictionaryDerivationTests: XCTestCase {
     func testGenerateAbbrev_singleWord_empty() {
         XCTAssertEqual(CustomDictionaryDerivation.generateAbbrev("hó"), "")
     }
+
+    // MARK: - generateRomanNum (delegates to InputNormalizer)
+
+    func testGenerateRomanNum_delegatesToInputNormalizer() {
+        // Parity check — generateRomanNum is documented as InputNormalizer.normalize(_, mode: .tl).
+        XCTAssertEqual(CustomDictionaryDerivation.generateRomanNum("gâu-tsá"), "gau5tsa2")
+    }
+
+    // MARK: - searchPrefix routing
+
+    func testSearchPrefix_toneAware() {
+        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "ho2")
+        XCTAssertTrue(toneAware)
+        XCTAssertEqual(key, "ho2")
+    }
+
+    func testSearchPrefix_toneAware_stripsHyphens() {
+        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "gau5-tsa2")
+        XCTAssertTrue(toneAware)
+        XCTAssertEqual(key, "gau5tsa2")
+    }
+
+    func testSearchPrefix_toneless() {
+        let (key, toneAware) = CustomDictionaryDerivation.searchPrefix(for: "hó")
+        XCTAssertFalse(toneAware)
+        XCTAssertEqual(key, "ho")
+    }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §10
+
+    func test_INVARIANT_custom_derivation_matches_input_normalizer() {
+        // The `roman_num` key must be exactly what InputNormalizer.normalize(_, mode: .tl)
+        // produces, or custom-dictionary entries become invisible through the main search.
+        let fixtures = ["gâu-tsá", "tāi-tsì", "hó", "tsiah8-pá"]
+        for input in fixtures {
+            XCTAssertEqual(
+                CustomDictionaryDerivation.generateRomanNum(input),
+                InputNormalizer.normalize(input, mode: .tl),
+                "Parity failure on \(input)",
+            )
+        }
+    }
+
+    func test_INVARIANT_abbrev_key_is_one_char_per_syllable() {
+        XCTAssertEqual(CustomDictionaryDerivation.generateAbbrev("gâu-tsá"), "gt")
+        XCTAssertEqual(CustomDictionaryDerivation.generateAbbrev("lí-hó-bô"), "lhb")
+        XCTAssertEqual(CustomDictionaryDerivation.generateAbbrev("saⁿ-á-kûn"), "sak")
+    }
 }

@@ -76,4 +76,71 @@ final class NextWordScorerTests: XCTestCase {
             previous = decay
         }
     }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §7 + §8 labels
+
+    /// Age far beyond any reasonable retention — pushes raw decay ≈ 0 so the
+    /// high/low decay floors are the only remaining contribution.
+    private static let saturatedAgeMs: Int64 = 1000 * 365 * 24 * 3_600_000
+
+    func test_INVARIANT_decay_half_life_is_168_hours() {
+        let halfLifeMs = Int64(NextWordScorer.decayHalfLifeHours * 3_600_000)
+        XCTAssertEqual(NextWordScorer.calculateDecay(lastUsedMs: 0, nowMs: halfLifeMs), 0.5, accuracy: 1e-3)
+    }
+
+    func test_INVARIANT_high_usage_decay_floor_95() {
+        let score = NextWordScorer.calculateUserScore(count: 3, lastUsedMs: 0, nowMs: Self.saturatedAgeMs)
+        let expected = 3 * NextWordScorer.userWeight * NextWordScorer.highUsageDecayFloor
+            + NextWordScorer.learningBonus
+        XCTAssertEqual(score, expected, accuracy: 1e-9)
+    }
+
+    func test_INVARIANT_low_usage_decay_floor_30() {
+        let score = NextWordScorer.calculateUserScore(count: 2, lastUsedMs: 0, nowMs: Self.saturatedAgeMs)
+        let expected = 2 * NextWordScorer.userWeight * NextWordScorer.lowUsageDecayFloor
+            + NextWordScorer.learningBonus
+        XCTAssertEqual(score, expected, accuracy: 1e-9)
+    }
+
+    /// Pin test — literal values here are deliberate. Changing any constant in
+    /// `NextWordScorer` requires a mirrored change in
+    /// `android/app/src/main/java/com/siansiansu/taigikeyboard/nextword/NextWordService.kt`.
+    func test_INVARIANT_scorer_constants_match_android() {
+        XCTAssertEqual(NextWordScorer.userWeight, 50.0)
+        XCTAssertEqual(NextWordScorer.dictWeight, 1.0)
+        XCTAssertEqual(NextWordScorer.learningBonus, 300.0)
+        XCTAssertEqual(NextWordScorer.decayHalfLifeHours, 168.0)
+        XCTAssertEqual(NextWordScorer.highUsageDecayFloor, 0.95)
+        XCTAssertEqual(NextWordScorer.lowUsageDecayFloor, 0.3)
+        XCTAssertEqual(NextWordScorer.highUsageThreshold, 3)
+    }
+
+    func test_INVARIANT_user_weight_is_50() {
+        // Differencing two count values cancels learningBonus and isolates userWeight.
+        let one = NextWordScorer.calculateUserScore(count: 1, lastUsedMs: 0, nowMs: 0)
+        let two = NextWordScorer.calculateUserScore(count: 2, lastUsedMs: 0, nowMs: 0)
+        XCTAssertEqual(two - one, NextWordScorer.userWeight, accuracy: 1e-9)
+    }
+
+    func test_INVARIANT_dict_weight_is_1() {
+        XCTAssertEqual(NextWordScorer.scoreDict(count: 0), 0.0)
+        XCTAssertEqual(NextWordScorer.scoreDict(count: 1), NextWordScorer.dictWeight)
+        XCTAssertEqual(NextWordScorer.scoreDict(count: 42), 42 * NextWordScorer.dictWeight)
+    }
+
+    func test_INVARIANT_learning_bonus_is_300() {
+        // count=0 zeroes the userWeight term; at epoch effectiveDecay == 1.
+        XCTAssertEqual(
+            NextWordScorer.calculateUserScore(count: 0, lastUsedMs: 0, nowMs: 0),
+            NextWordScorer.learningBonus,
+        )
+    }
+
+    func test_INVARIANT_user_entry_outranks_dict_entry() {
+        // Very stale count=1 user entry vs count=100 dict entry — learningBonus wins.
+        let tenYearsMs: Int64 = 10 * 365 * 24 * 3_600_000
+        let userScore = NextWordScorer.calculateUserScore(count: 1, lastUsedMs: 0, nowMs: tenYearsMs)
+        let dictScore = NextWordScorer.scoreDict(count: 100)
+        XCTAssertGreaterThan(userScore, dictScore)
+    }
 }

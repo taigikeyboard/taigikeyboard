@@ -736,4 +736,33 @@ final class InputNormalizerTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - INVARIANT wrappers — Phase 0 §4
+
+    func test_INVARIANT_input_normalizer_is_mode_agnostic() {
+        // Current source signature is `normalize(_, mode _:)` — the parameter is
+        // unused. A future change that reads `mode` must preserve output parity.
+        let probes = ["hó", "tâi-gí", "tsia̍h", "ko-nóo"]
+        for input in probes {
+            let tlOut = InputNormalizer.normalize(input, mode: .tl)
+            let pojOut = InputNormalizer.normalize(input, mode: .poj)
+            let tpsOut = InputNormalizer.normalize(input, mode: .tps)
+            let enOut = InputNormalizer.normalize(input, mode: .english)
+            XCTAssertEqual(tlOut, pojOut, "tl vs poj drift on \(input)")
+            XCTAssertEqual(tlOut, tpsOut, "tl vs tps drift on \(input)")
+            XCTAssertEqual(tlOut, enOut, "tl vs english drift on \(input)")
+        }
+    }
+
+    func test_INVARIANT_normalizer_strips_hyphens_in_notone() {
+        XCTAssertEqual(InputNormalizer.normalize("tai5-gi2", mode: .tl), "tai5gi2")
+        XCTAssertEqual(InputNormalizer.normalize("tâi-gí", mode: .tl), "tai5gi2")
+    }
+
+    func test_INVARIANT_normalizer_preserves_hyphens_in_roman_num() {
+        // Current behavior: hyphens stripped in all modes. Phase 0 §4 wording differs
+        // from implementation — see docs/architecture/g9-coverage-matrix.md §4 FU-2.
+        let out = InputNormalizer.normalize("tai5-gi2", mode: .tl)
+        XCTAssertFalse(out.contains("-"))
+    }
 }
