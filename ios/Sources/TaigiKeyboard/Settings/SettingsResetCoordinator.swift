@@ -33,12 +33,12 @@ enum SettingsResetCoordinator {
     /// so a partial failure still clears what it can.
     static func resetAllUserData() {
         do {
-            try UserFrequencyService.deleteUserDatabase()
+            try CompositionRoot.userFrequencyRepository.deleteDatabase()
         } catch {
             logger.error("Failed to delete frequency database: \(error)")
         }
         do {
-            try NextWordService.deleteUserDatabase()
+            try CompositionRoot.nextWordService.deleteUserDatabase()
         } catch {
             logger.error("Failed to delete association database: \(error)")
         }

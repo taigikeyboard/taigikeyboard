@@ -15,7 +15,7 @@ final class CustomDictionaryViewModel: ObservableObject {
     private let settings: SharedSettings
 
     init(
-        service: CustomDictionaryService = .shared,
+        service: CustomDictionaryService = CompositionRoot.customDictionaryService,
         settings: SharedSettings = .shared,
     ) {
         self.service = service

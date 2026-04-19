@@ -5,14 +5,12 @@ import Foundation
 final class CustomDictionaryService: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = CustomDictionaryService()
-
     private let repository: CustomDictionaryRepository
     private let logger = DebugLogger(category: "CustomDictionaryService")
 
     // MARK: - Initialization
 
-    init(repository: CustomDictionaryRepository = .shared) {
+    init(repository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository) {
         self.repository = repository
     }
 

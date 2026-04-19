@@ -15,7 +15,7 @@ final class AssociationDataViewModel: ObservableObject {
     private let settings: SharedSettings
 
     init(
-        service: NextWordService = .shared,
+        service: NextWordService = CompositionRoot.nextWordService,
         settings: SharedSettings = .shared,
     ) {
         self.service = service

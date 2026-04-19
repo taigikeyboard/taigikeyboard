@@ -14,7 +14,7 @@ final class DictionarySearchViewModel: ObservableObject {
     private let service: DictionarySearchService
     private let logger = DebugLogger(category: "DictionarySearchVM")
 
-    init(service: DictionarySearchService = DictionarySearchService()) {
+    init(service: DictionarySearchService = CompositionRoot.dictionarySearchService) {
         self.service = service
     }
 

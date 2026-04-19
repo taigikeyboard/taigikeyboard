@@ -5,47 +5,22 @@ import Foundation
 final class UserFrequencyService: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = UserFrequencyService()
-
     private let repository: UserFrequencyRepository
     private let logger = DebugLogger(category: "UserFrequencyService")
 
     // MARK: - Initialization
 
-    init(repository: UserFrequencyRepository = .shared) {
+    init(repository: UserFrequencyRepository = CompositionRoot.userFrequencyRepository) {
         self.repository = repository
     }
 
-    // MARK: - Public API
+    // MARK: - Lifecycle
 
-    /// 記錄詞彙使用
-    static func recordUsage(for word: String) {
-        shared.recordUsage(for: word)
-    }
-
-    /// 取得詞彙使用頻率
-    static func frequency(for word: String) -> Int {
-        shared.frequency(for: word)
-    }
-
-    /// 取得詞彙使用頻率資料（包含頻率和最後使用時間）
-    static func frequencyData(for word: String) -> FrequencyData {
-        shared.frequencyData(for: word)
-    }
-
-    /// 批次取得多個詞彙的頻率資料
-    static func frequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
-        shared.frequencyDataBatch(for: words)
-    }
-
-    /// 檢查是否已連接
-    static func isConnected() -> Bool {
-        shared.isConnected()
-    }
-
-    /// 刪除使用者資料庫
-    static func deleteUserDatabase() throws {
-        try shared.deleteDatabase()
+    /// Ensure the underlying frequency DB is open and schema is applied.
+    /// LexiconService calls this before a search arrives so candidate ranking
+    /// can read frequencies without a cold-connect penalty on the first query.
+    func ensureInitialized() async throws {
+        try await repository.ensureInitialized()
     }
 
     // MARK: - Instance Methods
@@ -74,9 +49,5 @@ final class UserFrequencyService: @unchecked Sendable {
 
     func isConnected() -> Bool {
         repository.isConnected()
-    }
-
-    func deleteDatabase() throws {
-        try repository.deleteDatabase()
     }
 }

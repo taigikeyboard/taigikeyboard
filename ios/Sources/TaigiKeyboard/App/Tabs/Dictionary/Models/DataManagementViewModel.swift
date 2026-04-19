@@ -17,7 +17,7 @@ final class DataManagementViewModel: ObservableObject {
 
     private let service: BackupService
 
-    init(service: BackupService = .shared) {
+    init(service: BackupService = CompositionRoot.backupService) {
         self.service = service
     }
 

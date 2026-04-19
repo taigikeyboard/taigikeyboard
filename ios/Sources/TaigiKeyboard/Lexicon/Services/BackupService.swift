@@ -5,10 +5,6 @@ import Foundation
 /// Exports and imports all user data (custom dictionary, frequency, associations)
 /// as a single `.taigi` JSON file for device migration.
 final class BackupService: @unchecked Sendable {
-    // MARK: - Singleton
-
-    static let shared = BackupService()
-
     // MARK: - Dependencies
 
     private let customDictionaryService: CustomDictionaryService
@@ -19,9 +15,9 @@ final class BackupService: @unchecked Sendable {
     // MARK: - Initialization
 
     init(
-        customDictionaryService: CustomDictionaryService = .shared,
-        userFrequencyRepository: UserFrequencyRepository = .shared,
-        nextWordService: NextWordService = .shared,
+        customDictionaryService: CustomDictionaryService = CompositionRoot.customDictionaryService,
+        userFrequencyRepository: UserFrequencyRepository = CompositionRoot.userFrequencyRepository,
+        nextWordService: NextWordService = CompositionRoot.nextWordService,
     ) {
         self.customDictionaryService = customDictionaryService
         self.userFrequencyRepository = userFrequencyRepository

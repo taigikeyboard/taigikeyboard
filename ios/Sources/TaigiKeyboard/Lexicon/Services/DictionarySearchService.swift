@@ -26,7 +26,8 @@ final class DictionarySearchService: @unchecked Sendable {
 
     init(
         repository: DictionaryRepository? = nil,
-        customDictionaryRepository: CustomDictionaryRepository = .shared,
+        customDictionaryRepository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository,
+        trieService: TrieService = CompositionRoot.trieService,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.customDictionaryRepository = customDictionaryRepository
@@ -34,13 +35,13 @@ final class DictionarySearchService: @unchecked Sendable {
         // Build a repository that shares the injected settings provider so
         // DB-layer filtering agrees with the service's enabled-source view.
         self.repository = repository ?? DictionaryRepository(
+            trieService: trieService,
             settingsProvider: settingsProvider,
         )
         // Kick off Trie load on a detached task we can await from search().
-        // TrieService.initialize() is idempotent, so this is a no-op when the
-        // shared keyboard-side LexiconService has already loaded it.
-        trieBootstrap = Task.detached(priority: .userInitiated) {
-            _ = TrieService.shared.initialize()
+        // Idempotent — no-op if LexiconService already loaded the same handle.
+        trieBootstrap = Task.detached(priority: .userInitiated) { [trieService] in
+            _ = trieService.initialize()
         }
         bootstrapCustomDictionary()
     }

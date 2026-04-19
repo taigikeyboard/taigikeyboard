@@ -16,7 +16,7 @@ final class FrequencyDataViewModel: ObservableObject {
     private let logger = DebugLogger(category: "FrequencyDataViewModel")
 
     init(
-        repository: UserFrequencyRepository = .shared,
+        repository: UserFrequencyRepository = CompositionRoot.userFrequencyRepository,
         settings: SharedSettings = .shared,
     ) {
         self.repository = repository
@@ -42,7 +42,7 @@ final class FrequencyDataViewModel: ObservableObject {
 
     func clearAll() {
         do {
-            try UserFrequencyService.deleteUserDatabase()
+            try repository.deleteDatabase()
             allData = []
         } catch {
             logger.error("Failed to delete frequency database: \(error)")

@@ -56,8 +56,6 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Properties
 
-    static let shared = NextWordService()
-
     private let associationReader: AssociationBinaryReader?
     private let userConnectionManager: SQLiteConnectionManager
     private let settingsProvider: EngineSettingsProvider
@@ -224,20 +222,20 @@ final class NextWordService: @unchecked Sendable {
     // MARK: - Lifecycle
 
     /// 刪除使用者關聯資料庫
-    static func deleteUserDatabase() throws {
+    func deleteUserDatabase() throws {
         // Cancel the in-flight init Task (if any) BEFORE closing the
         // connection so it bails out rather than racing against a fresh
         // Task installed by the next caller.
-        let priorTask = shared.stateLock.withLock { () -> Task<Void, Error>? in
-            let task = shared._tableCreationTask
-            shared._tableCreationTask = nil
-            shared._tableCreationGeneration &+= 1
+        let priorTask = stateLock.withLock { () -> Task<Void, Error>? in
+            let task = _tableCreationTask
+            _tableCreationTask = nil
+            _tableCreationGeneration &+= 1
             return task
         }
         priorTask?.cancel()
-        shared.userConnectionManager.close()
+        userConnectionManager.close()
 
-        let path = try getUserDatabasePath()
+        let path = try Self.getUserDatabasePath()
         if FileManager.default.fileExists(atPath: path) {
             try FileManager.default.removeItem(atPath: path)
         }

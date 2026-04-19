@@ -29,7 +29,7 @@ extension ActionHandler {
 
             let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
             if settings.isFrequencyRecordingEnabled {
-                UserFrequencyService.recordUsage(for: displayText)
+                CompositionRoot.userFrequencyService.recordUsage(for: displayText)
             }
 
             logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")

@@ -11,8 +11,6 @@ import SQLite3
 final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = UserFrequencyRepository()
-
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "UserFrequencyRepository")
 

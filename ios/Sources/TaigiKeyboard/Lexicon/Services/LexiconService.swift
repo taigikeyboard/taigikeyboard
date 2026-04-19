@@ -5,8 +5,6 @@ import Foundation
 final class LexiconService: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = LexiconService()
-
     private let repository: DictionaryRepository
     private let userFrequencyService: UserFrequencyService
     private let trieService: TrieService
@@ -18,9 +16,9 @@ final class LexiconService: @unchecked Sendable {
 
     init(
         repository: DictionaryRepository? = nil,
-        userFrequencyService: UserFrequencyService = .shared,
-        trieService: TrieService = .shared,
-        customDictionaryRepository: CustomDictionaryRepository = .shared,
+        userFrequencyService: UserFrequencyService = CompositionRoot.userFrequencyService,
+        trieService: TrieService = CompositionRoot.trieService,
+        customDictionaryRepository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.trieService = trieService
@@ -225,7 +223,7 @@ final class LexiconService: @unchecked Sendable {
     ) async -> [TaigiWord] {
         // Ensure user frequency DB is initialized (lazy: first search triggers connection)
         if !userFrequencyService.isConnected() {
-            try? await UserFrequencyRepository.shared.ensureInitialized()
+            try? await userFrequencyService.ensureInitialized()
         }
         guard userFrequencyService.isConnected() else { return words }
 

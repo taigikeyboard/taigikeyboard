@@ -9,8 +9,6 @@ import Foundation
 final class DictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = DictionaryRepository()
-
     private let binaryReader: DictionaryBinaryReader?
     private let trieService: TrieService
     private let settingsProvider: EngineSettingsProvider
@@ -20,7 +18,7 @@ final class DictionaryRepository: @unchecked Sendable {
 
     init(
         binaryReader: DictionaryBinaryReader? = nil,
-        trieService: TrieService = .shared,
+        trieService: TrieService = CompositionRoot.trieService,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.binaryReader = binaryReader ?? DictionaryBinaryReader()

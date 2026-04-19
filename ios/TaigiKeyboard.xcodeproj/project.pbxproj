@@ -244,6 +244,12 @@
 			path = Resources/Assets;
 			sourceTree = "<group>";
 		};
+		F35E7D5E2F94C2AF008B62C0 /* Composition */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Composition;
+			path = Sources/TaigiKeyboard/Composition;
+			sourceTree = "<group>";
+		};
 		F361A88B2F85522D00682CC6 /* Overlays */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Overlays;
@@ -312,6 +318,7 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F3EFE0DB2F93656800696406 /* Common */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
@@ -383,6 +390,7 @@
 				2A4FAF492EAF137B006E37A8 /* App */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F35BA8872F89F134004657F0 /* Assets */,
+				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
@@ -425,6 +433,7 @@
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35BA8872F89F134004657F0 /* Assets */,
+				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,

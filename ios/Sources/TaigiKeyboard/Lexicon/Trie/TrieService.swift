@@ -6,15 +6,9 @@ import Foundation
 /// 底層使用 C++ MARISA-trie library 透過 C 橋接層存取。
 ///
 /// 支援多實例：每個 TrieService 實例管理一個獨立的 trie handle。
-/// `.shared` 繼續管理 dictionary.trie。
+/// `CompositionRoot.trieService` 管理 dictionary.trie（一 process 一份）。
 final class TrieService: @unchecked Sendable {
     // MARK: - Properties
-
-    static let shared = TrieService(
-        fileName: "dictionary",
-        fileExtension: "trie",
-        logCategory: "TrieService",
-    )
 
     private let logger: DebugLogger
     private let fileName: String

@@ -31,7 +31,7 @@ struct TaigiKeyboardApp: App {
 
         // Seed custom dictionary default entries on first install only
         Task {
-            try? await CustomDictionaryService.shared.seedDefaultEntryIfEmpty()
+            try? await CompositionRoot.customDictionaryService.seedDefaultEntryIfEmpty()
         }
     }
 

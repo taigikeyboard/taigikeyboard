@@ -24,7 +24,7 @@ final class NextWordController: SelectionContextProvider {
 
     init(
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
-        nextWordService: NextWordService = .shared,
+        nextWordService: NextWordService = CompositionRoot.nextWordService,
     ) {
         self.settingsProvider = settingsProvider
         self.nextWordService = nextWordService

@@ -58,9 +58,9 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - Initialization
 
     init(
-        lexiconService: LexiconService = .shared,
+        lexiconService: LexiconService = CompositionRoot.lexiconService,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
-        nextWordService: NextWordService = .shared,
+        nextWordService: NextWordService = CompositionRoot.nextWordService,
     ) {
         self.lexiconService = lexiconService
         self.settingsProvider = settingsProvider

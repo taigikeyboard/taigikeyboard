@@ -13,8 +13,6 @@ import SQLite3
 final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
-    static let shared = CustomDictionaryRepository()
-
     private let connectionManager: SQLiteConnectionManager
     private let logger = DebugLogger(category: "CustomDictionaryRepository")
 
