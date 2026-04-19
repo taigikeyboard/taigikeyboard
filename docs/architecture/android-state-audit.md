@@ -351,7 +351,7 @@ Mirror of iOS G0 + G9. Android already has 10 test files under `app/src/test/jav
 
 **Deliverable**:
 - Audit existing tests against the 12 invariants in `behavioral-invariants.md` §1–12.
-- Add / rename tests so each invariant has at least one Android-side `INVARIANT_*` test (equivalent to the iOS G9 requirement, deferred to end of Phase II if coverage overlap is already high).
+- Add / rename tests so each invariant has at least one Android-side `INVARIANT_*` test (equivalent to the iOS G9 requirement — **deferred to A9 as of PR #TBD 2026-04-19** because A1 / A2 / A5-impl reshape the files the tests would target; the A0 matrix at `android-g9-coverage-matrix.md` enumerates the 36 labels A9 must deliver).
 - Qualitative perf gate on real device (S1 POJ, S2 TPS, S3 Hanji scroll) — same three sequences as iOS, ported to Android dogfooding script.
 
 **Risk**: low (tests + qualitative gate).
@@ -428,7 +428,7 @@ Mirror of iOS G5-impl.
 
 **Parity-correction flag** (Codex post-review 2026-04-19): iOS G5-impl introduced a generation counter on `queryPredictions` + `clearPredictionsUI` to drop stale predictions (late async result after user has moved on). Android `NextWordHandler` currently has no generation counter — if users today see stale predictions in edge cases, introducing one is a parity correction, not purely refactor-freeze compatible. Treat as part of this round, explicitly noted in PR description with before/after description; tests must cover the late-callback drop.
 
-**Risk**: high — user-learning math is subtle. INVARIANT test labels from A0 must gate merge.
+**Risk**: high — user-learning math is subtle. A0 invariants audit (`android-g9-coverage-matrix.md` §7 / §8 rows) names the test labels A9 must land after this extract; pre-merge gating for A5-impl is qualitative dogfooding (S1 / S2 / S3) plus a manual walkthrough of the invariants audit — grep-visible `INVARIANT_*` labels do not exist until A9.
 
 ### A6 · Autocomplete cleanup (S — ~1–2 hr)
 
