@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.InputNormalizer
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
@@ -26,7 +26,7 @@ import kotlinx.coroutines.CancellationException
  */
 class TaigiAutocompleteService(
     private val inputMode: ToneConverterModels.InputMode,
-    private val prefs: PrefHelper,
+    private val settings: EngineSettings,
     private val lexicon: LexiconService,
     private val nextWord: NextWordService,
     private val logger: LoggerBackend,
@@ -61,7 +61,7 @@ class TaigiAutocompleteService(
                     input = rawInput,
                     inputType = inputType,
                     inputMode = inputMode,
-                    prefs = prefs,
+                    settings = settings,
                 )
             if (BuildConfig.DEBUG) {
                 logger.d("PERF", "[3-b] LexiconService.search call: ${System.currentTimeMillis() - searchStart}ms")
@@ -130,7 +130,7 @@ class TaigiAutocompleteService(
             nextWord.predict(
                 word = lastSelectedWord,
                 limit = 30,
-                prefs = prefs,
+                settings = settings,
             )
         if (predictions.isEmpty()) return words
 

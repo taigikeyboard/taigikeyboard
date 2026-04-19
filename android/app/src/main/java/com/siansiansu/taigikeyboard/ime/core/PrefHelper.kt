@@ -9,6 +9,9 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +24,8 @@ import kotlinx.coroutines.runBlocking
 
 class PrefHelper(
     private val context: Context,
-) {
+) : EngineSettings,
+    EngineSettingsProvider {
     companion object {
         private const val TAG = "PrefHelper"
 
@@ -192,7 +196,7 @@ class PrefHelper(
         }
 
     // Language settings
-    var inputMode: String
+    override var inputMode: String
         get() = cached(PreferenceKeys.INPUT_MODE, "tl")
         set(value) {
             val oldValue = inputMode
@@ -242,7 +246,7 @@ class PrefHelper(
             }
         }
 
-    var isTranslateSwapped: Boolean
+    override var isTranslateSwapped: Boolean
         get() = cached(PreferenceKeys.IS_TRANSLATE_SWAPPED, false)
         set(value) {
             updateCacheAndPersist(PreferenceKeys.IS_TRANSLATE_SWAPPED, value)
@@ -522,59 +526,75 @@ class PrefHelper(
             updateCacheAndPersist(PreferenceKeys.KHIIN_ENABLED, value)
         }
 
-    /**
-     * Snapshot of all dictionary-enabled flags, captured atomically from a single
-     * cached preferences read to avoid torn reads across multiple getters.
-     */
-    data class DictEnabledSnapshot(
-        val moe: Boolean,
-        val newword: Boolean,
-        val itaigi: Boolean,
-        val taiwanPlant: Boolean,
-        val taiHua: Boolean,
-        val taiwanJapan: Boolean,
-        val kungge: Boolean,
-        val stti: Boolean,
-        val khpoo: Boolean,
-        val variant: Boolean,
-        val khiin: Boolean,
-        val lkk: Boolean,
-    )
+    // ------------------------------------------------------------------ //
+    // EngineSettings / EngineSettingsProvider conformance
+    //
+    // Bridge properties that rename Android-side preferences to the
+    // iOS-aligned `is*` naming expected by engine-facing code. Each getter
+    // delegates to the existing Android property so live-read semantics
+    // (re-read `cachedPrefs` per access) are inherited without duplicate
+    // logic. See `ime/core/settings/EngineSettings.kt` for the contract.
+    // ------------------------------------------------------------------ //
 
-    fun snapshotEnabledDictionaries(): DictEnabledSnapshot {
-        val snapshot = cachedPrefs
-        return if (snapshot != null) {
-            DictEnabledSnapshot(
-                moe = snapshot[PreferenceKeys.MOE_DICT_ENABLED] ?: true,
-                newword = snapshot[PreferenceKeys.NEWWORD_DICT_ENABLED] ?: true,
-                itaigi = snapshot[PreferenceKeys.ITAIGI_DICT_ENABLED] ?: false,
-                taiwanPlant = snapshot[PreferenceKeys.SITBUT_DICT_ENABLED] ?: false,
-                taiHua = snapshot[PreferenceKeys.TAIHOA_DICT_ENABLED] ?: false,
-                taiwanJapan = snapshot[PreferenceKeys.TAIJIT_DICT_ENABLED] ?: false,
-                kungge = snapshot[PreferenceKeys.KUNGGE_DICT_ENABLED] ?: true,
-                stti = snapshot[PreferenceKeys.STTI_DICT_ENABLED] ?: true,
-                khpoo = snapshot[PreferenceKeys.KHPOO_DICT_ENABLED] ?: true,
-                variant = snapshot[PreferenceKeys.VARIANT_DICT_ENABLED] ?: false,
-                khiin = snapshot[PreferenceKeys.KHIIN_ENABLED] ?: false,
-                lkk = snapshot[PreferenceKeys.LKK_DICT_ENABLED] ?: true,
-            )
-        } else {
-            DictEnabledSnapshot(
-                moe = moeDictEnabled,
-                newword = newwordDictEnabled,
-                itaigi = itaigiDictEnabled,
-                taiwanPlant = taiwanPlantDictEnabled,
-                taiHua = taiHuaDictEnabled,
-                taiwanJapan = taiwanJapanDictEnabled,
-                kungge = kunggeDictEnabled,
-                stti = sttiDictEnabled,
-                khpoo = khpooDictEnabled,
-                variant = variantEnabled,
-                khiin = khiin,
-                lkk = lkkDictEnabled,
-            )
-        }
-    }
+    override val isAutoCap: Boolean
+        get() = autoCapitalizationEnabled
+
+    override val isAssociationRecordingEnabled: Boolean
+        get() = associationRecordingEnabled
+
+    override val toneToggles: ToneToggles
+        get() = ToneToggles(enableDoubleTapOO, enableDoubleTapNN)
+
+    override val isCustomDictEnabled: Boolean
+        get() = customDictEnabled
+
+    override val isTpsOrMappedToER: Boolean
+        get() = tpsOrMapsToER
+
+    override val isMoeDictEnabled: Boolean
+        get() = moeDictEnabled
+
+    override val isNewwordDictEnabled: Boolean
+        get() = newwordDictEnabled
+
+    override val isKunggeDictEnabled: Boolean
+        get() = kunggeDictEnabled
+
+    override val isITaigiDictEnabled: Boolean
+        get() = itaigiDictEnabled
+
+    override val isTaiwanJapanDictEnabled: Boolean
+        get() = taiwanJapanDictEnabled
+
+    override val isTaiHuaDictEnabled: Boolean
+        get() = taiHuaDictEnabled
+
+    override val isTaiwanPlantDictEnabled: Boolean
+        get() = taiwanPlantDictEnabled
+
+    override val isSttiDictEnabled: Boolean
+        get() = sttiDictEnabled
+
+    override val isKhpooDictEnabled: Boolean
+        get() = khpooDictEnabled
+
+    override val isVariantEnabled: Boolean
+        get() = variantEnabled
+
+    override val isKhiinEnabled: Boolean
+        get() = khiin
+
+    override val isLkkDictEnabled: Boolean
+        get() = lkkDictEnabled
+
+    /**
+     * Returns `this` as [EngineSettings]. Each property access on the
+     * returned value re-reads the DataStore cache, so the engine always
+     * sees the most recent values — critical for settings-screen changes
+     * to propagate without rebuilding the composition root.
+     */
+    override val current: EngineSettings
+        get() = this
 
     // Flow-based API for reactive observations
 

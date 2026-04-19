@@ -123,7 +123,7 @@ class NextWordHandler(
                 nextWord.predict(
                     word = displayText,
                     roman = romanTl,
-                    prefs = taigikeyboard.prefs,
+                    settings = taigikeyboard.prefs,
                 )
 
             kotlinx.coroutines.withContext(Dispatchers.Main) {
@@ -206,7 +206,7 @@ class NextWordHandler(
             val predictions =
                 nextWord.predict(
                     word = lastChar,
-                    prefs = taigikeyboard.prefs,
+                    settings = taigikeyboard.prefs,
                 )
             kotlinx.coroutines.withContext(Dispatchers.Main) {
                 if (predictions.isNotEmpty()) {

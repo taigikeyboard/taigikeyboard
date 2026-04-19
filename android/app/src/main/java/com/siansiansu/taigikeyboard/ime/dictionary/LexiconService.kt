@@ -5,6 +5,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CancellationException
@@ -52,14 +53,18 @@ class LexiconService(
      * @param inputType Input classification — hanzi / roman with or without tone.
      * @param inputMode POJ or TL.
      * @param limit Max number of results.
-     * @param prefs Preference snapshot; falls back to a `PrefHelper(appContext)` when null.
+     * @param settings Engine-facing settings view; falls back to a fresh
+     * `PrefHelper(appContext)` when null. Only the non-null `settings`
+     * drives the TPS display-dedup gate — passing null preserves the
+     * legacy "skip display dedup" behavior used by callers that do not
+     * own a settings reference.
      */
     suspend fun search(
         input: String,
         inputType: InputType,
         inputMode: InputMode = InputMode.POJ,
         limit: Int = DictionaryConstants.DEFAULT_SEARCH_LIMIT,
-        prefs: PrefHelper? = null,
+        settings: EngineSettings? = null,
     ): List<TaigiWord> =
         withContext(Dispatchers.IO) {
             val searchStart = System.currentTimeMillis()
@@ -74,19 +79,21 @@ class LexiconService(
             }
 
             val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
-            // Atomic snapshot to avoid torn reads across multiple getters.
-            val prefHelper = prefs ?: PrefHelper(appContext)
-            val enabledDicts = EnabledDictionaries.fromSnapshot(prefHelper.snapshotEnabledDictionaries())
+            val activeSettings: EngineSettings = settings ?: PrefHelper(appContext)
+            val enabledDicts = EnabledDictionaries.fromSettings(activeSettings)
 
             try {
-                val customWords = lookupCustomDictionary(input, prefHelper)
-                val systemWords = querySystemDictionaries(reader, input, inputMode, limit, enabledDicts, prefHelper)
+                val customWords = lookupCustomDictionary(input, activeSettings)
+                val systemWords = querySystemDictionaries(reader, input, inputMode, limit, enabledDicts, activeSettings)
                 // Merge: custom words first, then system words (matching iOS).
                 val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
                 val ranked = rankByFrequency(merged, input, inputMode)
-                val result = applyDisplayDedup(ranked, prefs)
+                // Display dedup fires only when the CALLER supplied settings
+                // and the caller is in TPS mode — preserves prior behavior
+                // where a null `prefs` skipped dedup entirely.
+                val result = applyDisplayDedup(ranked, settings)
                 if (BuildConfig.DEBUG) {
                     logger.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
                     logger.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
@@ -106,9 +113,9 @@ class LexiconService(
      */
     private suspend fun lookupCustomDictionary(
         input: String,
-        prefHelper: PrefHelper,
+        settings: EngineSettings,
     ): List<TaigiWord> {
-        if (!prefHelper.customDictEnabled) return emptyList()
+        if (!settings.isCustomDictEnabled) return emptyList()
 
         val isToneAware = input.any { it.isDigit() }
         val searchPrefix =
@@ -144,7 +151,7 @@ class LexiconService(
         inputMode: InputMode,
         limit: Int,
         enabledDicts: EnabledDictionaries,
-        prefHelper: PrefHelper,
+        settings: EngineSettings,
     ): List<TaigiWord> {
         val trieStart = System.currentTimeMillis()
         val words = searchWithTrie(reader, input, inputMode, limit, enabledDicts)
@@ -156,7 +163,7 @@ class LexiconService(
         }
 
         // TPS ㄜ expansion: also search "or" variant when toggle is ON.
-        if (!(TPSConverter.containsTPS(input) && prefHelper.tpsOrMapsToER)) return words
+        if (!(TPSConverter.containsTPS(input) && settings.isTpsOrMappedToER)) return words
         val tlInput = TPSConverter.toTL(input)
         if (!tlInput.contains("er")) return words
 
@@ -186,12 +193,14 @@ class LexiconService(
 
     /**
      * Phase 4: TPS mode hides visual duplicates (same hanzi, different
-     * roman). Non-TPS modes return the ranked list unchanged.
+     * roman). Non-TPS modes return the ranked list unchanged. A null
+     * [settings] argument preserves the prior behavior of skipping
+     * display dedup for callers that did not pass preferences.
      */
     private fun applyDisplayDedup(
         ranked: List<TaigiWord>,
-        prefs: PrefHelper?,
-    ): List<TaigiWord> = if (prefs?.inputMode == "tps") CandidateProcessor.removeDisplayDuplicates(ranked) else ranked
+        settings: EngineSettings?,
+    ): List<TaigiWord> = if (settings?.inputMode == "tps") CandidateProcessor.removeDisplayDuplicates(ranked) else ranked
 
     /**
      * Trie exact match + prefix match → binary reader lookup with bitmask filter.
@@ -292,7 +301,7 @@ class LexiconService(
             val rowIds = lookupRowIds(trieKey)
             if (rowIds.isEmpty()) return@withContext emptyList()
 
-            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(appContext).snapshotEnabledDictionaries())
+            val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
 
             buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
         }
@@ -363,7 +372,7 @@ class LexiconService(
                 return@withContext emptyList()
             }
 
-            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(appContext).snapshotEnabledDictionaries())
+            val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
             val sorted = buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
 
             if (BuildConfig.DEBUG) {

@@ -149,7 +149,7 @@ class CandidateUpdateCoordinator(
                     taigiAutocompleteService =
                         com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
                             inputMode = inputMode,
-                            prefs = taigikeyboard.prefs,
+                            settings = taigikeyboard.prefs,
                             lexicon = root.lexicon,
                             nextWord = root.nextWord,
                             logger = root.logger,

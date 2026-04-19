@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 
 /**
- * 辭典開關設定（從 PrefHelper snapshot 建立）
+ * 辭典開關設定(從 EngineSettings 建立)
  *
  * Bitmask bit layout must match dictionary.bin / association.bin:
  *   0=kautian  1=taigitv  2=itaigi  3=sitbut  4=taihoa  5=taijit
@@ -24,10 +24,10 @@ data class EnabledDictionaries(
     val khiin: Boolean, // 在來字
     val lkk: Boolean, // LKK漢羅合用建議用字
 ) {
-    /** 是否全部開啟（10 個主要來源） */
+    /** 是否全部開啟(10 個主要來源) */
     fun allEnabled(): Boolean = kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo && lkk
 
-    /** 轉換為 dictionary bitmask（bits 0-11） */
+    /** 轉換為 dictionary bitmask(bits 0-11) */
     fun sourceBitmask(): Int {
         var mask = 0
         if (kautian) mask = mask or (1 shl 0)
@@ -45,28 +45,35 @@ data class EnabledDictionaries(
         return mask
     }
 
-    /** 轉換為 association bitmask（bits 0-8，對應 association.bin 的 9 個來源） */
+    /** 轉換為 association bitmask(bits 0-8,對應 association.bin 的 9 個來源) */
     fun associationBitmask(): Int = sourceBitmask() and 0x1FF
 
     /** association 的 9 個來源是否全部開啟 */
     fun allAssociationSourcesEnabled(): Boolean = kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
 
     companion object {
-        /** 從 PrefHelper snapshot 建立 */
-        fun fromSnapshot(snapshot: PrefHelper.DictEnabledSnapshot): EnabledDictionaries =
+        /**
+         * Build from an [EngineSettings] live-read view. Each boolean is
+         * read individually — matches iOS, which also does per-field
+         * reads. A mid-iteration DataStore update could in theory produce
+         * a split snapshot, but this mirrors the behavior iOS ships and
+         * is consistent with the live-read contract in
+         * `EngineSettingsProvider`.
+         */
+        fun fromSettings(settings: EngineSettings): EnabledDictionaries =
             EnabledDictionaries(
-                kautian = snapshot.moe,
-                taigitv = snapshot.newword,
-                itaigi = snapshot.itaigi,
-                sitbut = snapshot.taiwanPlant,
-                taihoa = snapshot.taiHua,
-                taijit = snapshot.taiwanJapan,
-                kungge = snapshot.kungge,
-                stti = snapshot.stti,
-                khpoo = snapshot.khpoo,
-                variant = snapshot.variant,
-                khiin = snapshot.khiin,
-                lkk = snapshot.lkk,
+                kautian = settings.isMoeDictEnabled,
+                taigitv = settings.isNewwordDictEnabled,
+                itaigi = settings.isITaigiDictEnabled,
+                sitbut = settings.isTaiwanPlantDictEnabled,
+                taihoa = settings.isTaiHuaDictEnabled,
+                taijit = settings.isTaiwanJapanDictEnabled,
+                kungge = settings.isKunggeDictEnabled,
+                stti = settings.isSttiDictEnabled,
+                khpoo = settings.isKhpooDictEnabled,
+                variant = settings.isVariantEnabled,
+                khiin = settings.isKhiinEnabled,
+                lkk = settings.isLkkDictEnabled,
             )
     }
 }

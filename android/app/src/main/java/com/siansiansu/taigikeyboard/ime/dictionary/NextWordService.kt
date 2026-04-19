@@ -4,9 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -210,7 +210,7 @@ class NextWordService(
         word: String,
         roman: String = "",
         limit: Int = DEFAULT_LIMIT,
-        prefs: PrefHelper,
+        settings: EngineSettings,
     ): List<Prediction> =
         withContext(Dispatchers.IO) {
             if (word.isEmpty()) {
@@ -226,7 +226,7 @@ class NextWordService(
             // 1. Dictionary associations — look up via `last char` in association.bin
             associationReader?.let { reader ->
                 try {
-                    val enabledDicts = EnabledDictionaries.fromSnapshot(prefs.snapshotEnabledDictionaries())
+                    val enabledDicts = EnabledDictionaries.fromSettings(settings)
 
                     logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
 
