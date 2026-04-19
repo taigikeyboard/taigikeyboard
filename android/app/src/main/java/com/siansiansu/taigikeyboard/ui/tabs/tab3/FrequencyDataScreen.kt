@@ -38,8 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -72,6 +72,7 @@ fun FrequencyDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val userFreq = remember(context) { CompositionRoot.shared(context).userFreq }
 
     var allData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -90,7 +91,7 @@ fun FrequencyDataScreen(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            allData = UserFrequencyService.getAllFrequencies(context)
+            allData = userFreq.getAllFrequencies()
         }
     }
 
@@ -103,7 +104,7 @@ fun FrequencyDataScreen(
                 try {
                     val exportData =
                         withContext(Dispatchers.IO) {
-                            UserFrequencyService.getAllFrequencies(context)
+                            userFreq.getAllFrequencies()
                         }
                     val csv =
                         buildString {
@@ -142,7 +143,7 @@ fun FrequencyDataScreen(
                     val entries = parseFrequencyCSV(csvString)
                     val imported =
                         withContext(Dispatchers.IO) {
-                            UserFrequencyService.batchImportMerge(context, entries)
+                            userFreq.batchImportMerge(entries)
                         }
                     val skipped = entries.size - imported
                     resultMessage =
@@ -154,7 +155,7 @@ fun FrequencyDataScreen(
                     showResultDialog = true
                     // Reload data
                     withContext(Dispatchers.IO) {
-                        allData = UserFrequencyService.getAllFrequencies(context)
+                        allData = userFreq.getAllFrequencies()
                     }
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: CommonTexts.importFailed
@@ -349,7 +350,7 @@ fun FrequencyDataScreen(
                                 onClick = {
                                     scope.launch {
                                         withContext(Dispatchers.IO) {
-                                            UserFrequencyService.deleteWord(context, word)
+                                            userFreq.deleteWord(word)
                                         }
                                         allData = allData.filter { it.first != word }
                                     }
@@ -392,7 +393,7 @@ fun FrequencyDataScreen(
             onConfirm = {
                 showClearDialog = false
                 scope.launch {
-                    withContext(Dispatchers.IO) { UserFrequencyService.deleteDatabase() }
+                    withContext(Dispatchers.IO) { userFreq.deleteDatabase() }
                     allData = emptyList()
                 }
             },

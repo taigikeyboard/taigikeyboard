@@ -145,11 +145,14 @@ class CandidateUpdateCoordinator(
             synchronized(serviceLock) {
                 if (taigiAutocompleteService == null || cachedInputMode != inputMode) {
                     cachedInputMode = inputMode
+                    val root = taigikeyboard.compositionRoot
                     taigiAutocompleteService =
                         com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
-                            taigikeyboard.context,
-                            inputMode,
+                            inputMode = inputMode,
                             prefs = taigikeyboard.prefs,
+                            lexicon = root.lexicon,
+                            nextWord = root.nextWord,
+                            logger = root.logger,
                         )
                 }
                 taigiAutocompleteService!!

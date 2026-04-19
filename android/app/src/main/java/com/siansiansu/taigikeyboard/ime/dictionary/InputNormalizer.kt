@@ -1,7 +1,8 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import java.text.Normalizer
 
@@ -20,8 +21,6 @@ import java.text.Normalizer
  * Pipeline: split syllables → per-syllable (diacritics→digits) → join
  */
 object InputNormalizer {
-    private const val TAG = "InputNormalizer"
-
     // Derive tone mark map from TaigiPhonetics (single source of truth)
     private val toneMarkToNumber: Map<Char, String> =
         TaigiPhonetics.combiningToToneNum.mapKeys { (codePoint, _) -> codePoint.toChar() }
@@ -56,13 +55,7 @@ object InputNormalizer {
                 normalizeSyllable(syllable, addDefaultTone = shouldAddDefaultTones)
             }
 
-        val normalized = result.joinToString("")
-
-        if (BuildConfig.DEBUG && input != normalized) {
-            Log.d(TAG, "[NORMALIZE] input='$input' -> '$normalized'")
-        }
-
-        return normalized
+        return result.joinToString("")
     }
 
     /**

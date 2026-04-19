@@ -49,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
@@ -83,6 +84,7 @@ fun CustomDictionaryScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val customDict = remember(context) { CompositionRoot.shared(context).customDict }
 
     var entries by remember { mutableStateOf<List<CustomDictionaryService.Entry>>(emptyList()) }
     var showEditDialog by remember { mutableStateOf(false) }
@@ -105,7 +107,7 @@ fun CustomDictionaryScreen(
         }
 
     fun reload() {
-        scope.launch { entries = CustomDictionaryService.fetchAll() }
+        scope.launch { entries = customDict.fetchAll() }
     }
 
     LaunchedEffect(Unit) {
@@ -121,7 +123,7 @@ fun CustomDictionaryScreen(
             isImporting = true
             scope.launch {
                 try {
-                    val result = CustomDictionaryService.importFromFile(context, uri)
+                    val result = customDict.importFromFile(context, uri)
                     resultMessage =
                         String.format(
                             Tab3Texts.importResult,
@@ -153,7 +155,7 @@ fun CustomDictionaryScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val csv = CustomDictionaryService.exportCSV()
+                    val csv = customDict.exportCSV()
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         outputStream.write(csv.toByteArray(Charsets.UTF_8))
                     }
@@ -382,7 +384,7 @@ fun CustomDictionaryScreen(
                             IconButton(
                                 onClick = {
                                     scope.launch {
-                                        CustomDictionaryService.delete(entry.id)
+                                        customDict.delete(entry.id)
                                         reload()
                                     }
                                 },
@@ -422,7 +424,7 @@ fun CustomDictionaryScreen(
             onDismiss = { showEditDialog = false },
             onSave = { entry ->
                 scope.launch {
-                    CustomDictionaryService.save(entry)
+                    customDict.save(entry)
                     reload()
                 }
                 showEditDialog = false
@@ -440,7 +442,7 @@ fun CustomDictionaryScreen(
             onConfirm = {
                 showDeleteAllDialog = false
                 scope.launch {
-                    CustomDictionaryService.deleteAll()
+                    customDict.deleteAll()
                     reload()
                 }
             },

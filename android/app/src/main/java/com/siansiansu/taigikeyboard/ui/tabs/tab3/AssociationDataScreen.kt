@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
@@ -72,6 +73,7 @@ fun AssociationDataScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val nextWord = remember(context) { CompositionRoot.shared(context).nextWord }
 
     var allData by remember { mutableStateOf<List<NextWordService.AssociationEntry>>(emptyList()) }
     var showClearDialog by remember { mutableStateOf(false) }
@@ -95,7 +97,7 @@ fun AssociationDataScreen(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            allData = NextWordService.allAssociations(context)
+            allData = nextWord.allAssociations()
         }
     }
 
@@ -108,7 +110,7 @@ fun AssociationDataScreen(
                 try {
                     val exportData =
                         withContext(Dispatchers.IO) {
-                            NextWordService.allAssociations(context)
+                            nextWord.allAssociations()
                         }
                     val csv =
                         buildString {
@@ -153,7 +155,7 @@ fun AssociationDataScreen(
                     val entries = parseAssociationCSV(csvString)
                     val imported =
                         withContext(Dispatchers.IO) {
-                            NextWordService.batchImportAssociations(context, entries)
+                            nextWord.batchImportAssociations(entries)
                         }
                     val skipped = entries.size - imported
                     resultMessage =
@@ -164,7 +166,7 @@ fun AssociationDataScreen(
                         )
                     showResultDialog = true
                     withContext(Dispatchers.IO) {
-                        allData = NextWordService.allAssociations(context)
+                        allData = nextWord.allAssociations()
                     }
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: CommonTexts.importFailed
@@ -361,7 +363,7 @@ fun AssociationDataScreen(
                                 onClick = {
                                     scope.launch {
                                         withContext(Dispatchers.IO) {
-                                            NextWordService.deleteAssociation(context, entry)
+                                            nextWord.deleteAssociation(entry)
                                         }
                                         allData =
                                             allData.filter {
@@ -411,7 +413,7 @@ fun AssociationDataScreen(
             onConfirm = {
                 showClearDialog = false
                 scope.launch {
-                    withContext(Dispatchers.IO) { NextWordService.clearAllAssociations(context) }
+                    withContext(Dispatchers.IO) { nextWord.clearAllAssociations() }
                     allData = emptyList()
                 }
             },

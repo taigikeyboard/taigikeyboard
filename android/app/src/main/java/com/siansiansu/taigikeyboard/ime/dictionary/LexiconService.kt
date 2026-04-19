@@ -1,10 +1,12 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
-import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -14,18 +16,29 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Service for querying Taigi dictionary
+ * Dictionary search orchestrator.
  *
- * 查詢流程：
- * 1. 使用 Trie 前綴匹配取得候選 rowid
- * 2. 使用 DictionaryBinaryReader 讀取 binary mmap 格式
- * 3. 使用 bitmask 過濾詞庫來源
- * 4. 按 frequency 排序
+ * Search flow:
+ * 1. Trie prefix match to get candidate rowids.
+ * 2. `DictionaryBinaryReader` reads the mmap binary records.
+ * 3. Bitmask filter keeps only user-enabled dictionaries.
+ * 4. `CandidateProcessor.sortByScore` ranks by user-frequency + input affinity.
  *
- * Thread-safe singleton with lazy initialization
+ * Owned by `CompositionRoot`; collaborators are injected through the ctor.
+ * [close] releases `dictionary.bin` mmap; subsequent calls re-open on demand.
  */
-object LexiconService {
-    private const val TAG = "LexiconService"
+class LexiconService(
+    appContext: Context,
+    private val logger: LoggerBackend,
+    private val trie: TrieService,
+    private val customDict: CustomDictionaryService,
+    private val userFreq: UserFrequencyService,
+) {
+    private val appContext: Context = appContext.applicationContext
+
+    companion object {
+        private const val TAG = "LexiconService"
+    }
 
     @Volatile private var binaryReader: DictionaryBinaryReader? = null
 
@@ -33,21 +46,19 @@ object LexiconService {
     private val initMutex = Mutex()
 
     /**
-     * Search for words in the dictionary
+     * Search the dictionary.
      *
-     * @param input Search query string (preprocessed, may be lowercased for search)
-     * @param inputType Type of input (hanzi, roman with/without tone)
-     * @param inputMode POJ or TL mode
-     * @param limit Maximum number of results
-     * @param context Android context for accessing assets
-     * @return List of matching TaigiWord entries
+     * @param input Search query (preprocessed, may be lowercased for search).
+     * @param inputType Input classification — hanzi / roman with or without tone.
+     * @param inputMode POJ or TL.
+     * @param limit Max number of results.
+     * @param prefs Preference snapshot; falls back to a `PrefHelper(appContext)` when null.
      */
     suspend fun search(
         input: String,
         inputType: InputType,
         inputMode: InputMode = InputMode.POJ,
         limit: Int = DictionaryConstants.DEFAULT_SEARCH_LIMIT,
-        context: Context,
         prefs: PrefHelper? = null,
     ): List<TaigiWord> =
         withContext(Dispatchers.IO) {
@@ -57,39 +68,41 @@ object LexiconService {
             if (inputType is InputType.Hanzi) return@withContext emptyList()
 
             val initStart = System.currentTimeMillis()
-            ensureInitialized(context)
-            if (BuildConfig.DEBUG) Log.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
+            ensureInitialized()
+            if (BuildConfig.DEBUG) {
+                logger.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
+            }
 
             val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
-            // 讀取搜尋設定（atomic snapshot to avoid torn reads across multiple getters）
-            val prefHelper = prefs ?: PrefHelper(context)
+            // Atomic snapshot to avoid torn reads across multiple getters.
+            val prefHelper = prefs ?: PrefHelper(appContext)
             val enabledDicts = EnabledDictionaries.fromSnapshot(prefHelper.snapshotEnabledDictionaries())
 
             try {
                 val customWords = lookupCustomDictionary(input, prefHelper)
                 val systemWords = querySystemDictionaries(reader, input, inputMode, limit, enabledDicts, prefHelper)
-                // Merge: custom words first, then system words (matching iOS)
+                // Merge: custom words first, then system words (matching iOS).
                 val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
                 val ranked = rankByFrequency(merged, input, inputMode)
                 val result = applyDisplayDedup(ranked, prefs)
                 if (BuildConfig.DEBUG) {
-                    Log.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
-                    Log.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
+                    logger.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
+                    logger.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
                 }
                 result
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Query failed", e)
+                logger.e(TAG, "[SEARCH] Query failed", e)
                 throw DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error")
             }
         }
 
     /**
-     * Phase 1: query the custom user dictionary by prefix.
-     * Returns early if the custom-dict toggle is off.
+     * Phase 1: query the custom user dictionary by prefix. Returns early
+     * if the custom-dict toggle is off.
      */
     private suspend fun lookupCustomDictionary(
         input: String,
@@ -102,23 +115,20 @@ object LexiconService {
             if (isToneAware) {
                 input.lowercase().replace("-", "").replace(" ", "")
             } else {
-                CustomDictionaryService.generateNotone(input)
+                CustomDictionaryDerivation.generateNotone(input)
             }
         return try {
-            CustomDictionaryService
+            customDict
                 .search(prefix = searchPrefix, isToneAware = isToneAware, limit = 20)
                 .also { entries ->
-                    if (BuildConfig.DEBUG) {
-                        Log.d(
-                            TAG,
-                            "[SEARCH] customDict prefix='$searchPrefix' toneAware=$isToneAware results=${entries.size}",
-                        )
+                    logger.debug(TAG) {
+                        "[SEARCH] customDict prefix='$searchPrefix' toneAware=$isToneAware results=${entries.size}"
                     }
                 }.map { entry ->
                     TaigiWord(id = -2, roman = entry.roman, hanzi = entry.hanzi, lengthScore = null)
                 }
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
+            logger.w(TAG, "[SEARCH] Custom dictionary query failed: ${e.message}", e)
             emptyList()
         }
     }
@@ -126,7 +136,7 @@ object LexiconService {
     /**
      * Phase 2: query the system trie + binary reader, including the TPS
      * er↔or variant expansion when the toggle is on. Preserves
-     * existingIds-based dedup with the primary result set.
+     * `existingIds`-based dedup with the primary result set.
      */
     private fun querySystemDictionaries(
         reader: DictionaryBinaryReader,
@@ -139,13 +149,13 @@ object LexiconService {
         val trieStart = System.currentTimeMillis()
         val words = searchWithTrie(reader, input, inputMode, limit, enabledDicts)
         if (BuildConfig.DEBUG) {
-            Log.d(
+            logger.d(
                 "PERF",
                 "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms",
             )
         }
 
-        // TPS ㄜ expansion: also search "or" variant when toggle is ON
+        // TPS ㄜ expansion: also search "or" variant when toggle is ON.
         if (!(TPSConverter.containsTPS(input) && prefHelper.tpsOrMapsToER)) return words
         val tlInput = TPSConverter.toTL(input)
         if (!tlInput.contains("er")) return words
@@ -157,8 +167,10 @@ object LexiconService {
     }
 
     /**
-     * Phase 3: dedup + score-based ordering. Normalizes the input once
-     * for scoring and delegates ranking to CandidateProcessor.
+     * Phase 3: dedup + score-based ordering. Normalizes the input once for
+     * scoring, batches user-frequency lookups, and delegates ranking to
+     * `CandidateProcessor`. Mirrors iOS: user-frequency batch fetch lives
+     * at the caller of the pure scoring function, not inside it.
      */
     private suspend fun rankByFrequency(
         merged: List<TaigiWord>,
@@ -167,7 +179,9 @@ object LexiconService {
     ): List<TaigiWord> {
         val uniqueWords = CandidateProcessor.removeDuplicates(merged)
         val normalizedInput = InputNormalizer.normalize(input, inputMode)
-        return CandidateProcessor.sortByScore(uniqueWords, normalizedInput)
+        val wordTexts = uniqueWords.map { it.displayText }.distinct()
+        val frequencyData = userFreq.frequencyDataBatch(wordTexts)
+        return CandidateProcessor.sortByScore(uniqueWords, normalizedInput, frequencyData, logger = logger)
     }
 
     /**
@@ -180,7 +194,7 @@ object LexiconService {
     ): List<TaigiWord> = if (prefs?.inputMode == "tps") CandidateProcessor.removeDisplayDuplicates(ranked) else ranked
 
     /**
-     * Search using Trie exact match + prefix match + binary reader
+     * Trie exact match + prefix match → binary reader lookup with bitmask filter.
      */
     private fun searchWithTrie(
         reader: DictionaryBinaryReader,
@@ -189,42 +203,37 @@ object LexiconService {
         limit: Int,
         enabledDicts: EnabledDictionaries,
     ): List<TaigiWord> {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[SEARCH] input='$input', mode=$inputMode, limit=$limit")
-        }
+        logger.debug(TAG) { "[SEARCH] input='$input', mode=$inputMode, limit=$limit" }
 
-        if (!TrieService.isReady) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Trie not loaded")
+        if (!trie.isReady) {
+            logger.e(TAG, "[SEARCH] Trie not loaded")
             throw DictionaryError.TrieNotLoaded
         }
 
         val searchKey = InputNormalizer.buildSearchKey(input, inputMode)
         val normalizedInput = InputNormalizer.normalize(searchKey, inputMode)
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NORMALIZE] '$input' -> '$searchKey' -> '$normalizedInput'")
-        }
+        logger.debug(TAG) { "[NORMALIZE] '$input' -> '$searchKey' -> '$normalizedInput'" }
 
         if (normalizedInput.isEmpty()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "[NORMALIZE] Empty after normalization, returning empty")
+            logger.d(TAG, "[NORMALIZE] Empty after normalization, returning empty")
             return emptyList()
         }
 
         val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[TRIE] trieKey='$trieKey', TrieService.isReady=${TrieService.isReady}, keyCount=${TrieService.getKeyCount()}")
+        logger.debug(TAG) {
+            "[TRIE] trieKey='$trieKey', TrieService.isReady=${trie.isReady}, keyCount=${trie.getKeyCount()}"
         }
 
         val rowIds = lookupRowIds(trieKey)
         if (rowIds.isEmpty()) {
-            if (BuildConfig.DEBUG) Log.d(TAG, "[TRIE] No results for: $trieKey")
+            logger.debug(TAG) { "[TRIE] No results for: $trieKey" }
             return emptyList()
         }
 
-        if (BuildConfig.DEBUG) Log.d(TAG, "[TRIE] Total ${rowIds.size} unique rowIds")
+        logger.debug(TAG) { "[TRIE] Total ${rowIds.size} unique rowIds" }
 
-        // Binary reader lookup + bitmask filter
         val results = mutableListOf<TaigiWord>()
         for (id in rowIds) {
             val record = reader.record(id) ?: continue
@@ -241,9 +250,9 @@ object LexiconService {
         }
 
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[BIN] ${results.size} words after filter")
+            logger.d(TAG, "[BIN] ${results.size} words after filter")
             results.take(3).forEach { word ->
-                Log.d(TAG, "[BIN]   - ${word.roman} / ${word.hanzi ?: "(no hanzi)"}")
+                logger.d(TAG, "[BIN]   - ${word.roman} / ${word.hanzi ?: "(no hanzi)"}")
             }
         }
 
@@ -253,31 +262,28 @@ object LexiconService {
     }
 
     /**
-     * Trie lookup: exact match + prefix search, merged and deduplicated (no artificial limit).
-     * Shared between searchWithTrie(), searchWithSources(), and searchByHanzi().
+     * Trie lookup: exact match + prefix search merged and deduplicated.
+     * Shared by [searchWithTrie], [searchWithSources], and [searchByHanzi].
      */
     private fun lookupRowIds(trieKey: String): List<Int> {
-        val exactRowIds = TrieService.lookup(trieKey)
-        val prefixRowIds = TrieService.prefixSearch(trieKey)
+        val exactRowIds = trie.lookup(trieKey)
+        val prefixRowIds = trie.prefixSearch(trieKey)
         return (exactRowIds.toList() + prefixRowIds.toList()).distinct()
     }
 
-    /**
-     * Search dictionary with source information (for dictionary exploration in Tab 3).
-     */
+    /** Search with source metadata (tab3 dictionary exploration). */
     suspend fun searchWithSources(
         input: String,
         inputMode: InputMode,
         limit: Int = 50,
-        context: Context,
     ): List<DictionarySearchResult> =
         withContext(Dispatchers.IO) {
             if (input.isEmpty()) return@withContext emptyList()
 
-            ensureInitialized(context)
+            ensureInitialized()
             val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
 
-            if (!TrieService.isReady) throw DictionaryError.TrieNotLoaded
+            if (!trie.isReady) throw DictionaryError.TrieNotLoaded
 
             val normalizedInput = InputNormalizer.normalize(input, inputMode)
             if (normalizedInput.isEmpty()) return@withContext emptyList()
@@ -286,14 +292,12 @@ object LexiconService {
             val rowIds = lookupRowIds(trieKey)
             if (rowIds.isEmpty()) return@withContext emptyList()
 
-            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(context).snapshotEnabledDictionaries())
+            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(appContext).snapshotEnabledDictionaries())
 
             buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
         }
 
-    /**
-     * Build DictionarySearchResult list from rowIds using binary reader
-     */
+    /** Build a list of `DictionarySearchResult` rows from trie rowids. */
     private fun buildSearchResults(
         reader: DictionaryBinaryReader,
         ids: List<Int>,
@@ -333,40 +337,39 @@ object LexiconService {
     }
 
     /**
-     * Search dictionary by hanzi (漢字) using trie prefix search.
-     * Uses "hanzi:" prefix in trie (matching iOS searchByHanzi).
+     * Search by hanzi (漢字) via trie prefix with `hanzi:` namespace key.
+     * Matches iOS `searchByHanzi`.
      */
     suspend fun searchByHanzi(
         input: String,
         inputMode: InputMode,
         limit: Int = 50,
-        context: Context,
     ): List<DictionarySearchResult> =
         withContext(Dispatchers.IO) {
             if (input.isEmpty()) return@withContext emptyList()
 
-            if (BuildConfig.DEBUG) Log.d(TAG, "[HANZI-SEARCH] query='$input' limit=$limit")
+            logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
 
-            ensureInitialized(context)
+            ensureInitialized()
             val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
 
-            if (!TrieService.isReady) throw DictionaryError.TrieNotLoaded
+            if (!trie.isReady) throw DictionaryError.TrieNotLoaded
 
             val trieKey = DictionaryConstants.TRIE_PREFIX_HANZI + input
             val rowIds = lookupRowIds(trieKey)
 
             if (rowIds.isEmpty()) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "[HANZI-SEARCH] No trie results for: $trieKey")
+                logger.debug(TAG) { "[HANZI-SEARCH] No trie results for: $trieKey" }
                 return@withContext emptyList()
             }
 
-            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(context).snapshotEnabledDictionaries())
+            val enabledDicts = EnabledDictionaries.fromSnapshot(PrefHelper(appContext).snapshotEnabledDictionaries())
             val sorted = buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results")
+                logger.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results")
                 sorted.firstOrNull()?.let {
-                    Log.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
+                    logger.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
                 }
             }
 
@@ -375,52 +378,45 @@ object LexiconService {
 
     // --- Initialization ---
 
-    /**
-     * Ensure trie and binary reader are initialized
-     */
-    private suspend fun ensureInitialized(context: Context) {
+    /** Copy binary assets and open the mmap reader + trie on first use. */
+    private suspend fun ensureInitialized() {
         if (isInitialized) return
 
         initMutex.withLock {
             if (isInitialized) return
 
             try {
-                // Copy binary assets to filesDir
-                copyAssetsIfNeeded(context)
+                copyAssetsIfNeeded(appContext)
 
-                // Initialize Trie
-                val trieLoaded = TrieService.init(context)
+                val trieLoaded = trie.init()
                 if (!trieLoaded) {
-                    if (BuildConfig.DEBUG) Log.w(TAG, "[INIT] Trie initialization failed")
+                    logger.w(TAG, "[INIT] Trie initialization failed")
                 }
 
-                // Initialize binary reader
-                val binFile = File(context.filesDir, DictionaryConstants.DICT_BIN_NAME)
+                val binFile = File(appContext.filesDir, DictionaryConstants.DICT_BIN_NAME)
                 binaryReader = DictionaryBinaryReader.open(binFile)
                 if (binaryReader == null) {
-                    if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Failed to open dictionary.bin")
+                    logger.e(TAG, "[INIT] Failed to open dictionary.bin")
                 }
 
                 isInitialized = true
-                if (BuildConfig.DEBUG) {
-                    Log.i(
-                        TAG,
-                        "[INIT] Initialized: Trie keys=${TrieService.getKeyCount()}, " +
-                            "records=${binaryReader?.recordCount ?: 0}",
-                    )
-                }
+                logger.i(
+                    TAG,
+                    "[INIT] Initialized: Trie keys=${trie.getKeyCount()}, " +
+                        "records=${binaryReader?.recordCount ?: 0}",
+                )
             } catch (e: Exception) {
                 close()
-                if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Initialization failed", e)
+                logger.e(TAG, "[INIT] Initialization failed", e)
                 throw e
             }
         }
     }
 
     /**
-     * Copy dictionary binary files from assets to filesDir if app version changed.
-     * Copies: dictionary.bin, association.bin (for NextWordService)
-     * dictionary.trie is copied by TrieService.
+     * Copy binary assets to `filesDir` when the app version changes.
+     * Copies: `dictionary.bin`, `association.bin`. `dictionary.trie` is
+     * copied by `TrieService`.
      */
     private fun copyAssetsIfNeeded(context: Context) {
         val versionFile = File(context.filesDir, "dictionary_app_version.txt")
@@ -449,11 +445,9 @@ object LexiconService {
                             input.copyTo(output)
                         }
                     }
-                    if (BuildConfig.DEBUG) {
-                        Log.i(TAG, "[COPY] $fileName (${destFile.length()} bytes)")
-                    }
+                    logger.i(TAG, "[COPY] $fileName (${destFile.length()} bytes)")
                 } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) Log.e(TAG, "[COPY] Failed to copy $fileName", e)
+                    logger.e(TAG, "[COPY] Failed to copy $fileName", e)
                     throw DictionaryError.DatabaseConnectionFailed("Failed to copy $fileName: ${e.message}")
                 }
             }
@@ -461,20 +455,19 @@ object LexiconService {
 
         if (needsCopy) {
             versionFile.writeText(currentAppVersion.toString())
-            if (BuildConfig.DEBUG) {
-                Log.i(TAG, "[UPDATE] Dictionary assets updated from v$lastCopiedVersion to v$currentAppVersion")
-            }
+            logger.i(TAG, "[UPDATE] Dictionary assets updated from v$lastCopiedVersion to v$currentAppVersion")
         }
     }
 
     /**
-     * Close resources (call in service cleanup)
+     * Release the mmap reader and flip the instance back to an
+     * uninitialized state. Subsequent [search] calls re-run
+     * [ensureInitialized] and reopen `dictionary.bin`. Does **not** close
+     * `TrieService` — the trie is process-wide and owned separately.
      */
     fun close() {
         binaryReader = null
         isInitialized = false
-        if (BuildConfig.DEBUG) {
-            Log.i(TAG, "[CLOSE] Resources released")
-        }
+        logger.i(TAG, "[CLOSE] Resources released")
     }
 }

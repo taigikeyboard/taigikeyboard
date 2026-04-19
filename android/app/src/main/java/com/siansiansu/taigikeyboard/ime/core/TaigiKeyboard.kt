@@ -25,12 +25,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
-import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
@@ -46,6 +43,9 @@ private var taigikeyboardInstance: TaigiKeyboard? = null
 
 class TaigiKeyboard : LifecycleInputMethodService() {
     lateinit var prefs: PrefHelper
+        private set
+
+    lateinit var compositionRoot: CompositionRoot
         private set
 
     val context: Context
@@ -158,13 +158,12 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
 
-        // Initialize user frequency service
-        UserFrequencyService.init(this)
+        // Wire up the service graph (shared instance across IME + Settings).
+        compositionRoot = CompositionRoot.shared(this)
 
-        // Initialize custom dictionary service and seed defaults on first install
-        CustomDictionaryService.init(this)
+        // Seed default custom-dictionary entries on first install.
         serviceScope.launch {
-            CustomDictionaryService.seedDefaultEntryIfEmpty()
+            compositionRoot.customDict.seedDefaultEntryIfEmpty()
         }
 
         super.onCreate()
@@ -268,7 +267,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         serviceScope.cancel()
         osHandler.removeCallbacksAndMessages(null)
-        LexiconService.close()
+        compositionRoot.lexicon.close()
         taigikeyboardInstance = null
 
         super.onDestroy()

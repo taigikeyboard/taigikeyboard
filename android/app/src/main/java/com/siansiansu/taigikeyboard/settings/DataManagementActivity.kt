@@ -11,8 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
-import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
@@ -33,6 +32,8 @@ class DataManagementActivity : ComponentActivity() {
 
     private var isProcessing by mutableStateOf(false)
 
+    private val root: CompositionRoot by lazy { CompositionRoot.shared(this) }
+
     // Backup export launcher
     private val exportBackupLauncher =
         registerForActivityResult(
@@ -42,7 +43,7 @@ class DataManagementActivity : ComponentActivity() {
             isProcessing = true
             lifecycleScope.launch {
                 try {
-                    val json = BackupService.exportAll(this@DataManagementActivity)
+                    val json = root.backup.exportAll(this@DataManagementActivity)
                     contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
                     Toast.makeText(this@DataManagementActivity, Tab3Texts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
@@ -63,7 +64,7 @@ class DataManagementActivity : ComponentActivity() {
             lifecycleScope.launch {
                 try {
                     val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@launch
-                    val result = BackupService.importAll(this@DataManagementActivity, json)
+                    val result = root.backup.importAll(json)
                     Toast
                         .makeText(
                             this@DataManagementActivity,
@@ -80,8 +81,6 @@ class DataManagementActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        CustomDictionaryService.init(this)
 
         setupEdgeToEdge()
 

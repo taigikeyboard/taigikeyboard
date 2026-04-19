@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -12,18 +12,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * Handles NextWord prediction logic extracted from SmartbarManager.
+ * NextWord prediction controller.
  *
- * Manages context tracking (last selected word, timing) and NextWord predictions
- * including compound word splitting and association recording.
+ * Extracted from `SmartbarManager`. Owns context tracking (last selected
+ * word + selection timing) and drives the NextWord prediction / recording
+ * pipeline, including compound-word splitting. Depends on an injected
+ * [NextWordService] so there are no global service reach-ins.
  */
 class NextWordHandler(
     private val scope: CoroutineScope,
     private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
+    private val nextWord: NextWordService,
+    private val logger: LoggerBackend,
     private val isTranslateSwapped: () -> Boolean,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
-    private val onClearCandidates: () -> Unit
+    private val onClearCandidates: () -> Unit,
 ) {
     private var lastSelectedWord: String? = null
     private var lastSelectedRoman: String? = null
@@ -49,33 +53,36 @@ class NextWordHandler(
         isShowingNextWord = showing
     }
 
-    /**
-     * Handle NextWord prediction after a word is selected.
-     */
-    fun handleNextWordPrediction(displayText: String, committedText: String, roman: String, hanzi: String? = null, rawInput: String = "") {
+    /** Handle NextWord prediction after a word is selected. */
+    fun handleNextWordPrediction(
+        displayText: String,
+        committedText: String,
+        roman: String,
+        hanzi: String? = null,
+        rawInput: String = "",
+    ) {
         val currentTime = System.currentTimeMillis()
 
-        // Check if context should be reset
-        val shouldReset = when {
-            committedText.lastOrNull() in SENTENCE_END_PUNCTUATION -> true
-            lastSelectionTime > 0 && (currentTime - lastSelectionTime) > CONTEXT_TIMEOUT_MS -> true
-            else -> false
-        }
+        val shouldReset =
+            when {
+                committedText.lastOrNull() in SENTENCE_END_PUNCTUATION -> true
+                lastSelectionTime > 0 && (currentTime - lastSelectionTime) > CONTEXT_TIMEOUT_MS -> true
+                else -> false
+            }
 
         if (shouldReset) {
             lastSelectedWord = null
             lastSelectedRoman = null
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] Context reset")
-            }
+            logger.d(TAG, "[NEXTWORD] Context reset")
         }
 
-        val shouldRecordAssociation = lastSelectedWord != null &&
-            (currentTime - lastSelectionTime) < ASSOCIATION_TIMEOUT_MS
+        val shouldRecordAssociation =
+            lastSelectedWord != null &&
+                (currentTime - lastSelectionTime) < ASSOCIATION_TIMEOUT_MS
 
         val parts = splitCompoundWord(displayText)
-        // Normalize romanization to TL for consistent storage and query
-        // pojDisplayToTLDisplay is idempotent on TL input, safe for all modes
+        // Normalize romanization to TL for consistent storage and query;
+        // `pojDisplayToTLDisplay` is idempotent on TL input.
         val romanTl = TaigiPhonetics.pojDisplayToTLDisplay(roman)
         val romanTlParts = splitCompoundWord(romanTl)
         val prevWord = lastSelectedWord
@@ -85,46 +92,39 @@ class NextWordHandler(
             if (prefs.associationRecordingEnabled) {
                 if (shouldRecordAssociation && prevWord != null) {
                     if (!isNoise(displayText)) {
-                        NextWordService.recordAssociation(
+                        nextWord.recordAssociation(
                             prev = prevWord,
                             prevTl = prevTl,
                             nextHanzi = displayText,
                             nextTl = romanTl,
-                            context = taigikeyboard.context
                         )
-                        if (BuildConfig.DEBUG) {
-                            Log.d(TAG, "[NEXTWORD] Record: '$prevWord($prevTl)' → '$displayText'")
-                        }
-                    } else if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[NEXTWORD] Skip noise: '$displayText'")
+                        logger.debug(TAG) { "[NEXTWORD] Record: '$prevWord($prevTl)' → '$displayText'" }
+                    } else {
+                        logger.debug(TAG) { "[NEXTWORD] Skip noise: '$displayText'" }
                     }
                 }
 
-                // Record compound word internal associations
                 for (i in 0 until parts.size - 1) {
                     val prevPart = parts[i]
                     val prevPartTl = romanTlParts.getOrNull(i) ?: ""
                     val nextPart = parts[i + 1]
                     val nextPartTl = romanTlParts.getOrNull(i + 1) ?: ""
-                    NextWordService.recordAssociation(
+                    nextWord.recordAssociation(
                         prev = prevPart,
                         prevTl = prevPartTl,
                         nextHanzi = nextPart,
                         nextTl = nextPartTl,
-                        context = taigikeyboard.context
                     )
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[NEXTWORD] Record compound: '$prevPart' → '$nextPart'")
-                    }
+                    logger.debug(TAG) { "[NEXTWORD] Record compound: '$prevPart' → '$nextPart'" }
                 }
             }
 
-            val predictions = NextWordService.predict(
-                word = displayText,
-                roman = romanTl,
-                context = taigikeyboard.context,
-                prefs = taigikeyboard.prefs
-            )
+            val predictions =
+                nextWord.predict(
+                    word = displayText,
+                    roman = romanTl,
+                    prefs = taigikeyboard.prefs,
+                )
 
             kotlinx.coroutines.withContext(Dispatchers.Main) {
                 if (predictions.isNotEmpty()) {
@@ -135,28 +135,27 @@ class NextWordHandler(
             }
         }
 
-        // Update context (noise doesn't update lastSelectedWord)
         if (!isNoise(displayText)) {
             lastSelectedWord = displayText
             lastSelectedRoman = romanTl
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] lastSelectedWord updated: '$displayText' roman='$romanTl'")
-            }
-        } else if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NEXTWORD] Skip updating lastSelectedWord for noise: '$displayText'")
+            logger.debug(TAG) { "[NEXTWORD] lastSelectedWord updated: '$displayText' roman='$romanTl'" }
+        } else {
+            logger.debug(TAG) { "[NEXTWORD] Skip updating lastSelectedWord for noise: '$displayText'" }
         }
         lastSelectionTime = currentTime
     }
 
     /**
-     * Update lastSelectedWord without triggering NextWord prediction.
-     * Used when space key confirms composing text.
+     * Update `lastSelectedWord` without triggering NextWord prediction.
+     * Invoked when the space key confirms composing text.
      */
-    fun updateLastSelectedWord(word: String, roman: String? = null) {
+    fun updateLastSelectedWord(
+        word: String,
+        roman: String? = null,
+    ) {
         if (word.isEmpty()) return
 
         val parts = splitCompoundWord(word)
-        // Normalize romanization to TL for consistent storage
         val romanTl = TaigiPhonetics.pojDisplayToTLDisplay(roman ?: word)
 
         if (parts.size > 1 && prefs.associationRecordingEnabled) {
@@ -167,16 +166,13 @@ class NextWordHandler(
                     val prevPartTl = romanTlParts.getOrNull(i) ?: ""
                     val nextPart = parts[i + 1]
                     val nextPartTl = romanTlParts.getOrNull(i + 1) ?: ""
-                    NextWordService.recordAssociation(
+                    nextWord.recordAssociation(
                         prev = prevPart,
                         prevTl = prevPartTl,
                         nextHanzi = nextPart,
                         nextTl = nextPartTl,
-                        context = taigikeyboard.context
                     )
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[NEXTWORD] Record compound (space): '$prevPart' → '$nextPart'")
-                    }
+                    logger.debug(TAG) { "[NEXTWORD] Record compound (space): '$prevPart' → '$nextPart'" }
                 }
             }
         }
@@ -184,18 +180,14 @@ class NextWordHandler(
         if (!isNoise(word)) {
             lastSelectedWord = word
             lastSelectedRoman = romanTl
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: '$word' roman='$romanTl'")
-            }
-        } else if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NEXTWORD] updateLastSelectedWord: skip noise '$word'")
+            logger.debug(TAG) { "[NEXTWORD] updateLastSelectedWord: '$word' roman='$romanTl'" }
+        } else {
+            logger.debug(TAG) { "[NEXTWORD] updateLastSelectedWord: skip noise '$word'" }
         }
         lastSelectionTime = System.currentTimeMillis()
     }
 
-    /**
-     * Handle backspace: re-predict from remaining text.
-     */
+    /** Backspace handler: re-predict from the trailing character of remaining text. */
     fun handleBackspaceForNextWord(textBeforeCursor: String) {
         val trimmedText = textBeforeCursor.trimEnd()
 
@@ -204,20 +196,18 @@ class NextWordHandler(
             lastSelectedWord = null
             lastSelectedRoman = null
             lastSelectionTime = 0
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[NEXTWORD] Backspace: text empty, cleared predictions")
-            }
+            logger.d(TAG, "[NEXTWORD] Backspace: text empty, cleared predictions")
             return
         }
 
         val lastChar = trimmedText.last().toString()
 
         scope.launch {
-            val predictions = NextWordService.predict(
-                word = lastChar,
-                context = taigikeyboard.context,
-                prefs = taigikeyboard.prefs
-            )
+            val predictions =
+                nextWord.predict(
+                    word = lastChar,
+                    prefs = taigikeyboard.prefs,
+                )
             kotlinx.coroutines.withContext(Dispatchers.Main) {
                 if (predictions.isNotEmpty()) {
                     updateCandidatesWithPredictions(predictions)
@@ -231,46 +221,35 @@ class NextWordHandler(
         lastSelectedRoman = null
         lastSelectionTime = System.currentTimeMillis()
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NEXTWORD] Backspace: re-predict from '$lastChar'")
-        }
+        logger.debug(TAG) { "[NEXTWORD] Backspace: re-predict from '$lastChar'" }
     }
 
-    /**
-     * Convert predictions to TaigiWord list and update candidates.
-     */
     private fun updateCandidatesWithPredictions(predictions: List<NextWordService.Prediction>) {
         val useTl = (prefs.inputMode == "tl")
         val cachedIsTranslateSwapped = isTranslateSwapped()
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NEXTWORD] updateCandidatesWithPredictions: ${predictions.size} predictions, useTl=$useTl, isTranslateSwapped=$cachedIsTranslateSwapped")
+        logger.debug(TAG) {
+            "[NEXTWORD] updateCandidatesWithPredictions: ${predictions.size} predictions, useTl=$useTl, isTranslateSwapped=$cachedIsTranslateSwapped"
         }
 
-        val words = predictions.mapIndexedNotNull { index, prediction ->
-            val roman = if (useTl) prediction.tl else TaigiPhonetics.tlDisplayToPOJDisplay(prediction.tl)
+        val words =
+            predictions.mapIndexedNotNull { index, prediction ->
+                val roman = if (useTl) prediction.tl else TaigiPhonetics.tlDisplayToPOJDisplay(prediction.tl)
 
-            if (!cachedIsTranslateSwapped && roman.isEmpty()) {
-                if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[NEXTWORD] Filtered out '${prediction.hanzi}' (no roman, isTranslateSwapped=$cachedIsTranslateSwapped)")
+                if (!cachedIsTranslateSwapped && roman.isEmpty()) {
+                    logger.debug(TAG) {
+                        "[NEXTWORD] Filtered out '${prediction.hanzi}' (no roman, isTranslateSwapped=$cachedIsTranslateSwapped)"
+                    }
+                    return@mapIndexedNotNull null
                 }
-                return@mapIndexedNotNull null
-            }
 
-            TaigiWord(
-                id = -index - 1,
-                roman = roman,
-                hanzi = prediction.hanzi,
-                lengthScore = prediction.score.toInt()
-            )
-        }
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[NEXTWORD] After filter: ${words.size} words")
-            words.forEachIndexed { index, word ->
-                Log.d(TAG, "[NEXTWORD] Word[$index]: hanzi='${word.hanzi}', roman='${word.roman}', score=${word.lengthScore}")
+                TaigiWord(
+                    id = -index - 1,
+                    roman = roman,
+                    hanzi = prediction.hanzi,
+                    lengthScore = prediction.score.toInt(),
+                )
             }
-        }
 
         if (words.isNotEmpty()) {
             onUpdateCandidates(words)
@@ -285,15 +264,58 @@ class NextWordHandler(
         private const val CONTEXT_TIMEOUT_MS = 30_000L
         private val SENTENCE_END_PUNCTUATION = setOf('。', '！', '？', '.', '!', '?')
 
-        private val NOISE_CHARS = setOf(
-            '。', '！', '？', '.', '!', '?',
-            '，', ',', '、', '；', ';', '：', ':',
-            '「', '」', '『', '』', '"', '"', '\'',
-            '（', '）', '(', ')', '【', '】', '[', ']', '{', '}',
-            '—', '–', '-', '～', '~', '…', '·',
-            ' ', '　',
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-        )
+        private val NOISE_CHARS =
+            setOf(
+                '。',
+                '！',
+                '？',
+                '.',
+                '!',
+                '?',
+                '，',
+                ',',
+                '、',
+                '；',
+                ';',
+                '：',
+                ':',
+                '「',
+                '」',
+                '『',
+                '』',
+                '"',
+                '"',
+                '\'',
+                '（',
+                '）',
+                '(',
+                ')',
+                '【',
+                '】',
+                '[',
+                ']',
+                '{',
+                '}',
+                '—',
+                '–',
+                '-',
+                '～',
+                '~',
+                '…',
+                '·',
+                ' ',
+                '　',
+                '0',
+                '1',
+                '2',
+                '3',
+                '4',
+                '5',
+                '6',
+                '7',
+                '8',
+                '9',
+            )
 
         fun isNoise(word: String): Boolean {
             if (word.isEmpty()) return true

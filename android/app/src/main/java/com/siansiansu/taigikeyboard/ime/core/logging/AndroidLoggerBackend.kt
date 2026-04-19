@@ -1,0 +1,50 @@
+package com.siansiansu.taigikeyboard.ime.core.logging
+
+import android.util.Log
+import com.siansiansu.taigikeyboard.BuildConfig
+
+/**
+ * Platform-side `LoggerBackend` that forwards to `android.util.Log`.
+ * Debug / info / warning messages are gated on `BuildConfig.DEBUG` to
+ * preserve the original `if (BuildConfig.DEBUG) Log.x(...)` semantics
+ * every caller used before this class existed. Errors always log.
+ *
+ * [isDebugEnabled] is exposed so inline-extension callers (e.g. the
+ * `d { ... }` lazy overload in `LoggerBackend.kt`) can skip string
+ * interpolation in release builds.
+ */
+class AndroidLoggerBackend : LoggerBackend {
+    override val isDebugEnabled: Boolean = BuildConfig.DEBUG
+
+    override fun d(
+        tag: String,
+        msg: String,
+    ) {
+        if (BuildConfig.DEBUG) Log.d(tag, msg)
+    }
+
+    override fun i(
+        tag: String,
+        msg: String,
+    ) {
+        if (BuildConfig.DEBUG) Log.i(tag, msg)
+    }
+
+    override fun w(
+        tag: String,
+        msg: String,
+        t: Throwable?,
+    ) {
+        if (BuildConfig.DEBUG) {
+            if (t != null) Log.w(tag, msg, t) else Log.w(tag, msg)
+        }
+    }
+
+    override fun e(
+        tag: String,
+        msg: String,
+        t: Throwable?,
+    ) {
+        if (t != null) Log.e(tag, msg, t) else Log.e(tag, msg)
+    }
+}

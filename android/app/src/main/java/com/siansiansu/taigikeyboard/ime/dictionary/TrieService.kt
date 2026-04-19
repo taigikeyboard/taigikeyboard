@@ -1,8 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
-import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -11,34 +11,41 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * MARISA-trie 查詢服務
- *
- * 提供前綴搜尋和完全匹配功能，用於快速查詢詞典索引。
- * 底層使用 C++ MARISA-trie library 透過 JNI 存取。
+ * MARISA-trie lookup service backed by a C++ library via JNI.
+ * Provides exact-match and prefix search over dictionary indices. Owned
+ * by `CompositionRoot`; all JNI state lives in native `g_trie` so only
+ * one instance is expected per process.
  */
-object TrieService {
-    private const val TAG = "TrieService"
-    private const val TRIE_FILE_NAME = "dictionary.trie"
+class TrieService(
+    appContext: Context,
+    private val logger: LoggerBackend,
+) {
+    private val appContext: Context = appContext.applicationContext
 
     @Volatile
     private var isInitialized = false
     private val initMutex = Mutex()
 
-    init {
-        try {
-            System.loadLibrary("taigi_trie")
-            if (BuildConfig.DEBUG) {
-                Log.i(TAG, "[INIT] Native library loaded")
+    companion object {
+        private const val TAG = "TrieService"
+        private const val TRIE_FILE_NAME = "dictionary.trie"
+
+        init {
+            try {
+                System.loadLibrary("taigi_trie")
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.i(TAG, "[INIT] Native library loaded")
+                }
+            } catch (e: UnsatisfiedLinkError) {
+                if (BuildConfig.DEBUG) {
+                    android.util.Log.e(TAG, "[INIT] Failed to load native library", e)
+                }
             }
-        } catch (e: UnsatisfiedLinkError) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Failed to load native library", e)
         }
     }
 
-    /**
-     * 初始化 trie（從 assets 複製並載入）
-     */
-    suspend fun init(context: Context): Boolean =
+    /** Copy trie asset on first run and hand it to the native loader. */
+    suspend fun init(): Boolean =
         withContext(Dispatchers.IO) {
             if (isInitialized) return@withContext true
 
@@ -46,34 +53,28 @@ object TrieService {
                 if (isInitialized) return@withLock true
 
                 try {
-                    val triePath = getTriePath(context)
+                    val triePath = getTriePath(appContext)
                     val success = nativeLoad(triePath)
 
                     if (success) {
                         isInitialized = true
-                        if (BuildConfig.DEBUG) {
-                            Log.i(TAG, "[INIT] Trie loaded, keys=${nativeGetKeyCount()}")
-                        }
+                        logger.i(TAG, "[INIT] Trie loaded, keys=${nativeGetKeyCount()}")
                     } else {
-                        if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Failed to load trie")
+                        logger.e(TAG, "[INIT] Failed to load trie")
                     }
 
                     success
                 } catch (e: Exception) {
-                    if (BuildConfig.DEBUG) Log.e(TAG, "[INIT] Exception during init", e)
+                    logger.e(TAG, "[INIT] Exception during init", e)
                     false
                 }
             }
         }
 
-    /**
-     * 前綴搜尋（回傳所有符合結果）
-     * @param prefix 搜尋前綴
-     * @return 匹配的 rowid 列表
-     */
+    /** Prefix search — returns every rowid whose key starts with [prefix]. */
     fun prefixSearch(prefix: String): IntArray {
         if (!isInitialized) {
-            if (BuildConfig.DEBUG) Log.w(TAG, "[SEARCH] Trie not initialized")
+            logger.w(TAG, "[SEARCH] Trie not initialized")
             return IntArray(0)
         }
         if (prefix.isEmpty()) return IntArray(0)
@@ -82,19 +83,15 @@ object TrieService {
             val bufferSize = maxOf(nativeGetKeyCount(), 1000)
             nativePrefixSearch(prefix, bufferSize)
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Prefix search failed", e)
+            logger.e(TAG, "[SEARCH] Prefix search failed", e)
             IntArray(0)
         }
     }
 
-    /**
-     * 完全匹配查詢（回傳所有符合結果）
-     * @param key 要查詢的 key
-     * @return 匹配的 rowid 列表（一個 key 可能對應多個 rowid）
-     */
+    /** Exact-match lookup — returns every rowid mapped to [key] (one-to-many). */
     fun lookup(key: String): IntArray {
         if (!isInitialized) {
-            if (BuildConfig.DEBUG) Log.w(TAG, "[LOOKUP] Trie not initialized")
+            logger.w(TAG, "[LOOKUP] Trie not initialized")
             return IntArray(0)
         }
         if (key.isEmpty()) return IntArray(0)
@@ -102,38 +99,28 @@ object TrieService {
         return try {
             nativeLookup(key)
         } catch (e: Exception) {
-            if (BuildConfig.DEBUG) Log.e(TAG, "[LOOKUP] Lookup failed", e)
+            logger.e(TAG, "[LOOKUP] Lookup failed", e)
             IntArray(0)
         }
     }
 
-    /**
-     * 取得 trie 中的 key 數量
-     */
+    /** Current native key count, or 0 when trie is not yet loaded. */
     fun getKeyCount(): Int = if (isInitialized) nativeGetKeyCount() else 0
 
-    /**
-     * 檢查是否已初始化
-     */
+    /** True once [init] has returned success. */
     val isReady: Boolean get() = isInitialized && nativeIsLoaded()
 
-    /**
-     * 釋放資源
-     */
+    /** Release the native trie handle. Safe to call from any thread. */
     @Synchronized
     fun close() {
         if (isInitialized) {
             nativeClose()
             isInitialized = false
-            if (BuildConfig.DEBUG) {
-                Log.i(TAG, "[CLOSE] Trie closed")
-            }
+            logger.i(TAG, "[CLOSE] Trie closed")
         }
     }
 
-    /**
-     * 取得 trie 檔案路徑，必要時從 assets 複製
-     */
+    /** Resolve trie file path, copying from assets when version changes. */
     private fun getTriePath(context: Context): String {
         val trieFile = File(context.filesDir, TRIE_FILE_NAME)
         val versionFile = File(context.filesDir, "trie_app_version.txt")
@@ -146,7 +133,6 @@ object TrieService {
                 0
             }
 
-        // App 版本更新時重新複製 trie
         if (currentAppVersion > lastCopiedVersion || !trieFile.exists()) {
             try {
                 context.assets.open(TRIE_FILE_NAME).use { input ->
@@ -156,11 +142,9 @@ object TrieService {
                 }
                 versionFile.writeText(currentAppVersion.toString())
 
-                if (BuildConfig.DEBUG) {
-                    Log.i(TAG, "[UPDATE] Trie updated from v$lastCopiedVersion to v$currentAppVersion")
-                }
+                logger.i(TAG, "[UPDATE] Trie updated from v$lastCopiedVersion to v$currentAppVersion")
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[ERROR] Failed to copy trie from assets", e)
+                logger.e(TAG, "[ERROR] Failed to copy trie from assets", e)
                 throw e
             }
         }
@@ -168,7 +152,6 @@ object TrieService {
         return trieFile.absolutePath
     }
 
-    // Native methods
     private external fun nativeLoad(path: String): Boolean
 
     private external fun nativePrefixSearch(

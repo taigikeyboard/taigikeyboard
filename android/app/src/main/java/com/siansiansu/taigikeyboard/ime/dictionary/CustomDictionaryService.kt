@@ -1,13 +1,11 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -15,19 +13,23 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.text.Normalizer
 import java.util.UUID
 
 /**
- * Custom dictionary service
- *
- * Handles CRUD, CSV export, and file import for user custom dictionary.
- * Follows the same singleton + SQLiteOpenHelper pattern as UserFrequencyService.
+ * Custom-dictionary CRUD, CSV export, and file import. Persists to
+ * `custom_dictionary.db` via `SQLiteOpenHelper`. Owned by `CompositionRoot`.
  */
-object CustomDictionaryService {
-    private const val TAG = "CustomDictionaryService"
-    private const val DATABASE_NAME = "custom_dictionary.db"
-    private const val DATABASE_VERSION = 5
+class CustomDictionaryService(
+    appContext: Context,
+    private val logger: LoggerBackend,
+) {
+    private val appContext: Context = appContext.applicationContext
+
+    companion object {
+        private const val TAG = "CustomDictionaryService"
+        private const val DATABASE_NAME = "custom_dictionary.db"
+        private const val DATABASE_VERSION = 5
+    }
 
     private object Table {
         const val NAME = "custom_dictionary"
@@ -41,15 +43,14 @@ object CustomDictionaryService {
         const val UPDATED_AT = "updated_at"
     }
 
-    private var appContext: Context? = null
     private var dbHelper: DatabaseHelper? = null
     private val initMutex = Mutex()
     private var isInitialized = false
 
     /**
-     * UPSERT template shared between save() and importFromFile().
-     * Both previously duplicated this SQL block verbatim (runtime-identical
-     * after trimIndent()). Single source of truth now.
+     * UPSERT template shared between [save] and [importFromFile]. Both paths
+     * previously duplicated this SQL block verbatim (runtime-identical after
+     * `trimIndent()`). Single source of truth now.
      */
     private val UPSERT_SQL =
         """
@@ -68,28 +69,18 @@ object CustomDictionaryService {
         db: SQLiteDatabase,
         entry: Entry,
     ) {
-        val notone = generateNotone(entry.roman)
-        val abbrev = generateAbbrev(entry.roman)
-        val romanNum = generateRomanNum(entry.roman)
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[UPSERT] roman='${entry.roman}' notone='$notone' abbrev='$abbrev' romanNum='$romanNum'")
-        }
+        val notone = CustomDictionaryDerivation.generateNotone(entry.roman)
+        val abbrev = CustomDictionaryDerivation.generateAbbrev(entry.roman)
+        val romanNum = CustomDictionaryDerivation.generateRomanNum(entry.roman)
+        logger.debug(TAG) { "[UPSERT] roman='${entry.roman}' notone='$notone' abbrev='$abbrev' romanNum='$romanNum'" }
         db.execSQL(UPSERT_SQL, arrayOf(entry.id, entry.roman, entry.hanzi, notone, abbrev, romanNum))
-    }
-
-    fun init(context: Context) {
-        appContext = context.applicationContext
     }
 
     private suspend fun initialize() {
         if (isInitialized) return
         initMutex.withLock {
             if (isInitialized) return
-            val context =
-                appContext ?: throw IllegalStateException(
-                    "CustomDictionaryService not initialized",
-                )
-            dbHelper = DatabaseHelper(context)
+            dbHelper = DatabaseHelper(appContext, logger)
             isInitialized = true
         }
     }
@@ -123,9 +114,7 @@ object CustomDictionaryService {
             DefaultEntry("default-tsiah-pa-bue", "tsia̍h-pá--buē", "食飽未"),
         )
 
-    /**
-     * Seed default example entries if the dictionary is empty.
-     */
+    /** Seed default example entries when the dictionary is empty (called from `TaigiKeyboard.onCreate`). */
     suspend fun seedDefaultEntryIfEmpty() =
         withContext(Dispatchers.IO) {
             initialize()
@@ -168,7 +157,7 @@ object CustomDictionaryService {
                 }
                 results
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[FETCH] Failed", e)
+                logger.e(TAG, "[FETCH] Failed", e)
                 emptyList()
             }
         }
@@ -181,7 +170,7 @@ object CustomDictionaryService {
                 val db = dbHelper?.writableDatabase ?: return@withContext
                 executeUpsert(db, entry)
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[SAVE] Failed", e)
+                logger.e(TAG, "[SAVE] Failed", e)
             }
         }
 
@@ -192,7 +181,7 @@ object CustomDictionaryService {
                 val db = dbHelper?.writableDatabase ?: return@withContext
                 db.delete(Table.NAME, "${Table.ID} = ?", arrayOf(id))
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[DELETE] Failed", e)
+                logger.e(TAG, "[DELETE] Failed", e)
             }
         }
 
@@ -203,14 +192,14 @@ object CustomDictionaryService {
                 val db = dbHelper?.writableDatabase ?: return@withContext
                 db.execSQL("DELETE FROM ${Table.NAME}")
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[DELETE_ALL] Failed", e)
+                logger.e(TAG, "[DELETE_ALL] Failed", e)
             }
         }
 
     /**
-     * Search by prefix (for autocomplete integration)
-     * @param prefix Preprocessed search prefix (roman_num key for toned, notone key for toneless)
-     * @param isToneAware If true, matches against roman_num column; if false, matches against notone column
+     * Prefix search for autocomplete integration.
+     * @param prefix Preprocessed prefix — `roman_num` key when [isToneAware], else `notone` key.
+     * @param isToneAware `true` matches against the toned column.
      */
     suspend fun search(
         prefix: String,
@@ -248,7 +237,7 @@ object CustomDictionaryService {
                 }
                 results
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[SEARCH] Failed", e)
+                logger.e(TAG, "[SEARCH] Failed", e)
                 emptyList()
             }
         }
@@ -267,9 +256,9 @@ object CustomDictionaryService {
 
     // MARK: - File Import
 
-    private const val MAX_FILE_SIZE = 5L * 1024 * 1024 // 5 MB
-    private const val MAX_ENTRY_COUNT = 30_000
-    private const val IMPORT_BATCH_SIZE = 500
+    private val MAX_FILE_SIZE = 5L * 1024 * 1024 // 5 MB
+    private val MAX_ENTRY_COUNT = 30_000
+    private val IMPORT_BATCH_SIZE = 500
 
     @Suppress("SqlResolve")
     suspend fun importFromFile(
@@ -277,7 +266,6 @@ object CustomDictionaryService {
         uri: Uri,
     ): ImportResult =
         withContext(Dispatchers.IO) {
-            // Pre-validate file size
             context.contentResolver.openFileDescriptor(uri, "r")?.use { fd ->
                 if (fd.statSize > MAX_FILE_SIZE) {
                     throw Exception("fileTooLarge")
@@ -291,14 +279,12 @@ object CustomDictionaryService {
 
             val entries = parseCSV(csvString)
 
-            // If the file has non-empty content lines but no valid entries, it's a format error
             val hasContentLines = csvString.split("\n").any { it.trim().isNotEmpty() }
             if (entries.isEmpty() && hasContentLines) {
                 throw Exception("檔案格式無正確，請使用 CSV 格式（roman,hanzi）")
             }
             if (entries.isEmpty()) return@withContext ImportResult(0, 0)
 
-            // Pre-validate entry count
             if (entries.size > MAX_ENTRY_COUNT) {
                 throw Exception("tooManyEntries")
             }
@@ -306,7 +292,6 @@ object CustomDictionaryService {
             initialize()
             val db = dbHelper?.writableDatabase ?: return@withContext ImportResult(0, 0)
 
-            // Build set of existing roman|hanzi keys for deduplication
             val existingKeys = mutableSetOf<String>()
             db
                 .rawQuery(
@@ -322,7 +307,6 @@ object CustomDictionaryService {
             var importedCount = 0
             var skippedCount = 0
 
-            // Process in batches to avoid long-running single transaction
             for (batch in entries.chunked(IMPORT_BATCH_SIZE)) {
                 db.beginTransaction()
                 try {
@@ -337,7 +321,7 @@ object CustomDictionaryService {
                             existingKeys.add(key)
                             importedCount++
                         } catch (e: Exception) {
-                            if (BuildConfig.DEBUG) Log.w(TAG, "[IMPORT] Skipped entry: ${entry.roman}", e)
+                            logger.w(TAG, "[IMPORT] Skipped entry: ${entry.roman}", e)
                         }
                     }
                     db.setTransactionSuccessful()
@@ -347,13 +331,11 @@ object CustomDictionaryService {
             }
 
             val totalSkipped = entries.size - importedCount
-            if (BuildConfig.DEBUG) Log.i(TAG, "[IMPORT] Imported $importedCount, skipped $totalSkipped (duplicates: $skippedCount)")
+            logger.i(TAG, "[IMPORT] Imported $importedCount, skipped $totalSkipped (duplicates: $skippedCount)")
             ImportResult(importedCount, totalSkipped)
         }
 
-    /**
-     * Returns total entry count, or -1 if DB is not open.
-     */
+    /** Returns total entry count, or -1 if DB is not open. */
     fun totalCount(): Int {
         return try {
             val db = dbHelper?.readableDatabase ?: return -1
@@ -372,70 +354,14 @@ object CustomDictionaryService {
                 dbHelper?.close()
                 dbHelper = null
                 isInitialized = false
-                val context = appContext ?: return@withContext
-                val dbFile = context.getDatabasePath(DATABASE_NAME)
+                val dbFile = appContext.getDatabasePath(DATABASE_NAME)
                 if (dbFile.exists()) {
                     dbFile.delete()
                 }
             } catch (e: Exception) {
-                if (BuildConfig.DEBUG) Log.e(TAG, "[DELETE_DB] Failed", e)
+                logger.e(TAG, "[DELETE_DB] Failed", e)
             }
         }
-
-    // MARK: - Notone / Abbrev Generation
-
-    /**
-     * Generate toneless form from romanization.
-     * Strips tone diacritics (via NFD), trailing digits, hyphens, and spaces.
-     */
-    internal fun generateNotone(roman: String): String {
-        // Convert POJ nasal markers ⁿ (U+207F) / ᴺ (U+1D3A) → nn
-        val withNasalConverted =
-            roman
-                .lowercase()
-                .replace("\u207F", "nn")
-                .replace("\u1D3A", "nn")
-        val decomposed = Normalizer.normalize(withNasalConverted, Normalizer.Form.NFD)
-        return buildString {
-            for (cp in decomposed.codePoints().toArray()) {
-                // Skip combining marks (Unicode category Mn)
-                if (Character.getType(cp) == Character.NON_SPACING_MARK.toInt()) continue
-                // Skip digits
-                if (cp in '0'.code..'9'.code) continue
-                // Skip hyphens and spaces
-                if (cp == '-'.code || cp == ' '.code) continue
-                appendCodePoint(cp)
-            }
-        }.let { Normalizer.normalize(it, Normalizer.Form.NFC) }
-    }
-
-    /**
-     * Generate abbreviation from romanization.
-     * Takes first letter of each syllable (split by - or space), removes diacritics.
-     * Returns empty string if fewer than 2 syllables.
-     */
-    internal fun generateAbbrev(roman: String): String {
-        val syllables = roman.lowercase().split(Regex("[-\\s]+")).filter { it.isNotEmpty() }
-        if (syllables.size < 2) return ""
-        return syllables.joinToString("") { syllable ->
-            val firstChar = syllable.first().toString()
-            val decomposed = Normalizer.normalize(firstChar, Normalizer.Form.NFD)
-            buildString {
-                decomposed.codePoints().forEach { cp ->
-                    if (Character.getType(cp) != Character.NON_SPACING_MARK.toInt()) {
-                        appendCodePoint(cp)
-                    }
-                }
-            }.let { Normalizer.normalize(it, Normalizer.Form.NFC) }
-        }
-    }
-
-    /**
-     * Generate numeric-toned form from romanization (for tone-aware search).
-     * Converts diacritics to tone digits and strips hyphens.
-     * Example: "gâu-tsá" → "gau5tsa2"
-     */
-    internal fun generateRomanNum(roman: String): String = InputNormalizer.normalize(roman, InputMode.TL)
 
     // MARK: - CSV Helpers
 
@@ -464,6 +390,7 @@ object CustomDictionaryService {
 
     private class DatabaseHelper(
         context: Context,
+        private val logger: LoggerBackend,
     ) : SQLiteOpenHelper(
             context,
             DATABASE_NAME,
@@ -500,9 +427,7 @@ object CustomDictionaryService {
             if (oldVersion < 3) migrateV2ToV3(db)
             if (oldVersion < 4) migrateV3ToV4(db)
             if (oldVersion < 5) migrateV4ToV5(db)
-            if (BuildConfig.DEBUG) {
-                Log.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
-            }
+            logger.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
         }
 
         /** v1 → v2: add notone/abbrev columns and backfill existing rows. */
@@ -514,7 +439,11 @@ object CustomDictionaryService {
             forEachRomanRow(db) { id, roman ->
                 db.execSQL(
                     "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ?, ${Table.ABBREV} = ? WHERE ${Table.ID} = ?",
-                    arrayOf(generateNotone(roman), generateAbbrev(roman), id),
+                    arrayOf(
+                        CustomDictionaryDerivation.generateNotone(roman),
+                        CustomDictionaryDerivation.generateAbbrev(roman),
+                        id,
+                    ),
                 )
             }
         }
@@ -532,7 +461,7 @@ object CustomDictionaryService {
             forEachRomanRow(db) { id, roman ->
                 db.execSQL(
                     "UPDATE ${Table.NAME} SET ${Table.ROMAN_NUM} = ? WHERE ${Table.ID} = ?",
-                    arrayOf(generateRomanNum(roman), id),
+                    arrayOf(CustomDictionaryDerivation.generateRomanNum(roman), id),
                 )
             }
         }
@@ -541,7 +470,7 @@ object CustomDictionaryService {
             forEachRomanRow(db) { id, roman ->
                 db.execSQL(
                     "UPDATE ${Table.NAME} SET ${Table.NOTONE} = ? WHERE ${Table.ID} = ?",
-                    arrayOf(generateNotone(roman), id),
+                    arrayOf(CustomDictionaryDerivation.generateNotone(roman), id),
                 )
             }
         }

@@ -16,8 +16,6 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
-import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
@@ -193,8 +191,11 @@ class SettingsMainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 prefs.resetToDefaults()
-                UserFrequencyService.deleteDatabase()
-                NextWordService.clearAllAssociations(this@SettingsMainActivity)
+                val root =
+                    com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+                        .shared(this@SettingsMainActivity)
+                root.userFreq.deleteDatabase()
+                root.nextWord.clearAllAssociations()
                 resetCounter++
                 Toast
                     .makeText(

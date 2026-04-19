@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
@@ -34,6 +35,7 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
     private var isComposingEnabled: Boolean = false
     private val textInputManager: TextInputManager = TextInputManager.getInstance()
     private val prefs: PrefHelper by lazy { PrefHelper(taigikeyboard.context) }
+    private val compositionRoot: CompositionRoot = CompositionRoot.shared(taigikeyboard)
     var smartbarView: SmartbarView? = null
         private set
     var candidateOverlayView: CandidateOverlayView? = null
@@ -76,6 +78,8 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
             scope = scope,
             prefs = prefs,
             taigikeyboard = taigikeyboard,
+            nextWord = compositionRoot.nextWord,
+            logger = compositionRoot.logger,
             isTranslateSwapped = { cachedIsTranslateSwapped },
             onUpdateCandidates = { updateCandidates(it) },
             onClearCandidates = { clearCandidates() },
@@ -107,6 +111,7 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
             scope = scope,
             prefs = prefs,
             taigikeyboard = taigikeyboard,
+            userFreq = compositionRoot.userFreq,
             getCurrentSuggestions = { currentSuggestions },
             getIsTranslateSwapped = { cachedIsTranslateSwapped },
             getOutputBothScripts = { cachedOutputBothScripts },

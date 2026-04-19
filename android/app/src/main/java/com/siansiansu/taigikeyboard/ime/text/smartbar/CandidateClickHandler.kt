@@ -20,18 +20,21 @@ class CandidateClickHandler(
     private val scope: CoroutineScope,
     private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
+    private val userFreq: UserFrequencyService,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
     private val getIsTranslateSwapped: () -> Boolean,
     private val getOutputBothScripts: () -> Boolean,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
-    private val onNextWordPrediction: (displayText: String, committedText: String, roman: String, hanzi: String?, rawInput: String) -> Unit
+    private val onNextWordPrediction: (displayText: String, committedText: String, roman: String, hanzi: String?, rawInput: String) -> Unit,
 ) {
-
     /**
      * Handle candidate click from RecyclerView.
      */
-    fun handleCandidateClick(selectedWord: TaigiWord, index: Int) {
+    fun handleCandidateClick(
+        selectedWord: TaigiWord,
+        index: Int,
+    ) {
         if (BuildConfig.DEBUG) {
             val isNextWord = getCurrentSuggestions().firstOrNull()?.id?.let { it < 0 } ?: false
             Log.d(TAG, "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${getCurrentSuggestions().size}")
@@ -52,28 +55,42 @@ class CandidateClickHandler(
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
         // Convert roman to TPS for bracket annotation when in TPS mode
-        val bracketRoman = if (isTPSLayout) {
-            TPSConverter.toTPSFromDisplay(selectedWord.roman, prefs.tpsOrMapsToER)
-        } else {
-            selectedWord.roman
-        }
+        val bracketRoman =
+            if (isTPSLayout) {
+                TPSConverter.toTPSFromDisplay(selectedWord.roman, prefs.tpsOrMapsToER)
+            } else {
+                selectedWord.roman
+            }
 
-        val textToCommit = when {
-            isEnglishSuggestion -> selectedWord.roman
-            cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
-                if (effectiveSwapped) {
-                    "${selectedWord.hanzi} ($bracketRoman)"
-                } else {
-                    "$bracketRoman (${selectedWord.hanzi})"
+        val textToCommit =
+            when {
+                isEnglishSuggestion -> {
+                    selectedWord.roman
+                }
+
+                cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
+                    if (effectiveSwapped) {
+                        "${selectedWord.hanzi} ($bracketRoman)"
+                    } else {
+                        "$bracketRoman (${selectedWord.hanzi})"
+                    }
+                }
+
+                effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> {
+                    selectedWord.hanzi
+                }
+
+                else -> {
+                    selectedWord.roman
                 }
             }
-            effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> selectedWord.hanzi
-            else -> selectedWord.roman
-        }
 
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'")
-            Log.d(TAG, "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts")
+            Log.d(
+                TAG,
+                "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
+            )
             Log.d(TAG, "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion")
         }
 
@@ -111,7 +128,7 @@ class CandidateClickHandler(
         // Record usage frequency
         if (prefs.frequencyRecordingEnabled) {
             scope.launch {
-                UserFrequencyService.recordUsage(selectedWord.displayText)
+                userFreq.recordUsage(selectedWord.displayText)
             }
         }
 
@@ -121,7 +138,7 @@ class CandidateClickHandler(
             textToCommit,
             selectedWord.roman,
             selectedWord.hanzi,
-            capturedRawInput
+            capturedRawInput,
         )
     }
 
@@ -152,7 +169,10 @@ class CandidateClickHandler(
     /**
      * Handle overlay suggestion selection.
      */
-    fun handleOverlaySuggestionSelected(word: TaigiWord, index: Int) {
+    fun handleOverlaySuggestionSelected(
+        word: TaigiWord,
+        index: Int,
+    ) {
         val ic = taigikeyboard.currentInputConnection ?: return
         val composingManager = getComposingManager()
 
@@ -163,23 +183,31 @@ class CandidateClickHandler(
         val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
 
         // Convert roman to TPS for bracket annotation when in TPS mode
-        val bracketRoman = if (isTPSLayout) {
-            TPSConverter.toTPSFromDisplay(word.roman, prefs.tpsOrMapsToER)
-        } else {
-            word.roman
-        }
+        val bracketRoman =
+            if (isTPSLayout) {
+                TPSConverter.toTPSFromDisplay(word.roman, prefs.tpsOrMapsToER)
+            } else {
+                word.roman
+            }
 
-        val textToCommit = when {
-            cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
-                if (effectiveSwapped) {
-                    "${word.hanzi} ($bracketRoman)"
-                } else {
-                    "$bracketRoman (${word.hanzi})"
+        val textToCommit =
+            when {
+                cachedOutputBothScripts && !word.hanzi.isNullOrEmpty() -> {
+                    if (effectiveSwapped) {
+                        "${word.hanzi} ($bracketRoman)"
+                    } else {
+                        "$bracketRoman (${word.hanzi})"
+                    }
+                }
+
+                effectiveSwapped && !word.hanzi.isNullOrEmpty() -> {
+                    word.hanzi
+                }
+
+                else -> {
+                    word.roman
                 }
             }
-            effectiveSwapped && !word.hanzi.isNullOrEmpty() -> word.hanzi
-            else -> word.roman
-        }
 
         if (isNextWordPred) {
             ic.commitText(textToCommit, 1)
@@ -201,7 +229,7 @@ class CandidateClickHandler(
         // Record usage frequency
         if (prefs.frequencyRecordingEnabled) {
             scope.launch {
-                UserFrequencyService.recordUsage(word.displayText)
+                userFreq.recordUsage(word.displayText)
             }
         }
 
@@ -211,7 +239,7 @@ class CandidateClickHandler(
             textToCommit,
             word.roman,
             word.hanzi,
-            ""
+            "",
         )
 
         if (BuildConfig.DEBUG) {

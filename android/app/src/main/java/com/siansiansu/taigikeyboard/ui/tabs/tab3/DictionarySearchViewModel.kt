@@ -5,11 +5,11 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
-import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +39,7 @@ class DictionarySearchViewModel(
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
     private val prefs = PrefHelper(application)
+    private val root = CompositionRoot.shared(application)
 
     init {
         observeSearchText()
@@ -86,7 +87,6 @@ class DictionarySearchViewModel(
     private suspend fun performSearch(query: String) {
         _isSearching.value = true
         try {
-            val context = getApplication<Application>()
             val inputMode =
                 when (prefs.inputMode) {
                     "poj" -> ToneConverterModels.InputMode.POJ
@@ -101,18 +101,16 @@ class DictionarySearchViewModel(
 
             val searchResults =
                 if (isCJK) {
-                    LexiconService.searchByHanzi(
+                    root.lexicon.searchByHanzi(
                         input = query,
                         inputMode = inputMode,
                         limit = SEARCH_RESULT_LIMIT,
-                        context = context,
                     )
                 } else {
-                    LexiconService.searchWithSources(
+                    root.lexicon.searchWithSources(
                         input = query,
                         inputMode = inputMode,
                         limit = SEARCH_RESULT_LIMIT,
-                        context = context,
                     )
                 }
 
@@ -120,7 +118,7 @@ class DictionarySearchViewModel(
                 Log.d(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${searchResults.size} results")
             }
 
-            val customResults = searchCustomDictionary(query, isCJK, context)
+            val customResults = searchCustomDictionary(query, isCJK)
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[SEARCH] custom dictionary returned ${customResults.size} results")
@@ -152,19 +150,17 @@ class DictionarySearchViewModel(
     private suspend fun searchCustomDictionary(
         query: String,
         isCJK: Boolean,
-        context: Application,
     ): List<DictionarySearchResult> {
         if (isCJK) return emptyList()
         return try {
-            CustomDictionaryService.init(context)
             val isToneAware = query.any { it.isDigit() }
             val searchPrefix =
                 if (isToneAware) {
                     query.lowercase().replace("-", "").replace(" ", "")
                 } else {
-                    CustomDictionaryService.generateNotone(query)
+                    CustomDictionaryDerivation.generateNotone(query)
                 }
-            CustomDictionaryService
+            root.customDict
                 .search(
                     prefix = searchPrefix,
                     isToneAware = isToneAware,
