@@ -128,11 +128,21 @@ Prediction query happens asynchronously on the platform side. The service return
 public struct RawNextWordPrediction: Equatable {
     public let hanzi: String
     public let tl: String
-    public let count: Int
-    public let source: Source    // .user | .dict
-    public enum Source: Equatable { case user, dict }
+    public let score: Double     // merged dict + user signal, opaque to engine
 }
 ```
+
+**Impl revision (G5-impl, 2026-04-19)**: the original sketch above proposed
+`count: Int` + `source: Source (.user | .dict)` so shared-core ports could
+re-run `NextWordScorer` themselves. Implementation kept `score: Double`
+instead because today's `NextWordService` already *merges* dict + user
+rows with summed scores (dict row + user row on the same `(hanzi, tl)`
+key become a single row with `score = dictScore + userScore`). A merged
+row has no single `source`, so splitting the DTO back into `count` /
+`source` would be lossy. Phase I treats `score` as an opaque ordering
+weight; elevating scoring into shared-core (so Kotlin/Rust can compute
+scores themselves from raw `count` + `lastUsedMs`) is a Phase IV-B
+follow-up on the shared-core roadmap.
 
 Service mapping: `NextWordService.Prediction` → `RawNextWordPrediction` happens in `NextWordService` itself (platform side) before results cross into the engine.
 

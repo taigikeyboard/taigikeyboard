@@ -1,19 +1,18 @@
-// NextWordController: manages NextWord prediction state, association recording, and UI updates.
-// Separated from ActionHandler to maintain single responsibility:
-// ActionHandler dispatches keyboard actions, NextWordController manages word prediction.
-
 import Foundation
 
-/// Controls NextWord prediction lifecycle: record associations, update state, trigger predictions.
+/// Platform executor for NextWord prediction on iOS.
 ///
-/// **Lifecycle** (word selection → prediction display):
-/// 1. `process()` — validate input, record word association, update state, trigger prediction
-/// 2. `triggerPrediction()` — async query `NextWordService`, convert to suggestions, update UI
+/// Delegates decision logic to `NextWordEngine`; interprets the returned
+/// `Outcome.Effect`s against platform resources (Timer, SQLite service,
+/// main-thread UI callbacks, generation counter).
 ///
-/// **Special paths**:
-/// - `rePredictAfterBackspace()` — re-predict without recording associations (backspace is not a word selection)
-/// - `clearDisplay()` — hide suggestions when user starts typing or enters a digit
-/// - `resetAndClearUI()` — full reset on sentence-end punctuation or empty document
+/// **Public surface** preserved from the pre-split controller so call sites
+/// (`ActionHandler`, `KeyboardViewController`) do not change:
+/// - `process(text:roman:requireRomanMode:triggerPrediction:)`
+/// - `rePredictAfterBackspace(lastChar:)`
+/// - `resetAndClearUI()`
+/// - `clearDisplay()`
+/// - `isShowing`, `lastSelectedWord` (read-only)
 final class NextWordController: SelectionContextProvider {
     let logger = DebugLogger(category: "NextWord")
 
@@ -33,115 +32,180 @@ final class NextWordController: SelectionContextProvider {
 
     // MARK: - State
 
-    /// Previous word for association recording (exposed via SelectionContextProvider for autocomplete context boost)
-    private(set) var lastSelectedWord: String?
-    private(set) var lastSelectedRoman: String?
-    private(set) var lastSelectionTime: Int64 = 0
-    /// Whether NextWord predictions are currently displayed
-    private(set) var isShowing: Bool = false
+    private var persistedState: NextWordPersistedState = .initial
     private var contextTimeoutTimer: Timer?
 
-    private enum Constants {
-        /// Max interval between selections to record association
-        static let associationTimeoutMs: Int64 = 10000
-        /// Context timeout — clears NextWord state after inactivity
-        static let contextTimeoutSeconds: TimeInterval = 30.0
-        /// Sentence-end punctuation resets NextWord context
-        static let sentenceEndPunctuation = Set<Character>(["。", "！", "？", ".", "!", "?"])
-        /// Noise punctuation — superset of sentenceEndPunctuation, used by isNoiseText()
-        static let noisePunctuation = "。！？.!?，,、；;：:「」『』\"\"\u{2018}\u{2019}（）()【】[]{}—–-～~…·"
+    /// Exposed via `SelectionContextProvider` for autocomplete context boost.
+    var lastSelectedWord: String? {
+        persistedState.lastSelectedWord
     }
 
-    // MARK: - Core Processing
+    /// Whether NextWord predictions are currently displayed.
+    var isShowing: Bool {
+        persistedState.isShowing
+    }
 
-    /// Unified NextWord entry point: validate → record association → update state → optionally predict.
-    /// Called by: suggestion selection, Space (triggerPrediction=false), Enter (requireRomanMode=true)
-    /// - `requireRomanMode`: when true, skip if in Hanji mode (Enter commits raw romanization only)
-    /// - `triggerPrediction`: when false, only record + update state (Space path)
+    // MARK: - Public API
+
+    /// Unified NextWord entry: validate → record association → update state → optionally predict.
+    /// Called by: suggestion selection, Space (`triggerPrediction=false`), Enter (`requireRomanMode=true`).
     func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
-        if requireRomanMode {
-            guard !settingsProvider.current.isTranslateSwapped else { return }
-        }
-
-        guard !text.isEmpty, !isNoiseText(text) else {
-            if isSentenceEndPunctuation(text) {
-                resetAndClearUI()
-            }
-            return
-        }
-
-        // Normalize romanization to TL for consistent storage and query
-        // pojToTL is idempotent on TL input, safe for all modes including TPS
-        let textTl = RomanizationConverter.pojToTL(roman)
-        let prevTl = RomanizationConverter.pojToTL(lastSelectedRoman ?? "")
-
-        if settingsProvider.current.isAssociationRecordingEnabled {
-            if shouldRecordAssociation(), let prevWord = lastSelectedWord {
-                Task { [nextWordService] in
-                    await nextWordService.recordAssociation(
-                        prev: prevWord,
-                        prevTl: prevTl,
-                        nextHanzi: text,
-                        nextTl: textTl,
-                    )
-                }
-            }
-
-            recordCompoundWordAssociations(displayText: text, roman: textTl)
-        }
-
-        lastSelectedWord = text
-        lastSelectedRoman = textTl
-        lastSelectionTime = Self.currentTimestampMs
-        startContextTimeoutTimer()
-
-        if triggerPrediction {
-            self.triggerPrediction(for: text, roman: textTl)
-        }
+        apply(intent: .wordSelected(
+            text: text,
+            roman: roman,
+            requireRomanMode: requireRomanMode,
+            triggerPrediction: triggerPrediction,
+        ))
     }
 
     /// Re-predict NextWord after backspace based on last remaining character.
-    /// Called by: ActionHandler+KeyActions (backspace path)
     /// Intentionally does NOT record associations — backspace is not a word selection.
     func rePredictAfterBackspace(lastChar: String) {
-        lastSelectedWord = lastChar
-        lastSelectedRoman = nil
-        lastSelectionTime = Self.currentTimestampMs
-
-        triggerPrediction(for: lastChar)
+        apply(intent: .backspace(lastChar: lastChar))
     }
 
     /// Full reset: clear all state and hide UI suggestions.
-    /// Called by: backspace (empty document), textDidChange, sentence-end punctuation
+    /// Called by: backspace (empty document), textDidChange, sentence-end punctuation.
     func resetAndClearUI() {
-        let wasShowing = isShowing
-        resetContext()
-        if wasShowing {
-            contextUpdater?.resetNextWordSuggestions()
-        }
+        apply(intent: .resetFull)
     }
 
     /// Hide NextWord suggestions without clearing association state.
-    /// Called by: digit input, new composing character (not hyphen)
+    /// Called by: digit input, new composing character (not hyphen).
     func clearDisplay() {
-        isShowing = false
+        apply(intent: .clearForNewComposing)
+    }
+
+    // MARK: - Intent Dispatch
+
+    /// Lower a lifecycle event into an engine intent, apply the outcome.
+    ///
+    /// **Threading invariant** (inherited from pre-split controller, to be
+    /// tightened in G9): call sites must be on the main thread. `Timer`
+    /// fires on the main run-loop, `@MainActor handleQueryResult` stays on
+    /// main; keyboard action handlers run on main. No synchronization on
+    /// `persistedState` — the main-thread invariant is the contract.
+    private func apply(intent: NextWordIntent) {
+        let input = makeDecisionInput()
+        let outcome = NextWordEngine.decide(intent: intent, state: persistedState, input: input)
+        persistedState = outcome.newState
+        for effect in outcome.effects {
+            execute(effect)
+        }
+    }
+
+    private func makeDecisionInput() -> NextWordDecisionInput {
+        NextWordDecisionInput(nowMs: Self.currentTimestampMs, settings: currentEngineSettings())
+    }
+
+    /// Snapshot the settings fields the engine reads. Called per-intent AND
+    /// again when a prediction query resolves, so user toggles made while a
+    /// query is in-flight (e.g. POJ↔TL, Hanji swap) take effect on render.
+    private func currentEngineSettings() -> NextWordEngineSettings {
+        let current = settingsProvider.current
+        return NextWordEngineSettings(
+            inputMode: current.inputMode,
+            isTranslateSwapped: current.isTranslateSwapped,
+            isAssociationRecordingEnabled: current.isAssociationRecordingEnabled,
+        )
+    }
+
+    // MARK: - Effect Interpreter
+
+    private func execute(_ effect: NextWordOutcome.Effect) {
+        switch effect {
+        case let .rescheduleContextTimeout(after):
+            startContextTimeoutTimer(after: after)
+        case .cancelContextTimeout:
+            stopContextTimeoutTimer()
+        case let .recordAssociation(pair):
+            recordAssociation(pair)
+        case let .recordCompoundAssociations(pairs):
+            recordCompoundAssociations(pairs)
+        case let .queryPredictions(word, roman, generation):
+            dispatchPredictionQuery(word: word, roman: roman, generation: generation)
+        case let .clearPredictionsUI(generation):
+            clearPredictionsUI(generation: generation)
+        }
+    }
+
+    // MARK: - Service I/O
+
+    private func recordAssociation(_ pair: NextWordAssociationPair) {
+        Task { [nextWordService] in
+            await nextWordService.recordAssociation(
+                prev: pair.prev,
+                prevTl: pair.prevTl,
+                nextHanzi: pair.next,
+                nextTl: pair.nextTl,
+            )
+        }
+    }
+
+    /// Loop associations sequentially to avoid races on the SQLite UNIQUE
+    /// constraint that protects `(prev_word, next_word)`.
+    private func recordCompoundAssociations(_ pairs: [NextWordAssociationPair]) {
+        Task { [nextWordService] in
+            for pair in pairs {
+                await nextWordService.recordAssociation(
+                    prev: pair.prev,
+                    prevTl: pair.prevTl,
+                    nextHanzi: pair.next,
+                    nextTl: pair.nextTl,
+                )
+            }
+        }
+    }
+
+    private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64) {
+        logger.debug("[TRIGGER] querying for word='\(word)' gen=\(generation)")
+
+        Task { @MainActor [nextWordService] in
+            let raw = await nextWordService.predict(word: word, roman: roman)
+            handleQueryResult(raw: raw, generation: generation)
+        }
+    }
+
+    /// Resolve an async prediction query. Compares the generation tagged at
+    /// dispatch time against the current persisted generation; a mismatch
+    /// means an invalidating intent fired while the query was in flight, so
+    /// the result is dropped to avoid stale UI.
+    @MainActor
+    private func handleQueryResult(raw: [RawNextWordPrediction], generation: UInt64) {
+        guard generation == persistedState.currentGeneration else {
+            logger.debug("[TRIGGER] dropping stale result gen=\(generation) current=\(persistedState.currentGeneration)")
+            return
+        }
+
+        let predictions = NextWordEngine.filterPredictions(raw, settings: currentEngineSettings())
+
+        if predictions.isEmpty {
+            persistedState.isShowing = false
+            contextUpdater?.resetNextWordSuggestions()
+        } else {
+            contextUpdater?.setNextWordPredictions(predictions)
+            persistedState.isShowing = true
+            startContextTimeoutTimer(after: NextWordEngine.contextTimeoutSeconds)
+        }
+    }
+
+    /// Clear is synchronous to match the pre-split controller's behavior:
+    /// `clearDisplay` and `resetAndClearUI` always cleared without a main
+    /// queue hop. Routing through `DispatchQueue.main.async` would open a
+    /// race where a stale clear runs after a newer prediction query has
+    /// already rendered fresh suggestions. Main-thread invariant documented
+    /// on `apply(intent:)` keeps this safe; `generation` is informational
+    /// for Kotlin/Rust ports that may need an async gate.
+    private func clearPredictionsUI(generation _: UInt64) {
         contextUpdater?.resetNextWordSuggestions()
     }
 
-    // MARK: - State Management
+    // MARK: - Timer
 
-    private func resetContext() {
-        lastSelectedWord = nil
-        lastSelectedRoman = nil
-        lastSelectionTime = 0
-        isShowing = false
-        stopContextTimeoutTimer()
-    }
-
-    private func startContextTimeoutTimer() {
+    private func startContextTimeoutTimer(after interval: TimeInterval) {
         stopContextTimeoutTimer()
         contextTimeoutTimer = Timer.scheduledTimer(
-            withTimeInterval: Constants.contextTimeoutSeconds,
+            withTimeInterval: interval,
             repeats: false,
         ) { [weak self] _ in
             self?.handleContextTimeout()
@@ -155,123 +219,12 @@ final class NextWordController: SelectionContextProvider {
 
     private func handleContextTimeout() {
         logger.debug("[TIMEOUT] Context timeout - resetting")
-        let wasShowing = isShowing
-        resetContext()
-        if wasShowing {
-            DispatchQueue.main.async { [weak self] in
-                self?.contextUpdater?.resetNextWordSuggestions()
-            }
-        }
+        apply(intent: .contextTimeoutFired)
     }
+
+    // MARK: - Clock
 
     static var currentTimestampMs: Int64 {
         Int64(Date().timeIntervalSince1970 * 1000)
-    }
-
-    // MARK: - Prediction
-
-    /// Query NextWordService and update UI with predictions
-    private func triggerPrediction(for word: String, roman: String = "") {
-        logger.debug("[TRIGGER] querying for word='\(word)'")
-
-        Task { @MainActor [nextWordService] in
-            let predictions = await nextWordService.predict(word: word, roman: roman)
-            logger.debug("[TRIGGER] predictions.count=\(predictions.count) for word='\(word)'")
-
-            if predictions.isEmpty {
-                isShowing = false
-                contextUpdater?.resetNextWordSuggestions()
-                return
-            }
-
-            let enginePredictions = makePredictions(from: predictions)
-            logger.debug("[TRIGGER] after filter: predictions.count=\(enginePredictions.count) (from \(predictions.count) predictions)")
-
-            if enginePredictions.isEmpty {
-                isShowing = false
-                contextUpdater?.resetNextWordSuggestions()
-            } else {
-                contextUpdater?.setNextWordPredictions(enginePredictions)
-                isShowing = true
-                startContextTimeoutTimer()
-            }
-        }
-    }
-
-    /// Convert NextWord raw predictions to engine-layer `EnginePrediction`
-    /// values. The KK boundary (`ActionHandler`) is the only place that
-    /// turns these into `Autocomplete.Suggestion`s.
-    private func makePredictions(from predictions: [NextWordService.Prediction]) -> [EnginePrediction] {
-        let settings = settingsProvider.current
-        return predictions.compactMap { prediction in
-            if !settings.isTranslateSwapped && prediction.tl.isEmpty {
-                logger.debug("[FILTER] REMOVED hanzi='\(prediction.hanzi)' tl='\(prediction.tl)' (TL empty in roman mode)")
-                return nil
-            }
-
-            let roman = settings.inputMode == .poj
-                ? RomanizationConverter.tlToPOJ(prediction.tl)
-                : prediction.tl
-            let text = roman.isEmpty ? prediction.hanzi : roman
-            let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
-
-            return EnginePrediction(
-                text: text,
-                subtitle: subtitle,
-                hanzi: prediction.hanzi,
-                tl: prediction.tl,
-            )
-        }
-    }
-
-    // MARK: - Association Helpers
-
-    /// Whether to record word association (previous selection exists and interval < 10s)
-    private func shouldRecordAssociation() -> Bool {
-        guard lastSelectedWord != nil else { return false }
-        return (Self.currentTimestampMs - lastSelectionTime) < Constants.associationTimeoutMs
-    }
-
-    /// Noise filter: punctuation, whitespace, pure digits don't trigger NextWord
-    private func isNoiseText(_ text: String) -> Bool {
-        guard let firstChar = text.first else { return true }
-        if Constants.noisePunctuation.contains(firstChar) { return true }
-        if firstChar.isWhitespace { return true }
-        if text.allSatisfy({ $0.isASCII && $0.isNumber }) { return true }
-        return false
-    }
-
-    private func isSentenceEndPunctuation(_ text: String) -> Bool {
-        guard let firstChar = text.first else { return false }
-        return Constants.sentenceEndPunctuation.contains(firstChar)
-    }
-
-    private func splitCompoundWord(_ word: String) -> [String] {
-        guard !word.isEmpty else { return [] }
-        return word.split(separator: "-").map(String.init).filter { !$0.isEmpty }
-    }
-
-    /// Record associations between parts of compound words (e.g. tshit-niû → tshit, niû)
-    private func recordCompoundWordAssociations(displayText: String, roman: String) {
-        let parts = splitCompoundWord(displayText)
-        let romanParts = splitCompoundWord(roman)
-
-        guard parts.count > 1 else { return }
-
-        Task { [nextWordService] in
-            for i in 0 ..< (parts.count - 1) {
-                let prevPart = parts[i]
-                let prevPartRoman = romanParts.indices.contains(i) ? romanParts[i] : ""
-                let nextPart = parts[i + 1]
-                let nextRoman = romanParts.indices.contains(i + 1) ? romanParts[i + 1] : ""
-
-                await nextWordService.recordAssociation(
-                    prev: prevPart,
-                    prevTl: prevPartRoman,
-                    nextHanzi: nextPart,
-                    nextTl: nextRoman,
-                )
-            }
-        }
     }
 }

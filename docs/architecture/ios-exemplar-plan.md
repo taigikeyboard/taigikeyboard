@@ -93,7 +93,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 
 ---
 
-### G5 · NextWordController engine/platform split (L — ~3–4 hr, **boundary design front-loaded**)
+### G5 · NextWordController engine/platform split (L — ~3–4 hr, **boundary design front-loaded**) — **G5-impl done 2026-04-19**
 
 **Problem**: `NextWordController` uses `@MainActor`, `Timer`, `DispatchQueue.main`, and reads `SharedSettings.shared`. Listed in Exclusions. Timing of the decay algorithm may be emergent from Timer scheduling.
 
@@ -102,6 +102,8 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 - **G5-impl** (late, ~2.5–3.5 hr): extract `NextWordEngine` (Foundation-only). `NextWordController` keeps only the Timer-driven platform executor wrapping the engine.
 
 **Risk**: medium — decay math is subtle; G9 tests must verify scheduling parity before/after.
+
+**Status 2026-04-19 (G5-impl)**: branch `refactor/ios-g5-nextword-engine-split`, PR pending user Xcode target additions. `NextWordEngine` (enum), `NextWordOutcome`, `RawNextWordPrediction` added as shared-core candidates (roster +3 → 39). `NextWordController` reduced to iOS platform executor; public surface unchanged. Behavior changes landed: negative-delta `shouldRecordAssociation` fix + query-generation race elimination. Design doc `nextword-engine-boundary.md` §2.4 amended to reflect the `score: Double` decision (merged dict+user rows invalidated the original `count/source` sketch).
 
 ---
 

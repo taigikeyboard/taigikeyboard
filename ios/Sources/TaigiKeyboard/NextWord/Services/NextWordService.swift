@@ -28,13 +28,6 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public Types
 
-    /// NextWord 預測結果
-    struct Prediction {
-        let hanzi: String
-        let tl: String
-        let score: Double
-    }
-
     /// 使用者關聯資料。UI (DictionaryTab AssociationDataView) 依賴此公開型別；
     /// 保留為 facade-owned struct 以支援外部 `Identifiable` extension。
     struct AssociationEntry {
@@ -104,14 +97,14 @@ final class NextWordService: @unchecked Sendable {
     /// Mixed bigram model:
     /// - Dict layer: look up by last character → single-char predictions.
     /// - User layer: look up by full word → full-word predictions.
-    func predict(word: String, roman: String = "", limit: Int = Constants.defaultLimit) async -> [Prediction] {
+    func predict(word: String, roman: String = "", limit: Int = Constants.defaultLimit) async -> [RawNextWordPrediction] {
         guard !word.isEmpty else { return [] }
         guard let last = word.last else { return [] }
         let lastChar = String(last)
 
         logger.debug("[PREDICT][ENTRY] word='\(word)' lastChar='\(lastChar)'")
 
-        var results: [String: Prediction] = [:]
+        var results: [String: RawNextWordPrediction] = [:]
         await queryDictAssociations(lastChar: lastChar, limit: limit, results: &results)
         let dictCount = results.count
         logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar)'")
@@ -257,7 +250,7 @@ final class NextWordService: @unchecked Sendable {
     private func queryDictAssociations(
         lastChar: String,
         limit: Int,
-        results: inout [String: Prediction],
+        results: inout [String: RawNextWordPrediction],
     ) async {
         guard let reader = associationReader else {
             logger.warning("[DICT] Association binary reader not available")
@@ -274,7 +267,7 @@ final class NextWordService: @unchecked Sendable {
                 enabledDicts: enabledDicts,
             ) else { continue }
 
-            let prediction = Prediction(
+            let prediction = RawNextWordPrediction(
                 hanzi: entry.nextWord,
                 tl: entry.nextTl,
                 score: NextWordScorer.scoreDict(count: entry.count),
@@ -289,7 +282,7 @@ final class NextWordService: @unchecked Sendable {
         word: String,
         roman: String,
         limit: Int,
-        results: inout [String: Prediction],
+        results: inout [String: RawNextWordPrediction],
     ) async {
         do {
             try await ensureUserTablesCreated()
@@ -307,13 +300,13 @@ final class NextWordService: @unchecked Sendable {
                 let key = "\(row.hanzi)\t\(row.tl)"
 
                 if let existing = results[key] {
-                    results[key] = Prediction(
+                    results[key] = RawNextWordPrediction(
                         hanzi: row.hanzi,
                         tl: row.tl.isEmpty ? existing.tl : row.tl,
                         score: existing.score + userScore,
                     )
                 } else {
-                    results[key] = Prediction(hanzi: row.hanzi, tl: row.tl, score: userScore)
+                    results[key] = RawNextWordPrediction(hanzi: row.hanzi, tl: row.tl, score: userScore)
                 }
             }
         } catch {
