@@ -219,7 +219,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             .store(in: &cancellables)
     }
 
-    // MARK: - ComposingDelegate (overrides must be in class body)
+    // MARK: - UIResponder Text Input Overrides
+
+    // Route UIResponder text-input calls (e.g. external/hardware keyboard, system
+    // voice input) through the text document proxy so they land in the host doc.
+    // ComposingDelegate.execute(_:) operates on the proxy independently — these
+    // overrides are for UIResponder-chain callers, not for the composing engine.
 
     override func insertText(_ text: String) {
         textDocumentProxy.insertText(text)

@@ -10,30 +10,33 @@ protocol ComposingContextSink: AnyObject {
     var isComposingText: Bool { get set }
 }
 
-/// Manages Taigi input composing state with `rawInput` as the single source of truth.
+/// iOS platform wrapper around the pure `ComposingState` engine.
 ///
-/// - `rawInput`: Original keystrokes (e.g. `"gua2"`) — used for Trie search.
-/// - `composingText`: Derived display text (e.g. `"guá"`) — re-computed via `ToneConverter`
-///   on every state change.
+/// Responsibilities kept in this file (non-candidate, iOS-specific):
+/// - `ObservableObject` + `@Published` fan-out for SwiftUI,
+/// - `ComposingDelegate` / `ComposingContextSink` wiring (UIKit side effects),
+/// - reading `EngineSettingsProvider.current` per intent and threading
+///   `mode` + `toneToggles` into `ComposingState.apply(...)`.
 ///
-/// Text side-effects (insertText / deleteBackward / markedText) are sent through
-/// `ComposingDelegate`, keeping this file independent of `_Keyboard/`.
+/// The engine boundary lives in `ComposingState.swift` /
+/// `ComposingTransition.swift` — this wrapper is intentionally
+/// mechanical (see `composing-state-boundary.md` §2.4).
 public class ComposingManager: ObservableObject, ComposingStateProvider {
-    // MARK: - State
+    // MARK: - Engine State
 
-    private enum ComposingState {
-        case idle
-        case composing(raw: String)
-    }
+    private var state = ComposingState()
 
-    private var state: ComposingState = .idle {
-        didSet { syncStateToProperties() }
-    }
+    // MARK: - Published Mirror
 
     @Published public private(set) var isComposing: Bool = false
     @Published public private(set) var composingText: String = ""
     @Published public private(set) var rawInput: String = ""
-    @Published public var selectedCandidateIndex: Int = 0
+
+    /// SwiftUI mirror of the engine-owned `ComposingState.selectedCandidateIndex`.
+    /// All writes flow through either `dispatch(_:)` (buffer intents) or
+    /// `setSelectedCandidateIndex(_:)` (UI-driven selection) so the wrapper
+    /// never desyncs from the pure state.
+    @Published public private(set) var selectedCandidateIndex: Int = -1
 
     // MARK: - Collaborators
 
@@ -41,10 +44,6 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     weak var delegate: (any ComposingDelegate)?
 
     private let settingsProvider: EngineSettingsProvider
-
-    private var inputMode: InputMode {
-        settingsProvider.current.inputMode
-    }
 
     // MARK: - Init
 
@@ -59,61 +58,38 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     // MARK: - Composing Operations
 
     public func startComposing(with text: String) {
-        selectedCandidateIndex = 0
-        updateComposingState(.composing(raw: text))
+        dispatch(.start(text))
     }
 
     public func appendCharacter(_ char: String) {
-        guard isComposing else {
-            startComposing(with: char)
-            return
-        }
-        selectedCandidateIndex = 0
-        updateComposingState(.composing(raw: rawInput + char))
+        dispatch(.append(char))
     }
 
     /// Retroactively replace the last raw-input character (used by TPS auto-correct).
     /// Intentionally does NOT reset `selectedCandidateIndex` — unlike `appendCharacter`
     /// / `startComposing`, replacement is a correction and preserves candidate selection.
     public func replaceLastCharacter(with replacement: String) {
-        guard isComposing, !rawInput.isEmpty else { return }
-        let newRaw = String(rawInput.dropLast()) + replacement
-        updateComposingState(.composing(raw: newRaw))
+        dispatch(.replaceLast(replacement))
     }
 
     public func appendHyphen() {
-        appendCharacter("-")
+        dispatch(.appendHyphen)
     }
 
     public func deleteBackward() {
-        guard isComposing, !rawInput.isEmpty else { return }
-
-        let newRaw = String(rawInput.dropLast())
-        if newRaw.isEmpty {
-            // Exit composing and delete one char from the backing text.
-            // Order matters: idle transition (clearMarkedText + resetAutocomplete)
-            // must run BEFORE delegate?.deleteBackward() so markedText is cleared
-            // before the backing text mutates.
-            updateComposingState(.idle)
-            clearSelectionAndSuggestions()
-            delegate?.deleteBackward()
-        } else {
-            updateComposingState(.composing(raw: newRaw))
-        }
+        dispatch(.deleteBackward)
     }
 
     /// Commit the derived `composingText` (tone-marked form) to the backing text.
     public func commitComposition() {
-        guard isComposing, !composingText.isEmpty else { return }
-        commit(text: composingText)
+        dispatch(.commitDerived)
     }
 
     /// Commit the literal raw keystrokes (no tone conversion / segmentation).
     /// Used when Enter is pressed at candidate index 0, so English words or
     /// partially-typed romanization pass through unchanged.
     public func commitRawInput() {
-        guard isComposing, !rawInput.isEmpty else { return }
-        commit(text: rawInput)
+        dispatch(.commitRaw)
     }
 
     /// Commit the given candidate text and leave composing state.
@@ -121,22 +97,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     /// Takes a raw `String` rather than `Autocomplete.Suggestion` so this
     /// file stays engine-pure. The KK adapter side passes `suggestion.text`.
     public func selectSuggestion(text: String) {
-        guard isComposing else { return }
-
-        // Ordering contract with the text document proxy:
-        //   clearMarkedText → insertText → state=.idle/sync → resetAutocomplete.
-        // The direct `state = .idle` + manual `syncStateToProperties()` is
-        // intentional — routing through `updateComposingState(.idle)` would
-        // re-trigger `clearMarkedText` after `insertText`, which duplicates work
-        // and resets autocomplete in the wrong order.
-        delegate?.clearMarkedText()
-        delegate?.insertText(text)
-
-        state = .idle
-        syncStateToProperties()
-        clearSelectionAndSuggestions()
-        delegate?.resetAutocomplete()
-        delegate?.resetAutocompleteContext()
+        dispatch(.selectSuggestion(text))
     }
 
     /// Commit the currently-selected candidate, given only the visible
@@ -154,66 +115,45 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
 
     /// Clear all state (e.g. keyboard teardown).
     public func reset() {
-        updateComposingState(.idle)
-        clearSelectionAndSuggestions()
+        dispatch(.reset)
     }
 
-    // MARK: - Private Helpers
-
-    /// Shared commit flow for `commitComposition` and `commitRawInput`.
-    /// The `text` argument must be captured before calling — `updateComposingState(.idle)`
-    /// clears `composingText` and `rawInput` via `syncStateToProperties()`.
-    private func commit(text: String) {
-        updateComposingState(.idle)
-        clearSelectionAndSuggestions()
-        delegate?.insertText(text)
-        delegate?.resetAutocompleteContext()
+    /// Update the candidate-bar selection (tap or keyboard arrow).
+    /// Routes through the engine so the pure state stays authoritative.
+    public func setSelectedCandidateIndex(_ index: Int) {
+        state.setSelectedCandidateIndex(index)
+        if selectedCandidateIndex != index { selectedCandidateIndex = index }
     }
 
-    private func clearSelectionAndSuggestions() {
-        selectedCandidateIndex = -1
-    }
+    // MARK: - Transition Application (three-phase, see boundary doc §2.4)
 
-    /// Derive display text from raw input.
-    /// TPS symbols are already display-ready; POJ/TL go through `ToneConverter`,
-    /// which handles hyphen-separated syllables internally.
-    private func deriveDisplay(from raw: String) -> String {
-        guard !raw.isEmpty else { return "" }
-        if TPSTables.containsTPS(raw) { return raw }
-        return ToneConverter.convertToToneMarks(raw, mode: inputMode)
-    }
+    private func dispatch(_ intent: ComposingState.Intent) {
+        let settings = settingsProvider.current
+        let transition = state.apply(
+            intent,
+            mode: settings.inputMode,
+            toneToggles: settings.toneToggles,
+        )
 
-    /// Sync the state enum to published properties and notify the delegate of
-    /// marked-text changes. Guards no-op writes so `@Published` doesn't fan out
-    /// redundant `objectWillChange` events on idle→idle transitions.
-    private func syncStateToProperties() {
-        switch state {
-        case .idle:
-            if isComposing { isComposing = false }
-            if !composingText.isEmpty { composingText = "" }
-            if !rawInput.isEmpty { rawInput = "" }
-
-        case let .composing(raw):
-            if !isComposing { isComposing = true }
-            if rawInput != raw { rawInput = raw }
-            let display = deriveDisplay(from: raw)
-            if composingText != display { composingText = display }
-            delegate?.setMarkedText(display)
+        // Phase 1 — mutate published mirror (guarded-inequality writes keep
+        // idle→idle silent and avoid redundant SwiftUI invalidation).
+        let engineIsComposing = state.isComposing
+        let engineRaw = state.rawInput
+        if isComposing != engineIsComposing { isComposing = engineIsComposing }
+        if rawInput != engineRaw { rawInput = engineRaw }
+        if !transition.effects.isEmpty, composingText != transition.derivedDisplay {
+            composingText = transition.derivedDisplay
+        }
+        if selectedCandidateIndex != transition.newSelectedIndex {
+            selectedCandidateIndex = transition.newSelectedIndex
         }
 
-        contextSink?.isComposingText = isComposing
-    }
-
-    /// Unified state transition. The enum didSet triggers `syncStateToProperties()`,
-    /// this method then fires delegate hooks appropriate for the new state.
-    private func updateComposingState(_ newState: ComposingState) {
-        state = newState
-        switch newState {
-        case .idle:
-            delegate?.clearMarkedText()
-            delegate?.resetAutocomplete()
-        case .composing:
-            delegate?.performAutocomplete()
+        // Phase 2 — execute platform effects in the order the engine emitted.
+        for effect in transition.effects {
+            delegate?.execute(effect)
         }
+
+        // Phase 3 — notify composing-context sink once state is settled.
+        contextSink?.isComposingText = engineIsComposing
     }
 }

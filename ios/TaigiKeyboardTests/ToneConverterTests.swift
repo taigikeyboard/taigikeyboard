@@ -1,39 +1,31 @@
 @testable import TaigiKeyboard
 import XCTest
 
-/// ToneConverter unit tests
+/// ToneConverter unit tests — exercise the parameterized `toneToggles` entry point.
+/// Settings are never read here; each test supplies the exact toggle combination.
 final class ToneConverterTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        SharedSettings.shared.isDoubleTapOOEnabled = true
-        SharedSettings.shared.isDoubleTapNNEnabled = true
-    }
-
-    override func tearDown() {
-        SharedSettings.shared.isDoubleTapOOEnabled = true
-        SharedSettings.shared.isDoubleTapNNEnabled = true
-        super.tearDown()
-    }
+    private static let bothOn = ToneToggles(isDoubleTapOOEnabled: true, isDoubleTapNNEnabled: true)
+    private static let ooOnly = ToneToggles(isDoubleTapOOEnabled: true, isDoubleTapNNEnabled: false)
+    private static let nnOnly = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: true)
+    private static let bothOff = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
 
     // MARK: - TL Mode (No Preprocessing)
 
     func testConvertToToneMarks_tlMode_multiSyllable() {
-        let result = ToneConverter.convertToToneMarks("ho2-se3", mode: .tl)
+        let result = ToneConverter.convertToToneMarks("ho2-se3", mode: .tl, toneToggles: Self.bothOn)
         XCTAssertEqual(result, "h\u{00F3}-s\u{00E8}") // hó-sè
     }
 
     func testConvertToToneMarks_tlMode_noPreprocessing() {
-        // In TL mode, "oo" stays "oo" (no o͘ conversion), tone 2 = acute
-        let result = ToneConverter.convertToToneMarks("hoo2", mode: .tl)
+        // TL mode ignores the OO/NN toggles entirely.
+        let result = ToneConverter.convertToToneMarks("hoo2", mode: .tl, toneToggles: Self.bothOn)
         XCTAssertEqual(result, "h\u{00F3}o") // hóo (tone 2 acute on first o)
     }
 
     // MARK: - POJ Mode + OO Enabled
 
     func testConvertToToneMarks_pojMode_ooEnabled() {
-        SharedSettings.shared.isDoubleTapOOEnabled = true
-        let result = ToneConverter.convertToToneMarks("hoo2", mode: .poj)
-        // oo -> o͘ first, then tone mark applied
+        let result = ToneConverter.convertToToneMarks("hoo2", mode: .poj, toneToggles: Self.ooOnly)
         XCTAssertTrue(
             result.unicodeScalars.contains { $0 == "\u{0358}" },
             "POJ with OO enabled should produce o͘: got \(result)",
@@ -43,8 +35,7 @@ final class ToneConverterTests: XCTestCase {
     // MARK: - POJ Mode + NN Enabled
 
     func testConvertToToneMarks_pojMode_nnEnabled() {
-        SharedSettings.shared.isDoubleTapNNEnabled = true
-        let result = ToneConverter.convertToToneMarks("ann2", mode: .poj)
+        let result = ToneConverter.convertToToneMarks("ann2", mode: .poj, toneToggles: Self.nnOnly)
         XCTAssertTrue(
             result.contains("\u{207F}"),
             "POJ with NN enabled should produce ⁿ: got \(result)",
@@ -54,46 +45,42 @@ final class ToneConverterTests: XCTestCase {
     // MARK: - POJ Mode + OO Disabled
 
     func testConvertToToneMarks_pojMode_ooDisabled() {
-        SharedSettings.shared.isDoubleTapOOEnabled = false
-        let result = ToneConverter.convertToToneMarks("hoo2", mode: .poj)
-        // Even with OO disabled, toPOJ always outputs o͘ (POJ standard format).
-        // The setting only affects keyboard input preprocessing, not output format.
+        let result = ToneConverter.convertToToneMarks("hoo2", mode: .poj, toneToggles: Self.bothOff)
+        // Even with OO preprocessing off, toPOJ always outputs o͘ (POJ standard
+        // output). The toggle only affects keyboard input preprocessing.
         XCTAssertTrue(
             result.unicodeScalars.contains { $0 == "\u{0358}" },
-            "POJ output always uses o͘ regardless of OO setting: got \(result)",
+            "POJ output always uses o͘ regardless of OO toggle: got \(result)",
         )
     }
 
     // MARK: - POJ Mode + NN Disabled
 
     func testConvertToToneMarks_pojMode_nnDisabled() {
-        SharedSettings.shared.isDoubleTapNNEnabled = false
-        let result = ToneConverter.convertToToneMarks("ann2", mode: .poj)
-        // Even with NN disabled, toPOJ always outputs ⁿ (POJ standard format).
-        // The setting only affects keyboard input preprocessing, not output format.
+        let result = ToneConverter.convertToToneMarks("ann2", mode: .poj, toneToggles: Self.bothOff)
+        // Mirrors the OO case — output always uses ⁿ regardless of NN toggle.
         XCTAssertTrue(
             result.unicodeScalars.contains { $0 == "\u{207F}" },
-            "POJ output always uses ⁿ regardless of NN setting: got \(result)",
+            "POJ output always uses ⁿ regardless of NN toggle: got \(result)",
         )
     }
 
     // MARK: - English Passthrough
 
     func testConvertToToneMarks_englishMode() {
-        let result = ToneConverter.convertToToneMarks("hello2", mode: .english)
+        let result = ToneConverter.convertToToneMarks("hello2", mode: .english, toneToggles: Self.bothOn)
         XCTAssertEqual(result, "hello2", "English mode should pass through without conversion")
     }
 
     func testConvertToToneMarks_englishMode_multiSyllable() {
-        let result = ToneConverter.convertToToneMarks("ka2-lang5", mode: .english)
+        let result = ToneConverter.convertToToneMarks("ka2-lang5", mode: .english, toneToggles: Self.bothOn)
         XCTAssertEqual(result, "ka2-lang5")
     }
 
     // MARK: - Nasal Marker Case
 
     func testConvertToToneMarks_pojMode_capsLockNN() {
-        SharedSettings.shared.isDoubleTapNNEnabled = true
-        let result = ToneConverter.convertToToneMarks("ANN2", mode: .poj)
+        let result = ToneConverter.convertToToneMarks("ANN2", mode: .poj, toneToggles: Self.nnOnly)
         // Caps lock: uppercase vowel A → nasal should be ᴺ
         XCTAssertTrue(
             result.contains("\u{1D3A}"),
@@ -102,8 +89,7 @@ final class ToneConverterTests: XCTestCase {
     }
 
     func testConvertToToneMarks_pojMode_singleShiftNN() {
-        SharedSettings.shared.isDoubleTapNNEnabled = true
-        let result = ToneConverter.convertToToneMarks("Penn5", mode: .poj)
+        let result = ToneConverter.convertToToneMarks("Penn5", mode: .poj, toneToggles: Self.nnOnly)
         // Single shift: P uppercase but e lowercase → nasal follows e → ⁿ
         XCTAssertTrue(
             result.contains("\u{207F}"),
@@ -118,14 +104,13 @@ final class ToneConverterTests: XCTestCase {
     // MARK: - Edge Cases
 
     func testConvertToToneMarks_emptyString() {
-        XCTAssertEqual(ToneConverter.convertToToneMarks("", mode: .tl), "")
-        XCTAssertEqual(ToneConverter.convertToToneMarks("", mode: .poj), "")
+        XCTAssertEqual(ToneConverter.convertToToneMarks("", mode: .tl, toneToggles: Self.bothOn), "")
+        XCTAssertEqual(ToneConverter.convertToToneMarks("", mode: .poj, toneToggles: Self.bothOn), "")
     }
 
     func testConvertToToneMarks_pojMode_uppercaseOO() {
-        SharedSettings.shared.isDoubleTapOOEnabled = true
         // Oo -> O͘, OO -> O͘
-        let result1 = ToneConverter.convertToToneMarks("Oo2", mode: .poj)
+        let result1 = ToneConverter.convertToToneMarks("Oo2", mode: .poj, toneToggles: Self.ooOnly)
         XCTAssertTrue(
             result1.unicodeScalars.contains { $0 == "\u{0358}" },
             "Uppercase Oo should also convert: got \(result1)",

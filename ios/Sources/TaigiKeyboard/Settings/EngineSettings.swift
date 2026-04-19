@@ -1,6 +1,7 @@
 import Foundation
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 /// Read-only view of the settings the lexicon / input engine needs to
@@ -14,6 +15,10 @@ protocol EngineSettings {
     var isAutoCap: Bool { get }
     var isTranslateSwapped: Bool { get }
     var isAssociationRecordingEnabled: Bool { get }
+
+    /// POJ preprocessing toggles bundled as a live-read value so
+    /// `ComposingState` / `ToneConverter` can stay Foundation-pure.
+    var toneToggles: ToneToggles { get }
 
     var isCustomDictEnabled: Bool { get }
     var isTpsOrMappedToER: Bool { get }

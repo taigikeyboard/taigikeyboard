@@ -1,59 +1,24 @@
 @testable import TaigiKeyboard
 import XCTest
 
-/// Tests for ComposingManager: published state transitions + ComposingDelegate call order.
+/// Tests for `ComposingManager` — the iOS platform wrapper over
+/// `ComposingState`. Focus:
+/// - Published mirror (isComposing / rawInput / composingText / selectedCandidateIndex),
+/// - Delegate call order via the platform-neutral `Effect` enum,
+/// - Public API routing to the right intents.
 ///
-/// Focus:
-/// - State contract (isComposing / rawInput / selectedCandidateIndex)
-/// - Delegate call ORDER — this is the behavioral contract with KeyboardViewController
-/// - Idle ↔ composing transitions
-///
-/// Avoids asserting `composingText` for strings whose tone conversion depends on
-/// SharedSettings.inputMode; uses inputs that pass through unchanged
-/// (e.g. "abc", "gua" with no tone digit).
+/// Pure-state behavior (phase transitions, effect ordering per intent) is
+/// covered more densely in `ComposingStateTests`; this file verifies the
+/// wrapper wires the engine's transitions to published state + delegate
+/// correctly.
 final class ComposingManagerTests: XCTestCase {
-    // MARK: - Spy
-
-    /// Records ComposingDelegate calls in order for contract verification.
+    /// Spy that records every `execute(_:)` call so tests can assert the
+    /// wrapper fans out effects in the order the engine emitted them.
     private final class DelegateSpy: ComposingDelegate {
-        enum Event: Equatable {
-            case insertText(String)
-            case deleteBackward
-            case setMarkedText(String)
-            case clearMarkedText
-            case resetAutocomplete
-            case performAutocomplete
-            case resetAutocompleteContext
-        }
+        var effects: [ComposingTransition.Effect] = []
 
-        var events: [Event] = []
-
-        func insertText(_ text: String) {
-            events.append(.insertText(text))
-        }
-
-        func deleteBackward() {
-            events.append(.deleteBackward)
-        }
-
-        func setMarkedText(_ text: String) {
-            events.append(.setMarkedText(text))
-        }
-
-        func clearMarkedText() {
-            events.append(.clearMarkedText)
-        }
-
-        func resetAutocomplete() {
-            events.append(.resetAutocomplete)
-        }
-
-        func performAutocomplete() {
-            events.append(.performAutocomplete)
-        }
-
-        func resetAutocompleteContext() {
-            events.append(.resetAutocompleteContext)
+        func execute(_ effect: ComposingTransition.Effect) {
+            effects.append(effect)
         }
     }
 
@@ -79,89 +44,80 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
-        XCTAssertEqual(manager.selectedCandidateIndex, 0)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - startComposing
+    // MARK: - startComposing / appendCharacter
 
-    func testStartComposing_entersComposingAndNotifiesDelegate() {
+    func testStartComposing_entersComposingAndFiresUpdateThenPerform() {
         manager.startComposing(with: "a")
 
         XCTAssertTrue(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "a")
         XCTAssertEqual(manager.selectedCandidateIndex, 0)
-
-        // Contract: setMarkedText (from sync) must happen before performAutocomplete
-        XCTAssertEqual(spy.events, [
-            .setMarkedText(manager.composingText),
+        XCTAssertEqual(spy.effects, [
+            .updatePreedit(manager.composingText),
             .performAutocomplete,
         ])
     }
-
-    // MARK: - appendCharacter
 
     func testAppendCharacter_whenIdle_startsComposing() {
         manager.appendCharacter("a")
 
         XCTAssertTrue(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "a")
-        XCTAssertEqual(spy.events, [
-            .setMarkedText(manager.composingText),
+        XCTAssertEqual(spy.effects, [
+            .updatePreedit(manager.composingText),
             .performAutocomplete,
         ])
     }
 
     func testAppendCharacter_whenComposing_appendsAndResetsSelectedIndex() {
         manager.startComposing(with: "a")
-        manager.selectedCandidateIndex = 3
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.appendCharacter("b")
 
         XCTAssertEqual(manager.rawInput, "ab")
         XCTAssertEqual(manager.selectedCandidateIndex, 0)
-        XCTAssertEqual(spy.events, [
-            .setMarkedText(manager.composingText),
+        XCTAssertEqual(spy.effects, [
+            .updatePreedit(manager.composingText),
             .performAutocomplete,
         ])
     }
 
     // MARK: - replaceLastCharacter
 
-    func testReplaceLastCharacter_replacesTailWithoutResettingSelectedIndex() {
+    func testReplaceLastCharacter_replacesTailAndKeepsComposing() {
         manager.startComposing(with: "ab")
-        manager.selectedCandidateIndex = 2
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.replaceLastCharacter(with: "c")
 
         XCTAssertEqual(manager.rawInput, "ac")
-        // Contract: replaceLast must NOT reset selectedCandidateIndex
-        // (append/start do reset; replace is a correction, keeps selection)
-        XCTAssertEqual(manager.selectedCandidateIndex, 2)
+        XCTAssertTrue(manager.isComposing)
+        // Contract asserted in ComposingStateTests: selectedCandidateIndex
+        // is preserved across replaceLast. At wrapper level we only verify
+        // the effect list matches what the engine emitted.
+        XCTAssertEqual(spy.effects, [
+            .updatePreedit(manager.composingText),
+            .performAutocomplete,
+        ])
     }
 
     func testReplaceLastCharacter_whenIdle_isNoop() {
         manager.replaceLastCharacter(with: "x")
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.rawInput, "")
-        XCTAssertEqual(spy.events, [])
-    }
-
-    func testReplaceLastCharacter_whenEmptyRaw_isNoop() {
-        // Force composing state with empty raw is not reachable via public API;
-        // this guard documents the internal guard.
-        manager.replaceLastCharacter(with: "x")
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
     // MARK: - appendHyphen
 
     func testAppendHyphen_behavesAsAppendCharacter() {
         manager.startComposing(with: "a")
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.appendHyphen()
 
@@ -170,37 +126,33 @@ final class ComposingManagerTests: XCTestCase {
 
     // MARK: - deleteBackward
 
-    func testDeleteBackward_whenComposingWithMultipleChars_shortensRaw() {
+    func testDeleteBackward_whenMultipleChars_shortensRaw() {
         manager.startComposing(with: "ab")
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.deleteBackward()
 
         XCTAssertTrue(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "a")
-        XCTAssertEqual(spy.events, [
-            .setMarkedText(manager.composingText),
+        XCTAssertEqual(spy.effects, [
+            .updatePreedit(manager.composingText),
             .performAutocomplete,
         ])
     }
 
-    func testDeleteBackward_whenComposingWithSingleChar_exitsAndDelegatesDelete() {
+    func testDeleteBackward_whenSingleChar_exitsWithOrderedEffects() {
         manager.startComposing(with: "a")
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.deleteBackward()
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-
-        // Contract ordering: idle transition (clearMarkedText + resetAutocomplete)
-        // must happen BEFORE delegate?.deleteBackward() — the markedText must be
-        // cleared before the backing text mutates.
-        XCTAssertEqual(spy.events, [
-            .clearMarkedText,
+        XCTAssertEqual(spy.effects, [
+            .clearPreeditWithoutCommit,
             .resetAutocomplete,
-            .deleteBackward,
+            .deleteBackwardFromDocument,
         ])
     }
 
@@ -208,82 +160,64 @@ final class ComposingManagerTests: XCTestCase {
         manager.deleteBackward()
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - commitComposition
+    // MARK: - commitComposition / commitRawInput
 
-    func testCommitComposition_insertsComposingTextAndExits() {
-        manager.startComposing(with: "a")
-        let committedText = manager.composingText
-        manager.selectedCandidateIndex = 2
-        spy.events.removeAll()
+    func testCommitComposition_insertsDerivedTextAndExits() {
+        manager.startComposing(with: "hello")
+        let derived = manager.composingText
+        spy.effects.removeAll()
 
         manager.commitComposition()
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-
-        // Contract ordering: state → idle (clearMarkedText + resetAutocomplete)
-        // → insertText → resetAutocompleteContext
-        XCTAssertEqual(spy.events, [
-            .clearMarkedText,
+        XCTAssertEqual(spy.effects, [
+            .commitTextReplacingPreedit(derived),
             .resetAutocomplete,
-            .insertText(committedText),
             .resetAutocompleteContext,
         ])
     }
 
     func testCommitComposition_whenIdle_isNoop() {
         manager.commitComposition()
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
-
-    // MARK: - commitRawInput
 
     func testCommitRawInput_insertsRawStringBypassingConversion() {
         manager.startComposing(with: "Hello")
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.commitRawInput()
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-
-        XCTAssertEqual(spy.events, [
-            .clearMarkedText,
+        XCTAssertEqual(spy.effects, [
+            .commitTextReplacingPreedit("Hello"),
             .resetAutocomplete,
-            .insertText("Hello"),
             .resetAutocompleteContext,
         ])
     }
 
     func testCommitRawInput_whenIdle_isNoop() {
         manager.commitRawInput()
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - selectSuggestion
+    // MARK: - selectSuggestion / confirmSelectedCandidate
 
-    func testSelectSuggestion_whenComposing_commitsSuggestionTextAndExits() {
+    func testSelectSuggestion_whenComposing_commitsAtomically() {
         manager.startComposing(with: "a")
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.selectSuggestion(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-
-        // Contract ordering: clearMarkedText → insertText → resetAutocomplete →
-        // resetAutocompleteContext. NOTE: this ordering differs from commitComposition
-        // (which goes clearMarkedText → resetAutocomplete → insertText) because
-        // selectSuggestion writes state to .idle directly and only calls the delegate
-        // reset hooks afterward. Preserving this ordering is deliberate.
-        XCTAssertEqual(spy.events, [
-            .clearMarkedText,
-            .insertText("picked"),
+        XCTAssertEqual(spy.effects, [
+            .commitTextReplacingPreedit("picked"),
             .resetAutocomplete,
             .resetAutocompleteContext,
         ])
@@ -293,60 +227,58 @@ final class ComposingManagerTests: XCTestCase {
         manager.selectSuggestion(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - confirmSelectedCandidate
-
-    func testConfirmSelectedCandidate_whenIndexValid_selectsSuggestionAndReturnsTrue() {
+    func testConfirmSelectedCandidate_whenIndexValid_selectsAndReturnsTrue() {
         manager.startComposing(with: "a")
-        manager.selectedCandidateIndex = 1
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
+        // selectedCandidateIndex defaults to 0 after startComposing, so
+        // availableTexts[0] is what confirm picks.
         let confirmed = manager.confirmSelectedCandidate(availableTexts: ["zero", "one"])
 
         XCTAssertTrue(confirmed)
         XCTAssertFalse(manager.isComposing)
-        // Should pick "one" (index 1)
-        XCTAssertTrue(spy.events.contains(.insertText("one")))
+        XCTAssertTrue(spy.effects.contains(.commitTextReplacingPreedit("zero")))
     }
 
     func testConfirmSelectedCandidate_whenIndexOutOfRange_returnsFalseAndDoesNothing() {
         manager.startComposing(with: "a")
-        manager.selectedCandidateIndex = 5
-        spy.events.removeAll()
+        manager.setSelectedCandidateIndex(5) // past the end of availableTexts
+        spy.effects.removeAll()
 
         let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
 
         XCTAssertFalse(confirmed)
         XCTAssertTrue(manager.isComposing)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    func testConfirmSelectedCandidate_whenIndexNegative_returnsFalse() {
+    func testSetSelectedCandidateIndex_updatesWrapperAndEngineTogether() {
         manager.startComposing(with: "a")
-        manager.selectedCandidateIndex = -1
-        spy.events.removeAll()
+        manager.setSelectedCandidateIndex(2)
+        spy.effects.removeAll()
 
-        let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
+        // replaceLast preserves the current index, so the engine's 2 must
+        // round-trip through the wrapper mirror.
+        manager.replaceLastCharacter(with: "b")
 
-        XCTAssertFalse(confirmed)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertEqual(manager.selectedCandidateIndex, 2)
     }
 
     func testConfirmSelectedCandidate_whenIdle_returnsFalse() {
         let confirmed = manager.confirmSelectedCandidate(availableTexts: ["only"])
 
         XCTAssertFalse(confirmed)
-        XCTAssertEqual(spy.events, [])
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 
     // MARK: - reset
 
     func testReset_whenComposing_returnsToIdleWithoutInserting() {
         manager.startComposing(with: "abc")
-        manager.selectedCandidateIndex = 2
-        spy.events.removeAll()
+        spy.effects.removeAll()
 
         manager.reset()
 
@@ -354,33 +286,18 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "")
         XCTAssertEqual(manager.composingText, "")
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-
-        // No text should have been inserted or deleted
-        XCTAssertFalse(spy.events.contains { event in
-            if case .insertText = event { return true }
-            if case .deleteBackward = event { return true }
-            return false
-        })
-        // Should notify clearMarkedText + resetAutocomplete
-        XCTAssertEqual(spy.events, [
-            .clearMarkedText,
+        XCTAssertEqual(spy.effects, [
+            .clearPreeditWithoutCommit,
             .resetAutocomplete,
         ])
     }
 
-    func testReset_whenIdle_isIdempotent() {
-        spy.events.removeAll()
+    func testReset_whenIdle_emitsNoEffects() {
         manager.reset()
 
         XCTAssertFalse(manager.isComposing)
-        // Idle → idle does not re-trigger state-change side effects (state didSet
-        // still fires, so delegate clear hooks still run — this documents the current
-        // behavior).
-        // We assert only that no insert/delete happened.
-        XCTAssertFalse(spy.events.contains { event in
-            if case .insertText = event { return true }
-            if case .deleteBackward = event { return true }
-            return false
-        })
+        // INVARIANT_composing_idle_to_idle_is_noop — wrapper must not fan
+        // out delegate calls on a noop reset.
+        XCTAssertTrue(spy.effects.isEmpty)
     }
 }

@@ -1,30 +1,15 @@
 import Foundation
 
-/// Delegate protocol for text input and autocomplete operations.
+/// Platform adapter that executes a `ComposingTransition.Effect` against
+/// the host text-input surface.
 ///
-/// Decouples `ComposingManager` from `KeyboardViewController` so that
-/// `Input/` has no compile-time dependency on `_Keyboard/`.
+/// Keeps `ComposingManager` independent of `_Keyboard/` — the iOS
+/// implementation (in `KeyboardViewController+TextInput`) switches on the
+/// effect enum and forwards to `UITextDocumentProxy`. Android's Phase II
+/// mirror implements the same contract against `InputConnection`.
 ///
-/// Implemented by `KeyboardViewController` (via class body + extension).
+/// The binding contract (iOS / Android mappings) lives in
+/// `docs/architecture/composing-state-boundary.md` §2.2.
 protocol ComposingDelegate: AnyObject {
-    /// Insert text at the caret (commits marked text first).
-    func insertText(_ text: String)
-
-    /// Delete one character backward at the caret.
-    func deleteBackward()
-
-    /// Set marked (composing) text, with caret placed at the end.
-    func setMarkedText(_ text: String)
-
-    /// Clear marked text and unmark the text range.
-    func clearMarkedText()
-
-    /// Reset the autocomplete suggestion list.
-    func resetAutocomplete()
-
-    /// Trigger a fresh autocomplete pass based on current composing buffer.
-    func performAutocomplete()
-
-    /// Reset the autocomplete context (including selection / history).
-    func resetAutocompleteContext()
+    func execute(_ effect: ComposingTransition.Effect)
 }

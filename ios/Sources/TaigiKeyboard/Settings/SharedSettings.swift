@@ -432,6 +432,15 @@ extension SharedSettings: EngineSettings {
             forKey: "com.keyboardkit.settings.keyboard.isAutocapitalizationEnabled",
         )
     }
+
+    /// Live-reads the two underlying booleans per call, matching the
+    /// `EngineSettingsProvider.current` live-read contract.
+    var toneToggles: ToneToggles {
+        ToneToggles(
+            isDoubleTapOOEnabled: isDoubleTapOOEnabled,
+            isDoubleTapNNEnabled: isDoubleTapNNEnabled,
+        )
+    }
 }
 
 // MARK: - EngineSettingsProvider Conformance

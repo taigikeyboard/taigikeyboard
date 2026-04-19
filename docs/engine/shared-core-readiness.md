@@ -20,9 +20,14 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 
 ---
 
-## Candidate roster (36 files, ~2400 LOC)
+## Candidate roster (43 files, ~3000 LOC)
 
-### Phonetics — 9 files, 609 LOC
+G5-impl (2026-04-19, PR #137) added three NextWord engine files. G4-impl
+(same day, this PR) adds three composing-engine files plus promotes
+`Phonetics/ToneConverter.swift` once `SharedSettings.shared` is removed
+behind a `ToneToggles` parameter.
+
+### Phonetics — 10 files, 700 LOC
 
 | File                                                | LOC | Notes                                                              |
 |-----------------------------------------------------|-----|--------------------------------------------------------------------|
@@ -35,8 +40,9 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 | `Phonetics/Converter/RomanizationConverter.swift`   |  20 | Thin wrapper around the formatter/parser pair.                     |
 | `Phonetics/ToneRestoration.swift`                   |  36 | NFD-based tone-mark stripping for backspace.                       |
 | `Phonetics/ToneUtilities.swift`                     |  60 | Nasal-marker case adapter.                                         |
+| `Phonetics/ToneConverter.swift`                     |  95 | POJ/TL tone conversion. POJ preprocessing toggles passed in as `ToneToggles` (G4-impl). Logs via `LoggerBackend` — no `SharedSettings.shared` / OSLog. |
 
-### Input — 7 files, 882 LOC
+### Input — 9 files, ~1160 LOC
 
 | File                                                | LOC | Notes                                                              |
 |-----------------------------------------------------|-----|--------------------------------------------------------------------|
@@ -47,6 +53,8 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 | `Input/TPS/TPSInputAdjuster.swift`                  | 129 | TPS composition order fix-ups.                                     |
 | `Input/TPS/TPSToTL.swift`                           | 140 | TPS → TL (numeric tone) converter.                                 |
 | `Input/TPS/TLToTPS.swift`                           | 146 | TL → TPS converter.                                                |
+| `Input/Composing/ComposingState.swift`              | 230 | Pure state machine (G4-impl). Intent API + `apply(...)` returning `ComposingTransition`. |
+| `Input/Composing/ComposingTransition.swift`         |  50 | Platform-neutral `Effect` enum + `Transition` value (G4-impl).      |
 
 ### Lexicon — 11 files, 615 LOC
 
@@ -64,13 +72,16 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 | `Lexicon/Trie/InputNormalizer.swift`                |  92 | Mode-agnostic normalization → numeric tones. Logs via `LoggerBackend`. |
 | `Lexicon/Database/CustomDictionaryDerivation.swift` |  80 | Pure derivation of `notone` / `abbrev` / `roman_num` search keys.  |
 
-### NextWord — 3 files, 119 LOC
+### NextWord — 6 files, ~530 LOC
 
 | File                                                | LOC | Notes                                                              |
 |-----------------------------------------------------|-----|--------------------------------------------------------------------|
 | `NextWord/EnginePrediction.swift`                   |  22 | Engine-side value replacing KK `Autocomplete.Suggestion`.          |
 | `NextWord/NextWordScorer.swift`                     |  64 | RIME-style decay + user/dict weighting. Invariant-tagged with Android. |
 | `NextWord/AutocompleteContextBooster.swift`         |  33 | Re-orders candidates by predicted first-char bigram set.           |
+| `NextWord/NextWordEngine.swift`                     | 290 | Pure decide/filter pipeline (G5-impl). Enum namespace, no time/timer reads. |
+| `NextWord/NextWordOutcome.swift`                    |  96 | Intent / PersistedState / DecisionInput / Outcome / Effect / AssociationPair / EngineSettings DTOs (G5-impl). |
+| `NextWord/RawNextWordPrediction.swift`              |  26 | Service-boundary DTO (hanzi/tl/score) decoupled from `NextWordService` (G5-impl). |
 
 ### Autocomplete — 2 files, 81 LOC
 
@@ -79,13 +90,14 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 | `Autocomplete/Services/AutocompleteInputClassifier.swift` |  55 | Classifies rawInput → `(inputType, searchKey)`. All deps (InputType, CandidateProcessor, InputNormalizer, TPSTables, TPSToTL) are candidates. |
 | `Autocomplete/Services/AutocompleteProviders.swift` |  26 | `ComposingStateProvider`, `SelectionContextProvider`, `AutocompleteContextUpdater` protocols over Foundation + `EnginePrediction`. |
 
-### Settings (engine contracts) — 3 files, 72 LOC
+### Settings (engine contracts) — 4 files, ~93 LOC
 
 | File                                                | LOC | Notes                                                              |
 |-----------------------------------------------------|-----|--------------------------------------------------------------------|
 | `Settings/EngineSettings.swift`                     |  33 | Read-only protocol consumed by every injected service.             |
 | `Settings/EngineSettingsProvider.swift`             |  20 | `current` accessor; live-read not snapshot (documented invariant). |
 | `Settings/InputMode.swift`                          |  19 | `.poj / .tl / .english / .tps`. Pure enum; `displayName` localization lives platform-side in `SettingsModels.swift`. |
+| `Settings/ToneToggles.swift`                        |  21 | POJ preprocessing toggles as a value type (G4-impl). Consumed by `ComposingState` / `ToneConverter`. |
 
 ### Common (shared-core infrastructure) — 1 file, 59 LOC
 
@@ -169,17 +181,16 @@ These files are engine-layer but deliberately excluded from the candidate set.
 
 | File                                                 | Reason                                                                                     |
 |------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `Phonetics/ToneConverter.swift`                      | Reads `SharedSettings.shared` (`isDoubleTapOOEnabled` / `isDoubleTapNNEnabled`). Parameterize the two booleans to qualify. |
 | `Lexicon/Models/EnabledDictionaries.swift`           | Mechanically pure, but bitmask layout and `enabledSources` accessor are coupled to the iOS `dictionary.bin` binary format. Unblock when Android aligns to this shape. |
 | `Lexicon/Models/DictionarySearchResult.swift`        | Builds app-specific lookup URL (`chhoe.taigi.info` / `sutian.moe.edu.tw`).                 |
 | `Lexicon/Utils/ExternalLookupURLBuilder.swift`       | App-specific URL construction.                                                             |
 | `Lexicon/Trie/TrieService.swift`                     | `DispatchQueue` + `static let shared` + C++ MARISA bridge (platform dep).                  |
-| `Input/Composing/ComposingManager.swift`             | `Combine`, `@Published`, `ObservableObject`.                                               |
-| `Input/Composing/ComposingDelegate.swift`            | Mechanically pure protocol, but methods mirror iOS `UITextDocumentProxy` semantics; Android `InputConnection` has a different contract. |
+| `Input/Composing/ComposingManager.swift`             | iOS platform wrapper over `ComposingState` — `Combine`, `@Published`, `ObservableObject`, delegate / context-sink wiring. Shrunk to ~150 LOC by G4-impl. |
+| `Input/Composing/ComposingDelegate.swift`            | iOS `Effect` interpreter (single `execute(_:)` method). Android Phase II mirror implements the same contract against `InputConnection`. |
 | `Autocomplete/Views/CandidateViewStyleEnvironment.swift` | `EnvironmentKey` default value depends on `CandidateView.Style.standard` (SwiftUI type). |
 | `Lexicon/Services/*` (all)                           | Coordinate side effects (DB, singletons, logging).                                         |
 | `Lexicon/Database/*Repository.swift`, `*Schema.swift`, `SQLiteConnectionManager.swift` | Use SQLite3 C API + `FileManager` + `DispatchQueue`. |
-| `NextWord/NextWordController.swift`                  | `Timer`, `DispatchQueue.main`, `@MainActor`, `SharedSettings.shared`.                      |
+| `NextWord/NextWordController.swift`                  | iOS platform executor for `NextWordEngine` (G5-impl). `Timer`, `DispatchQueue.main`, `@MainActor`. |
 | `NextWord/Services/NextWordService.swift`            | SQLite + `FileManager` + `SharedSettings.shared`.                                          |
 | `NextWord/Repository/*`                              | SQLite.                                                                                    |
 | `App/Tabs/Layout/AppearanceSettingsViewModel.swift`  | SwiftUI `Color` + KK `Color.keyboardBackground` + SharedSettings write path.               |
@@ -225,11 +236,18 @@ ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryDerivation.swift
 ios/Sources/TaigiKeyboard/NextWord/EnginePrediction.swift
 ios/Sources/TaigiKeyboard/NextWord/NextWordScorer.swift
 ios/Sources/TaigiKeyboard/NextWord/AutocompleteContextBooster.swift
+ios/Sources/TaigiKeyboard/NextWord/NextWordEngine.swift
+ios/Sources/TaigiKeyboard/NextWord/NextWordOutcome.swift
+ios/Sources/TaigiKeyboard/NextWord/RawNextWordPrediction.swift
 ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteInputClassifier.swift
 ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteProviders.swift
 ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
 ios/Sources/TaigiKeyboard/Settings/EngineSettingsProvider.swift
 ios/Sources/TaigiKeyboard/Settings/InputMode.swift
+ios/Sources/TaigiKeyboard/Settings/ToneToggles.swift
+ios/Sources/TaigiKeyboard/Input/Composing/ComposingState.swift
+ios/Sources/TaigiKeyboard/Input/Composing/ComposingTransition.swift
+ios/Sources/TaigiKeyboard/Phonetics/ToneConverter.swift
 EOF
 
 # 1. Every candidate must import Foundation (and nothing else heavy)
@@ -257,5 +275,5 @@ Each of the five greps should produce no output. The import check (grep 2) is an
 1. ~~Move `InputMode` into its own file (`Settings/InputMode.swift`).~~ Done 2026-04-19.
 2. ~~Hoist `UserFrequencyService.FrequencyData` into a shared value type.~~ Done 2026-04-19 → `Lexicon/Models/FrequencyData.swift`.
 3. ~~Introduce a `LoggerBackend` protocol so `CandidateProcessor` / `InputNormalizer` do not reference `DebugLogger` directly in shared core.~~ Done 2026-04-19 → `Common/LoggerBackend.swift`.
-4. Parameterize `ToneConverter.preprocessPojInput` to unblock that file.
+4. ~~Parameterize `ToneConverter.preprocessPojInput` to unblock that file.~~ Done 2026-04-19 (G4-impl) — now consumes `ToneToggles`.
 5. Align Android `enabledSources` onto iOS `EnabledDictionaries` shape before promoting that file.

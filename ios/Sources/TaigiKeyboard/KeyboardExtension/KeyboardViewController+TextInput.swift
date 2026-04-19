@@ -5,21 +5,43 @@ import UIKit
 // MARK: - ComposingDelegate
 
 extension KeyboardViewController {
-    // insertText(_:) and deleteBackward() are in KeyboardViewController.swift
-    // (protocol methods that override superclass must be in the class body)
+    /// Translate a platform-neutral `ComposingTransition.Effect` to the
+    /// iOS `UITextDocumentProxy` surface. Binding contract (iOS + Android)
+    /// is documented in `composing-state-boundary.md` §2.2.
+    func execute(_ effect: ComposingTransition.Effect) {
+        switch effect {
+        case let .updatePreedit(text):
+            setMarkedText(text)
+        case .clearPreeditWithoutCommit:
+            clearMarkedText()
+        case let .commitTextReplacingPreedit(text):
+            // Clear marked text first so the commit replaces the preedit
+            // region atomically from the user's perspective (Android
+            // achieves this via `commitText(text, 1)`).
+            clearMarkedText()
+            textDocumentProxy.insertText(text)
+        case .deleteBackwardFromDocument:
+            textDocumentProxy.deleteBackward()
+        case .resetAutocomplete:
+            resetAutocomplete()
+        case .performAutocomplete:
+            performAutocomplete()
+        case .resetAutocompleteContext:
+            state.autocompleteContext.reset()
+        }
+    }
 
-    /// Selection point at end of markedText for cursor positioning
+    /// Set marked (composing) text with the caret placed at the end.
+    /// Used by `.updatePreedit(_)` effect and by the explicit preedit
+    /// clears in the textDidChange handler.
     func setMarkedText(_ text: String) {
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
     }
 
-    /// Clear + unmark (two steps required by UITextInput)
+    /// Clear marked text + unmark (two steps required by UITextInput).
+    /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
     func clearMarkedText() {
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         textDocumentProxy.unmarkText()
-    }
-
-    func resetAutocompleteContext() {
-        state.autocompleteContext.reset()
     }
 }
