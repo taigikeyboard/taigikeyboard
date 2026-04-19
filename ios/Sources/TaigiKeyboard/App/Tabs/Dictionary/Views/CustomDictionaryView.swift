@@ -4,10 +4,9 @@ import UniformTypeIdentifiers
 /// Custom dictionary subpage
 /// Lists all user-added entries with add/edit/delete and import/export
 struct CustomDictionaryView: View {
-    @State private var isCustomDictEnabled: Bool
+    @StateObject private var viewModel = CustomDictionaryViewModel()
+    @StateObject private var importExport = ImportExportHandler()
 
-    @State private var entries: [CustomDictionaryEntry] = []
-    @State private var isLoading = true
     @State private var filterText = ""
     @State private var showEntryAlert = false
     @State private var editingEntry: CustomDictionaryEntry?
@@ -15,29 +14,20 @@ struct CustomDictionaryView: View {
     @State private var hanziInput = ""
     @State private var showDeleteAllAlert = false
 
-    @StateObject private var importExport = ImportExportHandler()
-
-    private let settings = SharedSettings.shared
-    private let service = CustomDictionaryService.shared
-
     private var filteredEntries: [CustomDictionaryEntry] {
         if filterText.isEmpty {
-            return Array(entries.prefix(100))
+            return Array(viewModel.entries.prefix(100))
         }
         let query = filterText.lowercased()
-        return entries.filter {
+        return viewModel.entries.filter {
             $0.roman.lowercased().contains(query) ||
                 $0.hanzi.lowercased().contains(query)
         }
     }
 
-    init() {
-        _isCustomDictEnabled = State(initialValue: SharedSettings.shared.isCustomDictEnabled)
-    }
-
     var body: some View {
         List {
-            if isLoading {
+            if viewModel.isLoading {
                 Section {
                     ProgressView()
                         .frame(maxWidth: .infinity)
@@ -45,14 +35,16 @@ struct CustomDictionaryView: View {
             } else {
                 // Enable/Disable toggle
                 Section {
-                    Toggle(isOn: $isCustomDictEnabled) {
+                    Toggle(
+                        isOn: Binding(
+                            get: { viewModel.isCustomDictEnabled },
+                            set: { viewModel.setCustomDictEnabled($0) },
+                        ),
+                    ) {
                         HStack {
                             Text(DictionaryTexts.isCustomDictEnabled)
                             SettingInfoButton(description: DictionaryTexts.isCustomDictEnabledInfo)
                         }
-                    }
-                    .onChange(of: isCustomDictEnabled) { _, newValue in
-                        settings.isCustomDictEnabled = newValue
                     }
                 }
 
@@ -66,7 +58,7 @@ struct CustomDictionaryView: View {
                     Text(DictionaryTexts.customDictDescription)
                         .font(AppStyle.bodyFont)
                     Button {
-                        importExport.performExport { try await service.exportCSV() }
+                        importExport.performExport { try await viewModel.exportCSV() }
                     } label: {
                         Label(
                             DictionaryTexts.exportCSV,
@@ -109,7 +101,7 @@ struct CustomDictionaryView: View {
 
                 // Entry list
                 Section {
-                    if entries.isEmpty {
+                    if viewModel.entries.isEmpty {
                         VStack(spacing: 16) {
                             Image(systemName: "book.closed")
                                 .font(AppStyle.appFont(size: 48))
@@ -142,10 +134,7 @@ struct CustomDictionaryView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    Task {
-                                        try? await service.delete(id: entry.id)
-                                        await loadEntries()
-                                    }
+                                    Task { await viewModel.delete(id: entry.id) }
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -205,16 +194,13 @@ struct CustomDictionaryView: View {
         .alert(DictionaryTexts.deleteAll, isPresented: $showDeleteAllAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
             Button(DictionaryTexts.clear, role: .destructive) {
-                Task {
-                    try? await service.deleteAll()
-                    await loadEntries()
-                }
+                Task { await viewModel.deleteAll() }
             }
         } message: {
             Text(DictionaryTexts.deleteAllMessage)
         }
         .task {
-            await loadEntries()
+            await viewModel.load()
         }
     }
 
@@ -237,32 +223,15 @@ struct CustomDictionaryView: View {
             CustomDictionaryEntry(roman: trimmedRoman, hanzi: trimmedHanzi)
         }
         editingEntry = nil
-        Task { await saveAndReload(entry) }
-    }
-
-    private func loadEntries() async {
-        do {
-            entries = try await service.fetchAll()
-        } catch {
-            entries = []
-        }
-        isLoading = false
-    }
-
-    private func saveAndReload(_ entry: CustomDictionaryEntry) async {
-        try? await service.save(entry)
-        await loadEntries()
+        Task { await viewModel.save(entry) }
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,
-            importAction: { url in
-                let result = try await service.importFromFile(url: url)
-                return (imported: result.imported, skipped: result.skipped)
-            },
+            importAction: { url in try await viewModel.importFile(url: url) },
             resultFormat: DictionaryTexts.importResultFormat,
-            onComplete: { await loadEntries() },
+            onComplete: { await viewModel.load() },
         )
     }
 }

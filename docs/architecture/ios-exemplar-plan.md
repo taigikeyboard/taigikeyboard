@@ -69,6 +69,13 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 
 **Risk**: medium — need to preserve async behavior and loading states.
 
+**Status 2026-04-19**: Done (branch `refactor/ios-g3-dict-tab-viewmodels`). 4 VMs added under `App/Tabs/Dictionary/Models/` (`FrequencyDataViewModel`, `AssociationDataViewModel`, `CustomDictionaryViewModel`, `DataManagementViewModel`), each `@MainActor final class … : ObservableObject` with init DI defaulting to `.shared` (matches G1/G6 pattern). CSV parse/build extracted to `CSVDocument` extension (`App/Tabs/Dictionary/Utilities/CSVParsers.swift`) to keep VMs lean; `NextWordService.AssociationEntry: Identifiable` extension relocated to `Models/AssociationEntry+Identifiable.swift`. `DataManagementViewModel` returns a named `BackupExportPayload` struct instead of a bare tuple. Views retain form state (`romanInput`/`hanziInput`/`editingEntry`), alert flags, `ImportExportHandler` (@StateObject), `UIImpactFeedbackGenerator`, and the SwiftUI `fileExporter`/`fileImporter` bindings — only repository/service calls and data state migrated. No API changes to repositories/services.
+
+**Cross-platform format notes (for Phase II Android)**:
+- **Frequency CSV**: 2 columns — `word,count`. Count is a positive integer; rows with empty word or non-positive count are dropped silently. Fields wrapping comma/quote/newline use RFC4180 double-quote escaping (`CSVDocument.escape`). Parser toggles `inQuotes` on any `"` — does NOT unescape `""` back to `"` (known short-term simplification; file as follow-up before Phase II parser is written).
+- **Association CSV**: 5 columns — `prevWord,prevTl,nextWord,nextTl,count`. Same escaping/parsing caveats. `prevWord`/`prevTl` may be empty (unigram start-of-sentence); `nextWord` must be non-empty; `count` must be > 0.
+- **Backup JSON (`.taigi`)**: `BackupService.BackupData` — `{ version, exportedAt, platform, appVersion, customDictionary[], userFrequency[], userAssociation[] }`. `platform: "ios"` field is present in iOS exports; Android import must accept `"ios"` / `"android"` without branching on it (data payload is platform-neutral). `prevTl` in `AssociationBackupEntry` is `String?` (optional), `nextTl` is non-optional `String`.
+
 ---
 
 ### G4 · ComposingManager engine/platform split (L — ~4–6 hr, **boundary design front-loaded**)

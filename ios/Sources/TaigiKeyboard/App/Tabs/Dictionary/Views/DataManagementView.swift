@@ -5,18 +5,18 @@ import UniformTypeIdentifiers
 /// Backup/Restore sub-page
 /// Provides export and import of all user data
 struct DataManagementView: View {
+    @StateObject private var viewModel = DataManagementViewModel()
 
-    // Backup/Restore state
     @State private var showBackupExporter = false
     @State private var showBackupImporter = false
     @State private var backupDocument: BackupDocument?
     @State private var backupFilename = "taigi_backup.taigi"
+
     @State private var showBackupResultAlert = false
     @State private var backupResultMessage = ""
     @State private var showExportSuccessAlert = false
     @State private var showBackupErrorAlert = false
     @State private var backupErrorMessage = ""
-    @State private var isProcessing = false
 
     var body: some View {
         List {
@@ -35,8 +35,8 @@ struct DataManagementView: View {
                         systemImage: "square.and.arrow.up",
                     )
                 }
-                .disabled(isProcessing)
-                if isProcessing {
+                .disabled(viewModel.isProcessing)
+                if viewModel.isProcessing {
                     ProgressView()
                         .frame(maxWidth: .infinity)
                 } else {
@@ -87,29 +87,18 @@ struct DataManagementView: View {
         }
     }
 
-    // MARK: - Backup/Restore
+    // MARK: - Backup / Restore
 
     private func exportBackup() {
-        isProcessing = true
         Task {
-            defer { Task { @MainActor in isProcessing = false } }
             do {
-                let data = try await BackupService.shared.exportAll()
-                await MainActor.run {
-                    let dateStr = {
-                        let f = DateFormatter()
-                        f.dateFormat = "yyyy-MM-dd"
-                        return f.string(from: Date())
-                    }()
-                    backupFilename = "備份復原_\(dateStr).taigi"
-                    backupDocument = BackupDocument(data)
-                    showBackupExporter = true
-                }
+                let payload = try await viewModel.exportBackup()
+                backupFilename = payload.filename
+                backupDocument = BackupDocument(payload.data)
+                showBackupExporter = true
             } catch {
-                await MainActor.run {
-                    backupErrorMessage = error.localizedDescription
-                    showBackupErrorAlert = true
-                }
+                backupErrorMessage = error.localizedDescription
+                showBackupErrorAlert = true
             }
         }
     }
@@ -118,32 +107,20 @@ struct DataManagementView: View {
         switch result {
         case let .success(urls):
             guard let url = urls.first else { return }
-            isProcessing = true
             Task {
-                defer { Task { @MainActor in isProcessing = false } }
                 do {
-                    let accessing = url.startAccessingSecurityScopedResource()
-                    defer {
-                        if accessing { url.stopAccessingSecurityScopedResource() }
-                    }
-                    let data = try Data(contentsOf: url)
-                    let importResult = try await BackupService.shared.importAll(from: data)
-                    await MainActor.run {
-                        backupResultMessage = String(
-                            format: DictionaryTexts.importBackupResult,
-                            importResult.customDict,
-                            importResult.frequency,
-                            importResult.association,
-                        )
-                        showBackupResultAlert = true
-                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                        impactFeedback.impactOccurred()
-                    }
+                    let importResult = try await viewModel.importBackup(url: url)
+                    backupResultMessage = String(
+                        format: DictionaryTexts.importBackupResult,
+                        importResult.customDict,
+                        importResult.frequency,
+                        importResult.association,
+                    )
+                    showBackupResultAlert = true
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 } catch {
-                    await MainActor.run {
-                        backupErrorMessage = error.localizedDescription
-                        showBackupErrorAlert = true
-                    }
+                    backupErrorMessage = error.localizedDescription
+                    showBackupErrorAlert = true
                 }
             }
         case let .failure(error):

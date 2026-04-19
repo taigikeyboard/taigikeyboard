@@ -4,24 +4,20 @@ import UniformTypeIdentifiers
 /// Association data sub-page
 /// Shows word association list with toggle, import/export, and clear option
 struct AssociationDataView: View {
+    @StateObject private var viewModel = AssociationDataViewModel()
+    @StateObject private var importExport = ImportExportHandler()
 
-    @State private var isAssociationRecordingEnabled: Bool
-    @State private var allData: [NextWordService.AssociationEntry] = []
-    @State private var isLoading = true
     @State private var filterText = ""
     @State private var showClearAlert = false
 
-    @StateObject private var importExport = ImportExportHandler()
-
-    private let settings = SharedSettings.shared
     private let displayLimit = 100
 
     private var filteredData: [NextWordService.AssociationEntry] {
         if filterText.isEmpty {
-            return Array(allData.prefix(displayLimit))
+            return Array(viewModel.allData.prefix(displayLimit))
         }
         let query = filterText.lowercased()
-        return allData.filter {
+        return viewModel.allData.filter {
             $0.prevWord.lowercased().contains(query) ||
                 $0.prevTl.lowercased().contains(query) ||
                 $0.nextWord.lowercased().contains(query) ||
@@ -29,13 +25,9 @@ struct AssociationDataView: View {
         }
     }
 
-    init() {
-        _isAssociationRecordingEnabled = State(initialValue: SharedSettings.shared.isAssociationRecordingEnabled)
-    }
-
     var body: some View {
         List {
-            if isLoading {
+            if viewModel.isLoading {
                 Section {
                     ProgressView()
                         .frame(maxWidth: .infinity)
@@ -43,14 +35,16 @@ struct AssociationDataView: View {
             } else {
                 // Toggle
                 Section {
-                    Toggle(isOn: $isAssociationRecordingEnabled) {
+                    Toggle(
+                        isOn: Binding(
+                            get: { viewModel.isAssociationRecordingEnabled },
+                            set: { viewModel.setRecordingEnabled($0) },
+                        ),
+                    ) {
                         HStack {
                             Text(DictionaryTexts.isAssociationRecordingEnabled)
                             SettingInfoButton(description: DictionaryTexts.isAssociationRecordingEnabledInfo)
                         }
-                    }
-                    .onChange(of: isAssociationRecordingEnabled) { _, newValue in
-                        settings.isAssociationRecordingEnabled = newValue
                     }
                 }
 
@@ -59,7 +53,7 @@ struct AssociationDataView: View {
                     Text(DictionaryTexts.associationDescription)
                         .font(AppStyle.bodyFont)
                     Button {
-                        importExport.performExport { try await exportCSV() }
+                        importExport.performExport { try await viewModel.exportCSV() }
                     } label: {
                         Label(
                             DictionaryTexts.associationExportCSV,
@@ -101,7 +95,7 @@ struct AssociationDataView: View {
 
                 // Data list
                 Section {
-                    if allData.isEmpty {
+                    if viewModel.allData.isEmpty {
                         Text(DictionaryTexts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
@@ -118,10 +112,7 @@ struct AssociationDataView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    Task {
-                                        await NextWordService.shared.deleteAssociation(item)
-                                        allData.removeAll { $0.id == item.id }
-                                    }
+                                    Task { await viewModel.delete(item) }
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -145,7 +136,7 @@ struct AssociationDataView: View {
         .alert(DictionaryTexts.clearAllAssociation, isPresented: $showClearAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
             Button(DictionaryTexts.clear, role: .destructive) {
-                clearData()
+                Task { await viewModel.clearAll() }
             }
         } message: {
             Text(DictionaryTexts.clearAssociationMessage)
@@ -160,19 +151,11 @@ struct AssociationDataView: View {
             onFileImport: { handleImport($0) },
         )
         .task {
-            await loadData()
+            await viewModel.load()
         }
     }
 
-    // MARK: - Data
-
-    private func loadData() async {
-        let assoc = await NextWordService.shared.allAssociations()
-        await MainActor.run {
-            allData = assoc
-            isLoading = false
-        }
-    }
+    // MARK: - Display
 
     private func associationDisplayText(_ item: NextWordService.AssociationEntry) -> String {
         let prev = item.prevTl.isEmpty ? item.prevWord : "(\(item.prevTl), \(item.prevWord))"
@@ -180,73 +163,14 @@ struct AssociationDataView: View {
         return "\(prev) → \(next)"
     }
 
-    private func clearData() {
-        Task {
-            await NextWordService.shared.clearAllAssociations()
-            await MainActor.run {
-                allData = []
-            }
-        }
-    }
-
-    // MARK: - Export/Import
-
-    private func exportCSV() async throws -> String {
-        let data = await NextWordService.shared.allAssociations()
-        var csv = ""
-        for item in data {
-            csv += "\(CSVDocument.escape(item.prevWord)),\(CSVDocument.escape(item.prevTl)),\(CSVDocument.escape(item.nextWord)),\(CSVDocument.escape(item.nextTl)),\(item.count)\n"
-        }
-        return csv
-    }
+    // MARK: - Import
 
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,
-            importAction: { url in
-                let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                let fileData = try Data(contentsOf: url)
-                guard let csvString = String(data: fileData, encoding: .utf8) else {
-                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot read file"])
-                }
-                let entries = parseAssociationCSV(csvString)
-                let imported = try await NextWordService.shared.batchImportAssociations(entries: entries.map {
-                    (prevWord: $0.prevWord, prevTl: $0.prevTl, nextWord: $0.nextWord, nextTl: $0.nextTl, count: $0.count)
-                })
-                return (imported: imported, skipped: entries.count - imported)
-            },
+            importAction: { url in try await viewModel.importCSV(url: url) },
             resultFormat: DictionaryTexts.importResultFormat,
-            onComplete: { await loadData() },
+            onComplete: { await viewModel.load() },
         )
-    }
-
-    // MARK: - CSV Helpers
-
-    private func parseAssociationCSV(_ csv: String) -> [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)] {
-        let lines = csv.components(separatedBy: .newlines)
-        var entries: [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)] = []
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            let columns = CSVDocument.parseLine(trimmed)
-            guard columns.count >= 5 else { continue }
-            let prevWord = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let prevTl = columns[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            let nextWord = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
-            let nextTl = columns[3].trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let count = Int(columns[4].trimmingCharacters(in: .whitespacesAndNewlines)),
-                  count > 0, !nextWord.isEmpty else { continue }
-            entries.append((prevWord: prevWord, prevTl: prevTl, nextWord: nextWord, nextTl: nextTl, count: count))
-        }
-        return entries
-    }
-}
-
-// MARK: - Identifiable Extension
-
-extension NextWordService.AssociationEntry: Identifiable {
-    public var id: String {
-        "\(prevWord)\t\(prevTl)\t\(nextWord)\t\(nextTl)"
     }
 }

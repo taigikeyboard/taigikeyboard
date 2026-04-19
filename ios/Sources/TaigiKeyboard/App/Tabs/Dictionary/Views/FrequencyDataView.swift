@@ -4,33 +4,25 @@ import UniformTypeIdentifiers
 /// Frequency data sub-page
 /// Shows top word frequency list with toggle, import/export, and clear option
 struct FrequencyDataView: View {
+    @StateObject private var viewModel = FrequencyDataViewModel()
+    @StateObject private var importExport = ImportExportHandler()
 
-    @State private var isFrequencyRecordingEnabled: Bool
-    @State private var allData: [(word: String, count: Int)] = []
-    @State private var isLoading = true
     @State private var filterText = ""
     @State private var showClearAlert = false
 
-    @StateObject private var importExport = ImportExportHandler()
-
-    private let settings = SharedSettings.shared
     private let displayLimit = 100
 
     private var filteredData: [(word: String, count: Int)] {
         if filterText.isEmpty {
-            return Array(allData.prefix(displayLimit))
+            return Array(viewModel.allData.prefix(displayLimit))
         }
         let query = filterText.lowercased()
-        return allData.filter { $0.word.lowercased().contains(query) }
-    }
-
-    init() {
-        _isFrequencyRecordingEnabled = State(initialValue: SharedSettings.shared.isFrequencyRecordingEnabled)
+        return viewModel.allData.filter { $0.word.lowercased().contains(query) }
     }
 
     var body: some View {
         List {
-            if isLoading {
+            if viewModel.isLoading {
                 Section {
                     ProgressView()
                         .frame(maxWidth: .infinity)
@@ -38,14 +30,16 @@ struct FrequencyDataView: View {
             } else {
                 // Toggle
                 Section {
-                    Toggle(isOn: $isFrequencyRecordingEnabled) {
+                    Toggle(
+                        isOn: Binding(
+                            get: { viewModel.isFrequencyRecordingEnabled },
+                            set: { viewModel.setRecordingEnabled($0) },
+                        ),
+                    ) {
                         HStack {
                             Text(DictionaryTexts.isFrequencyRecordingEnabled)
                             SettingInfoButton(description: DictionaryTexts.isFrequencyRecordingEnabledInfo)
                         }
-                    }
-                    .onChange(of: isFrequencyRecordingEnabled) { _, newValue in
-                        settings.isFrequencyRecordingEnabled = newValue
                     }
                 }
 
@@ -54,7 +48,7 @@ struct FrequencyDataView: View {
                     Text(DictionaryTexts.frequencyDescription)
                         .font(AppStyle.bodyFont)
                     Button {
-                        importExport.performExport { try await exportCSV() }
+                        importExport.performExport { try await viewModel.exportCSV() }
                     } label: {
                         Label(
                             DictionaryTexts.frequencyExportCSV,
@@ -96,7 +90,7 @@ struct FrequencyDataView: View {
 
                 // Data list
                 Section {
-                    if allData.isEmpty {
+                    if viewModel.allData.isEmpty {
                         Text(DictionaryTexts.noData)
                             .foregroundColor(.secondary)
                     } else if !filterText.isEmpty, filteredData.isEmpty {
@@ -113,10 +107,7 @@ struct FrequencyDataView: View {
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    Task {
-                                        try? await UserFrequencyRepository.shared.deleteWord(item.word)
-                                        allData.removeAll { $0.word == item.word }
-                                    }
+                                    Task { await viewModel.deleteWord(item.word) }
                                 } label: {
                                     Image(systemName: "trash")
                                 }
@@ -140,7 +131,7 @@ struct FrequencyDataView: View {
         .alert(DictionaryTexts.clearAllFrequency, isPresented: $showClearAlert) {
             Button(CommonTexts.cancel, role: .cancel) {}
             Button(DictionaryTexts.clear, role: .destructive) {
-                clearData()
+                viewModel.clearAll()
             }
         } message: {
             Text(DictionaryTexts.clearFrequencyMessage)
@@ -155,76 +146,18 @@ struct FrequencyDataView: View {
             onFileImport: { handleImport($0) },
         )
         .task {
-            await loadData()
+            await viewModel.load()
         }
     }
 
-    // MARK: - Data
-
-    private func loadData() async {
-        let freq = await UserFrequencyRepository.shared.topWordsAsync(limit: Int.max)
-        await MainActor.run {
-            allData = freq
-            isLoading = false
-        }
-    }
-
-    private func clearData() {
-        do {
-            try UserFrequencyService.deleteUserDatabase()
-            allData = []
-        } catch {
-            DebugLogger(category: "FrequencyDataView").error("Failed to delete frequency database: \(error)")
-        }
-    }
-
-    // MARK: - Export/Import
-
-    private func exportCSV() async throws -> String {
-        let data = await UserFrequencyRepository.shared.topWordsAsync(limit: Int.max)
-        var csv = ""
-        for item in data {
-            csv += "\(CSVDocument.escape(item.word)),\(item.count)\n"
-        }
-        return csv
-    }
+    // MARK: - Import
 
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,
-            importAction: { url in
-                let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-                let data = try Data(contentsOf: url)
-                guard let csvString = String(data: data, encoding: .utf8) else {
-                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot read file"])
-                }
-                let entries = parseFrequencyCSV(csvString)
-                try await UserFrequencyRepository.shared.ensureInitialized()
-                let imported = try await UserFrequencyRepository.shared.batchImportMerge(entries: entries)
-                return (imported: imported, skipped: entries.count - imported)
-            },
+            importAction: { url in try await viewModel.importCSV(url: url) },
             resultFormat: DictionaryTexts.importResultFormat,
-            onComplete: { await loadData() },
+            onComplete: { await viewModel.load() },
         )
-    }
-
-    // MARK: - CSV Helpers
-
-    private func parseFrequencyCSV(_ csv: String) -> [(word: String, count: Int)] {
-        let lines = csv.components(separatedBy: .newlines)
-        var entries: [(word: String, count: Int)] = []
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            let columns = CSVDocument.parseLine(trimmed)
-            guard columns.count >= 2 else { continue }
-            let word = columns[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !word.isEmpty,
-                  let count = Int(columns[1].trimmingCharacters(in: .whitespacesAndNewlines)),
-                  count > 0 else { continue }
-            entries.append((word: word, count: count))
-        }
-        return entries
     }
 }
