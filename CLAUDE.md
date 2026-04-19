@@ -18,7 +18,9 @@ taigikeyboard/
 ├── rules/             # Mandatory rules (must read before relevant changes)
 │   ├── ui-style-guide.md   # Cross-platform UI styling spec
 │   ├── security-rules.md   # Logging, SQL, network, data storage rules
-│   ├── ios-guidelines.md   # SourceKit, KeyboardKit, memory, naming, tests
+│   ├── ios-guidelines.md   # Day-to-day iOS: SourceKit, KeyboardKit, memory, naming, tests
+│   ├── ios-architecture.md # Structural iOS: layers, KK isolation, shared-core, settings injection
+│   ├── android-guidelines.md # Kotlin/Android: shared-core candidate rules, DI, coroutines, Compose, IME
 │   ├── ai-friendly-code.md # Naming, comments, function design for AI readability
 │   ├── code-review-rules.md # Code review checklist (best practices, regression, scope)
 │   ├── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
@@ -38,11 +40,12 @@ taigikeyboard/
 6. **Phonetic conversion** — When working on TL/POJ/TPS conversion, **must** read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` before changes
 7. **UI Style Guide** — Before modifying app UI, **must** read `rules/ui-style-guide.md`
 8. **Security Rules** — Before adding logging, SQL, network, or storage code, **must** read `rules/security-rules.md`
-9. **iOS Guidelines** — Before modifying iOS code, **must** read `rules/ios-guidelines.md`
-10. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
-11. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
-12. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
-13. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
+9. **iOS Guidelines** — Before modifying iOS code, **must** read `rules/ios-guidelines.md`; for structural changes also read `rules/ios-architecture.md`
+10. **Android Guidelines** — Before modifying Android code, **must** read `rules/android-guidelines.md` — shared-core candidate rules, DI patterns, Kotlin/Android best practices, coroutines, Compose, IME-specific rules
+11. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
+12. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
+13. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
+14. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
 
 ## Build & Test
 

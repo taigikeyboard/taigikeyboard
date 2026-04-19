@@ -1,8 +1,10 @@
 # iOS Architecture Rules
 
-Mandatory architectural contract for the iOS target. Read before any non-trivial structural change. This document is the judge for the 11-phase refactor in `/Users/alexsu/.claude/plans/tender-zooming-steele.md`.
+Mandatory architectural contract for the iOS target. Read before any non-trivial structural change.
 
-Last updated: 2026-04-19 (Phase 11 shared-core audit complete).
+**Status**: iOS structure refactor Phase 0–11 closed 2026-04-19 (PRs #131–#133). iOS Phase I exemplar plan closed same day (PR #141). This doc is now a stable reference — Phase I tactical TODO blocks removed 2026-04-19.
+
+**Phase context**: shared-core extraction roadmap is tracked in `docs/architecture/ios-exemplar-plan.md` (Phase I history) and `docs/architecture/android-state-audit.md` (Phase II plan); session-persistent phase state is kept in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo). iOS is currently the architectural exemplar; Android Phase II mirrors the shape documented at `docs/architecture/ios-exemplar.md`.
 
 ---
 
@@ -108,32 +110,6 @@ KeyboardKit types (`Autocomplete.Suggestion`, `Keyboard.KeyboardCase`, `Autocomp
 
 They do **not** appear in Engine-layer files — no exceptions.
 
-### Current violations to fix during the refactor
-
-| File                                            | Current state                                    | Phase |
-|-------------------------------------------------|--------------------------------------------------|-------|
-| `Lexicon/Processor/CandidateProcessor.swift`    | Reads `KeyboardSettings.store` directly          | 4     |
-| `Input/CaseTransformer.swift`                   | Public API uses `Keyboard.KeyboardCase`          | 4     |
-| `Autocomplete/Services/AutocompleteProviders.swift` | Protocol returns `Autocomplete.Suggestion`   | 4     |
-| `Input/Composing/ComposingManager.swift`        | `@Published suggestions: [Autocomplete.Suggestion]` | 4  |
-| `NextWord/NextWordController.swift`             | Accepts `Autocomplete.Suggestion`                | 4     |
-| `Settings/SharedSettings.swift`                 | Calls `KeyboardSettings.store.resetToDefaults()` | 3     |
-
-### KK boundary call-site inventory (to be filled in Phase 4 pre-step)
-
-Before Phase 4 starts, run grep passes and record call-sites here. Format:
-
-```
-Keyboard.KeyboardCase consumers:
-  - <file:line>  — ...
-AutocompleteContextUpdater callers:
-  - <file:line>  — ...
-Autocomplete.Suggestion producers:
-  - <file:line>  — ...
-```
-
-This inventory justifies where each adapter lives.
-
 ### Conflict resolution
 
 If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong layer**. Move it to Adapter or Platform — do not add `import KeyboardKit` to an Engine file as an exception.
@@ -164,9 +140,9 @@ Every file that satisfies the criteria begins with:
 
 Files that are engine-layer but **do not** qualify should begin with a one-line `// NOTE: Not shared-core — <reason>` comment so the audit state stays visible at the top of the file.
 
-### Candidate roster (Phase 11, 2026-04-19)
+### Candidate roster
 
-33 files, ~2341 LOC across Phonetics (9), Input (7), Lexicon (10), NextWord (3), Autocomplete (2), Settings contracts (2). **Authoritative table with LOC, notes, dependency graph, and verification script: `docs/engine/shared-core-readiness.md`.** Do not re-enumerate here — update the readiness doc and point back.
+**Authoritative table with LOC, notes, dependency graph, and verification script: `docs/engine/shared-core-readiness.md`.** Do not re-enumerate here — update the readiness doc and point back. Current count as of end of Phase I: 43 files.
 
 ### Exclusions, soft dependencies, verification
 
@@ -268,24 +244,24 @@ Folder names align with `TabType` enum cases and UI-visible titles, not sub-file
 
 ---
 
-## 7. Per-Phase Judgment Criteria
+## 7. Per-Change Audit Checklist
 
-This document is the reference the refactor plan defers to. When a phase completes, audit against:
+Apply to any non-trivial structural change:
 
 - [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker)
 - [ ] No Engine-layer file imports `KeyboardKit` / `UIKit` / `SwiftUI` / `Combine`
 - [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store`
-- [ ] `git grep` call-site inventory in §3 matches the current KK-boundary file set
-- [ ] Settings change sync regression test passes
+- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard)
 - [ ] File names match primary types; no `_` prefix, no numeric folders
 
 ---
 
 ## 8. References
 
-- Refactor plan: `/Users/alexsu/.claude/plans/tender-zooming-steele.md`
-- Codex review (2026-04-18): recorded in the project memory at `/Users/alexsu/.claude/projects/-Users-alexsu-Workspace-taigikeyboard/memory/` — findings from the review are baked into §3, §4, §5 of this document
-- Related rules:
-  - `ios-guidelines.md` — SourceKit, KeyboardKit, memory mgmt, naming, tests
-  - `ai-friendly-code.md` — naming, comments, function design
-  - `code-review-rules.md` — review checklist
+- `rules/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
+- `rules/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
+- `rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
+- `rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
+- `rules/code-review-rules.md` — review checklist
+- `docs/architecture/ios-exemplar.md` — Phase II alignment target for Android
+- `docs/engine/shared-core-readiness.md` — authoritative candidate roster
