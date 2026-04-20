@@ -26,6 +26,7 @@
 10. [Custom-dictionary search-key derivation](#10-custom-dictionary-search-key-derivation)
 11. [Settings read semantics](#11-settings-read-semantics)
 12. [Logger backend neutrality](#12-logger-backend-neutrality)
+13. [Composing-buffer reset semantics](#13-composing-buffer-reset-semantics)
 
 ---
 
@@ -277,6 +278,35 @@ baseFreqScore  (~0 … +100)       fallback
 **Test labels**:
 - `INVARIANT_candidates_only_depend_on_logger_backend_protocol`
 - `INVARIANT_null_logger_is_the_default_factory`
+
+---
+
+## 13. Composing-buffer reset semantics
+
+**Invariant**: clearing the composing buffer (`ComposingState.apply(.reset)` on iOS, `ComposingManager.reset(ic)` on Android) MUST NOT commit the active preedit to the backing document. The user-visible effect is identical on both platforms: the preedit disappears, the document is unchanged.
+
+**Why**: external `reset` callers — keyboard subtype switch, session teardown, mode change — assume composing state is discarded, not flushed. A silent commit means tone-marked but un-confirmed text leaks into the editor whenever the keyboard is dismissed mid-composition.
+
+**Scope**:
+- iOS engine: `Input/Composing/ComposingState.swift` `.reset` intent emits `[.clearPreeditWithoutCommit, .resetAutocomplete]`.
+- iOS binding: `KeyboardExtension/KeyboardViewController+TextInput.swift` `clearMarkedText()` calls `setMarkedText("", …)` + `unmarkText()` — no `insertText`.
+- Android binding: `ime/text/composing/ComposingManager.kt` `reset(ic)` and `startComposing(...)` mid-composition restart both call `ic.setComposingText("", 1)` BEFORE `ic.finishComposingText()`. Pre-zero is mandatory because `InputConnection.finishComposingText()` commits the active composing region by default — see `composing-state-boundary.md` §11.2 rule 1.
+
+**Known coverage gaps (deferred)**: the same invariant applies to two additional Android call-sites pending follow-up parity PRs that require a Robolectric / IME instrumentation harness:
+- `ime/text/TextInputManager.kt` `resetComposingText()` (4 call-sites).
+- `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` — emoji tap during active Taigi preedit currently leaks a silent commit.
+
+**Corner cases**:
+- Idle reset (no active composition) MUST issue zero `InputConnection` calls / zero `Effect` emissions on either platform — observable as a no-op.
+- The `deleteBackward` empty-raw path routes through `reset(ic)` on Android; the same zero-then-finish ordering applies.
+
+**Test labels**:
+- `INVARIANT_composing_clear_preedit_does_not_commit` — `ComposingManagerTest` (Android binding) + `ComposingManagerTests.testReset_whenComposing_returnsToIdleWithoutInserting` (iOS wrapper, engine-level pin).
+- `INVARIANT_composing_reset_when_idle_is_noop` — `ComposingManagerTest` (Android) + `ComposingManagerTests.testReset_whenIdle_emitsNoEffects` (iOS wrapper).
+- `INVARIANT_composing_idle_to_idle_is_noop` — `ComposingStateTests.testReset_whenIdle_emitsEmptyEffects` (pure engine, iOS).
+
+**Cross-references**:
+- Boundary doc §2.2 (`Effect` enum), §11.1 (Android binding state table), §11.2 rule 1 (zero-then-finish), §11.6 (parity correction history).
 
 ---
 

@@ -281,9 +281,9 @@ G9 must cover at minimum:
 - `INVARIANT_composing_replace_last_preserves_selected_index` — `replaceLastCharacter` does NOT reset `selectedCandidateIndex` (TPS auto-correct contract).
 - `INVARIANT_composing_idle_to_idle_is_noop` — repeated `reset()` on idle state produces a `Transition` with empty `effects` and no state changes.
 - `INVARIANT_composing_idle_has_no_selected_candidate` — every idle-producing intent returns `newSelectedIndex == -1`.
-- `INVARIANT_composing_clear_preedit_does_not_commit` — **platform integration test on both iOS and Android**: the `clearPreeditWithoutCommit` effect, as executed by the platform binding, leaves the backing text unchanged.
+- `INVARIANT_composing_clear_preedit_does_not_commit` — both platforms must pin that the `clearPreeditWithoutCommit` effect (or its binding-side equivalent) never inserts text. Android side covered as a JVM unit test in `ComposingManagerTest` against a hand-rolled `RecordingInputConnection` (records `setComposingText` / `finishComposingText` / `commitText` order). iOS side covered at the engine + wrapper layer in `ComposingStateTests` and `ComposingManagerTests`. UIKit `UITextDocumentProxy` integration is intentionally not covered — the project lacks a UI test harness; the binding (`KeyboardViewController+TextInput.swift`) is two trivial lines that cannot insert text.
 
-All pure-state tests runnable without a simulator; the last one requires iOS + Android instrumentation harness.
+All pure-state tests are runnable without a simulator; the binding-side tests above run on the standard JVM / XCTest targets — no instrumentation harness required.
 
 ---
 
@@ -330,12 +330,12 @@ Observable Android ↔ iOS divergence today:
 
 | Path | Today (Android) | Honors `clearPreeditWithoutCommit`? |
 |---|---|---|
-| `deleteBackward` empty-raw path | `ic.setComposingText("", 1)` → `reset(ic)` → `ic.finishComposingText()` | Yes — zero-then-finish order satisfied. |
-| `reset(ic)` called directly (external, e.g. subtype switch, session end with pending preedit) | `ic.finishComposingText()` only — no pre-zero | **No — silently commits preedit.** |
+| `deleteBackward` empty-raw path | `reset(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — pre-zero owned by `reset(ic)`. |
+| `reset(ic)` called directly (external, e.g. subtype switch, session end with pending preedit) | `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 | `commitComposition(ic)` | sync fallback derive + `ic.setComposingText(composingText, 1)` + `ic.finishComposingText()` | Intended commit path — pre-zero not applicable. |
 | `selectSuggestion(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
 
-The `reset(ic)` external-call path is the A4-impl **parity-correction** target (see §11.6).
+`reset(ic)` is the canonical owner of the zero-then-finish sequence; both external callers and the `deleteBackward` empty-raw path now route through it. Pinned by `INVARIANT_composing_clear_preedit_does_not_commit` (see `behavioral-invariants.md` §13).
 
 ### 11.2 Effect → `InputConnection` binding rules
 
@@ -374,14 +374,23 @@ Today's state for reference: `ComposingManager` owns no scope; `SmartbarManager`
 
 ### 11.6 Parity-correction flag — `reset(ic)` pre-zero
 
-Current `ComposingManager.reset(ic)` calls `ic.finishComposingText()` without a prior `ic.setComposingText("", 1)`. External callers invoking `reset` with a non-empty preedit silently commit that preedit. iOS `commitManager.reset()` does not — it clears without committing.
+**Status**: corrected — see `INVARIANT_composing_clear_preedit_does_not_commit` in `behavioral-invariants.md` §13.
 
-This parity correction lands in an **isolated PR before A4-impl** per `rules/cross-platform-alignment.md` §1b ("Not be bundled with unrelated refactor work — a parity correction is its own observable change and deserves an isolated review"). Requirements:
+Previously `ComposingManager.reset(ic)` called `ic.finishComposingText()` without a prior `ic.setComposingText("", 1)`. External callers invoking `reset` with a non-empty preedit silently committed that preedit. iOS `ComposingState.apply(.reset)` did not — it emits `clearPreeditWithoutCommit`, bound to `clearMarkedText()` which never inserts text.
+
+The correction landed as an **isolated PR before A4-impl** per `rules/cross-platform-alignment.md` §1b ("Not be bundled with unrelated refactor work — a parity correction is its own observable change and deserves an isolated review"). What shipped:
 
 - Title prefix `parity:`.
-- Scope = add `ic.setComposingText("", 1)` before `ic.finishComposingText()` inside `ComposingManager.reset(ic)` + a regression test pinning no-commit semantics on both platforms (`INVARIANT_composing_clear_preedit_does_not_commit` from §8).
-- Before / after behavior documented in the PR description for both iOS and Android.
+- `ComposingManager.reset(ic)` now does `ic.setComposingText("", 1)` then `ic.finishComposingText()` (`ComposingManager.kt`).
+- `ComposingManager.startComposing(...)` mid-composition restart applies the same pre-zero pair (covered by the same INVARIANT label, `behavioral-invariants.md` §13).
+- `deleteBackward` empty-raw path's redundant pre-zero removed; routes through `reset(ic)`.
+- Regression tests on both platforms: Android `ComposingManagerTest` (JVM, hand-rolled `RecordingInputConnection`); iOS `ComposingManagerTests.testReset_whenComposing_returnsToIdleWithoutInserting` plus the pure-state pin in `ComposingStateTests`.
 - A4-impl lands subsequently as pure refactor (Effect-enum split) on top of the corrected behavior.
+
+**Deferred parity follow-ups** (same INVARIANT label, separate PRs because they require IME / Robolectric harness):
+
+- `TextInputManager.resetComposingText` (4 call-sites at line 271 / 488 / 562 / 757) — calls `ic.finishComposingText()` without pre-zero.
+- `MediaInputManager.sendEmojiKeyPress` — calls `ic.finishComposingText()` then `ic.commitText(emoji, 1)`; emoji tap during active Taigi preedit silently commits the preedit.
 
 ### 11.7 Clock and settings at the boundary
 
@@ -414,4 +423,4 @@ A8-sweep adds the `// region Shared-Core Candidate` header per `rules/android-gu
 - A4-impl deliverable: `android-state-audit.md` §7 A4-impl.
 - Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
 - Android guidelines (IME, DI, coroutines): `rules/android-guidelines.md` §§4, 5, 8.
-- `clearPreeditWithoutCommit` test label: §8 test hooks in this doc (no counterpart in `behavioral-invariants.md` — the invariant is binding-specific, not engine-observable).
+- `clearPreeditWithoutCommit` test label: see §8 of this doc and `behavioral-invariants.md` §13 (full Composing-buffer reset semantics + cross-platform test mapping).

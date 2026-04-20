@@ -276,6 +276,11 @@ final class ComposingManagerTests: XCTestCase {
 
     // MARK: - reset
 
+    /// INVARIANT_composing_clear_preedit_does_not_commit — the wrapper must
+    /// emit `.clearPreeditWithoutCommit` (never `.commitTextReplacingPreedit`)
+    /// on `.reset`, mirroring the Android binding's pre-zero before
+    /// `finishComposingText()`. UIKit-side proxy integration is not covered
+    /// here — this project has no UI test harness for `UITextDocumentProxy`.
     func testReset_whenComposing_returnsToIdleWithoutInserting() {
         manager.startComposing(with: "abc")
         spy.effects.removeAll()
@@ -290,14 +295,18 @@ final class ComposingManagerTests: XCTestCase {
             .clearPreeditWithoutCommit,
             .resetAutocomplete,
         ])
+        XCTAssertFalse(spy.effects.contains { effect in
+            if case .commitTextReplacingPreedit = effect { return true }
+            return false
+        })
     }
 
+    /// INVARIANT_composing_reset_when_idle_is_noop — also pinned at the pure
+    /// engine layer in `ComposingStateTests.testReset_whenIdle_emitsEmptyEffects`.
     func testReset_whenIdle_emitsNoEffects() {
         manager.reset()
 
         XCTAssertFalse(manager.isComposing)
-        // INVARIANT_composing_idle_to_idle_is_noop — wrapper must not fan
-        // out delegate calls on a noop reset.
         XCTAssertTrue(spy.effects.isEmpty)
     }
 }

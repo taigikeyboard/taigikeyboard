@@ -27,9 +27,11 @@ class ComposingManager(
 ) {
     // rawInput: single source of truth (original keystrokes, e.g. "gua2si7")
     private var rawInput: String = ""
+
     // composingText: derived display (tone-marked, e.g. "guá sī")
     private var composingText: String = ""
     private var isComposing: Boolean = false
+
     // Whether composingText needs re-derivation (set true after rawInput changes)
     private var displayDirty: Boolean = false
 
@@ -40,8 +42,17 @@ class ComposingManager(
     /**
      * Start composing with initial character
      */
-    fun startComposing(char: String, ic: InputConnection) {
+    fun startComposing(
+        char: String,
+        ic: InputConnection,
+    ) {
         if (isComposing) {
+            // INVARIANT_composing_clear_preedit_does_not_commit:
+            // when starting a fresh composition over an active preedit,
+            // updateComposingText below atomically replaces the composing
+            // region. A `finishComposingText()` here would silently commit
+            // the previous preedit before the replace.
+            ic.setComposingText("", 1)
             ic.finishComposingText()
         }
         rawInput = char
@@ -55,7 +66,10 @@ class ComposingManager(
     /**
      * Append character to composing
      */
-    fun appendCharacter(char: String, ic: InputConnection) {
+    fun appendCharacter(
+        char: String,
+        ic: InputConnection,
+    ) {
         if (!isComposing) {
             startComposing(char, ic)
             return
@@ -72,7 +86,10 @@ class ComposingManager(
      * Replace the last character of rawInput with a new string.
      * Used by palatalization auto-correct.
      */
-    fun replaceLastCharacter(replacement: String, ic: InputConnection) {
+    fun replaceLastCharacter(
+        replacement: String,
+        ic: InputConnection,
+    ) {
         if (!isComposing || rawInput.isEmpty()) return
         rawInput = rawInput.dropLast(1) + replacement
         composingText = rawInput
@@ -98,7 +115,7 @@ class ComposingManager(
         rawInput = rawInput.dropLast(1)
 
         if (rawInput.isEmpty()) {
-            ic.setComposingText("", 1)
+            // reset(ic) owns the pre-zero now (INVARIANT_composing_clear_preedit_does_not_commit).
             reset(ic)
             return true
         }
@@ -136,7 +153,10 @@ class ComposingManager(
     /**
      * Select a suggestion candidate
      */
-    fun selectSuggestion(suggestion: String, ic: InputConnection) {
+    fun selectSuggestion(
+        suggestion: String,
+        ic: InputConnection,
+    ) {
         if (!isComposing) {
             return
         }
@@ -152,10 +172,17 @@ class ComposingManager(
     }
 
     /**
-     * Reset all composing state
+     * Reset all composing state.
+     *
+     * Mirrors iOS `ComposingState.apply(.reset)` which emits
+     * `clearPreeditWithoutCommit`. See `composing-state-boundary.md` §11.6.
      */
     fun reset(ic: InputConnection) {
         if (isComposing) {
+            // INVARIANT_composing_clear_preedit_does_not_commit:
+            // finishComposingText() commits the active composing region,
+            // so zero it first.
+            ic.setComposingText("", 1)
             ic.finishComposingText()
         }
         rawInput = ""
@@ -168,16 +195,12 @@ class ComposingManager(
     /**
      * Get current composing text (for UI display)
      */
-    fun getComposingText(): String? {
-        return if (isComposing) composingText else null
-    }
+    fun getComposingText(): String? = if (isComposing) composingText else null
 
     /**
      * Get raw input (for Trie search)
      */
-    fun getRawInput(): String? {
-        return if (isComposing) rawInput else null
-    }
+    fun getRawInput(): String? = if (isComposing) rawInput else null
 
     /**
      * Whether currently composing
@@ -190,7 +213,10 @@ class ComposingManager(
      * Apply a pre-computed derived display text to composing state and InputConnection.
      * Called from TextInputManager after background display derivation completes.
      */
-    internal fun applyDerivedDisplay(derivedText: String, ic: InputConnection) {
+    internal fun applyDerivedDisplay(
+        derivedText: String,
+        ic: InputConnection,
+    ) {
         if (!isComposing) return
         composingText = derivedText
         displayDirty = false
@@ -221,5 +247,4 @@ class ComposingManager(
     private fun updateComposingText(ic: InputConnection) {
         ic.setComposingText(composingText, 1)
     }
-
 }
