@@ -24,10 +24,14 @@ extension wiring hook (`TaigiKeyboard/KeyboardRoot.swift`). Android has two live
   `onCreate`, torn down in `onDestroy`. Owns per-session state (composing, candidates,
   next-word history).
 - **App-tab graph** — currently ephemeral: `PrefHelper(context)` is constructed per
-  `Activity`, no `Application` subclass exists. See `android-state-audit.md` §8 #1 —
-  a `TaigiKeyboardApplication : Application` subclass is the pending decision that
-  unblocks A3 (tab ViewModels). Until then, `CompositionRoot.shared(context)` serves as
-  a process-wide service holder (A1 deliverable) that both scopes reach into.
+  `Activity`, no `Application` subclass exists. **Decision 2026-04-20 (Claude + Codex
+  joint, auto-mode)**: `TaigiKeyboardApplication : Application` lands in A7, bundled
+  with the IME manager-graph unwind — see `android-state-audit.md` §8 #1. Until A7
+  closes, `CompositionRoot.shared(context)` continues as the process-wide service
+  holder (A1 deliverable) that both scopes reach into. Post-A7: `Application.onCreate`
+  owns the warmup chain (`prefs.warmUp()` + `migrateFromSharedPreferences` + per-service
+  `init(context)`); `TaigiKeyboard.onCreate` drops those calls (services are idempotent
+  per A1 so a duplicate call during migration stays safe).
 
 Engine-layer code MUST receive its dependencies via constructor injection from whichever
 scope constructs it. No `.INSTANCE` reach-ins. See `rules/android-guidelines.md` §4.

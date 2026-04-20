@@ -389,7 +389,7 @@ Mirror of iOS G2, adapted for DataStore.
 
 Mirror of iOS G3.
 
-**Prerequisite** (Codex post-review 2026-04-19): the app-tab graph ownership decision from §8 #1 must resolve *before* A3 starts. If Application subclass lands (recommended), ViewModels resolve service instances through the app-level `CompositionRoot`. If it does not, A3 invents a temporary `ViewModelProvider.Factory` that reaches the IME-scoped root indirectly — rework cost in A7 if we change direction later.
+**Prerequisite** (Codex post-review 2026-04-19 + §8 #1 decision 2026-04-20): the app-tab graph ownership decision resolved as "yes, add Application subclass", folded into A7. **A3 now blocks on A7**, not on §8 #1 directly — ViewModels resolve service instances via `(application as TaigiKeyboardApplication).composition` (or `CompositionRoot.shared(application)` as a back-compat path). A3 starting before A7 lands would invent a temporary factory and force rework when A7 relocates warmup to Application.
 
 **Deliverable**: 4 new ViewModels — `CustomDictionaryViewModel`, `FrequencyDataViewModel`, `AssociationDataViewModel`, `DataManagementViewModel`. Each extends `androidx.lifecycle.ViewModel` with `MutableStateFlow<State>` (private) + `asStateFlow()` (public). Pattern from `ios-exemplar.md` §6 Kotlin example. Constructor DI — services injected via VM factory.
 
@@ -438,17 +438,20 @@ Mirror of iOS G5-impl.
 
 Mirror of iOS G6. Smaller on Android since autocomplete services are already constructor-injected classes (not singletons). Scope: extract `AutocompleteInputClassifier` as a pure object/class, clean up any `LexiconService.INSTANCE` reach-ins post-A1.
 
-### A7 · IME manager-graph `getInstance()` unwind (M — ~3–4 hr)
+### A7 · IME manager-graph `getInstance()` unwind + Application subclass (M+ — ~3.5–4.5 hr)
 
-**Split from iOS G7** — the service-graph composition root lands earlier (see A1 note below); A7 only handles the `TaigiKeyboard ↔ TextInputManager ↔ SmartbarManager ↔ MediaInputManager` `getInstance()` cycle, which is separate from the stateful-`object` service graph.
+**Split from iOS G7** — the service-graph composition root lands earlier (see A1 note below); A7 handles the `TaigiKeyboard ↔ TextInputManager ↔ SmartbarManager ↔ MediaInputManager` `getInstance()` cycle plus — bundled per §8 #1 decision — the `TaigiKeyboardApplication : Application` subclass that owns app-tab composition.
 
 **Deliverable**:
 - Unwind `.getInstance()` reach (sites enumerated in §2.4). Each site takes its collaborators via init instead.
 - Extend the `CompositionRoot` introduced in A1 to hold the IME managers (`TextInputManager`, `SmartbarManager`, `MediaInputManager`) in place of the `companion object instance` pattern.
+- Introduce `TaigiKeyboardApplication : Application` (new ~30-LOC file) + `android:name=".TaigiKeyboardApplication"` on the Manifest `<application>` tag (one-line Manifest edit).
+- Relocate the warmup chain (`prefs.warmUp()`, `migrateFromSharedPreferences`, `UserFrequencyService.init`, `CustomDictionaryService.init`) from `TaigiKeyboard.onCreate` to `TaigiKeyboardApplication.onCreate`. Keep services idempotent for a safe migration.
+- `Application.onCreate` stays cheap — no synchronous heavy I/O; dictionary trie / binary loads continue firing lazily on first engine call, per A1 design.
 
-**Risk**: medium — mechanical but touches every smartbar view + key view.
+**Risk**: medium — mechanical but touches every smartbar view + key view. Application bundling adds one Manifest line + a new file with negligible runtime footprint.
 
-**Sequencing note** (Codex post-review finding, 2026-04-19): A1 introduces a minimal `CompositionRoot` holding the service graph so injected services have an owner; A7 expands that root to include the IME managers. Having A7 create `CompositionRoot` from scratch after A1 was already injecting via defaults would churn every service call-site twice.
+**Sequencing note** (Codex post-review finding, 2026-04-19 + §8 #1 decision, 2026-04-20): A1 introduces a minimal `CompositionRoot` holding the service graph so injected services have an owner; A7 expands that root to include the IME managers AND wraps the whole graph in a `TaigiKeyboardApplication` subclass. Having A7 create `CompositionRoot` from scratch after A1 was already injecting via defaults would churn every service call-site twice; keeping Application as its own standalone round would be a ~30 LOC + 1 Manifest-line PR with no test surface of its own.
 
 ### A8-skeleton · `android-exemplar.md` + marker convention (S — ~1 hr)
 
@@ -526,6 +529,7 @@ Total estimate: **30–42 hours focused work** (up from 28–40 after A7 / A8 sp
 These are decisions that must be made during Phase II proper but would benefit from user input early to avoid rework:
 
 1. **Application subclass** — introduce `class TaigiKeyboardApplication : Application` for app-tab graph composition, or keep app-tab state ephemeral (current pattern — `PrefHelper(context)` per Activity)? Recommendation: **yes, add one**. Isolates tab-side VM graph from IME-service graph (§2.2 three-scope problem). Behavior-neutral. Small round of its own, or folded into A7.
+   - **DECISION 2026-04-20** (Claude + Codex joint, auto-mode): **YES, add `TaigiKeyboardApplication : Application`. Fold into A7** (not a standalone round). Rationale: A7 already touches `CompositionRoot` structure for the IME manager-graph unwind; adding Application as a thin shell there avoids a round consisting of ~30 LOC + one Manifest line. Class name locked to `TaigiKeyboardApplication` (matches Manifest intent, avoids generic `TaigiApplication`). Warmup chain (`prefs.warmUp()` + `migrateFromSharedPreferences` + `UserFrequencyService.init` + `CustomDictionaryService.init`) relocates from `TaigiKeyboard.onCreate` to `TaigiKeyboardApplication.onCreate` — services must stay idempotent so a belt-and-suspenders duplicate call during the migration is safe. Codex-flagged risk: keep `CompositionRoot.shared(this)` construction in `Application.onCreate` cheap — service constructors are already cheap per A1 (dictionary trie / binary loads trigger lazily inside `LexiconService.search`); do NOT add synchronous heavy I/O to the Application boot path. Single-process assumption (no `android:process` split in Manifest) remains valid; if later split, re-audit. Unblocks A3 (tab ViewModels can use `(application as TaigiKeyboardApplication).composition` or the existing `CompositionRoot.shared(application)`). Manifest delta: one line `android:name=".TaigiKeyboardApplication"` on `<application>`.
 2. **Kotlin `object` migration pattern** — A1 converts stateful objects to classes with constructor DI. Default pattern — `companion object { @Volatile lateinit var INSTANCE }` initialized once from composition root, or plain class with no singleton? Recommendation: plain class, instances held by the `CompositionRoot`. No `INSTANCE` resurrection.
 3. **`FrequencyData` hoist** — iOS hoisted from `UserFrequencyService` (nested) to top-level in PR #133. Android should mirror. Decision: timing — bundle with A1 or separate round? Recommendation: A1 (same refactor pass).
 4. **LoggerBackend Android equivalent** — introduce `LoggerBackend` interface + `AndroidLogLoggerBackend` adapter wrapping `android.util.Log`. Engine files use `LoggerFactory.make(category:)` instead of calling `Log.d` directly. Decision: bundle with A1 or ship as its own A0.5? Recommendation: A1 precondition (carved out as the first PR of A1).
