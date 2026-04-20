@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordPredictor
+import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordScorer
 import com.siansiansu.taigikeyboard.ime.core.nextword.RawNextWordPrediction
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +16,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.exp
 
 private fun SQLiteStatement.bindArgs(vararg args: Any?) {
     clearBindings()
@@ -49,7 +50,7 @@ private fun SQLiteStatement.bindArgs(vararg args: Any?) {
 class NextWordService(
     appContext: Context,
     private val logger: LoggerBackend,
-) {
+) : NextWordPredictor {
     private val appContext: Context = appContext.applicationContext
 
     // ------------------------------------------------------------------ //
@@ -60,25 +61,13 @@ class NextWordService(
         private const val TAG = "NextWordService"
         private const val USER_DB_NAME = "user_association.db"
         private const val DATABASE_VERSION = 4 // v4: added prev_tl column
-        private const val DEFAULT_LIMIT = 30
 
-        // CROSS-PLATFORM INVARIANT — the scoring constants below
-        // (USER_WEIGHT, DICT_WEIGHT, DECAY_HALF_LIFE_HOURS, LEARNING_BONUS,
-        // *_DECAY_FLOOR, *_THRESHOLD) MUST mirror iOS NextWordService.swift.
-        // Drift causes silent ranking divergence between platforms.
-
-        // Source weights — USER_WEIGHT > DICT_WEIGHT so learned entries rank above dict
-        private const val USER_WEIGHT = 50
-        private const val DICT_WEIGHT = 1
-
-        // Time decay (RIME-style exponential decay): half-life 168h (1 week)
-        private const val DECAY_HALF_LIFE_HOURS = 168.0
-
-        // Memory strength: ensures user entries rank above dict entries
-        private const val LEARNING_BONUS = 300.0
-        private const val HIGH_USAGE_DECAY_FLOOR = 0.95 // count >= 3: near-permanent retention
-        private const val LOW_USAGE_DECAY_FLOOR = 0.3 // count < 3: prevents full decay (~1 month visible)
-        private const val HIGH_USAGE_THRESHOLD = 3
+        // `DEFAULT_LIMIT` now lives on `NextWordPredictor.Companion` so the
+        // interface seam owns the default exactly once.
+        //
+        // Scoring constants + math extracted to `ime/core/nextword/NextWordScorer.kt`
+        // (A9 BL4 extract) so invariants §7 / §8 can be pinned without reaching
+        // into SQLite or Android context. Mirrors iOS `NextWordScorer.swift`.
 
         // User-association capacity (prevents unbounded DB growth)
         private const val MAX_USER_ASSOCIATIONS = 50_000
@@ -207,10 +196,10 @@ class NextWordService(
      * ahead of iOS here; iOS `NextWordService.predict` still reads the
      * clock internally. Documented in `nextword-engine-boundary.md` §13.3.
      */
-    suspend fun predict(
+    override suspend fun predict(
         word: String,
-        roman: String = "",
-        limit: Int = DEFAULT_LIMIT,
+        roman: String,
+        limit: Int,
         settings: EngineSettings,
         nowMs: Long,
     ): List<RawNextWordPrediction> =
@@ -242,7 +231,7 @@ class NextWordService(
                             RawNextWordPrediction(
                                 hanzi = entry.nextWord,
                                 tl = entry.nextTl,
-                                score = entry.count.toDouble() * DICT_WEIGHT,
+                                score = NextWordScorer.scoreDict(entry.count),
                             )
                     }
 
@@ -277,10 +266,10 @@ class NextWordService(
                             val lastUsedMs = it.getLong(3)
                             userCount++
 
-                            val userScore = calculateUserScore(count, lastUsedMs, nowMs)
+                            val userScore = NextWordScorer.calculateUserScore(count, lastUsedMs, nowMs)
 
                             logger.debug(TAG) {
-                                val decay = calculateDecay(lastUsedMs, nowMs)
+                                val decay = NextWordScorer.calculateDecay(lastUsedMs, nowMs)
                                 "[PREDICT] User found: '$word' -> '$nextWord' (count=$count, decay=%.3f, score=%.1f)".format(
                                     decay,
                                     userScore,
@@ -328,43 +317,44 @@ class NextWordService(
 
     /** Record a bigram transition in `user_association` and prune periodically. */
     @Suppress("SqlResolve")
-    suspend fun recordAssociation(
+    override suspend fun recordAssociation(
         prev: String,
-        prevTl: String = "",
+        prevTl: String,
         nextHanzi: String,
-        nextTl: String = "",
-    ) = withContext(Dispatchers.IO) {
-        if (prev.isEmpty() || nextHanzi.isEmpty()) {
-            return@withContext
-        }
-
-        ensureInitialized()
-
-        val db = userDatabase ?: return@withContext
-
-        try {
-            val sql =
-                """
-                INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
-                VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-                ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
-                    prev_tl = excluded.prev_tl,
-                    count = count + 1,
-                    last_used = CURRENT_TIMESTAMP
-                """.trimIndent()
-
-            db.execSQL(sql, arrayOf(prev, prevTl, nextHanzi, nextTl))
-
-            logger.debug(TAG) { "[RECORD] '$prev' (tl='$prevTl') -> '$nextHanzi' (tl='$nextTl')" }
-
-            if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
-                recordCounter.set(0)
-                pruneOldAssociations()
+        nextTl: String,
+    ): Unit =
+        withContext(Dispatchers.IO) {
+            if (prev.isEmpty() || nextHanzi.isEmpty()) {
+                return@withContext
             }
-        } catch (e: Exception) {
-            logger.e(TAG, "[RECORD] Insert failed", e)
+
+            ensureInitialized()
+
+            val db = userDatabase ?: return@withContext
+
+            try {
+                val sql =
+                    """
+                    INSERT INTO user_association (prev_word, prev_tl, next_word, next_tl, count, last_used)
+                    VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(prev_word, next_word, next_tl) DO UPDATE SET
+                        prev_tl = excluded.prev_tl,
+                        count = count + 1,
+                        last_used = CURRENT_TIMESTAMP
+                    """.trimIndent()
+
+                db.execSQL(sql, arrayOf(prev, prevTl, nextHanzi, nextTl))
+
+                logger.debug(TAG) { "[RECORD] '$prev' (tl='$prevTl') -> '$nextHanzi' (tl='$nextTl')" }
+
+                if (recordCounter.incrementAndGet() >= PRUNE_CHECK_INTERVAL) {
+                    recordCounter.set(0)
+                    pruneOldAssociations()
+                }
+            } catch (e: Exception) {
+                logger.e(TAG, "[RECORD] Insert failed", e)
+            }
         }
-    }
 
     /** Batch-import association rows, merging by max(existing, incoming) count. */
     @Suppress("SqlResolve")
@@ -668,44 +658,6 @@ class NextWordService(
         } finally {
             db.endTransaction()
         }
-    }
-
-    // ------------------------------------------------------------------ //
-    // Scoring
-    // ------------------------------------------------------------------ //
-
-    /**
-     * RIME-style exponential decay factor. decay = exp(-ageHours / halfLifeHours * ln(2)).
-     * Recent usage ≈ 1.0; one week out ≈ 0.5; one month out ≈ 0.06.
-     */
-    private fun calculateDecay(
-        lastUsedMs: Long,
-        nowMs: Long,
-    ): Double {
-        val ageHours = (nowMs - lastUsedMs) / 3600000.0
-        return exp(-ageHours / DECAY_HALF_LIFE_HOURS * 0.693)
-    }
-
-    /**
-     * User-layer score with decay floor + learning bonus. Ensures user
-     * entries outrank dict entries by `LEARNING_BONUS`. Mirrors iOS
-     * `NextWordService.calculateUserScore()`.
-     */
-    private fun calculateUserScore(
-        count: Int,
-        lastUsedMs: Long,
-        nowMs: Long,
-    ): Double {
-        val decay = calculateDecay(lastUsedMs, nowMs)
-        val rawScore = count.toDouble() * USER_WEIGHT
-        val decayFloor =
-            if (count >= HIGH_USAGE_THRESHOLD) {
-                HIGH_USAGE_DECAY_FLOOR
-            } else {
-                LOW_USAGE_DECAY_FLOOR
-            }
-        val effectiveDecay = maxOf(decayFloor, decay)
-        return rawScore * effectiveDecay + LEARNING_BONUS
     }
 
     // ------------------------------------------------------------------ //

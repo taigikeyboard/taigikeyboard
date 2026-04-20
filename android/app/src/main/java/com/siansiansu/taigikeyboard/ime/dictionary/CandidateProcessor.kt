@@ -143,7 +143,10 @@ object CandidateProcessor {
         return sorted.map { it.first }
     }
 
-    private fun romanToBase(roman: String): String {
+    // `internal` so `CandidateProcessorTest` can pin the Phase 0 §6
+    // `INVARIANT_roman_to_base_strips_tones_hyphens_digits` label directly
+    // against this helper. No external non-test caller outside the module.
+    internal fun romanToBase(roman: String): String {
         val noHyphens = roman.replace("-", "").replace(" ", "")
         val withOo = TaigiUnicode.nfdPreprocessed(noHyphens)
         return withOo
@@ -153,7 +156,7 @@ object CandidateProcessor {
             .lowercase()
     }
 
-    private fun inputToBase(normalizedInput: String): String = normalizedInput.filter { !it.isDigit() }.lowercase()
+    internal fun inputToBase(normalizedInput: String): String = normalizedInput.filter { !it.isDigit() }.lowercase()
 
     private fun logScoreDetails(
         sorted: List<Pair<TaigiWord, ScoreBreakdown>>,

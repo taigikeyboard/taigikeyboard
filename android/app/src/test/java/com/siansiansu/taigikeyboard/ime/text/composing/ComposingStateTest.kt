@@ -265,8 +265,9 @@ class ComposingStateTest {
         )
     }
 
+    // Phase 0 §13 — label matches `docs/architecture/behavioral-invariants.md`.
     @Test
-    fun `reset when idle is noop`() {
+    fun test_INVARIANT_composing_idle_to_idle_is_noop() {
         val (next, transition) =
             ComposingState().apply(ComposingState.Intent.Reset, tl, togglesOff)
         assertFalse(next.isComposing)

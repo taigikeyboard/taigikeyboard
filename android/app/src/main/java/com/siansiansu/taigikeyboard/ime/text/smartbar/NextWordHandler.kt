@@ -8,10 +8,10 @@ import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordEngineSettings
 import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordIntent
 import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordOutcome
 import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordPersistedState
+import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordPredictor
 import com.siansiansu.taigikeyboard.ime.core.nextword.RawNextWordPrediction
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import kotlinx.coroutines.CoroutineScope
@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
 class NextWordHandler(
     private val scope: CoroutineScope,
     private val settingsProvider: EngineSettingsProvider,
-    private val nextWord: NextWordService,
+    private val nextWord: NextWordPredictor,
     private val logger: LoggerBackend,
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,

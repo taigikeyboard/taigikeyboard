@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
@@ -173,5 +174,87 @@ class SuggestionCaseTransformerTest {
         val words = listOf(word(1, ""))
         val result = SuggestionCaseTransformer.transform(words, "tai", caps = false, capsLock = true, inputMode = InputMode.POJ)
         assertEquals("Empty roman should stay empty", "", result[0].roman)
+    }
+
+    // MARK: - Phase 0 §9 — case transformation invariants.
+    // Labels match `docs/architecture/behavioral-invariants.md` §9.
+
+    /**
+     * Given the same inputs, `SuggestionCaseTransformer.transform` returns
+     * byte-identical output across invocations. The function reads no
+     * external state (no clock, no settings singleton) — callers forward
+     * `caps`, `capsLock`, and `inputMode` explicitly.
+     */
+    @Test
+    fun test_INVARIANT_case_transformer_is_deterministic() {
+        val words = listOf(word(1, "tâi-gí", "台語"))
+        // `InputMode` has only `POJ`, `TL`, and `ENGLISH` on Android —
+        // cross the flag matrix across all three + a couple of composing
+        // variants to pin determinism without mode-specific branching.
+        val fixtures =
+            listOf(
+                Triple(false, false, InputMode.POJ),
+                Triple(true, false, InputMode.POJ),
+                Triple(false, true, InputMode.POJ),
+                Triple(false, false, InputMode.TL),
+                Triple(true, false, InputMode.TL),
+                Triple(false, true, InputMode.TL),
+                Triple(false, false, InputMode.ENGLISH),
+            )
+        for ((caps, capsLock, mode) in fixtures) {
+            val first = SuggestionCaseTransformer.transform(words, "Tai", caps, capsLock, mode)
+            val second = SuggestionCaseTransformer.transform(words, "Tai", caps, capsLock, mode)
+            assertEquals(
+                "Same inputs must produce same output for (caps=$caps, capsLock=$capsLock, mode=$mode)",
+                first.map { it.roman },
+                second.map { it.roman },
+            )
+        }
+    }
+
+    /**
+     * `caps` toggles uppercase behavior; flipping the flag must change
+     * the output. The transformer reads ONLY the forwarded flag — never
+     * a global setting. We assert inequality (flag is observed) rather
+     * than pinning exact forms, because the match-case logic depends on
+     * the typed composing text's case and matching tests already pin
+     * the concrete transformations.
+     */
+    @Test
+    fun test_INVARIANT_case_transformer_honors_auto_cap_flag() {
+        val words = listOf(word(1, "tâi-gí", "台語"))
+
+        val withoutCaps =
+            SuggestionCaseTransformer.transform(
+                words,
+                "T",
+                caps = false,
+                capsLock = false,
+                inputMode = InputMode.POJ,
+            )
+        val withCaps =
+            SuggestionCaseTransformer.transform(
+                words,
+                "T",
+                caps = true,
+                capsLock = false,
+                inputMode = InputMode.POJ,
+            )
+        assertNotEquals(
+            "flipping caps flag must change output when composing starts with a letter",
+            withoutCaps[0].roman,
+            withCaps[0].roman,
+        )
+
+        // CapsLock overrides caps — both caps settings produce the same
+        // output when capsLock is true. Pins that capsLock is the stronger
+        // flag (observable by callers).
+        val lockedA = SuggestionCaseTransformer.transform(words, "T", false, true, InputMode.POJ)
+        val lockedB = SuggestionCaseTransformer.transform(words, "T", true, true, InputMode.POJ)
+        assertEquals(
+            "capsLock dominates caps flag",
+            lockedA[0].roman,
+            lockedB[0].roman,
+        )
     }
 }

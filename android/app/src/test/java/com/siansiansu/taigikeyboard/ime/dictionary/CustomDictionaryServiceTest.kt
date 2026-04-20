@@ -59,4 +59,72 @@ class CustomDictionaryServiceTest {
             )
         }
     }
+
+    // MARK: - Phase 0 §10 — custom-dictionary derivation invariants.
+    // Labels match `docs/architecture/behavioral-invariants.md` §10.
+
+    /**
+     * Every hyphen-separated syllable contributes exactly one character to
+     * `generateAbbrev`. Single-syllable input returns an empty abbrev per
+     * the `syllables.size < 2` guard. Wraps existing `testGenerateAbbrev`
+     * substance under the invariant label.
+     */
+    @Test
+    fun test_INVARIANT_abbrev_key_is_one_char_per_syllable() {
+        val multiSyllableFixtures =
+            listOf(
+                "gâu-tsá" to 2,
+                "tâi-gí-bûn" to 3,
+                "a-b-c-d" to 4,
+                "lí hó" to 2, // space-separated counts too
+            )
+        for ((input, syllableCount) in multiSyllableFixtures) {
+            val abbrev = CustomDictionaryDerivation.generateAbbrev(input)
+            assertEquals(
+                "abbrev length must equal syllable count for '$input'",
+                syllableCount,
+                abbrev.length,
+            )
+        }
+        // Single-syllable input must return empty abbrev (documented contract).
+        assertEquals(
+            "single-syllable abbrev is empty",
+            "",
+            CustomDictionaryDerivation.generateAbbrev("hó"),
+        )
+        // Empty input is a fixed point.
+        assertEquals(
+            "empty abbrev on empty input",
+            "",
+            CustomDictionaryDerivation.generateAbbrev(""),
+        )
+    }
+
+    /**
+     * `CustomDictionaryDerivation.generateRomanNum` delegates to
+     * `InputNormalizer.normalize(..., InputMode.TL)`. The delegation is the
+     * Phase 0 §10 guarantee — search keys land in the trie using the same
+     * pipeline that normalizes user input, so custom-dictionary entries
+     * surface at the same keystroke the original word would.
+     */
+    @Test
+    fun test_INVARIANT_custom_derivation_matches_input_normalizer() {
+        val fixtures =
+            listOf(
+                "", // empty → empty both sides
+                "hó", // single syllable with tone mark
+                "gâu-tsá", // hyphen + tone marks
+                "tâi-gí-bûn", // three syllables
+                "lí hó", // whitespace separator
+                "saⁿ", // POJ nasal
+                "hō͘", // POJ o͘
+            )
+        for (input in fixtures) {
+            assertEquals(
+                "generateRomanNum must equal InputNormalizer.normalize(..., TL) for '$input'",
+                InputNormalizer.normalize(input, ToneConverterModels.InputMode.TL),
+                CustomDictionaryDerivation.generateRomanNum(input),
+            )
+        }
+    }
 }

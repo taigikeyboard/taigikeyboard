@@ -4,6 +4,11 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("jacoco")
+}
+
+jacoco {
+    toolVersion = "0.8.12"
 }
 
 // 產生日期字串 (yyyyMMdd)
@@ -49,6 +54,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // A9 — enable unit-test coverage so Jacoco .exec data and the
+            // debug class tree line up. Without this, `jacocoCoverageVerify`
+            // reports 0% because the default .exec file references
+            // instrumented class IDs that don't match
+            // `tmp/kotlin-classes/debug`.
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -154,4 +167,88 @@ dependencies {
 
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+}
+
+// A9 — invariant coverage gate. Runs against `testDebugUnitTest` only;
+// release coverage is not required because R8 churn would drift the
+// class-level numbers.
+val topTenCandidateClassPatterns =
+    listOf(
+        "com/siansiansu/taigikeyboard/ime/dictionary/TaigiPhonetics*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/InputNormalizer*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/CandidateProcessor*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/ToneConverter*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/SuggestionCaseTransformer*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/ToneRestoration*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/TPSConverter*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/TaigiUnicode*.class",
+        "com/siansiansu/taigikeyboard/ime/core/nextword/NextWordScorer*.class",
+        "com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryDerivation*.class",
+    )
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    group = "verification"
+    description = "Line coverage for top-10 shared-core candidates (A9 gate ≥70%)."
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val buildDir = layout.buildDirectory.get().asFile
+    classDirectories.setFrom(
+        // AGP 8.x writes Kotlin debug classes under
+        // `intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`.
+        // The old `tmp/kotlin-classes/debug` path is empty in current AGP.
+        fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+            include(topTenCandidateClassPatterns)
+        },
+    )
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(
+        fileTree(buildDir) {
+            include(
+                "jacoco/testDebugUnitTest.exec",
+                "outputs/unit_test_code_coverage/debugUnitTest/*.exec",
+            )
+        },
+    )
+}
+
+tasks.register<JacocoCoverageVerification>("jacocoCoverageVerify") {
+    group = "verification"
+    description = "Enforce ≥70% class-level line coverage on top-10 shared-core candidates."
+    dependsOn("jacocoTestReport")
+
+    val buildDir = layout.buildDirectory.get().asFile
+    classDirectories.setFrom(
+        // AGP 8.x writes Kotlin debug classes under
+        // `intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`.
+        // The old `tmp/kotlin-classes/debug` path is empty in current AGP.
+        fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+            include(topTenCandidateClassPatterns)
+        },
+    )
+    sourceDirectories.setFrom(files("src/main/java"))
+    executionData.setFrom(
+        fileTree(buildDir) {
+            include(
+                "jacoco/testDebugUnitTest.exec",
+                "outputs/unit_test_code_coverage/debugUnitTest/*.exec",
+            )
+        },
+    )
+
+    violationRules {
+        rule {
+            element = "CLASS"
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = "0.70".toBigDecimal()
+            }
+        }
+    }
 }

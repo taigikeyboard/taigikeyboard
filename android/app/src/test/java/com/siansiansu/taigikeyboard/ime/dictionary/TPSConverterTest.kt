@@ -653,4 +653,76 @@ class TPSConverterTest {
     fun testSyllabicNasalReplacement_nullLastChar() {
         assertNull("null last char", TPSConverter.syllabicNasalReplacement("˫", null))
     }
+
+    // ========================================================================
+    // MARK: - Phase 0 §3 — TPS ↔ TL round-trip + adjuster idempotency.
+    // Labels match `docs/architecture/behavioral-invariants.md` §3.
+    // ========================================================================
+
+    /**
+     * `TPSConverter.toTL(TPSConverter.toTPS(tl))` must be identity on
+     * supported TL syllables. Wraps `testRoundTrip_tpsToTlToTps` /
+     * `testRoundTrip_tlToTpsToTl` under the invariant label.
+     */
+    @Test
+    fun test_INVARIANT_tps_to_tl_roundtrip() {
+        val tpsFixtures =
+            listOf(
+                "ㄍㄨㄚˋ" to "kua2",
+                "ㄉㄧㄠˊ" to "tiau5",
+                "ㄍㄚㆻ˙" to "kak8",
+            )
+        for ((tps, expectedTl) in tpsFixtures) {
+            val tl = TPSConverter.toTL(tps)
+            assertEquals("toTL($tps)", expectedTl, tl)
+            val backToTps = TPSConverter.toTPS(tl)
+            assertEquals("TPS → TL → TPS must be identity", tps, backToTps)
+        }
+    }
+
+    /** TL display → TPS → TL must be identity on supported TL syllables. */
+    @Test
+    fun test_INVARIANT_tl_to_tps_roundtrip() {
+        val tlFixtures = listOf("ka2", "tshiu7", "ing5", "m7", "kah4", "kua2", "tiau5")
+        for (tl in tlFixtures) {
+            val tps = TPSConverter.toTPS(tl)
+            val backToTl = TPSConverter.toTL(tps)
+            assertEquals("TL → TPS → TL must be identity", tl, backToTl)
+        }
+    }
+
+    /**
+     * `adjustTPSInitialKey` + `adjustTPSNasalizedVowelKey` are idempotent:
+     * applying the adjuster to an already-adjusted sequence must not
+     * change the output again.
+     */
+    @Test
+    fun test_INVARIANT_tps_adjuster_is_idempotent() {
+        // Cases of initial-key adjustment: ㄇ remains ㄇ on empty prefix,
+        // ㄇ collapses to ㆬ before ㄧ, ㄅ collapses to ㆴ after ㄍㄚ.
+        val initialFixtures =
+            listOf(
+                Triple('ㄇ', "", "ㄇ"),
+                Triple('ㄇ', "ㄧ", "ㆬ"),
+                Triple('ㄅ', "ㄍㄚ", "ㆴ"),
+                Triple('ㄋ', "ㄒㄧ", "ㄣ"),
+                Triple('ㄋ', "", "ㄋ"),
+            )
+        for ((key, preceding, expected) in initialFixtures) {
+            val first = TPSConverter.adjustTPSInitialKey(key.toString(), preceding)
+            assertEquals("adjust($key, $preceding)", expected, first)
+            // Re-applying the adjuster to its own output must not shift.
+            // The first call already produced the adjusted glyph; the
+            // second call receives that glyph as a normal key and must
+            // leave it alone under the same preceding context.
+            val second = TPSConverter.adjustTPSInitialKey(first, preceding)
+            assertEquals("adjuster is idempotent for ($key, $preceding)", first, second)
+        }
+
+        // Nasalized-vowel adjustment: ㆮ → ㆯ after ㄧ, then idempotent.
+        val adjusted = TPSConverter.adjustTPSNasalizedVowelKey("ㆮ", "ㄧ")
+        assertEquals("ㆮ adjusts to ㆯ after ㄧ", "ㆯ", adjusted)
+        val readjusted = TPSConverter.adjustTPSNasalizedVowelKey(adjusted, "ㄧ")
+        assertEquals("nasalized-vowel adjuster is idempotent", adjusted, readjusted)
+    }
 }

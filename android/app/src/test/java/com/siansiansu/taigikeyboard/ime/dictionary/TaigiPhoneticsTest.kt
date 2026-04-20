@@ -10,33 +10,32 @@ import org.junit.Test
 /** TaigiPhonetics unit tests
  *  Ported from references/taigi-converter/tests/{phonetics,tl,poj}.test.js */
 class TaigiPhoneticsTest {
-
     // MARK: - A. stripToneMark
 
     @Test
     fun testStripToneMark_acuteAccentTone2() {
-        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E1")  // á
+        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E1") // á
         assertEquals("a", bare)
         assertEquals("2", tone)
     }
 
     @Test
     fun testStripToneMark_graveAccentTone3() {
-        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E0")  // à
+        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E0") // à
         assertEquals("a", bare)
         assertEquals("3", tone)
     }
 
     @Test
     fun testStripToneMark_circumflexTone5() {
-        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E2")  // â
+        val (bare, tone) = TaigiPhonetics.stripToneMark("\u00E2") // â
         assertEquals("a", bare)
         assertEquals("5", tone)
     }
 
     @Test
     fun testStripToneMark_macronTone7() {
-        val (bare, tone) = TaigiPhonetics.stripToneMark("\u0101")  // ā
+        val (bare, tone) = TaigiPhonetics.stripToneMark("\u0101") // ā
         assertEquals("a", bare)
         assertEquals("7", tone)
     }
@@ -50,7 +49,7 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testStripToneMark_breveTone9_POJ() {
-        val (bare, tone) = TaigiPhonetics.stripToneMark("\u0103")  // ă (a + breve)
+        val (bare, tone) = TaigiPhonetics.stripToneMark("\u0103") // ă (a + breve)
         assertEquals("a", bare)
         assertEquals("9", tone)
     }
@@ -88,22 +87,24 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testNormalizeToTL_cases() {
-        val cases = listOf(
-            "ch" to "ts",
-            "chh" to "tsh",
-            "oa" to "ua",
-            "oe" to "ue",
-            "eng" to "ing",
-            "ek" to "ik",
-            "ou" to "oo",
-            "o\u0358" to "oo",     // o͘ -> oo
-            "\u207F" to "nn",      // ⁿ -> nn
-            "oonn" to "onn",
-        )
+        val cases =
+            listOf(
+                "ch" to "ts",
+                "chh" to "tsh",
+                "oa" to "ua",
+                "oe" to "ue",
+                "eng" to "ing",
+                "ek" to "ik",
+                "ou" to "oo",
+                "o\u0358" to "oo", // o͘ -> oo
+                "\u207F" to "nn", // ⁿ -> nn
+                "oonn" to "onn",
+            )
         for ((input, expected) in cases) {
             assertEquals(
                 "normalizeToTL($input) should be $expected",
-                expected, TaigiPhonetics.normalizeToTL(input)
+                expected,
+                TaigiPhonetics.normalizeToTL(input),
             )
         }
     }
@@ -112,20 +113,22 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testIsStopTone_stopEndings() {
-        val cases = listOf(
-            "ap" to true,
-            "at" to true,
-            "ak" to true,
-            "ah" to true,
-            "a" to false,
-            "an" to false,
-            "ang" to false,
-            "annh" to true,  // nasal with h
-        )
+        val cases =
+            listOf(
+                "ap" to true,
+                "at" to true,
+                "ak" to true,
+                "ah" to true,
+                "a" to false,
+                "an" to false,
+                "ang" to false,
+                "annh" to true, // nasal with h
+            )
         for ((final_, expected) in cases) {
             assertEquals(
                 "isStopTone($final_) should be $expected",
-                expected, TaigiPhonetics.isStopTone(final_)
+                expected,
+                TaigiPhonetics.isStopTone(final_),
             )
         }
     }
@@ -134,16 +137,17 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testSplitInitialFinal_validSyllables() {
-        val cases = listOf(
-            Triple("ka", "k", "a"),
-            Triple("tshiu", "tsh", "iu"),
-            Triple("a", "", "a"),       // no initial
-            Triple("ng", "", "ng"),     // syllabic ng
-            Triple("m", "", "m"),       // syllabic m
-            Triple("phang", "ph", "ang"),
-            Triple("iang", "", "iang"),
-            Triple("oo", "", "oo"),
-        )
+        val cases =
+            listOf(
+                Triple("ka", "k", "a"),
+                Triple("tshiu", "tsh", "iu"),
+                Triple("a", "", "a"), // no initial
+                Triple("ng", "", "ng"), // syllabic ng
+                Triple("m", "", "m"), // syllabic m
+                Triple("phang", "ph", "ang"),
+                Triple("iang", "", "iang"),
+                Triple("oo", "", "oo"),
+            )
         for ((input, expectedInitial, expectedFinal) in cases) {
             val result = TaigiPhonetics.splitInitialFinal(input)
             assertNotNull("splitInitialFinal($input) should not be null", result)
@@ -161,21 +165,22 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testParseSyllable_simpleCases() {
-        val cases = listOf(
-            // (input, initial, final, tone)
-            arrayOf("ka2", "k", "a", "2"),
-            arrayOf("kang1", "k", "ang", "1"),
-            arrayOf("a1", "", "a", "1"),
-            // Tone mark
-            arrayOf("k\u00E1", "k", "a", "2"),  // ká
-            // Inferred tones
-            arrayOf("kah", "k", "ah", "4"),   // stop tone -> 4
-            arrayOf("ka", "k", "a", "1"),      // non-stop -> 1
-            // Aspirated initial
-            arrayOf("pha3", "ph", "a", "3"),
-            // tsh initial
-            arrayOf("tshiu7", "tsh", "iu", "7"),
-        )
+        val cases =
+            listOf(
+                // (input, initial, final, tone)
+                arrayOf("ka2", "k", "a", "2"),
+                arrayOf("kang1", "k", "ang", "1"),
+                arrayOf("a1", "", "a", "1"),
+                // Tone mark
+                arrayOf("k\u00E1", "k", "a", "2"), // ká
+                // Inferred tones
+                arrayOf("kah", "k", "ah", "4"), // stop tone -> 4
+                arrayOf("ka", "k", "a", "1"), // non-stop -> 1
+                // Aspirated initial
+                arrayOf("pha3", "ph", "a", "3"),
+                // tsh initial
+                arrayOf("tshiu7", "tsh", "iu", "7"),
+            )
         for (case_ in cases) {
             val (input, expectedInitial, expectedFinal, expectedTone) = case_
             val result = TaigiPhonetics.parseSyllable(input)
@@ -188,12 +193,13 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testParseSyllable_pojForms() {
-        val cases = listOf(
-            arrayOf("chhi2", "tsh", "i", "2"),    // ch->ts, chh->tsh
-            arrayOf("koa1", "k", "ua", "1"),       // oa->ua
-            arrayOf("koe1", "k", "ue", "1"),       // oe->ue
-            arrayOf("peng5", "p", "ing", "5"),     // eng->ing
-        )
+        val cases =
+            listOf(
+                arrayOf("chhi2", "tsh", "i", "2"), // ch->ts, chh->tsh
+                arrayOf("koa1", "k", "ua", "1"), // oa->ua
+                arrayOf("koe1", "k", "ue", "1"), // oe->ue
+                arrayOf("peng5", "p", "ing", "5"), // eng->ing
+            )
         for (case_ in cases) {
             val (input, expectedInitial, expectedFinal, expectedTone) = case_
             val result = TaigiPhonetics.parseSyllable(input)
@@ -228,15 +234,16 @@ class TaigiPhoneticsTest {
 
     @Test
     fun testToTL_allTones() {
-        val cases = listOf(
-            arrayOf("k", "a", "1", "ka"),             // tone 1: no mark
-            arrayOf("k", "a", "2", "k\u00E1"),        // ká
-            arrayOf("k", "a", "3", "k\u00E0"),        // kà
-            arrayOf("k", "ah", "4", "kah"),            // tone 4: no mark
-            arrayOf("k", "a", "5", "k\u00E2"),        // kâ
-            arrayOf("k", "a", "7", "k\u0101"),        // kā
-            arrayOf("k", "ah", "8", "ka\u030Dh"),     // ka̍h
-        )
+        val cases =
+            listOf(
+                arrayOf("k", "a", "1", "ka"), // tone 1: no mark
+                arrayOf("k", "a", "2", "k\u00E1"), // ká
+                arrayOf("k", "a", "3", "k\u00E0"), // kà
+                arrayOf("k", "ah", "4", "kah"), // tone 4: no mark
+                arrayOf("k", "a", "5", "k\u00E2"), // kâ
+                arrayOf("k", "a", "7", "k\u0101"), // kā
+                arrayOf("k", "ah", "8", "ka\u030Dh"), // ka̍h
+            )
         for (case_ in cases) {
             val (initial, final_, tone, expected) = case_
             val result = TaigiPhonetics.toTL(initial = initial, final_ = final_, tone = tone)
@@ -249,30 +256,31 @@ class TaigiPhoneticsTest {
         val result = TaigiPhonetics.toTL(initial = "k", final_ = "a", tone = "9")
         assertTrue(
             "TL tone 9 should use double acute accent (U+030B)",
-            result.codePoints().toArray().contains(0x030B)
+            result.codePoints().toArray().contains(0x030B),
         )
     }
 
     @Test
     fun testToTL_vowelPriority() {
-        val cases = listOf(
-            // a takes priority
-            arrayOf("k", "ai", "2", "k\u00E1i"),
-            // oo: mark between o's
-            arrayOf("k", "oo", "5", "k\u00F4o"),
-            // e
-            arrayOf("t", "e", "7", "t\u0113"),
-            // o
-            arrayOf("k", "o", "2", "k\u00F3"),
-            // ui -> mark on i
-            arrayOf("k", "ui", "3", "ku\u00EC"),
-            // iu -> mark on u
-            arrayOf("tsh", "iu", "7", "tshi\u016B"),
-            // ng -> mark on n
-            arrayOf("", "ng", "5", "n\u0302g"),
-            // m -> mark on m
-            arrayOf("", "m", "7", "m\u0304"),
-        )
+        val cases =
+            listOf(
+                // a takes priority
+                arrayOf("k", "ai", "2", "k\u00E1i"),
+                // oo: mark between o's
+                arrayOf("k", "oo", "5", "k\u00F4o"),
+                // e
+                arrayOf("t", "e", "7", "t\u0113"),
+                // o
+                arrayOf("k", "o", "2", "k\u00F3"),
+                // ui -> mark on i
+                arrayOf("k", "ui", "3", "ku\u00EC"),
+                // iu -> mark on u
+                arrayOf("tsh", "iu", "7", "tshi\u016B"),
+                // ng -> mark on n
+                arrayOf("", "ng", "5", "n\u0302g"),
+                // m -> mark on m
+                arrayOf("", "m", "7", "m\u0304"),
+            )
         for (case_ in cases) {
             val (initial, final_, tone, expected) = case_
             val result = TaigiPhonetics.toTL(initial = initial, final_ = final_, tone = tone)
@@ -283,14 +291,14 @@ class TaigiPhoneticsTest {
     @Test
     fun testToTL_noInitial() {
         val result = TaigiPhonetics.toTL(initial = "", final_ = "a", tone = "2")
-        assertEquals("\u00E1", result)  // á
+        assertEquals("\u00E1", result) // á
     }
 
     @Test
     fun testToTL_complexFinal_iang() {
         // a takes priority in iang
         val result = TaigiPhonetics.toTL(initial = "k", final_ = "iang", tone = "5")
-        assertEquals("ki\u00E2ng", result)  // kiâng
+        assertEquals("ki\u00E2ng", result) // kiâng
     }
 
     // MARK: - G. toPOJ
@@ -299,11 +307,11 @@ class TaigiPhoneticsTest {
     fun testToPOJ_initialConversion() {
         // ts -> ch
         val result1 = TaigiPhonetics.toPOJ(initial = "ts", final_ = "u", tone = "2")
-        assertEquals("ch\u00FA", result1)  // chú
+        assertEquals("ch\u00FA", result1) // chú
 
         // tsh -> chh
         val result2 = TaigiPhonetics.toPOJ(initial = "tsh", final_ = "iu", tone = "7")
-        assertEquals("chhi\u016B", result2)  // chhiū
+        assertEquals("chhi\u016B", result2) // chhiū
     }
 
     @Test
@@ -316,7 +324,7 @@ class TaigiPhoneticsTest {
         val ooResult = TaigiPhonetics.toPOJ(initial = "k", final_ = "oo", tone = "1")
         assertTrue(
             "oo should become o͘ in POJ: got $ooResult",
-            ooResult.codePoints().toArray().contains(0x0358)
+            ooResult.codePoints().toArray().contains(0x0358),
         )
 
         // ua -> oa
@@ -448,29 +456,29 @@ class TaigiPhoneticsTest {
     @Test
     fun testTlDisplayToPOJDisplay_tsConversion() {
         // TL ts -> POJ ch
-        val result = TaigiPhonetics.tlDisplayToPOJDisplay("ts\u00E1i")  // tsái
+        val result = TaigiPhonetics.tlDisplayToPOJDisplay("ts\u00E1i") // tsái
         assertTrue("ts should become ch: got $result", result.startsWith("ch"))
     }
 
     @Test
     fun testTlDisplayToPOJDisplay_casePreservation() {
-        val result = TaigiPhonetics.tlDisplayToPOJDisplay("T\u00E2i")  // Tâi
+        val result = TaigiPhonetics.tlDisplayToPOJDisplay("T\u00E2i") // Tâi
         assertTrue("Case should be preserved: got $result", result.first().isUpperCase())
     }
 
     @Test
     fun testTlDisplayToPOJDisplay_ooHandling() {
         // TL oo -> POJ o͘
-        val result = TaigiPhonetics.tlDisplayToPOJDisplay("h\u00F4o")  // hôo
+        val result = TaigiPhonetics.tlDisplayToPOJDisplay("h\u00F4o") // hôo
         assertTrue(
             "oo should become o͘ in POJ: got $result",
-            result.codePoints().toArray().contains(0x0358)
+            result.codePoints().toArray().contains(0x0358),
         )
     }
 
     @Test
     fun testTlDisplayToPOJDisplay_hyphenatedMultiSyllable() {
-        val result = TaigiPhonetics.tlDisplayToPOJDisplay("t\u00E2i-g\u00ED")  // tâi-gí
+        val result = TaigiPhonetics.tlDisplayToPOJDisplay("t\u00E2i-g\u00ED") // tâi-gí
         assertTrue("Hyphens should be preserved", result.contains("-"))
     }
 
@@ -484,26 +492,26 @@ class TaigiPhoneticsTest {
     @Test
     fun testPojDisplayToTLDisplay_chConversion() {
         // POJ ch -> TL ts
-        val result = TaigiPhonetics.pojDisplayToTLDisplay("ch\u00E1i")  // chái
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("ch\u00E1i") // chái
         assertTrue("ch should become ts: got $result", result.startsWith("ts"))
     }
 
     @Test
     fun testPojDisplayToTLDisplay_casePreservation() {
-        val result = TaigiPhonetics.pojDisplayToTLDisplay("T\u00E2i")  // Tâi (POJ)
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("T\u00E2i") // Tâi (POJ)
         assertTrue("Case should be preserved: got $result", result.first().isUpperCase())
     }
 
     @Test
     fun testPojDisplayToTLDisplay_oaDipthong() {
         // POJ oa -> TL ua
-        val result = TaigiPhonetics.pojDisplayToTLDisplay("h\u00F2a")  // hòa
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("h\u00F2a") // hòa
         assertTrue("oa should become ua: got $result", result.contains("u"))
     }
 
     @Test
     fun testPojDisplayToTLDisplay_hyphenatedMultiSyllable() {
-        val result = TaigiPhonetics.pojDisplayToTLDisplay("t\u00E2i-g\u00ED")  // tâi-gí (POJ)
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("t\u00E2i-g\u00ED") // tâi-gí (POJ)
         assertTrue("Hyphens should be preserved", result.contains("-"))
         assertTrue("Result should be TL format: got $result", result.startsWith("t"))
     }
@@ -511,7 +519,7 @@ class TaigiPhoneticsTest {
     @Test
     fun testPojDisplayToTLDisplay_idempotentOnTL() {
         // pojDisplayToTLDisplay on TL input should return same TL
-        val tlInput = "t\u00E2i-g\u00ED"  // tâi-gí (TL)
+        val tlInput = "t\u00E2i-g\u00ED" // tâi-gí (TL)
         val result = TaigiPhonetics.pojDisplayToTLDisplay(tlInput)
         assertEquals("Should be idempotent on TL input", tlInput, result)
     }
@@ -524,7 +532,100 @@ class TaigiPhoneticsTest {
     @Test
     fun testPojDisplayToTLDisplay_nasalConversion() {
         // POJ superscript ⁿ -> TL nn
-        val result = TaigiPhonetics.pojDisplayToTLDisplay("sa\u207F")  // saⁿ
+        val result = TaigiPhonetics.pojDisplayToTLDisplay("sa\u207F") // saⁿ
         assertTrue("Nasal ⁿ should become nn: got $result", result.contains("nn"))
+    }
+
+    // MARK: - Phase 0 §1 — TL ↔ POJ round-trip invariants.
+    // Labels match `docs/architecture/behavioral-invariants.md` §1.
+
+    /**
+     * TL display form → POJ display form → TL display form must be identity
+     * on valid single-syllable input.
+     */
+    @Test
+    fun test_INVARIANT_tl_to_poj_roundtrip_is_lossless() {
+        // (initial, TL-final, tone) tuples covering all seven tones + the
+        // stop-tone (4) + the o͘-bearing final.
+        val fixtures =
+            listOf(
+                Triple("g", "ua", "1"), // gua
+                Triple("g", "ua", "2"), // guá
+                Triple("t", "ai", "5"), // tâi
+                Triple("k", "a", "7"), // kā
+                Triple("l", "ah", "4"), // lah (stop)
+                Triple("p", "ok", "8"), // po̍k
+                Triple("h", "oo", "2"), // hóo — exercises oo ↔ o͘ hop
+            )
+        for ((initial, final, tone) in fixtures) {
+            val tl1 = TaigiPhonetics.toTL(initial, final, tone)
+            val poj = TaigiPhonetics.tlDisplayToPOJDisplay(tl1)
+            val tl2 = TaigiPhonetics.pojDisplayToTLDisplay(poj)
+            assertEquals("TL → POJ → TL should be identity for ($initial,$final,$tone)", tl1, tl2)
+        }
+    }
+
+    /**
+     * POJ display form → TL display form → POJ display form must be identity
+     * on valid single-syllable input.
+     */
+    @Test
+    fun test_INVARIANT_poj_to_tl_roundtrip_is_lossless() {
+        val fixtures =
+            listOf(
+                Triple("g", "ua", "1"),
+                Triple("g", "ua", "2"),
+                Triple("t", "ai", "5"),
+                Triple("k", "a", "7"),
+                Triple("l", "ah", "4"),
+                Triple("p", "ok", "8"),
+                Triple("h", "oo", "2"),
+            )
+        for ((initial, final, tone) in fixtures) {
+            val poj1 = TaigiPhonetics.toPOJ(initial, final, tone)
+            val tl = TaigiPhonetics.pojDisplayToTLDisplay(poj1)
+            val poj2 = TaigiPhonetics.tlDisplayToPOJDisplay(tl)
+            assertEquals("POJ → TL → POJ should be identity for ($initial,$final,$tone)", poj1, poj2)
+        }
+    }
+
+    /**
+     * `oo` (TL) and `o͘` (POJ, `o` + U+0358 combining dot) represent the
+     * same vowel and must round-trip both ways without loss.
+     */
+    @Test
+    fun test_INVARIANT_oo_combining_form_roundtrips() {
+        // TL "hóo" → POJ "hó͘" (has U+0358) → back to TL "hóo"
+        val tl = TaigiPhonetics.toTL("h", "oo", "2")
+        val poj = TaigiPhonetics.tlDisplayToPOJDisplay(tl)
+        assertTrue("POJ form should contain o͘ (U+0358): got $poj", poj.contains('\u0358'))
+        val tlBack = TaigiPhonetics.pojDisplayToTLDisplay(poj)
+        assertEquals("TL → POJ → TL must preserve oo-based syllable", tl, tlBack)
+
+        // Reverse direction: POJ assembly + round-trip back.
+        val poj2 = TaigiPhonetics.toPOJ("h", "oo", "2")
+        val tl2 = TaigiPhonetics.pojDisplayToTLDisplay(poj2)
+        val pojBack = TaigiPhonetics.tlDisplayToPOJDisplay(tl2)
+        assertEquals("POJ → TL → POJ must preserve o͘-based syllable", poj2, pojBack)
+    }
+
+    /**
+     * Nasal marker variants `nn` (TL), `ⁿ` (U+207F POJ), and `ᴺ` (U+1D3A)
+     * must collapse to the same internal representation on the display
+     * normalization hop. `pojDisplayToTLDisplay` is the entry point both
+     * `ⁿ` and `ᴺ` flow through to produce `nn`.
+     */
+    @Test
+    fun test_INVARIANT_nasal_marker_variants_collapse_on_parse() {
+        val superscriptNasal = TaigiPhonetics.pojDisplayToTLDisplay("sa\u207F") // saⁿ
+        val modifierNasal = TaigiPhonetics.pojDisplayToTLDisplay("sa\u1D3A") // saᴺ
+        val literalNn = TaigiPhonetics.pojDisplayToTLDisplay("sann")
+
+        assertTrue("ⁿ → nn: got $superscriptNasal", superscriptNasal.contains("nn"))
+        assertTrue("ᴺ → nn: got $modifierNasal", modifierNasal.contains("nn"))
+        assertTrue("literal nn is preserved: got $literalNn", literalNn.contains("nn"))
+        // All three variants emit byte-identical output after display normalization.
+        assertEquals("ⁿ and ᴺ normalize to the same TL form", superscriptNasal, modifierNasal)
+        assertEquals("ⁿ and literal nn normalize to the same TL form", superscriptNasal, literalNn)
     }
 }

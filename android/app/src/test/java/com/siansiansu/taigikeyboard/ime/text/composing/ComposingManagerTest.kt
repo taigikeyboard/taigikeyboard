@@ -33,10 +33,11 @@ import org.junit.Test
 class ComposingManagerTest {
     private fun newManager(): ComposingManager = ComposingManager(settingsProvider = FakeSettingsProvider())
 
-    // MARK: - INVARIANT_composing_clear_preedit_does_not_commit
+    // MARK: - Phase 0 §13 — composing-buffer reset invariants.
+    // Labels match `docs/architecture/behavioral-invariants.md` §13.
 
     @Test
-    fun `reset on composing pre-zeros before finishComposingText`() {
+    fun test_INVARIANT_composing_clear_preedit_does_not_commit() {
         val manager = newManager()
         val ic = RecordingInputConnection()
         manager.appendCharacter("a", ic)
@@ -78,10 +79,8 @@ class ComposingManagerTest {
         assertTrue(ic.calls.none { it is IcCall.CommitText })
     }
 
-    // MARK: - INVARIANT_composing_reset_when_idle_is_noop
-
     @Test
-    fun `reset when idle issues no InputConnection calls`() {
+    fun test_INVARIANT_composing_reset_when_idle_is_noop() {
         val manager = newManager()
         val ic = RecordingInputConnection()
 
@@ -89,8 +88,6 @@ class ComposingManagerTest {
 
         assertTrue("Idle reset must not touch InputConnection", ic.calls.isEmpty())
     }
-
-    // MARK: - INVARIANT_composing_clear_preedit_does_not_commit (startComposing path)
 
     @Test
     fun `startComposing over an active preedit pre-zeros before finish`() {

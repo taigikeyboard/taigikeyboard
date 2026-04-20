@@ -743,4 +743,60 @@ class InputNormalizerTest {
             )
         }
     }
+
+    // ========================================================================
+    // MARK: - Phase 0 §4 — input normalization must be mode-agnostic.
+    // Label matches `docs/architecture/behavioral-invariants.md` §4.
+    // The two hyphen-preserving / hyphen-stripping labels are deferred
+    // to FU-A4: `InputNormalizer.normalize` on either platform does not
+    // expose dual `roman_num` / `notone` keys — the split currently
+    // lives in `CustomDictionaryDerivation`. Phase 0 §4 wording is
+    // still open (iOS FU-2). A9 ships only the mode-agnostic label.
+    // ========================================================================
+
+    /**
+     * Equivalent display-form inputs written in different input modes
+     * must produce the same normalized key. Same syllable typed with
+     * POJ tone marks, TL tone marks, or TPS keystrokes lands on the
+     * same trie lookup key.
+     */
+    @Test
+    fun test_INVARIANT_input_normalizer_is_mode_agnostic() {
+        // `hó` is a TL/POJ-identical syllable: tone-2 on `o` with no
+        // mode-specific spelling hop. Normalizing it in POJ mode and TL
+        // mode must land on the same trie key `ho2`. POJ → TL spelling
+        // conversion (e.g. `oa → ua`) happens upstream in the display
+        // pipeline, not inside `normalize()`; this invariant pins the
+        // mode-agnostic character of the normalization STEP itself.
+        val identicalDisplay = "h\u00F3" // hó (tone 2)
+        assertEquals(
+            "hó normalizes the same in POJ mode",
+            "ho2",
+            InputNormalizer.normalize(identicalDisplay, InputMode.POJ),
+        )
+        assertEquals(
+            "hó normalizes the same in TL mode",
+            "ho2",
+            InputNormalizer.normalize(identicalDisplay, InputMode.TL),
+        )
+
+        // Tone 7 macron (`ā → a7`): same input, same key across modes.
+        assertEquals("a7 via macron — POJ", "a7", InputNormalizer.normalize("\u0101", InputMode.POJ))
+        assertEquals("a7 via macron — TL", "a7", InputNormalizer.normalize("\u0101", InputMode.TL))
+
+        // Numeric-tone input ("ho2") is a fixed point (already canonical).
+        // Empty input is a fixed point in every mode.
+        for (mode in listOf(InputMode.POJ, InputMode.TL, InputMode.ENGLISH)) {
+            assertEquals(
+                "ho2 is canonical fixed point in $mode",
+                "ho2",
+                InputNormalizer.normalize("ho2", mode),
+            )
+            assertEquals(
+                "empty input is a fixed point in $mode",
+                "",
+                InputNormalizer.normalize("", mode),
+            )
+        }
+    }
 }
