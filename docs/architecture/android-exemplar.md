@@ -141,8 +141,8 @@ platforms and drift would silently change behavior:
 | # | Surface | Android owner | Status |
 |---|---------|---------------|--------|
 | 1 | NextWord scoring constants (`userWeight`, `dictWeight`, `decayHalfLifeHours`, `learningBonus`, `highUsageDecayFloor`, `lowUsageDecayFloor`, `highUsageThreshold`) | `NextWordService.kt:57-73` | present ✅ |
-| 2 | Candidate scoring (recency window, cappedUserFreq cap, user-freq multiplier, completion penalty, closeness max, exact bonus, recency bonus) | `CandidateProcessor.kt:14-17` | **present-partial** — covers 5 / 7 constants (missing `USER_FREQ_WEIGHT`, `RECENCY_BONUS`); A8-sweep expands |
-| 3 | NextWord timing (`associationTimeoutMs`, `contextTimeoutSeconds`) | `NextWordHandler.kt` companion (`ASSOCIATION_TIMEOUT_MS`, `CONTEXT_TIMEOUT_MS` at lines 261-264) | **missing** — A5-impl relocates to `NextWordEngine.kt` and adds the comment inline |
+| 2 | Candidate scoring (recency window, cappedUserFreq cap, user-freq multiplier, completion penalty, closeness max, exact bonus, recency bonus) | `CandidateProcessor.kt` Kdoc + constants 5.3 #2 | present ✅ — A8-sweep expanded the Kdoc to cite all 7 constants (`USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`, `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`) + iOS file path |
+| 3 | NextWord timing (`associationTimeoutMs`, `contextTimeoutSeconds`) | `NextWordEngine.kt:28-38` (`ASSOCIATION_TIMEOUT_MS`, `CONTEXT_TIMEOUT_MS`) | present ✅ — A5-impl added inline |
 | 4 | Taigi Unicode preprocessing (U+207F, U+1D3A, U+0358 handling) | `TaigiUnicode.kt` | present ✅ |
 
 Two additional Android-only INVARIANT comments exist on `AssociationBinaryReader.kt` and
@@ -161,9 +161,23 @@ Phase II gating target per `android-state-audit.md` §9 signal #3: ≥ 40 files 
 | Round | Files marked | Running total |
 |-------|--------------|---------------|
 | Pre-A8-skeleton | 6 — `FrequencyData.kt`, `LoggerBackend.kt`, `InputNormalizer.kt`, `CustomDictionaryDerivation.kt`, `AutocompleteInputClassifier.kt`, `AutocompleteContextBooster.kt` (from A1 / A6) | 6 |
-| A8-skeleton (this round) | 5 — `TaigiUnicode.kt`, `TaigiPhonetics.kt`, `SuggestionCaseTransformer.kt`, `TPSConverter.kt`, `ToneRestoration.kt` | 11 |
-| A4-impl / A5-impl | extracted `ComposingState`, `ComposingTransition`, `NextWordEngine`, `RawNextWordPrediction`, `NextWordOutcome`, `NextWordScorer`, `ToneToggles` (+ split artifacts) | +7 expected |
-| A8-sweep | remaining candidate files post-splits (`TaigiInput`, `InputValidator`, `NextWordUtils`, derivation helpers, etc.) | ≥ 40 target |
+| A8-skeleton | 5 — `TaigiUnicode.kt`, `TaigiPhonetics.kt`, `SuggestionCaseTransformer.kt`, `TPSConverter.kt`, `ToneRestoration.kt` | 11 |
+| A5-impl (PR #153) | 4 — `NextWordEngine.kt`, `NextWordOutcome.kt`, `RawNextWordPrediction.kt`, `EnginePrediction.kt` (`ComposingState` extract reserved for A4-impl; no shared-core marker added on it — transitively imports `ToneConverter`) | 15 |
+| A4-impl (PR #152) | 0 — `ComposingState.kt` / `ComposingDelegate.kt` were created this round, but `ComposingState` transitively imports `ToneConverter` (which still calls `android.util.Log` + `BuildConfig`). Markers deferred until ToneConverter is purified. | 15 |
+| A8-sweep (this round) | 13 — `TaigiWord.kt`, `InputType.kt`, `DictionarySource.kt`, `DictionaryConstants.kt`, `ToneUtilities.kt`, `ToneConverterModels.kt`, `ExternalLookupURLBuilder.kt`, `DictionarySearchResult.kt`, `EnabledDictionaries.kt`, `ComposingTransition.kt`, `EngineSettings.kt`, `EngineSettingsProvider.kt`, `ToneToggles.kt` | 28 |
+
+### 5.1 Gate shortfall (≥40 target — 12 short)
+
+A8-sweep closes the post-split sweep cleanly, but the running total is 28 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. The gap comes from four files that are structurally near-miss and need small follow-up rounds before they can qualify:
+
+| File | Blocker | Follow-up round |
+|------|---------|-----------------|
+| `ToneConverter.kt` | `android.util.Log` + `BuildConfig` debug trace | Route through `LoggerBackend` param (default `NullLoggerBackend`) |
+| `CandidateProcessor.kt` | `BuildConfig.DEBUG` guard + `currentTime: Long = System.currentTimeMillis()` default | Remove `BuildConfig`; make `currentTime` a required parameter (callers already pass it in production) |
+| `ComposingState.kt` | transitively imports `ToneConverter` | Unblocks once `ToneConverter.kt` is purified (above) |
+| `DictionaryError.kt` | `sealed class : Exception()` conflicts with `rules/android-guidelines.md` §10 "no Throwable across shared-core" | Convert to a `sealed class` without `Exception` inheritance; callers already switch on subtype |
+
+Closing these four candidates adds 4 markers; the remaining 8 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as A9-adjacent cleanup or a later A-round. Gate is achievable without another large A-round.
 
 Detailed roster + per-file audit lives in `../engine/shared-core-readiness.md`.
 
@@ -179,8 +193,14 @@ Round-by-round intent (full spec in `android-state-audit.md` §7):
 - **A5-impl** — new files from `NextWordEngine` / `NextWordScorer` / `RawNextWordPrediction`
   extract get the marker inline with creation. A5-impl also lands the §5.3 #3 (NextWord
   timing) INVARIANT comment as part of the extract.
-- **A8-sweep** — marker applied to every remaining candidate file post-splits, plus the
-  `CandidateProcessor.kt` §5.3 #2 INVARIANT comment. No other code change in that round.
+- **A8-sweep** — marker applied to every remaining **eligible** candidate file post-splits
+  (13 files — see §5 running-total table), plus the `CandidateProcessor.kt` §5.3 #2
+  INVARIANT comment expanded to all 7 constants with iOS file-path citation. Three files
+  held back (`CandidateProcessor.kt`, `ComposingState.kt`, `DictionaryError.kt`) — each
+  has a structural blocker documented in §5.1. Additionally, `ToneConverter.kt`,
+  `ComposingDelegate.kt`, and `AndroidLoggerBackend.kt` received explicit
+  `// NOTE: Not shared-core — <reason>` headers so audit state is visible at file head.
+  No runtime code change in that round.
 
 ## 7. ViewModel pattern (reference)
 

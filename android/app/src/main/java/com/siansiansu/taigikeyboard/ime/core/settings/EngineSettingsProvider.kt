@@ -1,3 +1,6 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**

@@ -427,12 +427,12 @@ Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions 
 
 ### 13.7 Cross-platform invariant constants
 
-After A5-impl lands `NextWordEngine.kt` / equivalent, A8-sweep adds Kotlin `// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordEngine.swift:<line>. Drift causes silent divergence.` comments to:
+**Post-A5-impl state (2026-04-20)**: A5-impl landed `NextWordEngine.kt` with the Kotlin `// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordEngine.swift:<line>. Drift causes silent divergence.` comments inline on:
 
 - `ASSOCIATION_TIMEOUT_MS = 10_000L`
-- `CONTEXT_TIMEOUT_MS = 30_000L` (or whatever the post-split constant name becomes)
+- `CONTEXT_TIMEOUT_MS = 30_000L`
 
-per `rules/cross-platform-alignment.md` §3a + `rules/android-guidelines.md` §2. A5-design does not move these constants; A8-sweep applies the marker. Listed here for round-to-round hand-off.
+per `rules/cross-platform-alignment.md` §3a + `rules/android-guidelines.md` §2. A5-design plan originally deferred this to A8-sweep; it was inlined into A5-impl instead because the constants moved in the same PR. A8-sweep has no follow-up work on these comments.
 
 ### 13.8 Strict-less-than boundary + negative-delta guard
 

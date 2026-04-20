@@ -1,3 +1,6 @@
+// NOTE: Not shared-core — Android-side adapter that forwards LoggerBackend
+// calls to android.util.Log. The LoggerBackend interface itself (in
+// LoggerBackend.kt) is the shared-core contract.
 package com.siansiansu.taigikeyboard.ime.core.logging
 
 import android.util.Log

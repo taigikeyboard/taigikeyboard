@@ -1,3 +1,7 @@
+// NOTE: Not shared-core — platform adapter binding ComposingTransition.Effect
+// values to android.view.inputmethod.InputConnection. Owns the Android-specific
+// zero-then-finish semantics for clear-preedit; see
+// docs/architecture/composing-state-boundary.md §11.2.
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection

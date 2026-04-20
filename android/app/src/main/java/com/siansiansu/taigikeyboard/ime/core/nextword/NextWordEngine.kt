@@ -26,7 +26,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
  */
 object NextWordEngine {
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordEngine.swift:27.
-    // Drift causes silent divergence. A8-sweep tightens the marker wording across constants.
+    // Drift causes silent divergence.
     /** Strict-less-than association window. 10_000 ms gap does NOT record; negative deltas also skipped. */
     const val ASSOCIATION_TIMEOUT_MS: Long = 10_000L
 

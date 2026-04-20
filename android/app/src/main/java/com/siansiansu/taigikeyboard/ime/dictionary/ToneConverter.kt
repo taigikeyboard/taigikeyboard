@@ -1,3 +1,6 @@
+// NOTE: Not shared-core — logs via android.util.Log + BuildConfig for debug
+// trace. LoggerBackend migration pending follow-up round; see
+// docs/architecture/android-exemplar.md §5.
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.util.Log

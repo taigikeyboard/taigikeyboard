@@ -181,6 +181,8 @@ No Timer-equivalent leaks into the `ime/dictionary/` package.
 - `// region Shared-Core Candidate` markers: **0 files** (iOS has 43). Purely a documentation gap — no code change. A8 delivers the marker convention + sweep.
 - `CROSS-PLATFORM INVARIANT` comments: 4 files — `NextWordService` (scoring), `TaigiUnicode`, `AssociationBinaryReader`, `DictionaryBinaryReader`. iOS `ios-exemplar.md` §5.3 lists 4 surfaces requiring the marker: NextWordScorer, CandidateProcessor, NextWordEngine timing, TaigiUnicode preprocessing. Android has 3 of 4 (missing `CandidateProcessor` scoring constants); the two binary-reader comments are an Android-specific addition useful to keep.
 
+**Progress note (2026-04-20 post-A8-sweep)** — this section captures the audit-day snapshot. Current state: 28 Shared-Core markers landed (A1/A5-impl/A6/A8-skeleton/A8-sweep), all 4 §5.3 INVARIANT surfaces covered (CandidateProcessor expanded in A8-sweep; NextWordEngine timing added by A5-impl). Living counts live in `android-exemplar.md` §5 — defer to that doc, not this snapshot.
+
 ---
 
 ## 4. Settings access — DataStore / SharedPreferences semantics (Android-specific)
@@ -236,6 +238,8 @@ Plus `ToneConverterModels.kt` (Android-only, holds `InputMode` enum + helper typ
 | `Input/TPS/TLToTPS.swift` | folded into `TPSConverter.kt` | ⚠ |
 | `Input/Composing/ComposingState.swift` (G4-impl) | **missing** — state + I/O in `ComposingManager.kt` | ✗ — A4-impl target |
 | `Input/Composing/ComposingTransition.swift` (G4-impl) | **missing** | ✗ — A4-impl target |
+
+_Progress note (post-A4-impl + post-A8-sweep)_: `ComposingState.kt`, `ComposingTransition.kt` and `ComposingDelegate.kt` were landed by A4-impl (PR #152). A8-sweep marked `ComposingTransition.kt` as Shared-Core; `ComposingState.kt` is held back (transitive `ToneConverter` import); `ComposingDelegate.kt` carries a `// NOTE: Not shared-core — platform adapter` header. Living status in `android-exemplar.md` §5.
 
 ### Lexicon (iOS 11 files)
 

@@ -402,13 +402,13 @@ A4-impl adds the following Android files to the roster (mirroring §6 iOS column
 
 | iOS file (§6) | Android file (target) | Shared-Core Candidate marker? |
 |---|---|---|
-| `Input/Composing/ComposingState.swift` | `ime/text/composing/ComposingState.kt` *(new)* | Yes |
-| `Input/Composing/ComposingTransition.swift` | `ime/text/composing/ComposingTransition.kt` *(new)* | Yes |
-| `Settings/ToneToggles.swift` | `ime/core/settings/ToneToggles.kt` *(already exists, add marker)* | Yes |
-| `Phonetics/ToneConverter.swift` (parameterized) | `ime/dictionary/ToneConverter.kt` — NOT yet shared-core pure (imports `android.util.Log`, `BuildConfig`). A4-impl signature migration takes `ToneToggles`; A8-sweep strips the logging + `BuildConfig` references to promote. | Deferred to A8-sweep |
+| `Input/Composing/ComposingState.swift` | `ime/text/composing/ComposingState.kt` *(new)* | **Held** — transitively imports `ToneConverter`; marker unlocks when `ToneConverter.kt` is purified (future round) |
+| `Input/Composing/ComposingTransition.swift` | `ime/text/composing/ComposingTransition.kt` *(new)* | Yes — landed by A8-sweep |
+| `Settings/ToneToggles.swift` | `ime/core/settings/ToneToggles.kt` *(already exists, add marker)* | Yes — landed by A8-sweep |
+| `Phonetics/ToneConverter.swift` (parameterized) | `ime/dictionary/ToneConverter.kt` — NOT yet shared-core pure (imports `android.util.Log`, `BuildConfig`). A4-impl signature migration took `ToneToggles`; A8-sweep kept logging intact and applied a `// NOTE: Not shared-core` header. | Deferred to follow-up round (LoggerBackend migration) |
 | `Input/Composing/ComposingManager.swift` (reduced wrapper) | `ime/text/composing/ComposingManager.kt` (reduced wrapper) | No — platform. |
 
-A8-sweep adds the `// region Shared-Core Candidate` header per `rules/android-guidelines.md` §1 to each new file. A4-impl does not pre-empt A8-sweep — it just creates the files with correct purity.
+A8-sweep applied the `// region Shared-Core Candidate` header per `rules/android-guidelines.md` §1 to `ComposingTransition.kt` + `ToneToggles.kt`. `ComposingState.kt` marker is held per Codex pre-review (2026-04-20): marking it would leak a transitive platform dependency through `ToneConverter.kt`.
 
 ### 11.9 Out of scope for A4-design
 

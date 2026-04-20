@@ -1,3 +1,8 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only (java.net.URLEncoder is JDK stdlib,
+// accepted per the InputNormalizer / java.text.Normalizer precedent).
+// Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import java.net.URLEncoder

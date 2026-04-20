@@ -11,10 +11,14 @@ import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
  * service reach-ins, no DB lookups. Callers batch-fetch user-frequency
  * data and pass it in, mirroring iOS `CandidateProcessor.swift`.
  *
- * CROSS-PLATFORM INVARIANT — the scoring weights below
- * (`USER_FREQ_CAP`, `RECENCY_WINDOW_MS`, `EXACT_BONUS`, `COMPLETION_PENALTY`,
- * `CLOSENESS_WEIGHT`) MUST mirror iOS `CandidateProcessor.calculateScore`.
+ * CROSS-PLATFORM INVARIANT — mirrors
+ * ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift
+ * `calculateScore`. The seven iOS-synced scoring constants MUST stay in
+ * lock-step: `USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`,
+ * `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`.
  * Drift causes silent ranking divergence between platforms.
+ * `BASE_FREQ_DIVISOR` is Android-only (dictionary-frequency normalisation)
+ * and is NOT part of the invariant set.
  */
 object CandidateProcessor {
     private const val TAG = "CandidateProcessor"
