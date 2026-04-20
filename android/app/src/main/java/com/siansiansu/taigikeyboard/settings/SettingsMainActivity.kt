@@ -23,6 +23,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab1.HomeScreen
 import com.siansiansu.taigikeyboard.ui.tabs.tab2.LayoutScreen
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab4.DiagnosticViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
@@ -50,6 +51,7 @@ class SettingsMainActivity : AppCompatActivity() {
     lateinit var prefs: PrefHelper
 
     private val searchViewModel: DictionarySearchViewModel by viewModels()
+    private val diagnosticViewModel: DiagnosticViewModel by viewModels()
     private var resetCounter by mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -159,6 +161,7 @@ class SettingsMainActivity : AppCompatActivity() {
                         TAB_SETTINGS -> {
                             InputSettingsScreen(
                                 prefs = prefs,
+                                diagnosticViewModel = diagnosticViewModel,
                                 onResetSettings = ::resetAllSettings,
                                 resetCounter = resetCounter,
                             )

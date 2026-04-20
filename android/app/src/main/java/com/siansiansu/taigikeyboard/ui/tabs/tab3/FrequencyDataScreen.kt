@@ -38,8 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -53,7 +52,6 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,16 +65,17 @@ private const val DISPLAY_LIMIT = 100
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FrequencyDataScreen(
-    prefs: PrefHelper,
+    viewModel: FrequencyDataViewModel,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val userFreq = remember(context) { CompositionRoot.shared(context).userFreq }
 
-    var allData by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    val allData by viewModel.allData.collectAsStateWithLifecycle()
+    val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
+    val isRecordingEnabled by viewModel.isFrequencyRecordingEnabled.collectAsStateWithLifecycle()
+
     var showClearDialog by remember { mutableStateOf(false) }
-    var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
@@ -89,11 +88,7 @@ fun FrequencyDataScreen(
             allData.filter { it.first.lowercase().contains(query) }
         }
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            allData = userFreq.getAllFrequencies()
-        }
-    }
+    LaunchedEffect(Unit) { viewModel.load() }
 
     val exportLauncher =
         rememberLauncherForActivityResult(
@@ -102,16 +97,7 @@ fun FrequencyDataScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val exportData =
-                        withContext(Dispatchers.IO) {
-                            userFreq.getAllFrequencies()
-                        }
-                    val csv =
-                        buildString {
-                            for ((word, count) in exportData) {
-                                append("${CsvUtils.escape(word)},$count\n")
-                            }
-                        }
+                    val csv = viewModel.exportCSV()
                     withContext(Dispatchers.IO) {
                         context.contentResolver.openOutputStream(uri)?.use {
                             it.write(csv.toByteArray(Charsets.UTF_8))
@@ -131,37 +117,19 @@ fun FrequencyDataScreen(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri: Uri? ->
             uri ?: return@rememberLauncherForActivityResult
-            isImporting = true
             scope.launch {
                 try {
-                    val csvString =
-                        withContext(Dispatchers.IO) {
-                            context.contentResolver.openInputStream(uri)?.use {
-                                it.bufferedReader(Charsets.UTF_8).readText()
-                            } ?: throw Exception("Cannot read file")
-                        }
-                    val entries = parseFrequencyCSV(csvString)
-                    val imported =
-                        withContext(Dispatchers.IO) {
-                            userFreq.batchImportMerge(entries)
-                        }
-                    val skipped = entries.size - imported
+                    val outcome = viewModel.importCSV(uri)
                     resultMessage =
                         String.format(
                             Tab3Texts.frequencyImportResult,
-                            imported,
-                            skipped,
+                            outcome.imported,
+                            outcome.skipped,
                         )
                     showResultDialog = true
-                    // Reload data
-                    withContext(Dispatchers.IO) {
-                        allData = userFreq.getAllFrequencies()
-                    }
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: CommonTexts.importFailed
                     showResultDialog = true
-                } finally {
-                    isImporting = false
                 }
             }
         }
@@ -206,9 +174,9 @@ fun FrequencyDataScreen(
                     SettingsCard {
                         SwitchRow(
                             label = Tab3Texts.frequencyRecordingEnabled,
-                            checked = prefs.frequencyRecordingEnabled,
+                            checked = isRecordingEnabled,
                             infoText = Tab3Texts.frequencyRecordingEnabledInfo,
-                            onCheckedChange = { prefs.frequencyRecordingEnabled = it },
+                            onCheckedChange = { viewModel.setRecordingEnabled(it) },
                         )
                     }
                 }
@@ -347,14 +315,7 @@ fun FrequencyDataScreen(
                                 style = MaterialTheme.typography.labelLarge,
                             )
                             IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            userFreq.deleteWord(word)
-                                        }
-                                        allData = allData.filter { it.first != word }
-                                    }
-                                },
+                                onClick = { viewModel.deleteWord(word) },
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -392,10 +353,7 @@ fun FrequencyDataScreen(
             dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showClearDialog = false
-                scope.launch {
-                    withContext(Dispatchers.IO) { userFreq.deleteDatabase() }
-                    allData = emptyList()
-                }
+                viewModel.clearAll()
             },
             onDismiss = { showClearDialog = false },
         )
@@ -408,19 +366,4 @@ fun FrequencyDataScreen(
             onDismiss = { showResultDialog = false },
         )
     }
-}
-
-private fun parseFrequencyCSV(csv: String): List<Pair<String, Int>> {
-    val entries = mutableListOf<Pair<String, Int>>()
-    for (line in csv.split("\n")) {
-        val trimmed = line.trim()
-        if (trimmed.isEmpty()) continue
-        val columns = CsvUtils.parseLine(trimmed)
-        if (columns.size < 2) continue
-        val word = columns[0].trim()
-        val count = columns[1].trim().toIntOrNull() ?: continue
-        if (word.isEmpty() || count <= 0) continue
-        entries.add(word to count)
-    }
-    return entries
 }

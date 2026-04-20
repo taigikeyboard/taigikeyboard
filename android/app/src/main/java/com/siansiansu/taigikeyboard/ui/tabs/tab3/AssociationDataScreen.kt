@@ -38,9 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -54,7 +52,6 @@ import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
-import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -68,16 +65,17 @@ private const val DISPLAY_LIMIT = 100
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssociationDataScreen(
-    prefs: PrefHelper,
+    viewModel: AssociationDataViewModel,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val nextWord = remember(context) { CompositionRoot.shared(context).nextWord }
 
-    var allData by remember { mutableStateOf<List<NextWordService.AssociationEntry>>(emptyList()) }
+    val allData by viewModel.allData.collectAsStateWithLifecycle()
+    val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
+    val isRecordingEnabled by viewModel.isAssociationRecordingEnabled.collectAsStateWithLifecycle()
+
     var showClearDialog by remember { mutableStateOf(false) }
-    var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
@@ -95,11 +93,7 @@ fun AssociationDataScreen(
             }
         }
 
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            allData = nextWord.allAssociations()
-        }
-    }
+    LaunchedEffect(Unit) { viewModel.load() }
 
     val exportLauncher =
         rememberLauncherForActivityResult(
@@ -108,22 +102,7 @@ fun AssociationDataScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val exportData =
-                        withContext(Dispatchers.IO) {
-                            nextWord.allAssociations()
-                        }
-                    val csv =
-                        buildString {
-                            for (entry in exportData) {
-                                append(
-                                    "${CsvUtils.escape(
-                                        entry.prevWord,
-                                    )},${CsvUtils.escape(
-                                        entry.prevTl,
-                                    )},${CsvUtils.escape(entry.nextWord)},${CsvUtils.escape(entry.nextTl)},${entry.count}\n",
-                                )
-                            }
-                        }
+                    val csv = viewModel.exportCSV()
                     withContext(Dispatchers.IO) {
                         context.contentResolver.openOutputStream(uri)?.use {
                             it.write(csv.toByteArray(Charsets.UTF_8))
@@ -143,36 +122,19 @@ fun AssociationDataScreen(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri: Uri? ->
             uri ?: return@rememberLauncherForActivityResult
-            isImporting = true
             scope.launch {
                 try {
-                    val csvString =
-                        withContext(Dispatchers.IO) {
-                            context.contentResolver.openInputStream(uri)?.use {
-                                it.bufferedReader(Charsets.UTF_8).readText()
-                            } ?: throw Exception("Cannot read file")
-                        }
-                    val entries = parseAssociationCSV(csvString)
-                    val imported =
-                        withContext(Dispatchers.IO) {
-                            nextWord.batchImportAssociations(entries)
-                        }
-                    val skipped = entries.size - imported
+                    val outcome = viewModel.importCSV(uri)
                     resultMessage =
                         String.format(
                             Tab3Texts.associationImportResult,
-                            imported,
-                            skipped,
+                            outcome.imported,
+                            outcome.skipped,
                         )
                     showResultDialog = true
-                    withContext(Dispatchers.IO) {
-                        allData = nextWord.allAssociations()
-                    }
                 } catch (e: Exception) {
                     resultMessage = e.localizedMessage ?: CommonTexts.importFailed
                     showResultDialog = true
-                } finally {
-                    isImporting = false
                 }
             }
         }
@@ -217,9 +179,9 @@ fun AssociationDataScreen(
                     SettingsCard {
                         SwitchRow(
                             label = Tab3Texts.associationRecordingEnabled,
-                            checked = prefs.associationRecordingEnabled,
+                            checked = isRecordingEnabled,
                             infoText = Tab3Texts.associationRecordingEnabledInfo,
-                            onCheckedChange = { prefs.associationRecordingEnabled = it },
+                            onCheckedChange = { viewModel.setRecordingEnabled(it) },
                         )
                     }
                 }
@@ -360,21 +322,7 @@ fun AssociationDataScreen(
                                 style = MaterialTheme.typography.labelLarge,
                             )
                             IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) {
-                                            nextWord.deleteAssociation(entry)
-                                        }
-                                        allData =
-                                            allData.filter {
-                                                !(
-                                                    it.prevWord == entry.prevWord && it.prevTl == entry.prevTl &&
-                                                        it.nextWord == entry.nextWord &&
-                                                        it.nextTl == entry.nextTl
-                                                )
-                                            }
-                                    }
-                                },
+                                onClick = { viewModel.delete(entry) },
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -412,10 +360,7 @@ fun AssociationDataScreen(
             dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showClearDialog = false
-                scope.launch {
-                    withContext(Dispatchers.IO) { nextWord.clearAllAssociations() }
-                    allData = emptyList()
-                }
+                viewModel.clearAll()
             },
             onDismiss = { showClearDialog = false },
         )
@@ -428,22 +373,4 @@ fun AssociationDataScreen(
             onDismiss = { showResultDialog = false },
         )
     }
-}
-
-private fun parseAssociationCSV(csv: String): List<NextWordService.AssociationEntry> {
-    val entries = mutableListOf<NextWordService.AssociationEntry>()
-    for (line in csv.split("\n")) {
-        val trimmed = line.trim()
-        if (trimmed.isEmpty()) continue
-        val columns = CsvUtils.parseLine(trimmed)
-        if (columns.size < 5) continue
-        val prevWord = columns[0].trim()
-        val prevTl = columns[1].trim()
-        val nextWord = columns[2].trim()
-        val nextTl = columns[3].trim()
-        val count = columns[4].trim().toIntOrNull() ?: continue
-        if (nextWord.isEmpty() || count <= 0) continue
-        entries.add(NextWordService.AssociationEntry(prevWord, prevTl, nextWord, nextTl, count))
-    }
-    return entries
 }

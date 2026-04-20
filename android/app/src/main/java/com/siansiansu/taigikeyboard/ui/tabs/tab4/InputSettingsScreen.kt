@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +54,6 @@ import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
-import kotlinx.coroutines.launch
 
 private const val FEATURE_ID_HANLO_DESIGN = "hanloDesign"
 private const val FEATURE_ID_CASE_SWITCH = "caseSwitch"
@@ -67,6 +65,7 @@ private const val DIAGNOSTIC_EMAIL = "info@taigikeyboard.tw"
 @Composable
 fun InputSettingsScreen(
     prefs: PrefHelper,
+    diagnosticViewModel: DiagnosticViewModel,
     onResetSettings: () -> Unit,
     resetCounter: Int,
 ) {
@@ -290,7 +289,7 @@ fun InputSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                DiagnosticSection()
+                DiagnosticSection(viewModel = diagnosticViewModel)
 
                 Spacer(Modifier.height(24.dp))
 
@@ -321,23 +320,20 @@ fun InputSettingsScreen(
 }
 
 @Composable
-private fun DiagnosticSection() {
+private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     SectionHeader(Tab4Texts.diagnosticSectionTitle)
     SettingsCard {
         ActionRow(
             label = Tab4Texts.diagnosticCopy,
             icon = Icons.Outlined.ContentCopy,
             onClick = {
-                scope.launch {
-                    val info = DiagnosticService.gather(context)
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    clipboard.setPrimaryClip(
-                        ClipData.newPlainText(DIAGNOSTIC_CLIP_LABEL, info.formatted()),
-                    )
-                    Toast.makeText(context, Tab4Texts.diagnosticCopied, Toast.LENGTH_SHORT).show()
-                }
+                val info = viewModel.gather()
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(
+                    ClipData.newPlainText(DIAGNOSTIC_CLIP_LABEL, info.formatted()),
+                )
+                Toast.makeText(context, Tab4Texts.diagnosticCopied, Toast.LENGTH_SHORT).show()
             },
         )
         SettingsDivider()
@@ -346,16 +342,14 @@ private fun DiagnosticSection() {
             icon = Icons.AutoMirrored.Outlined.OpenInNew,
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
-                scope.launch {
-                    val info = DiagnosticService.gather(context)
-                    val sendIntent =
-                        Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, info.formatted())
-                            type = DIAGNOSTIC_MIME_TYPE
-                        }
-                    context.startActivity(Intent.createChooser(sendIntent, null))
-                }
+                val info = viewModel.gather()
+                val sendIntent =
+                    Intent().apply {
+                        action = Intent.ACTION_SEND
+                        putExtra(Intent.EXTRA_TEXT, info.formatted())
+                        type = DIAGNOSTIC_MIME_TYPE
+                    }
+                context.startActivity(Intent.createChooser(sendIntent, null))
             },
         )
         SettingsDivider()
@@ -364,16 +358,14 @@ private fun DiagnosticSection() {
             icon = Icons.AutoMirrored.Outlined.OpenInNew,
             textColor = MaterialTheme.colorScheme.primary,
             onClick = {
-                scope.launch {
-                    val info = DiagnosticService.gather(context)
-                    val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
-                    val body = Uri.encode(info.formatted())
-                    val uri = Uri.parse("mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body")
-                    try {
-                        context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
-                    } catch (_: Exception) {
-                        Toast.makeText(context, Tab4Texts.noEmailApp, Toast.LENGTH_SHORT).show()
-                    }
+                val info = viewModel.gather()
+                val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
+                val body = Uri.encode(info.formatted())
+                val uri = Uri.parse("mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body")
+                try {
+                    context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
+                } catch (_: Exception) {
+                    Toast.makeText(context, Tab4Texts.noEmailApp, Toast.LENGTH_SHORT).show()
                 }
             },
         )

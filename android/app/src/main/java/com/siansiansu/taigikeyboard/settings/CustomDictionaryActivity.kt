@@ -5,9 +5,9 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import androidx.activity.viewModels
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.CustomDictionaryScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.CustomDictionaryViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
@@ -17,20 +17,17 @@ class CustomDictionaryActivity : ComponentActivity() {
         fun createIntent(context: Context): Intent = Intent(context, CustomDictionaryActivity::class.java)
     }
 
+    private val viewModel: CustomDictionaryViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Ensure the process-wide service graph exists before screens use it.
-        CompositionRoot.shared(this)
-        val prefs = PrefHelper(this)
-        prefs.warmUp()
 
         setupEdgeToEdge()
 
         setContent {
             TaigiKeyboardTheme {
                 CustomDictionaryScreen(
-                    prefs = prefs,
+                    viewModel = viewModel,
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()
                     },

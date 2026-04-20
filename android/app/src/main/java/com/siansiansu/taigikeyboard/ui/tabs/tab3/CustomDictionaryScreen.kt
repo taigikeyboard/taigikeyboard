@@ -48,9 +48,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
@@ -79,18 +78,19 @@ private const val DISPLAY_LIMIT = 100
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomDictionaryScreen(
-    prefs: PrefHelper,
+    viewModel: CustomDictionaryViewModel,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val customDict = remember(context) { CompositionRoot.shared(context).customDict }
 
-    var entries by remember { mutableStateOf<List<CustomDictionaryService.Entry>>(emptyList()) }
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
+    val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
+    val isCustomDictEnabled by viewModel.isCustomDictEnabled.collectAsStateWithLifecycle()
+
     var showEditDialog by remember { mutableStateOf(false) }
     var editingEntry by remember { mutableStateOf<CustomDictionaryService.Entry?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
-    var isImporting by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
     var filterText by remember { mutableStateOf("") }
@@ -106,13 +106,7 @@ fun CustomDictionaryScreen(
             }
         }
 
-    fun reload() {
-        scope.launch { entries = customDict.fetchAll() }
-    }
-
-    LaunchedEffect(Unit) {
-        reload()
-    }
+    LaunchedEffect(Unit) { viewModel.load() }
 
     // File import launcher
     val importLauncher =
@@ -120,10 +114,9 @@ fun CustomDictionaryScreen(
             contract = ActivityResultContracts.OpenDocument(),
         ) { uri: Uri? ->
             uri ?: return@rememberLauncherForActivityResult
-            isImporting = true
             scope.launch {
                 try {
-                    val result = customDict.importFromFile(context, uri)
+                    val result = viewModel.importFile(uri)
                     resultMessage =
                         String.format(
                             Tab3Texts.importResult,
@@ -131,7 +124,6 @@ fun CustomDictionaryScreen(
                             result.skipped,
                         )
                     showResultDialog = true
-                    reload()
                 } catch (e: Exception) {
                     resultMessage =
                         when {
@@ -141,8 +133,6 @@ fun CustomDictionaryScreen(
                             else -> e.localizedMessage ?: CommonTexts.importFailed
                         }
                     showResultDialog = true
-                } finally {
-                    isImporting = false
                 }
             }
         }
@@ -155,9 +145,11 @@ fun CustomDictionaryScreen(
             uri ?: return@rememberLauncherForActivityResult
             scope.launch {
                 try {
-                    val csv = customDict.exportCSV()
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(csv.toByteArray(Charsets.UTF_8))
+                    val csv = viewModel.exportCSV()
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            outputStream.write(csv.toByteArray(Charsets.UTF_8))
+                        }
                     }
                     resultMessage = Tab3Texts.exportSuccess
                     showResultDialog = true
@@ -216,9 +208,9 @@ fun CustomDictionaryScreen(
                     SettingsCard {
                         SwitchRow(
                             label = Tab3Texts.customDictEnabled,
-                            checked = prefs.customDictEnabled,
+                            checked = isCustomDictEnabled,
                             infoText = Tab3Texts.customDictEnabledInfo,
-                            onCheckedChange = { prefs.customDictEnabled = it },
+                            onCheckedChange = { viewModel.setCustomDictEnabled(it) },
                         )
                     }
                 }
@@ -382,12 +374,7 @@ fun CustomDictionaryScreen(
                                         }.padding(vertical = 12.dp),
                             )
                             IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        customDict.delete(entry.id)
-                                        reload()
-                                    }
-                                },
+                                onClick = { viewModel.delete(entry.id) },
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
@@ -423,10 +410,7 @@ fun CustomDictionaryScreen(
             entry = editingEntry,
             onDismiss = { showEditDialog = false },
             onSave = { entry ->
-                scope.launch {
-                    customDict.save(entry)
-                    reload()
-                }
+                viewModel.save(entry)
                 showEditDialog = false
             },
         )
@@ -441,10 +425,7 @@ fun CustomDictionaryScreen(
             dismissLabel = CommonTexts.cancel,
             onConfirm = {
                 showDeleteAllDialog = false
-                scope.launch {
-                    customDict.deleteAll()
-                    reload()
-                }
+                viewModel.deleteAll()
             },
             onDismiss = { showDeleteAllDialog = false },
         )

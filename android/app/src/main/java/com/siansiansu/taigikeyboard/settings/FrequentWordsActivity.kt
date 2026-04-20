@@ -5,9 +5,11 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import androidx.activity.viewModels
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.AssociationDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.AssociationDataViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 
@@ -26,10 +28,12 @@ class FrequentWordsActivity : ComponentActivity() {
                 .putExtra(EXTRA_TYPE, type)
     }
 
+    private val frequencyViewModel: FrequencyDataViewModel by viewModels()
+    private val associationViewModel: AssociationDataViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val prefs = PrefHelper(this)
         val type = intent.getStringExtra(EXTRA_TYPE) ?: TYPE_FREQUENCY
 
         setupEdgeToEdge()
@@ -39,7 +43,7 @@ class FrequentWordsActivity : ComponentActivity() {
                 when (type) {
                     TYPE_FREQUENCY -> {
                         FrequencyDataScreen(
-                            prefs = prefs,
+                            viewModel = frequencyViewModel,
                             onNavigateBack = {
                                 onBackPressedDispatcher.onBackPressed()
                             },
@@ -48,7 +52,7 @@ class FrequentWordsActivity : ComponentActivity() {
 
                     TYPE_ASSOCIATION -> {
                         AssociationDataScreen(
-                            prefs = prefs,
+                            viewModel = associationViewModel,
                             onNavigateBack = {
                                 onBackPressedDispatcher.onBackPressed()
                             },

@@ -7,17 +7,19 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.localization.CommonTexts
 import com.siansiansu.taigikeyboard.localization.Tab3Texts
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -30,9 +32,7 @@ class DataManagementActivity : ComponentActivity() {
         fun createIntent(context: Context): Intent = Intent(context, DataManagementActivity::class.java)
     }
 
-    private var isProcessing by mutableStateOf(false)
-
-    private val root: CompositionRoot by lazy { CompositionRoot.shared(this) }
+    private val viewModel: DataManagementViewModel by viewModels()
 
     // Backup export launcher
     private val exportBackupLauncher =
@@ -40,16 +40,16 @@ class DataManagementActivity : ComponentActivity() {
             ActivityResultContracts.CreateDocument("application/json"),
         ) { uri ->
             uri ?: return@registerForActivityResult
-            isProcessing = true
             lifecycleScope.launch {
                 try {
-                    val json = root.backup.exportAll(this@DataManagementActivity)
-                    contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                    viewModel.exportBackup { json ->
+                        withContext(Dispatchers.IO) {
+                            contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                        }
+                    }
                     Toast.makeText(this@DataManagementActivity, Tab3Texts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(this@DataManagementActivity, CommonTexts.exportFailed, Toast.LENGTH_SHORT).show()
-                } finally {
-                    isProcessing = false
                 }
             }
         }
@@ -60,21 +60,17 @@ class DataManagementActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocument(),
         ) { uri ->
             uri ?: return@registerForActivityResult
-            isProcessing = true
             lifecycleScope.launch {
                 try {
-                    val json = contentResolver.openInputStream(uri)?.bufferedReader()?.readText() ?: return@launch
-                    val result = root.backup.importAll(json)
+                    val result = viewModel.importBackup(uri) ?: return@launch
                     Toast
                         .makeText(
                             this@DataManagementActivity,
                             String.format(Tab3Texts.importBackupResult, result.customDict, result.frequency, result.association),
                             Toast.LENGTH_LONG,
                         ).show()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     Toast.makeText(this@DataManagementActivity, CommonTexts.importFailed, Toast.LENGTH_SHORT).show()
-                } finally {
-                    isProcessing = false
                 }
             }
         }
@@ -86,6 +82,8 @@ class DataManagementActivity : ComponentActivity() {
 
         setContent {
             TaigiKeyboardTheme {
+                val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
+
                 DataManagementScreen(
                     isProcessing = isProcessing,
                     onNavigateBack = {
