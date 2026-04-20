@@ -247,24 +247,12 @@ class TextInputManager private constructor() :
                 }
 
             synchronized(composingLock) {
-                if (isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS) {
-                    val inputMode =
-                        taigikeyboard.prefs.inputMode.let {
-                            when (it) {
-                                "poj" -> ToneConverterModels.InputMode.POJ
-                                "tl", "tps" -> ToneConverterModels.InputMode.TL
-                                else -> ToneConverterModels.InputMode.POJ
-                            }
-                        }
-                    composingManager =
-                        ComposingManager(
-                            inputMode = inputMode,
-                            enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO,
-                            enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN,
-                        )
-                } else {
-                    composingManager = null
-                }
+                composingManager =
+                    if (isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS) {
+                        ComposingManager(settingsProvider = taigikeyboard.prefs)
+                    } else {
+                        null
+                    }
             }
 
             capsStateManager.updateCapsState()
@@ -353,19 +341,9 @@ class TextInputManager private constructor() :
         override fun onInputModeChanged(newInputMode: String) {
             if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onInputModeChanged($newInputMode)")
 
-            val newMode =
-                when (newInputMode) {
-                    "poj" -> ToneConverterModels.InputMode.POJ
-                    "tl", "tps" -> ToneConverterModels.InputMode.TL
-                    else -> ToneConverterModels.InputMode.POJ
-                }
-            synchronized(composingLock) {
-                composingManager?.let { manager ->
-                    manager.inputMode = newMode
-                    manager.enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO
-                    manager.enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN
-                }
-            }
+            // ComposingManager reads inputMode + toneToggles per dispatch
+            // via EngineSettingsProvider.current (live read) — no direct
+            // field mutation needed.
 
             layoutReloadJob?.cancel()
             layoutReloadJob =
@@ -396,15 +374,6 @@ class TextInputManager private constructor() :
                         }
                     keyboardView.updateVisibility()
                 }
-        }
-
-        fun refreshDoubleTapSettings() {
-            synchronized(composingLock) {
-                composingManager?.let { manager ->
-                    manager.enableDoubleTapOO = taigikeyboard.prefs.enableDoubleTapOO
-                    manager.enableDoubleTapNN = taigikeyboard.prefs.enableDoubleTapNN
-                }
-            }
         }
 
         fun reloadCurrentLayout() {

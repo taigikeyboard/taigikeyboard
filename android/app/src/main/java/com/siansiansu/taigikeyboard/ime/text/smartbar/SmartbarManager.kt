@@ -283,7 +283,8 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
 
         overlayView.onHide = {
             cachedOutputBothScripts = prefs.outputBothScripts
-            textInputManager.refreshDoubleTapSettings()
+            // Double-tap toggles are live-read by ComposingManager via
+            // EngineSettingsProvider.current — no manual refresh needed.
         }
 
         overlayView.onOpenApp = {

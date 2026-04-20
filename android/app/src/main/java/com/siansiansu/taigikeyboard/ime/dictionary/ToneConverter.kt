@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 
 /**
@@ -11,31 +12,44 @@ import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
  * POJ preprocessing (oo→o͘, nn→ⁿ) is handled here before delegating to TaigiPhonetics.
  */
 object ToneConverter {
-
     private const val TAG = "ToneConverter"
 
     /**
-     * Convert input with tone numbers to tone marks
+     * Convert input with tone numbers to tone marks.
+     *
      * @param input Input string with tone numbers
      * @param mode POJ or TL mode
-     * @param enableDoubleTapOO Whether oo→o͘ conversion is enabled (user setting)
-     * @param enableDoubleTapNN Whether nn→ⁿ conversion is enabled (user setting)
+     * @param toggles POJ preprocessing toggles (oo→o͘, nn→ⁿ) — live-read
+     *   value type carried from `EngineSettingsProvider.current.toneToggles`
+     *   so engine-layer callers (including `ComposingState`) don't touch
+     *   Android settings APIs.
      * @return String with tone marks applied
      */
     fun convertToToneMarks(
         input: String,
         mode: InputMode,
-        enableDoubleTapOO: Boolean = true,
-        enableDoubleTapNN: Boolean = true,
+        toggles: ToneToggles = ToneToggles(isDoubleTapOOEnabled = true, isDoubleTapNNEnabled = true),
     ): String {
-        val result = when (mode) {
-            InputMode.POJ -> {
-                val preprocessed = preprocessPojInput(input, enableDoubleTapOO, enableDoubleTapNN)
-                TaigiPhonetics.convertToToneMarks(preprocessed, InputMode.POJ)
+        val result =
+            when (mode) {
+                InputMode.POJ -> {
+                    val preprocessed =
+                        preprocessPojInput(
+                            input,
+                            toggles.isDoubleTapOOEnabled,
+                            toggles.isDoubleTapNNEnabled,
+                        )
+                    TaigiPhonetics.convertToToneMarks(preprocessed, InputMode.POJ)
+                }
+
+                InputMode.TL -> {
+                    TaigiPhonetics.convertToToneMarks(input, InputMode.TL)
+                }
+
+                InputMode.ENGLISH -> {
+                    input
+                }
             }
-            InputMode.TL -> TaigiPhonetics.convertToToneMarks(input, InputMode.TL)
-            InputMode.ENGLISH -> input
-        }
 
         val adjusted = ToneUtilities.adjustNasalMarkerCase(result)
 
@@ -85,12 +99,13 @@ object ToneConverter {
         while (i < input.length) {
             when {
                 i + 2 < input.length &&
-                input[i] in nasalVowels &&
-                input[i + 1].lowercaseChar() == 'n' &&
-                input[i + 2].lowercaseChar() == 'n' -> {
+                    input[i] in nasalVowels &&
+                    input[i + 1].lowercaseChar() == 'n' &&
+                    input[i + 2].lowercaseChar() == 'n' -> {
                     result.append(input[i]).append("ⁿ")
                     i += 3
                 }
+
                 else -> {
                     result.append(input[i])
                     i++

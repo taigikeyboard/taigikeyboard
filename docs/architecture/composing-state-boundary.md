@@ -417,7 +417,45 @@ A8-sweep adds the `// region Shared-Core Candidate` header per `rules/android-gu
 - StateFlow migration — deferred per §11.4.
 - `ToneConverter.convertToToneMarks` signature migration — A4-impl precondition, folded into the same PR.
 
-### 11.10 Cross-references
+### 11.10 Live-typing preedit text — Android raw vs iOS derived (A4-impl divergence)
+
+**Status**: deferred divergence, locked 2026-04-20 during A4-impl on branch `phase2/a4-composing-state`. Documents a real shared-core contract divergence so it is not silent per `rules/cross-platform-alignment.md` §3.
+
+For live-typing intents — `Start` / `Append` / `AppendHyphen` / `ReplaceLast` / non-empty-result `DeleteBackward` — the two platforms emit different `Effect.UpdatePreedit` text content:
+
+- **iOS**: `ComposingState.apply(...)` synchronously calls `derivedDisplay(mode, toneToggles)` and emits `.updatePreedit(derivedText)`. The user sees the tone-marked form immediately on every keystroke.
+- **Android**: `ComposingState.apply(...)` emits `UpdatePreedit(rawInput)` (the raw keystrokes) AND leaves `transition.derivedDisplay` empty for live-typing paths — no synchronous `ToneConverter.convertToToneMarks` call on the main-thread dispatch path. `ComposingManager.cachedDerivedDisplay` is cleared on every dispatch so `getComposingText()` returns the raw placeholder (matching pre-A4 observable behavior for `handleEnter` / `handleSpace` callers that capture `committedText` before commit). A background derivation loop (`CandidateUpdateCoordinator.scheduleDisplayDerivation`) subsequently calls `ComposingManager.applyDerivedDisplay(derived, ic)` which replaces the preedit on `Dispatchers.Default` → `Dispatchers.Main` AND populates `cachedDerivedDisplay` so subsequent `getComposingText()` calls read the derived form. Commit-path intents (`CommitDerived`) still compute `derivedDisplay` synchronously — the derived text travels inline in the `CommitTextReplacingPreedit(text)` effect and Enter/Space is not a hot path.
+
+**Why the divergence exists** — Android's pre-A4 flow set `composingText = rawInput` as a placeholder, then async-derived. Preserving this flow in A4-impl honors `rules/cross-platform-alignment.md` §1 refactor-freeze. Collapsing the async path into synchronous derivation (matching iOS) would be a user-visible mid-keystroke behavior change — `rules/cross-platform-alignment.md` §1b mandates an isolated parity-correction PR for that.
+
+**Why it is not a shared-core contract break** — `Effect.UpdatePreedit(text: String)` carries an arbitrary `String` value. The Effect contract is "show `text` as the preedit," not "show the derived form." Both platforms honor the contract; they pass different text.
+
+`ComposingTransition.derivedDisplay` diverges too: iOS populates it synchronously on every transition (the field feeds `@Published composingText` in the wrapper); Android live-typing paths (`Start` / `Append` / `ReplaceLast` / non-empty-result `DeleteBackward`) intentionally leave it empty to avoid a duplicate main-thread `ToneConverter.convertToToneMarks` call — the wrapper ignores the field and the async loop in `CandidateUpdateCoordinator.scheduleDisplayDerivation` computes the derived form on `Dispatchers.Default`. Commit-path intents (`CommitDerived`) still populate it synchronously because the derived text is carried inline in the `CommitTextReplacingPreedit(text)` effect and Enter/Space is not a hot path.
+
+**Test expectations** —
+
+- Pure-state: `ComposingStateTest.live-typing UpdatePreedit carries raw keystrokes not derived form` pins Android's raw-text contract. iOS `ComposingStateTests.testStart_emitsUpdatePreeditThenPerformAutocomplete` pins iOS's derived-text contract. The two are intentionally NOT cross-platform symmetric — they each assert their own platform's emitted text.
+- Binding-side: `ComposingManagerTest.appendCharacter shows raw keystrokes in preedit` asserts the last `setComposingText` call Android emits during keystroke sequence is the raw form.
+
+**Wrapper-level intent routing divergences** (Android only) — three cases where Android's `ComposingManager` dispatches differently than iOS because Android's in-document composing region (vs iOS floating marked text) makes certain emitted effects platform-unsafe:
+
+- `startComposing(char, ic)` on an active preedit: Android wrapper first dispatches `Reset` (emits `ClearPreeditWithoutCommit` → `setComposingText("", 1) + finishComposingText()`), then dispatches `Start(char)`. This pins the pre-zero contract from PR #151 / `behavioral-invariants.md` §13. iOS does not need the pre-Reset because `setMarkedText` atomically replaces the floating mark.
+- `deleteBackward(ic)` on 1-char composing buffer: Android wrapper dispatches `Reset` instead of `DeleteBackward`, so the state never emits `DeleteBackwardFromDocument` for this path. On iOS, `DeleteBackwardFromDocument` is the "normal backspace" companion to `ClearPreeditWithoutCommit` (because clearing the floating mark does not touch the document); on Android, `ClearPreeditWithoutCommit` already removes the preedit char from the document, so the extra `deleteSurroundingText(1, 0)` would delete a pre-existing document character.
+- `commitComposition(ic)` fast-path vs slow-path split: when `cachedDerivedDisplay` is non-empty (async derivation already replaced the raw preedit with the derived form), wrapper issues `finishComposingText()` ONLY — no `CommitTextReplacingPreedit` dispatch. This matches pre-A4 `displayDirty == false` semantics where `finishComposingText` is a no-op if the editor cleared the composing region externally (e.g. user tap → cursor move), avoiding a duplicate text insertion at the new cursor position. When `cachedDerivedDisplay` is empty (async hasn't caught up), wrapper dispatches `CommitDerived` which synchronously derives + atomically commits via `commitText` (matches pre-A4 `displayDirty == true` semantics; retains the pre-A4 duplicate-on-cleared-region bug in this narrow sub-case — <50ms between last keystroke and commit).
+
+All three routes preserve Android's pre-A4 observable behavior. `ComposingState` itself stays iOS-effect-shape compatible — the divergence lives in wrapper intent selection, not in the pure state's effect-emission rules.
+
+**Future parity-correction path** — if we later decide to collapse Android's async derivation into synchronous `state.apply` (matching iOS), the round needs to:
+
+1. Ship as an isolated `parity:` PR per §1b (not bundled with unrelated refactor).
+2. Remove `ComposingManager.applyDerivedDisplay` + `deriveDisplay(raw)` and delete `CandidateUpdateCoordinator.scheduleDisplayDerivation` / `displayDerivationJob`.
+3. Flip `ComposingState.apply(...)` live-typing intents to emit `UpdatePreedit(derivedDisplay(mode, toggles))`.
+4. Update both test suites (pure-state + binding) to assert the derived-text contract on Android too; drop this §11.10 divergence note.
+5. Dogfooding S1/S2/S3 covers the before/after comparison (placeholder flash → direct-derived).
+
+Tracked under `rules/cross-platform-alignment.md` §1b tier; not scheduled in Phase II.
+
+### 11.11 Cross-references
 
 - iOS boundary contract: §§1–10 above.
 - A4-impl deliverable: `android-state-audit.md` §7 A4-impl.
