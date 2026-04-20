@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 
 /**
  * Smartbar 視圖
@@ -21,8 +22,10 @@ import com.siansiansu.taigikeyboard.R
  * 候選詞支援左右滑動，可動態顯示最多 100 個候選詞
  */
 class SmartbarView : LinearLayout {
-
-    private val smartbarManager = SmartbarManager.getInstance()
+    // A7: `SmartbarView` is only inflated inside the IME input view tree, so
+    // `context` is always the IME service. Previewed screens do not use it.
+    private val smartbarManager: SmartbarManager
+        get() = (context as TaigiKeyboard).smartbarManager
 
     // 候選詞相關視圖
     var candidatesContainer: LinearLayout? = null
@@ -120,8 +123,11 @@ class SmartbarView : LinearLayout {
     fun setExpandButtonState(isExpanded: Boolean) {
         expandToggleButton?.apply {
             setImageResource(
-                if (isExpanded) R.drawable.ic_keyboard_arrow_up
-                else R.drawable.ic_keyboard_arrow_down
+                if (isExpanded) {
+                    R.drawable.ic_keyboard_arrow_up
+                } else {
+                    R.drawable.ic_keyboard_arrow_down
+                },
             )
             // 根據鍵盤主題動態設定圖示顏色
             val typedValue = TypedValue()
@@ -157,5 +163,4 @@ class SmartbarView : LinearLayout {
             imageTintList = ColorStateList.valueOf(typedValue.data)
         }
     }
-
 }

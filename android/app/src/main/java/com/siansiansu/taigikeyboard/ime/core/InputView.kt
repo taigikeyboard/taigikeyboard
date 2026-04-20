@@ -12,8 +12,10 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 
 class InputView : FrameLayout {
-
-    private var taigikeyboard: TaigiKeyboard = TaigiKeyboard.getInstance()
+    // A7: `InputView` is inflated only inside `TaigiKeyboard.onCreateInputView`,
+    // so the constructor `Context` is the IME service itself.
+    private val taigikeyboard: TaigiKeyboard
+        get() = context as TaigiKeyboard
 
     var mainViewFlipper: ViewFlipper? = null
         private set

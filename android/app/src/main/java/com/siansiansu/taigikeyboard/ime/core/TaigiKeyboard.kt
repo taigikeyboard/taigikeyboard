@@ -25,11 +25,13 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.TaigiKeyboardApplication
 import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
+import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import com.siansiansu.taigikeyboard.util.*
 import com.squareup.moshi.Json
@@ -38,8 +40,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-
-private var taigikeyboardInstance: TaigiKeyboard? = null
 
 class TaigiKeyboard : LifecycleInputMethodService() {
     lateinit var prefs: PrefHelper
@@ -67,17 +67,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     lateinit var subtypeManager: SubtypeManager
     lateinit var activeSubtype: Subtype
 
-    val textInputManager: TextInputManager
-    val mediaInputManager: MediaInputManager
+    lateinit var textInputManager: TextInputManager
+        private set
+    lateinit var smartbarManager: SmartbarManager
+        private set
+    lateinit var mediaInputManager: MediaInputManager
+        private set
 
     private val navbarManager = NavigationBarManager()
-
-    init {
-        taigikeyboardInstance = this
-
-        textInputManager = TextInputManager.getInstance()
-        mediaInputManager = MediaInputManager.getInstance()
-    }
 
     companion object {
         private const val IME_ID: String = "com.siansiansu.taigikeyboard/.ime.core.TaigiKeyboard"
@@ -101,11 +98,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
             return isEnabled
         }
-
-        @Synchronized
-        fun getInstance(): TaigiKeyboard =
-            taigikeyboardInstance
-                ?: throw IllegalStateException("TaigiKeyboard not initialized")
     }
 
     override fun onCreate() {
@@ -132,15 +124,28 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onCreate()")
 
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        prefs = PrefHelper(this)
-        prefs.warmUp()
 
-        // Migrate from SharedPreferences to DataStore on first launch
-        serviceScope.launch {
-            prefs.migrateFromSharedPreferences()
-        }
+        // Read prefs + service graph from the Application. Warmup + DataStore
+        // migration + custom-dict seed have already been launched by
+        // `TaigiKeyboardApplication.onCreate` (per audit §A7 warmup relocation).
+        // Prefs migration stays fire-and-forget async — same race profile as
+        // the prior `serviceScope.launch { migrateFromSharedPreferences }`,
+        // so no observable-behavior change on first-launch reads below.
+        val app = application as TaigiKeyboardApplication
+        prefs = app.prefs
+        compositionRoot = app.compositionRoot
+
         subtypeManager = SubtypeManager(this, prefs)
         activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
+
+        // Construct the IME manager graph directly (A7: no more `getInstance()`
+        // cycle). Order matters — SmartbarManager ctor needs TextInputManager;
+        // TextInputManager reaches SmartbarManager lazily via a `lateinit` set
+        // right after SmartbarManager is built.
+        textInputManager = TextInputManager(this, prefs)
+        smartbarManager = SmartbarManager(this, prefs, compositionRoot, textInputManager)
+        textInputManager.smartbarManager = smartbarManager
+        mediaInputManager = MediaInputManager(this)
 
         // Observe inputMode changes and reload keyboard layout
         serviceScope.launch {
@@ -165,14 +170,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         setTheme(R.style.KeyboardTheme)
 
         AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
-
-        // Wire up the service graph (shared instance across IME + Settings).
-        compositionRoot = CompositionRoot.shared(this)
-
-        // Seed default custom-dictionary entries on first install.
-        serviceScope.launch {
-            compositionRoot.customDict.seedDefaultEntryIfEmpty()
-        }
 
         super.onCreate()
         textInputManager.onCreate()
@@ -276,7 +273,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         serviceScope.cancel()
         osHandler.removeCallbacksAndMessages(null)
         compositionRoot.lexicon.close()
-        taigikeyboardInstance = null
 
         super.onDestroy()
         textInputManager.onDestroy()

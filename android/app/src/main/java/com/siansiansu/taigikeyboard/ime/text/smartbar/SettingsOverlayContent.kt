@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
@@ -38,11 +37,11 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun SettingsOverlayContent(
+    prefs: PrefHelper,
     refreshTrigger: Int,
     onDismiss: () -> Unit,
     onOpenApp: () -> Unit,
 ) {
-    val prefs: PrefHelper = TaigiKeyboard.getInstance().prefs
     val scope = rememberCoroutineScope()
 
     val fontFamily =

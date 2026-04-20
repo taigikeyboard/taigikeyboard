@@ -28,16 +28,18 @@ import com.siansiansu.taigikeyboard.util.FontUtils
  * Only visible rows are inflated; ViewHolders are reused during scroll.
  */
 class CandidateOverlayView : FrameLayout {
-
     companion object {
         private const val TAG = "CandidateOverlayView"
         private const val ITEMS_PER_PAGE = 20
         private const val MINIMUM_CELL_WIDTH_DP = 44f
         private const val CELL_HORIZONTAL_PADDING_DP = 20f
+
         // Primary text size in sp (matches candidate_grid_cell.xml)
         private const val PRIMARY_TEXT_SIZE_SP = 21f
+
         // Subtitle text size in sp (matches candidate_grid_cell.xml)
         private const val SUBTITLE_TEXT_SIZE_SP = 19f
+
         // Right-side padding: 68dp (60dp panel + 8dp gap) + 4dp row margins
         private const val RIGHT_RESERVED_DP = 72f
     }
@@ -56,7 +58,10 @@ class CandidateOverlayView : FrameLayout {
     private var isVisible: Boolean = false
     private var currentPage: Int = 0
     private var suggestions: List<TaigiWord> = emptyList()
-    private val prefs: PrefHelper by lazy { PrefHelper(TaigiKeyboard.getInstance().context) }
+
+    // A7: IME-only view; `context` resolves to the `TaigiKeyboard` service,
+    // so the Application-owned PrefHelper is reachable without `getInstance()`.
+    private val prefs: PrefHelper by lazy { (context as TaigiKeyboard).prefs }
 
     // Text measurement
     private val primaryPaint = Paint().apply { isAntiAlias = true }
@@ -95,19 +100,20 @@ class CandidateOverlayView : FrameLayout {
 
         // Set up RecyclerView
         layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
-        adapter = CandidateOverlayAdapter(
-            context = context,
-            isTranslateSwapped = { SmartbarManager.getInstance().getCachedIsTranslateSwapped() },
-            fontType = { prefs.fontType },
-            layoutType = { prefs.keyboardLayoutType },
-            orMapsToER = { prefs.tpsOrMapsToER },
-            isClickEnabled = { isClickEnabled },
-            onCellClick = { word, index ->
-                onSuggestionSelected?.invoke(word, index)
-                hide()
-                onCollapse?.invoke()
-            }
-        )
+        adapter =
+            CandidateOverlayAdapter(
+                context = context,
+                isTranslateSwapped = { (context as TaigiKeyboard).smartbarManager.getCachedIsTranslateSwapped() },
+                fontType = { prefs.fontType },
+                layoutType = { prefs.keyboardLayoutType },
+                orMapsToER = { prefs.tpsOrMapsToER },
+                isClickEnabled = { isClickEnabled },
+                onCellClick = { word, index ->
+                    onSuggestionSelected?.invoke(word, index)
+                    hide()
+                    onCollapse?.invoke()
+                },
+            )
         recyclerView?.apply {
             this.layoutManager = this@CandidateOverlayView.layoutManager
             this.adapter = this@CandidateOverlayView.adapter
@@ -136,7 +142,10 @@ class CandidateOverlayView : FrameLayout {
      * @param suggestions candidate list
      * @param keyboardHeight total keyboard height (constrains overlay height)
      */
-    fun show(suggestions: List<TaigiWord>, keyboardHeight: Int) {
+    fun show(
+        suggestions: List<TaigiWord>,
+        keyboardHeight: Int,
+    ) {
         // Click protection: disable immediately
         isClickEnabled = false
 
@@ -152,12 +161,13 @@ class CandidateOverlayView : FrameLayout {
         if (keyboardHeight > 0) {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {
                 height = keyboardHeight
-            } ?: FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                keyboardHeight
-            ).apply {
-                gravity = android.view.Gravity.TOP
-            }
+            } ?: FrameLayout
+                .LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    keyboardHeight,
+                ).apply {
+                    gravity = android.view.Gravity.TOP
+                }
         }
 
         resetScrollPosition()
@@ -298,11 +308,12 @@ class CandidateOverlayView : FrameLayout {
 
         // Non-TPS: measure both roman and hanzi to cover swap states
         val romanWidth = primaryPaint.measureText(word.roman)
-        val hanziWidth = if (!word.hanzi.isNullOrEmpty()) {
-            subtitlePaint.measureText(word.hanzi)
-        } else {
-            0f
-        }
+        val hanziWidth =
+            if (!word.hanzi.isNullOrEmpty()) {
+                subtitlePaint.measureText(word.hanzi)
+            } else {
+                0f
+            }
         val maxTextWidth = maxOf(romanWidth, hanziWidth)
         return maxOf(minimumCellWidthPx, (maxTextWidth + cellHorizontalPaddingPx + 0.5f).toInt())
     }
@@ -369,8 +380,7 @@ class CandidateOverlayView : FrameLayout {
         }
 
         translateButton?.visibility = View.VISIBLE
-        val smartbarManager = SmartbarManager.getInstance()
-        val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
+        val isTranslateSwapped = (context as TaigiKeyboard).smartbarManager.getCachedIsTranslateSwapped()
         translateButton?.isActivated = isTranslateSwapped
     }
 

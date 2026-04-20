@@ -43,7 +43,8 @@ class LayoutSelectionOverlayView : FrameLayout {
         val isDisabled: Boolean = false,
     )
 
-    private val prefs: PrefHelper get() = TaigiKeyboard.getInstance().prefs
+    // A7: IME-only overlay; `context` resolves to the `TaigiKeyboard` service.
+    private val prefs: PrefHelper get() = (context as TaigiKeyboard).prefs
     private var isShowing: Boolean = false
 
     private var romanizationRow: LinearLayout? = null

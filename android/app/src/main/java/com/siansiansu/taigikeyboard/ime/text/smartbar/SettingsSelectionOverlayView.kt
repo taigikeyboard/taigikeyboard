@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
@@ -63,10 +64,15 @@ class SettingsSelectionOverlayView : FrameLayout {
             ),
         )
 
+        // A7: IME-only overlay; `context` resolves to the `TaigiKeyboard`
+        // service, so we can hand the Application-owned prefs to the
+        // Compose content instead of resurrecting a `getInstance()` reach.
+        val prefs = (context as TaigiKeyboard).prefs
         composeView?.setContent {
             TaigiKeyboardTheme {
                 val trigger by refreshTrigger
                 SettingsOverlayContent(
+                    prefs = prefs,
                     refreshTrigger = trigger,
                     onDismiss = { hide() },
                     onOpenApp = { onOpenApp?.invoke() },

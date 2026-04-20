@@ -21,6 +21,7 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -30,12 +31,13 @@ import java.util.concurrent.atomic.AtomicReference
  * 支援動態生成候選詞按鈕，最多顯示 200 個候選詞
  * 候選詞數量由 LexiconService 控制（預設 limit = 200）
  */
-class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
-    private val taigikeyboard: TaigiKeyboard = TaigiKeyboard.getInstance()
+class SmartbarManager(
+    private val taigikeyboard: TaigiKeyboard,
+    private val prefs: PrefHelper,
+    private val compositionRoot: CompositionRoot,
+    private val textInputManager: TextInputManager,
+) : TaigiKeyboard.EventListener {
     private var isComposingEnabled: Boolean = false
-    private val textInputManager: TextInputManager = TextInputManager.getInstance()
-    private val prefs: PrefHelper by lazy { PrefHelper(taigikeyboard.context) }
-    private val compositionRoot: CompositionRoot = CompositionRoot.shared(taigikeyboard)
     var smartbarView: SmartbarView? = null
         private set
     var candidateOverlayView: CandidateOverlayView? = null
@@ -76,10 +78,10 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
     private val nextWordHandler =
         NextWordHandler(
             // Use the IME-lifecycle scope so the context-timeout `delay` job
-            // is cancelled in `TaigiKeyboard.onDestroy`. SmartbarManager's
-            // own scope is not cancelled in its `onDestroy`, so a pending
-            // 30 s timeout would otherwise leak across input sessions
-            // (see `nextword-engine-boundary.md` §13.5).
+            // is cancelled in `TaigiKeyboard.onDestroy`. A7 also cancels
+            // SmartbarManager's own scope in `onDestroy`, but the 30 s
+            // NextWord timeout stays on the service scope so cancellation
+            // semantics match iOS (`nextword-engine-boundary.md` §13.5).
             scope = taigikeyboard.serviceScope,
             settingsProvider = taigikeyboard.prefs,
             nextWord = compositionRoot.nextWord,
@@ -176,15 +178,6 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
 
     companion object {
         private const val TAG = "SmartbarManager"
-        private var instance: SmartbarManager? = null
-
-        @Synchronized
-        fun getInstance(): SmartbarManager {
-            if (instance == null) {
-                instance = SmartbarManager()
-            }
-            return instance!!
-        }
     }
 
     fun registerSmartbarView(smartbarView: SmartbarView) {
@@ -275,7 +268,7 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
         this.symbolSelectionOverlayView = overlayView
 
         overlayView.onSymbolSelected = { symbol ->
-            TaigiKeyboard.getInstance().currentInputConnection?.commitText(symbol, 1)
+            taigikeyboard.currentInputConnection?.commitText(symbol, 1)
         }
     }
 
@@ -327,11 +320,15 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
     override fun onDestroy() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
+        // A7: cancel the manager-owned scope so CandidateClickHandler jobs do
+        // not outlive the IME service instance. Pre-A7 this scope leaked
+        // because `SmartbarManager` was a resurrectable companion singleton.
+        scope.cancel()
+
         smartbarView = null
         layoutSelectionOverlayView = null
         symbolSelectionOverlayView = null
         settingsSelectionOverlayView = null
-        instance = null
     }
 
     fun onStartInputView(

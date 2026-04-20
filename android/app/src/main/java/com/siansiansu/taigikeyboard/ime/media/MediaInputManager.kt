@@ -2,6 +2,8 @@
 package com.siansiansu.taigikeyboard.ime.media
 
 import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -9,39 +11,24 @@ import android.view.ViewGroup
 import android.widget.*
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.InputView
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyData
 import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyboardView
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
-import android.os.Handler
-import android.os.Looper
 import kotlinx.coroutines.*
 
-class MediaInputManager private constructor() : CoroutineScope by MainScope(),
+class MediaInputManager(
+    private val taigikeyboard: TaigiKeyboard,
+) : CoroutineScope by MainScope(),
     TaigiKeyboard.EventListener {
-
-    private val taigikeyboard = TaigiKeyboard.getInstance()
-
     private var osHandler: Handler? = null
     private var isDeletePressed: Boolean = false
     private var emojiKeyboardView: ViewFlipper? = null
 
     var mediaViewGroup: LinearLayout? = null
-
-    companion object {
-        private var instance: MediaInputManager? = null
-
-        @Synchronized
-        fun getInstance(): MediaInputManager {
-            if (instance == null) {
-                instance = MediaInputManager()
-            }
-            return instance!!
-        }
-    }
 
     /**
      * Called when a new input view has been registered. Used to initialize all media-relevant
@@ -57,19 +44,22 @@ class MediaInputManager private constructor() : CoroutineScope by MainScope(),
             emojiKeyboardView = inputView.findViewById(R.id.media_input_view_flipper)
 
             // Init bottom buttons
-            inputView.findViewById<Button>(R.id.media_input_switch_to_text_input_button)
+            inputView
+                .findViewById<Button>(R.id.media_input_switch_to_text_input_button)
                 .setOnTouchListener { view, event -> onBottomButtonEvent(view, event) }
-            inputView.findViewById<ImageButton>(R.id.media_input_backspace_button)
+            inputView
+                .findViewById<ImageButton>(R.id.media_input_backspace_button)
                 .setOnTouchListener { view, event -> onBottomButtonEvent(view, event) }
 
             try {
                 // 直接建立並加入 EmojiKeyboardView
                 val emojiView = EmojiKeyboardView(taigikeyboard.context)
                 withContext(Dispatchers.Main) {
-                    val layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                    )
+                    val layoutParams =
+                        ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                        )
                     emojiKeyboardView?.addView(emojiView, layoutParams)
                 }
             } catch (e: Exception) {
@@ -85,23 +75,30 @@ class MediaInputManager private constructor() : CoroutineScope by MainScope(),
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
         cancel()
-        instance = null
     }
 
     /**
      * Handles clicks on the bottom buttons.
      */
-    private fun onBottomButtonEvent(view: View, event: MotionEvent?): Boolean {
+    private fun onBottomButtonEvent(
+        view: View,
+        event: MotionEvent?,
+    ): Boolean {
         event ?: return false
-        val data = when (view.id) {
-            R.id.media_input_switch_to_text_input_button -> {
-                KeyData(KeyCode.SWITCH_TO_TEXT_CONTEXT)
+        val data =
+            when (view.id) {
+                R.id.media_input_switch_to_text_input_button -> {
+                    KeyData(KeyCode.SWITCH_TO_TEXT_CONTEXT)
+                }
+
+                R.id.media_input_backspace_button -> {
+                    KeyData(KeyCode.DELETE, type = KeyType.ENTER_EDITING)
+                }
+
+                else -> {
+                    null
+                }
             }
-            R.id.media_input_backspace_button -> {
-                KeyData(KeyCode.DELETE, type = KeyType.ENTER_EDITING)
-            }
-            else -> null
-        }
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 taigikeyboard.keyPressVibrate(view)
@@ -112,17 +109,19 @@ class MediaInputManager private constructor() : CoroutineScope by MainScope(),
                         osHandler = Handler(Looper.getMainLooper())
                     }
                     // 使用 Handler 替代 Timer，確保回調在主執行緒執行
-                    val repeatDelete = object : Runnable {
-                        override fun run() {
-                            if (isDeletePressed) {
-                                taigikeyboard.textInputManager.sendKeyPress(data)
-                                osHandler?.postDelayed(this, 50)
+                    val repeatDelete =
+                        object : Runnable {
+                            override fun run() {
+                                if (isDeletePressed) {
+                                    taigikeyboard.textInputManager.sendKeyPress(data)
+                                    osHandler?.postDelayed(this, 50)
+                                }
                             }
                         }
-                    }
                     osHandler?.postDelayed(repeatDelete, 500)
                 }
             }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isDeletePressed = false
                 osHandler?.removeCallbacksAndMessages(null)

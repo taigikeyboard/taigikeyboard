@@ -20,8 +20,10 @@ import kotlinx.coroutines.launch
  * Emoji 鍵盤 View（整合 Compose）
  */
 class EmojiKeyboardView : FrameLayout {
-
-    private val taigikeyboard: TaigiKeyboard = TaigiKeyboard.getInstance()
+    // A7: `EmojiKeyboardView` is instantiated by `MediaInputManager` with the
+    // IME service context (`taigikeyboard.context`), so casting is safe.
+    private val taigikeyboard: TaigiKeyboard
+        get() = context as TaigiKeyboard
     private val mainScope = MainScope()
     private var composeView: ComposeView? = null
 
@@ -33,7 +35,7 @@ class EmojiKeyboardView : FrameLayout {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(
         context,
         attrs,
-        defStyleAttr
+        defStyleAttr,
     ) {
         // 初始化將在 onAttachedToWindow 執行
     }
@@ -45,28 +47,34 @@ class EmojiKeyboardView : FrameLayout {
         preferencesManager = EmojiPreferences(context)
 
         // 建立 ComposeView（會自動從 view tree 找到 LifecycleOwner）
-        composeView = ComposeView(context).apply {
-            // 設定 composition strategy
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        }
+        composeView =
+            ComposeView(context).apply {
+                // 設定 composition strategy
+                setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            }
 
-        addView(composeView, LayoutParams(
-            LayoutParams.MATCH_PARENT,
-            LayoutParams.MATCH_PARENT
-        ))
+        addView(
+            composeView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT,
+            ),
+        )
 
         // 異步載入 emoji 資料並設定 content
         mainScope.launch {
-            val layouts = mainScope.async(Dispatchers.IO) {
-                parseRawEmojiSpecsFile(context, "ime/media/emoji/root.txt")
-            }.await()
+            val layouts =
+                mainScope
+                    .async(Dispatchers.IO) {
+                        parseRawEmojiSpecsFile(context, "ime/media/emoji/root.txt")
+                    }.await()
 
             // 資料載入完成後設定 Compose content
             composeView?.setContent {
                 TaigiKeyboardTheme {
                     // 觀察膚色偏好
                     val preferredSkinTone by preferencesManager.getPreferredSkinTone().collectAsState(
-                        initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT
+                        initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT,
                     )
 
                     EmojiPaletteView(
@@ -82,7 +90,7 @@ class EmojiKeyboardView : FrameLayout {
                                 preferencesManager.setPreferredSkinTone(skinTone)
                             }
                         },
-                        modifier = Modifier
+                        modifier = Modifier,
                     )
                 }
             }

@@ -19,11 +19,12 @@ import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
  * prior `object`-singleton pattern.
  *
  * Access through [shared]; call-sites pass any `Context`, the root keys
- * itself on `applicationContext`. This interim shape replaces `object`
- * singletons without introducing an `Application` subclass (that decision
- * is deferred to A3 per `android-state-audit.md` §8 #1). A7 extends this
- * graph to include IME managers (TextInputManager / SmartbarManager /
- * MediaInputManager).
+ * itself on `applicationContext`. Owned by `TaigiKeyboardApplication`
+ * after A7 (`android-state-audit.md` §A7 + §8 #1 resolution). The IME
+ * manager graph (TextInputManager / SmartbarManager / MediaInputManager)
+ * stays IME-service-scoped and is constructed inside `TaigiKeyboard.onCreate`;
+ * it is intentionally NOT held here because manager lifecycles follow the
+ * IME service, not the Application process.
  */
 class CompositionRoot private constructor(
     appContext: Context,

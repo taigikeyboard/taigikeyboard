@@ -17,11 +17,12 @@ import androidx.core.view.children
 import com.google.android.flexbox.FlexboxLayout
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyView
 import com.siansiansu.taigikeyboard.ime.text.layout.ComputedLayoutData
+import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.util.getColorFromAttr
 
 class KeyboardView : LinearLayout {
@@ -44,6 +45,12 @@ class KeyboardView : LinearLayout {
     var desiredKeyWidth: Int = resources.getDimension(R.dimen.key_width).toInt()
     var desiredKeyHeight: Int = resources.getDimension(R.dimen.key_height).toInt()
     var taigikeyboard: TaigiKeyboard? = null
+
+    // A7: pushed by TextInputManager when a new KeyboardView is created so
+    // KeyView can read `isTranslateSwapped` without a global `getInstance()`
+    // lookup. Null in settings preview (`KeyboardPreviewPanel`), which is
+    // why the type is nullable even though IME-path instances always set it.
+    var smartbarManager: SmartbarManager? = null
     var isPreviewMode: Boolean = false
     var popupManager = KeyPopupManager<KeyboardView, KeyView>(this)
     lateinit var prefs: PrefHelper
@@ -51,7 +58,8 @@ class KeyboardView : LinearLayout {
     // Cached parsed color settings — avoids JSON parsing in onDraw/KeyView.onDraw
     private var cachedColorSettingsJson: String = ""
     var cachedColorSettings: com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings =
-        com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings()
+        com.siansiansu.taigikeyboard.ime.core
+            .KeyboardColorSettings()
         private set
 
     /** Returns the cached KeyboardColorSettings, re-parsing only when the JSON string changes. */
@@ -59,7 +67,9 @@ class KeyboardView : LinearLayout {
         val json = prefs.colorSettings
         if (json != cachedColorSettingsJson) {
             cachedColorSettingsJson = json
-            cachedColorSettings = com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings.fromJson(json)
+            cachedColorSettings =
+                com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
+                    .fromJson(json)
         }
         return cachedColorSettings
     }
@@ -74,7 +84,9 @@ class KeyboardView : LinearLayout {
         val fontType = prefs.fontType
         if (fontType != cachedFontType) {
             cachedFontType = fontType
-            cachedTypeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(fontType, context)
+            cachedTypeface =
+                com.siansiansu.taigikeyboard.util.FontUtils
+                    .getTypefaceByType(fontType, context)
         }
         return cachedTypeface
     }
@@ -87,7 +99,7 @@ class KeyboardView : LinearLayout {
         orientation = VERTICAL
         layoutParams = layoutParams ?: FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
+            FrameLayout.LayoutParams.WRAP_CONTENT,
         )
     }
 
@@ -107,18 +119,27 @@ class KeyboardView : LinearLayout {
                 keyView.taigikeyboard = taigikeyboard
                 rowView.addView(keyView)
                 if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi") && rowIndex == 2 && keyIndex >= 8) {
-                    Log.d(TAG, "[LAYOUT]     Row $rowIndex Key $keyIndex: label='${key.label}' code=${key.code} type=${key.type} variation=${key.variation}")
+                    Log.d(
+                        TAG,
+                        "[LAYOUT]     Row $rowIndex Key $keyIndex: label='${key.label}' code=${key.code} type=${key.type} variation=${key.variation}",
+                    )
                 }
             }
             if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi")) {
                 Log.d(TAG, "[LAYOUT]   Row $rowIndex: added ${row.size} KeyViews to rowView (childCount=${rowView.childCount})")
                 if (rowIndex == 2) {
                     post {
-                        Log.d(TAG, "[LAYOUT]   Row $rowIndex after layout: rowView width=${rowView.width}, childCount=${rowView.childCount}")
+                        Log.d(
+                            TAG,
+                            "[LAYOUT]   Row $rowIndex after layout: rowView width=${rowView.width}, childCount=${rowView.childCount}",
+                        )
                         for (i in 0 until rowView.childCount) {
                             val child = rowView.getChildAt(i)
                             if (child is KeyView && child.data.label == "-") {
-                                Log.d(TAG, "[LAYOUT]     Hyphen KeyView: visibility=${child.visibility}, width=${child.width}, left=${child.left}, right=${child.right}, isShown=${child.isShown}")
+                                Log.d(
+                                    TAG,
+                                    "[LAYOUT]     Hyphen KeyView: visibility=${child.visibility}, width=${child.width}, left=${child.left}, right=${child.right}, isShown=${child.isShown}",
+                                )
                             }
                         }
                     }
@@ -148,9 +169,7 @@ class KeyboardView : LinearLayout {
     /**
      * Catch all events which are designated for child views.
      */
-    override fun onInterceptTouchEvent(event: MotionEvent?): Boolean {
-        return true
-    }
+    override fun onInterceptTouchEvent(event: MotionEvent?): Boolean = true
 
     /**
      * This is the main logic for choosing which [KeyView] is the current active one.
@@ -166,15 +185,19 @@ class KeyboardView : LinearLayout {
         var pointerId = event.getPointerId(pointerIndex)
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN,
-            MotionEvent.ACTION_POINTER_DOWN -> {
+            MotionEvent.ACTION_POINTER_DOWN,
+            -> {
                 if (activePointerId == null) {
                     activePointerId = pointerId
                     activeX = event.getX(pointerIndex)
                     activeY = event.getY(pointerIndex)
                     searchForActiveKeyView()
                     if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "[TOUCH] DOWN → key=${activeKeyView?.data?.code} " +
-                            "(${activeKeyView?.data?.label})")
+                        Log.d(
+                            TAG,
+                            "[TOUCH] DOWN → key=${activeKeyView?.data?.code} " +
+                                "(${activeKeyView?.data?.label})",
+                        )
                     }
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_DOWN)
                 } else if (activePointerId != pointerId) {
@@ -199,6 +222,7 @@ class KeyboardView : LinearLayout {
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_DOWN)
                 }
             }
+
             MotionEvent.ACTION_MOVE -> {
                 for (index in 0 until event.pointerCount) {
                     pointerId = event.getPointerId(index)
@@ -214,19 +238,27 @@ class KeyboardView : LinearLayout {
                     }
                 }
             }
+
             MotionEvent.ACTION_UP,
             MotionEvent.ACTION_CANCEL,
-            MotionEvent.ACTION_POINTER_UP -> {
+            MotionEvent.ACTION_POINTER_UP,
+            -> {
                 if (activePointerId == pointerId) {
                     sendFlorisTouchEvent(eventFloris, MotionEvent.ACTION_UP)
                     activeKeyView = null
                     activePointerId = null
                 } else if (BuildConfig.DEBUG) {
-                    Log.d(TAG, "[TOUCH] ACTION_UP ignored: " +
-                        "activePointerId=$activePointerId, eventPointerId=$pointerId")
+                    Log.d(
+                        TAG,
+                        "[TOUCH] ACTION_UP ignored: " +
+                            "activePointerId=$activePointerId, eventPointerId=$pointerId",
+                    )
                 }
             }
-            else -> return false
+
+            else -> {
+                return false
+            }
         }
         eventFloris.recycle()
         return true
@@ -240,26 +272,36 @@ class KeyboardView : LinearLayout {
      * @param event The event to pass to [activeKeyView].
      * @param actionParam The action to set the [event] to.
      */
-    private fun sendFlorisTouchEvent(event: MotionEvent, actionParam: Int) {
-        val keyView = activeKeyView ?: run {
-            if (BuildConfig.DEBUG) {
-                Log.w(TAG, "[TOUCH] sendFlorisTouchEvent skipped: " +
-                    "activeKeyView is null, action=$actionParam")
+    private fun sendFlorisTouchEvent(
+        event: MotionEvent,
+        actionParam: Int,
+    ) {
+        val keyView =
+            activeKeyView ?: run {
+                if (BuildConfig.DEBUG) {
+                    Log.w(
+                        TAG,
+                        "[TOUCH] sendFlorisTouchEvent skipped: " +
+                            "activeKeyView is null, action=$actionParam",
+                    )
+                }
+                return
             }
-            return
-        }
         val keyViewParent = keyView.parent as ViewGroup
-        keyView.onFlorisTouchEvent(event.apply {
-            action = when (actionParam) {
-                MotionEvent.ACTION_POINTER_DOWN -> MotionEvent.ACTION_DOWN
-                MotionEvent.ACTION_POINTER_UP -> MotionEvent.ACTION_UP
-                else -> actionParam
-            }
-            setLocation(
-                activeX - keyViewParent.x - keyView.x,
-                activeY - keyViewParent.y - keyView.y
-            )
-        })
+        keyView.onFlorisTouchEvent(
+            event.apply {
+                action =
+                    when (actionParam) {
+                        MotionEvent.ACTION_POINTER_DOWN -> MotionEvent.ACTION_DOWN
+                        MotionEvent.ACTION_POINTER_UP -> MotionEvent.ACTION_UP
+                        else -> actionParam
+                    }
+                setLocation(
+                    activeX - keyViewParent.x - keyView.x,
+                    activeY - keyViewParent.y - keyView.y,
+                )
+            },
+        )
     }
 
     /**
@@ -295,6 +337,7 @@ class KeyboardView : LinearLayout {
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                 }
             }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 activeKeyView?.isPressed = false
                 activeKeyView = null
@@ -309,12 +352,21 @@ class KeyboardView : LinearLayout {
      */
     fun dismissActiveKeyViewReference() {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[TOUCH] dismissActiveKeyViewReference: " +
-                "keyCode=${activeKeyView?.data?.code}, pointerId=$activePointerId")
+            Log.d(
+                TAG,
+                "[TOUCH] dismissActiveKeyViewReference: " +
+                    "keyCode=${activeKeyView?.data?.code}, pointerId=$activePointerId",
+            )
         }
-        val cancelEvent = MotionEvent.obtain(
-            0, 0, MotionEvent.ACTION_CANCEL, 0.0f, 0.0f, 0
-        )
+        val cancelEvent =
+            MotionEvent.obtain(
+                0,
+                0,
+                MotionEvent.ACTION_CANCEL,
+                0.0f,
+                0.0f,
+                0,
+            )
         activeKeyView?.onFlorisTouchEvent(cancelEvent)
         cancelEvent.recycle()
         activeKeyView = null
@@ -324,28 +376,37 @@ class KeyboardView : LinearLayout {
     /**
      * The desired key heights/widths are being calculated here.
      */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    override fun onMeasure(
+        widthMeasureSpec: Int,
+        heightMeasureSpec: Int,
+    ) {
         val widthSize = MeasureSpec.getSize(widthMeasureSpec)
 
         val keyMarginH = resources.getDimension((R.dimen.key_marginH)).toInt()
         desiredKeyWidth = (widthSize / 10) - (2 * keyMarginH)
 
         val factor = prefs.heightFactor
-        val keyHeightFactor = when (resources.configuration.orientation) {
-            Configuration.ORIENTATION_LANDSCAPE -> 0.85f
-            else -> 1.0f
-        } * when (factor) {
-            "extra_short" -> 0.85f
-            "short" -> 0.90f
-            "mid_short" -> 0.95f
-            "normal" -> 1.00f
-            "mid_tall" -> 1.05f
-            "tall" -> 1.10f
-            "extra_tall" -> 1.15f
-            else -> 1.00f
-        } * prefs.keyHeightScale
+        val keyHeightFactor =
+            when (resources.configuration.orientation) {
+                Configuration.ORIENTATION_LANDSCAPE -> 0.85f
+                else -> 1.0f
+            } *
+                when (factor) {
+                    "extra_short" -> 0.85f
+                    "short" -> 0.90f
+                    "mid_short" -> 0.95f
+                    "normal" -> 1.00f
+                    "mid_tall" -> 1.05f
+                    "tall" -> 1.10f
+                    "extra_tall" -> 1.15f
+                    else -> 1.00f
+                } * prefs.keyHeightScale
         desiredKeyHeight = (resources.getDimension(R.dimen.key_height) * keyHeightFactor).toInt()
-        taigikeyboard?.textInputManager?.smartbarManager?.smartbarView?.setHeightFactor(keyHeightFactor)
+        taigikeyboard
+            ?.textInputManager
+            ?.smartbarManager
+            ?.smartbarView
+            ?.setHeightFactor(keyHeightFactor)
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }

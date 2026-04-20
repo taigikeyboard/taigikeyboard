@@ -586,11 +586,10 @@ class KeyView(
     private fun updateKeyPressedBackground() {
         // 檢查是否為 translate 按鍵且處於 swapped 狀態
         // 使用 SmartbarManager 的快取值避免 DataStore 非同步讀取問題
+        // A7: SmartbarManager 由 parent KeyboardView 推入；preview 模式為 null。
         val isTranslateSwapped =
             data.code == KeyCode.TRANSLATE &&
-                com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
-                    .getInstance()
-                    .getCachedIsTranslateSwapped()
+                keyboardView.smartbarManager?.getCachedIsTranslateSwapped() == true
 
         // 只有 translate 按鍵在 swapped 狀態時需要特殊處理
         // 其他按鍵（包括 ENTER、DELETE）的觸擊效果由 selector 自動處理
@@ -784,10 +783,9 @@ class KeyView(
 
                 KeyCode.VIEW_NUMERIC_ADVANCED -> {
                     // 在 symbol 鍵盤中，根據 isTranslateSwapped 狀態決定顯示內容
+                    // A7: SmartbarManager 由 parent KeyboardView 推入；preview 模式為 null。
                     val isTranslateSwapped =
-                        com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
-                            .getInstance()
-                            .getCachedIsTranslateSwapped()
+                        keyboardView.smartbarManager?.getCachedIsTranslateSwapped() == true
                     if (isTranslateSwapped && keyboardView.computedLayout?.mode == KeyboardMode.SYMBOLS) {
                         label = "、"
                         drawable = null
