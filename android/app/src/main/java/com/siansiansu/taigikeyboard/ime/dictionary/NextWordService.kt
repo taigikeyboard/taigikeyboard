@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.core.nextword.RawNextWordPrediction
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -92,13 +93,6 @@ class NextWordService(
     // ------------------------------------------------------------------ //
     // Public types
     // ------------------------------------------------------------------ //
-
-    /** One predicted next-character result. */
-    data class Prediction(
-        val hanzi: String,
-        val tl: String,
-        val score: Double,
-    )
 
     /** User-learned association row (debug / export). */
     data class AssociationEntry(
@@ -203,15 +197,23 @@ class NextWordService(
     // ------------------------------------------------------------------ //
 
     /**
-     * Predict the next character given the last-committed [word].
-     * Merges dictionary bigrams with user-learned entries.
+     * Predict the next character given the last-committed [word]. Merges
+     * dictionary bigrams with user-learned entries.
+     *
+     * [nowMs] is supplied by the caller (A5-impl clock-injection — the
+     * executor holds the single `System.currentTimeMillis()` reader for
+     * the whole intent, so the `shouldRecordAssociation` window and the
+     * user-row decay score see the same "now"). Android walks one step
+     * ahead of iOS here; iOS `NextWordService.predict` still reads the
+     * clock internally. Documented in `nextword-engine-boundary.md` §13.3.
      */
     suspend fun predict(
         word: String,
         roman: String = "",
         limit: Int = DEFAULT_LIMIT,
         settings: EngineSettings,
-    ): List<Prediction> =
+        nowMs: Long,
+    ): List<RawNextWordPrediction> =
         withContext(Dispatchers.IO) {
             if (word.isEmpty()) {
                 return@withContext emptyList()
@@ -221,7 +223,7 @@ class NextWordService(
 
             ensureInitialized()
 
-            val results = mutableMapOf<String, Prediction>()
+            val results = mutableMapOf<String, RawNextWordPrediction>()
 
             // 1. Dictionary associations — look up via `last char` in association.bin
             associationReader?.let { reader ->
@@ -237,7 +239,7 @@ class NextWordService(
 
                         val key = "${entry.nextWord}\t${entry.nextTl}"
                         results[key] =
-                            Prediction(
+                            RawNextWordPrediction(
                                 hanzi = entry.nextWord,
                                 tl = entry.nextTl,
                                 score = entry.count.toDouble() * DICT_WEIGHT,
@@ -265,9 +267,6 @@ class NextWordService(
 
                     logger.debug(TAG) { "[PREDICT] User query: prev_word='$word', prev_tl='$roman'" }
 
-                    // Single clock read per prediction batch — all rows score
-                    // against the same "now" for consistent ranking.
-                    val nowMs = System.currentTimeMillis()
                     val cursor = db.rawQuery(sql, arrayOf(word, roman, (limit * 2).toString()))
                     var userCount = 0
                     cursor.use {
@@ -299,7 +298,7 @@ class NextWordService(
                                     )
                             } else {
                                 results[key] =
-                                    Prediction(
+                                    RawNextWordPrediction(
                                         hanzi = nextWord,
                                         tl = nextTl,
                                         score = userScore,

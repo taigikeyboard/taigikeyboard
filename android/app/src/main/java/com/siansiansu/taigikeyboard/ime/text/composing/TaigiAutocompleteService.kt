@@ -119,6 +119,7 @@ class TaigiAutocompleteService(
                 word = lastSelectedWord,
                 limit = 30,
                 settings = settings,
+                nowMs = System.currentTimeMillis(),
             )
         if (predictions.isEmpty()) return words
 

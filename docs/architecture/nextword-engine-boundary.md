@@ -144,7 +144,7 @@ weight; elevating scoring into shared-core (so Kotlin/Rust can compute
 scores themselves from raw `count` + `lastUsedMs`) is a Phase IV-B
 follow-up on the shared-core roadmap.
 
-Service mapping: `NextWordService.Prediction` → `RawNextWordPrediction` happens in `NextWordService` itself (platform side) before results cross into the engine.
+Service mapping: in the original G5-design sketch, `NextWordService.Prediction` → `RawNextWordPrediction` happened in `NextWordService` itself (platform side) before results cross into the engine. Both platforms simplified this at impl time — iOS G5-impl (PR #141) and Android A5-impl deleted the intermediate `NextWordService.Prediction` DTO and have `predict` return `List<RawNextWordPrediction>` (`[RawNextWordPrediction]` on iOS) directly.
 
 Engine signature:
 
@@ -386,7 +386,7 @@ Already decided (moved out of "deferred" after review cycle):
 |---|---|
 | Section placement | Append at end (§13). Audit §7 A5-design's "§3" reference is stale. |
 | Context-timeout model | **Option A — active**. Port iOS `Timer.scheduledTimer` to a coroutine-scheduled `delay` (see §13.5). |
-| `RawNextWordPrediction` package | **New** `ime/core/nextword/` package — groups shared-core candidates away from platform I/O (`ime/dictionary/`). Service maps `NextWordService.Prediction → ime.core.nextword.RawNextWordPrediction` at the boundary. |
+| `RawNextWordPrediction` package | **New** `ime/core/nextword/` package — groups shared-core candidates away from platform I/O (`ime/dictionary/`). A5-impl deletes the pre-A5 nested `NextWordService.Prediction` and has `predict` return `List<ime.core.nextword.RawNextWordPrediction>` directly (simpler than the originally-sketched boundary mapping step). |
 | Generation counter | Port iOS pattern as a parity correction in A5-impl (see §13.6). |
 | `StateFlow` on executor | Not required — same reasoning as composing §11.4. |
 
@@ -423,7 +423,7 @@ Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions 
 - Every invalidating intent bumps generation (see §3 rule).
 - `Outcome.Effect.queryPredictions(... generation: Long)` carries the bumped value; executor passes it to the coroutine issuing `nextWord.predict`.
 - On `predict` resumption, executor compares against current generation; mismatch drops the result silently.
-- Test pins post-correction behavior: `INVARIANT_nextword_late_prediction_is_discarded` (§10).
+- A5-impl ships pure-engine tests pinning the generation-bump rule (every invalidating intent produces `newState.currentGeneration > state.currentGeneration`). The end-to-end `INVARIANT_nextword_late_prediction_is_discarded` from §10 needs a wrapper harness with a fake `NextWordService` + coroutine-test dispatcher; the `kotlinx-coroutines-test` dependency is not yet on the Android test classpath, so that wrapper-level test is **deferred to A9** per §13.11. Pre-merge gating for A5-impl is S1/S2/S3 dogfooding + the pure-engine coverage already landed.
 
 ### 13.7 Cross-platform invariant constants
 
@@ -472,9 +472,9 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 | `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
 | `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
 | `NextWord/NextWordController.swift` (platform executor) | `ime/text/smartbar/NextWordHandler.kt` (reduced wrapper) | No — platform executor. |
-| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (adds `.Prediction → RawNextWordPrediction` mapping, `nowMs` parameter on `predict`) | No — SQLite + file manager. |
+| `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` (`predict` now returns `List<RawNextWordPrediction>` directly; the pre-A5 nested `NextWordService.Prediction` DTO is deleted. `nowMs: Long` added to the `predict` signature per §13.3) | No — SQLite + file manager. |
 
-A8-sweep adds the `// region Shared-Core Candidate` header to each new file, plus the `// CROSS-PLATFORM INVARIANT` comments from §13.7. A5-impl does not pre-empt A8-sweep.
+**Post-A5-impl state (2026-04-20)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).
 
 ### 13.11 Out of scope for A5-design
 

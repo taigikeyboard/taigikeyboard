@@ -54,7 +54,15 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     private var audioManager: AudioManager? = null
     private val osHandler = Handler(Looper.getMainLooper())
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /**
+     * IME-lifecycle coroutine scope cancelled in [onDestroy]. Exposed so
+     * engine wrappers (e.g. [com.siansiansu.taigikeyboard.ime.text.smartbar.NextWordHandler])
+     * can launch work that must NOT outlive the input-method service.
+     * Marked `internal` to keep the visibility narrow — do not leak the
+     * scope outside the app module.
+     */
+    internal val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     lateinit var subtypeManager: SubtypeManager
     lateinit var activeSubtype: Subtype

@@ -75,12 +75,15 @@ class SmartbarManager private constructor() : TaigiKeyboard.EventListener {
 
     private val nextWordHandler =
         NextWordHandler(
-            scope = scope,
-            prefs = prefs,
-            taigikeyboard = taigikeyboard,
+            // Use the IME-lifecycle scope so the context-timeout `delay` job
+            // is cancelled in `TaigiKeyboard.onDestroy`. SmartbarManager's
+            // own scope is not cancelled in its `onDestroy`, so a pending
+            // 30 s timeout would otherwise leak across input sessions
+            // (see `nextword-engine-boundary.md` §13.5).
+            scope = taigikeyboard.serviceScope,
+            settingsProvider = taigikeyboard.prefs,
             nextWord = compositionRoot.nextWord,
             logger = compositionRoot.logger,
-            isTranslateSwapped = { cachedIsTranslateSwapped },
             onUpdateCandidates = { updateCandidates(it) },
             onClearCandidates = { clearCandidates() },
         )
