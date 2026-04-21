@@ -179,6 +179,25 @@ class ComposingManager(
     }
 
     /**
+     * Commit the current preedit (if any) and insert externally-supplied
+     * [text] in one atomic `InputConnection.commitText` call. Used by
+     * non-Taigi input surfaces — emoji palette, clipboard paste — so an
+     * active Taigi preedit never leaks a silent commit through direct
+     * `finishComposingText` bypass paths. Mirrors iOS
+     * `ComposingManager.commitPreeditThenInsertExternal(_:)`.
+     *
+     * Replaces the pre-A5 `MediaInputManager.sendEmojiKeyPress` direct
+     * `finishComposingText + commitText` sequence — see
+     * `composing-state-boundary.md` §11.6 deferred parity follow-up.
+     */
+    fun commitPreeditThenInsertExternal(
+        text: String,
+        ic: InputConnection,
+    ) {
+        dispatch(ComposingState.Intent.CommitPreeditThenInsertExternal(text), ic)
+    }
+
+    /**
      * Reset all composing state.
      *
      * Mirrors iOS `ComposingState.apply(.reset)` which emits

@@ -241,6 +241,112 @@ class ComposingStateTest {
         )
     }
 
+    // MARK: - INVARIANT_composing_external_insert_commits_preedit_atomically
+
+    @Test
+    fun `commitPreeditThenInsertExternal when composing emits atomic combined commit`() {
+        // Emoji / clipboard tap during active Taigi preedit: the derived
+        // preedit must be committed together with the external text in one
+        // `commitText` call (atomic from the editor's perspective) —
+        // NOT via a bare `finishComposingText` + `commitText(emoji)` pair
+        // which is the pre-A5 bypass flagged in
+        // `composing-state-boundary.md` §11.6.
+        val (afterStart, _) =
+            ComposingState().apply(ComposingState.Intent.Start("a"), tl, togglesOff)
+        val (next, transition) =
+            afterStart.apply(
+                ComposingState.Intent.CommitPreeditThenInsertExternal("😀"),
+                tl,
+                togglesOff,
+            )
+
+        assertFalse(next.isComposing)
+        assertEquals(-1, next.selectedCandidateIndex)
+        assertEquals(-1, transition.newSelectedIndex)
+        val commit =
+            transition.effects.filterIsInstance<ComposingTransition.Effect.CommitTextReplacingPreedit>().single()
+        assertTrue(
+            "commit text must end with emoji and include derived preedit",
+            commit.text.endsWith("😀") && commit.text.length > "😀".length,
+        )
+        assertEquals(
+            listOf(
+                ComposingTransition.Effect.CommitTextReplacingPreedit(commit.text),
+                ComposingTransition.Effect.ResetAutocomplete,
+                ComposingTransition.Effect.ResetAutocompleteContext,
+            ),
+            transition.effects,
+        )
+        assertFalse(
+            "must NOT emit a separate ClearPreeditWithoutCommit",
+            transition.effects.any { it is ComposingTransition.Effect.ClearPreeditWithoutCommit },
+        )
+    }
+
+    @Test
+    fun `commitPreeditThenInsertExternal when idle emits plain insert only`() {
+        val (next, transition) =
+            ComposingState().apply(
+                ComposingState.Intent.CommitPreeditThenInsertExternal("😀"),
+                tl,
+                togglesOff,
+            )
+
+        assertFalse(next.isComposing)
+        assertEquals(
+            listOf(ComposingTransition.Effect.CommitTextReplacingPreedit("😀")),
+            transition.effects,
+        )
+        assertEquals(-1, transition.newSelectedIndex)
+    }
+
+    @Test
+    fun `commitPreeditThenInsertExternal with empty text is noop and preserves preedit`() {
+        // Guard against a stray empty-string delegate call discarding the
+        // user's in-progress composition.
+        val (afterStart, _) =
+            ComposingState().apply(ComposingState.Intent.Start("abc"), tl, togglesOff)
+        val (next, transition) =
+            afterStart.apply(
+                ComposingState.Intent.CommitPreeditThenInsertExternal(""),
+                tl,
+                togglesOff,
+            )
+
+        assertTrue(next.isComposing)
+        assertEquals("abc", next.rawInput)
+        assertTrue(transition.effects.isEmpty())
+    }
+
+    @Test
+    fun `commitPreeditThenInsertExternal with non-zero selected index commits derived not candidate`() {
+        // Pin the contract that emoji insertion does NOT implicitly choose
+        // the currently-highlighted candidate. A user may have tapped into
+        // candidate index 3; tapping an emoji still commits the derived
+        // preedit + emoji atomically, and the candidate selection is
+        // discarded as state transitions to idle.
+        val (afterStart, _) =
+            ComposingState().apply(ComposingState.Intent.Start("a"), tl, togglesOff)
+        val composingWithIndex = afterStart.withSelectedIndex(3)
+
+        val (next, transition) =
+            composingWithIndex.apply(
+                ComposingState.Intent.CommitPreeditThenInsertExternal("😀"),
+                tl,
+                togglesOff,
+            )
+
+        assertFalse(next.isComposing)
+        assertEquals(-1, next.selectedCandidateIndex)
+        assertEquals(-1, transition.newSelectedIndex)
+        val commit =
+            transition.effects.filterIsInstance<ComposingTransition.Effect.CommitTextReplacingPreedit>().single()
+        assertTrue(
+            "commit must combine derived preedit + emoji, not a candidate string",
+            commit.text.endsWith("😀") && commit.text.length > "😀".length,
+        )
+    }
+
     // MARK: - Reset semantics
 
     @Test
@@ -287,6 +393,7 @@ class ComposingStateTest {
                 ComposingState.Intent.CommitDerived,
                 ComposingState.Intent.CommitRaw,
                 ComposingState.Intent.SelectSuggestion("x"),
+                ComposingState.Intent.CommitPreeditThenInsertExternal("😀"),
                 ComposingState.Intent.Reset,
             )
 

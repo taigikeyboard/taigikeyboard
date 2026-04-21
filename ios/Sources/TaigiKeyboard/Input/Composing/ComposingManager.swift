@@ -100,6 +100,15 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         dispatch(.selectSuggestion(text))
     }
 
+    /// Commit the current preedit (if any) and insert externally-supplied
+    /// text in one atomic document write. Used by non-Taigi input surfaces
+    /// such as the emoji palette, so an active Taigi preedit never leaks a
+    /// silent commit through `textDocumentProxy.insertText` /
+    /// `InputConnection.finishComposingText` bypass paths.
+    public func commitPreeditThenInsertExternal(_ text: String) {
+        dispatch(.commitPreeditThenInsertExternal(text))
+    }
+
     /// Commit the currently-selected candidate, given only the visible
     /// candidate text strings. KK-side callers pass
     /// `suggestions.map(\.text)` at the boundary.

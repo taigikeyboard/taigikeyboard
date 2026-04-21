@@ -292,9 +292,14 @@ baseFreqScore  (~0 … +100)       fallback
 - iOS binding: `KeyboardExtension/KeyboardViewController+TextInput.swift` `clearMarkedText()` calls `setMarkedText("", …)` + `unmarkText()` — no `insertText`.
 - Android binding: `ime/text/composing/ComposingManager.kt` `reset(ic)` and `startComposing(...)` mid-composition restart both call `ic.setComposingText("", 1)` BEFORE `ic.finishComposingText()`. Pre-zero is mandatory because `InputConnection.finishComposingText()` commits the active composing region by default — see `composing-state-boundary.md` §11.2 rule 1.
 
-**Known coverage gaps (deferred)**: the same invariant applies to two additional Android call-sites pending follow-up parity PRs that require a Robolectric / IME instrumentation harness:
+**Known coverage gaps (deferred)**: the same invariant applies to one additional Android call-site pending a follow-up parity PR that requires a Robolectric / IME instrumentation harness:
 - `ime/text/TextInputManager.kt` `resetComposingText()` (4 call-sites).
-- `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` — emoji tap during active Taigi preedit currently leaks a silent commit.
+
+**Extended invariant — `INVARIANT_composing_external_insert_commits_preedit_atomically`**: external insertion surfaces (emoji palette, clipboard paste) MUST commit the active Taigi preedit together with the external text in a single atomic document write — never a `finishComposingText` + `commitText(external)` pair (silent double-commit on Android) nor a bare `insertText(external)` while marked text is live (stale preedit on iOS).
+
+- Pure-state pin: `ComposingStateTest`/`ComposingStateTests` — idle path emits plain insert, composing path emits `CommitTextReplacingPreedit(derived + external)` + `ResetAutocomplete` + `ResetAutocompleteContext`, empty-text path is a no-op.
+- Binding pin: Android `ComposingManagerTest` — single `commitText` call, zero `finishComposingText`; iOS `ComposingManagerTests` — mirrored via `DelegateSpy` effect ordering.
+- Closed path: `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` (Android) + `KeyboardExtension/KeyboardViewController+EmojiDelegate.swift` `emojiDidSelect(_:)` (iOS) — both route through `ComposingManager.commitPreeditThenInsertExternal(...)` as of 2026-04-21 (`parity/emoji-key-press-preedit`).
 
 **Corner cases**:
 - Idle reset (no active composition) MUST issue zero `InputConnection` calls / zero `Effect` emissions on either platform — observable as a no-op.

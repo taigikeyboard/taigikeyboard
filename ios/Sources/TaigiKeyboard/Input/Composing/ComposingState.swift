@@ -48,6 +48,13 @@ struct ComposingState: Equatable {
         /// replacing the current preedit.
         case selectSuggestion(String)
 
+        /// Commit the current preedit (if any) and insert an externally
+        /// supplied text atomically in one document write. Used by
+        /// non-Taigi input surfaces — emoji palette, clipboard paste —
+        /// so composing state never leaks a silent finish-composing.
+        /// Idle → behaves as a plain insert of `text`.
+        case commitPreeditThenInsertExternal(String)
+
         /// Clear all state (e.g. keyboard teardown / mode switch).
         case reset
     }
@@ -188,6 +195,28 @@ struct ComposingState: Equatable {
                     .resetAutocomplete,
                     .resetAutocompleteContext,
                 ],
+            )
+
+        case let .commitPreeditThenInsertExternal(externalText):
+            guard !externalText.isEmpty else { return noopTransition() }
+            if case .composing = phase {
+                let derived = derivedDisplay(mode: mode, toneToggles: toneToggles)
+                return exitToIdle(
+                    effects: [
+                        .commitTextReplacingPreedit(derived + externalText),
+                        .resetAutocomplete,
+                        .resetAutocompleteContext,
+                    ],
+                )
+            }
+            // Idle: behave as a plain insert. Reuse `commitTextReplacingPreedit`
+            // because it already maps to `clearMarkedText + insertText` on iOS
+            // and `commitText` on Android; both are no-op-on-empty-preedit safe.
+            return ComposingTransition(
+                newPhase: .idle,
+                newSelectedIndex: -1,
+                effects: [.commitTextReplacingPreedit(externalText)],
+                derivedDisplay: "",
             )
 
         case .reset:

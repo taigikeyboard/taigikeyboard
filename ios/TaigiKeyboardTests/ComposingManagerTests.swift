@@ -230,6 +230,46 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
+    // MARK: - commitPreeditThenInsertExternal (emoji / clipboard path)
+
+    func testCommitPreeditThenInsertExternal_whenComposing_commitsAtomicallyWithExternalText() {
+        // Pins the iOS side of the parity fix with Android
+        // `MediaInputManager.sendEmojiKeyPress`. Wrapper must emit a single
+        // `.commitTextReplacingPreedit` carrying the derived preedit + the
+        // external text — never a bare `.updatePreedit("")` or clear pair.
+        manager.startComposing(with: "hello")
+        let derived = manager.composingText
+        spy.effects.removeAll()
+
+        manager.commitPreeditThenInsertExternal("😀")
+
+        XCTAssertFalse(manager.isComposing)
+        XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        XCTAssertEqual(spy.effects, [
+            .commitTextReplacingPreedit(derived + "😀"),
+            .resetAutocomplete,
+            .resetAutocompleteContext,
+        ])
+    }
+
+    func testCommitPreeditThenInsertExternal_whenIdle_insertsExternalTextOnly() {
+        manager.commitPreeditThenInsertExternal("😀")
+
+        XCTAssertFalse(manager.isComposing)
+        XCTAssertEqual(spy.effects, [.commitTextReplacingPreedit("😀")])
+    }
+
+    func testCommitPreeditThenInsertExternal_withEmptyText_whenComposing_isNoop() {
+        manager.startComposing(with: "abc")
+        spy.effects.removeAll()
+
+        manager.commitPreeditThenInsertExternal("")
+
+        XCTAssertTrue(manager.isComposing)
+        XCTAssertEqual(manager.rawInput, "abc")
+        XCTAssertTrue(spy.effects.isEmpty)
+    }
+
     func testConfirmSelectedCandidate_whenIndexValid_selectsAndReturnsTrue() {
         manager.startComposing(with: "a")
         spy.effects.removeAll()

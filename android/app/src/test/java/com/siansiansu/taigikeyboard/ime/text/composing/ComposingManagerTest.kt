@@ -187,6 +187,64 @@ class ComposingManagerTest {
 
     // MARK: - Live-typing preedit text (Android raw vs iOS derived — §11 addendum)
 
+    // MARK: - INVARIANT_composing_external_insert_commits_preedit_atomically
+
+    @Test
+    fun `commitPreeditThenInsertExternal when composing emits single atomic commitText`() {
+        // Pre-A5 `sendEmojiKeyPress` used `finishComposingText` + `commitText` —
+        // a silent double-commit flagged in
+        // `composing-state-boundary.md` §11.6 deferred parity follow-up.
+        // Post-A5 the binding must issue ONE `commitText` containing the
+        // derived preedit + external text, with zero `finishComposingText`
+        // calls.
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+        manager.appendCharacter("a", ic)
+        ic.calls.clear()
+
+        manager.commitPreeditThenInsertExternal("😀", ic)
+
+        assertEquals(1, ic.calls.size)
+        val commit = ic.calls.single() as IcCall.CommitText
+        assertTrue(
+            "commit text must carry preedit + emoji in one write",
+            commit.text.endsWith("😀") && commit.text.length > "😀".length,
+        )
+        assertEquals(1, commit.newCursorPosition)
+        assertTrue(
+            "must NOT pre-finish the composing region (double-commit risk)",
+            ic.calls.none { it is IcCall.FinishComposingText },
+        )
+        assertFalse(manager.isComposing())
+    }
+
+    @Test
+    fun `commitPreeditThenInsertExternal when idle emits plain commitText`() {
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+
+        manager.commitPreeditThenInsertExternal("😀", ic)
+
+        assertEquals(
+            listOf(IcCall.CommitText("😀", 1)),
+            ic.calls,
+        )
+        assertTrue(ic.calls.none { it is IcCall.FinishComposingText })
+    }
+
+    @Test
+    fun `commitPreeditThenInsertExternal with empty text is noop and preserves preedit`() {
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+        manager.appendCharacter("a", ic)
+        ic.calls.clear()
+
+        manager.commitPreeditThenInsertExternal("", ic)
+
+        assertTrue("Empty external insert must not touch InputConnection", ic.calls.isEmpty())
+        assertTrue("Active preedit must be preserved", manager.isComposing())
+    }
+
     @Test
     fun `appendCharacter shows raw keystrokes in preedit (Android divergence)`() {
         // Android emits rawInput for UpdatePreedit on live-typing intents;

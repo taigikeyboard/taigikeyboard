@@ -390,7 +390,7 @@ The correction landed as an **isolated PR before A4-impl** per `rules/cross-plat
 **Deferred parity follow-ups** (same INVARIANT label, separate PRs because they require IME / Robolectric harness):
 
 - `TextInputManager.resetComposingText` (4 call-sites at line 271 / 488 / 562 / 757) — calls `ic.finishComposingText()` without pre-zero.
-- `MediaInputManager.sendEmojiKeyPress` — calls `ic.finishComposingText()` then `ic.commitText(emoji, 1)`; emoji tap during active Taigi preedit silently commits the preedit.
+- ~~`MediaInputManager.sendEmojiKeyPress`~~ — **CLOSED 2026-04-21** (branch `parity/emoji-key-press-preedit`). Both platforms now route emoji insertion through `ComposingManager.commitPreeditThenInsertExternal(_:)` / `commitPreeditThenInsertExternal(text, ic)`, which emits a single `CommitTextReplacingPreedit(derived + external)` effect (atomic `commitText` / `clearMarkedText + insertText`) plus autocomplete resets. Pure-state pin: `ComposingStateTest(s)` `INVARIANT_composing_external_insert_commits_preedit_atomically`. Binding pin: Android `ComposingManagerTest.commitPreeditThenInsertExternal when composing emits single atomic commitText`; iOS `ComposingManagerTests.testCommitPreeditThenInsertExternal_whenComposing_commitsAtomicallyWithExternalText`. Same closure also routes iOS emoji-palette backspace through `ActionHandler.handleBackspaceAction` so composing/idle branches match the regular keyboard.
 
 ### 11.7 Clock and settings at the boundary
 

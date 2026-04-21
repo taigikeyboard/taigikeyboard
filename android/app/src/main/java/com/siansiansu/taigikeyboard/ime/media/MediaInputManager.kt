@@ -136,10 +136,25 @@ class MediaInputManager(
 
     /**
      * Sends a given [emojiKeyData] to the current input editor.
+     *
+     * Routes through [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager]
+     * so an active Taigi preedit is committed atomically together with the
+     * emoji in a single `InputConnection.commitText` call. Pre-A5 behavior
+     * (direct `finishComposingText` + `commitText`) was flagged as a
+     * deferred parity violation in `composing-state-boundary.md` §11.6 —
+     * this path now pins `INVARIANT_composing_external_insert_commits_preedit_atomically`
+     * (see `behavioral-invariants.md` §13). Falls back to the direct commit
+     * only when `ComposingManager` is unavailable (pre-init / post-destroy
+     * edges).
      */
     fun sendEmojiKeyPress(emojiKeyData: EmojiKeyData) {
-        val ic = taigikeyboard.currentInputConnection
-        ic?.finishComposingText()
-        ic?.commitText(emojiKeyData.getCodePointsAsString(), 1)
+        val ic = taigikeyboard.currentInputConnection ?: return
+        val emoji = emojiKeyData.getCodePointsAsString()
+        val composingManager = taigikeyboard.textInputManager.getComposingManager()
+        if (composingManager != null) {
+            composingManager.commitPreeditThenInsertExternal(emoji, ic)
+        } else {
+            ic.commitText(emoji, 1)
+        }
     }
 }

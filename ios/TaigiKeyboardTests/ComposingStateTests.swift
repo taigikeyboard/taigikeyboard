@@ -205,6 +205,75 @@ final class ComposingStateTests: XCTestCase {
         XCTAssertEqual(t.effects, [])
     }
 
+    // MARK: - INVARIANT_composing_external_insert_commits_preedit_atomically
+
+    func testCommitPreeditThenInsertExternal_whenComposing_emitsAtomicCombinedCommit() {
+        // Simulates emoji / clipboard insertion during an active Taigi
+        // preedit: the preedit must be committed together with the external
+        // text in a single document write, not leaked via a bare
+        // `finishComposingText`/`insertText` bypass.
+        var state = ComposingState()
+        _ = state.apply(.start("hello"), mode: .english, toneToggles: togglesOff)
+        let t = state.apply(.commitPreeditThenInsertExternal("😀"), mode: .english, toneToggles: togglesOff)
+
+        XCTAssertFalse(state.isComposing)
+        XCTAssertEqual(state.selectedCandidateIndex, -1)
+        XCTAssertEqual(t.newSelectedIndex, -1)
+        XCTAssertEqual(t.effects, [
+            .commitTextReplacingPreedit("hello😀"),
+            .resetAutocomplete,
+            .resetAutocompleteContext,
+        ])
+        XCTAssertFalse(
+            t.effects.contains(.clearPreeditWithoutCommit),
+            "commitPreeditThenInsertExternal must not emit a separate clear-then-insert pair",
+        )
+    }
+
+    func testCommitPreeditThenInsertExternal_whenIdle_emitsInsertOnly() {
+        var state = ComposingState()
+        let t = state.apply(.commitPreeditThenInsertExternal("😀"), mode: tl, toneToggles: togglesOff)
+
+        XCTAssertFalse(state.isComposing)
+        XCTAssertEqual(t.effects, [.commitTextReplacingPreedit("😀")])
+        XCTAssertEqual(t.newSelectedIndex, -1)
+    }
+
+    func testCommitPreeditThenInsertExternal_withEmptyText_isNoop() {
+        var state = ComposingState()
+        _ = state.apply(.start("abc"), mode: tl, toneToggles: togglesOff)
+        let t = state.apply(.commitPreeditThenInsertExternal(""), mode: tl, toneToggles: togglesOff)
+
+        // Empty external text must NOT discard the preedit — state is
+        // untouched so the user's in-progress composition survives a
+        // no-content insert (e.g. a stray empty-string delegate call).
+        XCTAssertTrue(state.isComposing)
+        XCTAssertEqual(state.rawInput, "abc")
+        XCTAssertEqual(t.effects, [])
+    }
+
+    func testCommitPreeditThenInsertExternal_withNonZeroSelectedIndex_commitsDerivedNotCandidate() {
+        // Pin the contract that emoji insertion does NOT implicitly choose
+        // the currently-highlighted candidate. A user may have arrowed /
+        // tapped to a later candidate (index > 0); tapping an emoji still
+        // commits the *derived preedit* + emoji atomically, and the
+        // candidate selection is discarded as state transitions to idle.
+        var state = ComposingState()
+        _ = state.apply(.start("hello"), mode: .english, toneToggles: togglesOff)
+        state.setSelectedCandidateIndex(3)
+
+        let t = state.apply(.commitPreeditThenInsertExternal("😀"), mode: .english, toneToggles: togglesOff)
+
+        XCTAssertFalse(state.isComposing)
+        XCTAssertEqual(state.selectedCandidateIndex, -1)
+        XCTAssertEqual(t.newSelectedIndex, -1)
+        XCTAssertEqual(t.effects, [
+            .commitTextReplacingPreedit("hello😀"),
+            .resetAutocomplete,
+            .resetAutocompleteContext,
+        ])
+    }
+
     // MARK: - reset
 
     func testReset_whenComposing_exitsWithClearAndAutocompleteReset() {
@@ -251,6 +320,12 @@ final class ComposingStateTests: XCTestCase {
         )
         XCTAssertEqual(
             selectedIndexOnIdle { $0.apply(.selectSuggestion("x"), mode: tl, toneToggles: togglesOff) },
+            -1,
+        )
+        XCTAssertEqual(
+            selectedIndexOnIdle {
+                $0.apply(.commitPreeditThenInsertExternal("😀"), mode: tl, toneToggles: togglesOff)
+            },
             -1,
         )
         XCTAssertEqual(

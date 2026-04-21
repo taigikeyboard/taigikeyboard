@@ -88,6 +88,19 @@ data class ComposingState(
             val text: String,
         ) : Intent()
 
+        /**
+         * Commit the current preedit (if any) and insert an externally
+         * supplied [text] atomically in one document write. Used by
+         * non-Taigi input surfaces — emoji palette, clipboard paste — so
+         * composing state never leaks a silent `finishComposingText`
+         * bypass. Idle → behaves as a plain insert of [text].
+         *
+         * Mirrors iOS `ComposingState.Intent.commitPreeditThenInsertExternal`.
+         */
+        data class CommitPreeditThenInsertExternal(
+            val text: String,
+        ) : Intent()
+
         /** Clear all state (e.g. keyboard teardown / mode switch). */
         object Reset : Intent()
     }
@@ -268,6 +281,35 @@ data class ComposingState(
                                 ComposingTransition.Effect.ResetAutocompleteContext,
                             ),
                     )
+                }
+            }
+
+            is Intent.CommitPreeditThenInsertExternal -> {
+                if (intent.text.isEmpty()) {
+                    noopTransition()
+                } else if (phase is Phase.Composing) {
+                    val derived = derivedDisplay(mode, toggles)
+                    exitToIdle(
+                        effects =
+                            listOf(
+                                ComposingTransition.Effect.CommitTextReplacingPreedit(derived + intent.text),
+                                ComposingTransition.Effect.ResetAutocomplete,
+                                ComposingTransition.Effect.ResetAutocompleteContext,
+                            ),
+                    )
+                } else {
+                    // Idle: behave as a plain insert. `CommitTextReplacingPreedit`
+                    // maps to `InputConnection.commitText(text, 1)` (see
+                    // `ComposingDelegate`); with no composing region this is a
+                    // pure insert.
+                    val transition =
+                        ComposingTransition(
+                            newPhase = Phase.Idle,
+                            newSelectedIndex = -1,
+                            effects = listOf(ComposingTransition.Effect.CommitTextReplacingPreedit(intent.text)),
+                            derivedDisplay = "",
+                        )
+                    this to transition
                 }
             }
 
