@@ -170,17 +170,14 @@ Phase II gating target per `android-state-audit.md` §9 signal #3: ≥ 40 files 
 | A4-impl (PR #152) | 0 — `ComposingState.kt` / `ComposingDelegate.kt` were created this round, but `ComposingState` transitively imports `ToneConverter` (which still calls `android.util.Log` + `BuildConfig`). Markers deferred until ToneConverter is purified. | 15 |
 | A8-sweep | 13 — `TaigiWord.kt`, `InputType.kt`, `DictionarySource.kt`, `DictionaryConstants.kt`, `ToneUtilities.kt`, `ToneConverterModels.kt`, `ExternalLookupURLBuilder.kt`, `DictionarySearchResult.kt`, `EnabledDictionaries.kt`, `ComposingTransition.kt`, `EngineSettings.kt`, `EngineSettingsProvider.kt`, `ToneToggles.kt` | 28 |
 | A9 (PR #158) | 1 — `NextWordScorer.kt` (BL4 extract from `NextWordService`; 7 scoring constants + math, mirrors iOS `NextWordScorer.swift`) | 29 |
-| follow-ups hygiene (this PR) | 3 — `ToneConverter.kt` (LoggerBackend injected, header flipped from `// NOTE: Not shared-core` to shared-core marker), `CandidateProcessor.kt` (clock required, `BuildConfig` dropped, lazy `logger.debug` adopted), `ComposingState.kt` (transitive unlock once `ToneConverter` purified) | 32 |
+| follow-ups hygiene (PR #160) | 3 — `ToneConverter.kt` (LoggerBackend injected, header flipped from `// NOTE: Not shared-core` to shared-core marker), `CandidateProcessor.kt` (clock required, `BuildConfig` dropped, lazy `logger.debug` adopted), `ComposingState.kt` (transitive unlock once `ToneConverter` purified) | 32 |
+| DictionaryError → Outcome (this PR) | 2 — `DictionaryError.kt` (drops `: Exception()`; was blocker §5.1), `Outcome.kt` (new `sealed class Outcome<T, E>` at `ime/core/`, maps to Rust `Result<T, E>`) | 34 |
 
-### 5.1 Gate shortfall (≥40 target — 8 short)
+### 5.1 Gate shortfall (≥40 target — 6 short)
 
-Post-follow-ups-hygiene, the running total is 32 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. The remaining blocker candidate:
+Post-DictionaryError/Outcome, the running total is 34 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. No remaining single-file structural blockers.
 
-| File | Blocker | Follow-up round |
-|------|---------|-----------------|
-| `DictionaryError.kt` | `sealed class : Exception()` conflicts with `rules/android-guidelines.md` §10 "no Throwable across shared-core" | Convert to a `sealed class` without `Exception` inheritance; migrate the 6 `throw DictionaryError.X` sites in `LexiconService.kt` (and their catch handlers) to an `Outcome<T, E>` / `Result<T>` return contract. S-M scope, own PR. |
-
-Closing `DictionaryError` adds 1 marker; the remaining 7 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as post-Phase-II cleanup or a later A-round. Gate is achievable without another large A-round.
+The remaining 6 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as post-Phase-II cleanup or a later A-round. Gate is achievable without another large A-round.
 
 Detailed roster + per-file audit lives in `../engine/shared-core-readiness.md`.
 
@@ -210,8 +207,14 @@ Round-by-round intent (full spec in `android-state-audit.md` §7):
   required parameter, `BuildConfig.DEBUG` outer gate removed in favor of lazy
   `logger.debug { … }`, shared-core marker added) + `ComposingState.kt` (transitive marker
   unlock). `ComposingDelegate.kt` and `AndroidLoggerBackend.kt` retain their `// NOTE: Not
-  shared-core` headers (platform-bound by design). `DictionaryError.kt` still held back
-  pending `sealed class : Exception()` → `Outcome<T, E>` migration (own S-M PR).
+  shared-core` headers (platform-bound by design).
+- **DictionaryError → Outcome** (post-follow-ups-hygiene) — drops
+  `sealed class DictionaryError : Exception()` inheritance; introduces
+  `ime/core/Outcome.kt` (`sealed class Outcome<T, E>` with `Success` / `Failure`,
+  Kotlin-stdlib-only, maps to Rust `Result<T, E>`); migrates `LexiconService` public
+  methods to return `Outcome<List<…>, DictionaryError>`. Both files land the shared-core
+  marker. Field rename: `override val message` / data-class `message` → `reason` (no
+  Throwable parent means `message` is no longer an override).
 
 ## 7. ViewModel pattern (reference)
 

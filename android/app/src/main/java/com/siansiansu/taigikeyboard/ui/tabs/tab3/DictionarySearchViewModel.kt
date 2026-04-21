@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
@@ -99,7 +100,7 @@ class DictionarySearchViewModel(
                 Log.d(TAG, "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode")
             }
 
-            val searchResults =
+            val outcome =
                 if (isCJK) {
                     root.lexicon.searchByHanzi(
                         input = query,
@@ -112,6 +113,21 @@ class DictionarySearchViewModel(
                         inputMode = inputMode,
                         limit = SEARCH_RESULT_LIMIT,
                     )
+                }
+            val searchResults =
+                when (outcome) {
+                    is Outcome.Success -> {
+                        outcome.value
+                    }
+
+                    is Outcome.Failure -> {
+                        if (BuildConfig.DEBUG) {
+                            Log.w(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path failed: ${outcome.error}")
+                        }
+                        _results.value = emptyList()
+                        _isSearching.value = false
+                        return
+                    }
                 }
 
             if (BuildConfig.DEBUG) {

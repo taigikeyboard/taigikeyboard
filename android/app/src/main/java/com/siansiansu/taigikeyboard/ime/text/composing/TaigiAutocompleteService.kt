@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
@@ -54,13 +55,24 @@ class TaigiAutocompleteService(
             }
 
             val searchStart = System.currentTimeMillis()
-            val words =
+            val searchOutcome =
                 lexicon.search(
                     input = rawInput,
                     inputType = inputType,
                     inputMode = inputMode,
                     settings = settings,
                 )
+            val words =
+                when (searchOutcome) {
+                    is Outcome.Success -> {
+                        searchOutcome.value
+                    }
+
+                    is Outcome.Failure -> {
+                        logger.e(TAG, "[ERROR] autocomplete search failed: ${searchOutcome.error}")
+                        return emptyList()
+                    }
+                }
             if (BuildConfig.DEBUG) {
                 logger.d("PERF", "[3-b] LexiconService.search call: ${System.currentTimeMillis() - searchStart}ms")
                 logger.debug(TAG) { "[RESULT] LexiconService returned ${words.size} words" }

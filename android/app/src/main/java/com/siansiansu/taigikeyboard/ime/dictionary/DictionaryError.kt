@@ -1,30 +1,32 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**
- * Sealed class for dictionary-related errors
+ * Typed failure surface for dictionary operations.
+ *
+ * Carried inside [com.siansiansu.taigikeyboard.ime.core.Outcome.Failure] at
+ * `LexiconService` public boundaries. No `Throwable` parent — Java
+ * exceptions never cross shared-core boundaries per
+ * `rules/android-guidelines.md` §10.
  */
-sealed class DictionaryError : Exception() {
-    object DatabaseNotFound : DictionaryError() {
-        override val message: String = "Dictionary database file not found"
-    }
+sealed class DictionaryError {
+    object DatabaseNotFound : DictionaryError()
 
-    object DatabaseNotAvailable : DictionaryError() {
-        override val message: String = "Dictionary database is not available"
-    }
+    object DatabaseNotAvailable : DictionaryError()
 
     data class DatabaseConnectionFailed(
-        override val message: String,
+        val reason: String,
     ) : DictionaryError()
 
     data class QueryExecutionFailed(
-        override val message: String,
+        val reason: String,
     ) : DictionaryError()
 
     data class QueryPreparationFailed(
-        override val message: String,
+        val reason: String,
     ) : DictionaryError()
 
-    object TrieNotLoaded : DictionaryError() {
-        override val message: String = "Trie index not loaded"
-    }
+    object TrieNotLoaded : DictionaryError()
 }

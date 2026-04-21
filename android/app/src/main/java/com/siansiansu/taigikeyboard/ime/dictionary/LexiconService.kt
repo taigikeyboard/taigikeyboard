@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -15,6 +16,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 
 /**
  * Dictionary search orchestrator.
@@ -65,20 +67,37 @@ class LexiconService(
         inputMode: InputMode = InputMode.POJ,
         limit: Int = DictionaryConstants.DEFAULT_SEARCH_LIMIT,
         settings: EngineSettings? = null,
-    ): List<TaigiWord> =
-        withContext(Dispatchers.IO) {
+    ): Outcome<List<TaigiWord>, DictionaryError> {
+        if (input.isEmpty()) return Outcome.Success(emptyList())
+        // Hanzi input cannot be searched via trie (matching iOS guard)
+        if (inputType is InputType.Hanzi) return Outcome.Success(emptyList())
+
+        return withContext(Dispatchers.IO) {
             val searchStart = System.currentTimeMillis()
-            if (input.isEmpty()) return@withContext emptyList()
-            // Hanzi input cannot be searched via trie (matching iOS guard)
-            if (inputType is InputType.Hanzi) return@withContext emptyList()
 
             val initStart = System.currentTimeMillis()
-            ensureInitialized()
+            try {
+                ensureInitialized()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "[SEARCH] Initialization failed", e)
+                return@withContext Outcome.Failure(
+                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
+                )
+            }
             if (BuildConfig.DEBUG) {
                 logger.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
             }
 
-            val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
+            val reader =
+                binaryReader
+                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
+            if (!trie.isReady) {
+                logger.e(TAG, "[SEARCH] Trie not loaded")
+                return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
+            }
+
             val activeSettings: EngineSettings = settings ?: PrefHelper(appContext)
             val enabledDicts = EnabledDictionaries.fromSettings(activeSettings)
 
@@ -98,14 +117,15 @@ class LexiconService(
                     logger.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
                     logger.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
                 }
-                result
+                Outcome.Success(result)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 logger.e(TAG, "[SEARCH] Query failed", e)
-                throw DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error")
+                Outcome.Failure(DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error"))
             }
         }
+    }
 
     /**
      * Phase 1: query the custom user dictionary by prefix. Returns early
@@ -220,11 +240,6 @@ class LexiconService(
     ): List<TaigiWord> {
         logger.debug(TAG) { "[SEARCH] input='$input', mode=$inputMode, limit=$limit" }
 
-        if (!trie.isReady) {
-            logger.e(TAG, "[SEARCH] Trie not loaded")
-            throw DictionaryError.TrieNotLoaded
-        }
-
         val searchKey = InputNormalizer.buildSearchKey(input, inputMode)
         val normalizedInput = InputNormalizer.normalize(searchKey, inputMode)
 
@@ -291,26 +306,45 @@ class LexiconService(
         input: String,
         inputMode: InputMode,
         limit: Int = 50,
-    ): List<DictionarySearchResult> =
-        withContext(Dispatchers.IO) {
-            if (input.isEmpty()) return@withContext emptyList()
+    ): Outcome<List<DictionarySearchResult>, DictionaryError> {
+        if (input.isEmpty()) return Outcome.Success(emptyList())
 
-            ensureInitialized()
-            val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
+        return withContext(Dispatchers.IO) {
+            try {
+                ensureInitialized()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "[SOURCES] Initialization failed", e)
+                return@withContext Outcome.Failure(
+                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
+                )
+            }
 
-            if (!trie.isReady) throw DictionaryError.TrieNotLoaded
+            val reader =
+                binaryReader
+                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
+            if (!trie.isReady) return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
 
             val normalizedInput = InputNormalizer.normalize(input, inputMode)
-            if (normalizedInput.isEmpty()) return@withContext emptyList()
+            if (normalizedInput.isEmpty()) return@withContext Outcome.Success(emptyList())
 
             val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
             val rowIds = lookupRowIds(trieKey)
-            if (rowIds.isEmpty()) return@withContext emptyList()
+            if (rowIds.isEmpty()) return@withContext Outcome.Success(emptyList())
 
             val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
 
-            buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
+            try {
+                Outcome.Success(buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "[SOURCES] Query failed", e)
+                Outcome.Failure(DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error"))
+            }
         }
+    }
 
     /** Build a list of `DictionarySearchResult` rows from trie rowids. */
     private fun buildSearchResults(
@@ -359,37 +393,55 @@ class LexiconService(
         input: String,
         inputMode: InputMode,
         limit: Int = 50,
-    ): List<DictionarySearchResult> =
-        withContext(Dispatchers.IO) {
-            if (input.isEmpty()) return@withContext emptyList()
+    ): Outcome<List<DictionarySearchResult>, DictionaryError> {
+        if (input.isEmpty()) return Outcome.Success(emptyList())
 
+        return withContext(Dispatchers.IO) {
             logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
 
-            ensureInitialized()
-            val reader = binaryReader ?: throw DictionaryError.DatabaseNotAvailable
+            try {
+                ensureInitialized()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "[HANZI-SEARCH] Initialization failed", e)
+                return@withContext Outcome.Failure(
+                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
+                )
+            }
 
-            if (!trie.isReady) throw DictionaryError.TrieNotLoaded
+            val reader =
+                binaryReader
+                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
+            if (!trie.isReady) return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
 
             val trieKey = DictionaryConstants.TRIE_PREFIX_HANZI + input
             val rowIds = lookupRowIds(trieKey)
 
             if (rowIds.isEmpty()) {
                 logger.debug(TAG) { "[HANZI-SEARCH] No trie results for: $trieKey" }
-                return@withContext emptyList()
+                return@withContext Outcome.Success(emptyList())
             }
 
             val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
-            val sorted = buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
 
-            if (BuildConfig.DEBUG) {
-                logger.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results")
-                sorted.firstOrNull()?.let {
-                    logger.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
+            try {
+                val sorted = buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
+                if (BuildConfig.DEBUG) {
+                    logger.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results")
+                    sorted.firstOrNull()?.let {
+                        logger.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
+                    }
                 }
+                Outcome.Success(sorted)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logger.e(TAG, "[HANZI-SEARCH] Query failed", e)
+                Outcome.Failure(DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error"))
             }
-
-            sorted
         }
+    }
 
     // --- Initialization ---
 
@@ -463,7 +515,7 @@ class LexiconService(
                     logger.i(TAG, "[COPY] $fileName (${destFile.length()} bytes)")
                 } catch (e: Exception) {
                     logger.e(TAG, "[COPY] Failed to copy $fileName", e)
-                    throw DictionaryError.DatabaseConnectionFailed("Failed to copy $fileName: ${e.message}")
+                    throw IOException("Failed to copy $fileName: ${e.message}", e)
                 }
             }
         }
