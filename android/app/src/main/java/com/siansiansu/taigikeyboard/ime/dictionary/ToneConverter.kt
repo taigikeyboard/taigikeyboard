@@ -1,10 +1,11 @@
-// NOTE: Not shared-core — logs via android.util.Log + BuildConfig for debug
-// trace. LoggerBackend migration pending follow-up round; see
-// docs/architecture/android-exemplar.md §5.
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import android.util.Log
-import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
 
@@ -26,12 +27,17 @@ object ToneConverter {
      *   value type carried from `EngineSettingsProvider.current.toneToggles`
      *   so engine-layer callers (including `ComposingState`) don't touch
      *   Android settings APIs.
+     * @param logger Diagnostic sink. Defaults to [NullLoggerBackend] so
+     *   shared-core callers (e.g. `ComposingState`) stay Kotlin-stdlib-pure.
+     *   A platform wrapper may pass an `AndroidLoggerBackend` to surface the
+     *   `[TONE] input=… -> adjusted=…` trace in dev builds.
      * @return String with tone marks applied
      */
     fun convertToToneMarks(
         input: String,
         mode: InputMode,
         toggles: ToneToggles = ToneToggles(isDoubleTapOOEnabled = true, isDoubleTapNNEnabled = true),
+        logger: LoggerBackend = NullLoggerBackend,
     ): String {
         val result =
             when (mode) {
@@ -56,8 +62,8 @@ object ToneConverter {
 
         val adjusted = ToneUtilities.adjustNasalMarkerCase(result)
 
-        if (BuildConfig.DEBUG && input != adjusted) {
-            Log.d(TAG, "[TONE] input='$input' mode=$mode -> '$adjusted'")
+        if (input != adjusted) {
+            logger.debug(TAG) { "[TONE] input='$input' mode=$mode -> '$adjusted'" }
         }
 
         return adjusted

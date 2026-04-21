@@ -1,8 +1,11 @@
+// region Shared-Core Candidate
+// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
+// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.debug
 
 /**
  * Candidate-word scoring, dedup, and ordering.
@@ -126,7 +129,7 @@ object CandidateProcessor {
         words: List<TaigiWord>,
         normalizedInput: String,
         frequencyData: Map<String, FrequencyData>,
-        currentTime: Long = System.currentTimeMillis(),
+        currentTime: Long,
         logger: LoggerBackend = NullLoggerBackend,
     ): List<TaigiWord> {
         val sorted =
@@ -136,9 +139,7 @@ object CandidateProcessor {
                     word to calculateScore(word, normalizedInput, freqData, currentTime)
                 }.sortedByDescending { it.second.total }
 
-        if (BuildConfig.DEBUG) {
-            logScoreDetails(sorted, normalizedInput, logger)
-        }
+        logScoreDetails(sorted, normalizedInput, logger)
 
         return sorted.map { it.first }
     }
@@ -163,12 +164,12 @@ object CandidateProcessor {
         normalizedInput: String,
         logger: LoggerBackend,
     ) {
+        if (!logger.isDebugEnabled) return
         for ((word, b) in sorted) {
             val hanzi = word.hanzi ?: ""
-            logger.d(
-                TAG,
-                "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=${b.userFreqScore} recency=${b.recencyBonus} exact=${b.exactBonus} close=${b.closenessBonus} base=${b.baseFreqScore} completion=${b.completionPenalty} total=${b.total}",
-            )
+            logger.debug(TAG) {
+                "[SCORE] input='$normalizedInput' | ${word.roman} $hanzi: user=${b.userFreqScore} recency=${b.recencyBonus} exact=${b.exactBonus} close=${b.closenessBonus} base=${b.baseFreqScore} completion=${b.completionPenalty} total=${b.total}"
+            }
         }
     }
 }

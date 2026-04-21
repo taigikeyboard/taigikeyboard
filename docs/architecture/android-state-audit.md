@@ -555,6 +555,23 @@ Advance to the Phase II end decision point (see `rules/cross-platform-alignment.
 7. **Memory leak / stability pass** — no IME service kills observed during extended typing session. Refactor-only: steady-state capacity unchanged.
 8. **Data artifact audit addendum** — `data-artifacts-portability.md` has Android sections filled in (A10).
 
+### 9.1 Audit snapshot — 2026-04-21 (post-A10 + follow-ups hygiene PR)
+
+Per-signal status after the hygiene bundle PR (ToneConverter + CandidateProcessor + ComposingState marker unlock). Captured here as a living checklist; do not treat as the Phase II end decision itself (that lives in `rules/cross-platform-alignment.md` §4).
+
+| # | Signal | Status | Notes |
+|---|--------|--------|-------|
+| 1 | Engine purity | ADVANCED | `.INSTANCE` reach-ins all closed (A1 / A7). `ToneConverter` + `CandidateProcessor` routed through `LoggerBackend` this PR. Remaining engine-layer `android.util.Log` / `BuildConfig` direct refs: `TrieService.kt`, `LexiconService.kt` (perf tracing), `NextWordService.kt`, `AssociationBinaryReader.kt`, `DictionaryBinaryReader.kt`, `EnglishAutocompleteService.kt`, `TaigiAutocompleteService.kt`, `UserFrequencyService.kt`. Not blocking — these are service-scope files, not shared-core candidates. Follow-up cleanup optional before Phase II end. |
+| 2 | UI purity | CLOSED | A3 PR #157. All tab3 + tab4 Compose screens route through VMs. |
+| 3 | Exclusions shrunk — roster ≥ 40 | ADVANCED | Running total 29 → 32 (+ToneConverter, +CandidateProcessor, +ComposingState; A9 row in exemplar §5 corrected to include `NextWordScorer.kt` baseline). 8 short of ≥ 40 gate. Remaining candidates: `DictionaryError.kt` (needs `sealed class` without `Exception` inheritance — S-M own PR), plus ≈ 7 from further `LexiconService` / `CustomDictionaryService` splits. |
+| 4 | Doc parity | ADVANCED | `android-exemplar.md` present (A8-skeleton). Boundary addenda present (A4-design / A5-design). Four `CROSS-PLATFORM INVARIANT` surfaces present (`ios-exemplar.md` §5.3). Roster marker count advances with each round; §5.1 delta updated this PR. |
+| 5 | Test baseline | CLOSED | A9 PR #158. Top-10 candidate coverage ≥ 70%, 39 `INVARIANT_*` labels. |
+| 6 | Latency dogfooding | PENDING | Requires user S1/S2/S3 pass on a real Android device. Not a code deliverable. |
+| 7 | Memory leak / stability | PENDING | Requires user extended-typing dogfooding pass. Not a code deliverable. |
+| 8 | Data artifact addendum | CLOSED | A10 PR #159. |
+
+**Decision-gate readiness (`rules/cross-platform-alignment.md` §4)**: signals #1, #3, #4 are ADVANCED but not CLOSED; #6, #7 require user dogfooding. #2, #5, #8 are CLOSED. The Phase II end decision point cannot be surfaced until #6 + #7 pass; user judgment applies to whether #1, #3, #4 advancement is sufficient without chasing the ≥ 40 roster count to the exact number (mirror of iOS 43).
+
 ---
 
 ## 10. Out of scope for Phase II

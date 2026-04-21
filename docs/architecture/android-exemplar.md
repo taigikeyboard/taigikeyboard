@@ -168,20 +168,19 @@ Phase II gating target per `android-state-audit.md` §9 signal #3: ≥ 40 files 
 | A8-skeleton | 5 — `TaigiUnicode.kt`, `TaigiPhonetics.kt`, `SuggestionCaseTransformer.kt`, `TPSConverter.kt`, `ToneRestoration.kt` | 11 |
 | A5-impl (PR #153) | 4 — `NextWordEngine.kt`, `NextWordOutcome.kt`, `RawNextWordPrediction.kt`, `EnginePrediction.kt` (`ComposingState` extract reserved for A4-impl; no shared-core marker added on it — transitively imports `ToneConverter`) | 15 |
 | A4-impl (PR #152) | 0 — `ComposingState.kt` / `ComposingDelegate.kt` were created this round, but `ComposingState` transitively imports `ToneConverter` (which still calls `android.util.Log` + `BuildConfig`). Markers deferred until ToneConverter is purified. | 15 |
-| A8-sweep (this round) | 13 — `TaigiWord.kt`, `InputType.kt`, `DictionarySource.kt`, `DictionaryConstants.kt`, `ToneUtilities.kt`, `ToneConverterModels.kt`, `ExternalLookupURLBuilder.kt`, `DictionarySearchResult.kt`, `EnabledDictionaries.kt`, `ComposingTransition.kt`, `EngineSettings.kt`, `EngineSettingsProvider.kt`, `ToneToggles.kt` | 28 |
+| A8-sweep | 13 — `TaigiWord.kt`, `InputType.kt`, `DictionarySource.kt`, `DictionaryConstants.kt`, `ToneUtilities.kt`, `ToneConverterModels.kt`, `ExternalLookupURLBuilder.kt`, `DictionarySearchResult.kt`, `EnabledDictionaries.kt`, `ComposingTransition.kt`, `EngineSettings.kt`, `EngineSettingsProvider.kt`, `ToneToggles.kt` | 28 |
+| A9 (PR #158) | 1 — `NextWordScorer.kt` (BL4 extract from `NextWordService`; 7 scoring constants + math, mirrors iOS `NextWordScorer.swift`) | 29 |
+| follow-ups hygiene (this PR) | 3 — `ToneConverter.kt` (LoggerBackend injected, header flipped from `// NOTE: Not shared-core` to shared-core marker), `CandidateProcessor.kt` (clock required, `BuildConfig` dropped, lazy `logger.debug` adopted), `ComposingState.kt` (transitive unlock once `ToneConverter` purified) | 32 |
 
-### 5.1 Gate shortfall (≥40 target — 12 short)
+### 5.1 Gate shortfall (≥40 target — 8 short)
 
-A8-sweep closes the post-split sweep cleanly, but the running total is 28 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. The gap comes from four files that are structurally near-miss and need small follow-up rounds before they can qualify:
+Post-follow-ups-hygiene, the running total is 32 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. The remaining blocker candidate:
 
 | File | Blocker | Follow-up round |
 |------|---------|-----------------|
-| `ToneConverter.kt` | `android.util.Log` + `BuildConfig` debug trace | Route through `LoggerBackend` param (default `NullLoggerBackend`) |
-| `CandidateProcessor.kt` | `BuildConfig.DEBUG` guard + `currentTime: Long = System.currentTimeMillis()` default | Remove `BuildConfig`; make `currentTime` a required parameter (callers already pass it in production) |
-| `ComposingState.kt` | transitively imports `ToneConverter` | Unblocks once `ToneConverter.kt` is purified (above) |
-| `DictionaryError.kt` | `sealed class : Exception()` conflicts with `rules/android-guidelines.md` §10 "no Throwable across shared-core" | Convert to a `sealed class` without `Exception` inheritance; callers already switch on subtype |
+| `DictionaryError.kt` | `sealed class : Exception()` conflicts with `rules/android-guidelines.md` §10 "no Throwable across shared-core" | Convert to a `sealed class` without `Exception` inheritance; migrate the 6 `throw DictionaryError.X` sites in `LexiconService.kt` (and their catch handlers) to an `Outcome<T, E>` / `Result<T>` return contract. S-M scope, own PR. |
 
-Closing these four candidates adds 4 markers; the remaining 8 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as A9-adjacent cleanup or a later A-round. Gate is achievable without another large A-round.
+Closing `DictionaryError` adds 1 marker; the remaining 7 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as post-Phase-II cleanup or a later A-round. Gate is achievable without another large A-round.
 
 Detailed roster + per-file audit lives in `../engine/shared-core-readiness.md`.
 
@@ -201,10 +200,18 @@ Round-by-round intent (full spec in `android-state-audit.md` §7):
   (13 files — see §5 running-total table), plus the `CandidateProcessor.kt` §5.3 #2
   INVARIANT comment expanded to all 7 constants with iOS file-path citation. Three files
   held back (`CandidateProcessor.kt`, `ComposingState.kt`, `DictionaryError.kt`) — each
-  has a structural blocker documented in §5.1. Additionally, `ToneConverter.kt`,
+  had a structural blocker documented in §5.1. Additionally, `ToneConverter.kt`,
   `ComposingDelegate.kt`, and `AndroidLoggerBackend.kt` received explicit
   `// NOTE: Not shared-core — <reason>` headers so audit state is visible at file head.
   No runtime code change in that round.
+- **follow-ups hygiene** (post-A10) — purifies `ToneConverter.kt` (LoggerBackend injected
+  via default param, `android.util.Log` + `BuildConfig` imports dropped, header flipped
+  from `// NOTE` to shared-core marker) + `CandidateProcessor.kt` (clock promoted to
+  required parameter, `BuildConfig.DEBUG` outer gate removed in favor of lazy
+  `logger.debug { … }`, shared-core marker added) + `ComposingState.kt` (transitive marker
+  unlock). `ComposingDelegate.kt` and `AndroidLoggerBackend.kt` retain their `// NOTE: Not
+  shared-core` headers (platform-bound by design). `DictionaryError.kt` still held back
+  pending `sealed class : Exception()` → `Outcome<T, E>` migration (own S-M PR).
 
 ## 7. ViewModel pattern (reference)
 

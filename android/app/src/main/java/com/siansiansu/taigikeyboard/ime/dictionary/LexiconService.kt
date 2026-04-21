@@ -188,7 +188,13 @@ class LexiconService(
         val normalizedInput = InputNormalizer.normalize(input, inputMode)
         val wordTexts = uniqueWords.map { it.displayText }.distinct()
         val frequencyData = userFreq.frequencyDataBatch(wordTexts)
-        return CandidateProcessor.sortByScore(uniqueWords, normalizedInput, frequencyData, logger = logger)
+        return CandidateProcessor.sortByScore(
+            words = uniqueWords,
+            normalizedInput = normalizedInput,
+            frequencyData = frequencyData,
+            currentTime = System.currentTimeMillis(),
+            logger = logger,
+        )
     }
 
     /**
