@@ -22,6 +22,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -440,10 +441,15 @@ class TextInputManager(
         }
     }
 
+    // Clears any residual host composing region without committing its
+    // content. Called at session-start + non-composing fallback paths
+    // (DELETE / ENTER / NUMERIC-PHONE key) where a stale region could
+    // otherwise be silently committed by a bare `finishComposingText()`.
+    // Pinned by `INVARIANT_composing_clear_preedit_does_not_commit`
+    // (`behavioral-invariants.md` §13).
     private fun resetComposingText(notifyInputConnection: Boolean = true) {
         if (notifyInputConnection) {
-            val ic = taigikeyboard.currentInputConnection
-            ic?.finishComposingText()
+            clearHostComposingRegion(taigikeyboard.currentInputConnection)
         }
     }
 

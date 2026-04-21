@@ -329,6 +329,37 @@ class ComposingManagerTest {
         )
     }
 
+    // MARK: - clearHostComposingRegion helper
+    // Consumer: `TextInputManager.resetComposingText()` — the 4 bare-IC
+    // sites (session start, DELETE / ENTER non-composing fallback,
+    // NUMERIC-PHONE key) that do NOT route through `ComposingManager`.
+    // Same invariant as `reset(ic)`: pre-zero before finish.
+
+    @Test
+    fun `clearHostComposingRegion zeros then finishes without committing`() {
+        val ic = RecordingInputConnection()
+
+        clearHostComposingRegion(ic)
+
+        assertEquals(
+            listOf(
+                IcCall.SetComposingText("", 1),
+                IcCall.FinishComposingText,
+            ),
+            ic.calls,
+        )
+        assertTrue(ic.calls.none { it is IcCall.CommitText })
+    }
+
+    @Test
+    fun `clearHostComposingRegion with null ic is noop`() {
+        // Mirrors `TextInputManager.currentInputConnection` returning null
+        // when the IME has no active target editor.
+        clearHostComposingRegion(null)
+        // No exception means pass; assertion is the negative: the call
+        // threw nothing and returned.
+    }
+
     @Test
     fun `hostReportsNoComposingRegion encodes the -1,-1 policy`() {
         // Policy extracted as a top-level function so TextInputManager's

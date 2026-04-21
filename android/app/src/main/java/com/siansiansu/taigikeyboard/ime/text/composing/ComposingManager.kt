@@ -318,3 +318,25 @@ internal fun hostReportsNoComposingRegion(
     candidatesStart: Int,
     candidatesEnd: Int,
 ): Boolean = candidatesStart == -1 && candidatesEnd == -1
+
+/**
+ * Clear the host editor's composing region at the [InputConnection] layer
+ * without committing whatever text it contains. Issues
+ * `setComposingText("", 1)` then `finishComposingText()` — the pre-zero
+ * is mandatory because `finishComposingText()` on its own silently
+ * commits the active composing region (see
+ * `composing-state-boundary.md` §11.2 rule 1).
+ *
+ * Pulled out as a top-level function so bare-`InputConnection` sites
+ * that do NOT route through [ComposingManager.reset] (e.g.
+ * `TextInputManager.resetComposingText` — called when `composingManager`
+ * is null or the current keyboard mode bypasses composing) still honor
+ * `INVARIANT_composing_clear_preedit_does_not_commit`
+ * (`behavioral-invariants.md` §13). [ComposingManager.reset] remains the
+ * canonical owner for composing-aware sites; this helper is the
+ * IC-layer-only equivalent.
+ */
+internal fun clearHostComposingRegion(ic: InputConnection?) {
+    ic?.setComposingText("", 1)
+    ic?.finishComposingText()
+}
