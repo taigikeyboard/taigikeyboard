@@ -27,7 +27,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +38,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
@@ -68,9 +68,9 @@ fun DictionarySettingsScreen(
     val focusManager = LocalFocusManager.current
 
     // Search state
-    val searchText by searchViewModel?.searchText?.collectAsState() ?: remember { mutableStateOf("") }
-    val searchResults by searchViewModel?.results?.collectAsState() ?: remember { mutableStateOf(emptyList()) }
-    val isSearching by searchViewModel?.isSearching?.collectAsState() ?: remember { mutableStateOf(false) }
+    val searchText by searchViewModel?.searchText?.collectAsStateWithLifecycle() ?: remember { mutableStateOf("") }
+    val searchResults by searchViewModel?.results?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(emptyList()) }
+    val isSearching by searchViewModel?.isSearching?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
     var selectedResultIndex by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(searchText) { selectedResultIndex = null }
 
