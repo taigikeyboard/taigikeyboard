@@ -295,6 +295,81 @@ Distribution-channel design (OTA vs app-bundle) is out of scope for this audit �
 
 None of D1–D7 blocks Phase II. All must be catalogued before Phase IV-A design freezes.
 
+---
+
+## 7. Android addendum — storage paths, asset copy, update-in-place
+
+Phase II A10 deliverable (2026-04-21). Fills `docs/architecture/android-state-audit.md` §9 gate #8. Pure append — iOS §§1–6, §Update / delivery, and §Decision register are untouched. Cross-references back into those sections by anchor; does not restate their content.
+
+### 7.1 On-disk paths
+
+| Artifact | Android on-disk location | Access mechanism |
+|---|---|---|
+| `dictionary.trie` | `{filesDir}/dictionary.trie` (copied from `assets/dictionary.trie`) | JNI MARISA (`trie_jni.cpp`) via `nativeLoad(path)` |
+| `dictionary.bin` | `{filesDir}/dictionary.bin` (copied from `assets/dictionary.bin`) | `RandomAccessFile` → `MappedByteBuffer` (READ_ONLY) |
+| `association.bin` | `{filesDir}/association.bin` (copied from `assets/association.bin`) | `MappedByteBuffer` (READ_ONLY) |
+| `user_frequency.db` | `{databases}/user_frequency.db` (`SQLiteOpenHelper`-managed) | `SQLiteOpenHelper.readableDatabase` / `writableDatabase` |
+| `user_association.db` | `{filesDir}/user_association.db` (**not** under `databases/`) | `SQLiteDatabase.openOrCreateDatabase(File, null)` |
+| `custom_dictionary.db` | `{databases}/custom_dictionary.db` (`SQLiteOpenHelper`-managed) | `SQLiteOpenHelper.readableDatabase` / `writableDatabase` |
+
+`{filesDir}` = `Context.getFilesDir()` (`/data/user/0/<pkg>/files/`). `{databases}` = `Context.getDatabasePath(name).parentFile` (`/data/user/0/<pkg>/databases/`).
+
+Divergence — `user_association.db` lives in `filesDir/`, not `databases/`. It was introduced with a direct `openOrCreateDatabase(File, null)` call rather than `SQLiteOpenHelper`, and the path stuck. Any future tool that enumerates DBs through `Context.getDatabasePath(...)` will miss it. Kept as-is to avoid migrating existing installs; flagged here as platform-only trivia (no cross-platform mapping implication since iOS has no database directory convention).
+
+### 7.2 Asset copy semantics — shipped trio
+
+All three read-only artifacts ship inside the APK at `android/app/src/main/assets/`. None are read directly from the APK: `android/app/build.gradle.kts` does not declare `noCompress("bin", "trie")`, so AAPT2 compresses them by default. Compressed zip entries cannot be memory-mapped, and the MARISA JNI loader calls `marisa::Trie::mmap(path)` (`android/app/src/main/cpp/trie_jni.cpp:87`) — it needs a real uncompressed filesystem path. Every boot therefore resolves to the uncompressed copy under `{filesDir}`.
+
+| Artifact | Stamp file | Copier call-site |
+|---|---|---|
+| `dictionary.trie` | `{filesDir}/trie_app_version.txt` | `TrieService.getTriePath` (`TrieService.kt:124`) |
+| `dictionary.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the .bin pair)* | `LexiconService.copyAssetsIfNeeded` (`LexiconService.kt:430`) |
+| `association.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the .bin pair)* | `LexiconService.copyAssetsIfNeeded` (`LexiconService.kt:430`) |
+
+Each copier on boot reads its stamp file, compares against `BuildConfig.VERSION_CODE`, and re-copies the asset(s) if the stamp is behind — OR if the destination file is missing regardless of stamp. Stamp-rewrite timing is **not** symmetric across the two copiers: `TrieService` rewrites `trie_app_version.txt` unconditionally after every successful trie copy; `LexiconService.copyAssetsIfNeeded` only rewrites `dictionary_app_version.txt` when `currentAppVersion > lastCopiedVersion`, so a same-version boot that has to repair a missing `.bin` file (e.g. user cleared app data partially, or a prior copy failed) runs the copy but leaves the stamp untouched.
+
+**Cohesion risk — Android-specific sub-case of D7.** The trie stamp and the `.bin`-pair stamp are two files written independently, each after its own copy loop succeeds, with no cross-file transaction. The two stamps therefore do not move atomically even on the happy path, and any interruption (process kill, power loss, uncaught copy failure) between the two writers can leave the two stamps transiently out of sync. Readers trust whichever file is on disk; no manifest hash or combined check exists today. This is a narrower Android restatement of the iOS-authored D7 item ("embed a trie header or compute a manifest hash covering all three files") — tracked there, not as a new decision.
+
+### 7.3 SQLite open mechanism — three patterns
+
+Android runs three distinct SQLite-init patterns across the three runtime DBs. Terminal schemas still match iOS §§4–6; the mechanism divergence is platform-internal.
+
+| DB | Mechanism | Version stamp | Migration shape |
+|---|---|---|---|
+| `user_frequency.db` | `SQLiteOpenHelper` | `DATABASE_VERSION = 1` (Helper-managed) plus `metadata.schema_version = "1"` text row | `onUpgrade` is a no-op (no migrations have ever shipped on this DB) |
+| `user_association.db` | `SQLiteDatabase.openOrCreateDatabase` — no Helper | `PRAGMA user_version` (hand-rolled) — currently `4` | `migrateUserDb` (`NextWordService.kt:552`) dispatches `migrateV0ToV2` / `migrateV2ToV3` / `migrateV3ToV4`, then stamps `PRAGMA user_version = DATABASE_VERSION` |
+| `custom_dictionary.db` | `SQLiteOpenHelper` | `DATABASE_VERSION = 5` (Helper-managed) | `onUpgrade` (`CustomDictionaryService.kt:421`) chains `migrateV1ToV2` → `migrateV2ToV3` → `migrateV3ToV4` → `migrateV4ToV5` |
+
+Two of the four `custom_dictionary.db` steps (`v2→v3`, `v3→v4`) are pure derivation-logic regenerations with no DDL; see iOS §6 Migration-mechanism table for the divergence on version-namespace semantics (D5).
+
+**One-shot journal-mode migration (parity with iOS)**. `NextWordService.migrateFromWAL` (`NextWordService.kt:523`) runs on every `user_association.db` open, detects `PRAGMA journal_mode = wal`, executes `PRAGMA wal_checkpoint(TRUNCATE)`, then switches to `PRAGMA journal_mode = DELETE`. Mirrors iOS `SQLiteConnectionManager.swift:42-98`. `user_association.db` is the only Android DB with an explicit WAL→DELETE migration; `user_frequency.db` and `custom_dictionary.db` go through `SQLiteOpenHelper` and take the platform default for journal mode without a corresponding switch. The asymmetry is accepted for Phase II (no cross-process writer on those two DBs); §9 gating signal applies only to the user-association path.
+
+### 7.4 Update-in-place — APK upgrade semantics
+
+1. **Read-only trio** — installing a new APK bumps `BuildConfig.VERSION_CODE`. On next boot both copiers (`TrieService`, `LexiconService`) detect stale stamps and overwrite `{filesDir}/dictionary.trie`, `{filesDir}/dictionary.bin`, `{filesDir}/association.bin` with the new asset bytes. No partial-upgrade fallback: on copy failure the old files remain. No OTA channel — every artifact refresh ships as an app update (parity with iOS §Update / delivery).
+2. **User SQLite DBs** — `user_frequency.db`, `user_association.db`, `custom_dictionary.db` all persist across APK replacement (both `filesDir` and `databases/` survive app update). Uninstalling the app is the only way to lose them. Schema migrations run on first open after update per §7.3.
+3. **DataStore** — the main `Preferences<Preferences>` file is `{filesDir}/datastore/taigi_keyboard_prefs.preferences_pb` (declared at `PreferenceDataStore.kt:16`). A second DataStore `{filesDir}/datastore/emoji_preferences.preferences_pb` holds the emoji skin-tone selection (`EmojiPreferences.kt:20`). Both persist across APK replacement. `PrefHelper.migrateFromSharedPreferences` (`PrefHelper.kt:625`) pulls legacy Android `PreferenceManager` SharedPreferences values forward exactly once, gated on a DataStore-empty check.
+
+DataStore blobs are **out of shared-core scope** per §Summary (iOS `SharedSettings` / Android DataStore blobs). They are listed here only for Android-side audit completeness so a future cross-platform reset / backup tool has a single inventory — they are not candidates for Rust-core ownership.
+
+### 7.5 Read contract — matches iOS
+
+This section is pointer-only — the substantive contract lives in iOS §§1–3.
+
+- **UTF-8 decode** — Android `DictionaryBinaryReader.decodeUtf8Strict` (`DictionaryBinaryReader.kt:106`) uses `CodingErrorAction.REPORT` and returns `null` on invalid bytes with no log. `AssociationBinaryReader` follows the same contract. Matches iOS "hanzi-optional, tl-required" (§2). Policy alignment covered by D2.
+- **Bitmask semantics duplication** — `DictionaryBinaryReader.BIT_TO_SOURCE` (`DictionaryBinaryReader.kt:124`) hardcodes the 12 dictionary source bits. `AssociationBinaryReader` holds no source-mapping table of its own; `passesFilter` routes through `EnabledDictionaries.associationBitmask()` (`EnabledDictionaries.kt:52`), which masks `sourceBitmask()` to bits 0–8 (the 9-bit subset iOS §3 documents). Silent-drift risk between `EnabledDictionaries.sourceBitmask` and `DictionaryBinaryReader.BIT_TO_SOURCE` is flagged in §2; covered by D4.
+- **`build_ts` cohesion** — both binary readers expose `buildTimestamp` from the mmap header. The build pipeline enforces `build_ts` equality across `dictionary.bin` and `association.bin` (iOS §3 Format). Android does nothing extra here; readers simply surface whatever the shipped bytes carry.
+
+### 7.6 Cross-references
+
+- iOS readers / writers: §§1–6 above.
+- Cross-platform invariants the delivery mechanism must preserve: §Update / delivery items 1–4. Android additions in §7.2 (stamp cohesion) and §7.4 (DataStore out-of-scope reminder).
+- Phase II gate #8: `docs/architecture/android-state-audit.md` §9 #8.
+- Android exemplar roster and marker convention: `docs/architecture/android-exemplar.md` §§3, 5 (I/O wrappers are explicitly excluded from the candidate roster there).
+- Candidate-class markers on the Android readers: `DictionaryBinaryReader.kt` / `AssociationBinaryReader.kt` are platform-only I/O wrappers by construction (mmap over `MappedByteBuffer`) and are not carried on the Shared-Core candidate roster.
+
+---
+
 ## Out of scope
 
 - Rust FFI surface design — Phase IV-A.
