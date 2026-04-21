@@ -9,9 +9,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -25,11 +23,11 @@ import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.tab4.DiagnosticViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.tab4.SettingsResetViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import com.siansiansu.taigikeyboard.util.LauncherIconUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
-import kotlinx.coroutines.launch
 
 // Main settings host — tabbed UI for home, layout, dictionary, and input settings
 class SettingsMainActivity : AppCompatActivity() {
@@ -52,7 +50,7 @@ class SettingsMainActivity : AppCompatActivity() {
 
     private val searchViewModel: DictionarySearchViewModel by viewModels()
     private val diagnosticViewModel: DiagnosticViewModel by viewModels()
-    private var resetCounter by mutableIntStateOf(0)
+    private val resetViewModel: SettingsResetViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +85,7 @@ class SettingsMainActivity : AppCompatActivity() {
             }
 
         setContent {
+            val resetCounter by resetViewModel.resetCounter.collectAsStateWithLifecycle()
             TaigiKeyboardTheme {
                 MainSettingsScreen(
                     tabs =
@@ -162,7 +161,14 @@ class SettingsMainActivity : AppCompatActivity() {
                             InputSettingsScreen(
                                 prefs = prefs,
                                 diagnosticViewModel = diagnosticViewModel,
-                                onResetSettings = ::resetAllSettings,
+                                onResetSettings = {
+                                    resetViewModel.resetAllSettings(prefs) { success ->
+                                        val message = if (success) Tab4Texts.resetSuccess else Tab4Texts.resetFailed
+                                        Toast
+                                            .makeText(this, message, Toast.LENGTH_SHORT)
+                                            .show()
+                                    }
+                                },
                                 resetCounter = resetCounter,
                             )
                         }
@@ -187,33 +193,6 @@ class SettingsMainActivity : AppCompatActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (_: Exception) {
             // No browser available to handle the URL
-        }
-    }
-
-    private fun resetAllSettings() {
-        lifecycleScope.launch {
-            try {
-                prefs.resetToDefaults()
-                val root =
-                    com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-                        .shared(this@SettingsMainActivity)
-                root.userFreq.deleteDatabase()
-                root.nextWord.clearAllAssociations()
-                resetCounter++
-                Toast
-                    .makeText(
-                        this@SettingsMainActivity,
-                        Tab4Texts.resetSuccess,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-            } catch (_: Exception) {
-                Toast
-                    .makeText(
-                        this@SettingsMainActivity,
-                        Tab4Texts.resetFailed,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-            }
         }
     }
 
