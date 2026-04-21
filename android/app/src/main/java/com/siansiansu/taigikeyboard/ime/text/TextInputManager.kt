@@ -22,6 +22,7 @@ import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
+import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
@@ -416,6 +417,27 @@ class TextInputManager(
     override fun onUpdateCursorAnchorInfo(cursorAnchorInfo: CursorAnchorInfo?) {
         cursorAnchorInfo ?: return
         capsStateManager.updateCapsState()
+    }
+
+    override fun onUpdateSelection(
+        oldSelStart: Int,
+        oldSelEnd: Int,
+        newSelStart: Int,
+        newSelEnd: Int,
+        candidatesStart: Int,
+        candidatesEnd: Int,
+    ) {
+        // When the host editor reports no composing region (both
+        // candidate offsets == -1, e.g. user taps to move the cursor or
+        // changes the selection), sync internal ComposingManager state so
+        // a later commit/reset does not re-insert stale preedit at the
+        // new cursor. Closes the root cause of the commitComposition
+        // fast/slow split in `composing-state-boundary.md` §11.10
+        // divergence #3; pinned by
+        // `INVARIANT_composing_external_region_clear_discards_state`.
+        if (hostReportsNoComposingRegion(candidatesStart, candidatesEnd)) {
+            composingManager?.onExternalComposingRegionCleared()
+        }
     }
 
     private fun resetComposingText(notifyInputConnection: Boolean = true) {

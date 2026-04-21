@@ -245,6 +245,103 @@ class ComposingManagerTest {
         assertTrue("Active preedit must be preserved", manager.isComposing())
     }
 
+    // MARK: - INVARIANT_composing_external_region_clear_discards_state
+    // Host editor cleared the composing region externally (cursor move,
+    // selection change). Binding must zero internal state without touching
+    // InputConnection — the region is already gone.
+
+    @Test
+    fun test_INVARIANT_composing_external_region_clear_discards_state() {
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+        manager.appendCharacter("a", ic)
+        ic.calls.clear()
+
+        manager.onExternalComposingRegionCleared()
+
+        assertFalse("State must exit to idle after external region clear", manager.isComposing())
+        assertTrue(
+            "Hook must not touch InputConnection — region already cleared by host",
+            ic.calls.isEmpty(),
+        )
+    }
+
+    @Test
+    fun `onExternalComposingRegionCleared when idle is noop`() {
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+
+        manager.onExternalComposingRegionCleared()
+
+        assertFalse(manager.isComposing())
+        assertTrue(ic.calls.isEmpty())
+    }
+
+    @Test
+    fun `onExternalComposingRegionCleared short-circuits subsequent commit via idle state`() {
+        // Root-cause regression pin for `composing-state-boundary.md` §11.10
+        // divergence #3: before this hook existed, an external region clear
+        // left `state.isComposing` true, so a later `commitComposition(ic)`
+        // would (fast-path) issue a stale `finishComposingText()` OR
+        // (slow-path) commit derived text at the new cursor position. After
+        // the hook, commitComposition early-returns via the `isComposing`
+        // guard. This test pins the idle-state short-circuit — cache clear
+        // is pinned separately by `…clears cachedDerivedDisplay field`.
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+        manager.appendCharacter("a", ic)
+        manager.applyDerivedDisplay("a", ic)
+        ic.calls.clear()
+
+        manager.onExternalComposingRegionCleared()
+        manager.commitComposition(ic)
+
+        assertTrue(
+            "commit after external clear must not touch InputConnection",
+            ic.calls.isEmpty(),
+        )
+        assertFalse(manager.isComposing())
+    }
+
+    @Test
+    fun `onExternalComposingRegionCleared clears cachedDerivedDisplay field`() {
+        // Reflection-based pin: no public API exposes cachedDerivedDisplay
+        // independently of `state.isComposing` (getComposingText() returns
+        // null when state is idle; every dispatch() re-zeroes the cache).
+        // Without this direct pin, a future refactor that resets only
+        // `state` and forgets `cachedDerivedDisplay` would leak stale
+        // derived text through `applyDerivedDisplay` → `getComposingText`
+        // if `dispatch()`'s own cache reset is ever removed.
+        val manager = newManager()
+        val ic = RecordingInputConnection()
+        manager.appendCharacter("a", ic)
+        manager.applyDerivedDisplay("á", ic)
+        val cacheField = ComposingManager::class.java.getDeclaredField("cachedDerivedDisplay")
+        cacheField.isAccessible = true
+        assertEquals("á", cacheField.get(manager) as String)
+
+        manager.onExternalComposingRegionCleared()
+
+        assertEquals(
+            "hook must clear cachedDerivedDisplay, not only state",
+            "",
+            cacheField.get(manager) as String,
+        )
+    }
+
+    @Test
+    fun `hostReportsNoComposingRegion encodes the -1,-1 policy`() {
+        // Policy extracted as a top-level function so TextInputManager's
+        // onUpdateSelection override can delegate without pulling
+        // android.* classes into unit tests. Both coordinates must be -1.
+        assertTrue(hostReportsNoComposingRegion(candidatesStart = -1, candidatesEnd = -1))
+
+        assertFalse(hostReportsNoComposingRegion(candidatesStart = 0, candidatesEnd = 1))
+        assertFalse(hostReportsNoComposingRegion(candidatesStart = 5, candidatesEnd = 8))
+        assertFalse(hostReportsNoComposingRegion(candidatesStart = -1, candidatesEnd = 5))
+        assertFalse(hostReportsNoComposingRegion(candidatesStart = 5, candidatesEnd = -1))
+    }
+
     @Test
     fun `appendCharacter shows raw keystrokes in preedit (Android divergence)`() {
         // Android emits rawInput for UpdatePreedit on live-typing intents;

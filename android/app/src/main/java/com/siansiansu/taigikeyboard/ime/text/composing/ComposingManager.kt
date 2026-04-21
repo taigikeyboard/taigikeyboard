@@ -209,6 +209,34 @@ class ComposingManager(
         dispatch(ComposingState.Intent.Reset, ic)
     }
 
+    /**
+     * Sync internal composing state after the host editor reports no
+     * composing region (Android framework signals this via
+     * `InputMethodService.onUpdateSelection` with
+     * `candidatesStart == -1 && candidatesEnd == -1`, e.g. cursor move
+     * via tap, selection change). Zeroes [state] + [cachedDerivedDisplay]
+     * without touching [InputConnection] — the region is already gone on
+     * the host side, so any IC call here would either no-op or mutate
+     * text at the new cursor position.
+     *
+     * Closes the root cause of the [commitComposition] fast/slow split
+     * documented in `composing-state-boundary.md` §11.10 divergence #3:
+     * without this hook, a stale `cachedDerivedDisplay` would survive
+     * an external clear and drive the fast-path `finishComposingText()`,
+     * OR a stale `state.isComposing` would drive the slow-path
+     * `CommitDerived` into a duplicate `commitText` at the new cursor.
+     *
+     * Pinned by `INVARIANT_composing_external_region_clear_discards_state`
+     * (`behavioral-invariants.md` §13). Android-only binding contract;
+     * iOS's floating marked text model has no in-document region for the
+     * host editor to clear externally.
+     */
+    fun onExternalComposingRegionCleared() {
+        if (!state.isComposing) return
+        state = ComposingState()
+        cachedDerivedDisplay = ""
+    }
+
     // endregion
 
     /**
@@ -275,3 +303,18 @@ class ComposingManager(
             else -> ToneConverterModels.InputMode.POJ
         }
 }
+
+/**
+ * Policy helper: does an `onUpdateSelection` payload indicate the host
+ * editor no longer reports a composing region? Both coordinates are `-1`
+ * when no region exists (per
+ * `InputMethodService.onUpdateSelection(int,int,int,int,int,int)`).
+ *
+ * Pulled out as a top-level function so the policy is unit-testable
+ * without instantiating the Android framework classes `TextInputManager`
+ * depends on. Consumer: [TextInputManager.onUpdateSelection].
+ */
+internal fun hostReportsNoComposingRegion(
+    candidatesStart: Int,
+    candidatesEnd: Int,
+): Boolean = candidatesStart == -1 && candidatesEnd == -1
