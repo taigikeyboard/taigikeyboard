@@ -52,7 +52,7 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
   // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordScorer.swift:<line>.
   // Drift causes silent divergence.
   ```
-- Surfaces currently requiring the marker on Android (from `docs/architecture/ios-exemplar.md` §5.3): NextWord scoring constants (`NextWordService.kt` — already present), CandidateProcessor recency window + score caps (missing, A8-sweep target), NextWord timing (`contextTimeoutMs`, `associationTimeoutMs` — missing), TaigiUnicode preprocessing codepoints (present).
+- Surfaces currently carrying the marker on Android (from `docs/architecture/ios-exemplar.md` §5.3 — all landed as of Phase II code-close 2026-04-22): NextWord scoring constants (`NextWordScorer.kt` — extracted by A9 PR #158, marker present), CandidateProcessor recency window + score caps (`CandidateProcessor.kt` — markers expanded to 7/7 via A8-sweep PR #154), NextWord timing constants (`NextWordEngine.kt` — extracted by A5-impl PR #153, marker present), TaigiUnicode preprocessing codepoints (`TaigiUnicode.kt` — present), Association + Dictionary binary-reader layouts (`AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt` — present).
 - Async pipelines that may produce stale results use a monotonic generation counter. Late callbacks drop on generation mismatch. Matches the iOS `NextWordController.currentGeneration` pattern; A5-impl ports it to Android per audit §7 parity-correction flag.
 
 ## 3. Kotlin idioms `[B]`
@@ -154,7 +154,9 @@ Durable checklist for every Android refactor PR:
 - [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `rules/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
 
-Phase II-specific task labels (A0–A10) and sequencing live in `docs/architecture/android-state-audit.md` §7; avoid duplicating them here so this doc does not age with the phase.
+Phase II-specific task labels (A0–A10) and sequencing live in `docs/architecture/android-state-audit.md` §7; avoid duplicating them here so this doc does not age with the phase. **Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`); the audit doc §9.1 table is a point-in-time snapshot, not a living counter.
+
+During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex pre-impl review if a new stateful dependency enters a candidate file.
 
 ## 12. References
 
