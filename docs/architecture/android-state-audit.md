@@ -355,7 +355,7 @@ Mirror of iOS G0 + G9. Android already has 10 test files under `app/src/test/jav
 
 **Deliverable**:
 - Audit existing tests against the 12 invariants in `behavioral-invariants.md` §1–12.
-- Add / rename tests so each invariant has at least one Android-side `INVARIANT_*` test (equivalent to the iOS G9 requirement — **deferred to A9 as of PR #TBD 2026-04-19** because A1 / A2 / A5-impl reshape the files the tests would target; the A0 matrix at `android-g9-coverage-matrix.md` enumerates the 36 labels A9 must deliver).
+- Add / rename tests so each invariant has at least one Android-side `INVARIANT_*` test (equivalent to the iOS G9 requirement — **deferred to A9 at A0 close 2026-04-19; A9 delivered via PR #158 (2026-04-21)** because A1 / A2 / A5-impl reshape the files the tests would target; the A0 matrix at `android-g9-coverage-matrix.md` enumerates the 36 labels A9 must deliver).
 - Qualitative perf gate on real device (S1 POJ, S2 TPS, S3 Hanji scroll) — same three sequences as iOS, ported to Android dogfooding script.
 
 **Risk**: low (tests + qualitative gate).
@@ -557,7 +557,7 @@ Advance to the Phase II end decision point (see `rules/cross-platform-alignment.
 
 ### 9.1 Audit snapshot — 2026-04-21 (post-A10 + follow-ups hygiene PR)
 
-Per-signal status after the hygiene bundle PR (ToneConverter + CandidateProcessor + ComposingState marker unlock). Captured here as a living checklist; do not treat as the Phase II end decision itself (that lives in `rules/cross-platform-alignment.md` §4).
+Per-signal status after the hygiene bundle PR (ToneConverter + CandidateProcessor + ComposingState marker unlock). Captured here as a point-in-time snapshot — **for current living counts / roster state, see `android-exemplar.md` §5 / §5.1** (this snapshot is not updated per follow-up PR; the auto-memory index tracks round-by-round state instead). Do not treat this snapshot as the Phase II end decision itself (that lives in `rules/cross-platform-alignment.md` §4).
 
 | # | Signal | Status | Notes |
 |---|--------|--------|-------|

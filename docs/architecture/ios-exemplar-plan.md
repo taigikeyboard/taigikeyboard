@@ -12,7 +12,7 @@ Pre-work for the shared-core extraction roadmap. Produced 2026-04-19 after PR #1
 
 ## Current state snapshot (2026-04-19)
 
-- **Shared-core candidates**: 36 files marked, 0 compile-time soft deps, all 5 verification greps green.
+- **Shared-core candidates**: 36 files marked at snapshot time; roster grew to 43 after iOS G4-impl (PR #138) and G5-impl (PR #137) landed later the same day (2026-04-19). 0 compile-time soft deps, all 5 verification greps green.
 - **Non-candidate singletons (`static let shared`)**: 10 — `SharedSettings`, `LexiconService`, `UserFrequencyService`, `BackupService`, `CustomDictionaryService`, `TrieService`, `DictionaryRepository`, `UserFrequencyRepository`, `CustomDictionaryRepository`, `NextWordService`.
 - **Engine-layer services already accept DI** (optional `= .shared` default): `LexiconService`, `DictionarySearchService`, `NextWordService`, `NextWordController`, `ComposingManager`, `CustomDictionaryService`, `UserFrequencyService`, `DictionaryRepository`. `BackupService` is the outlier.
 - **Engine-layer `ObservableObject` / `@Published`**: only `ComposingManager` (already in Exclusions — needs platform split).
@@ -31,7 +31,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 **Problem**: Phase I must not regress perceived latency or cause memory-related extension termination. The cost of a full quantitative baseline (Instruments signposts, P50/P95 capture, per-refactor re-measurement) is not justified for a solo-dev IME — the user is the QA, and perceptible regression on S1/S2/S3 sequences is the acceptance criterion.
 
 **Deliverable (revised 2026-04-19)**:
-- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the 36 candidates must uphold (TL↔POJ round-trip, NFD normalization, candidate dedup, scoring determinism, decay math, composing state transitions). Each invariant references a named test case (may be TODO in G9). **Status: authored 2026-04-19.**
+- Phase 0 doc `docs/architecture/behavioral-invariants.md` — enumerate the cross-platform invariants the shared-core candidates (36 at snapshot; 43 post-G4/G5-impl) must uphold (TL↔POJ round-trip, NFD normalization, candidate dedup, scoring determinism, decay math, composing state transitions). Each invariant references a named test case (may be TODO in G9). **Status: authored 2026-04-19.**
 - `docs/perf/keyboard-baseline-2026-04.md` and `docs/perf/extension-memory-2026-04.md` — quantitative methodology **deferred** (kept as optional future work for when CI perf lane / team workflow makes numbers worth the overhead). Files retained; header annotated `deferred`.
 - **Qualitative gate** in place of quantitative baseline: after G2 / G4-impl / G5-impl, user dogfoods S1/S2/S3 sequences (same three defined in the perf methodology docs) on real device. Pass = no perceptible typing latency regression, no keyboard dismiss (64 MB termination signal), no progressive memory growth during extended typing session (sanity check for leaks only — refactor does not add features, so steady-state capacity is unchanged).
 
@@ -103,7 +103,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 
 **Risk**: medium — decay math is subtle; G9 tests must verify scheduling parity before/after.
 
-**Status 2026-04-19 (G5-impl)**: branch `refactor/ios-g5-nextword-engine-split`, PR pending user Xcode target additions. `NextWordEngine` (enum), `NextWordOutcome`, `RawNextWordPrediction` added as shared-core candidates (roster +3 → 39). `NextWordController` reduced to iOS platform executor; public surface unchanged. Behavior changes landed: negative-delta `shouldRecordAssociation` fix + query-generation race elimination. Design doc `nextword-engine-boundary.md` §2.4 amended to reflect the `score: Double` decision (merged dict+user rows invalidated the original `count/source` sketch).
+**Status**: CLOSED via PR #137 (2026-04-19). `NextWordEngine` (enum), `NextWordOutcome`, `RawNextWordPrediction` added as shared-core candidates (roster +3 → 39; subsequent G4-impl brought roster to 43). `NextWordController` reduced to iOS platform executor; public surface unchanged. Behavior changes landed: negative-delta `shouldRecordAssociation` fix + query-generation race elimination. Design doc `nextword-engine-boundary.md` §2.4 amended to reflect the `score: Double` decision (merged dict+user rows invalidated the original `count/source` sketch).
 
 ---
 
@@ -139,7 +139,7 @@ Each group is independently mergeable. Estimates assume single-phase focus.
 - Settings access pattern (`EngineSettingsProvider` protocol).
 - Engine vs platform split (for `ComposingState` / `NextWordEngine`).
 - Naming / file layout rules.
-- List of 36 (+) shared-core candidates as the immutable contract surface.
+- List of 43 shared-core candidates as the immutable contract surface (36 at snapshot; +4 via G4-impl PR #138 (2026-04-19), +3 via G5-impl PR #137 (2026-04-19)).
 
 **Risk**: none.
 

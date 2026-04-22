@@ -2,7 +2,7 @@
 
 **Status**: authored 2026-04-19 as the Phase 0 gate before the iOS exemplar Phase I plan (`ios-exemplar-plan.md`) begins. Required by Codex strategic review finding C2 to keep the shared-core contract neutral instead of Swift/KeyboardKit-shaped.
 
-**Purpose**: enumerate the cross-platform behaviors the 36 shared-core candidates (see `docs/engine/shared-core-readiness.md`) must uphold on both iOS and Android. Refactors inside Phase I must preserve every invariant in this document. Phase II (Android alignment), Phase III (≥95% + FFI POC), and Phase IV-A (Rust phonetics slice) treat these as the immutable contract.
+**Purpose**: enumerate the cross-platform behaviors the shared-core candidates (36 at authoring; roster grew to 43 after iOS G4-impl PR #138 (2026-04-19) + G5-impl PR #137 (2026-04-19) — see `docs/engine/shared-core-readiness.md`) must uphold on both iOS and Android. Refactors inside Phase I must preserve every invariant in this document. Phase II (Android alignment), Phase III (≥95% + FFI POC), and Phase IV-A (Rust phonetics slice) treat these as the immutable contract.
 
 **Scope boundary**: this doc captures *behavior* only. Architecture purity (DI, ObservableObject, singletons) lives in `shared-core-readiness.md`; data-artifact portability (MARISA / SQLite / `dictionary.bin`) lives in the G10 deliverable.
 
@@ -297,7 +297,7 @@ baseFreqScore  (~0 … +100)       fallback
 
 - Pure-state pin: `ComposingStateTest`/`ComposingStateTests` — idle path emits plain insert, composing path emits `CommitTextReplacingPreedit(derived + external)` + `ResetAutocomplete` + `ResetAutocompleteContext`, empty-text path is a no-op.
 - Binding pin: Android `ComposingManagerTest` — single `commitText` call, zero `finishComposingText`; iOS `ComposingManagerTests` — mirrored via `DelegateSpy` effect ordering.
-- Closed path: `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` (Android) + `KeyboardExtension/KeyboardViewController+EmojiDelegate.swift` `emojiDidSelect(_:)` (iOS) — both route through `ComposingManager.commitPreeditThenInsertExternal(...)` as of 2026-04-21 (`parity/emoji-key-press-preedit`).
+- Closed path: `ime/media/MediaInputManager.kt` `sendEmojiKeyPress()` (Android) + `KeyboardExtension/KeyboardViewController+EmojiDelegate.swift` `emojiDidSelect(_:)` (iOS) — both route through `ComposingManager.commitPreeditThenInsertExternal(...)` as of PR #162 (2026-04-21).
 
 **Extended invariant — `INVARIANT_composing_external_region_clear_discards_state`**: when the host editor reports that the composing region no longer exists, the IME binding MUST zero its internal composing state (raw buffer + cached derived display) without issuing any `InputConnection` call. A stale `state.isComposing` or `cachedDerivedDisplay` would let a later commit / reset re-insert preedit text at the new cursor position.
 
@@ -331,7 +331,7 @@ baseFreqScore  (~0 … +100)       fallback
 
 ## Cross-references
 
-- Architectural surface of the 36 candidates: `docs/engine/shared-core-readiness.md`.
+- Architectural surface of the shared-core candidates (43 as of Phase I close): `docs/engine/shared-core-readiness.md`.
 - Phase I task plan referencing this doc as prerequisite: `docs/architecture/ios-exemplar-plan.md` (G0).
 - Codex review findings C2 / I7 that motivated this doc: `docs/architecture/codex-review-2026-04-19.md`.
 - Data-artifact portability (MARISA / SQLite / `dictionary.bin`) tracked separately under G10.

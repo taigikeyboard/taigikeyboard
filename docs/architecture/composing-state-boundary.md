@@ -1,6 +1,6 @@
 # G4-design — Composing State / Platform Boundary
 
-**Status**: design-only deliverable for Phase I G4, authored 2026-04-19. Revised same day after Codex + Gemini review (see `codex-review-2026-04-19.md` for the earlier strategic pass; this revision captures the G4/G5/G8 docs-review cycle). Implementation (G4-impl) happens late in Phase I — this doc front-loads the boundary so G1 / G2 / G3 / G6 do not lock in assumptions that contradict it (per Codex finding I1).
+**Status**: design deliverable for Phase I G4, authored 2026-04-19. Revised same day after Codex + Gemini review (see `codex-review-2026-04-19.md` for the earlier strategic pass; this revision captures the G4/G5/G8 docs-review cycle). iOS G4-impl landed via PR #138 (2026-04-19); Android A4-impl landed via PR #152 (2026-04-20). This doc front-loaded the boundary so earlier Phase I groups (G1 / G2 / G3 / G6) did not lock in assumptions that contradict it (per Codex finding I1); §11 Android Binding Addendum now reflects landed shape.
 
 **Goal**: split `Input/Composing/ComposingManager.swift` into
 
@@ -11,7 +11,7 @@
 
 **Non-goal**: do NOT implement in this doc. G4-impl takes the sketch here, writes code, and wires G9 golden-text regression tests against it.
 
-**Precondition** (resolved before G4-impl begins): `ToneConverter.preprocessPojInput` must be parameterized (take `isDoubleTapOOEnabled` / `isDoubleTapNNEnabled` as arguments instead of reading `SharedSettings.shared`). The parameterization itself is a small one-file change listed in the Phase I plan's "Out of scope" section; G4-impl either folds it in or lands it as an independent prerequisite PR. Without this precondition, `ComposingState.derivedDisplay` cannot be Foundation-pure.
+**Precondition** (resolved during G4-impl, PR #138 (2026-04-19)): `ToneConverter.preprocessPojInput` was parameterized (takes `isDoubleTapOOEnabled` / `isDoubleTapNNEnabled` as arguments instead of reading `SharedSettings.shared`). The parameterization was folded into G4-impl; `ComposingState.derivedDisplay` is now Foundation-pure.
 
 ---
 
