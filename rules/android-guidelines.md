@@ -147,7 +147,7 @@ Cross-platform test naming + assertion conventions follow `rules/ios-guidelines.
 Durable checklist for every Android refactor PR:
 
 - [ ] Refactor-freeze observed per `rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
-- [ ] Codex pre-review on plan before implementation (per `rules/claude-workflow.md` §Review Before Implementation).
+- [ ] Codex + `/simplify` pre-review on plan before implementation (per `rules/claude-workflow.md` §Review Before Implementation). `/simplify` is the Claude Code official skill — run in parallel with Codex to catch reuse / quality / dead-code issues Codex does not flag.
 - [ ] Codex post-review on diff before merge.
 - [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round.
 - [ ] Invariant tests stay green.
@@ -156,7 +156,7 @@ Durable checklist for every Android refactor PR:
 
 Phase II-specific task labels (A0–A10) and sequencing live in `docs/architecture/android-state-audit.md` §7; avoid duplicating them here so this doc does not age with the phase. **Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`); the audit doc §9.1 table is a point-in-time snapshot, not a living counter.
 
-During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex pre-impl review if a new stateful dependency enters a candidate file.
+During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
 
 ## 12. References
 

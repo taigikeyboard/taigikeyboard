@@ -184,8 +184,8 @@ Codifying `rules/cross-platform-alignment.md` §5.1 in Rust terms:
 ## 12. Enforcement hooks `[A]`
 
 - **Phase II.5 entry**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` drafts must cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
-- **Phase III D9 POC**: POC code is reviewed against every rule above. Deviations land only after Codex pre + post review with written rationale.
-- **Phase IV-A onward**: every Rust PR runs through the §1c constraint (for shared-core-candidate equivalence) plus this file's §§2–10 enforcement.
+- **Phase III D9 POC**: POC code is reviewed against every rule above. Deviations land only after Codex + `/simplify` pre-review and Codex post-review on the diff, with written rationale.
+- **Phase IV-A onward**: every Rust PR runs through the §1c constraint (for shared-core-candidate equivalence), Codex + `/simplify` pre-implementation review on the plan, Codex post-edit review on the diff, plus this file's §§2–10 enforcement. `/simplify` is the Claude Code official skill and catches reuse / quality / dead-code issues Codex does not flag; run both in parallel per `rules/claude-workflow.md` §Subagent Usage.
 
 ## 13. References
 
