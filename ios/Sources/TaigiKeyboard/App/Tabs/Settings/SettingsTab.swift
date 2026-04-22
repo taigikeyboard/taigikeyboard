@@ -114,7 +114,7 @@ struct SettingsTab: View {
                             Label {
                                 Text(SettingsTexts.toolbarAutoCollapse)
                             } icon: {
-                                Image(systemName: SettingsIcons.toolbar)
+                                Image(latinSystemName: SettingsIcons.toolbar)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
                             SettingInfoButton(description: SettingsTexts.toolbarAutoCollapseInfo)
@@ -129,7 +129,7 @@ struct SettingsTab: View {
                             Label {
                                 Text(SettingsTexts.globeKey)
                             } icon: {
-                                Image(systemName: SettingsIcons.globeKey)
+                                Image(latinSystemName: SettingsIcons.globeKey)
                                     .foregroundColor(AppStyle.accentBlue)
                             }
                             SettingInfoButton(description: SettingsTexts.globeKeyInfo)

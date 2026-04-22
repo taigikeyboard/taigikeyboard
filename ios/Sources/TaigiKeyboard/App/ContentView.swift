@@ -16,7 +16,7 @@ struct ContentView: View {
                     Label {
                         Text(TabType.home.title)
                     } icon: {
-                        Image(systemName: TabType.home.icon)
+                        Image(latinSystemName: TabType.home.icon)
                     }
                 }
                 .tag(TabType.home)
@@ -27,7 +27,7 @@ struct ContentView: View {
                     Label {
                         Text(TabType.layout.title)
                     } icon: {
-                        Image(systemName: TabType.layout.icon)
+                        Image(latinSystemName: TabType.layout.icon)
                     }
                 }
                 .tag(TabType.layout)
@@ -38,7 +38,7 @@ struct ContentView: View {
                     Label {
                         Text(TabType.dictionary.title)
                     } icon: {
-                        Image(systemName: TabType.dictionary.icon)
+                        Image(latinSystemName: TabType.dictionary.icon)
                     }
                 }
                 .tag(TabType.dictionary)
@@ -49,7 +49,7 @@ struct ContentView: View {
                     Label {
                         Text(TabType.settings.title)
                     } icon: {
-                        Image(systemName: TabType.settings.icon)
+                        Image(latinSystemName: TabType.settings.icon)
                     }
                 }
                 .tag(TabType.settings)

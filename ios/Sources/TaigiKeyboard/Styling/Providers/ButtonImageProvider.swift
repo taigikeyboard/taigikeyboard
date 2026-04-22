@@ -20,19 +20,19 @@ final class ButtonImageProvider {
     func buttonImage(for action: KeyboardAction) -> Image? {
         switch action {
         case .nextKeyboard:
-            return Image(systemName: "globe")
+            return Image(latinSystemName: "globe")
         case .primary(.return):
             // Show newline icon when not composing; nil lets ButtonTextProvider show confirmation text
-            return keyboardContext.isComposingText ? nil : Image(systemName: "arrow.turn.down.left")
+            return keyboardContext.isComposingText ? nil : Image(latinSystemName: "arrow.turn.down.left")
         case .settings:
-            return Image(systemName: "gearshape.fill")
+            return Image(latinSystemName: "gearshape.fill")
         case let .custom(name):
             switch name {
             case "translate":
                 let iconName = keyboardContext.isTranslateSwapped
                     ? "character.square.fill" // Active: filled
                     : "character.square" // Default: outlined
-                return Image(systemName: iconName)
+                return Image(latinSystemName: iconName)
             default:
                 return nil
             }

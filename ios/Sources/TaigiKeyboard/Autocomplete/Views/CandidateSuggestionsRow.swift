@@ -87,7 +87,7 @@ struct CandidateSuggestionsRow: View {
     /// 展開/收合擴充候選詞視圖的 chevron 按鈕
     private var expandChevronButton: some View {
         Button(action: { expandState.toggle() }) {
-            Image(systemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
+            Image(latinSystemName: expandState.isExpanded ? "chevron.up" : "chevron.down")
                 .font(KeyboardFonts.globalFont(size: 18))
                 .foregroundColor(theme.primaryTextColor)
                 .scaleEffect(1.2)

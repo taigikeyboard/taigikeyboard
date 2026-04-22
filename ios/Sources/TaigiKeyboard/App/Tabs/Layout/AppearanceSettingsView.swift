@@ -163,7 +163,7 @@ struct AppearanceSettingsView: View {
                         value.wrappedValue = defaultValue
                         onChanged(defaultValue)
                     } label: {
-                        Image(systemName: "arrow.counterclockwise")
+                        Image(latinSystemName: "arrow.counterclockwise")
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
@@ -195,7 +195,7 @@ struct AppearanceSettingsView: View {
                     color.wrappedValue = defaultColor
                     viewModel.resetColor(keyPath)
                 } label: {
-                    Image(systemName: "arrow.counterclockwise")
+                    Image(latinSystemName: "arrow.counterclockwise")
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
@@ -223,7 +223,7 @@ private struct AppearanceFontPickerView: View {
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedFont == font {
-                                Image(systemName: "checkmark")
+                                Image(latinSystemName: "checkmark")
                                     .foregroundColor(AppStyle.accentBlue)
                             }
                         }

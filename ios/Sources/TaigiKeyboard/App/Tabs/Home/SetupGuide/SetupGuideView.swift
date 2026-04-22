@@ -68,7 +68,7 @@ struct SetupGuideView: View {
                     Text(HomeTexts.setupInfoMessage)
                         .lineSpacing(4)
                 } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(latinSystemName: "exclamationmark.triangle.fill")
                         .foregroundColor(AppStyle.warningOrange)
                 }
 
@@ -76,7 +76,7 @@ struct SetupGuideView: View {
                     Text(HomeTexts.setupBrandWarning)
                         .lineSpacing(4)
                 } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(latinSystemName: "exclamationmark.triangle.fill")
                         .foregroundColor(AppStyle.warningOrange)
                 }
             }

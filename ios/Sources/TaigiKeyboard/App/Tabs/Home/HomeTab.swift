@@ -35,7 +35,7 @@ struct HomeTab: View {
                             Label {
                                 Text(feature.title)
                             } icon: {
-                                Image(systemName: feature.icon.ios)
+                                Image(latinSystemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.warningOrange)
                             }
                         }
@@ -54,7 +54,7 @@ struct HomeTab: View {
                             Label {
                                 Text(feature.title)
                             } icon: {
-                                Image(systemName: feature.icon.ios)
+                                Image(latinSystemName: feature.icon.ios)
                                     .foregroundStyle(AppStyle.accentBlue)
                             }
                         }
@@ -116,7 +116,7 @@ struct HomeTab: View {
                             Label {
                                 Text(faq.title)
                             } icon: {
-                                Image(systemName: faq.icon.ios)
+                                Image(latinSystemName: faq.icon.ios)
                             }
                         }
                     }

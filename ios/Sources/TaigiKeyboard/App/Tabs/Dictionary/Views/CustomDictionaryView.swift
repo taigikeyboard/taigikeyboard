@@ -103,7 +103,7 @@ struct CustomDictionaryView: View {
                 Section {
                     if viewModel.entries.isEmpty {
                         VStack(spacing: 16) {
-                            Image(systemName: "book.closed")
+                            Image(latinSystemName: "book.closed")
                                 .font(AppStyle.appFont(size: 48))
                                 .foregroundColor(.secondary)
                             Text(DictionaryTexts.customDictEmpty)
@@ -127,7 +127,7 @@ struct CustomDictionaryView: View {
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
                                     Spacer()
-                                    Image(systemName: "chevron.right")
+                                    Image(latinSystemName: "chevron.right")
                                         .font(AppStyle.captionFont)
                                         .foregroundColor(.secondary)
                                 }
@@ -136,7 +136,7 @@ struct CustomDictionaryView: View {
                                 Button(role: .destructive) {
                                     Task { await viewModel.delete(id: entry.id) }
                                 } label: {
-                                    Image(systemName: "trash")
+                                    Image(latinSystemName: "trash")
                                 }
                             }
                         }
@@ -163,7 +163,7 @@ struct CustomDictionaryView: View {
                     hanziInput = ""
                     showEntryAlert = true
                 } label: {
-                    Image(systemName: "plus")
+                    Image(latinSystemName: "plus")
                 }
             }
         }

@@ -109,7 +109,7 @@ struct FrequencyDataView: View {
                                 Button(role: .destructive) {
                                     Task { await viewModel.deleteWord(item.word) }
                                 } label: {
-                                    Image(systemName: "trash")
+                                    Image(latinSystemName: "trash")
                                 }
                             }
                         }

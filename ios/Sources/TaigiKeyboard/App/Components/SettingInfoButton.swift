@@ -11,7 +11,7 @@ struct SettingInfoButton: View {
 
     var body: some View {
         Button { showAlert = true } label: {
-            Image(systemName: "questionmark.circle")
+            Image(latinSystemName: "questionmark.circle")
                 .foregroundColor(AppStyle.accentBlue)
         }
         .buttonStyle(.plain)

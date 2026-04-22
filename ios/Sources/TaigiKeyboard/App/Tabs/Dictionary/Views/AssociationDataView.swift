@@ -114,7 +114,7 @@ struct AssociationDataView: View {
                                 Button(role: .destructive) {
                                     Task { await viewModel.delete(item) }
                                 } label: {
-                                    Image(systemName: "trash")
+                                    Image(latinSystemName: "trash")
                                 }
                             }
                         }

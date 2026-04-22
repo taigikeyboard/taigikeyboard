@@ -26,7 +26,7 @@ struct LayoutTab: View {
                         HStack {
                             Text(LayoutTexts.appearanceSettings)
                             Spacer()
-                            Image(systemName: "chevron.right")
+                            Image(latinSystemName: "chevron.right")
                                 .font(AppStyle.captionFont)
                                 .foregroundColor(.secondary)
                         }
@@ -143,7 +143,7 @@ private struct LayoutOptionCard: View {
                             .fill(AppStyle.accentBlue)
                             .frame(width: 36, height: 36)
                             .overlay(
-                                Image(systemName: "checkmark")
+                                Image(latinSystemName: "checkmark")
                                     .font(AppStyle.appFont(size: 16).bold())
                                     .foregroundColor(.white),
                             )
@@ -187,7 +187,7 @@ private struct LayoutOptionCard: View {
                 .fill(Color(.tertiarySystemBackground))
                 .overlay(
                     VStack(spacing: 6) {
-                        Image(systemName: "keyboard")
+                        Image(latinSystemName: "keyboard")
                             .font(AppStyle.appFont(size: 28))
                             .foregroundColor(.secondary)
                         Text(title)

@@ -178,7 +178,7 @@ struct DictionaryTab: View {
 
                     // Search bar
                     HStack {
-                        Image(systemName: "magnifyingglass")
+                        Image(latinSystemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                         TextField(
                             DictionaryTexts.searchPlaceholder,
@@ -193,7 +193,7 @@ struct DictionaryTab: View {
                                 searchVM.searchText = ""
                                 isSearchFocused = false
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
+                                Image(latinSystemName: "xmark.circle.fill")
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
@@ -251,7 +251,7 @@ struct DictionaryTab: View {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                 }
                 Spacer()
-                Image(systemName: "arrow.up.right")
+                Image(latinSystemName: "arrow.up.right")
                     .font(AppStyle.captionFont)
                     .foregroundStyle(.secondary)
             }
@@ -278,7 +278,7 @@ struct DictionaryTab: View {
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.forward.square")
+                        Image(latinSystemName: "arrow.up.forward.square")
                             .font(.subheadline)
                         Text(title)
                     }

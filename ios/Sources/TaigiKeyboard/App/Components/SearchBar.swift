@@ -16,7 +16,7 @@ struct SearchBar: View {
         VStack(spacing: 0) {
             Divider()
             HStack {
-                Image(systemName: "magnifyingglass")
+                Image(latinSystemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                 TextField(placeholder, text: $text)
                     .autocorrectionDisabled()
@@ -25,7 +25,7 @@ struct SearchBar: View {
                     Button {
                         text = ""
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
+                        Image(latinSystemName: "xmark.circle.fill")
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)

@@ -18,7 +18,7 @@ struct InputModePickerView: View {
                                 .foregroundColor(.primary)
                             Spacer()
                             if selectedMode == mode {
-                                Image(systemName: "checkmark")
+                                Image(latinSystemName: "checkmark")
                                     .foregroundColor(AppStyle.accentBlue)
                             }
                         }

@@ -148,7 +148,7 @@ struct SettingsSelectionOverlay: View {
         Toggle(isOn: isOn) {
             if let icon {
                 HStack(spacing: 8) {
-                    Image(systemName: icon)
+                    Image(latinSystemName: icon)
                         .font(.system(size: 16))
                         .frame(width: 20)
                     Text(label)

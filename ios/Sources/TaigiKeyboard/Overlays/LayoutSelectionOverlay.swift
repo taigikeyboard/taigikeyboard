@@ -155,7 +155,7 @@ private struct LayoutCard: View {
                             .fill(Color.accentColor)
                             .frame(width: 24, height: 24)
                             .overlay(
-                                Image(systemName: "checkmark")
+                                Image(latinSystemName: "checkmark")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white),
                             )
@@ -193,7 +193,7 @@ private struct LayoutCard: View {
                 .aspectRatio(1.8, contentMode: .fit)
                 .overlay(
                     VStack(spacing: 4) {
-                        Image(systemName: "keyboard")
+                        Image(latinSystemName: "keyboard")
                             .font(.system(size: 24))
                             .foregroundColor(.secondary)
                         Text(name)

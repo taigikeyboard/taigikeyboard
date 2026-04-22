@@ -34,7 +34,7 @@ struct ToolShortcutsToolbar: View {
                 isExpanded.toggle()
             }
         }) {
-            Image(systemName: "plus")
+            Image(latinSystemName: "plus")
                 .font(KeyboardFonts.globalFont(size: 16))
                 .fontWeight(.light)
                 .foregroundColor(theme.primaryTextColor)
@@ -151,7 +151,7 @@ private struct ToolShortcutIcon: View {
     @Environment(\.candidateTheme) private var theme
 
     var body: some View {
-        Image(systemName: systemName)
+        Image(latinSystemName: systemName)
             .font(KeyboardFonts.globalFont(size: 18))
             .fontWeight(.light)
             .foregroundColor(theme.primaryTextColor)

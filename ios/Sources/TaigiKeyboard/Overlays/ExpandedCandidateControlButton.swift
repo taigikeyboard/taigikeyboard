@@ -11,7 +11,7 @@ struct ExpandedCandidateControlButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: iconName)
+            Image(latinSystemName: iconName)
                 .font(KeyboardFonts.globalFont(size: 20))
                 .foregroundColor(theme.primaryTextColor)
                 .frame(width: 45, height: 45, alignment: .center)

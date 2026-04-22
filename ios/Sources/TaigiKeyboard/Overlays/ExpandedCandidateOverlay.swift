@@ -131,7 +131,7 @@ struct ExpandedCandidateOverlay: View {
     private func controlButtonPanel(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 0) {
             Button(action: { onCollapse() }) {
-                Image(systemName: "chevron.up")
+                Image(latinSystemName: "chevron.up")
                     .font(KeyboardFonts.globalFont(size: 20))
                     .foregroundColor(theme.primaryTextColor)
                     .frame(width: 60, height: 56, alignment: .center)
