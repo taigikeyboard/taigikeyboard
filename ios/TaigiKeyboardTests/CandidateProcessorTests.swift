@@ -6,8 +6,18 @@ import XCTest
 final class CandidateProcessorTests: XCTestCase {
     // MARK: - Fixtures
 
-    private func word(_ roman: String, _ hanzi: String? = nil, lengthScore: Int? = nil) -> TaigiWord {
-        TaigiWord(id: 0, roman: roman, hanzi: hanzi, lengthScore: lengthScore)
+    private func word(_ roman: String, _ hanzi: String? = nil, lengthScore: Int? = nil, sourceBitmask: UInt16? = nil) -> TaigiWord {
+        TaigiWord(id: 0, roman: roman, hanzi: hanzi, lengthScore: lengthScore, sourceBitmask: sourceBitmask)
+    }
+
+    /// Tier-bitmask convenience for readability in tier-invariant tests.
+    /// Bit positions mirror dictionary/build/10_create_dictionary_bin.py.
+    private enum TierBit {
+        static let kautian: UInt16 = 1 << 0
+        static let taigitv: UInt16 = 1 << 1
+        static let itaigi: UInt16 = 1 << 2
+        static let kungge: UInt16 = 1 << 6
+        static let stti: UInt16 = 1 << 7
     }
 
     private let fixedNow: Int64 = 1_700_000_000_000 // Arbitrary pinned epoch ms
@@ -181,5 +191,56 @@ final class CandidateProcessorTests: XCTestCase {
         )
         XCTAssertEqual(breakdown.exactBonus, 100)
         XCTAssertEqual(breakdown.completionPenalty, 0)
+    }
+
+    // MARK: - Tier bonus invariants
+
+    func test_INVARIANT_tier_bonus_preserves_frequency_ordering() {
+        // Assert baseFreqScore arithmetic directly to isolate the tier math from
+        // closeness/exact/completion noise. Using identical roman + input
+        // neutralizes those components across both candidates.
+        // Kautian tier-1 (1.5×): lengthScore=100 → baseFreqScore = 100/10 * 15/10 = 15.
+        // Default tier        : lengthScore=160 → baseFreqScore = 160/10 * 10/10 = 16.
+        // Max tier bonus (1.5×) cannot invert a strictly >1.5× raw-frequency gap.
+        let kautianWord = word("x", "A", lengthScore: 100, sourceBitmask: TierBit.kautian)
+        let defaultWord = word("x", "B", lengthScore: 160, sourceBitmask: TierBit.itaigi)
+        let kautianBreakdown = CandidateProcessor.calculateScore(
+            word: kautianWord, normalizedInput: "x", frequencyData: .empty, currentTime: fixedNow,
+        )
+        let defaultBreakdown = CandidateProcessor.calculateScore(
+            word: defaultWord, normalizedInput: "x", frequencyData: .empty, currentTime: fixedNow,
+        )
+        XCTAssertEqual(kautianBreakdown.baseFreqScore, 15)
+        XCTAssertEqual(defaultBreakdown.baseFreqScore, 16)
+        XCTAssertGreaterThan(defaultBreakdown.baseFreqScore, kautianBreakdown.baseFreqScore)
+    }
+
+    func test_INVARIANT_tier_bonus_first_match_wins() {
+        // Bitmask with kautian (bit 0) + kungge (bit 6) set. First-match-wins → kautian (1.5×) applies.
+        // A kautian+kungge word with lengthScore=100 → baseFreqScore = 15 (not 11).
+        // A pure kungge word with lengthScore=100 → baseFreqScore = 11.
+        // A kautian-only word with lengthScore=100 → baseFreqScore = 15.
+        // Both-bits word must tie with kautian-only, strictly beat kungge-only.
+        let both = word("tl-both", "Both", lengthScore: 100, sourceBitmask: TierBit.kautian | TierBit.kungge)
+        let kautianOnly = word("tl-kau", "Kau", lengthScore: 100, sourceBitmask: TierBit.kautian)
+        let kunggeOnly = word("tl-kun", "Kun", lengthScore: 100, sourceBitmask: TierBit.kungge)
+        let bothScore = CandidateProcessor.calculateScore(word: both, normalizedInput: "x", frequencyData: .empty, currentTime: fixedNow)
+        let kautianScore = CandidateProcessor.calculateScore(word: kautianOnly, normalizedInput: "x", frequencyData: .empty, currentTime: fixedNow)
+        let kunggeScore = CandidateProcessor.calculateScore(word: kunggeOnly, normalizedInput: "x", frequencyData: .empty, currentTime: fixedNow)
+        XCTAssertEqual(bothScore.baseFreqScore, kautianScore.baseFreqScore, "kautian+kungge → kautian tier wins")
+        XCTAssertGreaterThan(bothScore.baseFreqScore, kunggeScore.baseFreqScore, "kautian+kungge must outrank kungge-only")
+    }
+
+    func test_kautian_beats_itaigi_at_comparable_frequency() {
+        // Kautian lengthScore=100 → baseFreqScore = 15. Itaigi lengthScore=110 → 11. Kautian wins.
+        let kautianWord = word("tl-a", "A", lengthScore: 100, sourceBitmask: TierBit.kautian)
+        let itaigiWord = word("tl-b", "B", lengthScore: 110, sourceBitmask: TierBit.itaigi)
+        let sorted = CandidateProcessor.sortByScore(
+            [itaigiWord, kautianWord],
+            normalizedInput: "z",
+            frequencyDataMap: [:],
+            currentTime: fixedNow,
+        )
+        XCTAssertEqual(sorted.first?.hanzi, "A", "Kautian at comparable frequency must outrank itaigi")
     }
 }

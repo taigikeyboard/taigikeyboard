@@ -68,7 +68,7 @@ behind a `ToneToggles` parameter.
 | `Lexicon/Models/LexiconConstants.swift`             |  29 | Constants; logging subsystem name is iOS-bundle-specific but harmless as a string. |
 | `Lexicon/Models/LexiconError.swift`                 |  34 | `LocalizedError` over Foundation only.                             |
 | `Lexicon/Utils/TaigiUnicode.swift`                  |  27 | `nfdPreprocessed` — mirrors Android `TaigiUnicode.kt`.             |
-| `Lexicon/Utils/CandidateProcessor.swift`            | 234 | Classify / capitalize / dedupe / score / sort. Callers inject `inputMode`, `isAutoCap`, `FrequencyData`, `currentTime`. Logs via `LoggerBackend`. |
+| `Lexicon/Utils/CandidateProcessor.swift`            | 267 | Classify / capitalize / dedupe / score / sort. Callers inject `inputMode`, `isAutoCap`, `FrequencyData`, `currentTime`. Logs via `LoggerBackend`. Carries the tier-based `baseFreqScore` multiplier (`SOURCE_TIERS` — kautian/taigitv/stti/kungge, first-match-wins over `word.sourceBitmask`). |
 | `Lexicon/Trie/InputNormalizer.swift`                |  92 | Mode-agnostic normalization → numeric tones. Logs via `LoggerBackend`. |
 | `Lexicon/Database/CustomDictionaryDerivation.swift` |  80 | Pure derivation of `notone` / `abbrev` / `roman_num` search keys.  |
 

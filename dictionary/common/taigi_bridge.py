@@ -77,7 +77,7 @@ _converter = TaigiConverter()
 
 
 def convert_tl_to_poj(tl: str) -> str:
-    """Convert TL romanization to POJ."""
+    """Convert TL romanization to POJ. Graceful — returns input on failure."""
     try:
         return _converter.convert(tl, "tl", "poj")
     except Exception:
@@ -85,11 +85,37 @@ def convert_tl_to_poj(tl: str) -> str:
 
 
 def convert_poj_to_tl(poj: str) -> str:
-    """Convert POJ romanization to TL."""
+    """Convert POJ romanization to TL. Graceful — returns input on failure."""
     try:
         return _converter.convert(poj, "poj", "tl")
     except Exception:
         return poj
+
+
+def _convert_strict(text: str, source: str, target: str) -> str:
+    """Strict convert: raise RuntimeError on subprocess / JS failure.
+
+    Used by callers that must skip a row when conversion cannot complete
+    (e.g. `build/01_merge_csv.py` supplement loaders), rather than silently
+    writing the untransformed input into the wrong column.
+    """
+    result = _converter._call("convert", text=text, source=source, target=target)
+    if result.get("error"):
+        raise RuntimeError(f"taigi-converter {source}→{target} failed: {result['error']}")
+    converted = result.get("result")
+    if converted is None:
+        raise RuntimeError(f"taigi-converter {source}→{target} returned null for {text!r}")
+    return converted
+
+
+def convert_tl_to_poj_strict(tl: str) -> str:
+    """Convert TL → POJ. Raises RuntimeError on subprocess / JS failure."""
+    return _convert_strict(tl, "tl", "poj")
+
+
+def convert_poj_to_tl_strict(poj: str) -> str:
+    """Convert POJ → TL. Raises RuntimeError on subprocess / JS failure."""
+    return _convert_strict(poj, "poj", "tl")
 
 
 def to_tone_number(text: str, system: str = "tl") -> str:

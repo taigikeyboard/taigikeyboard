@@ -14,7 +14,7 @@ enum HomeTexts {
     static let setupKeyboard = "齒盤愛拍開才會當使用"
     static let typingGuide = "拍字說明"
     static let newFeatures = "功能設定"
-    static let faq = "捷問 ê 問題"
+    static let faq = "其他"
 
     // MARK: - 啟用方法
 
@@ -45,8 +45,8 @@ enum HomeTexts {
 
     // MARK: - 寄付
 
-    static let emailContact = "台語齒盤是我 1 个人用上班以外 ê 時間開發佮維護，開發者帳號、開發家私、網站費用攏是用家己薪水支付。若你感覺這个齒盤對你有幫助，歡迎贊助支持，予台語齒盤會當繼續運作落去，咱做伙為著台語拍拚。"
-    static let freePromise = "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好 ê 家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
+    static let emailContact = "台語齒盤是我 1 个人用上班以外時間開發佮維護，開發者帳號、開發家私、網站費用攏是用家己薪水支付。若你感覺這个齒盤對你有幫助，歡迎贊助支持，予台語齒盤會當繼續運作落去，咱做伙為著台語拍拚。"
+    static let freePromise = "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
     static let supportUs = "贊助台語齒盤"
 
     // MARK: - 版本資訊

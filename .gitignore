@@ -67,6 +67,9 @@ ENV/
 .pytest_cache/
 .ruff_cache/
 
+# === Gradle ===
+.gradle/
+
 # === Claude Code ===
 .claude/settings.local.json
 .claude/projects/

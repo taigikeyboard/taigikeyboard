@@ -80,6 +80,7 @@ final class DictionaryRepository: @unchecked Sendable {
                 roman: roman,
                 hanzi: record.hanzi,
                 lengthScore: Int(record.frequency),
+                sourceBitmask: record.bitmask,
             ))
         }
 

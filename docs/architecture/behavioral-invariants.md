@@ -136,20 +136,59 @@ Reversing or merging these two passes changes ordering. Running display dedup be
 
 **Invariant**: `CandidateProcessor.calculateScore` is **pure** — same inputs yield the same `ScoreBreakdown`. Given identical `(word, normalizedInput, frequencyData, currentTime)`, iOS and Android return the same total.
 
-Further, the priority ordering is fixed:
+Priority ordering (typical regime):
 
 ```
-userFreqScore  (0 … +10000)     dominates
-completionPenalty (0 or -1000)   separates exact vs completion tiers
-closenessBonus (0 … +500)        orders among completions
-recencyBonus   (0 or +200)       tiebreaker within same freq
-exactBonus     (0 or +100)       tiebreaker
-baseFreqScore  (~0 … +100)       fallback
+userFreqScore  (0 … +10000)          dominates within typical frequencies
+completionPenalty (0 or -1000)        separates exact vs completion tiers
+closenessBonus (0 … +500)             orders among completions
+recencyBonus   (0 or +200)            tiebreaker within same freq
+exactBonus     (0 or +100)            tiebreaker
+baseFreqScore  (≈ lengthScore/10 × tier)  fallback (cold-start dominant, uncapped)
 ```
+
+### Bounded dominance of `userFreqScore`
+
+`userFreqScore` is capped at `USER_FREQ_CAP × USER_FREQ_WEIGHT = 10000` (reached at count = 100), but `baseFreqScore = (lengthScore / 10) × numerator / 10` is **not** capped. For very high-frequency dictionary entries, the base score can exceed user frequency. The invariant is therefore **bounded**, not absolute.
+
+**Pairwise dominance threshold**: `userFreqScore` dominates a competitor's `baseFreqScore` when
+
+```
+count × 100  >  (lengthScore / 10) × numerator / 10
+⟺  lengthScore  <  count × 10_000 / numerator
+```
+
+Concrete thresholds:
+
+| user count | userFreqScore | dominates default-tier up to `lengthScore` | dominates tier-1 (1.5×) up to `lengthScore` |
+|---|---|---|---|
+| 10  | 1000   | 10_000  | ≈ 6_667  |
+| 50  | 5000   | 50_000  | ≈ 33_333 |
+| 100 | 10_000 (cap) | 100_000 | ≈ 66_667 |
+
+Outside that regime, raw dictionary frequency becomes the leading factor — this is intentional: heavily-used dictionary entries (e.g., "的" with `lengthScore ≈ 200_000`) should stay on top even for users who haven't formed a habit yet.
+
+**Worked example (typical regime)**: User has used word A (`lengthScore=500`, default tier) 10 times; candidate B (`lengthScore=800`, default tier) is cold. A: `userFreqScore = 1000`, `baseFreqScore = 50`. B: `userFreqScore = 0`, `baseFreqScore = 80`. A wins (~970 lead after other bonuses).
+
+**Worked example (heavy-frequency regime)**: User has used rare word A (`lengthScore=100`, default tier) 100 times; candidate B is "的" (`lengthScore=200_000`, default tier). A: `userFreqScore = 10000`, `baseFreqScore = 10`. B: `userFreqScore = 0`, `baseFreqScore = 20000`. B wins (~9990 lead). A only resurfaces if other bonuses close the gap or if the user enters text where A matches exactly while B is a completion (`-1000` penalty flips the balance).
+
+### Tier-based `baseFreqScore` multiplier
+
+`baseFreqScore = (lengthScore / BASE_FREQ_DIVISOR) × tierNumerator / TIER_DENOMINATOR`. Tiers are selected by first-match-wins traversal of `SOURCE_TIERS`:
+
+| Tier | Dictionary | Bit | Numerator | Effective multiplier |
+|---|---|---|---|---|
+| 1 | 教育部臺灣台語常用詞辭典 (kautian) | 0 | 15 | 1.5× |
+| 2 | 公視台語新詞辭庫 (taigitv) | 1 | 13 | 1.3× |
+| 3 | 教育部學科術語辭典 (stti) | 7 | 12 | 1.2× |
+| 4 | 台語工藝詞庫 (kungge) | 6 | 11 | 1.1× |
+| 5 (default) | 其他來源 / 補充資料 / `nil` bitmask | — | 10 | 1.0× |
+
+Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is in the ranking tier list but **not** in `dictionary/build/01_merge_csv.py:80` OFFICIAL_SOURCES (which governs dedup priority only) — intentional divergence.
 
 **Why**: the scoring formula is the user-visible ordering of every candidate. Drift means the keyboard ranks differently on iOS vs Android for the same word + same user state.
 
-**Scope**: `Lexicon/Utils/CandidateProcessor.swift` — `calculateScore`, `romanToBase`, `inputToBase`, `sortByScore`.
+**Scope**: `Lexicon/Utils/CandidateProcessor.swift` — `calculateScore`, `romanToBase`, `inputToBase`, `sortByScore`, `tierNumerator`, `SOURCE_TIERS`.
 
 **Corner cases**:
 - `currentTime` is injected at the call site (ms since epoch). No call inside the engine reads the clock.
@@ -157,13 +196,17 @@ baseFreqScore  (~0 … +100)       fallback
 - Recency window is exactly 1 hour (`60 * 60 * 1000` ms); boundary condition `(currentTime - lastUsedMillis) < oneHourMillis` is strict `<`.
 - `romanToBase` must strip hyphens, spaces, NFD combining marks, and digits in that order.
 - Sort is stable on ties in the sense that the original array order is preserved when `total` ties (Swift `sorted(by:)` is not guaranteed stable — documented weakness; ordering fallback currently relies on the pre-sort input order).
+- Tier bonus is bounded at max 1.5× — cannot invert a frequency gap > 1.5× between default- and tier-1 candidates. Proven by `INVARIANT_tier_bonus_preserves_frequency_ordering`.
+- Integer math throughout: `rawBase * numerator / denominator` is computed bit-exact across Swift and Kotlin.
 
 **Test labels**:
 - `INVARIANT_score_is_deterministic`
-- `INVARIANT_user_freq_dominates_ranking`
+- `INVARIANT_user_freq_dominates_ranking` (bounded — see worked examples above)
 - `INVARIANT_completion_penalty_separates_tiers`
 - `INVARIANT_recency_window_is_exactly_1_hour`
 - `INVARIANT_roman_to_base_strips_tones_hyphens_digits`
+- `INVARIANT_tier_bonus_preserves_frequency_ordering`
+- `INVARIANT_tier_bonus_first_match_wins`
 
 ---
 

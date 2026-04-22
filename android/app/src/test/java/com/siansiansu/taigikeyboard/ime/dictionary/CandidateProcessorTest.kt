@@ -23,7 +23,27 @@ class CandidateProcessorTest {
         roman: String,
         hanzi: String? = null,
         lengthScore: Int? = null,
-    ): TaigiWord = TaigiWord(id = id, roman = roman, hanzi = hanzi, lengthScore = lengthScore)
+        sourceBitmask: Int? = null,
+    ): TaigiWord =
+        TaigiWord(
+            id = id,
+            roman = roman,
+            hanzi = hanzi,
+            lengthScore = lengthScore,
+            sourceBitmask = sourceBitmask,
+        )
+
+    /**
+     * Tier-bitmask convenience for readability in tier-invariant tests.
+     * Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`.
+     */
+    private object TierBit {
+        const val KAUTIAN = 1 shl 0
+        const val TAIGITV = 1 shl 1
+        const val ITAIGI = 1 shl 2
+        const val KUNGGE = 1 shl 6
+        const val STTI = 1 shl 7
+    }
 
     // ========================================================================
     // §5 — engine vs display dedup
@@ -261,5 +281,77 @@ class CandidateProcessorTest {
         // mode-agnostic, but we want to catch any future reach-in.
         @Suppress("UNUSED_VARIABLE")
         val modeSanityCheck = InputMode.TL
+    }
+
+    // ========================================================================
+    // §6 — tier bonus invariants (mirrors iOS CandidateProcessorTests.swift)
+    // ========================================================================
+
+    /**
+     * Tier multiplier (max 1.5× for kautian) cannot invert a >1.5× frequency
+     * gap. Kautian lengthScore=100 → baseFreqScore = 100/10 * 15/10 = 15.
+     * Default tier lengthScore=160 → baseFreqScore = 160/10 * 10/10 = 16.
+     * Default-tier wins strictly.
+     */
+    @Test
+    fun test_INVARIANT_tier_bonus_preserves_frequency_ordering() {
+        // Assert baseFreqScore arithmetic directly to isolate the tier math from
+        // closeness/exact/completion noise. Identical roman + input neutralizes
+        // those components across both candidates.
+        // Kautian tier-1 (1.5×): lengthScore=100 → 100/10 * 15/10 = 15.
+        // Default tier        : lengthScore=160 → 160/10 * 10/10 = 16.
+        // Max tier bonus (1.5×) cannot invert a strictly >1.5× raw-frequency gap.
+        val kautianWord = word(1, "x", "A", lengthScore = 100, sourceBitmask = TierBit.KAUTIAN)
+        val defaultWord = word(2, "x", "B", lengthScore = 160, sourceBitmask = TierBit.ITAIGI)
+        val kautianScore = CandidateProcessor.calculateScore(kautianWord, "x", FrequencyData.EMPTY, 0L)
+        val defaultScore = CandidateProcessor.calculateScore(defaultWord, "x", FrequencyData.EMPTY, 0L)
+        assertEquals(15, kautianScore.baseFreqScore)
+        assertEquals(16, defaultScore.baseFreqScore)
+        assertTrue(
+            "Default-tier at >1.5× frequency must have strictly greater baseFreqScore",
+            defaultScore.baseFreqScore > kautianScore.baseFreqScore,
+        )
+    }
+
+    /**
+     * When multiple tier bits are set on one bitmask, the numerator of the
+     * earliest entry in SOURCE_TIERS applies. kautian (1.5×) + kungge (1.1×)
+     * must use kautian's numerator 15.
+     */
+    @Test
+    fun test_INVARIANT_tier_bonus_first_match_wins() {
+        val both = word(1, "tl-both", "Both", lengthScore = 100, sourceBitmask = TierBit.KAUTIAN or TierBit.KUNGGE)
+        val kautianOnly = word(2, "tl-kau", "Kau", lengthScore = 100, sourceBitmask = TierBit.KAUTIAN)
+        val kunggeOnly = word(3, "tl-kun", "Kun", lengthScore = 100, sourceBitmask = TierBit.KUNGGE)
+        val bothScore = CandidateProcessor.calculateScore(both, "x", FrequencyData.EMPTY, 0L)
+        val kautianScore = CandidateProcessor.calculateScore(kautianOnly, "x", FrequencyData.EMPTY, 0L)
+        val kunggeScore = CandidateProcessor.calculateScore(kunggeOnly, "x", FrequencyData.EMPTY, 0L)
+        assertEquals(
+            "kautian+kungge → kautian tier wins",
+            kautianScore.baseFreqScore,
+            bothScore.baseFreqScore,
+        )
+        assertTrue(
+            "kautian+kungge must outrank kungge-only",
+            bothScore.baseFreqScore > kunggeScore.baseFreqScore,
+        )
+    }
+
+    /**
+     * Kautian lengthScore=100 → baseFreqScore = 15. Itaigi lengthScore=110
+     * → baseFreqScore = 11. Kautian wins at comparable raw frequency.
+     */
+    @Test
+    fun test_kautian_beats_itaigi_at_comparable_frequency() {
+        val kautianWord = word(1, "tl-a", "A", lengthScore = 100, sourceBitmask = TierBit.KAUTIAN)
+        val itaigiWord = word(2, "tl-b", "B", lengthScore = 110, sourceBitmask = TierBit.ITAIGI)
+        val sorted =
+            CandidateProcessor.sortByScore(
+                words = listOf(itaigiWord, kautianWord),
+                normalizedInput = "z",
+                frequencyData = emptyMap(),
+                currentTime = 0L,
+            )
+        assertEquals("Kautian at comparable frequency must outrank itaigi", "A", sorted[0].hanzi)
     }
 }

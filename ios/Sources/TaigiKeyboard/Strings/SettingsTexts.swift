@@ -30,7 +30,7 @@ enum SettingsTexts {
     // MARK: - 齒盤設定
 
     static let keyboardSectionTitle = "齒盤設定"
-    static let toolbarAutoCollapse = "自動切換工具列"
+    static let toolbarAutoCollapse = "自動隱藏工具列"
     static let globeKey = "插入齒盤切換揤鈕"
 
     // MARK: - 回饋設定

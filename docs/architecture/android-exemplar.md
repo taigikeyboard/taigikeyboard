@@ -145,7 +145,7 @@ platforms and drift would silently change behavior:
 | # | Surface | Android owner | Status |
 |---|---------|---------------|--------|
 | 1 | NextWord scoring constants (`userWeight`, `dictWeight`, `decayHalfLifeHours`, `learningBonus`, `highUsageDecayFloor`, `lowUsageDecayFloor`, `highUsageThreshold`) | `NextWordService.kt:57-73` | present ✅ |
-| 2 | Candidate scoring (recency window, cappedUserFreq cap, user-freq multiplier, completion penalty, closeness max, exact bonus, recency bonus) | `CandidateProcessor.kt` Kdoc + constants 5.3 #2 | present ✅ — A8-sweep expanded the Kdoc to cite all 7 constants (`USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`, `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`) + iOS file path |
+| 2 | Candidate scoring (recency window, cappedUserFreq cap, user-freq multiplier, completion penalty, closeness max, exact bonus, recency bonus, tier multipliers) | `CandidateProcessor.kt` Kdoc + constants 5.3 #2 | present ✅ — A8-sweep expanded the Kdoc to cite `USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`, `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT` + iOS file path; dictionary-refactor round added `SOURCE_TIERS` (kautian=15, taigitv=13, stti=12, kungge=11) + `TIER_DENOMINATOR` (first-match-wins; bit positions mirror `dictionary/build/10_create_dictionary_bin.py`) |
 | 3 | NextWord timing (`associationTimeoutMs`, `contextTimeoutSeconds`) | `NextWordEngine.kt:28-38` (`ASSOCIATION_TIMEOUT_MS`, `CONTEXT_TIMEOUT_MS`) | present ✅ — A5-impl added inline |
 | 4 | Taigi Unicode preprocessing (U+207F, U+1D3A, U+0358 handling) | `TaigiUnicode.kt` | present ✅ |
 

@@ -43,7 +43,7 @@ object Tab4Texts {
     // MARK: - 齒盤設定
 
     const val keyboardSectionTitle = "齒盤設定"
-    const val toolbarAutoCollapse = "自動切換工具列"
+    const val toolbarAutoCollapse = "自動隱藏工具列"
     const val globeKey = "插入齒盤切換揤鈕"
 
     // MARK: - 回饋設定

@@ -276,7 +276,15 @@ class LexiconService(
                     record.tl
                 }
 
-            results.add(TaigiWord(id, roman, record.hanzi, record.frequency))
+            results.add(
+                TaigiWord(
+                    id = id,
+                    roman = roman,
+                    hanzi = record.hanzi,
+                    lengthScore = record.frequency,
+                    sourceBitmask = record.bitmask,
+                ),
+            )
         }
 
         if (BuildConfig.DEBUG) {

@@ -210,6 +210,7 @@ final class LexiconService: @unchecked Sendable {
                 roman: CandidateProcessor.capitalize(word.roman, basedOn: input, inputMode: inputMode, isAutoCap: isAutoCap),
                 hanzi: processedHanzi,
                 lengthScore: word.lengthScore,
+                sourceBitmask: word.sourceBitmask,
             )
         }
     }

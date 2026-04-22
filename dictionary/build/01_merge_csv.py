@@ -184,8 +184,8 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: str, logger) ->
 
     這些詞條的所有 source column 都是 False，不會出現在 App 的辭典開關設定中。
     """
-    from kesi import Ku
-    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.romanization import to_numeric_tone
+    from common.taigi_bridge import convert_poj_to_tl_strict
     from common.notone import remove_tone
     from common.abbrev import extract_abbrev
 
@@ -235,9 +235,8 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: str, logger) ->
             continue
 
         try:
-            ku = Ku(inp)
-            tl = ku.TL().hanlo.lower().replace(" ", "-")
-            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+            poj = inp.lower().replace(" ", "-")
+            tl = convert_poj_to_tl_strict(poj).lower().replace(" ", "-")
         except Exception:
             continue
 
@@ -293,8 +292,8 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: str, logger) -> pd
     If a (hanzi, tl) pair already exists, marks it dev=True (always included).
     New pairs are added with dev=True and all source columns set to False.
     """
-    from kesi import Ku
-    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.romanization import to_numeric_tone
+    from common.taigi_bridge import convert_tl_to_poj_strict
     from common.notone import remove_tone
     from common.abbrev import extract_abbrev
 
@@ -337,9 +336,8 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: str, logger) -> pd
             continue
 
         try:
-            ku = Ku(tl_raw)
-            tl = ku.TL().hanlo.lower().replace(" ", "-")
-            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+            tl = tl_raw.replace(" ", "-")
+            poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
             tl_num = to_numeric_tone(tl)
             poj_num = to_numeric_tone(poj, ascii_only=True)
         except Exception as e:
@@ -393,8 +391,8 @@ def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: str, logger) -> pd.Da
     If a (hanzi, tl) pair already exists, marks it lkk=True.
     New pairs are added with lkk=True and all other source columns set to False.
     """
-    from kesi import Ku
-    from common.romanization import normalize_roman, to_numeric_tone, convert_tl_to_poj
+    from common.romanization import to_numeric_tone
+    from common.taigi_bridge import convert_tl_to_poj_strict
     from common.notone import remove_tone
     from common.abbrev import extract_abbrev
 
@@ -441,9 +439,8 @@ def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: str, logger) -> pd.Da
             continue
 
         try:
-            ku = Ku(tl_raw)
-            tl = ku.TL().hanlo.lower().replace(" ", "-")
-            poj = ku.POJ().hanlo.lower().replace(" ", "-")
+            tl = tl_raw.replace(" ", "-")
+            poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
             tl_num = to_numeric_tone(tl)
             poj_num = to_numeric_tone(poj, ascii_only=True)
         except Exception as e:

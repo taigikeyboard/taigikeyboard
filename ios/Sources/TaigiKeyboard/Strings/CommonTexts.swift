@@ -21,7 +21,7 @@ enum CommonTexts {
     static let fontOpenHuninn = "粉圓"
     static let fontIansui = "芫荽"
     static let fontGenYoMin = "源樣明體"
-    static let fontGenYoGothic = "源樣黑體"
+    static let fontGenYoGothic = "源樣烏體"
 
     // MARK: - 通用
 

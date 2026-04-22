@@ -82,6 +82,36 @@ enum CandidateProcessor {
         }
     }
 
+    // MARK: - Source Tier
+
+    /// Maps a dictionary-source bit to a `baseFreqScore` multiplier numerator.
+    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CandidateProcessor.kt:46.
+    /// Bit positions match dictionary/build/10_create_dictionary_bin.py.
+    /// First-match-wins: when multiple source bits are set, the tier earlier
+    /// in SOURCE_TIERS wins. Drift causes silent ranking divergence.
+    private struct SourceTier {
+        let bit: Int
+        let numerator: Int
+    }
+
+    private static let SOURCE_TIERS: [SourceTier] = [
+        SourceTier(bit: 0, numerator: 15), // kautian
+        SourceTier(bit: 1, numerator: 13), // taigitv
+        SourceTier(bit: 7, numerator: 12), // stti
+        SourceTier(bit: 6, numerator: 11), // kungge
+    ]
+    private static let DEFAULT_TIER_NUMERATOR = 10
+    private static let TIER_DENOMINATOR = 10
+
+    private static func tierNumerator(for bitmask: UInt16?) -> Int {
+        guard let bitmask else { return DEFAULT_TIER_NUMERATOR }
+        for tier in SOURCE_TIERS where (bitmask & (1 << tier.bit)) != 0 {
+            return tier.numerator
+        }
+        return DEFAULT_TIER_NUMERATOR
+    }
+
     // MARK: - Score Breakdown
 
     /// Breakdown of candidate score components (single source of truth).
@@ -154,8 +184,9 @@ enum CandidateProcessor {
         let matchRatio = Double(min(inputLen, candidateLen)) / Double(max(inputLen, candidateLen))
         let closenessBonus = Int(matchRatio * 500)
 
-        // 詞庫頻率（新詞 fallback，約 0-100）
-        let baseFreqScore = (word.lengthScore ?? 0) / 10
+        // 詞庫頻率（新詞 fallback，約 0-100）+ tier bonus (kautian/taigitv/stti/kungge)
+        let rawBase = (word.lengthScore ?? 0) / 10
+        let baseFreqScore = rawBase * Self.tierNumerator(for: word.sourceBitmask) / Self.TIER_DENOMINATOR
 
         return ScoreBreakdown(
             userFreqScore: userFreqScore,

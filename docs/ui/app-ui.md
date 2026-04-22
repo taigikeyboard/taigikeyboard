@@ -93,7 +93,11 @@ Tab1 (Home) content is **JSON-driven** — feature descriptions and FAQ are load
 | `FeatureContent.swift` / `.kt` | Both | Data model |
 | `FeatureContentLoader.swift` / `.kt` | Both | JSON loader |
 
-Content sync: `scripts/sync-tab1-content.sh` copies JSON to both platform resource directories.
+Content sync: both platform resource files are **symlinks** into `content/`:
+- `ios/Sources/TaigiKeyboard/App/Tabs/Home/tab1-{features,faq}.json` → `content/tab1-{features,faq}.json`
+- `android/app/src/main/assets/tab1-{features,faq}.json` → `content/tab1-{features,faq}.json`
+
+Editing `content/tab1-*.json` is immediately visible on both platforms — no sync step required.
 
 ---
 

@@ -16,10 +16,10 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
  *
  * CROSS-PLATFORM INVARIANT — mirrors
  * ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift
- * `calculateScore`. The seven iOS-synced scoring constants MUST stay in
+ * `calculateScore`. The iOS-synced scoring constants MUST stay in
  * lock-step: `USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`,
- * `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`.
- * Drift causes silent ranking divergence between platforms.
+ * `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`,
+ * `SOURCE_TIERS`, `TIER_DENOMINATOR`. Drift causes silent ranking divergence.
  * `BASE_FREQ_DIVISOR` is Android-only (dictionary-frequency normalisation)
  * and is NOT part of the invariant set.
  */
@@ -34,6 +34,37 @@ object CandidateProcessor {
     private const val COMPLETION_PENALTY = -1000
     private const val CLOSENESS_WEIGHT = 500
     private const val BASE_FREQ_DIVISOR = 10
+
+    /**
+     * Maps a dictionary-source bit to a `baseFreqScore` multiplier numerator.
+     * CROSS-PLATFORM INVARIANT — mirrors
+     * ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift:93.
+     * Bit positions match dictionary/build/10_create_dictionary_bin.py.
+     * First-match-wins: when multiple source bits are set, the tier earlier
+     * in SOURCE_TIERS wins. Drift causes silent ranking divergence.
+     */
+    private data class SourceTier(
+        val bit: Int,
+        val numerator: Int,
+    )
+
+    private val SOURCE_TIERS: List<SourceTier> =
+        listOf(
+            SourceTier(bit = 0, numerator = 15), // kautian
+            SourceTier(bit = 1, numerator = 13), // taigitv
+            SourceTier(bit = 7, numerator = 12), // stti
+            SourceTier(bit = 6, numerator = 11), // kungge
+        )
+    private const val DEFAULT_TIER_NUMERATOR = 10
+    private const val TIER_DENOMINATOR = 10
+
+    private fun tierNumerator(bitmask: Int?): Int {
+        if (bitmask == null) return DEFAULT_TIER_NUMERATOR
+        for (tier in SOURCE_TIERS) {
+            if ((bitmask and (1 shl tier.bit)) != 0) return tier.numerator
+        }
+        return DEFAULT_TIER_NUMERATOR
+    }
 
     /**
      * Breakdown of candidate score components — single source of truth for
@@ -107,7 +138,8 @@ object CandidateProcessor {
         val matchRatio = minOf(inputLen, candidateLen).toDouble() / maxOf(inputLen, candidateLen).toDouble()
         val closenessBonus = (matchRatio * CLOSENESS_WEIGHT).toInt()
 
-        val baseFreqScore = (word.lengthScore ?: 0) / BASE_FREQ_DIVISOR
+        val rawBase = (word.lengthScore ?: 0) / BASE_FREQ_DIVISOR
+        val baseFreqScore = rawBase * tierNumerator(word.sourceBitmask) / TIER_DENOMINATOR
 
         return ScoreBreakdown(
             userFreqScore = userFreqScore,
