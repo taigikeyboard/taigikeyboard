@@ -96,6 +96,8 @@ Before any D9 FFI POC work begins, two Phase II.5 artifacts must exist and be Co
 - **`docs/engine/ffi-safety.md`** — mandatory rules for any Rust FFI entry: `std::panic::catch_unwind` at every boundary, `Mutex<Engine>` (engine `!Sync` but `Send`), explicit `shutdown(handle)` + `Drop` impl, error sentinels (`Response.ErrorCode` in protobuf, out-of-band null only for "engine is sick, restart"), logging bridge (`log` crate routed to `OSLog` / `android.util.Log` via a platform-side adapter — candidate code never touches platform log APIs). Informed by khiin-rs reference (`references/khiin-rs/`) failure modes: see plan `/Users/alexsu/.claude/plans/cozy-dancing-nova.md` §"Lessons from khiin-rs" for citations.
 - **`docs/engine/rust-core-proto.md`** — thin Request/Response schema draft covering only the first two slices (Phonetics + Composing). Includes request-id correlation, generation-counter semantics for stale-response discard, `CMD_SET_CONFIG`-equivalent settings-snapshot push (engine must not cache settings — live-read per `behavioral-invariants.md` §11). Full Lexicon / NextWord / SQLite proto design is deferred to Phase III.
 
+Both docs must comply with `rules/rust-best-practices.md` — workspace layout (§1), FFI boundary discipline (§2), error handling (§3), `unsafe` discipline (§4), crate choices (§5), opaque handle pattern (§10), non-goals (§11). Rule deviations require `// JUSTIFICATION:` prose in the spec.
+
 These docs land in the post-v3.5.0 round per the approved roadmap revision plan. Until both exist, Phase III entry is blocked regardless of `/shared-core-confidence` score or user-facing gate status.
 
 ## 5. Out of scope for this rule

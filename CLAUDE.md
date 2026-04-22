@@ -24,7 +24,8 @@ taigikeyboard/
 │   ├── ai-friendly-code.md # Naming, comments, function design for AI readability
 │   ├── code-review-rules.md # Code review checklist (best practices, regression, scope)
 │   ├── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
-│   └── cross-platform-alignment.md # Refactor-freeze, divergence docs, Phase II end gate
+│   ├── cross-platform-alignment.md # Refactor-freeze, divergence docs, Phase II end gate
+│   └── rust-best-practices.md # Workspace layout, FFI safety, crate choices (active Phase IV-A+)
 ├── dictionary/        # Dictionary data files
 ├── scripts/           # Build and utility scripts
 └── references/        # External repos (gitignored — don't place tracked content here)
@@ -46,6 +47,7 @@ taigikeyboard/
 12. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
 13. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
 14. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
+15. **Rust Best Practices** — Before authoring Phase II.5 docs (`docs/engine/ffi-safety.md`, `docs/engine/rust-core-proto.md`), the Phase III D9 FFI POC, or any Phase IV-A+ Rust code, **must** read `rules/rust-best-practices.md` — workspace layout, FFI safety discipline, `thiserror`/`prost`/`fst`/`jni`/`swift-bridge` crate choices, opaque handle pattern, MSRV policy, non-goals
 
 ## Build & Test
 
