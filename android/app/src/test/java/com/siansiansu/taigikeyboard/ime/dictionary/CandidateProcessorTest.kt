@@ -35,7 +35,7 @@ class CandidateProcessorTest {
 
     /**
      * Tier-bitmask convenience for readability in tier-invariant tests.
-     * Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`.
+     * Bit positions mirror `dictionary/common/source_bits.py`.
      */
     private object TierBit {
         const val KAUTIAN = 1 shl 0

@@ -120,7 +120,12 @@ class DictionaryBinaryReader private constructor(
         private const val DEV_BIT = 1 shl 10
         private const val VARIANT_BIT = 1 shl 12
 
-        /** Bit-to-source mapping for bitmask → DictionarySource conversion */
+        /**
+         * CROSS-PLATFORM INVARIANT — these 12 bit positions mirror
+         * `dictionary/common/source_bits.py` (SOURCE_BITS + IS_VARIANT_BIT
+         * at bit 12) and iOS `DictionaryBinaryReader.swift` bitToSource.
+         * Drift causes silent filter + ranking divergence.
+         */
         private val BIT_TO_SOURCE =
             listOf(
                 0 to DictionarySource.KAUTIAN,

@@ -1,0 +1,34 @@
+source_name: stti
+category: official
+chinese_name: 學科術語辭典
+input_format: csv
+input_path: data/01_raw/stti.csv
+
+stages:
+  - extract
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  extract:
+    # Custom expansion: space-separated tokens may denote either variant
+    # readings of one phrase or word boundaries within one reading. Greedy-
+    # group TL tokens until cumulative syllables match hanzi char count.
+    mode: stti_variant_expand
+    hanzi_col: 臺灣台語詞彙
+    tl_col: 臺羅
+    dedup: true
+
+  cleanup: {}
+
+  variants:
+    mode: mark
+    variants_csv: ../../../supplementary/variants/data/variants.csv
+
+source_url: https://terms.naer.edu.tw/

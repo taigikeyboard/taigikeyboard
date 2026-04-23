@@ -1,0 +1,37 @@
+source_name: taihoa
+category: community
+chinese_name: 台華線頂對照典
+input_format: csv
+input_path: data/01_raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv
+
+stages:
+  - extract
+  - expand
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  extract:
+    column_mapping:
+      KipUnicode: tl
+      HanLoTaibunKip: hanzi
+    drop_empty_tl: true
+
+  cleanup:
+    check_roman_in_hanzi: true
+
+  source:
+    no_hanzi: drop
+
+  variants:
+    mode: mark
+    variants_csv: ../../../supplementary/variants/data/variants.csv
+
+license: CC-BY-SA-3.0-TW
+source_url: https://chhoe.taigi.info/

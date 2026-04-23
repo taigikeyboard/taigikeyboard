@@ -8,16 +8,16 @@
 from .taigi_bridge import convert_tl_to_poj, to_tone_number
 
 
-def normalize_roman(text: str, preserve_spaces: bool = False) -> str:
-    """
-    正規化羅馬字：全形空格處理、半形空格處理
+def normalize_roman_spacing(text: str, preserve_spaces: bool = False) -> str:
+    """Normalize whitespace inside a romanization string.
 
-    Args:
-        text: 羅馬字
-        preserve_spaces: True=保留空白（官方辭典），False=空白轉連字符
+    Full-width space (U+3000) and ASCII spaces are converted to hyphens
+    (or kept as spaces when `preserve_spaces=True`, for official dicts where
+    word boundaries matter).
 
-    Returns:
-        正規化後的羅馬字
+    NB: this is a subset of `common.cleanup.normalize_roman`, which also
+    applies lowercase + NFC-via-taigi-converter. Callers that need the full
+    normalisation should import the one from `common.cleanup`.
     """
     text = text.replace("\u3000", " " if preserve_spaces else "-")
     if not preserve_spaces:
@@ -101,8 +101,8 @@ def add_roman_columns(hanzi: str, tl: str, preserve_spaces: bool = False) -> dic
     poj = convert_tl_to_poj(tl)
 
     # 正規化
-    tl = normalize_roman(tl, preserve_spaces=preserve_spaces)
-    poj = normalize_roman(poj, preserve_spaces=preserve_spaces)
+    tl = normalize_roman_spacing(tl, preserve_spaces=preserve_spaces)
+    poj = normalize_roman_spacing(poj, preserve_spaces=preserve_spaces)
 
     # 產生數字聲調版本
     tl_num = to_numeric_tone(tl)

@@ -37,11 +37,10 @@ object CandidateProcessor {
 
     /**
      * Maps a dictionary-source bit to a `baseFreqScore` multiplier numerator.
-     * CROSS-PLATFORM INVARIANT — mirrors
-     * ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift:93.
-     * Bit positions match dictionary/build/10_create_dictionary_bin.py.
-     * First-match-wins: when multiple source bits are set, the tier earlier
-     * in SOURCE_TIERS wins. Drift causes silent ranking divergence.
+     * CROSS-PLATFORM INVARIANT — mirrors `dictionary/common/source_bits.py`
+     * (SOURCE_TIERS + TIER_DENOMINATOR) and
+     * `ios/.../CandidateProcessor.swift` SOURCE_TIERS. First-match-wins on
+     * overlapping bits. Drift causes silent ranking divergence.
      */
     private data class SourceTier(
         val bit: Int,

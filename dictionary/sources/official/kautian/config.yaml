@@ -1,0 +1,60 @@
+source_name: kautian
+category: official
+chinese_name: 教育部臺灣台語常用詞辭典
+input_format: ods
+input_path: data/01_raw/kautian.ods
+
+stages:
+  - extract
+  - select
+  - expand
+  - merge
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  select:
+    sheets:
+      詞目.csv:       { columns: [漢字, 羅馬字] }
+      又唸作.csv:     { columns: [漢字, 羅馬字] }
+      合音唸作.csv:   { columns: [漢字, 羅馬字] }
+      俗唸作.csv:     { columns: [漢字, 羅馬字] }
+      詞彙比較.csv:   { columns: [漢字, 羅馬字] }
+      名.csv:         { columns: [漢字, 羅馬字] }
+      姓.csv:         { columns: [漢字, 羅馬字] }
+      異用字.csv:     { columns: [漢字, 異用字] }
+    dialect_sheet: 語音差異.csv
+    dialect_columns:
+      - 鹿港偏泉腔
+      - 三峽偏泉腔
+      - 臺北偏泉腔
+      - 宜蘭偏漳腔
+      - 臺南混合腔
+      - 高雄混合腔
+      - 金門偏泉腔
+      - 馬公偏泉腔
+      - 新竹偏泉腔
+      - 臺中偏漳腔
+
+  merge:
+    exclude: [異用字.csv]
+    dedup_subset: [hanzi, tl]
+    dedup_keep: first
+    sort_by: [hanzi, tl]
+    sort_kind: mergesort
+
+  cleanup:
+    preserve_spaces: true
+
+  variants:
+    mode: generate
+    variants_csv: ../../../supplementary/variants/data/variants.csv
+
+license: CC-BY-ND-3.0-TW
+source_url: https://twblg.dict.edu.tw/

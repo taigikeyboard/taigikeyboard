@@ -1,0 +1,38 @@
+source_name: sitbut
+category: community
+chinese_name: 台灣植物名彙
+input_format: csv
+input_path: data/01_raw/ChhoeTaigi_TaioanSitbutMialui.csv
+
+stages:
+  - extract
+  - expand
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  extract:
+    # NOTE: sitbut uses HanLoTaibunPoj (not Kip like the other ChhoeTaigi dicts).
+    column_mapping:
+      KipUnicode: tl
+      HanLoTaibunPoj: hanzi
+    drop_empty_tl: true
+
+  cleanup:
+    check_roman_in_hanzi: true
+
+  source:
+    no_hanzi: drop
+
+  variants:
+    mode: mark
+    variants_csv: ../../../supplementary/variants/data/variants.csv
+
+license: CC-BY-SA-3.0-TW
+source_url: https://chhoe.taigi.info/

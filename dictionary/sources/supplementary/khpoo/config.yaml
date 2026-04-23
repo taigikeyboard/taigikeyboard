@@ -1,0 +1,31 @@
+source_name: khpoo
+category: supplementary
+chinese_name: 齒盤補充辭典
+input_format: csv_noheader
+input_path: data/01_raw/khpoo.csv
+
+stages:
+  - extract
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  extract:
+    names: [hanzi, tl]
+    drop_empty_tl: true
+    dedup: true
+
+  cleanup:
+    # Pre-processed by the contributor — skip validation/dedup, only
+    # normalize romanization (NFC + lowercase + space→hyphen).
+    minimal: true
+
+  variants:
+    mode: mark
+    variants_csv: ../../../supplementary/variants/data/variants.csv

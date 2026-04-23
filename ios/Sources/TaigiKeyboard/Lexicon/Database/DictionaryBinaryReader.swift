@@ -25,7 +25,10 @@ final class DictionaryBinaryReader: @unchecked Sendable {
     private static let headerSize = 16
     private static let supportedVersion: UInt32 = 1
 
-    /// Bitmask bit positions — must match build script
+    /// CROSS-PLATFORM INVARIANT — these 12 bit positions mirror
+    /// `dictionary/common/source_bits.py` (SOURCE_BITS + IS_VARIANT_BIT at
+    /// bit 12) and `android/.../dictionary/DictionaryBinaryReader.kt`
+    /// BIT_TO_SOURCE. Drift causes silent filter + ranking divergence.
     private static let bitToSource: [(bit: Int, source: DictionarySource)] = [
         (0, .kautian), (1, .taigitv), (2, .itaigi), (3, .sitbut),
         (4, .taihoa), (5, .taijit), (6, .kungge), (7, .stti),

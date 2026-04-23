@@ -1,23 +1,19 @@
 #!/bin/bash
 #
-# 辭典建置主腳本
+# 辭典建置主腳本 — 每次執行 = 完整建置 + deploy
 #
 # 執行順序：
-#   1. merge_csv            - 合併各詞庫 CSV
-#   2. create_app_db        - 建立 App 使用的 SQLite 資料庫
-#   3. generate_association - 產生 NextWord 詞彙關聯（加入 dictionary.db）
-#   4. create_trie_db       - 建立 Trie 建置用的 SQLite 資料庫
-#   5. create_trie          - 建立 MARISA-trie
-#   6. create_dictionary_bin - 建立 dictionary.bin (binary mmap)
-#   7. create_association_bin - 建立 association.bin (binary mmap)
-#   8. audit                - 產生審計報告
-#   9. deploy               - 複製到 Android/iOS 專案
+#   1. merge_csv                - 合併各詞庫 CSV
+#   2. create_app_db            - 建立 App 使用的 SQLite 資料庫
+#   3. generate_association     - 產生 NextWord 詞彙關聯（加入 dictionary.db）
+#   4. create_trie_db           - 建立 Trie 建置用的 SQLite 資料庫
+#   5. create_trie              - 建立 MARISA-trie
+#   6. create_dictionary_bin    - 建立 dictionary.bin (binary mmap)
+#   7. create_association_bin   - 建立 association.bin (binary mmap)
+#   8. audit                    - 產生審計報告
+#   9. deploy                   - 複製到 Android/iOS 專案
 #
-# 用法：
-#   ./build.sh          # 完整建置（不含 deploy）
-#   ./build.sh all      # 完整建置 + deploy
-#   ./build.sh deploy   # 只執行 deploy
-#   ./build.sh clean    # 清除 output/
+# output/ 由使用者手動清除；本腳本不提供 clean / deploy-only 子命令。
 
 set -e
 
@@ -25,139 +21,47 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build"
 OUTPUT_DIR="$SCRIPT_DIR/output"
 
-# 顏色
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-NC='\033[0m' # No Color
+# Build scripts import from `build.common` + `common.*`; run them as modules
+# from dictionary/ so the package imports resolve without sys.path hacks.
+export PYTHONPATH="$SCRIPT_DIR"
+cd "$SCRIPT_DIR"
 
-print_step() {
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+step() {
     echo ""
     echo -e "${GREEN}▶ $1${NC}"
     echo ""
 }
 
-print_error() {
-    echo -e "${RED}✗ $1${NC}"
-}
+step "Step 1/9: Merging dictionaries..."
+python3 -m build.merge_csv
 
-print_success() {
-    echo -e "${GREEN}✓ $1${NC}"
-}
+step "Step 2/9: Creating App SQLite database..."
+bash "$BUILD_DIR/create_app_db.sh"
 
-# 清除 output/
-do_clean() {
-    print_step "Cleaning output directory..."
-    rm -rf "$OUTPUT_DIR"/*
-    print_success "Cleaned: $OUTPUT_DIR"
-}
+step "Step 3/9: Generating NextWord associations..."
+python3 -m build.generate_association
 
-# Step 1: Merge CSV
-do_merge_csv() {
-    print_step "Step 1/9: Merging dictionaries..."
-    python3 "$BUILD_DIR/01_merge_csv.py"
-}
+step "Step 4/9: Creating Trie SQLite database..."
+bash "$BUILD_DIR/create_trie_db.sh"
 
-# Step 2: Create App DB
-do_create_app_db() {
-    print_step "Step 2/9: Creating App SQLite database..."
-    bash "$BUILD_DIR/02_create_app_db.sh"
-}
+step "Step 5/9: Creating MARISA-trie..."
+python3 -m build.create_trie
 
-# Step 3: Generate Association
-do_generate_association() {
-    print_step "Step 3/9: Generating NextWord associations..."
-    python3 "$BUILD_DIR/05_generate_association.py"
-}
+step "Step 6/9: Creating dictionary.bin..."
+python3 -m build.create_dictionary_bin --verify
 
-# Step 4: Create Trie DB
-do_create_trie_db() {
-    print_step "Step 4/9: Creating Trie SQLite database..."
-    bash "$BUILD_DIR/03_create_trie_db.sh"
-}
+step "Step 7/9: Creating association.bin..."
+python3 -m build.create_association_bin --verify
 
-# Step 5: Create Trie
-do_create_trie() {
-    print_step "Step 5/9: Creating MARISA-trie..."
-    python3 "$BUILD_DIR/04_create_trie.py"
-}
+step "Step 8/9: Running audit report..."
+python3 -m build.audit
 
-# Step 6: Create dictionary.bin
-do_create_dictionary_bin() {
-    print_step "Step 6/9: Creating dictionary.bin..."
-    python3 "$BUILD_DIR/10_create_dictionary_bin.py" --verify
-}
+step "Step 9/9: Deploying to Android/iOS..."
+bash "$BUILD_DIR/deploy.sh"
 
-# Step 7: Create association.bin
-do_create_association_bin() {
-    print_step "Step 7/9: Creating association.bin..."
-    python3 "$BUILD_DIR/11_create_association_bin.py" --verify
-}
-
-# Step 8: Audit
-do_audit() {
-    print_step "Step 8/9: Running audit report..."
-    python3 "$BUILD_DIR/07_audit.py"
-}
-
-# Step 9: Deploy
-do_deploy() {
-    print_step "Step 9/9: Deploying to Android/iOS..."
-    bash "$BUILD_DIR/06_deploy.sh"
-}
-
-# 完整建置（不含 deploy）
-do_build() {
-    do_merge_csv
-    do_create_app_db
-    do_generate_association
-    do_create_trie_db
-    do_create_trie
-    do_create_dictionary_bin
-    do_create_association_bin
-    do_audit
-}
-
-# 顯示用法
-show_usage() {
-    echo "用法: ./build.sh [command]"
-    echo ""
-    echo "Commands:"
-    echo "  (none)    完整建置（不含 deploy）"
-    echo "  all       完整建置 + deploy"
-    echo "  deploy    只執行 deploy"
-    echo "  clean     清除 output/"
-    echo ""
-}
-
-# Main
-case "${1:-}" in
-    "")
-        do_build
-        echo ""
-        print_success "Build complete!"
-        echo "  Output: $OUTPUT_DIR"
-        echo ""
-        echo "  Run './build.sh deploy' to copy to Android."
-        ;;
-    "all")
-        do_build
-        do_deploy
-        echo ""
-        print_success "Build and deploy complete!"
-        ;;
-    "deploy")
-        do_deploy
-        ;;
-    "clean")
-        do_clean
-        ;;
-    "help"|"-h"|"--help")
-        show_usage
-        ;;
-    *)
-        print_error "Unknown command: $1"
-        show_usage
-        exit 1
-        ;;
-esac
+echo ""
+echo -e "${GREEN}✓ Build and deploy complete!${NC}"
+echo "  Output: $OUTPUT_DIR"

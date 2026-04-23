@@ -1,0 +1,32 @@
+source_name: kungge
+category: official
+chinese_name: 台語工藝詞庫
+input_format: json
+input_path: data/01_raw/scrape-20251210.json
+
+stages:
+  - extract
+  - cleanup
+  - frequency
+  - poj
+  - numtone
+  - notone
+  - abbrev
+  - source
+  - variants
+
+stage_options:
+  extract:
+    hanzi_field: taiwaneseCharacters
+    tl_field: romanizationSystem
+    tl_is_array: false
+    dedup: true
+
+  cleanup:
+    preserve_spaces: true
+
+  variants:
+    mode: mark
+    variants_csv: ../../../supplementary/variants/data/variants.csv
+
+source_url: https://www.taiwaneseofficial.gov.tw/

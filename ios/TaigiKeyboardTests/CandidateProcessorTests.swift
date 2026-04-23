@@ -11,7 +11,7 @@ final class CandidateProcessorTests: XCTestCase {
     }
 
     /// Tier-bitmask convenience for readability in tier-invariant tests.
-    /// Bit positions mirror dictionary/build/10_create_dictionary_bin.py.
+    /// Bit positions mirror dictionary/common/source_bits.py.
     private enum TierBit {
         static let kautian: UInt16 = 1 << 0
         static let taigitv: UInt16 = 1 << 1
