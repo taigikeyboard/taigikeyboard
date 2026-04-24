@@ -5,7 +5,7 @@
 使用 taigi-converter (Node.js subprocess) 進行 TL↔POJ 轉換和聲調處理。
 """
 
-from .taigi_bridge import convert_tl_to_poj, to_tone_number
+from .taigi_bridge import convert_tl_to_poj, to_tone_number, to_tone_number_ascii
 
 
 def normalize_roman_spacing(text: str, preserve_spaces: bool = False) -> str:
@@ -36,8 +36,8 @@ def _to_numeric_tone_word(roman: str, ascii_only: bool = False) -> str:
     Returns:
         數字聲調版本（無連字符），如 "m7bat4" 或 "phau3"
     """
-    system = "poj" if ascii_only else "tl"
-    result = to_tone_number(roman, system=system).lower()
+    converter = to_tone_number_ascii if ascii_only else to_tone_number
+    result = converter(roman).lower()
 
     # 分割音節，檢查每個音節是否有聲調數字
     syllables = result.split("-")

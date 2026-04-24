@@ -119,9 +119,14 @@ class TaigiConverter:
         result = self._call("convert", text=text, source=source, target=target)
         return result.get("result") or text
 
-    def to_tone_number(self, text: str, system: str = "tl") -> str:
-        """Convert tone marks to tone numbers."""
-        result = self._call("toToneNumber", text=text, system=system)
+    def to_tone_number(self, text: str) -> str:
+        """Convert tone marks to tone numbers (preserves POJ non-ASCII o͘/ⁿ)."""
+        result = self._call("toToneNumber", text=text)
+        return result.get("result") or text
+
+    def to_tone_number_ascii(self, text: str) -> str:
+        """Convert tone marks to tone numbers with POJ ASCII folding (o͘→oo, ⁿ→nn)."""
+        result = self._call("toToneNumberAscii", text=text)
         return result.get("result") or text
 
     def close(self) -> None:
@@ -184,12 +189,33 @@ def convert_poj_to_tl_strict(poj: str) -> str:
     return _convert_strict(poj, "poj", "tl")
 
 
-def to_tone_number(text: str, system: str = "tl") -> str:
-    """Convert tone marks to tone numbers (e.g. 'hó-sè' → 'ho2-se3')."""
+def to_tone_number(text: str) -> str:
+    """Convert tone marks to tone numbers (e.g. 'hó-sè' → 'ho2-se3').
+
+    POJ non-ASCII characters (o͘, ⁿ) are preserved. For ASCII-folded POJ
+    output suitable for trie storage, use `to_tone_number_ascii` instead.
+    """
     try:
-        return _converter.to_tone_number(text, system)
+        return _converter.to_tone_number(text)
     except _BRIDGE_FAILURES as e:
-        _log_bridge_failure(f"toToneNumber({system})", str(e), _converter._tail_stderr())
+        _log_bridge_failure("toToneNumber", str(e), _converter._tail_stderr())
+        return text
+
+
+def to_tone_number_ascii(text: str) -> str:
+    """Convert POJ tone marks to tone numbers + fold non-ASCII to ASCII.
+
+    Applies the kesi `tsuan_sooji_tiau(ascii=True)` convention:
+      - o͘ → oo, O͘ → OO
+      - ⁿ → nn, ᴺ → NN
+
+    Used by the pipeline `numtone` stage to populate `poj_num` / `poj_notone`
+    columns that downstream trie lookup matches against ASCII user input.
+    """
+    try:
+        return _converter.to_tone_number_ascii(text)
+    except _BRIDGE_FAILURES as e:
+        _log_bridge_failure("toToneNumberAscii", str(e), _converter._tail_stderr())
         return text
 
 
