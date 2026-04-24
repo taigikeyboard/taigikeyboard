@@ -2,7 +2,7 @@ source_name: kungge
 category: official
 chinese_name: 台語工藝詞庫
 input_format: json
-input_path: data/01_raw/scrape-20251210.json
+input_path: data/raw/scrape-20251210.json
 
 stages:
   - extract

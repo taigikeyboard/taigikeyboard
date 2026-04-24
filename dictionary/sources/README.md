@@ -1,7 +1,7 @@
 # sources/
 
 Per-source dictionary inputs discovered by the pipeline. Each subdirectory
-contains one `config.yaml` + `data/01_raw/<original>` + a canonical
+contains one `config.yaml` + `data/raw/<original>` + a canonical
 `data/<key>.csv` produced by `./run.sh`.
 
 ## Sources

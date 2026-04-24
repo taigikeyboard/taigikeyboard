@@ -2,7 +2,7 @@ source_name: taihoa
 category: community
 chinese_name: 台華線頂對照典
 input_format: csv
-input_path: data/01_raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv
+input_path: data/raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv
 
 stages:
   - extract

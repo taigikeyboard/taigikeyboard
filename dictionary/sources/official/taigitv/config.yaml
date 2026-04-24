@@ -2,7 +2,7 @@ source_name: taigitv
 category: official
 chinese_name: 台語新詞辭庫
 input_format: json
-input_path: data/01_raw/scrape-20260319T144906Z.json
+input_path: data/raw/scrape-20260319T144906Z.json
 
 stages:
   - extract

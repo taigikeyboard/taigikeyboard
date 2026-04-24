@@ -26,11 +26,20 @@ def run(ctx: PipelineContext) -> None:
         ctx.set_df(df)
         return
 
-    df, _ = cleanup_dataframe(
+    df, dropped_df = cleanup_dataframe(
         df,
         logger=ctx.logger,
         max_syllables=opts.get("max_syllables", 4),
         check_roman_in_hanzi=opts.get("check_roman_in_hanzi", False),
         preserve_spaces=opts.get("preserve_spaces", False),
     )
+
+    drop_path = ctx.dict_dir / "data" / "cleaned" / "drop.csv"
+    if not dropped_df.empty:
+        drop_path.parent.mkdir(parents=True, exist_ok=True)
+        dropped_df.to_csv(drop_path, index=False)
+        ctx.logger.info(f"  Wrote {len(dropped_df)} dropped rows → {drop_path.relative_to(ctx.base_dir)}")
+    elif drop_path.exists():
+        drop_path.unlink()
+
     ctx.set_df(df)

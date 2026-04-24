@@ -119,7 +119,7 @@ def _selftest() -> int:
         category: official
         chinese_name: 教育部臺灣台語常用詞辭典
         input_format: ods
-        input_path: data/01_raw/kautian.ods
+        input_path: data/raw/kautian.ods
         stages: [extract, select, expand, cleanup, merge, frequency, poj, numtone, notone, abbrev, source, variants]
         stage_options:
           variants:

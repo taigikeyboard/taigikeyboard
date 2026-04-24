@@ -2,7 +2,7 @@ source_name: itaigi
 category: community
 chinese_name: iTaigi 華台對照典
 input_format: csv
-input_path: data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv
+input_path: data/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv
 
 stages:
   - extract

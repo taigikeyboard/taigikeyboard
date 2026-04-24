@@ -10,7 +10,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: 中華民國教育部 (MoE Taiwan)
 - **Origin URL**: <https://sutian.moe.edu.tw/>
 - **Format**: ODS (OpenDocument Spreadsheet, 18 sheets)
-- **Captured**: `data/01_raw/kautian.ods` (file committed 2026-04-23; actual
+- **Captured**: `data/raw/kautian.ods` (file committed 2026-04-23; actual
   MoE release date TBD)
 - **Licence**: 創用 CC 姓名標示-非商業性 4.0 國際 / CC BY-NC 4.0 (per sutian.moe.edu.tw)
 - **Notes**: Multi-sheet; pipeline `select`/`expand`/`merge` stages
@@ -20,7 +20,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: 公共電視文化事業基金會 / 公視台語台 (PTS Taigi)
 - **Origin URL**: TBD
 - **Format**: JSON (scraped; filename encodes capture timestamp)
-- **Captured**: `data/01_raw/scrape-20260319T144906Z.json` → 2026-03-19 14:49 UTC
+- **Captured**: `data/raw/scrape-20260319T144906Z.json` → 2026-03-19 14:49 UTC
 - **Licence**: TBD (public-service broadcast content; consult 公視 usage terms)
 - **Notes**: Supplement dictionary for neologisms; ~2.1k rows.
 
@@ -28,7 +28,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: ChhoeTaigi 找台語 project
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV (ChhoeTaigi canonical export)
-- **Captured**: `data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv` — capture date TBD
+- **Captured**: `data/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv` — capture date TBD
 - **Licence**: CC BY-SA 4.0 (per ChhoeTaigi)
 - **Notes**: Original source iTaigi (<https://itaigi.tw>); ~15k rows.
 
@@ -36,7 +36,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: ChhoeTaigi
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV
-- **Captured**: `data/01_raw/ChhoeTaigi_TaioanSitbutMialui.csv` — capture date TBD
+- **Captured**: `data/raw/ChhoeTaigi_TaioanSitbutMialui.csv` — capture date TBD
 - **Licence**: CC BY-SA 4.0 (per ChhoeTaigi)
 - **Notes**: Plant-name vocabulary; ~1.3k rows.
 
@@ -44,7 +44,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: ChhoeTaigi
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV
-- **Captured**: `data/01_raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv` — capture date TBD
+- **Captured**: `data/raw/ChhoeTaigi_TaihoaSoanntengTuichiautian.csv` — capture date TBD
 - **Licence**: CC BY-SA 4.0 (per ChhoeTaigi)
 - **Notes**: Broadest community Taigi↔Mandarin crossreference; ~57k rows.
 
@@ -52,7 +52,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: ChhoeTaigi (digitisation of 小川尚義《台日大辭典》 1931–32)
 - **Origin URL**: <https://github.com/ChhoeTaigi/ChhoeTaigiDatabase>
 - **Format**: CSV
-- **Captured**: `data/01_raw/ChhoeTaigi_TaijitToaSutian.csv` — capture date TBD
+- **Captured**: `data/raw/ChhoeTaigi_TaijitToaSutian.csv` — capture date TBD
 - **Licence**: public-domain primary source, digitisation terms CC BY-SA 4.0 (per ChhoeTaigi)
 - **Notes**: Largest community source (~64k rows); historic Taigi-Japanese dictionary.
 
@@ -60,7 +60,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: 中華民國教育部 (MoE Taiwan)
 - **Origin URL**: TBD
 - **Format**: JSON (scraped; filename encodes capture date)
-- **Captured**: `data/01_raw/scrape-20251210.json` → 2025-12-10
+- **Captured**: `data/raw/scrape-20251210.json` → 2025-12-10
 - **Licence**: TBD (MoE-derived)
 - **Notes**: Specialised craft/industry terminology; ~1k rows.
 
@@ -68,7 +68,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: 中華民國教育部 / 國家教育研究院 (National Academy for Educational Research)
 - **Origin URL**: TBD
 - **Format**: CSV
-- **Captured**: `data/01_raw/stti.csv` — capture date TBD
+- **Captured**: `data/raw/stti.csv` — capture date TBD
 - **Licence**: TBD (government-released; likely 開放政府資料授權條款 1.0 / Open Government Data Licence)
 - **Notes**: Academic-discipline terminology; ~4.9k rows. Extract stage
   runs a bespoke `expand_variant_readings` (see `common/stages/extract.py`).
@@ -77,7 +77,7 @@ current-at-release values when cutting a dictionary refresh.
 - **Publisher**: TBD (supplementary set maintained for keyboard coverage)
 - **Origin URL**: TBD
 - **Format**: CSV (no header)
-- **Captured**: `data/01_raw/khpoo.csv` — capture date TBD
+- **Captured**: `data/raw/khpoo.csv` — capture date TBD
 - **Licence**: TBD
 - **Notes**: Pre-processed data — pipeline uses `cleanup.minimal: true`
   (normalize_roman only). ~4.2k rows.
@@ -128,7 +128,7 @@ current-at-release values when cutting a dictionary refresh.
 
 When refreshing a source:
 
-1. Replace `data/01_raw/<file>` with the new capture. Include the date in
+1. Replace `data/raw/<file>` with the new capture. Include the date in
    the filename if the publisher provides one (`scrape-YYYYMMDD*.json`).
 2. Update `Captured:` above with the new date.
 3. Re-run `./run.sh` (regenerates every source's `data/<key>.csv`; the

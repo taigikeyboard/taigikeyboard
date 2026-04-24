@@ -2,7 +2,7 @@ source_name: khpoo
 category: supplementary
 chinese_name: 齒盤補充辭典
 input_format: csv_noheader
-input_path: data/01_raw/khpoo.csv
+input_path: data/raw/khpoo.csv
 
 stages:
   - extract

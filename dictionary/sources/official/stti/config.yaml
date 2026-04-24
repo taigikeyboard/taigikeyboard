@@ -2,7 +2,7 @@ source_name: stti
 category: official
 chinese_name: 學科術語辭典
 input_format: csv
-input_path: data/01_raw/stti.csv
+input_path: data/raw/stti.csv
 
 stages:
   - extract

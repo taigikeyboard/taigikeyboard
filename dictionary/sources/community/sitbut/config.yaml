@@ -2,7 +2,7 @@ source_name: sitbut
 category: community
 chinese_name: 台灣植物名彙
 input_format: csv
-input_path: data/01_raw/ChhoeTaigi_TaioanSitbutMialui.csv
+input_path: data/raw/ChhoeTaigi_TaioanSitbutMialui.csv
 
 stages:
   - extract

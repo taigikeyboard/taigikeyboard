@@ -2,7 +2,7 @@
 
 Specialised craft / industry terminology (~1k rows, source bit 6),
 released by the MoE and scraped as JSON. The filename
-`data/01_raw/scrape-20251210.json` records the capture date (2025-12-10).
+`data/raw/scrape-20251210.json` records the capture date (2025-12-10).
 
 Pipeline is the same shape as `taigitv`: `extract → cleanup → frequency
 → poj → numtone → notone → abbrev → source → variants`. Small row count
