@@ -233,6 +233,24 @@ final class NextWordEngineTests: XCTestCase {
         XCTAssertEqual(result.first?.hanzi, "好")
     }
 
+    func testFilterPredictions_pojMode_convertsTlToPoj() {
+        // Guards the upstream invariant the commit-path fix in
+        // `ActionHandler+Suggestions.parseRomanAndHanzi` now relies on:
+        // `EnginePrediction.text` is the mode-correct display string (POJ in
+        // POJ mode). A regression here would silently revive the "UI shows
+        // POJ but insertion emits TL" bug.
+        let raw = [
+            RawNextWordPrediction(hanzi: "酌", tl: "tsiok", score: 10),
+        ]
+        let result = NextWordEngine.filterPredictions(
+            raw,
+            settings: settings(inputMode: .poj, isTranslateSwapped: false),
+        )
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.text, "chiok")
+        XCTAssertEqual(result.first?.tl, "tsiok")
+    }
+
     func testFilterPredictions_hanziMode_keepsEmptyTl() {
         let raw = [
             RawNextWordPrediction(hanzi: "好", tl: "hó", score: 10),
@@ -257,6 +275,35 @@ final class NextWordEngineTests: XCTestCase {
 
         let expected = NextWordAssociationPair(prev: "早", prevTl: "tsá", next: "安", nextTl: "an")
         XCTAssertTrue(outcome.effects.contains(.recordAssociation(expected)))
+    }
+
+    func testWordSelected_emptyRoman_recordsEmptyAndQueriesEmpty() {
+        // Guards the association-path fork in
+        // `ActionHandler+Suggestions.handleSuggestionSelection`: hanzi-only
+        // next-word predictions pass `associationRoman = ""` (the
+        // `additionalInfo["tl"]` sidechannel is empty). `pojToTL("") == ""`,
+        // so `nextTl`, `lastSelectedRoman`, and the follow-up
+        // `queryPredictions.roman` must all remain `""`.
+        let state = stateWithLastSelection(word: "早", roman: "tsá", timeMs: 0)
+        let outcome = NextWordEngine.decide(
+            intent: .wordSelected(text: "安", roman: "", requireRomanMode: false, triggerPrediction: true),
+            state: state,
+            input: input(nowMs: 5000),
+        )
+
+        let expectedPair = NextWordAssociationPair(prev: "早", prevTl: "tsá", next: "安", nextTl: "")
+        XCTAssertTrue(outcome.effects.contains(.recordAssociation(expectedPair)))
+        XCTAssertEqual(outcome.newState.lastSelectedRoman, "")
+
+        var sawQuery = false
+        for effect in outcome.effects {
+            if case let .queryPredictions(word: word, roman: roman, generation: _) = effect {
+                XCTAssertEqual(word, "安")
+                XCTAssertEqual(roman, "")
+                sawQuery = true
+            }
+        }
+        XCTAssertTrue(sawQuery, "queryPredictions effect missing")
     }
 
     func testWordSelected_requireRomanModeInSwappedMode_noOps() {

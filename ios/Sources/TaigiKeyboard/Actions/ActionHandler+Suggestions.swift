@@ -43,7 +43,14 @@ extension ActionHandler {
                 }
             }
 
-            nextWordController.process(text: displayText, roman: roman)
+            // Fork: `roman` is the commit string (may be POJ/Hanji); the engine
+            // expects raw TL (it calls `pojToTL` on it). Next-word candidates
+            // carry raw TL on the `additionalInfo["tl"]` sidechannel — use it
+            // here to preserve association-recording semantics.
+            let associationRoman = isNextWordPrediction
+                ? (suggestion.additionalInfo["tl"] ?? "")
+                : roman
+            nextWordController.process(text: displayText, roman: associationRoman)
         } else {
             keyboardContext.textDocumentProxy.insertText(suggestion.text)
         }
@@ -58,11 +65,28 @@ extension ActionHandler {
         effectiveSwapped: Bool,
     ) -> (roman: String, hanzi: String?) {
         if isNextWord {
-            (suggestion.additionalInfo["tl"] ?? suggestion.text, suggestion.additionalInfo["hanzi"])
+            // CROSS-PLATFORM INVARIANT: next-word commit string == UI display string.
+            // `suggestion.text` is mode-shaped (POJ in POJ mode, TL otherwise) by
+            // `NextWordEngine.filterPredictions`, but `CandidateCellHelper.suggestionToHandle`
+            // pre-swaps text↔subtitle in swapped/TPS modes before this handler runs —
+            // so we must mirror that swap to recover the mode-shaped roman.
+            // `additionalInfo["hanzi"]` carries hanzi even for hanzi-only predictions
+            // (Case B) where `subtitle == nil`. The raw-TL sidechannel on
+            // `additionalInfo["tl"]` is consumed separately at the association call
+            // site (see `handleSuggestionSelection`).
+            // Mirror: android/.../smartbar/NextWordHandler.kt:355-363 (TaigiWord.roman).
+            // Swapped/TPS Case B (hanzi-only, no roman): `subtitle == nil` after
+            // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
+            // back to `""` so bracket-mode output stays `"漢字 ()"` — matches the
+            // pre-fix sidechannel behavior, avoids Hanji duplication.
+            let roman = effectiveSwapped
+                ? (suggestion.subtitle ?? "")
+                : suggestion.text
+            return (roman, suggestion.additionalInfo["hanzi"])
         } else if effectiveSwapped {
-            (suggestion.subtitle ?? suggestion.text, suggestion.text)
+            return (suggestion.subtitle ?? suggestion.text, suggestion.text)
         } else {
-            (suggestion.text, suggestion.subtitle)
+            return (suggestion.text, suggestion.subtitle)
         }
     }
 

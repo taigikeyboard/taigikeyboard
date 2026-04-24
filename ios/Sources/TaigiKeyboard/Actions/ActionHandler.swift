@@ -170,6 +170,10 @@ extension ActionHandler: AutocompleteContextUpdater {
                 additionalInfo: [
                     "isNextWord": "true",
                     "hanzi": prediction.hanzi,
+                    // Raw TL sidechannel — NOT the commit string. Consumed only
+                    // by the association-recording fork in
+                    // `handleSuggestionSelection` (engine's `pojToTL` needs raw
+                    // roman, not the mode-shaped display `text`).
                     "tl": prediction.tl,
                     "displayText": prediction.hanzi,
                 ],
