@@ -80,21 +80,38 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// 自動完成核心方法
     /// 根據輸入文字搜尋台語候選詞
     /// 第 0 個候選詞永遠是當前的組字文字，第 1 個位置開始才是建議的候選詞
+    ///
+    /// Stale-result guard: KeyboardKit's `autocomplete(_:updating:)` spawns an
+    /// untracked `Task` that cannot be cancelled by the subclass. After each
+    /// `await`, re-check the active composing context against the value
+    /// captured at entry; if it changed (buffer cleared by backspace or new
+    /// keystroke arrived), return `isOutdated: true` so KeyboardKit ignores
+    /// this stale result instead of overwriting the cleared context.
     func autocomplete(_ text: String) async throws -> Autocomplete.Result {
         guard !text.isEmpty, let composing = activeComposingContext() else {
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
 
+        let capturedRawInput = composing.rawInput
         logger.debug("[AUTOCOMPLETE] rawInput='\(composing.rawInput)' display='\(composing.displayText)'")
 
         do {
             let classification = AutocompleteInputClassifier.classify(rawInput: composing.rawInput)
             let words = try await searchLexicon(using: classification, rawInput: composing.rawInput)
+            guard activeComposingContext()?.rawInput == capturedRawInput else {
+                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
+            }
             let boosted = await applyContextBoost(words: words)
+            guard activeComposingContext()?.rawInput == capturedRawInput else {
+                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
+            }
             let suggestions = buildSuggestions(from: boosted, composingText: composing.displayText)
             return Autocomplete.Result(inputText: text, suggestions: suggestions)
         } catch {
             logger.error("[AUTOCOMPLETE] failed for text '\(text)': \(error.localizedDescription)")
+            guard activeComposingContext()?.rawInput == capturedRawInput else {
+                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
+            }
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
     }

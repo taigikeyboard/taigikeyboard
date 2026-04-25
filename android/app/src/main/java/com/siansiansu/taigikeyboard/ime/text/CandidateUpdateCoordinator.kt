@@ -125,6 +125,11 @@ class CandidateUpdateCoordinator(
                 smartbarManager.clearCandidates()
                 return
             }
+        if (rawInput.isEmpty()) {
+            if (BuildConfig.DEBUG) Log.d(TAG, "[CANDIDATES] rawInput=empty, clearCandidates")
+            smartbarManager.clearCandidates()
+            return
+        }
         val displayText = manager.getComposingText() ?: rawInput
 
         if (BuildConfig.DEBUG) {
@@ -173,6 +178,18 @@ class CandidateUpdateCoordinator(
 
         val uiStart = System.currentTimeMillis()
         withContext(Dispatchers.Main) {
+            // Stale-result guard: composing state may have changed during the
+            // search await (backspace cleared the buffer, or a new keystroke
+            // arrived). Drop this result rather than overwrite the now-current
+            // candidate list with stale data.
+            if (!isActive) return@withContext
+            val currentRaw = getComposingManager()?.getRawInput()
+            if (currentRaw != rawInput) {
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[CANDIDATES] stale result dropped (was='$rawInput', now='$currentRaw')")
+                }
+                return@withContext
+            }
             smartbarManager.updateCandidates(suggestions)
             if (BuildConfig.DEBUG) Log.d("PERF", "[4] updateCandidates UI: ${System.currentTimeMillis() - uiStart}ms")
         }
