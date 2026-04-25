@@ -190,20 +190,35 @@ class KeyView(
                 }
         setPadding(0, 0, 0, 0)
 
-        // 根據按鍵類型設定對應的背景 selector
+        applyAppearance()
+
+        // 初始化時更新按鍵內容
+        updateKeyContent()
+    }
+
+    /**
+     * Apply background drawable, corner radius, border, and color tint from current prefs.
+     * Safe to invoke repeatedly — also called from KeyboardView.applyAppearanceChanges()
+     * when appearance settings are dragged live in the Tab2 preview.
+     */
+    internal fun applyAppearance() {
         val isFunctionKey =
             data.type == KeyType.MODIFIER || data.type == KeyType.ENTER_EDITING ||
                 data.code == KeyCode.DELETE || data.code == KeyCode.SHIFT ||
                 data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.VIEW_NUMERIC_ADVANCED ||
                 data.code == KeyCode.VIEW_SYMBOLS || data.code == KeyCode.VIEW_SYMBOLS2 ||
                 data.code == KeyCode.VIEW_CHARACTERS
-        background =
-            when {
-                data.code == KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
-                isFunctionKey -> getDrawable(context, R.drawable.key_function_background_selector)
-                else -> getDrawable(context, R.drawable.key_background_selector)
-            }
-        // Apply corner radius and border width from appearance settings to background drawable
+        // Inflate the background selector once per key — drawable type is static for a key's
+        // lifetime, so re-inflating on every live appearance change wastes ~30 keys × ~30Hz
+        // allocations during slider drag.
+        if (background !is android.graphics.drawable.StateListDrawable) {
+            background =
+                when {
+                    data.code == KeyCode.ENTER -> getDrawable(context, R.drawable.key_enter_background_selector)
+                    isFunctionKey -> getDrawable(context, R.drawable.key_function_background_selector)
+                    else -> getDrawable(context, R.drawable.key_background_selector)
+                }
+        }
         val radiusPx = keyboardView.prefs.keyCornerRadius * resources.displayMetrics.density
         val borderWidthPx = (keyboardView.prefs.keyBorderWidth * resources.displayMetrics.density).toInt()
         val borderColor = getColorFromAttr(context, R.attr.key_fgColor)
@@ -215,32 +230,31 @@ class KeyView(
                 val item = bg.getStateDrawable(i)
                 if (item is android.graphics.drawable.GradientDrawable) {
                     item.cornerRadius = radiusPx
-                    if (borderWidthPx > 0) {
-                        item.setStroke(borderWidthPx, borderColor)
-                    }
+                    // Always re-apply stroke so dragging border-width to 0 visually clears it
+                    item.setStroke(borderWidthPx, borderColor)
                 }
             }
         }
         elevation = 0.0f
 
-        // Apply custom fill color if set in appearance settings
         val colors = keyboardView.getColorSettings()
-        val isSpecialKey =
-            isFunctionKey ||
-                data.code == KeyCode.ENTER
+        val isSpecialKey = isFunctionKey || data.code == KeyCode.ENTER
         val customFill = if (isSpecialKey) colors.specialKeyFillColor else colors.normalKeyFillColor
-        if (customFill != null) {
-            backgroundTintList =
+        // Always assign (null clears prior tint) so reset-to-default takes effect live
+        backgroundTintList =
+            customFill?.let {
                 android.content.res.ColorStateList
-                    .valueOf(customFill)
-        }
+                    .valueOf(it)
+            }
 
         if (!keyboardView.isPreviewMode) {
             updateKeyPressedBackground()
         }
 
-        // 初始化時更新按鍵內容
-        updateKeyContent()
+        // Refresh outline provider so cornerRadius changes apply without waiting for onSizeChanged
+        if (width > 0 && height > 0) {
+            outlineProvider = KeyViewOutline(width, height, keyboardView.prefs.keyCornerRadius)
+        }
     }
 
     /**

@@ -72,9 +72,13 @@ object Tab1Texts {
         listOf(
             VersionEntry(
                 "3.5.0",
-                "2026/04/16",
+                "2026/04/25",
                 listOf(
                     "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+                    "Restored POJ candidates for words containing o͘ / ⁿ — about 21% of romanization queries had been missing matches.",
+                    "Fixed candidates occasionally remaining on screen after backspacing.",
+                    "Fixed emoji key not committing the active candidate before inserting the emoji.",
+                    "Updated dictionary data.",
                 ),
             ),
             VersionEntry(

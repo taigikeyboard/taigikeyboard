@@ -55,8 +55,14 @@ enum HomeTexts {
     static let versionHistory = "版本紀錄"
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
-        ("3.5.0", "2026/04/16", [
+        ("3.5.0", "2026/04/25", [
             "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+            "Restored POJ candidates for words containing o͘ / ⁿ — about 21% of romanization queries had been missing matches.",
+            "Fixed next-word candidate inserting raw TL form instead of POJ when typing in POJ mode.",
+            "Fixed candidates occasionally remaining on screen after backspacing.",
+            "Fixed emoji key not committing the active candidate before inserting the emoji.",
+            "Fixed icon rendering on devices configured for non-Latin locales.",
+            "Updated dictionary data.",
         ]),
         ("3.4.9", "2026/04/12", [
             "Reduced iOS app size by 73% (48 MB → 13 MB).",

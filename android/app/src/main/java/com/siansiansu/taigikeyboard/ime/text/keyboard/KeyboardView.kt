@@ -412,90 +412,69 @@ class KeyboardView : LinearLayout {
     }
 
     /**
-     * Queues a layout request for all keys.
+     * Re-applies appearance settings (background drawable, corner radius, border, color tint,
+     * font typeface) to every key without recreating the view hierarchy. Invoked by the Tab2
+     * preview's AndroidView update lambda when the user drags appearance sliders or picks a color.
      */
-    fun requestLayoutAllKeys() {
+    fun applyAppearanceChanges() {
+        // Force re-parse on next access so live colorSettings JSON / fontType take effect
+        cachedColorSettingsJson = ""
+        cachedFontType = ""
+
+        applyKeyboardBackgroundTint()
+        forEachKey { it.applyAppearance() }
+        requestLayout()
+        invalidate()
+    }
+
+    private inline fun forEachKey(action: (KeyView) -> Unit) {
         for (row in children) {
-            if (row is FlexboxLayout) {
-                for (keyView in row.children) {
-                    if (keyView is KeyView) {
-                        keyView.requestLayout()
-                    }
-                }
+            if (row !is FlexboxLayout) continue
+            for (child in row.children) {
+                if (child is KeyView) action(child)
             }
         }
     }
 
+    private fun applyKeyboardBackgroundTint() {
+        colorDrawable.color =
+            getColorSettings().backgroundColor ?: getColorFromAttr(context, R.attr.keyboard_bgColor)
+    }
+
+    /**
+     * Queues a layout request for all keys.
+     */
+    fun requestLayoutAllKeys() = forEachKey { it.requestLayout() }
+
     /**
      * Queues a redraw for all keys.
      */
-    fun invalidateAllKeys() {
-        for (row in children) {
-            if (row is FlexboxLayout) {
-                for (keyView in row.children) {
-                    if (keyView is KeyView) {
-                        keyView.invalidate()
-                    }
-                }
-            }
-        }
-    }
+    fun invalidateAllKeys() = forEachKey { it.invalidate() }
 
     /**
      * 只重繪符合指定 keyCode 的按鍵
      * 用於避免不必要的全鍵盤刷新
      */
-    fun invalidateKeysByCode(vararg keyCodes: Int) {
-        for (row in children) {
-            if (row is FlexboxLayout) {
-                for (keyView in row.children) {
-                    if (keyView is KeyView && keyView.data.code in keyCodes) {
-                        keyView.invalidate()
-                    }
-                }
-            }
-        }
-    }
+    fun invalidateKeysByCode(vararg keyCodes: Int) = forEachKey { if (it.data.code in keyCodes) it.invalidate() }
 
     /**
      * 重繪字母鍵（CHARACTER 類型）和 Shift 鍵
      * 用於 Shift 狀態改變時的高效刷新
      */
-    fun invalidateCharacterKeys() {
-        for (row in children) {
-            if (row is FlexboxLayout) {
-                for (keyView in row.children) {
-                    if (keyView is KeyView) {
-                        val isCharKey = keyView.data.type == com.siansiansu.taigikeyboard.ime.text.key.KeyType.CHARACTER
-                        val isShiftKey = keyView.data.code == com.siansiansu.taigikeyboard.ime.text.key.KeyCode.SHIFT
-                        if (isCharKey || isShiftKey) {
-                            keyView.invalidate()
-                        }
-                    }
-                }
-            }
+    fun invalidateCharacterKeys() =
+        forEachKey { keyView ->
+            val isCharKey = keyView.data.type == com.siansiansu.taigikeyboard.ime.text.key.KeyType.CHARACTER
+            val isShiftKey = keyView.data.code == com.siansiansu.taigikeyboard.ime.text.key.KeyCode.SHIFT
+            if (isCharKey || isShiftKey) keyView.invalidate()
         }
-    }
 
     /**
      * Syncs the current key variation with all keys and updates their visibility.
      */
-    fun updateVisibility() {
-        for (row in children) {
-            if (row is FlexboxLayout) {
-                for (keyView in row.children) {
-                    if (keyView is KeyView) {
-                        keyView.updateVisibility()
-                    }
-                }
-            }
-        }
-    }
+    fun updateVisibility() = forEachKey { it.updateVisibility() }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-        val customBgColor = getColorSettings().backgroundColor
-        colorDrawable.color = customBgColor ?: getColorFromAttr(context, R.attr.keyboard_bgColor)
+        applyKeyboardBackgroundTint()
     }
 }

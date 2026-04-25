@@ -1,6 +1,5 @@
 # Changelog
 
-- [v3.5.1](changelog/v3.5.1.md)
 - [v3.5.0](changelog/v3.5.0.md)
 - [v3.4.9](changelog/v3.4.9.md)
 - [v3.4.8](changelog/v3.4.8.md)

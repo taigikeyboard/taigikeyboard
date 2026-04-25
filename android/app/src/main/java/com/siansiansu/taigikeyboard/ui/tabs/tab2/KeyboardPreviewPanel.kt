@@ -45,10 +45,13 @@ import com.siansiansu.taigikeyboard.util.getColorFromAttr
 @Composable
 fun KeyboardPreviewPanel(
     prefs: PrefHelper,
-    previewKey: Int,
     layoutType: String,
     colorSettings: KeyboardColorSettings,
     candidateTextSizeScale: Float,
+    keyHeightScale: Float,
+    keyFontSizeScale: Float,
+    keyCornerRadius: Float,
+    keyBorderWidth: Float,
     fontType: String,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -58,9 +61,13 @@ fun KeyboardPreviewPanel(
             fontType = fontType,
         )
 
-        // key() forces full AndroidView recreation when previewKey or layoutType changes,
-        // recomputing the layout from current prefs (matching iOS KeyboardPreviewPanel behavior)
-        key(previewKey, layoutType) {
+        // Re-key on layoutType (structural) and keyHeightScale (changes the AndroidView's measured
+        // height — Compose's AndroidView wrapper feeds the hosted KeyboardView an EXACTLY height
+        // spec derived from finite parent constraints, so an in-place requestLayout cannot grow
+        // or shrink the view. For all other appearance edits (color, font, cornerRadius,
+        // borderWidth, candidate size) the cheap update-lambda path applies styling without
+        // rebuilding the view hierarchy.
+        key(layoutType, keyHeightScale) {
             AndroidView(
                 factory = { ctx ->
                     val themedContext = ContextThemeWrapper(ctx, R.style.KeyboardTheme)
@@ -76,6 +83,18 @@ fun KeyboardPreviewPanel(
                         this.computedLayout = layout
                         updateVisibility()
                     }
+                },
+                update = { view ->
+                    // Touch each scalar so Compose registers snapshot reads here; live drag of
+                    // any appearance slider/color picker then re-fires this lambda and re-applies
+                    // styling without rebuilding the view hierarchy.
+                    colorSettings
+                    candidateTextSizeScale
+                    keyFontSizeScale
+                    keyCornerRadius
+                    keyBorderWidth
+                    fontType
+                    view.applyAppearanceChanges()
                 },
                 modifier = Modifier.fillMaxWidth(),
             )

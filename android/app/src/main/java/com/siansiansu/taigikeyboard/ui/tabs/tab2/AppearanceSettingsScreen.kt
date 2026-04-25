@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -68,9 +67,6 @@ fun AppearanceSettingsScreen(
     }
     var colorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
 
-    // Increment to force KeyboardView recreation in preview
-    var previewKey by remember { mutableIntStateOf(0) }
-
     val currentLayoutType by prefs
         .observeKeyboardLayoutType()
         .collectAsState(initial = prefs.keyboardLayoutType)
@@ -80,7 +76,6 @@ fun AppearanceSettingsScreen(
         prefs.colorSettings = updated.toJson()
     }
     val onPickerOpen: (ColorPickerTarget) -> Unit = { colorPickerTarget = it }
-    val onPreviewRefresh: () -> Unit = { previewKey++ }
 
     if (showFontPicker) {
         FontPickerContent(
@@ -176,7 +171,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(backgroundColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
@@ -186,10 +180,11 @@ fun AppearanceSettingsScreen(
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
                                 defaultValue = PrefHelper.DEFAULT_KEY_HEIGHT_SCALE,
-                                onValueChange = { keyHeight = it },
-                                onValueChangeFinished = {
-                                    prefs.keyHeightScale = keyHeight
-                                    previewKey++
+                                onValueChange = {
+                                    if (it != keyHeight) {
+                                        keyHeight = it
+                                        prefs.keyHeightScale = it
+                                    }
                                 },
                             )
                         }
@@ -207,7 +202,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(keyTextColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
@@ -217,7 +211,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(normalKeyFillColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
@@ -227,7 +220,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(specialKeyFillColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
@@ -237,10 +229,11 @@ fun AppearanceSettingsScreen(
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
                                 defaultValue = PrefHelper.DEFAULT_KEY_FONT_SIZE_SCALE,
-                                onValueChange = { keyFontSize = it },
-                                onValueChangeFinished = {
-                                    prefs.keyFontSizeScale = keyFontSize
-                                    previewKey++
+                                onValueChange = {
+                                    if (it != keyFontSize) {
+                                        keyFontSize = it
+                                        prefs.keyFontSizeScale = it
+                                    }
                                 },
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
@@ -251,10 +244,11 @@ fun AppearanceSettingsScreen(
                                 valueTo = 15f,
                                 stepSize = 0.5f,
                                 defaultValue = PrefHelper.DEFAULT_KEY_CORNER_RADIUS,
-                                onValueChange = { cornerRadius = it },
-                                onValueChangeFinished = {
-                                    prefs.keyCornerRadius = cornerRadius
-                                    previewKey++
+                                onValueChange = {
+                                    if (it != cornerRadius) {
+                                        cornerRadius = it
+                                        prefs.keyCornerRadius = it
+                                    }
                                 },
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
@@ -265,10 +259,11 @@ fun AppearanceSettingsScreen(
                                 valueTo = 3f,
                                 stepSize = 0.5f,
                                 defaultValue = PrefHelper.DEFAULT_KEY_BORDER_WIDTH,
-                                onValueChange = { borderWidth = it },
-                                onValueChangeFinished = {
-                                    prefs.keyBorderWidth = borderWidth
-                                    previewKey++
+                                onValueChange = {
+                                    if (it != borderWidth) {
+                                        borderWidth = it
+                                        prefs.keyBorderWidth = it
+                                    }
                                 },
                             )
                         }
@@ -286,7 +281,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(candidateTextColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             ColorSettingRow(
@@ -296,7 +290,6 @@ fun AppearanceSettingsScreen(
                                 onUpdate = { s, c -> s.copy(candidateBackgroundColor = c) },
                                 onColorSettingsChanged = onColorSettingsChanged,
                                 onPickerOpen = onPickerOpen,
-                                onPreviewRefresh = onPreviewRefresh,
                             )
                             SettingsDivider(Modifier.padding(vertical = 8.dp))
                             SliderRow(
@@ -306,10 +299,11 @@ fun AppearanceSettingsScreen(
                                 valueTo = 1.15f,
                                 stepSize = 0.01f,
                                 defaultValue = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE,
-                                onValueChange = { candidateTextSize = it },
-                                onValueChangeFinished = {
-                                    prefs.candidateTextSizeScale = candidateTextSize
-                                    previewKey++
+                                onValueChange = {
+                                    if (it != candidateTextSize) {
+                                        candidateTextSize = it
+                                        prefs.candidateTextSizeScale = it
+                                    }
                                 },
                             )
                         }
@@ -335,7 +329,6 @@ fun AppearanceSettingsScreen(
                                 candidateTextSize = PrefHelper.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
                                 cornerRadius = PrefHelper.DEFAULT_KEY_CORNER_RADIUS
                                 borderWidth = PrefHelper.DEFAULT_KEY_BORDER_WIDTH
-                                previewKey++
                                 onFontChanged()
                             },
                             textColor = MaterialTheme.colorScheme.error,
@@ -346,10 +339,13 @@ fun AppearanceSettingsScreen(
                 HorizontalDivider()
                 KeyboardPreviewPanel(
                     prefs = prefs,
-                    previewKey = previewKey,
                     layoutType = currentLayoutType,
                     colorSettings = colorSettings,
                     candidateTextSizeScale = candidateTextSize,
+                    keyHeightScale = keyHeight,
+                    keyFontSizeScale = keyFontSize,
+                    keyCornerRadius = cornerRadius,
+                    keyBorderWidth = borderWidth,
                     fontType = fontType,
                 )
             }
@@ -361,7 +357,6 @@ fun AppearanceSettingsScreen(
                     onDismiss = { colorPickerTarget = null },
                     onColorSelected = { newColor ->
                         target.onColorSelected(newColor)
-                        previewKey++
                     },
                 )
             }
@@ -377,7 +372,6 @@ private fun ColorSettingRow(
     onUpdate: (KeyboardColorSettings, Int?) -> KeyboardColorSettings,
     onColorSettingsChanged: (KeyboardColorSettings) -> Unit,
     onPickerOpen: (ColorPickerTarget) -> Unit,
-    onPreviewRefresh: () -> Unit,
 ) {
     ColorRow(
         label = label,
@@ -395,7 +389,6 @@ private fun ColorSettingRow(
         },
         onReset = {
             onColorSettingsChanged(onUpdate(colorSettings, null))
-            onPreviewRefresh()
         },
     )
 }

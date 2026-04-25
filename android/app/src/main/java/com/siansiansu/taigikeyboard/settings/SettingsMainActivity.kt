@@ -154,6 +154,7 @@ class SettingsMainActivity : AppCompatActivity() {
                                     startActivity(DataManagementActivity.createIntent(this))
                                 },
                                 searchViewModel = searchViewModel,
+                                resetCounter = resetCounter,
                             )
                         }
 
