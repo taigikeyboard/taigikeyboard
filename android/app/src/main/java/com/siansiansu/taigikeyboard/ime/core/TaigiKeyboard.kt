@@ -10,8 +10,6 @@ import android.os.*
 import android.util.Log
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
-import android.view.Window
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.inputmethod.CursorAnchorInfo
@@ -221,13 +219,14 @@ class TaigiKeyboard : LifecycleInputMethodService() {
                     // 使用 padding 而不是 margin，讓背景可以延伸到導覽列區域
                     // Slightly reduce padding so keyboard sits closer to nav bar
                     val adjustedHeight = (navBarHeight * 0.90f).toInt()
-                    innerContainer.setPadding(
-                        innerContainer.paddingLeft,
-                        innerContainer.paddingTop,
-                        innerContainer.paddingRight,
-                        adjustedHeight,
-                    )
-                    innerContainer.requestLayout()
+                    if (innerContainer.paddingBottom != adjustedHeight) {
+                        innerContainer.setPadding(
+                            innerContainer.paddingLeft,
+                            innerContainer.paddingTop,
+                            innerContainer.paddingRight,
+                            adjustedHeight,
+                        )
+                    }
 
                     if (BuildConfig.DEBUG) {
                         Log.d("TaigiKeyboard", "  Final height used: $navBarHeight")
@@ -371,73 +370,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             candidatesStart,
             candidatesEnd,
         )
-    }
-
-    override fun onComputeInsets(outInsets: Insets?) {
-        super.onComputeInsets(outInsets)
-        val inputView = this.inputView ?: return
-
-        if (!isInputViewShown) {
-            return
-        }
-
-        val innerInputViewContainer =
-            inputView.findViewById<LinearLayout>(R.id.inner_input_view_container) ?: return
-
-        // Get the actual Y position of the keyboard content in the window
-        val location = IntArray(2)
-        innerInputViewContainer.getLocationInWindow(location)
-        val topInset = location[1]
-
-        // Set insets - use TOUCHABLE_INSETS_VISIBLE to allow app input area to remain touchable
-        outInsets?.contentTopInsets = topInset
-        outInsets?.visibleTopInsets = topInset
-        outInsets?.touchableInsets = Insets.TOUCHABLE_INSETS_VISIBLE
-    }
-
-    override fun onConfigureWindow(
-        win: Window,
-        isFullscreen: Boolean,
-        isCandidatesOnly: Boolean,
-    ) {
-        super.onConfigureWindow(win, isFullscreen, isCandidatesOnly)
-
-        // Follow fcitx5-android approach: set window to MATCH_PARENT
-        win.setLayout(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
-
-        if (BuildConfig.DEBUG) {
-            Log.d("TaigiKeyboard", "onConfigureWindow: MATCH_PARENT x MATCH_PARENT")
-        }
-    }
-
-    override fun setInputView(view: View) {
-        super.setInputView(view)
-
-        // Follow fcitx5-android approach: set inputArea and inputView to MATCH_PARENT
-        window?.window?.findViewById<View>(android.R.id.inputArea)?.let { inputArea ->
-            inputArea.layoutParams =
-                inputArea.layoutParams.apply {
-                    height = ViewGroup.LayoutParams.MATCH_PARENT
-                }
-        }
-
-        view.layoutParams = view.layoutParams?.apply {
-            height = ViewGroup.LayoutParams.MATCH_PARENT
-        } ?: ViewGroup.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
-        )
-
-        if (BuildConfig.DEBUG) {
-            Log.d("TaigiKeyboard", "setInputView: inputArea and view set to MATCH_PARENT")
-        }
-    }
-
-    override fun updateFullscreenMode() {
-        super.updateFullscreenMode()
     }
 
     /**
