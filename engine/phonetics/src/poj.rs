@@ -51,13 +51,6 @@ fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
 
     // Two adjacent ASCII vowels. Mirrors poj.js placePojToneMark vowel-pair
     // logic; multi-branch chain collapsed for clippy::if_same_then_else.
-    //
-    // DRIFT (type a, plan §4): the nasal-suffix and consonant-suffix sets
-    // include U+1D3A (MODIFIER LETTER CAPITAL N) in addition to U+207F. iOS
-    // POJFormatter.swift:64 and Android TaigiPhonetics.kt:401-410 both ship
-    // with the U+1D3A inclusion to support uppercase POJ inputs; JS
-    // poj.js:40-44 only checks U+207F. The Rust port follows iOS+Android
-    // production. PR description flags this as an upstream issue.
     if let Some(m) = TWO_VOWELS.find(final_str) {
         let bytes = final_str.as_bytes();
         let start = m.start();

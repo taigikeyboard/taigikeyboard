@@ -1,12 +1,4 @@
-//! Phonetic tables. Canonical structure ported from `taigi-converter/src/tables.js`.
-//!
-//! `TL_FINALS` is the **superset** of the three production sources — JS canonical,
-//! iOS `PhoneticsTables.swift`, Android `TaigiPhonetics.kt`. iOS+Android added
-//! `iri`, `erk`, `eeh` over JS canonical (`taigi-converter/src/tables.js:23-26`,
-//! which already includes `irinn`). Per the §4 cross-validation triage in
-//! `/Users/alexsu/.claude/plans/zesty-sprouting-crystal.md`, this is drift type
-//! (a) — canonical is missing cases that production needs. The PR description
-//! flags these as upstream issues for `taigi-converter`.
+//! Phonetic tables. Ported 1:1 from `taigi-converter/src/tables.js`.
 
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
@@ -22,7 +14,6 @@ pub static TL_INITIALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 
 pub static TL_FINALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
-        // Canonical (from taigi-converter/src/tables.js).
         "a", "ah", "ap", "at", "ak", "ann", "annh", "am", "an", "ang", "e", "eh", "enn", "ennh",
         "i", "ih", "ip", "it", "ik", "inn", "innh", "im", "in", "ing", "o", "oh", "oo", "ooh",
         "op", "ok", "om", "ong", "onn", "onnh", "u", "uh", "ut", "un", "ai", "aih", "ainn",
@@ -30,11 +21,9 @@ pub static TL_FINALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
         "iang", "iann", "iannh", "io", "ioh", "iok", "iong", "ionn", "iu", "iuh", "iut", "iunn",
         "iunnh", "ua", "uah", "uat", "uak", "uan", "uann", "uannh", "ue", "ueh", "uenn", "uennh",
         "ui", "uih", "uinn", "uinnh", "iau", "iauh", "iaunn", "iaunnh", "uai", "uaih", "uainn",
-        "uainnh", "m", "mh", "ng", "ngh", "ioo", "iooh", "iai", "iaih", "er", "erh", "erm", "ere",
-        "ereh", "eng", "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "irinn", "ie", "or",
-        "orh", "ior", "iorh", "uang", "oi", "oih", "ee",
-        // DRIFT: iOS+Android additions (production-tested) absent from JS canonical.
-        "iri", "erk", "eeh",
+        "uainnh", "m", "mh", "ng", "ngh", "ioo", "iooh", "iai", "iaih", "er", "erh", "erk", "erm",
+        "ere", "ereh", "eng", "ir", "irh", "irp", "irt", "irk", "irm", "irn", "irng", "iri",
+        "irinn", "ie", "or", "orh", "ior", "iorh", "uang", "oi", "oih", "ee", "eeh",
     ]
     .into_iter()
     .collect()
