@@ -1,0 +1,46 @@
+[config]
+default_to_workspace = false
+
+[tasks.fmt]
+description = "Format all crates"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.fmt-check]
+description = "Verify formatting"
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.clippy]
+description = "Run clippy with -D warnings"
+command = "cargo"
+args = ["clippy", "--workspace", "--all-targets", "--", "-D", "warnings"]
+
+[tasks.test]
+description = "Run all workspace tests"
+command = "cargo"
+args = ["test", "--workspace"]
+
+[tasks.check]
+description = "cargo check --workspace --locked"
+command = "cargo"
+args = ["check", "--workspace", "--locked"]
+
+[tasks.build-cli]
+description = "Build the dev cli binary"
+command = "cargo"
+args = ["build", "--release", "-p", "cli"]
+
+[tasks.audit]
+description = "Run cargo-audit (requires separate install)"
+command = "cargo"
+args = ["audit"]
+
+[tasks.deny]
+description = "Run cargo-deny check (requires separate install)"
+command = "cargo"
+args = ["deny", "check"]
+
+[tasks.ci]
+description = "Local mirror of the CI build job"
+dependencies = ["fmt-check", "check", "clippy", "test"]

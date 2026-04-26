@@ -1,0 +1,106 @@
+//! POJ (Pe̍h-ōe-jī) assembly — ported from `taigi-converter/src/poj.js`.
+
+use crate::tables::{poj_tone_mark, POJ_FINAL_SUBSTITUTIONS, POJ_INITIAL_FROM_TL};
+use once_cell::sync::Lazy;
+use regex::Regex;
+use unicode_normalization::UnicodeNormalization;
+
+static TWO_VOWELS: Lazy<Regex> = Lazy::new(|| Regex::new("[aeiou]{2}").unwrap());
+static SINGLE_VOWEL: Lazy<Regex> = Lazy::new(|| Regex::new("[aeiou]").unwrap());
+
+/// Assemble a POJ syllable from a TL `initial + final + tone`. Output is NFC.
+pub fn to_poj(initial: &str, final_str: &str, tone: &str) -> String {
+    let poj_initial = POJ_INITIAL_FROM_TL.get(initial).copied().unwrap_or(initial);
+    let poj_final = tl_final_to_poj(final_str);
+    let mark = poj_tone_mark(tone);
+    let marked = place_poj_tone_mark(&poj_final, mark);
+    let mut combined = String::with_capacity(poj_initial.len() + marked.len());
+    combined.push_str(poj_initial);
+    combined.push_str(&marked);
+    combined.nfc().collect()
+}
+
+fn tl_final_to_poj(final_str: &str) -> String {
+    let mut result = final_str.to_string();
+    for (tl_part, poj_part) in POJ_FINAL_SUBSTITUTIONS {
+        result = result.replace(tl_part, poj_part);
+    }
+    result
+}
+
+fn place_poj_tone_mark(final_str: &str, mark: &str) -> String {
+    if mark.is_empty() {
+        return final_str.to_string();
+    }
+
+    // o͘ (o + U+0358) takes the mark between o and combining dot.
+    if let Some(pos) = final_str.find("o\u{0358}") {
+        let mut out = String::with_capacity(final_str.len() + mark.len());
+        out.push_str(&final_str[..pos]);
+        out.push('o');
+        out.push_str(mark);
+        out.push('\u{0358}');
+        out.push_str(&final_str[pos + "o\u{0358}".len()..]);
+        return out;
+    }
+
+    // iau / oai → mark on `a`.
+    if final_str.contains("iau") || final_str.contains("oai") {
+        return final_str.replacen('a', &format!("a{mark}"), 1);
+    }
+
+    // Two adjacent ASCII vowels. Mirrors poj.js placePojToneMark vowel-pair
+    // logic; multi-branch chain collapsed for clippy::if_same_then_else.
+    //
+    // DRIFT (type a, plan §4): the nasal-suffix and consonant-suffix sets
+    // include U+1D3A (MODIFIER LETTER CAPITAL N) in addition to U+207F. iOS
+    // POJFormatter.swift:64 and Android TaigiPhonetics.kt:401-410 both ship
+    // with the U+1D3A inclusion to support uppercase POJ inputs; JS
+    // poj.js:40-44 only checks U+207F. The Rust port follows iOS+Android
+    // production. PR description flags this as an upstream issue.
+    if let Some(m) = TWO_VOWELS.find(final_str) {
+        let bytes = final_str.as_bytes();
+        let start = m.start();
+        let first = bytes[start] as char;
+        let second = bytes[start + 1] as char;
+        let chars_count = final_str.chars().count();
+        let nasal_without_h_prefix = (final_str.ends_with('\u{207f}')
+            || final_str.ends_with('\u{1d3a}'))
+            && !final_str.ends_with("h\u{207f}")
+            && !final_str.ends_with("h\u{1d3a}");
+        let target = if first == 'i' {
+            second
+        } else if second != 'i' && chars_count > 2 && !nasal_without_h_prefix {
+            // Suffix lookahead must decode the next Unicode scalar, not cast
+            // a single byte. `final_str` here can carry multi-byte ⁿ (U+207F,
+            // 3 bytes) or ᴺ (U+1D3A, 3 bytes) at `after`; `bytes[after] as
+            // char` would yield a UTF-8 lead byte (e.g. 0xe2 → 'â') and the
+            // suffix-set test would silently miss real nasal markers,
+            // mis-placing the tone on the first vowel for finals like
+            // `oa\u{207f}h` (POJ form of TL `uannh`). Found by Codex review
+            // on PR #183 (discussion r3143646949).
+            let after = start + 2;
+            let suffix_char = final_str.get(after..).and_then(|s| s.chars().next());
+            match suffix_char {
+                Some(c) if "nmgptkh\u{207f}\u{1d3a}".contains(c) => second,
+                _ => first,
+            }
+        } else {
+            first
+        };
+        return final_str.replacen(target, &format!("{target}{mark}"), 1);
+    }
+
+    if let Some(m) = SINGLE_VOWEL.find(final_str) {
+        let vowel = m.as_str();
+        return final_str.replacen(vowel, &format!("{vowel}{mark}"), 1);
+    }
+
+    if final_str.contains("ng") {
+        return final_str.replacen('n', &format!("n{mark}"), 1);
+    }
+    if final_str.contains('m') {
+        return final_str.replacen('m', &format!("m{mark}"), 1);
+    }
+    final_str.to_string()
+}

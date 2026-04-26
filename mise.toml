@@ -1,2 +1,4 @@
 [tools]
 java = "21"
+rust = "1.85"
+protoc = "27"

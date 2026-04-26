@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+// Phonetics slice — first surface. Pure stateless ops.
+// Mirrors ios PhoneticsConverter.swift / android TaigiPhonetics.kt
+// at the syllable/display level. Word-level segmentation is OUT OF SCOPE
+// for D9 (Lexicon concern, Phase IV-B). See docs/engine/rust-core-proto.md §7.
+
+message PhoneticsRequest {
+  enum Op {
+    OP_UNSPECIFIED = 0;
+    OP_TL_TO_POJ = 1;
+    OP_POJ_TO_TL = 2;
+    OP_NORMALIZE_TONE = 3;  // numeric tone digits → diacritic marks (TL output)
+    OP_STRIP_TONE = 4;      // diacritic marks → numeric tone digits
+  }
+  Op op = 1;
+  string input = 2;
+}
+
+message PhoneticsResponse {
+  string output = 1;
+  bool tone_restored = 2;
+}

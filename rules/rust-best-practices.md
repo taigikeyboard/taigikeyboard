@@ -18,19 +18,19 @@ Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-r
 
 ```
 taigi-keyboard-rs/
-├── taigi-phonetics/   # Pure functions — POJ/TL/TPS, Unicode, tone. No I/O, no std beyond core+alloc.
-├── taigi-engine/      # Stateful engine — composing state, candidate ranking, next-word.
-├── taigi-protos/      # Protobuf definitions (generated via prost-build).
-├── taigi-android-jni/ # cdylib — JNI entry points + protobuf marshaling.
-├── taigi-swift-ffi/   # staticlib — swift-bridge entry points + protobuf marshaling.
-├── taigi-cli/         # Developer TUI (optional, matches khiin-rs `cli/`).
+├── phonetics/   # Pure functions — POJ/TL/TPS, Unicode, tone. No I/O, no std beyond core+alloc.
+├── engine/      # Stateful engine — composing state, candidate ranking, next-word.
+├── protos/      # Protobuf definitions (generated via prost-build).
+├── android-jni/ # cdylib — JNI entry points + protobuf marshaling.
+├── swift-ffi/   # staticlib — swift-bridge entry points + protobuf marshaling.
+├── cli/         # Developer TUI (optional, matches khiin-rs `cli/`).
 └── Cargo.toml         # Workspace manifest, pinned workspace.dependencies.
 ```
 
-- **`taigi-phonetics/`** corresponds to `knowledge/` reference content + `taigi-converter/` behavior. Zero platform dependencies — portable to any Rust target.
-- **`taigi-engine/`** owns `BufferMgr`-equivalent state machines, candidate scoring, SQLite access. Depends on `taigi-phonetics` + `taigi-protos`.
-- **FFI crates** (`taigi-android-jni`, `taigi-swift-ffi`) are **thin** — protobuf in / protobuf out / `catch_unwind`. No domain logic. Each crate's `lib.rs` should be < 300 LOC.
-- Depend via `workspace.dependencies` in root `Cargo.toml` with pinned versions. Workspace-internal deps use relative paths (`taigi_phonetics = { path = "./taigi-phonetics" }`).
+- **`phonetics/`** corresponds to `knowledge/` reference content + `taigi-converter/` behavior. Zero platform dependencies — portable to any Rust target.
+- **`engine/`** owns `BufferMgr`-equivalent state machines, candidate scoring, SQLite access. Depends on `phonetics` + `protos`.
+- **FFI crates** (`android-jni`, `swift-ffi`) are **thin** — protobuf in / protobuf out / `catch_unwind`. No domain logic. Each crate's `lib.rs` should be < 300 LOC.
+- Depend via `workspace.dependencies` in root `Cargo.toml` with pinned versions. Workspace-internal deps use relative paths (`phonetics = { path = "./phonetics" }`).
 
 ## 2. FFI boundary discipline `[S]`
 
@@ -56,7 +56,7 @@ Policy lives here; technical spec is `docs/engine/ffi-safety.md` (Phase II.5 del
       InternalPanic(String),
   }
   ```
-- **`anyhow` is forbidden in library crates** (`taigi-phonetics`, `taigi-engine`, `taigi-protos`). Allowed in `taigi-cli/` and build scripts only.
+- **`anyhow` is forbidden in library crates** (`phonetics`, `engine`, `protos`). Allowed in `cli/` and build scripts only.
 - **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge.
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per §4 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
@@ -66,7 +66,7 @@ Policy lives here; technical spec is `docs/engine/ffi-safety.md` (Phase II.5 del
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
-- **No raw pointer dereferences outside FFI crates.** `taigi-phonetics` and `taigi-engine` are `#![forbid(unsafe_code)]` at the crate root; only `taigi-android-jni` and `taigi-swift-ffi` may contain `unsafe`.
+- **No raw pointer dereferences outside FFI crates.** `phonetics` and `engine` are `#![forbid(unsafe_code)]` at the crate root; only `android-jni` and `swift-ffi` may contain `unsafe`.
 - **Every new `unsafe` block requires Codex pre-implementation review** per `rules/cross-platform-alignment.md` §1c.
 
 ## 5. Crate + type choices `[R]` `[A]`
@@ -112,9 +112,9 @@ Type-shape preferences that cross FFI:
 
 ## 7. Testing strategy `[R]` `[A]`
 
-- **Unit tests**: `#[cfg(test)] mod tests` alongside source files. Pure logic (`taigi-phonetics`, `taigi-engine`) targets ≥ 80% line coverage.
-- **Integration tests**: `taigi-engine/tests/` exercises the engine through its public API with protobuf messages, no FFI.
-- **FFI roundtrip tests**: `taigi-android-jni/tests/` + `taigi-swift-ffi/tests/` exercise FFI entry points for panic safety, Drop, thread serialization, malformed-bytes handling. Required for D9 POC acceptance.
+- **Unit tests**: `#[cfg(test)] mod tests` alongside source files. Pure logic (`phonetics`, `engine`) targets ≥ 80% line coverage.
+- **Integration tests**: `engine/tests/` exercises the engine through its public API with protobuf messages, no FFI.
+- **FFI roundtrip tests**: `android-jni/tests/` + `swift-ffi/tests/` exercise FFI entry points for panic safety, Drop, thread serialization, malformed-bytes handling. Required for D9 POC acceptance.
 - **Invariant tests**: every `INVARIANT_*` label from `docs/architecture/behavioral-invariants.md` has a matching Rust test. Drift between platform tests and Rust tests = regression.
 - **`cargo test --workspace`** must pass in CI before any PR merges.
 - **Property tests** (`proptest`) for phonetics round-trip invariants (TL↔POJ↔TPS) — complements hand-written invariant tests.
@@ -122,17 +122,19 @@ Type-shape preferences that cross FFI:
 ## 8. Rust version policy `[A]`
 
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
-- **MSRV pinned at Rust 1.75** in root `Cargo.toml` (`rust-version = "1.75"`) as the initial pin. Rationale: 1.75 (Dec 2023) is old enough to be widely available in CI images and ships `async fn` in traits — which we do not use today but avoids re-pin churn if a future slice adopts async. Round C may tighten this after verifying crate dependencies. Bumping MSRV is a PR-level decision with CI verification.
-- **No experimental features** (`async fn` in traits landed stable in 1.75 — OK; GATs in traits OK; const generics full — OK).
+- **MSRV pinned at Rust 1.85** in root `Cargo.toml` (`rust-version = "1.85"`). Rationale: 1.85 (Feb 2025) stabilises edition2024. The modern Rust ecosystem already requires it — `clap_lex` 1.x, `getrandom` 0.4.x, and many other actively maintained crates declare `edition = "2024"`. The original 1.75 pin (Dec 2023) failed crate resolution during the Phase III D9.1 POC build (PR #TODO), so this rule was bumped jointly with that round. Bumping MSRV further is a PR-level decision with CI verification.
+- **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
 - **`rustfmt` default config**, no deviations. `cargo fmt --check` in CI.
 - **`clippy` with `-D warnings`** in CI. Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
-## 9. CI + supply chain `[A]`
+## 9. Pre-commit gate + supply chain `[A]`
 
-- **`cargo-audit`** runs on every PR (security vulnerability scan against RustSec advisory DB).
-- **`cargo-deny`** enforces dependency policy: banned crates list, license allow-list (MIT / Apache-2.0 / BSD only), duplicate-version check.
-- **`cargo test --workspace`** + **`cargo clippy -- -D warnings`** + **`cargo fmt --check`** gate every PR.
-- **FFI integration tests** must pass on a representative Android emulator + iOS simulator target in CI before merge to main (D9 gate onward).
+This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `feedback_manual_build_test.md` for `./gradlew` / `xcodebuild`: the author runs build/test, AI does not. The author invokes the four-command gate before committing each PR (canonical bare-`cargo` form; `cargo-make` is optional via `engine/Makefile.toml`).
+
+- Per-PR gate: `cargo fmt --all -- --check` + `cargo check --workspace --locked` + `cargo clippy --workspace --all-targets -- -D warnings` + `cargo test --workspace`.
+- **`cargo-audit`** scans against the RustSec advisory DB before each PR — optional, install via `cargo install cargo-audit --locked`.
+- **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Optional, install via `cargo install cargo-deny --locked`.
+- **FFI integration tests** must pass on a representative Android emulator + iOS simulator target before merge to main (D9 gate onward) — author runs locally; no CI matrix.
 - **Supply chain**: no git dependencies in `Cargo.toml`. Patches go through explicit `[patch.crates-io]` with version pins and written justification.
 
 ## 10. Opaque handle pattern `[S]` `[R]`

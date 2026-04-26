@@ -11,7 +11,7 @@
 
 - Active from **Phase III D9 POC** onward; pre-authored in **Phase II.5** so the POC has a written safety contract to build against.
 - Applies to every Rust function exposed via `jni` (Android) or `swift-bridge` (iOS / macOS).
-- **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`taigi-engine`, `taigi-phonetics`) follow the broader Rust idioms in `rules/rust-best-practices.md`; this spec only governs the FFI seam.
+- **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`engine`, `phonetics`) follow the broader Rust idioms in `rules/rust-best-practices.md`; this spec only governs the FFI seam.
 - **Authoritative companion**: `rules/rust-best-practices.md` §2 (FFI boundary discipline) and §10 (opaque handle pattern). Any deviation from this spec or that rules file requires inline `// JUSTIFICATION:` prose at the deviation site, per `rules/rust-best-practices.md` §12.
 
 ---
@@ -99,16 +99,16 @@ Rust never propagates a `Result` or `Option` across the ABI (`rules/rust-best-pr
 
 ## 6. Logging bridge — Rust uses `log` crate only; platform installs the adapter
 
-Rust core code (`taigi-engine`, `taigi-phonetics`) imports nothing beyond the `log` crate. Forbidden in candidate code: `OSLog`, `os_log`, `android.util.Log`, `__android_log_print`, `println!`, `eprintln!`.
+Rust core code (`engine`, `phonetics`) imports nothing beyond the `log` crate. Forbidden in candidate code: `OSLog`, `os_log`, `android.util.Log`, `__android_log_print`, `println!`, `eprintln!`.
 
 **Setup contract**:
 
-- Each platform FFI crate (`taigi-android-jni`, `taigi-swift-ffi`) defines a `PlatformLoggerAdapter` that implements `log::Log`.
+- Each platform FFI crate (`android-jni`, `swift-ffi`) defines a `PlatformLoggerAdapter` that implements `log::Log`.
 - `log::set_logger` is **process-global** and only succeeds **once** for the lifetime of the process. The platform FFI crate wraps the registration in a `std::sync::Once` (or equivalent `OnceLock`) so the call is idempotent across IME session create/destroy cycles. Per-engine init MUST NOT call `log::set_logger` directly — the second call returns `SetLoggerError`, and an unwrapped panic on that path would crash the IME on the second session start (which would also break the T2 / T8 / T9 lifecycle tests in §7).
 - The adapter forwards each `log::Record` into the platform's existing `LoggerBackend` — the same protocol candidate Swift/Kotlin code already uses (`docs/architecture/behavioral-invariants.md:313-323` §12).
 - `engine_shutdown` does NOT unregister the logger; the adapter outlives engine instances.
 
-**Adapter ownership rule**: the adapter type lives in the platform FFI crate, not in `taigi-engine` or `taigi-phonetics`. Pure-engine crates never import platform logging adapters; they import `log` and that is all.
+**Adapter ownership rule**: the adapter type lives in the platform FFI crate, not in `engine` or `phonetics`. Pure-engine crates never import platform logging adapters; they import `log` and that is all.
 
 This rule extends the existing platform `LoggerBackend` invariant — Rust core is one more candidate that depends on the logger interface, not on a platform log API.
 
@@ -130,7 +130,7 @@ The POC ships with these tests, run on both iOS and Android (per `rules/rust-bes
 | T8 | Double shutdown | Calling `engine_shutdown` twice is bounded (idempotent or documented invalid); no UB |
 | T9 | Call after shutdown | `send_command_bytes` after `engine_shutdown` returns the sick-engine sentinel without dereferencing freed memory |
 
-Tests live in `taigi-android-jni/tests/` and `taigi-swift-ffi/tests/` per `rules/rust-best-practices.md` §7.
+Tests live in `android-jni/tests/` and `swift-ffi/tests/` per `rules/rust-best-practices.md` §7.
 
 ---
 

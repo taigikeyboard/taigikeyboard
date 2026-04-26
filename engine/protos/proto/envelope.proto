@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+import "phonetics.proto";
+
+// Single FFI entry point envelope. Logical shape mirrors
+// references/khiin-rs/khiin/src/engine.rs:57 — see
+// docs/engine/rust-core-proto.md §3-§4.
+
+enum CommandType {
+  CMD_UNSPECIFIED = 0;
+  CMD_PHONETICS = 1;
+  // CMD_COMPOSING reserved for D9.3.
+  reserved 2;
+}
+
+enum ErrorCode {
+  OK = 0;
+  FAIL_PARSE = 1;
+  FAIL_INTERNAL = 2;
+  FAIL_IO = 3;
+  FAIL_INVARIANT = 4;
+}
+
+// Per-request live snapshot. iOS EngineSettings / Android EngineSettings
+// shape — minimal in D9.1, expands with the Composing slice in D9.3.
+message AppConfig {
+  string tone_mode = 1;
+  string input_mode = 2;
+}
+
+message Request {
+  uint32 id = 1;
+  CommandType type = 2;
+  AppConfig config_snapshot = 3;
+  uint64 generation = 4;
+  oneof payload {
+    PhoneticsRequest phonetics = 10;
+  }
+  // Composing payload reserved for D9.3 to avoid renumbering.
+  reserved 11;
+}
+
+message Response {
+  uint32 id = 1;
+  ErrorCode error = 2;
+  uint64 generation = 3;
+  oneof payload {
+    PhoneticsResponse phonetics = 10;
+  }
+  reserved 11;
+}
+
+message Command {
+  Request request = 1;
+  Response response = 2;
+}

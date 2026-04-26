@@ -35,8 +35,8 @@ fn send_command_bytes(handle: EngineHandle, bytes: &[u8]) -> Vec<u8>
 
 Concrete extern signatures differ per platform (per `rules/rust-best-practices.md` §10):
 
-- **JNI** (`taigi-android-jni`): `JByteArray` in / `JByteArray` out, plus `EngineHandle` as `jlong` wrapped in a `@JvmInline value class` on the Kotlin side.
-- **swift-bridge** (`taigi-swift-ffi`): `&[u8]` in / `Vec<u8>` out, with an `EngineBridge` struct holding the handle.
+- **JNI** (`android-jni`): `JByteArray` in / `JByteArray` out, plus `EngineHandle` as `jlong` wrapped in a `@JvmInline value class` on the Kotlin side.
+- **swift-bridge** (`swift-ffi`): `&[u8]` in / `Vec<u8>` out, with an `EngineBridge` struct holding the handle.
 - Both wrap the body in `catch_unwind` per `ffi-safety.md` §2 and lock the `Mutex<Engine>` per `ffi-safety.md` §3.
 
 ---

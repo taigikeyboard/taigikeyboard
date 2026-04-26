@@ -1,0 +1,22 @@
+[package]
+name = "phonetics"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+prost = { workspace = true }
+protos = { workspace = true }
+unicode-normalization = { workspace = true }
+regex = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+once_cell = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
