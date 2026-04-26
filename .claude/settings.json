@@ -10,21 +10,6 @@
           }
         ]
       }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/swiftformat-on-edit.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/ktlint-on-edit.sh"
-          }
-        ]
-      }
     ]
   }
 }
