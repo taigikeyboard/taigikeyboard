@@ -9,9 +9,17 @@
 /* Begin PBXBuildFile section */
 		2A3B2A9E2ED81EB500317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9D2ED81EB500317D6D /* ISEmojiView */; };
 		2A3B2AA02ED81ECB00317D6D /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = 2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */; };
+		F312E9272F9E93A300E53A7F /* RustTaigi.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9262F9E93A300E53A7F /* RustTaigi.swift */; };
+		F312E9282F9E93A300E53A7F /* RustTaigi.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9262F9E93A300E53A7F /* RustTaigi.swift */; };
+		F312E92A2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */; };
+		F312E92B2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */; };
 		F32651AE2E524AA8002E99A4 /* TaigiKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
 		F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
+		F39D1D542F9E8E550053D307 /* RustTaigi.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */; };
+		F39D1D582F9E8F090053D307 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = F39D1D572F9E8F090053D307 /* SwiftProtobuf */; };
+		F39D1D5A2F9E8F0E0053D307 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = F39D1D592F9E8F0E0053D307 /* SwiftProtobuf */; };
+		F39D1D5B2F9E8F600053D307 /* RustTaigi.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */; };
 		F3ECE84F2EFE79FD002FCA11 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3ECE84E2EFE79FD002FCA11 /* KeyboardKit */; };
 		F3ECE8512EFE7A03002FCA11 /* KeyboardKit in Frameworks */ = {isa = PBXBuildFile; productRef = F3ECE8502EFE7A03002FCA11 /* KeyboardKit */; };
 /* End PBXBuildFile section */
@@ -84,10 +92,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F312E9262F9E93A300E53A7F /* RustTaigi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RustTaigi.swift; path = RustEngine/RustTaigi.swift; sourceTree = "<group>"; };
+		F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SwiftBridgeCore.swift; path = RustEngine/SwiftBridgeCore.swift; sourceTree = "<group>"; };
 		F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaigiKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaigiKeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaigiKeyboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F361A8A32F8578E500682CC6 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogger.swift; path = Sources/TaigiKeyboard/DebugLogger.swift; sourceTree = "<group>"; };
+		F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = RustTaigi.xcframework; path = RustEngine/RustTaigi.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -272,6 +283,12 @@
 			path = "../libs/marisa-trie/lib/marisa";
 			sourceTree = SOURCE_ROOT;
 		};
+		F39D1D4B2F9E8C030053D307 /* Engine */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Engine;
+			path = Sources/TaigiKeyboard/Engine;
+			sourceTree = "<group>";
+		};
 		F3E176912F8824050017FB6D /* NextWord */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = NextWord;
@@ -293,6 +310,8 @@
 			files = (
 				F3ECE84F2EFE79FD002FCA11 /* KeyboardKit in Frameworks */,
 				2A3B2A9E2ED81EB500317D6D /* ISEmojiView in Frameworks */,
+				F39D1D542F9E8E550053D307 /* RustTaigi.xcframework in Frameworks */,
+				F39D1D582F9E8F090053D307 /* SwiftProtobuf in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,8 +319,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F39D1D5B2F9E8F600053D307 /* RustTaigi.xcframework in Frameworks */,
 				F3ECE8512EFE7A03002FCA11 /* KeyboardKit in Frameworks */,
 				2A3B2AA02ED81ECB00317D6D /* ISEmojiView in Frameworks */,
+				F39D1D5A2F9E8F0E0053D307 /* SwiftProtobuf in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,6 +339,9 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */,
+				F312E9262F9E93A300E53A7F /* RustTaigi.swift */,
+				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F3EFE0DB2F93656800696406 /* Common */,
 				F35BA8872F89F134004657F0 /* Assets */,
@@ -351,6 +375,7 @@
 		F3ECE84B2EFE6F6A002FCA11 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -394,6 +419,7 @@
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
+				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F3EFE0DB2F93656800696406 /* Common */,
 			);
@@ -401,6 +427,7 @@
 			packageProductDependencies = (
 				2A3B2A9D2ED81EB500317D6D /* ISEmojiView */,
 				F3ECE84E2EFE79FD002FCA11 /* KeyboardKit */,
+				F39D1D572F9E8F090053D307 /* SwiftProtobuf */,
 			);
 			productName = POJKeyboard;
 			productReference = F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */;
@@ -437,6 +464,7 @@
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
+				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F3EFE0DB2F93656800696406 /* Common */,
 			);
@@ -444,6 +472,7 @@
 			packageProductDependencies = (
 				2A3B2A9F2ED81ECB00317D6D /* ISEmojiView */,
 				F3ECE8502EFE7A03002FCA11 /* KeyboardKit */,
+				F39D1D592F9E8F0E0053D307 /* SwiftProtobuf */,
 			);
 			productName = POJKeyboardExtension;
 			productReference = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */;
@@ -569,6 +598,7 @@
 			packageReferences = (
 				F3026C4E2E2DFF19002F7E94 /* XCRemoteSwiftPackageReference "KeyboardKit" */,
 				2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */,
+				F39D1D522F9E8C4D0053D307 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F3026C0A2E2DFEA8002F7E94;
@@ -612,6 +642,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */,
+				F312E9282F9E93A300E53A7F /* RustTaigi.swift in Sources */,
+				F312E92B2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,6 +652,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */,
+				F312E9272F9E93A300E53A7F /* RustTaigi.swift in Sources */,
+				F312E92A2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -799,7 +833,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.5.0;
+				MARKETING_VERSION = 3.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -837,7 +871,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.5.0;
+				MARKETING_VERSION = 3.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -868,7 +902,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.5.0;
+				MARKETING_VERSION = 3.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -900,7 +934,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 3.5.0;
+				MARKETING_VERSION = 3.5.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.siansiansu.TaigiKeyboard.TaigiKeyboardExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1014,6 +1048,14 @@
 				minimumVersion = 9.7.2;
 			};
 		};
+		F39D1D522F9E8C4D0053D307 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.37.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1026,6 +1068,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 2A3B2A9C2ED81EB500317D6D /* XCRemoteSwiftPackageReference "ISEmojiView" */;
 			productName = ISEmojiView;
+		};
+		F39D1D572F9E8F090053D307 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F39D1D522F9E8C4D0053D307 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+		F39D1D592F9E8F0E0053D307 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F39D1D522F9E8C4D0053D307 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
 		};
 		F3ECE84E2EFE79FD002FCA11 /* KeyboardKit */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard
 
 import android.app.Application
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import kotlinx.coroutines.CoroutineScope
@@ -27,6 +28,11 @@ class TaigiKeyboardApplication : Application() {
         prefs = PrefHelper(this)
         prefs.warmUp()
         compositionRoot = CompositionRoot.shared(this)
+
+        // D9.2 — register the Rust shared-core logger sink so any
+        // `log::warn!` etc. from `librust_taigi.so` reaches the same
+        // `LoggerBackend` the rest of the app uses.
+        RustEngineBridge.install(compositionRoot.logger)
 
         // Deferred boot work — kept off the Application.onCreate main thread
         // per `android-state-audit.md` §A7 (keep Application.onCreate cheap).

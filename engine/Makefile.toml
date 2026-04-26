@@ -44,3 +44,27 @@ args = ["deny", "check"]
 [tasks.ci]
 description = "Local mirror of the CI build job"
 dependencies = ["fmt-check", "check", "clippy", "test"]
+
+# --- D9.2 platform-artifact wrappers ---------------------------------------
+# Thin wrappers around the shell scripts. The bare-cargo gate stays canonical
+# per `feedback_no_rust_ci.md`; cargo-make remains the optional orchestrator.
+
+[tasks.gen-protos]
+description = "Generate platform-side .pb.swift + .java from engine/protos/proto/"
+script = ["scripts/gen-platform-protos.sh"]
+
+[tasks.build-swift]
+description = "Build release RustTaigi.xcframework (no panic-injector)"
+script = ["scripts/build-xcframework.sh"]
+
+[tasks.build-swift-dev]
+description = "Build dev RustTaigi.xcframework (with panic-injector for T1)"
+script = ["scripts/build-xcframework.sh --dev"]
+
+[tasks.build-droid]
+description = "Build release librust_taigi.so for arm64-v8a"
+script = ["scripts/build-android-libs.sh"]
+
+[tasks.build-droid-dev]
+description = "Build dev librust_taigi.so (with panic-injector for T1)"
+script = ["scripts/build-android-libs.sh --dev"]

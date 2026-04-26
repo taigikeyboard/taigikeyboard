@@ -1,0 +1,36 @@
+[package]
+name = "swift-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# JUSTIFICATION: FFI crate — overrides workspace `unsafe_code = "forbid"` per
+# `rules/rust-best-practices.md` §4. Every `unsafe` block in this crate carries
+# a `// SAFETY:` comment per the same rule.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lib]
+name = "rust_taigi"
+crate-type = ["staticlib"]
+
+[features]
+# Dev-only: exposes `panic_for_test()` so platform tests can drive T1.
+# Release builds omit this feature; the post-build `nm` check in
+# `engine/scripts/build-xcframework.sh` asserts the symbol is absent.
+panic-injector = []
+
+[dependencies]
+phonetics = { workspace = true }
+protos = { workspace = true }
+prost = { workspace = true }
+log = { workspace = true }
+swift-bridge = { workspace = true }
+
+[build-dependencies]
+swift-bridge-build = { workspace = true }

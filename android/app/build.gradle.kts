@@ -22,13 +22,16 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 350
-        versionName = "3.5.0"
+        versionCode = 351
+        versionName = "3.5.1"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             debugSymbolLevel = "FULL"
-            // 支援的 CPU 架構
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            // D9.2 — Rust shared-core ships only arm64-v8a; Play Store
+            // 64-bit policy + minSdk 28 + no Chromebook target.
+            abiFilters += listOf("arm64-v8a")
         }
 
         // CMake 設定
@@ -168,6 +171,11 @@ dependencies {
     // JUnit 單元測試
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+
+    // D9.2 — Rust shared-core protobuf runtime + AndroidX test for FFI bridge
+    implementation("com.google.protobuf:protobuf-javalite:3.25.5")
+    androidTestImplementation("androidx.test:runner:1.7.0")
+    androidTestImplementation("androidx.test.ext:junit:1.3.0")
 }
 
 // A9 — invariant coverage gate. Runs against `testDebugUnitTest` only;

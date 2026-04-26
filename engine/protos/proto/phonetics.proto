@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package taigi.engine;
 
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
 // Phonetics slice — first surface. Pure stateless ops.
 // Mirrors ios PhoneticsConverter.swift / android TaigiPhonetics.kt
 // at the syllable/display level. Word-level segmentation is OUT OF SCOPE

@@ -1,0 +1,5 @@
+module RustTaigi {
+    header "SwiftBridgeCore.h"
+    header "RustTaigi.h"
+    export *
+}

@@ -4,6 +4,9 @@ package taigi.engine;
 
 import "phonetics.proto";
 
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
 // Single FFI entry point envelope. Logical shape mirrors
 // references/khiin-rs/khiin/src/engine.rs:57 — see
 // docs/engine/rust-core-proto.md §3-§4.

@@ -1,0 +1,33 @@
+[package]
+name = "android-jni"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# JUSTIFICATION: FFI crate — overrides workspace `unsafe_code = "forbid"` per
+# `rules/rust-best-practices.md` §4. Every `unsafe` block in this crate carries
+# a `// SAFETY:` comment per the same rule.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[lib]
+name = "rust_taigi"
+crate-type = ["cdylib"]
+
+[features]
+# Dev-only: exposes `Java_..._panicForTest` so platform tests can drive T1.
+# Release builds omit this feature; the post-build `nm` check in
+# `engine/scripts/build-android-libs.sh` asserts the symbol is absent.
+panic-injector = []
+
+[dependencies]
+phonetics = { workspace = true }
+protos = { workspace = true }
+prost = { workspace = true }
+log = { workspace = true }
+jni = { workspace = true }

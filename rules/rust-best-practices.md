@@ -122,7 +122,7 @@ Type-shape preferences that cross FFI:
 ## 8. Rust version policy `[A]`
 
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
-- **MSRV pinned at Rust 1.85** in root `Cargo.toml` (`rust-version = "1.85"`). Rationale: 1.85 (Feb 2025) stabilises edition2024. The modern Rust ecosystem already requires it — `clap_lex` 1.x, `getrandom` 0.4.x, and many other actively maintained crates declare `edition = "2024"`. The original 1.75 pin (Dec 2023) failed crate resolution during the Phase III D9.1 POC build (PR #TODO), so this rule was bumped jointly with that round. Bumping MSRV further is a PR-level decision with CI verification.
+- **MSRV pinned at Rust 1.86** in root `Cargo.toml` (`rust-version = "1.86"`). Rationale: 1.85 (Feb 2025) stabilises edition2024 and 1.86 (Apr 2025) is the next stable. Bumped during Phase III D9.2 because `cargo-ndk` 4.x requires 1.86 and the dev-tool gap is not worth carrying a 3.5.x sidegrade for. Earlier pins (1.75 → 1.85 in D9.1) similarly bumped to clear active-tooling gaps. Bumping MSRV further remains a PR-level decision with CI verification.
 - **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
 - **`rustfmt` default config**, no deviations. `cargo fmt --check` in CI.
 - **`clippy` with `-D warnings`** in CI. Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.

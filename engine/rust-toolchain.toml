@@ -1,4 +1,16 @@
 [toolchain]
-channel = "1.85"
+channel = "1.86"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
+# JUSTIFICATION: D9.2 ABI scope. Rust core ships only Apple device + simulator
+# triples for iOS and aarch64-linux-android for Android. armv7 and x86_64
+# Android targets from `rules/rust-best-practices.md` §6 are intentionally
+# omitted because the user does not ship to those ABIs (matched by the
+# arm64-v8a-only `abiFilters` in android/app/build.gradle.kts). Re-add when
+# expanding to emulator dev or 32-bit support.
+targets = [
+    "aarch64-apple-ios",
+    "aarch64-apple-ios-sim",
+    "x86_64-apple-ios",
+    "aarch64-linux-android",
+]
