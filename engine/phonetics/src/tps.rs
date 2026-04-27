@@ -52,10 +52,15 @@ pub fn is_zhuyin(text: &str) -> bool {
     ZHUYIN_RE.is_match(text)
 }
 
-/// Convert a single TL token (with tone digit) to TPS. `encode_safe = true`
-/// substitutes `\u{02d9}` for `\u{0307}` so TPS round-trips through systems
-/// that strip combining marks.
-pub fn to_zhuyin(text: &str, encode_safe: bool) -> String {
+/// Convert a single TL token (with tone digit) to TPS.
+///
+/// - `encode_safe = true` substitutes `\u{02d9}` for `\u{0307}` so TPS
+///   round-trips through systems that strip combining marks.
+/// - `or_maps_to_er = false` (default) renders the vowel `or` as ㄛ
+///   (`\u{311b}`); `true` renders it as ㄜ (`\u{311c}`), matching the iOS
+///   `orMapsToER` toggle. Override is per-token (only applied when the
+///   matched vowel slot is exactly `"or"`); other vowels are unaffected.
+pub fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
     let mut remaining: String = text.to_lowercase();
     let mut pre_punct = String::new();
     let mut consonant = String::new();
@@ -89,7 +94,15 @@ pub fn to_zhuyin(text: &str, encode_safe: bool) -> String {
         let mut matched = false;
         for (tl, tps) in ZHUYIN_VOWELS {
             if remaining.starts_with(tl) {
-                vowel.push_str(tps);
+                // Per-token override: when toggle is OFF, the vowel `or`
+                // renders as ㄛ (matches iOS default). With toggle ON, fall
+                // through to the table value (ㄜ).
+                let effective_tps: &str = if *tl == "or" && !or_maps_to_er {
+                    "\u{311b}"
+                } else {
+                    tps
+                };
+                vowel.push_str(effective_tps);
                 remaining = remaining[tl.len()..].to_string();
                 matched = true;
                 break;

@@ -4,7 +4,7 @@ import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CoroutineScope
@@ -57,7 +57,7 @@ class CandidateClickHandler(
         // Convert roman to TPS for bracket annotation when in TPS mode
         val bracketRoman =
             if (isTPSLayout) {
-                TPSConverter.toTPSFromDisplay(selectedWord.roman, prefs.tpsOrMapsToER)
+                RustEngineBridge.tlDisplayToTps(selectedWord.roman, prefs.tpsOrMapsToER)
             } else {
                 selectedWord.roman
             }
@@ -185,7 +185,7 @@ class CandidateClickHandler(
         // Convert roman to TPS for bracket annotation when in TPS mode
         val bracketRoman =
             if (isTPSLayout) {
-                TPSConverter.toTPSFromDisplay(word.roman, prefs.tpsOrMapsToER)
+                RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER)
             } else {
                 word.roman
             }

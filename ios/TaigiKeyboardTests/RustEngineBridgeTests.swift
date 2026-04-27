@@ -1,22 +1,17 @@
 import XCTest
 @testable import TaigiKeyboard
 
-/// D9.2 platform-side acceptance tests for the Rust shared-core FFI.
+/// D9.2/D9.4 platform-side acceptance tests for the Rust shared-core FFI.
 ///
 /// **Requires** the dev xcframework built by
 /// `engine/scripts/build-xcframework-dev.sh` (i.e. with the `panic-injector`
-/// Cargo feature) so T1 actually panics inside the FFI catch boundary. Run
-/// the release script before shipping.
+/// Cargo feature) so T1 actually panics inside the FFI catch boundary.
 ///
-/// Test ID map vs `docs/engine/ffi-safety.md` §7:
-///   T1   panic at FFI                      → `test_T1_*`
-///   T2   Drop / cleanup                    → DEFERRED to D9.3 (no handle in D9.2)
-///   T3   Thread safety                     → DEFERRED to D9.3
-///   T4   Malformed protobuf                → `test_T4_*`
-///   T5   Oversized payload                 → `test_T5_*` + boundary cases
-///   T6   Logging round-trip                → `test_T6_*`
-///   T7'  Empty bytes (reframed from null handle) → `test_T7prime_*`
-///   T8/T9 handle lifecycle                 → DEFERRED to D9.3
+/// D9.4 expanded the bridge surface from 4 to 17 ops. This file keeps the
+/// D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and adds
+/// smoke coverage for every new op. Branch-level fixture coverage lives in
+/// `engine/phonetics/tests/d9_4_ops.rs`; call-site parity coverage lands
+/// alongside the platform call-site swaps in commits 7–8.
 final class RustEngineBridgeTests: XCTestCase {
     override class func setUp() {
         super.setUp()
@@ -30,22 +25,132 @@ final class RustEngineBridgeTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    // MARK: - Op tests (canonical fixtures + 1 keyboard real-world)
+    // MARK: - Phonetics core (9 ops)
 
-    func test_op_tlToPoj_keyboardRealWorld() {
-        XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
+    func test_op_normalizeTone_TL() {
+        let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+        XCTAssertEqual(
+            RustEngineBridge.normalizeTone("gua2", mode: .tl, toggles: toggles),
+            "guá"
+        )
+    }
+
+    func test_op_stripTone_returnsBareAndToneTuple() {
+        let result = RustEngineBridge.stripTone("guá")
+        XCTAssertEqual(result.bare, "gua")
+        XCTAssertEqual(result.tone, "2")
     }
 
     func test_op_pojToTl_canonical() {
         XCTAssertEqual(RustEngineBridge.pojToTl("góa"), "guá")
     }
 
-    func test_op_normalizeTone_canonical() {
-        XCTAssertEqual(RustEngineBridge.normalizeTone("gua2"), "guá")
+    func test_op_tlToPoj_canonical() {
+        XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }
 
-    func test_op_stripTone_canonical() {
-        XCTAssertEqual(RustEngineBridge.stripTone("guá"), "gua2")
+    func test_op_normalizeToTL_passthrough() {
+        XCTAssertEqual(RustEngineBridge.normalizeToTl("hoo"), "hoo")
+    }
+
+    func test_op_normalizeInput_extractsToneFromDiacritic() {
+        XCTAssertEqual(RustEngineBridge.normalizeInput("hó"), "ho2")
+    }
+
+    func test_op_restoreTone_returnsBareForToneMarked() {
+        XCTAssertEqual(RustEngineBridge.restoreTone("hó"), "ho")
+    }
+
+    func test_op_restoreTone_returnsNilForPlain() {
+        XCTAssertNil(RustEngineBridge.restoreTone("ho"))
+    }
+
+    func test_op_hasToneMarks_trueForDiacritic() {
+        XCTAssertTrue(RustEngineBridge.hasToneMarks("hó"))
+    }
+
+    func test_op_hasToneMarks_falseForPlain() {
+        XCTAssertFalse(RustEngineBridge.hasToneMarks("ho"))
+    }
+
+    func test_op_toneVariations_lazyCache_returnsBothModes() {
+        let cache = RustEngineBridge.toneVariations
+        XCTAssertFalse(cache.poj.isEmpty, "POJ map should populate")
+        XCTAssertFalse(cache.tl.isEmpty, "TL map should populate")
+        XCTAssertNotNil(cache.tl["a"])
+        XCTAssertNotNil(cache.poj["a"])
+        XCTAssertNotNil(cache.tl["oo"])
+        XCTAssertNotNil(cache.poj["o\u{0358}"])
+    }
+
+    // MARK: - Derivation (2 ops)
+
+    func test_op_deriveNotone_stripsDiacriticsDigitsHyphensSpaces() {
+        XCTAssertEqual(RustEngineBridge.deriveNotone("Gâu-tsá 2"), "gautsa")
+    }
+
+    func test_op_deriveAbbrev_returnsFirstCharPerSyllable() {
+        XCTAssertEqual(RustEngineBridge.deriveAbbrev("gâu-tsá"), "gt")
+    }
+
+    // MARK: - TPS (6 ops)
+
+    func test_op_containsTPS_trueForZhuyin() {
+        XCTAssertTrue(RustEngineBridge.containsTPS("ㄉㄧㄠ"))
+    }
+
+    func test_op_containsTPS_falseForLatin() {
+        XCTAssertFalse(RustEngineBridge.containsTPS("tiau"))
+    }
+
+    func test_op_tpsToTL_basic() {
+        let out = RustEngineBridge.tpsToTL("ㄉㄧㄠˊ")
+        XCTAssertTrue(out.contains("tiau"), "got: \(out)")
+    }
+
+    func test_op_tlNumericToTPS_basic() {
+        let out = RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)
+        XCTAssertFalse(out.isEmpty, "TL numeric → TPS should produce zhuyin")
+    }
+
+    func test_op_tlDisplayToTPS_basic() {
+        let out = RustEngineBridge.tlDisplayToTPS("tiâu", orMapsToER: false)
+        XCTAssertFalse(out.isEmpty, "TL display → TPS should produce zhuyin")
+    }
+
+    func test_op_isTPSToneMark_acuteIsToneMark() {
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{02ca}"))
+    }
+
+    func test_op_isTPSToneMark_letterIsNotToneMark() {
+        XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
+    }
+
+    func test_op_tpsInputAdjust_dualForm() {
+        let result = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄚ")
+        XCTAssertEqual(result.adjusted, "ㆬ")
+        XCTAssertNil(result.replaceLast)
+    }
+
+    func test_op_tpsInputAdjust_palatalization() {
+        let result = RustEngineBridge.tpsInputAdjust(incoming: "ㄧ", rawInput: "ㄗ")
+        XCTAssertEqual(result.adjusted, "ㄧ")
+        XCTAssertEqual(result.replaceLast, "ㄐ")
+    }
+
+    func test_op_tpsInputAdjust_syllabicNasal() {
+        let result = RustEngineBridge.tpsInputAdjust(incoming: "\u{02ca}", rawInput: "ㄇ")
+        XCTAssertEqual(result.adjusted, "\u{02ca}")
+        XCTAssertEqual(result.replaceLast, "ㆬ")
+    }
+
+    // MARK: - Diagnostics (Codex v2 §8 / v3 §7)
+
+    func test_diagnostics_initialState_isEmpty() {
+        RustEngineBridge.resetDiagnosticsForTesting()
+        let snapshot = RustEngineBridge.diagnostics()
+        XCTAssertEqual(snapshot.failureCount, 0)
+        XCTAssertTrue(snapshot.recentErrors.isEmpty)
     }
 
     // MARK: - T1: panic at FFI
@@ -75,10 +180,6 @@ final class RustEngineBridgeTests: XCTestCase {
     }
 
     func test_T5_atCap_returnsParseOrInvariant() {
-        // At cap (== MAX_REQUEST_BYTES). Bytes are not a valid Request, so the
-        // FFI accepts the size and the inner decoder returns FAIL_PARSE — the
-        // important assertion is "did not crash and did not return
-        // FailInvariant for an at-cap payload".
         let atCap = [UInt8](repeating: 0x00, count: 2 * 1024 * 1024)
         let response = RustEngineBridge.sendRawBytes(atCap)
         XCTAssertNotNil(response)
@@ -90,25 +191,19 @@ final class RustEngineBridgeTests: XCTestCase {
     func test_T6_loggerRoundTrip_warningReachesPlatformSink() {
         let sink = TestLogSink()
         LoggerFactory.install { _ in sink }
-        defer {
-            LoggerFactory.install { _ in NullLoggerBackend() }
-        }
-        // Drive a warning through the Rust core. Malformed bytes cause
-        // `phonetics::api::run_request` to log a warn-level decode-failure.
+        defer { LoggerFactory.install { _ in NullLoggerBackend() } }
         _ = RustEngineBridge.sendRawBytes([0xFF, 0xFE, 0xFD])
-        XCTAssertGreaterThanOrEqual(sink.recorded.count, 1, "expected at least one log line")
+        XCTAssertGreaterThanOrEqual(sink.recorded.count, 1)
     }
 
-    // MARK: - T7': empty bytes (reframed from null handle since D9.2 has no handle)
+    // MARK: - T7': empty bytes
 
     func test_T7prime_emptyBytes_returnsFailParseOrInvariant() {
         let response = RustEngineBridge.sendRawBytes([])
         XCTAssertNotNil(response)
-        // Empty is wire-valid (zero-byte Request decodes to defaults), but
-        // missing payload triggers FAIL_INVARIANT in `run_request`.
         XCTAssertTrue(
             response?.error == .failInvariant || response?.error == .failParse,
-            "expected FAIL_INVARIANT or FAIL_PARSE, got \(String(describing: response?.error))"
+            "got \(String(describing: response?.error))"
         )
     }
 }

@@ -128,7 +128,7 @@ enum CandidateCellHelper {
         for suggestion: Autocomplete.Suggestion,
         orMapsToER: Bool,
     ) -> String {
-        TLToTPS.convert(suggestion.text, orMapsToER: orMapsToER)
+        RustEngineBridge.tlNumericToTPS(suggestion.text, orMapsToER: orMapsToER)
     }
 
     /// 以 `newText` 取代原本的 commit text，並把原本的 text 移到 subtitle 以保留 hint。

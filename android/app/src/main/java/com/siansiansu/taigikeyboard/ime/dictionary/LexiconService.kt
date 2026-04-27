@@ -4,10 +4,11 @@ import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -183,8 +184,8 @@ class LexiconService(
         }
 
         // TPS ㄜ expansion: also search "or" variant when toggle is ON.
-        if (!(TPSConverter.containsTPS(input) && settings.isTpsOrMappedToER)) return words
-        val tlInput = TPSConverter.toTL(input)
+        if (!(RustEngineBridge.containsTps(input) && settings.isTpsOrMappedToER)) return words
+        val tlInput = RustEngineBridge.tpsToTl(input)
         if (!tlInput.contains("er")) return words
 
         val orVariant = tlInput.replace("er", "or")
@@ -271,7 +272,7 @@ class LexiconService(
 
             val roman =
                 if (inputMode == InputMode.POJ) {
-                    TaigiPhonetics.tlDisplayToPOJDisplay(record.tl)
+                    RustEngineBridge.tlToPoj(record.tl)
                 } else {
                     record.tl
                 }
@@ -371,7 +372,7 @@ class LexiconService(
             val tlRoman = record.tl
             val roman =
                 if (inputMode == InputMode.POJ) {
-                    TaigiPhonetics.tlDisplayToPOJDisplay(tlRoman)
+                    RustEngineBridge.tlToPoj(tlRoman)
                 } else {
                     tlRoman
                 }

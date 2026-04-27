@@ -1,10 +1,12 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.engine.NormalizeMode
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 
 /**
  * Platform wrapper around the pure [ComposingState] engine.
@@ -269,10 +271,27 @@ class ComposingManager(
      */
     internal fun deriveDisplay(raw: String): String {
         if (raw.isEmpty()) return ""
-        if (TPSConverter.containsTPS(raw)) return raw
+        if (RustEngineBridge.containsTps(raw)) return raw
         val settings = settingsProvider.current
         val mode = resolveInputMode(settings.inputMode)
-        return ToneConverter.convertToToneMarks(raw, mode, settings.toneToggles)
+        // Forward all three modes — collapsing ENGLISH to TL would route
+        // English text through tone normalization (Rust passthrough relies
+        // on receiving `InputMode::English` per
+        // `engine/phonetics/src/api.rs:236`).
+        val normalizeMode = when (mode) {
+            InputMode.POJ -> NormalizeMode.POJ
+            InputMode.TL -> NormalizeMode.TL
+            InputMode.ENGLISH -> NormalizeMode.ENGLISH
+        }
+        val carrier = ToneTogglesCarrier(
+            settings.toneToggles.isDoubleTapOOEnabled,
+            settings.toneToggles.isDoubleTapNNEnabled,
+        )
+        // Match the pre-D9.4 `ToneConverter.convertToToneMarks` pipeline:
+        // normalize tones via the engine, then post-process nasal-marker
+        // case so `ⁿ` / `ᴺ` follow the preceding letter's case.
+        val toneMarked = RustEngineBridge.normalizeTone(raw, normalizeMode, carrier)
+        return ToneUtilities.adjustNasalMarkerCase(toneMarked)
     }
 
     private fun dispatch(
@@ -296,11 +315,11 @@ class ComposingManager(
         }
     }
 
-    private fun resolveInputMode(raw: String): ToneConverterModels.InputMode =
+    private fun resolveInputMode(raw: String): InputMode =
         when (raw) {
-            "poj" -> ToneConverterModels.InputMode.POJ
-            "tl", "tps" -> ToneConverterModels.InputMode.TL
-            else -> ToneConverterModels.InputMode.POJ
+            "poj" -> InputMode.POJ
+            "tl", "tps" -> InputMode.TL
+            else -> InputMode.POJ
         }
 }
 

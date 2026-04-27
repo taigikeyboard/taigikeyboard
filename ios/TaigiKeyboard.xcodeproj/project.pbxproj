@@ -267,12 +267,6 @@
 			path = Sources/TaigiKeyboard/Overlays;
 			sourceTree = "<group>";
 		};
-		F361A89A2F8560BF00682CC6 /* Phonetics */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Phonetics;
-			path = Sources/TaigiKeyboard/Phonetics;
-			sourceTree = "<group>";
-		};
 		F39C27AA2EEE980700AA2361 /* marisa */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -347,7 +341,6 @@
 				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
-				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
@@ -417,7 +410,6 @@
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
-				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,
@@ -462,7 +454,6 @@
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
-				F361A89A2F8560BF00682CC6 /* Phonetics */,
 				F39C27AA2EEE980700AA2361 /* marisa */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,

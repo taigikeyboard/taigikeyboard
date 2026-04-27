@@ -3,7 +3,7 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
  * Constants for dictionary operations

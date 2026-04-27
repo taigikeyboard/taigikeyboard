@@ -8,7 +8,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * Per-request live snapshot. iOS EngineSettings / Android EngineSettings
- * shape — minimal in D9.1, expands with the Composing slice in D9.3.
+ * shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
+ * per call per behavioral-invariants.md §11. Platform wrappers MUST pass
+ * current values per request (e.g. iOS `RustEngineBridge.normalizeTone(input,
+ * toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
+ *
+ * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
+ * preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -116,6 +122,58 @@ public  final class AppConfig extends
 
   }
 
+  public static final int OO_DOUBLETAP_ENABLED_FIELD_NUMBER = 3;
+  private boolean ooDoubletapEnabled_;
+  /**
+   * <code>bool oo_doubletap_enabled = 3;</code>
+   * @return The ooDoubletapEnabled.
+   */
+  @java.lang.Override
+  public boolean getOoDoubletapEnabled() {
+    return ooDoubletapEnabled_;
+  }
+  /**
+   * <code>bool oo_doubletap_enabled = 3;</code>
+   * @param value The ooDoubletapEnabled to set.
+   */
+  private void setOoDoubletapEnabled(boolean value) {
+    
+    ooDoubletapEnabled_ = value;
+  }
+  /**
+   * <code>bool oo_doubletap_enabled = 3;</code>
+   */
+  private void clearOoDoubletapEnabled() {
+
+    ooDoubletapEnabled_ = false;
+  }
+
+  public static final int NN_DOUBLETAP_ENABLED_FIELD_NUMBER = 4;
+  private boolean nnDoubletapEnabled_;
+  /**
+   * <code>bool nn_doubletap_enabled = 4;</code>
+   * @return The nnDoubletapEnabled.
+   */
+  @java.lang.Override
+  public boolean getNnDoubletapEnabled() {
+    return nnDoubletapEnabled_;
+  }
+  /**
+   * <code>bool nn_doubletap_enabled = 4;</code>
+   * @param value The nnDoubletapEnabled to set.
+   */
+  private void setNnDoubletapEnabled(boolean value) {
+    
+    nnDoubletapEnabled_ = value;
+  }
+  /**
+   * <code>bool nn_doubletap_enabled = 4;</code>
+   */
+  private void clearNnDoubletapEnabled() {
+
+    nnDoubletapEnabled_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -202,7 +260,13 @@ public  final class AppConfig extends
   /**
    * <pre>
    * Per-request live snapshot. iOS EngineSettings / Android EngineSettings
-   * shape — minimal in D9.1, expands with the Composing slice in D9.3.
+   * shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
+   * per call per behavioral-invariants.md §11. Platform wrappers MUST pass
+   * current values per request (e.g. iOS `RustEngineBridge.normalizeTone(input,
+   * toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
+   *
+   * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
+   * preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -316,6 +380,62 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <code>bool oo_doubletap_enabled = 3;</code>
+     * @return The ooDoubletapEnabled.
+     */
+    @java.lang.Override
+    public boolean getOoDoubletapEnabled() {
+      return instance.getOoDoubletapEnabled();
+    }
+    /**
+     * <code>bool oo_doubletap_enabled = 3;</code>
+     * @param value The ooDoubletapEnabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOoDoubletapEnabled(boolean value) {
+      copyOnWrite();
+      instance.setOoDoubletapEnabled(value);
+      return this;
+    }
+    /**
+     * <code>bool oo_doubletap_enabled = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOoDoubletapEnabled() {
+      copyOnWrite();
+      instance.clearOoDoubletapEnabled();
+      return this;
+    }
+
+    /**
+     * <code>bool nn_doubletap_enabled = 4;</code>
+     * @return The nnDoubletapEnabled.
+     */
+    @java.lang.Override
+    public boolean getNnDoubletapEnabled() {
+      return instance.getNnDoubletapEnabled();
+    }
+    /**
+     * <code>bool nn_doubletap_enabled = 4;</code>
+     * @param value The nnDoubletapEnabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNnDoubletapEnabled(boolean value) {
+      copyOnWrite();
+      instance.setNnDoubletapEnabled(value);
+      return this;
+    }
+    /**
+     * <code>bool nn_doubletap_enabled = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNnDoubletapEnabled() {
+      copyOnWrite();
+      instance.clearNnDoubletapEnabled();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -334,10 +454,12 @@ public  final class AppConfig extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "toneMode_",
             "inputMode_",
+            "ooDoubletapEnabled_",
+            "nnDoubletapEnabled_",
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0007\u0004\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

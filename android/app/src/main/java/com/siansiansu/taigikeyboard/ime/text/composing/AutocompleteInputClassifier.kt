@@ -5,7 +5,6 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.ime.dictionary.InputNormalizer
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 
 /**
  * Classify raw autocomplete input into an [InputType] tier.
@@ -28,7 +27,7 @@ object AutocompleteInputClassifier {
      */
     fun determineInputType(text: String): InputType =
         when {
-            ToneConverterModels.isHanzi(text) -> InputType.Hanzi
+            isHanzi(text) -> InputType.Hanzi
             InputNormalizer.hasToneMarks(text) -> InputType.RomanWithTone
             containsNumericTone(text) -> InputType.RomanWithTone
             else -> InputType.RomanWithoutTone
@@ -43,4 +42,27 @@ object AutocompleteInputClassifier {
         text.any { char ->
             char.isDigit() && char != '1' && char != '4' && char != '0'
         }
+
+    /**
+     * True if `input` contains any CJK Unified Ideograph (or Extensions A–E).
+     * Inlined from the deleted `ToneConverterModels.isHanzi` helper —
+     * single consumer, kept private here.
+     */
+    private fun isHanzi(input: String): Boolean {
+        var i = 0
+        while (i < input.length) {
+            val codePoint = Character.codePointAt(input, i)
+            if (codePoint in 0x4E00..0x9FFF || // CJK Unified Ideographs
+                codePoint in 0x3400..0x4DBF || // CJK Extension A
+                codePoint in 0x20000..0x2A6DF || // CJK Extension B
+                codePoint in 0x2A700..0x2B73F || // CJK Extension C
+                codePoint in 0x2B740..0x2B81F || // CJK Extension D
+                codePoint in 0x2B820..0x2CEAF // CJK Extension E
+            ) {
+                return true
+            }
+            i += Character.charCount(codePoint)
+        }
+        return false
+    }
 }

@@ -4,7 +4,7 @@ import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CoroutineScope
@@ -35,7 +35,7 @@ class CandidateUpdateCoordinator(
     // Protected by serviceLock for thread-safe access
     private val serviceLock = Any()
     private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService? = null
-    private var cachedInputMode: ToneConverterModels.InputMode? = null
+    private var cachedInputMode: InputMode? = null
 
     // English autocomplete service
     private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
@@ -140,9 +140,9 @@ class CandidateUpdateCoordinator(
         val inputMode =
             taigikeyboard.prefs.inputMode.let {
                 when (it) {
-                    "poj" -> ToneConverterModels.InputMode.POJ
-                    "tl", "tps" -> ToneConverterModels.InputMode.TL
-                    else -> ToneConverterModels.InputMode.POJ
+                    "poj" -> InputMode.POJ
+                    "tl", "tps" -> InputMode.TL
+                    else -> InputMode.POJ
                 }
             }
 

@@ -101,7 +101,13 @@ public enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
 }
 
 /// Per-request live snapshot. iOS EngineSettings / Android EngineSettings
-/// shape — minimal in D9.1, expands with the Composing slice in D9.3.
+/// shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
+/// per call per behavioral-invariants.md §11. Platform wrappers MUST pass
+/// current values per request (e.g. iOS `RustEngineBridge.normalizeTone(input,
+/// toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
+///
+/// D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
+/// preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
 public struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -110,6 +116,10 @@ public struct Taigi_Engine_AppConfig: Sendable {
   public var toneMode: String = String()
 
   public var inputMode: String = String()
+
+  public var ooDoubletapEnabled: Bool = false
+
+  public var nnDoubletapEnabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -234,7 +244,7 @@ extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
 
 extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -244,6 +254,8 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.toneMode) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.ooDoubletapEnabled) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.nnDoubletapEnabled) }()
       default: break
       }
     }
@@ -256,12 +268,20 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if !self.inputMode.isEmpty {
       try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 2)
     }
+    if self.ooDoubletapEnabled != false {
+      try visitor.visitSingularBoolField(value: self.ooDoubletapEnabled, fieldNumber: 3)
+    }
+    if self.nnDoubletapEnabled != false {
+      try visitor.visitSingularBoolField(value: self.nnDoubletapEnabled, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_AppConfig, rhs: Taigi_Engine_AppConfig) -> Bool {
     if lhs.toneMode != rhs.toneMode {return false}
     if lhs.inputMode != rhs.inputMode {return false}
+    if lhs.ooDoubletapEnabled != rhs.ooDoubletapEnabled {return false}
+    if lhs.nnDoubletapEnabled != rhs.nnDoubletapEnabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

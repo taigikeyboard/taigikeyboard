@@ -3,6 +3,8 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+
 /**
  * 候選詞大小寫轉換器
  *
@@ -26,7 +28,7 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): List<TaigiWord> =
         suggestions.map { word ->
             transformWord(word, composingText, caps, capsLock, inputMode)
@@ -40,7 +42,7 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): TaigiWord {
         // NextWord / English suggestions (id < 0) skip case transform,
         // but custom dictionary entries (id == -2) should be transformed
@@ -82,7 +84,7 @@ object SuggestionCaseTransformer {
         composingText: String,
         caps: Boolean,
         capsLock: Boolean,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): String {
         // Caps Lock：全部大寫
         if (capsLock) {
@@ -182,7 +184,7 @@ object SuggestionCaseTransformer {
     private fun matchCase(
         target: String,
         source: String,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): String {
         val result = StringBuilder()
         val sourceLetters = source.filter { it.isLetter() }.toMutableList()
@@ -208,7 +210,7 @@ object SuggestionCaseTransformer {
      */
     private fun capitalizeFirstLetter(
         text: String,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): String {
         val result = StringBuilder()
         var isFirstLetter = true
@@ -234,7 +236,7 @@ object SuggestionCaseTransformer {
      */
     private fun toUppercase(
         text: String,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): String =
         text
             .map { char ->
@@ -246,7 +248,7 @@ object SuggestionCaseTransformer {
      */
     private fun toLowercase(
         text: String,
-        inputMode: ToneConverterModels.InputMode,
+        inputMode: InputMode,
     ): String =
         text
             .map { char ->

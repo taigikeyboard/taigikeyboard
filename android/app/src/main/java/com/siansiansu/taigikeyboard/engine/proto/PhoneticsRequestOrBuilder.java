@@ -10,25 +10,215 @@ public interface PhoneticsRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>.taigi.engine.PhoneticsRequest.Op op = 1;</code>
-   * @return The enum numeric value on the wire for op.
+   * <pre>
+   * --- Phonetics core (9 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
+   * @return Whether the normalizeTone field is set.
    */
-  int getOpValue();
+  boolean hasNormalizeTone();
   /**
-   * <code>.taigi.engine.PhoneticsRequest.Op op = 1;</code>
-   * @return The op.
+   * <pre>
+   * --- Phonetics core (9 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
+   * @return The normalizeTone.
    */
-  com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.Op getOp();
+  com.siansiansu.taigikeyboard.engine.proto.NormalizeTone getNormalizeTone();
 
   /**
-   * <code>string input = 2;</code>
-   * @return The input.
+   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
+   * @return Whether the stripTone field is set.
    */
-  java.lang.String getInput();
+  boolean hasStripTone();
   /**
-   * <code>string input = 2;</code>
-   * @return The bytes for input.
+   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
+   * @return The stripTone.
    */
-  com.google.protobuf.ByteString
-      getInputBytes();
+  com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone();
+
+  /**
+   * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
+   * @return Whether the pojToTl field is set.
+   */
+  boolean hasPojToTl();
+  /**
+   * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
+   * @return The pojToTl.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.PojToTl getPojToTl();
+
+  /**
+   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
+   * @return Whether the tlToPoj field is set.
+   */
+  boolean hasTlToPoj();
+  /**
+   * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
+   * @return The tlToPoj.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj();
+
+  /**
+   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
+   * @return Whether the normalizeToTl field is set.
+   */
+  boolean hasNormalizeToTl();
+  /**
+   * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
+   * @return The normalizeToTl.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl getNormalizeToTl();
+
+  /**
+   * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
+   * @return Whether the normalizeInput field is set.
+   */
+  boolean hasNormalizeInput();
+  /**
+   * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
+   * @return The normalizeInput.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NormalizeInput getNormalizeInput();
+
+  /**
+   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
+   * @return Whether the restoreTone field is set.
+   */
+  boolean hasRestoreTone();
+  /**
+   * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
+   * @return The restoreTone.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone();
+
+  /**
+   * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
+   * @return Whether the hasToneMarks field is set.
+   */
+  boolean hasHasToneMarks();
+  /**
+   * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
+   * @return The hasToneMarks.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.HasToneMarks getHasToneMarks();
+
+  /**
+   * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
+   * @return Whether the getToneVariations field is set.
+   */
+  boolean hasGetToneVariations();
+  /**
+   * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
+   * @return The getToneVariations.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.GetToneVariations getGetToneVariations();
+
+  /**
+   * <pre>
+   * --- Derivation (2 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
+   * @return Whether the deriveNotone field is set.
+   */
+  boolean hasDeriveNotone();
+  /**
+   * <pre>
+   * --- Derivation (2 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
+   * @return The deriveNotone.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeriveNotone getDeriveNotone();
+
+  /**
+   * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
+   * @return Whether the deriveAbbrev field is set.
+   */
+  boolean hasDeriveAbbrev();
+  /**
+   * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
+   * @return The deriveAbbrev.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev getDeriveAbbrev();
+
+  /**
+   * <pre>
+   * --- TPS (6 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
+   * @return Whether the containsTps field is set.
+   */
+  boolean hasContainsTps();
+  /**
+   * <pre>
+   * --- TPS (6 ops) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
+   * @return The containsTps.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps();
+
+  /**
+   * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
+   * @return Whether the tpsToTl field is set.
+   */
+  boolean hasTpsToTl();
+  /**
+   * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
+   * @return The tpsToTl.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TpsToTl getTpsToTl();
+
+  /**
+   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
+   * @return Whether the tlNumericToTps field is set.
+   */
+  boolean hasTlNumericToTps();
+  /**
+   * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
+   * @return The tlNumericToTps.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps getTlNumericToTps();
+
+  /**
+   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
+   * @return Whether the tlDisplayToTps field is set.
+   */
+  boolean hasTlDisplayToTps();
+  /**
+   * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
+   * @return The tlDisplayToTps.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps();
+
+  /**
+   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
+   * @return Whether the isTpsToneMark field is set.
+   */
+  boolean hasIsTpsToneMark();
+  /**
+   * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
+   * @return The isTpsToneMark.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark getIsTpsToneMark();
+
+  /**
+   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
+   * @return Whether the tpsInputAdjust field is set.
+   */
+  boolean hasTpsInputAdjust();
+  /**
+   * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
+   * @return The tpsInputAdjust.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust();
+
+  public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.IntentCase getIntentCase();
 }

@@ -3,61 +3,27 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
-import java.text.Normalizer
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 
 /**
- * Pure derivation functions for custom-dictionary columns. Kept out of
- * `CustomDictionaryService` so scoring/search paths can depend on these
- * helpers without touching SQLite or Android context. Mirrors iOS
- * `Lexicon/Database/CustomDictionaryDerivation.swift`.
+ * Pure derivation functions for custom-dictionary columns. Mirrors iOS
+ * `Lexicon/Database/CustomDictionaryDerivation.swift`. After D9.4 every
+ * entry point is a thin wrapper over [RustEngineBridge]; the previous
+ * NFD walks + nasal-marker conversion + diacritic stripping moved into
+ * `engine/phonetics/src/derivation.rs`.
  */
 object CustomDictionaryDerivation {
-    /**
-     * Toneless form used for toneless prefix search.
-     * Strips tone diacritics (via NFD), trailing digits, hyphens, and spaces.
-     */
-    fun generateNotone(roman: String): String {
-        val withNasalConverted =
-            roman
-                .lowercase()
-                .replace("\u207F", "nn")
-                .replace("\u1D3A", "nn")
-        val decomposed = Normalizer.normalize(withNasalConverted, Normalizer.Form.NFD)
-        return buildString {
-            for (cp in decomposed.codePoints().toArray()) {
-                if (Character.getType(cp) == Character.NON_SPACING_MARK.toInt()) continue
-                if (cp in '0'.code..'9'.code) continue
-                if (cp == '-'.code || cp == ' '.code) continue
-                appendCodePoint(cp)
-            }
-        }.let { Normalizer.normalize(it, Normalizer.Form.NFC) }
-    }
+    /** Toneless form used for toneless prefix search — Rust `OP_DERIVE_NOTONE`. */
+    fun generateNotone(roman: String): String = RustEngineBridge.deriveNotone(roman)
 
     /**
-     * Abbreviation: first letter of each syllable (split by `-` or space)
-     * with diacritics stripped. Returns empty string for single-syllable input.
+     * Abbreviation: first letter of each syllable (split by hyphen + ASCII
+     * whitespace `[ \t\n\x0B\f\r-]+`) with diacritics stripped. Returns
+     * empty string for single-syllable input. Whitespace canonical matches
+     * Android JVM `Regex("[\\s-]+")` exactly per Codex v3 §1.
      */
-    fun generateAbbrev(roman: String): String {
-        val syllables = roman.lowercase().split(Regex("[-\\s]+")).filter { it.isNotEmpty() }
-        if (syllables.size < 2) return ""
-        return syllables.joinToString("") { syllable ->
-            val firstChar = syllable.first().toString()
-            val decomposed = Normalizer.normalize(firstChar, Normalizer.Form.NFD)
-            buildString {
-                decomposed.codePoints().forEach { cp ->
-                    if (Character.getType(cp) != Character.NON_SPACING_MARK.toInt()) {
-                        appendCodePoint(cp)
-                    }
-                }
-            }.let { Normalizer.normalize(it, Normalizer.Form.NFC) }
-        }
-    }
+    fun generateAbbrev(roman: String): String = RustEngineBridge.deriveAbbrev(roman)
 
-    /**
-     * Numeric-toned form (e.g. "gâu-tsá" → "gau5tsa2") for tone-aware search.
-     * Delegates to [InputNormalizer.normalize] in TL mode so the tone-digit
-     * rules live in one place.
-     */
-    fun generateRomanNum(roman: String): String = InputNormalizer.normalize(roman, InputMode.TL)
+    /** Numeric-toned form for tone-aware search — same as `OP_NORMALIZE_INPUT`. */
+    fun generateRomanNum(roman: String): String = RustEngineBridge.normalizeInput(roman)
 }

@@ -13,38 +13,23 @@ import Foundation
 /// query key), so both sides must stay exactly in sync — hence a single
 /// canonical implementation here rather than any callback into the service.
 enum CustomDictionaryDerivation {
-    /// Toneless form — strips tone diacritics (via NFD), trailing digits,
-    /// hyphens, and spaces. Used for toneless prefix search.
+    /// Toneless form — Rust `OP_DERIVE_NOTONE` strips tone diacritics + digits
+    /// + hyphens + spaces after lowercase + nasal-marker conversion.
     static func generateNotone(_ roman: String) -> String {
-        // POJ nasal markers ⁿ (U+207F) / ᴺ (U+1D3A) → nn
-        let withNasalConverted = roman.lowercased()
-            .replacingOccurrences(of: "\u{207F}", with: "nn")
-            .replacingOccurrences(of: "\u{1D3A}", with: "nn")
-        let decomposed = withNasalConverted.decomposedStringWithCanonicalMapping
-        var result = ""
-        for scalar in decomposed.unicodeScalars {
-            if scalar.properties.generalCategory == .nonspacingMark { continue }
-            if scalar.value >= 0x30 && scalar.value <= 0x39 { continue }
-            if scalar == "-" || scalar == " " { continue }
-            result.unicodeScalars.append(scalar)
-        }
-        return result.precomposedStringWithCanonicalMapping
+        RustEngineBridge.deriveNotone(roman)
     }
 
-    /// Abbreviation form — first letter of each syllable (split by `-` or space),
-    /// diacritics stripped. Empty string when fewer than two syllables.
+    /// Abbreviation form — Rust `OP_DERIVE_ABBREV` returns first char per
+    /// syllable (split by ASCII whitespace + hyphen), diacritics stripped.
+    /// Returns "" when fewer than 2 syllables. Whitespace canonical
+    /// `[ \t\n\x0B\f\r-]+` matches Android JVM `Regex("[\\s-]+")` (Codex v3 §1).
     static func generateAbbrev(_ roman: String) -> String {
-        let syllables = roman.lowercased()
-            .components(separatedBy: CharacterSet(charactersIn: "- "))
-            .filter { !$0.isEmpty }
-        guard syllables.count >= 2 else { return "" }
-        return syllables.map { stripCombiningMarks(String($0.prefix(1))) }.joined()
+        RustEngineBridge.deriveAbbrev(roman)
     }
 
-    /// Numeric-toned form for tone-aware search — diacritics converted to
-    /// tone digits, hyphens removed. Example: `"gâu-tsá" → "gau5tsa2"`.
+    /// Numeric-toned form for tone-aware search — same as `OP_NORMALIZE_INPUT`.
     static func generateRomanNum(_ roman: String) -> String {
-        InputNormalizer.normalize(roman, mode: .tl)
+        RustEngineBridge.normalizeInput(roman)
     }
 
     /// Build the custom-dictionary prefix-search key for `roman`.
@@ -64,17 +49,4 @@ enum CustomDictionaryDerivation {
         return (key, isToneAware)
     }
 
-    // MARK: - Private
-
-    /// Decompose then drop Unicode `Mn` (nonspacing marks). Used by
-    /// `generateAbbrev`; `generateNotone` open-codes its own loop because
-    /// it layers additional digit/hyphen/space filters on the same pass.
-    private static func stripCombiningMarks(_ s: String) -> String {
-        let decomposed = s.decomposedStringWithCanonicalMapping
-        var result = ""
-        for scalar in decomposed.unicodeScalars where scalar.properties.generalCategory != .nonspacingMark {
-            result.unicodeScalars.append(scalar)
-        }
-        return result.precomposedStringWithCanonicalMapping
-    }
 }

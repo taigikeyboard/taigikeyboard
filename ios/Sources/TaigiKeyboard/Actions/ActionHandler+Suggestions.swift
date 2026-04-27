@@ -93,7 +93,7 @@ extension ActionHandler {
     /// Format output text based on display mode (roman, Hanji, or both scripts)
     private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
         let bracketRoman = isTPSLayout
-            ? TLToTPS.convertFromDisplay(roman, orMapsToER: settings.isTpsOrMappedToER)
+            ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: settings.isTpsOrMappedToER)
             : roman
 
         if settings.isOutputBothScripts, let hanzi, !hanzi.isEmpty {

@@ -174,7 +174,7 @@ final class LexiconService: @unchecked Sendable {
         )
 
         // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
-        if let raw = rawInput, TPSTables.containsTPS(raw),
+        if let raw = rawInput, RustEngineBridge.containsTPS(raw),
            settingsProvider.current.isTpsOrMappedToER,
            segmentedInput.contains("er")
         {

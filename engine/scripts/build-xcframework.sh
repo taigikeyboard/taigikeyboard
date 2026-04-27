@@ -129,7 +129,7 @@ cp "$OUT_DIR/SwiftBridgeCore.swift" "$DEST_DIR/SwiftBridgeCore.swift" 2>/dev/nul
 # panicking. Production app code never references the symbol; the test
 # target does. The Android side enforces strict symbol absence in release.
 echo "release/dev symbol surface (informational):"
-nm "$DEVICE_LIB" 2>/dev/null | grep -E '(process_request_bytes|install_logger_sink|panic_for_test)' || true
+nm "$DEVICE_LIB" 2>/dev/null | grep -E '(process_request_bytes|install_logger_sink|set_log_level|panic_for_test)' || true
 
 if [[ $DEV -eq 1 ]]; then
     echo "ok — DEV RustTaigi.xcframework (panic-injector ON) staged at $DEST_DIR"

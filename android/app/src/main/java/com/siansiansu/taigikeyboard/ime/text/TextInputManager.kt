@@ -18,8 +18,8 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
@@ -607,7 +607,7 @@ class TextInputManager(
         if (taigikeyboard.prefs.keyboardLayoutType == "tps" && composingManager?.isComposing() == true) {
             val rawInput = composingManager?.getRawInput() ?: ""
             val lastChar = rawInput.lastOrNull()
-            if (lastChar != null && !TPSConverter.isTPSToneMark(lastChar) && lastChar != ' ') {
+            if (lastChar != null && !RustEngineBridge.isTpsToneMark(lastChar) && lastChar != ' ') {
                 composingManager?.appendCharacter(" ", ic)
                 candidateCoordinator.scheduleDisplayDerivation()
                 candidateCoordinator.updateTaigiCandidatesDebounced()
@@ -828,9 +828,9 @@ class TextInputManager(
 
         val inputMode =
             when (taigikeyboard.prefs.inputMode) {
-                "poj" -> ToneConverterModels.InputMode.POJ
-                "tl", "tps" -> ToneConverterModels.InputMode.TL
-                else -> ToneConverterModels.InputMode.POJ
+                "poj" -> InputMode.POJ
+                "tl", "tps" -> InputMode.TL
+                else -> InputMode.POJ
             }
         var char =
             when {
@@ -839,21 +839,13 @@ class TextInputManager(
                 else -> ToneUtilities.lowercaseToneLetter(baseText, inputMode)
             }
 
-        // TPS layout: context-aware character adjustments
+        // TPS layout: context-aware character adjustments via CharacterInputPipeline
+        // (mirrors iOS CharacterInputPipeline.adjust collapsed entry point).
         if (taigikeyboard.prefs.keyboardLayoutType == "tps") {
             val rawInput = composingManager?.getRawInput() ?: ""
-            char = TPSConverter.adjustTPSInitialKey(char, rawInput)
-            char = TPSConverter.adjustTPSNasalizedVowelKey(char, rawInput)
-            // Syllabic nasal auto-correct: ㄇ+tone → ㆬ, ㄫ+tone → ㆭ
-            val nasalReplacement = TPSConverter.syllabicNasalReplacement(char, rawInput.lastOrNull())
-            if (nasalReplacement != null) {
-                composingManager?.replaceLastCharacter(nasalReplacement, ic)
-            }
-            // Palatalization auto-correct: ㄗ/ㄘ/ㄙ/ㆡ + ㄧ/ㆪ → ㄐ/ㄑ/ㄒ/ㆢ
-            val replacement = TPSConverter.palatalizationReplacement(char, rawInput.lastOrNull())
-            if (replacement != null) {
-                composingManager?.replaceLastCharacter(replacement, ic)
-            }
+            val adjustment = CharacterInputPipeline.adjust(char, rawInput)
+            char = adjustment.char
+            adjustment.replaceLast?.let { composingManager?.replaceLastCharacter(it, ic) }
         }
 
         // English mode: commit directly

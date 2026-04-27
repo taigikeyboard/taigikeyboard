@@ -61,7 +61,9 @@ enum ExternalLookupURLBuilder {
         // then reuse the shared tone-stripping helper so all call sites share
         // one implementation.
         let preprocessed = TaigiUnicode.nfdPreprocessed(syllable)
-        let (bare, tone) = TaigiPhonetics.stripToneMark(preprocessed)
+        let stripped = RustEngineBridge.stripTone(preprocessed)
+        let bare = stripped.bare
+        let tone = stripped.tone
 
         // Tone 1 (open) and 4 (checked) are omitted in external dictionary URLs.
         if tone.isEmpty || tone == "1" || tone == "4" {

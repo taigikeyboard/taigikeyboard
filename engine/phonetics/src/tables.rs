@@ -137,6 +137,8 @@ pub const ZHUYIN_VOWELS: &[(&str, &str)] = &[
     ("oo", "\u{31a6}"),
     ("ee", "\u{311d}"),
     ("er", "\u{311c}"),
+    // `or` defaults to ㄛ at runtime; this ㄜ entry is the toggle-ON form
+    // selected by `tps::to_zhuyin(_, _, or_maps_to_er = true)`.
     ("or", "\u{311c}"),
     ("ir", "\u{31a8}"),
     ("ai", "\u{311e}"),

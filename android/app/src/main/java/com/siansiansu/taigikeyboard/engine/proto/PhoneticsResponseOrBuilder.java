@@ -10,20 +10,70 @@ public interface PhoneticsResponseOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string output = 1;</code>
-   * @return The output.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
+   * @return Whether the stringResult field is set.
    */
-  java.lang.String getOutput();
+  boolean hasStringResult();
   /**
-   * <code>string output = 1;</code>
-   * @return The bytes for output.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
+   * @return The stringResult.
    */
-  com.google.protobuf.ByteString
-      getOutputBytes();
+  com.siansiansu.taigikeyboard.engine.proto.StringResult getStringResult();
 
   /**
-   * <code>bool tone_restored = 2;</code>
-   * @return The toneRestored.
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+   * @return Whether the stripToneResult field is set.
    */
-  boolean getToneRestored();
+  boolean hasStripToneResult();
+  /**
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+   * @return The stripToneResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult();
+
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   * @return Whether the optionalStringResult field is set.
+   */
+  boolean hasOptionalStringResult();
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   * @return The optionalStringResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult getOptionalStringResult();
+
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   * @return Whether the boolResult field is set.
+   */
+  boolean hasBoolResult();
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   * @return The boolResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.BoolResult getBoolResult();
+
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   * @return Whether the toneVariationsResult field is set.
+   */
+  boolean hasToneVariationsResult();
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   * @return The toneVariationsResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult getToneVariationsResult();
+
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   * @return Whether the tpsAdjustResult field is set.
+   */
+  boolean hasTpsAdjustResult();
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   * @return The tpsAdjustResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult();
+
+  public com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse.ResultCase getResultCase();
 }

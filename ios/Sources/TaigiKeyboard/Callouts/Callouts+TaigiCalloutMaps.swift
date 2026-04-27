@@ -8,76 +8,17 @@ import Foundation
 import KeyboardKit
 
 public extension Callouts {
-    /// Maps base characters to their toned variants, sorted by tone number
+    /// Maps base characters to their toned variants, sorted by tone number.
+    ///
+    /// D9.4: tables come from `RustEngineBridge.toneVariations` (init bulk-pull
+    /// cached on first access via Swift `static let`, thread-safe by
+    /// construction). The previous platform-side `buildToneMap(mode:)` and its
+    /// helpers (`combiningMark` / `buildVariations`) are now built in Rust by
+    /// `engine/phonetics/src/tone_variations.rs` to match the McBopomofo /
+    /// khiin-rs "platform owns zero phonetics" architecture.
     enum TaigiToneMaps {
-        static let poj: [String: [String]] = buildToneMap(mode: .poj)
-        static let tl: [String: [String]] = buildToneMap(mode: .tl)
-
-        /// Returns the combining mark for a given tone number and input mode.
-        /// POJ and TL share all marks except tone 9: POJ uses breve (U+0306, already in toneNumToCombining),
-        /// TL uses double acute (U+030B).
-        private static func combiningMark(for tone: String, mode: InputMode) -> String {
-            if tone == "9", mode == .tl {
-                return TaigiPhonetics.tlTone9Combining
-            }
-            return TaigiPhonetics.toneNumToCombining[tone] ?? ""
-        }
-
-        /// Builds toned variations by inserting combining marks between base and suffix.
-        /// Example: base="o", suffix="o" → ["óo", "òo", "ôo", ...] (TL oo variants)
-        private static func buildVariations(
-            base: String, suffix: String = "", toneNumbers: [String], mode: InputMode,
-        ) -> [String] {
-            toneNumbers.compactMap { tone in
-                let mark = combiningMark(for: tone, mode: mode)
-                guard !mark.isEmpty else { return nil }
-                return (base + mark + suffix).precomposedStringWithCanonicalMapping
-            }
-        }
-
-        private static func buildToneMap(mode: InputMode) -> [String: [String]] {
-            let toneNumbers = ["2", "3", "5", "6", "7", "8", "9"]
-            var mapping: [String: [String]] = [:]
-
-            for base in ["a", "e", "i", "o", "u"] {
-                let variations = buildVariations(base: base, toneNumbers: toneNumbers, mode: mode)
-                mapping[base] = variations
-                mapping[base.uppercased()] = variations.map { $0.uppercased() }
-            }
-
-            // POJ: o͘ (o + combining dot above right U+0358)
-            if mode == .poj {
-                let variations = buildVariations(base: "o", suffix: "\u{0358}", toneNumbers: toneNumbers, mode: mode)
-                mapping["o\u{0358}"] = variations
-                // Single logical character — full uppercasing is correct (o͘ → O͘)
-                mapping["O\u{0358}"] = variations.map { $0.uppercased() }
-            }
-
-            // TL: oo (double o — tone mark on first o)
-            if mode == .tl {
-                let variations = buildVariations(base: "o", suffix: "o", toneNumbers: toneNumbers, mode: mode)
-                mapping["oo"] = variations
-                // Multi-char: capitalize only first character (oo → Oo, not OO)
-                mapping["Oo"] = variations.map { $0.prefix(1).uppercased() + $0.dropFirst() }
-            }
-
-            // Syllabic consonants: n, m (appended to existing vowel entries above)
-            for base in ["n", "m"] {
-                let variations = buildVariations(base: base, toneNumbers: toneNumbers, mode: mode)
-                mapping[base] = (mapping[base] ?? []) + variations
-                mapping[base.uppercased()] = (mapping[base.uppercased()] ?? []) + variations.map { $0.uppercased() }
-            }
-
-            // ng: tone mark goes on n, g is suffix
-            let ngVariations = buildVariations(base: "n", suffix: "g", toneNumbers: toneNumbers, mode: mode)
-            mapping["ng"] = ngVariations
-            // Multi-char: capitalize only first character (ng → Ng, not NG)
-            mapping["Ng"] = ngVariations.map { $0.prefix(1).uppercased() + $0.dropFirst() }
-
-            mapping["n"] = (mapping["n"] ?? []) + ["ⁿ"]
-
-            return mapping
-        }
+        static var poj: [String: [String]] { RustEngineBridge.toneVariations.poj }
+        static var tl: [String: [String]] { RustEngineBridge.toneVariations.tl }
     }
 
     /// TPS layout callouts (方音符號 long-press variants)

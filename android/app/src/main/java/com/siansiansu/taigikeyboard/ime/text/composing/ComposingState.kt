@@ -3,10 +3,12 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import com.siansiansu.taigikeyboard.engine.NormalizeMode
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverter
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 
 /**
  * Platform-neutral composing-buffer state machine.
@@ -123,13 +125,27 @@ data class ComposingState(
      * `composing-state-boundary.md` §11 Android addendum).
      */
     fun derivedDisplay(
-        mode: ToneConverterModels.InputMode,
+        mode: InputMode,
         toggles: ToneToggles,
     ): String {
         val raw = rawInput
         if (raw.isEmpty()) return ""
-        if (TPSConverter.containsTPS(raw)) return raw
-        return ToneConverter.convertToToneMarks(raw, mode, toggles)
+        if (RustEngineBridge.containsTps(raw)) return raw
+        // Forward all three modes — collapsing ENGLISH to TL would route
+        // English text through tone normalization. Rust `to_tone_marks` for
+        // `InputMode::English` is a passthrough (syllable returned as-is)
+        // per `engine/phonetics/src/api.rs:236`.
+        val normalizeMode = when (mode) {
+            InputMode.POJ -> NormalizeMode.POJ
+            InputMode.TL -> NormalizeMode.TL
+            InputMode.ENGLISH -> NormalizeMode.ENGLISH
+        }
+        val carrier = ToneTogglesCarrier(toggles.isDoubleTapOOEnabled, toggles.isDoubleTapNNEnabled)
+        // Match the pre-D9.4 `ToneConverter.convertToToneMarks` pipeline:
+        // normalize tones via the engine, then post-process nasal-marker
+        // case so `ⁿ` / `ᴺ` follow the preceding letter's case.
+        val toneMarked = RustEngineBridge.normalizeTone(raw, normalizeMode, carrier)
+        return ToneUtilities.adjustNasalMarkerCase(toneMarked)
     }
 
     /** Returns a new state with [selectedCandidateIndex] set to [index]. */
@@ -152,7 +168,7 @@ data class ComposingState(
      */
     fun apply(
         intent: Intent,
-        mode: ToneConverterModels.InputMode,
+        mode: InputMode,
         toggles: ToneToggles,
     ): Pair<ComposingState, ComposingTransition> =
         when (intent) {
@@ -330,7 +346,7 @@ data class ComposingState(
 
     private fun enterComposing(
         raw: String,
-        @Suppress("UNUSED_PARAMETER") mode: ToneConverterModels.InputMode,
+        @Suppress("UNUSED_PARAMETER") mode: InputMode,
         @Suppress("UNUSED_PARAMETER") toggles: ToneToggles,
     ): Pair<ComposingState, ComposingTransition> {
         val newState = ComposingState(phase = Phase.Composing(raw), selectedCandidateIndex = 0)

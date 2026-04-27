@@ -72,7 +72,7 @@ final class DictionaryRepository: @unchecked Sendable {
             ) else { continue }
 
             let roman = inputMode == .poj
-                ? RomanizationConverter.tlToPOJ(record.tl)
+                ? RustEngineBridge.tlToPoj(record.tl)
                 : record.tl
 
             results.append(TaigiWord(
@@ -201,7 +201,7 @@ final class DictionaryRepository: @unchecked Sendable {
             ) else { continue }
 
             let roman = inputMode == .poj
-                ? RomanizationConverter.tlToPOJ(record.tl)
+                ? RustEngineBridge.tlToPoj(record.tl)
                 : record.tl
 
             let sources = DictionaryBinaryReader.sourcesFromBitmask(record.bitmask)

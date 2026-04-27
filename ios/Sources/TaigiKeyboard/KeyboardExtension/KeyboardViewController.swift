@@ -55,6 +55,10 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // (CandidateProcessor / InputNormalizer) route logs through DebugLogger.
         LoggerFactory.install { DebugLogger(category: $0) }
 
+        // Wire the Rust engine logger sink so Rust `log::warn!` lines reach
+        // DebugLogger. Idempotent — main app also calls this in `init`.
+        RustEngineBridge.install()
+
         // Register custom fonts from containing app bundle (extension only)
         FontRegistration.registerFontsIfNeeded()
 

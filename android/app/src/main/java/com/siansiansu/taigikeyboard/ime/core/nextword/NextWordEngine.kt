@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.core.nextword
 
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
@@ -151,7 +151,7 @@ object NextWordEngine {
                 if (useTl) {
                     prediction.tl
                 } else {
-                    TaigiPhonetics.tlDisplayToPOJDisplay(prediction.tl)
+                    RustEngineBridge.tlToPoj(prediction.tl)
                 }
 
             if (!settings.isTranslateSwapped && roman.isEmpty()) return@mapNotNull null
@@ -271,8 +271,8 @@ object NextWordEngine {
         }
 
         // pojDisplayToTLDisplay is idempotent on TL input — safe for POJ and TPS alike.
-        val textTl = TaigiPhonetics.pojDisplayToTLDisplay(roman)
-        val prevTl = TaigiPhonetics.pojDisplayToTLDisplay(state.lastSelectedRoman ?: "")
+        val textTl = RustEngineBridge.pojToTl(roman)
+        val prevTl = RustEngineBridge.pojToTl(state.lastSelectedRoman ?: "")
 
         val effects = mutableListOf<NextWordOutcome.Effect>()
 

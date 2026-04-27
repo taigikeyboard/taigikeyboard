@@ -27,10 +27,18 @@ enum ErrorCode {
 }
 
 // Per-request live snapshot. iOS EngineSettings / Android EngineSettings
-// shape — minimal in D9.1, expands with the Composing slice in D9.3.
+// shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
+// per call per behavioral-invariants.md §11. Platform wrappers MUST pass
+// current values per request (e.g. iOS `RustEngineBridge.normalizeTone(input,
+// toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
+//
+// D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
+// preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
 message AppConfig {
   string tone_mode = 1;
   string input_mode = 2;
+  bool oo_doubletap_enabled = 3;
+  bool nn_doubletap_enabled = 4;
 }
 
 message Request {

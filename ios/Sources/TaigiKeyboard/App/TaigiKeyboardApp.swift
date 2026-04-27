@@ -13,6 +13,10 @@ struct TaigiKeyboardApp: App {
         // (CandidateProcessor / InputNormalizer) route logs through DebugLogger.
         LoggerFactory.install { DebugLogger(category: $0) }
 
+        // Wire the Rust engine logger sink so Rust `log::warn!` lines reach
+        // DebugLogger. Idempotent. Mirrors Android `Application.onCreate`.
+        RustEngineBridge.install()
+
         // Configure KeyboardKit to persist settings via App Group.
         // Must be called before any @AppStorage access.
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)

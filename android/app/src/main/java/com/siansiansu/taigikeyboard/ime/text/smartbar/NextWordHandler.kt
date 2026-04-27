@@ -12,7 +12,7 @@ import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordPredictor
 import com.siansiansu.taigikeyboard.ime.core.nextword.RawNextWordPrediction
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.dictionary.TaigiPhonetics
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -158,7 +158,7 @@ class NextWordHandler(
         roman: String? = null,
     ) {
         if (word.isEmpty()) return
-        val romanTl = TaigiPhonetics.pojDisplayToTLDisplay(roman ?: word)
+        val romanTl = RustEngineBridge.pojToTl(roman ?: word)
         if (currentEngineSettings().isAssociationRecordingEnabled) {
             val compound =
                 NextWordEngine.compoundAssociationPairs(displayText = word, roman = romanTl)

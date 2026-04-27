@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.Dispatchers
@@ -162,9 +163,9 @@ class BackupService(
                     // Normalize prevTl/nextTl to TL format (old backups or cross-platform may contain POJ).
                     NextWordService.AssociationEntry(
                         prevWord = obj.optString("prevWord", ""),
-                        prevTl = TaigiPhonetics.pojDisplayToTLDisplay(obj.optString("prevTl", "")),
+                        prevTl = RustEngineBridge.pojToTl(obj.optString("prevTl", "")),
                         nextWord = obj.optString("nextWord", ""),
-                        nextTl = TaigiPhonetics.pojDisplayToTLDisplay(obj.optString("nextTl", "")),
+                        nextTl = RustEngineBridge.pojToTl(obj.optString("nextTl", "")),
                         count = obj.optInt("count", 1),
                     )
                 }.filter { it.prevWord.isNotEmpty() && it.nextWord.isNotEmpty() }

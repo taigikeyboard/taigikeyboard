@@ -38,14 +38,7 @@ enum CharacterInputPipeline {
         guard inputMode == .tps else {
             return Adjustment(char: char, replaceLast: nil)
         }
-
-        var adjusted = TPSInputAdjuster.adjustInitialKey(char, afterRawInput: rawInput)
-        adjusted = TPSInputAdjuster.adjustNasalizedVowelKey(adjusted, afterRawInput: rawInput)
-
-        let lastChar = rawInput.last
-        let replaceLast = TPSInputAdjuster.syllabicNasalReplacement(forIncoming: adjusted, lastRawChar: lastChar)
-            ?? TPSInputAdjuster.palatalizationReplacement(forIncoming: adjusted, lastRawChar: lastChar)
-
-        return Adjustment(char: adjusted, replaceLast: replaceLast)
+        let result = RustEngineBridge.tpsInputAdjust(incoming: char, rawInput: rawInput)
+        return Adjustment(char: result.adjusted, replaceLast: result.replaceLast)
     }
 }

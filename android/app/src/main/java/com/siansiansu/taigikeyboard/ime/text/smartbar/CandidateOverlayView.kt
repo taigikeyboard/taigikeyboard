@@ -17,7 +17,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.util.FontUtils
 
@@ -301,7 +301,14 @@ class CandidateOverlayView : FrameLayout {
 
         if (isTPSLayout) {
             // TPS: only hanzi title (or TPS-converted fallback), no subtitle
-            val titleText = if (!word.hanzi.isNullOrEmpty()) word.hanzi else TPSConverter.toTPS(word.roman, prefs.tpsOrMapsToER)
+            val titleText = if (!word.hanzi.isNullOrEmpty()) {
+                word.hanzi
+            } else {
+                // word.roman is display form (per TaigiWord docs), so use display-aware op.
+                // Codex v3 §8 / v4 §8: pre-D9.4 displayRoman wrongly called numeric `toTPS`
+                // on display input. D9.4 fixes via tlDisplayToTps.
+                RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER)
+            }
             val titleWidth = primaryPaint.measureText(titleText)
             return maxOf(minimumCellWidthPx, (titleWidth + cellHorizontalPaddingPx + 0.5f).toInt())
         }

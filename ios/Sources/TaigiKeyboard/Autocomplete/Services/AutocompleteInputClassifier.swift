@@ -48,8 +48,8 @@ enum AutocompleteInputClassifier {
     /// Build a Trie-compatible search key from raw input.
     /// TPS 輸入先轉為 TL 羅馬字；其他原樣輸出。
     static func buildSearchKey(from rawInput: String) -> String {
-        TPSTables.containsTPS(rawInput)
-            ? TPSToTL.convert(rawInput)
+        RustEngineBridge.containsTPS(rawInput)
+            ? RustEngineBridge.tpsToTL(rawInput)
             : rawInput
     }
 }

@@ -11,7 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -90,8 +90,8 @@ class DictionarySearchViewModel(
         try {
             val inputMode =
                 when (prefs.inputMode) {
-                    "poj" -> ToneConverterModels.InputMode.POJ
-                    else -> ToneConverterModels.InputMode.TL
+                    "poj" -> InputMode.POJ
+                    else -> InputMode.TL
                 }
 
             val isCJK = query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }

@@ -5,23 +5,16 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import java.net.URLEncoder
 
 /**
  * Builds MOE / Chhoe Taigi external dictionary lookup URLs from TL display form.
- *
  * Parallels iOS `ExternalLookupURLBuilder.swift`. Tone-digit conversion semantics
  * follow the external dictionaries' URL format (tone 1 / tone 4 omitted).
  */
 object ExternalLookupURLBuilder {
-    // Tone mark → tone digit map derived from TaigiPhonetics (single source of truth)
-    private val toneMarkToNumber: Map<Char, String> =
-        TaigiPhonetics.combiningToToneNum.mapKeys { (codePoint, _) -> codePoint.toChar() }
-
-    /**
-     * Build Chhoe Taigi lookup URL for a TL display string.
-     * Returns null if the TL string produces an empty digit form.
-     */
+    /** Build Chhoe Taigi lookup URL. Returns null if the TL string produces an empty digit form. */
     fun chhoeURL(tl: String): String? {
         val tlDigit = toTLDigit(tl)
         if (tlDigit.isEmpty()) return null
@@ -29,10 +22,7 @@ object ExternalLookupURLBuilder {
         return "https://chhoe.taigi.info/s?s=su&f=e&lmjf=ki&lmj=$encoded"
     }
 
-    /**
-     * Build MOE Dictionary lookup URL for a TL display string.
-     * Returns null if the TL string produces an empty digit form.
-     */
+    /** Build MOE Dictionary lookup URL. Returns null if the TL string produces an empty digit form. */
     fun moeURL(tl: String): String? {
         val tlDigit = toTLDigit(tl)
         if (tlDigit.isEmpty()) return null
@@ -40,10 +30,7 @@ object ExternalLookupURLBuilder {
         return "https://sutian.moe.edu.tw/zh-hant/tshiau/?lui=tai_su&tsha=$encoded"
     }
 
-    /**
-     * Convert TL display form (with diacritics) to TL digit form for URL.
-     * e.g. "tāi-tsì" → "tai7-tsi3"
-     */
+    /** Convert TL display form (with diacritics) to TL digit form for URL. */
     fun toTLDigit(tl: String): String {
         val syllables = tl.lowercase().split("-")
         return syllables.joinToString("-") { normalizeSyllableToDigit(it) }
@@ -51,37 +38,24 @@ object ExternalLookupURLBuilder {
 
     private fun normalizeSyllableToDigit(syllable: String): String {
         if (syllable.isEmpty()) return ""
-
-        // Quick path: already-digit-toned input keeps the digit (or strips
-        // tone 1 / 4 for external dictionary URL semantics). Nasal-only
-        // substitution suffices for the digit branch; full preprocessing
-        // happens below for the diacritic path.
-        val withNasalConverted = syllable.replace("\u207F", "nn").replace("\u1D3A", "nn")
+        // Quick path: nasal-only substitution suffices to detect already-digit
+        // input (e.g. "ho2", "saⁿ1"). Full POJ preprocessing (`o͘` → `oo`) is
+        // only needed for the diacritic branch below.
+        val withNasalConverted = syllable.replace("ⁿ", "nn").replace("ᴺ", "nn")
         if (withNasalConverted.last().isDigit()) {
             val tone = withNasalConverted.last().toString()
             if (tone == "1" || tone == "4") return withNasalConverted.dropLast(1)
             return withNasalConverted
         }
-
-        val withOoConverted = TaigiUnicode.nfdPreprocessed(syllable)
-
-        var toneNumber = ""
-        val withoutTone = StringBuilder()
-
-        for (char in withOoConverted) {
-            val tone = toneMarkToNumber[char]
-            if (tone != null) {
-                toneNumber = tone
-            } else {
-                withoutTone.append(char)
-            }
+        // Diacritic path: apply full Taigi preprocessing (nasal + `o͘` → `oo`)
+        // before tone stripping — matches iOS `ExternalLookupURLBuilder` and
+        // ensures custom-dict entries containing POJ `o͘` produce canonical
+        // TL `hoo`/`hoo2` URLs instead of `ho͘`/`ho͘2`.
+        val preprocessed = TaigiUnicode.nfdPreprocessed(syllable)
+        val stripped = RustEngineBridge.stripTone(preprocessed)
+        if (stripped.tone.isEmpty() || stripped.tone == "1" || stripped.tone == "4") {
+            return stripped.bare
         }
-
-        // Tone 1 (open) and 4 (checked) are omitted in external dictionary URLs
-        if (toneNumber.isEmpty() || toneNumber == "1" || toneNumber == "4") {
-            return withoutTone.toString()
-        }
-
-        return withoutTone.toString() + toneNumber
+        return stripped.bare + stripped.tone
     }
 }

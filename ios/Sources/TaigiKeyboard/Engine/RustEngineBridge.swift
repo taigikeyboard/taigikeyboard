@@ -6,48 +6,237 @@ import SwiftProtobuf
 /// Thin Swift wrapper around the Rust shared-core FFI exposed by
 /// `engine/swift-ffi/src/lib.rs`.
 ///
-/// In D9.2 this bridge is **not** wired into the IME runtime — production
-/// phonetics conversion still flows through `PhoneticsConverter`. The bridge
-/// exists so unit tests can prove the Rust `.xcframework` loads and produces
-/// the right answer. It will replace `PhoneticsConverter` only after D9.4
-/// proves INVARIANT_* parity.
+/// D9.4 surface: 17 typed methods + lazy `toneVariations` cache + structured
+/// error visibility. Production phonetics call sites route through these
+/// methods; legacy `Phonetics/*` and `Input/TPS/*` modules are deleted in
+/// later commits.
 ///
-/// Usage:
+/// Per `feedback_codex_review_sandwich.md` Codex v2 §7: every method
+/// requiring AppConfig (currently NormalizeTone for POJ preprocessing)
+/// takes the necessary fields as mandatory parameters — no global default.
 ///
-/// ```
-/// RustEngineBridge.install(category: "RustEngine")
-/// let poj = RustEngineBridge.tlToPoj("gua2") // → "góa"
-/// ```
+/// Per Codex v2 §8 + v3 §7: error visibility is hardened. DEBUG asserts on
+/// failure; release returns a graceful fallback + logs + records a
+/// structured `DiagnosticsEntry` in a bounded in-memory queue accessible
+/// via `diagnostics()` for dogfood inspection.
 public enum RustEngineBridge {
     private static let installLock = NSLock()
     private static var installed = false
 
     /// Idempotent. Registers a logger sink that forwards every Rust
-    /// `log::warn!` (and friends) into the platform `LoggerBackend` via
-    /// `LoggerFactory.make(category:)`. The category comes from the Rust
-    /// `log::Record.target()`, not from a fixed install-time value.
+    /// `log::warn!` (and friends) into the platform `LoggerBackend`.
+    /// In DEBUG builds, also bumps Rust `log::max_level` to `Debug` so
+    /// dogfood traces are visible. Release stays at default `Warn` so
+    /// `log::debug!`/`log::info!` macros short-circuit before format —
+    /// no FFI cost for the no-op render path on `DebugLogger`.
     public static func install() {
         installLock.lock()
         defer { installLock.unlock() }
         guard !installed else { return }
         install_logger_sink(SwiftLoggerSink())
+        #if DEBUG
+        set_log_level(4) // 4 = Debug, see SwiftLoggerSink level constants
+        #endif
         installed = true
     }
 
-    public static func tlToPoj(_ input: String) -> String {
-        sendPhonetics(op: .tlToPoj, input: input)
+    // MARK: Phonetics core (9 ops)
+
+    /// `OP_NORMALIZE_TONE` — input + AppConfig.input_mode + ToneToggles →
+    /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
+    /// them per request (live-read invariant).
+    public static func normalizeTone(
+        _ input: String,
+        mode: InputMode,
+        toggles: ToneToggles
+    ) -> String {
+        var payload = Taigi_Engine_NormalizeTone()
+        payload.input = input
+        return stringDispatch(
+            intent: .normalizeTone(payload),
+            input: input,
+            op: "normalizeTone",
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func stripTone(_ input: String) -> (bare: String, tone: String) {
+        var payload = Taigi_Engine_StripTone()
+        payload.input = input
+        let resp = dispatch(intent: .stripTone(payload), op: "stripTone", config: nil)
+        guard case let .stripToneResult(r)? = resp?.result else {
+            recordFailure(op: "stripTone", message: "missing result")
+            return (input, "")
+        }
+        return (r.bare, r.tone)
     }
 
     public static func pojToTl(_ input: String) -> String {
-        sendPhonetics(op: .pojToTl, input: input)
+        var payload = Taigi_Engine_PojToTl()
+        payload.input = input
+        return stringDispatch(intent: .pojToTl(payload), input: input, op: "pojToTl", config: nil)
     }
 
-    public static func normalizeTone(_ input: String) -> String {
-        sendPhonetics(op: .normalizeTone, input: input)
+    public static func tlToPoj(_ input: String) -> String {
+        var payload = Taigi_Engine_TlToPoj()
+        payload.input = input
+        return stringDispatch(intent: .tlToPoj(payload), input: input, op: "tlToPoj", config: nil)
     }
 
-    public static func stripTone(_ input: String) -> String {
-        sendPhonetics(op: .stripTone, input: input)
+    public static func normalizeToTl(_ input: String) -> String {
+        var payload = Taigi_Engine_NormalizeToTl()
+        payload.input = input
+        return stringDispatch(
+            intent: .normalizeToTl(payload),
+            input: input,
+            op: "normalizeToTl",
+            config: nil
+        )
+    }
+
+    public static func normalizeInput(_ input: String) -> String {
+        var payload = Taigi_Engine_NormalizeInput()
+        payload.input = input
+        return stringDispatch(
+            intent: .normalizeInput(payload),
+            input: input,
+            op: "normalizeInput",
+            config: nil
+        )
+    }
+
+    public static func restoreTone(_ text: String) -> String? {
+        var payload = Taigi_Engine_RestoreTone()
+        payload.text = text
+        let resp = dispatch(intent: .restoreTone(payload), op: "restoreTone", config: nil)
+        guard case let .optionalStringResult(r)? = resp?.result else {
+            recordFailure(op: "restoreTone", message: "missing result")
+            return nil
+        }
+        return r.present ? r.output : nil
+    }
+
+    public static func hasToneMarks(_ text: String) -> Bool {
+        var payload = Taigi_Engine_HasToneMarks()
+        payload.text = text
+        return boolDispatch(intent: .hasToneMarks_p(payload), op: "hasToneMarks")
+    }
+
+    /// Lazy-init cache for `OP_GET_TONE_VARIATIONS`. Swift `static let`
+    /// initializer is dispatch_once-equivalent — thread-safe by construction.
+    public static let toneVariations: ToneVariationsCache = {
+        let resp = dispatch(intent: .getToneVariations(Taigi_Engine_GetToneVariations()),
+                            op: "getToneVariations",
+                            config: nil)
+        guard case let .toneVariationsResult(r)? = resp?.result else {
+            recordFailure(op: "getToneVariations", message: "missing result")
+            return ToneVariationsCache(poj: [:], tl: [:])
+        }
+        return ToneVariationsCache(
+            poj: r.pojVariations.mapValues { $0.variations },
+            tl: r.tlVariations.mapValues { $0.variations }
+        )
+    }()
+
+    // MARK: Derivation (2 ops)
+
+    public static func deriveNotone(_ roman: String) -> String {
+        var payload = Taigi_Engine_DeriveNotone()
+        payload.roman = roman
+        return stringDispatch(intent: .deriveNotone(payload), input: roman, op: "deriveNotone", config: nil)
+    }
+
+    public static func deriveAbbrev(_ roman: String) -> String {
+        var payload = Taigi_Engine_DeriveAbbrev()
+        payload.roman = roman
+        return stringDispatch(intent: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
+    }
+
+    // MARK: TPS (6 ops)
+
+    public static func containsTPS(_ text: String) -> Bool {
+        var payload = Taigi_Engine_ContainsTps()
+        payload.text = text
+        return boolDispatch(intent: .containsTps(payload), op: "containsTps")
+    }
+
+    public static func tpsToTL(_ text: String) -> String {
+        var payload = Taigi_Engine_TpsToTl()
+        payload.text = text
+        return stringDispatch(intent: .tpsToTl(payload), input: text, op: "tpsToTl", config: nil)
+    }
+
+    public static func tlNumericToTPS(_ text: String, orMapsToER: Bool) -> String {
+        var payload = Taigi_Engine_TlNumericToTps()
+        payload.text = text
+        payload.orMapsToEr = orMapsToER
+        return stringDispatch(
+            intent: .tlNumericToTps(payload),
+            input: text,
+            op: "tlNumericToTps",
+            config: nil
+        )
+    }
+
+    public static func tlDisplayToTPS(_ text: String, orMapsToER: Bool) -> String {
+        var payload = Taigi_Engine_TlDisplayToTps()
+        payload.text = text
+        payload.orMapsToEr = orMapsToER
+        return stringDispatch(
+            intent: .tlDisplayToTps(payload),
+            input: text,
+            op: "tlDisplayToTps",
+            config: nil
+        )
+    }
+
+    public static func isTPSToneMark(_ char: Character) -> Bool {
+        var payload = Taigi_Engine_IsTpsToneMark()
+        payload.char = String(char)
+        return boolDispatch(intent: .isTpsToneMark(payload), op: "isTpsToneMark")
+    }
+
+    public static func tpsInputAdjust(
+        incoming: String,
+        rawInput: String
+    ) -> (adjusted: String, replaceLast: String?) {
+        var payload = Taigi_Engine_TpsInputAdjust()
+        payload.incoming = incoming
+        payload.rawInput = rawInput
+        let resp = dispatch(intent: .tpsInputAdjust(payload), op: "tpsInputAdjust", config: nil)
+        guard case let .tpsAdjustResult(r)? = resp?.result else {
+            recordFailure(op: "tpsInputAdjust", message: "missing result")
+            return (incoming, nil)
+        }
+        let replace = r.hasReplaceLast && r.replaceLast.present ? r.replaceLast.output : nil
+        return (r.adjusted, replace)
+    }
+
+    // MARK: Diagnostics (Codex v2 §8 / v3 §7)
+
+    public struct DiagnosticsEntry: Equatable {
+        public let timestamp: Date
+        public let op: String
+        public let errorCode: Int32
+        public let message: String
+    }
+
+    /// Read-only snapshot of in-memory failure tracking. For debug menu
+    /// + test inspection. Counter increments on every fallback path
+    /// (encode error, decode error, dispatch returned non-OK, missing
+    /// result variant). Recent entries capped at 32 to bound memory.
+    public static func diagnostics() -> (failureCount: Int, recentErrors: [DiagnosticsEntry]) {
+        diagnosticsLock.lock()
+        defer { diagnosticsLock.unlock() }
+        return (Int(failureCounter), Array(recentErrorBuffer))
+    }
+
+    /// Test-only: clears counters so independent test cases don't bleed.
+    static func resetDiagnosticsForTesting() {
+        diagnosticsLock.lock()
+        defer { diagnosticsLock.unlock() }
+        failureCounter = 0
+        recentErrorBuffer.removeAll()
     }
 
     // MARK: Test-only seam
@@ -63,47 +252,13 @@ public enum RustEngineBridge {
 
     /// Drives T1. Resolves to a panic inside the Rust `catch_unwind` boundary
     /// when the dev xcframework (built with `--features panic-injector`) is
-    /// linked. Returns the encoded `FAIL_INTERNAL` response from the catch
-    /// arm without crashing the test process.
+    /// linked.
     static func panicForTestRaw() -> Taigi_Engine_Response? {
         let responseBytes = panic_for_test().toArray()
         return try? Taigi_Engine_Response(serializedBytes: Data(responseBytes))
     }
 
     // MARK: Private dispatch
-
-    private static func sendPhonetics(
-        op: Taigi_Engine_PhoneticsRequest.Op,
-        input: String
-    ) -> String {
-        var phonetics = Taigi_Engine_PhoneticsRequest()
-        phonetics.op = op
-        phonetics.input = input
-
-        var request = Taigi_Engine_Request()
-        request.id = nextRequestID()
-        request.payload = .phonetics(phonetics)
-
-        let bytes: [UInt8]
-        do {
-            bytes = try Array(request.serializedData())
-        } catch {
-            return input
-        }
-
-        let responseBytes = bytes.withUnsafeBufferPointer { buf in
-            process_request_bytes(buf).toArray()
-        }
-        guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
-        ) else {
-            return input
-        }
-        guard response.error == .ok, case let .phonetics(payload) = response.payload else {
-            return input
-        }
-        return payload.output
-    }
 
     private static let idLock = NSLock()
     private static var nextID: UInt32 = 0
@@ -113,19 +268,127 @@ public enum RustEngineBridge {
         nextID &+= 1
         return nextID
     }
+
+    private static let diagnosticsLock = NSLock()
+    private static var failureCounter: UInt32 = 0
+    private static var recentErrorBuffer: [DiagnosticsEntry] = []
+
+    private static let recentErrorCap = 32
+
+    private static func recordFailure(op: String, message: String, code: Int32 = -1) {
+        diagnosticsLock.lock()
+        defer { diagnosticsLock.unlock() }
+        failureCounter &+= 1
+        let entry = DiagnosticsEntry(
+            timestamp: Date(),
+            op: op,
+            errorCode: code,
+            message: message
+        )
+        recentErrorBuffer.append(entry)
+        if recentErrorBuffer.count > recentErrorCap {
+            recentErrorBuffer.removeFirst(recentErrorBuffer.count - recentErrorCap)
+        }
+        let logger = LoggerFactory.make(category: "RustEngineBridge")
+        logger.warning("[\(op)] \(message)")
+        #if DEBUG
+        assertionFailure("RustEngineBridge.\(op) failed: \(message)")
+        #endif
+    }
+
+    private static func appConfig(mode: InputMode, toggles: ToneToggles) -> Taigi_Engine_AppConfig {
+        var cfg = Taigi_Engine_AppConfig()
+        switch mode {
+        case .poj: cfg.inputMode = "poj"
+        case .tl: cfg.inputMode = "tl"
+        case .english: cfg.inputMode = "english"
+        case .tps: cfg.inputMode = "tl" // TPS is a layout, not an engine mode
+        }
+        cfg.ooDoubletapEnabled = toggles.isDoubleTapOOEnabled
+        cfg.nnDoubletapEnabled = toggles.isDoubleTapNNEnabled
+        return cfg
+    }
+
+    private static func dispatch(
+        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        op: String,
+        config: Taigi_Engine_AppConfig?
+    ) -> Taigi_Engine_PhoneticsResponse? {
+        var phonetics = Taigi_Engine_PhoneticsRequest()
+        phonetics.intent = intent
+
+        var request = Taigi_Engine_Request()
+        request.id = nextRequestID()
+        request.payload = .phonetics(phonetics)
+        if let config { request.configSnapshot = config }
+
+        let bytes: [UInt8]
+        do {
+            bytes = try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+
+        let responseBytes = bytes.withUnsafeBufferPointer { buf in
+            process_request_bytes(buf).toArray()
+        }
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(responseBytes)
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return nil
+        }
+        guard response.error == .ok else {
+            recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
+            return nil
+        }
+        guard case let .phonetics(payload) = response.payload else {
+            recordFailure(op: op, message: "missing phonetics payload")
+            return nil
+        }
+        return payload
+    }
+
+    private static func stringDispatch(
+        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        input: String,
+        op: String,
+        config: Taigi_Engine_AppConfig?
+    ) -> String {
+        guard let resp = dispatch(intent: intent, op: op, config: config) else { return input }
+        guard case let .stringResult(s)? = resp.result else {
+            recordFailure(op: op, message: "expected StringResult")
+            return input
+        }
+        return s.output
+    }
+
+    private static func boolDispatch(
+        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        op: String
+    ) -> Bool {
+        guard let resp = dispatch(intent: intent, op: op, config: nil) else { return false }
+        guard case let .boolResult(b)? = resp.result else {
+            recordFailure(op: op, message: "expected BoolResult")
+            return false
+        }
+        return b.value
+    }
+}
+
+// MARK: - ToneVariationsCache
+
+/// Init-bulk-pull cache for the callout tone variation tables. Loaded once
+/// at first access via `RustEngineBridge.toneVariations`; both POJ + TL
+/// maps live in a single payload to amortize FFI cost.
+public struct ToneVariationsCache {
+    public let poj: [String: [String]]
+    public let tl: [String: [String]]
 }
 
 // MARK: - Logger sink
 
-/// swift-bridge generates a base class `SwiftLoggerSink` from the
-/// `extern "Swift" { type SwiftLoggerSink; }` block in `engine/swift-ffi/src/lib.rs`.
-/// The Rust side calls `log(level:category:message:)` with `RustString` for
-/// the two string parameters; we convert to Swift `String` and forward to
-/// the platform `LoggerBackend` registered through `LoggerFactory`.
-///
-/// Must be `public` because the swift-bridge generated `install_logger_sink(_:)`
-/// in `ios/RustEngine/RustTaigi.swift` is declared `public` and takes this
-/// type as parameter — Swift forbids a public API exposing an internal type.
 public final class SwiftLoggerSink {
     static let levelError: UInt8 = 0
     static let levelWarn: UInt8 = 1
@@ -139,14 +402,10 @@ public final class SwiftLoggerSink {
         let backend = LoggerFactory.make(category: category.toString())
         let text = message.toString()
         switch level {
-        case Self.levelError:
-            backend.error(text)
-        case Self.levelWarn:
-            backend.warning(text)
-        case Self.levelInfo:
-            backend.info(text)
-        default:
-            backend.debug(text)
+        case Self.levelError: backend.error(text)
+        case Self.levelWarn: backend.warning(text)
+        case Self.levelInfo: backend.info(text)
+        default: backend.debug(text)
         }
     }
 }
@@ -154,11 +413,6 @@ public final class SwiftLoggerSink {
 // MARK: - swift-bridge interop helpers
 
 private extension RustVec where T == UInt8 {
-    /// O(n) element-wise copy. Acceptable in D9.2 because the bridge is
-    /// invoked only from unit tests; production keystroke path stays on
-    /// `PhoneticsConverter`. When the engine takes the IME hot path in
-    /// D9.4+, switch to a bulk `as_ptr()` + `Data(bytes:count:)` copy so a
-    /// 2 MB response is a single memcpy instead of 2M virtual calls.
     func toArray() -> [UInt8] {
         let count = Int(len())
         var out = [UInt8]()

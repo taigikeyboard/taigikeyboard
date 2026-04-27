@@ -99,8 +99,40 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
         });
         SET_LOGGER.call_once(|| {
             let _ = log::set_logger(&PLATFORM_LOGGER);
-            log::set_max_level(log::LevelFilter::Trace);
+            // Default to Warn — see the matching note in
+            // `engine/swift-ffi/src/lib.rs::install_logger_sink` for
+            // rationale. Kotlin bridges call `setLogLevel(4)` in
+            // BuildConfig.DEBUG to opt into `Debug`.
+            log::set_max_level(log::LevelFilter::Warn);
         });
+    }));
+}
+
+/// JNI mirror of swift-ffi `set_log_level`. Adjusts Rust `log::max_level`
+/// at runtime so platform DEBUG builds can opt into `Debug` verbosity
+/// without release builds paying the format cost.
+///
+/// Levels: 0=Off, 1=Error, 2=Warn, 3=Info, 4=Debug, 5=Trace; anything
+/// else → `Off`.
+#[no_mangle]
+pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_setLogLevel<
+    'local,
+>(
+    _env: JNIEnv<'local>,
+    _class: JClass<'local>,
+    level: jni::sys::jint,
+) {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        let filter = match level {
+            1 => log::LevelFilter::Error,
+            2 => log::LevelFilter::Warn,
+            3 => log::LevelFilter::Info,
+            4 => log::LevelFilter::Debug,
+            5 => log::LevelFilter::Trace,
+            _ => log::LevelFilter::Off,
+        };
+        log::set_max_level(filter);
+        log::info!("rust log level set to {filter:?}");
     }));
 }
 

@@ -5,24 +5,190 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Phonetics slice — first surface. Pure stateless ops.
-// Mirrors ios PhoneticsConverter.swift / android TaigiPhonetics.kt
-// at the syllable/display level. Word-level segmentation is OUT OF SCOPE
-// for D9 (Lexicon concern, Phase IV-B). See docs/engine/rust-core-proto.md §7.
+// Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
+// syllable structure, Unicode normalization, phonological auto-correct.
+//
+// 17 ops live in PhoneticsRequest.intent oneof; each op returns its natural
+// shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
+// `oneof Intent` design + khiin-rs single-entry-point dispatch.
+//
+// AppConfig (envelope.proto) carries per-request live snapshot — input mode,
+// POJ oo/nn doubletap toggles. Engine never caches; live-read per call per
+// behavioral-invariants.md §11.
+
+// =========================================================================
+// Request envelope
+// =========================================================================
 
 message PhoneticsRequest {
-  enum Op {
-    OP_UNSPECIFIED = 0;
-    OP_TL_TO_POJ = 1;
-    OP_POJ_TO_TL = 2;
-    OP_NORMALIZE_TONE = 3;  // numeric tone digits → diacritic marks (TL output)
-    OP_STRIP_TONE = 4;      // diacritic marks → numeric tone digits
+  // D9.2 legacy flat fields (`op` enum + `string input`) replaced by
+  // oneof intent in D9.4. Field numbers 1–2 reserved to prevent silent
+  // wire-format collision if any old bytes are encountered.
+  reserved 1, 2;
+
+  oneof intent {
+    // --- Phonetics core (9 ops) ---
+    NormalizeTone normalize_tone = 10;
+    StripTone strip_tone = 11;
+    PojToTl poj_to_tl = 12;
+    TlToPoj tl_to_poj = 13;
+    NormalizeToTl normalize_to_tl = 14;
+    NormalizeInput normalize_input = 15;
+    RestoreTone restore_tone = 16;
+    HasToneMarks has_tone_marks = 17;
+    GetToneVariations get_tone_variations = 18;
+
+    // --- Derivation (2 ops) ---
+    DeriveNotone derive_notone = 20;
+    DeriveAbbrev derive_abbrev = 21;
+
+    // --- TPS (6 ops) ---
+    ContainsTps contains_tps = 30;
+    TpsToTl tps_to_tl = 31;
+    TlNumericToTps tl_numeric_to_tps = 32;
+    TlDisplayToTps tl_display_to_tps = 33;
+    IsTpsToneMark is_tps_tone_mark = 34;
+    TpsInputAdjust tps_input_adjust = 35;
   }
-  Op op = 1;
-  string input = 2;
 }
 
+// =========================================================================
+// Phonetics core request payloads
+// =========================================================================
+
+// `NormalizeTone` reads `AppConfig.input_mode` (POJ / TL) and
+// `AppConfig.oo_doubletap_enabled` / `nn_doubletap_enabled` from envelope's
+// per-request `config_snapshot`. Engine never caches settings.
+message NormalizeTone { string input = 1; }
+message StripTone { string input = 1; }
+message PojToTl { string input = 1; }
+message TlToPoj { string input = 1; }
+message NormalizeToTl { string input = 1; }
+
+// `NormalizeInput` is the full pipeline that produces a trie-query key:
+// TPS preprocess (if input contains TPS) → per-syllable diacritic→digit →
+// checked-ending heuristic for default tone (1 vs 4). Replaces both
+// platforms' `InputNormalizer.normalize`.
+message NormalizeInput { string input = 1; }
+
+// `RestoreTone` removes the LAST combining tone mark from `text` and NFC
+// recomposes. Returns absent if no tone mark found. Replaces both
+// platforms' `ToneRestoration.restore`.
+message RestoreTone { string text = 1; }
+
+// `HasToneMarks` true if `text` (after NFD) contains any combining tone
+// mark. Replaces `InputNormalizer.hasToneMarks`.
+message HasToneMarks { string text = 1; }
+
+// `GetToneVariations` is the init-bulk-pull op for callout tone variation
+// tables. Returns POJ + TL maps in one response. Caller caches once at
+// engine init (lazy / idempotent on platform side).
+message GetToneVariations {}
+
+// =========================================================================
+// Derivation request payloads (CustomDictionaryDerivation)
+// =========================================================================
+
+// `DeriveNotone` strips tone diacritics + digits + hyphens + spaces,
+// after lowercase + nasal marker conversion. Replaces
+// `CustomDictionaryDerivation.generateNotone`.
+message DeriveNotone { string roman = 1; }
+
+// `DeriveAbbrev` returns first char per syllable (split by hyphen + ASCII
+// whitespace `[ \t\n\x0B\f\r-]+`), diacritics stripped. Returns "" when
+// fewer than 2 syllables. Whitespace canonical = ASCII only (matches
+// Android JVM `Regex("[\\s-]+")` semantics; preserves NBSP as non-delimiter).
+message DeriveAbbrev { string roman = 1; }
+
+// =========================================================================
+// TPS request payloads
+// =========================================================================
+
+message ContainsTps { string text = 1; }
+message TpsToTl { string text = 1; }
+
+// `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
+// iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
+message TlNumericToTps {
+  string text = 1;
+  bool or_maps_to_er = 2;
+}
+
+// `TlDisplayToTps` input is display form with diacritics (e.g. "hóo").
+// Replaces iOS `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.
+message TlDisplayToTps {
+  string text = 1;
+  bool or_maps_to_er = 2;
+}
+
+// `IsTpsToneMark` checks if a single Unicode scalar is a TPS tone mark.
+// `char` MUST be a single grapheme; engine returns false for empty / multi.
+message IsTpsToneMark { string char = 1; }
+
+// `TpsInputAdjust` is the collapsed TPSAdjustmentBundle entry point:
+// runs adjustInitialKey → adjustNasalizedVowelKey → syllabicNasalReplacement
+// ?: palatalizationReplacement. Caller MUST gate by TPS layout; engine
+// does not gate (TPS is a layout, not a mode, on Android).
+message TpsInputAdjust {
+  string incoming = 1;
+  string raw_input = 2;
+}
+
+// =========================================================================
+// Response envelope
+// =========================================================================
+
 message PhoneticsResponse {
+  // D9.2 legacy flat fields (`output` + `tone_restored`) replaced by
+  // oneof result in D9.4.
+  reserved 1, 2;
+
+  oneof result {
+    StringResult string_result = 10;
+    StripToneResult strip_tone_result = 11;
+    OptionalStringResult optional_string_result = 12;
+    BoolResult bool_result = 13;
+    ToneVariationsResult tone_variations_result = 14;
+    TpsAdjustResult tps_adjust_result = 15;
+  }
+}
+
+// =========================================================================
+// Response payloads
+// =========================================================================
+
+message StringResult { string output = 1; }
+
+// `StripToneResult` returns the bare syllable + extracted tone digit.
+// `tone` is "" when no tone mark was present.
+message StripToneResult {
+  string bare = 1;
+  string tone = 2;
+}
+
+// `OptionalStringResult` is a String? equivalent. `present` indicates
+// whether `output` is meaningful (proto3 has no native optional for
+// non-message scalar fields without the `optional` keyword).
+message OptionalStringResult {
   string output = 1;
-  bool tone_restored = 2;
+  bool present = 2;
+}
+
+message BoolResult { bool value = 1; }
+
+// `ToneVariationsResult` is the callout init-pull payload. Maps the base
+// char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
+message ToneVariationsResult {
+  map<string, ToneVariationList> poj_variations = 1;
+  map<string, ToneVariationList> tl_variations = 2;
+}
+
+message ToneVariationList { repeated string variations = 1; }
+
+// `TpsAdjustResult` carries the adjusted incoming char + an optional
+// retroactive `replace_last` instruction for the platform to issue
+// `replaceLastCharacter`.
+message TpsAdjustResult {
+  string adjusted = 1;
+  OptionalStringResult replace_last = 2;
 }

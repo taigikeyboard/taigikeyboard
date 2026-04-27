@@ -8,7 +8,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import kotlinx.coroutines.CancellationException
 
 /**
@@ -24,7 +24,7 @@ import kotlinx.coroutines.CancellationException
  * the input mode flips.
  */
 class TaigiAutocompleteService(
-    private val inputMode: ToneConverterModels.InputMode,
+    private val inputMode: InputMode,
     private val settings: EngineSettings,
     private val lexicon: LexiconService,
     private val nextWord: NextWordService,

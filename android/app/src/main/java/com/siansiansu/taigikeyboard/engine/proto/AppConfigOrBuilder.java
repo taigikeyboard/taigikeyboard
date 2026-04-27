@@ -32,4 +32,16 @@ public interface AppConfigOrBuilder extends
    */
   com.google.protobuf.ByteString
       getInputModeBytes();
+
+  /**
+   * <code>bool oo_doubletap_enabled = 3;</code>
+   * @return The ooDoubletapEnabled.
+   */
+  boolean getOoDoubletapEnabled();
+
+  /**
+   * <code>bool nn_doubletap_enabled = 4;</code>
+   * @return The nnDoubletapEnabled.
+   */
+  boolean getNnDoubletapEnabled();
 }

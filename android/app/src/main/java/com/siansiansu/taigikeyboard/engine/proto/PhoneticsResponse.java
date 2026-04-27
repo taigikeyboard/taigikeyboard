@@ -14,79 +14,356 @@ public  final class PhoneticsResponse extends
     // @@protoc_insertion_point(message_implements:taigi.engine.PhoneticsResponse)
     PhoneticsResponseOrBuilder {
   private PhoneticsResponse() {
-    output_ = "";
   }
-  public static final int OUTPUT_FIELD_NUMBER = 1;
-  private java.lang.String output_;
+  private int resultCase_ = 0;
+  private java.lang.Object result_;
+  public enum ResultCase {
+    STRING_RESULT(10),
+    STRIP_TONE_RESULT(11),
+    OPTIONAL_STRING_RESULT(12),
+    BOOL_RESULT(13),
+    TONE_VARIATIONS_RESULT(14),
+    TPS_ADJUST_RESULT(15),
+    RESULT_NOT_SET(0);
+    private final int value;
+    private ResultCase(int value) {
+      this.value = value;
+    }
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static ResultCase valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static ResultCase forNumber(int value) {
+      switch (value) {
+        case 10: return STRING_RESULT;
+        case 11: return STRIP_TONE_RESULT;
+        case 12: return OPTIONAL_STRING_RESULT;
+        case 13: return BOOL_RESULT;
+        case 14: return TONE_VARIATIONS_RESULT;
+        case 15: return TPS_ADJUST_RESULT;
+        case 0: return RESULT_NOT_SET;
+        default: return null;
+      }
+    }
+    public int getNumber() {
+      return this.value;
+    }
+  };
+
+  @java.lang.Override
+  public ResultCase
+  getResultCase() {
+    return ResultCase.forNumber(
+        resultCase_);
+  }
+
+  private void clearResult() {
+    resultCase_ = 0;
+    result_ = null;
+  }
+
+  public static final int STRING_RESULT_FIELD_NUMBER = 10;
   /**
-   * <code>string output = 1;</code>
-   * @return The output.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
    */
   @java.lang.Override
-  public java.lang.String getOutput() {
-    return output_;
+  public boolean hasStringResult() {
+    return resultCase_ == 10;
   }
   /**
-   * <code>string output = 1;</code>
-   * @return The bytes for output.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
    */
   @java.lang.Override
-  public com.google.protobuf.ByteString
-      getOutputBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(output_);
+  public com.siansiansu.taigikeyboard.engine.proto.StringResult getStringResult() {
+    if (resultCase_ == 10) {
+       return (com.siansiansu.taigikeyboard.engine.proto.StringResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.StringResult.getDefaultInstance();
   }
   /**
-   * <code>string output = 1;</code>
-   * @param value The output to set.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
    */
-  private void setOutput(
-      java.lang.String value) {
-    java.lang.Class<?> valueClass = value.getClass();
-  
-    output_ = value;
+  private void setStringResult(com.siansiansu.taigikeyboard.engine.proto.StringResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 10;
   }
   /**
-   * <code>string output = 1;</code>
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
    */
-  private void clearOutput() {
-
-    output_ = getDefaultInstance().getOutput();
+  private void mergeStringResult(com.siansiansu.taigikeyboard.engine.proto.StringResult value) {
+    value.getClass();
+  if (resultCase_ == 10 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.StringResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.StringResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StringResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 10;
   }
   /**
-   * <code>string output = 1;</code>
-   * @param value The bytes for output to set.
+   * <code>.taigi.engine.StringResult string_result = 10;</code>
    */
-  private void setOutputBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    output_ = value.toStringUtf8();
-
+  private void clearStringResult() {
+    if (resultCase_ == 10) {
+      resultCase_ = 0;
+      result_ = null;
+    }
   }
 
-  public static final int TONE_RESTORED_FIELD_NUMBER = 2;
-  private boolean toneRestored_;
+  public static final int STRIP_TONE_RESULT_FIELD_NUMBER = 11;
   /**
-   * <code>bool tone_restored = 2;</code>
-   * @return The toneRestored.
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
    */
   @java.lang.Override
-  public boolean getToneRestored() {
-    return toneRestored_;
+  public boolean hasStripToneResult() {
+    return resultCase_ == 11;
   }
   /**
-   * <code>bool tone_restored = 2;</code>
-   * @param value The toneRestored to set.
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
    */
-  private void setToneRestored(boolean value) {
-    
-    toneRestored_ = value;
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult() {
+    if (resultCase_ == 11) {
+       return (com.siansiansu.taigikeyboard.engine.proto.StripToneResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.StripToneResult.getDefaultInstance();
   }
   /**
-   * <code>bool tone_restored = 2;</code>
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
    */
-  private void clearToneRestored() {
+  private void setStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+   */
+  private void mergeStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
+    value.getClass();
+  if (resultCase_ == 11 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.StripToneResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.StripToneResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StripToneResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+   */
+  private void clearStripToneResult() {
+    if (resultCase_ == 11) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
 
-    toneRestored_ = false;
+  public static final int OPTIONAL_STRING_RESULT_FIELD_NUMBER = 12;
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   */
+  @java.lang.Override
+  public boolean hasOptionalStringResult() {
+    return resultCase_ == 12;
+  }
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult getOptionalStringResult() {
+    if (resultCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   */
+  private void setOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 12;
+  }
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   */
+  private void mergeOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
+    value.getClass();
+  if (resultCase_ == 12 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 12;
+  }
+  /**
+   * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+   */
+  private void clearOptionalStringResult() {
+    if (resultCase_ == 12) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int BOOL_RESULT_FIELD_NUMBER = 13;
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasBoolResult() {
+    return resultCase_ == 13;
+  }
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.BoolResult getBoolResult() {
+    if (resultCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.BoolResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.BoolResult.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   */
+  private void setBoolResult(com.siansiansu.taigikeyboard.engine.proto.BoolResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   */
+  private void mergeBoolResult(com.siansiansu.taigikeyboard.engine.proto.BoolResult value) {
+    value.getClass();
+  if (resultCase_ == 13 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.BoolResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.BoolResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.BoolResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+   */
+  private void clearBoolResult() {
+    if (resultCase_ == 13) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int TONE_VARIATIONS_RESULT_FIELD_NUMBER = 14;
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   */
+  @java.lang.Override
+  public boolean hasToneVariationsResult() {
+    return resultCase_ == 14;
+  }
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult getToneVariationsResult() {
+    if (resultCase_ == 14) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   */
+  private void setToneVariationsResult(com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   */
+  private void mergeToneVariationsResult(com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult value) {
+    value.getClass();
+  if (resultCase_ == 14 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+   */
+  private void clearToneVariationsResult() {
+    if (resultCase_ == 14) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int TPS_ADJUST_RESULT_FIELD_NUMBER = 15;
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   */
+  @java.lang.Override
+  public boolean hasTpsAdjustResult() {
+    return resultCase_ == 15;
+  }
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult() {
+    if (resultCase_ == 15) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   */
+  private void setTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 15;
+  }
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   */
+  private void mergeTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
+    value.getClass();
+  if (resultCase_ == 15 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 15;
+  }
+  /**
+   * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+   */
+  private void clearTpsAdjustResult() {
+    if (resultCase_ == 15) {
+      resultCase_ = 0;
+      result_ = null;
+    }
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse parseFrom(
@@ -185,81 +462,304 @@ public  final class PhoneticsResponse extends
       super(DEFAULT_INSTANCE);
     }
 
+    @java.lang.Override
+    public ResultCase
+        getResultCase() {
+      return instance.getResultCase();
+    }
 
-    /**
-     * <code>string output = 1;</code>
-     * @return The output.
-     */
-    @java.lang.Override
-    public java.lang.String getOutput() {
-      return instance.getOutput();
-    }
-    /**
-     * <code>string output = 1;</code>
-     * @return The bytes for output.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getOutputBytes() {
-      return instance.getOutputBytes();
-    }
-    /**
-     * <code>string output = 1;</code>
-     * @param value The output to set.
-     * @return This builder for chaining.
-     */
-    public Builder setOutput(
-        java.lang.String value) {
+    public Builder clearResult() {
       copyOnWrite();
-      instance.setOutput(value);
-      return this;
-    }
-    /**
-     * <code>string output = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearOutput() {
-      copyOnWrite();
-      instance.clearOutput();
-      return this;
-    }
-    /**
-     * <code>string output = 1;</code>
-     * @param value The bytes for output to set.
-     * @return This builder for chaining.
-     */
-    public Builder setOutputBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setOutputBytes(value);
+      instance.clearResult();
       return this;
     }
 
+
     /**
-     * <code>bool tone_restored = 2;</code>
-     * @return The toneRestored.
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
      */
     @java.lang.Override
-    public boolean getToneRestored() {
-      return instance.getToneRestored();
+    public boolean hasStringResult() {
+      return instance.hasStringResult();
     }
     /**
-     * <code>bool tone_restored = 2;</code>
-     * @param value The toneRestored to set.
-     * @return This builder for chaining.
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
      */
-    public Builder setToneRestored(boolean value) {
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.StringResult getStringResult() {
+      return instance.getStringResult();
+    }
+    /**
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
+     */
+    public Builder setStringResult(com.siansiansu.taigikeyboard.engine.proto.StringResult value) {
       copyOnWrite();
-      instance.setToneRestored(value);
+      instance.setStringResult(value);
       return this;
     }
     /**
-     * <code>bool tone_restored = 2;</code>
-     * @return This builder for chaining.
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
      */
-    public Builder clearToneRestored() {
+    public Builder setStringResult(
+        com.siansiansu.taigikeyboard.engine.proto.StringResult.Builder builderForValue) {
       copyOnWrite();
-      instance.clearToneRestored();
+      instance.setStringResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
+     */
+    public Builder mergeStringResult(com.siansiansu.taigikeyboard.engine.proto.StringResult value) {
+      copyOnWrite();
+      instance.mergeStringResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.StringResult string_result = 10;</code>
+     */
+    public Builder clearStringResult() {
+      copyOnWrite();
+      instance.clearStringResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    @java.lang.Override
+    public boolean hasStripToneResult() {
+      return instance.hasStripToneResult();
+    }
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult() {
+      return instance.getStripToneResult();
+    }
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    public Builder setStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
+      copyOnWrite();
+      instance.setStripToneResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    public Builder setStripToneResult(
+        com.siansiansu.taigikeyboard.engine.proto.StripToneResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setStripToneResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    public Builder mergeStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
+      copyOnWrite();
+      instance.mergeStripToneResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
+     */
+    public Builder clearStripToneResult() {
+      copyOnWrite();
+      instance.clearStripToneResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    @java.lang.Override
+    public boolean hasOptionalStringResult() {
+      return instance.hasOptionalStringResult();
+    }
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult getOptionalStringResult() {
+      return instance.getOptionalStringResult();
+    }
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    public Builder setOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
+      copyOnWrite();
+      instance.setOptionalStringResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    public Builder setOptionalStringResult(
+        com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setOptionalStringResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    public Builder mergeOptionalStringResult(com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult value) {
+      copyOnWrite();
+      instance.mergeOptionalStringResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.OptionalStringResult optional_string_result = 12;</code>
+     */
+    public Builder clearOptionalStringResult() {
+      copyOnWrite();
+      instance.clearOptionalStringResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasBoolResult() {
+      return instance.hasBoolResult();
+    }
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.BoolResult getBoolResult() {
+      return instance.getBoolResult();
+    }
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    public Builder setBoolResult(com.siansiansu.taigikeyboard.engine.proto.BoolResult value) {
+      copyOnWrite();
+      instance.setBoolResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    public Builder setBoolResult(
+        com.siansiansu.taigikeyboard.engine.proto.BoolResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setBoolResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    public Builder mergeBoolResult(com.siansiansu.taigikeyboard.engine.proto.BoolResult value) {
+      copyOnWrite();
+      instance.mergeBoolResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.BoolResult bool_result = 13;</code>
+     */
+    public Builder clearBoolResult() {
+      copyOnWrite();
+      instance.clearBoolResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    @java.lang.Override
+    public boolean hasToneVariationsResult() {
+      return instance.hasToneVariationsResult();
+    }
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult getToneVariationsResult() {
+      return instance.getToneVariationsResult();
+    }
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    public Builder setToneVariationsResult(com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult value) {
+      copyOnWrite();
+      instance.setToneVariationsResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    public Builder setToneVariationsResult(
+        com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setToneVariationsResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    public Builder mergeToneVariationsResult(com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult value) {
+      copyOnWrite();
+      instance.mergeToneVariationsResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ToneVariationsResult tone_variations_result = 14;</code>
+     */
+    public Builder clearToneVariationsResult() {
+      copyOnWrite();
+      instance.clearToneVariationsResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    @java.lang.Override
+    public boolean hasTpsAdjustResult() {
+      return instance.hasTpsAdjustResult();
+    }
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult getTpsAdjustResult() {
+      return instance.getTpsAdjustResult();
+    }
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    public Builder setTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
+      copyOnWrite();
+      instance.setTpsAdjustResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    public Builder setTpsAdjustResult(
+        com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.Builder builderForValue) {
+      copyOnWrite();
+      instance.setTpsAdjustResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    public Builder mergeTpsAdjustResult(com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult value) {
+      copyOnWrite();
+      instance.mergeTpsAdjustResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.TpsAdjustResult tps_adjust_result = 15;</code>
+     */
+    public Builder clearTpsAdjustResult() {
+      copyOnWrite();
+      instance.clearTpsAdjustResult();
       return this;
     }
 
@@ -279,12 +779,18 @@ public  final class PhoneticsResponse extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "output_",
-            "toneRestored_",
+            "result_",
+            "resultCase_",
+            com.siansiansu.taigikeyboard.engine.proto.StringResult.class,
+            com.siansiansu.taigikeyboard.engine.proto.StripToneResult.class,
+            com.siansiansu.taigikeyboard.engine.proto.OptionalStringResult.class,
+            com.siansiansu.taigikeyboard.engine.proto.BoolResult.class,
+            com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.class,
+            com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.class,
           };
           java.lang.String info =
-              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0007" +
-              "";
+              "\u0000\u0006\u0001\u0000\n\u000f\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
+              "<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

@@ -161,9 +161,9 @@ final class BackupService: @unchecked Sendable {
             // Normalize prevTl/nextTl to TL format (old backups or cross-platform may contain POJ)
             return try await nextWordService.batchImportAssociations(entries: entries.map {
                 (prevWord: $0.prevWord,
-                 prevTl: RomanizationConverter.pojToTL($0.prevTl ?? ""),
+                 prevTl: RustEngineBridge.pojToTl($0.prevTl ?? ""),
                  nextWord: $0.nextWord,
-                 nextTl: RomanizationConverter.pojToTL($0.nextTl),
+                 nextTl: RustEngineBridge.pojToTl($0.nextTl),
                  count: $0.count)
             })
         } catch {

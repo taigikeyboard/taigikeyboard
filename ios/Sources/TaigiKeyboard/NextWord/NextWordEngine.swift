@@ -82,7 +82,7 @@ enum NextWordEngine {
             }
 
             let roman = settings.inputMode == .poj
-                ? RomanizationConverter.tlToPOJ(prediction.tl)
+                ? RustEngineBridge.tlToPoj(prediction.tl)
                 : prediction.tl
             let text = roman.isEmpty ? prediction.hanzi : roman
             let subtitle: String? = roman.isEmpty ? nil : prediction.hanzi
@@ -171,8 +171,8 @@ enum NextWordEngine {
         }
 
         // pojToTL is idempotent on TL input — safe for POJ and TPS alike.
-        let textTl = RomanizationConverter.pojToTL(roman)
-        let prevTl = RomanizationConverter.pojToTL(state.lastSelectedRoman ?? "")
+        let textTl = RustEngineBridge.pojToTl(roman)
+        let prevTl = RustEngineBridge.pojToTl(state.lastSelectedRoman ?? "")
 
         var effects: [NextWordOutcome.Effect] = []
 

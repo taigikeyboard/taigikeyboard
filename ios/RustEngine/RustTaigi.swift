@@ -6,6 +6,9 @@ public func process_request_bytes(_ bytes: UnsafeBufferPointer<UInt8>) -> RustVe
 public func install_logger_sink(_ sink: SwiftLoggerSink) {
     __swift_bridge__$install_logger_sink(Unmanaged.passRetained(sink).toOpaque())
 }
+public func set_log_level(_ level: UInt8) {
+    __swift_bridge__$set_log_level(level)
+}
 public func panic_for_test() -> RustVec<UInt8> {
     RustVec(ptr: __swift_bridge__$panic_for_test())
 }

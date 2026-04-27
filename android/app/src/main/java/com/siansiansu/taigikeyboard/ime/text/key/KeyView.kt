@@ -21,7 +21,7 @@ import com.google.android.flexbox.FlexboxLayout
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
@@ -294,9 +294,9 @@ class KeyView(
         // 使用對照表正確轉換聲調字母（如 á → Á）
         val inputMode =
             when (taigikeyboard?.prefs?.inputMode) {
-                "poj" -> ToneConverterModels.InputMode.POJ
-                "tl", "tps" -> ToneConverterModels.InputMode.TL
-                else -> ToneConverterModels.InputMode.POJ
+                "poj" -> InputMode.POJ
+                "tl", "tps" -> InputMode.TL
+                else -> InputMode.POJ
             }
 
         return when {

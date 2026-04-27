@@ -19,11 +19,11 @@ package com.siansiansu.taigikeyboard.ime.core.settings
  * propagate without rebuilding the engine graph.
  *
  * ### Divergence from iOS (deferred)
- * - [inputMode] is a `String` on Android because the existing
- *   `ToneConverterModels.InputMode` enum has only POJ/TL and cannot
- *   represent `english` or `tps`. Engine-side call sites key on the raw
- *   string (`"tps"`, `"poj"`, `"tl"`). iOS uses the full `InputMode` enum.
- *   A future round unifies the shape.
+ * - [inputMode] is a `String` on Android because the platform's
+ *   `InputMode` enum has only POJ/TL/ENGLISH and cannot represent `tps`.
+ *   Engine-side call sites key on the raw string (`"tps"`, `"poj"`, `"tl"`).
+ *   iOS uses the full `InputMode` enum (4 cases). A future round unifies
+ *   the shape.
  */
 interface EngineSettings {
     /** Current input mode — `"poj"`, `"tl"`, `"tps"`, or `"english"`. */

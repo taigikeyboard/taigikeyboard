@@ -15,8 +15,7 @@ use crate::tl::to_tl;
 use crate::tps::to_zhuyin;
 use once_cell::sync::Lazy;
 use prost::Message;
-use protos::engine::phonetics_request::Op;
-use protos::engine::{ErrorCode, PhoneticsRequest, PhoneticsResponse, Request, Response};
+use protos::engine::{ErrorCode, Request, Response};
 use regex::Regex;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use thiserror::Error;
@@ -146,7 +145,7 @@ pub fn convert(text: &str, from: System, to: System) -> Result<String, Phonetics
                         } else {
                             tok.to_string()
                         };
-                        let tps = to_zhuyin(&with_prefix, false).trim_end().to_string();
+                        let tps = to_zhuyin(&with_prefix, false, false).trim_end().to_string();
                         for s in split_keep_punct(&tps) {
                             if !s.is_empty() {
                                 parts.push(s);
@@ -365,7 +364,7 @@ fn run_request(bytes: &[u8]) -> Response {
     };
     let id = request.id;
     let generation = request.generation;
-    let _config = request.config_snapshot.unwrap_or_default();
+    let config = request.config_snapshot.clone().unwrap_or_default();
 
     let Some(payload) = request.payload else {
         log::warn!("phonetics request missing payload (id={id})");
@@ -373,7 +372,7 @@ fn run_request(bytes: &[u8]) -> Response {
     };
     let protos::engine::request::Payload::Phonetics(phonetics_req) = payload;
 
-    match handle_phonetics(&phonetics_req) {
+    match crate::dispatch::handle(&phonetics_req, &config) {
         Ok(response_payload) => Response {
             id,
             error: ErrorCode::Ok as i32,
@@ -387,21 +386,6 @@ fn run_request(bytes: &[u8]) -> Response {
             error_response(id, error_code_for(&err), generation)
         }
     }
-}
-
-fn handle_phonetics(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsError> {
-    let op = Op::try_from(req.op).unwrap_or(Op::Unspecified);
-    let output = match op {
-        Op::Unspecified => return Err(PhoneticsError::UnsupportedOp),
-        Op::TlToPoj => convert(&req.input, System::Tl, System::Poj)?,
-        Op::PojToTl => convert(&req.input, System::Poj, System::Tl)?,
-        Op::NormalizeTone => to_tone_marks(&req.input, InputMode::Tl),
-        Op::StripTone => to_tone_number(&req.input),
-    };
-    Ok(PhoneticsResponse {
-        output,
-        tone_restored: false,
-    })
 }
 
 fn error_code_for(err: &PhoneticsError) -> ErrorCode {

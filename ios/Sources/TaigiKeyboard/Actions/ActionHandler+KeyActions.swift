@@ -128,7 +128,7 @@ extension ActionHandler {
         // If the syllable already has a tone mark or ends with space, fall through to commit.
         if settings.inputMode == .tps, composingManager.isComposing {
             if let lastChar = composingManager.rawInput.last,
-               !TPSTables.isTPSToneMark(lastChar), lastChar != " "
+               !RustEngineBridge.isTPSToneMark(lastChar), lastChar != " "
             {
                 composingManager.appendCharacter(" ")
                 return true

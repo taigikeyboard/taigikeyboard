@@ -1,4 +1,7 @@
 [tools]
 java = "21"
-rust = "1.85"
 protoc = "27"
+# Rust toolchain is pinned in `engine/rust-toolchain.toml` (single source of
+# truth). Listing `rust` here would `export RUSTUP_TOOLCHAIN=...` which
+# overrides `rust-toolchain.toml` and forces all Rust builds to that version
+# regardless of the engine workspace's MSRV.

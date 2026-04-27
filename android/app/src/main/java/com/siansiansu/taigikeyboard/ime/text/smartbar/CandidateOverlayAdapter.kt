@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.dictionary.TPSConverter
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.util.FontUtils
 
@@ -166,7 +166,11 @@ class CandidateOverlayAdapter(
             isSwapped: Boolean
         ) {
             val isTPSLayout = layoutType() == "tps"
-            val displayRoman = TPSConverter.displayRoman(word.roman, layoutType(), orMapsToER())
+            val displayRoman = if (isTPSLayout) {
+                RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER())
+            } else {
+                word.roman
+            }
 
             when {
                 word.hanzi.isNullOrEmpty() -> {

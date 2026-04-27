@@ -41,6 +41,7 @@ mod ffi {
     extern "Rust" {
         fn process_request_bytes(bytes: &[u8]) -> Vec<u8>;
         fn install_logger_sink(sink: SwiftLoggerSink);
+        fn set_log_level(level: u8);
         fn panic_for_test() -> Vec<u8>;
     }
 
@@ -75,9 +76,34 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
             // benign because installing a second time means a previous test
             // run installed the same global logger object.
             let _ = log::set_logger(&PLATFORM_LOGGER);
-            log::set_max_level(log::LevelFilter::Trace);
+            // Default to Warn so release builds do NOT pay the cost of
+            // formatting `log::debug!` / `log::info!` messages that the
+            // platform side would only no-op anyway. Callers can opt in to
+            // higher verbosity via `set_log_level` (e.g. iOS DEBUG calls
+            // `set_log_level(4)` for `Debug`).
+            log::set_max_level(log::LevelFilter::Warn);
         });
     }));
+}
+
+/// Adjust the Rust `log::max_level` at runtime. Intended for platform
+/// bridges to bump verbosity in DEBUG builds without paying the format
+/// cost in release.
+///
+/// Levels mirror `SwiftLoggerSink`: 0=Off, 1=Error, 2=Warn, 3=Info,
+/// 4=Debug, 5=Trace. Anything outside the range is treated as `Off`
+/// (defensive — keeps an integer typo from accidentally enabling trace).
+fn set_log_level(level: u8) {
+    let filter = match level {
+        1 => log::LevelFilter::Error,
+        2 => log::LevelFilter::Warn,
+        3 => log::LevelFilter::Info,
+        4 => log::LevelFilter::Debug,
+        5 => log::LevelFilter::Trace,
+        _ => log::LevelFilter::Off,
+    };
+    log::set_max_level(filter);
+    log::info!("rust log level set to {filter:?}");
 }
 
 fn panic_for_test() -> Vec<u8> {

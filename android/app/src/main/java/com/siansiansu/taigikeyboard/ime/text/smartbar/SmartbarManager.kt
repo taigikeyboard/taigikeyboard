@@ -14,7 +14,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
@@ -387,9 +387,9 @@ class SmartbarManager(
         val composingText = textInputManager.getComposingManager()?.getComposingText() ?: ""
         val inputMode =
             when (prefs.inputMode) {
-                "poj" -> ToneConverterModels.InputMode.POJ
-                "tl", "tps" -> ToneConverterModels.InputMode.TL
-                else -> ToneConverterModels.InputMode.POJ
+                "poj" -> InputMode.POJ
+                "tl", "tps" -> InputMode.TL
+                else -> InputMode.POJ
             }
 
         val transformedSuggestions =

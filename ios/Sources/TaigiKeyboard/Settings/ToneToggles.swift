@@ -10,7 +10,12 @@ import Foundation
 /// Foundation-pure. The wrapper reads the booleans from
 /// `EngineSettingsProvider.current` at call time (live read — see
 /// `EngineSettingsProvider`), then passes them through.
-struct ToneToggles: Equatable {
-    let isDoubleTapOOEnabled: Bool
-    let isDoubleTapNNEnabled: Bool
+public struct ToneToggles: Equatable {
+    public let isDoubleTapOOEnabled: Bool
+    public let isDoubleTapNNEnabled: Bool
+
+    public init(isDoubleTapOOEnabled: Bool, isDoubleTapNNEnabled: Bool) {
+        self.isDoubleTapOOEnabled = isDoubleTapOOEnabled
+        self.isDoubleTapNNEnabled = isDoubleTapNNEnabled
+    }
 }
