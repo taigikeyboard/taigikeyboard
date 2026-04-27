@@ -1,4 +1,4 @@
-//! `OP_GET_TONE_VARIATIONS` — init-bulk-pull builder for callout tone
+//! `Method::GetToneVariations` — init-bulk-pull builder for callout tone
 //! variation tables.
 //!
 //! Mirrors iOS `Callouts/Callouts+TaigiCalloutMaps.swift` `TaigiToneMaps`

@@ -63,7 +63,7 @@ pub fn normalize_to_tl(text: &str) -> String {
 
 /// True when the final ends with a stop consonant (p, t, k, h), ignoring trailing
 /// nasal `nn`. `kah4` → true; `kann2` → false.
-pub fn is_stop_tone(final_str: &str) -> bool {
+pub(crate) fn is_stop_tone(final_str: &str) -> bool {
     let cleaned = final_str.to_lowercase().replace("nn", "");
     cleaned.ends_with('p')
         || cleaned.ends_with('t')
@@ -73,7 +73,7 @@ pub fn is_stop_tone(final_str: &str) -> bool {
 
 /// Split `text` into `(initial, final)` by iterating prefixes against the TL
 /// initial / final tables. `text` must already be lowercase + TL-normalised.
-pub fn split_initial_final(text: &str) -> Option<(String, String)> {
+pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
     for i in 0..=text.len() {
         if !text.is_char_boundary(i) {
             continue;
@@ -91,7 +91,7 @@ pub fn split_initial_final(text: &str) -> Option<(String, String)> {
 
 /// Parse a syllable into `(initial, final, tone)`. Returns `None` when the
 /// syllable cannot be split. Inferred tones: `4` for stop finals, `1` otherwise.
-pub fn parse_syllable(text: &str) -> Option<(String, String, String)> {
+pub(crate) fn parse_syllable(text: &str) -> Option<(String, String, String)> {
     let (bare, tone) = strip_tone_mark(text);
     let normalized = normalize_to_tl(&bare.to_lowercase());
     let (initial, final_str) = split_initial_final(&normalized)?;
@@ -101,4 +101,111 @@ pub fn parse_syllable(text: &str) -> Option<(String, String, String)> {
         tone
     };
     Some((initial, final_str, final_tone))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // MARK: - is_stop_tone. SOURCE: phonetics.test.js + iOS + Android.
+
+    #[test]
+    fn is_stop_tone_cases() {
+        assert!(is_stop_tone("ap"));
+        assert!(is_stop_tone("at"));
+        assert!(is_stop_tone("ak"));
+        assert!(is_stop_tone("ah"));
+        assert!(!is_stop_tone("a"));
+        assert!(!is_stop_tone("an"));
+        assert!(!is_stop_tone("ang"));
+        assert!(is_stop_tone("annh"));
+    }
+
+    // MARK: - split_initial_final. SOURCE: TaigiPhoneticsTests.swift +
+    // TaigiPhoneticsTest.kt — both add cases beyond JS.
+
+    #[test]
+    fn split_initial_final_valid() {
+        let cases = [
+            ("ka", "k", "a"),
+            ("tshiu", "tsh", "iu"),
+            ("a", "", "a"),
+            ("ng", "", "ng"),
+            ("m", "", "m"),
+            ("phang", "ph", "ang"),
+            ("iang", "", "iang"),
+            ("oo", "", "oo"),
+        ];
+        for (input, init, fin) in cases {
+            let result = split_initial_final(input);
+            assert_eq!(
+                result.as_ref().map(|(i, _)| i.as_str()),
+                Some(init),
+                "initial of {input}"
+            );
+            assert_eq!(
+                result.as_ref().map(|(_, f)| f.as_str()),
+                Some(fin),
+                "final of {input}"
+            );
+        }
+    }
+
+    #[test]
+    fn split_initial_final_invalid_returns_none() {
+        assert!(split_initial_final("xyz").is_none());
+    }
+
+    // MARK: - parse_syllable. SOURCE: phonetics.test.js + iOS + Android.
+
+    #[test]
+    fn parse_syllable_simple() {
+        let cases = [
+            ("ka2", "k", "a", "2"),
+            ("kang1", "k", "ang", "1"),
+            ("a1", "", "a", "1"),
+            ("k\u{00e1}", "k", "a", "2"),
+            ("kah", "k", "ah", "4"),
+            ("ka", "k", "a", "1"),
+            ("pha3", "ph", "a", "3"),
+            ("tshiu7", "tsh", "iu", "7"),
+        ];
+        for (input, init, fin, tone) in cases {
+            let r = parse_syllable(input)
+                .unwrap_or_else(|| panic!("parse_syllable({input}) returned None"));
+            assert_eq!(r.0, init, "initial of {input}");
+            assert_eq!(r.1, fin, "final of {input}");
+            assert_eq!(r.2, tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn parse_syllable_poj_forms() {
+        let cases = [
+            ("chhi2", "tsh", "i", "2"),
+            ("koa1", "k", "ua", "1"),
+            ("koe1", "k", "ue", "1"),
+            ("peng5", "p", "ing", "5"),
+        ];
+        for (input, init, fin, tone) in cases {
+            let r = parse_syllable(input)
+                .unwrap_or_else(|| panic!("parse_syllable({input}) returned None"));
+            assert_eq!(r.0, init);
+            assert_eq!(r.1, fin);
+            assert_eq!(r.2, tone);
+        }
+    }
+
+    #[test]
+    fn parse_syllable_syllabic_consonants() {
+        let r = parse_syllable("ng5").unwrap();
+        assert_eq!(r, ("".into(), "ng".into(), "5".into()));
+        let r = parse_syllable("m7").unwrap();
+        assert_eq!(r, ("".into(), "m".into(), "7".into()));
+    }
+
+    #[test]
+    fn parse_syllable_invalid_returns_none() {
+        assert!(parse_syllable("xyz").is_none());
+    }
 }

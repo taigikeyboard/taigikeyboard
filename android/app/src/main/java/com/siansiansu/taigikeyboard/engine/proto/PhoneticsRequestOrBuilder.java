@@ -220,5 +220,5 @@ public interface PhoneticsRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust();
 
-  public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.IntentCase getIntentCase();
+  public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

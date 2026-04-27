@@ -14,7 +14,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
  *
  * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
- * preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
+ * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -266,7 +266,7 @@ public  final class AppConfig extends
    * toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
    *
    * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
-   * preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
+   * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}

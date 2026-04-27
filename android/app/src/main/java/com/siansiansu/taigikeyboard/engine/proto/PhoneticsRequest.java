@@ -15,9 +15,9 @@ public  final class PhoneticsRequest extends
     PhoneticsRequestOrBuilder {
   private PhoneticsRequest() {
   }
-  private int intentCase_ = 0;
-  private java.lang.Object intent_;
-  public enum IntentCase {
+  private int methodCase_ = 0;
+  private java.lang.Object method_;
+  public enum MethodCase {
     NORMALIZE_TONE(10),
     STRIP_TONE(11),
     POJ_TO_TL(12),
@@ -35,20 +35,20 @@ public  final class PhoneticsRequest extends
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
     TPS_INPUT_ADJUST(35),
-    INTENT_NOT_SET(0);
+    METHOD_NOT_SET(0);
     private final int value;
-    private IntentCase(int value) {
+    private MethodCase(int value) {
       this.value = value;
     }
     /**
      * @deprecated Use {@link #forNumber(int)} instead.
      */
     @java.lang.Deprecated
-    public static IntentCase valueOf(int value) {
+    public static MethodCase valueOf(int value) {
       return forNumber(value);
     }
 
-    public static IntentCase forNumber(int value) {
+    public static MethodCase forNumber(int value) {
       switch (value) {
         case 10: return NORMALIZE_TONE;
         case 11: return STRIP_TONE;
@@ -67,7 +67,7 @@ public  final class PhoneticsRequest extends
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
         case 35: return TPS_INPUT_ADJUST;
-        case 0: return INTENT_NOT_SET;
+        case 0: return METHOD_NOT_SET;
         default: return null;
       }
     }
@@ -77,15 +77,15 @@ public  final class PhoneticsRequest extends
   };
 
   @java.lang.Override
-  public IntentCase
-  getIntentCase() {
-    return IntentCase.forNumber(
-        intentCase_);
+  public MethodCase
+  getMethodCase() {
+    return MethodCase.forNumber(
+        methodCase_);
   }
 
-  private void clearIntent() {
-    intentCase_ = 0;
-    intent_ = null;
+  private void clearMethod() {
+    methodCase_ = 0;
+    method_ = null;
   }
 
   public static final int NORMALIZE_TONE_FIELD_NUMBER = 10;
@@ -98,7 +98,7 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasNormalizeTone() {
-    return intentCase_ == 10;
+    return methodCase_ == 10;
   }
   /**
    * <pre>
@@ -109,8 +109,8 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.NormalizeTone getNormalizeTone() {
-    if (intentCase_ == 10) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) intent_;
+    if (methodCase_ == 10) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.getDefaultInstance();
   }
@@ -123,8 +123,8 @@ public  final class PhoneticsRequest extends
    */
   private void setNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 10;
+  method_ = value;
+    methodCase_ = 10;
   }
   /**
    * <pre>
@@ -135,14 +135,14 @@ public  final class PhoneticsRequest extends
    */
   private void mergeNormalizeTone(com.siansiansu.taigikeyboard.engine.proto.NormalizeTone value) {
     value.getClass();
-  if (intentCase_ == 10 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) intent_)
+  if (methodCase_ == 10 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeTone) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 10;
+    methodCase_ = 10;
   }
   /**
    * <pre>
@@ -152,9 +152,9 @@ public  final class PhoneticsRequest extends
    * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
    */
   private void clearNormalizeTone() {
-    if (intentCase_ == 10) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 10) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -164,15 +164,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasStripTone() {
-    return intentCase_ == 11;
+    return methodCase_ == 11;
   }
   /**
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone() {
-    if (intentCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.StripTone) intent_;
+    if (methodCase_ == 11) {
+       return (com.siansiansu.taigikeyboard.engine.proto.StripTone) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance();
   }
@@ -181,30 +181,30 @@ public  final class PhoneticsRequest extends
    */
   private void setStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 11;
+  method_ = value;
+    methodCase_ = 11;
   }
   /**
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   private void mergeStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
     value.getClass();
-  if (intentCase_ == 11 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.StripTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StripTone) intent_)
+  if (methodCase_ == 11 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.StripTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StripTone) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 11;
+    methodCase_ = 11;
   }
   /**
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    */
   private void clearStripTone() {
-    if (intentCase_ == 11) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 11) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -214,15 +214,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasPojToTl() {
-    return intentCase_ == 12;
+    return methodCase_ == 12;
   }
   /**
    * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.PojToTl getPojToTl() {
-    if (intentCase_ == 12) {
-       return (com.siansiansu.taigikeyboard.engine.proto.PojToTl) intent_;
+    if (methodCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.PojToTl) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.PojToTl.getDefaultInstance();
   }
@@ -231,30 +231,30 @@ public  final class PhoneticsRequest extends
    */
   private void setPojToTl(com.siansiansu.taigikeyboard.engine.proto.PojToTl value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 12;
+  method_ = value;
+    methodCase_ = 12;
   }
   /**
    * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
    */
   private void mergePojToTl(com.siansiansu.taigikeyboard.engine.proto.PojToTl value) {
     value.getClass();
-  if (intentCase_ == 12 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.PojToTl.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.PojToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.PojToTl) intent_)
+  if (methodCase_ == 12 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.PojToTl.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.PojToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.PojToTl) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 12;
+    methodCase_ = 12;
   }
   /**
    * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
    */
   private void clearPojToTl() {
-    if (intentCase_ == 12) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 12) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -264,15 +264,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasTlToPoj() {
-    return intentCase_ == 13;
+    return methodCase_ == 13;
   }
   /**
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj() {
-    if (intentCase_ == 13) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlToPoj) intent_;
+    if (methodCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TlToPoj) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance();
   }
@@ -281,30 +281,30 @@ public  final class PhoneticsRequest extends
    */
   private void setTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 13;
+  method_ = value;
+    methodCase_ = 13;
   }
   /**
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   private void mergeTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
     value.getClass();
-  if (intentCase_ == 13 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.TlToPoj.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlToPoj) intent_)
+  if (methodCase_ == 13 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TlToPoj.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlToPoj) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 13;
+    methodCase_ = 13;
   }
   /**
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   private void clearTlToPoj() {
-    if (intentCase_ == 13) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 13) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -314,15 +314,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasNormalizeToTl() {
-    return intentCase_ == 14;
+    return methodCase_ == 14;
   }
   /**
    * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl getNormalizeToTl() {
-    if (intentCase_ == 14) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) intent_;
+    if (methodCase_ == 14) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.getDefaultInstance();
   }
@@ -331,30 +331,30 @@ public  final class PhoneticsRequest extends
    */
   private void setNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 14;
+  method_ = value;
+    methodCase_ = 14;
   }
   /**
    * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
    */
   private void mergeNormalizeToTl(com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl value) {
     value.getClass();
-  if (intentCase_ == 14 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) intent_)
+  if (methodCase_ == 14 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 14;
+    methodCase_ = 14;
   }
   /**
    * <code>.taigi.engine.NormalizeToTl normalize_to_tl = 14;</code>
    */
   private void clearNormalizeToTl() {
-    if (intentCase_ == 14) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 14) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -364,15 +364,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasNormalizeInput() {
-    return intentCase_ == 15;
+    return methodCase_ == 15;
   }
   /**
    * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.NormalizeInput getNormalizeInput() {
-    if (intentCase_ == 15) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeInput) intent_;
+    if (methodCase_ == 15) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NormalizeInput) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.getDefaultInstance();
   }
@@ -381,30 +381,30 @@ public  final class PhoneticsRequest extends
    */
   private void setNormalizeInput(com.siansiansu.taigikeyboard.engine.proto.NormalizeInput value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 15;
+  method_ = value;
+    methodCase_ = 15;
   }
   /**
    * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
    */
   private void mergeNormalizeInput(com.siansiansu.taigikeyboard.engine.proto.NormalizeInput value) {
     value.getClass();
-  if (intentCase_ == 15 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeInput) intent_)
+  if (methodCase_ == 15 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.NormalizeInput.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NormalizeInput) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 15;
+    methodCase_ = 15;
   }
   /**
    * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
    */
   private void clearNormalizeInput() {
-    if (intentCase_ == 15) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 15) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -414,15 +414,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasRestoreTone() {
-    return intentCase_ == 16;
+    return methodCase_ == 16;
   }
   /**
    * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone() {
-    if (intentCase_ == 16) {
-       return (com.siansiansu.taigikeyboard.engine.proto.RestoreTone) intent_;
+    if (methodCase_ == 16) {
+       return (com.siansiansu.taigikeyboard.engine.proto.RestoreTone) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.RestoreTone.getDefaultInstance();
   }
@@ -431,30 +431,30 @@ public  final class PhoneticsRequest extends
    */
   private void setRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 16;
+  method_ = value;
+    methodCase_ = 16;
   }
   /**
    * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
    */
   private void mergeRestoreTone(com.siansiansu.taigikeyboard.engine.proto.RestoreTone value) {
     value.getClass();
-  if (intentCase_ == 16 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.RestoreTone.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.RestoreTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RestoreTone) intent_)
+  if (methodCase_ == 16 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.RestoreTone.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.RestoreTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RestoreTone) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 16;
+    methodCase_ = 16;
   }
   /**
    * <code>.taigi.engine.RestoreTone restore_tone = 16;</code>
    */
   private void clearRestoreTone() {
-    if (intentCase_ == 16) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 16) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -464,15 +464,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasHasToneMarks() {
-    return intentCase_ == 17;
+    return methodCase_ == 17;
   }
   /**
    * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.HasToneMarks getHasToneMarks() {
-    if (intentCase_ == 17) {
-       return (com.siansiansu.taigikeyboard.engine.proto.HasToneMarks) intent_;
+    if (methodCase_ == 17) {
+       return (com.siansiansu.taigikeyboard.engine.proto.HasToneMarks) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.getDefaultInstance();
   }
@@ -481,30 +481,30 @@ public  final class PhoneticsRequest extends
    */
   private void setHasToneMarks(com.siansiansu.taigikeyboard.engine.proto.HasToneMarks value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 17;
+  method_ = value;
+    methodCase_ = 17;
   }
   /**
    * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
    */
   private void mergeHasToneMarks(com.siansiansu.taigikeyboard.engine.proto.HasToneMarks value) {
     value.getClass();
-  if (intentCase_ == 17 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.newBuilder((com.siansiansu.taigikeyboard.engine.proto.HasToneMarks) intent_)
+  if (methodCase_ == 17 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.newBuilder((com.siansiansu.taigikeyboard.engine.proto.HasToneMarks) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 17;
+    methodCase_ = 17;
   }
   /**
    * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
    */
   private void clearHasToneMarks() {
-    if (intentCase_ == 17) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 17) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -514,15 +514,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasGetToneVariations() {
-    return intentCase_ == 18;
+    return methodCase_ == 18;
   }
   /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.GetToneVariations getGetToneVariations() {
-    if (intentCase_ == 18) {
-       return (com.siansiansu.taigikeyboard.engine.proto.GetToneVariations) intent_;
+    if (methodCase_ == 18) {
+       return (com.siansiansu.taigikeyboard.engine.proto.GetToneVariations) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.getDefaultInstance();
   }
@@ -531,30 +531,30 @@ public  final class PhoneticsRequest extends
    */
   private void setGetToneVariations(com.siansiansu.taigikeyboard.engine.proto.GetToneVariations value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 18;
+  method_ = value;
+    methodCase_ = 18;
   }
   /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
    */
   private void mergeGetToneVariations(com.siansiansu.taigikeyboard.engine.proto.GetToneVariations value) {
     value.getClass();
-  if (intentCase_ == 18 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.newBuilder((com.siansiansu.taigikeyboard.engine.proto.GetToneVariations) intent_)
+  if (methodCase_ == 18 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.newBuilder((com.siansiansu.taigikeyboard.engine.proto.GetToneVariations) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 18;
+    methodCase_ = 18;
   }
   /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
    */
   private void clearGetToneVariations() {
-    if (intentCase_ == 18) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 18) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -568,7 +568,7 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasDeriveNotone() {
-    return intentCase_ == 20;
+    return methodCase_ == 20;
   }
   /**
    * <pre>
@@ -579,8 +579,8 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.DeriveNotone getDeriveNotone() {
-    if (intentCase_ == 20) {
-       return (com.siansiansu.taigikeyboard.engine.proto.DeriveNotone) intent_;
+    if (methodCase_ == 20) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DeriveNotone) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.getDefaultInstance();
   }
@@ -593,8 +593,8 @@ public  final class PhoneticsRequest extends
    */
   private void setDeriveNotone(com.siansiansu.taigikeyboard.engine.proto.DeriveNotone value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 20;
+  method_ = value;
+    methodCase_ = 20;
   }
   /**
    * <pre>
@@ -605,14 +605,14 @@ public  final class PhoneticsRequest extends
    */
   private void mergeDeriveNotone(com.siansiansu.taigikeyboard.engine.proto.DeriveNotone value) {
     value.getClass();
-  if (intentCase_ == 20 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveNotone) intent_)
+  if (methodCase_ == 20 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveNotone) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 20;
+    methodCase_ = 20;
   }
   /**
    * <pre>
@@ -622,9 +622,9 @@ public  final class PhoneticsRequest extends
    * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
    */
   private void clearDeriveNotone() {
-    if (intentCase_ == 20) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 20) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -634,15 +634,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasDeriveAbbrev() {
-    return intentCase_ == 21;
+    return methodCase_ == 21;
   }
   /**
    * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev getDeriveAbbrev() {
-    if (intentCase_ == 21) {
-       return (com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev) intent_;
+    if (methodCase_ == 21) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.getDefaultInstance();
   }
@@ -651,30 +651,30 @@ public  final class PhoneticsRequest extends
    */
   private void setDeriveAbbrev(com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 21;
+  method_ = value;
+    methodCase_ = 21;
   }
   /**
    * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
    */
   private void mergeDeriveAbbrev(com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev value) {
     value.getClass();
-  if (intentCase_ == 21 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev) intent_)
+  if (methodCase_ == 21 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 21;
+    methodCase_ = 21;
   }
   /**
    * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
    */
   private void clearDeriveAbbrev() {
-    if (intentCase_ == 21) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 21) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -688,7 +688,7 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasContainsTps() {
-    return intentCase_ == 30;
+    return methodCase_ == 30;
   }
   /**
    * <pre>
@@ -699,8 +699,8 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps() {
-    if (intentCase_ == 30) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ContainsTps) intent_;
+    if (methodCase_ == 30) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ContainsTps) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.ContainsTps.getDefaultInstance();
   }
@@ -713,8 +713,8 @@ public  final class PhoneticsRequest extends
    */
   private void setContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 30;
+  method_ = value;
+    methodCase_ = 30;
   }
   /**
    * <pre>
@@ -725,14 +725,14 @@ public  final class PhoneticsRequest extends
    */
   private void mergeContainsTps(com.siansiansu.taigikeyboard.engine.proto.ContainsTps value) {
     value.getClass();
-  if (intentCase_ == 30 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.ContainsTps.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.ContainsTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ContainsTps) intent_)
+  if (methodCase_ == 30 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ContainsTps.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ContainsTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ContainsTps) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 30;
+    methodCase_ = 30;
   }
   /**
    * <pre>
@@ -742,9 +742,9 @@ public  final class PhoneticsRequest extends
    * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
    */
   private void clearContainsTps() {
-    if (intentCase_ == 30) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 30) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -754,15 +754,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasTpsToTl() {
-    return intentCase_ == 31;
+    return methodCase_ == 31;
   }
   /**
    * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.TpsToTl getTpsToTl() {
-    if (intentCase_ == 31) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TpsToTl) intent_;
+    if (methodCase_ == 31) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TpsToTl) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.TpsToTl.getDefaultInstance();
   }
@@ -771,30 +771,30 @@ public  final class PhoneticsRequest extends
    */
   private void setTpsToTl(com.siansiansu.taigikeyboard.engine.proto.TpsToTl value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 31;
+  method_ = value;
+    methodCase_ = 31;
   }
   /**
    * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
    */
   private void mergeTpsToTl(com.siansiansu.taigikeyboard.engine.proto.TpsToTl value) {
     value.getClass();
-  if (intentCase_ == 31 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.TpsToTl.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.TpsToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsToTl) intent_)
+  if (methodCase_ == 31 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TpsToTl.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TpsToTl.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsToTl) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 31;
+    methodCase_ = 31;
   }
   /**
    * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
    */
   private void clearTpsToTl() {
-    if (intentCase_ == 31) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 31) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -804,15 +804,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasTlNumericToTps() {
-    return intentCase_ == 32;
+    return methodCase_ == 32;
   }
   /**
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps getTlNumericToTps() {
-    if (intentCase_ == 32) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) intent_;
+    if (methodCase_ == 32) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance();
   }
@@ -821,30 +821,30 @@ public  final class PhoneticsRequest extends
    */
   private void setTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 32;
+  method_ = value;
+    methodCase_ = 32;
   }
   /**
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   private void mergeTlNumericToTps(com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps value) {
     value.getClass();
-  if (intentCase_ == 32 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) intent_)
+  if (methodCase_ == 32 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 32;
+    methodCase_ = 32;
   }
   /**
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>
    */
   private void clearTlNumericToTps() {
-    if (intentCase_ == 32) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 32) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -854,15 +854,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasTlDisplayToTps() {
-    return intentCase_ == 33;
+    return methodCase_ == 33;
   }
   /**
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps getTlDisplayToTps() {
-    if (intentCase_ == 33) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) intent_;
+    if (methodCase_ == 33) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance();
   }
@@ -871,30 +871,30 @@ public  final class PhoneticsRequest extends
    */
   private void setTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 33;
+  method_ = value;
+    methodCase_ = 33;
   }
   /**
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void mergeTlDisplayToTps(com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps value) {
     value.getClass();
-  if (intentCase_ == 33 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) intent_)
+  if (methodCase_ == 33 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 33;
+    methodCase_ = 33;
   }
   /**
    * <code>.taigi.engine.TlDisplayToTps tl_display_to_tps = 33;</code>
    */
   private void clearTlDisplayToTps() {
-    if (intentCase_ == 33) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 33) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -904,15 +904,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasIsTpsToneMark() {
-    return intentCase_ == 34;
+    return methodCase_ == 34;
   }
   /**
    * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark getIsTpsToneMark() {
-    if (intentCase_ == 34) {
-       return (com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) intent_;
+    if (methodCase_ == 34) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.getDefaultInstance();
   }
@@ -921,30 +921,30 @@ public  final class PhoneticsRequest extends
    */
   private void setIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 34;
+  method_ = value;
+    methodCase_ = 34;
   }
   /**
    * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
    */
   private void mergeIsTpsToneMark(com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark value) {
     value.getClass();
-  if (intentCase_ == 34 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) intent_)
+  if (methodCase_ == 34 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 34;
+    methodCase_ = 34;
   }
   /**
    * <code>.taigi.engine.IsTpsToneMark is_tps_tone_mark = 34;</code>
    */
   private void clearIsTpsToneMark() {
-    if (intentCase_ == 34) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 34) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -954,15 +954,15 @@ public  final class PhoneticsRequest extends
    */
   @java.lang.Override
   public boolean hasTpsInputAdjust() {
-    return intentCase_ == 35;
+    return methodCase_ == 35;
   }
   /**
    * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
    */
   @java.lang.Override
   public com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust() {
-    if (intentCase_ == 35) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) intent_;
+    if (methodCase_ == 35) {
+       return (com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) method_;
     }
     return com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.getDefaultInstance();
   }
@@ -971,30 +971,30 @@ public  final class PhoneticsRequest extends
    */
   private void setTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
     value.getClass();
-  intent_ = value;
-    intentCase_ = 35;
+  method_ = value;
+    methodCase_ = 35;
   }
   /**
    * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
    */
   private void mergeTpsInputAdjust(com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust value) {
     value.getClass();
-  if (intentCase_ == 35 &&
-        intent_ != com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.getDefaultInstance()) {
-      intent_ = com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) intent_)
+  if (methodCase_ == 35 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust) method_)
           .mergeFrom(value).buildPartial();
     } else {
-      intent_ = value;
+      method_ = value;
     }
-    intentCase_ = 35;
+    methodCase_ = 35;
   }
   /**
    * <code>.taigi.engine.TpsInputAdjust tps_input_adjust = 35;</code>
    */
   private void clearTpsInputAdjust() {
-    if (intentCase_ == 35) {
-      intentCase_ = 0;
-      intent_ = null;
+    if (methodCase_ == 35) {
+      methodCase_ = 0;
+      method_ = null;
     }
   }
 
@@ -1095,14 +1095,14 @@ public  final class PhoneticsRequest extends
     }
 
     @java.lang.Override
-    public IntentCase
-        getIntentCase() {
-      return instance.getIntentCase();
+    public MethodCase
+        getMethodCase() {
+      return instance.getMethodCase();
     }
 
-    public Builder clearIntent() {
+    public Builder clearMethod() {
       copyOnWrite();
-      instance.clearIntent();
+      instance.clearMethod();
       return this;
     }
 
@@ -2011,8 +2011,8 @@ public  final class PhoneticsRequest extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "intent_",
-            "intentCase_",
+            "method_",
+            "methodCase_",
             com.siansiansu.taigikeyboard.engine.proto.NormalizeTone.class,
             com.siansiansu.taigikeyboard.engine.proto.StripTone.class,
             com.siansiansu.taigikeyboard.engine.proto.PojToTl.class,

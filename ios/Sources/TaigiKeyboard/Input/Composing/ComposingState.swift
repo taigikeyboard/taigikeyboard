@@ -93,12 +93,9 @@ struct ComposingState: Equatable {
         let raw = rawInput
         guard !raw.isEmpty else { return "" }
         if RustEngineBridge.containsTPS(raw) { return raw }
-        // Match the pre-D9.4 `ToneConverter.convertToToneMarks` pipeline:
-        // normalize tones via the engine, then post-process the nasal
-        // marker case so `ⁿ` / `ᴺ` follow the preceding letter's case
-        // (uppercase before → `ᴺ`, otherwise `ⁿ`).
-        let toneMarked = RustEngineBridge.normalizeTone(raw, mode: mode, toggles: toneToggles)
-        return ToneUtilities.adjustNasalMarkerCase(toneMarked)
+        // `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band,
+        // so the returned string is display-ready.
+        return RustEngineBridge.normalizeTone(raw, mode: mode, toggles: toneToggles)
     }
 
     /// Apply an intent and emit the resulting `Transition`. The receiver is

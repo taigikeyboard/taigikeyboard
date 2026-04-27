@@ -2,6 +2,7 @@
 #![doc = include_str!("../../README.md")]
 
 pub mod api;
+pub mod case_adjust;
 pub mod derivation;
 pub mod dispatch;
 pub mod parser;
@@ -15,8 +16,6 @@ pub mod tps_adjust;
 pub use api::{
     convert, process_request, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
 };
-pub use parser::{
-    is_stop_tone, normalize_to_tl, parse_syllable, split_initial_final, strip_tone_mark,
-};
+pub use parser::{normalize_to_tl, strip_tone_mark};
 pub use poj::to_poj;
 pub use tl::to_tl;

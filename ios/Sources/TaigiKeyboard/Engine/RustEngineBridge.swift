@@ -42,7 +42,7 @@ public enum RustEngineBridge {
 
     // MARK: Phonetics core (9 ops)
 
-    /// `OP_NORMALIZE_TONE` — input + AppConfig.input_mode + ToneToggles →
+    /// `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
     /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
     /// them per request (live-read invariant).
     public static func normalizeTone(
@@ -53,7 +53,7 @@ public enum RustEngineBridge {
         var payload = Taigi_Engine_NormalizeTone()
         payload.input = input
         return stringDispatch(
-            intent: .normalizeTone(payload),
+            method: .normalizeTone(payload),
             input: input,
             op: "normalizeTone",
             config: appConfig(mode: mode, toggles: toggles)
@@ -63,7 +63,7 @@ public enum RustEngineBridge {
     public static func stripTone(_ input: String) -> (bare: String, tone: String) {
         var payload = Taigi_Engine_StripTone()
         payload.input = input
-        let resp = dispatch(intent: .stripTone(payload), op: "stripTone", config: nil)
+        let resp = dispatch(method: .stripTone(payload), op: "stripTone", config: nil)
         guard case let .stripToneResult(r)? = resp?.result else {
             recordFailure(op: "stripTone", message: "missing result")
             return (input, "")
@@ -74,20 +74,20 @@ public enum RustEngineBridge {
     public static func pojToTl(_ input: String) -> String {
         var payload = Taigi_Engine_PojToTl()
         payload.input = input
-        return stringDispatch(intent: .pojToTl(payload), input: input, op: "pojToTl", config: nil)
+        return stringDispatch(method: .pojToTl(payload), input: input, op: "pojToTl", config: nil)
     }
 
     public static func tlToPoj(_ input: String) -> String {
         var payload = Taigi_Engine_TlToPoj()
         payload.input = input
-        return stringDispatch(intent: .tlToPoj(payload), input: input, op: "tlToPoj", config: nil)
+        return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj", config: nil)
     }
 
     public static func normalizeToTl(_ input: String) -> String {
         var payload = Taigi_Engine_NormalizeToTl()
         payload.input = input
         return stringDispatch(
-            intent: .normalizeToTl(payload),
+            method: .normalizeToTl(payload),
             input: input,
             op: "normalizeToTl",
             config: nil
@@ -98,7 +98,7 @@ public enum RustEngineBridge {
         var payload = Taigi_Engine_NormalizeInput()
         payload.input = input
         return stringDispatch(
-            intent: .normalizeInput(payload),
+            method: .normalizeInput(payload),
             input: input,
             op: "normalizeInput",
             config: nil
@@ -108,7 +108,7 @@ public enum RustEngineBridge {
     public static func restoreTone(_ text: String) -> String? {
         var payload = Taigi_Engine_RestoreTone()
         payload.text = text
-        let resp = dispatch(intent: .restoreTone(payload), op: "restoreTone", config: nil)
+        let resp = dispatch(method: .restoreTone(payload), op: "restoreTone", config: nil)
         guard case let .optionalStringResult(r)? = resp?.result else {
             recordFailure(op: "restoreTone", message: "missing result")
             return nil
@@ -119,13 +119,13 @@ public enum RustEngineBridge {
     public static func hasToneMarks(_ text: String) -> Bool {
         var payload = Taigi_Engine_HasToneMarks()
         payload.text = text
-        return boolDispatch(intent: .hasToneMarks_p(payload), op: "hasToneMarks")
+        return boolDispatch(method: .hasToneMarks_p(payload), op: "hasToneMarks")
     }
 
-    /// Lazy-init cache for `OP_GET_TONE_VARIATIONS`. Swift `static let`
+    /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.
     public static let toneVariations: ToneVariationsCache = {
-        let resp = dispatch(intent: .getToneVariations(Taigi_Engine_GetToneVariations()),
+        let resp = dispatch(method: .getToneVariations(Taigi_Engine_GetToneVariations()),
                             op: "getToneVariations",
                             config: nil)
         guard case let .toneVariationsResult(r)? = resp?.result else {
@@ -143,13 +143,13 @@ public enum RustEngineBridge {
     public static func deriveNotone(_ roman: String) -> String {
         var payload = Taigi_Engine_DeriveNotone()
         payload.roman = roman
-        return stringDispatch(intent: .deriveNotone(payload), input: roman, op: "deriveNotone", config: nil)
+        return stringDispatch(method: .deriveNotone(payload), input: roman, op: "deriveNotone", config: nil)
     }
 
     public static func deriveAbbrev(_ roman: String) -> String {
         var payload = Taigi_Engine_DeriveAbbrev()
         payload.roman = roman
-        return stringDispatch(intent: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
+        return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
     }
 
     // MARK: TPS (6 ops)
@@ -157,13 +157,13 @@ public enum RustEngineBridge {
     public static func containsTPS(_ text: String) -> Bool {
         var payload = Taigi_Engine_ContainsTps()
         payload.text = text
-        return boolDispatch(intent: .containsTps(payload), op: "containsTps")
+        return boolDispatch(method: .containsTps(payload), op: "containsTps")
     }
 
     public static func tpsToTL(_ text: String) -> String {
         var payload = Taigi_Engine_TpsToTl()
         payload.text = text
-        return stringDispatch(intent: .tpsToTl(payload), input: text, op: "tpsToTl", config: nil)
+        return stringDispatch(method: .tpsToTl(payload), input: text, op: "tpsToTl", config: nil)
     }
 
     public static func tlNumericToTPS(_ text: String, orMapsToER: Bool) -> String {
@@ -171,7 +171,7 @@ public enum RustEngineBridge {
         payload.text = text
         payload.orMapsToEr = orMapsToER
         return stringDispatch(
-            intent: .tlNumericToTps(payload),
+            method: .tlNumericToTps(payload),
             input: text,
             op: "tlNumericToTps",
             config: nil
@@ -183,7 +183,7 @@ public enum RustEngineBridge {
         payload.text = text
         payload.orMapsToEr = orMapsToER
         return stringDispatch(
-            intent: .tlDisplayToTps(payload),
+            method: .tlDisplayToTps(payload),
             input: text,
             op: "tlDisplayToTps",
             config: nil
@@ -193,7 +193,7 @@ public enum RustEngineBridge {
     public static func isTPSToneMark(_ char: Character) -> Bool {
         var payload = Taigi_Engine_IsTpsToneMark()
         payload.char = String(char)
-        return boolDispatch(intent: .isTpsToneMark(payload), op: "isTpsToneMark")
+        return boolDispatch(method: .isTpsToneMark(payload), op: "isTpsToneMark")
     }
 
     public static func tpsInputAdjust(
@@ -203,7 +203,7 @@ public enum RustEngineBridge {
         var payload = Taigi_Engine_TpsInputAdjust()
         payload.incoming = incoming
         payload.rawInput = rawInput
-        let resp = dispatch(intent: .tpsInputAdjust(payload), op: "tpsInputAdjust", config: nil)
+        let resp = dispatch(method: .tpsInputAdjust(payload), op: "tpsInputAdjust", config: nil)
         guard case let .tpsAdjustResult(r)? = resp?.result else {
             recordFailure(op: "tpsInputAdjust", message: "missing result")
             return (incoming, nil)
@@ -310,12 +310,12 @@ public enum RustEngineBridge {
     }
 
     private static func dispatch(
-        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
         config: Taigi_Engine_AppConfig?
     ) -> Taigi_Engine_PhoneticsResponse? {
         var phonetics = Taigi_Engine_PhoneticsRequest()
-        phonetics.intent = intent
+        phonetics.method = method
 
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
@@ -351,12 +351,12 @@ public enum RustEngineBridge {
     }
 
     private static func stringDispatch(
-        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         input: String,
         op: String,
         config: Taigi_Engine_AppConfig?
     ) -> String {
-        guard let resp = dispatch(intent: intent, op: op, config: config) else { return input }
+        guard let resp = dispatch(method: method, op: op, config: config) else { return input }
         guard case let .stringResult(s)? = resp.result else {
             recordFailure(op: op, message: "expected StringResult")
             return input
@@ -365,10 +365,10 @@ public enum RustEngineBridge {
     }
 
     private static func boolDispatch(
-        intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent,
+        method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String
     ) -> Bool {
-        guard let resp = dispatch(intent: intent, op: op, config: nil) else { return false }
+        guard let resp = dispatch(method: method, op: op, config: nil) else { return false }
         guard case let .boolResult(b)? = resp.result else {
             recordFailure(op: op, message: "expected BoolResult")
             return false

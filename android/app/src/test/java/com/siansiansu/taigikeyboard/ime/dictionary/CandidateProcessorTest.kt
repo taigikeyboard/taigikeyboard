@@ -235,7 +235,7 @@ class CandidateProcessorTest {
                 "GUA2" to "gua",
                 // POJ o͘ (U+0358) collapses to "o".
                 "h\u00F3\u0358" to "hoo",
-                // POJ nasal ⁿ → nn (via TaigiUnicode preprocessing).
+                // POJ nasal ⁿ → nn (via `TaigiUnicode.nfdPreprocessed`).
                 "sa\u207F" to "sann",
                 // Empty input is a fixed point.
                 "" to "",

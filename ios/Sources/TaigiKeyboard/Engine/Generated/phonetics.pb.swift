@@ -25,150 +25,150 @@ public struct Taigi_Engine_PhoneticsRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var intent: Taigi_Engine_PhoneticsRequest.OneOf_Intent? = nil
+  public var method: Taigi_Engine_PhoneticsRequest.OneOf_Method? = nil
 
   /// --- Phonetics core (9 ops) ---
   public var normalizeTone: Taigi_Engine_NormalizeTone {
     get {
-      if case .normalizeTone(let v)? = intent {return v}
+      if case .normalizeTone(let v)? = method {return v}
       return Taigi_Engine_NormalizeTone()
     }
-    set {intent = .normalizeTone(newValue)}
+    set {method = .normalizeTone(newValue)}
   }
 
   public var stripTone: Taigi_Engine_StripTone {
     get {
-      if case .stripTone(let v)? = intent {return v}
+      if case .stripTone(let v)? = method {return v}
       return Taigi_Engine_StripTone()
     }
-    set {intent = .stripTone(newValue)}
+    set {method = .stripTone(newValue)}
   }
 
   public var pojToTl: Taigi_Engine_PojToTl {
     get {
-      if case .pojToTl(let v)? = intent {return v}
+      if case .pojToTl(let v)? = method {return v}
       return Taigi_Engine_PojToTl()
     }
-    set {intent = .pojToTl(newValue)}
+    set {method = .pojToTl(newValue)}
   }
 
   public var tlToPoj: Taigi_Engine_TlToPoj {
     get {
-      if case .tlToPoj(let v)? = intent {return v}
+      if case .tlToPoj(let v)? = method {return v}
       return Taigi_Engine_TlToPoj()
     }
-    set {intent = .tlToPoj(newValue)}
+    set {method = .tlToPoj(newValue)}
   }
 
   public var normalizeToTl: Taigi_Engine_NormalizeToTl {
     get {
-      if case .normalizeToTl(let v)? = intent {return v}
+      if case .normalizeToTl(let v)? = method {return v}
       return Taigi_Engine_NormalizeToTl()
     }
-    set {intent = .normalizeToTl(newValue)}
+    set {method = .normalizeToTl(newValue)}
   }
 
   public var normalizeInput: Taigi_Engine_NormalizeInput {
     get {
-      if case .normalizeInput(let v)? = intent {return v}
+      if case .normalizeInput(let v)? = method {return v}
       return Taigi_Engine_NormalizeInput()
     }
-    set {intent = .normalizeInput(newValue)}
+    set {method = .normalizeInput(newValue)}
   }
 
   public var restoreTone: Taigi_Engine_RestoreTone {
     get {
-      if case .restoreTone(let v)? = intent {return v}
+      if case .restoreTone(let v)? = method {return v}
       return Taigi_Engine_RestoreTone()
     }
-    set {intent = .restoreTone(newValue)}
+    set {method = .restoreTone(newValue)}
   }
 
   public var hasToneMarks_p: Taigi_Engine_HasToneMarks {
     get {
-      if case .hasToneMarks_p(let v)? = intent {return v}
+      if case .hasToneMarks_p(let v)? = method {return v}
       return Taigi_Engine_HasToneMarks()
     }
-    set {intent = .hasToneMarks_p(newValue)}
+    set {method = .hasToneMarks_p(newValue)}
   }
 
   public var getToneVariations: Taigi_Engine_GetToneVariations {
     get {
-      if case .getToneVariations(let v)? = intent {return v}
+      if case .getToneVariations(let v)? = method {return v}
       return Taigi_Engine_GetToneVariations()
     }
-    set {intent = .getToneVariations(newValue)}
+    set {method = .getToneVariations(newValue)}
   }
 
   /// --- Derivation (2 ops) ---
   public var deriveNotone: Taigi_Engine_DeriveNotone {
     get {
-      if case .deriveNotone(let v)? = intent {return v}
+      if case .deriveNotone(let v)? = method {return v}
       return Taigi_Engine_DeriveNotone()
     }
-    set {intent = .deriveNotone(newValue)}
+    set {method = .deriveNotone(newValue)}
   }
 
   public var deriveAbbrev: Taigi_Engine_DeriveAbbrev {
     get {
-      if case .deriveAbbrev(let v)? = intent {return v}
+      if case .deriveAbbrev(let v)? = method {return v}
       return Taigi_Engine_DeriveAbbrev()
     }
-    set {intent = .deriveAbbrev(newValue)}
+    set {method = .deriveAbbrev(newValue)}
   }
 
   /// --- TPS (6 ops) ---
   public var containsTps: Taigi_Engine_ContainsTps {
     get {
-      if case .containsTps(let v)? = intent {return v}
+      if case .containsTps(let v)? = method {return v}
       return Taigi_Engine_ContainsTps()
     }
-    set {intent = .containsTps(newValue)}
+    set {method = .containsTps(newValue)}
   }
 
   public var tpsToTl: Taigi_Engine_TpsToTl {
     get {
-      if case .tpsToTl(let v)? = intent {return v}
+      if case .tpsToTl(let v)? = method {return v}
       return Taigi_Engine_TpsToTl()
     }
-    set {intent = .tpsToTl(newValue)}
+    set {method = .tpsToTl(newValue)}
   }
 
   public var tlNumericToTps: Taigi_Engine_TlNumericToTps {
     get {
-      if case .tlNumericToTps(let v)? = intent {return v}
+      if case .tlNumericToTps(let v)? = method {return v}
       return Taigi_Engine_TlNumericToTps()
     }
-    set {intent = .tlNumericToTps(newValue)}
+    set {method = .tlNumericToTps(newValue)}
   }
 
   public var tlDisplayToTps: Taigi_Engine_TlDisplayToTps {
     get {
-      if case .tlDisplayToTps(let v)? = intent {return v}
+      if case .tlDisplayToTps(let v)? = method {return v}
       return Taigi_Engine_TlDisplayToTps()
     }
-    set {intent = .tlDisplayToTps(newValue)}
+    set {method = .tlDisplayToTps(newValue)}
   }
 
   public var isTpsToneMark: Taigi_Engine_IsTpsToneMark {
     get {
-      if case .isTpsToneMark(let v)? = intent {return v}
+      if case .isTpsToneMark(let v)? = method {return v}
       return Taigi_Engine_IsTpsToneMark()
     }
-    set {intent = .isTpsToneMark(newValue)}
+    set {method = .isTpsToneMark(newValue)}
   }
 
   public var tpsInputAdjust: Taigi_Engine_TpsInputAdjust {
     get {
-      if case .tpsInputAdjust(let v)? = intent {return v}
+      if case .tpsInputAdjust(let v)? = method {return v}
       return Taigi_Engine_TpsInputAdjust()
     }
-    set {intent = .tpsInputAdjust(newValue)}
+    set {method = .tpsInputAdjust(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Intent: Equatable, Sendable {
+  public enum OneOf_Method: Equatable, Sendable {
     /// --- Phonetics core (9 ops) ---
     case normalizeTone(Taigi_Engine_NormalizeTone)
     case stripTone(Taigi_Engine_StripTone)
@@ -622,7 +622,7 @@ fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{3}has_tone_marks\0\u{3}get_tone_variations\0\u{4}\u{2}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{3}tps_to_tl\0\u{3}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{3}has_tone_marks\0\u{3}get_tone_variations\0\u{4}\u{2}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{3}tps_to_tl\0\u{3}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}(\u{1}\u{c})\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -633,222 +633,222 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
       case 10: try {
         var v: Taigi_Engine_NormalizeTone?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .normalizeTone(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .normalizeTone(v)
+          self.method = .normalizeTone(v)
         }
       }()
       case 11: try {
         var v: Taigi_Engine_StripTone?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .stripTone(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .stripTone(v)
+          self.method = .stripTone(v)
         }
       }()
       case 12: try {
         var v: Taigi_Engine_PojToTl?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .pojToTl(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .pojToTl(v)
+          self.method = .pojToTl(v)
         }
       }()
       case 13: try {
         var v: Taigi_Engine_TlToPoj?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .tlToPoj(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .tlToPoj(v)
+          self.method = .tlToPoj(v)
         }
       }()
       case 14: try {
         var v: Taigi_Engine_NormalizeToTl?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .normalizeToTl(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .normalizeToTl(v)
+          self.method = .normalizeToTl(v)
         }
       }()
       case 15: try {
         var v: Taigi_Engine_NormalizeInput?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .normalizeInput(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .normalizeInput(v)
+          self.method = .normalizeInput(v)
         }
       }()
       case 16: try {
         var v: Taigi_Engine_RestoreTone?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .restoreTone(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .restoreTone(v)
+          self.method = .restoreTone(v)
         }
       }()
       case 17: try {
         var v: Taigi_Engine_HasToneMarks?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .hasToneMarks_p(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .hasToneMarks_p(v)
+          self.method = .hasToneMarks_p(v)
         }
       }()
       case 18: try {
         var v: Taigi_Engine_GetToneVariations?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .getToneVariations(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .getToneVariations(v)
+          self.method = .getToneVariations(v)
         }
       }()
       case 20: try {
         var v: Taigi_Engine_DeriveNotone?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .deriveNotone(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .deriveNotone(v)
+          self.method = .deriveNotone(v)
         }
       }()
       case 21: try {
         var v: Taigi_Engine_DeriveAbbrev?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .deriveAbbrev(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .deriveAbbrev(v)
+          self.method = .deriveAbbrev(v)
         }
       }()
       case 30: try {
         var v: Taigi_Engine_ContainsTps?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .containsTps(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .containsTps(v)
+          self.method = .containsTps(v)
         }
       }()
       case 31: try {
         var v: Taigi_Engine_TpsToTl?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .tpsToTl(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .tpsToTl(v)
+          self.method = .tpsToTl(v)
         }
       }()
       case 32: try {
         var v: Taigi_Engine_TlNumericToTps?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .tlNumericToTps(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .tlNumericToTps(v)
+          self.method = .tlNumericToTps(v)
         }
       }()
       case 33: try {
         var v: Taigi_Engine_TlDisplayToTps?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .tlDisplayToTps(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .tlDisplayToTps(v)
+          self.method = .tlDisplayToTps(v)
         }
       }()
       case 34: try {
         var v: Taigi_Engine_IsTpsToneMark?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .isTpsToneMark(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .isTpsToneMark(v)
+          self.method = .isTpsToneMark(v)
         }
       }()
       case 35: try {
         var v: Taigi_Engine_TpsInputAdjust?
         var hadOneofValue = false
-        if let current = self.intent {
+        if let current = self.method {
           hadOneofValue = true
           if case .tpsInputAdjust(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.intent = .tpsInputAdjust(v)
+          self.method = .tpsInputAdjust(v)
         }
       }()
       default: break
@@ -861,73 +861,73 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    switch self.intent {
+    switch self.method {
     case .normalizeTone?: try {
-      guard case .normalizeTone(let v)? = self.intent else { preconditionFailure() }
+      guard case .normalizeTone(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
     case .stripTone?: try {
-      guard case .stripTone(let v)? = self.intent else { preconditionFailure() }
+      guard case .stripTone(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
     }()
     case .pojToTl?: try {
-      guard case .pojToTl(let v)? = self.intent else { preconditionFailure() }
+      guard case .pojToTl(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
     case .tlToPoj?: try {
-      guard case .tlToPoj(let v)? = self.intent else { preconditionFailure() }
+      guard case .tlToPoj(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
     case .normalizeToTl?: try {
-      guard case .normalizeToTl(let v)? = self.intent else { preconditionFailure() }
+      guard case .normalizeToTl(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
     case .normalizeInput?: try {
-      guard case .normalizeInput(let v)? = self.intent else { preconditionFailure() }
+      guard case .normalizeInput(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
     case .restoreTone?: try {
-      guard case .restoreTone(let v)? = self.intent else { preconditionFailure() }
+      guard case .restoreTone(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case .hasToneMarks_p?: try {
-      guard case .hasToneMarks_p(let v)? = self.intent else { preconditionFailure() }
+      guard case .hasToneMarks_p(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case .getToneVariations?: try {
-      guard case .getToneVariations(let v)? = self.intent else { preconditionFailure() }
+      guard case .getToneVariations(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     case .deriveNotone?: try {
-      guard case .deriveNotone(let v)? = self.intent else { preconditionFailure() }
+      guard case .deriveNotone(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     case .deriveAbbrev?: try {
-      guard case .deriveAbbrev(let v)? = self.intent else { preconditionFailure() }
+      guard case .deriveAbbrev(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
     }()
     case .containsTps?: try {
-      guard case .containsTps(let v)? = self.intent else { preconditionFailure() }
+      guard case .containsTps(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
     }()
     case .tpsToTl?: try {
-      guard case .tpsToTl(let v)? = self.intent else { preconditionFailure() }
+      guard case .tpsToTl(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
     }()
     case .tlNumericToTps?: try {
-      guard case .tlNumericToTps(let v)? = self.intent else { preconditionFailure() }
+      guard case .tlNumericToTps(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
     }()
     case .tlDisplayToTps?: try {
-      guard case .tlDisplayToTps(let v)? = self.intent else { preconditionFailure() }
+      guard case .tlDisplayToTps(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
     }()
     case .isTpsToneMark?: try {
-      guard case .isTpsToneMark(let v)? = self.intent else { preconditionFailure() }
+      guard case .isTpsToneMark(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 34)
     }()
     case .tpsInputAdjust?: try {
-      guard case .tpsInputAdjust(let v)? = self.intent else { preconditionFailure() }
+      guard case .tpsInputAdjust(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 35)
     }()
     case nil: break
@@ -936,7 +936,7 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 
   public static func ==(lhs: Taigi_Engine_PhoneticsRequest, rhs: Taigi_Engine_PhoneticsRequest) -> Bool {
-    if lhs.intent != rhs.intent {return false}
+    if lhs.method != rhs.method {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -93,14 +93,14 @@ object RustEngineBridge {
     // region Phonetics core (9 ops)
 
     /**
-     * `OP_NORMALIZE_TONE` — input + AppConfig.input_mode + ToneToggles →
+     * `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
      * tone-marked string. `mode` and `toggles` are mandatory (no default)
      * to enforce the live-read invariant per Codex v2 §7.
      */
     fun normalizeTone(input: String, mode: NormalizeMode, toggles: ToneTogglesCarrier): String {
         val payload = NormalizeTone.newBuilder().setInput(input).build()
         return stringDispatch(
-            intent = { it.normalizeTone = payload },
+            method = { it.normalizeTone = payload },
             input = input,
             op = "normalizeTone",
             config = appConfig(mode, toggles),
@@ -156,7 +156,7 @@ object RustEngineBridge {
     }
 
     /**
-     * Lazy-init cache for OP_GET_TONE_VARIATIONS. Kotlin `by lazy` defaults
+     * Lazy-init cache for Method::GetToneVariations. Kotlin `by lazy` defaults
      * to `LazyThreadSafetyMode.SYNCHRONIZED` — single execution + thread
      * safety guaranteed by language semantics. First reader pays the FFI
      * roundtrip; subsequent reads are zero-FFI.
@@ -360,12 +360,12 @@ object RustEngineBridge {
             .build()
 
     private inline fun dispatch(
-        intentSetter: (PhoneticsRequest.Builder) -> Unit,
+        methodSetter: (PhoneticsRequest.Builder) -> Unit,
         op: String,
         config: AppConfig?,
     ): PhoneticsResponse? {
         val phoneticsBuilder = PhoneticsRequest.newBuilder()
-        intentSetter(phoneticsBuilder)
+        methodSetter(phoneticsBuilder)
         val requestBuilder = Request.newBuilder()
             .setId(nextId.incrementAndGet())
             .setPhonetics(phoneticsBuilder.build())
@@ -389,12 +389,12 @@ object RustEngineBridge {
     }
 
     private inline fun stringDispatch(
-        intentSetter: (PhoneticsRequest.Builder) -> Unit,
+        methodSetter: (PhoneticsRequest.Builder) -> Unit,
         input: String,
         op: String,
         config: AppConfig?,
     ): String {
-        val resp = dispatch(intentSetter, op, config) ?: return input
+        val resp = dispatch(methodSetter, op, config) ?: return input
         if (!resp.hasStringResult()) {
             recordFailure(op, "expected StringResult")
             return input
@@ -404,10 +404,10 @@ object RustEngineBridge {
     }
 
     private inline fun boolDispatch(
-        intentSetter: (PhoneticsRequest.Builder) -> Unit,
+        methodSetter: (PhoneticsRequest.Builder) -> Unit,
         op: String,
     ): Boolean {
-        val resp = dispatch(intentSetter, op, null) ?: return false
+        val resp = dispatch(methodSetter, op, null) ?: return false
         if (!resp.hasBoolResult()) {
             recordFailure(op, "expected BoolResult")
             return false
@@ -442,7 +442,7 @@ object RustEngineBridge {
 // Public DTOs (Kotlin doesn't allow named-tuple returns; using data classes)
 // =========================================================================
 
-/** `OP_NORMALIZE_TONE` mode parameter. Mirrors iOS `InputMode` minus `.tps` */
+/** `Method::NormalizeTone` mode parameter. Mirrors iOS `InputMode` minus `.tps` */
 enum class NormalizeMode { POJ, TL, ENGLISH }
 
 /**
@@ -455,10 +455,10 @@ data class ToneTogglesCarrier(
     val isDoubleTapNnEnabled: Boolean,
 )
 
-/** Result of `OP_STRIP_TONE`. */
+/** Result of `Method::StripTone`. */
 data class StripToneOutcome(val bare: String, val tone: String)
 
-/** Result of `OP_TPS_INPUT_ADJUST`. */
+/** Result of `Method::TpsInputAdjust`. */
 data class TpsAdjustOutcome(val adjusted: String, val replaceLast: String?)
 
 /** Init-bulk-pull cache for the callout tone variation tables. */

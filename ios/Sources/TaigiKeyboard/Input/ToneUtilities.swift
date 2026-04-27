@@ -1,55 +1,46 @@
 import Foundation
 
-/// Tone-letter case-conversion helpers for the `ⁿ` (U+207F) / `ᴺ` (U+1D3A)
-/// nasal-marker codepoint pair plus mode-aware upper/lower routing.
+/// Per-character case mapping for POJ tone letters used by `CaseTransformer`,
+/// plus the string-level `adjustNasalMarkerCase` used by
+/// `SuggestionCaseTransformer`.
 ///
-/// Pure Foundation logic — `Character.uppercased()` / `lowercased()` already
-/// handle combining tone marks correctly; this enum only handles the
-/// non-roundtripping nasal-marker case the standard library can't infer.
-///
-/// Restored 2026-04-27 after `D9.4 commit 9` over-deleted alongside the
-/// genuine Phonetics modules. Lives next to `CaseTransformer.swift` (its
-/// primary consumer) to reflect the corrected scope: case-transform helper,
-/// not phonetics core.
+/// Why this lives on the platform (instead of going through `RustEngineBridge`):
+/// `SuggestionCaseTransformer.transformWord` runs once per candidate during
+/// JVM unit tests where the JNI native library is not loaded — routing every
+/// candidate through the FFI would make `RustEngineBridge.<init>` (which
+/// calls `System.loadLibrary("rust_taigi")`) throw `UnsatisfiedLinkError`.
+/// `Method::NormalizeTone` still applies the same logic in-band for the
+/// composing-display path, so the engine remains source-of-truth there.
 enum ToneUtilities {
-    /// Uppercase a tone letter. Swift's built-in `uppercased()` handles
-    /// combining marks correctly; the only special case is the nasal marker.
     static func uppercaseToneLetter(_ char: String, mode _: InputMode) -> String {
-        if char == "\u{207F}" { return "\u{1D3A}" } // ⁿ → ᴺ
+        if char == "\u{207F}" { return "\u{1D3A}" }
         return char.uppercased()
     }
 
-    /// Lowercase a tone letter. Mirror of `uppercaseToneLetter`.
     static func lowercaseToneLetter(_ char: String, mode _: InputMode) -> String {
-        if char == "\u{1D3A}" { return "\u{207F}" } // ᴺ → ⁿ
+        if char == "\u{1D3A}" { return "\u{207F}" }
         return char.lowercased()
     }
 
     /// Adjust nasal marker (`ⁿ`/`ᴺ`) case to match the preceding letter.
-    /// Rule: `ⁿ` follows lowercase, `ᴺ` follows uppercase.
-    ///
-    /// Swift caveat: `Character.isUppercase` returns `true` for both `ⁿ`
-    /// and `ᴺ`, so explicit codepoint checks are required.
+    /// Mirrors Rust `engine/phonetics/src/case_adjust.rs::adjust_nasal_marker_case`.
+    /// CROSS-PLATFORM INVARIANT — drift causes silent divergence with
+    /// `Method::NormalizeTone`'s in-band post-process.
     static func adjustNasalMarkerCase(_ text: String) -> String {
-        let nasalLower: Character = "\u{207F}" // ⁿ
-        let nasalUpper: Character = "\u{1D3A}" // ᴺ
-
+        let nasalLower: Character = "\u{207F}"
+        let nasalUpper: Character = "\u{1D3A}"
         guard text.contains(nasalLower) || text.contains(nasalUpper) else { return text }
 
         var result = ""
         var lastLetterIsUppercase = false
-
         for char in text {
             if char == nasalLower || char == nasalUpper {
                 result.append(lastLetterIsUppercase ? nasalUpper : nasalLower)
             } else {
-                if char.isLetter {
-                    lastLetterIsUppercase = char.isUppercase
-                }
+                if char.isLetter { lastLetterIsUppercase = char.isUppercase }
                 result.append(char)
             }
         }
-
         return result
     }
 }

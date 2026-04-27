@@ -56,7 +56,7 @@ pub fn is_tps_tone_mark(c: char) -> bool {
     TONE_MARK_CHARS.contains(&c)
 }
 
-/// String-overload for the `OP_IS_TPS_TONE_MARK` op which takes a string
+/// String-overload for the `Method::IsTpsToneMark` op which takes a string
 /// (single grapheme expected). Returns false on empty / multi-grapheme.
 pub fn is_tps_tone_mark_str(s: &str) -> bool {
     let mut chars = s.chars();
@@ -164,7 +164,7 @@ pub fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -
 }
 
 // =========================================================================
-// `OP_TPS_INPUT_ADJUST` — collapsed entry point
+// `Method::TpsInputAdjust` — collapsed entry point
 // =========================================================================
 
 /// Collapse-equivalent of iOS `CharacterInputPipeline.adjust(_, .tps, raw)`.

@@ -6,17 +6,22 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 /**
- * Tone-letter case-conversion utilities for POJ/TL romanization.
+ * Per-character case mapping for POJ/TL tone letters used by `CaseTransformer`
+ * and `SuggestionCaseTransformer`, plus the string-level
+ * `adjustNasalMarkerCase`. Mirrors iOS `Input/ToneUtilities.swift`.
  *
- * Mirrors iOS `Input/ToneUtilities.swift`. Handles the `ⁿ` (U+207F) /
- * `ᴺ` (U+1D3A) nasal-marker codepoint pair plus mode-specific tone-letter
- * tables that Kotlin's stdlib `uppercase()` / `lowercase()` would round-trip
- * incorrectly.
+ * Kotlin's stdlib `String.uppercase()` / `lowercase()` does not round-trip
+ * combining-mark sequences (`a̍`, `o̍`, …) correctly, so explicit POJ + TL
+ * mapping tables are kept private to this object.
  *
- * Restored 2026-04-27 after `D9.4 commit 9` over-deleted the surrounding
- * `ToneConverterModels.kt` (which housed phonetic tables now owned by
- * Rust). The four case-mapping tables are inlined here as `private val`
- * because no other file consumed them.
+ * `adjustNasalMarkerCase` lives on the platform (not behind `RustEngineBridge`)
+ * because `SuggestionCaseTransformer` runs in JVM unit tests where the JNI
+ * native library is not loaded — routing through the FFI would make
+ * `System.loadLibrary("rust_taigi")` throw `UnsatisfiedLinkError`.
+ * `Method::NormalizeTone` still applies the same logic in-band for the
+ * composing-display path, so the engine remains source-of-truth there.
+ * CROSS-PLATFORM INVARIANT — drift causes silent divergence with
+ * Rust `engine/phonetics/src/case_adjust.rs::adjust_nasal_marker_case`.
  */
 object ToneUtilities {
     /**
@@ -86,29 +91,22 @@ object ToneUtilities {
     /**
      * Adjust nasal marker (`ⁿ`/`ᴺ`) case to match the preceding letter.
      * Rule: `ⁿ` follows lowercase letters, `ᴺ` follows uppercase letters.
-     *
-     * Mirrors iOS `ToneUtilities.adjustNasalMarkerCase`.
      */
     fun adjustNasalMarkerCase(text: String): String {
-        val nasalLower = 'ⁿ' // ⁿ
-        val nasalUpper = 'ᴺ' // ᴺ
-
+        val nasalLower = 'ⁿ'
+        val nasalUpper = 'ᴺ'
         if (nasalLower !in text && nasalUpper !in text) return text
 
         val result = StringBuilder()
         var lastLetterIsUppercase = false
-
         for (char in text) {
             if (char == nasalLower || char == nasalUpper) {
                 result.append(if (lastLetterIsUppercase) nasalUpper else nasalLower)
             } else {
-                if (char.isLetter()) {
-                    lastLetterIsUppercase = char.isUpperCase()
-                }
+                if (char.isLetter()) lastLetterIsUppercase = char.isUpperCase()
                 result.append(char)
             }
         }
-
         return result.toString()
     }
 

@@ -287,11 +287,9 @@ class ComposingManager(
             settings.toneToggles.isDoubleTapOOEnabled,
             settings.toneToggles.isDoubleTapNNEnabled,
         )
-        // Match the pre-D9.4 `ToneConverter.convertToToneMarks` pipeline:
-        // normalize tones via the engine, then post-process nasal-marker
-        // case so `ⁿ` / `ᴺ` follow the preceding letter's case.
-        val toneMarked = RustEngineBridge.normalizeTone(raw, normalizeMode, carrier)
-        return ToneUtilities.adjustNasalMarkerCase(toneMarked)
+        // `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band,
+        // so the returned string is display-ready.
+        return RustEngineBridge.normalizeTone(raw, normalizeMode, carrier)
     }
 
     private fun dispatch(

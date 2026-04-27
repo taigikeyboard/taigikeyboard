@@ -13,13 +13,13 @@ import Foundation
 /// query key), so both sides must stay exactly in sync — hence a single
 /// canonical implementation here rather than any callback into the service.
 enum CustomDictionaryDerivation {
-    /// Toneless form — Rust `OP_DERIVE_NOTONE` strips tone diacritics + digits
+    /// Toneless form — Rust `Method::DeriveNotone` strips tone diacritics + digits
     /// + hyphens + spaces after lowercase + nasal-marker conversion.
     static func generateNotone(_ roman: String) -> String {
         RustEngineBridge.deriveNotone(roman)
     }
 
-    /// Abbreviation form — Rust `OP_DERIVE_ABBREV` returns first char per
+    /// Abbreviation form — Rust `Method::DeriveAbbrev` returns first char per
     /// syllable (split by ASCII whitespace + hyphen), diacritics stripped.
     /// Returns "" when fewer than 2 syllables. Whitespace canonical
     /// `[ \t\n\x0B\f\r-]+` matches Android JVM `Regex("[\\s-]+")` (Codex v3 §1).
@@ -27,7 +27,7 @@ enum CustomDictionaryDerivation {
         RustEngineBridge.deriveAbbrev(roman)
     }
 
-    /// Numeric-toned form for tone-aware search — same as `OP_NORMALIZE_INPUT`.
+    /// Numeric-toned form for tone-aware search — same as `Method::NormalizeInput`.
     static func generateRomanNum(_ roman: String) -> String {
         RustEngineBridge.normalizeInput(roman)
     }

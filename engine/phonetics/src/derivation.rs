@@ -21,7 +21,7 @@ use unicode_normalization::UnicodeNormalization;
 // CustomDictionaryDerivation
 // ===========================================================================
 
-/// `OP_DERIVE_NOTONE` — strips tone diacritics + digits + hyphens + spaces,
+/// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces,
 /// after lowercase + nasal marker conversion (ⁿ U+207F / ᴺ U+1D3A → nn).
 pub fn derive_notone(roman: &str) -> String {
     let with_nasal_converted = roman
@@ -47,7 +47,7 @@ pub fn derive_notone(roman: &str) -> String {
     result.nfc().collect::<String>()
 }
 
-/// `OP_DERIVE_ABBREV` — first char per syllable, diacritics stripped.
+/// `Method::DeriveAbbrev` — first char per syllable, diacritics stripped.
 /// Returns "" when fewer than 2 syllables.
 ///
 /// Whitespace split = ASCII `[ \t\n\x0B\f\r-]+` literal (matches Android JVM
@@ -90,7 +90,7 @@ fn is_nonspacing_mark(c: char) -> bool {
 // InputNormalizer (full pipeline → trie-query key)
 // ===========================================================================
 
-/// `OP_NORMALIZE_INPUT` — full pipeline:
+/// `Method::NormalizeInput` — full pipeline:
 /// 1. TPS preprocess (if input contains TPS) via `from_zhuyin`.
 /// 2. Lowercase.
 /// 3. Detect whether input contains tone-mark diacritics (decides
@@ -118,7 +118,7 @@ pub fn normalize_input(input: &str) -> String {
     result
 }
 
-/// `OP_HAS_TONE_MARKS` — true if `text` (after NFD) contains any combining
+/// `Method::HasToneMarks` — true if `text` (after NFD) contains any combining
 /// tone mark recognised by `COMBINING_TO_TONE_NUM`.
 pub fn has_tone_marks(text: &str) -> bool {
     text.nfd().any(|c| COMBINING_TO_TONE_NUM.contains_key(&c))
@@ -170,7 +170,7 @@ fn nfd_preprocessed(text: &str) -> String {
 // ToneRestoration
 // ===========================================================================
 
-/// `OP_RESTORE_TONE` — find the LAST combining tone mark in NFD-decomposed
+/// `Method::RestoreTone` — find the LAST combining tone mark in NFD-decomposed
 /// `text`, remove it, and NFC-recompose. Returns `None` if no tone mark
 /// found. Replaces both platforms' `ToneRestoration.restore`.
 pub fn restore_tone(text: &str) -> Option<String> {

@@ -11,7 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
  *
  * Converts user input to numeric tone format (mode-native spelling). Full
  * pipeline (TPS preprocess + per-syllable diacritic→digit + checked-ending
- * heuristic) lives in Rust as `OP_NORMALIZE_INPUT`. The `mode` parameter
+ * heuristic) lives in Rust as `Method::NormalizeInput`. The `mode` parameter
  * is no longer used by the engine (Codex v3 §2 — both platforms ignored
  * it pre-D9.4) but is kept on the public signature for call-site source
  * compatibility; remove in a follow-up sweep.

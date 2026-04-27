@@ -13,7 +13,7 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
  * `engine/phonetics/src/derivation.rs`.
  */
 object CustomDictionaryDerivation {
-    /** Toneless form used for toneless prefix search — Rust `OP_DERIVE_NOTONE`. */
+    /** Toneless form used for toneless prefix search — Rust `Method::DeriveNotone`. */
     fun generateNotone(roman: String): String = RustEngineBridge.deriveNotone(roman)
 
     /**
@@ -24,6 +24,6 @@ object CustomDictionaryDerivation {
      */
     fun generateAbbrev(roman: String): String = RustEngineBridge.deriveAbbrev(roman)
 
-    /** Numeric-toned form for tone-aware search — same as `OP_NORMALIZE_INPUT`. */
+    /** Numeric-toned form for tone-aware search — same as `Method::NormalizeInput`. */
     fun generateRomanNum(roman: String): String = RustEngineBridge.normalizeInput(roman)
 }

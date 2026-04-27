@@ -3,21 +3,21 @@
 
 use phonetics::api::process_request;
 use prost::Message;
-use protos::engine::phonetics_request::Intent;
+use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     request, response, ErrorCode, NormalizeTone, PhoneticsRequest, PojToTl, Request, Response,
     StripTone, TlToPoj,
 };
 
-fn run(intent: Intent) -> Response {
+fn run(method: Method) -> Response {
     let req = Request {
         id: 7,
         r#type: 0,
         config_snapshot: None,
         generation: 0,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            intent: Some(intent),
+            method: Some(method),
         })),
     };
     let mut buf = Vec::with_capacity(req.encoded_len());
@@ -48,7 +48,7 @@ fn expect_strip_tone_output(resp: &Response) -> (String, String) {
 
 #[test]
 fn tl_to_poj_empty_input() {
-    let resp = run(Intent::TlToPoj(TlToPoj {
+    let resp = run(Method::TlToPoj(TlToPoj {
         input: String::new(),
     }));
     assert_eq!(resp.error, ErrorCode::Ok as i32);
@@ -58,7 +58,7 @@ fn tl_to_poj_empty_input() {
 
 #[test]
 fn poj_to_tl_empty_input() {
-    let resp = run(Intent::PojToTl(PojToTl {
+    let resp = run(Method::PojToTl(PojToTl {
         input: String::new(),
     }));
     assert_eq!(resp.error, ErrorCode::Ok as i32);
@@ -67,7 +67,7 @@ fn poj_to_tl_empty_input() {
 
 #[test]
 fn normalize_tone_empty_input() {
-    let resp = run(Intent::NormalizeTone(NormalizeTone {
+    let resp = run(Method::NormalizeTone(NormalizeTone {
         input: String::new(),
     }));
     assert_eq!(resp.error, ErrorCode::Ok as i32);
@@ -76,7 +76,7 @@ fn normalize_tone_empty_input() {
 
 #[test]
 fn strip_tone_empty_input() {
-    let resp = run(Intent::StripTone(StripTone {
+    let resp = run(Method::StripTone(StripTone {
         input: String::new(),
     }));
     assert_eq!(resp.error, ErrorCode::Ok as i32);

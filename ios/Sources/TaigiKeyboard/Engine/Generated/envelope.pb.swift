@@ -107,7 +107,7 @@ public enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
 ///
 /// D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
-/// preprocessing (oo→o͘, nn→ⁿ) read by `OP_NORMALIZE_TONE`.
+/// preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
 public struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

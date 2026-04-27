@@ -3,7 +3,7 @@
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 
-pub static TL_INITIALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+pub(crate) static TL_INITIALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
         "p", "ph", "m", "b", "t", "th", "n", "l", "k", "kh", "ng", "g", "ts", "tsh", "s", "j", "h",
         "",
@@ -12,7 +12,7 @@ pub static TL_INITIALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     .collect()
 });
 
-pub static TL_FINALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+pub(crate) static TL_FINALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
     [
         "a", "ah", "ap", "at", "ak", "ann", "annh", "am", "an", "ang", "e", "eh", "enn", "ennh",
         "i", "ih", "ip", "it", "ik", "inn", "innh", "im", "in", "ing", "o", "oh", "oo", "ooh",
@@ -31,7 +31,7 @@ pub static TL_FINALS: Lazy<HashSet<&'static str>> = Lazy::new(|| {
 
 /// Tone number -> NFD combining mark. Tones 1 and 4 carry no mark.
 /// Tone 9 here is the POJ form (breve U+0306); TL overrides via `tl_tone_mark`.
-pub static TONE_NUM_TO_COMBINING: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+pub(crate) static TONE_NUM_TO_COMBINING: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     [
         ("1", ""),
         ("2", "\u{0301}"),
@@ -48,11 +48,11 @@ pub static TONE_NUM_TO_COMBINING: Lazy<HashMap<&'static str, &'static str>> = La
 });
 
 /// TL tone 9 uses double acute accent (U+030B).
-pub const TL_TONE9_COMBINING: &str = "\u{030b}";
+pub(crate) const TL_TONE9_COMBINING: &str = "\u{030b}";
 
 /// Combining-mark scalar -> tone number. Includes both POJ breve (U+0306) and
 /// TL double acute (U+030B) for tone 9.
-pub static COMBINING_TO_TONE_NUM: Lazy<HashMap<char, &'static str>> = Lazy::new(|| {
+pub(crate) static COMBINING_TO_TONE_NUM: Lazy<HashMap<char, &'static str>> = Lazy::new(|| {
     [
         ('\u{0301}', "2"),
         ('\u{0300}', "3"),
@@ -68,12 +68,12 @@ pub static COMBINING_TO_TONE_NUM: Lazy<HashMap<char, &'static str>> = Lazy::new(
 });
 
 /// TL initial -> POJ initial.
-pub static POJ_INITIAL_FROM_TL: Lazy<HashMap<&'static str, &'static str>> =
+pub(crate) static POJ_INITIAL_FROM_TL: Lazy<HashMap<&'static str, &'static str>> =
     Lazy::new(|| [("ts", "ch"), ("tsh", "chh")].into_iter().collect());
 
 /// TL final -> POJ final substitutions. Order matters: `nn` before `oo` so
 /// `oonn` does not collapse into `oo + nn`.
-pub const POJ_FINAL_SUBSTITUTIONS: &[(&str, &str)] = &[
+pub(crate) const POJ_FINAL_SUBSTITUTIONS: &[(&str, &str)] = &[
     ("nn", "\u{207f}"),
     ("oo", "o\u{0358}"),
     ("ua", "oa"),
@@ -83,7 +83,7 @@ pub const POJ_FINAL_SUBSTITUTIONS: &[(&str, &str)] = &[
 ];
 
 /// Resolve TL combining mark for a tone digit. Tone 9 is TL-specific (double acute).
-pub fn tl_tone_mark(tone: &str) -> &'static str {
+pub(crate) fn tl_tone_mark(tone: &str) -> &'static str {
     if tone == "9" {
         TL_TONE9_COMBINING
     } else {
@@ -93,14 +93,14 @@ pub fn tl_tone_mark(tone: &str) -> &'static str {
 
 /// Resolve POJ combining mark for a tone digit. Tone 9 is the breve already in
 /// the table.
-pub fn poj_tone_mark(tone: &str) -> &'static str {
+pub(crate) fn poj_tone_mark(tone: &str) -> &'static str {
     TONE_NUM_TO_COMBINING.get(tone).copied().unwrap_or("")
 }
 
 // MARK: - TPS (Zhuyin) tables — ported from zhuyin.js. Order matters: longer
 // keys appear first so `tsh` matches before `t`.
 
-pub const ZHUYIN_INITIALS: &[(&str, &str)] = &[
+pub(crate) const ZHUYIN_INITIALS: &[(&str, &str)] = &[
     ("tshi", "\u{3111}\u{3127}"),
     ("tsi", "\u{3110}\u{3127}"),
     ("tsh", "\u{3118}"),
@@ -124,7 +124,7 @@ pub const ZHUYIN_INITIALS: &[(&str, &str)] = &[
     ("h", "\u{310f}"),
 ];
 
-pub const ZHUYIN_VOWELS: &[(&str, &str)] = &[
+pub(crate) const ZHUYIN_VOWELS: &[(&str, &str)] = &[
     ("ainn", "\u{31ae}"),
     ("aunn", "\u{31af}"),
     ("ann", "\u{31a9}"),
@@ -156,7 +156,7 @@ pub const ZHUYIN_VOWELS: &[(&str, &str)] = &[
     ("n", "\u{3123}"),
 ];
 
-pub const ZHUYIN_TONES: &[(&str, &str)] = &[
+pub(crate) const ZHUYIN_TONES: &[(&str, &str)] = &[
     ("1", " "),
     ("2", "\u{02cb}"),
     ("3", "\u{02ea}"),
@@ -175,7 +175,7 @@ pub const ZHUYIN_TONES: &[(&str, &str)] = &[
     ("9", "\u{02c6}"),
 ];
 
-pub const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
+pub(crate) const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
     ("1", " "),
     ("2", "\u{02cb}"),
     ("3", "\u{02ea}"),
@@ -194,12 +194,12 @@ pub const ZHUYIN_TONES_ENCODE_SAFE: &[(&str, &str)] = &[
     ("9", "\u{02c6}"),
 ];
 
-pub const PUNCTUATION_CHARS: &[&str] = &[
+pub(crate) const PUNCTUATION_CHARS: &[&str] = &[
     "\u{ff0e}", "\u{300c}", "\u{300d}", "\u{ff0c}", "\u{3002}", "\u{ff1f}", "--", ",", ".", "?",
     "\"",
 ];
 
-pub const PUNCTUATION_PAIRS: &[(&str, &str)] = &[
+pub(crate) const PUNCTUATION_PAIRS: &[(&str, &str)] = &[
     ("\u{3002}", ". "),
     ("\u{3002}", "."),
     ("\u{300c}", "\""),

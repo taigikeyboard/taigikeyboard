@@ -6,7 +6,7 @@
 
 use phonetics::api::process_request;
 use prost::Message;
-use protos::engine::phonetics_request::Intent;
+use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     request, response, AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, ErrorCode,
@@ -18,14 +18,14 @@ use protos::engine::{
 
 // ---------------- helpers ----------------
 
-fn run(intent: Intent, config: AppConfig) -> Response {
+fn run(method: Method, config: AppConfig) -> Response {
     let req = Request {
         id: 42,
         r#type: 0,
         config_snapshot: Some(config),
         generation: 0,
         payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            intent: Some(intent),
+            method: Some(method),
         })),
     };
     let mut buf = Vec::with_capacity(req.encoded_len());
@@ -120,7 +120,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
 #[test]
 fn normalize_tone_tl_basic() {
     let resp = run(
-        Intent::NormalizeTone(NormalizeTone {
+        Method::NormalizeTone(NormalizeTone {
             input: "ho2".to_string(),
         }),
         tl_config(),
@@ -138,7 +138,7 @@ fn normalize_tone_poj_oo_doubletap_enabled() {
     // preprocessor's transformation is observable. With toggle ON, "hoo"
     // becomes "ho͘".
     let resp = run(
-        Intent::NormalizeTone(NormalizeTone {
+        Method::NormalizeTone(NormalizeTone {
             input: "hoo".to_string(),
         }),
         poj_config(true, false),
@@ -152,7 +152,7 @@ fn normalize_tone_poj_oo_doubletap_disabled() {
     // Same input, toggle OFF — preprocessor is a no-op so "oo" remains
     // literal and U+0358 is absent.
     let resp = run(
-        Intent::NormalizeTone(NormalizeTone {
+        Method::NormalizeTone(NormalizeTone {
             input: "hoo".to_string(),
         }),
         poj_config(false, false),
@@ -164,7 +164,7 @@ fn normalize_tone_poj_oo_doubletap_disabled() {
 #[test]
 fn normalize_tone_poj_nn_doubletap_enabled() {
     let resp = run(
-        Intent::NormalizeTone(NormalizeTone {
+        Method::NormalizeTone(NormalizeTone {
             input: "ann2".to_string(),
         }),
         poj_config(false, true),
@@ -177,7 +177,7 @@ fn normalize_tone_poj_nn_doubletap_enabled() {
 #[test]
 fn strip_tone_returns_bare_and_tone() {
     let resp = run(
-        Intent::StripTone(StripTone {
+        Method::StripTone(StripTone {
             input: "hó".to_string(),
         }),
         tl_config(),
@@ -190,7 +190,7 @@ fn strip_tone_returns_bare_and_tone() {
 #[test]
 fn poj_to_tl_display_round_trip() {
     let resp = run(
-        Intent::PojToTl(PojToTl {
+        Method::PojToTl(PojToTl {
             input: "ho͘".to_string(),
         }),
         tl_config(),
@@ -202,7 +202,7 @@ fn poj_to_tl_display_round_trip() {
 #[test]
 fn tl_to_poj_display_round_trip() {
     let resp = run(
-        Intent::TlToPoj(TlToPoj {
+        Method::TlToPoj(TlToPoj {
             input: "hoo".to_string(),
         }),
         tl_config(),
@@ -214,7 +214,7 @@ fn tl_to_poj_display_round_trip() {
 #[test]
 fn normalize_to_tl_passes_input_through_normalizer() {
     let resp = run(
-        Intent::NormalizeToTl(NormalizeToTl {
+        Method::NormalizeToTl(NormalizeToTl {
             input: "hoo".to_string(),
         }),
         tl_config(),
@@ -226,7 +226,7 @@ fn normalize_to_tl_passes_input_through_normalizer() {
 #[test]
 fn normalize_input_extracts_tone_from_diacritic() {
     let resp = run(
-        Intent::NormalizeInput(NormalizeInput {
+        Method::NormalizeInput(NormalizeInput {
             input: "hó".to_string(),
         }),
         tl_config(),
@@ -238,7 +238,7 @@ fn normalize_input_extracts_tone_from_diacritic() {
 #[test]
 fn normalize_input_handles_hyphenated_syllables() {
     let resp = run(
-        Intent::NormalizeInput(NormalizeInput {
+        Method::NormalizeInput(NormalizeInput {
             input: "gâu-tsá".to_string(),
         }),
         tl_config(),
@@ -250,7 +250,7 @@ fn normalize_input_handles_hyphenated_syllables() {
 #[test]
 fn normalize_input_keeps_existing_tone_digit() {
     let resp = run(
-        Intent::NormalizeInput(NormalizeInput {
+        Method::NormalizeInput(NormalizeInput {
             input: "ho2".to_string(),
         }),
         tl_config(),
@@ -262,7 +262,7 @@ fn normalize_input_keeps_existing_tone_digit() {
 #[test]
 fn restore_tone_returns_text_without_last_diacritic() {
     let resp = run(
-        Intent::RestoreTone(RestoreTone {
+        Method::RestoreTone(RestoreTone {
             text: "hó".to_string(),
         }),
         tl_config(),
@@ -274,7 +274,7 @@ fn restore_tone_returns_text_without_last_diacritic() {
 #[test]
 fn restore_tone_returns_none_when_no_tone_mark() {
     let resp = run(
-        Intent::RestoreTone(RestoreTone {
+        Method::RestoreTone(RestoreTone {
             text: "ho".to_string(),
         }),
         tl_config(),
@@ -285,7 +285,7 @@ fn restore_tone_returns_none_when_no_tone_mark() {
 #[test]
 fn has_tone_marks_true_for_diacritic() {
     let resp = run(
-        Intent::HasToneMarks(HasToneMarks {
+        Method::HasToneMarks(HasToneMarks {
             text: "hó".to_string(),
         }),
         tl_config(),
@@ -296,7 +296,7 @@ fn has_tone_marks_true_for_diacritic() {
 #[test]
 fn has_tone_marks_false_for_plain_ascii() {
     let resp = run(
-        Intent::HasToneMarks(HasToneMarks {
+        Method::HasToneMarks(HasToneMarks {
             text: "ho".to_string(),
         }),
         tl_config(),
@@ -306,7 +306,7 @@ fn has_tone_marks_false_for_plain_ascii() {
 
 #[test]
 fn get_tone_variations_returns_both_modes() {
-    let resp = run(Intent::GetToneVariations(GetToneVariations {}), tl_config());
+    let resp = run(Method::GetToneVariations(GetToneVariations {}), tl_config());
     let result = tone_variations_result(&resp);
     assert!(!result.poj_variations.is_empty(), "POJ map non-empty");
     assert!(!result.tl_variations.is_empty(), "TL map non-empty");
@@ -324,7 +324,7 @@ fn get_tone_variations_returns_both_modes() {
 #[test]
 fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
     let resp = run(
-        Intent::DeriveNotone(DeriveNotone {
+        Method::DeriveNotone(DeriveNotone {
             roman: "Gâu-tsá 2".to_string(),
         }),
         tl_config(),
@@ -335,7 +335,7 @@ fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
 #[test]
 fn derive_notone_converts_nasal_marker_to_nn() {
     let resp = run(
-        Intent::DeriveNotone(DeriveNotone {
+        Method::DeriveNotone(DeriveNotone {
             roman: "siu\u{207f}".to_string(),
         }),
         tl_config(),
@@ -346,7 +346,7 @@ fn derive_notone_converts_nasal_marker_to_nn() {
 #[test]
 fn derive_abbrev_returns_first_char_per_syllable() {
     let resp = run(
-        Intent::DeriveAbbrev(DeriveAbbrev {
+        Method::DeriveAbbrev(DeriveAbbrev {
             roman: "gâu-tsá".to_string(),
         }),
         tl_config(),
@@ -357,7 +357,7 @@ fn derive_abbrev_returns_first_char_per_syllable() {
 #[test]
 fn derive_abbrev_returns_empty_on_single_syllable() {
     let resp = run(
-        Intent::DeriveAbbrev(DeriveAbbrev {
+        Method::DeriveAbbrev(DeriveAbbrev {
             roman: "hó".to_string(),
         }),
         tl_config(),
@@ -368,7 +368,7 @@ fn derive_abbrev_returns_empty_on_single_syllable() {
 #[test]
 fn derive_abbrev_splits_on_ascii_whitespace_and_hyphen() {
     let resp = run(
-        Intent::DeriveAbbrev(DeriveAbbrev {
+        Method::DeriveAbbrev(DeriveAbbrev {
             roman: "a\tb\nc d-e".to_string(),
         }),
         tl_config(),
@@ -383,7 +383,7 @@ fn derive_abbrev_splits_on_ascii_whitespace_and_hyphen() {
 #[test]
 fn derive_abbrev_does_not_split_on_nbsp() {
     let resp = run(
-        Intent::DeriveAbbrev(DeriveAbbrev {
+        Method::DeriveAbbrev(DeriveAbbrev {
             roman: "a\u{00A0}b".to_string(),
         }),
         tl_config(),
@@ -398,19 +398,19 @@ fn derive_abbrev_does_not_split_on_nbsp() {
 
 #[test]
 fn contains_tps_true_for_zhuyin() {
-    let resp = run(Intent::ContainsTps(ContainsTps { text: "ㄉㄧㄠ".to_string() }), tl_config());
+    let resp = run(Method::ContainsTps(ContainsTps { text: "ㄉㄧㄠ".to_string() }), tl_config());
     assert!(bool_result(&resp));
 }
 
 #[test]
 fn contains_tps_false_for_latin() {
-    let resp = run(Intent::ContainsTps(ContainsTps { text: "tiau".to_string() }), tl_config());
+    let resp = run(Method::ContainsTps(ContainsTps { text: "tiau".to_string() }), tl_config());
     assert!(!bool_result(&resp));
 }
 
 #[test]
 fn tps_to_tl_basic() {
-    let resp = run(Intent::TpsToTl(TpsToTl { text: "ㄉㄧㄠˊ".to_string() }), tl_config());
+    let resp = run(Method::TpsToTl(TpsToTl { text: "ㄉㄧㄠˊ".to_string() }), tl_config());
     let out = string_result(&resp);
     assert!(out.contains("tiau"), "got {out:?}");
 }
@@ -418,7 +418,7 @@ fn tps_to_tl_basic() {
 #[test]
 fn tl_numeric_to_tps_basic() {
     let resp = run(
-        Intent::TlNumericToTps(TlNumericToTps {
+        Method::TlNumericToTps(TlNumericToTps {
             text: "tiau5".to_string(),
             or_maps_to_er: false,
         }),
@@ -431,7 +431,7 @@ fn tl_numeric_to_tps_basic() {
 #[test]
 fn tl_display_to_tps_uses_display_form() {
     let resp = run(
-        Intent::TlDisplayToTps(TlDisplayToTps {
+        Method::TlDisplayToTps(TlDisplayToTps {
             text: "tiâu".to_string(),
             or_maps_to_er: false,
         }),
@@ -447,7 +447,7 @@ fn tl_display_to_tps_uses_display_form() {
 #[test]
 fn tl_numeric_to_tps_or_default_uses_o_vowel() {
     let resp = run(
-        Intent::TlNumericToTps(TlNumericToTps {
+        Method::TlNumericToTps(TlNumericToTps {
             text: "kor1".to_string(),
             or_maps_to_er: false,
         }),
@@ -463,7 +463,7 @@ fn tl_numeric_to_tps_or_default_uses_o_vowel() {
 #[test]
 fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
     let resp = run(
-        Intent::TlNumericToTps(TlNumericToTps {
+        Method::TlNumericToTps(TlNumericToTps {
             text: "kor1".to_string(),
             or_maps_to_er: true,
         }),
@@ -479,7 +479,7 @@ fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
 #[test]
 fn tl_numeric_to_tps_preserves_syllable_boundaries() {
     let resp = run(
-        Intent::TlNumericToTps(TlNumericToTps {
+        Method::TlNumericToTps(TlNumericToTps {
             text: "gua2-gua2".to_string(),
             or_maps_to_er: false,
         }),
@@ -495,7 +495,7 @@ fn tl_numeric_to_tps_preserves_syllable_boundaries() {
 #[test]
 fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
     let resp = run(
-        Intent::TlNumericToTps(TlNumericToTps {
+        Method::TlNumericToTps(TlNumericToTps {
             text: "gua2--gua2".to_string(),
             or_maps_to_er: false,
         }),
@@ -511,7 +511,7 @@ fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
 #[test]
 fn tl_display_to_tps_preserves_syllable_boundaries() {
     let resp = run(
-        Intent::TlDisplayToTps(TlDisplayToTps {
+        Method::TlDisplayToTps(TlDisplayToTps {
             text: "guá-guá".to_string(),
             or_maps_to_er: false,
         }),
@@ -523,19 +523,19 @@ fn tl_display_to_tps_preserves_syllable_boundaries() {
 
 #[test]
 fn is_tps_tone_mark_true_for_acute() {
-    let resp = run(Intent::IsTpsToneMark(IsTpsToneMark { char: "\u{02ca}".to_string() }), tl_config());
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: "\u{02ca}".to_string() }), tl_config());
     assert!(bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_letter() {
-    let resp = run(Intent::IsTpsToneMark(IsTpsToneMark { char: "a".to_string() }), tl_config());
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: "a".to_string() }), tl_config());
     assert!(!bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_empty() {
-    let resp = run(Intent::IsTpsToneMark(IsTpsToneMark { char: String::new() }), tl_config());
+    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: String::new() }), tl_config());
     assert!(!bool_result(&resp));
 }
 
@@ -543,7 +543,7 @@ fn is_tps_tone_mark_false_for_empty() {
 
 fn tps_adjust(incoming: &str, raw: &str) -> (String, Option<String>) {
     let resp = run(
-        Intent::TpsInputAdjust(TpsInputAdjust {
+        Method::TpsInputAdjust(TpsInputAdjust {
             incoming: incoming.to_string(),
             raw_input: raw.to_string(),
         }),

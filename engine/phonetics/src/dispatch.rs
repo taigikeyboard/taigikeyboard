@@ -1,5 +1,5 @@
-//! Phonetics request dispatcher — routes `PhoneticsRequest.intent` (17 ops)
-//! to the corresponding implementation. All 17 ops live behind a single FFI
+//! Phonetics request dispatcher — routes `PhoneticsRequest.method` variants
+//! to the corresponding implementation. All variants live behind a single FFI
 //! entry per `docs/engine/rust-core-proto.md` §3 and the architectural
 //! convergence doc with khiin-rs / McBopomofo.
 //!
@@ -15,11 +15,12 @@ use crate::api::{
     poj_display_to_tl_display, tl_display_to_poj_display, to_tone_marks, to_tone_number, InputMode,
     PhoneticsError,
 };
+use crate::case_adjust::adjust_nasal_marker_case;
 use crate::derivation;
 use crate::tone_variations;
 use crate::tps;
 use crate::tps_adjust;
-use protos::engine::phonetics_request::Intent;
+use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse,
@@ -29,43 +30,44 @@ use protos::engine::{
 /// Dispatch a decoded `PhoneticsRequest` against the per-request `AppConfig`
 /// snapshot (live-read settings per `behavioral-invariants.md` §11).
 pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsResponse, PhoneticsError> {
-    let Some(intent) = &req.intent else {
+    let Some(method) = &req.method else {
         // The most common cause is a Swift/Rust proto schema mismatch
         // (xcframework built before the proto was updated). Run
-        // `make build` to regenerate. The `UnsupportedOp` thiserror
-        // message also mentions the segmenter case, but that path is
-        // unreachable here because dispatch handles every op.
+        // `make build` to regenerate.
         log::warn!(
-            "PhoneticsRequest.intent is None — likely Swift/Rust proto schema mismatch (rebuild xcframework with `make build`)"
+            "PhoneticsRequest.method is None — likely Swift/Rust proto schema mismatch (rebuild xcframework with `make build`)"
         );
         return Err(PhoneticsError::UnsupportedOp);
     };
 
-    let result = match intent {
+    let result = match method {
         // --- Phonetics core ---
-        Intent::NormalizeTone(payload) => {
+        Method::NormalizeTone(payload) => {
             let mode = parse_input_mode(&config.input_mode);
             let preprocessed = preprocess_for_normalize_tone(&payload.input, mode, config);
-            let output = to_tone_marks(&preprocessed, mode);
+            let tone_marked = to_tone_marks(&preprocessed, mode);
+            // Display-form contract: nasal marker case agrees with the
+            // preceding letter.
+            let output = adjust_nasal_marker_case(&tone_marked);
             PhonResult::StringResult(StringResult { output })
         }
-        Intent::StripTone(payload) => {
+        Method::StripTone(payload) => {
             let (bare, tone) = crate::parser::strip_tone_mark(&payload.input);
             PhonResult::StripToneResult(StripToneResult { bare, tone })
         }
-        Intent::PojToTl(payload) => PhonResult::StringResult(StringResult {
+        Method::PojToTl(payload) => PhonResult::StringResult(StringResult {
             output: poj_display_to_tl_display(&payload.input),
         }),
-        Intent::TlToPoj(payload) => PhonResult::StringResult(StringResult {
+        Method::TlToPoj(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_poj_display(&payload.input),
         }),
-        Intent::NormalizeToTl(payload) => PhonResult::StringResult(StringResult {
+        Method::NormalizeToTl(payload) => PhonResult::StringResult(StringResult {
             output: crate::parser::normalize_to_tl(&payload.input),
         }),
-        Intent::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
+        Method::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
             output: derivation::normalize_input(&payload.input),
         }),
-        Intent::RestoreTone(payload) => match derivation::restore_tone(&payload.text) {
+        Method::RestoreTone(payload) => match derivation::restore_tone(&payload.text) {
             Some(s) => PhonResult::OptionalStringResult(OptionalStringResult {
                 output: s,
                 present: true,
@@ -75,38 +77,38 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
                 present: false,
             }),
         },
-        Intent::HasToneMarks(payload) => PhonResult::BoolResult(BoolResult {
+        Method::HasToneMarks(payload) => PhonResult::BoolResult(BoolResult {
             value: derivation::has_tone_marks(&payload.text),
         }),
-        Intent::GetToneVariations(_) => {
+        Method::GetToneVariations(_) => {
             PhonResult::ToneVariationsResult(tone_variations::build())
         }
 
         // --- Derivation ---
-        Intent::DeriveNotone(payload) => PhonResult::StringResult(StringResult {
+        Method::DeriveNotone(payload) => PhonResult::StringResult(StringResult {
             output: derivation::derive_notone(&payload.roman),
         }),
-        Intent::DeriveAbbrev(payload) => PhonResult::StringResult(StringResult {
+        Method::DeriveAbbrev(payload) => PhonResult::StringResult(StringResult {
             output: derivation::derive_abbrev(&payload.roman),
         }),
 
         // --- TPS ---
-        Intent::ContainsTps(payload) => PhonResult::BoolResult(BoolResult {
+        Method::ContainsTps(payload) => PhonResult::BoolResult(BoolResult {
             value: tps::is_zhuyin(&payload.text),
         }),
-        Intent::TpsToTl(payload) => PhonResult::StringResult(StringResult {
+        Method::TpsToTl(payload) => PhonResult::StringResult(StringResult {
             output: tps::from_zhuyin(&payload.text),
         }),
-        Intent::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
+        Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
             output: tps_to_tps_numeric(&payload.text, payload.or_maps_to_er),
         }),
-        Intent::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
+        Method::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
             output: tps_to_tps_display(&payload.text, payload.or_maps_to_er),
         }),
-        Intent::IsTpsToneMark(payload) => PhonResult::BoolResult(BoolResult {
+        Method::IsTpsToneMark(payload) => PhonResult::BoolResult(BoolResult {
             value: tps_adjust::is_tps_tone_mark_str(&payload.char),
         }),
-        Intent::TpsInputAdjust(payload) => {
+        Method::TpsInputAdjust(payload) => {
             let (adjusted, replace_last) =
                 tps_adjust::adjust(&payload.incoming, &payload.raw_input);
             let replace_payload = match replace_last {
@@ -124,6 +126,7 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
                 replace_last: Some(replace_payload),
             })
         }
+
     };
 
     Ok(PhoneticsResponse {
@@ -185,13 +188,13 @@ fn convert_nasal_double_n(input: &str) -> String {
     result
 }
 
-/// `OP_TL_NUMERIC_TO_TPS` — input is numeric tone form (e.g. `"hoo2"`).
+/// `Method::TlNumericToTps` — input is numeric tone form (e.g. `"hoo2"`).
 /// Mirrors iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
 fn tps_to_tps_numeric(text: &str, or_maps_to_er: bool) -> String {
     convert_numeric_tl_to_tps(text, or_maps_to_er)
 }
 
-/// `OP_TL_DISPLAY_TO_TPS` — input is display form with diacritics
+/// `Method::TlDisplayToTps` — input is display form with diacritics
 /// (e.g. `"hóo"`). Strips diacritics → numeric → `to_zhuyin`. Mirrors iOS
 /// `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.
 fn tps_to_tps_display(text: &str, or_maps_to_er: bool) -> String {

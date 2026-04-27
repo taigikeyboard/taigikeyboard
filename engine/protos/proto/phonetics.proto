@@ -10,7 +10,7 @@ option java_multiple_files = true;
 //
 // 17 ops live in PhoneticsRequest.intent oneof; each op returns its natural
 // shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
-// `oneof Intent` design + khiin-rs single-entry-point dispatch.
+// `oneof method` design + khiin-rs single-entry-point dispatch.
 //
 // AppConfig (envelope.proto) carries per-request live snapshot — input mode,
 // POJ oo/nn doubletap toggles. Engine never caches; live-read per call per
@@ -24,9 +24,13 @@ message PhoneticsRequest {
   // D9.2 legacy flat fields (`op` enum + `string input`) replaced by
   // oneof intent in D9.4. Field numbers 1–2 reserved to prevent silent
   // wire-format collision if any old bytes are encountered.
-  reserved 1, 2;
+  // Tags 40, 41 reserved — previously `AdjustNasalMarkerCase` and
+  // `NfdPreprocess`; removed in the PR #187 follow-up after their only
+  // callers reverted to platform-side helpers for JVM unit-test
+  // compatibility.
+  reserved 1, 2, 40, 41;
 
-  oneof intent {
+  oneof method {
     // --- Phonetics core (9 ops) ---
     NormalizeTone normalize_tone = 10;
     StripTone strip_tone = 11;
@@ -133,6 +137,7 @@ message TpsInputAdjust {
   string incoming = 1;
   string raw_input = 2;
 }
+
 
 // =========================================================================
 // Response envelope
