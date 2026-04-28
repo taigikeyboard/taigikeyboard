@@ -1,5 +1,5 @@
 //! iOS / macOS swift-bridge entry point. Thin wrapper around
-//! `phonetics::process_request` plus a logger sink registration.
+//! `dispatch::process_request` plus a logger sink registration.
 //!
 //! Everything that crosses the FFI seam is wrapped in `catch_unwind` per
 //! `docs/engine/ffi-safety.md` §2 and the request body is size-capped per
@@ -60,7 +60,7 @@ fn process_request_bytes(bytes: &[u8]) -> Vec<u8> {
             // reserved fields.
             return encode_error(0, ErrorCode::FailInvariant, 0);
         }
-        phonetics::process_request(bytes)
+        dispatch::process_request(bytes)
     }))
     .unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0))
 }

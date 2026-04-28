@@ -26,7 +26,7 @@ crate-type = ["cdylib"]
 panic-injector = []
 
 [dependencies]
-phonetics = { workspace = true }
+dispatch = { workspace = true }
 protos = { workspace = true }
 prost = { workspace = true }
 log = { workspace = true }

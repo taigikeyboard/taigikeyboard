@@ -11,7 +11,9 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * @property lengthScore 詞庫頻率（frequency），用於排序。值越大代表越常用。
  * @property sourceBitmask u16 source-dictionary bitmask from `dictionary.bin`,
  *   `null` for non-dictionary sources (custom dict, autocomplete, spell-check).
- *   Consumed by `CandidateProcessor.tierNumerator` for tier-based ranking bonus.
+ *   Consumed by `engine/ranking/src/score.rs::tier_numerator` (production
+ *   path through `RustEngineBridge.processCandidates`) and the retained
+ *   `CandidateProcessor.tierNumerator` JVM-test pin.
  */
 data class TaigiWord(
     val id: Int,

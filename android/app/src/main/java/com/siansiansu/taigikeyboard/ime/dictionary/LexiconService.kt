@@ -26,7 +26,9 @@ import java.io.IOException
  * 1. Trie prefix match to get candidate rowids.
  * 2. `DictionaryBinaryReader` reads the mmap binary records.
  * 3. Bitmask filter keeps only user-enabled dictionaries.
- * 4. `CandidateProcessor.sortByScore` ranks by user-frequency + input affinity.
+ * 4. `RustEngineBridge.processCandidates` dedups, ranks by user-frequency
+ *    + input affinity, and (TPS-gated) collapses display duplicates —
+ *    all in a single FFI round-trip into `engine/ranking/`.
  *
  * Owned by `CompositionRoot`; collaborators are injected through the ctor.
  * [close] releases `dictionary.bin` mmap; subsequent calls re-open on demand.
@@ -109,11 +111,7 @@ class LexiconService(
                 val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
-                val ranked = rankByFrequency(merged, input, inputMode)
-                // Display dedup fires only when the CALLER supplied settings
-                // and the caller is in TPS mode — preserves prior behavior
-                // where a null `prefs` skipped dedup entirely.
-                val result = applyDisplayDedup(ranked, settings)
+                val result = processCandidates(merged, input, inputMode, settings)
                 if (BuildConfig.DEBUG) {
                     logger.d("PERF", "[3d] sort: ${System.currentTimeMillis() - sortStart}ms")
                     logger.d("PERF", "[3-TOTAL] LexiconService.search: ${System.currentTimeMillis() - searchStart}ms")
@@ -195,39 +193,32 @@ class LexiconService(
     }
 
     /**
-     * Phase 3: dedup + score-based ordering. Normalizes the input once for
-     * scoring, batches user-frequency lookups, and delegates ranking to
-     * `CandidateProcessor`. Mirrors iOS: user-frequency batch fetch lives
-     * at the caller of the pure scoring function, not inside it.
+     * Phase 3+4: hand the merged candidate list to the Rust ranking
+     * pipeline. One FFI round-trip atomically runs dedup → score → sort
+     * → (TPS-gated) display-dedup inside `engine/ranking/`. Normalizes
+     * the input once for scoring and batches user-frequency lookups
+     * before the call. The TPS display-dedup gate stays platform-decided
+     * (`settings?.inputMode == "tps"`) — a null [settings] preserves the
+     * prior behavior of skipping display dedup for callers that did not
+     * pass preferences.
      */
-    private suspend fun rankByFrequency(
+    private suspend fun processCandidates(
         merged: List<TaigiWord>,
         input: String,
         inputMode: InputMode,
+        settings: EngineSettings?,
     ): List<TaigiWord> {
-        val uniqueWords = CandidateProcessor.removeDuplicates(merged)
         val normalizedInput = InputNormalizer.normalize(input, inputMode)
-        val wordTexts = uniqueWords.map { it.displayText }.distinct()
+        val wordTexts = merged.map { it.displayText }.distinct()
         val frequencyData = userFreq.frequencyDataBatch(wordTexts)
-        return CandidateProcessor.sortByScore(
-            words = uniqueWords,
+        return RustEngineBridge.processCandidates(
+            raw = merged,
             normalizedInput = normalizedInput,
+            tpsDedupEnabled = settings?.inputMode == "tps",
             frequencyData = frequencyData,
-            currentTime = System.currentTimeMillis(),
-            logger = logger,
+            nowMs = System.currentTimeMillis(),
         )
     }
-
-    /**
-     * Phase 4: TPS mode hides visual duplicates (same hanzi, different
-     * roman). Non-TPS modes return the ranked list unchanged. A null
-     * [settings] argument preserves the prior behavior of skipping
-     * display dedup for callers that did not pass preferences.
-     */
-    private fun applyDisplayDedup(
-        ranked: List<TaigiWord>,
-        settings: EngineSettings?,
-    ): List<TaigiWord> = if (settings?.inputMode == "tps") CandidateProcessor.removeDisplayDuplicates(ranked) else ranked
 
     /**
      * Trie exact match + prefix match → binary reader lookup with bitmask filter.

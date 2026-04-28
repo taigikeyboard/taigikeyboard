@@ -74,8 +74,11 @@ final class LexiconService: @unchecked Sendable {
     /// Orchestrates four search phases:
     /// 1. Custom dictionary lookup (user-added entries, highest priority)
     /// 2. System dictionary query (with optional TPS `er`↔`or` expansion)
-    /// 3. Merge + dedup + case processing
-    /// 4. Rank by user frequency (if available)
+    /// 3. Case processing on the merged list
+    /// 4. Rank by user frequency through `RustEngineBridge.processCandidates`
+    ///    (dedup + score + sort + optional TPS display-dedup, atomic in
+    ///    Rust shared core); cold-start before the freq DB warms up falls
+    ///    back to platform dedup helpers and skips the score-sort.
     ///
     /// - Parameters:
     ///   - input: Segmented search key for system dictionary (e.g. "li-ho")
@@ -100,15 +103,9 @@ final class LexiconService: @unchecked Sendable {
         )
 
         let processedSystem = applyCaseProcessing(systemWords, basedOn: input, inputMode: inputMode)
-        let uniqueWords = CandidateProcessor.removeDuplicates(customWords + processedSystem)
+        let merged = customWords + processedSystem
 
-        let ranked = await rankByFrequency(uniqueWords, segmentedInput: input, inputMode: inputMode)
-
-        // TPS mode: remove visual duplicates (same hanzi, different roman)
-        if inputMode == .tps {
-            return CandidateProcessor.removeDisplayDuplicates(ranked)
-        }
-        return ranked
+        return await processCandidates(merged, segmentedInput: input, inputMode: inputMode)
     }
 
     // MARK: - Connection Status
@@ -215,29 +212,49 @@ final class LexiconService: @unchecked Sendable {
         }
     }
 
-    /// Rank candidates by user frequency. Lazily initialises the frequency DB
-    /// on first use; returns `words` unchanged when the DB is not available.
-    private func rankByFrequency(
-        _ words: [TaigiWord],
+    /// Run the merged candidate list through the lexicon ranking pipeline.
+    ///
+    /// Connected path: hands the full pipeline (dedup → score → sort →
+    /// optional TPS display-dedup) to the Rust shared core via
+    /// `RustEngineBridge.processCandidates`. Atomic — no intermediate
+    /// platform passes.
+    ///
+    /// Disconnected path (cold-start before the user-frequency DB is
+    /// available): falls back to platform `CandidateProcessor.removeDuplicates`
+    /// + optional TPS `removeDisplayDuplicates`. Skipping the score-sort
+    /// preserves the legacy iOS "merged-order on cold-start" behavior so
+    /// custom-dictionary entries continue to surface ahead of system
+    /// candidates until the freq DB warms up. This is an **intentional
+    /// exception** to the v3.5.2 ranking-slice rule that production
+    /// routes through Rust — see `docs/engine/ranking-slice-audit.md` § 8
+    /// row "iOS cold-start fallback". Android has no equivalent because
+    /// its `UserFrequencyService.frequencyDataBatch` is always callable.
+    private func processCandidates(
+        _ merged: [TaigiWord],
         segmentedInput: String,
         inputMode: InputMode,
     ) async -> [TaigiWord] {
-        // Ensure user frequency DB is initialized (lazy: first search triggers connection)
         if !userFrequencyService.isConnected() {
             try? await userFrequencyService.ensureInitialized()
         }
-        guard userFrequencyService.isConnected() else { return words }
 
-        let wordTexts = words.compactMap(\.displayText)
-        let frequencyDataMap = userFrequencyService.frequencyDataBatch(for: wordTexts)
+        let isTPS = inputMode == .tps
+        guard userFrequencyService.isConnected() else {
+            let uniqueWords = CandidateProcessor.removeDuplicates(merged)
+            return isTPS ? CandidateProcessor.removeDisplayDuplicates(uniqueWords) : uniqueWords
+        }
 
-        // 正規化輸入用於完全匹配判斷（包含調符或 POJ 特殊字符時需要轉換）
         let normalizedInput = InputNormalizer.normalize(segmentedInput, mode: inputMode)
+        let displayKeys = merged.map(\.displayText)
+        let frequencyDataMap = userFrequencyService.frequencyDataBatch(for: displayKeys)
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
 
-        return CandidateProcessor.sortByScore(
-            words,
+        return RustEngineBridge.processCandidates(
+            raw: merged,
             normalizedInput: normalizedInput,
-            frequencyDataMap: frequencyDataMap,
+            tpsDedupEnabled: isTPS,
+            frequencyData: frequencyDataMap,
+            nowMs: nowMs,
         )
     }
 }

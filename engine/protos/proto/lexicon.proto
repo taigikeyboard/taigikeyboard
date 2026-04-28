@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
+// Lexicon module — candidate ranking, dedup, scoring, sorting.
+//
+// Single op `process_candidates` lives in LexiconRequest.method oneof.
+// Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
+// (engine::dispatch) routes by Request.payload tag and then per-module
+// dispatch routes by oneof method.
+//
+// Out of slice (no version commitment):
+// - Hanji classification (`isHanzi`) — kept platform per audit § 3
+// - Capitalization (`capitalize`, `startsWithRomanLetter`) — kept platform
+//   per audit § 3 (Android does not have these in CandidateProcessor;
+//   moving them to Rust would change Android behavior)
+
+// =========================================================================
+// Request envelope
+// =========================================================================
+
+message LexiconRequest {
+  oneof method {
+    ProcessCandidatesRequest process_candidates = 10;
+  }
+}
+
+// =========================================================================
+// Request payloads
+// =========================================================================
+
+// `ProcessCandidatesRequest` is the merged-list ranking pipeline:
+// remove_duplicates → calculate_score per candidate → sort_by_score →
+// (optional) remove_display_duplicates if `tps_dedup_enabled`.
+//
+// Replaces both platforms' inline `LexiconService` calls into
+// `CandidateProcessor.removeDuplicates`, `sortByScore`, and (TPS-gated)
+// `removeDisplayDuplicates`.
+//
+// `tps_dedup_enabled` is platform-decided (iOS `inputMode == .tps`,
+// Android `settings?.inputMode == "tps"`); audit § 3 confirms identical
+// semantics today. Engine does not derive it from `input_mode`.
+//
+// `include_breakdown` toggles per-candidate ScoreBreakdown serialization
+// for #if DEBUG logging on iOS / Android. Off in release builds for zero
+// per-call serialization overhead.
+//
+// `now_ms` is caller-supplied to keep ranking deterministic in tests.
+message ProcessCandidatesRequest {
+  repeated TaigiWord raw = 1;
+  string normalized_input = 2;
+  // Tag 3 was originally reserved in audit § 6.2 for `InputMode mode`,
+  // dropped during impl per audit § 3 (engine never derives the
+  // tps-dedup gate from input_mode; platform decides). Reserved to
+  // preserve the audit's wire layout and prevent accidental reuse.
+  reserved 3;
+  bool tps_dedup_enabled = 4;
+  repeated FrequencyEntry freq = 5;
+  int64 now_ms = 6;
+  bool include_breakdown = 7;
+}
+
+// =========================================================================
+// Response envelope
+// =========================================================================
+
+message LexiconResponse {
+  oneof result {
+    ProcessCandidatesResponse process_candidates_result = 10;
+  }
+}
+
+// =========================================================================
+// Response payloads
+// =========================================================================
+
+// `ProcessCandidatesResponse.ranked` is the dedup → score → sort →
+// (TPS-gated) display-dedup pipeline output.
+//
+// `breakdown` is populated only when the request had
+// `include_breakdown = true`; when populated, `breakdown[i]` corresponds
+// to `ranked[i]` so platform-side debug formatters can pair them.
+message ProcessCandidatesResponse {
+  repeated TaigiWord ranked = 1;
+  repeated ScoreBreakdown breakdown = 2;
+}
+
+// =========================================================================
+// Shared value types
+// =========================================================================
+
+// `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
+// Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
+// `length_score` is the dictionary frequency / length proxy used as the
+// `baseFreqScore` cold-start signal. `source_bitmask` is the
+// `dictionary/common/source_bits.py` bitmask consumed by the
+// SOURCE_TIERS first-match-wins multiplier.
+//
+// Optional fields use proto3 `optional` so platforms can distinguish
+// "field absent" from "scalar default" — important for `length_score`
+// where 0 is a meaningful zero-score signal vs absent (use default tier).
+message TaigiWord {
+  int64 id = 1;
+  string roman = 2;
+  optional string hanji = 3;
+  optional int32 length_score = 4;
+  optional uint32 source_bitmask = 5;
+}
+
+// `FrequencyEntry` is the per-candidate user-frequency snapshot. Caller
+// pre-filters to candidate-relevant keys to keep the request small.
+// `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
+// so the engine can `find` matching entries during scoring.
+message FrequencyEntry {
+  string display_text_key = 1;
+  uint32 count = 2;
+  int64 last_used_ms = 3;
+}
+
+// `ScoreBreakdown` mirrors iOS `CandidateProcessor.ScoreBreakdown` /
+// Android `CandidateProcessor.ScoreBreakdown`. Single source of truth
+// for both ranking math and debug logging — total = sum of the six fields.
+message ScoreBreakdown {
+  int32 user_freq_score = 1;
+  int32 recency_bonus = 2;
+  int32 exact_bonus = 3;
+  int32 completion_penalty = 4;
+  int32 closeness_bonus = 5;
+  int32 base_freq_score = 6;
+}

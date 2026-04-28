@@ -26,8 +26,7 @@ use unicode_normalization::UnicodeNormalization;
 pub fn derive_notone(roman: &str) -> String {
     let with_nasal_converted = roman
         .to_lowercase()
-        .replace('\u{207F}', "nn")
-        .replace('\u{1D3A}', "nn");
+        .replace(['\u{207F}', '\u{1D3A}'], "nn");
     let decomposed: String = with_nasal_converted.nfd().collect();
     let mut result = String::new();
     for ch in decomposed.chars() {
@@ -55,7 +54,7 @@ pub fn derive_notone(roman: &str) -> String {
 pub fn derive_abbrev(roman: &str) -> String {
     let lowered = roman.to_lowercase();
     let syllables: Vec<&str> = lowered
-        .split(|c: char| matches!(c, ' ' | '\t' | '\n' | '\u{0B}' | '\u{0C}' | '\r' | '-'))
+        .split([' ', '\t', '\n', '\u{0B}', '\u{0C}', '\r', '-'])
         .filter(|s| !s.is_empty())
         .collect();
     if syllables.len() < 2 {
@@ -112,7 +111,7 @@ pub fn normalize_input(input: &str) -> String {
     let lowered = processed.to_lowercase();
     let should_add_default_tones = has_tone_marks(&lowered);
     let mut result = String::new();
-    for syl in lowered.split(|c: char| c == '-' || c == ' ') {
+    for syl in lowered.split(['-', ' ']) {
         result.push_str(&normalize_syllable(syl, should_add_default_tones));
     }
     result
@@ -160,7 +159,7 @@ fn normalize_syllable(syllable: &str, add_default_tone: bool) -> String {
 /// Mirrors iOS `TaigiUnicode.nfdPreprocessed`: NFD-decompose, then convert
 /// `ⁿ` → `nn` and `o͘` → `oo` so the trie key uses ASCII-only forms.
 fn nfd_preprocessed(text: &str) -> String {
-    let with_nasal = text.replace('\u{207f}', "nn").replace('\u{1d3a}', "nn");
+    let with_nasal = text.replace(['\u{207f}', '\u{1d3a}'], "nn");
     let decomposed: String = with_nasal.nfd().collect();
     // o + combining dot above right (U+0358) → "oo"
     decomposed.replace("o\u{0358}", "oo").replace("O\u{0358}", "Oo")

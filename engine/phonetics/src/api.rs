@@ -370,7 +370,14 @@ fn run_request(bytes: &[u8]) -> Response {
         log::warn!("phonetics request missing payload (id={id})");
         return error_response(id, ErrorCode::FailInvariant, generation);
     };
-    let protos::engine::request::Payload::Phonetics(phonetics_req) = payload;
+    // After lexicon.proto added the Lexicon variant to Request.payload (v3.5.2,
+    // commit 1), this binding stopped being irrefutable. The top-level
+    // engine::dispatch (v3.5.2 commit 5) routes by Payload variant; until it
+    // lands, reject lexicon requests here so phonetics callers still work.
+    let protos::engine::request::Payload::Phonetics(phonetics_req) = payload else {
+        log::warn!("phonetics process_request received non-phonetics payload (id={id})");
+        return error_response(id, ErrorCode::FailInvariant, generation);
+    };
 
     match crate::dispatch::handle(&phonetics_req, &config) {
         Ok(response_payload) => Response {

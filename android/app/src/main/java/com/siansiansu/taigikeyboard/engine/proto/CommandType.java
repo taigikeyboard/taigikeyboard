@@ -18,6 +18,10 @@ public enum CommandType
    * <code>CMD_PHONETICS = 1;</code>
    */
   CMD_PHONETICS(1),
+  /**
+   * <code>CMD_LEXICON = 3;</code>
+   */
+  CMD_LEXICON(3),
   UNRECOGNIZED(-1),
   ;
 
@@ -29,6 +33,10 @@ public enum CommandType
    * <code>CMD_PHONETICS = 1;</code>
    */
   public static final int CMD_PHONETICS_VALUE = 1;
+  /**
+   * <code>CMD_LEXICON = 3;</code>
+   */
+  public static final int CMD_LEXICON_VALUE = 3;
 
 
   @java.lang.Override
@@ -54,6 +62,7 @@ public enum CommandType
     switch (value) {
       case 0: return CMD_UNSPECIFIED;
       case 1: return CMD_PHONETICS;
+      case 3: return CMD_LEXICON;
       default: return null;
     }
   }

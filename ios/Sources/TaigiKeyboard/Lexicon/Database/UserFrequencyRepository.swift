@@ -3,8 +3,9 @@ import SQLite3
 
 /// User frequency repository.
 ///
-/// Tracks per-word usage counts so the ranker (`CandidateProcessor.sortByScore`)
-/// can bias recently- and often-used words toward the top.
+/// Tracks per-word usage counts so the ranker
+/// (`RustEngineBridge.processCandidates` → `engine/ranking/`) can bias
+/// recently- and often-used words toward the top.
 /// Split responsibilities:
 /// - `UserFrequencySchema`: DDL (CREATE TABLE / CREATE INDEX / metadata seed)
 /// - `UserFrequencyPruner`: capacity (`maxEntries`) + delete-oldest algorithm

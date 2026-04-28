@@ -2,19 +2,22 @@ import Foundation
 
 /// Taigi-specific Unicode preprocessing helpers.
 ///
-/// Stays on the platform (not behind `RustEngineBridge`) because the only
-/// callers — `CandidateProcessor.romanToBase` (per-candidate scoring) and
-/// `ExternalLookupURLBuilder.normalizeSyllableToDigit` (URL build) — must
-/// also work in JVM unit-test contexts on Android where the JNI native
-/// library is not loaded. Routing through the FFI would make
-/// `RustEngineBridge.<init>` → `System.loadLibrary("rust_taigi")` throw
-/// `UnsatisfiedLinkError`. Keeping a pure Foundation implementation here
-/// preserves the test path.
+/// Stays on the platform (not behind `RustEngineBridge`) because the
+/// remaining callers — `ExternalLookupURLBuilder.normalizeSyllableToDigit`
+/// (URL build) and the cold-start dedup path in `CandidateProcessor`
+/// (`romanToBase` / `inputToBase` retained for the freq-DB-not-yet-
+/// connected branch) — must also work in JVM unit-test contexts on
+/// Android where the JNI native library is not loaded. Routing through
+/// the FFI would make `RustEngineBridge.<init>` →
+/// `System.loadLibrary("rust_taigi")` throw `UnsatisfiedLinkError`.
+/// Keeping a pure Foundation implementation here preserves the test path.
 ///
 /// CROSS-PLATFORM INVARIANT — semantics must match Android
-/// `TaigiUnicode.kt` `nfdPreprocessed`. Both implementations are
-/// exact-equivalent preprocessing for tone-mark / combining-character
-/// analysis.
+/// `TaigiUnicode.kt::nfdPreprocessed` and Rust
+/// `engine/ranking/src/nfd.rs::nfd_preprocessed` (Rust copy is the
+/// production ranking path; this Foundation copy is the platform pin).
+/// All three implementations are exact-equivalent preprocessing for
+/// tone-mark / combining-character analysis.
 
 // MARK: - Shared-Core Candidate
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.

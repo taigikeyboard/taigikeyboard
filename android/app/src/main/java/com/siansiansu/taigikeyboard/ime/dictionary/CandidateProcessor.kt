@@ -1,28 +1,29 @@
-// region Shared-Core Candidate
-// Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
-// endregion
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 
 /**
- * Candidate-word scoring, dedup, and ordering.
+ * Candidate-word scoring, dedup, and ordering — JVM-test pinning copy.
  *
- * Owns the ranking math extracted from `LexiconService`. Stateless — no
- * service reach-ins, no DB lookups. Callers batch-fetch user-frequency
- * data and pass it in, mirroring iOS `CandidateProcessor.swift`.
+ * Production callers (`LexiconService.search`) route through
+ * `RustEngineBridge.processCandidates` into `engine/ranking/`, which is
+ * the canonical math source for the v3.5.2 ranking slice. This Kotlin
+ * impl is retained so that `src/test/` JVM unit tests continue to pin
+ * the same scoring math without needing to load `librust_taigi.so`
+ * (`System.loadLibrary` fails on host JVM — see
+ * `feedback_jvm_test_jni_compat.md`).
  *
- * CROSS-PLATFORM INVARIANT — mirrors
- * ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift
- * `calculateScore`. The iOS-synced scoring constants MUST stay in
- * lock-step: `USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`,
- * `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`, `CLOSENESS_WEIGHT`,
- * `SOURCE_TIERS`, `TIER_DENOMINATOR`. Drift causes silent ranking divergence.
- * `BASE_FREQ_DIVISOR` is Android-only (dictionary-frequency normalisation)
- * and is NOT part of the invariant set.
+ * CROSS-PLATFORM INVARIANT — mirrors `engine/ranking/src/score.rs` /
+ * `dedup.rs` / `sort.rs` and iOS
+ * `ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift`.
+ * The scoring constants MUST stay in lock-step across all three sites:
+ * `USER_FREQ_CAP`, `USER_FREQ_WEIGHT`, `RECENCY_WINDOW_MS`,
+ * `RECENCY_BONUS`, `EXACT_BONUS`, `COMPLETION_PENALTY`,
+ * `CLOSENESS_WEIGHT`, `BASE_FREQ_DIVISOR`, `SOURCE_TIERS`,
+ * `TIER_DENOMINATOR`. Drift causes silent ranking divergence and
+ * JVM/instrumented test disagreement.
  */
 object CandidateProcessor {
     private const val TAG = "CandidateProcessor"
@@ -154,8 +155,9 @@ object CandidateProcessor {
     /**
      * Sort [words] by descending score. User-frequency data is supplied by
      * the caller so this function stays free of service reach-ins —
-     * `LexiconService.rankByFrequency` is the production caller; tests
-     * may pin [frequencyData] and [currentTime] for deterministic ranking.
+     * `CandidateProcessorTest` is the sole caller post-Rust-swap (production
+     * routes through `RustEngineBridge.processCandidates`); tests pin
+     * [frequencyData] and [currentTime] for deterministic ranking.
      */
     fun sortByScore(
         words: List<TaigiWord>,

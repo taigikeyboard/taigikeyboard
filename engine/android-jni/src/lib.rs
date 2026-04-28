@@ -1,4 +1,4 @@
-//! Android JNI entry point. Thin wrapper around `phonetics::process_request`
+//! Android JNI entry point. Thin wrapper around `dispatch::process_request`
 //! plus a logger callback that bounces back into the JVM via a cached
 //! `JavaVM` + `GlobalRef` to the `RustEngineBridge` class.
 //!
@@ -54,7 +54,7 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
             Ok(v) => v,
             Err(_) => return encode_error(0, ErrorCode::FailParse, 0),
         };
-        phonetics::process_request(&bytes_vec)
+        dispatch::process_request(&bytes_vec)
     }));
     let response_bytes = result.unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0));
     match env.byte_array_from_slice(&response_bytes) {

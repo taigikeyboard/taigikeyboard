@@ -24,6 +24,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case cmdUnspecified // = 0
   case cmdPhonetics // = 1
+  case cmdLexicon // = 3
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -34,6 +35,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     switch rawValue {
     case 0: self = .cmdUnspecified
     case 1: self = .cmdPhonetics
+    case 3: self = .cmdLexicon
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -42,6 +44,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     switch self {
     case .cmdUnspecified: return 0
     case .cmdPhonetics: return 1
+    case .cmdLexicon: return 3
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -50,6 +53,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public static let allCases: [Taigi_Engine_CommandType] = [
     .cmdUnspecified,
     .cmdPhonetics,
+    .cmdLexicon,
   ]
 
 }
@@ -156,10 +160,21 @@ public struct Taigi_Engine_Request: Sendable {
     set {payload = .phonetics(newValue)}
   }
 
+  /// Composing payload reserved for D9.3 to avoid renumbering.
+  public var lexicon: Taigi_Engine_LexiconRequest {
+    get {
+      if case .lexicon(let v)? = payload {return v}
+      return Taigi_Engine_LexiconRequest()
+    }
+    set {payload = .lexicon(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsRequest)
+    /// Composing payload reserved for D9.3 to avoid renumbering.
+    case lexicon(Taigi_Engine_LexiconRequest)
 
   }
 
@@ -189,45 +204,53 @@ public struct Taigi_Engine_Response: Sendable {
     set {payload = .phonetics(newValue)}
   }
 
+  public var lexicon: Taigi_Engine_LexiconResponse {
+    get {
+      if case .lexicon(let v)? = payload {return v}
+      return Taigi_Engine_LexiconResponse()
+    }
+    set {payload = .lexicon(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsResponse)
+    case lexicon(Taigi_Engine_LexiconResponse)
 
   }
 
   public init() {}
 }
 
-public struct Taigi_Engine_Command: Sendable {
+public struct Taigi_Engine_Command: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var request: Taigi_Engine_Request {
-    get {_request ?? Taigi_Engine_Request()}
-    set {_request = newValue}
+    get {_storage._request ?? Taigi_Engine_Request()}
+    set {_uniqueStorage()._request = newValue}
   }
   /// Returns true if `request` has been explicitly set.
-  public var hasRequest: Bool {self._request != nil}
+  public var hasRequest: Bool {_storage._request != nil}
   /// Clears the value of `request`. Subsequent reads from it will return its default value.
-  public mutating func clearRequest() {self._request = nil}
+  public mutating func clearRequest() {_uniqueStorage()._request = nil}
 
   public var response: Taigi_Engine_Response {
-    get {_response ?? Taigi_Engine_Response()}
-    set {_response = newValue}
+    get {_storage._response ?? Taigi_Engine_Response()}
+    set {_uniqueStorage()._response = newValue}
   }
   /// Returns true if `response` has been explicitly set.
-  public var hasResponse: Bool {self._response != nil}
+  public var hasResponse: Bool {_storage._response != nil}
   /// Clears the value of `response`. Subsequent reads from it will return its default value.
-  public mutating func clearResponse() {self._response = nil}
+  public mutating func clearResponse() {_uniqueStorage()._response = nil}
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _request: Taigi_Engine_Request? = nil
-  fileprivate var _response: Taigi_Engine_Response? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -235,7 +258,7 @@ public struct Taigi_Engine_Command: Sendable {
 fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{2}\u{2}CMD_LEXICON\0")
 }
 
 extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
@@ -289,7 +312,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 
 extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{c}\u{b}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{2}\u{2}lexicon\0\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -314,6 +337,19 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
           self.payload = .phonetics(v)
         }
       }()
+      case 12: try {
+        var v: Taigi_Engine_LexiconRequest?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .lexicon(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .lexicon(v)
+        }
+      }()
       default: break
       }
     }
@@ -336,9 +372,17 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     if self.generation != 0 {
       try visitor.visitSingularUInt64Field(value: self.generation, fieldNumber: 4)
     }
-    try { if case .phonetics(let v)? = self.payload {
+    switch self.payload {
+    case .phonetics?: try {
+      guard case .phonetics(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    } }()
+    }()
+    case .lexicon?: try {
+      guard case .lexicon(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -355,7 +399,7 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
 
 extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{c}\u{b}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{2}\u{2}lexicon\0\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -379,6 +423,19 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
           self.payload = .phonetics(v)
         }
       }()
+      case 12: try {
+        var v: Taigi_Engine_LexiconResponse?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .lexicon(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .lexicon(v)
+        }
+      }()
       default: break
       }
     }
@@ -398,9 +455,17 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     if self.generation != 0 {
       try visitor.visitSingularUInt64Field(value: self.generation, fieldNumber: 3)
     }
-    try { if case .phonetics(let v)? = self.payload {
+    switch self.payload {
+    case .phonetics?: try {
+      guard case .phonetics(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    } }()
+    }()
+    case .lexicon?: try {
+      guard case .lexicon(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -418,36 +483,74 @@ extension Taigi_Engine_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
   public static let protoMessageName: String = _protobuf_package + ".Command"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}request\0\u{1}response\0")
 
+  fileprivate class _StorageClass {
+    var _request: Taigi_Engine_Request? = nil
+    var _response: Taigi_Engine_Response? = nil
+
+      // This property is used as the initial default value for new instances of the type.
+      // The type itself is protecting the reference to its storage via CoW semantics.
+      // This will force a copy to be made of this reference when the first mutation occurs;
+      // hence, it is safe to mark this as `nonisolated(unsafe)`.
+      static nonisolated(unsafe) let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _request = source._request
+      _response = source._response
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularMessageField(value: &self._request) }()
-      case 2: try { try decoder.decodeSingularMessageField(value: &self._response) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._request) }()
+        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._response) }()
+        default: break
+        }
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._request {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-    } }()
-    try { if let v = self._response {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    } }()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      try { if let v = _storage._request {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+      } }()
+      try { if let v = _storage._response {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+      } }()
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_Command, rhs: Taigi_Engine_Command) -> Bool {
-    if lhs._request != rhs._request {return false}
-    if lhs._response != rhs._response {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._request != rhs_storage._request {return false}
+        if _storage._response != rhs_storage._response {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

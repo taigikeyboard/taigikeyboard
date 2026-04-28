@@ -43,5 +43,16 @@ public interface ResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse getPhonetics();
 
+  /**
+   * <code>.taigi.engine.LexiconResponse lexicon = 12;</code>
+   * @return Whether the lexicon field is set.
+   */
+  boolean hasLexicon();
+  /**
+   * <code>.taigi.engine.LexiconResponse lexicon = 12;</code>
+   * @return The lexicon.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LexiconResponse getLexicon();
+
   public com.siansiansu.taigikeyboard.engine.proto.Response.PayloadCase getPayloadCase();
 }

@@ -20,6 +20,7 @@ public  final class Request extends
   private java.lang.Object payload_;
   public enum PayloadCase {
     PHONETICS(10),
+    LEXICON(12),
     PAYLOAD_NOT_SET(0);
     private final int value;
     private PayloadCase(int value) {
@@ -36,6 +37,7 @@ public  final class Request extends
     public static PayloadCase forNumber(int value) {
       switch (value) {
         case 10: return PHONETICS;
+        case 12: return LEXICON;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
       }
@@ -242,6 +244,76 @@ public  final class Request extends
    */
   private void clearPhonetics() {
     if (payloadCase_ == 10) {
+      payloadCase_ = 0;
+      payload_ = null;
+    }
+  }
+
+  public static final int LEXICON_FIELD_NUMBER = 12;
+  /**
+   * <pre>
+   * Composing payload reserved for D9.3 to avoid renumbering.
+   * </pre>
+   *
+   * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+   */
+  @java.lang.Override
+  public boolean hasLexicon() {
+    return payloadCase_ == 12;
+  }
+  /**
+   * <pre>
+   * Composing payload reserved for D9.3 to avoid renumbering.
+   * </pre>
+   *
+   * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest getLexicon() {
+    if (payloadCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.LexiconRequest) payload_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Composing payload reserved for D9.3 to avoid renumbering.
+   * </pre>
+   *
+   * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+   */
+  private void setLexicon(com.siansiansu.taigikeyboard.engine.proto.LexiconRequest value) {
+    value.getClass();
+  payload_ = value;
+    payloadCase_ = 12;
+  }
+  /**
+   * <pre>
+   * Composing payload reserved for D9.3 to avoid renumbering.
+   * </pre>
+   *
+   * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+   */
+  private void mergeLexicon(com.siansiansu.taigikeyboard.engine.proto.LexiconRequest value) {
+    value.getClass();
+  if (payloadCase_ == 12 &&
+        payload_ != com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.getDefaultInstance()) {
+      payload_ = com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LexiconRequest) payload_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      payload_ = value;
+    }
+    payloadCase_ = 12;
+  }
+  /**
+   * <pre>
+   * Composing payload reserved for D9.3 to avoid renumbering.
+   * </pre>
+   *
+   * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+   */
+  private void clearLexicon() {
+    if (payloadCase_ == 12) {
       payloadCase_ = 0;
       payload_ = null;
     }
@@ -553,6 +625,78 @@ public  final class Request extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    @java.lang.Override
+    public boolean hasLexicon() {
+      return instance.hasLexicon();
+    }
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest getLexicon() {
+      return instance.getLexicon();
+    }
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    public Builder setLexicon(com.siansiansu.taigikeyboard.engine.proto.LexiconRequest value) {
+      copyOnWrite();
+      instance.setLexicon(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    public Builder setLexicon(
+        com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLexicon(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    public Builder mergeLexicon(com.siansiansu.taigikeyboard.engine.proto.LexiconRequest value) {
+      copyOnWrite();
+      instance.mergeLexicon(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Composing payload reserved for D9.3 to avoid renumbering.
+     * </pre>
+     *
+     * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
+     */
+    public Builder clearLexicon() {
+      copyOnWrite();
+      instance.clearLexicon();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Request)
   }
   @java.lang.Override
@@ -577,10 +721,11 @@ public  final class Request extends
             "configSnapshot_",
             "generation_",
             com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0001\u0001\u0001\n\u0005\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
-              "\u1009\u0000\u0004\u0003\n<\u0000";
+              "\u0000\u0006\u0001\u0001\u0001\f\u0006\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
+              "\u1009\u0000\u0004\u0003\n<\u0000\f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

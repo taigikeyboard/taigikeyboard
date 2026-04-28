@@ -35,7 +35,9 @@ protoc \
     --proto_path="$PROTO_DIR" \
     --swift_out="$SWIFT_OUT" \
     --swift_opt=Visibility=Public \
-    "$PROTO_DIR/envelope.proto" "$PROTO_DIR/phonetics.proto"
+    "$PROTO_DIR/envelope.proto" \
+    "$PROTO_DIR/phonetics.proto" \
+    "$PROTO_DIR/lexicon.proto"
 
 # Java output: --java_out=lite for protobuf-javalite runtime. The
 # `option java_package` in the .proto files puts files under
@@ -43,7 +45,9 @@ protoc \
 protoc \
     --proto_path="$PROTO_DIR" \
     --java_out=lite:"$JAVA_OUT" \
-    "$PROTO_DIR/envelope.proto" "$PROTO_DIR/phonetics.proto"
+    "$PROTO_DIR/envelope.proto" \
+    "$PROTO_DIR/phonetics.proto" \
+    "$PROTO_DIR/lexicon.proto"
 
 echo "generated:"
 ls -1 "$SWIFT_OUT"
