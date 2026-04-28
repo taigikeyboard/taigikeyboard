@@ -39,7 +39,7 @@ behind a `ToneToggles` parameter.
 | `Phonetics/Converter/PhoneticsConverter.swift`      | 121 | High-level display round-trips (POJ↔TL).                           |
 | `Phonetics/Converter/RomanizationConverter.swift`   |  20 | Thin wrapper around the formatter/parser pair.                     |
 | `Phonetics/ToneRestoration.swift`                   |  36 | NFD-based tone-mark stripping for backspace.                       |
-| `Phonetics/ToneUtilities.swift`                     |  60 | Nasal-marker case adapter.                                         |
+| `Phonetics/ToneUtilities.swift`                     |  60 | Nasal-marker case adapter. **Platform-stays (PR #187)** — Android JVM unit tests can't load `.so`; mirrored helper kept at `ToneUtilities.kt`. Rust crate retains canonical `case_adjust::adjust_nasal_marker_case` and `Method::NormalizeTone` applies it in-band. |
 | `Phonetics/ToneConverter.swift`                     |  95 | POJ/TL tone conversion. POJ preprocessing toggles passed in as `ToneToggles` (G4-impl). Logs via `LoggerBackend` — no `SharedSettings.shared` / OSLog. |
 
 ### Input — 9 files, ~1160 LOC
@@ -67,7 +67,7 @@ behind a `ToneToggles` parameter.
 | `Lexicon/Models/FrequencyData.swift`                |  18 | Per-word usage snapshot (count + lastUsedMillis). Consumed by ranking; hoisted out of `UserFrequencyRepository`. |
 | `Lexicon/Models/LexiconConstants.swift`             |  29 | Constants; logging subsystem name is iOS-bundle-specific but harmless as a string. |
 | `Lexicon/Models/LexiconError.swift`                 |  34 | `LocalizedError` over Foundation only.                             |
-| `Lexicon/Utils/TaigiUnicode.swift`                  |  27 | `nfdPreprocessed` — mirrors Android `TaigiUnicode.kt`.             |
+| `Lexicon/Utils/TaigiUnicode.swift`                  |  27 | `nfdPreprocessed` — mirrors Android `TaigiUnicode.kt`. **Platform-stays (PR #187)** — Android JVM unit tests can't load `.so`; helper kept on platform. Rust crate retains canonical implementation but is not invoked at search-key build sites. |
 | `Lexicon/Utils/CandidateProcessor.swift`            | 267 | Classify / capitalize / dedupe / score / sort. Callers inject `inputMode`, `isAutoCap`, `FrequencyData`, `currentTime`. Logs via `LoggerBackend`. Carries the tier-based `baseFreqScore` multiplier (`SOURCE_TIERS` — kautian/taigitv/stti/kungge, first-match-wins over `word.sourceBitmask`). |
 | `Lexicon/Trie/InputNormalizer.swift`                |  92 | Mode-agnostic normalization → numeric tones. Logs via `LoggerBackend`. |
 | `Lexicon/Database/CustomDictionaryDerivation.swift` |  80 | Pure derivation of `notone` / `abbrev` / `roman_num` search keys.  |

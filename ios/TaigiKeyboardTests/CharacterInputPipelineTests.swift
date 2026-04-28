@@ -6,7 +6,7 @@ import XCTest
 ///
 /// Pre-D9.4 commit-1 baseline: every fixture here is the agreed-canonical
 /// behavior. Post-D9.4, the same fixtures must hold against the Rust
-/// implementation called via `OP_TPS_INPUT_ADJUST`.
+/// implementation called via `Method::TpsInputAdjust`.
 final class CharacterInputPipelineTests: XCTestCase {
     // MARK: - Non-TPS gate
 

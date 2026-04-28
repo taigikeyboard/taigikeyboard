@@ -1,17 +1,18 @@
-# Rust Core Protobuf Contract — First-Slice Draft
+# Rust Core Protobuf Contract — First-Slice Reference
 
-> **Type**: Reference (THIN — first-slice draft only; full contract = Phase III)
+> **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = DESIGN DRAFT, deferred to D9.3 / v3.6.0)
 > **Keywords**: `protobuf`, `Command`, `Request`, `Response`, `request-id`, `generation`, `AppConfig`, `Phonetics`, `Composing`
 > **Related**: `ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
-> **Audience**: D9 POC implementer; Phase III proto designers continue from here.
+> **Audience**: Phase III implementers continuing from the merged D9.4 Phonetics slice.
+> **Authoritative source**: `engine/protos/proto/envelope.proto` + `engine/protos/proto/phonetics.proto` (the .proto files are canonical when they diverge from this doc).
 
 ---
 
 ## 1. Scope of THIS document
 
-- **Phonetics slice + Composing slice ONLY.**
-- Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III.
-- The point: prove the wire shape on the smallest viable surface so the D9 POC isn't blocked on its own input.
+- **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — DEFERRED to v3.6.0).**
+- Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III post-Composing.
+- §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 remains a design draft to be revisited when D9.3 lands.
 - **Authoritative companion**: `rules/rust-best-practices.md` §5 (crate choices — `prost` for protobuf), §10 (opaque handle pattern), §11 (non-goals).
 
 ---
@@ -43,6 +44,8 @@ Concrete extern signatures differ per platform (per `rules/rust-best-practices.m
 
 ## 4. Message envelope
 
+The merged shape (`engine/protos/proto/envelope.proto`):
+
 ```protobuf
 syntax = "proto3";
 
@@ -58,8 +61,8 @@ message Request {
   uint64 generation = 4;               // platform-supplied — see §5
   oneof payload {
     PhoneticsRequest phonetics = 10;
-    ComposingRequest composing = 11;
   }
+  reserved 11;                         // Composing payload — D9.3
 }
 
 message Response {
@@ -68,8 +71,14 @@ message Response {
   uint64 generation = 3;               // echoes Request.generation
   oneof payload {
     PhoneticsResponse phonetics = 10;
-    ComposingResponse composing = 11;
   }
+  reserved 11;                         // Composing payload — D9.3
+}
+
+enum CommandType {
+  CMD_UNSPECIFIED = 0;
+  CMD_PHONETICS = 1;
+  reserved 2;                          // CMD_COMPOSING — D9.3
 }
 ```
 
@@ -105,34 +114,62 @@ Phase II.5 just lifts the existing platform-side mechanism (iOS G5-impl + Androi
 
 ---
 
-## 7. Phonetics slice — first surface
+## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
+
+The merged D9.4 shape uses an `oneof method` dispatch with 17 ops grouped into 3 families. Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
-  enum Op {
-    OP_UNSPECIFIED = 0;
-    OP_TL_TO_POJ = 1;
-    OP_POJ_TO_TL = 2;
-    OP_NORMALIZE_TONE = 3;             // numeric tone → diacritics
-    OP_STRIP_TONE = 4;
+  // D9.2 legacy flat fields (`op` enum + `string input`) replaced by
+  // oneof method in D9.4. Tags 1, 2 reserved.
+  // Tags 40, 41 reserved — previously AdjustNasalMarkerCase + NfdPreprocess;
+  // removed in PR #187 follow-up after their only callers reverted to
+  // platform-side helpers for JVM unit-test compatibility.
+  reserved 1, 2, 40, 41;
+
+  oneof method {
+    // Phonetics core (9 ops): NormalizeTone, StripTone, PojToTl, TlToPoj,
+    // NormalizeToTl, NormalizeInput, RestoreTone, HasToneMarks,
+    // GetToneVariations.
+    NormalizeTone normalize_tone = 10;
+    // ... (see phonetics.proto for full list)
+
+    // Derivation (2 ops): DeriveNotone, DeriveAbbrev.
+    DeriveNotone derive_notone = 20;
+    DeriveAbbrev derive_abbrev = 21;
+
+    // TPS (6 ops): ContainsTps, TpsToTl, TlNumericToTps, TlDisplayToTps,
+    // IsTpsToneMark, TpsInputAdjust.
+    TpsInputAdjust tps_input_adjust = 35;
+    // ...
   }
-  Op op = 1;
-  string input = 2;
 }
 
 message PhoneticsResponse {
-  string output = 1;
-  bool tone_restored = 2;              // matches iOS deleteBackward path
+  reserved 1, 2;                       // D9.2 legacy flat fields
+  oneof result {
+    StringResult string_result = 10;
+    StripToneResult strip_tone_result = 11;
+    OptionalStringResult optional_string_result = 12;
+    BoolResult bool_result = 13;
+    ToneVariationsResult tone_variations_result = 14;
+    TpsAdjustResult tps_adjust_result = 15;
+  }
 }
 ```
 
-- Pure, stateless — does not consult settings except via `AppConfig.tone_mode` from §6.
-- Direct mapping to existing `PhoneticsConverter.swift` (iOS) / `TaigiPhonetics.kt` (Android) APIs.
-- Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `ffi-safety.md` §3 is not strictly required for this slice but the unified entry point keeps the FFI contract uniform.
+- **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
+- **`oneof result`** with 6 result shapes covers all 17 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; nullable-string ops use `OptionalStringResult`; `HasToneMarks` / `IsTpsToneMark` / `ContainsTps` use `BoolResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- Pure, stateless. Settings consulted via `AppConfig.input_mode` / `oo_doubletap_enabled` / `nn_doubletap_enabled` from §6 (no engine-side caching).
+- Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
+- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility — the bridge can't load `.so` from `src/test/`. The Rust phonetics crate retains the canonical implementations; `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline. See `feedback_jvm_test_jni_compat.md`.
+- Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `ffi-safety.md` §3 keeps the FFI contract uniform across slices.
 
 ---
 
-## 8. Composing slice — second surface
+## 8. Composing slice — DESIGN DRAFT (D9.3 deferred to v3.6.0)
+
+> **Status**: This section is design intent only. The merged proto reserves tag 11 in `Request.payload` / `Response.payload` and `CMD_COMPOSING` in `CommandType` for the eventual D9.3 wire (`engine/protos/proto/envelope.proto:18-20,52,62`). Field naming below (`oneof intent`) will likely be renamed to `oneof method` to match the Phonetics convention adopted in PR #186 — track in D9.3 design.
 
 ```protobuf
 message ComposingRequest {

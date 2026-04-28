@@ -69,7 +69,7 @@ Silent divergence is the failure mode this rule exists to prevent.
 
 Behavior that MUST match between iOS and Android is captured in `docs/architecture/behavioral-invariants.md` with named `INVARIANT_*` labels.
 
-- Constants that mirror the other platform carry a `CROSS-PLATFORM INVARIANT — mirrors <other file>:<line>. Drift causes silent divergence.` comment. Platform examples: iOS `NextWordScorer.swift` / `CandidateProcessor.swift` / `TaigiUnicode.swift`; Android `NextWordService.kt` / `TaigiUnicode.kt` / `AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt`.
+- Constants that mirror the other platform carry a `CROSS-PLATFORM INVARIANT — mirrors <other file>:<line>. Drift causes silent divergence.` comment. Platform examples: iOS `NextWordScorer.swift` / `CandidateProcessor.swift` / `TaigiUnicode.swift` / `Input/ToneUtilities.swift`; Android `NextWordService.kt` / `TaigiUnicode.kt` / `ToneUtilities.kt` / `AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt`. (Note: `TaigiUnicode` and `ToneUtilities` are **platform-stays** helpers per PR #187 — Rust crate retains canonical implementations but Android JVM unit tests can't load `.so`, so the cross-platform invariant lives between iOS↔Android source rather than via FFI.)
 - Tests that pin a cross-platform behavior use the `INVARIANT_*` prefix, matching a label in `behavioral-invariants.md`.
 - Modifying any invariant constant requires **iOS source + Android source + `behavioral-invariants.md` + invariant test** all updated in the **same PR**. A diff that updates only one side is rejected at review.
 

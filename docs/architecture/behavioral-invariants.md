@@ -378,3 +378,17 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 - Phase I task plan referencing this doc as prerequisite: `docs/architecture/ios-exemplar-plan.md` (G0).
 - Codex review findings C2 / I7 that motivated this doc: `docs/architecture/codex-review-2026-04-19.md`.
 - Data-artifact portability (MARISA / SQLite / `dictionary.bin`) tracked separately under G10.
+
+---
+
+## Test-label drift snapshot (2026-04-29)
+
+Doc-sweep audit found **18 `INVARIANT_*` labels live in tests but are not enumerated as named invariants in this document**. Per line 9 ("an invariant without a label is not"), the inverse — test labels not bound to a named invariant — points to behaviors that may merit explicit documentation. Backfill is out of scope for the doc sweep; tracked as future work.
+
+Orphan test labels grouped by module (verbatim from `grep -rn "INVARIANT_[a-z_]+" {ios,android}/.../test{,s}/`):
+
+- **Composing** (5): `..._commit_captures_text_before_idle`, `..._delete_order`, `..._idle_has_no_selected_candidate`, `..._replace_last_preserves_selected_index`, `..._select_suggestion_is_atomic_commit`.
+- **NextWord** (8): `..._association_window_strict_lt_`, `..._backspace_does_not_record`, `..._compound_pairs_are_sequential`, `..._generation_bumps_on_invalidating_intents`, `..._late_prediction_is_discarded`, `..._prediction_filter_hides_empty_tl_in_roman_mode`, `..._rescheduling_leaks_no_timer`, `..._sentence_end_resets_context`.
+- **Unicode** (5 sub-labels of §2 `INVARIANT_nfd_preprocessed_platform_parity`): `..._idempotent_on_ascii`, `..._keeps_tone_combining_marks`, `..._nasal_marker_substitution`, `..._o_combining_dot_collapses`, `..._repeated_o_combining_dot`.
+
+The Unicode bucket is partial coverage of the existing umbrella label and need not be lifted as separate invariants. Composing + NextWord buckets pin behaviors not currently named in §13 / §7-§8 — backfill candidates.
