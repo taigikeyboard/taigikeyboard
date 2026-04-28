@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.1",
+                "2026/04/28",
+                listOf(
+                    "Internal: phonetics conversion engine rewritten in Rust (no behavior change).",
+                ),
+            ),
+            VersionEntry(
                 "3.5.0",
                 "2026/04/25",
                 listOf(

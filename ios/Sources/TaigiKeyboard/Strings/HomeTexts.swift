@@ -55,6 +55,9 @@ enum HomeTexts {
     static let versionHistory = "版本紀錄"
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.1", "2026/04/28", [
+            "Internal: phonetics conversion engine rewritten in Rust (no behavior change).",
+        ]),
         ("3.5.0", "2026/04/25", [
             "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
             "Restored POJ candidates for words containing o͘ / ⁿ — about 21% of romanization queries had been missing matches.",
