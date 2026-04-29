@@ -359,8 +359,9 @@ public enum RustEngineBridge {
     /// Raw-list fallback on the FFI error path. When the Rust lexicon
     /// dispatch fails (encode error, decode error, non-OK engine
     /// response, or missing payload variant), return the input list
-    /// unchanged. v3.5.4 simplification — previously this delegated to
-    /// the Swift `CandidateProcessor.removeDuplicates` /
+    /// unchanged. Simplified in the v3.5.3 follow-up (PR #192) —
+    /// previously this delegated to the Swift
+    /// `CandidateProcessor.removeDuplicates` /
     /// `removeDisplayDuplicates` helpers as defense-in-depth dedup, but
     /// that silently masked Rust dispatch bugs. `tpsDedupEnabled` is
     /// kept on the signature for caller-shape parity with the Android

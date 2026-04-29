@@ -6,7 +6,8 @@ import XCTest
 ///
 /// Score / sort / tier / dedup invariants moved to the Rust shared core
 /// in v3.5.2 (`engine/ranking/`); the cold-start dedup invariants moved
-/// in v3.5.4 once `LexiconService` cold-start started routing through
+/// in the v3.5.3 follow-up (PR #192) once `LexiconService` cold-start
+/// started routing through
 /// `RustEngineBridge.processCandidates(..., mergeOrderOnly: true)`. The
 /// FFI-boundary parity tests live in `RustEngineBridgeRankingTests`;
 /// algorithm tests live in `engine/ranking/` + `engine/phonetics/tests/`.

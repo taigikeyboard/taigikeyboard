@@ -1,7 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,7 +19,7 @@ import org.junit.Test
  * asserts Android's raw-text contract explicitly rather than mirroring iOS.
  */
 class ComposingStateTest {
-    private val tl = ToneConverterModels.InputMode.TL
+    private val tl = InputMode.TL
     private val togglesOff = ToneToggles(isDoubleTapOOEnabled = false, isDoubleTapNNEnabled = false)
 
     // MARK: - Initial state

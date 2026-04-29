@@ -398,8 +398,9 @@ object RustEngineBridge {
      * dispatch fails (encode / decode error, non-OK engine response,
      * or missing payload variant), return the input list unchanged.
      *
-     * v3.5.4 simplification: previously this delegated to the Kotlin
-     * `CandidateProcessor.removeDuplicates` / `removeDisplayDuplicates`
+     * Simplified in the v3.5.3 follow-up (PR #192): previously this
+     * delegated to the Kotlin `CandidateProcessor.removeDuplicates` /
+     * `removeDisplayDuplicates`
      * helpers as a defense-in-depth dedup. That silently masked Rust
      * dispatch bugs by producing a near-correct candidate list. The
      * `tpsDedupEnabled` parameter no longer changes behaviour here —

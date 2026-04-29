@@ -31,7 +31,7 @@ pub enum System {
 
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
-    #[error("unsupported op (TPS→TL/POJ word segmentation is out of scope for D9 — Lexicon slice in Phase IV-B)")]
+    #[error("unsupported op (TPS→TL/POJ word segmentation belongs with the Lexicon slice — not implemented here)")]
     UnsupportedOp,
 }
 
@@ -100,9 +100,9 @@ fn capitalize_first(text: &str) -> String {
 }
 
 /// Convert text from one phonetic system to another. The TPS→TL / TPS→POJ paths
-/// in the JS `convert` function are intentionally not implemented in D9.1 — they
-/// require word-level segmentation (`segmenter.js` + 1.6 MB dictionary trie),
-/// which belongs with the Lexicon slice in Phase IV-B.
+/// in the JS `convert` function are not implemented here — they require
+/// word-level segmentation (`segmenter.js` + 1.6 MB dictionary trie), which
+/// belongs with the Lexicon slice.
 pub fn convert(text: &str, from: System, to: System) -> Result<String, PhoneticsError> {
     if from == to {
         return Ok(text.to_string());
@@ -301,7 +301,7 @@ fn is_combining(c: char) -> bool {
 }
 
 // MARK: - Display-level helpers (iOS / Android `pojDisplayToTLDisplay` / `tlDisplayToPOJDisplay`).
-//        Re-using these from D9.1 lets the iOS+Android fixture suite exercise them.
+//        Exposed so the iOS+Android fixture suite can exercise them.
 
 pub fn poj_display_to_tl_display(text: &str) -> String {
     rewrite_display(text, System::Tl)

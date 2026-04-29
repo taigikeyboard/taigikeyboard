@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneConverterModels.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test

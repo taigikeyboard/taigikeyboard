@@ -119,12 +119,12 @@ This document captures the cross-platform audit performed before any code change
 | `test_INVARIANT_tier_bonus_first_match_wins` | `calculateScore` | HIGH |
 | `test_kautian_beats_itaigi_at_comparable_frequency` | `sortByScore` | HIGH |
 
-**Strategy** (per `feedback_jvm_test_jni_compat.md`, PR #187 pattern):
+**Strategy** (historical — JVM-test-compat retention reversed by v3.5.3 follow-up; see `feedback_path_g_delete_mirrors.md`):
 
 1. **Production swap goes through Rust**. `LexiconService.kt:208, 212, 230` call `RustEngineBridge.processCandidates(...)`.
-2. **Platform Kotlin helpers retained** as the "canonical" copy for `src/test/`. Apparent duplication is intentional — JVM tests pin the math, Rust crate has its own unit + integration tests over the same fixtures.
-3. **CROSS-PLATFORM INVARIANT comment** added to both Kotlin and Rust sides pointing at each other (mirrors PR #187 pattern for `TaigiUnicode` / `ToneUtilities.adjustNasalMarkerCase`).
-4. **Acceptance**: Rust's own tests + iOS XCTest (links xcframework, no JNI issue) + Android instrumented dogfood are the primary parity gates. Android `src/test/` tests serve as a redundant fast-feedback loop and a JVM-side check that platform helpers haven't drifted from the Rust impl.
+2. ~~**Platform Kotlin helpers retained** as the "canonical" copy for `src/test/`.~~ **Obsolete**: path G deletes the platform mirrors + their JVM unit tests. The Rust crate is the sole owner; Android `src/test/` does not duplicate Rust algorithm coverage.
+3. ~~**CROSS-PLATFORM INVARIANT comment** added to both Kotlin and Rust sides pointing at each other.~~ **Obsolete**: no Kotlin mirror remains to comment on.
+4. **Acceptance**: Rust's own tests + iOS XCTest (links xcframework, no JNI issue) + Android instrumented dogfood are the parity gates. Android `src/test/` carries platform-only logic (UI/state machines) — not Rust algorithm mirrors.
 
 ## 5. Rust `engine/ranking/` crate layout (locked)
 

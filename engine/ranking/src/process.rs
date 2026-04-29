@@ -286,8 +286,9 @@ mod tests {
     // -----------------------------------------------------------------
 
     /// `merge_order_only` must dedup but preserve INPUT order. Mirrors the
-    /// pre-v3.5.4 iOS Swift fallback that ran `removeDuplicates` on the
-    /// custom-merged-then-system list before user-frequency DB warmed up.
+    /// earlier iOS Swift fallback (replaced in v3.5.3 follow-up, PR #192)
+    /// that ran `removeDuplicates` on the custom-merged-then-system list
+    /// before user-frequency DB warmed up.
     #[test]
     fn merge_order_dedups_and_preserves_input_order() {
         let req = ProcessCandidatesRequest {

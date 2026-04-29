@@ -116,8 +116,8 @@ fn trie_key_unicode_form(text: &str) -> String {
 ///
 /// CROSS-PLATFORM INVARIANT — byte-exact mirror of iOS
 /// `Lexicon/Utils/TaigiUnicode.swift::nfdPreprocessed` and Android
-/// `ime/dictionary/TaigiUnicode.kt::nfdPreprocessed` until v3.5.4
-/// removed those platform copies. Production routes:
+/// `ime/dictionary/TaigiUnicode.kt::nfdPreprocessed` until v3.5.3
+/// follow-up (PR #192) removed those platform copies. Production routes:
 /// - `engine/ranking::score::roman_to_base` (candidate scoring)
 /// - `Method::NfdPreprocessForLookup` (URL builder phonetic prep)
 ///
@@ -158,9 +158,9 @@ mod tests {
     use super::*;
 
     // taigi_unicode_base_form — moved from engine/ranking/src/nfd.rs in
-    // v3.5.4 (consolidates the helper that backs both ranking and the
-    // new Method::NfdPreprocessForLookup op). Test cases preserved
-    // verbatim from the original ranking-side module.
+    // v3.5.3 follow-up (PR #192) — consolidates the helper that backs
+    // both ranking and Method::NfdPreprocessForLookup. Test cases
+    // preserved verbatim from the original ranking-side module.
 
     #[test]
     fn nasal_marker_superscript_n_becomes_nn() {

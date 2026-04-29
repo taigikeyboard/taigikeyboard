@@ -8,7 +8,8 @@ import Foundation
 ///
 /// The score / sort / tier / dedup math moved to the Rust shared core in
 /// v3.5.2 (`engine/ranking/`); the cold-start dedup helpers were removed
-/// in v3.5.4 once `LexiconService` cold-start started routing through
+/// in the v3.5.3 follow-up (PR #192) once `LexiconService` cold-start
+/// started routing through
 /// `RustEngineBridge.processCandidates(..., mergeOrderOnly: true)`. The
 /// remaining helpers (`isHanzi`, `capitalize`, `startsWithRomanLetter`)
 /// are platform-specific text classification / orchestration used outside

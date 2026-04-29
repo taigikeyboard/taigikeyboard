@@ -293,7 +293,7 @@ pub(crate) fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> S
 
 /// Convert a TPS string to a TL tone-numbered string. Mirrors `fromZhuyin` in
 /// `zhuyin.js`. Word segmentation is **not** performed here — that is the
-/// segmenter's job, which is out of scope for D9.1 (Lexicon, Phase IV-B).
+/// segmenter's job, which belongs with the Lexicon slice.
 pub(crate) fn from_zhuyin(text: &str) -> String {
     let rev_punct = [
         ("\u{3002}", "."),
