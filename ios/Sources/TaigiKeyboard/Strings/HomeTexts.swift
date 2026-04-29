@@ -55,6 +55,9 @@ enum HomeTexts {
     static let versionHistory = "版本紀錄"
 
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.2", "2026/04/29", [
+            "Internal: candidate ranking pipeline rewritten in Rust (no behavior change).",
+        ]),
         ("3.5.1", "2026/04/28", [
             "Internal: phonetics conversion engine rewritten in Rust (no behavior change).",
         ]),
