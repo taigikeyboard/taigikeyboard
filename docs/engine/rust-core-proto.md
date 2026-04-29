@@ -1,6 +1,6 @@
 # Rust Core Protobuf Contract — First-Slice Reference
 
-> **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = DESIGN DRAFT, deferred to D9.3 / v3.6.0)
+> **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = DESIGN DRAFT, deferred to D9.3 / v3.5.4)
 > **Keywords**: `protobuf`, `Command`, `Request`, `Response`, `request-id`, `generation`, `AppConfig`, `Phonetics`, `Composing`
 > **Related**: `ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
 > **Audience**: Phase III implementers continuing from the merged D9.4 Phonetics slice.
@@ -10,7 +10,7 @@
 
 ## 1. Scope of THIS document
 
-- **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — DEFERRED to v3.6.0).**
+- **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — DEFERRED to v3.5.4).**
 - Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III post-Composing.
 - §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 remains a design draft to be revisited when D9.3 lands.
 - **Authoritative companion**: `rules/rust-best-practices.md` §5 (crate choices — `prost` for protobuf), §10 (opaque handle pattern), §11 (non-goals).
@@ -167,7 +167,7 @@ message PhoneticsResponse {
 
 ---
 
-## 8. Composing slice — DESIGN DRAFT (D9.3 deferred to v3.6.0)
+## 8. Composing slice — DESIGN DRAFT (D9.3 deferred to v3.5.4)
 
 > **Status**: This section is design intent only. The merged proto reserves tag 11 in `Request.payload` / `Response.payload` and `CMD_COMPOSING` in `CommandType` for the eventual D9.3 wire (`engine/protos/proto/envelope.proto:18-20,52,62`). Field naming below (`oneof intent`) will likely be renamed to `oneof method` to match the Phonetics convention adopted in PR #186 — track in D9.3 design.
 
