@@ -17,8 +17,7 @@ import java.net.URLEncoder
  * query parameters each dictionary takes, percent-encoding rules) are
  * not phonetics; they belong with the platform that knows about
  * `URLEncoder`. The phonetic prep step delegates to
- * `TaigiUnicode.nfdPreprocessed` (kept platform-side per
- * `feedback_jvm_test_jni_compat.md`) and tone-strip to
+ * `RustEngineBridge.nfdPreprocessForLookup` and tone-strip to
  * `RustEngineBridge.stripTone`.
  */
 object ExternalLookupURLBuilder {
@@ -59,7 +58,7 @@ object ExternalLookupURLBuilder {
         // before tone stripping — matches iOS `ExternalLookupURLBuilder` and
         // ensures custom-dict entries containing POJ `o͘` produce canonical
         // TL `hoo`/`hoo2` URLs instead of `ho͘`/`ho͘2`.
-        val preprocessed = TaigiUnicode.nfdPreprocessed(syllable)
+        val preprocessed = RustEngineBridge.nfdPreprocessForLookup(syllable)
         val stripped = RustEngineBridge.stripTone(preprocessed)
         if (stripped.tone.isEmpty() || stripped.tone == "1" || stripped.tone == "4") {
             return stripped.bare

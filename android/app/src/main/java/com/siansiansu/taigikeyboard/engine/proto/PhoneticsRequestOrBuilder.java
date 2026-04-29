@@ -117,6 +117,17 @@ public interface PhoneticsRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.GetToneVariations getGetToneVariations();
 
   /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   * @return Whether the nfdPreprocessForLookup field is set.
+   */
+  boolean hasNfdPreprocessForLookup();
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   * @return The nfdPreprocessForLookup.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup();
+
+  /**
    * <pre>
    * --- Derivation (2 ops) ---
    * </pre>

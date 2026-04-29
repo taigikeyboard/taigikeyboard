@@ -100,6 +100,14 @@ public struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .getToneVariations(newValue)}
   }
 
+  public var nfdPreprocessForLookup: Taigi_Engine_NfdPreprocessForLookup {
+    get {
+      if case .nfdPreprocessForLookup(let v)? = method {return v}
+      return Taigi_Engine_NfdPreprocessForLookup()
+    }
+    set {method = .nfdPreprocessForLookup(newValue)}
+  }
+
   /// --- Derivation (2 ops) ---
   public var deriveNotone: Taigi_Engine_DeriveNotone {
     get {
@@ -179,6 +187,7 @@ public struct Taigi_Engine_PhoneticsRequest: Sendable {
     case restoreTone(Taigi_Engine_RestoreTone)
     case hasToneMarks_p(Taigi_Engine_HasToneMarks)
     case getToneVariations(Taigi_Engine_GetToneVariations)
+    case nfdPreprocessForLookup(Taigi_Engine_NfdPreprocessForLookup)
     /// --- Derivation (2 ops) ---
     case deriveNotone(Taigi_Engine_DeriveNotone)
     case deriveAbbrev(Taigi_Engine_DeriveAbbrev)
@@ -310,6 +319,29 @@ public struct Taigi_Engine_GetToneVariations: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `NfdPreprocessForLookup` runs Taigi-specific Unicode preprocessing for
+/// external dictionary URL lookup: replace POJ nasal markers (ⁿ U+207F /
+/// ᴺ U+1D3A) with `nn`, NFD-decompose, then collapse standalone `\u{0358}`
+/// (POJ `o͘` combining mark) to `o`. Output preserves the input's letters
+/// and combining tone marks so the URL builder can run `strip_tone` on the
+/// result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
+/// inside `ExternalLookupURLBuilder`.
+///
+/// Distinct from `NormalizeInput` (which lowercases + extracts tone digits
+/// + adds default tones + splits syllables) — see
+/// `engine/ranking/src/nfd.rs:11-16` for the algorithm contrast.
+public struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var input: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -622,7 +654,7 @@ fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{3}has_tone_marks\0\u{3}get_tone_variations\0\u{4}\u{2}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{3}tps_to_tl\0\u{3}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}(\u{1}\u{c})\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{3}has_tone_marks\0\u{3}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{3}tps_to_tl\0\u{3}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}(\u{1}\u{c})\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -745,6 +777,19 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.method = .getToneVariations(v)
+        }
+      }()
+      case 19: try {
+        var v: Taigi_Engine_NfdPreprocessForLookup?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .nfdPreprocessForLookup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .nfdPreprocessForLookup(v)
         }
       }()
       case 20: try {
@@ -897,6 +942,10 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
     case .getToneVariations?: try {
       guard case .getToneVariations(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .nfdPreprocessForLookup?: try {
+      guard case .nfdPreprocessForLookup(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
     case .deriveNotone?: try {
       guard case .deriveNotone(let v)? = self.method else { preconditionFailure() }
@@ -1196,6 +1245,36 @@ extension Taigi_Engine_GetToneVariations: SwiftProtobuf.Message, SwiftProtobuf._
   }
 
   public static func ==(lhs: Taigi_Engine_GetToneVariations, rhs: Taigi_Engine_GetToneVariations) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_NfdPreprocessForLookup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NfdPreprocessForLookup"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.input.isEmpty {
+      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_NfdPreprocessForLookup, rhs: Taigi_Engine_NfdPreprocessForLookup) -> Bool {
+    if lhs.input != rhs.input {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

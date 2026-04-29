@@ -9,6 +9,7 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, GetToneVariations,
+    NfdPreprocessForLookup,
     HasToneMarks, IsTpsToneMark, NormalizeInput, NormalizeToTl, NormalizeTone,
     OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone, StringResult,
     StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj, ToneVariationsResult,
@@ -321,6 +322,28 @@ fn get_tone_variations_returns_both_modes() {
     // TL 'oo' entry exists; POJ 'o͘' entry exists.
     assert!(result.tl_variations.contains_key("oo"));
     assert!(result.poj_variations.contains_key("o\u{0358}"));
+}
+
+#[test]
+fn nfd_preprocess_for_lookup_collapses_o_dot() {
+    let resp = run(
+        Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
+            input: "ho\u{0358}".to_string(),
+        }),
+        tl_config(),
+    );
+    assert_eq!(string_result(&resp), "hoo");
+}
+
+#[test]
+fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
+    let resp = run(
+        Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
+            input: "sa\u{207f}".to_string(),
+        }),
+        tl_config(),
+    );
+    assert_eq!(string_result(&resp), "sann");
 }
 
 // ============================================================

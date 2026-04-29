@@ -1,14 +1,19 @@
-//! InputNormalizer port + ToneRestoration port.
+//! InputNormalizer + ToneRestoration + lookup-NFD ports.
 //!
 //! Mirrors:
 //! - iOS `Lexicon/Trie/InputNormalizer.swift` (`normalize`, `hasToneMarks`,
 //!   `normalizeSyllable`).
 //! - iOS `Phonetics/ToneRestoration.swift` (`restore`).
+//! - iOS / Android `TaigiUnicode.nfdPreprocessed` (lookup-side NFD prep —
+//!   exposed as `taigi_unicode_base_form` for the `engine/ranking` crate
+//!   and the `Method::NfdPreprocessForLookup` op).
 //!
-//! Shares NFD + `COMBINING_TO_TONE_NUM` mechanics across both ports — every
-//! function in this file works against combining-tone-mark tables, distinct
-//! from `derivation.rs` which deals in custom-dictionary string transforms
-//! (whitespace splitting, ASCII filtering).
+//! Shares NFD + `COMBINING_TO_TONE_NUM` mechanics across all ports. The
+//! two lookup-NFD helpers (`trie_key_unicode_form` and
+//! `taigi_unicode_base_form`) are intentionally distinct algorithms —
+//! one collapses literal `o\u{0358}` adjacency into `oo` for trie keys,
+//! the other replaces every standalone `\u{0358}` codepoint with `o`
+//! for ranking comparison bases.
 
 use crate::tables::COMBINING_TO_TONE_NUM;
 use crate::tps;
@@ -97,6 +102,33 @@ fn trie_key_unicode_form(text: &str) -> String {
 }
 
 // ===========================================================================
+// Lookup NFD preprocessing (taigi_unicode_base_form)
+// ===========================================================================
+
+/// Apply Taigi-specific Unicode preprocessing for external dictionary
+/// lookup + ranking comparison-base form:
+/// 1. Replace POJ nasal markers `ⁿ` (U+207F) / `ᴺ` (U+1D3A) with `nn`.
+/// 2. NFD-decompose so combining marks become individually accessible.
+/// 3. Replace every standalone `\u{0358}` (POJ `o͘` combining dot)
+///    with `o` so the original `o\u{0358}` collapses into `oo`
+///    regardless of the canonical combining-class reorder that NFD
+///    applies when other diacritics sit between `o` and `\u{0358}`.
+///
+/// CROSS-PLATFORM INVARIANT — byte-exact mirror of iOS
+/// `Lexicon/Utils/TaigiUnicode.swift::nfdPreprocessed` and Android
+/// `ime/dictionary/TaigiUnicode.kt::nfdPreprocessed` until v3.5.4
+/// removed those platform copies. Production routes:
+/// - `engine/ranking::score::roman_to_base` (candidate scoring)
+/// - `Method::NfdPreprocessForLookup` (URL builder phonetic prep)
+///
+/// Distinct from [`trie_key_unicode_form`] — see module-level docs.
+pub fn taigi_unicode_base_form(input: &str) -> String {
+    let with_nasal = input.replace(['\u{207f}', '\u{1d3a}'], "nn");
+    let decomposed: String = with_nasal.nfd().collect();
+    decomposed.replace('\u{0358}', "o")
+}
+
+// ===========================================================================
 // ToneRestoration
 // ===========================================================================
 
@@ -119,4 +151,76 @@ pub(crate) fn restore_tone(text: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // taigi_unicode_base_form — moved from engine/ranking/src/nfd.rs in
+    // v3.5.4 (consolidates the helper that backs both ranking and the
+    // new Method::NfdPreprocessForLookup op). Test cases preserved
+    // verbatim from the original ranking-side module.
+
+    #[test]
+    fn nasal_marker_superscript_n_becomes_nn() {
+        assert_eq!(taigi_unicode_base_form("sa\u{207f}"), "sann");
+    }
+
+    #[test]
+    fn nasal_marker_modifier_n_becomes_nn() {
+        assert_eq!(taigi_unicode_base_form("sa\u{1d3a}"), "sann");
+    }
+
+    #[test]
+    fn poj_o_dot_collapses_to_oo() {
+        // "ho͘" — o + U+0358. After NFD it stays as `o\u{0358}` (no further
+        // decomposition), then \u{0358} → "o" gives "hoo".
+        assert_eq!(taigi_unicode_base_form("ho\u{0358}"), "hoo");
+    }
+
+    #[test]
+    fn poj_o_dot_with_acute_handles_ccc_reorder() {
+        // "hó͘" composed: NFC `h ó ͘`. NFD reorders to `h, o, combining_acute,
+        // combining_dot_above` (CCC 230 before CCC 232). Replacing
+        // \u{0358} with "o" gives `h, o, combining_acute, o`, visually "hóo".
+        let input = "h\u{00f3}\u{0358}";
+        let result = taigi_unicode_base_form(input);
+        let expected = "ho\u{0301}o";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn no_special_chars_preserves_nfd_decompose() {
+        // Plain "tâi-gí" with NFC accents: NFD decomposes the diacritics.
+        let input = "t\u{00e2}i-g\u{00ed}";
+        let result = taigi_unicode_base_form(input);
+        let expected = "ta\u{0302}i-gi\u{0301}";
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn empty_string_is_fixed_point() {
+        assert_eq!(taigi_unicode_base_form(""), "");
+    }
+
+    #[test]
+    fn ascii_only_passes_through() {
+        assert_eq!(taigi_unicode_base_form("hello"), "hello");
+    }
+
+    /// Pin behaviour against URL-builder use case: a tone-marked Taigi
+    /// syllable from MOE / Chhoe Taigi keeps its tone diacritics and only
+    /// the lookup-style preprocessing (nasal substitution + dot collapse)
+    /// applies. The caller (`ExternalLookupURLBuilder`) feeds the result
+    /// into `Method::StripTone` to peel the diacritic.
+    #[test]
+    fn url_builder_pipeline_keeps_tone_diacritic_intact() {
+        // "tāi" — NFD `t a U+0304 i`. base_form keeps the macron because
+        // U+0304 is not in {U+207F, U+1D3A, U+0358}.
+        let input = "t\u{0101}i";
+        let result = taigi_unicode_base_form(input);
+        let expected = "ta\u{0304}i";
+        assert_eq!(result, expected);
+    }
 }

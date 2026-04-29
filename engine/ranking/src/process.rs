@@ -30,6 +30,10 @@ use crate::sort::{self, FrequencyMap};
 /// Run the merged-candidate ranking pipeline against `req` and return the
 /// proto response. Stateless and panic-free for well-formed input.
 pub fn process_candidates(req: ProcessCandidatesRequest) -> ProcessCandidatesResponse {
+    if req.merge_order_only {
+        return process_merge_order(req);
+    }
+
     let freq_map = build_frequency_map(&req.freq);
 
     // Phase 1 — engine dedup (key = "<roman>|<hanji>").
@@ -58,6 +62,24 @@ pub fn process_candidates(req: ProcessCandidatesRequest) -> ProcessCandidatesRes
     };
 
     ProcessCandidatesResponse { ranked, breakdown }
+}
+
+/// Cold-start branch: dedup without scoring + sorting. Replaces the
+/// iOS `LexiconService` Swift fallback that ran before the user-frequency
+/// DB had warmed up. The `tps_dedup_enabled` gate still applies — display
+/// dedup must run AFTER engine dedup, same invariant as the scoring path.
+/// `breakdown` is always empty (no scoring took place).
+fn process_merge_order(req: ProcessCandidatesRequest) -> ProcessCandidatesResponse {
+    let merged_unique = dedup::remove_duplicates(req.raw);
+    let ranked = if req.tps_dedup_enabled {
+        dedup::remove_display_duplicates(merged_unique)
+    } else {
+        merged_unique
+    };
+    ProcessCandidatesResponse {
+        ranked,
+        breakdown: Vec::new(),
+    }
 }
 
 /// Build the per-display-text frequency lookup. The proto's
@@ -154,6 +176,7 @@ mod tests {
             }],
             now_ms: 1_000_000_000,
             include_breakdown: true,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert_eq!(resp.ranked.len(), 2, "duplicate dropped");
@@ -170,6 +193,7 @@ mod tests {
             freq: Vec::new(),
             now_ms: 0,
             include_breakdown: false,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert_eq!(resp.ranked.len(), 1);
@@ -189,6 +213,7 @@ mod tests {
             freq: Vec::new(),
             now_ms: 0,
             include_breakdown: false,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert_eq!(resp.ranked.len(), 1, "display dedup collapsed entries");
@@ -207,6 +232,7 @@ mod tests {
             freq: Vec::new(),
             now_ms: 0,
             include_breakdown: false,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert_eq!(resp.ranked.len(), 2, "display dedup skipped in non-TPS mode");
@@ -228,6 +254,7 @@ mod tests {
             freq: Vec::new(),
             now_ms: 0,
             include_breakdown: true,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert_eq!(resp.ranked.len(), 2);
@@ -247,9 +274,86 @@ mod tests {
             freq: Vec::new(),
             now_ms: 0,
             include_breakdown: true,
+            merge_order_only: false,
         };
         let resp = process_candidates(req);
         assert!(resp.ranked.is_empty());
         assert!(resp.breakdown.is_empty());
+    }
+
+    // -----------------------------------------------------------------
+    // merge_order_only branch — replaces iOS LexiconService cold-start
+    // -----------------------------------------------------------------
+
+    /// `merge_order_only` must dedup but preserve INPUT order. Mirrors the
+    /// pre-v3.5.4 iOS Swift fallback that ran `removeDuplicates` on the
+    /// custom-merged-then-system list before user-frequency DB warmed up.
+    #[test]
+    fn merge_order_dedups_and_preserves_input_order() {
+        let req = ProcessCandidatesRequest {
+            raw: vec![
+                word(1, "gua", Some("我"), Some(50)),
+                word(2, "gua", Some("我"), Some(50)),
+                word(3, "gua", Some("瓜"), Some(100)),
+                word(4, "tai", Some("台"), Some(80)),
+            ],
+            normalized_input: "ignored_in_merge_order".to_owned(),
+            tps_dedup_enabled: false,
+            freq: Vec::new(),
+            now_ms: 0,
+            include_breakdown: false,
+            merge_order_only: true,
+        };
+        let resp = process_candidates(req);
+        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 3, 4]);
+        assert!(resp.breakdown.is_empty(), "breakdown always empty in merge_order_only");
+    }
+
+    /// `tps_dedup_enabled` still gates the display-dedup pass even when
+    /// `merge_order_only` is set. Display dedup runs AFTER engine dedup,
+    /// same ordering invariant as the score path.
+    #[test]
+    fn merge_order_with_tps_dedup_collapses_repeated_hanji() {
+        let req = ProcessCandidatesRequest {
+            raw: vec![
+                word(1, "phuānn-tshiú", Some("伴手"), Some(100)),
+                word(2, "phuǎnn-tshiú", Some("伴手"), Some(50)),
+                word(3, "tha̍k-tsheh", Some("讀冊"), Some(80)),
+            ],
+            normalized_input: "_".to_owned(),
+            tps_dedup_enabled: true,
+            freq: Vec::new(),
+            now_ms: 0,
+            include_breakdown: true,
+            merge_order_only: true,
+        };
+        let resp = process_candidates(req);
+        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 3]);
+        assert!(resp.breakdown.is_empty());
+    }
+
+    /// Scoring inputs (`freq`, `now_ms`, `normalized_input`,
+    /// `include_breakdown`) are all ignored when `merge_order_only` is set.
+    /// Pin this so a future refactor that accidentally consults them is caught.
+    #[test]
+    fn merge_order_ignores_scoring_inputs() {
+        let req = ProcessCandidatesRequest {
+            raw: vec![
+                word(1, "a", Some("甲"), Some(0)),
+                word(2, "b", Some("乙"), Some(999)),
+            ],
+            normalized_input: "would-affect-score-if-consulted".to_owned(),
+            tps_dedup_enabled: false,
+            freq: vec![FrequencyEntry {
+                display_text_key: "甲".to_owned(),
+                count: 100,
+                last_used_ms: 1,
+            }],
+            now_ms: 1_000_000,
+            include_breakdown: true,
+            merge_order_only: true,
+        };
+        let resp = process_candidates(req);
+        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 2]);
     }
 }

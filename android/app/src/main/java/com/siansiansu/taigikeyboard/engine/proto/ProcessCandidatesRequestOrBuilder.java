@@ -66,4 +66,22 @@ public interface ProcessCandidatesRequestOrBuilder extends
    * @return The includeBreakdown.
    */
   boolean getIncludeBreakdown();
+
+  /**
+   * <pre>
+   * `merge_order_only = true` skips score + sort and returns the
+   * dedup result directly in input (merged) order. Replaces iOS
+   * `LexiconService` cold-start fallback that previously used Swift
+   * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+   * Output `breakdown` is always empty when this flag is set —
+   * there is no scoring to break down. `now_ms` and `freq` are
+   * ignored. `tps_dedup_enabled` still gates the display dedup pass
+   * (must run AFTER the engine dedup, same ordering invariant as
+   * the score path).
+   * </pre>
+   *
+   * <code>bool merge_order_only = 8;</code>
+   * @return The mergeOrderOnly.
+   */
+  boolean getMergeOrderOnly();
 }

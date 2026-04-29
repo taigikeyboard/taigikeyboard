@@ -41,6 +41,7 @@ message PhoneticsRequest {
     RestoreTone restore_tone = 16;
     HasToneMarks has_tone_marks = 17;
     GetToneVariations get_tone_variations = 18;
+    NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
     // --- Derivation (2 ops) ---
     DeriveNotone derive_notone = 20;
@@ -88,6 +89,20 @@ message HasToneMarks { string text = 1; }
 // tables. Returns POJ + TL maps in one response. Caller caches once at
 // engine init (lazy / idempotent on platform side).
 message GetToneVariations {}
+
+// `NfdPreprocessForLookup` runs Taigi-specific Unicode preprocessing for
+// external dictionary URL lookup: replace POJ nasal markers (ⁿ U+207F /
+// ᴺ U+1D3A) with `nn`, NFD-decompose, then collapse standalone `\u{0358}`
+// (POJ `o͘` combining mark) to `o`. Output preserves the input's letters
+// and combining tone marks so the URL builder can run `strip_tone` on the
+// result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
+// inside `ExternalLookupURLBuilder`.
+//
+// Distinct from `NormalizeInput` (which lowercases + extracts tone digits
+// + adds default tones + splits syllables) — see
+// `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
+// for the algorithm contrast against `trie_key_unicode_form`.
+message NfdPreprocessForLookup { string input = 1; }
 
 // =========================================================================
 // Derivation request payloads (CustomDictionaryDerivation)

@@ -187,6 +187,7 @@ mod tests {
             }],
             now_ms: 1_000_000_000,
             include_breakdown: true,
+            merge_order_only: false,
         };
         let req = lexicon_request(candidates);
         let mut buf = Vec::with_capacity(req.encoded_len());

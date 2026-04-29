@@ -6,16 +6,13 @@ import Foundation
 
 /// Candidate-processing utilities retained on the iOS platform side.
 ///
-/// CROSS-PLATFORM INVARIANT — the score/sort/tier math originally living
-/// in this file moved to the Rust shared core in v3.5.2 (slice
-/// `phase4b/ranking-slice`). Production ranking now flows through
-/// `RustEngineBridge.processCandidates(...)` → `engine/ranking/`. The
-/// helpers that remain here are either out-of-slice on iOS
-/// (`isHanzi` / `capitalize` / `startsWithRomanLetter` — used outside
-/// `LexiconService`) or used by the cold-start fallback in
-/// `LexiconService.processCandidates` when the user-frequency DB has not
-/// yet warmed up. Drift between this file and `engine/ranking/` causes
-/// silent ranking divergence; mirror behavior changes both places.
+/// The score / sort / tier / dedup math moved to the Rust shared core in
+/// v3.5.2 (`engine/ranking/`); the cold-start dedup helpers were removed
+/// in v3.5.4 once `LexiconService` cold-start started routing through
+/// `RustEngineBridge.processCandidates(..., mergeOrderOnly: true)`. The
+/// remaining helpers (`isHanzi`, `capitalize`, `startsWithRomanLetter`)
+/// are platform-specific text classification / orchestration used outside
+/// the lexicon ranking pipeline.
 enum CandidateProcessor {
     // MARK: - Text Classification
 
@@ -57,40 +54,4 @@ enum CandidateProcessor {
         return firstChar.isLetter
     }
 
-    // MARK: - Deduplication (cold-start fallback)
-
-    /// 移除重複的詞彙（基於 roman 和 hanzi 組合）
-    ///
-    /// Only the cold-start branch of `LexiconService.processCandidates`
-    /// (user-frequency DB not yet connected) reaches this helper. The
-    /// connected branch routes through `RustEngineBridge.processCandidates`
-    /// where `engine/ranking/dedup.rs` runs the same logic.
-    static func removeDuplicates(_ words: [TaigiWord]) -> [TaigiWord] {
-        var seen = Set<String>()
-        var result: [TaigiWord] = []
-
-        for word in words {
-            let key = "\(word.roman)|\(word.hanzi ?? "")"
-            if seen.contains(key) { continue }
-            seen.insert(key)
-            result.append(word)
-        }
-
-        return result
-    }
-
-    /// Remove visual duplicates for TPS mode (dedup by hanzi only).
-    /// Words without hanzi are always kept (they display as TPS symbols, unique by roman).
-    /// Must be called AFTER sorting so the highest-ranked entry for each hanzi is kept.
-    ///
-    /// Cold-start fallback only — see `removeDuplicates` doc.
-    static func removeDisplayDuplicates(_ words: [TaigiWord]) -> [TaigiWord] {
-        var seenHanzi = Set<String>()
-        return words.filter { word in
-            guard let hanzi = word.hanzi, !hanzi.isEmpty else {
-                return true
-            }
-            return seenHanzi.insert(hanzi).inserted
-        }
-    }
 }

@@ -10,6 +10,7 @@ import com.siansiansu.taigikeyboard.engine.proto.DeriveNotone
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
+import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.HasToneMarks
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
@@ -37,7 +38,6 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 import com.siansiansu.taigikeyboard.engine.proto.TpsToTl
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
-import com.siansiansu.taigikeyboard.ime.dictionary.CandidateProcessor
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
@@ -146,6 +146,23 @@ object RustEngineBridge {
     fun normalizeInput(input: String): String {
         val payload = NormalizeInput.newBuilder().setInput(input).build()
         return stringDispatch({ it.normalizeInput = payload }, input, "normalizeInput", null)
+    }
+
+    /**
+     * Replaces platform `TaigiUnicode.nfdPreprocessed(...)`. Lookup-side
+     * NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
+     * Distinct semantics from [normalizeInput] — this preserves tone
+     * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
+     * `\u{0358}` → `o` are rewritten.
+     */
+    fun nfdPreprocessForLookup(input: String): String {
+        val payload = NfdPreprocessForLookup.newBuilder().setInput(input).build()
+        return stringDispatch(
+            { it.nfdPreprocessForLookup = payload },
+            input,
+            "nfdPreprocessForLookup",
+            null,
+        )
     }
 
     fun restoreTone(text: String): String? {
@@ -284,9 +301,8 @@ object RustEngineBridge {
      * in tests; production passes `System.currentTimeMillis()`.
      *
      * In `BuildConfig.DEBUG` builds, requests + emits the per-candidate
-     * `ScoreBreakdown` so dogfood traces match the legacy
-     * `CandidateProcessor.logScoreDetails` output. Release builds skip
-     * the breakdown (zero serialization overhead).
+     * `ScoreBreakdown` so dogfood traces include the score arithmetic.
+     * Release builds skip the breakdown (zero serialization overhead).
      */
     fun processCandidates(
         raw: List<TaigiWord>,
@@ -326,10 +342,8 @@ object RustEngineBridge {
      *
      * NOTE: `src/test/` JVM tests cannot exercise this seam because
      * `System.loadLibrary("rust_taigi")` fails on host JVM. Bridge
-     * parity is verified by Rust's own tests + iOS XCTest (links the
-     * xcframework) + Android instrumented dogfood. JVM-side ranking math
-     * stays pinned by `CandidateProcessorTest` against the platform
-     * helpers per `feedback_jvm_test_jni_compat.md`.
+     * parity is verified by the Rust workspace tests + iOS XCTest
+     * (links the xcframework) + Android instrumented dogfood.
      */
     fun processCandidatesDetailed(
         raw: List<TaigiWord>,
@@ -380,30 +394,22 @@ object RustEngineBridge {
     }
 
     /**
-     * Defense-in-depth ranking on the FFI error path. When the Rust
-     * lexicon dispatch fails (encode/decode error, non-OK engine
-     * response, or missing payload variant), fall back to the retained
-     * platform `CandidateProcessor` helpers so the user still sees a
-     * deduplicated and (TPS-gated) display-deduped candidate list
-     * instead of the raw merged input. Score-sort is skipped because
-     * the bridge owns user-frequency lookups; the input list arrives
-     * pre-sorted by `lengthScore` from `LexiconService.searchWithTrie`,
-     * which preserves a "reasonable" order even on the error path.
+     * Raw-list fallback on the FFI error path. When the Rust lexicon
+     * dispatch fails (encode / decode error, non-OK engine response,
+     * or missing payload variant), return the input list unchanged.
      *
-     * Mirrors iOS `RustEngineBridge.fallbackRanked`. Audit § 8 row
-     * "FFI error path graceful degradation" documents the rationale.
+     * v3.5.4 simplification: previously this delegated to the Kotlin
+     * `CandidateProcessor.removeDuplicates` / `removeDisplayDuplicates`
+     * helpers as a defense-in-depth dedup. That silently masked Rust
+     * dispatch bugs by producing a near-correct candidate list. The
+     * `tpsDedupEnabled` parameter no longer changes behaviour here —
+     * kept on the signature for caller-shape parity with the iOS
+     * mirror (Codex audit § 1 Q3).
      */
     private fun fallbackRanked(
         raw: List<TaigiWord>,
-        tpsDedupEnabled: Boolean,
-    ): List<TaigiWord> {
-        val deduped = CandidateProcessor.removeDuplicates(raw)
-        return if (tpsDedupEnabled) {
-            CandidateProcessor.removeDisplayDuplicates(deduped)
-        } else {
-            deduped
-        }
-    }
+        @Suppress("UNUSED_PARAMETER") tpsDedupEnabled: Boolean,
+    ): List<TaigiWord> = raw
 
     private fun taigiWordToProto(word: TaigiWord): ProtoTaigiWord {
         val builder = ProtoTaigiWord.newBuilder()

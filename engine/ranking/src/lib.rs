@@ -22,7 +22,6 @@
 //! byte-identical across platforms at audit time.
 
 mod dedup;
-mod nfd;
 mod process;
 mod score;
 mod sort;

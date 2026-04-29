@@ -77,8 +77,9 @@ final class LexiconService: @unchecked Sendable {
     /// 3. Case processing on the merged list
     /// 4. Rank by user frequency through `RustEngineBridge.processCandidates`
     ///    (dedup + score + sort + optional TPS display-dedup, atomic in
-    ///    Rust shared core); cold-start before the freq DB warms up falls
-    ///    back to platform dedup helpers and skips the score-sort.
+    ///    Rust shared core); cold-start before the freq DB warms up routes
+    ///    through the same call with `mergeOrderOnly: true` to skip
+    ///    score-sort while still running engine dedup.
     ///
     /// - Parameters:
     ///   - input: Segmented search key for system dictionary (e.g. "li-ho")
@@ -220,15 +221,13 @@ final class LexiconService: @unchecked Sendable {
     /// platform passes.
     ///
     /// Disconnected path (cold-start before the user-frequency DB is
-    /// available): falls back to platform `CandidateProcessor.removeDuplicates`
-    /// + optional TPS `removeDisplayDuplicates`. Skipping the score-sort
-    /// preserves the legacy iOS "merged-order on cold-start" behavior so
+    /// available): routes through `RustEngineBridge.processCandidates`
+    /// with `mergeOrderOnly: true` so dedup runs without scoring/sorting.
+    /// Preserves the legacy iOS "merged-order on cold-start" behavior —
     /// custom-dictionary entries continue to surface ahead of system
-    /// candidates until the freq DB warms up. This is an **intentional
-    /// exception** to the v3.5.2 ranking-slice rule that production
-    /// routes through Rust — see `docs/engine/ranking-slice-audit.md` § 8
-    /// row "iOS cold-start fallback". Android has no equivalent because
-    /// its `UserFrequencyService.frequencyDataBatch` is always callable.
+    /// candidates until the freq DB warms up. Android has no equivalent
+    /// branch because its `UserFrequencyService.frequencyDataBatch` is
+    /// always callable.
     private func processCandidates(
         _ merged: [TaigiWord],
         segmentedInput: String,
@@ -240,8 +239,14 @@ final class LexiconService: @unchecked Sendable {
 
         let isTPS = inputMode == .tps
         guard userFrequencyService.isConnected() else {
-            let uniqueWords = CandidateProcessor.removeDuplicates(merged)
-            return isTPS ? CandidateProcessor.removeDisplayDuplicates(uniqueWords) : uniqueWords
+            return RustEngineBridge.processCandidates(
+                raw: merged,
+                normalizedInput: "",
+                tpsDedupEnabled: isTPS,
+                frequencyData: [:],
+                nowMs: 0,
+                mergeOrderOnly: true,
+            )
         }
 
         let normalizedInput = InputNormalizer.normalize(segmentedInput, mode: inputMode)

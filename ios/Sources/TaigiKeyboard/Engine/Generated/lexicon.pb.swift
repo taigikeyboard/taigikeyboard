@@ -79,6 +79,17 @@ public struct Taigi_Engine_ProcessCandidatesRequest: Sendable {
 
   public var includeBreakdown: Bool = false
 
+  /// `merge_order_only = true` skips score + sort and returns the
+  /// dedup result directly in input (merged) order. Replaces iOS
+  /// `LexiconService` cold-start fallback that previously used Swift
+  /// `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+  /// Output `breakdown` is always empty when this flag is set —
+  /// there is no scoring to break down. `now_ms` and `freq` are
+  /// ignored. `tps_dedup_enabled` still gates the display dedup pass
+  /// (must run AFTER the engine dedup, same ordering invariant as
+  /// the score path).
+  public var mergeOrderOnly: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -281,7 +292,7 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProcessCandidatesRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0\u{3}normalized_input\0\u{4}\u{2}tps_dedup_enabled\0\u{1}freq\0\u{3}now_ms\0\u{3}include_breakdown\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0\u{3}normalized_input\0\u{4}\u{2}tps_dedup_enabled\0\u{1}freq\0\u{3}now_ms\0\u{3}include_breakdown\0\u{3}merge_order_only\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -295,6 +306,7 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
       case 5: try { try decoder.decodeRepeatedMessageField(value: &self.freq) }()
       case 6: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.includeBreakdown) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.mergeOrderOnly) }()
       default: break
       }
     }
@@ -319,6 +331,9 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
     if self.includeBreakdown != false {
       try visitor.visitSingularBoolField(value: self.includeBreakdown, fieldNumber: 7)
     }
+    if self.mergeOrderOnly != false {
+      try visitor.visitSingularBoolField(value: self.mergeOrderOnly, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -329,6 +344,7 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
     if lhs.freq != rhs.freq {return false}
     if lhs.nowMs != rhs.nowMs {return false}
     if lhs.includeBreakdown != rhs.includeBreakdown {return false}
+    if lhs.mergeOrderOnly != rhs.mergeOrderOnly {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

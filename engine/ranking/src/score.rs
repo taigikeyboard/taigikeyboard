@@ -26,7 +26,7 @@
 
 use protos::engine::{ScoreBreakdown, TaigiWord};
 
-use crate::nfd::taigi_unicode_base_form;
+use phonetics::taigi_unicode_base_form;
 
 // ---------------------------------------------------------------------------
 // Cross-platform invariant constants — DO NOT drift without updating

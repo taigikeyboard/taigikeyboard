@@ -11,8 +11,7 @@ import Foundation
 /// query parameters each dictionary takes, percent-encoding rules) are
 /// not phonetics; they belong with the platform that knows about
 /// `URLQueryAllowed` / `URLEncoder`. The phonetic prep step delegates to
-/// `TaigiUnicode.nfdPreprocessed` (kept platform-side per
-/// `feedback_jvm_test_jni_compat.md`) and tone-strip to
+/// `RustEngineBridge.nfdPreprocessForLookup` and tone-strip to
 /// `RustEngineBridge.stripTone`. Mirror at
 /// `android/.../ime/dictionary/ExternalLookupURLBuilder.kt`.
 enum ExternalLookupURLBuilder {
@@ -69,7 +68,7 @@ enum ExternalLookupURLBuilder {
         // Diacritic path: apply Taigi preprocessing (nasal / o͘ normalization)
         // then reuse the shared tone-stripping helper so all call sites share
         // one implementation.
-        let preprocessed = TaigiUnicode.nfdPreprocessed(syllable)
+        let preprocessed = RustEngineBridge.nfdPreprocessForLookup(syllable)
         let stripped = RustEngineBridge.stripTone(preprocessed)
         let bare = stripped.bare
         let tone = stripped.tone

@@ -86,6 +86,9 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
         Method::GetToneVariations(_) => {
             PhonResult::ToneVariationsResult(tone_variations::build())
         }
+        Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
+            output: normalization::taigi_unicode_base_form(&payload.input),
+        }),
 
         // --- Derivation ---
         Method::DeriveNotone(payload) => PhonResult::StringResult(StringResult {

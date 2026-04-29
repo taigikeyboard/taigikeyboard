@@ -105,6 +105,22 @@ public enum RustEngineBridge {
         )
     }
 
+    /// Replaces platform `TaigiUnicode.nfdPreprocessed(_:)`. Lookup-side
+    /// NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
+    /// Distinct semantics from `normalizeInput` — this preserves tone
+    /// diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
+    /// `\u{0358}` → `o` are rewritten.
+    public static func nfdPreprocessForLookup(_ input: String) -> String {
+        var payload = Taigi_Engine_NfdPreprocessForLookup()
+        payload.input = input
+        return stringDispatch(
+            method: .nfdPreprocessForLookup(payload),
+            input: input,
+            op: "nfdPreprocessForLookup",
+            config: nil
+        )
+    }
+
     public static func restoreTone(_ text: String) -> String? {
         var payload = Taigi_Engine_RestoreTone()
         payload.text = text
@@ -218,11 +234,10 @@ public enum RustEngineBridge {
     /// (dedup → score → sort → optional TPS display-dedup) atomically in
     /// the Rust core. Mirrors `engine/ranking/src/process.rs`.
     ///
-    /// Cold-start callers that lack a connected user-frequency DB should
-    /// short-circuit to platform `CandidateProcessor.removeDuplicates` /
-    /// `removeDisplayDuplicates` rather than calling this with an empty
-    /// `frequencyData` map — the score-sort is deterministic but reorders
-    /// candidates against the legacy iOS "merged-order on cold-start"
+    /// Cold-start callers that lack a connected user-frequency DB pass
+    /// `mergeOrderOnly: true` so engine dedup runs without scoring +
+    /// sorting — the score-sort is deterministic but reorders candidates
+    /// against the legacy iOS "merged-order on cold-start"
     /// behavior. See `LexiconService.search` for the gating logic.
     ///
     /// `tpsDedupEnabled` is platform-decided (audit § 3) — pass
@@ -241,7 +256,8 @@ public enum RustEngineBridge {
         normalizedInput: String,
         tpsDedupEnabled: Bool,
         frequencyData: [String: FrequencyData],
-        nowMs: Int64
+        nowMs: Int64,
+        mergeOrderOnly: Bool = false
     ) -> [TaigiWord] {
         #if DEBUG
             let detailed = processCandidatesDetailed(
@@ -251,6 +267,7 @@ public enum RustEngineBridge {
                 frequencyData: frequencyData,
                 nowMs: nowMs,
                 includeBreakdown: true,
+                mergeOrderOnly: mergeOrderOnly,
             )
             if detailed.breakdowns.count == detailed.ranked.count {
                 let logger = LoggerFactory.make(category: "RustEngineBridge")
@@ -268,6 +285,7 @@ public enum RustEngineBridge {
                 frequencyData: frequencyData,
                 nowMs: nowMs,
                 includeBreakdown: false,
+                mergeOrderOnly: mergeOrderOnly,
             ).ranked
         #endif
     }
@@ -307,7 +325,8 @@ public enum RustEngineBridge {
         tpsDedupEnabled: Bool,
         frequencyData: [String: FrequencyData],
         nowMs: Int64,
-        includeBreakdown: Bool
+        includeBreakdown: Bool,
+        mergeOrderOnly: Bool = false
     ) -> CandidateRanking {
         var payload = Taigi_Engine_ProcessCandidatesRequest()
         payload.raw = raw.map(taigiWordToProto)
@@ -322,6 +341,7 @@ public enum RustEngineBridge {
         }
         payload.nowMs = nowMs
         payload.includeBreakdown = includeBreakdown
+        payload.mergeOrderOnly = mergeOrderOnly
 
         let resp = lexiconDispatch(method: .processCandidates(payload), op: "processCandidates")
         guard case let .processCandidatesResult(result)? = resp?.result else {
@@ -336,21 +356,17 @@ public enum RustEngineBridge {
         return CandidateRanking(ranked: ranked, breakdowns: breakdowns)
     }
 
-    /// Defense-in-depth ranking on the FFI error path. When the Rust
-    /// lexicon dispatch fails (encode error, decode error, non-OK engine
-    /// response, or missing payload variant), fall back to the retained
-    /// platform `CandidateProcessor` helpers so the user still sees a
-    /// deduplicated and (TPS-gated) display-deduped candidate list
-    /// instead of the raw merged input. Score-sort is skipped because
-    /// the bridge owns user-frequency lookups; the input list arrives
-    /// pre-sorted by `lengthScore` from `LexiconService.searchWithTrie`,
-    /// which preserves a "reasonable" order even on the error path.
-    ///
-    /// Mirrors Android `RustEngineBridge.fallbackRanked`. Audit § 8 row
-    /// "FFI error path graceful degradation" documents the rationale.
-    private static func fallbackRanked(raw: [TaigiWord], tpsDedupEnabled: Bool) -> [TaigiWord] {
-        let deduped = CandidateProcessor.removeDuplicates(raw)
-        return tpsDedupEnabled ? CandidateProcessor.removeDisplayDuplicates(deduped) : deduped
+    /// Raw-list fallback on the FFI error path. When the Rust lexicon
+    /// dispatch fails (encode error, decode error, non-OK engine
+    /// response, or missing payload variant), return the input list
+    /// unchanged. v3.5.4 simplification — previously this delegated to
+    /// the Swift `CandidateProcessor.removeDuplicates` /
+    /// `removeDisplayDuplicates` helpers as defense-in-depth dedup, but
+    /// that silently masked Rust dispatch bugs. `tpsDedupEnabled` is
+    /// kept on the signature for caller-shape parity with the Android
+    /// mirror (Codex audit § 1 Q3).
+    private static func fallbackRanked(raw: [TaigiWord], tpsDedupEnabled _: Bool) -> [TaigiWord] {
+        raw
     }
 
     private static func scoreBreakdownFromProto(_ proto: Taigi_Engine_ScoreBreakdown) -> ScoreBreakdown {

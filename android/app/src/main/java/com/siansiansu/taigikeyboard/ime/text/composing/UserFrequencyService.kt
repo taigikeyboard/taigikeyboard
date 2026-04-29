@@ -30,8 +30,8 @@ private fun SQLiteStatement.bindArgs(vararg args: Any?) {
 
 /**
  * User-word frequency service. Records how often each displayed word is
- * picked so [com.siansiansu.taigikeyboard.ime.dictionary.CandidateProcessor]
- * can boost them in ranking. Owned by `CompositionRoot`.
+ * picked so the engine ranking pipeline (`RustEngineBridge.processCandidates`)
+ * can boost them. Owned by `CompositionRoot`.
  *
  * File layout: Constants · Schema · Properties · Init ·
  * Public API (Recording / Queries / Mutations) · Pruning · DatabaseHelper.

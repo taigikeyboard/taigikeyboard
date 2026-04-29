@@ -27,6 +27,7 @@ public  final class PhoneticsRequest extends
     RESTORE_TONE(16),
     HAS_TONE_MARKS(17),
     GET_TONE_VARIATIONS(18),
+    NFD_PREPROCESS_FOR_LOOKUP(19),
     DERIVE_NOTONE(20),
     DERIVE_ABBREV(21),
     CONTAINS_TPS(30),
@@ -59,6 +60,7 @@ public  final class PhoneticsRequest extends
         case 16: return RESTORE_TONE;
         case 17: return HAS_TONE_MARKS;
         case 18: return GET_TONE_VARIATIONS;
+        case 19: return NFD_PREPROCESS_FOR_LOOKUP;
         case 20: return DERIVE_NOTONE;
         case 21: return DERIVE_ABBREV;
         case 30: return CONTAINS_TPS;
@@ -553,6 +555,56 @@ public  final class PhoneticsRequest extends
    */
   private void clearGetToneVariations() {
     if (methodCase_ == 18) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int NFD_PREPROCESS_FOR_LOOKUP_FIELD_NUMBER = 19;
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   */
+  @java.lang.Override
+  public boolean hasNfdPreprocessForLookup() {
+    return methodCase_ == 19;
+  }
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup() {
+    if (methodCase_ == 19) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   */
+  private void setNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 19;
+  }
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   */
+  private void mergeNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
+    value.getClass();
+  if (methodCase_ == 19 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 19;
+  }
+  /**
+   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+   */
+  private void clearNfdPreprocessForLookup() {
+    if (methodCase_ == 19) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1564,6 +1616,54 @@ public  final class PhoneticsRequest extends
     }
 
     /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    @java.lang.Override
+    public boolean hasNfdPreprocessForLookup() {
+      return instance.hasNfdPreprocessForLookup();
+    }
+    /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup() {
+      return instance.getNfdPreprocessForLookup();
+    }
+    /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    public Builder setNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
+      copyOnWrite();
+      instance.setNfdPreprocessForLookup(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    public Builder setNfdPreprocessForLookup(
+        com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNfdPreprocessForLookup(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    public Builder mergeNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
+      copyOnWrite();
+      instance.mergeNfdPreprocessForLookup(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
+     */
+    public Builder clearNfdPreprocessForLookup() {
+      copyOnWrite();
+      instance.clearNfdPreprocessForLookup();
+      return this;
+    }
+
+    /**
      * <pre>
      * --- Derivation (2 ops) ---
      * </pre>
@@ -2022,6 +2122,7 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.RestoreTone.class,
             com.siansiansu.taigikeyboard.engine.proto.HasToneMarks.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
+            com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveNotone.class,
             com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev.class,
             com.siansiansu.taigikeyboard.engine.proto.ContainsTps.class,
@@ -2032,9 +2133,10 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
           };
           java.lang.String info =
-              "\u0000\u0011\u0001\u0000\n#\u0011\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0014" +
-              "<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
+              "\u0000\u0012\u0001\u0000\n#\u0012\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
+              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013" +
+              "<\u0000\u0014<\u0000\u0015<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000\"<\u0000" +
+              "#<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

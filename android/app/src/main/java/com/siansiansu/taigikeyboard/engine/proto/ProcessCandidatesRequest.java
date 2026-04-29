@@ -50,7 +50,7 @@ public  final class ProcessCandidatesRequest extends
   /**
    * <code>repeated .taigi.engine.TaigiWord raw = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder>
       getRawOrBuilderList() {
     return raw_;
   }
@@ -158,7 +158,7 @@ public  final class ProcessCandidatesRequest extends
   private void setNormalizedInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     normalizedInput_ = value;
   }
   /**
@@ -194,7 +194,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The tpsDedupEnabled to set.
    */
   private void setTpsDedupEnabled(boolean value) {
-    
+
     tpsDedupEnabled_ = value;
   }
   /**
@@ -217,7 +217,7 @@ public  final class ProcessCandidatesRequest extends
   /**
    * <code>repeated .taigi.engine.FrequencyEntry freq = 5;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder>
       getFreqOrBuilderList() {
     return freq_;
   }
@@ -314,7 +314,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The nowMs to set.
    */
   private void setNowMs(long value) {
-    
+
     nowMs_ = value;
   }
   /**
@@ -340,7 +340,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The includeBreakdown to set.
    */
   private void setIncludeBreakdown(boolean value) {
-    
+
     includeBreakdown_ = value;
   }
   /**
@@ -349,6 +349,68 @@ public  final class ProcessCandidatesRequest extends
   private void clearIncludeBreakdown() {
 
     includeBreakdown_ = false;
+  }
+
+  public static final int MERGE_ORDER_ONLY_FIELD_NUMBER = 8;
+  private boolean mergeOrderOnly_;
+  /**
+   * <pre>
+   * `merge_order_only = true` skips score + sort and returns the
+   * dedup result directly in input (merged) order. Replaces iOS
+   * `LexiconService` cold-start fallback that previously used Swift
+   * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+   * Output `breakdown` is always empty when this flag is set —
+   * there is no scoring to break down. `now_ms` and `freq` are
+   * ignored. `tps_dedup_enabled` still gates the display dedup pass
+   * (must run AFTER the engine dedup, same ordering invariant as
+   * the score path).
+   * </pre>
+   *
+   * <code>bool merge_order_only = 8;</code>
+   * @return The mergeOrderOnly.
+   */
+  @java.lang.Override
+  public boolean getMergeOrderOnly() {
+    return mergeOrderOnly_;
+  }
+  /**
+   * <pre>
+   * `merge_order_only = true` skips score + sort and returns the
+   * dedup result directly in input (merged) order. Replaces iOS
+   * `LexiconService` cold-start fallback that previously used Swift
+   * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+   * Output `breakdown` is always empty when this flag is set —
+   * there is no scoring to break down. `now_ms` and `freq` are
+   * ignored. `tps_dedup_enabled` still gates the display dedup pass
+   * (must run AFTER the engine dedup, same ordering invariant as
+   * the score path).
+   * </pre>
+   *
+   * <code>bool merge_order_only = 8;</code>
+   * @param value The mergeOrderOnly to set.
+   */
+  private void setMergeOrderOnly(boolean value) {
+
+    mergeOrderOnly_ = value;
+  }
+  /**
+   * <pre>
+   * `merge_order_only = true` skips score + sort and returns the
+   * dedup result directly in input (merged) order. Replaces iOS
+   * `LexiconService` cold-start fallback that previously used Swift
+   * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+   * Output `breakdown` is always empty when this flag is set —
+   * there is no scoring to break down. `now_ms` and `freq` are
+   * ignored. `tps_dedup_enabled` still gates the display dedup pass
+   * (must run AFTER the engine dedup, same ordering invariant as
+   * the score path).
+   * </pre>
+   *
+   * <code>bool merge_order_only = 8;</code>
+   */
+  private void clearMergeOrderOnly() {
+
+    mergeOrderOnly_ = false;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest parseFrom(
@@ -805,6 +867,70 @@ public  final class ProcessCandidatesRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * `merge_order_only = true` skips score + sort and returns the
+     * dedup result directly in input (merged) order. Replaces iOS
+     * `LexiconService` cold-start fallback that previously used Swift
+     * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+     * Output `breakdown` is always empty when this flag is set —
+     * there is no scoring to break down. `now_ms` and `freq` are
+     * ignored. `tps_dedup_enabled` still gates the display dedup pass
+     * (must run AFTER the engine dedup, same ordering invariant as
+     * the score path).
+     * </pre>
+     *
+     * <code>bool merge_order_only = 8;</code>
+     * @return The mergeOrderOnly.
+     */
+    @java.lang.Override
+    public boolean getMergeOrderOnly() {
+      return instance.getMergeOrderOnly();
+    }
+    /**
+     * <pre>
+     * `merge_order_only = true` skips score + sort and returns the
+     * dedup result directly in input (merged) order. Replaces iOS
+     * `LexiconService` cold-start fallback that previously used Swift
+     * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+     * Output `breakdown` is always empty when this flag is set —
+     * there is no scoring to break down. `now_ms` and `freq` are
+     * ignored. `tps_dedup_enabled` still gates the display dedup pass
+     * (must run AFTER the engine dedup, same ordering invariant as
+     * the score path).
+     * </pre>
+     *
+     * <code>bool merge_order_only = 8;</code>
+     * @param value The mergeOrderOnly to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMergeOrderOnly(boolean value) {
+      copyOnWrite();
+      instance.setMergeOrderOnly(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * `merge_order_only = true` skips score + sort and returns the
+     * dedup result directly in input (merged) order. Replaces iOS
+     * `LexiconService` cold-start fallback that previously used Swift
+     * `CandidateProcessor.removeDuplicates` + `removeDisplayDuplicates`.
+     * Output `breakdown` is always empty when this flag is set —
+     * there is no scoring to break down. `now_ms` and `freq` are
+     * ignored. `tps_dedup_enabled` still gates the display dedup pass
+     * (must run AFTER the engine dedup, same ordering invariant as
+     * the score path).
+     * </pre>
+     *
+     * <code>bool merge_order_only = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMergeOrderOnly() {
+      copyOnWrite();
+      instance.clearMergeOrderOnly();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ProcessCandidatesRequest)
   }
   @java.lang.Override
@@ -829,10 +955,11 @@ public  final class ProcessCandidatesRequest extends
             com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.class,
             "nowMs_",
             "includeBreakdown_",
+            "mergeOrderOnly_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0007\u0006\u0000\u0002\u0000\u0001\u001b\u0002\u0208" +
-              "\u0004\u0007\u0005\u001b\u0006\u0002\u0007\u0007";
+              "\u0000\u0007\u0000\u0000\u0001\b\u0007\u0000\u0002\u0000\u0001\u001b\u0002\u0208" +
+              "\u0004\u0007\u0005\u001b\u0006\u0002\u0007\u0007\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
