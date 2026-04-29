@@ -6,6 +6,8 @@
 //! Helpers are split across submodules:
 //! - This file owns the dispatch + result-shape construction.
 //! - `derivation` owns CustomDictionaryDerivation port (notone / abbrev).
+//! - `normalization` owns InputNormalizer + ToneRestoration ports
+//!   (NFD / combining-mark mechanics).
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (4-fn collapse).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
 //! - Existing modules (`api`, `parser`, `tps`, `poj`, `tl`, `tables`)
@@ -17,6 +19,7 @@ use crate::api::{
 };
 use crate::case_adjust::adjust_nasal_marker_case;
 use crate::derivation;
+use crate::normalization;
 use crate::tone_variations;
 use crate::tps;
 use crate::tps_adjust;
@@ -65,9 +68,9 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
             output: crate::parser::normalize_to_tl(&payload.input),
         }),
         Method::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
-            output: derivation::normalize_input(&payload.input),
+            output: normalization::normalize_input(&payload.input),
         }),
-        Method::RestoreTone(payload) => match derivation::restore_tone(&payload.text) {
+        Method::RestoreTone(payload) => match normalization::restore_tone(&payload.text) {
             Some(s) => PhonResult::OptionalStringResult(OptionalStringResult {
                 output: s,
                 present: true,
@@ -78,7 +81,7 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
             }),
         },
         Method::HasToneMarks(payload) => PhonResult::BoolResult(BoolResult {
-            value: derivation::has_tone_marks(&payload.text),
+            value: normalization::has_tone_marks(&payload.text),
         }),
         Method::GetToneVariations(_) => {
             PhonResult::ToneVariationsResult(tone_variations::build())

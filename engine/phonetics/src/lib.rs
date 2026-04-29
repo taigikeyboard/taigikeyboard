@@ -1,21 +1,29 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../../README.md")]
 
+// Public façade modules — the only externally-supported entry points.
+// Tests and other engine crates depend on these paths; everything else
+// stays mod-private per the domain↔proto boundary rule in
+// rules/rust-best-practices.md §3a.
 pub mod api;
-pub mod case_adjust;
-pub mod derivation;
 pub mod dispatch;
-pub mod parser;
-pub mod poj;
-pub mod tables;
-pub mod tl;
-pub mod tone_variations;
-pub mod tps;
-pub mod tps_adjust;
 
-pub use api::{
-    convert, process_request, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
-};
+mod case_adjust;
+mod derivation;
+mod normalization;
+mod parser;
+mod poj;
+mod tables;
+mod tl;
+mod tone_variations;
+mod tps;
+mod tps_adjust;
+
+// Top-level re-exports of named entry points — kept stable across the
+// `engine/cli` and integration-test surface. (`process_request` is NOT
+// re-exported: tests call `phonetics::api::process_request` directly,
+// and `engine/dispatch` is the canonical FFI entry.)
+pub use api::{convert, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System};
 pub use parser::{normalize_to_tl, strip_tone_mark};
 pub use poj::to_poj;
 pub use tl::to_tl;

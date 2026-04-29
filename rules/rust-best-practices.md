@@ -61,6 +61,41 @@ Policy lives here; technical spec is `docs/engine/ffi-safety.md` (Phase II.5 del
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per §4 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
 
+## 3a. Domain↔proto boundary rule `[R]` `[A]`
+
+Established 2026-04-29 after the second domain crate landed (PR #189 ranking slice). Codifies the surface pattern both `engine/phonetics` and `engine/ranking` already follow, so `engine/composing` (and any future stateless slice) inherits a consistent template.
+
+**Rule.** The **dispatch / RPC façade** of each domain crate (the function the dispatcher routes through — `phonetics::dispatch::handle`, `ranking::process_candidates`, future `composing::*`) accepts and returns **protobuf-generated types** (`protos::engine::*`) directly. There is no parallel native-Rust mirror tier and no proto↔native translation layer between `engine/dispatch` and the domain crate. The protobuf schema is the cross-platform contract; duplicating it doubles maintenance with no consumer.
+
+This rule binds the cross-platform RPC seam, not every public function. CLI helpers, test fixtures, and stable native-Rust convenience APIs (`phonetics::convert`, `phonetics::to_tone_marks`, `phonetics::to_tone_number`, `phonetics::normalize_to_tl`, `phonetics::strip_tone_mark`, etc.) may keep native signatures — they were intentionally exposed for in-process Rust callers (CLI, integration tests). What is forbidden is letting those native helpers grow into a **second proto-mirroring type tier** that the dispatcher routes through.
+
+**Module visibility.** Implementation modules are `mod`-private. Only **named façade / entry modules** are `pub mod`, and they expose only the named entry points downstream actually call. Top-level `pub use` re-exports are reserved for stable cross-crate symbols (CLI helpers, integration-test helpers, the public `Error` enum) — never as a redundant alias for an entry already reachable through a façade module.
+
+Concretely, `engine/phonetics/src/lib.rs` is the canonical shape:
+
+```rust
+pub mod api;        // tests + CLI hit phonetics::api::*
+pub mod dispatch;   // engine/dispatch routes through phonetics::dispatch::handle
+
+mod case_adjust;
+mod derivation;
+mod normalization;
+mod parser;
+// … all other implementation modules stay private
+```
+
+**Layering by crate.**
+
+| Layer | Type vocabulary | Visibility |
+|---|---|---|
+| `phonetics`, `ranking`, `composing` (domain) | **Dispatch façade** takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
+| `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation. |
+| `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §2. | Calls `dispatch::process_request` directly. |
+
+**What this rule excludes.** Native-Rust input/output structs that mirror proto messages, `From<NativeFoo> for protos::engine::Foo` impls, separate per-op entry points in dispatch (`dispatch::process_phonetics`, `dispatch::process_ranking`, …) — all banned. They show up in candidate refactors and they are always extra work for no end-user benefit.
+
+**When this rule may be revisited.** If a future slice needs to expose a domain API that takes / returns Rust-native types because the public Rust crate has consumers outside the IME (e.g. someone embeds `phonetics` in a non-IME tool). Until that happens, Pattern A holds.
+
 ## 4. `unsafe` discipline `[S]`
 
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
