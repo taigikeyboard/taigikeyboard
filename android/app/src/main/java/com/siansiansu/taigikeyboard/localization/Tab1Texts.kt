@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.3",
+                "2026/04/29",
+                listOf(
+                    "Internal: engine workspace cleanup, removed duplicate platform implementations (no behavior change).",
+                ),
+            ),
+            VersionEntry(
                 "3.5.2",
                 "2026/04/29",
                 listOf(
