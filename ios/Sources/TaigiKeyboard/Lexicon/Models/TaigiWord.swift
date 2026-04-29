@@ -5,7 +5,7 @@ import Foundation
 // MARK: - Shared-Core Candidate
 
 /// Pure logic, Foundation-only. Eligible for cross-platform extraction.
-public struct TaigiWord {
+public struct TaigiWord: Equatable {
     let id: Int
     let roman: String
     let hanzi: String?

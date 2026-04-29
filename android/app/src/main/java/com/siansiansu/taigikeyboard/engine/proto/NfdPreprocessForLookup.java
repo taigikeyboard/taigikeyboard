@@ -17,7 +17,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * Distinct from `NormalizeInput` (which lowercases + extracts tone digits
  * + adds default tones + splits syllables) — see
- * `engine/ranking/src/nfd.rs:11-16` for the algorithm contrast.
+ * `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
+ * for the algorithm contrast against `trie_key_unicode_form`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.NfdPreprocessForLookup}
@@ -56,7 +57,7 @@ public  final class NfdPreprocessForLookup extends
   private void setInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-
+  
     input_ = value;
   }
   /**
@@ -172,7 +173,8 @@ public  final class NfdPreprocessForLookup extends
    *
    * Distinct from `NormalizeInput` (which lowercases + extracts tone digits
    * + adds default tones + splits syllables) — see
-   * `engine/ranking/src/nfd.rs:11-16` for the algorithm contrast.
+   * `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
+   * for the algorithm contrast against `trie_key_unicode_form`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.NfdPreprocessForLookup}
@@ -310,3 +312,4 @@ public  final class NfdPreprocessForLookup extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
+

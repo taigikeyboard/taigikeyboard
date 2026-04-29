@@ -109,7 +109,7 @@ object RustEngineBridge {
     fun normalizeTone(input: String, mode: NormalizeMode, toggles: ToneTogglesCarrier): String {
         val payload = NormalizeTone.newBuilder().setInput(input).build()
         return stringDispatch(
-            method = { it.normalizeTone = payload },
+            methodSetter = { it.normalizeTone = payload },
             input = input,
             op = "normalizeTone",
             config = appConfig(mode, toggles),

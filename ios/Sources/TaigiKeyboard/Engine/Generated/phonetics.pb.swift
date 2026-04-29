@@ -335,7 +335,8 @@ public struct Taigi_Engine_GetToneVariations: Sendable {
 ///
 /// Distinct from `NormalizeInput` (which lowercases + extracts tone digits
 /// + adds default tones + splits syllables) — see
-/// `engine/ranking/src/nfd.rs:11-16` for the algorithm contrast.
+/// `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
+/// for the algorithm contrast against `trie_key_unicode_form`.
 public struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

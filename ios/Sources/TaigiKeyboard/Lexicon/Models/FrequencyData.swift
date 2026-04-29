@@ -11,9 +11,14 @@ import Foundation
 /// Hoisted out of `UserFrequencyRepository` so the bridge marshalling code
 /// depends on this Foundation-only value type rather than an iOS-only
 /// SQLite repository.
-struct FrequencyData {
-    let count: Int
-    let lastUsedMillis: Int64 // Unix timestamp in milliseconds
+public struct FrequencyData {
+    public let count: Int
+    public let lastUsedMillis: Int64 // Unix timestamp in milliseconds
 
-    static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
+    public init(count: Int, lastUsedMillis: Int64) {
+        self.count = count
+        self.lastUsedMillis = lastUsedMillis
+    }
+
+    public static let empty = FrequencyData(count: 0, lastUsedMillis: 0)
 }
