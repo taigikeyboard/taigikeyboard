@@ -80,7 +80,7 @@ pub mod dispatch;   // engine/dispatch routes through phonetics::dispatch::handl
 mod case_adjust;
 mod derivation;
 mod normalization;
-mod parser;
+mod syllable;
 // … all other implementation modules stay private
 ```
 

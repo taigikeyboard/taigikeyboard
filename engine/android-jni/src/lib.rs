@@ -7,6 +7,7 @@
 //! length-checks the `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an
 //! oversized payload is rejected without the matching allocation.
 
+use dispatch::MAX_REQUEST_BYTES;
 use jni::objects::{GlobalRef, JByteArray, JClass, JObject, JStaticMethodID, JValue};
 use jni::signature::{Primitive, ReturnType};
 use jni::sys::{jbyteArray, jint};
@@ -15,10 +16,6 @@ use prost::Message;
 use protos::engine::{ErrorCode, Response};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Once, OnceLock};
-
-/// 2 MB cap on the request byte buffer. See `engine/swift-ffi/src/lib.rs` for
-/// the matching iOS constant; both crates must agree.
-pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
 const BRIDGE_CLASS: &str = "com/siansiansu/taigikeyboard/engine/RustEngineBridge";
 const DISPATCH_METHOD: &str = "dispatchLog";

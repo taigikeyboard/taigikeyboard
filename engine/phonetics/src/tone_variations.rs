@@ -111,7 +111,7 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
 }
 
 /// Returns POJ + TL tone-variation maps in one response.
-pub fn build() -> ToneVariationsResult {
+pub(crate) fn build() -> ToneVariationsResult {
     let poj_variations = build_mode_map(false);
     let tl_variations = build_mode_map(true);
     log::info!(

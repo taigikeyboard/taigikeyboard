@@ -12,6 +12,14 @@ import java.net.URLEncoder
  * Builds MOE / Chhoe Taigi external dictionary lookup URLs from TL display form.
  * Parallels iOS `ExternalLookupURLBuilder.swift`. Tone-digit conversion semantics
  * follow the external dictionaries' URL format (tone 1 / tone 4 omitted).
+ *
+ * Platform-owned by design — URL conventions (which tones to drop, which
+ * query parameters each dictionary takes, percent-encoding rules) are
+ * not phonetics; they belong with the platform that knows about
+ * `URLEncoder`. The phonetic prep step delegates to
+ * `TaigiUnicode.nfdPreprocessed` (kept platform-side per
+ * `feedback_jvm_test_jni_compat.md`) and tone-strip to
+ * `RustEngineBridge.stripTone`.
  */
 object ExternalLookupURLBuilder {
     /** Build Chhoe Taigi lookup URL. Returns null if the TL string produces an empty digit form. */

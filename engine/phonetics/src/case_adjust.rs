@@ -13,7 +13,7 @@ const NASAL_UPPER: char = '\u{1D3A}'; // ᴺ
 /// - Each marker is rewritten in place to follow the case of the most recent
 ///   letter scanned. Non-letter characters between the marker and the prior
 ///   letter (digits, punctuation) do not reset the carried case.
-pub fn adjust_nasal_marker_case(text: &str) -> String {
+pub(crate) fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();
     }

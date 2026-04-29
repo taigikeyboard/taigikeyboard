@@ -11,19 +11,19 @@ pub mod dispatch;
 mod case_adjust;
 mod derivation;
 mod normalization;
-mod parser;
 mod poj;
+mod syllable;
 mod tables;
 mod tl;
 mod tone_variations;
 mod tps;
 mod tps_adjust;
 
-// Top-level re-exports of named entry points — kept stable across the
-// `engine/cli` and integration-test surface. (`process_request` is NOT
-// re-exported: tests call `phonetics::api::process_request` directly,
-// and `engine/dispatch` is the canonical FFI entry.)
+// Top-level re-exports — stable native-helper surface used by the dev
+// `cli` crate and integration tests. The cross-platform FFI envelope
+// is `engine/dispatch::process_request`; this crate exposes only the
+// in-process Rust API.
 pub use api::{convert, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System};
-pub use parser::{normalize_to_tl, strip_tone_mark};
 pub use poj::to_poj;
+pub use syllable::{normalize_to_tl, strip_tone_mark};
 pub use tl::to_tl;

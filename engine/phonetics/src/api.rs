@@ -1,23 +1,17 @@
-//! High-level Phonetics API.
-//!
-//! Two surfaces:
-//! - **Direct calls** (`convert`, `to_tone_marks`, `to_tone_number`) — used by
-//!   tests and the dev `cli` crate.
-//! - **Protobuf entry** (`process_request`) — wraps the direct calls in
-//!   `catch_unwind` and returns prost-encoded bytes. The library-side stand-in
-//!   for D9.2's FFI seam.
+//! High-level Phonetics API for direct in-process callers (the dev
+//! `cli` crate, integration tests, and `phonetics::dispatch::handle`).
+//! The cross-platform FFI envelope lives in `engine/dispatch` per
+//! `rules/rust-best-practices.md §3a`; this module never decodes a
+//! top-level `taigi.engine.Request` or owns a panic boundary.
 
-use crate::parser::{
+use crate::poj::to_poj;
+use crate::syllable::{
     is_stop_tone, normalize_to_tl, parse_syllable, split_initial_final, strip_tone_mark,
 };
-use crate::poj::to_poj;
 use crate::tl::to_tl;
 use crate::tps::to_zhuyin;
 use once_cell::sync::Lazy;
-use prost::Message;
-use protos::engine::{ErrorCode, Request, Response};
 use regex::Regex;
-use std::panic::{catch_unwind, AssertUnwindSafe};
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
@@ -37,12 +31,6 @@ pub enum System {
 
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
-    #[error("invalid protobuf: {0}")]
-    InvalidProto(#[from] prost::DecodeError),
-    #[error("unknown system: {0}")]
-    UnknownSystem(String),
-    #[error("internal panic")]
-    InternalPanic,
     #[error("unsupported op (TPS→TL/POJ word segmentation is out of scope for D9 — Lexicon slice in Phase IV-B)")]
     UnsupportedOp,
 }
@@ -310,108 +298,6 @@ fn is_letter_like(c: char) -> bool {
 
 fn is_combining(c: char) -> bool {
     matches!(c, '\u{0300}'..='\u{036f}')
-}
-
-/// Decode a `Request` from `bytes`, dispatch the Phonetics op, and re-encode the
-/// `Response`. Wrapped in `catch_unwind` so panics anywhere in the
-/// decode → dispatch → encode pipeline surface as a Response with
-/// `ErrorCode::FailInternal` rather than aborting the host process. Per
-/// `docs/engine/ffi-safety.md` §2 the catch boundary covers the entire body so
-/// the function never returns a Rust `Result` or `Option` across the seam.
-#[must_use]
-pub fn process_request(bytes: &[u8]) -> Vec<u8> {
-    process_request_with(bytes, run_request)
-}
-
-/// Indirection for the panic-injection T1' test. The closure replaces the real
-/// dispatcher so the test can force a panic *inside* the same `catch_unwind`
-/// boundary that production code uses, proving the seam catches it.
-/// `#[doc(hidden)]` so it does not surface in published docs.
-#[doc(hidden)]
-pub fn process_request_with<F>(bytes: &[u8], dispatcher: F) -> Vec<u8>
-where
-    F: FnOnce(&[u8]) -> Response + std::panic::UnwindSafe,
-{
-    let result = catch_unwind(AssertUnwindSafe(|| {
-        let response = dispatcher(bytes);
-        encode_response(&response)
-    }));
-    result.unwrap_or_else(|_| {
-        log::error!("phonetics request panicked");
-        encode_response(&error_response(0, ErrorCode::FailInternal, 0))
-    })
-}
-
-fn encode_response(response: &Response) -> Vec<u8> {
-    let mut buf = Vec::with_capacity(response.encoded_len());
-    response
-        .encode(&mut buf)
-        .expect("prost encode into Vec<u8> never fails");
-    buf
-}
-
-/// Production dispatcher. Always returns a `Response` so error envelopes carry
-/// `id` + `generation` echoed from the originating Request per
-/// `docs/engine/rust-core-proto.md` §4.
-fn run_request(bytes: &[u8]) -> Response {
-    let request = match Request::decode(bytes) {
-        Ok(r) => r,
-        Err(e) => {
-            log::warn!("phonetics request decode failed: {e}");
-            // Decode failed before we could read id/generation; both default to 0.
-            return error_response(0, ErrorCode::FailParse, 0);
-        }
-    };
-    let id = request.id;
-    let generation = request.generation;
-    let config = request.config_snapshot.clone().unwrap_or_default();
-
-    let Some(payload) = request.payload else {
-        log::warn!("phonetics request missing payload (id={id})");
-        return error_response(id, ErrorCode::FailInvariant, generation);
-    };
-    // After lexicon.proto added the Lexicon variant to Request.payload (v3.5.2,
-    // commit 1), this binding stopped being irrefutable. The top-level
-    // engine::dispatch (v3.5.2 commit 5) routes by Payload variant; until it
-    // lands, reject lexicon requests here so phonetics callers still work.
-    let protos::engine::request::Payload::Phonetics(phonetics_req) = payload else {
-        log::warn!("phonetics process_request received non-phonetics payload (id={id})");
-        return error_response(id, ErrorCode::FailInvariant, generation);
-    };
-
-    match crate::dispatch::handle(&phonetics_req, &config) {
-        Ok(response_payload) => Response {
-            id,
-            error: ErrorCode::Ok as i32,
-            generation,
-            payload: Some(protos::engine::response::Payload::Phonetics(
-                response_payload,
-            )),
-        },
-        Err(err) => {
-            log::warn!("phonetics request failed (id={id}): {err}");
-            error_response(id, error_code_for(&err), generation)
-        }
-    }
-}
-
-fn error_code_for(err: &PhoneticsError) -> ErrorCode {
-    match err {
-        PhoneticsError::InvalidProto(_) => ErrorCode::FailParse,
-        PhoneticsError::UnknownSystem(_) | PhoneticsError::UnsupportedOp => {
-            ErrorCode::FailInvariant
-        }
-        PhoneticsError::InternalPanic => ErrorCode::FailInternal,
-    }
-}
-
-fn error_response(id: u32, error: ErrorCode, generation: u64) -> Response {
-    Response {
-        id,
-        error: error as i32,
-        generation,
-        payload: None,
-    }
 }
 
 // MARK: - Display-level helpers (iOS / Android `pojDisplayToTLDisplay` / `tlDisplayToPOJDisplay`).

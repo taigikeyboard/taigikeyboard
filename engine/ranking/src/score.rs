@@ -26,7 +26,7 @@
 
 use protos::engine::{ScoreBreakdown, TaigiWord};
 
-use crate::nfd::nfd_preprocessed;
+use crate::nfd::taigi_unicode_base_form;
 
 // ---------------------------------------------------------------------------
 // Cross-platform invariant constants — DO NOT drift without updating
@@ -58,13 +58,13 @@ const SOURCE_TIERS: &[(u32, i32)] = &[
 /// stateless. `last_used_ms == 0` means "never used"; the recency bonus
 /// gate guards against a stray bonus for never-seen entries.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct FrequencyData {
-    pub count: i32,
-    pub last_used_ms: i64,
+pub(crate) struct FrequencyData {
+    pub(crate) count: i32,
+    pub(crate) last_used_ms: i64,
 }
 
 /// Compute the score breakdown for a single candidate.
-pub fn calculate_score(
+pub(crate) fn calculate_score(
     word: &TaigiWord,
     normalized_input: &str,
     freq: FrequencyData,
@@ -114,7 +114,7 @@ pub fn calculate_score(
 /// both platforms. Internal helper; engine returns the breakdown and lets
 /// the platform / sort layer compute totals as needed.
 #[inline]
-pub fn total(breakdown: &ScoreBreakdown) -> i32 {
+pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
     breakdown.user_freq_score
         + breakdown.recency_bonus
         + breakdown.exact_bonus
@@ -142,9 +142,9 @@ pub fn total(breakdown: &ScoreBreakdown) -> i32 {
 /// tone digits 1-9) all three platforms produce byte-identical output;
 /// the strict Nd choice keeps Rust aligned with the narrower Kotlin
 /// contract while remaining a subset of Swift's predicate.
-pub fn roman_to_base(roman: &str) -> String {
+fn roman_to_base(roman: &str) -> String {
     let no_hyphens: String = roman.chars().filter(|c| *c != '-' && *c != ' ').collect();
-    let with_oo = nfd_preprocessed(&no_hyphens);
+    let with_oo = taigi_unicode_base_form(&no_hyphens);
     with_oo
         .chars()
         .filter(|c| !is_nonspacing_mark(*c))
@@ -158,7 +158,7 @@ pub fn roman_to_base(roman: &str) -> String {
 /// numeric tone form (no diacritics) — the digit filter catches the
 /// trailing tone digit (`tai5tsi3` → `taitsi`). Uses the same strict
 /// `Nd` predicate as [`roman_to_base`] for cross-platform parity.
-pub fn input_to_base(normalized_input: &str) -> String {
+fn input_to_base(normalized_input: &str) -> String {
     normalized_input
         .chars()
         .filter(|c| !is_decimal_digit(*c))
@@ -168,7 +168,7 @@ pub fn input_to_base(normalized_input: &str) -> String {
 
 /// First-match-wins multiplier numerator. Returns the default when
 /// `bitmask` is `None` or no `SOURCE_TIERS` entry's bit is set.
-pub fn tier_numerator(bitmask: Option<u32>) -> i32 {
+fn tier_numerator(bitmask: Option<u32>) -> i32 {
     let Some(bits) = bitmask else {
         return DEFAULT_TIER_NUMERATOR;
     };

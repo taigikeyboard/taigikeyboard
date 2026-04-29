@@ -6,6 +6,15 @@ import Foundation
 /// syllables (e.g. `tai7-tsi3`), while our search results carry the
 /// diacritic display form (`tāi-tsì`). This helper encapsulates that
 /// conversion and percent-encoding so the lookup call sites stay trivial.
+///
+/// Platform-owned by design — URL conventions (which tones to drop, which
+/// query parameters each dictionary takes, percent-encoding rules) are
+/// not phonetics; they belong with the platform that knows about
+/// `URLQueryAllowed` / `URLEncoder`. The phonetic prep step delegates to
+/// `TaigiUnicode.nfdPreprocessed` (kept platform-side per
+/// `feedback_jvm_test_jni_compat.md`) and tone-strip to
+/// `RustEngineBridge.stripTone`. Mirror at
+/// `android/.../ime/dictionary/ExternalLookupURLBuilder.kt`.
 enum ExternalLookupURLBuilder {
     /// Chhoe Taigi dictionary lookup URL for the given TL display form.
     static func chhoeURL(forTL tl: String) -> URL? {

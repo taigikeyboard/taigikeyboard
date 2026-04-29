@@ -14,7 +14,7 @@ use unicode_normalization::UnicodeNormalization;
 
 /// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces,
 /// after lowercase + nasal marker conversion (ⁿ U+207F / ᴺ U+1D3A → nn).
-pub fn derive_notone(roman: &str) -> String {
+pub(crate) fn derive_notone(roman: &str) -> String {
     let with_nasal_converted = roman.to_lowercase().replace(['\u{207F}', '\u{1D3A}'], "nn");
     let decomposed: String = with_nasal_converted.nfd().collect();
     let mut result = String::new();
@@ -40,7 +40,7 @@ pub fn derive_notone(roman: &str) -> String {
 ///
 /// Whitespace split = ASCII `[ \t\n\x0B\f\r-]+` literal (matches Android JVM
 /// behavior; NBSP U+00A0 stays a non-delimiter).
-pub fn derive_abbrev(roman: &str) -> String {
+pub(crate) fn derive_abbrev(roman: &str) -> String {
     let lowered = roman.to_lowercase();
     let syllables: Vec<&str> = lowered
         .split([' ', '\t', '\n', '\u{0B}', '\u{0C}', '\r', '-'])

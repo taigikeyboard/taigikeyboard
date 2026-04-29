@@ -1,43 +1,24 @@
-//! `NormalizeTone` integration tests pinning the in-band nasal-marker case
-//! agreement that was added during D9.4 cleanup. Closes the gap identified
-//! in commit `29b5a2a` and the `feedback_rust_swap_preserves_pipeline.md`
-//! meta-feedback.
-//!
-//! Standalone `adjust_nasal_marker_case` is exercised by the in-source unit
-//! tests in `engine/phonetics/src/case_adjust.rs`. No FFI-exposed op for it
-//! because the only would-be caller (`SuggestionCaseTransformer`) reverted
-//! to a platform-side helper for JVM unit-test compatibility — same reason
-//! `TaigiUnicode.nfdPreprocessed` stayed on the platform (no Rust op for
-//! that one either).
+//! `NormalizeTone` integration tests for in-band nasal-marker case
+//! agreement: the case of the POJ nasal marker (ⁿ U+207F vs ᴺ U+1D3A)
+//! must agree with the case of the preceding letter on the way out of
+//! `NormalizeTone`. The standalone `adjust_nasal_marker_case` unit
+//! tests live alongside the helper in `engine/phonetics/src/case_adjust.rs`;
+//! these tests pin the rule end-to-end through the dispatcher.
 
-use phonetics::api::process_request;
-use prost::Message;
+use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
-use protos::engine::{
-    request, response, AppConfig, NormalizeTone, PhoneticsRequest, Request, Response, StringResult,
-};
+use protos::engine::{AppConfig, NormalizeTone, PhoneticsRequest, PhoneticsResponse, StringResult};
 
-fn run(method: Method, config: AppConfig) -> Response {
-    let req = Request {
-        id: 99,
-        r#type: 0,
-        config_snapshot: Some(config),
-        generation: 0,
-        payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            method: Some(method),
-        })),
+fn run(method: Method, config: AppConfig) -> PhoneticsResponse {
+    let req = PhoneticsRequest {
+        method: Some(method),
     };
-    let bytes = req.encode_to_vec();
-    let response_bytes = process_request(&bytes);
-    Response::decode(response_bytes.as_slice()).expect("response decodes")
+    handle(&req, &config).expect("dispatch handle should succeed")
 }
 
-fn string_result(resp: &Response) -> &str {
-    let Some(response::Payload::Phonetics(phon)) = resp.payload.as_ref() else {
-        panic!("expected phonetics payload");
-    };
-    let result = phon.result.as_ref().expect("phonetics result");
+fn string_result(resp: &PhoneticsResponse) -> &str {
+    let result = resp.result.as_ref().expect("phonetics result");
     match result {
         PhonResult::StringResult(StringResult { output }) => output.as_str(),
         other => panic!("expected StringResult, got {other:?}"),
@@ -93,6 +74,12 @@ fn normalize_tone_mixed_case_per_marker_resolution() {
         cfg,
     );
     let out = string_result(&resp);
-    assert!(out.contains('\u{1D3A}'), "expected ᴺ in uppercase syllable: {out:?}");
-    assert!(out.contains('\u{207F}'), "expected ⁿ in lowercase syllable: {out:?}");
+    assert!(
+        out.contains('\u{1D3A}'),
+        "expected ᴺ in uppercase syllable: {out:?}"
+    );
+    assert!(
+        out.contains('\u{207F}'),
+        "expected ⁿ in lowercase syllable: {out:?}"
+    );
 }

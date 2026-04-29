@@ -18,9 +18,11 @@ import java.text.Normalizer
  * preserves the test path.
  *
  * CROSS-PLATFORM INVARIANT — semantics must match iOS
- * `TaigiUnicode.swift` `nfdPreprocessed`. Both implementations are
- * exact-equivalent preprocessing for tone-mark / combining-character
- * analysis.
+ * `TaigiUnicode.swift::nfdPreprocessed` and Rust
+ * `engine/ranking/src/nfd.rs::taigi_unicode_base_form` (Rust copy is
+ * the production ranking path; this Kotlin copy is the platform pin).
+ * All three implementations are exact-equivalent preprocessing for
+ * tone-mark / combining-character analysis.
  */
 object TaigiUnicode {
     /**

@@ -448,7 +448,6 @@ dependencies = [
  "log",
  "once_cell",
  "proptest",
- "prost",
  "protos",
  "regex",
  "thiserror",

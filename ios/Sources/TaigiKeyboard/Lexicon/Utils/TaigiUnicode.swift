@@ -14,10 +14,10 @@ import Foundation
 ///
 /// CROSS-PLATFORM INVARIANT — semantics must match Android
 /// `TaigiUnicode.kt::nfdPreprocessed` and Rust
-/// `engine/ranking/src/nfd.rs::nfd_preprocessed` (Rust copy is the
-/// production ranking path; this Foundation copy is the platform pin).
-/// All three implementations are exact-equivalent preprocessing for
-/// tone-mark / combining-character analysis.
+/// `engine/ranking/src/nfd.rs::taigi_unicode_base_form` (Rust copy is
+/// the production ranking path; this Foundation copy is the platform
+/// pin). All three implementations are exact-equivalent preprocessing
+/// for tone-mark / combining-character analysis.
 
 // MARK: - Shared-Core Candidate
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.

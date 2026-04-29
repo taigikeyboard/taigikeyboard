@@ -91,7 +91,7 @@ fn normalize_to_tl_cases() {
 }
 
 // `is_stop_tone`, `split_initial_final`, `parse_syllable` tests live in
-// `engine/phonetics/src/parser.rs` `#[cfg(test)] mod tests` (these are
+// `engine/phonetics/src/syllable.rs` `#[cfg(test)] mod tests` (these are
 // `pub(crate)` helpers; integration tests can't reach them).
 
 // MARK: - to_tl. SOURCE: tl.test.js + TaigiPhoneticsTests.swift testToTL_*.

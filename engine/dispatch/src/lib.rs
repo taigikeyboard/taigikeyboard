@@ -18,12 +18,35 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use prost::Message;
 use protos::engine::{request, response, ErrorCode, Request, Response};
 
+/// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
+/// from the IME are kilobytes at worst; 2 MB is generous slack for proto
+/// envelope overhead. Single source of truth — `swift-ffi` and
+/// `android-jni` import this constant for their pre-allocation early
+/// rejection so the cap stays in lock-step across both FFI seams.
+pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
+
 /// Decode `bytes` as a `Request`, dispatch by payload variant, encode the
 /// resulting `Response`. Always returns a valid encoded `Response` —
 /// never panics across the seam.
 #[must_use]
 pub fn process_request(bytes: &[u8]) -> Vec<u8> {
     let result = catch_unwind(AssertUnwindSafe(|| encode(&run(bytes))));
+    result.unwrap_or_else(|_| {
+        log::error!("engine dispatch panicked");
+        encode(&error_response(0, ErrorCode::FailInternal, 0))
+    })
+}
+
+/// `#[cfg(test)]`-only panic-injection seam. The inline panic test passes
+/// a closure that always panics so the catch-unwind boundary is
+/// exercised against a known panic. Production code never references
+/// this; it is compiled out of release builds.
+#[cfg(test)]
+fn process_request_with<F>(bytes: &[u8], dispatcher: F) -> Vec<u8>
+where
+    F: FnOnce(&[u8]) -> Response + std::panic::UnwindSafe,
+{
+    let result = catch_unwind(AssertUnwindSafe(|| encode(&dispatcher(bytes))));
     result.unwrap_or_else(|_| {
         log::error!("engine dispatch panicked");
         encode(&error_response(0, ErrorCode::FailInternal, 0))
@@ -92,10 +115,7 @@ fn run(bytes: &[u8]) -> Response {
 
 fn phonetics_error_code(err: &phonetics::PhoneticsError) -> ErrorCode {
     match err {
-        phonetics::PhoneticsError::InvalidProto(_) => ErrorCode::FailParse,
-        phonetics::PhoneticsError::UnknownSystem(_)
-        | phonetics::PhoneticsError::UnsupportedOp => ErrorCode::FailInvariant,
-        phonetics::PhoneticsError::InternalPanic => ErrorCode::FailInternal,
+        phonetics::PhoneticsError::UnsupportedOp => ErrorCode::FailInvariant,
     }
 }
 
@@ -122,8 +142,7 @@ fn encode(response: &Response) -> Vec<u8> {
 mod tests {
     use super::*;
     use protos::engine::{
-        AppConfig, CommandType, FrequencyEntry, LexiconRequest, ProcessCandidatesRequest,
-        TaigiWord,
+        AppConfig, CommandType, FrequencyEntry, LexiconRequest, ProcessCandidatesRequest, TaigiWord,
     };
 
     fn lexicon_request(req: ProcessCandidatesRequest) -> Request {
@@ -133,9 +152,9 @@ mod tests {
             config_snapshot: Some(AppConfig::default()),
             generation: 7,
             payload: Some(request::Payload::Lexicon(LexiconRequest {
-                method: Some(
-                    protos::engine::lexicon_request::Method::ProcessCandidates(req),
-                ),
+                method: Some(protos::engine::lexicon_request::Method::ProcessCandidates(
+                    req,
+                )),
             })),
         }
     }
@@ -228,5 +247,23 @@ mod tests {
         let resp = Response::decode(resp_bytes.as_slice()).unwrap();
         assert_eq!(resp.error, ErrorCode::FailInvariant as i32);
         assert_eq!(resp.id, 9);
+    }
+
+    /// Mirrors `docs/engine/ffi-safety.md` §7 T1' (library-side panic
+    /// isolation). Inject a dispatcher that panics; the same
+    /// `catch_unwind` boundary used by `process_request` must convert
+    /// the panic into an encoded `Response` carrying `FailInternal`.
+    /// Uses the crate-private `process_request_with` seam so production
+    /// code never has to expose a panic-injection hook.
+    #[test]
+    fn forced_dispatcher_panic_is_caught_and_returns_fail_internal() {
+        let resp_bytes = process_request_with(&[1, 2, 3], |_| panic!("intentional T1' test panic"));
+        let resp = Response::decode(resp_bytes.as_slice()).expect("response decodes");
+        assert_eq!(
+            resp.error,
+            ErrorCode::FailInternal as i32,
+            "panic in dispatcher must surface as FailInternal, got error={}",
+            resp.error
+        );
     }
 }

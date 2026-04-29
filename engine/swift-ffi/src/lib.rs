@@ -6,14 +6,11 @@
 //! plan v3 §B3 so an oversized payload returns `FAIL_INVARIANT` instead of
 //! allocating without bound.
 
+use dispatch::MAX_REQUEST_BYTES;
 use prost::Message;
 use protos::engine::{ErrorCode, Response};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, Once, OnceLock};
-
-/// 2 MB cap on the request byte buffer. Phonetics inputs from the IME are
-/// kilobytes at worst; 2 MB is generous slack for proto envelope overhead.
-pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
 // Bridge module. Doc comments live OUTSIDE this block — swift-bridge's parser
 // rejects `///` on the items inside.

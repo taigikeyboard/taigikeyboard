@@ -8,9 +8,9 @@
 //! - `derivation` owns CustomDictionaryDerivation port (notone / abbrev).
 //! - `normalization` owns InputNormalizer + ToneRestoration ports
 //!   (NFD / combining-mark mechanics).
-//! - `tps_adjust` owns the TPSAdjustmentBundle port (4-fn collapse).
+//! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
 //! - `tone_variations` owns the GetToneVariations init-pull table builder.
-//! - Existing modules (`api`, `parser`, `tps`, `poj`, `tl`, `tables`)
+//! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
 use crate::api::{
@@ -55,7 +55,7 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
             PhonResult::StringResult(StringResult { output })
         }
         Method::StripTone(payload) => {
-            let (bare, tone) = crate::parser::strip_tone_mark(&payload.input);
+            let (bare, tone) = crate::syllable::strip_tone_mark(&payload.input);
             PhonResult::StripToneResult(StripToneResult { bare, tone })
         }
         Method::PojToTl(payload) => PhonResult::StringResult(StringResult {
@@ -65,7 +65,7 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
             output: tl_display_to_poj_display(&payload.input),
         }),
         Method::NormalizeToTl(payload) => PhonResult::StringResult(StringResult {
-            output: crate::parser::normalize_to_tl(&payload.input),
+            output: crate::syllable::normalize_to_tl(&payload.input),
         }),
         Method::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
             output: normalization::normalize_input(&payload.input),

@@ -28,7 +28,7 @@ use unicode_normalization::UnicodeNormalization;
 ///    + checked-ending heuristic.
 ///
 /// Replaces both platforms' `InputNormalizer.normalize`.
-pub fn normalize_input(input: &str) -> String {
+pub(crate) fn normalize_input(input: &str) -> String {
     if input.is_empty() {
         return String::new();
     }
@@ -48,7 +48,7 @@ pub fn normalize_input(input: &str) -> String {
 
 /// `Method::HasToneMarks` — true if `text` (after NFD) contains any combining
 /// tone mark recognised by `COMBINING_TO_TONE_NUM`.
-pub fn has_tone_marks(text: &str) -> bool {
+pub(crate) fn has_tone_marks(text: &str) -> bool {
     text.nfd().any(|c| COMBINING_TO_TONE_NUM.contains_key(&c))
 }
 
@@ -56,7 +56,7 @@ fn normalize_syllable(syllable: &str, add_default_tone: bool) -> String {
     if syllable.is_empty() {
         return String::new();
     }
-    let with_oo = nfd_preprocessed(syllable);
+    let with_oo = trie_key_unicode_form(syllable);
     if let Some(last) = with_oo.chars().last() {
         if last.is_ascii_digit() {
             return with_oo;
@@ -87,7 +87,7 @@ fn normalize_syllable(syllable: &str, add_default_tone: bool) -> String {
 
 /// Mirrors iOS `TaigiUnicode.nfdPreprocessed`: NFD-decompose, then convert
 /// `ⁿ` → `nn` and `o͘` → `oo` so the trie key uses ASCII-only forms.
-fn nfd_preprocessed(text: &str) -> String {
+fn trie_key_unicode_form(text: &str) -> String {
     let with_nasal = text.replace(['\u{207f}', '\u{1d3a}'], "nn");
     let decomposed: String = with_nasal.nfd().collect();
     // o + combining dot above right (U+0358) → "oo"
@@ -103,7 +103,7 @@ fn nfd_preprocessed(text: &str) -> String {
 /// `Method::RestoreTone` — find the LAST combining tone mark in NFD-decomposed
 /// `text`, remove it, and NFC-recompose. Returns `None` if no tone mark
 /// found. Replaces both platforms' `ToneRestoration.restore`.
-pub fn restore_tone(text: &str) -> Option<String> {
+pub(crate) fn restore_tone(text: &str) -> Option<String> {
     if text.is_empty() {
         return None;
     }

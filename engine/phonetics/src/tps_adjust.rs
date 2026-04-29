@@ -14,7 +14,7 @@
 //! (`{ㄗ, ㄘ, ㄙ, ㆡ}`) are disjoint by `lastChar`, so the `?:` short-circuit
 //! is observationally equivalent to running both checks unconditionally.
 
-use crate::tables::{ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
+use crate::tps::{ZHUYIN_TONES, ZHUYIN_TONES_ENCODE_SAFE};
 use once_cell::sync::Lazy;
 use std::collections::HashSet;
 
@@ -52,13 +52,13 @@ static TONE_MARK_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
     set
 });
 
-pub fn is_tps_tone_mark(c: char) -> bool {
+fn is_tps_tone_mark(c: char) -> bool {
     TONE_MARK_CHARS.contains(&c)
 }
 
 /// String-overload for the `Method::IsTpsToneMark` op which takes a string
 /// (single grapheme expected). Returns false on empty / multi-grapheme.
-pub fn is_tps_tone_mark_str(s: &str) -> bool {
+pub(crate) fn is_tps_tone_mark_str(s: &str) -> bool {
     let mut chars = s.chars();
     let Some(c) = chars.next() else { return false };
     if chars.next().is_some() {
@@ -91,7 +91,7 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
 /// Returns context-adjusted TPS character for keys with dual initial/final
 /// forms. At syllable start → keep initial form. Not at syllable start →
 /// final form (with ㄫ context-aware: after ㄧ → ㄥ, otherwise → ㆭ).
-pub fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
+fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
     let Some(first) = char_str.chars().next() else {
         return char_str.to_string();
     };
@@ -119,7 +119,7 @@ pub fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
 
 /// Auto-correct `ㆮ` → `ㆯ` when preceded by `ㄧ`. "iainn" is invalid;
 /// only "iaunn" exists.
-pub fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
+fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
     if char_str != "ㆮ" {
         return char_str.to_string();
     }
@@ -134,7 +134,7 @@ pub fn adjust_nasalized_vowel_key(char_str: &str, raw_input: &str) -> String {
 }
 
 /// Returns syllabic replacement for `lastRawChar`, or None.
-pub fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
+fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
     if !is_tps_tone_mark(first) {
@@ -148,7 +148,7 @@ pub fn syllabic_nasal_replacement(incoming: &str, last_raw_char: Option<char>) -
 }
 
 /// Returns palatalized replacement for `lastRawChar`, or None.
-pub fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
+fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Option<String> {
     let last = last_raw_char?;
     let first = incoming.chars().next()?;
     if !matches!(first, 'ㄧ' | 'ㆪ') {
@@ -169,7 +169,7 @@ pub fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -
 
 /// Collapse-equivalent of iOS `CharacterInputPipeline.adjust(_, .tps, raw)`.
 /// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
-pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
+pub(crate) fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
     let mut adjusted = adjust_initial_key(incoming, raw_input);
     adjusted = adjust_nasalized_vowel_key(&adjusted, raw_input);
 

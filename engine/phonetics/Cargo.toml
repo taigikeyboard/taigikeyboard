@@ -10,7 +10,6 @@ publish = false
 workspace = true
 
 [dependencies]
-prost = { workspace = true }
 protos = { workspace = true }
 unicode-normalization = { workspace = true }
 regex = { workspace = true }

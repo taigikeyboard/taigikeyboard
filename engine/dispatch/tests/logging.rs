@@ -1,10 +1,10 @@
-//! T6 — Rust core uses the `log` crate. A capture logger installed by the test
-//! must receive records emitted from the dispatch path. Real T6 (round-trip
-//! through `OSLog` / `android.util.Log`) lives in D9.2 — D9.1 just verifies
-//! that `phonetics` honors the contract by going through `log` at all.
+//! `engine/dispatch` honors the `log` crate contract (`ffi-safety.md`
+//! §7 T6 library half). A capture logger installed by this test must
+//! receive records emitted from the dispatch path; the FFI-side round
+//! trip through `OSLog` / `android.util.Log` is exercised separately
+//! by the platform test targets.
 
 use log::{Level, Metadata, Record};
-use phonetics::api::process_request;
 use std::sync::{Mutex, OnceLock};
 
 struct CaptureLogger {
@@ -42,14 +42,14 @@ fn install_logger() -> &'static CaptureLogger {
 fn malformed_request_emits_warning_through_log_crate() {
     let logger = install_logger();
     {
-        // Drain prior messages so the assertion is stable when this test file
-        // grows additional cases.
+        // Drain prior messages so the assertion is stable when this
+        // test file grows additional cases.
         logger.sink.lock().unwrap().clear();
     }
-    let _ = process_request(&[0xff, 0x01, 0xff]);
+    let _ = dispatch::process_request(&[0xff, 0x01, 0xff]);
     let captured = logger.sink.lock().unwrap().clone();
     assert!(
-        captured.iter().any(|m| m.contains("phonetics request")),
-        "expected a 'phonetics request' warning, captured: {captured:?}"
+        captured.iter().any(|m| m.contains("engine request")),
+        "expected an 'engine request' warning, captured: {captured:?}"
     );
 }

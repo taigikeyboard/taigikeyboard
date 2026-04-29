@@ -24,7 +24,7 @@ use protos::engine::TaigiWord;
 /// on both iOS (`Lexicon/Utils/CandidateProcessor.swift`) and Android
 /// (`ime/dictionary/CandidateProcessor.kt`). The pipe-delimited key shape
 /// must match exactly so the deduped sets align across platforms.
-pub fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
+pub(crate) fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen: HashSet<String> = HashSet::with_capacity(words.len());
     let mut result: Vec<TaigiWord> = Vec::with_capacity(words.len());
 
@@ -44,7 +44,7 @@ pub fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
 /// MUST be called only after sorting so the highest-ranked entry per
 /// hanji survives — this matches the platform contract documented in
 /// `CandidateProcessor.removeDisplayDuplicates`.
-pub fn remove_display_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
+pub(crate) fn remove_display_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen_hanji: HashSet<String> = HashSet::with_capacity(words.len());
     let mut result: Vec<TaigiWord> = Vec::with_capacity(words.len());
 

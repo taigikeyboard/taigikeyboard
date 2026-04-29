@@ -1,77 +1,76 @@
-//! D9.4 op coverage — exercises every new intent introduced in commit 2/3
-//! end-to-end through `process_request` so the wire format + dispatcher +
-//! implementation all stay in sync. Pre-impl Codex review v3 §3 mandated
-//! branch coverage for TPS adjustment and NBSP no-split for abbrev; both
-//! are pinned here.
+//! Op coverage — exercises every `PhoneticsRequest.method` variant
+//! end-to-end through the dispatcher so the wire format, dispatch
+//! routing, and per-op implementation stay in sync. Includes branch
+//! coverage for the TPS input adjuster and NBSP-as-non-delimiter for
+//! `derive_abbrev`.
 
-use phonetics::api::process_request;
-use prost::Message;
+use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    request, response, AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, ErrorCode,
-    GetToneVariations, HasToneMarks, IsTpsToneMark, NormalizeInput, NormalizeTone, NormalizeToTl,
-    OptionalStringResult, PhoneticsRequest, PojToTl, Request, Response, RestoreTone, StringResult,
+    AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, GetToneVariations,
+    HasToneMarks, IsTpsToneMark, NormalizeInput, NormalizeToTl, NormalizeTone,
+    OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone, StringResult,
     StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj, ToneVariationsResult,
     TpsAdjustResult, TpsInputAdjust, TpsToTl,
 };
 
 // ---------------- helpers ----------------
+//
+// Domain-level tests: drive `phonetics::dispatch::handle` directly and
+// assert against `Result<PhoneticsResponse>`. Envelope concerns
+// (`taigi.engine.Request` decoding, `Response.id`/`error`/`generation`,
+// panic catching) live in `engine/dispatch/tests/` — exercising them
+// from the phonetics crate would invert the production dependency
+// graph.
 
-fn run(method: Method, config: AppConfig) -> Response {
-    let req = Request {
-        id: 42,
-        r#type: 0,
-        config_snapshot: Some(config),
-        generation: 0,
-        payload: Some(request::Payload::Phonetics(PhoneticsRequest {
-            method: Some(method),
-        })),
+fn run(method: Method, config: AppConfig) -> PhoneticsResponse {
+    let req = PhoneticsRequest {
+        method: Some(method),
     };
-    let mut buf = Vec::with_capacity(req.encoded_len());
-    req.encode(&mut buf).unwrap();
-    let resp_bytes = process_request(&buf);
-    Response::decode(resp_bytes.as_slice()).expect("response decodes")
+    handle(&req, &config).expect("dispatch handle should succeed")
 }
 
-fn ok_phon(resp: &Response) -> &PhonResult {
-    assert_eq!(resp.error, ErrorCode::Ok as i32, "expected OK, got {resp:?}");
-    let Some(response::Payload::Phonetics(p)) = &resp.payload else {
-        panic!("expected phonetics payload");
-    };
-    p.result.as_ref().expect("expected result")
+fn ok_phon(resp: &PhoneticsResponse) -> &PhonResult {
+    resp.result
+        .as_ref()
+        .expect("PhoneticsResponse.result should be present")
 }
 
-fn string_result(resp: &Response) -> String {
+fn string_result(resp: &PhoneticsResponse) -> String {
     let PhonResult::StringResult(StringResult { output }) = ok_phon(resp) else {
         panic!("expected StringResult, got {:?}", ok_phon(resp));
     };
     output.clone()
 }
 
-fn bool_result(resp: &Response) -> bool {
+fn bool_result(resp: &PhoneticsResponse) -> bool {
     let PhonResult::BoolResult(BoolResult { value }) = ok_phon(resp) else {
         panic!("expected BoolResult");
     };
     *value
 }
 
-fn opt_result(resp: &Response) -> Option<String> {
+fn opt_result(resp: &PhoneticsResponse) -> Option<String> {
     let PhonResult::OptionalStringResult(OptionalStringResult { output, present }) = ok_phon(resp)
     else {
         panic!("expected OptionalStringResult");
     };
-    if *present { Some(output.clone()) } else { None }
+    if *present {
+        Some(output.clone())
+    } else {
+        None
+    }
 }
 
-fn strip_result(resp: &Response) -> (String, String) {
+fn strip_result(resp: &PhoneticsResponse) -> (String, String) {
     let PhonResult::StripToneResult(StripToneResult { bare, tone }) = ok_phon(resp) else {
         panic!("expected StripToneResult");
     };
     (bare.clone(), tone.clone())
 }
 
-fn tps_adjust_result(resp: &Response) -> (String, Option<String>) {
+fn tps_adjust_result(resp: &PhoneticsResponse) -> (String, Option<String>) {
     let PhonResult::TpsAdjustResult(TpsAdjustResult {
         adjusted,
         replace_last,
@@ -80,19 +79,20 @@ fn tps_adjust_result(resp: &Response) -> (String, Option<String>) {
         panic!("expected TpsAdjustResult");
     };
     let opt = replace_last.as_ref().and_then(|r| {
-        if r.present { Some(r.output.clone()) } else { None }
+        if r.present {
+            Some(r.output.clone())
+        } else {
+            None
+        }
     });
     (adjusted.clone(), opt)
 }
 
-fn tone_variations_result(resp: &Response) -> &ToneVariationsResult {
+fn tone_variations_result(resp: &PhoneticsResponse) -> ToneVariationsResult {
     let PhonResult::ToneVariationsResult(t) = ok_phon(resp) else {
         panic!("expected ToneVariationsResult");
     };
-    // Static reference into the response — but Response is owned here.
-    // Workaround: leak via a static slot (never freed) for read-only inspection.
-    // Tests are short-lived; acceptable.
-    Box::leak(Box::new(t.clone()))
+    t.clone()
 }
 
 fn tl_config() -> AppConfig {
@@ -128,7 +128,10 @@ fn normalize_tone_tl_basic() {
     let out = string_result(&resp);
     // Tone digit 2 → diacritic on vowel; exact NFC form matches existing
     // to_tone_marks behavior.
-    assert!(!out.is_empty(), "TL normalize should produce non-empty output");
+    assert!(
+        !out.is_empty(),
+        "TL normalize should produce non-empty output"
+    );
     assert!(!out.contains('2'), "tone digit should be removed");
 }
 
@@ -208,7 +211,10 @@ fn tl_to_poj_display_round_trip() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(out.contains('\u{0358}'), "TL oo should map to POJ o͘: {out:?}");
+    assert!(
+        out.contains('\u{0358}'),
+        "TL oo should map to POJ o͘: {out:?}"
+    );
 }
 
 #[test]
@@ -398,19 +404,34 @@ fn derive_abbrev_does_not_split_on_nbsp() {
 
 #[test]
 fn contains_tps_true_for_zhuyin() {
-    let resp = run(Method::ContainsTps(ContainsTps { text: "ㄉㄧㄠ".to_string() }), tl_config());
+    let resp = run(
+        Method::ContainsTps(ContainsTps {
+            text: "ㄉㄧㄠ".to_string(),
+        }),
+        tl_config(),
+    );
     assert!(bool_result(&resp));
 }
 
 #[test]
 fn contains_tps_false_for_latin() {
-    let resp = run(Method::ContainsTps(ContainsTps { text: "tiau".to_string() }), tl_config());
+    let resp = run(
+        Method::ContainsTps(ContainsTps {
+            text: "tiau".to_string(),
+        }),
+        tl_config(),
+    );
     assert!(!bool_result(&resp));
 }
 
 #[test]
 fn tps_to_tl_basic() {
-    let resp = run(Method::TpsToTl(TpsToTl { text: "ㄉㄧㄠˊ".to_string() }), tl_config());
+    let resp = run(
+        Method::TpsToTl(TpsToTl {
+            text: "ㄉㄧㄠˊ".to_string(),
+        }),
+        tl_config(),
+    );
     let out = string_result(&resp);
     assert!(out.contains("tiau"), "got {out:?}");
 }
@@ -425,7 +446,10 @@ fn tl_numeric_to_tps_basic() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(!out.is_empty(), "TL numeric → TPS should produce zhuyin: {out:?}");
+    assert!(
+        !out.is_empty(),
+        "TL numeric → TPS should produce zhuyin: {out:?}"
+    );
 }
 
 #[test]
@@ -438,7 +462,10 @@ fn tl_display_to_tps_uses_display_form() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(!out.is_empty(), "TL display → TPS should produce zhuyin: {out:?}");
+    assert!(
+        !out.is_empty(),
+        "TL display → TPS should produce zhuyin: {out:?}"
+    );
 }
 
 /// Default (`or_maps_to_er=false`) renders the vowel `or` as ㄛ (`\u{311b}`),
@@ -454,8 +481,14 @@ fn tl_numeric_to_tps_or_default_uses_o_vowel() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(out.contains('\u{311b}'), "or → ㄛ when toggle off; got {out:?}");
-    assert!(!out.contains('\u{311c}'), "must not contain ㄜ when toggle off; got {out:?}");
+    assert!(
+        out.contains('\u{311b}'),
+        "or → ㄛ when toggle off; got {out:?}"
+    );
+    assert!(
+        !out.contains('\u{311c}'),
+        "must not contain ㄜ when toggle off; got {out:?}"
+    );
 }
 
 /// With the toggle ON, the same `or` syllable renders as ㄜ (`\u{311c}`),
@@ -470,8 +503,14 @@ fn tl_numeric_to_tps_or_maps_to_er_when_enabled() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(out.contains('\u{311c}'), "or → ㄜ when toggle on; got {out:?}");
-    assert!(!out.contains('\u{311b}'), "must not contain ㄛ when toggle on; got {out:?}");
+    assert!(
+        out.contains('\u{311c}'),
+        "or → ㄜ when toggle on; got {out:?}"
+    );
+    assert!(
+        !out.contains('\u{311b}'),
+        "must not contain ㄛ when toggle on; got {out:?}"
+    );
 }
 
 /// Multi-syllable input must preserve the syllable boundary as a single
@@ -487,7 +526,10 @@ fn tl_numeric_to_tps_preserves_syllable_boundaries() {
     );
     let out = string_result(&resp);
     let space_count = out.matches(' ').count();
-    assert_eq!(space_count, 1, "two syllables should be joined by exactly one space; got {out:?}");
+    assert_eq!(
+        space_count, 1,
+        "two syllables should be joined by exactly one space; got {out:?}"
+    );
 }
 
 /// Repeated hyphen `--` (or leading / trailing `-`) must NOT introduce
@@ -502,8 +544,15 @@ fn tl_numeric_to_tps_handles_repeated_hyphen_without_double_space() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert!(!out.contains("  "), "no double space across `--`; got {out:?}");
-    assert_eq!(out.matches(' ').count(), 1, "exactly one space; got {out:?}");
+    assert!(
+        !out.contains("  "),
+        "no double space across `--`; got {out:?}"
+    );
+    assert_eq!(
+        out.matches(' ').count(),
+        1,
+        "exactly one space; got {out:?}"
+    );
 }
 
 /// Display-form path shares the helper, so the syllable-boundary fix must
@@ -518,24 +567,43 @@ fn tl_display_to_tps_preserves_syllable_boundaries() {
         tl_config(),
     );
     let out = string_result(&resp);
-    assert_eq!(out.matches(' ').count(), 1, "display-form multi-syllable must keep one space; got {out:?}");
+    assert_eq!(
+        out.matches(' ').count(),
+        1,
+        "display-form multi-syllable must keep one space; got {out:?}"
+    );
 }
 
 #[test]
 fn is_tps_tone_mark_true_for_acute() {
-    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: "\u{02ca}".to_string() }), tl_config());
+    let resp = run(
+        Method::IsTpsToneMark(IsTpsToneMark {
+            char: "\u{02ca}".to_string(),
+        }),
+        tl_config(),
+    );
     assert!(bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_letter() {
-    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: "a".to_string() }), tl_config());
+    let resp = run(
+        Method::IsTpsToneMark(IsTpsToneMark {
+            char: "a".to_string(),
+        }),
+        tl_config(),
+    );
     assert!(!bool_result(&resp));
 }
 
 #[test]
 fn is_tps_tone_mark_false_for_empty() {
-    let resp = run(Method::IsTpsToneMark(IsTpsToneMark { char: String::new() }), tl_config());
+    let resp = run(
+        Method::IsTpsToneMark(IsTpsToneMark {
+            char: String::new(),
+        }),
+        tl_config(),
+    );
     assert!(!bool_result(&resp));
 }
 
@@ -657,7 +725,10 @@ fn tps_adjust_disjoint_trigger_invariant() {
         for incoming in ["ㄧ", "ㆪ"] {
             let (adjusted, replace) = tps_adjust(incoming, last);
             assert_eq!(adjusted, incoming);
-            assert_eq!(replace, None, "{incoming} after {last} must not trigger either");
+            assert_eq!(
+                replace, None,
+                "{incoming} after {last} must not trigger either"
+            );
         }
     }
 }
