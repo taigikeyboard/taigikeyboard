@@ -6,330 +6,299 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
+import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Platform wrapper around the pure [ComposingState] engine.
+ * Android platform wrapper around the Rust shared-core composing engine
+ * (`engine/composing` crate, accessed via `RustEngineBridge.composing*`).
  *
- * Responsibilities kept here (platform-specific):
- * - Reads `EngineSettingsProvider.current.inputMode` + `.toneToggles` per
- *   dispatch so settings stay live-read (see `ios-exemplar.md` §3 warning
- *   on snapshot-initializers; Android DataStore analogue).
- * - Executes [ComposingTransition.Effect] values against the live
- *   [InputConnection] via [ComposingDelegate] (default binding per
- *   `composing-state-boundary.md` §11.2).
- * - Preserves current API signatures (methods take `ic: InputConnection`
- *   per call) so call-sites in `TextInputManager` / `CandidateClickHandler`
- *   / `CandidateUpdateCoordinator` / etc. do not need to be rewritten.
+ * Engine state (phase + raw input + selectedCandidateIndex) lives inside
+ * the Rust singleton EngineHandle; this wrapper:
+ * - mirrors the latest response into local fields so existing callers
+ *   (TextInputManager, CandidateUpdateCoordinator, SmartbarManager,
+ *   CandidateClickHandler) do not need re-shape,
+ * - dispatches the bridge-emitted `Effect[]` through [ComposingDelegate]
+ *   in proto-list order against the live [InputConnection],
+ * - encodes the documented Android divergence for the 1-char delete path
+ *   (plan §5b.1): query state first, route through `composingReset` when
+ *   the buffer holds exactly one character so `deleteSurroundingText` does
+ *   NOT remove a pre-existing document char.
  *
- * The engine boundary lives in [ComposingState] + [ComposingTransition] —
- * this wrapper is intentionally mechanical.
- *
- * Mirrors iOS `Input/Composing/ComposingManager.swift` post-G4-impl shape.
+ * Lifecycle: [bumpGeneration] is called from
+ * `TextInputManager.onStartInputView(restarting=false)` (commit 11) when a
+ * real input-context change occurs. Engine compares incoming generation to
+ * its last-seen and silently drops state on mismatch (no effects emitted
+ * from the drop itself; the request's own effects then apply against
+ * fresh state).
  */
 class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
 ) {
     @Volatile
-    private var state: ComposingState = ComposingState()
+    private var cachedRawInput: String = ""
+
+    @Volatile
+    private var cachedDisplayText: String = ""
+
+    @Volatile
+    private var cachedIsComposing: Boolean = false
+
+    @Volatile
+    private var cachedSelectedCandidateIndex: Int = -1
 
     /**
-     * Off-main-thread display re-derivation writes through this mirror so
-     * `updateCandidates` / UI can read the derived form without blocking
-     * the dispatch path. The raw preedit is emitted first by
-     * [ComposingState.apply], then [applyDerivedDisplay] replaces it
-     * asynchronously. See `composing-state-boundary.md` §11 Android
-     * addendum for the rationale — iOS derives synchronously; Android
-     * keeps the async path as a refactor-freeze preservation.
+     * Generation source. Lives on the companion so it survives
+     * `ComposingManager` reconstruction across `onStartInputView` calls.
+     * Engine-side `last_generation` is also process-singleton; both must
+     * be monotonic in the same address space so the generation-mismatch
+     * silent-drop semantics actually fire on real input-context changes.
+     */
+    private val currentGeneration: Long
+        get() = sharedGeneration.get()
+
+    /**
+     * `true` while the manager is dispatching effects from a self-driven
+     * commit. Suppresses redundant generation bumps from `textWillChange`
+     * / `onUpdateSelection` firing on candidate taps / self-commits.
      */
     @Volatile
-    private var cachedDerivedDisplay: String = ""
+    var selfCommitInProgress: Boolean = false
+        internal set
 
     val selectedCandidateIndex: Int
-        get() = state.selectedCandidateIndex
+        get() = cachedSelectedCandidateIndex
 
-    fun isComposing(): Boolean = state.isComposing
+    fun isComposing(): Boolean = cachedIsComposing
 
-    fun getRawInput(): String? = if (state.isComposing) state.rawInput else null
+    fun getRawInput(): String? = if (cachedIsComposing) cachedRawInput else null
 
     fun getComposingText(): String? =
-        if (state.isComposing) {
-            cachedDerivedDisplay.ifEmpty { state.rawInput }
-        } else {
-            null
-        }
+        if (cachedIsComposing) cachedDisplayText.ifEmpty { cachedRawInput } else null
 
-    // region Intent dispatch API — signatures preserved from pre-A4 shape
-
-    fun startComposing(
-        char: String,
-        ic: InputConnection,
-    ) {
-        // Mid-composition restart: zero-then-finish the old preedit before
-        // starting the new one. Android's composing region is in the
-        // document (vs iOS floating marked text), so `setComposingText`
-        // alone would replace the region without committing it, but the
-        // explicit pre-zero pins
-        // `INVARIANT_composing_clear_preedit_does_not_commit` and matches
-        // the contract landed by the parity correction in PR #151 (see
-        // `composing-state-boundary.md` §11.6 + §11.10).
-        if (state.isComposing) {
-            dispatch(ComposingState.Intent.Reset, ic)
-        }
-        dispatch(ComposingState.Intent.Start(char), ic)
+    /**
+     * Bump on real input-context change. Engine drops state silently on the
+     * next request. Wired by [com.siansiansu.taigikeyboard.ime.text.TextInputManager]
+     * in commit 11.
+     *
+     * Process-singleton via companion `AtomicLong` so it survives
+     * `ComposingManager` reconstruction.
+     */
+    fun bumpGeneration() {
+        sharedGeneration.incrementAndGet()
     }
 
-    fun appendCharacter(
-        char: String,
-        ic: InputConnection,
-    ) {
-        dispatch(ComposingState.Intent.Append(char), ic)
+    companion object {
+        // Starts at 1; first bump → 2. Engine-side `last_generation`
+        // initializes to 0 so the very first request is already a
+        // mismatch (silent reset of fresh engine = no-op).
+        private val sharedGeneration: AtomicLong = AtomicLong(1L)
+    }
+
+    // region Intent dispatch API
+
+    fun startComposing(char: String, ic: InputConnection) {
+        val settings = settingsProvider.current
+        val mode = resolveMode(settings.inputMode)
+        if (cachedIsComposing) {
+            // Mid-composition restart: clear-without-commit before starting fresh.
+            applyAsSelfCommit(
+                RustEngineBridge.composingReset(currentGeneration),
+                ic,
+            )
+        }
+        applyTransition(
+            RustEngineBridge.composingStart(
+                char,
+                mode,
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
+    }
+
+    fun appendCharacter(char: String, ic: InputConnection) {
+        val settings = settingsProvider.current
+        applyTransition(
+            RustEngineBridge.composingAppend(
+                char,
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
     }
 
     fun appendHyphen(ic: InputConnection) {
-        dispatch(ComposingState.Intent.AppendHyphen, ic)
+        val settings = settingsProvider.current
+        applyTransition(
+            RustEngineBridge.composingAppendHyphen(
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
+    }
+
+    fun replaceLastCharacter(replacement: String, ic: InputConnection) {
+        val settings = settingsProvider.current
+        applyTransition(
+            RustEngineBridge.composingReplaceLast(
+                replacement,
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
     }
 
     /**
-     * Replace the last raw-input character (TPS auto-correct). Intentionally
-     * preserves [selectedCandidateIndex] — unlike [appendCharacter] which
-     * snaps back to `0`.
-     */
-    fun replaceLastCharacter(
-        replacement: String,
-        ic: InputConnection,
-    ) {
-        dispatch(ComposingState.Intent.ReplaceLast(replacement), ic)
-    }
-
-    /**
-     * Delete one grapheme. Returns `true` if the wrapper consumed the key
-     * (was composing with non-empty raw); callers (TextInputManager) fall
-     * through to send a KeyEvent.KEYCODE_DEL on `false` to let the host
-     * editor process the backspace.
+     * Delete one grapheme. Returns `true` if the wrapper consumed the key.
      *
-     * Android divergence from iOS pure-state emission: the 1-char
-     * empty-after-delete path routes through [ComposingState.Intent.Reset]
-     * rather than [ComposingState.Intent.DeleteBackward] so Android does
-     * NOT issue `deleteSurroundingText(1, 0)` after clearing the preedit.
-     * iOS's floating marked-text model makes `deleteBackwardFromDocument`
-     * the "normal backspace" companion to the clear; Android's in-document
-     * composing region is already removed by `ClearPreeditWithoutCommit`,
-     * so the extra document delete would remove a pre-existing char. See
-     * `composing-state-boundary.md` §11.10 for the divergence note.
+     * Android divergence (plan §5b.1): the 1-char-empty-after-delete path
+     * routes through [RustEngineBridge.composingReset] rather than
+     * [RustEngineBridge.composingDeleteBackward]. Reason: Android's
+     * in-document composing region is removed by `ClearPreeditWithoutCommit`
+     * already; an additional `DeleteBackwardFromDocument` would delete a
+     * pre-existing document char. iOS's floating marked-text model has the
+     * opposite need.
+     *
+     * Reads the buffer length from the local cache (kept in sync via
+     * [applyTransition] on every prior dispatch) — saves one FFI round-trip
+     * per backspace vs. issuing `composingQueryState` first.
      */
     fun deleteBackward(ic: InputConnection): Boolean {
-        if (!state.isComposing || state.rawInput.isEmpty()) return false
-        if (state.rawInput.length == 1) {
-            dispatch(ComposingState.Intent.Reset, ic)
+        if (!cachedIsComposing || cachedRawInput.isEmpty()) return false
+        val transition = if (cachedRawInput.length == 1) {
+            RustEngineBridge.composingReset(currentGeneration)
         } else {
-            dispatch(ComposingState.Intent.DeleteBackward, ic)
+            val settings = settingsProvider.current
+            RustEngineBridge.composingDeleteBackward(
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            )
         }
+        applyTransition(transition, ic)
         return true
     }
 
-    /**
-     * Commit the tone-marked derived form.
-     *
-     * Fast / slow path split preserves pre-A4 `displayDirty` semantics so a
-     * mid-composition cursor move (editor clears the composing region
-     * externally) does NOT duplicate text at the new cursor:
-     *
-     * - **Fast path** (`cachedDerivedDisplay` non-empty, i.e. async
-     *   derivation already replaced the raw preedit with the derived form):
-     *   issue `finishComposingText()` only. If the editor cleared the
-     *   region externally, this is a no-op — matches pre-A4
-     *   `displayDirty == false` behavior. If the region is still live,
-     *   `finishComposingText` commits whatever text the region shows
-     *   (which is the derived form).
-     * - **Slow path** (`cachedDerivedDisplay` empty, i.e. async derivation
-     *   hasn't caught up to the latest keystroke): route through
-     *   [ComposingState.Intent.CommitDerived] which synchronously derives
-     *   + atomically commits via `commitText`. Matches pre-A4
-     *   `displayDirty == true` behavior. In the externally-cleared-region
-     *   case this retains the pre-A4 duplicate-insertion behavior — a
-     *   narrow regression vs the fast-path no-op, but rare (<50 ms
-     *   between keystroke and commit).
-     */
     fun commitComposition(ic: InputConnection) {
-        if (!state.isComposing) return
-        if (cachedDerivedDisplay.isNotEmpty()) {
-            ic.finishComposingText()
-            state = ComposingState()
-            cachedDerivedDisplay = ""
-        } else {
-            dispatch(ComposingState.Intent.CommitDerived, ic)
-        }
+        if (!cachedIsComposing) return
+        val settings = settingsProvider.current
+        applyAsSelfCommit(
+            RustEngineBridge.composingCommitDerived(
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
     }
 
-    /**
-     * Commit the literal raw keystrokes (bypass tone conversion). Mirror of
-     * iOS `ComposingManager.commitRawInput()`. No Android call-site invokes
-     * this today; kept for API parity with iOS and to exercise the
-     * `.CommitRaw` pure-state intent in tests.
-     */
     fun commitRawInput(ic: InputConnection) {
-        dispatch(ComposingState.Intent.CommitRaw, ic)
+        applyAsSelfCommit(
+            RustEngineBridge.composingCommitRaw(currentGeneration),
+            ic,
+        )
     }
 
-    fun selectSuggestion(
-        suggestion: String,
-        ic: InputConnection,
-    ) {
-        dispatch(ComposingState.Intent.SelectSuggestion(suggestion), ic)
+    fun selectSuggestion(suggestion: String, ic: InputConnection) {
+        applyAsSelfCommit(
+            RustEngineBridge.composingSelectSuggestion(suggestion, currentGeneration),
+            ic,
+        )
     }
 
-    /**
-     * Commit the current preedit (if any) and insert externally-supplied
-     * [text] in one atomic `InputConnection.commitText` call. Used by
-     * non-Taigi input surfaces — emoji palette, clipboard paste — so an
-     * active Taigi preedit never leaks a silent commit through direct
-     * `finishComposingText` bypass paths. Mirrors iOS
-     * `ComposingManager.commitPreeditThenInsertExternal(_:)`.
-     *
-     * Replaces the pre-A5 `MediaInputManager.sendEmojiKeyPress` direct
-     * `finishComposingText + commitText` sequence — see
-     * `composing-state-boundary.md` §11.6 deferred parity follow-up.
-     */
-    fun commitPreeditThenInsertExternal(
-        text: String,
-        ic: InputConnection,
-    ) {
-        dispatch(ComposingState.Intent.CommitPreeditThenInsertExternal(text), ic)
+    fun commitPreeditThenInsertExternal(text: String, ic: InputConnection) {
+        val settings = settingsProvider.current
+        applyAsSelfCommit(
+            RustEngineBridge.composingCommitPreeditThenInsertExternal(
+                text,
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
+            ic,
+        )
     }
 
-    /**
-     * Reset all composing state.
-     *
-     * Mirrors iOS `ComposingState.apply(.reset)` which emits
-     * `clearPreeditWithoutCommit`. See `composing-state-boundary.md` §11.6
-     * and `behavioral-invariants.md` §13 for the binding pin
-     * (`INVARIANT_composing_clear_preedit_does_not_commit`).
-     */
     fun reset(ic: InputConnection) {
-        dispatch(ComposingState.Intent.Reset, ic)
+        applyAsSelfCommit(
+            RustEngineBridge.composingReset(currentGeneration),
+            ic,
+        )
     }
 
     /**
-     * Sync internal composing state after the host editor reports no
-     * composing region (Android framework signals this via
-     * `InputMethodService.onUpdateSelection` with
-     * `candidatesStart == -1 && candidatesEnd == -1`, e.g. cursor move
-     * via tap, selection change). Zeroes [state] + [cachedDerivedDisplay]
-     * without touching [InputConnection] — the region is already gone on
-     * the host side, so any IC call here would either no-op or mutate
-     * text at the new cursor position.
+     * Sync internal cache after the host editor reports no composing region
+     * (cursor move via tap, selection change). Bumps the generation so the
+     * next intent dispatch causes the engine to silently drop its state.
+     * Local cache is cleared immediately so `getComposingText()` returns
+     * null right away.
      *
-     * Closes the root cause of the [commitComposition] fast/slow split
-     * documented in `composing-state-boundary.md` §11.10 divergence #3:
-     * without this hook, a stale `cachedDerivedDisplay` would survive
-     * an external clear and drive the fast-path `finishComposingText()`,
-     * OR a stale `state.isComposing` would drive the slow-path
-     * `CommitDerived` into a duplicate `commitText` at the new cursor.
-     *
-     * Pinned by `INVARIANT_composing_external_region_clear_discards_state`
-     * (`behavioral-invariants.md` §13). Android-only binding contract;
-     * iOS's floating marked text model has no in-document region for the
-     * host editor to clear externally.
+     * Self-commit suppression: if the manager is mid-self-commit, skip —
+     * the region clear is the IME's own write, not an external user action.
      */
     fun onExternalComposingRegionCleared() {
-        if (!state.isComposing) return
-        state = ComposingState()
-        cachedDerivedDisplay = ""
+        if (selfCommitInProgress) return
+        if (!cachedIsComposing) return
+        cachedRawInput = ""
+        cachedDisplayText = ""
+        cachedIsComposing = false
+        cachedSelectedCandidateIndex = -1
+        bumpGeneration()
     }
 
     // endregion
 
-    /**
-     * Apply a pre-computed derived display to the live preedit. Called by
-     * [com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator]
-     * after background tone conversion completes — replaces the raw-keystroke
-     * placeholder emitted by live-typing intents (see
-     * `composing-state-boundary.md` §11 Android addendum).
-     */
-    internal fun applyDerivedDisplay(
-        derivedText: String,
+    private fun applyAsSelfCommit(
+        transition: RustEngineBridge.ComposingTransition,
         ic: InputConnection,
     ) {
-        if (!state.isComposing) return
-        cachedDerivedDisplay = derivedText
-        ic.setComposingText(derivedText, 1)
-    }
-
-    /**
-     * Derive the display form for a caller-supplied raw-input snapshot.
-     * Used by the async display derivation path in
-     * [com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator],
-     * which captures [raw] at job-launch time so the stale-job guard
-     * (`manager.getRawInput() == raw`) remains valid even if the
-     * composing buffer mutated mid-derivation (e.g. `a → ab → a` races
-     * where a survived job could read mutable state).
-     *
-     * Settings stay live-read per [EngineSettingsProvider.current]
-     * contract. Returns an empty string when [raw] is empty.
-     */
-    internal fun deriveDisplay(raw: String): String {
-        if (raw.isEmpty()) return ""
-        if (RustEngineBridge.containsTps(raw)) return raw
-        val settings = settingsProvider.current
-        val mode = resolveInputMode(settings.inputMode)
-        // Forward all three modes — collapsing ENGLISH to TL would route
-        // English text through tone normalization (Rust passthrough relies
-        // on receiving `InputMode::English` per
-        // `engine/phonetics/src/api.rs:236`).
-        val normalizeMode = when (mode) {
-            InputMode.POJ -> NormalizeMode.POJ
-            InputMode.TL -> NormalizeMode.TL
-            InputMode.ENGLISH -> NormalizeMode.ENGLISH
+        selfCommitInProgress = true
+        try {
+            applyTransition(transition, ic)
+        } finally {
+            selfCommitInProgress = false
         }
-        val carrier = ToneTogglesCarrier(
-            settings.toneToggles.isDoubleTapOOEnabled,
-            settings.toneToggles.isDoubleTapNNEnabled,
-        )
-        // `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band,
-        // so the returned string is display-ready.
-        return RustEngineBridge.normalizeTone(raw, normalizeMode, carrier)
     }
 
-    private fun dispatch(
-        intent: ComposingState.Intent,
+    private fun applyTransition(
+        transition: RustEngineBridge.ComposingTransition,
         ic: InputConnection,
     ) {
-        val settings = settingsProvider.current
-        val mode = resolveInputMode(settings.inputMode)
-        val (newState, transition) = state.apply(intent, mode, settings.toneToggles)
-        state = newState
-        // Reset the derived-display mirror on every dispatch so
-        // `getComposingText()` returns the raw placeholder until the async
-        // derivation loop (CandidateUpdateCoordinator) calls
-        // `applyDerivedDisplay`. Mirrors pre-A4 observable behavior where
-        // the placeholder flash is visible to `handleEnter` / `handleSpace`
-        // callers that capture `committedText` before committing — see
-        // `composing-state-boundary.md` §11.10.
-        cachedDerivedDisplay = ""
+        cachedRawInput = transition.rawInput
+        cachedDisplayText = transition.displayText
+        cachedIsComposing = transition.isComposing
+        cachedSelectedCandidateIndex = transition.selectedCandidateIndex
         for (effect in transition.effects) {
             delegate.execute(effect, ic)
         }
     }
 
-    private fun resolveInputMode(raw: String): InputMode =
+    private fun resolveMode(raw: String): NormalizeMode =
         when (raw) {
-            "poj" -> InputMode.POJ
-            "tl", "tps" -> InputMode.TL
-            else -> InputMode.POJ
+            "poj" -> NormalizeMode.POJ
+            "english" -> NormalizeMode.ENGLISH
+            else -> NormalizeMode.TL
         }
+
+    private fun carrier(toggles: com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles): ToneTogglesCarrier =
+        ToneTogglesCarrier(
+            isDoubleTapOoEnabled = toggles.isDoubleTapOOEnabled,
+            isDoubleTapNnEnabled = toggles.isDoubleTapNNEnabled,
+        )
 }
 
 /**
  * Policy helper: does an `onUpdateSelection` payload indicate the host
  * editor no longer reports a composing region? Both coordinates are `-1`
- * when no region exists (per
- * `InputMethodService.onUpdateSelection(int,int,int,int,int,int)`).
- *
- * Pulled out as a top-level function so the policy is unit-testable
- * without instantiating the Android framework classes `TextInputManager`
- * depends on. Consumer: [TextInputManager.onUpdateSelection].
+ * when no region exists.
  */
 internal fun hostReportsNoComposingRegion(
     candidatesStart: Int,
@@ -339,21 +308,39 @@ internal fun hostReportsNoComposingRegion(
 /**
  * Clear the host editor's composing region at the [InputConnection] layer
  * without committing whatever text it contains. Issues
- * `setComposingText("", 1)` then `finishComposingText()` — the pre-zero
- * is mandatory because `finishComposingText()` on its own silently
- * commits the active composing region (see
- * `composing-state-boundary.md` §11.2 rule 1).
+ * `setComposingText("", 1)` then `finishComposingText()` — pre-zero is
+ * mandatory because `finishComposingText()` on its own silently commits.
  *
- * Pulled out as a top-level function so bare-`InputConnection` sites
- * that do NOT route through [ComposingManager.reset] (e.g.
- * `TextInputManager.resetComposingText` — called when `composingManager`
- * is null or the current keyboard mode bypasses composing) still honor
- * `INVARIANT_composing_clear_preedit_does_not_commit`
- * (`behavioral-invariants.md` §13). [ComposingManager.reset] remains the
- * canonical owner for composing-aware sites; this helper is the
- * IC-layer-only equivalent.
+ * Used by bare-IC sites that do NOT route through [ComposingManager.reset]
+ * (e.g. `TextInputManager.resetComposingText` when composingManager is
+ * null or the keyboard mode bypasses composing).
  */
 internal fun clearHostComposingRegion(ic: InputConnection?) {
     ic?.setComposingText("", 1)
     ic?.finishComposingText()
+}
+
+/**
+ * Helper used during `dispatch` and `commitComposition` paths to surface a
+ * caller-supplied raw snapshot's display form via the Rust engine. Callers
+ * that already issued `composingQueryState` get the display text from the
+ * response; this helper exists for off-path consumers (e.g. async refresh).
+ */
+internal fun deriveDisplay(
+    raw: String,
+    settingsProvider: EngineSettingsProvider,
+): String {
+    if (raw.isEmpty()) return ""
+    if (RustEngineBridge.containsTps(raw)) return raw
+    val settings = settingsProvider.current
+    val mode = when (settings.inputMode) {
+        "poj" -> NormalizeMode.POJ
+        "english" -> NormalizeMode.ENGLISH
+        else -> NormalizeMode.TL
+    }
+    val carrier = ToneTogglesCarrier(
+        isDoubleTapOoEnabled = settings.toneToggles.isDoubleTapOOEnabled,
+        isDoubleTapNnEnabled = settings.toneToggles.isDoubleTapNNEnabled,
+    )
+    return RustEngineBridge.normalizeTone(raw, mode, carrier)
 }

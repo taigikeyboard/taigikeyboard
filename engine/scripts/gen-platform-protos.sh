@@ -37,6 +37,7 @@ protoc \
     --swift_opt=Visibility=Public \
     "$PROTO_DIR/envelope.proto" \
     "$PROTO_DIR/phonetics.proto" \
+    "$PROTO_DIR/composing.proto" \
     "$PROTO_DIR/lexicon.proto"
 
 # Java output: --java_out=lite for protobuf-javalite runtime. The
@@ -47,6 +48,7 @@ protoc \
     --java_out=lite:"$JAVA_OUT" \
     "$PROTO_DIR/envelope.proto" \
     "$PROTO_DIR/phonetics.proto" \
+    "$PROTO_DIR/composing.proto" \
     "$PROTO_DIR/lexicon.proto"
 
 echo "generated:"

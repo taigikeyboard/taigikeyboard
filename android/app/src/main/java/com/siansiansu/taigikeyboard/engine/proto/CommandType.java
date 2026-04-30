@@ -19,6 +19,10 @@ public enum CommandType
    */
   CMD_PHONETICS(1),
   /**
+   * <code>CMD_COMPOSING = 2;</code>
+   */
+  CMD_COMPOSING(2),
+  /**
    * <code>CMD_LEXICON = 3;</code>
    */
   CMD_LEXICON(3),
@@ -33,6 +37,10 @@ public enum CommandType
    * <code>CMD_PHONETICS = 1;</code>
    */
   public static final int CMD_PHONETICS_VALUE = 1;
+  /**
+   * <code>CMD_COMPOSING = 2;</code>
+   */
+  public static final int CMD_COMPOSING_VALUE = 2;
   /**
    * <code>CMD_LEXICON = 3;</code>
    */
@@ -62,6 +70,7 @@ public enum CommandType
     switch (value) {
       case 0: return CMD_UNSPECIFIED;
       case 1: return CMD_PHONETICS;
+      case 2: return CMD_COMPOSING;
       case 3: return CMD_LEXICON;
       default: return null;
     }

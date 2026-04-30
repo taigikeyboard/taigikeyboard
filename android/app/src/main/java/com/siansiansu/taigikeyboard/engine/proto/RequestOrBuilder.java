@@ -55,19 +55,22 @@ public interface RequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest getPhonetics();
 
   /**
-   * <pre>
-   * Composing payload reserved for D9.3 to avoid renumbering.
-   * </pre>
-   *
+   * <code>.taigi.engine.ComposingRequest composing = 11;</code>
+   * @return Whether the composing field is set.
+   */
+  boolean hasComposing();
+  /**
+   * <code>.taigi.engine.ComposingRequest composing = 11;</code>
+   * @return The composing.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ComposingRequest getComposing();
+
+  /**
    * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
    * @return Whether the lexicon field is set.
    */
   boolean hasLexicon();
   /**
-   * <pre>
-   * Composing payload reserved for D9.3 to avoid renumbering.
-   * </pre>
-   *
    * <code>.taigi.engine.LexiconRequest lexicon = 12;</code>
    * @return The lexicon.
    */

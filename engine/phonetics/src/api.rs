@@ -4,13 +4,15 @@
 //! `rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
+use crate::case_adjust::adjust_nasal_marker_case;
 use crate::poj::to_poj;
 use crate::syllable::{
     is_stop_tone, normalize_to_tl, parse_syllable, split_initial_final, strip_tone_mark,
 };
 use crate::tl::to_tl;
-use crate::tps::to_zhuyin;
+use crate::tps::{is_zhuyin, to_zhuyin};
 use once_cell::sync::Lazy;
+use protos::engine::AppConfig;
 use regex::Regex;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
@@ -187,6 +189,75 @@ fn syllable_rewrite(text: &str, assembler: fn(&str, &str, &str) -> String) -> St
             }
         })
         .into_owned()
+}
+
+/// Translate the proto `AppConfig.input_mode` string into the typed enum.
+/// Unknown / empty / "tl" → `Tl`. Mirrors `phonetics::dispatch::parse_input_mode`.
+pub fn parse_input_mode(mode: &str) -> InputMode {
+    match mode {
+        "poj" | "POJ" => InputMode::Poj,
+        "english" | "English" | "EN" => InputMode::English,
+        _ => InputMode::Tl,
+    }
+}
+
+/// POJ doubletap preprocessing: `oo`→`o\u{0358}` + `nn`→nasal marker, gated
+/// by `AppConfig.{oo,nn}_doubletap_enabled`. No-op for non-POJ modes.
+/// Mirrors `phonetics::dispatch::preprocess_for_normalize_tone`.
+pub fn preprocess_for_normalize_tone(input: &str, mode: InputMode, config: &AppConfig) -> String {
+    if !matches!(mode, InputMode::Poj) {
+        return input.to_string();
+    }
+    let mut s = input.to_string();
+    if config.oo_doubletap_enabled {
+        s = s.replace("oo", "o\u{0358}");
+        s = s.replace("Oo", "O\u{0358}");
+        s = s.replace("OO", "O\u{0358}");
+    }
+    if config.nn_doubletap_enabled {
+        s = convert_nasal_double_n(&s);
+    }
+    s
+}
+
+/// Mirrors iOS ToneConverter `convertNasalDoubleN`: vowel + "nn" → vowel + "ⁿ".
+fn convert_nasal_double_n(input: &str) -> String {
+    const NASAL_VOWELS: &str = "aeiouAEIOU";
+    let chars: Vec<char> = input.chars().collect();
+    let mut result = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        if i + 1 < chars.len()
+            && (chars[i] == 'n' || chars[i] == 'N')
+            && (chars[i + 1] == 'n' || chars[i + 1] == 'N')
+            && i > 0
+            && NASAL_VOWELS.contains(chars[i - 1])
+        {
+            result.push('\u{207F}');
+            i += 2;
+        } else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+    result
+}
+
+/// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
+/// tone-mark application → nasal-marker case adjustment. The `Method::NormalizeTone`
+/// dispatch arm and `composing::derived` both call this directly. Plan §3.2a.
+pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
+    let mode = parse_input_mode(&config.input_mode);
+    let preprocessed = preprocess_for_normalize_tone(input, mode, config);
+    let tone_marked = to_tone_marks(&preprocessed, mode);
+    adjust_nasal_marker_case(&tone_marked)
+}
+
+/// `true` if the text contains TPS (Taiwanese Phonetic Symbols / Zhuyin)
+/// codepoints. Used by composing-derived display to skip POJ/TL tone-mark
+/// conversion (TPS strings are already display-ready).
+pub fn contains_tps(text: &str) -> bool {
+    is_zhuyin(text)
 }
 
 /// Convert hyphen-separated syllables to tone marks. Tone digits 1 and 4 are

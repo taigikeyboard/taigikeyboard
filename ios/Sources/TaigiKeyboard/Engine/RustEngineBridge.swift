@@ -401,6 +401,194 @@ public enum RustEngineBridge {
         )
     }
 
+    // MARK: Composing slice (12 ops) — v3.5.4
+
+    /// Bridge-synthesized companion to the proto `ComposingResponse`.
+    /// Consumed by `ComposingManager` and its delegate.
+    public struct ComposingTransition: Equatable {
+        public enum Effect: Equatable {
+            case updatePreedit(String)
+            case clearPreeditWithoutCommit
+            case commitTextReplacingPreedit(String)
+            case deleteBackwardFromDocument
+            case resetAutocomplete
+            case performAutocomplete
+            case resetAutocompleteContext
+        }
+
+        public let rawInput: String
+        public let displayText: String
+        public let effects: [Effect]
+        public let selectedCandidateIndex: Int
+        public let isComposing: Bool
+
+        public static let noop = ComposingTransition(
+            rawInput: "",
+            displayText: "",
+            effects: [],
+            selectedCandidateIndex: -1,
+            isComposing: false
+        )
+    }
+
+    public static func composingStart(
+        _ text: String,
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_Start()
+        payload.text = text
+        return composingDispatch(
+            method: .start(payload),
+            op: "composingStart",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingAppend(
+        _ char: String,
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_Append()
+        payload.char = char
+        return composingDispatch(
+            method: .append(payload),
+            op: "composingAppend",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingAppendHyphen(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        composingDispatch(
+            method: .appendHyphen(Taigi_Engine_AppendHyphen()),
+            op: "composingAppendHyphen",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingReplaceLast(
+        _ replacement: String,
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_ReplaceLast()
+        payload.replacement = replacement
+        return composingDispatch(
+            method: .replaceLast(payload),
+            op: "composingReplaceLast",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingDeleteBackward(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        composingDispatch(
+            method: .deleteBackward(Taigi_Engine_DeleteBackward()),
+            op: "composingDeleteBackward",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingCommitDerived(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        composingDispatch(
+            method: .commitDerived(Taigi_Engine_CommitDerived()),
+            op: "composingCommitDerived",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingCommitRaw(generation: UInt64) -> ComposingTransition {
+        composingDispatch(
+            method: .commitRaw(Taigi_Engine_CommitRaw()),
+            op: "composingCommitRaw",
+            generation: generation,
+            config: nil
+        )
+    }
+
+    public static func composingSelectSuggestion(
+        _ text: String,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_SelectSuggestion()
+        payload.text = text
+        return composingDispatch(
+            method: .selectSuggestion(payload),
+            op: "composingSelectSuggestion",
+            generation: generation,
+            config: nil
+        )
+    }
+
+    public static func composingCommitPreeditThenInsertExternal(
+        _ text: String,
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_CommitPreeditThenInsertExternal()
+        payload.text = text
+        return composingDispatch(
+            method: .commitPreeditThenInsertExternal(payload),
+            op: "composingCommitPreeditThenInsertExternal",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles)
+        )
+    }
+
+    public static func composingReset(generation: UInt64) -> ComposingTransition {
+        composingDispatch(
+            method: .reset(Taigi_Engine_Reset()),
+            op: "composingReset",
+            generation: generation,
+            config: nil
+        )
+    }
+
+    public static func composingSetSelectedCandidateIndex(
+        _ index: Int,
+        generation: UInt64
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_SetSelectedCandidateIndex()
+        payload.index = Int32(index)
+        return composingDispatch(
+            method: .setSelectedCandidateIndex(payload),
+            op: "composingSetSelectedCandidateIndex",
+            generation: generation,
+            config: nil
+        )
+    }
+
+    public static func composingQueryState(generation: UInt64) -> ComposingTransition {
+        composingDispatch(
+            method: .queryState(Taigi_Engine_QueryState()),
+            op: "composingQueryState",
+            generation: generation,
+            config: nil
+        )
+    }
+
     // MARK: Diagnostics (Codex v2 §8 / v3 §7)
 
     public struct DiagnosticsEntry: Equatable {
@@ -590,6 +778,71 @@ public enum RustEngineBridge {
             return nil
         }
         return payload
+    }
+
+    private static func composingDispatch(
+        method: Taigi_Engine_ComposingRequest.OneOf_Method,
+        op: String,
+        generation: UInt64,
+        config: Taigi_Engine_AppConfig?
+    ) -> ComposingTransition {
+        var composing = Taigi_Engine_ComposingRequest()
+        composing.method = method
+
+        var request = Taigi_Engine_Request()
+        request.id = nextRequestID()
+        request.generation = generation
+        request.payload = .composing(composing)
+        if let config { request.configSnapshot = config }
+
+        let bytes: [UInt8]
+        do {
+            bytes = try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return .noop
+        }
+
+        let responseBytes = bytes.withUnsafeBufferPointer { buf in
+            process_request_bytes(buf).toArray()
+        }
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(responseBytes)
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return .noop
+        }
+        guard response.error == .ok else {
+            recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
+            return .noop
+        }
+        guard case let .composing(payload) = response.payload else {
+            recordFailure(op: op, message: "missing composing payload")
+            return .noop
+        }
+        return synthComposing(payload)
+    }
+
+    private static func synthComposing(_ proto: Taigi_Engine_ComposingResponse) -> ComposingTransition {
+        let effects: [ComposingTransition.Effect] = proto.effect.compactMap { eff -> ComposingTransition.Effect? in
+            guard let kind = eff.kind else { return nil }
+            switch kind {
+            case .updatePreedit(let m): return .updatePreedit(m.display)
+            case .clearPreeditWithoutCommit_p: return .clearPreeditWithoutCommit
+            case .commitTextReplacingPreedit(let m): return .commitTextReplacingPreedit(m.text)
+            case .deleteBackwardFromDocument: return .deleteBackwardFromDocument
+            case .resetAutocomplete: return .resetAutocomplete
+            case .performAutocomplete: return .performAutocomplete
+            case .resetAutocompleteContext: return .resetAutocompleteContext
+            }
+        }
+        return ComposingTransition(
+            rawInput: proto.preedit.rawInput,
+            displayText: proto.preedit.displayText,
+            effects: effects,
+            selectedCandidateIndex: Int(proto.selectedCandidateIndex),
+            isComposing: proto.isComposing
+        )
     }
 
     private static func boolDispatch(

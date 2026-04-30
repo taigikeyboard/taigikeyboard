@@ -85,6 +85,20 @@ fn run(bytes: &[u8]) -> Response {
                 }
             }
         }
+        request::Payload::Composing(comp_req) => {
+            match composing::EngineHandle::instance().handle(&comp_req, &config, generation) {
+                Ok(comp_resp) => Response {
+                    id,
+                    error: ErrorCode::Ok as i32,
+                    generation,
+                    payload: Some(response::Payload::Composing(comp_resp)),
+                },
+                Err(err) => {
+                    log::warn!("composing dispatch failed (id={id}): {err}");
+                    error_response(id, ErrorCode::FailInvariant, generation)
+                }
+            }
+        }
         request::Payload::Lexicon(lex_req) => {
             let Some(method) = lex_req.method else {
                 log::warn!("lexicon request missing method (id={id})");

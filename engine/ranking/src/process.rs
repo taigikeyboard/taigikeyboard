@@ -114,10 +114,7 @@ fn post_sort_display_dedup(
     sorted_breakdowns: Vec<ScoreBreakdown>,
 ) -> (Vec<protos::engine::TaigiWord>, Vec<ScoreBreakdown>) {
     if sorted_breakdowns.is_empty() {
-        return (
-            dedup::remove_display_duplicates(sorted_words),
-            Vec::new(),
-        );
+        return (dedup::remove_display_duplicates(sorted_words), Vec::new());
     }
 
     debug_assert_eq!(
@@ -235,7 +232,11 @@ mod tests {
             merge_order_only: false,
         };
         let resp = process_candidates(req);
-        assert_eq!(resp.ranked.len(), 2, "display dedup skipped in non-TPS mode");
+        assert_eq!(
+            resp.ranked.len(),
+            2,
+            "display dedup skipped in non-TPS mode"
+        );
     }
 
     #[test]
@@ -306,8 +307,14 @@ mod tests {
             merge_order_only: true,
         };
         let resp = process_candidates(req);
-        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 3, 4]);
-        assert!(resp.breakdown.is_empty(), "breakdown always empty in merge_order_only");
+        assert_eq!(
+            resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(),
+            vec![1, 3, 4]
+        );
+        assert!(
+            resp.breakdown.is_empty(),
+            "breakdown always empty in merge_order_only"
+        );
     }
 
     /// `tps_dedup_enabled` still gates the display-dedup pass even when
@@ -329,7 +336,10 @@ mod tests {
             merge_order_only: true,
         };
         let resp = process_candidates(req);
-        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 3]);
+        assert_eq!(
+            resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(),
+            vec![1, 3]
+        );
         assert!(resp.breakdown.is_empty());
     }
 
@@ -355,6 +365,9 @@ mod tests {
             merge_order_only: true,
         };
         let resp = process_candidates(req);
-        assert_eq!(resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(), vec![1, 2]);
+        assert_eq!(
+            resp.ranked.iter().map(|w| w.id).collect::<Vec<_>>(),
+            vec![1, 2]
+        );
     }
 }

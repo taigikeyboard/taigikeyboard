@@ -23,7 +23,6 @@ taigi-keyboard-rs/
 ├── protos/      # Protobuf definitions (generated via prost-build).
 ├── android-jni/ # cdylib — JNI entry points + protobuf marshaling.
 ├── swift-ffi/   # staticlib — swift-bridge entry points + protobuf marshaling.
-├── cli/         # Developer TUI (optional, matches khiin-rs `cli/`).
 └── Cargo.toml         # Workspace manifest, pinned workspace.dependencies.
 ```
 
@@ -56,7 +55,7 @@ Policy lives here; technical spec is `docs/engine/ffi-safety.md` (Phase II.5 del
       InternalPanic(String),
   }
   ```
-- **`anyhow` is forbidden in library crates** (`phonetics`, `engine`, `protos`). Allowed in `cli/` and build scripts only.
+- **`anyhow` is forbidden in library crates** (`phonetics`, `engine`, `protos`). Allowed in build scripts only.
 - **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge.
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per §4 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
@@ -131,7 +130,7 @@ Type-shape preferences that cross FFI:
 
 ## 6. Cross-compile + build tooling `[A]`
 
-- **`cargo-make` + `Makefile.toml`** as the build orchestrator. Matches khiin-rs pattern (validated across 4 platforms). Tasks at minimum: `build-db`, `build-droid`, `build-swift`, `build-cli`.
+- **`cargo-make` + `Makefile.toml`** as the build orchestrator. Matches khiin-rs pattern (validated across 4 platforms). Tasks at minimum: `build-db`, `build-droid`, `build-swift`.
 - **Android**: `cargo-ndk` for multi-ABI builds (`arm64-v8a` mandatory; `x86_64` for emulator testing only — khiin-rs documents a known `x86_64` NDK crash in `android/README.md`, acceptable for emulator work).
 - **iOS / macOS**: `cargo build --target aarch64-apple-ios` + simulator targets; packaged as xcframework via `swift-bridge` generator.
 - **Rustup targets** pinned in `rust-toolchain.toml`:

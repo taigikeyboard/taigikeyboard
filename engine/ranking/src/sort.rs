@@ -65,7 +65,7 @@ fn sort_with_breakdown(
 
     // Descending by total. `sort_by` is stable, so equal-total entries
     // preserve their input order — matches Swift / Kotlin `sorted`.
-    paired.sort_by(|(_, a), (_, b)| score::total(b).cmp(&score::total(a)));
+    paired.sort_by_key(|(_, b)| std::cmp::Reverse(score::total(b)));
 
     let mut sorted_words = Vec::with_capacity(paired.len());
     let mut breakdowns = Vec::with_capacity(paired.len());
@@ -139,12 +139,14 @@ mod tests {
         let mut freq_map = FrequencyMap::new();
         freq_map.insert(
             "我".to_owned(),
-            FrequencyData { count: 5, last_used_ms: 0 },
+            FrequencyData {
+                count: 5,
+                last_used_ms: 0,
+            },
         );
         let now = 10_000_000_000;
 
-        let (sorted, _) =
-            sort_by_score(vec![cold, learned], "gua", &freq_map, now, false);
+        let (sorted, _) = sort_by_score(vec![cold, learned], "gua", &freq_map, now, false);
         assert_eq!(sorted[0].id, 2, "learned word must lead");
         assert_eq!(sorted[1].id, 1, "cold word trails");
     }
@@ -169,8 +171,7 @@ mod tests {
             length_score: Some(110),
             source_bitmask: Some(1 << 2), // itaigi
         };
-        let (sorted, _) =
-            sort_by_score(vec![itaigi, kautian], "z", &FrequencyMap::new(), 0, false);
+        let (sorted, _) = sort_by_score(vec![itaigi, kautian], "z", &FrequencyMap::new(), 0, false);
         assert_eq!(sorted[0].hanji.as_deref(), Some("A"));
     }
 
@@ -179,8 +180,7 @@ mod tests {
         // Two identical-score entries — relative order must match input.
         let a = word(1, "x", None, Some(50));
         let b = word(2, "x", None, Some(50));
-        let (sorted, _) =
-            sort_by_score(vec![a, b], "y", &FrequencyMap::new(), 0, false);
+        let (sorted, _) = sort_by_score(vec![a, b], "y", &FrequencyMap::new(), 0, false);
         assert_eq!(sorted[0].id, 1);
         assert_eq!(sorted[1].id, 2);
     }
@@ -211,8 +211,7 @@ mod tests {
     fn breakdowns_are_omitted_when_not_requested() {
         let a = word(1, "x", None, Some(100));
         let b = word(2, "y", None, Some(0));
-        let (sorted, breakdowns) =
-            sort_by_score(vec![b, a], "z", &FrequencyMap::new(), 0, false);
+        let (sorted, breakdowns) = sort_by_score(vec![b, a], "z", &FrequencyMap::new(), 0, false);
         // Sort still runs; breakdowns vector is empty (release-path
         // allocation skipped).
         assert_eq!(sorted[0].id, 1);

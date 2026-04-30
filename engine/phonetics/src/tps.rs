@@ -142,7 +142,7 @@ static REV_INITIALS: Lazy<Vec<(&'static str, &'static str)>> = Lazy::new(|| {
         ("\u{3112}", "s"),
         ("\u{31a2}", "j"),
     ]);
-    rev.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    rev.sort_by_key(|entry| std::cmp::Reverse(entry.0.len()));
     rev
 });
 
@@ -150,7 +150,7 @@ static REV_VOWELS: Lazy<Vec<(&'static str, &'static str)>> = Lazy::new(|| {
     let mut rev: Vec<(&'static str, &'static str)> =
         ZHUYIN_VOWELS.iter().map(|(tl, tps)| (*tps, *tl)).collect();
     rev.push(("\u{3125}", "ng"));
-    rev.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    rev.sort_by_key(|entry| std::cmp::Reverse(entry.0.len()));
     rev
 });
 
@@ -162,7 +162,7 @@ static REV_TONES: Lazy<Vec<(&'static str, &'static str)>> = Lazy::new(|| {
         }
     }
     let mut entries: Vec<(&'static str, &'static str)> = map.into_iter().collect();
-    entries.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+    entries.sort_by_key(|entry| std::cmp::Reverse(entry.0.len()));
     entries
 });
 

@@ -24,6 +24,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case cmdUnspecified // = 0
   case cmdPhonetics // = 1
+  case cmdComposing // = 2
   case cmdLexicon // = 3
   case UNRECOGNIZED(Int)
 
@@ -35,6 +36,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     switch rawValue {
     case 0: self = .cmdUnspecified
     case 1: self = .cmdPhonetics
+    case 2: self = .cmdComposing
     case 3: self = .cmdLexicon
     default: self = .UNRECOGNIZED(rawValue)
     }
@@ -44,6 +46,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     switch self {
     case .cmdUnspecified: return 0
     case .cmdPhonetics: return 1
+    case .cmdComposing: return 2
     case .cmdLexicon: return 3
     case .UNRECOGNIZED(let i): return i
     }
@@ -53,6 +56,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public static let allCases: [Taigi_Engine_CommandType] = [
     .cmdUnspecified,
     .cmdPhonetics,
+    .cmdComposing,
     .cmdLexicon,
   ]
 
@@ -160,7 +164,14 @@ public struct Taigi_Engine_Request: Sendable {
     set {payload = .phonetics(newValue)}
   }
 
-  /// Composing payload reserved for D9.3 to avoid renumbering.
+  public var composing: Taigi_Engine_ComposingRequest {
+    get {
+      if case .composing(let v)? = payload {return v}
+      return Taigi_Engine_ComposingRequest()
+    }
+    set {payload = .composing(newValue)}
+  }
+
   public var lexicon: Taigi_Engine_LexiconRequest {
     get {
       if case .lexicon(let v)? = payload {return v}
@@ -173,7 +184,7 @@ public struct Taigi_Engine_Request: Sendable {
 
   public enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsRequest)
-    /// Composing payload reserved for D9.3 to avoid renumbering.
+    case composing(Taigi_Engine_ComposingRequest)
     case lexicon(Taigi_Engine_LexiconRequest)
 
   }
@@ -204,6 +215,14 @@ public struct Taigi_Engine_Response: Sendable {
     set {payload = .phonetics(newValue)}
   }
 
+  public var composing: Taigi_Engine_ComposingResponse {
+    get {
+      if case .composing(let v)? = payload {return v}
+      return Taigi_Engine_ComposingResponse()
+    }
+    set {payload = .composing(newValue)}
+  }
+
   public var lexicon: Taigi_Engine_LexiconResponse {
     get {
       if case .lexicon(let v)? = payload {return v}
@@ -216,6 +235,7 @@ public struct Taigi_Engine_Response: Sendable {
 
   public enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsResponse)
+    case composing(Taigi_Engine_ComposingResponse)
     case lexicon(Taigi_Engine_LexiconResponse)
 
   }
@@ -258,7 +278,7 @@ public struct Taigi_Engine_Command: @unchecked Sendable {
 fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{2}\u{2}CMD_LEXICON\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{1}CMD_COMPOSING\0\u{1}CMD_LEXICON\0")
 }
 
 extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
@@ -312,7 +332,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 
 extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{2}\u{2}lexicon\0\u{c}\u{b}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -335,6 +355,19 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.payload = .phonetics(v)
+        }
+      }()
+      case 11: try {
+        var v: Taigi_Engine_ComposingRequest?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .composing(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .composing(v)
         }
       }()
       case 12: try {
@@ -377,6 +410,10 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
       guard case .phonetics(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
+    case .composing?: try {
+      guard case .composing(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
     case .lexicon?: try {
       guard case .lexicon(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
@@ -399,7 +436,7 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
 
 extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{2}\u{2}lexicon\0\u{c}\u{b}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -421,6 +458,19 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.payload = .phonetics(v)
+        }
+      }()
+      case 11: try {
+        var v: Taigi_Engine_ComposingResponse?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .composing(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .composing(v)
         }
       }()
       case 12: try {
@@ -459,6 +509,10 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     case .phonetics?: try {
       guard case .phonetics(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    }()
+    case .composing?: try {
+      guard case .composing(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
     }()
     case .lexicon?: try {
       guard case .lexicon(let v)? = self.payload else { preconditionFailure() }

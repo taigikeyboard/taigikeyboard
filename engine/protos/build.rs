@@ -6,6 +6,7 @@ fn main() -> Result<()> {
         &[
             "proto/envelope.proto",
             "proto/phonetics.proto",
+            "proto/composing.proto",
             "proto/lexicon.proto",
         ],
         &["proto"],

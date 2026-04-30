@@ -76,15 +76,18 @@ pub(crate) fn calculate_score(
     let capped_user_freq = freq.count.min(USER_FREQ_CAP);
     let user_freq_score = capped_user_freq * USER_FREQ_WEIGHT;
 
-    let recency_bonus = if freq.last_used_ms > 0
-        && (now_ms - freq.last_used_ms) < RECENCY_WINDOW_MS
+    let recency_bonus = if freq.last_used_ms > 0 && (now_ms - freq.last_used_ms) < RECENCY_WINDOW_MS
     {
         RECENCY_BONUS
     } else {
         0
     };
 
-    let exact_bonus = if candidate_base == input_base { EXACT_BONUS } else { 0 };
+    let exact_bonus = if candidate_base == input_base {
+        EXACT_BONUS
+    } else {
+        0
+    };
     let completion_penalty = if candidate_base == input_base {
         0
     } else {
@@ -93,8 +96,8 @@ pub(crate) fn calculate_score(
 
     let input_len = (input_base.chars().count() as i32).max(1);
     let candidate_len = (candidate_base.chars().count() as i32).max(1);
-    let match_ratio = f64::from(input_len.min(candidate_len))
-        / f64::from(input_len.max(candidate_len));
+    let match_ratio =
+        f64::from(input_len.min(candidate_len)) / f64::from(input_len.max(candidate_len));
     let closeness_bonus = (match_ratio * f64::from(CLOSENESS_WEIGHT)) as i32;
 
     let raw_base = word.length_score.unwrap_or(0) / BASE_FREQ_DIVISOR;
@@ -218,7 +221,10 @@ mod tests {
     }
 
     fn freq(count: i32, last_used_ms: i64) -> FrequencyData {
-        FrequencyData { count, last_used_ms }
+        FrequencyData {
+            count,
+            last_used_ms,
+        }
     }
 
     // -----------------------------------------------------------------------

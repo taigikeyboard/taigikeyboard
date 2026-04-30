@@ -19,6 +19,7 @@ public  final class Response extends
   private java.lang.Object payload_;
   public enum PayloadCase {
     PHONETICS(10),
+    COMPOSING(11),
     LEXICON(12),
     PAYLOAD_NOT_SET(0);
     private final int value;
@@ -36,6 +37,7 @@ public  final class Response extends
     public static PayloadCase forNumber(int value) {
       switch (value) {
         case 10: return PHONETICS;
+        case 11: return COMPOSING;
         case 12: return LEXICON;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
@@ -197,6 +199,56 @@ public  final class Response extends
    */
   private void clearPhonetics() {
     if (payloadCase_ == 10) {
+      payloadCase_ = 0;
+      payload_ = null;
+    }
+  }
+
+  public static final int COMPOSING_FIELD_NUMBER = 11;
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   */
+  @java.lang.Override
+  public boolean hasComposing() {
+    return payloadCase_ == 11;
+  }
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ComposingResponse getComposing() {
+    if (payloadCase_ == 11) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ComposingResponse) payload_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   */
+  private void setComposing(com.siansiansu.taigikeyboard.engine.proto.ComposingResponse value) {
+    value.getClass();
+  payload_ = value;
+    payloadCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   */
+  private void mergeComposing(com.siansiansu.taigikeyboard.engine.proto.ComposingResponse value) {
+    value.getClass();
+  if (payloadCase_ == 11 &&
+        payload_ != com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.getDefaultInstance()) {
+      payload_ = com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ComposingResponse) payload_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      payload_ = value;
+    }
+    payloadCase_ = 11;
+  }
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   */
+  private void clearComposing() {
+    if (payloadCase_ == 11) {
       payloadCase_ = 0;
       payload_ = null;
     }
@@ -512,6 +564,54 @@ public  final class Response extends
     }
 
     /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    @java.lang.Override
+    public boolean hasComposing() {
+      return instance.hasComposing();
+    }
+    /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ComposingResponse getComposing() {
+      return instance.getComposing();
+    }
+    /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    public Builder setComposing(com.siansiansu.taigikeyboard.engine.proto.ComposingResponse value) {
+      copyOnWrite();
+      instance.setComposing(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    public Builder setComposing(
+        com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setComposing(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    public Builder mergeComposing(com.siansiansu.taigikeyboard.engine.proto.ComposingResponse value) {
+      copyOnWrite();
+      instance.mergeComposing(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+     */
+    public Builder clearComposing() {
+      copyOnWrite();
+      instance.clearComposing();
+      return this;
+    }
+
+    /**
      * <code>.taigi.engine.LexiconResponse lexicon = 12;</code>
      */
     @java.lang.Override
@@ -581,11 +681,12 @@ public  final class Response extends
             "error_",
             "generation_",
             com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0001\u0000\u0001\f\u0005\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
-              "\u0003\n<\u0000\f<\u0000";
+              "\u0000\u0006\u0001\u0000\u0001\f\u0006\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
+              "\u0003\n<\u0000\u000b<\u0000\f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

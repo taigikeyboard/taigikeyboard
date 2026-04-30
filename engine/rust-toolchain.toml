@@ -1,5 +1,5 @@
 [toolchain]
-channel = "1.86"
+channel = "stable"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
 # JUSTIFICATION: D9.2 ABI scope. Rust core ships only Apple device + simulator

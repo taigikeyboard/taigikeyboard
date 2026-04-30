@@ -442,6 +442,267 @@ object RustEngineBridge {
         )
 
     // endregion
+    // region Composing slice (12 ops) — v3.5.4
+
+    /**
+     * Bridge-synthesized companion to the proto `ComposingResponse`.
+     * Consumed by `ComposingManager` and its delegate.
+     */
+    data class ComposingTransition(
+        val rawInput: String,
+        val displayText: String,
+        val effects: List<Effect>,
+        val selectedCandidateIndex: Int,
+        val isComposing: Boolean,
+    ) {
+        sealed class Effect {
+            data class UpdatePreedit(val display: String) : Effect()
+            object ClearPreeditWithoutCommit : Effect()
+            data class CommitTextReplacingPreedit(val text: String) : Effect()
+            object DeleteBackwardFromDocument : Effect()
+            object ResetAutocomplete : Effect()
+            object PerformAutocomplete : Effect()
+            object ResetAutocompleteContext : Effect()
+        }
+
+        companion object {
+            val NOOP = ComposingTransition(
+                rawInput = "",
+                displayText = "",
+                effects = emptyList(),
+                selectedCandidateIndex = -1,
+                isComposing = false,
+            )
+        }
+    }
+
+    @JvmStatic
+    fun composingStart(
+        text: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Start.newBuilder().setText(text).build()
+        return composingDispatch(
+            methodSetter = { it.start = payload },
+            op = "composingStart",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingAppend(
+        ch: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Append.newBuilder().setChar(ch).build()
+        return composingDispatch(
+            methodSetter = { it.append = payload },
+            op = "composingAppend",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingAppendHyphen(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.appendHyphen = payload },
+            op = "composingAppendHyphen",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingReplaceLast(
+        replacement: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.newBuilder()
+            .setReplacement(replacement).build()
+        return composingDispatch(
+            methodSetter = { it.replaceLast = payload },
+            op = "composingReplaceLast",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingDeleteBackward(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.deleteBackward = payload },
+            op = "composingDeleteBackward",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingCommitDerived(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.commitDerived = payload },
+            op = "composingCommitDerived",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingCommitRaw(generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.commitRaw = payload },
+            op = "composingCommitRaw",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    @JvmStatic
+    fun composingSelectSuggestion(text: String, generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder()
+            .setText(text).build()
+        return composingDispatch(
+            methodSetter = { it.selectSuggestion = payload },
+            op = "composingSelectSuggestion",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    @JvmStatic
+    fun composingCommitPreeditThenInsertExternal(
+        text: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto
+            .CommitPreeditThenInsertExternal.newBuilder()
+            .setText(text).build()
+        return composingDispatch(
+            methodSetter = { it.commitPreeditThenInsertExternal = payload },
+            op = "composingCommitPreeditThenInsertExternal",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    @JvmStatic
+    fun composingReset(generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Reset.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.reset = payload },
+            op = "composingReset",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    @JvmStatic
+    fun composingSetSelectedCandidateIndex(index: Int, generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto
+            .SetSelectedCandidateIndex.newBuilder()
+            .setIndex(index).build()
+        return composingDispatch(
+            methodSetter = { it.setSelectedCandidateIndex = payload },
+            op = "composingSetSelectedCandidateIndex",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    @JvmStatic
+    fun composingQueryState(generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.QueryState.newBuilder().build()
+        return composingDispatch(
+            methodSetter = { it.queryState = payload },
+            op = "composingQueryState",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    private inline fun composingDispatch(
+        methodSetter: (com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.Builder) -> Unit,
+        op: String,
+        generation: Long,
+        config: AppConfig?,
+    ): ComposingTransition {
+        val composingBuilder = com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.newBuilder()
+        methodSetter(composingBuilder)
+        val requestBuilder = Request.newBuilder()
+            .setId(nextId.incrementAndGet())
+            .setGeneration(generation)
+            .setComposing(composingBuilder.build())
+        if (config != null) {
+            requestBuilder.configSnapshot = config
+        }
+        val response = sendRawBytes(requestBuilder.build().toByteArray())
+        if (response == null) {
+            recordFailure(op, "response decode failed")
+            return ComposingTransition.NOOP
+        }
+        if (response.error != ErrorCode.OK) {
+            recordFailure(op, "engine returned ${response.error}", response.error.number)
+            return ComposingTransition.NOOP
+        }
+        if (!response.hasComposing()) {
+            recordFailure(op, "missing composing payload")
+            return ComposingTransition.NOOP
+        }
+        return synthComposing(response.composing)
+    }
+
+    private fun synthComposing(
+        proto: com.siansiansu.taigikeyboard.engine.proto.ComposingResponse,
+    ): ComposingTransition {
+        val effects: List<ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
+            when {
+                eff.hasUpdatePreedit() -> ComposingTransition.Effect.UpdatePreedit(eff.updatePreedit.display)
+                eff.hasClearPreeditWithoutCommit() -> ComposingTransition.Effect.ClearPreeditWithoutCommit
+                eff.hasCommitTextReplacingPreedit() ->
+                    ComposingTransition.Effect.CommitTextReplacingPreedit(eff.commitTextReplacingPreedit.text)
+                eff.hasDeleteBackwardFromDocument() -> ComposingTransition.Effect.DeleteBackwardFromDocument
+                eff.hasResetAutocomplete() -> ComposingTransition.Effect.ResetAutocomplete
+                eff.hasPerformAutocomplete() -> ComposingTransition.Effect.PerformAutocomplete
+                eff.hasResetAutocompleteContext() -> ComposingTransition.Effect.ResetAutocompleteContext
+                else -> null
+            }
+        }
+        return ComposingTransition(
+            rawInput = proto.preedit.rawInput,
+            displayText = proto.preedit.displayText,
+            effects = effects,
+            selectedCandidateIndex = proto.selectedCandidateIndex,
+            isComposing = proto.isComposing,
+        )
+    }
+
+    // endregion
     // region Diagnostics (Codex v2 §8 / v3 §7 / v4 §5)
 
     data class DiagnosticsEntry(

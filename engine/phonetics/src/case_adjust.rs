@@ -23,7 +23,11 @@ pub(crate) fn adjust_nasal_marker_case(text: &str) -> String {
 
     for ch in text.chars() {
         if ch == NASAL_LOWER || ch == NASAL_UPPER {
-            result.push(if last_letter_uppercase { NASAL_UPPER } else { NASAL_LOWER });
+            result.push(if last_letter_uppercase {
+                NASAL_UPPER
+            } else {
+                NASAL_LOWER
+            });
         } else {
             if ch.is_alphabetic() {
                 last_letter_uppercase = ch.is_uppercase();

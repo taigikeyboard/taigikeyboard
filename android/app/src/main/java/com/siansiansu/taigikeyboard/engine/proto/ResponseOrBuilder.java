@@ -44,6 +44,17 @@ public interface ResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.PhoneticsResponse getPhonetics();
 
   /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   * @return Whether the composing field is set.
+   */
+  boolean hasComposing();
+  /**
+   * <code>.taigi.engine.ComposingResponse composing = 11;</code>
+   * @return The composing.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ComposingResponse getComposing();
+
+  /**
    * <code>.taigi.engine.LexiconResponse lexicon = 12;</code>
    * @return Whether the lexicon field is set.
    */

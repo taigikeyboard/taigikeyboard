@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
+// Composing slice — Intent → Effect state machine.
+//
+// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
+// case set 1:1 pre-migration. The Rust crate `engine/composing` owns the
+// state (`Phase::Idle | Composing { raw }` + `selected_candidate_index`)
+// inside a singleton `Mutex<Engine>` held by `EngineHandle`.
+//
+// Naming convention: `oneof method` matches the Phonetics/Lexicon dispatch
+// pattern adopted in PR #186.
+//
+// Lifecycle: every request carries `Request.generation`. A mismatch from the
+// engine's last-seen generation drops state to Idle BEFORE applying the
+// request (no effects emitted from the drop). See
+// `docs/engine/composing-slice-plan.md §5b.2` for the full semantic table.
+
+message ComposingRequest {
+  oneof method {
+    Start                           start                                = 10;
+    Append                          append                               = 11;
+    AppendHyphen                    append_hyphen                        = 12;
+    ReplaceLast                     replace_last                         = 13;
+    DeleteBackward                  delete_backward                      = 14;
+    CommitDerived                   commit_derived                       = 15;
+    CommitRaw                       commit_raw                           = 16;
+    SelectSuggestion                select_suggestion                    = 17;
+    CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
+    Reset                           reset                                = 19;
+    SetSelectedCandidateIndex       set_selected_candidate_index         = 20;
+    QueryState                      query_state                          = 21;
+  }
+}
+
+// Begin a fresh composition buffer with `text`. Caret resets;
+// `selected_candidate_index` set to 0.
+message Start { string text = 1; }
+
+// Append a single character to the buffer. Idle → behaves as Start.
+message Append { string char = 1; }
+
+// Convenience alias for `Append("-")`. Kept distinct so call sites do not
+// synthesize hyphen strings on the wire.
+message AppendHyphen {}
+
+// TPS auto-correct: replace the last raw-input character. Intentionally
+// preserves `selected_candidate_index` (correction on top of an in-progress
+// selection, not a fresh composition step).
+message ReplaceLast { string replacement = 1; }
+
+// Delete one grapheme. Empties → Idle. iOS emits
+// `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
+// `Reset` instead (`composing-slice-plan.md §5b.1`).
+message DeleteBackward {}
+
+// Commit the tone-marked derived form to the document.
+message CommitDerived {}
+
+// Commit the literal raw input (bypass tone conversion). Used for
+// Enter-at-index-0 / English passthrough.
+message CommitRaw {}
+
+// Commit the supplied platform-resolved suggestion text, atomically
+// replacing the current preedit.
+message SelectSuggestion { string text = 1; }
+
+// Commit the current preedit (if any) and atomically insert externally
+// supplied text in one document write. Non-Taigi input surfaces (emoji
+// palette, clipboard paste). Idle → behaves as plain insert.
+message CommitPreeditThenInsertExternal { string text = 1; }
+
+// Clear all state (mode switch, teardown). User-initiated; emits
+// `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
+// `[]` if was Idle.
+message Reset {}
+
+// Externally override `selected_candidate_index` (candidate-bar tap,
+// keyboard-arrow gesture). Pure index mutation; emits no effects.
+message SetSelectedCandidateIndex { int32 index = 1; }
+
+// Pure read — replaces platform `manager.isComposingText` getter without
+// shadowing engine state on the platform side. Returns current preedit +
+// is_composing + selected_candidate_index. Emits no effects.
+message QueryState {}
+
+message ComposingResponse {
+  message Preedit {
+    string raw_input    = 1;  // numeric tone, ASCII (search key)
+    string display_text = 2;  // diacritics (UI)
+  }
+
+  Preedit preedit                = 1;
+  repeated Effect effect         = 2;  // ordered side effects; prost preserves order
+  int32 selected_candidate_index = 3;  // -1 idle, 0 fresh, preserved on ReplaceLast
+  bool is_composing              = 4;  // mirrors `state.isComposing`
+}
+
+// Platform-neutral effects. The wrapper maps document-mutation effects
+// (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
+// / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
+// `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
+// `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
+// `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+// autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+message Effect {
+  oneof kind {
+    UpdatePreedit              update_preedit                = 1;
+    ClearPreeditWithoutCommit  clear_preedit_without_commit  = 2;
+    CommitTextReplacingPreedit commit_text_replacing_preedit = 3;
+    DeleteBackwardFromDocument delete_backward_from_document = 4;
+    ResetAutocomplete          reset_autocomplete            = 5;
+    PerformAutocomplete        perform_autocomplete          = 6;
+    ResetAutocompleteContext   reset_autocomplete_context    = 7;
+  }
+}
+
+message UpdatePreedit              { string display = 1; }
+message ClearPreeditWithoutCommit  {}
+message CommitTextReplacingPreedit { string text = 1; }
+message DeleteBackwardFromDocument {}
+message ResetAutocomplete          {}
+message PerformAutocomplete        {}
+message ResetAutocompleteContext   {}

@@ -14,10 +14,8 @@
 //!   provide the foundational helpers reused here.
 
 use crate::api::{
-    poj_display_to_tl_display, tl_display_to_poj_display, to_tone_marks, to_tone_number, InputMode,
-    PhoneticsError,
+    poj_display_to_tl_display, tl_display_to_poj_display, to_tone_number, PhoneticsError,
 };
-use crate::case_adjust::adjust_nasal_marker_case;
 use crate::derivation;
 use crate::normalization;
 use crate::tone_variations;
@@ -26,13 +24,16 @@ use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse,
-    StringResult, StripToneResult, TpsAdjustResult,
+    AppConfig, BoolResult, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, StringResult,
+    StripToneResult, TpsAdjustResult,
 };
 
 /// Dispatch a decoded `PhoneticsRequest` against the per-request `AppConfig`
 /// snapshot (live-read settings per `behavioral-invariants.md` §11).
-pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsResponse, PhoneticsError> {
+pub fn handle(
+    req: &PhoneticsRequest,
+    config: &AppConfig,
+) -> Result<PhoneticsResponse, PhoneticsError> {
     let Some(method) = &req.method else {
         // The most common cause is a Swift/Rust proto schema mismatch
         // (xcframework built before the proto was updated). Run
@@ -45,15 +46,9 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
 
     let result = match method {
         // --- Phonetics core ---
-        Method::NormalizeTone(payload) => {
-            let mode = parse_input_mode(&config.input_mode);
-            let preprocessed = preprocess_for_normalize_tone(&payload.input, mode, config);
-            let tone_marked = to_tone_marks(&preprocessed, mode);
-            // Display-form contract: nasal marker case agrees with the
-            // preceding letter.
-            let output = adjust_nasal_marker_case(&tone_marked);
-            PhonResult::StringResult(StringResult { output })
-        }
+        Method::NormalizeTone(payload) => PhonResult::StringResult(StringResult {
+            output: crate::api::normalize_tone(&payload.input, config),
+        }),
         Method::StripTone(payload) => {
             let (bare, tone) = crate::syllable::strip_tone_mark(&payload.input);
             PhonResult::StripToneResult(StripToneResult { bare, tone })
@@ -83,9 +78,7 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
         Method::HasToneMarks(payload) => PhonResult::BoolResult(BoolResult {
             value: normalization::has_tone_marks(&payload.text),
         }),
-        Method::GetToneVariations(_) => {
-            PhonResult::ToneVariationsResult(tone_variations::build())
-        }
+        Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
         Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
             output: normalization::taigi_unicode_base_form(&payload.input),
         }),
@@ -132,7 +125,6 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
                 replace_last: Some(replace_payload),
             })
         }
-
     };
 
     Ok(PhoneticsResponse {
@@ -142,57 +134,9 @@ pub fn handle(req: &PhoneticsRequest, config: &AppConfig) -> Result<PhoneticsRes
 
 // ---- Local helpers ------------------------------------------------------
 
-fn parse_input_mode(mode: &str) -> InputMode {
-    match mode {
-        "poj" | "POJ" => InputMode::Poj,
-        "english" | "English" | "EN" => InputMode::English,
-        _ => InputMode::Tl,
-    }
-}
-
-fn preprocess_for_normalize_tone(input: &str, mode: InputMode, config: &AppConfig) -> String {
-    if !matches!(mode, InputMode::Poj) {
-        return input.to_string();
-    }
-    let mut s = input.to_string();
-    if config.oo_doubletap_enabled {
-        s = s.replace("oo", "o\u{0358}");
-        s = s.replace("Oo", "O\u{0358}");
-        s = s.replace("OO", "O\u{0358}");
-    }
-    if config.nn_doubletap_enabled {
-        s = convert_nasal_double_n(&s);
-    }
-    s
-}
-
-/// Mirrors iOS ToneConverter `convertNasalDoubleN`: vowel + "nn" → vowel + "ⁿ".
-fn convert_nasal_double_n(input: &str) -> String {
-    const NASAL_VOWELS: &str = "aeiouAEIOU";
-    let chars: Vec<char> = input.chars().collect();
-    let mut result = String::new();
-    let mut i = 0;
-    while i < chars.len() {
-        let after_vowel = NASAL_VOWELS.contains(chars[i]);
-        let next_is_n = chars
-            .get(i + 1)
-            .map(|c| c.eq_ignore_ascii_case(&'n'))
-            .unwrap_or(false);
-        let next2_is_n = chars
-            .get(i + 2)
-            .map(|c| c.eq_ignore_ascii_case(&'n'))
-            .unwrap_or(false);
-        if after_vowel && next_is_n && next2_is_n && i + 2 < chars.len() {
-            result.push(chars[i]);
-            result.push('\u{207f}');
-            i += 3;
-        } else {
-            result.push(chars[i]);
-            i += 1;
-        }
-    }
-    result
-}
+// `parse_input_mode`, `preprocess_for_normalize_tone`, and the nasal-double-n
+// helper moved to `crate::api` in v3.5.4 commit 3 so `composing::derived` can
+// call the same chain via `crate::api::normalize_tone`.
 
 /// `Method::TlNumericToTps` — input is numeric tone form (e.g. `"hoo2"`).
 /// Mirrors iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
@@ -219,8 +163,11 @@ fn convert_numeric_tl_to_tps(text: &str, or_maps_to_er: bool) -> String {
     }
     text.split('-')
         .filter(|tok| !tok.is_empty())
-        .map(|tok| tps::to_zhuyin(tok, false, or_maps_to_er).trim_end().to_string())
+        .map(|tok| {
+            tps::to_zhuyin(tok, false, or_maps_to_er)
+                .trim_end()
+                .to_string()
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }
-

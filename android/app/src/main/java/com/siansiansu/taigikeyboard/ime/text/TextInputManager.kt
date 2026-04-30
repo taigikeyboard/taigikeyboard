@@ -253,6 +253,17 @@ class TextInputManager(
         resetComposingText()
         setActiveKeyboardMode(keyboardMode)
         smartbarManager.onStartInputView(keyboardMode, isComposingEnabled)
+
+        // v3.5.4 lifecycle (plan §4.2): bump on every onStartInputView,
+        // including `restarting=true`. The block above unconditionally
+        // reassigns `composingManager` and the preceding `resetComposingText()`
+        // wiped the host editor's composing region — both signals say
+        // "platform-side state is fresh", so the process-singleton Rust
+        // engine MUST drop its preedit too. Without this bump, a restart
+        // (orientation flip, soft-keyboard re-show) would leave the engine
+        // holding stale buffer text that the next `deleteBackward` query
+        // would read as authoritative (Codex post-impl PR #197 r3163335192).
+        composingManager?.bumpGeneration()
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {

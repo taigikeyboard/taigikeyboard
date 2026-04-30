@@ -5,10 +5,10 @@ import UIKit
 // MARK: - ComposingDelegate
 
 extension KeyboardViewController {
-    /// Translate a platform-neutral `ComposingTransition.Effect` to the
-    /// iOS `UITextDocumentProxy` surface. Binding contract (iOS + Android)
-    /// is documented in `composing-state-boundary.md` §2.2.
-    func execute(_ effect: ComposingTransition.Effect) {
+    /// Translate a platform-neutral `RustEngineBridge.ComposingTransition.Effect`
+    /// to the iOS `UITextDocumentProxy` surface. Binding contract (iOS +
+    /// Android) is documented in `composing-state-boundary.md` §2.2.
+    func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
         switch effect {
         case let .updatePreedit(text):
             setMarkedText(text)

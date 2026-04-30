@@ -112,7 +112,13 @@ fn adjust_initial_key(char_str: &str, raw_input: &str) -> String {
         'ㄉ' => "ㆵ".to_string(),
         'ㄍ' => "ㆻ".to_string(),
         'ㄏ' => "ㆷ".to_string(),
-        'ㄫ' => if last == 'ㄧ' { "ㄥ".to_string() } else { "ㆭ".to_string() },
+        'ㄫ' => {
+            if last == 'ㄧ' {
+                "ㄥ".to_string()
+            } else {
+                "ㆭ".to_string()
+            }
+        }
         _ => char_str.to_string(),
     }
 }

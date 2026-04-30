@@ -13,5 +13,6 @@ workspace = true
 prost = { workspace = true }
 protos = { workspace = true }
 phonetics = { workspace = true }
+composing = { workspace = true }
 ranking = { workspace = true }
 log = { workspace = true }

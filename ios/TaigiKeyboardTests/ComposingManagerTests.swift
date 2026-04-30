@@ -15,9 +15,9 @@ final class ComposingManagerTests: XCTestCase {
     /// Spy that records every `execute(_:)` call so tests can assert the
     /// wrapper fans out effects in the order the engine emitted them.
     private final class DelegateSpy: ComposingDelegate {
-        var effects: [ComposingTransition.Effect] = []
+        var effects: [RustEngineBridge.ComposingTransition.Effect] = []
 
-        func execute(_ effect: ComposingTransition.Effect) {
+        func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
             effects.append(effect)
         }
     }

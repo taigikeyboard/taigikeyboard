@@ -1,5 +1,5 @@
 [workspace]
-members = ["phonetics", "protos", "ranking", "dispatch", "cli", "swift-ffi", "android-jni"]
+members = ["phonetics", "composing", "protos", "ranking", "dispatch", "swift-ffi", "android-jni"]
 resolver = "2"
 
 [workspace.package]
@@ -17,11 +17,10 @@ unicode-properties = "0.1"
 regex = "1"
 log = "0.4"
 thiserror = "1"
-clap = { version = "4", features = ["derive"] }
-anyhow = "1"
 proptest = "1"
 once_cell = "1"
 phonetics = { path = "./phonetics" }
+composing = { path = "./composing" }
 protos = { path = "./protos" }
 ranking = { path = "./ranking" }
 dispatch = { path = "./dispatch" }

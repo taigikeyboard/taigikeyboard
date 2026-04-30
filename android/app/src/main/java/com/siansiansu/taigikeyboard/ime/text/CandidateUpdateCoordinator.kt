@@ -61,24 +61,19 @@ class CandidateUpdateCoordinator(
     }
 
     /**
-     * Schedule display derivation (segmentation + tone conversion) off the main thread.
+     * Obsolete after v3.5.4 (Composing → Rust shared core). The Rust
+     * dispatch returns the display form synchronously inside the
+     * bridge-emitted `UpdatePreedit` effect, which the
+     * [DefaultComposingDelegate] applies via `ic.setComposingText` during
+     * the dispatch itself. The async refresh path existed only to absorb
+     * Kotlin tone-converter latency; Rust dispatch is microsecond-scale
+     * so no async refresh is needed.
+     *
+     * Kept as a no-op shim so existing call sites (TextInputManager) do
+     * not need to be edited in this commit.
      */
     fun scheduleDisplayDerivation() {
         displayDerivationJob?.cancel()
-        val manager = getComposingManager() ?: return
-        val raw = manager.getRawInput() ?: return
-
-        displayDerivationJob =
-            scope.launch {
-                val derived =
-                    withContext(Dispatchers.Default) {
-                        manager.deriveDisplay(raw)
-                    }
-                val ic = taigikeyboard.currentInputConnection ?: return@launch
-                if (manager.isComposing() && manager.getRawInput() == raw) {
-                    manager.applyDerivedDisplay(derived, ic)
-                }
-            }
     }
 
     /**

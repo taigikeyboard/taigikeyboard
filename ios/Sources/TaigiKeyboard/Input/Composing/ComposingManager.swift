@@ -1,42 +1,48 @@
 import Combine
 import Foundation
 
-/// A minimal write-only view of the composing-context state that the
-/// keyboard extension needs updated when composing starts/stops. The
-/// KeyboardKit `KeyboardContext` conforms to this (see
-/// `KeyboardContext+Composing`), so ComposingManager stays
-/// Foundation-only.
+/// Minimal write-only view of the composing-context state that the keyboard
+/// extension needs updated when composing starts/stops. KeyboardKit's
+/// `KeyboardContext` conforms via `KeyboardContext+Composing` so this
+/// wrapper stays Foundation-only.
 protocol ComposingContextSink: AnyObject {
     var isComposingText: Bool { get set }
 }
 
-/// iOS platform wrapper around the pure `ComposingState` engine.
+/// iOS platform wrapper around the Rust shared-core composing engine
+/// (`engine/composing` crate, accessed through
+/// `RustEngineBridge.composing*` methods).
 ///
-/// Responsibilities kept in this file (non-candidate, iOS-specific):
-/// - `ObservableObject` + `@Published` fan-out for SwiftUI,
-/// - `ComposingDelegate` / `ComposingContextSink` wiring (UIKit side effects),
-/// - reading `EngineSettingsProvider.current` per intent and threading
-///   `mode` + `toneToggles` into `ComposingState.apply(...)`.
+/// Engine state (phase + raw input + selectedCandidateIndex) lives inside
+/// the Rust singleton `EngineHandle`; this wrapper:
+/// - mirrors the latest response into `@Published` properties for SwiftUI,
+/// - dispatches the bridge-emitted `Effect[]` through `ComposingDelegate`
+///   in proto-list order,
+/// - notifies the `ComposingContextSink` once state is settled.
 ///
-/// The engine boundary lives in `ComposingState.swift` /
-/// `ComposingTransition.swift` — this wrapper is intentionally
-/// mechanical (see `composing-state-boundary.md` §2.4).
+/// Lifecycle: `currentGeneration` ticks once per real input-context
+/// change (per plan §4.2 + Codex P1.4). The bridge passes it on every call;
+/// the engine compares against last-seen and silently drops state on
+/// mismatch.
 public class ComposingManager: ObservableObject, ComposingStateProvider {
-    // MARK: - Engine State
-
-    private var state = ComposingState()
-
     // MARK: - Published Mirror
 
     @Published public private(set) var isComposing: Bool = false
     @Published public private(set) var composingText: String = ""
     @Published public private(set) var rawInput: String = ""
-
-    /// SwiftUI mirror of the engine-owned `ComposingState.selectedCandidateIndex`.
-    /// All writes flow through either `dispatch(_:)` (buffer intents) or
-    /// `setSelectedCandidateIndex(_:)` (UI-driven selection) so the wrapper
-    /// never desyncs from the pure state.
     @Published public private(set) var selectedCandidateIndex: Int = -1
+
+    // MARK: - Lifecycle Generation
+
+    /// Bumped by `KeyboardViewController` lifecycle hooks (commit 11) when
+    /// a real input-context change is detected. Engine-side generation
+    /// mismatch then drops state silently before applying the next request.
+    private var currentGeneration: UInt64 = 1
+
+    /// `true` while the platform is dispatching effects from a self-driven
+    /// commit. Suppresses redundant generation bumps from `textWillChange`
+    /// firing on candidate taps / self-commits.
+    public internal(set) var selfCommitInProgress: Bool = false
 
     // MARK: - Collaborators
 
@@ -55,114 +61,136 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         contextSink = sink
     }
 
+    /// Called by `KeyboardViewController` lifecycle hooks (per plan §4.2)
+    /// when a NEW input context is detected. Subsequent bridge calls carry
+    /// the bumped generation; engine drops stale state silently.
+    public func bumpGeneration() {
+        currentGeneration &+= 1
+    }
+
     // MARK: - Composing Operations
 
     public func startComposing(with text: String) {
-        dispatch(.start(text))
+        let settings = settingsProvider.current
+        apply(RustEngineBridge.composingStart(
+            text,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
     public func appendCharacter(_ char: String) {
-        dispatch(.append(char))
-    }
-
-    /// Retroactively replace the last raw-input character (used by TPS auto-correct).
-    /// Intentionally does NOT reset `selectedCandidateIndex` — unlike `appendCharacter`
-    /// / `startComposing`, replacement is a correction and preserves candidate selection.
-    public func replaceLastCharacter(with replacement: String) {
-        dispatch(.replaceLast(replacement))
+        let settings = settingsProvider.current
+        apply(RustEngineBridge.composingAppend(
+            char,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
     public func appendHyphen() {
-        dispatch(.appendHyphen)
+        let settings = settingsProvider.current
+        apply(RustEngineBridge.composingAppendHyphen(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
+    }
+
+    /// TPS auto-correct — preserves `selectedCandidateIndex`.
+    public func replaceLastCharacter(with replacement: String) {
+        let settings = settingsProvider.current
+        apply(RustEngineBridge.composingReplaceLast(
+            replacement,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
     public func deleteBackward() {
-        dispatch(.deleteBackward)
+        let settings = settingsProvider.current
+        apply(RustEngineBridge.composingDeleteBackward(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
-    /// Commit the derived `composingText` (tone-marked form) to the backing text.
     public func commitComposition() {
-        dispatch(.commitDerived)
+        let settings = settingsProvider.current
+        applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
-    /// Commit the literal raw keystrokes (no tone conversion / segmentation).
-    /// Used when Enter is pressed at candidate index 0, so English words or
-    /// partially-typed romanization pass through unchanged.
     public func commitRawInput() {
-        dispatch(.commitRaw)
+        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(generation: currentGeneration))
     }
 
-    /// Commit the given candidate text and leave composing state.
-    ///
-    /// Takes a raw `String` rather than `Autocomplete.Suggestion` so this
-    /// file stays engine-pure. The KK adapter side passes `suggestion.text`.
     public func selectSuggestion(text: String) {
-        dispatch(.selectSuggestion(text))
+        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(text, generation: currentGeneration))
     }
 
-    /// Commit the current preedit (if any) and insert externally-supplied
-    /// text in one atomic document write. Used by non-Taigi input surfaces
-    /// such as the emoji palette, so an active Taigi preedit never leaks a
-    /// silent commit through `textDocumentProxy.insertText` /
-    /// `InputConnection.finishComposingText` bypass paths.
     public func commitPreeditThenInsertExternal(_ text: String) {
-        dispatch(.commitPreeditThenInsertExternal(text))
+        let settings = settingsProvider.current
+        applyAsSelfCommit(RustEngineBridge.composingCommitPreeditThenInsertExternal(
+            text,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration
+        ))
     }
 
-    /// Commit the currently-selected candidate, given only the visible
-    /// candidate text strings. KK-side callers pass
-    /// `suggestions.map(\.text)` at the boundary.
+    /// Commit the currently-selected candidate, given the visible candidate
+    /// strings. KK-side callers pass `suggestions.map(\.text)`.
     public func confirmSelectedCandidate(availableTexts: [String]) -> Bool {
         guard isComposing,
               selectedCandidateIndex >= 0,
               selectedCandidateIndex < availableTexts.count
         else { return false }
-
         selectSuggestion(text: availableTexts[selectedCandidateIndex])
         return true
     }
 
-    /// Clear all state (e.g. keyboard teardown).
     public func reset() {
-        dispatch(.reset)
+        applyAsSelfCommit(RustEngineBridge.composingReset(generation: currentGeneration))
     }
 
-    /// Update the candidate-bar selection (tap or keyboard arrow).
-    /// Routes through the engine so the pure state stays authoritative.
     public func setSelectedCandidateIndex(_ index: Int) {
-        state.setSelectedCandidateIndex(index)
-        if selectedCandidateIndex != index { selectedCandidateIndex = index }
+        apply(RustEngineBridge.composingSetSelectedCandidateIndex(index, generation: currentGeneration))
     }
 
-    // MARK: - Transition Application (three-phase, see boundary doc §2.4)
+    // MARK: - Apply Transition (three-phase, see boundary doc §2.4)
 
-    private func dispatch(_ intent: ComposingState.Intent) {
-        let settings = settingsProvider.current
-        let transition = state.apply(
-            intent,
-            mode: settings.inputMode,
-            toneToggles: settings.toneToggles,
-        )
+    private func applyAsSelfCommit(_ transition: RustEngineBridge.ComposingTransition) {
+        selfCommitInProgress = true
+        defer { selfCommitInProgress = false }
+        apply(transition)
+    }
 
+    private func apply(_ transition: RustEngineBridge.ComposingTransition) {
         // Phase 1 — mutate published mirror (guarded-inequality writes keep
         // idle→idle silent and avoid redundant SwiftUI invalidation).
-        let engineIsComposing = state.isComposing
-        let engineRaw = state.rawInput
-        if isComposing != engineIsComposing { isComposing = engineIsComposing }
-        if rawInput != engineRaw { rawInput = engineRaw }
-        if !transition.effects.isEmpty, composingText != transition.derivedDisplay {
-            composingText = transition.derivedDisplay
+        if isComposing != transition.isComposing { isComposing = transition.isComposing }
+        if rawInput != transition.rawInput { rawInput = transition.rawInput }
+        if !transition.effects.isEmpty, composingText != transition.displayText {
+            composingText = transition.displayText
         }
-        if selectedCandidateIndex != transition.newSelectedIndex {
-            selectedCandidateIndex = transition.newSelectedIndex
+        if selectedCandidateIndex != transition.selectedCandidateIndex {
+            selectedCandidateIndex = transition.selectedCandidateIndex
         }
 
-        // Phase 2 — execute platform effects in the order the engine emitted.
+        // Phase 2 — execute platform effects in proto-list order.
         for effect in transition.effects {
             delegate?.execute(effect)
         }
 
         // Phase 3 — notify composing-context sink once state is settled.
-        contextSink?.isComposingText = engineIsComposing
+        contextSink?.isComposingText = transition.isComposing
     }
 }

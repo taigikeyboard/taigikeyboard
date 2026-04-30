@@ -30,6 +30,11 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     var lastInputMode: InputMode?
     var lastKeyboardLayoutType: KeyboardLayoutType?
 
+    /// Identity of the most recent `UITextInput` seen by `textWillChange`.
+    /// Pointer-equality detects field switches without touching the iOS 26
+    /// SDK's broken `documentIdentifier` UUID bridge.
+    private var lastTextInputID: ObjectIdentifier?
+
     var emojiService: EmojiService {
         if emojiServiceStorage == nil {
             emojiServiceStorage = EmojiService()
@@ -145,6 +150,25 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         super.textDidChange(textInput)
 
         actionHandler?.nextWordController.resetAndClearUI()
+    }
+
+    /// v3.5.4 lifecycle (plan §4.2): bump the composing engine's
+    /// input-context generation on a real field change.
+    ///
+    /// `selfCommitInProgress` skips the IME's own commits (candidate tap,
+    /// self-driven write re-entry). The `ObjectIdentifier` compare detects
+    /// genuine field switches via UITextInput class-instance identity —
+    /// distinct fields are distinct instances. Same-field textWillChange
+    /// fires (typing, selection change) keep the same identity and skip
+    /// the bump, preserving an active composing buffer.
+    override func textWillChange(_ textInput: UITextInput?) {
+        super.textWillChange(textInput)
+        guard let manager = actionHandler?.composingManager else { return }
+        if manager.selfCommitInProgress { return }
+        let id = textInput.map { ObjectIdentifier($0 as AnyObject) }
+        if lastTextInputID == id { return }
+        lastTextInputID = id
+        manager.bumpGeneration()
     }
 
     /// FIXME: Workaround layer 1/2 for KeyboardKit 10 auto-capitalization override.

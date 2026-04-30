@@ -26,11 +26,6 @@ description = "cargo check --workspace --locked"
 command = "cargo"
 args = ["check", "--workspace", "--locked"]
 
-[tasks.build-cli]
-description = "Build the dev cli binary"
-command = "cargo"
-args = ["build", "--release", "-p", "cli"]
-
 [tasks.audit]
 description = "Run cargo-audit (requires separate install)"
 command = "cargo"

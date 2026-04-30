@@ -9,11 +9,10 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, GetToneVariations,
-    NfdPreprocessForLookup,
-    HasToneMarks, IsTpsToneMark, NormalizeInput, NormalizeToTl, NormalizeTone,
-    OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone, StringResult,
-    StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj, ToneVariationsResult,
-    TpsAdjustResult, TpsInputAdjust, TpsToTl,
+    HasToneMarks, IsTpsToneMark, NfdPreprocessForLookup, NormalizeInput, NormalizeToTl,
+    NormalizeTone, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone,
+    StringResult, StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj,
+    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust, TpsToTl,
 };
 
 // ---------------- helpers ----------------

@@ -3,6 +3,7 @@ syntax = "proto3";
 package taigi.engine;
 
 import "phonetics.proto";
+import "composing.proto";
 import "lexicon.proto";
 
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
@@ -15,8 +16,7 @@ option java_multiple_files = true;
 enum CommandType {
   CMD_UNSPECIFIED = 0;
   CMD_PHONETICS = 1;
-  // CMD_COMPOSING reserved for D9.3.
-  reserved 2;
+  CMD_COMPOSING = 2;
   CMD_LEXICON = 3;
 }
 
@@ -50,10 +50,9 @@ message Request {
   uint64 generation = 4;
   oneof payload {
     PhoneticsRequest phonetics = 10;
-    // Composing payload reserved for D9.3 to avoid renumbering.
+    ComposingRequest composing = 11;
     LexiconRequest lexicon = 12;
   }
-  reserved 11;
 }
 
 message Response {
@@ -62,9 +61,9 @@ message Response {
   uint64 generation = 3;
   oneof payload {
     PhoneticsResponse phonetics = 10;
+    ComposingResponse composing = 11;
     LexiconResponse lexicon = 12;
   }
-  reserved 11;
 }
 
 message Command {

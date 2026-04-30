@@ -1,6 +1,6 @@
 # Rust Core Protobuf Contract — First-Slice Reference
 
-> **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = DESIGN DRAFT, deferred to D9.3 / v3.5.4)
+> **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = AS-IMPLEMENTED in v3.5.4)
 > **Keywords**: `protobuf`, `Command`, `Request`, `Response`, `request-id`, `generation`, `AppConfig`, `Phonetics`, `Composing`
 > **Related**: `ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
 > **Audience**: Phase III implementers continuing from the merged D9.4 Phonetics slice.
@@ -10,9 +10,9 @@
 
 ## 1. Scope of THIS document
 
-- **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — DEFERRED to v3.5.4).**
+- **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — MERGED in v3.5.4).**
 - Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring all DEFERRED to Phase III post-Composing.
-- §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 remains a design draft to be revisited when D9.3 lands.
+- §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 reflects the merged Composing wire (v3.5.4); naming was changed from `oneof intent` to `oneof method` per the Phonetics convention adopted in PR #186.
 - **Authoritative companion**: `rules/rust-best-practices.md` §5 (crate choices — `prost` for protobuf), §10 (opaque handle pattern), §11 (non-goals).
 
 ---
@@ -61,8 +61,9 @@ message Request {
   uint64 generation = 4;               // platform-supplied — see §5
   oneof payload {
     PhoneticsRequest phonetics = 10;
+    ComposingRequest composing = 11;
+    LexiconRequest lexicon = 12;
   }
-  reserved 11;                         // Composing payload — D9.3
 }
 
 message Response {
@@ -71,14 +72,16 @@ message Response {
   uint64 generation = 3;               // echoes Request.generation
   oneof payload {
     PhoneticsResponse phonetics = 10;
+    ComposingResponse composing = 11;
+    LexiconResponse lexicon = 12;
   }
-  reserved 11;                         // Composing payload — D9.3
 }
 
 enum CommandType {
   CMD_UNSPECIFIED = 0;
   CMD_PHONETICS = 1;
-  reserved 2;                          // CMD_COMPOSING — D9.3
+  CMD_COMPOSING = 2;
+  CMD_LEXICON = 3;
 }
 ```
 
@@ -167,9 +170,9 @@ message PhoneticsResponse {
 
 ---
 
-## 8. Composing slice — DESIGN DRAFT (D9.3 deferred to v3.5.4)
+## 8. Composing slice — AS-IMPLEMENTED (v3.5.4)
 
-> **Status**: This section is design intent only. The merged proto reserves tag 11 in `Request.payload` / `Response.payload` and `CMD_COMPOSING` in `CommandType` for the eventual D9.3 wire (`engine/protos/proto/envelope.proto:18-20,52,62`). Field naming below (`oneof intent`) will likely be renamed to `oneof method` to match the Phonetics convention adopted in PR #186 — track in D9.3 design.
+> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 + `CMD_COMPOSING = 2` were unreserved. Field naming uses `oneof method` (Phonetics convention). Two methods were added beyond the original §8 design draft: `SetSelectedCandidateIndex` (UI-driven candidate-bar tap mutator) and `QueryState` (pure read replacing the platform `manager.isComposingText` getter). Plus `is_composing` boolean on `ComposingResponse` so the platform stops shadowing engine state. See `composing-slice-plan.md` §2.3 for the rationale.
 
 ```protobuf
 message ComposingRequest {

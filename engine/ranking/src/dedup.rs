@@ -105,10 +105,7 @@ mod tests {
 
     #[test]
     fn remove_duplicates_keeps_homophones_with_different_hanji() {
-        let words = vec![
-            word(1, "kau3", Some("教")),
-            word(2, "kau3", Some("猴")),
-        ];
+        let words = vec![word(1, "kau3", Some("教")), word(2, "kau3", Some("猴"))];
         let result = remove_duplicates(words);
         assert_eq!(result.len(), 2);
     }
