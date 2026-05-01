@@ -58,9 +58,9 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Properties
 
-    /// Bundled-bigram lookups go through `RustEngineBridge.lexiconAssocLookup`
-    /// (Rust shared-core lexicon engine). The previous `AssociationBinaryReader`
-    /// platform mirror was deleted in v3.5.6 commit 13.
+    /// Bundled-bigram lookups go through `RustEngineBridge.lexiconAssocLookup`.
+    /// `userConnectionManager` only owns the mutable `user_association.db`
+    /// SQLite half (write path).
     private let userConnectionManager: SQLiteConnectionManager
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "NextWordService")

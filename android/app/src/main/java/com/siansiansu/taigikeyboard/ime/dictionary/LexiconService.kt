@@ -19,20 +19,19 @@ import kotlinx.coroutines.withContext
 /**
  * Dictionary search orchestrator.
  *
- * Search flow (v3.5.6 — Rust shared-core lexicon engine):
+ * Search flow:
  * 1. **D-8 hanzi guard** — `inputType is InputType.Hanzi` short-circuits to
  *    `[]` BEFORE custom-dict / system-dict. Pinned by
  *    `INVARIANT_LEX_HANZI_GUARD` (`docs/architecture/behavioral-invariants.md` §14).
  * 2. Custom-dict lookup (user-added entries, highest priority).
- * 3. System-dict query through `LexiconBridge.search` (engine handles trie,
- *    binary-reader filter, TPS er↔or expansion atomically).
+ * 3. System-dict query through `LexiconBridge.search` (Rust engine handles
+ *    trie, binary-reader filter, TPS er↔or expansion atomically).
  * 4. `RustEngineBridge.processCandidates` dedups + ranks + (TPS-gated)
  *    display-dedup in one FFI round-trip into `engine/ranking/`.
  *
  * Owned by `CompositionRoot`; collaborators injected through the ctor.
- * `trie` / `binaryReader` parameters from previous slices were removed in
- * v3.5.6 — engine state is installed at app startup via
- * `LexiconBridge.install(...)` from `AppInitializer`.
+ * Engine state is installed at app startup via `LexiconBridge.install(...)`
+ * from `AppInitializer`.
  */
 class LexiconService(
     appContext: Context,

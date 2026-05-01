@@ -48,8 +48,8 @@ class TaigiKeyboardApplication : Application() {
         applicationScope.launch {
             compositionRoot.customDict.seedDefaultEntryIfEmpty()
         }
-        // v3.5.6: copy bundled assets to filesDir then install the
-        // Rust shared-core lexicon engine. Idempotent.
+        // Copy bundled assets to filesDir then install the Rust shared-core
+        // lexicon engine. Idempotent.
         applicationScope.launch {
             installLexiconEngine()
         }

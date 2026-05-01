@@ -1,9 +1,11 @@
 import Foundation
 
-/// Errors raised by the lexicon engine (SQLite repositories, trie loader,
+/// Errors raised by the lexicon module (user-data SQLite repositories +
 /// shared infrastructure). Named after the module, not any single data
-/// source — these surface from `DictionaryRepository`, `CustomDictionaryRepository`,
-/// `UserFrequencyRepository`, `NextWordService`, and `TrieService` alike.
+/// source — these surface from `CustomDictionaryRepository`,
+/// `UserFrequencyRepository`, `NextWordRepository`, and `NextWordService`
+/// alike. (Read-only dictionary errors live in the Rust engine and surface
+/// through `RustEngineBridge` instead.)
 
 // MARK: - Shared-Core Candidate
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.

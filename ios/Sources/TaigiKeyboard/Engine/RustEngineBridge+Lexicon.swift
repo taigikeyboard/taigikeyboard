@@ -1,13 +1,12 @@
 import Foundation
 import SwiftProtobuf
 
-// MARK: - RustEngineBridge Lexicon surface (v3.5.6)
+// MARK: - RustEngineBridge Lexicon surface
 
-/// Lexicon read-path slice extension for `RustEngineBridge`. Mirrors the
-/// extension pattern established for the NextWord (v3.5.5) and composing
-/// (v3.5.4) slices — proto roundtrip helpers + Swift-friendly synthesized
-/// value types co-located inside this file (per
-/// `docs/engine/lexicon-slice-plan.md` G3).
+/// Lexicon read-path extension for `RustEngineBridge`. Follows the same
+/// "proto roundtrip helpers + Swift-friendly synthesized value types
+/// co-located in one file" pattern used by the NextWord, composing, and
+/// phonetics extensions.
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
@@ -24,8 +23,7 @@ public extension RustEngineBridge {
     }
 
     /// Bridge-synthesized companion to proto `LexiconAssocEntry`. Consumed
-    /// by iOS `NextWordService` (post-rewire in commit 10) for bundled
-    /// bigram lookups.
+    /// by iOS `NextWordService` for bundled bigram lookups.
     struct LexiconAssocEntry: Equatable {
         public let previousWord: String
         public let candidateWord: String

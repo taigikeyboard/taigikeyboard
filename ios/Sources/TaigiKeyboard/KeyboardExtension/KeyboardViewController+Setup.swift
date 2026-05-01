@@ -17,11 +17,11 @@ extension KeyboardViewController {
         setupCoreServices()
     }
 
-    /// v3.5.6 — install the Rust shared-core lexicon engine state once at
-    /// extension launch. Resolves bundle paths via `ResourceBundleResolver`;
-    /// bundle assets are read-only + stable across the extension's lifetime
-    /// so a single install is sufficient. Failures are logged and left to
-    /// graceful degradation at first search call (engine returns
+    /// Install the Rust shared-core lexicon engine state once at extension
+    /// launch. Resolves bundle paths via `ResourceBundleResolver`; bundle
+    /// assets are read-only + stable across the extension's lifetime so a
+    /// single install is sufficient. Failures are logged and left to graceful
+    /// degradation at first search call (engine returns
     /// `LexiconError::NotInitialized` → bridge returns `[]`).
     func installLexiconEngine() {
         let bundle = ResourceBundleResolver.dictionaryBundle

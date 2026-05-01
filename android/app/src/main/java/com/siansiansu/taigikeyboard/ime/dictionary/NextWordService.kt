@@ -98,10 +98,6 @@ class NextWordService(
     // Properties
     // ------------------------------------------------------------------ //
 
-    // v3.5.6: bundled-bigram lookups go through `LexiconBridge.assocLookup`
-    // (Rust shared-core lexicon engine). The previous AssociationBinaryReader
-    // platform mirror was deleted in commit 13.
-
     @Volatile private var userDatabase: SQLiteDatabase? = null
 
     @Volatile private var isInitialized = false
@@ -202,12 +198,11 @@ class NextWordService(
             if (lexiconReady) {
                 try {
                     logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
-                    // v3.5.6: bundled bigram lookup goes through the Rust shared-core
-                    // lexicon engine (engine/lexicon::assoc_lookup). Engine applies
-                    // the 1-layer source filter (low 9 bits of bitmask) per audit
-                    // §4. Over-fetch limit * 2 for merge-slack (Codex post-impl
-                    // P2-1). Bitmask plumbed end-to-end since r3173013233 (prior
-                    // to that, api.rs hardcoded u32::MAX).
+                    // Engine applies the 1-layer source filter (low 9 bits of
+                    // bitmask) per audit §4. Over-fetch limit * 2 so the Rust
+                    // filter step has slack to merge (hanzi, tl) collisions
+                    // across dict + user without dropping below the caller's
+                    // requested limit.
                     val enabled = EnabledDictionaries.fromSettings(settings)
                     val bitmask: UInt = if (enabled.allAssociationSourcesEnabled()) {
                         UInt.MAX_VALUE

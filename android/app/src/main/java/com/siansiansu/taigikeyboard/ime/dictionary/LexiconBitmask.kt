@@ -3,10 +3,6 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 /**
  * `LexiconBitmask` — bitmask → `List<DictionarySource>` decoder.
  *
- * Survivor of the v3.5.6 Lexicon read-path Rust extraction. Mirrors the
- * 12-bit `bitToSource` table that lived inside the deleted
- * `DictionaryBinaryReader.sourcesFromBitmask`.
- *
  * CROSS-PLATFORM INVARIANT — bit positions mirror
  * `dictionary/common/source_bits.py` (SOURCE_BITS + IS_VARIANT_BIT at
  * bit 12), `engine/lexicon/src/dictionary_reader.rs` constants, and iOS

@@ -17,10 +17,10 @@ struct TaigiKeyboardApp: App {
         // DebugLogger. Idempotent. Mirrors Android `Application.onCreate`.
         RustEngineBridge.install()
 
-        // v3.5.6: install the Rust shared-core lexicon engine state for
-        // the main app (Dictionary tab uses bundled fst + dict.bin reads).
-        // Idempotent — extension calls the same install separately at
-        // viewDidLoad. Bundle paths resolve through `ResourceBundleResolver`.
+        // Install the Rust shared-core lexicon engine state for the main
+        // app (Dictionary tab uses bundled fst + dict.bin reads). Idempotent
+        // — extension calls the same install separately at viewDidLoad.
+        // Bundle paths resolve through `ResourceBundleResolver`.
         installLexiconEngineForMainApp()
 
         // Configure KeyboardKit to persist settings via App Group.
@@ -45,8 +45,8 @@ struct TaigiKeyboardApp: App {
         }
     }
 
-    /// v3.5.6 — install the Rust shared-core lexicon engine for the main
-    /// app process (Dictionary tab uses the same fst + bundled binaries).
+    /// Install the Rust shared-core lexicon engine for the main app
+    /// process (Dictionary tab uses the same fst + bundled binaries).
     /// Idempotent; the keyboard extension does its own install in
     /// `KeyboardViewController.viewDidLoad`.
     private func installLexiconEngineForMainApp() {

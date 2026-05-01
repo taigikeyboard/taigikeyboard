@@ -14,18 +14,18 @@ import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord
 
 /**
- * v3.5.6 lexicon read-path bridge. Top-level object (NOT a member of
- * `RustEngineBridge`) per `docs/engine/lexicon-slice-plan.md` G3 — the
- * LOC + functional-cohesion argument outweighs the cross-class call
- * inconsistency with composing/nextword/phonetics slices.
+ * Lexicon read-path bridge. Top-level object (NOT a member of
+ * `RustEngineBridge`) — keeps the lexicon LOC + functional cohesion in
+ * one place at the cost of cross-class call inconsistency with the
+ * composing / nextword / phonetics slices.
  *
  * Reuses `RustEngineBridge.dispatchRaw` for the JNI roundtrip (single
  * symbol bound to `RustEngineBridge`) and `nextRequestIdInternal` for
  * unique IDs across bridges.
  *
- * The mutable `user_association.db` SQLite half of NextWord persistence
- * is OUT OF SCOPE for v3.5.6 — only the bundled `association.bin`
- * read-only half goes through this bridge.
+ * Read-path only — the mutable `user_association.db` SQLite half of
+ * NextWord persistence is out of scope for this bridge; only the
+ * bundled `association.bin` read-only half goes through here.
  */
 object LexiconBridge {
     private const val TAG = "LexiconBridge"
@@ -159,10 +159,7 @@ object LexiconBridge {
         return resp.searchByHanziResult.rowsList.map(::taigiWordToRow)
     }
 
-    /**
-     * Bundled-bigram lookup. Called by `NextWordService` after the
-     * commit 11 rewire (replaces direct `AssociationBinaryReader.lookup`).
-     */
+    /** Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows. */
     fun assocLookup(
         previousWord: String,
         limit: UInt,

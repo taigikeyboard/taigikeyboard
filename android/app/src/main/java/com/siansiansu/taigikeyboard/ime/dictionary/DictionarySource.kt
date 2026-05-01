@@ -5,8 +5,9 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**
  * Dictionary source enum used for search-result attribution.
- * (Bit positions are owned by EnabledDictionaries / DictionaryBinaryReader;
- *  see docs/engine/binary-format.md §4.)
+ * (Bit positions are owned by `dictionary/common/source_bits.py` and read
+ *  by `engine/lexicon/src/dictionary_reader.rs`; see
+ *  docs/engine/binary-format.md §4.)
  */
 enum class DictionarySource(
     val displayName: String,

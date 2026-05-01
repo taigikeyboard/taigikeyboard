@@ -4,8 +4,7 @@ import Foundation
 /// repositories → leaf services → composite services.
 /// `SharedSettings.shared` is referenced directly by init defaults.
 ///
-/// v3.5.6: `TrieService` + `DictionaryRepository` were deleted. The Rust
-/// shared-core lexicon engine owns the trie + binary readers; install
+/// The Rust shared-core lexicon engine owns the trie + binary readers; install
 /// happens once at process startup via `RustEngineBridge.lexiconInstall(...)`
 /// from `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
 /// `KeyboardViewController.installLexiconEngine()`.

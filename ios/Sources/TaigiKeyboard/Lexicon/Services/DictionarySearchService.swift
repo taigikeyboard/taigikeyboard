@@ -6,10 +6,12 @@ import Foundation
 /// in `LexiconService`): CJK vs roman path selection, custom-dict prefix search,
 /// kautian-first ordering, and source-tag filtering for badge display.
 ///
-/// `DictionaryRepository` performs DB-layer filtering using the current
-/// settings snapshot, so disabled dictionaries never show up in results.
-/// This service only filters each result's `sources` array so the badge UI
-/// reflects the user's current toggles.
+/// System-dict queries flow through `RustEngineBridge.lexiconSearchByHanzi` /
+/// `lexiconSearchWithSources`. The Rust engine's bitmask filter drops rows
+/// where ZERO enabled bits match — but multi-source rows that overlap at
+/// least one enabled source still arrive with their full source bitmask.
+/// `retagSources` then trims each row's `sources` array to enabled-only so
+/// the badge UI reflects the user's current toggles.
 final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Dependencies
 

@@ -31,8 +31,9 @@ enum ResourceBundleResolver {
         }
 
         // Fallback for unit tests or unexpected configurations.
-        // `LexiconBitmask` is a stable platform helper that survives the
-        // v3.5.6 Lexicon Rust extraction (DictionaryRepository was deleted).
+        // `LexiconBitmaskBundleAnchor` is a private class colocated with the
+        // dictionary resources in the same bundle, so `Bundle(for:)` resolves
+        // to the right asset directory.
         logger.warning("[RESOLVE] Could not locate extension bundle, falling back to Bundle(for:)")
         return Bundle(for: type(of: LexiconBitmaskBundleAnchor()))
     }

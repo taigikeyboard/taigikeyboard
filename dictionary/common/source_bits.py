@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 """Authoritative source-bitmask and tier constants for the dictionary pipeline.
 
-CROSS-PLATFORM INVARIANT — the values in this module MUST mirror:
-  - ios/Sources/TaigiKeyboard/Lexicon/Database/DictionaryBinaryReader.swift
-  - ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift
-  - android/.../dictionary/DictionaryBinaryReader.kt
-  - android/.../dictionary/CandidateProcessor.kt
+CROSS-PLATFORM INVARIANT — drift here causes silent divergence in dictionary
+filtering and candidate ranking. When changing ANY constant, update this
+file AND every mirror listed below in the SAME PR (see
+rules/cross-platform-alignment.md §3a).
 
-Drift causes silent divergence in dictionary filtering and candidate ranking.
-When changing ANY bit position or tier numerator, update this file AND both
-platform sources in the SAME PR (see rules/cross-platform-alignment.md §3a).
+`SOURCE_BITS` + `IS_VARIANT_BIT` (bit-layout owners):
+  - engine/lexicon/src/dictionary_reader.rs (binary-reader filter mask)
+  - ios/Sources/TaigiKeyboard/Lexicon/Utils/LexiconBitmask.swift (decoder)
+  - android/.../dictionary/LexiconBitmask.kt (decoder)
 
-`scripts/check_source_bits_parity.py` guards the invariant in CI.
+`SOURCE_TIERS` + `DEFAULT_TIER_NUMERATOR` + `TIER_DENOMINATOR` (ranking owners):
+  - engine/ranking/src/score.rs (`tier_numerator` + `TIER_DENOMINATOR`)
 """
 
 from __future__ import annotations
