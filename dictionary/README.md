@@ -1,8 +1,9 @@
 # dictionary/
 
 Taigi Keyboard's dictionary data pipeline. Builds the runtime artefacts
-(`dictionary.bin` / `dictionary.fst` / `association.bin` + `dictionary.db`
-for development) that both iOS and Android consume.
+(`dictionary.bin` / `dictionary.fst` / `association.bin`) that both iOS
+and Android consume. Each binary is generated directly from the canonical
+`dictionary.csv` — no SQLite intermediates (removed in v3.5.6 part 2).
 
 ## Layout
 
@@ -10,7 +11,7 @@ for development) that both iOS and Android consume.
 dictionary/
 ├── run.sh                     # Pipeline entry point — regenerate per-source CSVs
 ├── build.sh                   # Build entry point — produces output/ + deploys to android/ + ios/
-├── baseline.json              # Parity gate reference (removed at Step 11)
+├── baseline.json              # Parity gate reference (compare_baseline.py verify)
 ├── requirements.txt           # Python deps
 │
 ├── pipeline/                  # Shared pipeline driver (discover_configs + run_dict)
@@ -91,9 +92,11 @@ original URLs.
 | `common/stages/*.py`             | Individual stage implementations (12 stages total)           |
 | `common/source_bits.py`          | Authoritative SOURCE_BITS / SOURCE_TIERS / column orders     |
 | `build/merge_csv.py`             | Merge 9 per-source CSVs + khiin/dev/lkk supplements          |
-| `build/create_fst.py`            | fst prefix index from SQLite (shells to engine/build-helpers/fst-builder)  |
+| `build/dictionary_records.py`    | Shared loader — CSV → filtered records with rowids 1..N      |
+| `build/associations.py`          | Shared bigram + char-to-phrase generator from dictionary.csv |
+| `build/create_fst.py`            | fst prefix index from CSV (shells to engine/build-helpers/fst-builder) |
 | `build/create_{dictionary,association}_bin.py` | Binary mmap formats consumed by mobile apps |
-| `tools/compare_baseline.py`      | Parity gate — SHA256 + SQL-semantic diff vs baseline.json    |
+| `tools/compare_baseline.py`      | Parity gate — SHA256 + CSV-derived semantic diff vs baseline.json |
 | `tools/verify_csv.py`            | CSV character-validity + duplicate sanity checker            |
 | `tools/query_fst.py`             | Query the compiled fst prefix index (dev debug)              |
 

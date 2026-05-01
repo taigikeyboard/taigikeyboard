@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 trie.db + dictionary.db 建立 fst 前綴索引
+從 dictionary.csv 建立 fst 前綴索引
 
-輸入：output/trie.db, output/dictionary.db
+輸入：output/dictionary.csv
 輸出：output/dictionary.fst
 
 Key 格式（前綴式）：
@@ -19,26 +19,32 @@ Wire format (per docs/engine/lexicon-slice-plan.md §2.2):
     key_bytes (UTF-8) || 0xFF || rowid_le_4
 
 實際 fst 建置由 Rust binary `engine/build-helpers/fst-builder` 完成；
-本 Python 腳本只負責讀取 SQLite、組 stdin pairs、shell out 到 Rust。
+本 Python 腳本只負責讀取 dictionary.csv、組 stdin pairs、shell out 到 Rust。
+
+Romanization-key filter mirrors the original create_trie_db.sh JOIN +
+syllable cap on `tl_num` (Codex pre-impl review Q6): emit a romanization
+key only when `tl_num` is non-empty AND `tl_num` syllable count <= 4.
+Hanzi keys come from dictionary records with non-NULL hanzi.
 """
 
 import shutil
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
 from build.common import LOG_DIR, OUTPUT_DIR
+from build.dictionary_records import load_dictionary_records
 from common.logging_utils import log_header, setup_logging
 
-DB_FILE = OUTPUT_DIR / "trie.db"
-DICT_DB_FILE = OUTPUT_DIR / "dictionary.db"
+CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "dictionary.fst"
 SCRIPT_NAME = "create_fst"
 
 ENGINE_DIR = Path(__file__).resolve().parents[2] / "engine"
 BUILDER_RELEASE = ENGINE_DIR / "target" / "release" / "fst-builder"
 BUILDER_DEBUG = ENGINE_DIR / "target" / "debug" / "fst-builder"
+
+MAX_SYLLABLES_TL_NUM = 4
 
 
 def resolve_builder_bin() -> Path:
@@ -65,12 +71,18 @@ def resolve_builder_bin() -> Path:
     return BUILDER_RELEASE
 
 
+def _tl_num_syllable_count(tl_num: str) -> int:
+    """Count syllables in tl_num (always hyphen-separated, no spaces)."""
+    return tl_num.count("-") + 1
+
+
 def collect_pairs(logger) -> list[tuple[str, int]]:
-    """Yield (key, rowid) pairs from trie.db + dictionary.db hanzi rows."""
-    if not DB_FILE.exists():
-        raise RuntimeError(f"Database not found: {DB_FILE}")
-    if not DICT_DB_FILE.exists():
-        raise RuntimeError(f"Dictionary database not found: {DICT_DB_FILE}")
+    """Yield (key, rowid) pairs from dictionary records."""
+    if not CSV_FILE.exists():
+        raise RuntimeError(f"CSV not found: {CSV_FILE}")
+
+    records = load_dictionary_records(CSV_FILE)
+    logger.info(f"Loaded {len(records)} records from {CSV_FILE.name}")
 
     pairs: list[tuple[str, int]] = []
     seen: set[tuple[str, int]] = set()
@@ -81,48 +93,31 @@ def collect_pairs(logger) -> list[tuple[str, int]]:
             seen.add(pair)
             pairs.append(pair)
 
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM dictionary")
-    rows = cursor.fetchall()
-    columns = rows[0].keys() if rows else []
-    logger.info(f"Loaded {len(rows)} records from {DB_FILE.name}")
-    logger.info(f"Columns: {list(columns)}")
-
-    for row in rows:
-        rowid = int(row["id"])
-        for col in ("tl_num", "tl_notone", "tl_abbrev"):
-            if col in columns:
-                val = row[col]
+    for record in records:
+        rowid = record.rowid
+        # Romanization-key filter (mirrors original trie.db JOIN: tl_num
+        # non-empty + syllables <= 4). All three TL variants share the
+        # tl_num gate; same for POJ.
+        if record.tl_num and _tl_num_syllable_count(record.tl_num) <= MAX_SYLLABLES_TL_NUM:
+            for val in (record.tl_num, record.tl_notone, record.tl_abbrev):
                 if val:
                     add(f"tl:{val}", rowid)
-        for col in ("poj_num", "poj_notone", "poj_abbrev"):
-            if col in columns:
-                val = row[col]
+        if record.poj_num and _tl_num_syllable_count(record.poj_num) <= MAX_SYLLABLES_TL_NUM:
+            for val in (record.poj_num, record.poj_notone, record.poj_abbrev):
                 if val:
                     add(f"poj:{val}", rowid)
 
     romanization_count = len(pairs)
     logger.info(f"Romanization pairs: {romanization_count}")
 
-    dict_conn = sqlite3.connect(DICT_DB_FILE)
-    dict_conn.row_factory = sqlite3.Row
-    dict_cursor = dict_conn.cursor()
-    dict_cursor.execute(
-        "SELECT id, hanzi FROM dictionary "
-        "WHERE hanzi IS NOT NULL AND hanzi != '' "
-        "ORDER BY id"
-    )
-    for row in dict_cursor.fetchall():
-        add(f"hanzi:{row['hanzi']}", int(row["id"]))
-    dict_conn.close()
-    conn.close()
+    for record in records:
+        if record.hanzi:
+            add(f"hanzi:{record.hanzi}", record.rowid)
 
     hanzi_count = len(pairs) - romanization_count
     if hanzi_count <= 0:
         raise RuntimeError(
-            "No hanzi keys generated — dictionary.db may be missing hanzi data"
+            "No hanzi keys generated — dictionary.csv may be missing hanzi data"
         )
     logger.info(f"Hanzi pairs: {hanzi_count}")
     logger.info(f"Total pairs: {len(pairs)}")
@@ -149,7 +144,7 @@ def emit_to_builder(pairs: list[tuple[str, int]], builder_bin: Path) -> None:
 
 def main() -> None:
     logger = setup_logging(SCRIPT_NAME, log_dir=LOG_DIR)
-    log_header(logger, SCRIPT_NAME, DB_FILE, OUTPUT_FILE)
+    log_header(logger, SCRIPT_NAME, CSV_FILE, OUTPUT_FILE)
 
     builder_bin = resolve_builder_bin()
     logger.info(f"fst-builder: {builder_bin}")

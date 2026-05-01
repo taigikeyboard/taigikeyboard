@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """Capture or verify parity baseline for dictionary pipeline outputs.
 
-Compares `output/dictionary.{csv,trie,bin,db}` + `output/association.bin` against a
-baseline JSON captured before any refactor step. build_ts bytes in `.bin` files are
-masked to zero so content-identical rebuilds match even when timestamps differ.
+Compares `output/dictionary.{csv,fst,bin}` + `output/association.bin`
+against a baseline JSON captured before any refactor step. build_ts bytes
+in `.bin` files are masked to zero so content-identical rebuilds match
+even when timestamps differ.
+
+Post-v3.5.6 part-2 (SQLite intermediate-layer removal): semantic counters
+are derived directly from `dictionary.csv` + the in-memory association
+generator instead of from the deleted `dictionary.db`. The output JSON
+shape is preserved (top-level `"db"` key) so baselines captured before
+the refactor remain comparable byte-for-byte (counters parity proven by
+the one-shot `scripts/validate_csv_vs_sql.py`, since deleted alongside
+the SQLite path).
 
 Usage:
   python3 tools/compare_baseline.py capture              # → dictionary/baseline.json
@@ -16,7 +25,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
@@ -25,6 +33,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = BASE_DIR / "output"
 BASELINE_PATH = BASE_DIR / "baseline.json"
 
+sys.path.insert(0, str(BASE_DIR))
+
+from build.associations import compute_associations  # noqa: E402
+from build.dictionary_records import load_dictionary_records  # noqa: E402
+
 DICT_BIN_TS_OFFSET = 12  # bytes 12..15 in dictionary.bin
 ASSOC_BIN_TS_OFFSET = 16  # bytes 16..19 in association.bin
 
@@ -32,11 +45,15 @@ ASSOC_SOURCE_COLS = (
     "kautian", "taigitv", "itaigi", "sitbut",
     "taihoa", "taijit", "kungge", "stti", "khpoo",
 )
+DICT_SOURCE_COLS = (
+    "kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit",
+    "kungge", "stti", "khpoo", "khiin", "dev", "lkk", "is_variant",
+)
 
 
 def hash_bytes_masked(data: bytes, mask_offset: int | None) -> str:
     if mask_offset is not None:
-        data = data[:mask_offset] + b"\x00\x00\x00\x00" + data[mask_offset + 4 :]
+        data = data[:mask_offset] + b"\x00\x00\x00\x00" + data[mask_offset + 4:]
     return hashlib.sha256(data).hexdigest()
 
 
@@ -44,75 +61,79 @@ def hash_file(path: Path, mask_offset: int | None = None) -> str:
     return hash_bytes_masked(path.read_bytes(), mask_offset)
 
 
-def db_counters(db_path: Path) -> dict[str, Any]:
-    conn = sqlite3.connect(db_path)
-    try:
-        cur = conn.cursor()
-        result: dict[str, Any] = {}
+def csv_counters(csv_path: Path) -> dict[str, Any]:
+    """CSV+associations-derived semantic counters.
 
-        result["dictionary_rowcount"] = cur.execute(
-            "SELECT COUNT(*) FROM dictionary"
-        ).fetchone()[0]
+    Returns a dict with the SAME keys+shape that the previous
+    `db_counters()` (against `dictionary.db`) returned, so baselines
+    captured before the v3.5.6 part-2 refactor still compare cleanly.
+    """
+    records = load_dictionary_records(csv_path)
+    grouped = compute_associations(csv_path)
 
-        source_cols = [
-            "kautian", "taigitv", "itaigi", "sitbut", "taihoa", "taijit",
-            "kungge", "stti", "khpoo", "khiin", "dev", "lkk", "is_variant",
-        ]
-        sums_sql = ", ".join(f"SUM({c})" for c in source_cols)
-        sums = cur.execute(f"SELECT {sums_sql} FROM dictionary").fetchone()
-        result["dictionary_source_sums"] = dict(zip(source_cols, sums))
+    result: dict[str, Any] = {}
+    result["dictionary_rowcount"] = len(records)
 
-        result["dictionary_null_tl"] = cur.execute(
-            "SELECT COUNT(*) FROM dictionary WHERE tl IS NULL OR tl = ''"
-        ).fetchone()[0]
-        result["dictionary_null_freq"] = cur.execute(
-            "SELECT COUNT(*) FROM dictionary WHERE frequency IS NULL"
-        ).fetchone()[0]
-        result["dictionary_dupe_hanzi_tl"] = cur.execute(
-            "SELECT COUNT(*) FROM ("
-            "  SELECT hanzi, tl FROM dictionary GROUP BY hanzi, tl HAVING COUNT(*) > 1"
-            ")"
-        ).fetchone()[0]
+    sums = {col: 0 for col in DICT_SOURCE_COLS}
+    null_tl = 0
+    null_freq = 0
+    freq_hist: dict[str, int] = {}
+    combo_counter: dict[str, int] = {}
+    # SQL `GROUP BY hanzi, tl HAVING COUNT(*) > 1` treats NULL hanzi as a
+    # single group key (NULL == NULL in GROUP BY, unlike UNIQUE). After
+    # load_dictionary_records' INSERT-OR-IGNORE-style dedup, residual
+    # duplicates can only appear when two NULL-hanzi rows share a `tl`.
+    group_counts: dict[tuple, int] = {}
+    for rec in records:
+        srcs = rec.source_dict()
+        for col in DICT_SOURCE_COLS:
+            if srcs[col]:
+                sums[col] += 1
+        if not rec.tl:
+            null_tl += 1
+        if rec.frequency is None:
+            null_freq += 1
+            bucket_key = "None"  # mirrors SQLite NULL bucket → str(None)
+        else:
+            bucket_key = str((rec.frequency // 1000) * 1000)
+        freq_hist[bucket_key] = freq_hist.get(bucket_key, 0) + 1
+        combo_str = "".join("1" if srcs[col] else "0" for col in DICT_SOURCE_COLS)
+        combo_counter[combo_str] = combo_counter.get(combo_str, 0) + 1
+        group_key = (rec.hanzi, rec.tl)  # hanzi may be None
+        group_counts[group_key] = group_counts.get(group_key, 0) + 1
+    dupe_groups = sum(1 for count in group_counts.values() if count > 1)
+    result["dictionary_source_sums"] = sums
+    result["dictionary_null_tl"] = null_tl
+    result["dictionary_null_freq"] = null_freq
+    result["dictionary_dupe_hanzi_tl"] = dupe_groups
+    # SQLite ORDER BY puts NULL bucket first; replicate by sorting numeric
+    # keys naturally and prepending "None" if present.
+    sorted_buckets = sorted(
+        (k for k in freq_hist if k != "None"), key=int
+    )
+    if "None" in freq_hist:
+        sorted_buckets = ["None", *sorted_buckets]
+    result["dictionary_freq_hist"] = {k: freq_hist[k] for k in sorted_buckets}
+    result["dictionary_source_combos"] = dict(sorted(combo_counter.items()))
 
-        freq_hist = cur.execute(
-            "SELECT (frequency / 1000) * 1000 AS bucket, COUNT(*) "
-            "FROM dictionary GROUP BY bucket ORDER BY bucket"
-        ).fetchall()
-        result["dictionary_freq_hist"] = {str(b): c for b, c in freq_hist}
+    assoc_count = 0
+    assoc_count_sum = 0
+    assoc_source_sums = {col: 0 for col in ASSOC_SOURCE_COLS}
+    for entries in grouped.values():
+        for e in entries:
+            assoc_count += 1
+            assoc_count_sum += e.count
+            srcs = e.source_dict()
+            for col in ASSOC_SOURCE_COLS:
+                assoc_source_sums[col] += srcs[col]
+    result["word_association_rowcount"] = assoc_count
+    result["word_association_count_sum"] = assoc_count_sum
+    # word_association keys are unique by construction
+    # (compute_associations dedupes by (prev,next,next_tl)).
+    result["word_association_dupe"] = 0
+    result["word_association_source_sums"] = assoc_source_sums
 
-        combo = cur.execute(
-            "SELECT kautian||taigitv||itaigi||sitbut||taihoa||taijit||kungge||stti||khpoo"
-            "||khiin||dev||lkk||is_variant AS combo, COUNT(*) "
-            "FROM dictionary GROUP BY combo ORDER BY combo"
-        ).fetchall()
-        result["dictionary_source_combos"] = {c: n for c, n in combo}
-
-        result["word_association_rowcount"] = cur.execute(
-            "SELECT COUNT(*) FROM word_association"
-        ).fetchone()[0]
-        result["word_association_count_sum"] = cur.execute(
-            "SELECT COALESCE(SUM(count), 0) FROM word_association"
-        ).fetchone()[0]
-        # word_association has UNIQUE(prev_word, next_word, next_tl) so dupe is always 0,
-        # but we still record it so any schema regression surfaces explicitly.
-        result["word_association_dupe"] = cur.execute(
-            "SELECT COUNT(*) FROM ("
-            "  SELECT prev_word, next_word, next_tl FROM word_association"
-            "  GROUP BY prev_word, next_word, next_tl HAVING COUNT(*) > 1"
-            ")"
-        ).fetchone()[0]
-        assoc_source_sums = cur.execute(
-            "SELECT SUM(kautian), SUM(taigitv), SUM(itaigi), SUM(sitbut),"
-            "       SUM(taihoa),  SUM(taijit),  SUM(kungge), SUM(stti), SUM(khpoo) "
-            "FROM word_association"
-        ).fetchone()
-        result["word_association_source_sums"] = dict(zip(
-            ASSOC_SOURCE_COLS, assoc_source_sums,
-        ))
-
-        return result
-    finally:
-        conn.close()
+    return result
 
 
 def capture() -> dict[str, Any]:
@@ -123,9 +144,8 @@ def capture() -> dict[str, Any]:
     fst_path = OUTPUT_DIR / "dictionary.fst"
     dict_bin = OUTPUT_DIR / "dictionary.bin"
     assoc_bin = OUTPUT_DIR / "association.bin"
-    dict_db = OUTPUT_DIR / "dictionary.db"
 
-    missing = [p for p in (csv_path, fst_path, dict_bin, assoc_bin, dict_db) if not p.exists()]
+    missing = [p for p in (csv_path, fst_path, dict_bin, assoc_bin) if not p.exists()]
     if missing:
         sys.exit("error: missing output files: " + ", ".join(str(m) for m in missing))
 
@@ -142,7 +162,7 @@ def capture() -> dict[str, Any]:
                 "size": assoc_bin.stat().st_size,
             },
         },
-        "db": db_counters(dict_db),
+        "db": csv_counters(csv_path),
     }
 
 

@@ -2,16 +2,13 @@
 #
 # 辭典建置主腳本 — 每次執行 = 完整建置 + deploy
 #
-# 執行順序：
+# 執行順序（v3.5.6 part 2: SQLite intermediate-layer removal）：
 #   1. merge_csv                - 合併各詞庫 CSV
-#   2. create_app_db            - 建立 App 使用的 SQLite 資料庫
-#   3. generate_association     - 產生 NextWord 詞彙關聯（加入 dictionary.db）
-#   4. create_trie_db           - 建立 fst 建置用的 SQLite 資料庫
-#   5. create_fst               - 建立 fst 前綴索引
-#   6. create_dictionary_bin    - 建立 dictionary.bin (binary mmap)
-#   7. create_association_bin   - 建立 association.bin (binary mmap)
-#   8. audit                    - 產生審計報告
-#   9. deploy                   - 複製到 Android/iOS 專案
+#   2. create_dictionary_bin    - 建立 dictionary.bin (binary mmap)，並寫入共享 build_ts
+#   3. create_fst               - 建立 dictionary.fst 前綴索引
+#   4. create_association_bin   - 建立 association.bin (binary mmap)，沿用 build_ts
+#   5. audit                    - 產生審計報告
+#   6. deploy                   - 複製到 Android/iOS 專案
 #
 # output/ 由使用者手動清除；本腳本不提供 clean / deploy-only 子命令。
 
@@ -35,31 +32,22 @@ step() {
     echo ""
 }
 
-step "Step 1/9: Merging dictionaries..."
+step "Step 1/6: Merging dictionaries..."
 python3 -m build.merge_csv
 
-step "Step 2/9: Creating App SQLite database..."
-bash "$BUILD_DIR/create_app_db.sh"
-
-step "Step 3/9: Generating NextWord associations..."
-python3 -m build.generate_association
-
-step "Step 4/9: Creating fst-build SQLite database..."
-bash "$BUILD_DIR/create_trie_db.sh"
-
-step "Step 5/9: Creating fst prefix index..."
-python3 -m build.create_fst
-
-step "Step 6/9: Creating dictionary.bin..."
+step "Step 2/6: Creating dictionary.bin..."
 python3 -m build.create_dictionary_bin --verify
 
-step "Step 7/9: Creating association.bin..."
+step "Step 3/6: Creating fst prefix index..."
+python3 -m build.create_fst
+
+step "Step 4/6: Creating association.bin..."
 python3 -m build.create_association_bin --verify
 
-step "Step 8/9: Running audit report..."
+step "Step 5/6: Running audit report..."
 python3 -m build.audit
 
-step "Step 9/9: Deploying to Android/iOS..."
+step "Step 6/6: Deploying to Android/iOS..."
 bash "$BUILD_DIR/deploy.sh"
 
 echo ""

@@ -41,9 +41,9 @@ IS_VARIANT_BIT: Final[int] = 12  # bit 12 in dictionary.bin u16 bitmask
 DICT_BIN_COLUMNS: Final[list[str]] = list(SOURCE_BITS.keys()) + ["is_variant"]
 
 # The 9-flag subset used by association.bin, build/merge_csv.py's main-source
-# selection, and build/generate_association.py. khiin/dev/lkk and is_variant
-# are excluded — those sources do not participate in NextWord scoring and
-# supplementary flags are derived at merge time.
+# selection, and build/associations.py (NextWord bigram generator). khiin /
+# dev / lkk and is_variant are excluded — those sources do not participate in
+# NextWord scoring and supplementary flags are derived at merge time.
 ASSOC_SOURCE_COLUMNS: Final[list[str]] = list(SOURCE_BITS.keys())[:9]
 # Alias retained for the main-source merge pipeline (same 9 columns).
 MAIN_SOURCE_COLUMNS: Final[list[str]] = ASSOC_SOURCE_COLUMNS

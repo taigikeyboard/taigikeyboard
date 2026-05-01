@@ -10,20 +10,26 @@
     python query_fst.py hanzi:好
 
 支援前綴查詢；exact-match 由前綴查詢自然涵蓋（key 完全相符 = 前綴長度等於 key 長度）。
+
+Sample row resolution reads dictionary.csv via load_dictionary_records()
+(post-v3.5.6 part 2; previously came from `output/trie.db`).
 """
 
 import shutil
-import sqlite3
 import subprocess
 import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FST_FILE = BASE_DIR / "output" / "dictionary.fst"
-DB_FILE = BASE_DIR / "output" / "trie.db"
+CSV_FILE = BASE_DIR / "output" / "dictionary.csv"
 ENGINE_DIR = BASE_DIR.parent / "engine"
 BUILDER_RELEASE = ENGINE_DIR / "target" / "release" / "fst-builder"
 BUILDER_DEBUG = ENGINE_DIR / "target" / "debug" / "fst-builder"
+
+sys.path.insert(0, str(BASE_DIR))
+
+from build.dictionary_records import load_dictionary_records  # noqa: E402
 
 
 def resolve_builder_bin() -> Path:
@@ -91,25 +97,21 @@ def main() -> None:
     if len(lines) > 50:
         print(f"  ... 還有 {len(lines) - 50} 筆")
 
-    if rowids and DB_FILE.exists():
-        conn = sqlite3.connect(str(DB_FILE))
-        cursor = conn.cursor()
+    if rowids and CSV_FILE.exists():
+        records_by_id = {r.rowid: r for r in load_dictionary_records(CSV_FILE)}
         sample = rowids[:20]
-        placeholders = ",".join("?" * len(sample))
-        cursor.execute(
-            f"SELECT id, tl_num, tl_notone, tl_abbrev FROM dictionary "
-            f"WHERE id IN ({placeholders}) LIMIT 20",
-            sample,
-        )
         print("\n[sample resolved rows]")
-        for row_id, tl_num, tl_notone, tl_abbrev in cursor.fetchall():
-            parts = [f"num={tl_num}"]
-            if tl_notone:
-                parts.append(f"notone={tl_notone}")
-            if tl_abbrev:
-                parts.append(f"abbrev={tl_abbrev}")
-            print(f"  [{row_id}] {', '.join(parts)}")
-        conn.close()
+        for rid in sample:
+            rec = records_by_id.get(rid)
+            if rec is None:
+                print(f"  [{rid}] <not found>")
+                continue
+            parts = [f"num={rec.tl_num}"]
+            if rec.tl_notone:
+                parts.append(f"notone={rec.tl_notone}")
+            if rec.tl_abbrev:
+                parts.append(f"abbrev={rec.tl_abbrev}")
+            print(f"  [{rid}] {', '.join(parts)}")
 
     sys.stderr.write(proc.stderr.decode("utf-8", errors="replace"))
 

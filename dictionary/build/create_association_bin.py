@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 dictionary.db 的 word_association 表建立 association.bin
+從 dictionary.csv 建立 association.bin
 
-輸入：output/dictionary.db
+輸入：output/dictionary.csv
 輸出：output/association.bin
 
 Binary 格式（little-endian）：
@@ -24,7 +24,9 @@ Binary 格式（little-endian）：
       entry_offset:  u32   absolute byte offset to first entry
       entry_count:   u16   number of entries for this key
 
-  Entry section (sorted by count DESC within each key group):
+  Entry section (sorted by count DESC within each key group, NO tiebreaker —
+  Codex pre-impl review Q6: adding a tiebreaker would drift the SHA256
+  baseline against pre-refactor builds):
     Each entry:
       bitmask:       u16   9-bit source flags (kautian..khpoo)
       count:         u32   association count
@@ -39,14 +41,14 @@ Binary 格式（little-endian）：
 """
 
 import struct
-import sqlite3
 import sys
 
+from build.associations import AssociationEntry, compute_associations
 from build.common import LOG_DIR, OUTPUT_DIR, read_shared_build_timestamp
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import ASSOC_SOURCE_COLUMNS
 
-DB_FILE = OUTPUT_DIR / "dictionary.db"
+CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "association.bin"
 SCRIPT_NAME = "create_association_bin"
 
@@ -54,22 +56,23 @@ MAGIC = b"TKWA"
 VERSION = 1
 
 
-def encode_assoc_bitmask(row):
+def encode_assoc_bitmask(entry: AssociationEntry) -> int:
     """Encode association source flags into a u16 bitmask."""
+    sources = entry.source_dict()
     mask = 0
     for bit, col in enumerate(ASSOC_SOURCE_COLUMNS):
-        if row[col]:
+        if sources[col]:
             mask |= 1 << bit
     return mask
 
 
-def encode_entry(row):
+def encode_entry(entry: AssociationEntry) -> bytes:
     """Encode a single association entry into binary bytes."""
-    bitmask = encode_assoc_bitmask(row)
-    count = row["count"] or 0
+    bitmask = encode_assoc_bitmask(entry)
+    count = entry.count or 0
 
-    next_word_bytes = row["next_word"].encode("utf-8")
-    next_tl = row["next_tl"] or ""
+    next_word_bytes = entry.next_word.encode("utf-8")
+    next_tl = entry.next_tl or ""
     next_tl_bytes = next_tl.encode("utf-8")
 
     return struct.pack(
@@ -84,65 +87,40 @@ def encode_entry(row):
 
 
 def build(logger):
-    if not DB_FILE.exists():
-        logger.error(f"Database not found: {DB_FILE}")
+    if not CSV_FILE.exists():
+        logger.error(f"CSV not found: {CSV_FILE}")
         sys.exit(1)
 
     build_ts = read_shared_build_timestamp()
     logger.info(f"Build timestamp: {build_ts}")
 
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    grouped = compute_associations(CSV_FILE)
 
-    # Get all unique prev_words sorted by UTF-8 bytes
-    cursor.execute("SELECT DISTINCT prev_word FROM word_association ORDER BY prev_word")
-    all_keys = [row["prev_word"] for row in cursor.fetchall()]
+    # Outer sort: prev_word UTF-8 bytes ascending. Inner sort already done
+    # in compute_associations (count DESC stable).
+    all_keys = sorted(grouped.keys(), key=lambda s: s.encode("utf-8"))
 
-    # Sort by raw UTF-8 bytes (Python str sort matches UTF-8 byte sort for CJK)
-    all_keys.sort(key=lambda s: s.encode("utf-8"))
-
+    total_entries = sum(len(grouped[k]) for k in all_keys)
     logger.info(f"Unique prev_words: {len(all_keys)}")
-
-    # Build grouped entries (sorted by count DESC within each group)
-    groups: dict[str, list] = {}
-    total_entries = 0
-    for key in all_keys:
-        cursor.execute(
-            "SELECT next_word, next_tl, count, "
-            + ", ".join(ASSOC_SOURCE_COLUMNS)
-            + " FROM word_association WHERE prev_word = ? ORDER BY count DESC",
-            (key,),
-        )
-        entries = cursor.fetchall()
-        groups[key] = entries
-        total_entries += len(entries)
-
     logger.info(f"Total entries: {total_entries}")
 
-    # Encode all entries per group
     encoded_groups: dict[str, list[bytes]] = {}
     for key in all_keys:
-        encoded_groups[key] = [encode_entry(row) for row in groups[key]]
+        encoded_groups[key] = [encode_entry(e) for e in grouped[key]]
 
-    # Calculate layout
     key_count = len(all_keys)
     header_size = 20  # magic(4) + version(4) + key_count(4) + entry_count(4) + build_ts(4)
     key_offset_table_size = key_count * 4
 
-    # Key section: each key = prev_word_len(1) + prev_word(N) + entry_offset(4) + entry_count(2)
     key_section_start = header_size + key_offset_table_size
     key_entries_data = []
     for key in all_keys:
         key_bytes = key.encode("utf-8")
-        # Placeholder for entry_offset (will be filled later)
         key_entries_data.append((key_bytes, len(encoded_groups[key])))
 
-    # Calculate key section total size
     key_section_size = sum(1 + len(kb) + 4 + 2 for kb, _ in key_entries_data)
     entry_section_start = key_section_start + key_section_size
 
-    # Calculate entry offsets (absolute from file start)
     entry_offset = entry_section_start
     key_entry_offsets = []
     for key in all_keys:
@@ -150,54 +128,46 @@ def build(logger):
         for enc in encoded_groups[key]:
             entry_offset += len(enc)
 
-    # Calculate key offsets (absolute from file start)
     key_offsets = []
     pos = key_section_start
     for kb, _ in key_entries_data:
         key_offsets.append(pos)
         pos += 1 + len(kb) + 4 + 2
 
-    # Write binary file
     with open(OUTPUT_FILE, "wb") as f:
-        # Header
         f.write(MAGIC)
         f.write(struct.pack("<IIII", VERSION, key_count, total_entries, build_ts))
 
-        # Key offset table
         for offset in key_offsets:
             f.write(struct.pack("<I", offset))
 
-        # Key section
         for i, (kb, entry_count) in enumerate(key_entries_data):
             f.write(struct.pack("B", len(kb)))
             f.write(kb)
             f.write(struct.pack("<IH", key_entry_offsets[i], entry_count))
 
-        # Entry section
         for key in all_keys:
             for enc in encoded_groups[key]:
                 f.write(enc)
 
     file_size = OUTPUT_FILE.stat().st_size
-    logger.info(f"\n  [output]")
+    logger.info("\n  [output]")
     logger.info(f"    File:    {OUTPUT_FILE}")
     logger.info(f"    Size:    {file_size / 1024 / 1024:.2f} MB")
     logger.info(f"    Keys:    {key_count}")
     logger.info(f"    Entries: {total_entries}")
 
-    conn.close()
     return key_count, total_entries
 
 
 def verify(logger):
-    """Verify association.bin against dictionary.db (round-trip check)."""
+    """Verify association.bin against compute_associations (round-trip check)."""
     logger.info(f"\n{'=' * 50}")
-    logger.info("Verifying association.bin against dictionary.db...")
+    logger.info("Verifying association.bin against dictionary.csv...")
     logger.info(f"{'=' * 50}")
 
     data = OUTPUT_FILE.read_bytes()
 
-    # Parse header
     magic = data[:4]
     assert magic == MAGIC, f"Bad magic: {magic}"
     version, key_count, entry_count, build_ts = struct.unpack_from("<IIII", data, 4)
@@ -207,17 +177,13 @@ def verify(logger):
         f"entries={entry_count}, build_ts={build_ts}"
     )
 
-    # Parse key offset table
     header_size = 20
     key_offsets = []
     for i in range(key_count):
         offset = struct.unpack_from("<I", data, header_size + i * 4)[0]
         key_offsets.append(offset)
 
-    # Compare against SQLite
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    grouped = compute_associations(CSV_FILE)
 
     errors = 0
     verified_entries = 0
@@ -225,45 +191,36 @@ def verify(logger):
     for i in range(key_count):
         koff = key_offsets[i]
         prev_word_len = struct.unpack_from("B", data, koff)[0]
-        prev_word = data[koff + 1 : koff + 1 + prev_word_len].decode("utf-8")
+        prev_word = data[koff + 1: koff + 1 + prev_word_len].decode("utf-8")
         e_offset, e_count = struct.unpack_from("<IH", data, koff + 1 + prev_word_len)
 
-        # Get expected entries from SQLite
-        cursor.execute(
-            "SELECT next_word, next_tl, count, "
-            + ", ".join(ASSOC_SOURCE_COLUMNS)
-            + " FROM word_association WHERE prev_word = ? ORDER BY count DESC",
-            (prev_word,),
-        )
-        db_rows = cursor.fetchall()
+        expected_entries = grouped.get(prev_word, [])
 
-        if len(db_rows) != e_count:
+        if len(expected_entries) != e_count:
             logger.error(
-                f"  Key '{prev_word}': count mismatch bin={e_count} db={len(db_rows)}"
+                f"  Key '{prev_word}': count mismatch bin={e_count} csv={len(expected_entries)}"
             )
             errors += 1
             continue
 
-        # Parse and compare each entry
         pos = e_offset
-        for j, db_row in enumerate(db_rows):
+        for j, expected in enumerate(expected_entries):
             bitmask, count_val, nw_len, nt_len = struct.unpack_from("<HIBB", data, pos)
             pos += 8
-            next_word = data[pos : pos + nw_len].decode("utf-8")
+            next_word = data[pos: pos + nw_len].decode("utf-8")
             pos += nw_len
-            next_tl = data[pos : pos + nt_len].decode("utf-8")
+            next_tl = data[pos: pos + nt_len].decode("utf-8")
             pos += nt_len
 
-            expected_bitmask = encode_assoc_bitmask(db_row)
-            expected_next_tl = db_row["next_tl"] or ""
+            expected_bitmask = encode_assoc_bitmask(expected)
 
-            if next_word != db_row["next_word"]:
+            if next_word != expected.next_word:
                 logger.error(f"  Key '{prev_word}' entry {j}: next_word mismatch")
                 errors += 1
-            if next_tl != expected_next_tl:
+            if next_tl != (expected.next_tl or ""):
                 logger.error(f"  Key '{prev_word}' entry {j}: next_tl mismatch")
                 errors += 1
-            if count_val != (db_row["count"] or 0):
+            if count_val != (expected.count or 0):
                 logger.error(f"  Key '{prev_word}' entry {j}: count mismatch")
                 errors += 1
             if bitmask != expected_bitmask:
@@ -271,8 +228,6 @@ def verify(logger):
                 errors += 1
 
             verified_entries += 1
-
-    conn.close()
 
     if errors == 0:
         logger.info(f"  Verified {key_count} keys, {verified_entries} entries — all match!")
@@ -283,7 +238,7 @@ def verify(logger):
 
 def main():
     logger = setup_logging(SCRIPT_NAME, log_dir=LOG_DIR)
-    log_header(logger, SCRIPT_NAME, DB_FILE, OUTPUT_FILE)
+    log_header(logger, SCRIPT_NAME, CSV_FILE, OUTPUT_FILE)
 
     build(logger)
 

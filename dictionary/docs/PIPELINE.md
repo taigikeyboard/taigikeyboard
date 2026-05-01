@@ -67,21 +67,26 @@ supplementary/             │                         │
                                                       ▼
 sources/<cat>/<key>/                         output/dictionary.csv
   config.yaml ──────► pipeline/run.py ──► data/<key>.csv ──► build/* ──►
-    input_path                                                          ├─► dictionary.db
-                                                                        ├─► trie.db ─► dictionary.fst
-                                                                        ├─► dictionary.bin
+    input_path                                                          ├─► dictionary.bin
+                                                                        ├─► dictionary.fst
                                                                         └─► association.bin
 ```
 
-`./build.sh` executes the stages right of the pipe in fixed order
-(see `build.sh`). Each build step's naming follows the script filename:
-`merge_csv` → `create_app_db` → `generate_association` →
-`create_trie_db` → `create_fst` → `create_dictionary_bin` →
+`./build.sh` executes the stages right of the pipe in fixed order (see
+`build.sh`). Post-v3.5.6 part 2 the SQLite intermediates (`dictionary.db`,
+`trie.db`, `word_association.csv`) are gone — every binary writer reads
+`dictionary.csv` directly via `build/dictionary_records.py` and
+`build/associations.py`. Step naming follows the script filename:
+`merge_csv` → `create_dictionary_bin` → `create_fst` →
 `create_association_bin` → `audit` → `deploy`.
 
 ## Parity gate
 
-`tools/compare_baseline.py verify` checks both byte-level and SQL-semantic
-equality against `baseline.json` (captured at Step 0). Any non-trivial
-pipeline or build change must keep this gate green. `build_ts` (8-byte
-field) in `dictionary.bin` / `association.bin` is masked during hashing.
+`tools/compare_baseline.py verify` checks both byte-level (SHA256 of
+`dictionary.bin` / `dictionary.fst` / `association.bin`, with build_ts
+masked) and CSV-derived semantic equality against `baseline.json`
+(captured at Step 0). Any non-trivial pipeline or build change must
+keep this gate green. The semantic counters are derived directly from
+`dictionary.csv` + the in-memory association generator — historical
+baselines captured before the SQLite removal remain comparable because
+the JSON shape (top-level `"db"` key) is preserved.

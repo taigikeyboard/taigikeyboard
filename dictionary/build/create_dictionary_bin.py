@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-從 dictionary.db 建立 dictionary.bin（binary mmap 格式）
+從 dictionary.csv 建立 dictionary.bin（binary mmap 格式）
 
-輸入：output/dictionary.db
+輸入：output/dictionary.csv
 輸出：output/dictionary.bin
 
 Binary 格式（little-endian）：
@@ -36,42 +36,42 @@ Binary 格式（little-endian）：
 """
 
 import struct
-import sqlite3
 import sys
 
 from build.common import LOG_DIR, OUTPUT_DIR, start_new_build_timestamp
+from build.dictionary_records import DictionaryRecord, load_dictionary_records
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import DICT_BIN_COLUMNS
 
-DB_FILE = OUTPUT_DIR / "dictionary.db"
+CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "dictionary.bin"
 SCRIPT_NAME = "create_dictionary_bin"
 
 MAGIC = b"TKDB"
 VERSION = 1
 
-# Bitmask bit layout — must match Swift reader (CROSS-PLATFORM INVARIANT).
+# Bitmask bit layout — must match Swift / Kotlin readers (CROSS-PLATFORM INVARIANT).
 # Authoritative definition: common/source_bits.py:SOURCE_BITS + IS_VARIANT_BIT.
 SOURCE_COLUMNS = DICT_BIN_COLUMNS
 
 
-def encode_bitmask(row):
+def encode_bitmask(record: DictionaryRecord) -> int:
     """Encode source flags into a u16 bitmask."""
+    sources = record.source_dict()
     mask = 0
     for bit, col in enumerate(SOURCE_COLUMNS):
-        if row[col]:
+        if sources[col]:
             mask |= 1 << bit
     return mask
 
 
-def encode_record(row):
-    """Encode a single dictionary row into binary bytes."""
-    bitmask = encode_bitmask(row)
-    frequency = row["frequency"] or 0
+def encode_record(record: DictionaryRecord) -> bytes:
+    """Encode a single dictionary record into binary bytes."""
+    bitmask = encode_bitmask(record)
+    frequency = record.frequency or 0
 
-    hanzi = row["hanzi"]
-    hanzi_bytes = hanzi.encode("utf-8") if hanzi else b""
-    tl_bytes = row["tl"].encode("utf-8")
+    hanzi_bytes = record.hanzi.encode("utf-8") if record.hanzi else b""
+    tl_bytes = record.tl.encode("utf-8")
 
     return struct.pack(
         f"<HIBB{len(hanzi_bytes)}s{len(tl_bytes)}s",
@@ -85,69 +85,51 @@ def encode_record(row):
 
 
 def build(logger):
-    if not DB_FILE.exists():
-        logger.error(f"Database not found: {DB_FILE}")
+    if not CSV_FILE.exists():
+        logger.error(f"CSV not found: {CSV_FILE}")
         sys.exit(1)
 
     build_ts = start_new_build_timestamp()
     logger.info(f"Build timestamp: {build_ts}")
 
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    records = load_dictionary_records(CSV_FILE)
+    count = len(records)
+    if count == 0:
+        logger.error("load_dictionary_records returned 0 rows — CSV empty?")
+        sys.exit(1)
 
-    # Verify rowids are contiguous 1..N
-    cursor.execute("SELECT MIN(id), MAX(id), COUNT(*) FROM dictionary")
-    min_id, max_id, count = cursor.fetchone()
-    assert min_id == 1, f"Expected min id=1, got {min_id}"
-    assert max_id == count, f"Expected max id={count}, got {max_id}"
-    logger.info(f"Verified: {count} rows, ids 1..{count} (contiguous)")
-
-    # Fetch all rows ordered by id
-    cursor.execute(
-        "SELECT id, hanzi, tl, frequency, "
-        + ", ".join(SOURCE_COLUMNS)
-        + " FROM dictionary ORDER BY id"
+    # Sanity: rowids are 1..N contiguous by construction; assert anyway.
+    assert records[0].rowid == 1, f"Expected first rowid=1, got {records[0].rowid}"
+    assert records[-1].rowid == count, (
+        f"Expected last rowid={count}, got {records[-1].rowid}"
     )
-    rows = cursor.fetchall()
-    assert len(rows) == count
+    logger.info(f"Loaded {count} records, ids 1..{count} (contiguous)")
 
-    # Encode all records
-    records = []
-    for row in rows:
-        records.append(encode_record(row))
+    encoded = [encode_record(r) for r in records]
 
-    # Calculate offsets (absolute from file start)
     header_size = 16  # magic(4) + version(4) + count(4) + build_ts(4)
     offset_table_size = count * 4
     data_start = header_size + offset_table_size
 
     offsets = []
     current_offset = data_start
-    for rec in records:
+    for rec in encoded:
         offsets.append(current_offset)
         current_offset += len(rec)
 
-    # Verify offsets are monotonically increasing
     for i in range(1, len(offsets)):
         assert offsets[i] > offsets[i - 1], f"Non-monotonic offset at index {i}"
 
-    # Write binary file
     with open(OUTPUT_FILE, "wb") as f:
-        # Header
         f.write(MAGIC)
         f.write(struct.pack("<III", VERSION, count, build_ts))
-
-        # Offset table
         for offset in offsets:
             f.write(struct.pack("<I", offset))
-
-        # Records
-        for rec in records:
+        for rec in encoded:
             f.write(rec)
 
     file_size = OUTPUT_FILE.stat().st_size
-    logger.info(f"\n  [output]")
+    logger.info("\n  [output]")
     logger.info(f"    File:    {OUTPUT_FILE}")
     logger.info(f"    Size:    {file_size / 1024 / 1024:.2f} MB")
     logger.info(f"    Records: {count}")
@@ -155,14 +137,13 @@ def build(logger):
     logger.info(f"    Offsets: {offset_table_size} bytes")
     logger.info(f"    Data:    {current_offset - data_start} bytes")
 
-    conn.close()
     return count, build_ts
 
 
 def verify(logger):
-    """Verify dictionary.bin against dictionary.db (round-trip check)."""
+    """Verify dictionary.bin against load_dictionary_records (round-trip check)."""
     logger.info(f"\n{'=' * 50}")
-    logger.info("Verifying dictionary.bin against dictionary.db...")
+    logger.info("Verifying dictionary.bin against dictionary.csv...")
     logger.info(f"{'=' * 50}")
 
     if not OUTPUT_FILE.exists():
@@ -171,57 +152,40 @@ def verify(logger):
 
     data = OUTPUT_FILE.read_bytes()
 
-    # Parse header
     magic = data[:4]
     assert magic == MAGIC, f"Bad magic: {magic}"
     version, count, build_ts = struct.unpack_from("<III", data, 4)
     assert version == VERSION, f"Bad version: {version}"
     logger.info(f"  Header: version={version}, count={count}, build_ts={build_ts}")
 
-    # Parse offset table
     header_size = 16
     offsets = []
     for i in range(count):
         offset = struct.unpack_from("<I", data, header_size + i * 4)[0]
         offsets.append(offset)
 
-    # Compare against SQLite
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, hanzi, tl, frequency, "
-        + ", ".join(SOURCE_COLUMNS)
-        + " FROM dictionary ORDER BY id"
-    )
-    rows = cursor.fetchall()
-    assert len(rows) == count, f"Row count mismatch: bin={count}, db={len(rows)}"
+    records = load_dictionary_records(CSV_FILE)
+    assert len(records) == count, f"Row count mismatch: bin={count}, csv={len(records)}"
 
     errors = 0
-    for i, row in enumerate(rows):
+    for i, rec in enumerate(records):
         offset = offsets[i]
-        # Determine record size
-        if i + 1 < count:
-            rec_end = offsets[i + 1]
-        else:
-            rec_end = len(data)
+        rec_end = offsets[i + 1] if i + 1 < count else len(data)
         rec_data = data[offset:rec_end]
 
-        # Parse record
         bitmask, frequency, hanzi_len, tl_len = struct.unpack_from("<HIBB", rec_data, 0)
         pos = 8
-        hanzi_bytes = rec_data[pos : pos + hanzi_len]
+        hanzi_bytes = rec_data[pos: pos + hanzi_len]
         pos += hanzi_len
-        tl_bytes = rec_data[pos : pos + tl_len]
+        tl_bytes = rec_data[pos: pos + tl_len]
 
         hanzi = hanzi_bytes.decode("utf-8") if hanzi_len > 0 else None
         tl = tl_bytes.decode("utf-8")
 
-        # Compare
-        expected_hanzi = row["hanzi"] if row["hanzi"] else None
-        expected_tl = row["tl"]
-        expected_freq = row["frequency"] or 0
-        expected_bitmask = encode_bitmask(row)
+        expected_hanzi = rec.hanzi
+        expected_tl = rec.tl
+        expected_freq = rec.frequency or 0
+        expected_bitmask = encode_bitmask(rec)
 
         if hanzi != expected_hanzi:
             logger.error(f"  Row {i + 1}: hanzi mismatch: '{hanzi}' vs '{expected_hanzi}'")
@@ -238,8 +202,6 @@ def verify(logger):
             )
             errors += 1
 
-    conn.close()
-
     if errors == 0:
         logger.info(f"  Verified {count} records — all match!")
     else:
@@ -249,7 +211,7 @@ def verify(logger):
 
 def main():
     logger = setup_logging(SCRIPT_NAME, log_dir=LOG_DIR)
-    log_header(logger, SCRIPT_NAME, DB_FILE, OUTPUT_FILE)
+    log_header(logger, SCRIPT_NAME, CSV_FILE, OUTPUT_FILE)
 
     build(logger)
 

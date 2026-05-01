@@ -50,10 +50,18 @@ class CompositionRoot private constructor(
      * Suspend until lexicon install completes. Returns `true` on success,
      * `false` if install failed. Failures are logged at install time; this
      * helper is intentionally quiet so query paths don't spam logs.
+     *
+     * `CancellationException` is re-thrown unchanged — swallowing it
+     * would break structured concurrency, leaving canceled lifecycle
+     * scopes (IME service, ViewModel) running `LexiconService.search*`
+     * / `NextWordService.predict` to completion with empty-result
+     * fallback instead of honoring the cancel (Codex r3173789380).
      */
     suspend fun awaitLexiconReady(): Boolean = try {
         lexiconReady.await()
         true
+    } catch (ce: kotlinx.coroutines.CancellationException) {
+        throw ce
     } catch (_: Throwable) {
         false
     }

@@ -376,4 +376,4 @@ This section is pointer-only — the substantive contract lives in iOS §§1–3
 - OTA / incremental-update delivery — Phase IV-B.
 - UI assets (keyboard layouts, fonts, icons, tab1 content JSON).
 - Persisted settings (`SharedSettings` · Android DataStore blobs · `colorSettings`) — not shared-core candidates.
-- Build-time-only SQLite artifacts (`dictionary.db`, `trie.db`) — consumed by the Python pipeline, never shipped.
+- Build-time-only artifacts — none. Post-v3.5.6 part 2 the build pipeline reads `dictionary.csv` directly into the binary writers; the previous SQLite intermediates (`dictionary.db`, `trie.db`) are gone.

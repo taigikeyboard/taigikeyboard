@@ -15,12 +15,12 @@ Three read-only binary assets live in the dictionary bundle and are mmap-loaded 
 |---|---|---|---|
 | `dictionary.bin` | `TKDB` | rowid → {bitmask, frequency, hanzi, tl} | ~4.4 MB |
 | `association.bin` | `TKWA` | prev_word → list of next-word predictions | ~3.1 MB |
-| `dictionary.trie` | (MARISA) | trie key → rowid (for prefix + exact lookup) | ~4.5 MB |
+| `dictionary.fst` | (fst) | prefix key → rowid (for prefix + exact lookup) | ~9.2 MB |
 
 All formats use **little-endian** integers and **strict UTF-8** strings. Both platforms ship reader code that must agree byte-for-byte; mismatches surface as silent decode failures.
 
 **Source-of-truth** for layout: this document.
-**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (steps `01_merge_csv.py` through `11_create_association_bin.py`; `10_create_dictionary_bin.py` and `11_create_association_bin.py` produce the binary formats; `04_create_trie.py` produces the trie). When any step changes the binary layout, this document and both readers must be updated **in the same change set**.
+**Source-of-truth** for *content*: the Python build pipeline at `dictionary/build/` (`merge_csv.py` → `create_dictionary_bin.py` → `create_fst.py` → `create_association_bin.py` → `audit.py` → `deploy.sh`; the binary writers read `dictionary.csv` directly via `dictionary_records.py` / `associations.py`, while `create_fst.py` shells to the Rust `engine/build-helpers/fst-builder`). When any step changes the binary layout, this document and both readers must be updated **in the same change set**.
 
 ---
 
@@ -290,25 +290,24 @@ This cheap round-trip catches every drift category above except bit-layout swaps
 
 ## 6. Build Pipeline
 
-The Python build pipeline lives at `dictionary/build/`. Steps relevant to the formats described above:
+The Python build pipeline lives at `dictionary/build/`. Steps relevant to the formats described above (post-v3.5.6 part 2 — every binary writer reads `dictionary.csv` directly via `dictionary_records.py` / `associations.py`; SQLite intermediates removed):
 
 | Step | Output | Notes |
 |---|---|---|
-| `01_merge_csv.py` | merged source CSVs | per-source dictionary inputs |
-| `02_create_app_db.sh` | intermediate SQLite | used by later steps |
-| `03_create_trie_db.sh` | trie source data | feeds step 04 |
-| `04_create_trie.py` | `dictionary.trie` | MARISA RecordTrie, `0xFF` separator |
-| `05_generate_association.py` | intermediate association data | feeds step 11 |
-| `06_deploy.sh` | bundles into platform asset directories | iOS bundle + Android assets |
-| `07_audit.py` | sanity checks | run before deploy |
-| `10_create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1 |
-| `11_create_association_bin.py` | `association.bin` | TKWA format per §2 |
+| `merge_csv.py` | `dictionary.csv` | merged per-source CSVs + khiin/dev/lkk supplements |
+| `dictionary_records.py` | (in-memory) | filtered records + rowid 1..N — shared by `create_dictionary_bin` + `create_fst` |
+| `associations.py` | (in-memory) | bigram + char-to-phrase generator — shared by `create_association_bin` |
+| `create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1; writes shared `.build_ts` |
+| `create_fst.py` | `dictionary.fst` | shells to `engine/build-helpers/fst-builder` (Rust) for fst encoding |
+| `create_association_bin.py` | `association.bin` | TKWA format per §2; reads shared `.build_ts` |
+| `audit.py` | `audit_report.txt` + `audit/*.csv` | sanity checks against `dictionary.csv` |
+| `deploy.sh` | bundles into platform asset directories | iOS bundle + Android assets |
 
 The build pipeline must:
 
 1. Sort `association.bin` keys by raw UTF-8 byte order ascending.
 2. Sort each association key's entries by `count` DESC.
-3. Emit RecordTrie with `0xFF` separator and `uint32_le` rowid payload.
+3. Emit fst with `0xFF` separator and `uint32_le` rowid payload (`engine/build-helpers/fst-builder`).
 4. Use bit positions exactly per §4.
 5. Set magic bytes per §1, §2.
 6. Use version `1` for both `.bin` files.
