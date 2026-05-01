@@ -69,6 +69,19 @@ struct EnabledDictionaries {
         sourceBitmask() & 0x1FF
     }
 
+    /// 完整 dictionary.bin filter bitmask — 所有使用者切換（含 variant + khiin）
+    /// 都精確編碼進 bits 0-12。配合 `engine/lexicon/src/search.rs::build_filter`
+    /// 的 layout：bit 9=khiin、bit 10=dev (常開)、bit 12=variant。Tab3 +
+    /// autocomplete 都走此 mask；不要再用 `UInt32.max` short-circuit
+    /// (會錯誤強制 enable variant + khiin)。
+    func dictionaryFilterBitmask() -> UInt32 {
+        var mask = UInt32(sourceBitmask()) // bits 0-8, 11
+        if khiin { mask |= 1 << 9 }
+        mask |= 1 << 10 // dev always included
+        if variant { mask |= 1 << 12 }
+        return mask
+    }
+
     /// association 的 9 個來源是否全部開啟
     var allAssociationSourcesEnabled: Bool {
         kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo

@@ -28,7 +28,7 @@ enum AutocompleteInputClassifier {
         if CandidateProcessor.isHanzi(text) {
             return .hanzi
         }
-        if InputNormalizer.hasToneMarks(text) {
+        if RustEngineBridge.hasToneMarks(text) {
             return .romanWithTone
         }
         if containsNumericTone(text) {

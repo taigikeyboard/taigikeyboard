@@ -33,7 +33,7 @@ use unicode_normalization::UnicodeNormalization;
 ///    + checked-ending heuristic.
 ///
 /// Replaces both platforms' `InputNormalizer.normalize`.
-pub(crate) fn normalize_input(input: &str) -> String {
+pub fn normalize_input(input: &str) -> String {
     if input.is_empty() {
         return String::new();
     }

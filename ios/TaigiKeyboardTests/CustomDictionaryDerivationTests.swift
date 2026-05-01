@@ -64,7 +64,7 @@ final class CustomDictionaryDerivationTests: XCTestCase {
     // MARK: - generateRomanNum (delegates to InputNormalizer)
 
     func testGenerateRomanNum_delegatesToInputNormalizer() {
-        // Parity check — generateRomanNum is documented as InputNormalizer.normalize(_, mode: .tl).
+        // Parity check — generateRomanNum is documented as RustEngineBridge.normalizeInput(_).
         XCTAssertEqual(CustomDictionaryDerivation.generateRomanNum("gâu-tsá"), "gau5tsa2")
     }
 
@@ -91,13 +91,13 @@ final class CustomDictionaryDerivationTests: XCTestCase {
     // MARK: - INVARIANT wrappers — Phase 0 §10
 
     func test_INVARIANT_custom_derivation_matches_input_normalizer() {
-        // The `roman_num` key must be exactly what InputNormalizer.normalize(_, mode: .tl)
+        // The `roman_num` key must be exactly what RustEngineBridge.normalizeInput(_)
         // produces, or custom-dictionary entries become invisible through the main search.
         let fixtures = ["gâu-tsá", "tāi-tsì", "hó", "tsiah8-pá"]
         for input in fixtures {
             XCTAssertEqual(
                 CustomDictionaryDerivation.generateRomanNum(input),
-                InputNormalizer.normalize(input, mode: .tl),
+                RustEngineBridge.normalizeInput(input),
                 "Parity failure on \(input)",
             )
         }

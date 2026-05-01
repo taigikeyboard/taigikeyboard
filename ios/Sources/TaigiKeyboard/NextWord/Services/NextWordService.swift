@@ -58,7 +58,9 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Properties
 
-    private let associationReader: AssociationBinaryReader?
+    /// Bundled-bigram lookups go through `RustEngineBridge.lexiconAssocLookup`
+    /// (Rust shared-core lexicon engine). The previous `AssociationBinaryReader`
+    /// platform mirror was deleted in v3.5.6 commit 13.
     private let userConnectionManager: SQLiteConnectionManager
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "NextWordService")
@@ -77,10 +79,8 @@ final class NextWordService: @unchecked Sendable {
     // MARK: - Initialization
 
     init(
-        associationReader: AssociationBinaryReader? = nil,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
-        self.associationReader = associationReader ?? AssociationBinaryReader()
         self.settingsProvider = settingsProvider
 
         userConnectionManager = SQLiteConnectionManager(
@@ -263,22 +263,28 @@ final class NextWordService: @unchecked Sendable {
         limit: Int,
         rows: inout [RustEngineBridge.NextWordRawRow],
     ) async {
-        guard let reader = associationReader else {
-            logger.warning("[DICT] Association binary reader not available")
-            return
-        }
-
-        let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
-        let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
+        // Bridge call into engine/lexicon — engine applies the 1-layer source
+        // filter (low 9 bits of bitmask) internally per audit §4. Over-fetch
+        // limit*2 for merge-slack (Codex post-impl P2-1 carry-over from
+        // v3.5.5 NextWord slice). Bitmask plumbed end-to-end since
+        // r3173013233 (prior to that, api.rs hardcoded u32::MAX).
+        let enabled = EnabledDictionaries(from: settingsProvider.current)
+        let bitmask: UInt32 = enabled.allAssociationSourcesEnabled
+            ? UInt32.max
+            : UInt32(enabled.associationBitmask())
+        let entries = RustEngineBridge.lexiconAssocLookup(
+            previousWord: lastChar,
+            limit: UInt32(limit * 2),
+            enabledSourcesBitmask: bitmask,
+        )
 
         for entry in entries {
-            guard AssociationBinaryReader.passesFilter(
-                entryBitmask: entry.bitmask,
-                enabledDicts: enabledDicts,
-            ) else { continue }
+            // Engine's `assoc_lookup` carries both candidate_word (hanzi) +
+            // candidate_tl (TL) per bundled bigram; the platform NextWord
+            // pipeline needs both to reconstruct the prediction row.
             rows.append(RustEngineBridge.NextWordRawRow(
-                hanzi: entry.nextWord,
-                tl: entry.nextTl,
+                hanzi: entry.candidateWord,
+                tl: entry.candidateTl,
                 count: Int64(entry.count),
                 lastUsedMs: 0,
                 source: .dict,

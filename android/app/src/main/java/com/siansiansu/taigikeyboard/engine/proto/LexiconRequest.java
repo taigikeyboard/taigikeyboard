@@ -19,6 +19,11 @@ public  final class LexiconRequest extends
   private java.lang.Object method_;
   public enum MethodCase {
     PROCESS_CANDIDATES(10),
+    INSTALL(11),
+    SEARCH(12),
+    SEARCH_WITH_SOURCES(13),
+    SEARCH_BY_HANZI(14),
+    ASSOC_LOOKUP(15),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -35,6 +40,11 @@ public  final class LexiconRequest extends
     public static MethodCase forNumber(int value) {
       switch (value) {
         case 10: return PROCESS_CANDIDATES;
+        case 11: return INSTALL;
+        case 12: return SEARCH;
+        case 13: return SEARCH_WITH_SOURCES;
+        case 14: return SEARCH_BY_HANZI;
+        case 15: return ASSOC_LOOKUP;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -58,6 +68,10 @@ public  final class LexiconRequest extends
 
   public static final int PROCESS_CANDIDATES_FIELD_NUMBER = 10;
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    */
   @java.lang.Override
@@ -65,6 +79,10 @@ public  final class LexiconRequest extends
     return methodCase_ == 10;
   }
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    */
   @java.lang.Override
@@ -75,6 +93,10 @@ public  final class LexiconRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.getDefaultInstance();
   }
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    */
   private void setProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
@@ -83,6 +105,10 @@ public  final class LexiconRequest extends
     methodCase_ = 10;
   }
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    */
   private void mergeProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
@@ -97,10 +123,364 @@ public  final class LexiconRequest extends
     methodCase_ = 10;
   }
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    */
   private void clearProcessCandidates() {
     if (methodCase_ == 10) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int INSTALL_FIELD_NUMBER = 11;
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   */
+  @java.lang.Override
+  public boolean hasInstall() {
+    return methodCase_ == 11;
+  }
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.InstallRequest getInstall() {
+    if (methodCase_ == 11) {
+       return (com.siansiansu.taigikeyboard.engine.proto.InstallRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.InstallRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   */
+  private void setInstall(com.siansiansu.taigikeyboard.engine.proto.InstallRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 11;
+  }
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   */
+  private void mergeInstall(com.siansiansu.taigikeyboard.engine.proto.InstallRequest value) {
+    value.getClass();
+  if (methodCase_ == 11 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.InstallRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.InstallRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.InstallRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 11;
+  }
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   */
+  private void clearInstall() {
+    if (methodCase_ == 11) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int SEARCH_FIELD_NUMBER = 12;
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   */
+  @java.lang.Override
+  public boolean hasSearch() {
+    return methodCase_ == 12;
+  }
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch() {
+    if (methodCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.SearchRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.SearchRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   */
+  private void setSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 12;
+  }
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   */
+  private void mergeSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
+    value.getClass();
+  if (methodCase_ == 12 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SearchRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SearchRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 12;
+  }
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   */
+  private void clearSearch() {
+    if (methodCase_ == 12) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int SEARCH_WITH_SOURCES_FIELD_NUMBER = 13;
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasSearchWithSources() {
+    return methodCase_ == 13;
+  }
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest getSearchWithSources() {
+    if (methodCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   */
+  private void setSearchWithSources(com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 13;
+  }
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   */
+  private void mergeSearchWithSources(com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest value) {
+    value.getClass();
+  if (methodCase_ == 13 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 13;
+  }
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   */
+  private void clearSearchWithSources() {
+    if (methodCase_ == 13) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int SEARCH_BY_HANZI_FIELD_NUMBER = 14;
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   */
+  @java.lang.Override
+  public boolean hasSearchByHanzi() {
+    return methodCase_ == 14;
+  }
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest getSearchByHanzi() {
+    if (methodCase_ == 14) {
+       return (com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   */
+  private void setSearchByHanzi(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 14;
+  }
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   */
+  private void mergeSearchByHanzi(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest value) {
+    value.getClass();
+  if (methodCase_ == 14 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 14;
+  }
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   */
+  private void clearSearchByHanzi() {
+    if (methodCase_ == 14) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int ASSOC_LOOKUP_FIELD_NUMBER = 15;
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   */
+  @java.lang.Override
+  public boolean hasAssocLookup() {
+    return methodCase_ == 15;
+  }
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest getAssocLookup() {
+    if (methodCase_ == 15) {
+       return (com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   */
+  private void setAssocLookup(com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 15;
+  }
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   */
+  private void mergeAssocLookup(com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest value) {
+    value.getClass();
+  if (methodCase_ == 15 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 15;
+  }
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   */
+  private void clearAssocLookup() {
+    if (methodCase_ == 15) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -216,6 +596,10 @@ public  final class LexiconRequest extends
 
 
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     @java.lang.Override
@@ -223,6 +607,10 @@ public  final class LexiconRequest extends
       return instance.hasProcessCandidates();
     }
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     @java.lang.Override
@@ -230,6 +618,10 @@ public  final class LexiconRequest extends
       return instance.getProcessCandidates();
     }
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     public Builder setProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
@@ -238,6 +630,10 @@ public  final class LexiconRequest extends
       return this;
     }
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     public Builder setProcessCandidates(
@@ -247,6 +643,10 @@ public  final class LexiconRequest extends
       return this;
     }
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     public Builder mergeProcessCandidates(com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest value) {
@@ -255,11 +655,375 @@ public  final class LexiconRequest extends
       return this;
     }
     /**
+     * <pre>
+     * ranking
+     * </pre>
+     *
      * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
      */
     public Builder clearProcessCandidates() {
       copyOnWrite();
       instance.clearProcessCandidates();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    @java.lang.Override
+    public boolean hasInstall() {
+      return instance.hasInstall();
+    }
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.InstallRequest getInstall() {
+      return instance.getInstall();
+    }
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    public Builder setInstall(com.siansiansu.taigikeyboard.engine.proto.InstallRequest value) {
+      copyOnWrite();
+      instance.setInstall(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    public Builder setInstall(
+        com.siansiansu.taigikeyboard.engine.proto.InstallRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setInstall(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    public Builder mergeInstall(com.siansiansu.taigikeyboard.engine.proto.InstallRequest value) {
+      copyOnWrite();
+      instance.mergeInstall(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * lexicon read-path
+     * </pre>
+     *
+     * <code>.taigi.engine.InstallRequest install = 11;</code>
+     */
+    public Builder clearInstall() {
+      copyOnWrite();
+      instance.clearInstall();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    @java.lang.Override
+    public boolean hasSearch() {
+      return instance.hasSearch();
+    }
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch() {
+      return instance.getSearch();
+    }
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    public Builder setSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
+      copyOnWrite();
+      instance.setSearch(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    public Builder setSearch(
+        com.siansiansu.taigikeyboard.engine.proto.SearchRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSearch(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    public Builder mergeSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
+      copyOnWrite();
+      instance.mergeSearch(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * autocomplete entry
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchRequest search = 12;</code>
+     */
+    public Builder clearSearch() {
+      copyOnWrite();
+      instance.clearSearch();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasSearchWithSources() {
+      return instance.hasSearchWithSources();
+    }
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest getSearchWithSources() {
+      return instance.getSearchWithSources();
+    }
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    public Builder setSearchWithSources(com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest value) {
+      copyOnWrite();
+      instance.setSearchWithSources(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    public Builder setSearchWithSources(
+        com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSearchWithSources(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    public Builder mergeSearchWithSources(com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest value) {
+      copyOnWrite();
+      instance.mergeSearchWithSources(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 multi-source
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+     */
+    public Builder clearSearchWithSources() {
+      copyOnWrite();
+      instance.clearSearchWithSources();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    @java.lang.Override
+    public boolean hasSearchByHanzi() {
+      return instance.hasSearchByHanzi();
+    }
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest getSearchByHanzi() {
+      return instance.getSearchByHanzi();
+    }
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    public Builder setSearchByHanzi(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest value) {
+      copyOnWrite();
+      instance.setSearchByHanzi(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    public Builder setSearchByHanzi(
+        com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setSearchByHanzi(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    public Builder mergeSearchByHanzi(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest value) {
+      copyOnWrite();
+      instance.mergeSearchByHanzi(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Tab3 hanzi prefix
+     * </pre>
+     *
+     * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+     */
+    public Builder clearSearchByHanzi() {
+      copyOnWrite();
+      instance.clearSearchByHanzi();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    @java.lang.Override
+    public boolean hasAssocLookup() {
+      return instance.hasAssocLookup();
+    }
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest getAssocLookup() {
+      return instance.getAssocLookup();
+    }
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    public Builder setAssocLookup(com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest value) {
+      copyOnWrite();
+      instance.setAssocLookup(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    public Builder setAssocLookup(
+        com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setAssocLookup(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    public Builder mergeAssocLookup(com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest value) {
+      copyOnWrite();
+      instance.mergeAssocLookup(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * bundled bigram
+     * </pre>
+     *
+     * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+     */
+    public Builder clearAssocLookup() {
+      copyOnWrite();
+      instance.clearAssocLookup();
       return this;
     }
 
@@ -282,9 +1046,15 @@ public  final class LexiconRequest extends
             "method_",
             "methodCase_",
             com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.InstallRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.SearchRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0001\u0001\u0000\n\n\u0001\u0000\u0000\u0000\n<\u0000";
+              "\u0000\u0006\u0001\u0000\n\u000f\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
+              "<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

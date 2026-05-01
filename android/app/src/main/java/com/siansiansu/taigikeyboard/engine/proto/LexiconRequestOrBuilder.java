@@ -10,15 +10,118 @@ public interface LexiconRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    * @return Whether the processCandidates field is set.
    */
   boolean hasProcessCandidates();
   /**
+   * <pre>
+   * ranking
+   * </pre>
+   *
    * <code>.taigi.engine.ProcessCandidatesRequest process_candidates = 10;</code>
    * @return The processCandidates.
    */
   com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesRequest getProcessCandidates();
+
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   * @return Whether the install field is set.
+   */
+  boolean hasInstall();
+  /**
+   * <pre>
+   * lexicon read-path
+   * </pre>
+   *
+   * <code>.taigi.engine.InstallRequest install = 11;</code>
+   * @return The install.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.InstallRequest getInstall();
+
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   * @return Whether the search field is set.
+   */
+  boolean hasSearch();
+  /**
+   * <pre>
+   * autocomplete entry
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchRequest search = 12;</code>
+   * @return The search.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch();
+
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   * @return Whether the searchWithSources field is set.
+   */
+  boolean hasSearchWithSources();
+  /**
+   * <pre>
+   * Tab3 multi-source
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchWithSourcesRequest search_with_sources = 13;</code>
+   * @return The searchWithSources.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest getSearchWithSources();
+
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   * @return Whether the searchByHanzi field is set.
+   */
+  boolean hasSearchByHanzi();
+  /**
+   * <pre>
+   * Tab3 hanzi prefix
+   * </pre>
+   *
+   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
+   * @return The searchByHanzi.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest getSearchByHanzi();
+
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   * @return Whether the assocLookup field is set.
+   */
+  boolean hasAssocLookup();
+  /**
+   * <pre>
+   * bundled bigram
+   * </pre>
+   *
+   * <code>.taigi.engine.AssocLookupRequest assoc_lookup = 15;</code>
+   * @return The assocLookup.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest getAssocLookup();
 
   public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.MethodCase getMethodCase();
 }

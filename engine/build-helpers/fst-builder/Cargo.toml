@@ -1,0 +1,20 @@
+[package]
+name = "fst-builder"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "fst-builder"
+path = "src/main.rs"
+
+[dependencies]
+fst = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

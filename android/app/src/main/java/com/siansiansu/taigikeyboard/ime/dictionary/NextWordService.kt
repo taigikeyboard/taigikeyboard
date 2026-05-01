@@ -98,7 +98,9 @@ class NextWordService(
     // Properties
     // ------------------------------------------------------------------ //
 
-    @Volatile private var associationReader: AssociationBinaryReader? = null
+    // v3.5.6: bundled-bigram lookups go through `LexiconBridge.assocLookup`
+    // (Rust shared-core lexicon engine). The previous AssociationBinaryReader
+    // platform mirror was deleted in commit 13.
 
     @Volatile private var userDatabase: SQLiteDatabase? = null
 
@@ -112,58 +114,24 @@ class NextWordService(
     // ------------------------------------------------------------------ //
 
     /**
-     * Ensure databases are initialized.
-     *
-     * If the association binary reader is null after initial setup
-     * (LexiconService has not copied `association.bin` yet), subsequent
-     * calls retry opening it. This avoids permanently losing dictionary
-     * bigram predictions due to init ordering.
+     * Ensure user database is initialized. Bundled-bigram readers live in
+     * the Rust shared-core engine (installed once at app startup via
+     * `LexiconBridge.install` in `AppInitializer`), so this method only
+     * gates the SQLite user_association.db.
      */
     private suspend fun ensureInitialized() {
-        if (isInitialized) {
-            if (associationReader == null) {
-                initAssociationReader()
-            }
-            return
-        }
+        if (isInitialized) return
 
         initMutex.withLock {
             if (isInitialized) return
 
             try {
-                initAssociationReader()
                 connectUserDb()
-
-                // Only mark initialized when the user DB is ready. Association
-                // reader may still be null if LexiconService has not yet
-                // copied the file; the lazy retry above will pick it up later.
                 isInitialized = userDatabase != null
-
-                logger.i(
-                    TAG,
-                    "[INIT] NextWord initialized: assocReader=${associationReader != null}, userDb=${userDatabase != null}",
-                )
+                logger.i(TAG, "[INIT] NextWord initialized: userDb=${userDatabase != null}")
             } catch (e: Exception) {
                 logger.e(TAG, "[INIT] Initialization failed", e)
             }
-        }
-    }
-
-    /** Open the read-only association binary reader once `association.bin` is available. */
-    private fun initAssociationReader() {
-        val binFile = File(appContext.filesDir, DictionaryConstants.ASSOC_BIN_NAME)
-
-        if (!binFile.exists()) {
-            logger.e(TAG, "[INIT] association.bin not found (LexiconService not initialized?)")
-            return
-        }
-
-        associationReader = AssociationBinaryReader.open(binFile)
-
-        if (associationReader != null) {
-            logger.i(TAG, "[INIT] Association binary reader loaded")
-        } else {
-            logger.e(TAG, "[INIT] Failed to open association.bin")
         }
     }
 
@@ -225,27 +193,49 @@ class NextWordService(
             // Over-fetch limit * 2 so the Rust filter has slack to merge
             // (hanzi, tl) collisions across dict + user without dropping
             // below the caller's requested limit (Codex post-impl P2-1).
-            associationReader?.let { reader ->
+            // Cold-start gate around assocLookup only — user-DB paths below
+            // don't need the lexicon engine (Codex r3173440132). If install
+            // hasn't completed (or failed), skip dict rows and let user
+            // associations still surface.
+            val lexiconReady = com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+                .shared(appContext).awaitLexiconReady()
+            if (lexiconReady) {
                 try {
-                    val enabledDicts = EnabledDictionaries.fromSettings(settings)
                     logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
-                    val entries = reader.lookup(lastChar, limit * 2)
+                    // v3.5.6: bundled bigram lookup goes through the Rust shared-core
+                    // lexicon engine (engine/lexicon::assoc_lookup). Engine applies
+                    // the 1-layer source filter (low 9 bits of bitmask) per audit
+                    // §4. Over-fetch limit * 2 for merge-slack (Codex post-impl
+                    // P2-1). Bitmask plumbed end-to-end since r3173013233 (prior
+                    // to that, api.rs hardcoded u32::MAX).
+                    val enabled = EnabledDictionaries.fromSettings(settings)
+                    val bitmask: UInt = if (enabled.allAssociationSourcesEnabled()) {
+                        UInt.MAX_VALUE
+                    } else {
+                        enabled.associationBitmask().toUInt()
+                    }
+                    val entries = com.siansiansu.taigikeyboard.engine.LexiconBridge.assocLookup(
+                        previousWord = lastChar,
+                        limit = (limit * 2).toUInt(),
+                        enabledSourcesBitmask = bitmask,
+                    )
                     for (entry in entries) {
-                        if (!AssociationBinaryReader.passesFilter(entry.bitmask, enabledDicts)) continue
                         rows.add(
                             RustEngineBridge.NextWordRawRow(
-                                hanzi = entry.nextWord,
-                                tl = entry.nextTl,
+                                hanzi = entry.candidateWord,
+                                tl = entry.candidateTl,
                                 count = entry.count.toLong(),
                                 lastUsedMs = 0L,
                                 source = RustEngineBridge.NextWordRawRow.Source.DICT,
                             ),
                         )
                     }
-                    logger.debug(TAG) { "[PREDICT] Dict: ${entries.size} entries -> ${rows.size} after filter" }
+                    logger.debug(TAG) { "[PREDICT] Dict: ${entries.size} entries (bridge)" }
                 } catch (e: Exception) {
                     logger.e(TAG, "[PREDICT] Dict query failed", e)
                 }
+            } else {
+                logger.debug(TAG) { "[PREDICT] Dict skipped — lexicon not ready" }
             }
 
             // 2. User associations — un-scored rows tagged SOURCE_USER.
@@ -459,9 +449,8 @@ class NextWordService(
     // Lifecycle
     // ------------------------------------------------------------------ //
 
-    /** Release database + reader handles. Subsequent API calls re-open on demand. */
+    /** Release user database handle. Subsequent API calls re-open on demand. */
     fun close() {
-        associationReader = null
         userDatabase?.close()
         userDatabase = null
         isInitialized = false

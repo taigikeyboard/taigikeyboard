@@ -5,9 +5,7 @@ import Foundation
 final class LexiconService: @unchecked Sendable {
     // MARK: - Properties
 
-    private let repository: DictionaryRepository
     private let userFrequencyService: UserFrequencyService
-    private let trieService: TrieService
     private let customDictionaryRepository: CustomDictionaryRepository
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "LexiconService")
@@ -15,43 +13,22 @@ final class LexiconService: @unchecked Sendable {
     // MARK: - Initialization
 
     init(
-        repository: DictionaryRepository? = nil,
         userFrequencyService: UserFrequencyService = CompositionRoot.userFrequencyService,
-        trieService: TrieService = CompositionRoot.trieService,
         customDictionaryRepository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
-        self.trieService = trieService
         self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
         self.settingsProvider = settingsProvider
 
-        self.repository = repository ?? DictionaryRepository(
-            trieService: trieService,
-            settingsProvider: settingsProvider,
-        )
-
-        // 初始化 Trie
-        initializeTrie()
         // 初始化 Custom Dictionary（keyboard extension 需要提前初始化）
         initializeCustomDictionary()
+        // Trie / dictionary.bin / association.bin lexicon engine state is
+        // installed once at extension launch via `RustEngineBridge.lexiconInstall(...)`
+        // (see `KeyboardViewController+Setup.swift`). No per-service init needed.
     }
 
     // MARK: - Private Methods
-
-    /// 初始化 Trie（背景執行）
-    private func initializeTrie() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self else { return }
-
-            let success = trieService.initialize()
-            if success {
-                logger.info("[INIT] Dictionary trie initialized successfully")
-            } else {
-                logger.warning("[INIT] Dictionary trie initialization failed")
-            }
-        }
-    }
 
     /// 初始化 Custom Dictionary DB（背景執行）
     /// searchSync doesn't call ensureInitialized, so we must initialize eagerly
@@ -72,10 +49,15 @@ final class LexiconService: @unchecked Sendable {
     /// 搜尋詞彙
     ///
     /// Orchestrates four search phases:
-    /// 1. Custom dictionary lookup (user-added entries, highest priority)
-    /// 2. System dictionary query (with optional TPS `er`↔`or` expansion)
-    /// 3. Case processing on the merged list
-    /// 4. Rank by user frequency through `RustEngineBridge.processCandidates`
+    /// 1. **D-8 hanzi guard** — `inputType == .hanzi` short-circuits to `[]`
+    ///    BEFORE custom-dict and system-dict, mirroring Android. Pinned by
+    ///    `INVARIANT_LEX_HANZI_GUARD` (parity correction toward Android per
+    ///    `rules/cross-platform-alignment.md` §1b; `behavioral-invariants.md` §14).
+    /// 2. Custom dictionary lookup (user-added entries, highest priority)
+    /// 3. System dictionary query through `RustEngineBridge.lexiconSearch`
+    ///    (Rust engine handles trie / binary readers / TPS er↔or expansion)
+    /// 4. Case processing on the merged list
+    /// 5. Rank by user frequency through `RustEngineBridge.processCandidates`
     ///    (dedup + score + sort + optional TPS display-dedup, atomic in
     ///    Rust shared core); cold-start before the freq DB warms up routes
     ///    through the same call with `mergeOrderOnly: true` to skip
@@ -93,26 +75,22 @@ final class LexiconService: @unchecked Sendable {
     ) async throws -> [TaigiWord] {
         guard !input.isEmpty else { return [] }
 
-        let customWords = lookupCustomDictionary(rawInput: rawInput, segmentedInput: input, inputMode: inputMode)
+        // D-8 hard guard: hanzi inputs short-circuit before any reader is touched.
+        // See `behavioral-invariants.md` §14.
+        guard inputType != .hanzi else { return [] }
 
-        let systemWords = try await querySystemDictionaries(
+        let customWords = lookupCustomDictionary(rawInput: rawInput, segmentedInput: input, inputMode: inputMode)
+        let systemWords = querySystemDictionaries(
             segmentedInput: input,
             inputType: inputType,
             inputMode: inputMode,
             limit: limit,
-            rawInput: rawInput,
         )
 
         let processedSystem = applyCaseProcessing(systemWords, basedOn: input, inputMode: inputMode)
         let merged = customWords + processedSystem
 
         return await processCandidates(merged, segmentedInput: input, inputMode: inputMode)
-    }
-
-    // MARK: - Connection Status
-
-    func isConnected() -> Bool {
-        repository.isConnected()
     }
 
     // MARK: - Search Pipeline
@@ -155,39 +133,55 @@ final class LexiconService: @unchecked Sendable {
         }
     }
 
-    /// Query system dictionaries for the segmented input, with optional TPS
-    /// `er`↔`or` variant expansion when the user has that toggle on.
+    /// Query system dictionaries through the Rust shared-core lexicon engine.
+    ///
+    /// TPS `er`↔`or` variant expansion runs INSIDE the engine when
+    /// `tpsOrMappedToER` is set and the normalized key contains "er", per
+    /// `engine/lexicon/src/search.rs`. iOS no longer runs the variant-search
+    /// loop platform-side (audit D-1 + D-2 resolution).
     private func querySystemDictionaries(
         segmentedInput: String,
         inputType: InputType,
         inputMode: InputMode,
         limit: Int,
-        rawInput: String?,
-    ) async throws -> [TaigiWord] {
-        var systemWords = try await repository.query(
-            for: segmentedInput,
-            inputType: inputType,
-            inputMode: inputMode,
-            limit: limit,
-        )
-
-        // TPS ㄜ expansion: also search "or" variant when toggle ON (matching Android)
-        if let raw = rawInput, RustEngineBridge.containsTPS(raw),
-           settingsProvider.current.isTpsOrMappedToER,
-           segmentedInput.contains("er")
-        {
-            let orVariantKey = segmentedInput.replacingOccurrences(of: "er", with: "or")
-            let orWords = try await repository.query(
-                for: orVariantKey,
-                inputType: inputType,
-                inputMode: inputMode,
-                limit: limit,
-            )
-            let existingIds = Set(systemWords.map(\.id))
-            systemWords += orWords.filter { !existingIds.contains($0.id) }
+    ) -> [TaigiWord] {
+        let bridgeInputType: RustEngineBridge.LexiconInputType = switch inputType {
+        case .hanzi: .hanzi // unreachable due to D-8 guard, kept for completeness
+        case .romanWithTone: .romanWithTone
+        case .romanWithoutTone: .romanNoTone
         }
-
-        return systemWords
+        // .english unreachable — keyboard passthrough never invokes lexicon
+        // search; mirrors Android `InputMode.ENGLISH -> LexiconInputMode.TL`.
+        let bridgeInputMode: RustEngineBridge.LexiconInputMode = switch inputMode {
+        case .tl: .tl
+        case .poj: .poj
+        case .tps: .tps
+        case .english: .tl
+        }
+        // Use the exact dictionary filter mask (sources 0-8,11 + khiin@9 +
+        // dev@10 + variant@12). Pre-fix this branched on `allEnabled` and
+        // sent `UInt32.max`, which forced variant + khiin on regardless of
+        // user toggles (r3173440126).
+        let bitmask = EnabledDictionaries(from: settingsProvider.current).dictionaryFilterBitmask()
+        let rows = RustEngineBridge.lexiconSearch(
+            input: segmentedInput,
+            inputType: bridgeInputType,
+            inputMode: bridgeInputMode,
+            limit: UInt32(limit),
+            tpsOrMappedToER: settingsProvider.current.isTpsOrMappedToER,
+            enabledSourcesBitmask: bitmask,
+        )
+        return rows.map { row in
+            // Engine returns raw `tl`; if the user is in POJ mode, render to POJ.
+            let roman = inputMode == .poj ? RustEngineBridge.tlToPoj(row.roman) : row.roman
+            return TaigiWord(
+                id: Int(row.id),
+                roman: roman,
+                hanzi: row.hanzi,
+                lengthScore: row.lengthScore.map(Int.init),
+                sourceBitmask: row.sourceBitmask.map(UInt16.init(truncatingIfNeeded:)),
+            )
+        }
     }
 
     /// Apply auto-capitalization to roman and hanzi forms based on the input shape.
@@ -249,7 +243,7 @@ final class LexiconService: @unchecked Sendable {
             )
         }
 
-        let normalizedInput = InputNormalizer.normalize(segmentedInput, mode: inputMode)
+        let normalizedInput = RustEngineBridge.normalizeInput(segmentedInput)
         let displayKeys = merged.map(\.displayText)
         let frequencyDataMap = userFrequencyService.frequencyDataBatch(for: displayKeys)
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)

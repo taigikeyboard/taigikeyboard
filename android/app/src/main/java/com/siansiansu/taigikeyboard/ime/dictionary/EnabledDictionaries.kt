@@ -51,6 +51,21 @@ data class EnabledDictionaries(
     /** 轉換為 association bitmask(bits 0-8,對應 association.bin 的 9 個來源) */
     fun associationBitmask(): Int = sourceBitmask() and 0x1FF
 
+    /**
+     * 完整 dictionary.bin filter bitmask — 所有使用者切換(含 variant + khiin)
+     * 都精確編碼進 bits 0-12。配合 `engine/lexicon/src/search.rs::build_filter`
+     * 的 layout: bit 9=khiin、bit 10=dev (常開)、bit 12=variant。Tab3 +
+     * autocomplete 都走此 mask;不要再用 `Int.MAX` / `UInt.MAX_VALUE` short-circuit
+     * (會錯誤強制 enable variant + khiin)。
+     */
+    fun dictionaryFilterBitmask(): Int {
+        var mask = sourceBitmask() // bits 0-8, 11
+        if (khiin) mask = mask or (1 shl 9)
+        mask = mask or (1 shl 10) // dev always included
+        if (variant) mask = mask or (1 shl 12)
+        return mask
+    }
+
     /** association 的 9 個來源是否全部開啟 */
     fun allAssociationSourcesEnabled(): Boolean = kautian && taigitv && itaigi && sitbut && taihoa && taijit && kungge && stti && khpoo
 

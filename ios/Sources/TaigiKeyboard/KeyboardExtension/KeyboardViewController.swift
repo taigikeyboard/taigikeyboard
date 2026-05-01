@@ -64,6 +64,13 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // DebugLogger. Idempotent — main app also calls this in `init`.
         RustEngineBridge.install()
 
+        // v3.5.6: install the lexicon engine state (fst + dictionary.bin +
+        // association.bin) once at extension launch. Idempotent — calling
+        // again with the same paths is a no-op observation-wise. Bundle
+        // assets are read-only and stable across the keyboard extension's
+        // lifetime, so no reinstall is needed within a session.
+        installLexiconEngine()
+
         // Register custom fonts from containing app bundle (extension only)
         FontRegistration.registerFontsIfNeeded()
 

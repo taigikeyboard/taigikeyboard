@@ -17,6 +17,38 @@ extension KeyboardViewController {
         setupCoreServices()
     }
 
+    /// v3.5.6 — install the Rust shared-core lexicon engine state once at
+    /// extension launch. Resolves bundle paths via `ResourceBundleResolver`;
+    /// bundle assets are read-only + stable across the extension's lifetime
+    /// so a single install is sufficient. Failures are logged and left to
+    /// graceful degradation at first search call (engine returns
+    /// `LexiconError::NotInitialized` → bridge returns `[]`).
+    func installLexiconEngine() {
+        let bundle = ResourceBundleResolver.dictionaryBundle
+        guard
+            let fstURL = bundle.url(forResource: "dictionary", withExtension: "fst"),
+            let dictBinURL = bundle.url(forResource: "dictionary", withExtension: "bin"),
+            let assocBinURL = bundle.url(forResource: "association", withExtension: "bin")
+        else {
+            setupLogger.warning("[LEXICON] missing bundle resource(s); engine not installed")
+            return
+        }
+        let stamp = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String).flatMap(UInt32.init) ?? 1
+        if let stats = RustEngineBridge.lexiconInstall(
+            triePath: fstURL.path,
+            dictionaryBinPath: dictBinURL.path,
+            associationBinPath: assocBinURL.path,
+            dictionaryVersion: stamp,
+        ) {
+            setupLogger.info(
+                "[LEXICON] installed: dict=\(stats.dictionaryRecordCount) "
+                    + "fst_entries=\(stats.prefixIndexEntryCount) version=\(stamp)"
+            )
+        } else {
+            setupLogger.warning("[LEXICON] install returned nil; engine not installed")
+        }
+    }
+
     func setupLiquidGlass() {
         let context = state.keyboardContext
         if context.isLiquidGlassAvailable {

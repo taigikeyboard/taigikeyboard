@@ -105,6 +105,7 @@ fn run(bytes: &[u8]) -> Response {
                 return error_response(id, ErrorCode::FailInvariant, generation);
             };
             match method {
+                // Tag 10 — ranking crate (no behavior change).
                 protos::engine::lexicon_request::Method::ProcessCandidates(req) => {
                     let resp = ranking::process_candidates(req);
                     Response {
@@ -120,6 +121,25 @@ fn run(bytes: &[u8]) -> Response {
                                 ),
                             },
                         )),
+                    }
+                }
+                // Tags 11-15 — engine/lexicon (read path).
+                lex_method @ (protos::engine::lexicon_request::Method::Install(_)
+                | protos::engine::lexicon_request::Method::Search(_)
+                | protos::engine::lexicon_request::Method::SearchWithSources(_)
+                | protos::engine::lexicon_request::Method::SearchByHanzi(_)
+                | protos::engine::lexicon_request::Method::AssocLookup(_)) => {
+                    match lexicon::dispatch::handle(lex_method) {
+                        Ok(lex_resp) => Response {
+                            id,
+                            error: ErrorCode::Ok as i32,
+                            generation,
+                            payload: Some(response::Payload::Lexicon(lex_resp)),
+                        },
+                        Err(err) => {
+                            log::warn!("lexicon dispatch failed (id={id}): {err}");
+                            error_response(id, lexicon_error_code(&err), generation)
+                        }
                     }
                 }
             }
@@ -144,6 +164,18 @@ fn run(bytes: &[u8]) -> Response {
 fn phonetics_error_code(err: &phonetics::PhoneticsError) -> ErrorCode {
     match err {
         phonetics::PhoneticsError::UnsupportedOp => ErrorCode::FailInvariant,
+    }
+}
+
+fn lexicon_error_code(err: &lexicon::LexiconError) -> ErrorCode {
+    // Mirrors LexiconError::as_proto_error_code values literally so the
+    // mapping has a single source of truth in engine/lexicon/src/error.rs.
+    match err.as_proto_error_code() {
+        1 => ErrorCode::FailParse,
+        2 => ErrorCode::FailInternal,
+        3 => ErrorCode::FailIo,
+        4 => ErrorCode::FailInvariant,
+        _ => ErrorCode::FailInternal,
     }
 }
 
@@ -232,7 +264,10 @@ mod tests {
             panic!("expected Lexicon payload, got {payload:?}");
         };
         let result = lex_resp.result.expect("result present");
-        let protos::engine::lexicon_response::Result::ProcessCandidatesResult(pc) = result;
+        let protos::engine::lexicon_response::Result::ProcessCandidatesResult(pc) = result
+        else {
+            panic!("expected ProcessCandidatesResult, got {result:?}");
+        };
         assert_eq!(pc.ranked.len(), 1, "duplicate dropped by engine dedup");
         assert_eq!(pc.breakdown.len(), 1, "breakdown requested");
     }

@@ -1,0 +1,24 @@
+[package]
+name = "lexicon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+prost = { workspace = true }
+fst = { workspace = true }
+indexmap = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+once_cell = { workspace = true }
+mmap-host = { workspace = true }
+phonetics = { workspace = true }
+protos = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

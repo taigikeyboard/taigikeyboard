@@ -13,36 +13,22 @@ import Foundation
 final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Dependencies
 
-    private let repository: DictionaryRepository
     private let customDictionaryRepository: CustomDictionaryRepository
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionarySearchService")
 
-    /// Trie bootstrap task — awaited before every search so a user who types
-    /// right after opening the Dictionary tab doesn't see a false empty state.
-    private let trieBootstrap: Task<Void, Never>
-
     // MARK: - Init
 
     init(
-        repository: DictionaryRepository? = nil,
         customDictionaryRepository: CustomDictionaryRepository = CompositionRoot.customDictionaryRepository,
-        trieService: TrieService = CompositionRoot.trieService,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
         self.customDictionaryRepository = customDictionaryRepository
         self.settingsProvider = settingsProvider
-        // Build a repository that shares the injected settings provider so
-        // DB-layer filtering agrees with the service's enabled-source view.
-        self.repository = repository ?? DictionaryRepository(
-            trieService: trieService,
-            settingsProvider: settingsProvider,
-        )
-        // Kick off Trie load on a detached task we can await from search().
-        // Idempotent — no-op if LexiconService already loaded the same handle.
-        trieBootstrap = Task.detached(priority: .userInitiated) { [trieService] in
-            _ = trieService.initialize()
-        }
+        // Lexicon engine state (fst + dictionary.bin + association.bin) is
+        // installed once at extension launch via `RustEngineBridge.lexiconInstall(...)`.
+        // The Tab3 host process invokes the same bridge call from its
+        // composition root; reinstalling is idempotent.
         bootstrapCustomDictionary()
     }
 
@@ -75,13 +61,11 @@ final class DictionarySearchService: @unchecked Sendable {
     ) async throws -> [DictionarySearchResult] {
         guard !query.isEmpty else { return [] }
 
-        await trieBootstrap.value
-
         let inputMode = settingsProvider.current.inputMode
         let isCJK = CandidateProcessor.isHanzi(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
-        let systemResults = try await fetchSystemResults(
+        let systemResults = fetchSystemResults(
             query: query,
             inputMode: inputMode,
             isCJK: isCJK,
@@ -103,11 +87,46 @@ final class DictionarySearchService: @unchecked Sendable {
         inputMode: InputMode,
         isCJK: Bool,
         limit: Int,
-    ) async throws -> [DictionarySearchResult] {
-        if isCJK {
-            return try await repository.searchByHanzi(query: query, inputMode: inputMode, limit: limit)
+    ) -> [DictionarySearchResult] {
+        // .english unreachable — keyboard passthrough never invokes lexicon
+        // search; mirrors Android `InputMode.ENGLISH -> LexiconInputMode.TL`.
+        let bridgeMode: RustEngineBridge.LexiconInputMode = switch inputMode {
+        case .tl: .tl
+        case .poj: .poj
+        case .tps: .tps
+        case .english: .tl
         }
-        return try await repository.searchWithSources(input: query, inputMode: inputMode, limit: limit)
+        // Engine `dictionary.bin` filter expects exact bitmask layout
+        // (sources 0-8,11 + khiin@9 + dev@10 + variant@12). Don't use
+        // UInt32.max as a "all-enabled" sentinel here — it would force
+        // variant + khiin on regardless of user toggles.
+        let bitmask = EnabledDictionaries(from: settingsProvider.current).dictionaryFilterBitmask()
+        let rows = isCJK
+            ? RustEngineBridge.lexiconSearchByHanzi(
+                query: query,
+                inputMode: bridgeMode,
+                limit: UInt32(limit),
+                enabledSourcesBitmask: bitmask,
+            )
+            : RustEngineBridge.lexiconSearchWithSources(
+                input: query,
+                inputMode: bridgeMode,
+                limit: UInt32(limit),
+                enabledSourcesBitmask: bitmask,
+            )
+        return rows.map { row in
+            // Engine returns raw `tl`; render to POJ when in POJ mode.
+            let roman = inputMode == .poj ? RustEngineBridge.tlToPoj(row.roman) : row.roman
+            let bitmask = row.sourceBitmask ?? 0
+            return DictionarySearchResult(
+                id: Int(row.id),
+                roman: roman,
+                tl: row.roman,
+                hanzi: row.hanzi,
+                frequency: row.lengthScore.map(Int.init) ?? 0,
+                sources: LexiconBitmask.sources(from: bitmask),
+            )
+        }
     }
 
     private func lookupCustomDictionary(query: String) -> [DictionarySearchResult] {

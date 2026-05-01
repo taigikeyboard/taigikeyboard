@@ -2,9 +2,11 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.LexiconBridge
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
@@ -12,31 +14,29 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
 
 /**
  * Dictionary search orchestrator.
  *
- * Search flow:
- * 1. Trie prefix match to get candidate rowids.
- * 2. `DictionaryBinaryReader` reads the mmap binary records.
- * 3. Bitmask filter keeps only user-enabled dictionaries.
- * 4. `RustEngineBridge.processCandidates` dedups, ranks by user-frequency
- *    + input affinity, and (TPS-gated) collapses display duplicates —
- *    all in a single FFI round-trip into `engine/ranking/`.
+ * Search flow (v3.5.6 — Rust shared-core lexicon engine):
+ * 1. **D-8 hanzi guard** — `inputType is InputType.Hanzi` short-circuits to
+ *    `[]` BEFORE custom-dict / system-dict. Pinned by
+ *    `INVARIANT_LEX_HANZI_GUARD` (`docs/architecture/behavioral-invariants.md` §14).
+ * 2. Custom-dict lookup (user-added entries, highest priority).
+ * 3. System-dict query through `LexiconBridge.search` (engine handles trie,
+ *    binary-reader filter, TPS er↔or expansion atomically).
+ * 4. `RustEngineBridge.processCandidates` dedups + ranks + (TPS-gated)
+ *    display-dedup in one FFI round-trip into `engine/ranking/`.
  *
- * Owned by `CompositionRoot`; collaborators are injected through the ctor.
- * [close] releases `dictionary.bin` mmap; subsequent calls re-open on demand.
+ * Owned by `CompositionRoot`; collaborators injected through the ctor.
+ * `trie` / `binaryReader` parameters from previous slices were removed in
+ * v3.5.6 — engine state is installed at app startup via
+ * `LexiconBridge.install(...)` from `AppInitializer`.
  */
 class LexiconService(
     appContext: Context,
     private val logger: LoggerBackend,
-    private val trie: TrieService,
     private val customDict: CustomDictionaryService,
     private val userFreq: UserFrequencyService,
 ) {
@@ -45,11 +45,6 @@ class LexiconService(
     companion object {
         private const val TAG = "LexiconService"
     }
-
-    @Volatile private var binaryReader: DictionaryBinaryReader? = null
-
-    @Volatile private var isInitialized = false
-    private val initMutex = Mutex()
 
     /**
      * Search the dictionary.
@@ -60,9 +55,7 @@ class LexiconService(
      * @param limit Max number of results.
      * @param settings Engine-facing settings view; falls back to a fresh
      * `PrefHelper(appContext)` when null. Only the non-null `settings`
-     * drives the TPS display-dedup gate — passing null preserves the
-     * legacy "skip display dedup" behavior used by callers that do not
-     * own a settings reference.
+     * drives the TPS display-dedup gate.
      */
     suspend fun search(
         input: String,
@@ -72,42 +65,24 @@ class LexiconService(
         settings: EngineSettings? = null,
     ): Outcome<List<TaigiWord>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
-        // Hanzi input cannot be searched via trie (matching iOS guard)
+        // D-8 hard guard: hanzi inputs short-circuit before any reader is touched.
+        // See `behavioral-invariants.md` §14.
         if (inputType is InputType.Hanzi) return Outcome.Success(emptyList())
+        // Cold-start gate: install runs on Application's IO scope; without
+        // this await, queries can race ahead and the bridge swallows
+        // engine-not-initialized into empty results (Codex r3173440132).
+        if (!CompositionRoot.shared(appContext).awaitLexiconReady()) {
+            return Outcome.Success(emptyList())
+        }
 
         return withContext(Dispatchers.IO) {
             val searchStart = System.currentTimeMillis()
-
-            val initStart = System.currentTimeMillis()
-            try {
-                ensureInitialized()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logger.e(TAG, "[SEARCH] Initialization failed", e)
-                return@withContext Outcome.Failure(
-                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
-                )
-            }
-            if (BuildConfig.DEBUG) {
-                logger.d("PERF", "[3a] ensureInitialized: ${System.currentTimeMillis() - initStart}ms")
-            }
-
-            val reader =
-                binaryReader
-                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
-            if (!trie.isReady) {
-                logger.e(TAG, "[SEARCH] Trie not loaded")
-                return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
-            }
-
             val activeSettings: EngineSettings = settings ?: PrefHelper(appContext)
             val enabledDicts = EnabledDictionaries.fromSettings(activeSettings)
 
             try {
                 val customWords = lookupCustomDictionary(input, activeSettings)
-                val systemWords = querySystemDictionaries(reader, input, inputMode, limit, enabledDicts, activeSettings)
-                // Merge: custom words first, then system words (matching iOS).
+                val systemWords = querySystemDictionaries(input, inputMode, limit, enabledDicts, activeSettings)
                 val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
@@ -127,8 +102,8 @@ class LexiconService(
     }
 
     /**
-     * Phase 1: query the custom user dictionary by prefix. Returns early
-     * if the custom-dict toggle is off.
+     * Phase 1: custom user dictionary by prefix. Returns early if the
+     * custom-dict toggle is off.
      */
     private suspend fun lookupCustomDictionary(
         input: String,
@@ -160,47 +135,54 @@ class LexiconService(
     }
 
     /**
-     * Phase 2: query the system trie + binary reader, including the TPS
-     * er↔or variant expansion when the toggle is on. Preserves
-     * `existingIds`-based dedup with the primary result set.
+     * Phase 2: system dictionary through the Rust shared-core lexicon
+     * engine. `LexiconBridge.search` runs trie lookup + binary-reader
+     * filter + TPS er↔or expansion internally per audit D-1 + D-2.
      */
     private fun querySystemDictionaries(
-        reader: DictionaryBinaryReader,
         input: String,
         inputMode: InputMode,
         limit: Int,
         enabledDicts: EnabledDictionaries,
         settings: EngineSettings,
     ): List<TaigiWord> {
-        val trieStart = System.currentTimeMillis()
-        val words = searchWithTrie(reader, input, inputMode, limit, enabledDicts)
-        if (BuildConfig.DEBUG) {
-            logger.d(
-                "PERF",
-                "[3b] searchWithTrie (${words.size} results): ${System.currentTimeMillis() - trieStart}ms",
+        // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
+        // ENGLISH falls back to TL because the lexicon engine never receives
+        // English-mode queries on the autocomplete path. Aligning the
+        // InputMode enum across iOS / Android is a separate scope.
+        val bridgeMode = when (inputMode) {
+            InputMode.POJ -> LexiconBridge.LexiconInputMode.POJ
+            InputMode.TL -> LexiconBridge.LexiconInputMode.TL
+            InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
+        }
+        // Use the exact dictionary filter mask (sources 0-8,11 + khiin@9 +
+        // dev@10 + variant@12). Pre-fix this branched on `allEnabled` and
+        // sent `UInt.MAX_VALUE`, which forced variant + khiin on regardless
+        // of user toggles (r3173440126).
+        val bitmask = enabledDicts.dictionaryFilterBitmask().toUInt()
+        val rows = LexiconBridge.search(
+            input = input,
+            inputType = LexiconBridge.LexiconInputType.ROMAN_WITH_TONE,
+            inputMode = bridgeMode,
+            limit = limit.toUInt(),
+            tpsOrMappedToER = settings.isTpsOrMappedToER,
+            enabledSourcesBitmask = bitmask,
+        )
+        return rows.map { row ->
+            val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
+            TaigiWord(
+                id = row.id.toInt(),
+                roman = roman,
+                hanzi = row.hanzi,
+                lengthScore = row.lengthScore,
+                sourceBitmask = row.sourceBitmask?.toInt(),
             )
         }
-
-        // TPS ㄜ expansion: also search "or" variant when toggle is ON.
-        if (!(RustEngineBridge.containsTps(input) && settings.isTpsOrMappedToER)) return words
-        val tlInput = RustEngineBridge.tpsToTl(input)
-        if (!tlInput.contains("er")) return words
-
-        val orVariant = tlInput.replace("er", "or")
-        val orWords = searchWithTrie(reader, orVariant, inputMode, limit, enabledDicts)
-        val existingIds = words.map { it.id }.toSet()
-        return words + orWords.filter { it.id !in existingIds }
     }
 
     /**
      * Phase 3+4: hand the merged candidate list to the Rust ranking
-     * pipeline. One FFI round-trip atomically runs dedup → score → sort
-     * → (TPS-gated) display-dedup inside `engine/ranking/`. Normalizes
-     * the input once for scoring and batches user-frequency lookups
-     * before the call. The TPS display-dedup gate stays platform-decided
-     * (`settings?.inputMode == "tps"`) — a null [settings] preserves the
-     * prior behavior of skipping display dedup for callers that did not
-     * pass preferences.
+     * pipeline. Atomic FFI roundtrip into `engine/ranking/`.
      */
     private suspend fun processCandidates(
         merged: List<TaigiWord>,
@@ -208,7 +190,7 @@ class LexiconService(
         inputMode: InputMode,
         settings: EngineSettings?,
     ): List<TaigiWord> {
-        val normalizedInput = InputNormalizer.normalize(input, inputMode)
+        val normalizedInput = RustEngineBridge.normalizeInput(input)
         val wordTexts = merged.map { it.displayText }.distinct()
         val frequencyData = userFreq.frequencyDataBatch(wordTexts)
         return RustEngineBridge.processCandidates(
@@ -220,87 +202,6 @@ class LexiconService(
         )
     }
 
-    /**
-     * Trie exact match + prefix match → binary reader lookup with bitmask filter.
-     */
-    private fun searchWithTrie(
-        reader: DictionaryBinaryReader,
-        input: String,
-        inputMode: InputMode,
-        limit: Int,
-        enabledDicts: EnabledDictionaries,
-    ): List<TaigiWord> {
-        logger.debug(TAG) { "[SEARCH] input='$input', mode=$inputMode, limit=$limit" }
-
-        val searchKey = InputNormalizer.buildSearchKey(input, inputMode)
-        val normalizedInput = InputNormalizer.normalize(searchKey, inputMode)
-
-        logger.debug(TAG) { "[NORMALIZE] '$input' -> '$searchKey' -> '$normalizedInput'" }
-
-        if (normalizedInput.isEmpty()) {
-            logger.d(TAG, "[NORMALIZE] Empty after normalization, returning empty")
-            return emptyList()
-        }
-
-        val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
-
-        logger.debug(TAG) {
-            "[TRIE] trieKey='$trieKey', TrieService.isReady=${trie.isReady}, keyCount=${trie.getKeyCount()}"
-        }
-
-        val rowIds = lookupRowIds(trieKey)
-        if (rowIds.isEmpty()) {
-            logger.debug(TAG) { "[TRIE] No results for: $trieKey" }
-            return emptyList()
-        }
-
-        logger.debug(TAG) { "[TRIE] Total ${rowIds.size} unique rowIds" }
-
-        val results = mutableListOf<TaigiWord>()
-        for (id in rowIds) {
-            val record = reader.record(id) ?: continue
-            if (!DictionaryBinaryReader.passesFilter(record.bitmask, enabledDicts)) continue
-
-            val roman =
-                if (inputMode == InputMode.POJ) {
-                    RustEngineBridge.tlToPoj(record.tl)
-                } else {
-                    record.tl
-                }
-
-            results.add(
-                TaigiWord(
-                    id = id,
-                    roman = roman,
-                    hanzi = record.hanzi,
-                    lengthScore = record.frequency,
-                    sourceBitmask = record.bitmask,
-                ),
-            )
-        }
-
-        if (BuildConfig.DEBUG) {
-            logger.d(TAG, "[BIN] ${results.size} words after filter")
-            results.take(3).forEach { word ->
-                logger.d(TAG, "[BIN]   - ${word.roman} / ${word.hanzi ?: "(no hanzi)"}")
-            }
-        }
-
-        return results
-            .sortedByDescending { it.lengthScore ?: 0 }
-            .take(limit)
-    }
-
-    /**
-     * Trie lookup: exact match + prefix search merged and deduplicated.
-     * Shared by [searchWithTrie], [searchWithSources], and [searchByHanzi].
-     */
-    private fun lookupRowIds(trieKey: String): List<Int> {
-        val exactRowIds = trie.lookup(trieKey)
-        val prefixRowIds = trie.prefixSearch(trieKey)
-        return (exactRowIds.toList() + prefixRowIds.toList()).distinct()
-    }
-
     /** Search with source metadata (tab3 dictionary exploration). */
     suspend fun searchWithSources(
         input: String,
@@ -308,35 +209,14 @@ class LexiconService(
         limit: Int = 50,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
+        if (!CompositionRoot.shared(appContext).awaitLexiconReady()) {
+            return Outcome.Success(emptyList())
+        }
 
         return withContext(Dispatchers.IO) {
             try {
-                ensureInitialized()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logger.e(TAG, "[SOURCES] Initialization failed", e)
-                return@withContext Outcome.Failure(
-                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
-                )
-            }
-
-            val reader =
-                binaryReader
-                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
-            if (!trie.isReady) return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
-
-            val normalizedInput = InputNormalizer.normalize(input, inputMode)
-            if (normalizedInput.isEmpty()) return@withContext Outcome.Success(emptyList())
-
-            val trieKey = DictionaryConstants.triePrefix(inputMode) + normalizedInput
-            val rowIds = lookupRowIds(trieKey)
-            if (rowIds.isEmpty()) return@withContext Outcome.Success(emptyList())
-
-            val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
-
-            try {
-                Outcome.Success(buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts))
+                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, isCJK = false)
+                Outcome.Success(rowsToSearchResults(rows, inputMode, limit))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -346,94 +226,26 @@ class LexiconService(
         }
     }
 
-    /** Build a list of `DictionarySearchResult` rows from trie rowids. */
-    private fun buildSearchResults(
-        reader: DictionaryBinaryReader,
-        ids: List<Int>,
-        inputMode: InputMode,
-        limit: Int,
-        enabledDicts: EnabledDictionaries,
-    ): List<DictionarySearchResult> {
-        val results = mutableListOf<DictionarySearchResult>()
-
-        for (id in ids) {
-            val record = reader.record(id) ?: continue
-            if (!DictionaryBinaryReader.passesFilter(record.bitmask, enabledDicts)) continue
-
-            val tlRoman = record.tl
-            val roman =
-                if (inputMode == InputMode.POJ) {
-                    RustEngineBridge.tlToPoj(tlRoman)
-                } else {
-                    tlRoman
-                }
-
-            results.add(
-                DictionarySearchResult(
-                    id = id,
-                    roman = roman,
-                    tl = tlRoman,
-                    hanzi = record.hanzi,
-                    frequency = record.frequency,
-                    sources = DictionaryBinaryReader.sourcesFromBitmask(record.bitmask),
-                ),
-            )
-        }
-
-        return results
-            .sortedByDescending { it.frequency }
-            .take(limit)
-    }
-
-    /**
-     * Search by hanzi (漢字) via trie prefix with `hanzi:` namespace key.
-     * Matches iOS `searchByHanzi`.
-     */
+    /** Search by hanzi prefix (tab3 dictionary exploration). */
     suspend fun searchByHanzi(
         input: String,
         inputMode: InputMode,
         limit: Int = 50,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
+        if (!CompositionRoot.shared(appContext).awaitLexiconReady()) {
+            return Outcome.Success(emptyList())
+        }
 
         return withContext(Dispatchers.IO) {
             logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
-
             try {
-                ensureInitialized()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logger.e(TAG, "[HANZI-SEARCH] Initialization failed", e)
-                return@withContext Outcome.Failure(
-                    DictionaryError.DatabaseConnectionFailed(e.message ?: "Unknown error"),
-                )
-            }
-
-            val reader =
-                binaryReader
-                    ?: return@withContext Outcome.Failure(DictionaryError.DatabaseNotAvailable)
-            if (!trie.isReady) return@withContext Outcome.Failure(DictionaryError.TrieNotLoaded)
-
-            val trieKey = DictionaryConstants.TRIE_PREFIX_HANZI + input
-            val rowIds = lookupRowIds(trieKey)
-
-            if (rowIds.isEmpty()) {
-                logger.debug(TAG) { "[HANZI-SEARCH] No trie results for: $trieKey" }
-                return@withContext Outcome.Success(emptyList())
-            }
-
-            val enabledDicts = EnabledDictionaries.fromSettings(PrefHelper(appContext))
-
-            try {
-                val sorted = buildSearchResults(reader, rowIds, inputMode, limit, enabledDicts)
+                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, isCJK = true)
+                val results = rowsToSearchResults(rows, inputMode, limit)
                 if (BuildConfig.DEBUG) {
-                    logger.d(TAG, "[HANZI-SEARCH] returned ${sorted.size} results")
-                    sorted.firstOrNull()?.let {
-                        logger.d(TAG, "[HANZI-SEARCH] first: ${it.roman} / ${it.hanzi ?: ""}")
-                    }
+                    logger.d(TAG, "[HANZI-SEARCH] returned ${results.size} results")
                 }
-                Outcome.Success(sorted)
+                Outcome.Success(results)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -443,98 +255,51 @@ class LexiconService(
         }
     }
 
-    // --- Initialization ---
-
-    /** Copy binary assets and open the mmap reader + trie on first use. */
-    private suspend fun ensureInitialized() {
-        if (isInitialized) return
-
-        initMutex.withLock {
-            if (isInitialized) return
-
-            try {
-                copyAssetsIfNeeded(appContext)
-
-                val trieLoaded = trie.init()
-                if (!trieLoaded) {
-                    logger.w(TAG, "[INIT] Trie initialization failed")
-                }
-
-                val binFile = File(appContext.filesDir, DictionaryConstants.DICT_BIN_NAME)
-                binaryReader = DictionaryBinaryReader.open(binFile)
-                if (binaryReader == null) {
-                    logger.e(TAG, "[INIT] Failed to open dictionary.bin")
-                }
-
-                isInitialized = true
-                logger.i(
-                    TAG,
-                    "[INIT] Initialized: Trie keys=${trie.getKeyCount()}, " +
-                        "records=${binaryReader?.recordCount ?: 0}",
-                )
-            } catch (e: Exception) {
-                close()
-                logger.e(TAG, "[INIT] Initialization failed", e)
-                throw e
-            }
+    private fun bridgeSearchByHanziOrRoman(
+        input: String,
+        inputMode: InputMode,
+        limit: Int,
+        isCJK: Boolean,
+    ): List<LexiconBridge.Row> {
+        // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
+        // ENGLISH falls back to TL because the lexicon engine never receives
+        // English-mode queries on the autocomplete path. Aligning the
+        // InputMode enum across iOS / Android is a separate scope.
+        val bridgeMode = when (inputMode) {
+            InputMode.POJ -> LexiconBridge.LexiconInputMode.POJ
+            InputMode.TL -> LexiconBridge.LexiconInputMode.TL
+            InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
+        }
+        // Pull current source toggles for Tab3 mask. Tab3 vm doesn't pass
+        // settings (mirrors iOS, which reads via SharedSettings); fall back
+        // to PrefHelper here matching `search()` line 73 fallback.
+        val bitmask = EnabledDictionaries
+            .fromSettings(PrefHelper(appContext))
+            .dictionaryFilterBitmask()
+            .toUInt()
+        return if (isCJK) {
+            LexiconBridge.searchByHanzi(query = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = bitmask)
+        } else {
+            LexiconBridge.searchWithSources(input = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = bitmask)
         }
     }
 
-    /**
-     * Copy binary assets to `filesDir` when the app version changes.
-     * Copies: `dictionary.bin`, `association.bin`. `dictionary.trie` is
-     * copied by `TrieService`.
-     */
-    private fun copyAssetsIfNeeded(context: Context) {
-        val versionFile = File(context.filesDir, "dictionary_app_version.txt")
-        val currentAppVersion = BuildConfig.VERSION_CODE
-        val lastCopiedVersion =
-            if (versionFile.exists()) {
-                versionFile.readText().trim().toIntOrNull() ?: 0
-            } else {
-                0
-            }
-
-        val needsCopy = currentAppVersion > lastCopiedVersion
-
-        val filesToCopy =
-            listOf(
-                DictionaryConstants.DICT_BIN_NAME,
-                DictionaryConstants.ASSOC_BIN_NAME,
+    private fun rowsToSearchResults(
+        rows: List<LexiconBridge.Row>,
+        inputMode: InputMode,
+        limit: Int,
+    ): List<DictionarySearchResult> {
+        return rows.map { row ->
+            val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
+            val bitmask = row.sourceBitmask?.toInt() ?: 0
+            DictionarySearchResult(
+                id = row.id.toInt(),
+                roman = roman,
+                tl = row.roman,
+                hanzi = row.hanzi,
+                frequency = row.lengthScore ?: 0,
+                sources = LexiconBitmask.sourcesFromBitmask(bitmask),
             )
-
-        for (fileName in filesToCopy) {
-            val destFile = File(context.filesDir, fileName)
-            if (needsCopy || !destFile.exists()) {
-                try {
-                    context.assets.open(fileName).use { input ->
-                        FileOutputStream(destFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                    logger.i(TAG, "[COPY] $fileName (${destFile.length()} bytes)")
-                } catch (e: Exception) {
-                    logger.e(TAG, "[COPY] Failed to copy $fileName", e)
-                    throw IOException("Failed to copy $fileName: ${e.message}", e)
-                }
-            }
-        }
-
-        if (needsCopy) {
-            versionFile.writeText(currentAppVersion.toString())
-            logger.i(TAG, "[UPDATE] Dictionary assets updated from v$lastCopiedVersion to v$currentAppVersion")
-        }
-    }
-
-    /**
-     * Release the mmap reader and flip the instance back to an
-     * uninitialized state. Subsequent [search] calls re-run
-     * [ensureInitialized] and reopen `dictionary.bin`. Does **not** close
-     * `TrieService` — the trie is process-wide and owned separately.
-     */
-    fun close() {
-        binaryReader = null
-        isInitialized = false
-        logger.i(TAG, "[CLOSE] Resources released")
+        }.take(limit)
     }
 }

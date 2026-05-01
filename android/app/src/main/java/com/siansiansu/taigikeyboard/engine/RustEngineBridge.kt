@@ -1257,6 +1257,22 @@ object RustEngineBridge {
     @JvmStatic
     private external fun processRequestBytes(bytes: ByteArray): ByteArray
 
+    /**
+     * Internal dispatch seam for sibling bridges (`LexiconBridge`) that
+     * live outside this object but share the same JNI plumbing. Same
+     * package only — `internal` Kotlin visibility plus `engine` package.
+     * Wraps `processRequestBytes` so the JNI symbol stays bound to
+     * `RustEngineBridge`.
+     */
+    internal fun dispatchRaw(bytes: ByteArray): ByteArray = processRequestBytes(bytes)
+
+    /**
+     * Internal request-id allocator for sibling bridges. Increments the
+     * shared atomic so request IDs are unique across all bridges in the
+     * process.
+     */
+    internal fun nextRequestIdInternal(): Int = nextId.incrementAndGet()
+
     @JvmStatic
     private external fun registerLogger()
 

@@ -3,7 +3,7 @@
 // endregion
 package com.siansiansu.taigikeyboard.ime.text.composing
 
-import com.siansiansu.taigikeyboard.ime.dictionary.InputNormalizer
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType
 
 /**
@@ -28,7 +28,7 @@ object AutocompleteInputClassifier {
     fun determineInputType(text: String): InputType =
         when {
             isHanzi(text) -> InputType.Hanzi
-            InputNormalizer.hasToneMarks(text) -> InputType.RomanWithTone
+            RustEngineBridge.hasToneMarks(text) -> InputType.RomanWithTone
             containsNumericTone(text) -> InputType.RomanWithTone
             else -> InputType.RomanWithoutTone
         }

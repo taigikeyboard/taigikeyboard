@@ -120,19 +120,19 @@ def capture() -> dict[str, Any]:
         sys.exit(f"error: {OUTPUT_DIR} does not exist — run ./build.sh first")
 
     csv_path = OUTPUT_DIR / "dictionary.csv"
-    trie_path = OUTPUT_DIR / "dictionary.trie"
+    fst_path = OUTPUT_DIR / "dictionary.fst"
     dict_bin = OUTPUT_DIR / "dictionary.bin"
     assoc_bin = OUTPUT_DIR / "association.bin"
     dict_db = OUTPUT_DIR / "dictionary.db"
 
-    missing = [p for p in (csv_path, trie_path, dict_bin, assoc_bin, dict_db) if not p.exists()]
+    missing = [p for p in (csv_path, fst_path, dict_bin, assoc_bin, dict_db) if not p.exists()]
     if missing:
         sys.exit("error: missing output files: " + ", ".join(str(m) for m in missing))
 
     return {
         "files": {
             "dictionary.csv": {"sha256": hash_file(csv_path)},
-            "dictionary.trie": {"sha256": hash_file(trie_path)},
+            "dictionary.fst": {"sha256": hash_file(fst_path)},
             "dictionary.bin": {
                 "sha256_masked_ts": hash_file(dict_bin, DICT_BIN_TS_OFFSET),
                 "size": dict_bin.stat().st_size,

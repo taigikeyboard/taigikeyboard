@@ -20,5 +20,60 @@ public interface LexiconResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ProcessCandidatesResponse getProcessCandidatesResult();
 
+  /**
+   * <code>.taigi.engine.InstallResponse install_result = 11;</code>
+   * @return Whether the installResult field is set.
+   */
+  boolean hasInstallResult();
+  /**
+   * <code>.taigi.engine.InstallResponse install_result = 11;</code>
+   * @return The installResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.InstallResponse getInstallResult();
+
+  /**
+   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
+   * @return Whether the searchResult field is set.
+   */
+  boolean hasSearchResult();
+  /**
+   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
+   * @return The searchResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchResponse getSearchResult();
+
+  /**
+   * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
+   * @return Whether the searchWithSourcesResult field is set.
+   */
+  boolean hasSearchWithSourcesResult();
+  /**
+   * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
+   * @return The searchWithSourcesResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse getSearchWithSourcesResult();
+
+  /**
+   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * @return Whether the searchByHanziResult field is set.
+   */
+  boolean hasSearchByHanziResult();
+  /**
+   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * @return The searchByHanziResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse getSearchByHanziResult();
+
+  /**
+   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
+   * @return Whether the assocLookupResult field is set.
+   */
+  boolean hasAssocLookupResult();
+  /**
+   * <code>.taigi.engine.AssocLookupResponse assoc_lookup_result = 15;</code>
+   * @return The assocLookupResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse getAssocLookupResult();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.ResultCase getResultCase();
 }

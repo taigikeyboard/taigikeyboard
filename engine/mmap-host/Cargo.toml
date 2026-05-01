@@ -1,0 +1,24 @@
+[package]
+name = "mmap-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+memmap2 = { workspace = true }
+thiserror = { workspace = true }
+
+# JUSTIFICATION: this is the only NEW unsafe carve-out introduced by the
+# v3.5.6 lexicon slice. mmap inherently requires `unsafe` (memory may be
+# mutated by other processes). The single `unsafe` block lives in
+# `MmapHandle::open_readonly`; every other crate consumes the safe `&[u8]`
+# slice with lifetime tied to the handle. swift-ffi / android-jni keep
+# their existing FFI carve-outs unchanged. See
+# docs/engine/lexicon-slice-plan.md G4 + §4.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

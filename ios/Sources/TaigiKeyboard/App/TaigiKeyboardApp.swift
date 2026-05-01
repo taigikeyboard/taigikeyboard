@@ -17,6 +17,12 @@ struct TaigiKeyboardApp: App {
         // DebugLogger. Idempotent. Mirrors Android `Application.onCreate`.
         RustEngineBridge.install()
 
+        // v3.5.6: install the Rust shared-core lexicon engine state for
+        // the main app (Dictionary tab uses bundled fst + dict.bin reads).
+        // Idempotent — extension calls the same install separately at
+        // viewDidLoad. Bundle paths resolve through `ResourceBundleResolver`.
+        installLexiconEngineForMainApp()
+
         // Configure KeyboardKit to persist settings via App Group.
         // Must be called before any @AppStorage access.
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
@@ -37,6 +43,28 @@ struct TaigiKeyboardApp: App {
         Task {
             try? await CompositionRoot.customDictionaryService.seedDefaultEntryIfEmpty()
         }
+    }
+
+    /// v3.5.6 — install the Rust shared-core lexicon engine for the main
+    /// app process (Dictionary tab uses the same fst + bundled binaries).
+    /// Idempotent; the keyboard extension does its own install in
+    /// `KeyboardViewController.viewDidLoad`.
+    private func installLexiconEngineForMainApp() {
+        let bundle = ResourceBundleResolver.dictionaryBundle
+        guard
+            let fstURL = bundle.url(forResource: "dictionary", withExtension: "fst"),
+            let dictBinURL = bundle.url(forResource: "dictionary", withExtension: "bin"),
+            let assocBinURL = bundle.url(forResource: "association", withExtension: "bin")
+        else {
+            return
+        }
+        let stamp = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String).flatMap(UInt32.init) ?? 1
+        _ = RustEngineBridge.lexiconInstall(
+            triePath: fstURL.path,
+            dictionaryBinPath: dictBinURL.path,
+            associationBinPath: assocBinURL.path,
+            dictionaryVersion: stamp,
+        )
     }
 
     var body: some Scene {

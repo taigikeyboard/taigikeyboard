@@ -1,25 +1,19 @@
 import Foundation
 
 /// Production service graph. Wiring order matches constructor dependencies:
-/// `TrieService` → repositories → leaf services → composite services.
+/// repositories → leaf services → composite services.
 /// `SharedSettings.shared` is referenced directly by init defaults.
+///
+/// v3.5.6: `TrieService` + `DictionaryRepository` were deleted. The Rust
+/// shared-core lexicon engine owns the trie + binary readers; install
+/// happens once at process startup via `RustEngineBridge.lexiconInstall(...)`
+/// from `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
+/// `KeyboardViewController.installLexiconEngine()`.
 enum CompositionRoot {
-    // MARK: - Trie
-
-    static let trieService: TrieService = .init(
-        fileName: "dictionary",
-        fileExtension: "trie",
-        logCategory: "TrieService",
-    )
-
     // MARK: - Repositories
 
     static let userFrequencyRepository: UserFrequencyRepository = .init()
     static let customDictionaryRepository: CustomDictionaryRepository = .init()
-    static let dictionaryRepository: DictionaryRepository = .init(
-        trieService: trieService,
-        settingsProvider: SharedSettings.shared,
-    )
 
     // MARK: - Leaf services
 
@@ -36,9 +30,7 @@ enum CompositionRoot {
     // MARK: - Composite services
 
     static let lexiconService: LexiconService = .init(
-        repository: dictionaryRepository,
         userFrequencyService: userFrequencyService,
-        trieService: trieService,
         customDictionaryRepository: customDictionaryRepository,
         settingsProvider: SharedSettings.shared,
     )
@@ -51,7 +43,6 @@ enum CompositionRoot {
 
     static let dictionarySearchService: DictionarySearchService = .init(
         customDictionaryRepository: customDictionaryRepository,
-        trieService: trieService,
         settingsProvider: SharedSettings.shared,
     )
 }

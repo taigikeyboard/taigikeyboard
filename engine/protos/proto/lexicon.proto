@@ -24,7 +24,12 @@ option java_multiple_files = true;
 
 message LexiconRequest {
   oneof method {
-    ProcessCandidatesRequest process_candidates = 10;
+    ProcessCandidatesRequest  process_candidates    = 10;  // ranking
+    InstallRequest            install               = 11;  // lexicon read-path
+    SearchRequest             search                = 12;  // autocomplete entry
+    SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
+    SearchByHanziRequest      search_by_hanzi       = 14;  // Tab3 hanzi prefix
+    AssocLookupRequest        assoc_lookup          = 15;  // bundled bigram
   }
 }
 
@@ -73,13 +78,107 @@ message ProcessCandidatesRequest {
   bool merge_order_only = 8;
 }
 
+// `InstallRequest` is the (idempotent) lexicon read-path bootstrap. The
+// platform passes absolute Bundle / filesDir paths; engine opens mmap'd
+// readers and the fst prefix index, validates magic bytes + versions, and
+// atomically swaps in the new `EngineState`. Reinstall (Android asset
+// version bump per audit D-9) reuses this method — same shape, the engine
+// is responsible for atomic-on-success swap; old state stays intact if any
+// step fails.
+//
+// Path validation: any NUL byte (`\0`) or non-absolute path is rejected
+// with `LexiconError::InvalidPath` / `PathNotAbsolute` via the proto error
+// envelope. Engine NEVER panics on user-supplied paths.
+message InstallRequest {
+  string trie_path             = 1;  // absolute path to dictionary.fst
+  string dictionary_bin_path   = 2;  // absolute path to dictionary.bin (TKDB)
+  string association_bin_path  = 3;  // absolute path to association.bin (TKWA, bundled)
+  uint32 dictionary_version    = 4;  // platform-supplied stamp (Android: dictionary_app_version.txt; iOS: bundle build number)
+}
+
+// `SearchRequest` is the IME autocomplete entry point. `input` is the
+// already-segmented input (iOS `segmentedInput`; Android post-buildSearchKey
+// drop per audit D-1 resolution). Engine runs `phonetics::api::normalize_input`
+// internally as part of search.
+//
+// **D-8 hard guard**: when `input_type == INPUT_TYPE_HANZI`, the engine
+// returns an empty `rows` list WITHOUT consulting any reader. Verified by
+// `INVARIANT_LEX_HANZI_GUARD` (engine + iOS + Android per Codex Mod 1).
+//
+// `tps_or_mapped_to_er` triggers the `er`↔`or` variant search when
+// `input_mode == INPUT_MODE_TPS` and the normalized key contains `er`.
+//
+// `enabled_sources_bitmask` is the platform's source-toggle state encoded
+// as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
+// invariant). 0 = no sources enabled (engine returns empty).
+message SearchRequest {
+  string input                       = 1;
+  InputType input_type               = 2;
+  InputMode input_mode               = 3;
+  uint32 limit                       = 4;
+  bool tps_or_mapped_to_er           = 5;
+  uint32 enabled_sources_bitmask     = 6;
+}
+
+// `SearchWithSourcesRequest` is Tab3's all-source lookup. Unlike `SearchRequest`,
+// the input may be either romanized or hanji; the engine internally classifies
+// and dispatches to the matching prefix family. Mirrors iOS
+// `DictionaryRepository.searchWithSources`.
+message SearchWithSourcesRequest {
+  string input                   = 1;
+  InputMode input_mode           = 2;
+  uint32 limit                   = 3;
+  // Source-toggle bitmask filtering Tab3 results. Bit layout encodes
+  // sources(0-8,11) + khiin(9) + dev(10, always set) + variant(12).
+  // Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
+  // api.rs hardcoded `u32::MAX`, which both bypassed source filters
+  // AND falsely forced khiin/variant on regardless of user toggles.
+  uint32 enabled_sources_bitmask = 4;
+}
+
+// `SearchByHanziRequest` is Tab3's hanzi-prefix-only lookup. Mirrors iOS
+// `DictionaryRepository.searchByHanzi`.
+message SearchByHanziRequest {
+  string query                   = 1;
+  InputMode input_mode           = 2;
+  uint32 limit                   = 3;
+  // Same semantics as SearchWithSourcesRequest.enabled_sources_bitmask.
+  uint32 enabled_sources_bitmask = 4;
+}
+
+// `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
+// (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
+// / Android `NextWordService.kt`) through their respective bridges
+// (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+//
+// **Crate isolation invariant**: the Rust `engine/nextword` crate stays
+// independent of `engine/lexicon`. NextWord never imports or calls into
+// lexicon directly — the platform owns the cross-domain wiring (audit
+// goal-1 cross-module isolation).
+message AssocLookupRequest {
+  string previous_word           = 1;
+  uint32 limit                   = 2;
+  // Source-toggle bitmask filtering bundled bigram entries. Layout matches
+  // the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+  // `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
+  // -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
+  // `u32::MAX`, regressing the platform-side filter that used to honor
+  // `EnabledDictionaries.associationBitmask()`.
+  uint32 enabled_sources_bitmask = 3;
+}
+
 // =========================================================================
 // Response envelope
 // =========================================================================
 
 message LexiconResponse {
   oneof result {
-    ProcessCandidatesResponse process_candidates_result = 10;
+    ProcessCandidatesResponse  process_candidates_result   = 10;
+    InstallResponse            install_result              = 11;
+    SearchResponse             search_result               = 12;
+    SearchWithSourcesResponse  search_with_sources_result  = 13;
+    SearchByHanziResponse      search_by_hanzi_result      = 14;
+    AssocLookupResponse        assoc_lookup_result         = 15;
   }
 }
 
@@ -96,6 +195,35 @@ message LexiconResponse {
 message ProcessCandidatesResponse {
   repeated TaigiWord ranked = 1;
   repeated ScoreBreakdown breakdown = 2;
+}
+
+// `InstallResponse` carries diagnostic counts. Platform diagnostic surfaces
+// log these to confirm install success.
+message InstallResponse {
+  uint64 dictionary_record_count   = 1;
+  uint64 prefix_index_entry_count  = 2;
+}
+
+// `SearchResponse.rows` reuses `TaigiWord` (same shape — id / roman / hanji /
+// length_score / source_bitmask). Platforms convert to `TaigiWord` (Swift /
+// Kotlin) at the bridge layer, mirroring the existing ranking-slice pattern.
+message SearchResponse {
+  repeated TaigiWord rows = 1;
+}
+
+message SearchWithSourcesResponse {
+  repeated TaigiWord rows = 1;
+}
+
+message SearchByHanziResponse {
+  repeated TaigiWord rows = 1;
+}
+
+// `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
+// platform NextWord services rank/filter further; the engine just emits
+// the raw matches.
+message AssocLookupResponse {
+  repeated LexiconAssocEntry entries = 1;
 }
 
 // =========================================================================
@@ -140,4 +268,41 @@ message ScoreBreakdown {
   int32 completion_penalty = 4;
   int32 closeness_bonus = 5;
   int32 base_freq_score = 6;
+}
+
+// `LexiconAssocEntry` is one bundled bigram tuple — `previous_word` /
+// `candidate_word` (hanzi) / `candidate_tl` (TL) / `count`. Read-only; the
+// mutable `user_association.db` SQLite half is OUT OF SCOPE for v3.5.6
+// (audit § scope D-Boundary).
+//
+// `candidate_tl` carries the TL string per entry from the bundled
+// association.bin wire format (next_tl). Without it, the platform NextWord
+// pipeline cannot reconstruct the romanized form for predictions.
+message LexiconAssocEntry {
+  string previous_word   = 1;
+  string candidate_word  = 2;
+  uint32 count           = 3;
+  string candidate_tl    = 4;
+}
+
+// `InputType` is lexicon-local — only `SearchRequest` consumes it. Not
+// promoted to `envelope.proto` because no other module needs to classify
+// input by hanzi/roman/tone.
+enum InputType {
+  INPUT_TYPE_UNSPECIFIED      = 0;
+  INPUT_TYPE_ROMAN_NO_TONE    = 1;
+  INPUT_TYPE_ROMAN_WITH_TONE  = 2;
+  INPUT_TYPE_HANZI            = 3;
+}
+
+// `InputMode` is lexicon-local. Mirrors the platform-side input-mode setting
+// (TL / POJ / TPS). `engine/protos/envelope.proto::AppConfig.input_mode` uses
+// a string today; we re-encode here as enum so the lexicon bridge surface
+// stays type-safe at the FFI boundary. Values map: "tl"→TL, "poj"→POJ,
+// "tps"→TPS; anything else → UNSPECIFIED (engine treats as TL).
+enum InputMode {
+  INPUT_MODE_UNSPECIFIED  = 0;
+  INPUT_MODE_TL           = 1;
+  INPUT_MODE_POJ          = 2;
+  INPUT_MODE_TPS          = 3;
 }

@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# 建立 Trie 建置用的 SQLite 資料庫
+# 建立 fst 前綴索引建置用的 SQLite 資料庫
 #
 # 輸入：output/dictionary.csv, output/dictionary.db
-# 輸出：output/trie.db
+# 輸出：output/trie.db (取名沿用；create_fst.py 用此檔產生 dictionary.fst)
 #
 # 重要：trie.db 的 id 必須與 dictionary.db 的 id 完全一致，
-# 因為 MARISA trie 儲存的 rowid 會用來查詢 dictionary.db。
+# 因為 fst 前綴索引儲存的 rowid 會用來查詢 dictionary.db。
 # 透過 ATTACH dictionary.db 並 JOIN 取得正確的 id。
 
 set -e

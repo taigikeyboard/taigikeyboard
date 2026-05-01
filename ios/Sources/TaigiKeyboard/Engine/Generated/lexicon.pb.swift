@@ -20,6 +20,98 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+/// `InputType` is lexicon-local — only `SearchRequest` consumes it. Not
+/// promoted to `envelope.proto` because no other module needs to classify
+/// input by hanzi/roman/tone.
+public enum Taigi_Engine_InputType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case romanNoTone // = 1
+  case romanWithTone // = 2
+  case hanzi // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .romanNoTone
+    case 2: self = .romanWithTone
+    case 3: self = .hanzi
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .romanNoTone: return 1
+    case .romanWithTone: return 2
+    case .hanzi: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_InputType] = [
+    .unspecified,
+    .romanNoTone,
+    .romanWithTone,
+    .hanzi,
+  ]
+
+}
+
+/// `InputMode` is lexicon-local. Mirrors the platform-side input-mode setting
+/// (TL / POJ / TPS). `engine/protos/envelope.proto::AppConfig.input_mode` uses
+/// a string today; we re-encode here as enum so the lexicon bridge surface
+/// stays type-safe at the FFI boundary. Values map: "tl"→TL, "poj"→POJ,
+/// "tps"→TPS; anything else → UNSPECIFIED (engine treats as TL).
+public enum Taigi_Engine_InputMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case tl // = 1
+  case poj // = 2
+  case tps // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .tl
+    case 2: self = .poj
+    case 3: self = .tps
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .tl: return 1
+    case .poj: return 2
+    case .tps: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_InputMode] = [
+    .unspecified,
+    .tl,
+    .poj,
+    .tps,
+  ]
+
+}
+
 public struct Taigi_Engine_LexiconRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -27,6 +119,7 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
 
   public var method: Taigi_Engine_LexiconRequest.OneOf_Method? = nil
 
+  /// ranking
   public var processCandidates: Taigi_Engine_ProcessCandidatesRequest {
     get {
       if case .processCandidates(let v)? = method {return v}
@@ -35,10 +128,66 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
     set {method = .processCandidates(newValue)}
   }
 
+  /// lexicon read-path
+  public var install: Taigi_Engine_InstallRequest {
+    get {
+      if case .install(let v)? = method {return v}
+      return Taigi_Engine_InstallRequest()
+    }
+    set {method = .install(newValue)}
+  }
+
+  /// autocomplete entry
+  public var search: Taigi_Engine_SearchRequest {
+    get {
+      if case .search(let v)? = method {return v}
+      return Taigi_Engine_SearchRequest()
+    }
+    set {method = .search(newValue)}
+  }
+
+  /// Tab3 multi-source
+  public var searchWithSources: Taigi_Engine_SearchWithSourcesRequest {
+    get {
+      if case .searchWithSources(let v)? = method {return v}
+      return Taigi_Engine_SearchWithSourcesRequest()
+    }
+    set {method = .searchWithSources(newValue)}
+  }
+
+  /// Tab3 hanzi prefix
+  public var searchByHanzi: Taigi_Engine_SearchByHanziRequest {
+    get {
+      if case .searchByHanzi(let v)? = method {return v}
+      return Taigi_Engine_SearchByHanziRequest()
+    }
+    set {method = .searchByHanzi(newValue)}
+  }
+
+  /// bundled bigram
+  public var assocLookup: Taigi_Engine_AssocLookupRequest {
+    get {
+      if case .assocLookup(let v)? = method {return v}
+      return Taigi_Engine_AssocLookupRequest()
+    }
+    set {method = .assocLookup(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Method: Equatable, Sendable {
+    /// ranking
     case processCandidates(Taigi_Engine_ProcessCandidatesRequest)
+    /// lexicon read-path
+    case install(Taigi_Engine_InstallRequest)
+    /// autocomplete entry
+    case search(Taigi_Engine_SearchRequest)
+    /// Tab3 multi-source
+    case searchWithSources(Taigi_Engine_SearchWithSourcesRequest)
+    /// Tab3 hanzi prefix
+    case searchByHanzi(Taigi_Engine_SearchByHanziRequest)
+    /// bundled bigram
+    case assocLookup(Taigi_Engine_AssocLookupRequest)
 
   }
 
@@ -95,6 +244,155 @@ public struct Taigi_Engine_ProcessCandidatesRequest: Sendable {
   public init() {}
 }
 
+/// `InstallRequest` is the (idempotent) lexicon read-path bootstrap. The
+/// platform passes absolute Bundle / filesDir paths; engine opens mmap'd
+/// readers and the fst prefix index, validates magic bytes + versions, and
+/// atomically swaps in the new `EngineState`. Reinstall (Android asset
+/// version bump per audit D-9) reuses this method — same shape, the engine
+/// is responsible for atomic-on-success swap; old state stays intact if any
+/// step fails.
+///
+/// Path validation: any NUL byte (`\0`) or non-absolute path is rejected
+/// with `LexiconError::InvalidPath` / `PathNotAbsolute` via the proto error
+/// envelope. Engine NEVER panics on user-supplied paths.
+public struct Taigi_Engine_InstallRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// absolute path to dictionary.fst
+  public var triePath: String = String()
+
+  /// absolute path to dictionary.bin (TKDB)
+  public var dictionaryBinPath: String = String()
+
+  /// absolute path to association.bin (TKWA, bundled)
+  public var associationBinPath: String = String()
+
+  /// platform-supplied stamp (Android: dictionary_app_version.txt; iOS: bundle build number)
+  public var dictionaryVersion: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `SearchRequest` is the IME autocomplete entry point. `input` is the
+/// already-segmented input (iOS `segmentedInput`; Android post-buildSearchKey
+/// drop per audit D-1 resolution). Engine runs `phonetics::api::normalize_input`
+/// internally as part of search.
+///
+/// **D-8 hard guard**: when `input_type == INPUT_TYPE_HANZI`, the engine
+/// returns an empty `rows` list WITHOUT consulting any reader. Verified by
+/// `INVARIANT_LEX_HANZI_GUARD` (engine + iOS + Android per Codex Mod 1).
+///
+/// `tps_or_mapped_to_er` triggers the `er`↔`or` variant search when
+/// `input_mode == INPUT_MODE_TPS` and the normalized key contains `er`.
+///
+/// `enabled_sources_bitmask` is the platform's source-toggle state encoded
+/// as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
+/// invariant). 0 = no sources enabled (engine returns empty).
+public struct Taigi_Engine_SearchRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var input: String = String()
+
+  public var inputType: Taigi_Engine_InputType = .unspecified
+
+  public var inputMode: Taigi_Engine_InputMode = .unspecified
+
+  public var limit: UInt32 = 0
+
+  public var tpsOrMappedToEr: Bool = false
+
+  public var enabledSourcesBitmask: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `SearchWithSourcesRequest` is Tab3's all-source lookup. Unlike `SearchRequest`,
+/// the input may be either romanized or hanji; the engine internally classifies
+/// and dispatches to the matching prefix family. Mirrors iOS
+/// `DictionaryRepository.searchWithSources`.
+public struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var input: String = String()
+
+  public var inputMode: Taigi_Engine_InputMode = .unspecified
+
+  public var limit: UInt32 = 0
+
+  /// Source-toggle bitmask filtering Tab3 results. Bit layout encodes
+  /// sources(0-8,11) + khiin(9) + dev(10, always set) + variant(12).
+  /// Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
+  /// api.rs hardcoded `u32::MAX`, which both bypassed source filters
+  /// AND falsely forced khiin/variant on regardless of user toggles.
+  public var enabledSourcesBitmask: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `SearchByHanziRequest` is Tab3's hanzi-prefix-only lookup. Mirrors iOS
+/// `DictionaryRepository.searchByHanzi`.
+public struct Taigi_Engine_SearchByHanziRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var query: String = String()
+
+  public var inputMode: Taigi_Engine_InputMode = .unspecified
+
+  public var limit: UInt32 = 0
+
+  /// Same semantics as SearchWithSourcesRequest.enabled_sources_bitmask.
+  public var enabledSourcesBitmask: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
+/// (TKWA). Called by the platform NextWord services (iOS `NextWordService.swift`
+/// / Android `NextWordService.kt`) through their respective bridges
+/// (`RustEngineBridge.lexiconAssocLookup` / `LexiconBridge.assocLookup`).
+///
+/// **Crate isolation invariant**: the Rust `engine/nextword` crate stays
+/// independent of `engine/lexicon`. NextWord never imports or calls into
+/// lexicon directly — the platform owns the cross-domain wiring (audit
+/// goal-1 cross-module isolation).
+public struct Taigi_Engine_AssocLookupRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var previousWord: String = String()
+
+  public var limit: UInt32 = 0
+
+  /// Source-toggle bitmask filtering bundled bigram entries. Layout matches
+  /// the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+  /// `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
+  /// -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
+  /// `u32::MAX`, regressing the platform-side filter that used to honor
+  /// `EnabledDictionaries.associationBitmask()`.
+  public var enabledSourcesBitmask: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Taigi_Engine_LexiconResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -110,10 +408,55 @@ public struct Taigi_Engine_LexiconResponse: Sendable {
     set {result = .processCandidatesResult(newValue)}
   }
 
+  public var installResult: Taigi_Engine_InstallResponse {
+    get {
+      if case .installResult(let v)? = result {return v}
+      return Taigi_Engine_InstallResponse()
+    }
+    set {result = .installResult(newValue)}
+  }
+
+  public var searchResult: Taigi_Engine_SearchResponse {
+    get {
+      if case .searchResult(let v)? = result {return v}
+      return Taigi_Engine_SearchResponse()
+    }
+    set {result = .searchResult(newValue)}
+  }
+
+  public var searchWithSourcesResult: Taigi_Engine_SearchWithSourcesResponse {
+    get {
+      if case .searchWithSourcesResult(let v)? = result {return v}
+      return Taigi_Engine_SearchWithSourcesResponse()
+    }
+    set {result = .searchWithSourcesResult(newValue)}
+  }
+
+  public var searchByHanziResult: Taigi_Engine_SearchByHanziResponse {
+    get {
+      if case .searchByHanziResult(let v)? = result {return v}
+      return Taigi_Engine_SearchByHanziResponse()
+    }
+    set {result = .searchByHanziResult(newValue)}
+  }
+
+  public var assocLookupResult: Taigi_Engine_AssocLookupResponse {
+    get {
+      if case .assocLookupResult(let v)? = result {return v}
+      return Taigi_Engine_AssocLookupResponse()
+    }
+    set {result = .assocLookupResult(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Result: Equatable, Sendable {
     case processCandidatesResult(Taigi_Engine_ProcessCandidatesResponse)
+    case installResult(Taigi_Engine_InstallResponse)
+    case searchResult(Taigi_Engine_SearchResponse)
+    case searchWithSourcesResult(Taigi_Engine_SearchWithSourcesResponse)
+    case searchByHanziResult(Taigi_Engine_SearchByHanziResponse)
+    case assocLookupResult(Taigi_Engine_AssocLookupResponse)
 
   }
 
@@ -134,6 +477,76 @@ public struct Taigi_Engine_ProcessCandidatesResponse: Sendable {
   public var ranked: [Taigi_Engine_TaigiWord] = []
 
   public var breakdown: [Taigi_Engine_ScoreBreakdown] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `InstallResponse` carries diagnostic counts. Platform diagnostic surfaces
+/// log these to confirm install success.
+public struct Taigi_Engine_InstallResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var dictionaryRecordCount: UInt64 = 0
+
+  public var prefixIndexEntryCount: UInt64 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `SearchResponse.rows` reuses `TaigiWord` (same shape — id / roman / hanji /
+/// length_score / source_bitmask). Platforms convert to `TaigiWord` (Swift /
+/// Kotlin) at the bridge layer, mirroring the existing ranking-slice pattern.
+public struct Taigi_Engine_SearchResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var rows: [Taigi_Engine_TaigiWord] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Taigi_Engine_SearchWithSourcesResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var rows: [Taigi_Engine_TaigiWord] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Taigi_Engine_SearchByHanziResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var rows: [Taigi_Engine_TaigiWord] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
+/// platform NextWord services rank/filter further; the engine just emits
+/// the raw matches.
+public struct Taigi_Engine_AssocLookupResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entries: [Taigi_Engine_LexiconAssocEntry] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -240,13 +653,47 @@ public struct Taigi_Engine_ScoreBreakdown: Sendable {
   public init() {}
 }
 
+/// `LexiconAssocEntry` is one bundled bigram tuple — `previous_word` /
+/// `candidate_word` (hanzi) / `candidate_tl` (TL) / `count`. Read-only; the
+/// mutable `user_association.db` SQLite half is OUT OF SCOPE for v3.5.6
+/// (audit § scope D-Boundary).
+///
+/// `candidate_tl` carries the TL string per entry from the bundled
+/// association.bin wire format (next_tl). Without it, the platform NextWord
+/// pipeline cannot reconstruct the romanized form for predictions.
+public struct Taigi_Engine_LexiconAssocEntry: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var previousWord: String = String()
+
+  public var candidateWord: String = String()
+
+  public var count: UInt32 = 0
+
+  public var candidateTl: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "taigi.engine"
 
+extension Taigi_Engine_InputType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0INPUT_TYPE_UNSPECIFIED\0\u{1}INPUT_TYPE_ROMAN_NO_TONE\0\u{1}INPUT_TYPE_ROMAN_WITH_TONE\0\u{1}INPUT_TYPE_HANZI\0")
+}
+
+extension Taigi_Engine_InputMode: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0INPUT_MODE_UNSPECIFIED\0\u{1}INPUT_MODE_TL\0\u{1}INPUT_MODE_POJ\0\u{1}INPUT_MODE_TPS\0")
+}
+
 extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates\0\u{1}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{3}assoc_lookup\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -267,6 +714,71 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.method = .processCandidates(v)
         }
       }()
+      case 11: try {
+        var v: Taigi_Engine_InstallRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .install(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .install(v)
+        }
+      }()
+      case 12: try {
+        var v: Taigi_Engine_SearchRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .search(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .search(v)
+        }
+      }()
+      case 13: try {
+        var v: Taigi_Engine_SearchWithSourcesRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .searchWithSources(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .searchWithSources(v)
+        }
+      }()
+      case 14: try {
+        var v: Taigi_Engine_SearchByHanziRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .searchByHanzi(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .searchByHanzi(v)
+        }
+      }()
+      case 15: try {
+        var v: Taigi_Engine_AssocLookupRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .assocLookup(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .assocLookup(v)
+        }
+      }()
       default: break
       }
     }
@@ -277,9 +789,33 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .processCandidates(let v)? = self.method {
+    switch self.method {
+    case .processCandidates?: try {
+      guard case .processCandidates(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    } }()
+    }()
+    case .install?: try {
+      guard case .install(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
+    case .search?: try {
+      guard case .search(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .searchWithSources?: try {
+      guard case .searchWithSources(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .searchByHanzi?: try {
+      guard case .searchByHanzi(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case .assocLookup?: try {
+      guard case .assocLookup(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -350,9 +886,239 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
   }
 }
 
+extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InstallRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}trie_path\0\u{3}dictionary_bin_path\0\u{3}association_bin_path\0\u{3}dictionary_version\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.triePath) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.dictionaryBinPath) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.associationBinPath) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.dictionaryVersion) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.triePath.isEmpty {
+      try visitor.visitSingularStringField(value: self.triePath, fieldNumber: 1)
+    }
+    if !self.dictionaryBinPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.dictionaryBinPath, fieldNumber: 2)
+    }
+    if !self.associationBinPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.associationBinPath, fieldNumber: 3)
+    }
+    if self.dictionaryVersion != 0 {
+      try visitor.visitSingularUInt32Field(value: self.dictionaryVersion, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_InstallRequest, rhs: Taigi_Engine_InstallRequest) -> Bool {
+    if lhs.triePath != rhs.triePath {return false}
+    if lhs.dictionaryBinPath != rhs.dictionaryBinPath {return false}
+    if lhs.associationBinPath != rhs.associationBinPath {return false}
+    if lhs.dictionaryVersion != rhs.dictionaryVersion {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}input_type\0\u{3}input_mode\0\u{1}limit\0\u{3}tps_or_mapped_to_er\0\u{3}enabled_sources_bitmask\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.inputType) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.inputMode) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.tpsOrMappedToEr) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.input.isEmpty {
+      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
+    }
+    if self.inputType != .unspecified {
+      try visitor.visitSingularEnumField(value: self.inputType, fieldNumber: 2)
+    }
+    if self.inputMode != .unspecified {
+      try visitor.visitSingularEnumField(value: self.inputMode, fieldNumber: 3)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.limit, fieldNumber: 4)
+    }
+    if self.tpsOrMappedToEr != false {
+      try visitor.visitSingularBoolField(value: self.tpsOrMappedToEr, fieldNumber: 5)
+    }
+    if self.enabledSourcesBitmask != 0 {
+      try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchRequest, rhs: Taigi_Engine_SearchRequest) -> Bool {
+    if lhs.input != rhs.input {return false}
+    if lhs.inputType != rhs.inputType {return false}
+    if lhs.inputMode != rhs.inputMode {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.tpsOrMappedToEr != rhs.tpsOrMappedToEr {return false}
+    if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchWithSourcesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchWithSourcesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}input_mode\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.inputMode) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.input.isEmpty {
+      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
+    }
+    if self.inputMode != .unspecified {
+      try visitor.visitSingularEnumField(value: self.inputMode, fieldNumber: 2)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.limit, fieldNumber: 3)
+    }
+    if self.enabledSourcesBitmask != 0 {
+      try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchWithSourcesRequest, rhs: Taigi_Engine_SearchWithSourcesRequest) -> Bool {
+    if lhs.input != rhs.input {return false}
+    if lhs.inputMode != rhs.inputMode {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchByHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchByHanziRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}query\0\u{3}input_mode\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.query) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.inputMode) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.query.isEmpty {
+      try visitor.visitSingularStringField(value: self.query, fieldNumber: 1)
+    }
+    if self.inputMode != .unspecified {
+      try visitor.visitSingularEnumField(value: self.inputMode, fieldNumber: 2)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.limit, fieldNumber: 3)
+    }
+    if self.enabledSourcesBitmask != 0 {
+      try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchByHanziRequest, rhs: Taigi_Engine_SearchByHanziRequest) -> Bool {
+    if lhs.query != rhs.query {return false}
+    if lhs.inputMode != rhs.inputMode {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AssocLookupRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.previousWord) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.previousWord.isEmpty {
+      try visitor.visitSingularStringField(value: self.previousWord, fieldNumber: 1)
+    }
+    if self.limit != 0 {
+      try visitor.visitSingularUInt32Field(value: self.limit, fieldNumber: 2)
+    }
+    if self.enabledSourcesBitmask != 0 {
+      try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_AssocLookupRequest, rhs: Taigi_Engine_AssocLookupRequest) -> Bool {
+    if lhs.previousWord != rhs.previousWord {return false}
+    if lhs.limit != rhs.limit {return false}
+    if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates_result\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates_result\0\u{3}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{3}assoc_lookup_result\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -373,6 +1139,71 @@ extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
           self.result = .processCandidatesResult(v)
         }
       }()
+      case 11: try {
+        var v: Taigi_Engine_InstallResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .installResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .installResult(v)
+        }
+      }()
+      case 12: try {
+        var v: Taigi_Engine_SearchResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .searchResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .searchResult(v)
+        }
+      }()
+      case 13: try {
+        var v: Taigi_Engine_SearchWithSourcesResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .searchWithSourcesResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .searchWithSourcesResult(v)
+        }
+      }()
+      case 14: try {
+        var v: Taigi_Engine_SearchByHanziResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .searchByHanziResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .searchByHanziResult(v)
+        }
+      }()
+      case 15: try {
+        var v: Taigi_Engine_AssocLookupResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .assocLookupResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .assocLookupResult(v)
+        }
+      }()
       default: break
       }
     }
@@ -383,9 +1214,33 @@ extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    try { if case .processCandidatesResult(let v)? = self.result {
+    switch self.result {
+    case .processCandidatesResult?: try {
+      guard case .processCandidatesResult(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
-    } }()
+    }()
+    case .installResult?: try {
+      guard case .installResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
+    case .searchResult?: try {
+      guard case .searchResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .searchWithSourcesResult?: try {
+      guard case .searchWithSourcesResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .searchByHanziResult?: try {
+      guard case .searchByHanziResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+    }()
+    case .assocLookupResult?: try {
+      guard case .assocLookupResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case nil: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -426,6 +1281,161 @@ extension Taigi_Engine_ProcessCandidatesResponse: SwiftProtobuf.Message, SwiftPr
   public static func ==(lhs: Taigi_Engine_ProcessCandidatesResponse, rhs: Taigi_Engine_ProcessCandidatesResponse) -> Bool {
     if lhs.ranked != rhs.ranked {return false}
     if lhs.breakdown != rhs.breakdown {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_InstallResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InstallResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}dictionary_record_count\0\u{3}prefix_index_entry_count\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.dictionaryRecordCount) }()
+      case 2: try { try decoder.decodeSingularUInt64Field(value: &self.prefixIndexEntryCount) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.dictionaryRecordCount != 0 {
+      try visitor.visitSingularUInt64Field(value: self.dictionaryRecordCount, fieldNumber: 1)
+    }
+    if self.prefixIndexEntryCount != 0 {
+      try visitor.visitSingularUInt64Field(value: self.prefixIndexEntryCount, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_InstallResponse, rhs: Taigi_Engine_InstallResponse) -> Bool {
+    if lhs.dictionaryRecordCount != rhs.dictionaryRecordCount {return false}
+    if lhs.prefixIndexEntryCount != rhs.prefixIndexEntryCount {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.rows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rows, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchResponse, rhs: Taigi_Engine_SearchResponse) -> Bool {
+    if lhs.rows != rhs.rows {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchWithSourcesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchWithSourcesResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.rows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rows, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchWithSourcesResponse, rhs: Taigi_Engine_SearchWithSourcesResponse) -> Bool {
+    if lhs.rows != rhs.rows {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_SearchByHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SearchByHanziResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.rows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rows, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_SearchByHanziResponse, rhs: Taigi_Engine_SearchByHanziResponse) -> Bool {
+    if lhs.rows != rhs.rows {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_AssocLookupResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AssocLookupResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entries\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.entries) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.entries.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.entries, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_AssocLookupResponse, rhs: Taigi_Engine_AssocLookupResponse) -> Bool {
+    if lhs.entries != rhs.entries {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -575,6 +1585,51 @@ extension Taigi_Engine_ScoreBreakdown: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if lhs.completionPenalty != rhs.completionPenalty {return false}
     if lhs.closenessBonus != rhs.closenessBonus {return false}
     if lhs.baseFreqScore != rhs.baseFreqScore {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".LexiconAssocEntry"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{3}candidate_word\0\u{1}count\0\u{3}candidate_tl\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.previousWord) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.candidateWord) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.candidateTl) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.previousWord.isEmpty {
+      try visitor.visitSingularStringField(value: self.previousWord, fieldNumber: 1)
+    }
+    if !self.candidateWord.isEmpty {
+      try visitor.visitSingularStringField(value: self.candidateWord, fieldNumber: 2)
+    }
+    if self.count != 0 {
+      try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 3)
+    }
+    if !self.candidateTl.isEmpty {
+      try visitor.visitSingularStringField(value: self.candidateTl, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_LexiconAssocEntry, rhs: Taigi_Engine_LexiconAssocEntry) -> Bool {
+    if lhs.previousWord != rhs.previousWord {return false}
+    if lhs.candidateWord != rhs.candidateWord {return false}
+    if lhs.count != rhs.count {return false}
+    if lhs.candidateTl != rhs.candidateTl {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

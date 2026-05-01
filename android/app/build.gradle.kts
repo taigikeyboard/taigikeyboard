@@ -33,21 +33,6 @@ android {
             // 64-bit policy + minSdk 28 + no Chromebook target.
             abiFilters += listOf("arm64-v8a")
         }
-
-        // CMake 設定
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++17"
-            }
-        }
-    }
-
-    // Native build 設定
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
     }
 
     buildFeatures {

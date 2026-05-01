@@ -7,7 +7,6 @@ import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
-import com.siansiansu.taigikeyboard.ime.dictionary.TrieService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 
 /**
@@ -30,12 +29,34 @@ class CompositionRoot private constructor(
     appContext: Context,
 ) {
     val logger: LoggerBackend = AndroidLoggerBackend()
-    val trie: TrieService = TrieService(appContext, logger)
     val customDict: CustomDictionaryService = CustomDictionaryService(appContext, logger)
     val userFreq: UserFrequencyService = UserFrequencyService(appContext, logger)
     val nextWord: NextWordService = NextWordService(appContext, logger)
-    val lexicon: LexiconService = LexiconService(appContext, logger, trie, customDict, userFreq)
+    val lexicon: LexiconService = LexiconService(appContext, logger, customDict, userFreq)
     val backup: BackupService = BackupService(logger, customDict, userFreq, nextWord)
+
+    /**
+     * Lexicon engine readiness gate. Completed by
+     * `TaigiKeyboardApplication.installLexiconEngine` on success;
+     * `completeExceptionally` on copy/install failure. Callers must use
+     * [awaitLexiconReady] (never `lexiconReady.await()` directly) — fail-open
+     * per Codex r3173440132: install errors should let queries degrade to
+     * empty results, not poison every search invocation.
+     */
+    val lexiconReady: kotlinx.coroutines.CompletableDeferred<Unit> =
+        kotlinx.coroutines.CompletableDeferred()
+
+    /**
+     * Suspend until lexicon install completes. Returns `true` on success,
+     * `false` if install failed. Failures are logged at install time; this
+     * helper is intentionally quiet so query paths don't spam logs.
+     */
+    suspend fun awaitLexiconReady(): Boolean = try {
+        lexiconReady.await()
+        true
+    } catch (_: Throwable) {
+        false
+    }
 
     companion object {
         @Volatile private var instance: CompositionRoot? = null

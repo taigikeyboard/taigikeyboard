@@ -1,5 +1,17 @@
 [workspace]
-members = ["phonetics", "composing", "nextword", "protos", "ranking", "dispatch", "swift-ffi", "android-jni"]
+members = [
+    "phonetics",
+    "composing",
+    "nextword",
+    "protos",
+    "ranking",
+    "dispatch",
+    "swift-ffi",
+    "android-jni",
+    "build-helpers/fst-builder",
+    "mmap-host",
+    "lexicon",
+]
 resolver = "2"
 
 [workspace.package]
@@ -29,6 +41,10 @@ indexmap = "2"
 swift-bridge = "0.1"
 swift-bridge-build = "0.1"
 jni = "0.21"
+fst = "0.4"
+memmap2 = "0.9"
+mmap-host = { path = "./mmap-host" }
+lexicon = { path = "./lexicon" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

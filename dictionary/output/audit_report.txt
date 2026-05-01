@@ -1,16 +1,16 @@
 Taigi Keyboard Dictionary Audit Report
-Generated: 2026-04-24 22:30:28
+Generated: 2026-05-01 21:35:38
 Input: /Users/alexsu/Workspace/taigikeyboard/dictionary/output/dictionary.csv
-Total entries: 159297
+Total entries: 159035
 
 ============================================================
 1. Overview
 ============================================================
-  With hanzi:        159296
+  With hanzi:        159034
   Without hanzi:          1  (pure romanization)
   Space in tl:          997  (word boundary)
   Variants:           11166
-  No source:           8651  (Khiin supplement etc.)
+  No source:           8389  (Khiin supplement etc.)
 
 ============================================================
 2. Entries Without Hanzi
@@ -37,7 +37,7 @@ Total entries: 159297
 ============================================================
 4. Entries Without Source
 ============================================================
-  Count: 8651
+  Count: 8389
   CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/03_no_source.csv
 
 ============================================================
@@ -49,18 +49,18 @@ Total entries: 159297
 ============================================================
 6. Entries With frequency = 0
 ============================================================
-  Count: 1426
+  Count: 1412
   CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/05_freq_zero.csv
 
 ============================================================
 7. Frequency Distribution
 ============================================================
-  Max: 184693, Min: 0, Mean: 81.1, Median: 25
+  Max: 184693, Min: 0, Mean: 81.2, Median: 25
 
-           = 0:    1426 (  0.9%) 
-          1-10:   14269 (  9.0%) ████
-        11-100:  138706 ( 87.1%) ███████████████████████████████████████████
-        101-1K:    3286 (  2.1%) █
+           = 0:    1412 (  0.9%) 
+          1-10:   14065 (  8.8%) ████
+        11-100:  138691 ( 87.2%) ███████████████████████████████████████████
+        101-1K:    3257 (  2.0%) █
         1K-10K:    1429 (  0.9%) 
       10K-100K:     179 (  0.1%) 
         > 100K:       2 (  0.0%) 
@@ -68,67 +68,67 @@ Total entries: 159297
 ============================================================
 8. Syllable Count Distribution
 ============================================================
-    1 syl:   25378 ( 15.9%) ███████
-    2 syl:   83393 ( 52.4%) ██████████████████████████
-    3 syl:   39497 ( 24.8%) ████████████
-    4 syl:   11028 (  6.9%) ███
+    1 syl:   25296 ( 15.9%) ███████
+    2 syl:   83246 ( 52.3%) ██████████████████████████
+    3 syl:   39465 ( 24.8%) ████████████
+    4 syl:   11027 (  6.9%) ███
     5 syl:       1 (  0.0%) 
 
 ============================================================
 9. Homographs (same hanzi, multiple readings)
 ============================================================
-  Hanzi with multiple readings: 22798
-  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/06_homographs.csv (56144 rows)
+  Hanzi with multiple readings: 22683
+  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/06_homographs.csv (55767 rows)
 
   Top 20:
     咳 (18): hāi, hái, ka, kha, khik
     哈 (17): hah, ha, hap, ha̍h, ha̍p
     挾 (15): gia̍p, gue̍h, hia̍p, kere̍h, ke̍nnh
     呵 (14): ah, o, a̍h, ho, hoo
-    被 (13): phuē, phē, pī, hoo, hông
-    下 (13): hā, ē, hē, e, hê
     會 (13): huē, hē, ē, uē, kuè
-    和 (13): hōo, hô, huê, hām, hō
     昨日 (13): tsa-ji̍t, tsa̍h-ji̍t, tsa̍h-li̍t, tsoo-li̍t, tsorh-ji̍t
+    下 (13): hā, ē, hē, e, hê
+    和 (13): hōo, hô, huê, hām, hō
+    被 (13): phuē, phē, pī, hoo, hông
     泡 (12): phàu, bāu, pho, phok, pho̍k
-    妹 (12): buē, bē, muē, luā, bēr
     相 (12): sio, siong, siòng, siùnn, sann
+    妹 (12): buē, bē, muē, luā, bēr
+    裡 (12): lāi, lí, ni, lin, lér
     猶未 (12): ah-buē, ah-bē, iah-buē, iah-bē, iàu-bē
     夾 (12): ngeh, gereh, kah, kap, khueh
-    裡 (12): lāi, lí, ni, lin, lér
-    糜 (11): bê, muê, mi, muâi, buê
-    解 (11): kái, ké, tháu, hāi, hǎi
-    上 (11): siōng, tsiūnn, tshiūnn, siāng, sióng
+    食 (11): tsia̍h, si̍t, tshī, sū, piah
     長 (11): tiúnn, tn̂g, tióng, tiông, tsióng
-    得 (11): tik, tsit, tit, leh, lè
+    鴟鴞 (11): ba̍h-hio̍h, ba̍h-hiō, bua̍h-hio̍h, bā-hio̍h, lā-hio̍h
+    糜 (11): bê, muê, mi, muâi, buê
+    上 (11): siōng, tsiūnn, tshiūnn, siāng, sióng
 
 ============================================================
 10. Homophones (same tl, multiple hanzi)
 ============================================================
-  TL with multiple hanzi: 14570
-  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/07_homophones.csv (52368 rows)
+  TL with multiple hanzi: 14559
+  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/07_homophones.csv (52347 rows)
 
   Top 20:
     hông (110): 癀, 防, 黃, 皇, 乎人, 帆, 杭, 洪
     tsu (92): 資, 珠, 書, 姿, 滋, 朱, 諮, 諸
-    su (82): 師, 輸, 思, 書, 需, 軀, 私, 司
     lîng (82): 能, 靈, 龍, 寧, 鈴, 行, 苓, 齡
+    su (82): 師, 輸, 思, 書, 需, 軀, 私, 司
     tsik (69): 責, 叔, 即, 積, 則, 燭, 績, 蹟
     kî (69): 期, 其, 奇, 祈, 旗, 棋, 歧, 麒
     tsir (68): 䳄, 亝, 仔, 劯, 咨, 嗞, 姕, 姿
-    sik (66): 色, 式, 識, 室, 適, 息, 釋, 惜
     hōo (66): 予, 乎, 何, 候, 号, 后, 和, 怙
+    sik (66): 色, 式, 識, 室, 適, 息, 釋, 惜
     tsing (65): 精, 鐘, 爭, 舂, 增, 偵, 鍾, 争
     hong (64): 風, 方, 豐, 封, 丰, 妨, 峯, 慌
     tông (63): 同, 堂, 童, 桐, 佟, 侗, 勭, 唐
     sir (61): 俆, 俬, 偦, 偲, 厶, 司, 噓, 媤
     lôo (60): 爐, 蘆, 螺, 奴, 鱸, 伮, 僂, 呶
-    huân (60): 煩, 凡, 繁, 還, 䌓, 丸, 亘, 儇
     kong (60): 公, 光, 功, 攻, 工, 岡, 㓻, 㟵
+    huân (60): 煩, 凡, 繁, 還, 䌓, 丸, 亘, 儇
     tshiok (56): 雀, 促, 觸, ⻍, 丵, 亍, 俶, 傶
-    hu (55): 夫, 灰, 烌, 膚, 虎, 麩, 㭪, 䓵
     sū (55): 事, 士, 序, 嶼, 樹, 兕, 叙, 墅
-    hun (53): 分, 婚, 薰, 勳, 坋, 曛, 烟, 熏
+    hu (55): 夫, 灰, 烌, 膚, 虎, 麩, 㭪, 䓵
+    jû (53): 如, 挐, 侞, 儒, 嚅, 堬, 孺, 帤
 
 ============================================================
 11. Source Coverage
@@ -147,7 +147,7 @@ Total entries: 159297
     khpoo         4198    3754     4198        0       37
 
   Source overlap (entries in N sources):
-    0 sources: 8651
+    0 sources: 8389
     1 sources: 114145
     2 sources: 24342
     3 sources: 10430

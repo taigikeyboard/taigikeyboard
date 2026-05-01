@@ -746,7 +746,7 @@ public enum RustEngineBridge {
         return s.output
     }
 
-    private static func lexiconDispatch(
+    static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,
         op: String
     ) -> Taigi_Engine_LexiconResponse? {

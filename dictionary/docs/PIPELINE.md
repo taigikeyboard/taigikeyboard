@@ -68,7 +68,7 @@ supplementary/             │                         │
 sources/<cat>/<key>/                         output/dictionary.csv
   config.yaml ──────► pipeline/run.py ──► data/<key>.csv ──► build/* ──►
     input_path                                                          ├─► dictionary.db
-                                                                        ├─► trie.db ─► dictionary.trie
+                                                                        ├─► trie.db ─► dictionary.fst
                                                                         ├─► dictionary.bin
                                                                         └─► association.bin
 ```
@@ -76,7 +76,7 @@ sources/<cat>/<key>/                         output/dictionary.csv
 `./build.sh` executes the stages right of the pipe in fixed order
 (see `build.sh`). Each build step's naming follows the script filename:
 `merge_csv` → `create_app_db` → `generate_association` →
-`create_trie_db` → `create_trie` → `create_dictionary_bin` →
+`create_trie_db` → `create_fst` → `create_dictionary_bin` →
 `create_association_bin` → `audit` → `deploy`.
 
 ## Parity gate

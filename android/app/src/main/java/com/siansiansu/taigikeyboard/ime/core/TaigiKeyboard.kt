@@ -271,7 +271,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         serviceScope.cancel()
         osHandler.removeCallbacksAndMessages(null)
-        compositionRoot.lexicon.close()
 
         super.onDestroy()
         textInputManager.onDestroy()

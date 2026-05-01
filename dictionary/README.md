@@ -1,7 +1,7 @@
 # dictionary/
 
 Taigi Keyboard's dictionary data pipeline. Builds the runtime artefacts
-(`dictionary.bin` / `dictionary.trie` / `association.bin` + `dictionary.db`
+(`dictionary.bin` / `dictionary.fst` / `association.bin` + `dictionary.db`
 for development) that both iOS and Android consume.
 
 ## Layout
@@ -15,8 +15,8 @@ dictionary/
 │
 ├── pipeline/                  # Shared pipeline driver (discover_configs + run_dict)
 ├── common/                    # Stage implementations + shared helpers (source_bits, romanization, …)
-├── build/                     # Build stage scripts (merge_csv, create_trie, create_*_bin, …)
-├── tools/                     # Dev utilities (compare_baseline, verify_csv, query_trie)
+├── build/                     # Build stage scripts (merge_csv, create_fst, create_*_bin, …)
+├── tools/                     # Dev utilities (compare_baseline, verify_csv, query_fst)
 │
 ├── sources/                   # Per-source dictionary inputs (see sources/README.md)
 │   ├── official/{kautian,taigitv,kungge,stti}/
@@ -91,11 +91,11 @@ original URLs.
 | `common/stages/*.py`             | Individual stage implementations (12 stages total)           |
 | `common/source_bits.py`          | Authoritative SOURCE_BITS / SOURCE_TIERS / column orders     |
 | `build/merge_csv.py`             | Merge 9 per-source CSVs + khiin/dev/lkk supplements          |
-| `build/create_trie.py`           | MARISA trie from SQLite                                       |
+| `build/create_fst.py`            | fst prefix index from SQLite (shells to engine/build-helpers/fst-builder)  |
 | `build/create_{dictionary,association}_bin.py` | Binary mmap formats consumed by mobile apps |
 | `tools/compare_baseline.py`      | Parity gate — SHA256 + SQL-semantic diff vs baseline.json    |
 | `tools/verify_csv.py`            | CSV character-validity + duplicate sanity checker            |
-| `tools/query_trie.py`            | Query the compiled trie (dev debug)                          |
+| `tools/query_fst.py`             | Query the compiled fst prefix index (dev debug)              |
 
 ## Notes
 

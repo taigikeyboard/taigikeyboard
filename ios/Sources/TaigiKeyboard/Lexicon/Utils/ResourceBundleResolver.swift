@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves the bundle containing dictionary resources.
 ///
-/// Dictionary files (dictionary.bin, association.bin, dictionary.trie) live only in the
+/// Dictionary files (dictionary.bin, association.bin, dictionary.fst) live only in the
 /// keyboard extension bundle to avoid duplication. When running inside
 /// the main app, this resolver locates the embedded .appex bundle.
 /// When running inside the extension, it returns the extension's own bundle.
@@ -30,8 +30,15 @@ enum ResourceBundleResolver {
             return appexBundle
         }
 
-        // Fallback for unit tests or unexpected configurations
+        // Fallback for unit tests or unexpected configurations.
+        // `LexiconBitmask` is a stable platform helper that survives the
+        // v3.5.6 Lexicon Rust extraction (DictionaryRepository was deleted).
         logger.warning("[RESOLVE] Could not locate extension bundle, falling back to Bundle(for:)")
-        return Bundle(for: DictionaryRepository.self)
+        return Bundle(for: type(of: LexiconBitmaskBundleAnchor()))
     }
 }
+
+/// Anchor class for `Bundle(for:)` — needs to be a class (not an enum), and
+/// must live in the same bundle as the dictionary resources. Stays in this
+/// file to keep the dependency local.
+private final class LexiconBitmaskBundleAnchor {}
