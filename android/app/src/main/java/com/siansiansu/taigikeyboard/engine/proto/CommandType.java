@@ -26,6 +26,10 @@ public enum CommandType
    * <code>CMD_LEXICON = 3;</code>
    */
   CMD_LEXICON(3),
+  /**
+   * <code>CMD_NEXTWORD = 4;</code>
+   */
+  CMD_NEXTWORD(4),
   UNRECOGNIZED(-1),
   ;
 
@@ -45,6 +49,10 @@ public enum CommandType
    * <code>CMD_LEXICON = 3;</code>
    */
   public static final int CMD_LEXICON_VALUE = 3;
+  /**
+   * <code>CMD_NEXTWORD = 4;</code>
+   */
+  public static final int CMD_NEXTWORD_VALUE = 4;
 
 
   @java.lang.Override
@@ -72,6 +80,7 @@ public enum CommandType
       case 1: return CMD_PHONETICS;
       case 2: return CMD_COMPOSING;
       case 3: return CMD_LEXICON;
+      case 4: return CMD_NEXTWORD;
       default: return null;
     }
   }

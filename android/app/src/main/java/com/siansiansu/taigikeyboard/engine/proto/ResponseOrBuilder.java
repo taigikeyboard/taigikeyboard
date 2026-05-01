@@ -65,5 +65,16 @@ public interface ResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.LexiconResponse getLexicon();
 
+  /**
+   * <code>.taigi.engine.NextWordResponse nextword = 13;</code>
+   * @return Whether the nextword field is set.
+   */
+  boolean hasNextword();
+  /**
+   * <code>.taigi.engine.NextWordResponse nextword = 13;</code>
+   * @return The nextword.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordResponse getNextword();
+
   public com.siansiansu.taigikeyboard.engine.proto.Response.PayloadCase getPayloadCase();
 }

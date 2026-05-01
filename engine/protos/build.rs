@@ -8,6 +8,7 @@ fn main() -> Result<()> {
             "proto/phonetics.proto",
             "proto/composing.proto",
             "proto/lexicon.proto",
+            "proto/nextword.proto",
         ],
         &["proto"],
     )?;

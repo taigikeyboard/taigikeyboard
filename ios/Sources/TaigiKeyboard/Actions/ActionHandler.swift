@@ -160,8 +160,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 extension ActionHandler: AutocompleteContextUpdater {
     /// Engine-side predictions arrive here and are mapped to KeyboardKit
     /// `Autocomplete.Suggestion` values. This is the only place the
-    /// engine's `EnginePrediction` touches KeyboardKit types.
-    func setNextWordPredictions(_ predictions: [EnginePrediction]) {
+    /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
+    /// KeyboardKit types.
+    func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
         let suggestions = predictions.map { prediction in
             Autocomplete.Suggestion(
                 text: prediction.text,

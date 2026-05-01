@@ -15,6 +15,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
  * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
+ *
+ * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
+ * + `platform_id` for NextWord engine — platform_id branches divergences
+ * §5 #1 (compound split separator) and §5 #2 (noise punct set).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -174,6 +178,100 @@ public  final class AppConfig extends
     nnDoubletapEnabled_ = false;
   }
 
+  public static final int IS_TRANSLATE_SWAPPED_FIELD_NUMBER = 5;
+  private boolean isTranslateSwapped_;
+  /**
+   * <code>bool is_translate_swapped = 5;</code>
+   * @return The isTranslateSwapped.
+   */
+  @java.lang.Override
+  public boolean getIsTranslateSwapped() {
+    return isTranslateSwapped_;
+  }
+  /**
+   * <code>bool is_translate_swapped = 5;</code>
+   * @param value The isTranslateSwapped to set.
+   */
+  private void setIsTranslateSwapped(boolean value) {
+    
+    isTranslateSwapped_ = value;
+  }
+  /**
+   * <code>bool is_translate_swapped = 5;</code>
+   */
+  private void clearIsTranslateSwapped() {
+
+    isTranslateSwapped_ = false;
+  }
+
+  public static final int IS_ASSOCIATION_RECORDING_ENABLED_FIELD_NUMBER = 6;
+  private boolean isAssociationRecordingEnabled_;
+  /**
+   * <code>bool is_association_recording_enabled = 6;</code>
+   * @return The isAssociationRecordingEnabled.
+   */
+  @java.lang.Override
+  public boolean getIsAssociationRecordingEnabled() {
+    return isAssociationRecordingEnabled_;
+  }
+  /**
+   * <code>bool is_association_recording_enabled = 6;</code>
+   * @param value The isAssociationRecordingEnabled to set.
+   */
+  private void setIsAssociationRecordingEnabled(boolean value) {
+    
+    isAssociationRecordingEnabled_ = value;
+  }
+  /**
+   * <code>bool is_association_recording_enabled = 6;</code>
+   */
+  private void clearIsAssociationRecordingEnabled() {
+
+    isAssociationRecordingEnabled_ = false;
+  }
+
+  public static final int PLATFORM_ID_FIELD_NUMBER = 7;
+  private int platformId_;
+  /**
+   * <code>.taigi.engine.Platform platform_id = 7;</code>
+   * @return The enum numeric value on the wire for platformId.
+   */
+  @java.lang.Override
+  public int getPlatformIdValue() {
+    return platformId_;
+  }
+  /**
+   * <code>.taigi.engine.Platform platform_id = 7;</code>
+   * @return The platformId.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId() {
+    com.siansiansu.taigikeyboard.engine.proto.Platform result = com.siansiansu.taigikeyboard.engine.proto.Platform.forNumber(platformId_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.Platform.UNRECOGNIZED : result;
+  }
+  /**
+   * <code>.taigi.engine.Platform platform_id = 7;</code>
+   * @param value The enum numeric value on the wire for platformId to set.
+   */
+  private void setPlatformIdValue(int value) {
+      platformId_ = value;
+  }
+  /**
+   * <code>.taigi.engine.Platform platform_id = 7;</code>
+   * @param value The platformId to set.
+   */
+  private void setPlatformId(com.siansiansu.taigikeyboard.engine.proto.Platform value) {
+    platformId_ = value.getNumber();
+
+  }
+  /**
+   * <code>.taigi.engine.Platform platform_id = 7;</code>
+   */
+  private void clearPlatformId() {
+
+    platformId_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -267,6 +365,10 @@ public  final class AppConfig extends
    *
    * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
    * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
+   *
+   * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
+   * + `platform_id` for NextWord engine — platform_id branches divergences
+   * §5 #1 (compound split separator) and §5 #2 (noise punct set).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -436,6 +538,108 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <code>bool is_translate_swapped = 5;</code>
+     * @return The isTranslateSwapped.
+     */
+    @java.lang.Override
+    public boolean getIsTranslateSwapped() {
+      return instance.getIsTranslateSwapped();
+    }
+    /**
+     * <code>bool is_translate_swapped = 5;</code>
+     * @param value The isTranslateSwapped to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIsTranslateSwapped(boolean value) {
+      copyOnWrite();
+      instance.setIsTranslateSwapped(value);
+      return this;
+    }
+    /**
+     * <code>bool is_translate_swapped = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIsTranslateSwapped() {
+      copyOnWrite();
+      instance.clearIsTranslateSwapped();
+      return this;
+    }
+
+    /**
+     * <code>bool is_association_recording_enabled = 6;</code>
+     * @return The isAssociationRecordingEnabled.
+     */
+    @java.lang.Override
+    public boolean getIsAssociationRecordingEnabled() {
+      return instance.getIsAssociationRecordingEnabled();
+    }
+    /**
+     * <code>bool is_association_recording_enabled = 6;</code>
+     * @param value The isAssociationRecordingEnabled to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIsAssociationRecordingEnabled(boolean value) {
+      copyOnWrite();
+      instance.setIsAssociationRecordingEnabled(value);
+      return this;
+    }
+    /**
+     * <code>bool is_association_recording_enabled = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIsAssociationRecordingEnabled() {
+      copyOnWrite();
+      instance.clearIsAssociationRecordingEnabled();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.Platform platform_id = 7;</code>
+     * @return The enum numeric value on the wire for platformId.
+     */
+    @java.lang.Override
+    public int getPlatformIdValue() {
+      return instance.getPlatformIdValue();
+    }
+    /**
+     * <code>.taigi.engine.Platform platform_id = 7;</code>
+     * @param value The platformId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPlatformIdValue(int value) {
+      copyOnWrite();
+      instance.setPlatformIdValue(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.Platform platform_id = 7;</code>
+     * @return The platformId.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId() {
+      return instance.getPlatformId();
+    }
+    /**
+     * <code>.taigi.engine.Platform platform_id = 7;</code>
+     * @param value The enum numeric value on the wire for platformId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPlatformId(com.siansiansu.taigikeyboard.engine.proto.Platform value) {
+      copyOnWrite();
+      instance.setPlatformId(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.Platform platform_id = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPlatformId() {
+      copyOnWrite();
+      instance.clearPlatformId();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -456,10 +660,13 @@ public  final class AppConfig extends
             "inputMode_",
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
+            "isTranslateSwapped_",
+            "isAssociationRecordingEnabled_",
+            "platformId_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0007\u0004\u0007";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

@@ -1,0 +1,462 @@
+import Foundation
+import SwiftProtobuf
+
+// MARK: - RustEngineBridge NextWord surface (v3.5.5)
+
+/// NextWord slice extension for `RustEngineBridge`. Mirrors the pattern
+/// established in v3.5.4 for the composing slice — proto roundtrip
+/// helpers + Swift-friendly synthesized value types.
+///
+/// iOS does NOT call `nextwordUpdateLastSelectedWord` (Android-only
+/// Space-path per `nextword-engine-boundary.md` §13 + `nextword-slice-audit.md`
+/// §5 #5). The bridge surface intentionally omits it.
+public extension RustEngineBridge {
+    // MARK: - Synthesized value types
+
+    /// Bridge-synthesized companion to the proto `DecideResult`. Consumed
+    /// by `NextWordController`; effect-list executes in order on the iOS
+    /// platform-executor side.
+    struct NextWordDecideResult: Equatable {
+        public enum Effect: Equatable {
+            case rescheduleContextTimeout(afterMs: UInt64)
+            case cancelContextTimeout
+            case recordAssociation(NextWordAssociationPair)
+            case recordCompoundAssociations([NextWordAssociationPair])
+            /// `nowMs` is reused by the platform's predict() call so the
+            /// engine's association-window clock and the user-row decay
+            /// scoring see ONE consistent "now" per intent. Per
+            /// `nextword-engine-boundary.md` §13.3.
+            case queryPredictions(word: String, roman: String, generation: UInt64, nowMs: Int64)
+            case clearPredictionsUI(generation: UInt64)
+        }
+
+        public let effects: [Effect]
+        public let currentGeneration: UInt64
+        public let isShowing: Bool
+        /// `nil` when the engine has no last-selected word; otherwise the
+        /// echo of `state.last_selected_word`. Empty wire string maps to
+        /// `nil` per proto contract.
+        public let lastSelectedWord: String?
+
+        public static let noop = NextWordDecideResult(
+            effects: [],
+            currentGeneration: 0,
+            isShowing: false,
+            lastSelectedWord: nil
+        )
+    }
+
+    /// Bigram association pair surfaced through `RecordAssociation` /
+    /// `RecordCompoundAssociations` effects. Consumed by
+    /// `NextWordService.recordAssociation`.
+    struct NextWordAssociationPair: Equatable {
+        public let prev: String
+        public let prevTl: String
+        public let next: String
+        public let nextTl: String
+    }
+
+    /// UI-ready prediction value. `subtitle` is `nil` when the wire
+    /// string is empty (filter contract — happens iff roman is empty).
+    struct NextWordEnginePrediction: Equatable {
+        public let text: String
+        public let subtitle: String?
+        public let hanzi: String
+        public let tl: String
+        /// Merged score. iOS does not currently consume this field
+        /// (predictions render in array order); Android maps to
+        /// `TaigiWord.lengthScore`. Kept for parity + diagnostics.
+        public let score: Double
+    }
+
+    /// Filter+merge+sort+limit result. `wasStale=true` indicates the
+    /// platform-supplied `queryGeneration` did not match the engine's
+    /// current generation — late async result; predictions are empty.
+    struct NextWordFilterResult: Equatable {
+        public let predictions: [NextWordEnginePrediction]
+        public let wasStale: Bool
+    }
+
+    /// Pre-merge un-scored row from the platform `NextWordService.predict`
+    /// SQL pipeline. Crosses the bridge to the Rust filter step.
+    struct NextWordRawRow: Equatable {
+        public enum Source { case dict, user }
+
+        public let hanzi: String
+        public let tl: String
+        public let count: Int64
+        public let lastUsedMs: Int64
+        public let source: Source
+
+        public init(hanzi: String, tl: String, count: Int64, lastUsedMs: Int64, source: Source) {
+            self.hanzi = hanzi
+            self.tl = tl
+            self.count = count
+            self.lastUsedMs = lastUsedMs
+            self.source = source
+        }
+    }
+
+    /// Engine-state read for `SelectionContextProvider` / executor lookup.
+    struct NextWordStateSnapshot: Equatable {
+        public let lastSelectedWord: String?
+        public let isShowing: Bool
+        public let currentGeneration: UInt64
+    }
+
+    // MARK: - Decide intents (5 — UpdateLastSelectedWord is Android-only)
+
+    static func nextwordWordSelected(
+        text: String,
+        roman: String,
+        requireRomanMode: Bool,
+        triggerPrediction: Bool,
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_WordSelected()
+        payload.text = text
+        payload.roman = roman
+        payload.requireRomanMode = requireRomanMode
+        payload.triggerPrediction = triggerPrediction
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            method: .wordSelected(payload),
+            op: "nextwordWordSelected",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    static func nextwordBackspace(
+        lastChar: String,
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_Backspace()
+        payload.lastChar = lastChar
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            method: .backspace(payload),
+            op: "nextwordBackspace",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    static func nextwordContextTimeoutFired(
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_ContextTimeoutFired()
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            method: .contextTimeoutFired(payload),
+            op: "nextwordContextTimeoutFired",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    static func nextwordClearForNewComposing(
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_ClearForNewComposing()
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            // SwiftProtobuf appends `_p` to disambiguate `clearForNewComposing`
+            // from a generated property name; not a typo.
+            method: .clearForNewComposing_p(payload),
+            op: "nextwordClearForNewComposing",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    static func nextwordResetFull(
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_ResetFull()
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            method: .resetFull(payload),
+            op: "nextwordResetFull",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    /// Platform → engine UI visibility sync. Call after rendering an async
+    /// predict() result so the engine's state.is_showing stays accurate;
+    /// downstream `nextwordClearForNewComposing` / sentence-end / context
+    /// timeout / resetFull paths gate `clearPredictionsUI` emission on it.
+    /// No effects, no current_generation bump.
+    static func nextwordSetIsShowing(
+        _ isShowing: Bool,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_SetIsShowing()
+        payload.isShowing = isShowing
+        return decideDispatch(
+            method: .setIsShowing(payload),
+            op: "nextwordSetIsShowing",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        )
+    }
+
+    // MARK: - Filter / Boost / QueryState
+
+    static func nextwordFilter(
+        raw: [NextWordRawRow],
+        queryGeneration: UInt64,
+        nowMs: Int64,
+        limit: Int32,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordFilterResult {
+        var payload = Taigi_Engine_FilterPredictions()
+        payload.raw = raw.map { row in
+            var p = Taigi_Engine_RawNextWordPrediction()
+            p.hanzi = row.hanzi
+            p.tl = row.tl
+            p.count = row.count
+            p.lastUsedMs = row.lastUsedMs
+            p.source = row.source == .dict ? .dict : .user
+            return p
+        }
+        payload.queryGeneration = queryGeneration
+        payload.nowMs = nowMs
+        payload.limit = limit
+
+        guard let resp = nextwordDispatch(
+            method: .filterPredictions(payload),
+            op: "nextwordFilter",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        ) else {
+            return NextWordFilterResult(predictions: [], wasStale: false)
+        }
+        guard case let .filter(filter)? = resp.result else {
+            recordFailure(op: "nextwordFilter", message: "missing filter result")
+            return NextWordFilterResult(predictions: [], wasStale: false)
+        }
+        let predictions = filter.predictions.map { p in
+            NextWordEnginePrediction(
+                text: p.text,
+                subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
+                hanzi: p.hanzi,
+                tl: p.tl,
+                score: p.score
+            )
+        }
+        return NextWordFilterResult(predictions: predictions, wasStale: filter.wasStale)
+    }
+
+    static func nextwordBoostCandidates(
+        words: [String],
+        predictedFirstChars: Set<String>,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> [String] {
+        var payload = Taigi_Engine_BoostCandidates()
+        payload.words = words
+        payload.predictedFirstChars = Array(predictedFirstChars)
+
+        guard let resp = nextwordDispatch(
+            method: .boostCandidates(payload),
+            op: "nextwordBoostCandidates",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        ) else {
+            return words
+        }
+        guard case let .boost(boost)? = resp.result else {
+            recordFailure(op: "nextwordBoostCandidates", message: "missing boost result")
+            return words
+        }
+        return boost.words
+    }
+
+    static func nextwordQueryState(
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64
+    ) -> NextWordStateSnapshot {
+        let payload = Taigi_Engine_NextWordQueryState()
+        guard let resp = nextwordDispatch(
+            method: .queryState(payload),
+            op: "nextwordQueryState",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+        ) else {
+            return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
+        }
+        guard case let .stateSnapshot(snapshot)? = resp.result else {
+            recordFailure(op: "nextwordQueryState", message: "missing state snapshot")
+            return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
+        }
+        return NextWordStateSnapshot(
+            lastSelectedWord: snapshot.lastSelectedWord.isEmpty ? nil : snapshot.lastSelectedWord,
+            isShowing: snapshot.isShowing,
+            currentGeneration: snapshot.currentGeneration
+        )
+    }
+
+    // MARK: - Private helpers
+
+    /// Build the `DecisionInput` proto field shared by every decide intent.
+    private static func decisionInput(nowMs: Int64) -> Taigi_Engine_DecisionInput {
+        var input = Taigi_Engine_DecisionInput()
+        input.nowMs = nowMs
+        return input
+    }
+
+    /// Build an `AppConfig` populated for the NextWord engine. iOS bridge
+    /// always sets `platform_id = .ios`; tone toggles default to false (the
+    /// NextWord engine does not read them, but the field is required).
+    private static func nextwordConfig(
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool
+    ) -> Taigi_Engine_AppConfig {
+        var cfg = Taigi_Engine_AppConfig()
+        switch mode {
+        case .poj: cfg.inputMode = "poj"
+        case .tl: cfg.inputMode = "tl"
+        case .english: cfg.inputMode = "english"
+        case .tps: cfg.inputMode = "tl" // TPS is a layout, not an engine mode
+        }
+        cfg.ooDoubletapEnabled = false
+        cfg.nnDoubletapEnabled = false
+        cfg.isTranslateSwapped = translateSwapped
+        cfg.isAssociationRecordingEnabled = associationRecordingEnabled
+        cfg.platformID = .ios
+        return cfg
+    }
+
+    /// Nextword-specific dispatch helper. Mirrors the composing dispatch
+    /// pattern. Encodes a `Request` with `payload = .nextword(...)`,
+    /// passes it through the FFI seam, decodes, returns the
+    /// `NextWordResponse` payload (or nil on any failure path —
+    /// `recordFailure` invoked).
+    private static func nextwordDispatch(
+        method: Taigi_Engine_NextWordRequest.OneOf_Method,
+        op: String,
+        generation: UInt64,
+        config: Taigi_Engine_AppConfig
+    ) -> Taigi_Engine_NextWordResponse? {
+        var nextword = Taigi_Engine_NextWordRequest()
+        nextword.method = method
+
+        var request = Taigi_Engine_Request()
+        request.id = nextRequestID()
+        request.generation = generation
+        request.payload = .nextword(nextword)
+        request.configSnapshot = config
+
+        let bytes: [UInt8]
+        do {
+            bytes = try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+
+        let responseBytes = bytes.withUnsafeBufferPointer { buf in
+            process_request_bytes(buf).toArray()
+        }
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(responseBytes)
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return nil
+        }
+        guard response.error == .ok else {
+            recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
+            return nil
+        }
+        guard case let .nextword(payload) = response.payload else {
+            recordFailure(op: op, message: "missing nextword payload")
+            return nil
+        }
+        return payload
+    }
+
+    /// Decide-result dispatch wrapper. Used by all 5 iOS decide entries.
+    private static func decideDispatch(
+        method: Taigi_Engine_NextWordRequest.OneOf_Method,
+        op: String,
+        generation: UInt64,
+        config: Taigi_Engine_AppConfig
+    ) -> NextWordDecideResult {
+        guard let resp = nextwordDispatch(method: method, op: op, generation: generation, config: config) else {
+            return .noop
+        }
+        guard case let .decide(decide)? = resp.result else {
+            recordFailure(op: op, message: "missing decide result")
+            return .noop
+        }
+        return synthDecideResult(decide)
+    }
+
+    private static func synthDecideResult(_ proto: Taigi_Engine_DecideResult) -> NextWordDecideResult {
+        let effects: [NextWordDecideResult.Effect] = proto.effects.compactMap { eff in
+            guard let kind = eff.kind else { return nil }
+            switch kind {
+            case .rescheduleContextTimeout(let m):
+                return .rescheduleContextTimeout(afterMs: m.afterMs)
+            case .cancelContextTimeout:
+                return .cancelContextTimeout
+            case .recordAssociation(let m):
+                return .recordAssociation(synthAssociationPair(m.pair))
+            case .recordCompoundAssociations(let m):
+                return .recordCompoundAssociations(m.pairs.map(synthAssociationPair))
+            case .queryPredictions(let m):
+                return .queryPredictions(word: m.word, roman: m.roman, generation: m.generation, nowMs: m.nowMs)
+            case .clearPredictionsUi_p(let m):
+                return .clearPredictionsUI(generation: m.generation)
+            }
+        }
+        return NextWordDecideResult(
+            effects: effects,
+            currentGeneration: proto.currentGeneration,
+            isShowing: proto.isShowing,
+            lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord
+        )
+    }
+
+    private static func synthAssociationPair(_ proto: Taigi_Engine_AssociationPair) -> NextWordAssociationPair {
+        NextWordAssociationPair(
+            prev: proto.prev,
+            prevTl: proto.prevTl,
+            next: proto.next,
+            nextTl: proto.nextTl
+        )
+    }
+}

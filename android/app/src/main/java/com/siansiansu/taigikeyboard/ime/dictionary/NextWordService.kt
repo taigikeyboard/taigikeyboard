@@ -4,11 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordPredictor
-import com.siansiansu.taigikeyboard.ime.core.nextword.NextWordScorer
-import com.siansiansu.taigikeyboard.ime.core.nextword.RawNextWordPrediction
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -50,7 +48,7 @@ private fun SQLiteStatement.bindArgs(vararg args: Any?) {
 class NextWordService(
     appContext: Context,
     private val logger: LoggerBackend,
-) : NextWordPredictor {
+) {
     private val appContext: Context = appContext.applicationContext
 
     // ------------------------------------------------------------------ //
@@ -62,12 +60,16 @@ class NextWordService(
         private const val USER_DB_NAME = "user_association.db"
         private const val DATABASE_VERSION = 4 // v4: added prev_tl column
 
-        // `DEFAULT_LIMIT` now lives on `NextWordPredictor.Companion` so the
-        // interface seam owns the default exactly once.
+        /**
+         * Default candidate limit when callers don't specify one.
+         * Matches iOS `NextWordService.Constants.defaultLimit`.
+         */
+        const val DEFAULT_LIMIT: Int = 30
         //
-        // Scoring constants + math extracted to `ime/core/nextword/NextWordScorer.kt`
-        // (A9 BL4 extract) so invariants §7 / §8 can be pinned without reaching
-        // into SQLite or Android context. Mirrors iOS `NextWordScorer.swift`.
+        // Scoring + merge-by-(hanzi, tl) live in `engine/nextword/src/{scorer,filter}.rs`
+        // post-v3.5.5. The platform `predict()` returns un-scored rows tagged
+        // by `Source`; the caller routes them through
+        // `RustEngineBridge.nextwordFilter` for the score+merge+sort+limit step.
 
         // User-association capacity (prevents unbounded DB growth)
         private const val MAX_USER_ASSOCIATIONS = 50_000
@@ -186,23 +188,28 @@ class NextWordService(
     // ------------------------------------------------------------------ //
 
     /**
-     * Predict the next character given the last-committed [word]. Merges
-     * dictionary bigrams with user-learned entries.
+     * Predict raw rows for the next-word bigram bridge.
      *
-     * [nowMs] is supplied by the caller (A5-impl clock-injection — the
-     * executor holds the single `System.currentTimeMillis()` reader for
-     * the whole intent, so the `shouldRecordAssociation` window and the
-     * user-row decay score see the same "now"). Android walks one step
-     * ahead of iOS here; iOS `NextWordService.predict` still reads the
-     * clock internally. Documented in `nextword-engine-boundary.md` §13.3.
+     * Post-v3.5.5: returns un-merged un-scored rows tagged by source
+     * (`SOURCE_DICT` from `association.bin` mmap, `SOURCE_USER` from
+     * `user_association.db`). The caller passes them to
+     * [RustEngineBridge.nextwordFilter] which scores (dict via
+     * `DICT_WEIGHT`; user via decay+learning math), merges by
+     * `(hanzi, tl)`, sorts desc by score, applies limit, and shapes per
+     * display rules.
+     *
+     * [nowMs] still threads through for log-decay parity (the caller
+     * forwards it on to `nextwordFilter`'s `now_ms` so the
+     * `shouldRecordAssociation` clock and the user-row decay scoring see
+     * ONE consistent "now" per intent — `nextword-engine-boundary.md` §13.3).
      */
-    override suspend fun predict(
+    suspend fun predict(
         word: String,
-        roman: String,
-        limit: Int,
+        roman: String = "",
+        limit: Int = DEFAULT_LIMIT,
         settings: EngineSettings,
-        nowMs: Long,
-    ): List<RawNextWordPrediction> =
+        @Suppress("UNUSED_PARAMETER") nowMs: Long,
+    ): List<RustEngineBridge.NextWordRawRow> =
         withContext(Dispatchers.IO) {
             if (word.isEmpty()) {
                 return@withContext emptyList()
@@ -212,36 +219,37 @@ class NextWordService(
 
             ensureInitialized()
 
-            val results = mutableMapOf<String, RawNextWordPrediction>()
+            val rows = mutableListOf<RustEngineBridge.NextWordRawRow>()
 
-            // 1. Dictionary associations — look up via `last char` in association.bin
+            // 1. Dictionary associations — un-scored rows tagged SOURCE_DICT.
+            // Over-fetch limit * 2 so the Rust filter has slack to merge
+            // (hanzi, tl) collisions across dict + user without dropping
+            // below the caller's requested limit (Codex post-impl P2-1).
             associationReader?.let { reader ->
                 try {
                     val enabledDicts = EnabledDictionaries.fromSettings(settings)
-
                     logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
-
-                    // Over-fetch limit * 2 for dedup merging (matches iOS)
                     val entries = reader.lookup(lastChar, limit * 2)
                     for (entry in entries) {
                         if (!AssociationBinaryReader.passesFilter(entry.bitmask, enabledDicts)) continue
-
-                        val key = "${entry.nextWord}\t${entry.nextTl}"
-                        results[key] =
-                            RawNextWordPrediction(
+                        rows.add(
+                            RustEngineBridge.NextWordRawRow(
                                 hanzi = entry.nextWord,
                                 tl = entry.nextTl,
-                                score = NextWordScorer.scoreDict(entry.count),
-                            )
+                                count = entry.count.toLong(),
+                                lastUsedMs = 0L,
+                                source = RustEngineBridge.NextWordRawRow.Source.DICT,
+                            ),
+                        )
                     }
-
-                    logger.debug(TAG) { "[PREDICT] Dict: ${entries.size} raw -> ${results.size} after filter" }
+                    logger.debug(TAG) { "[PREDICT] Dict: ${entries.size} entries -> ${rows.size} after filter" }
                 } catch (e: Exception) {
                     logger.e(TAG, "[PREDICT] Dict query failed", e)
                 }
             }
 
-            // 2. User associations — bigram keyed on the full word (with TL disambiguator)
+            // 2. User associations — un-scored rows tagged SOURCE_USER.
+            val dictCount = rows.size
             userDatabase?.let { db ->
                 try {
                     val sql =
@@ -253,62 +261,34 @@ class NextWordService(
                         ORDER BY count DESC
                         LIMIT ?
                         """.trimIndent()
-
                     logger.debug(TAG) { "[PREDICT] User query: prev_word='$word', prev_tl='$roman'" }
-
+                    // Over-fetch limit * 2 — same merge-slack reason as the
+                    // dict path above (Codex post-impl P2-1).
                     val cursor = db.rawQuery(sql, arrayOf(word, roman, (limit * 2).toString()))
-                    var userCount = 0
                     cursor.use {
                         while (it.moveToNext()) {
                             val nextWord = it.getString(0) ?: continue
                             val nextTl = it.getString(1) ?: ""
                             val count = it.getInt(2)
                             val lastUsedMs = it.getLong(3)
-                            userCount++
-
-                            val userScore = NextWordScorer.calculateUserScore(count, lastUsedMs, nowMs)
-
-                            logger.debug(TAG) {
-                                val decay = NextWordScorer.calculateDecay(lastUsedMs, nowMs)
-                                "[PREDICT] User found: '$word' -> '$nextWord' (count=$count, decay=%.3f, score=%.1f)".format(
-                                    decay,
-                                    userScore,
-                                )
-                            }
-
-                            val key = "${nextWord}\t$nextTl"
-                            val existing = results[key]
-
-                            if (existing != null) {
-                                results[key] =
-                                    existing.copy(
-                                        tl = if (nextTl.isNotEmpty()) nextTl else existing.tl,
-                                        score = existing.score + userScore,
-                                    )
-                            } else {
-                                results[key] =
-                                    RawNextWordPrediction(
-                                        hanzi = nextWord,
-                                        tl = nextTl,
-                                        score = userScore,
-                                    )
-                            }
+                            rows.add(
+                                RustEngineBridge.NextWordRawRow(
+                                    hanzi = nextWord,
+                                    tl = nextTl,
+                                    count = count.toLong(),
+                                    lastUsedMs = lastUsedMs,
+                                    source = RustEngineBridge.NextWordRawRow.Source.USER,
+                                ),
+                            )
                         }
                     }
-                    logger.debug(TAG) { "[PREDICT] User query returned $userCount results" }
+                    logger.debug(TAG) { "[PREDICT] User: ${rows.size - dictCount} new rows (total ${rows.size})" }
                 } catch (e: Exception) {
                     logger.e(TAG, "[PREDICT] User query failed", e)
                 }
             }
 
-            val sortedResults =
-                results.values
-                    .sortedByDescending { it.score }
-                    .take(limit)
-
-            logger.debug(TAG) { "[PREDICT] '$word' -> ${sortedResults.size} total results (dict+user)" }
-
-            sortedResults
+            rows
         }
 
     // ------------------------------------------------------------------ //
@@ -317,11 +297,11 @@ class NextWordService(
 
     /** Record a bigram transition in `user_association` and prune periodically. */
     @Suppress("SqlResolve")
-    override suspend fun recordAssociation(
+    suspend fun recordAssociation(
         prev: String,
-        prevTl: String,
+        prevTl: String = "",
         nextHanzi: String,
-        nextTl: String,
+        nextTl: String = "",
     ): Unit =
         withContext(Dispatchers.IO) {
             if (prev.isEmpty() || nextHanzi.isEmpty()) {

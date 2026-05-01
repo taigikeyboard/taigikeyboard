@@ -22,6 +22,7 @@ public  final class Request extends
     PHONETICS(10),
     COMPOSING(11),
     LEXICON(12),
+    NEXTWORD(13),
     PAYLOAD_NOT_SET(0);
     private final int value;
     private PayloadCase(int value) {
@@ -40,6 +41,7 @@ public  final class Request extends
         case 10: return PHONETICS;
         case 11: return COMPOSING;
         case 12: return LEXICON;
+        case 13: return NEXTWORD;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
       }
@@ -346,6 +348,56 @@ public  final class Request extends
    */
   private void clearLexicon() {
     if (payloadCase_ == 12) {
+      payloadCase_ = 0;
+      payload_ = null;
+    }
+  }
+
+  public static final int NEXTWORD_FIELD_NUMBER = 13;
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextword() {
+    return payloadCase_ == 13;
+  }
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NextWordRequest getNextword() {
+    if (payloadCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NextWordRequest) payload_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   */
+  private void setNextword(com.siansiansu.taigikeyboard.engine.proto.NextWordRequest value) {
+    value.getClass();
+  payload_ = value;
+    payloadCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   */
+  private void mergeNextword(com.siansiansu.taigikeyboard.engine.proto.NextWordRequest value) {
+    value.getClass();
+  if (payloadCase_ == 13 &&
+        payload_ != com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.getDefaultInstance()) {
+      payload_ = com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordRequest) payload_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      payload_ = value;
+    }
+    payloadCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   */
+  private void clearNextword() {
+    if (payloadCase_ == 13) {
       payloadCase_ = 0;
       payload_ = null;
     }
@@ -753,6 +805,54 @@ public  final class Request extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextword() {
+      return instance.hasNextword();
+    }
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NextWordRequest getNextword() {
+      return instance.getNextword();
+    }
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    public Builder setNextword(com.siansiansu.taigikeyboard.engine.proto.NextWordRequest value) {
+      copyOnWrite();
+      instance.setNextword(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    public Builder setNextword(
+        com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextword(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    public Builder mergeNextword(com.siansiansu.taigikeyboard.engine.proto.NextWordRequest value) {
+      copyOnWrite();
+      instance.mergeNextword(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+     */
+    public Builder clearNextword() {
+      copyOnWrite();
+      instance.clearNextword();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Request)
   }
   @java.lang.Override
@@ -779,10 +879,11 @@ public  final class Request extends
             com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0001\u0001\f\u0007\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
-              "\u1009\u0000\u0004\u0003\n<\u0000\u000b<\u0000\f<\u0000";
+              "\u0000\b\u0001\u0001\u0001\r\b\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u1009" +
+              "\u0000\u0004\u0003\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

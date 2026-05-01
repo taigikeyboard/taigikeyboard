@@ -639,7 +639,9 @@ public enum RustEngineBridge {
 
     private static let idLock = NSLock()
     private static var nextID: UInt32 = 0
-    private static func nextRequestID() -> UInt32 {
+    /// `internal` (default) so the v3.5.5 `RustEngineBridge+NextWord`
+    /// extension file can share the request-id sequence.
+    static func nextRequestID() -> UInt32 {
         idLock.lock()
         defer { idLock.unlock() }
         nextID &+= 1
@@ -652,7 +654,10 @@ public enum RustEngineBridge {
 
     private static let recentErrorCap = 32
 
-    private static func recordFailure(op: String, message: String, code: Int32 = -1) {
+    /// `internal` (default) so the v3.5.5 `RustEngineBridge+NextWord`
+    /// extension file can route bridge failures through the same
+    /// counter + bounded ring-buffer.
+    static func recordFailure(op: String, message: String, code: Int32 = -1) {
         diagnosticsLock.lock()
         defer { diagnosticsLock.unlock() }
         failureCounter &+= 1
@@ -893,7 +898,9 @@ public final class SwiftLoggerSink {
 
 // MARK: - swift-bridge interop helpers
 
-private extension RustVec where T == UInt8 {
+/// `internal` (default) so v3.5.5 `RustEngineBridge+NextWord` can decode
+/// the FFI byte buffer the same way as the in-file Composing slice.
+extension RustVec where T == UInt8 {
     func toArray() -> [UInt8] {
         let count = Int(len())
         var out = [UInt8]()

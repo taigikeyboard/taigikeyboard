@@ -212,7 +212,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 ## 7. Next-word decay — RIME-style half-life
 
-**Invariant**: `NextWordScorer.calculateDecay(lastUsedMs:nowMs:)` computes `exp(-ageHours / 168.0 * ln(2))` — one-week half-life, RIME-derived. Constants are fixed:
+**Invariant**: `engine::nextword::scorer::calculate_decay(last_used_ms, now_ms)` computes `exp(-age_hours / 168.0 * ln(2))` — one-week half-life, RIME-derived. Constants are fixed:
 
 | Constant | Value |
 |---|---|
@@ -223,34 +223,35 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 **Why**: decay shapes the entire learning curve for user associations. A change here is not caught by scoring tests — it surfaces only after days of use.
 
-**Scope**: `NextWord/NextWordScorer.swift` + Android `NextWordService.kt`.
+**Scope**: `engine/nextword/src/scorer.rs` (canonical, post-v3.5.5 swap). Pre-swap mirrors in `NextWord/NextWordScorer.swift` + Android `NextWordService.kt` were deleted in PR for v3.5.5; iOS/Android platforms now route through `RustEngineBridge.nextwordFilter` for the score+merge+sort+limit step.
 
 **Corner cases**:
 - `nowMs - lastUsedMs` can be negative if the user rewinds the clock; the formula produces a factor > 1. Callers must not rely on decay ≤ 1.
-- `ln(2)` is hard-coded as `0.693` — precision loss vs full `log(2.0)` is acceptable (drift ≈ 0.03% at 1 week); constant must match Android.
-- `calculateUserScore` clamps to `max(decayFloor, decay)` — high-usage entries (count ≥ 3) retain ≥ 95% of raw score indefinitely.
+- `ln(2)` is hard-coded as `LN_2 = 0.693` in the Rust crate — precision loss vs full `log(2.0)` is acceptable (drift ≈ 0.03% at 1 week).
+- `calculate_user_score` clamps to `max(decay_floor, decay)` — high-usage entries (count ≥ 3) retain ≥ 95% of raw score indefinitely.
 
-**Test labels**:
-- `INVARIANT_decay_half_life_is_168_hours`
-- `INVARIANT_high_usage_decay_floor_95`
-- `INVARIANT_low_usage_decay_floor_30`
-- `INVARIANT_scorer_constants_match_android`
+**Test labels** (in `engine/nextword/src/scorer.rs` `tests`):
+- `decay_at_zero_age_is_one`
+- `decay_at_one_half_life_is_half`
+- `decay_at_two_half_lives_is_quarter`
+- `decay_is_monotonically_decreasing`
+- `high_and_low_floors_diverge_at_threshold`
 
 ---
 
 ## 8. Next-word weighting — user > dict
 
-**Invariant**: `scoreDict(count)` = `count * 1.0`. `calculateUserScore(count, lastUsedMs, nowMs)` = `count * 50.0 * effectiveDecay + 300.0`. The `learningBonus = 300.0` guarantees any user entry outranks any dict entry of equivalent count.
+**Invariant**: `score_dict(count)` = `count * 1.0`. `calculate_user_score(count, last_used_ms, now_ms)` = `count * 50.0 * max(decay_floor, decay) + 300.0`. The `LEARNING_BONUS = 300.0` guarantees any user entry outranks any dict entry of equivalent count.
 
 **Why**: when the user has selected a word, that signal must dominate cold-start dictionary ranking. Breaking this invariant makes the learning system feel dead.
 
-**Scope**: `NextWord/NextWordScorer.swift`.
+**Scope**: `engine/nextword/src/scorer.rs` (canonical, post-v3.5.5 swap).
 
-**Test labels**:
-- `INVARIANT_user_weight_is_50`
-- `INVARIANT_dict_weight_is_1`
-- `INVARIANT_learning_bonus_is_300`
-- `INVARIANT_user_entry_outranks_dict_entry`
+**Test labels** (in `engine/nextword/src/scorer.rs` `tests`):
+- `score_dict_count_zero_is_zero`
+- `score_dict_scales_linearly`
+- `fresh_user_score_includes_learning_bonus`
+- `user_outranks_dict_at_equal_count`
 
 ---
 

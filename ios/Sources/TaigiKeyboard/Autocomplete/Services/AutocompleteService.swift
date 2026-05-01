@@ -143,9 +143,14 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     }
 
     /// 依 `lastSelectedWord` 的 bigram 預測，將符合預測首字的候選詞拉到前面。
+    /// Routes the partition through `RustEngineBridge.nextwordBoostCandidates`
+    /// — the Rust crate owns the canonical first-char partition and the
+    /// platform `[TaigiWord] ↔ [String]` round-trip preserves intra-partition
+    /// order so original `TaigiWord` identity (`id`, `hanzi`, etc.) is
+    /// recovered post-bridge.
     private func applyContextBoost(words: [TaigiWord]) async -> [TaigiWord] {
-        guard let lastWord = selectionContext?.lastSelectedWord,
-              !lastWord.isEmpty
+        guard let selection = selectionContext,
+              let lastWord = selection.lastSelectedWord, !lastWord.isEmpty
         else {
             return words
         }
@@ -154,7 +159,42 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         guard !predictions.isEmpty else { return words }
 
         let contextSet = Set(predictions.map(\.hanzi))
-        return AutocompleteContextBooster.boost(words: words, predictedFirstChars: contextSet)
+        let displayTexts = words.map(\.displayText)
+        let settings = settingsProvider.current
+        let reordered = RustEngineBridge.nextwordBoostCandidates(
+            words: displayTexts,
+            predictedFirstChars: contextSet,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: selection.nextwordEnvelopeGeneration
+        )
+        return Self.remapBoostedWords(words, displayOrder: reordered)
+    }
+
+    /// Map the bridge's `[String]` partition reorder back to `[TaigiWord]`,
+    /// preserving original word identity. Walks `displayOrder` and pulls the
+    /// next `TaigiWord` from a per-display-text FIFO. Any size mismatch falls
+    /// back to original order so a bridge failure cannot drop candidates.
+    private static func remapBoostedWords(
+        _ original: [TaigiWord],
+        displayOrder: [String],
+    ) -> [TaigiWord] {
+        guard displayOrder.count == original.count else { return original }
+        var queues: [String: [Int]] = [:]
+        queues.reserveCapacity(original.count)
+        for (i, w) in original.enumerated() {
+            queues[w.displayText, default: []].append(i)
+        }
+        var result: [TaigiWord] = []
+        result.reserveCapacity(original.count)
+        for d in displayOrder {
+            guard var ids = queues[d], let head = ids.first else { return original }
+            result.append(original[head])
+            ids.removeFirst()
+            queues[d] = ids
+        }
+        return result
     }
 
     /// 組合 position-0 組字文字 + 查詢結果為 KeyboardKit 候選詞列表。

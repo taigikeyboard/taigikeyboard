@@ -159,7 +159,12 @@ class CandidateUpdateCoordinator(
             }
 
         val searchStart = System.currentTimeMillis()
-        val suggestions = service.autocomplete(rawInput, displayText, smartbarManager.getLastSelectedWord())
+        val suggestions = service.autocomplete(
+            rawInput = rawInput,
+            displayText = displayText,
+            lastSelectedWord = smartbarManager.getLastSelectedWord(),
+            nextwordEnvelopeGeneration = smartbarManager.getNextwordEnvelopeGeneration(),
+        )
         if (BuildConfig.DEBUG) {
             Log.d(
                 "PERF",

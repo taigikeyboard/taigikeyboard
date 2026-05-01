@@ -67,7 +67,7 @@ extension ActionHandler {
         if isNextWord {
             // CROSS-PLATFORM INVARIANT: next-word commit string == UI display string.
             // `suggestion.text` is mode-shaped (POJ in POJ mode, TL otherwise) by
-            // `NextWordEngine.filterPredictions`, but `CandidateCellHelper.suggestionToHandle`
+            // `RustEngineBridge.nextwordFilter` (Rust shape rule), but `CandidateCellHelper.suggestionToHandle`
             // pre-swaps text↔subtitle in swapped/TPS modes before this handler runs —
             // so we must mirror that swap to recover the mode-shaped roman.
             // `additionalInfo["hanzi"]` carries hanzi even for hanzi-only predictions

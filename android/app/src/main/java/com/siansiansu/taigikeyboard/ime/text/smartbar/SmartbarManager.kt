@@ -151,6 +151,14 @@ class SmartbarManager(
 
     fun getLastSelectedWord(): String? = nextWordHandler.getLastSelectedWord()
 
+    /**
+     * Envelope generation owned by [NextWordHandler]. Surfaced so
+     * `TaigiAutocompleteService.applyContextBoost` can pass it to
+     * `RustEngineBridge.nextwordBoostCandidates`, sharing engine-handle
+     * state with the rest of the NextWord pipeline within the IME session.
+     */
+    fun getNextwordEnvelopeGeneration(): Long = nextWordHandler.nextwordEnvelopeGeneration()
+
     fun collapseToolbarIfOpen() = toolbarManager.collapseToolbarIfOpen()
 
     fun getPreferredContainerId(): Int = toolbarManager.getPreferredContainerId()

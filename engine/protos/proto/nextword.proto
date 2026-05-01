@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
+// NextWord slice — Intent → Effect state machine.
+//
+// Mirrors iOS NextWord/NextWordOutcome.swift + Android
+// ime/core/nextword/NextWordOutcome.kt 1:1 pre-migration. The Rust crate
+// engine/nextword owns NextWordPersistedState (lastSelectedWord/Roman,
+// lastSelectionTimeMs, isShowing, currentGeneration) inside a singleton
+// Mutex<Engine> held by EngineHandle. Persistence (SQLite + association.bin
+// mmap) stays on the platform side until v3.5.6 (Lexicon slice).
+//
+// Naming: oneof method matches Phonetics/Composing dispatch pattern.
+//
+// Lifecycle: every request carries Request.generation (envelope-level —
+// IME-session ID; engine resets state on mismatch BEFORE applying the
+// request, no effects from the drop). The engine ALSO maintains an
+// internal current_generation that bumps on every state-mutating intent;
+// it travels on QueryPredictions/ClearPredictionsUI effects so the
+// platform executor can drop async SQLite results that land after
+// state invalidation. See nextword-engine-boundary.md §3 + §13.6.
+
+message NextWordRequest {
+  oneof method {
+    // State-mutating intents — return DecideResult.
+    WordSelected         word_selected           = 10;
+    Backspace            backspace               = 11;
+    ContextTimeoutFired  context_timeout_fired   = 12;
+    ClearForNewComposing clear_for_new_composing = 13;
+    ResetFull            reset_full              = 14;
+    // Android-only Space-path intent (audit §5 #5). iOS wrappers never
+    // emit this; Rust engine accepts generically. Mutates
+    // last_selected_*/lastSelectionTimeMs without bumping
+    // current_generation, no timer effects, emits compound-only
+    // RecordCompoundAssociations effect (no prev→this bigram).
+    UpdateLastSelectedWord update_last_selected_word = 15;
+
+    // Platform-driven UI visibility update. After the platform renders the
+    // result of an async predict() call (or clears it on empty result), it
+    // pushes the resulting visibility back to the engine via this intent so
+    // subsequent ClearForNewComposing / sentence-end / context-timeout /
+    // ResetFull paths can correctly emit ClearPredictionsUI when there is
+    // UI to clear. Mutates state.is_showing only — does NOT bump
+    // current_generation (the in-flight query that produced the rendered
+    // result already won the race; later intents will bump as usual).
+    // Returns DecideResult with empty effects + snapshot of state.
+    SetIsShowing set_is_showing = 16;
+
+    // Pure post-query filter+merge+sort+limit — return FilterResult
+    // (handles stale-gen drop).
+    FilterPredictions    filter_predictions      = 20;
+
+    // Stateless candidate reorder helper (NextWord-derived first-char set).
+    // Pure function; engine state untouched. Routes through standard
+    // EngineHandle::handle path (brief mutex acquire — no observable cost).
+    BoostCandidates      boost_candidates        = 21;
+
+    // Pure read — return StateSnapshot.
+    NextWordQueryState   query_state             = 30;
+  }
+}
+
+// Per-intent fields the engine needs but cannot read itself.
+message DecisionInput {
+  int64 now_ms = 1;
+}
+
+// User selected a candidate or committed composing text.
+// require_roman_mode: Enter-commits-raw-romanization paths.
+// trigger_prediction: false on Space.
+message WordSelected {
+  string text                  = 1;
+  string roman                 = 2;
+  bool   require_roman_mode    = 3;
+  bool   trigger_prediction    = 4;
+  DecisionInput input          = 5;
+}
+
+// Backspace after a word selection — re-predict, never record.
+message Backspace {
+  string last_char     = 1;
+  DecisionInput input  = 2;
+}
+
+// Executor's context-timeout fired.
+message ContextTimeoutFired {
+  DecisionInput input  = 1;
+}
+
+// User began composing a new syllable / digit — hide suggestions but
+// keep association state intact (matches iOS clearDisplay).
+message ClearForNewComposing {
+  DecisionInput input  = 1;
+}
+
+// Full reset (sentence-end punctuation outside WordSelected, or empty doc).
+message ResetFull {
+  DecisionInput input  = 1;
+}
+
+// Android-only Space-path intent (audit §5 #5). Mutates state without
+// timer effects or generation bump; emits compound-only effect.
+message UpdateLastSelectedWord {
+  string text          = 1;
+  string roman         = 2;
+  DecisionInput input  = 3;
+}
+
+// Platform → engine visibility sync. Pushes is_showing back to state
+// after platform rendering of an async predict() result. No effects,
+// no generation bump; just state.is_showing = is_showing.
+message SetIsShowing {
+  bool is_showing = 1;
+}
+
+// Engine-side filter+merge+sort+limit step. Platform calls this after
+// SQLite returns raw rows — engine groups by (hanzi, tl), scores dict
+// rows via DICT_WEIGHT and user rows via decay+learning math, sums
+// scores on (hanzi, tl) collision, sorts desc by score, applies limit,
+// then shapes via display-rule filter. On generation mismatch returns
+// predictions=[] + was_stale=true.
+message FilterPredictions {
+  repeated RawNextWordPrediction raw                = 1;
+  uint64                          query_generation  = 2;  // matches state.current_generation when fresh
+  int64                           now_ms            = 3;  // single decision-time clock per intent
+  int32                           limit             = 4;  // post-merge truncation; 30 default if 0
+}
+
+// Stateless candidate-reorder helper; engine state untouched.
+message BoostCandidates {
+  repeated string words                  = 1;
+  repeated string predicted_first_chars  = 2;
+}
+
+message NextWordQueryState {}
+
+// Pre-merge un-scored row tagged by source. Platform NextWordService.predict
+// returns these directly post-v3.5.5; Rust filter does merge + score.
+message RawNextWordPrediction {
+  string hanzi        = 1;
+  string tl           = 2;
+  int64  count        = 3;
+  int64  last_used_ms = 4;
+  Source source       = 5;
+}
+
+enum Source {
+  SOURCE_UNSPECIFIED = 0;  // Rust treats as FailInvariant
+  SOURCE_DICT        = 1;
+  SOURCE_USER        = 2;
+}
+
+message NextWordResponse {
+  oneof result {
+    DecideResult   decide          = 1;
+    FilterResult   filter          = 2;
+    BoostResult    boost           = 3;
+    StateSnapshot  state_snapshot  = 4;
+  }
+}
+
+message DecideResult {
+  repeated NextWordEffect effects             = 1;  // ordered, executor runs sequentially
+  uint64                  current_generation  = 2;
+  bool                    is_showing          = 3;
+  // Echo of last_selected_word so platform can implement
+  // SelectionContextProvider without holding a parallel cache.
+  // Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
+  string                  last_selected_word  = 4;
+}
+
+message FilterResult {
+  repeated EnginePrediction predictions = 1;  // empty if was_stale
+  bool                       was_stale  = 2;  // generation mismatch — late result
+}
+
+message BoostResult {
+  repeated string words = 1;  // boosted partition first, rest preserves original order
+}
+
+message StateSnapshot {
+  string  last_selected_word  = 1;  // "" == nil
+  bool    is_showing          = 2;
+  uint64  current_generation  = 3;
+}
+
+// UI-ready prediction value — mirrors iOS EnginePrediction.swift +
+// Android EnginePrediction.kt. Android consumes `score` for
+// TaigiWord.lengthScore; iOS ignores it (iOS bridge presentation
+// rule documented in nextword-engine-boundary.md §13.10).
+message EnginePrediction {
+  string text     = 1;
+  // "" == nil (Optional on iOS, nullable on Android). Filter contract
+  // guarantees subtitle = "" only when roman is empty (i.e. nil case);
+  // non-nil empty subtitle cannot arise because hanzi is required
+  // non-empty by the empty-hanzi filter.
+  string subtitle = 2;
+  string hanzi    = 3;
+  string tl       = 4;
+  // Merged score (sum of per-source scoreDict + calculateUserScore on
+  // (hanzi, tl) collision). Android maps to TaigiWord.lengthScore.
+  double score    = 5;
+}
+
+message NextWordEffect {
+  oneof kind {
+    RescheduleContextTimeout    reschedule_context_timeout    = 1;
+    CancelContextTimeout        cancel_context_timeout        = 2;
+    RecordAssociation           record_association            = 3;
+    RecordCompoundAssociations  record_compound_associations  = 4;
+    QueryPredictions            query_predictions             = 5;
+    ClearPredictionsUI          clear_predictions_ui          = 6;
+  }
+}
+
+// Single representation: ms. iOS bridge converts to TimeInterval seconds
+// for Timer.scheduledTimer(withTimeInterval:); Android uses delay(Long ms).
+message RescheduleContextTimeout { uint64 after_ms = 1; }
+message CancelContextTimeout {}
+
+message AssociationPair {
+  string prev    = 1;
+  string prev_tl = 2;
+  string next    = 3;
+  string next_tl = 4;
+}
+
+message RecordAssociation         { AssociationPair pair = 1; }
+message RecordCompoundAssociations { repeated AssociationPair pairs = 1; }
+
+message QueryPredictions {
+  string word        = 1;
+  string roman       = 2;
+  uint64 generation  = 3;
+  // now_ms reused by the platform's predict() call for user-row decay
+  // scoring — same clock the engine used in shouldRecordAssociation.
+  // Per nextword-engine-boundary.md §13.3.
+  int64  now_ms      = 4;
+}
+
+message ClearPredictionsUI { uint64 generation = 1; }

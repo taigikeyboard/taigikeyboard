@@ -124,6 +124,20 @@ fn run(bytes: &[u8]) -> Response {
                 }
             }
         }
+        request::Payload::Nextword(nw_req) => {
+            match nextword::EngineHandle::instance().handle(&nw_req, &config, generation) {
+                Ok(nw_resp) => Response {
+                    id,
+                    error: ErrorCode::Ok as i32,
+                    generation,
+                    payload: Some(response::Payload::Nextword(nw_resp)),
+                },
+                Err(err) => {
+                    log::warn!("nextword dispatch failed (id={id}): {err}");
+                    error_response(id, ErrorCode::FailInvariant, generation)
+                }
+            }
+        }
     }
 }
 

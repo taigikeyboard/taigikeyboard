@@ -169,6 +169,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         if lastTextInputID == id { return }
         lastTextInputID = id
         manager.bumpGeneration()
+        // Mirror the composing-slice IME-session bump for the NextWord
+        // engine handle so cross-field state (lastSelectedWord / is_showing /
+        // current_generation) drops on real input-context changes — Codex
+        // post-impl P2-2. Android does the equivalent in
+        // `NextWordHandler.resetContext()` invoked from `onStartInputView`.
+        actionHandler?.nextWordController.bumpEnvelopeGeneration()
     }
 
     /// FIXME: Workaround layer 1/2 for KeyboardKit 10 auto-capitalization override.

@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -38,6 +39,7 @@ class TaigiAutocompleteService(
         rawInput: String,
         displayText: String,
         lastSelectedWord: String? = null,
+        nextwordEnvelopeGeneration: Long = 0L,
     ): List<TaigiWord> {
         if (rawInput.isEmpty() || displayText.isEmpty()) {
             return emptyList()
@@ -78,7 +80,7 @@ class TaigiAutocompleteService(
                 logger.debug(TAG) { "[RESULT] LexiconService returned ${words.size} words" }
             }
 
-            val contextBoostedWords = applyContextBoost(words, lastSelectedWord)
+            val contextBoostedWords = applyContextBoost(words, lastSelectedWord, nextwordEnvelopeGeneration)
 
             val buildStart = System.currentTimeMillis()
             val composingTextWord = createComposingTextWord(displayText)
@@ -114,15 +116,20 @@ class TaigiAutocompleteService(
 
     /**
      * Float candidates whose display-text begins with a bigram-predicted
-     * character to the front. Preserves original order within each
-     * partition. Pure reordering is delegated to [AutocompleteContextBooster];
-     * this method owns the I/O (calling [NextWordService.predict]) and
-     * then hands the word list + predicted first-char set to the booster.
-     * Mirrors iOS `AutocompleteService.applyContextBoost`.
+     * character to the front. Routes the partition through
+     * [RustEngineBridge.nextwordBoostCandidates] — the Rust crate owns the
+     * canonical first-char partition; the platform `[TaigiWord] ↔ [String]`
+     * round-trip preserves intra-partition order so original `TaigiWord`
+     * identity is recovered post-bridge.
+     *
+     * [nextwordEnvelopeGeneration] is owned by [NextWordHandler] so all
+     * bridge calls within the IME session share state in the singleton
+     * `EngineHandle`.
      */
     private suspend fun applyContextBoost(
         words: List<TaigiWord>,
         lastSelectedWord: String?,
+        nextwordEnvelopeGeneration: Long,
     ): List<TaigiWord> {
         if (lastSelectedWord.isNullOrEmpty()) return words
 
@@ -136,6 +143,39 @@ class TaigiAutocompleteService(
         if (predictions.isEmpty()) return words
 
         val contextSet = predictions.map { it.hanzi }.toSet()
-        return AutocompleteContextBooster.boost(words, contextSet)
+        val displayTexts = words.map { it.displayText }
+        val reordered = RustEngineBridge.nextwordBoostCandidates(
+            words = displayTexts,
+            predictedFirstChars = contextSet,
+            mode = inputMode,
+            translateSwapped = settings.isTranslateSwapped,
+            associationRecordingEnabled = settings.isAssociationRecordingEnabled,
+            generation = nextwordEnvelopeGeneration,
+        )
+        return remapBoostedWords(words, reordered)
+    }
+
+    /**
+     * Map the bridge's `[String]` partition reorder back to `[TaigiWord]`,
+     * preserving original word identity. Walks `displayOrder` and pulls the
+     * next `TaigiWord` from a per-display-text FIFO. Any size mismatch falls
+     * back to original order so a bridge failure cannot drop candidates.
+     */
+    private fun remapBoostedWords(
+        original: List<TaigiWord>,
+        displayOrder: List<String>,
+    ): List<TaigiWord> {
+        if (displayOrder.size != original.size) return original
+        val queues = HashMap<String, ArrayDeque<Int>>(original.size)
+        for ((i, w) in original.withIndex()) {
+            queues.getOrPut(w.displayText) { ArrayDeque() }.addLast(i)
+        }
+        val result = ArrayList<TaigiWord>(original.size)
+        for (d in displayOrder) {
+            val q = queues[d] ?: return original
+            val head = q.removeFirstOrNull() ?: return original
+            result.add(original[head])
+        }
+        return result
     }
 }

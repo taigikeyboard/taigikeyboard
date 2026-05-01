@@ -101,6 +101,9 @@ fn tl_config() -> AppConfig {
         input_mode: "tl".to_string(),
         oo_doubletap_enabled: false,
         nn_doubletap_enabled: false,
+        is_translate_swapped: false,
+        is_association_recording_enabled: false,
+        platform_id: 0,
     }
 }
 
@@ -110,6 +113,9 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         input_mode: "poj".to_string(),
         oo_doubletap_enabled: oo,
         nn_doubletap_enabled: nn,
+        is_translate_swapped: false,
+        is_association_recording_enabled: false,
+        platform_id: 0,
     }
 }
 

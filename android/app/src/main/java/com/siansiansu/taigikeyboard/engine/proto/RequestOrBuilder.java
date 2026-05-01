@@ -76,5 +76,16 @@ public interface RequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.LexiconRequest getLexicon();
 
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   * @return Whether the nextword field is set.
+   */
+  boolean hasNextword();
+  /**
+   * <code>.taigi.engine.NextWordRequest nextword = 13;</code>
+   * @return The nextword.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordRequest getNextword();
+
   public com.siansiansu.taigikeyboard.engine.proto.Request.PayloadCase getPayloadCase();
 }

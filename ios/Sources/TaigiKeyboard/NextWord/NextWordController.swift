@@ -1,12 +1,18 @@
 import Foundation
 
-/// Platform executor for NextWord prediction on iOS.
+/// Platform executor for NextWord prediction on iOS — post-v3.5.5 Rust slice.
 ///
-/// Delegates decision logic to `NextWordEngine`; interprets the returned
-/// `Outcome.Effect`s against platform resources (Timer, SQLite service,
-/// main-thread UI callbacks, generation counter).
+/// Decision logic + persisted state moved into `engine/nextword/` (Rust); this
+/// controller is the iOS-side platform executor:
+/// - serializes intents through `RustEngineBridge.nextword*`,
+/// - interprets the returned `NextWordDecideResult.Effect` list against
+///   platform resources (Timer, SQLite service, main-thread UI callbacks),
+/// - caches `lastSelectedWord` / `isShowing` echoed back from the engine for
+///   sync read access by `ActionHandler` / `AutocompleteService`,
+/// - pushes UI visibility back into the engine via `nextwordSetIsShowing`
+///   after async predict() results render.
 ///
-/// **Public surface** preserved from the pre-split controller so call sites
+/// **Public surface** preserved from the pre-Rust controller so call sites
 /// (`ActionHandler`, `KeyboardViewController`) do not change:
 /// - `process(text:roman:requireRomanMode:triggerPrediction:)`
 /// - `rePredictAfterBackspace(lastChar:)`
@@ -30,108 +36,151 @@ final class NextWordController: SelectionContextProvider {
         self.nextWordService = nextWordService
     }
 
-    // MARK: - State
+    // MARK: - Cached state (echoed from Rust)
 
-    private var persistedState: NextWordPersistedState = .initial
+    /// Mirrors `state.last_selected_word` returned by every decide call.
+    /// Synchronous read for `SelectionContextProvider`.
+    private var cachedLastSelectedWord: String?
+
+    /// Mirrors `state.is_showing`. Set locally by `handleQueryResult` after
+    /// rendering, then pushed to the engine via `nextwordSetIsShowing` so
+    /// downstream clear / reset paths gate `clearPredictionsUI` correctly.
+    private var cachedIsShowing: Bool = false
+
     private var contextTimeoutTimer: Timer?
+
+    /// Per-IME-session envelope generation. Engine `EngineHandle` resets state
+    /// on mismatch BEFORE applying the request (composing-slice precedent —
+    /// see `ComposingManager.bumpGeneration`). Called by
+    /// `KeyboardViewController` lifecycle hooks on real input-context
+    /// changes.
+    private var envelopeGen: UInt64 = 1
 
     /// Exposed via `SelectionContextProvider` for autocomplete context boost.
     var lastSelectedWord: String? {
-        persistedState.lastSelectedWord
+        cachedLastSelectedWord
     }
 
     /// Whether NextWord predictions are currently displayed.
     var isShowing: Bool {
-        persistedState.isShowing
+        cachedIsShowing
     }
 
-    // MARK: - Public API
+    /// Conform to the protocol so `AutocompleteService.nextwordBoostCandidates`
+    /// shares the same envelope generation, avoiding spurious state resets.
+    var nextwordEnvelopeGeneration: UInt64 {
+        envelopeGen
+    }
 
-    /// Unified NextWord entry: validate → record association → update state → optionally predict.
-    /// Called by: suggestion selection, Space (`triggerPrediction=false`), Enter (`requireRomanMode=true`).
+    public func bumpEnvelopeGeneration() {
+        envelopeGen &+= 1
+        // Cross-field IME-session boundary. Rust engine state will be wiped
+        // on the next bridge call (envelope mismatch sets is_showing=false
+        // before the request processes), so a follow-up ResetFull /
+        // ClearForNewComposing cannot emit ClearPredictionsUI through the
+        // engine's was_showing gate. Force-clear platform-side cached state
+        // + UI here so cross-field stale suggestions don't linger.
+        // Codex post-impl PR #198 r3171935009.
+        stopContextTimeoutTimer()
+        if cachedIsShowing {
+            contextUpdater?.resetNextWordSuggestions()
+        }
+        cachedIsShowing = false
+        cachedLastSelectedWord = nil
+    }
+
+    // MARK: - Public API (preserved from pre-Rust controller)
+
     func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
-        apply(intent: .wordSelected(
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordWordSelected(
             text: text,
             roman: roman,
             requireRomanMode: requireRomanMode,
             triggerPrediction: triggerPrediction,
-        ))
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        applyDecideResult(result)
     }
 
-    /// Re-predict NextWord after backspace based on last remaining character.
-    /// Intentionally does NOT record associations — backspace is not a word selection.
     func rePredictAfterBackspace(lastChar: String) {
-        apply(intent: .backspace(lastChar: lastChar))
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordBackspace(
+            lastChar: lastChar,
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        applyDecideResult(result)
     }
 
-    /// Full reset: clear all state and hide UI suggestions.
-    /// Called by: backspace (empty document), textDidChange, sentence-end punctuation.
     func resetAndClearUI() {
-        apply(intent: .resetFull)
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordResetFull(
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        applyDecideResult(result)
     }
 
-    /// Hide NextWord suggestions without clearing association state.
-    /// Called by: digit input, new composing character (not hyphen).
     func clearDisplay() {
-        apply(intent: .clearForNewComposing)
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordClearForNewComposing(
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        applyDecideResult(result)
     }
 
-    // MARK: - Intent Dispatch
+    // MARK: - Effect interpretation
 
-    /// Lower a lifecycle event into an engine intent, apply the outcome.
+    /// Mirror engine state echo, then run effects in the order the engine emitted.
     ///
-    /// **Threading invariant** (inherited from pre-split controller, to be
-    /// tightened in G9): call sites must be on the main thread. `Timer`
-    /// fires on the main run-loop, `@MainActor handleQueryResult` stays on
-    /// main; keyboard action handlers run on main. No synchronization on
-    /// `persistedState` — the main-thread invariant is the contract.
-    private func apply(intent: NextWordIntent) {
-        let input = makeDecisionInput()
-        let outcome = NextWordEngine.decide(intent: intent, state: persistedState, input: input)
-        persistedState = outcome.newState
-        for effect in outcome.effects {
+    /// **Threading invariant** (inherited from pre-split controller): call
+    /// sites must be on the main thread. `Timer` fires on the main run-loop,
+    /// `@MainActor handleQueryResult` stays on main, keyboard action handlers
+    /// run on main. No synchronization on cached state — the main-thread
+    /// invariant is the contract.
+    private func applyDecideResult(_ result: RustEngineBridge.NextWordDecideResult) {
+        cachedLastSelectedWord = result.lastSelectedWord
+        cachedIsShowing = result.isShowing
+        for effect in result.effects {
             execute(effect)
         }
     }
 
-    private func makeDecisionInput() -> NextWordDecisionInput {
-        NextWordDecisionInput(nowMs: Self.currentTimestampMs, settings: currentEngineSettings())
-    }
-
-    /// Snapshot the settings fields the engine reads. Called per-intent AND
-    /// again when a prediction query resolves, so user toggles made while a
-    /// query is in-flight (e.g. POJ↔TL, Hanji swap) take effect on render.
-    private func currentEngineSettings() -> NextWordEngineSettings {
-        let current = settingsProvider.current
-        return NextWordEngineSettings(
-            inputMode: current.inputMode,
-            isTranslateSwapped: current.isTranslateSwapped,
-            isAssociationRecordingEnabled: current.isAssociationRecordingEnabled,
-        )
-    }
-
-    // MARK: - Effect Interpreter
-
-    private func execute(_ effect: NextWordOutcome.Effect) {
+    private func execute(_ effect: RustEngineBridge.NextWordDecideResult.Effect) {
         switch effect {
-        case let .rescheduleContextTimeout(after):
-            startContextTimeoutTimer(after: after)
+        case let .rescheduleContextTimeout(afterMs):
+            startContextTimeoutTimer(afterMs: afterMs)
         case .cancelContextTimeout:
             stopContextTimeoutTimer()
         case let .recordAssociation(pair):
             recordAssociation(pair)
         case let .recordCompoundAssociations(pairs):
             recordCompoundAssociations(pairs)
-        case let .queryPredictions(word, roman, generation):
-            dispatchPredictionQuery(word: word, roman: roman, generation: generation)
-        case let .clearPredictionsUI(generation):
-            clearPredictionsUI(generation: generation)
+        case let .queryPredictions(word, roman, generation, nowMs):
+            dispatchPredictionQuery(word: word, roman: roman, generation: generation, nowMs: nowMs)
+        case .clearPredictionsUI:
+            clearPredictionsUIEffect()
         }
     }
 
     // MARK: - Service I/O
 
-    private func recordAssociation(_ pair: NextWordAssociationPair) {
+    private func recordAssociation(_ pair: RustEngineBridge.NextWordAssociationPair) {
         Task { [nextWordService] in
             await nextWordService.recordAssociation(
                 prev: pair.prev,
@@ -142,9 +191,9 @@ final class NextWordController: SelectionContextProvider {
         }
     }
 
-    /// Loop associations sequentially to avoid races on the SQLite UNIQUE
-    /// constraint that protects `(prev_word, next_word)`.
-    private func recordCompoundAssociations(_ pairs: [NextWordAssociationPair]) {
+    /// Loop sequentially to avoid races on the SQLite UNIQUE constraint that
+    /// protects `(prev_word, next_word)`.
+    private func recordCompoundAssociations(_ pairs: [RustEngineBridge.NextWordAssociationPair]) {
         Task { [nextWordService] in
             for pair in pairs {
                 await nextWordService.recordAssociation(
@@ -157,53 +206,85 @@ final class NextWordController: SelectionContextProvider {
         }
     }
 
-    private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64) {
+    private func dispatchPredictionQuery(word: String, roman: String, generation: UInt64, nowMs: Int64) {
         logger.debug("[TRIGGER] querying for word='\(word)' gen=\(generation)")
 
         Task { @MainActor [nextWordService] in
             let raw = await nextWordService.predict(word: word, roman: roman)
-            handleQueryResult(raw: raw, generation: generation)
+            handleQueryResult(raw: raw, queryGeneration: generation, nowMs: nowMs)
         }
     }
 
-    /// Resolve an async prediction query. Compares the generation tagged at
-    /// dispatch time against the current persisted generation; a mismatch
-    /// means an invalidating intent fired while the query was in flight, so
-    /// the result is dropped to avoid stale UI.
+    /// Resolve an async prediction query. Pushes raw rows back through
+    /// `nextwordFilter` so the Rust engine merges + scores + sorts + truncates
+    /// + drops on stale generation. Renders the resulting `NextWordEnginePrediction`s
+    /// then pushes the new `is_showing` value back into engine state via
+    /// `nextwordSetIsShowing` — required so subsequent
+    /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetFull`
+    /// paths can emit `clearPredictionsUI` when there is UI to clear.
     @MainActor
-    private func handleQueryResult(raw: [RawNextWordPrediction], generation: UInt64) {
-        guard generation == persistedState.currentGeneration else {
-            logger.debug("[TRIGGER] dropping stale result gen=\(generation) current=\(persistedState.currentGeneration)")
+    private func handleQueryResult(
+        raw: [RustEngineBridge.NextWordRawRow],
+        queryGeneration: UInt64,
+        nowMs: Int64,
+    ) {
+        let settings = settingsProvider.current
+        let filterResult = RustEngineBridge.nextwordFilter(
+            raw: raw,
+            queryGeneration: queryGeneration,
+            nowMs: nowMs,
+            limit: 30,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        if filterResult.wasStale {
+            logger.debug("[TRIGGER] dropping stale result gen=\(queryGeneration)")
             return
         }
 
-        let predictions = NextWordEngine.filterPredictions(raw, settings: currentEngineSettings())
-
-        if predictions.isEmpty {
-            persistedState.isShowing = false
-            contextUpdater?.resetNextWordSuggestions()
+        let nowShowing = !filterResult.predictions.isEmpty
+        if nowShowing {
+            contextUpdater?.setNextWordPredictions(filterResult.predictions)
+            startContextTimeoutTimer(afterMs: Self.contextTimeoutMs)
         } else {
-            contextUpdater?.setNextWordPredictions(predictions)
-            persistedState.isShowing = true
-            startContextTimeoutTimer(after: NextWordEngine.contextTimeoutSeconds)
+            contextUpdater?.resetNextWordSuggestions()
         }
+
+        // Push the rendered visibility back into engine state.
+        let synced = RustEngineBridge.nextwordSetIsShowing(
+            nowShowing,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        cachedIsShowing = synced.isShowing
+        cachedLastSelectedWord = synced.lastSelectedWord
     }
 
-    /// Clear is synchronous to match the pre-split controller's behavior:
-    /// `clearDisplay` and `resetAndClearUI` always cleared without a main
-    /// queue hop. Routing through `DispatchQueue.main.async` would open a
-    /// race where a stale clear runs after a newer prediction query has
-    /// already rendered fresh suggestions. Main-thread invariant documented
-    /// on `apply(intent:)` keeps this safe; `generation` is informational
-    /// for Kotlin/Rust ports that may need an async gate.
-    private func clearPredictionsUI(generation _: UInt64) {
+    /// Clear is synchronous to match the pre-Rust controller's behavior:
+    /// `clearDisplay` / `resetAndClearUI` always cleared without a main-queue
+    /// hop. Routing through `DispatchQueue.main.async` would open a race
+    /// where a stale clear runs after a newer prediction query has rendered.
+    /// `generation` from the effect is informational; main-thread invariant
+    /// (above) keeps this safe.
+    private func clearPredictionsUIEffect() {
         contextUpdater?.resetNextWordSuggestions()
+        cachedIsShowing = false
     }
 
     // MARK: - Timer
 
-    private func startContextTimeoutTimer(after interval: TimeInterval) {
+    /// Mirrors `engine/nextword/src/decide.rs` `CONTEXT_TIMEOUT_MS = 30_000`.
+    /// CROSS-PLATFORM INVARIANT: changing this value requires a paired update
+    /// in the Rust crate + an `INVARIANT_*` parity-test mirror.
+    static let contextTimeoutMs: UInt64 = 30_000
+
+    private func startContextTimeoutTimer(afterMs: UInt64) {
         stopContextTimeoutTimer()
+        let interval = TimeInterval(afterMs) / 1000.0
         contextTimeoutTimer = Timer.scheduledTimer(
             withTimeInterval: interval,
             repeats: false,
@@ -219,7 +300,15 @@ final class NextWordController: SelectionContextProvider {
 
     private func handleContextTimeout() {
         logger.debug("[TIMEOUT] Context timeout - resetting")
-        apply(intent: .contextTimeoutFired)
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordContextTimeoutFired(
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen
+        )
+        applyDecideResult(result)
     }
 
     // MARK: - Clock

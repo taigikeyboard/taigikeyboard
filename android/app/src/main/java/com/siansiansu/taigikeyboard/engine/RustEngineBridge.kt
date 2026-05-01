@@ -38,6 +38,7 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 import com.siansiansu.taigikeyboard.engine.proto.TpsToTl
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
@@ -701,6 +702,499 @@ object RustEngineBridge {
             isComposing = proto.isComposing,
         )
     }
+
+    // endregion
+    // region NextWord slice (9 ops) — v3.5.5
+
+    /**
+     * Bridge-synthesized companion to the proto `DecideResult`. Consumed
+     * by the Android NextWord platform executor (`NextWordHandler`);
+     * effect list executes in order.
+     */
+    data class NextWordDecideResult(
+        val effects: List<Effect>,
+        val currentGeneration: Long,
+        val isShowing: Boolean,
+        /**
+         * `null` when the engine has no last-selected word; otherwise the
+         * echo of `state.last_selected_word`. Empty wire string maps to
+         * `null` per proto contract (`""` == `nil`).
+         */
+        val lastSelectedWord: String?,
+    ) {
+        sealed class Effect {
+            data class RescheduleContextTimeout(val afterMs: Long) : Effect()
+            object CancelContextTimeout : Effect()
+            data class RecordAssociation(val pair: NextWordAssociationPair) : Effect()
+            data class RecordCompoundAssociations(val pairs: List<NextWordAssociationPair>) : Effect()
+            /**
+             * `nowMs` is reused by the platform predict() call so the
+             * association-window clock and the user-row decay scoring see
+             * ONE consistent "now" per intent. Per
+             * `nextword-engine-boundary.md` §13.3.
+             */
+            data class QueryPredictions(
+                val word: String,
+                val roman: String,
+                val generation: Long,
+                val nowMs: Long,
+            ) : Effect()
+            data class ClearPredictionsUI(val generation: Long) : Effect()
+        }
+
+        companion object {
+            val NOOP = NextWordDecideResult(
+                effects = emptyList(),
+                currentGeneration = 0L,
+                isShowing = false,
+                lastSelectedWord = null,
+            )
+        }
+    }
+
+    /**
+     * Bigram association pair surfaced through `RecordAssociation` /
+     * `RecordCompoundAssociations` effects.
+     */
+    data class NextWordAssociationPair(
+        val prev: String,
+        val prevTl: String,
+        val next: String,
+        val nextTl: String,
+    )
+
+    /**
+     * UI-ready prediction value. `subtitle` is `null` when the wire string
+     * is empty (filter contract — happens iff roman is empty).
+     */
+    data class NextWordEnginePrediction(
+        val text: String,
+        val subtitle: String?,
+        val hanzi: String,
+        val tl: String,
+        /**
+         * Merged score. Android maps to `TaigiWord.lengthScore`. iOS does
+         * not currently consume this field (predictions render in array
+         * order); kept for parity + diagnostics.
+         */
+        val score: Double,
+    )
+
+    /**
+     * Filter+merge+sort+limit result. `wasStale=true` indicates the
+     * platform-supplied `queryGeneration` did not match the engine's
+     * current generation — late async result; predictions are empty.
+     */
+    data class NextWordFilterResult(
+        val predictions: List<NextWordEnginePrediction>,
+        val wasStale: Boolean,
+    )
+
+    /**
+     * Pre-merge un-scored row from the platform `NextWordService.predict`
+     * SQL pipeline. Crosses the bridge to the Rust filter step.
+     */
+    data class NextWordRawRow(
+        val hanzi: String,
+        val tl: String,
+        val count: Long,
+        val lastUsedMs: Long,
+        val source: Source,
+    ) {
+        enum class Source { DICT, USER }
+    }
+
+    /** Engine-state read for executor lookup. */
+    data class NextWordStateSnapshot(
+        val lastSelectedWord: String?,
+        val isShowing: Boolean,
+        val currentGeneration: Long,
+    )
+
+    // -- Decide intents (6 — UpdateLastSelectedWord is Android-only) --
+
+    @JvmStatic
+    fun nextwordWordSelected(
+        text: String,
+        roman: String,
+        requireRomanMode: Boolean,
+        triggerPrediction: Boolean,
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected.newBuilder()
+            .setText(text)
+            .setRoman(roman)
+            .setRequireRomanMode(requireRomanMode)
+            .setTriggerPrediction(triggerPrediction)
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.wordSelected = payload },
+            op = "nextwordWordSelected",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    @JvmStatic
+    fun nextwordBackspace(
+        lastChar: String,
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace.newBuilder()
+            .setLastChar(lastChar)
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.backspace = payload },
+            op = "nextwordBackspace",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    @JvmStatic
+    fun nextwordContextTimeoutFired(
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired.newBuilder()
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.contextTimeoutFired = payload },
+            op = "nextwordContextTimeoutFired",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    @JvmStatic
+    fun nextwordClearForNewComposing(
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing.newBuilder()
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.clearForNewComposing = payload },
+            op = "nextwordClearForNewComposing",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    @JvmStatic
+    fun nextwordResetFull(
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ResetFull.newBuilder()
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.resetFull = payload },
+            op = "nextwordResetFull",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    /**
+     * Platform → engine UI visibility sync. Call after rendering an async
+     * predict() result (or clearing it on empty result) so the engine's
+     * `state.is_showing` stays accurate. Downstream
+     * `nextwordClearForNewComposing` / sentence-end / context timeout /
+     * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
+     * No effects, no `current_generation` bump.
+     */
+    @JvmStatic
+    fun nextwordSetIsShowing(
+        isShowing: Boolean,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.newBuilder()
+            .setIsShowing(isShowing)
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.setIsShowing = payload },
+            op = "nextwordSetIsShowing",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    /**
+     * Android-only Space-path intent. Codex v1 P1: preserves the
+     * "compound-only / no timer reschedule / no generation bump"
+     * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
+     * The iOS bridge intentionally omits this intent.
+     */
+    @JvmStatic
+    fun nextwordUpdateLastSelectedWord(
+        text: String,
+        roman: String,
+        nowMs: Long,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordDecideResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.newBuilder()
+            .setText(text)
+            .setRoman(roman)
+            .setInput(decisionInput(nowMs))
+            .build()
+        return nextwordDecideDispatch(
+            methodSetter = { it.updateLastSelectedWord = payload },
+            op = "nextwordUpdateLastSelectedWord",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        )
+    }
+
+    // -- Filter / Boost / QueryState --
+
+    @JvmStatic
+    fun nextwordFilter(
+        raw: List<NextWordRawRow>,
+        queryGeneration: Long,
+        nowMs: Long,
+        limit: Int,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordFilterResult {
+        val builder = com.siansiansu.taigikeyboard.engine.proto.FilterPredictions.newBuilder()
+            .setQueryGeneration(queryGeneration)
+            .setNowMs(nowMs)
+            .setLimit(limit)
+        for (row in raw) {
+            builder.addRaw(
+                com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.newBuilder()
+                    .setHanzi(row.hanzi)
+                    .setTl(row.tl)
+                    .setCount(row.count)
+                    .setLastUsedMs(row.lastUsedMs)
+                    .setSource(
+                        when (row.source) {
+                            NextWordRawRow.Source.DICT -> com.siansiansu.taigikeyboard.engine.proto.Source.SOURCE_DICT
+                            NextWordRawRow.Source.USER -> com.siansiansu.taigikeyboard.engine.proto.Source.SOURCE_USER
+                        },
+                    )
+                    .build(),
+            )
+        }
+        val resp = nextwordDispatch(
+            methodSetter = { it.filterPredictions = builder.build() },
+            op = "nextwordFilter",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        ) ?: return NextWordFilterResult(emptyList(), wasStale = false)
+        if (!resp.hasFilter()) {
+            recordFailure("nextwordFilter", "missing filter result")
+            return NextWordFilterResult(emptyList(), wasStale = false)
+        }
+        val filter = resp.filter
+        val predictions = filter.predictionsList.map { p ->
+            NextWordEnginePrediction(
+                text = p.text,
+                subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
+                hanzi = p.hanzi,
+                tl = p.tl,
+                score = p.score,
+            )
+        }
+        return NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)
+    }
+
+    @JvmStatic
+    fun nextwordBoostCandidates(
+        words: List<String>,
+        predictedFirstChars: Set<String>,
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): List<String> {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.newBuilder()
+            .addAllWords(words)
+            .addAllPredictedFirstChars(predictedFirstChars)
+            .build()
+        val resp = nextwordDispatch(
+            methodSetter = { it.boostCandidates = payload },
+            op = "nextwordBoostCandidates",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        ) ?: return words
+        if (!resp.hasBoost()) {
+            recordFailure("nextwordBoostCandidates", "missing boost result")
+            return words
+        }
+        return resp.boost.wordsList.toList()
+    }
+
+    @JvmStatic
+    fun nextwordQueryState(
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+        generation: Long,
+    ): NextWordStateSnapshot {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.newBuilder().build()
+        val resp = nextwordDispatch(
+            methodSetter = { it.queryState = payload },
+            op = "nextwordQueryState",
+            generation = generation,
+            config = nextwordConfig(mode, translateSwapped, associationRecordingEnabled),
+        ) ?: return NextWordStateSnapshot(null, false, 0L)
+        if (!resp.hasStateSnapshot()) {
+            recordFailure("nextwordQueryState", "missing state snapshot")
+            return NextWordStateSnapshot(null, false, 0L)
+        }
+        val s = resp.stateSnapshot
+        return NextWordStateSnapshot(
+            lastSelectedWord = if (s.lastSelectedWord.isEmpty()) null else s.lastSelectedWord,
+            isShowing = s.isShowing,
+            currentGeneration = s.currentGeneration,
+        )
+    }
+
+    // -- Private helpers --
+
+    private fun decisionInput(nowMs: Long): com.siansiansu.taigikeyboard.engine.proto.DecisionInput =
+        com.siansiansu.taigikeyboard.engine.proto.DecisionInput.newBuilder()
+            .setNowMs(nowMs)
+            .build()
+
+    private fun nextwordConfig(
+        mode: InputMode,
+        translateSwapped: Boolean,
+        associationRecordingEnabled: Boolean,
+    ): AppConfig =
+        AppConfig.newBuilder()
+            .setInputMode(
+                when (mode) {
+                    InputMode.POJ -> "poj"
+                    InputMode.TL -> "tl"
+                    InputMode.ENGLISH -> "english"
+                },
+            )
+            .setOoDoubletapEnabled(false)
+            .setNnDoubletapEnabled(false)
+            .setIsTranslateSwapped(translateSwapped)
+            .setIsAssociationRecordingEnabled(associationRecordingEnabled)
+            .setPlatformId(com.siansiansu.taigikeyboard.engine.proto.Platform.PLATFORM_ANDROID)
+            .build()
+
+    private inline fun nextwordDispatch(
+        methodSetter: (com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.Builder) -> Unit,
+        op: String,
+        generation: Long,
+        config: AppConfig,
+    ): com.siansiansu.taigikeyboard.engine.proto.NextWordResponse? {
+        val nextwordBuilder = com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.newBuilder()
+        methodSetter(nextwordBuilder)
+        val request = Request.newBuilder()
+            .setId(nextId.incrementAndGet())
+            .setGeneration(generation)
+            .setConfigSnapshot(config)
+            .setNextword(nextwordBuilder.build())
+            .build()
+        val response = sendRawBytes(request.toByteArray())
+        if (response == null) {
+            recordFailure(op, "response decode failed")
+            return null
+        }
+        if (response.error != ErrorCode.OK) {
+            recordFailure(op, "engine returned ${response.error}", response.error.number)
+            return null
+        }
+        if (!response.hasNextword()) {
+            recordFailure(op, "missing nextword payload")
+            return null
+        }
+        return response.nextword
+    }
+
+    private inline fun nextwordDecideDispatch(
+        methodSetter: (com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.Builder) -> Unit,
+        op: String,
+        generation: Long,
+        config: AppConfig,
+    ): NextWordDecideResult {
+        val resp = nextwordDispatch(methodSetter, op, generation, config) ?: return NextWordDecideResult.NOOP
+        if (!resp.hasDecide()) {
+            recordFailure(op, "missing decide result")
+            return NextWordDecideResult.NOOP
+        }
+        return synthDecideResult(resp.decide)
+    }
+
+    private fun synthDecideResult(
+        proto: com.siansiansu.taigikeyboard.engine.proto.DecideResult,
+    ): NextWordDecideResult {
+        val effects: List<NextWordDecideResult.Effect> = proto.effectsList.mapNotNull { eff ->
+            when {
+                eff.hasRescheduleContextTimeout() ->
+                    NextWordDecideResult.Effect.RescheduleContextTimeout(eff.rescheduleContextTimeout.afterMs)
+                eff.hasCancelContextTimeout() -> NextWordDecideResult.Effect.CancelContextTimeout
+                eff.hasRecordAssociation() ->
+                    NextWordDecideResult.Effect.RecordAssociation(synthAssociationPair(eff.recordAssociation.pair))
+                eff.hasRecordCompoundAssociations() ->
+                    NextWordDecideResult.Effect.RecordCompoundAssociations(
+                        eff.recordCompoundAssociations.pairsList.map(::synthAssociationPair),
+                    )
+                eff.hasQueryPredictions() ->
+                    NextWordDecideResult.Effect.QueryPredictions(
+                        word = eff.queryPredictions.word,
+                        roman = eff.queryPredictions.roman,
+                        generation = eff.queryPredictions.generation,
+                        nowMs = eff.queryPredictions.nowMs,
+                    )
+                eff.hasClearPredictionsUi() ->
+                    NextWordDecideResult.Effect.ClearPredictionsUI(eff.clearPredictionsUi.generation)
+                else -> null
+            }
+        }
+        return NextWordDecideResult(
+            effects = effects,
+            currentGeneration = proto.currentGeneration,
+            isShowing = proto.isShowing,
+            lastSelectedWord = if (proto.lastSelectedWord.isEmpty()) null else proto.lastSelectedWord,
+        )
+    }
+
+    private fun synthAssociationPair(
+        proto: com.siansiansu.taigikeyboard.engine.proto.AssociationPair,
+    ): NextWordAssociationPair = NextWordAssociationPair(
+        prev = proto.prev,
+        prevTl = proto.prevTl,
+        next = proto.next,
+        nextTl = proto.nextTl,
+    )
 
     // endregion
     // region Diagnostics (Codex v2 §8 / v3 §7 / v4 §5)

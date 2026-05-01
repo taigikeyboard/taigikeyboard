@@ -38,7 +38,8 @@ protoc \
     "$PROTO_DIR/envelope.proto" \
     "$PROTO_DIR/phonetics.proto" \
     "$PROTO_DIR/composing.proto" \
-    "$PROTO_DIR/lexicon.proto"
+    "$PROTO_DIR/lexicon.proto" \
+    "$PROTO_DIR/nextword.proto"
 
 # Java output: --java_out=lite for protobuf-javalite runtime. The
 # `option java_package` in the .proto files puts files under
@@ -49,7 +50,8 @@ protoc \
     "$PROTO_DIR/envelope.proto" \
     "$PROTO_DIR/phonetics.proto" \
     "$PROTO_DIR/composing.proto" \
-    "$PROTO_DIR/lexicon.proto"
+    "$PROTO_DIR/lexicon.proto" \
+    "$PROTO_DIR/nextword.proto"
 
 echo "generated:"
 ls -1 "$SWIFT_OUT"

@@ -12,8 +12,10 @@ import SQLite3
 ///
 /// Facade 責任：
 /// - 持有 public API、concurrency state、capacity policy、wiring。
-/// - Schema (`NextWordSchema`)、CRUD (`NextWordRepository`)、
-///   ranking (`NextWordScorer`) 各司其職。
+/// - Schema (`NextWordSchema`)、CRUD (`NextWordRepository`) 各司其職。
+/// - 排序 / 合併 / 截斷 移交 Rust 端 `engine/nextword/` filter 步驟
+///   (post-v3.5.5)：`predict()` 回傳未排序的 `[NextWordRawRow]`，呼叫端
+///   走 `RustEngineBridge.nextwordFilter` 完成 score + merge + sort + limit。
 final class NextWordService: @unchecked Sendable {
     // MARK: - Constants (capacity policy)
 
@@ -90,32 +92,37 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public API: Prediction
 
-    /// 預測下一個詞
+    /// Predict raw rows for the next-word bigram bridge.
+    ///
+    /// Post-v3.5.5: returns un-merged un-scored rows tagged by source. The
+    /// caller passes them to `RustEngineBridge.nextwordFilter` which scores
+    /// (dict via DICT_WEIGHT; user via decay+learning math), merges by
+    /// `(hanzi, tl)`, sorts desc by score, applies limit, and shapes per
+    /// display rules.
     ///
     /// Mixed bigram model:
     /// - Dict layer: look up by last character → single-char predictions.
     /// - User layer: look up by full word → full-word predictions.
-    func predict(word: String, roman: String = "", limit: Int = Constants.defaultLimit) async -> [RawNextWordPrediction] {
+    func predict(
+        word: String,
+        roman: String = "",
+        limit: Int = Constants.defaultLimit,
+    ) async -> [RustEngineBridge.NextWordRawRow] {
         guard !word.isEmpty else { return [] }
         guard let last = word.last else { return [] }
         let lastChar = String(last)
 
         logger.debug("[PREDICT][ENTRY] word='\(word)' lastChar='\(lastChar)'")
 
-        var results: [String: RawNextWordPrediction] = [:]
-        await queryDictAssociations(lastChar: lastChar, limit: limit, results: &results)
-        let dictCount = results.count
-        logger.debug("[PREDICT][DICT] dictResults.count=\(dictCount) for lastChar='\(lastChar)'")
+        var rows: [RustEngineBridge.NextWordRawRow] = []
+        await collectDictAssociations(lastChar: lastChar, limit: limit, rows: &rows)
+        logger.debug("[PREDICT][DICT] dictRows.count=\(rows.count) for lastChar='\(lastChar)'")
 
-        await queryUserAssociations(word: word, roman: roman, limit: limit, results: &results)
-        let totalCount = results.count
-        logger.debug("[PREDICT][USER] after user merge: totalResults.count=\(totalCount) (user added \(totalCount - dictCount) new entries) for word='\(word)'")
+        let dictCount = rows.count
+        await collectUserAssociations(word: word, roman: roman, limit: limit, rows: &rows)
+        logger.debug("[PREDICT][USER] userRows added=\(rows.count - dictCount) total=\(rows.count) for word='\(word)'")
 
-        let sorted = Array(results.values
-            .sorted { $0.score > $1.score }
-            .prefix(limit))
-        logger.debug("[PREDICT] '\(word)' -> \(sorted.count) results")
-        return sorted
+        return rows
     }
 
     // MARK: - Public API: Recording
@@ -243,19 +250,24 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Prediction Pipeline
 
-    /// Dict-side prediction — reads from `association.bin` mmap,
-    /// applies the user's enabled-dictionary bitmask filter.
-    private func queryDictAssociations(
+    /// Dict-side raw rows — reads from `association.bin` mmap, applies the
+    /// user's enabled-dictionary bitmask filter, returns un-scored rows
+    /// tagged `.dict`. `lastUsedMs = 0` since dict entries have no
+    /// last-used timestamp; the Rust filter ignores it for `.dict` source.
+    ///
+    /// Over-fetches `limit * 2` so the Rust filter has slack to merge
+    /// `(hanzi, tl)` collisions across dict + user without dropping below
+    /// the caller's requested limit (Codex post-impl P2-1).
+    private func collectDictAssociations(
         lastChar: String,
         limit: Int,
-        results: inout [String: RawNextWordPrediction],
+        rows: inout [RustEngineBridge.NextWordRawRow],
     ) async {
         guard let reader = associationReader else {
             logger.warning("[DICT] Association binary reader not available")
             return
         }
 
-        // Over-fetch 2x to account for deduplication when merging dict + user results
         let entries = reader.lookup(prevWord: lastChar, limit: limit * 2)
         let enabledDicts = EnabledDictionaries(from: settingsProvider.current)
 
@@ -264,48 +276,43 @@ final class NextWordService: @unchecked Sendable {
                 entryBitmask: entry.bitmask,
                 enabledDicts: enabledDicts,
             ) else { continue }
-
-            let prediction = RawNextWordPrediction(
+            rows.append(RustEngineBridge.NextWordRawRow(
                 hanzi: entry.nextWord,
                 tl: entry.nextTl,
-                score: NextWordScorer.scoreDict(count: entry.count),
-            )
-            results["\(prediction.hanzi)\t\(prediction.tl)"] = prediction
+                count: Int64(entry.count),
+                lastUsedMs: 0,
+                source: .dict,
+            ))
         }
     }
 
-    /// User-side prediction — reads from `user_association.db` and merges
-    /// (adding scores) with any dict-side predictions already in `results`.
-    private func queryUserAssociations(
+    /// User-side raw rows — reads from `user_association.db`, returns
+    /// un-scored rows tagged `.user` so the Rust filter can apply
+    /// `calculateUserScore` (decay + learning bonus) at filter time.
+    ///
+    /// Over-fetches `limit * 2` for the same merge-slack reason as
+    /// `collectDictAssociations` (Codex post-impl P2-1).
+    private func collectUserAssociations(
         word: String,
         roman: String,
         limit: Int,
-        results: inout [String: RawNextWordPrediction],
+        rows: inout [RustEngineBridge.NextWordRawRow],
     ) async {
         do {
             try await ensureUserTablesCreated()
 
-            // Over-fetch 2x to account for deduplication when merging dict + user results
             let userRows = try await userConnectionManager.execute { db in
                 NextWordRepository.fetchUserRows(db: db, word: word, roman: roman, limit: limit * 2)
             }
 
-            let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
             for row in userRows {
-                let userScore = NextWordScorer.calculateUserScore(
-                    count: row.count, lastUsedMs: row.lastUsedMs, nowMs: nowMs,
-                )
-                let key = "\(row.hanzi)\t\(row.tl)"
-
-                if let existing = results[key] {
-                    results[key] = RawNextWordPrediction(
-                        hanzi: row.hanzi,
-                        tl: row.tl.isEmpty ? existing.tl : row.tl,
-                        score: existing.score + userScore,
-                    )
-                } else {
-                    results[key] = RawNextWordPrediction(hanzi: row.hanzi, tl: row.tl, score: userScore)
-                }
+                rows.append(RustEngineBridge.NextWordRawRow(
+                    hanzi: row.hanzi,
+                    tl: row.tl,
+                    count: Int64(row.count),
+                    lastUsedMs: row.lastUsedMs,
+                    source: .user,
+                ))
             }
         } catch {
             logger.error("[USER] Query failed: \(error.localizedDescription)")
