@@ -71,6 +71,20 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.5",
+                "2026/05/02",
+                listOf(
+                    "Internal: next-word prediction engine rewritten in Rust (no behavior change).",
+                ),
+            ),
+            VersionEntry(
+                "3.5.4",
+                "2026/05/01",
+                listOf(
+                    "Internal: composing buffer engine rewritten in Rust (no behavior change).",
+                ),
+            ),
+            VersionEntry(
                 "3.5.3",
                 "2026/04/29",
                 listOf(
