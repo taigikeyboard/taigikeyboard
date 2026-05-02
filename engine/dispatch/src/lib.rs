@@ -123,12 +123,14 @@ fn run(bytes: &[u8]) -> Response {
                         )),
                     }
                 }
-                // Tags 11-15 — engine/lexicon (read path).
+                // Tags 11-17 — engine/lexicon.
                 lex_method @ (protos::engine::lexicon_request::Method::Install(_)
                 | protos::engine::lexicon_request::Method::Search(_)
                 | protos::engine::lexicon_request::Method::SearchWithSources(_)
                 | protos::engine::lexicon_request::Method::SearchByHanzi(_)
-                | protos::engine::lexicon_request::Method::AssocLookup(_)) => {
+                | protos::engine::lexicon_request::Method::AssocLookup(_)
+                | protos::engine::lexicon_request::Method::ClassifyInput(_)
+                | protos::engine::lexicon_request::Method::IsHanzi(_)) => {
                     match lexicon::dispatch::handle(lex_method) {
                         Ok(lex_resp) => Response {
                             id,
@@ -264,8 +266,7 @@ mod tests {
             panic!("expected Lexicon payload, got {payload:?}");
         };
         let result = lex_resp.result.expect("result present");
-        let protos::engine::lexicon_response::Result::ProcessCandidatesResult(pc) = result
-        else {
+        let protos::engine::lexicon_response::Result::ProcessCandidatesResult(pc) = result else {
             panic!("expected ProcessCandidatesResult, got {result:?}");
         };
         assert_eq!(pc.ranked.len(), 1, "duplicate dropped by engine dedup");

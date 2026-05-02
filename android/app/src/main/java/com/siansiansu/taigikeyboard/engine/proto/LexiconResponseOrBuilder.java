@@ -75,5 +75,27 @@ public interface LexiconResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse getAssocLookupResult();
 
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   * @return Whether the classifyInputResult field is set.
+   */
+  boolean hasClassifyInputResult();
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   * @return The classifyInputResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse getClassifyInputResult();
+
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * @return Whether the isHanziResult field is set.
+   */
+  boolean hasIsHanziResult();
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * @return The isHanziResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.ResultCase getResultCase();
 }

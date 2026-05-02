@@ -13,10 +13,14 @@ option java_multiple_files = true;
 // dispatch routes by oneof method.
 //
 // Out of slice (no version commitment):
-// - Hanji classification (`isHanzi`) — kept platform per audit § 3
 // - Capitalization (`capitalize`, `startsWithRomanLetter`) — kept platform
 //   per audit § 3 (Android does not have these in CandidateProcessor;
 //   moving them to Rust would change Android behavior)
+//
+// v3.5.7 added `classify_input` + `is_hanzi` for IME autocomplete classifier
+// and Tab3 hanzi short-circuit. Tab3 parity correction in same slice —
+// Android `DictionarySearchViewModel.kt:97` previously used Kotlin `Char.code`
+// (16-bit), missing CJK Extensions B/C/D/E.
 
 // =========================================================================
 // Request envelope
@@ -30,6 +34,8 @@ message LexiconRequest {
     SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
     SearchByHanziRequest      search_by_hanzi       = 14;  // Tab3 hanzi prefix
     AssocLookupRequest        assoc_lookup          = 15;  // bundled bigram
+    ClassifyInputRequest      classify_input        = 16;  // v3.5.7 IME classifier
+    IsHanziRequest            is_hanzi              = 17;  // v3.5.7 Tab3 short-circuit
   }
 }
 
@@ -167,6 +173,24 @@ message AssocLookupRequest {
   uint32 enabled_sources_bitmask = 3;
 }
 
+// `ClassifyInputRequest` is the IME autocomplete classifier entry. The engine
+// resolves `(InputType, search_key)` in a single FFI call — replaces iOS
+// `AutocompleteInputClassifier.classify(rawInput:)` and Android
+// `AutocompleteInputClassifier.determineInputType` per-keystroke ladder.
+//
+// `mode` is intentionally absent: classification is mode-independent. Both
+// platforms compute identically today (audit § 4.3 / D-3).
+message ClassifyInputRequest {
+  string raw = 1;
+}
+
+// `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
+// short-circuit hanzi queries. Tab3 needs the predicate without paying the
+// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+message IsHanziRequest {
+  string text = 1;
+}
+
 // =========================================================================
 // Response envelope
 // =========================================================================
@@ -179,6 +203,8 @@ message LexiconResponse {
     SearchWithSourcesResponse  search_with_sources_result  = 13;
     SearchByHanziResponse      search_by_hanzi_result      = 14;
     AssocLookupResponse        assoc_lookup_result         = 15;
+    ClassifyInputResponse      classify_input_result       = 16;
+    IsHanziResponse            is_hanzi_result             = 17;
   }
 }
 
@@ -224,6 +250,21 @@ message SearchByHanziResponse {
 // the raw matches.
 message AssocLookupResponse {
   repeated LexiconAssocEntry entries = 1;
+}
+
+// `ClassifyInputResponse` carries the classifier output. `input_type` resolves
+// via short-circuit precedence (hanzi → tone-marked → numeric-tone →
+// no-tone). `search_key` is TPS-converted on the engine side so the platform
+// never sees raw TPS in lexicon search keys. See
+// INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE +
+// INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY.
+message ClassifyInputResponse {
+  InputType input_type = 1;
+  string    search_key = 2;
+}
+
+message IsHanziResponse {
+  bool is_hanzi = 1;
 }
 
 // =========================================================================

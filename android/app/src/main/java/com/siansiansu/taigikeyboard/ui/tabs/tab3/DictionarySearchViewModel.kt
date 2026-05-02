@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.LexiconBridge
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -94,7 +95,11 @@ class DictionarySearchViewModel(
                     else -> InputMode.TL
                 }
 
-            val isCJK = query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }
+            // Kotlin `Char.code` is 16-bit (UTF-16 code unit), so any inline
+            // CJK range check fails to match supplementary-plane codepoints.
+            // Route through Rust for the canonical 6-range coverage. See
+            // INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+            val isCJK = LexiconBridge.isHanzi(query)
 
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode")

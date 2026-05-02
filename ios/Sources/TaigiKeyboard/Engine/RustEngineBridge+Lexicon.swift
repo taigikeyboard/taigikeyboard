@@ -185,6 +185,51 @@ public extension RustEngineBridge {
         }
     }
 
+    // MARK: - Classification (v3.5.7)
+
+    /// Classifier output — pairs the resolved `InputType` with the
+    /// engine-built `searchKey` (TPS-converted on the engine side).
+    struct ClassificationResult: Equatable {
+        public let inputType: InputType
+        public let searchKey: String
+    }
+
+    /// Classify `rawInput` into `(InputType, searchKey)`. Single FFI hop
+    /// replaces the per-keystroke ladder of `hasToneMarks` /
+    /// `containsTPS` / `tpsToTL` calls. See
+    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
+    static func classifyInput(_ raw: String) -> ClassificationResult {
+        var payload = Taigi_Engine_ClassifyInputRequest()
+        payload.raw = raw
+        guard let resp = lexiconDispatch(method: .classifyInput(payload), op: "classifyInput") else {
+            return ClassificationResult(inputType: .romanWithoutTone, searchKey: raw)
+        }
+        guard case let .classifyInputResult(r)? = resp.result else {
+            recordFailure(op: "classifyInput", message: "missing classify_input result")
+            return ClassificationResult(inputType: .romanWithoutTone, searchKey: raw)
+        }
+        return ClassificationResult(
+            inputType: platformInputType(from: r.inputType),
+            searchKey: r.searchKey
+        )
+    }
+
+    /// Tab3 short-circuit predicate. True iff `text` contains any CJK
+    /// codepoint (Unified + Extensions A-E). See
+    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
+    static func isHanzi(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsHanziRequest()
+        payload.text = text
+        guard let resp = lexiconDispatch(method: .isHanzi(payload), op: "isHanzi") else {
+            return false
+        }
+        guard case let .isHanziResult(r)? = resp.result else {
+            recordFailure(op: "isHanzi", message: "missing is_hanzi result")
+            return false
+        }
+        return r.isHanzi
+    }
+
     // MARK: - Private helpers
 
     private static func taigiWordToRow(_ proto: Taigi_Engine_TaigiWord) -> LexiconRow {
@@ -195,5 +240,20 @@ public extension RustEngineBridge {
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil
         )
+    }
+
+    /// Map `Taigi_Engine_InputType` to the platform `InputType` enum.
+    /// Unspecified / unrecognised values fall back to `.romanWithoutTone`
+    /// (matches the safe-fallback contract of `lexiconDispatch` errors).
+    /// Mirrors Android `LexiconBridge.platformInputType` —
+    /// must drift together.
+    private static func platformInputType(from proto: Taigi_Engine_InputType) -> InputType {
+        switch proto {
+        case .hanzi:           return .hanzi
+        case .romanWithTone:   return .romanWithTone
+        case .romanNoTone:     return .romanWithoutTone
+        case .unspecified, .UNRECOGNIZED:
+            return .romanWithoutTone
+        }
     }
 }

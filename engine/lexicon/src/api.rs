@@ -3,15 +3,19 @@
 //! envelope responses.
 
 use protos::engine::{
-    AssocLookupRequest, AssocLookupResponse, InstallRequest, InstallResponse, LexiconAssocEntry,
+    AssocLookupRequest, AssocLookupResponse, ClassifyInputRequest, ClassifyInputResponse,
+    InstallRequest, InstallResponse, IsHanziRequest, IsHanziResponse, LexiconAssocEntry,
     SearchByHanziRequest, SearchByHanziResponse, SearchRequest, SearchResponse,
     SearchWithSourcesRequest, SearchWithSourcesResponse, TaigiWord,
 };
 
+use crate::classification;
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;
-use crate::search::{self, LexiconAssocOut, LexiconRowOut, SearchInputMode, SearchInputType, SearchParams};
+use crate::search::{
+    self, LexiconAssocOut, LexiconRowOut, SearchInputMode, SearchInputType, SearchParams,
+};
 
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
     let paths = LexiconPaths::validated(
@@ -113,6 +117,20 @@ pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, Lexi
     })
 }
 
+pub fn classify_input(req: ClassifyInputRequest) -> Result<ClassifyInputResponse, LexiconError> {
+    let result = classification::classify_input(&req.raw);
+    Ok(ClassifyInputResponse {
+        input_type: result.input_type as i32,
+        search_key: result.search_key,
+    })
+}
+
+pub fn is_hanzi(req: IsHanziRequest) -> Result<IsHanziResponse, LexiconError> {
+    Ok(IsHanziResponse {
+        is_hanzi: classification::is_hanzi(&req.text),
+    })
+}
+
 fn build_search_params(req: &SearchRequest) -> Result<SearchParams, LexiconError> {
     Ok(SearchParams {
         input: req.input.clone(),
@@ -163,4 +181,3 @@ fn assoc_out_to_proto(entry: LexiconAssocOut) -> LexiconAssocEntry {
         candidate_tl: entry.candidate_tl,
     }
 }
-

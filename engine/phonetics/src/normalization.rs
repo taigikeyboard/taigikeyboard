@@ -53,7 +53,7 @@ pub fn normalize_input(input: &str) -> String {
 
 /// `Method::HasToneMarks` — true if `text` (after NFD) contains any combining
 /// tone mark recognised by `COMBINING_TO_TONE_NUM`.
-pub(crate) fn has_tone_marks(text: &str) -> bool {
+pub fn has_tone_marks(text: &str) -> bool {
     text.nfd().any(|c| COMBINING_TO_TONE_NUM.contains_key(&c))
 }
 

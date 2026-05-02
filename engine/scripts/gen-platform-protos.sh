@@ -53,6 +53,17 @@ protoc \
     "$PROTO_DIR/lexicon.proto" \
     "$PROTO_DIR/nextword.proto"
 
+# Post-process generated Java: protoc-gen-java emits trailing whitespace and
+# an extra blank line at EOF that fail `git diff --check` and dirty the tree
+# on every `make build`. There is no protoc flag to disable this. Strip in
+# place so consecutive rebuilds produce a clean diff. Swift output via
+# protoc-gen-swift does not have this issue, so only Java is processed.
+JAVA_PROTO_DIR="$JAVA_OUT/com/siansiansu/taigikeyboard/engine/proto"
+for f in "$JAVA_PROTO_DIR"/*.java; do
+    perl -i -pe 's/[ \t]+$//' "$f"
+    perl -i -e 'local $/; $_ = <>; s/\n+\z/\n/; print' "$f"
+done
+
 echo "generated:"
 ls -1 "$SWIFT_OUT"
 ls -1 "$JAVA_OUT/com/siansiansu/taigikeyboard/engine/proto"

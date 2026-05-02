@@ -1,9 +1,11 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
+import com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
+import com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
 import com.siansiansu.taigikeyboard.engine.proto.Request
@@ -12,6 +14,7 @@ import com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord
+import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
 
 /**
  * Lexicon read-path bridge. Top-level object (NOT a member of
@@ -181,6 +184,61 @@ object LexiconBridge {
             )
         }
     }
+
+    // region Classification (v3.5.7)
+
+    /** Classifier output — `inputType` is the platform `DictInputType`. */
+    data class ClassificationResult(
+        val inputType: DictInputType,
+        val searchKey: String,
+    )
+
+    /**
+     * Classify `raw` into `(InputType, search_key)`. Single FFI hop replaces
+     * the per-keystroke ladder of `hasToneMarks` / `containsTPS` /
+     * `tpsToTL` calls. See `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
+     */
+    fun classifyInput(raw: String): ClassificationResult {
+        val payload = ClassifyInputRequest.newBuilder().setRaw(raw).build()
+        val resp = dispatch(LexiconRequest.newBuilder().setClassifyInput(payload).build())
+            ?: return ClassificationResult(DictInputType.RomanWithoutTone, raw)
+        if (!resp.hasClassifyInputResult()) {
+            return ClassificationResult(DictInputType.RomanWithoutTone, raw)
+        }
+        val r = resp.classifyInputResult
+        return ClassificationResult(
+            inputType = platformInputType(r.inputType),
+            searchKey = r.searchKey,
+        )
+    }
+
+    /**
+     * Tab3 short-circuit predicate. True iff `text` contains any CJK
+     * codepoint (Unified + Extensions A-E). See
+     * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
+     */
+    fun isHanzi(text: String): Boolean {
+        val payload = IsHanziRequest.newBuilder().setText(text).build()
+        val resp = dispatch(LexiconRequest.newBuilder().setIsHanzi(payload).build()) ?: return false
+        if (!resp.hasIsHanziResult()) return false
+        return resp.isHanziResult.isHanzi
+    }
+
+    /**
+     * Map proto `InputType` to the platform `DictInputType`. Unspecified /
+     * unrecognised values fall back to `RomanWithoutTone` (matches the
+     * safe-fallback contract used by the dispatch error paths).
+     * Mirrors iOS `RustEngineBridge.platformInputType` — must drift
+     * together.
+     */
+    private fun platformInputType(proto: InputType): DictInputType =
+        when (proto) {
+            InputType.INPUT_TYPE_HANZI           -> DictInputType.Hanzi
+            InputType.INPUT_TYPE_ROMAN_WITH_TONE -> DictInputType.RomanWithTone
+            else                                 -> DictInputType.RomanWithoutTone
+        }
+
+    // endregion Classification
 
     private fun dispatch(lexiconRequest: LexiconRequest): LexiconResponse? {
         val request = Request.newBuilder()

@@ -27,6 +27,8 @@
 11. [Settings read semantics](#11-settings-read-semantics)
 12. [Logger backend neutrality](#12-logger-backend-neutrality)
 13. [Composing-buffer reset semantics](#13-composing-buffer-reset-semantics)
+14. [Lexicon — hanzi-input search guard (D-8 parity correction)](#14-lexicon--hanzi-input-search-guard-d-8-parity-correction)
+15. [Lexicon — input classification (v3.5.7)](#15-lexicon--input-classification-v357)
 
 ---
 
@@ -416,3 +418,54 @@ The Unicode bucket is partial coverage of the existing umbrella label and need n
 The platform-layer tests are required (NOT only the Rust unit) because D-8's regression surface — custom-dict-on-hanzi — only exists outside the Rust engine. The custom-dict SQLite path is platform-side; only a service-layer test catches the iOS-specific layering side-effect that previously surfaced custom-dict entries on hanzi input.
 
 **Implementation status (2026-05-01)**: in v3.5.6 main commits, the engine-layer guard (Rust `search()` short-circuit) is wired and tested (`engine/lexicon/tests/parity.rs`). The platform-layer guards (iOS `LexiconService.search` early `[]` return on `inputType == .hanzi`, Android equivalent) and their parity tests land in the v3.5.6 commit 10/11 follow-up pass that does the full service-layer rewire. Until then, iOS continues to call `lookupCustomDictionary` first; the user-visible regression scope (paste-hanzi-into-composing-buffer + matching custom-dict entry) is dormant pending the rewire.
+
+---
+
+## 15. Lexicon — input classification (v3.5.7)
+
+**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. See `docs/engine/v3.5.7-classification-slice-audit.md` and `docs/engine/v3.5.7-classification-slice-plan.md`.
+
+This umbrella label has four named subcases. Same `raw` string ⇒ same `(InputType, search_key)` tuple regardless of input mode, settings, or platform.
+
+### `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`
+
+`is_hanzi(text)` returns `true` iff `text` contains at least one Unicode codepoint in any of:
+
+- CJK Unified Ideographs `0x4E00–0x9FFF`
+- CJK Extension A `0x3400–0x4DBF`
+- CJK Extension B `0x20000–0x2A6DF`
+- CJK Extension C `0x2A700–0x2B73F`
+- CJK Extension D `0x2B740–0x2B81F`
+- CJK Extension E `0x2B820–0x2CEAF`
+
+Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion is a separate behavior change, not part of this parity correction.
+
+**Tab3 parity correction**: pre-v3.5.7, Android `DictionarySearchViewModel.kt:97` used `query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }`. Kotlin `Char.code` is a 16-bit UTF-16 code unit (0–65535), so the `0x20000..0x2A6DF` clause was unreachable; effective coverage was Unified + A only. v3.5.7 routes both platforms' Tab3 through the canonical Rust 6-range check (`LexiconBridge.isHanzi` / `RustEngineBridge.isHanzi`).
+
+### `INVARIANT_LEX_INPUT_CLASSIFICATION_NUMERIC_TONE_SET`
+
+`contains_numeric_tone(text)` returns `true` iff `text` contains at least one ASCII digit in `{'2','3','5','6','7','8','9'}`. Digits `'0'`, `'1'`, `'4'` are NOT numeric tone markers.
+
+**ASCII-only is intentional, parity correction toward this invariant**: pre-v3.5.7, iOS used Swift `Character.isNumber` (Unicode general category N\* — includes full-width digits, Roman numerals, vulgar fractions) and Android used Kotlin `Char.isDigit()` (category Nd — includes full-width digits but not Roman numerals). The two platforms were therefore not aligned on edge inputs, and both had a subtle bug: their `!= '1' / '4' / '0'` exclusion checks compared against ASCII literals, so full-width `１` / `４` / `０` were not excluded and would be misclassified as tone markers. v3.5.7 collapses both platforms onto the ASCII-only contract above. Realistic Taigi IME input only ever produces ASCII tone digits (no IME flips into full-width digit mode for romanization typing), so the contracted set has no observable user impact. Filed under the `cross-platform-alignment.md` §1 "refactor surfaces existing divergence — correct toward documented invariant" allowance; surfaced by Codex on PR #202 (r3176669106) and explicitly accepted.
+
+### `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`
+
+`classify_input(raw)` resolves `InputType` via short-circuit precedence:
+
+1. `is_hanzi(raw)` ⇒ `InputType.Hanzi`
+2. `phonetics::has_tone_marks(raw)` ⇒ `InputType.RomanWithTone`
+3. `contains_numeric_tone(raw)` ⇒ `InputType.RomanWithTone`
+4. otherwise ⇒ `InputType.RomanNoTone`
+
+### `INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY`
+
+`classify_input(raw).search_key` is:
+
+- `phonetics::tps_to_tl(raw)` if `phonetics::contains_tps(raw)` is `true`
+- `raw` otherwise (no transformation when not TPS)
+
+### Tests
+
+- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers all four subcases (28 tests).
+- **iOS** — bridge round-trip exercised through `AutocompleteService.classify` end-to-end on real keystrokes; future explicit invariant test deferred (no `androidTest`-equivalent infra change in this PR).
+- **Android** — same posture as iOS; `LexiconBridge.classifyInput` tested via `TaigiAutocompleteService` end-to-end on real device.

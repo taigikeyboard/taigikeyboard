@@ -23,8 +23,11 @@ mod tps_adjust;
 // `cli` crate and integration tests. The cross-platform FFI envelope
 // is `engine/dispatch::process_request`; this crate exposes only the
 // in-process Rust API.
-pub use api::{convert, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System};
-pub use normalization::{normalize_input, taigi_unicode_base_form};
+pub use api::{
+    contains_tps, convert, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
+};
+pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;
 pub use syllable::{normalize_to_tl, strip_tone_mark};
 pub use tl::to_tl;
+pub use tps::from_zhuyin as tps_to_tl;

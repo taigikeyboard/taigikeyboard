@@ -64,7 +64,7 @@ final class DictionarySearchService: @unchecked Sendable {
         guard !query.isEmpty else { return [] }
 
         let inputMode = settingsProvider.current.inputMode
-        let isCJK = CandidateProcessor.isHanzi(query)
+        let isCJK = RustEngineBridge.isHanzi(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
         let systemResults = fetchSystemResults(

@@ -173,6 +173,24 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
     set {method = .assocLookup(newValue)}
   }
 
+  /// v3.5.7 IME classifier
+  public var classifyInput: Taigi_Engine_ClassifyInputRequest {
+    get {
+      if case .classifyInput(let v)? = method {return v}
+      return Taigi_Engine_ClassifyInputRequest()
+    }
+    set {method = .classifyInput(newValue)}
+  }
+
+  /// v3.5.7 Tab3 short-circuit
+  public var isHanzi: Taigi_Engine_IsHanziRequest {
+    get {
+      if case .isHanzi(let v)? = method {return v}
+      return Taigi_Engine_IsHanziRequest()
+    }
+    set {method = .isHanzi(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Method: Equatable, Sendable {
@@ -188,6 +206,10 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
     case searchByHanzi(Taigi_Engine_SearchByHanziRequest)
     /// bundled bigram
     case assocLookup(Taigi_Engine_AssocLookupRequest)
+    /// v3.5.7 IME classifier
+    case classifyInput(Taigi_Engine_ClassifyInputRequest)
+    /// v3.5.7 Tab3 short-circuit
+    case isHanzi(Taigi_Engine_IsHanziRequest)
 
   }
 
@@ -393,6 +415,40 @@ public struct Taigi_Engine_AssocLookupRequest: Sendable {
   public init() {}
 }
 
+/// `ClassifyInputRequest` is the IME autocomplete classifier entry. The engine
+/// resolves `(InputType, search_key)` in a single FFI call — replaces iOS
+/// `AutocompleteInputClassifier.classify(rawInput:)` and Android
+/// `AutocompleteInputClassifier.determineInputType` per-keystroke ladder.
+///
+/// `mode` is intentionally absent: classification is mode-independent. Both
+/// platforms compute identically today (audit § 4.3 / D-3).
+public struct Taigi_Engine_ClassifyInputRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var raw: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
+/// short-circuit hanzi queries. Tab3 needs the predicate without paying the
+/// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+public struct Taigi_Engine_IsHanziRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var text: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Taigi_Engine_LexiconResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -448,6 +504,22 @@ public struct Taigi_Engine_LexiconResponse: Sendable {
     set {result = .assocLookupResult(newValue)}
   }
 
+  public var classifyInputResult: Taigi_Engine_ClassifyInputResponse {
+    get {
+      if case .classifyInputResult(let v)? = result {return v}
+      return Taigi_Engine_ClassifyInputResponse()
+    }
+    set {result = .classifyInputResult(newValue)}
+  }
+
+  public var isHanziResult: Taigi_Engine_IsHanziResponse {
+    get {
+      if case .isHanziResult(let v)? = result {return v}
+      return Taigi_Engine_IsHanziResponse()
+    }
+    set {result = .isHanziResult(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Result: Equatable, Sendable {
@@ -457,6 +529,8 @@ public struct Taigi_Engine_LexiconResponse: Sendable {
     case searchWithSourcesResult(Taigi_Engine_SearchWithSourcesResponse)
     case searchByHanziResult(Taigi_Engine_SearchByHanziResponse)
     case assocLookupResult(Taigi_Engine_AssocLookupResponse)
+    case classifyInputResult(Taigi_Engine_ClassifyInputResponse)
+    case isHanziResult(Taigi_Engine_IsHanziResponse)
 
   }
 
@@ -547,6 +621,38 @@ public struct Taigi_Engine_AssocLookupResponse: Sendable {
   // methods supported on all messages.
 
   public var entries: [Taigi_Engine_LexiconAssocEntry] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// `ClassifyInputResponse` carries the classifier output. `input_type` resolves
+/// via short-circuit precedence (hanzi → tone-marked → numeric-tone →
+/// no-tone). `search_key` is TPS-converted on the engine side so the platform
+/// never sees raw TPS in lexicon search keys. See
+/// INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE +
+/// INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY.
+public struct Taigi_Engine_ClassifyInputResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var inputType: Taigi_Engine_InputType = .unspecified
+
+  public var searchKey: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Taigi_Engine_IsHanziResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var isHanzi: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -693,7 +799,7 @@ extension Taigi_Engine_InputMode: SwiftProtobuf._ProtoNameProviding {
 
 extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates\0\u{1}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{3}assoc_lookup\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates\0\u{1}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{3}assoc_lookup\0\u{3}classify_input\0\u{3}is_hanzi\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -779,6 +885,32 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
           self.method = .assocLookup(v)
         }
       }()
+      case 16: try {
+        var v: Taigi_Engine_ClassifyInputRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .classifyInput(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .classifyInput(v)
+        }
+      }()
+      case 17: try {
+        var v: Taigi_Engine_IsHanziRequest?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .isHanzi(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .isHanzi(v)
+        }
+      }()
       default: break
       }
     }
@@ -813,6 +945,14 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
     case .assocLookup?: try {
       guard case .assocLookup(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case .classifyInput?: try {
+      guard case .classifyInput(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+    }()
+    case .isHanzi?: try {
+      guard case .isHanzi(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case nil: break
     }
@@ -1116,9 +1256,69 @@ extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
+extension Taigi_Engine_ClassifyInputRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassifyInputRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.raw) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.raw.isEmpty {
+      try visitor.visitSingularStringField(value: self.raw, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ClassifyInputRequest, rhs: Taigi_Engine_ClassifyInputRequest) -> Bool {
+    if lhs.raw != rhs.raw {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_IsHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".IsHanziRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_IsHanziRequest, rhs: Taigi_Engine_IsHanziRequest) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates_result\0\u{3}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{3}assoc_lookup_result\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates_result\0\u{3}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{3}assoc_lookup_result\0\u{3}classify_input_result\0\u{3}is_hanzi_result\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1204,6 +1404,32 @@ extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
           self.result = .assocLookupResult(v)
         }
       }()
+      case 16: try {
+        var v: Taigi_Engine_ClassifyInputResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .classifyInputResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .classifyInputResult(v)
+        }
+      }()
+      case 17: try {
+        var v: Taigi_Engine_IsHanziResponse?
+        var hadOneofValue = false
+        if let current = self.result {
+          hadOneofValue = true
+          if case .isHanziResult(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.result = .isHanziResult(v)
+        }
+      }()
       default: break
       }
     }
@@ -1238,6 +1464,14 @@ extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
     case .assocLookupResult?: try {
       guard case .assocLookupResult(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    }()
+    case .classifyInputResult?: try {
+      guard case .classifyInputResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
+    }()
+    case .isHanziResult?: try {
+      guard case .isHanziResult(let v)? = self.result else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case nil: break
     }
@@ -1436,6 +1670,71 @@ extension Taigi_Engine_AssocLookupResponse: SwiftProtobuf.Message, SwiftProtobuf
 
   public static func ==(lhs: Taigi_Engine_AssocLookupResponse, rhs: Taigi_Engine_AssocLookupResponse) -> Bool {
     if lhs.entries != rhs.entries {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_ClassifyInputResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClassifyInputResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}input_type\0\u{3}search_key\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.inputType) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.searchKey) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.inputType != .unspecified {
+      try visitor.visitSingularEnumField(value: self.inputType, fieldNumber: 1)
+    }
+    if !self.searchKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.searchKey, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ClassifyInputResponse, rhs: Taigi_Engine_ClassifyInputResponse) -> Bool {
+    if lhs.inputType != rhs.inputType {return false}
+    if lhs.searchKey != rhs.searchKey {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_IsHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".IsHanziResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}is_hanzi\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.isHanzi) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.isHanzi != false {
+      try visitor.visitSingularBoolField(value: self.isHanzi, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_IsHanziResponse, rhs: Taigi_Engine_IsHanziResponse) -> Bool {
+    if lhs.isHanzi != rhs.isHanzi {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

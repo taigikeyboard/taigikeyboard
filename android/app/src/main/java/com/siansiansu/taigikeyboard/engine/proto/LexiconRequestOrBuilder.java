@@ -123,5 +123,43 @@ public interface LexiconRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest getAssocLookup();
 
+  /**
+   * <pre>
+   * v3.5.7 IME classifier
+   * </pre>
+   *
+   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
+   * @return Whether the classifyInput field is set.
+   */
+  boolean hasClassifyInput();
+  /**
+   * <pre>
+   * v3.5.7 IME classifier
+   * </pre>
+   *
+   * <code>.taigi.engine.ClassifyInputRequest classify_input = 16;</code>
+   * @return The classifyInput.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest getClassifyInput();
+
+  /**
+   * <pre>
+   * v3.5.7 Tab3 short-circuit
+   * </pre>
+   *
+   * <code>.taigi.engine.IsHanziRequest is_hanzi = 17;</code>
+   * @return Whether the isHanzi field is set.
+   */
+  boolean hasIsHanzi();
+  /**
+   * <pre>
+   * v3.5.7 Tab3 short-circuit
+   * </pre>
+   *
+   * <code>.taigi.engine.IsHanziRequest is_hanzi = 17;</code>
+   * @return The isHanzi.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest getIsHanzi();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.MethodCase getMethodCase();
 }

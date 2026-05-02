@@ -24,6 +24,8 @@ public  final class LexiconResponse extends
     SEARCH_WITH_SOURCES_RESULT(13),
     SEARCH_BY_HANZI_RESULT(14),
     ASSOC_LOOKUP_RESULT(15),
+    CLASSIFY_INPUT_RESULT(16),
+    IS_HANZI_RESULT(17),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -45,6 +47,8 @@ public  final class LexiconResponse extends
         case 13: return SEARCH_WITH_SOURCES_RESULT;
         case 14: return SEARCH_BY_HANZI_RESULT;
         case 15: return ASSOC_LOOKUP_RESULT;
+        case 16: return CLASSIFY_INPUT_RESULT;
+        case 17: return IS_HANZI_RESULT;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -361,6 +365,106 @@ public  final class LexiconResponse extends
    */
   private void clearAssocLookupResult() {
     if (resultCase_ == 15) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int CLASSIFY_INPUT_RESULT_FIELD_NUMBER = 16;
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   */
+  @java.lang.Override
+  public boolean hasClassifyInputResult() {
+    return resultCase_ == 16;
+  }
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse getClassifyInputResult() {
+    if (resultCase_ == 16) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   */
+  private void setClassifyInputResult(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 16;
+  }
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   */
+  private void mergeClassifyInputResult(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse value) {
+    value.getClass();
+  if (resultCase_ == 16 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 16;
+  }
+  /**
+   * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+   */
+  private void clearClassifyInputResult() {
+    if (resultCase_ == 16) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int IS_HANZI_RESULT_FIELD_NUMBER = 17;
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   */
+  @java.lang.Override
+  public boolean hasIsHanziResult() {
+    return resultCase_ == 17;
+  }
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult() {
+    if (resultCase_ == 17) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   */
+  private void setIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 17;
+  }
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   */
+  private void mergeIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+    value.getClass();
+  if (resultCase_ == 17 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 17;
+  }
+  /**
+   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   */
+  private void clearIsHanziResult() {
+    if (resultCase_ == 17) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -763,6 +867,102 @@ public  final class LexiconResponse extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    @java.lang.Override
+    public boolean hasClassifyInputResult() {
+      return instance.hasClassifyInputResult();
+    }
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse getClassifyInputResult() {
+      return instance.getClassifyInputResult();
+    }
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    public Builder setClassifyInputResult(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse value) {
+      copyOnWrite();
+      instance.setClassifyInputResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    public Builder setClassifyInputResult(
+        com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setClassifyInputResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    public Builder mergeClassifyInputResult(com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse value) {
+      copyOnWrite();
+      instance.mergeClassifyInputResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ClassifyInputResponse classify_input_result = 16;</code>
+     */
+    public Builder clearClassifyInputResult() {
+      copyOnWrite();
+      instance.clearClassifyInputResult();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    @java.lang.Override
+    public boolean hasIsHanziResult() {
+      return instance.hasIsHanziResult();
+    }
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult() {
+      return instance.getIsHanziResult();
+    }
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    public Builder setIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+      copyOnWrite();
+      instance.setIsHanziResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    public Builder setIsHanziResult(
+        com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setIsHanziResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    public Builder mergeIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+      copyOnWrite();
+      instance.mergeIsHanziResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     */
+    public Builder clearIsHanziResult() {
+      copyOnWrite();
+      instance.clearIsHanziResult();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.LexiconResponse)
   }
   @java.lang.Override
@@ -787,10 +987,12 @@ public  final class LexiconResponse extends
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\n\u000f\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +
-              "<\u0000\r<\u0000\u000e<\u0000\u000f<\u0000";
+              "\u0000\b\u0001\u0000\n\u0011\b\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

@@ -11,25 +11,12 @@ import Foundation
 /// in the v3.5.3 follow-up (PR #192) once `LexiconService` cold-start
 /// started routing through
 /// `RustEngineBridge.processCandidates(..., mergeOrderOnly: true)`. The
-/// remaining helpers (`isHanzi`, `capitalize`, `startsWithRomanLetter`)
-/// are platform-specific text classification / orchestration used outside
-/// the lexicon ranking pipeline.
+/// hanzi-range check moved to `engine/lexicon::classification` in v3.5.7
+/// (`RustEngineBridge.isHanzi`). The remaining helpers (`capitalize`,
+/// `startsWithRomanLetter`) are platform-specific text orchestration used
+/// outside the lexicon ranking pipeline and remain platform-side in this
+/// slice.
 enum CandidateProcessor {
-    // MARK: - Text Classification
-
-    /// Check if a string contains Hanzi characters
-    static func isHanzi(_ input: String) -> Bool {
-        input.contains { char in
-            guard let scalar = char.unicodeScalars.first else { return false }
-            return (0x4E00 ... 0x9FFF).contains(scalar.value)
-                || (0x3400 ... 0x4DBF).contains(scalar.value)
-                || (0x20000 ... 0x2A6DF).contains(scalar.value)
-                || (0x2A700 ... 0x2B73F).contains(scalar.value)
-                || (0x2B740 ... 0x2B81F).contains(scalar.value)
-                || (0x2B820 ... 0x2CEAF).contains(scalar.value)
-        }
-    }
-
     // MARK: - Capitalization
 
     /// 根據輸入文字的大小寫狀態，處理目標文字的大小寫

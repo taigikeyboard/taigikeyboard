@@ -1,13 +1,14 @@
-//! Dispatch: route `LexiconRequest.method` oneof variants 11-15 to the
+//! Dispatch: route `LexiconRequest.method` oneof variants 11-17 to the
 //! per-method API. Tag 10 (process_candidates) stays routed to `ranking`
-//! by `engine/dispatch::lib.rs`; this crate only owns the read-path
-//! variants per plan §6.
+//! by `engine/dispatch::lib.rs`; this crate owns the read-path variants
+//! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup) and the
+//! classification variants (ClassifyInput/IsHanzi).
 
 use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
-    AssocLookupRequest, InstallRequest, LexiconResponse, SearchByHanziRequest, SearchRequest,
-    SearchWithSourcesRequest,
+    AssocLookupRequest, ClassifyInputRequest, InstallRequest, IsHanziRequest, LexiconResponse,
+    SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
 };
 
 use crate::api;
@@ -36,9 +37,7 @@ pub fn handle_search_with_sources(
     })
 }
 
-pub fn handle_search_by_hanzi(
-    req: SearchByHanziRequest,
-) -> Result<LexiconResponse, LexiconError> {
+pub fn handle_search_by_hanzi(req: SearchByHanziRequest) -> Result<LexiconResponse, LexiconError> {
     let resp = api::search_by_hanzi(req)?;
     Ok(LexiconResponse {
         result: Some(LexResult::SearchByHanziResult(resp)),
@@ -49,6 +48,20 @@ pub fn handle_assoc_lookup(req: AssocLookupRequest) -> Result<LexiconResponse, L
     let resp = api::assoc_lookup(req)?;
     Ok(LexiconResponse {
         result: Some(LexResult::AssocLookupResult(resp)),
+    })
+}
+
+pub fn handle_classify_input(req: ClassifyInputRequest) -> Result<LexiconResponse, LexiconError> {
+    let resp = api::classify_input(req)?;
+    Ok(LexiconResponse {
+        result: Some(LexResult::ClassifyInputResult(resp)),
+    })
+}
+
+pub fn handle_is_hanzi(req: IsHanziRequest) -> Result<LexiconResponse, LexiconError> {
+    let resp = api::is_hanzi(req)?;
+    Ok(LexiconResponse {
+        result: Some(LexResult::IsHanziResult(resp)),
     })
 }
 
@@ -65,5 +78,7 @@ pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
         Method::SearchWithSources(req) => handle_search_with_sources(req),
         Method::SearchByHanzi(req) => handle_search_by_hanzi(req),
         Method::AssocLookup(req) => handle_assoc_lookup(req),
+        Method::ClassifyInput(req) => handle_classify_input(req),
+        Method::IsHanzi(req) => handle_is_hanzi(req),
     }
 }

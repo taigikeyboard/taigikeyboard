@@ -61,26 +61,51 @@ For each thread, decide one of:
 - **DECLINE** — the finding is wrong, already-handled, or not applicable. Reply with the reason; resolve.
 - **ALREADY-FIXED** — the latest commit on the branch already addresses this. Reply with the commit SHA; resolve.
 
-Show the evaluation table to the user before any code changes:
+Show the evaluation table to the user before any code changes. For FIX entries, also include the Step 4 review tier (A / B / C) so the user can sanity-check the planned review depth before you commit.
 
 ```
-| # | Prio | Path:Line              | Verdict      | Plan / Reason                          |
-|---|------|------------------------|--------------|----------------------------------------|
-| 1 | P1   | foo/bar.rs:42          | FIX          | Thread &AppConfig through snapshot()   |
-| 2 | P2   | ios/.../X.swift:88     | ALREADY-FIXED| Addressed in c385451                   |
-| 3 | P3   | docs/engine/y.md:10    | DECLINE      | Stale — section was removed in commit 19|
+| # | Prio | Path:Line              | Verdict      | Tier | Plan / Reason                          |
+|---|------|------------------------|--------------|------|----------------------------------------|
+| 1 | P1   | foo/bar.rs:42          | FIX          | C    | Thread &AppConfig through snapshot()   |
+| 2 | P2   | ios/RustEngine/...     | FIX          | A    | Rebuild xcframework — no source change |
+| 3 | P2   | ios/.../X.swift:88     | ALREADY-FIXED| —    | Addressed in c385451                   |
+| 4 | P3   | docs/engine/y.md:10    | DECLINE      | —    | Stale — section was removed in commit 19|
 ```
 
 ### 4. Apply FIX entries
 
-Per `feedback_codex_review_sandwich.md`, every coding round needs Codex pre-impl + post-impl review. For batched FIX entries:
+`feedback_codex_review_sandwich.md` makes pre-impl + post-impl Codex review the **default for coding rounds**, but Codex-PR-fix sweeps often include changes that carry no logic risk (artifact rebuilds, comment fixes). Pick a review tier per FIX batch using this rubric, and surface the chosen tier in the evaluation table from Step 3.
 
-- Group fixes by logical unit when natural; otherwise one commit per finding.
-- Run **one** combined Codex pre-impl review covering the planned fixes (cite the specific finding IDs).
+**Tier A — skip sandwich entirely** (no source-code logic change):
+
+- Pure artifact regeneration (xcframework / `librust_taigi.a` / generated proto bindings) — the underlying source already passed sandwich at the original commit; this commit only contains the regenerated binary.
+- Whitespace-only / trailing-newline / EOF cleanup.
+- Comment-only edits with no semantic content (typo fix, link update).
+- DECLINE / ALREADY-FIXED replies — no diff at all.
+
+**Tier B — post-impl only** (low-risk source change):
+
+- Single-file doc/comment edit that carries semantic content (wrong cross-ref, stale API name).
+- Renaming a private symbol or local variable for clarity, no API surface impact.
+- Removing a single clearly-dead helper the PR already orphaned (verifiable by grep).
+- Test-only edits.
+
+**Tier C — full sandwich** (default for anything else):
+
+- Any source change that affects runtime behavior.
+- Multi-file edits.
+- Anything touching `engine/dispatch/`, `engine/protos/`, FFI surface (`engine/swift-ffi/`, `engine/android-jni/`), or shared-core boundary.
+- Refactors, new code paths, public API additions/removals.
+- When in doubt, default to Tier C.
+
+Apply per batch:
+
+- Group fixes by logical unit when natural; otherwise one commit per finding. Mixed-tier fixes in one batch upgrade to the highest tier present.
+- Tier C: run **one** combined Codex pre-impl review covering the planned fixes (cite the specific finding IDs).
 - Apply fixes.
-- Run Codex post-impl review on the resulting diff.
-- Commit per `feedback_auto_commit_push.md` (commit + push without asking, no risky ops). Commit message must reference the discussion comment ID, e.g. `(Codex PR #197 r3169707395)`.
-- If a fix touches Rust under `engine/`, rebuild the xcframework via `engine/scripts/build-xcframework.sh` and include the regenerated artifacts in the commit. Per `feedback_no_rust_ci.md` the gate runs locally — never push without rebuilding.
+- Tier B & C: run Codex post-impl review on the resulting diff. Tier A skips post-impl too.
+- Commit per `feedback_auto_commit_push.md` (commit + push without asking, no risky ops). Commit message must reference the discussion comment ID, e.g. `(Codex PR #197 r3169707395)`. For Tier A artifact-only commits, the message must explicitly say "regenerated artifact, no source change" so the audit trail reflects why sandwich was skipped.
+- If a fix touches Rust under `engine/`, rebuild the xcframework via `engine/scripts/build-xcframework.sh` and include the regenerated artifacts in the commit. Per `feedback_no_rust_ci.md` the gate runs locally — never push without rebuilding. The rebuild itself is Tier A even when the source change is Tier C — bundle if same batch, otherwise separate commit.
 - If a fix touches `engine/composing/src/transition.rs` or `api.rs`, also run `cargo test -p composing` (per `feedback_manual_build_test.md` the user runs platform builds, but Rust workspace tests are scripted-safe).
 
 ### 5. Reply + resolve on GitHub
@@ -123,7 +148,7 @@ Print:
 
 - Per `feedback_codex_only.md`: never call Gemini or other reviewers; the bot under sweep IS Codex, and the sandwich reviewer is also Codex.
 - Per `feedback_workaround_circuit_breaker.md`: if a fix attempt fails review twice, STOP — list it as DISCUSS and surface to the user, do not stack patches.
-- Per `feedback_review_before_impl.md` + `feedback_codex_review_sandwich.md`: pre-impl Codex review is mandatory before any code change in this skill, even for "trivial" fixes.
+- Per `feedback_review_before_impl.md` + `feedback_codex_review_sandwich.md`: pre-impl + post-impl Codex review is the default, but Step 4's tier rubric scopes it to Tier C (logic changes). Tier A (artifact regen, comment-only) skips both gates; Tier B (low-risk source edit) runs post-impl only. The rubric only relaxes review *for this PR-fix sweep skill* — general coding rounds still follow the feedback memory's full sandwich rule.
 - Per `feedback_auto_commit_push.md`: commit + push without asking on the feature branch; pause for risky ops (push to main, force-push, scope drift). This skill should never push to main.
 - Per `feedback_round_hygiene.md`: each Codex sweep is its own coding round when fixes are applied — bundle the swept fixes into commits within the same PR (do NOT open a new PR per finding).
 - Project rule #4 (CLAUDE.md): never edit `.xcodeproj` / `.pbxproj` / `build.gradle`. If a finding requires editing one of these files, mark DISCUSS and surface to the user.

@@ -5,7 +5,7 @@ ENGINE := engine
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test help
+.PHONY: build test doc help
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
 # + Android jniLibs, run tests. The only build entry point.
@@ -27,6 +27,15 @@ build:
 test:
 	cd $(ENGINE) && cargo test --workspace
 
+# Generate rustdoc HTML for the workspace and open in browser. Excludes
+# android-jni because it shares `[lib] name = "rust_taigi"` with swift-ffi
+# and rustdoc cannot emit two crates to the same target/doc/<name>/ path.
+# To inspect android-jni instead, run:
+#   cd engine && cargo doc --no-deps -p android-jni --document-private-items --open
+doc:
+	cd $(ENGINE) && cargo doc --no-deps --workspace --document-private-items --exclude android-jni --open
+
 help:
 	@echo "  make build  Full rebuild: proto regen + iOS + Android + tests"
 	@echo "  make test   cargo test --workspace"
+	@echo "  make doc    Build rustdoc HTML for engine workspace and open in browser"
