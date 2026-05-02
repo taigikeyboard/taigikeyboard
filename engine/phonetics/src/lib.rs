@@ -24,7 +24,7 @@ mod tps_adjust;
 // is `engine/dispatch::process_request`; this crate exposes only the
 // in-process Rust API.
 pub use api::{
-    contains_tps, convert, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
+    contains_tps, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
 };
 pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;

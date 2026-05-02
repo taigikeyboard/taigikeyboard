@@ -210,76 +210,23 @@ fn to_poj_non_ts_initial_unchanged() {
 // Cross-validates against canonical taigi-converter:
 //   node -e "import('./src/converter.js').then(m => console.log(m.convert('uannh5','tl','poj')))"
 //   → "oâⁿh"
+//
+// NB: drives `to_poj` directly (the SYLLABLE_RE-based `convert` API was
+// removed — runtime takes the delimiter-based `*_display_to_*_display`
+// path which doesn't suffer from the codepoint-enumeration trap).
 
 #[test]
 fn to_poj_uannh_tone5_marks_second_vowel() {
-    use phonetics::{convert, System};
-    // tl→poj path: parse_syllable("uannh5") → ("", "uannh", "5");
-    // assembler = to_poj → tl_final_to_poj("uannh") = "oa\u{207f}h" → place_poj_tone_mark.
-    let result = convert("uannh5", System::Tl, System::Poj).unwrap();
+    use phonetics::to_poj;
+    // tl→poj: assembler input ("", "uannh", "5") → tl_final_to_poj("uannh")
+    // = "oa\u{207f}h" → place_poj_tone_mark on tone 5.
+    let result = to_poj("", "uannh", "5");
     assert_eq!(result, "o\u{00e2}\u{207f}h", "expected oâⁿh, got {result}");
 }
 
 #[test]
 fn to_poj_uennh_tone3_marks_second_vowel() {
-    use phonetics::{convert, System};
-    // Parallel case: TL "uennh" → POJ "oeⁿh"; tone 3 mark on 'e'.
-    let result = convert("uennh3", System::Tl, System::Poj).unwrap();
+    use phonetics::to_poj;
+    let result = to_poj("", "uennh", "3");
     assert_eq!(result, "o\u{00e8}\u{207f}h", "expected oèⁿh, got {result}");
-}
-
-// MARK: - P1 regression — Codex PR #183 discussion r3143631196.
-// SYLLABLE_RE must include UPPERCASE precomposed vowels, lowercase í/û,
-// caron triplet ǐ/ǒ/ǔ, and POJ tone 9 breve ă (U+0103). Previously these
-// inputs were silently bypassed by `convert` (regex didn't match → no
-// rewrite attempted → original returned).
-
-#[test]
-fn convert_uppercase_poj_to_tl_does_not_bypass() {
-    use phonetics::{convert, System};
-    // "Ká" — POJ K + acute. Pre-fix: returned verbatim. Post-fix: enters the
-    // conversion pipeline. K initial maps unchanged; acute stays. Output is
-    // identical to input here, but the PIPELINE was reached — verified via
-    // CHÂN test below where output differs.
-    let result = convert("K\u{00e1}", System::Poj, System::Tl).unwrap();
-    assert_eq!(result, "K\u{00e1}");
-}
-
-#[test]
-fn convert_uppercase_chan_poj_to_tl_substitutes_initial() {
-    use phonetics::{convert, System};
-    // POJ "CHÂN" → TL "TSÂN" (single-h ch → ts; chh would have been tsh).
-    // Pre-fix this returned "CHÂN" verbatim because the SYLLABLE_RE class
-    // missed uppercase Â (U+00C2).
-    let result = convert("CH\u{00c2}N", System::Poj, System::Tl).unwrap();
-    assert_eq!(result, "TS\u{00c2}N", "expected TSÂN, got {result}");
-}
-
-#[test]
-fn convert_lowercase_i_acute_round_trips() {
-    use phonetics::{convert, System};
-    // Pre-fix: "kí" silently returned. Post-fix: enters pipeline. í (U+00ED)
-    // is now in the SYLLABLE_RE class.
-    let result = convert("k\u{00ed}", System::Poj, System::Tl).unwrap();
-    assert_eq!(result, "k\u{00ed}");
-}
-
-#[test]
-fn convert_lowercase_u_circumflex_round_trips() {
-    use phonetics::{convert, System};
-    let result = convert("k\u{00fb}", System::Poj, System::Tl).unwrap();
-    assert_eq!(result, "k\u{00fb}");
-}
-
-#[test]
-fn convert_poj_tone9_breve_to_tl_double_acute() {
-    use phonetics::{convert, System};
-    // POJ "kă" (k + breve = tone 9) → TL k + U+030B (double acute, NFC).
-    // No precomposed exists for TL tone 9; output is k + combining mark.
-    // Pre-fix: ă (U+0103) was missing from the class; "kă" returned verbatim.
-    let result = convert("k\u{0103}", System::Poj, System::Tl).unwrap();
-    assert!(
-        result.contains('\u{030b}'),
-        "expected TL double-acute U+030B in output; got {result:?}"
-    );
 }

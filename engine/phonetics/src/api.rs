@@ -6,14 +6,10 @@
 
 use crate::case_adjust::adjust_nasal_marker_case;
 use crate::poj::to_poj;
-use crate::syllable::{
-    is_stop_tone, normalize_to_tl, parse_syllable, split_initial_final, strip_tone_mark,
-};
+use crate::syllable::{is_stop_tone, normalize_to_tl, split_initial_final, strip_tone_mark};
 use crate::tl::to_tl;
-use crate::tps::{is_zhuyin, to_zhuyin};
-use once_cell::sync::Lazy;
+use crate::tps::is_zhuyin;
 use protos::engine::AppConfig;
-use regex::Regex;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
@@ -33,64 +29,8 @@ pub enum System {
 
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
-    #[error("unsupported op (TPS→TL/POJ word segmentation belongs with the Lexicon slice — not implemented here)")]
+    #[error("unsupported op (e.g. PhoneticsRequest.method is None — likely proto schema mismatch)")]
     UnsupportedOp,
-}
-
-static SYLLABLE_RE: Lazy<Regex> = Lazy::new(|| {
-    // Mirrors taigi-converter/src/converter.js SYLLABLE_RE. The class covers:
-    //   - ASCII A-Za-z
-    //   - Latin-1 Supplement U+00C0-U+00FF (lower + UPPER precomposed
-    //     acute/grave/circumflex on a/e/i/o/u — the earlier narrower class
-    //     missed all uppercase forms and lowercase í/û)
-    //   - Latin Extended-A U+0100-U+017F (macrons + breves — earlier class
-    //     missed `ă` U+0103, the POJ tone 9 precomposed form)
-    //   - Latin Extended-B U+01CD-U+01DC (carons — earlier class missed
-    //     `ǐ ǒ ǔ`)
-    //   - Combining diacritics U+0300-U+036F (full block — covers tone 8
-    //     U+030D, TL tone 9 U+030B, combining `oo` dot U+0358 in one range)
-    //   - POJ nasal markers ⁿ (U+207F) and ᴺ (U+1D3A)
-    // Over-permissive on non-TL Latin chars; parse_syllable silently
-    // fails for non-TL syllables and the original token is returned, so the
-    // observable behaviour is unchanged for non-TL input but correct for
-    // previously-bypassed TL/POJ input (e.g. Ká, kă, CHÂN). Found by Codex
-    // review on PR #183 (discussion r3143631196).
-    Regex::new(concat!(
-        "([A-Za-z\u{00c0}-\u{00ff}\u{0100}-\u{017f}\u{01cd}-\u{01dc}",
-        "\u{0300}-\u{036f}\u{207f}\u{1d3a}",
-        "]+[0-9]?)"
-    ))
-    .unwrap()
-});
-
-#[derive(Debug, Clone, Copy)]
-enum Case {
-    Lower,
-    Upper,
-    Title,
-}
-
-fn detect_case(text: &str) -> Case {
-    let alpha: String = text.chars().filter(|c| c.is_alphabetic()).collect();
-    if alpha.is_empty() {
-        return Case::Lower;
-    }
-    if alpha == alpha.to_uppercase() {
-        return Case::Upper;
-    }
-    let first = alpha.chars().next().unwrap();
-    if first.to_uppercase().next() == Some(first) {
-        return Case::Title;
-    }
-    Case::Lower
-}
-
-fn apply_case(text: &str, case: Case) -> String {
-    match case {
-        Case::Upper => text.to_uppercase().replace('\u{207f}', "\u{1d3a}"),
-        Case::Title => capitalize_first(text),
-        Case::Lower => text.to_string(),
-    }
 }
 
 fn capitalize_first(text: &str) -> String {
@@ -99,96 +39,6 @@ fn capitalize_first(text: &str) -> String {
         Some(c) => c.to_uppercase().collect::<String>() + chars.as_str(),
         None => String::new(),
     }
-}
-
-/// Convert text from one phonetic system to another. The TPS→TL / TPS→POJ paths
-/// in the JS `convert` function are not implemented here — they require
-/// word-level segmentation (`segmenter.js` + 1.6 MB dictionary trie), which
-/// belongs with the Lexicon slice.
-pub fn convert(text: &str, from: System, to: System) -> Result<String, PhoneticsError> {
-    if from == to {
-        return Ok(text.to_string());
-    }
-    if from == System::Tps {
-        return Err(PhoneticsError::UnsupportedOp);
-    }
-
-    if to == System::Tps {
-        // text → tone-numbered → per-token to_zhuyin (mirrors converter.js:25-42).
-        let numbered = to_tone_number(text);
-        let lines: Vec<String> = numbered
-            .split('\n')
-            .map(|line| {
-                let mut parts: Vec<String> = Vec::new();
-                for word in line.split(' ') {
-                    let (prefix, bare) = if let Some(rest) = word.strip_prefix("--") {
-                        ("--", rest)
-                    } else {
-                        ("", word)
-                    };
-                    for (i, tok) in bare.split('-').enumerate() {
-                        if tok.is_empty() {
-                            continue;
-                        }
-                        let with_prefix = if i == 0 {
-                            format!("{prefix}{tok}")
-                        } else {
-                            tok.to_string()
-                        };
-                        let tps = to_zhuyin(&with_prefix, false, false).trim_end().to_string();
-                        for s in split_keep_punct(&tps) {
-                            if !s.is_empty() {
-                                parts.push(s);
-                            }
-                        }
-                    }
-                }
-                parts.join(" ")
-            })
-            .collect();
-        return Ok(lines.join("\n"));
-    }
-
-    // TL ↔ POJ via syllable-level rewrite.
-    let assembler: fn(&str, &str, &str) -> String = match to {
-        System::Tl => to_tl,
-        System::Poj => to_poj,
-        System::Tps => unreachable!(),
-    };
-    Ok(syllable_rewrite(text, assembler))
-}
-
-fn split_keep_punct(input: &str) -> Vec<String> {
-    static PUNCT: Lazy<Regex> =
-        Lazy::new(|| Regex::new("([\u{3002}\u{ff0c}\u{ff1f}\u{ff0e}「」]+)").unwrap());
-    let mut out = Vec::new();
-    let mut last = 0;
-    for m in PUNCT.find_iter(input) {
-        if m.start() > last {
-            out.push(input[last..m.start()].to_string());
-        }
-        out.push(m.as_str().to_string());
-        last = m.end();
-    }
-    if last < input.len() {
-        out.push(input[last..].to_string());
-    }
-    out
-}
-
-fn syllable_rewrite(text: &str, assembler: fn(&str, &str, &str) -> String) -> String {
-    SYLLABLE_RE
-        .replace_all(text, |caps: &regex::Captures| {
-            let m = &caps[0];
-            match parse_syllable(m) {
-                Some((initial, final_str, tone)) => {
-                    let case = detect_case(m);
-                    apply_case(&assembler(&initial, &final_str, &tone), case)
-                }
-                None => m.to_string(),
-            }
-        })
-        .into_owned()
 }
 
 /// Translate the proto `AppConfig.input_mode` string into the typed enum.

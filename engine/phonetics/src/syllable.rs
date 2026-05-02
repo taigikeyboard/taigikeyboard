@@ -91,7 +91,12 @@ pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
 
 /// Parse a syllable into `(initial, final, tone)`. Returns `None` when the
 /// syllable cannot be split. Inferred tones: `4` for stop finals, `1` otherwise.
-pub(crate) fn parse_syllable(text: &str) -> Option<(String, String, String)> {
+///
+/// Currently only used by this module's unit tests — the runtime
+/// `*_display_to_*_display` path uses `strip_tone_mark` + `split_initial_final`
+/// directly. Kept as a primitive for future callers.
+#[cfg(test)]
+fn parse_syllable(text: &str) -> Option<(String, String, String)> {
     let (bare, tone) = strip_tone_mark(text);
     let normalized = normalize_to_tl(&bare.to_lowercase());
     let (initial, final_str) = split_initial_final(&normalized)?;
