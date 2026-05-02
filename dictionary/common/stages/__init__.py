@@ -19,20 +19,21 @@ from pipeline.context import PipelineContext
 
 
 def csv_roundtrip(df: pd.DataFrame) -> pd.DataFrame:
-    """Serialise a DataFrame to CSV and reparse it via `pd.read_csv`.
+    """Serialise a DataFrame to CSV and reparse it via the project-wide
+    `read_dictionary_csv` helper.
 
-    Shared across stages that need the CSV-layer side effects pandas applies
-    on read — specifically:
+    Used to dedup clashing column names by suffixing (`hanzi` + `hanzi`
+    → `hanzi` + `hanzi.1`), as the kautian 異用字 sheet needs.
 
-    - deduping clashing column names by suffixing (`hanzi` + `hanzi` →
-      `hanzi` + `hanzi.1`), used by the kautian 異用字 sheet
-    - re-inferring dtypes so numeric-looking strings become NaN and
-      serialise back to empty rather than the literal "nan" string
+    `read_dictionary_csv` keeps `keep_default_na=False` so the literal
+    string `"nan"` survives the round-trip — `nan` is a valid POJ
+    first-letter abbreviation (e.g. `niû-á-nn̄g` → `nan`).
     """
+    from common import read_dictionary_csv
     buf = io.StringIO()
     df.to_csv(buf, index=False)
     buf.seek(0)
-    return pd.read_csv(buf)
+    return read_dictionary_csv(buf)
 
 
 from . import (

@@ -28,11 +28,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 一軍,it-kun,25,it-kun,it4kun1,it4kun1,itkun,itkun,ik,ik,True,False
 三塊,sann-tè,25,saⁿ-tè,sann1te3,sann1te3,sannte,sannte,st,st,True,False
 三殺,sam-sat,25,sam-sat,sam1sat4,sam1sat4,samsat,samsat,ss,ss,True,False
-上壘,tsiūnn-luí,25,chiūⁿ-luí,tsiunn7lui2,chiunn7lui2,tsiunnlui,chiunnlui,tl,cl,True,False
+上壘,tsiūnn-luí,25,chiūⁿ-lúi,tsiunn7lui2,chiunn7lui2,tsiunnlui,chiunnlui,tl,cl,True,False
 上籃,tsiūnn-nâ,25,chiūⁿ-nâ,tsiunn7na5,chiunn7na5,tsiunnna,chiunnna,tn,cn,True,False
 下載,hā-tsài,25,hā-chài,ha7tsai3,ha7chai3,hatsai,hachai,ht,hc,True,False
-並枕,phīng-tsím,25,phēng-tsím,phing7tsim2,pheng7tsim2,phingtsim,phengtsim,pt,pt,True,False
-中場,tiong-tiûnn,25,tiong-tiûnn,tiong1tiunn5,tiong1tiunn5,tiongtiunn,tiongtiunn,tt,tt,True,False
+並枕,phīng-tsím,25,phēng-chím,phing7tsim2,pheng7chim2,phingtsim,phengchim,pt,pc,True,False
+中場,tiong-tiûnn,25,tiong-tiûⁿ,tiong1tiunn5,tiong1tiunn5,tiongtiunn,tiongtiunn,tt,tt,True,False
 中子,tiong-jí,25,tiong-jí,tiong1ji2,tiong1ji2,tiongji,tiongji,tj,tj,True,False
 中子,tiong-lí,25,tiong-lí,tiong1li2,tiong1li2,tiongli,tiongli,tl,tl,True,False
 中線,tiong-suànn,25,tiong-sòaⁿ,tiong1suann3,tiong1soann3,tiongsuann,tiongsoann,ts,ts,True,False
@@ -63,7 +63,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 健力,kiān-li̍k,25,kiān-le̍k,kian7lik8,kian7lek8,kianlik,kianlek,kl,kl,True,False
 健美,kiān-bí,25,kiān-bí,kian7bi2,kian7bi2,kianbi,kianbi,kb,kb,True,False
 側投,tshik-tâu,25,chhek-tâu,tshik4tau5,chhek4tau5,tshiktau,chhektau,tt,ct,True,False
-偷壘,thau-luí,25,thau-luí,thau1lui2,thau1lui2,thaului,thaului,tl,tl,True,False
+偷壘,thau-luí,25,thau-lúi,thau1lui2,thau1lui2,thaului,thaului,tl,tl,True,False
 備份,pī-hūn,25,pī-hūn,pi7hun7,pi7hun7,pihun,pihun,ph,ph,True,False
 傭兵,iông-ping,25,iông-peng,iong5ping1,iong5peng1,iongping,iongpeng,ip,ip,True,False
 傳球,thuân-kiû,25,thoân-kiû,thuan5kiu5,thoan5kiu5,thuankiu,thoankiu,tk,tk,True,False
@@ -85,14 +85,13 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 冰壺,ping-ôo,25,peng-ô͘,ping1oo5,peng1oo5,pingoo,pengoo,po,po,True,False
 冰沙,ping-sua,25,peng-soa,ping1sua1,peng1soa1,pingsua,pengsoa,ps,ps,True,False
 冰磚,ping-tsng,25,peng-chng,ping1tsng1,peng1chng1,pingtsng,pengchng,pt,pc,True,False
-冷麵,líng-mī,25,líng-mī,ling2mi7,ling2mi7,lingmi,lingmi,lm,lm,True,False
+冷麵,líng-mī,25,léng-mī,ling2mi7,leng2mi7,lingmi,lengmi,lm,lm,True,False
 凝霜,gîng-song,25,gêng-song,ging5song1,geng5song1,gingsong,gengsong,gs,gs,True,False
 凝露,gîng-lōo,25,gêng-lō͘,ging5loo7,geng5loo7,gingloo,gengloo,gl,gl,True,False
 刀術,to-su̍t,25,to-su̍t,to1sut8,to1sut8,tosut,tosut,ts,ts,True,False
 分道,pun-tō,25,pun-tō,pun1to7,pun1to7,punto,punto,pt,pt,True,False
 分頁,hun-ia̍h,25,hun-ia̍h,hun1iah8,hun1iah8,huniah,huniah,hi,hi,True,False
 切球,tshiat-kiû,25,chhiat-kiû,tshiat4kiu5,chhiat4kiu5,tshiatkiu,chhiatkiu,tk,ck,True,False
-划船,kò-tsûn,25,kò-tsûn,ko3tsun5,ko3tsun5,kotsun,kotsun,kt,kt,True,False
 刣掉,thâi-tiāu,25,thâi-tiāu,thai5tiau7,thai5tiau7,thaitiau,thaitiau,tt,tt,True,False
 利劍,lāi-kiàm,25,lāi-kiàm,lai7kiam3,lai7kiam3,laikiam,laikiam,lk,lk,True,False
 刪除,san-tî,25,san-tî,san1ti5,san1ti5,santi,santi,st,st,True,True
@@ -144,12 +143,12 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 地板,tuē-pán,25,tōe-pán,tue7pan2,toe7pan2,tuepan,toepan,tp,tp,True,False
 地板,tē-pán,25,tē-pán,te7pan2,te7pan2,tepan,tepan,tp,tp,True,False
 坦邊,thán-pinn,25,thán-piⁿ,than2pinn1,than2pinn1,thanpinn,thanpinn,tp,tp,True,False
-場務,tiûnn-bū,25,tiûnn-bū,tiunn5bu7,tiunn5bu7,tiunnbu,tiunnbu,tb,tb,True,False
+場務,tiûnn-bū,25,tiûⁿ-bū,tiunn5bu7,tiunn5bu7,tiunnbu,tiunnbu,tb,tb,True,False
 墜機,tuī-ki,25,tūi-ki,tui7ki1,tui7ki1,tuiki,tuiki,tk,tk,True,False
 壁球,piah-kiû,25,piah-kiû,piah4kiu5,piah4kiu5,piahkiu,piahkiu,pk,pk,True,False
 壓制,ap-tsè,25,ap-chè,ap4tse3,ap4che3,aptse,apche,at,ac,True,False
-壘包,luí-pau,25,luí-pau,lui2pau1,lui2pau1,luipau,luipau,lp,lp,True,False
-壘球,luí-kiû,25,luí-kiû,lui2kiu5,lui2kiu5,luikiu,luikiu,lk,lk,True,False
+壘包,luí-pau,25,lúi-pau,lui2pau1,lui2pau1,luipau,luipau,lp,lp,True,False
+壘球,luí-kiû,25,lúi-kiû,lui2kiu5,lui2kiu5,luikiu,luikiu,lk,lk,True,False
 壯遊,tsōng-iû,25,chōng-iû,tsong7iu5,chong7iu5,tsongiu,chongiu,ti,ci,True,False
 壺鈴,ôo-lîng,25,ô͘-lêng,oo5ling5,oo5leng5,ooling,ooleng,ol,ol,True,False
 外遇,guā-gū,25,gōa-gū,gua7gu7,goa7gu7,guagu,goagu,gg,gg,True,True
@@ -175,7 +174,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 妨礙,hông-gāi,25,hông-gāi,hong5gai7,hong5gai7,honggai,honggai,hg,hg,True,False
 字元,jī-guân,25,jī-goân,ji7guan5,ji7goan5,jiguan,jigoan,jg,jg,True,False
 字元,lī-guân,25,lī-goân,li7guan5,li7goan5,liguan,ligoan,lg,lg,True,False
-存檔,tsûn-tóng,25,tsûn-tóng,tsun5tong2,tsun5tong2,tsuntong,tsuntong,tt,tt,True,False
+存檔,tsûn-tóng,25,chûn-tóng,tsun5tong2,chun5tong2,tsuntong,chuntong,tt,ct,True,False
 安入,an-ji̍p,25,an-ji̍p,an1jip8,an1jip8,anjip,anjip,aj,aj,True,False
 安入,an-li̍p,25,an-li̍p,an1lip8,an1lip8,anlip,anlip,al,al,True,False
 安打,an-tánn,25,an-táⁿ,an1tann2,an1tann2,antann,antann,at,at,True,False
@@ -205,7 +204,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 巴哥,pa-ko,25,pa-ko,pa1ko1,pa1ko1,pako,pako,pk,pk,True,False
 布丁,pòo-ting,25,pò͘-teng,poo3ting1,poo3teng1,pooting,pooteng,pt,pt,True,True
 布陣,pòo-tīn,25,pò͘-tīn,poo3tin7,poo3tin7,pootin,pootin,pt,pt,True,True
-帆船,phâng-tsûn,25,phâng-tsûn,phang5tsun5,phang5tsun5,phangtsun,phangtsun,pt,pt,True,False
+帆船,phâng-tsûn,25,phâng-chûn,phang5tsun5,phang5chun5,phangtsun,phangchun,pt,pc,True,False
 幌壺,hàinn-ôo,25,hàiⁿ-ô͘,hainn3oo5,hainn3oo5,hainnoo,hainnoo,ho,ho,True,False
 弄舌,lāng-tsi̍h,25,lāng-chi̍h,lang7tsih8,lang7chih8,langtsih,langchih,lt,lc,True,False
 彈劾,tân-hik,25,tân-hek,tan5hik4,tan5hek4,tanhik,tanhek,th,th,True,False
@@ -248,7 +247,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 授權,siū-khuân,25,siū-khoân,siu7khuan5,siu7khoan5,siukhuan,siukhoan,sk,sk,True,False
 掠夯,lia̍h-giâ,25,lia̍h-giâ,liah8gia5,liah8gia5,liahgia,liahgia,lg,lg,True,False
 接球,tsiap-kiû,25,chiap-kiû,tsiap4kiu5,chiap4kiu5,tsiapkiu,chiapkiu,tk,ck,True,False
-推進,thui-tsín,25,thui-tsín,thui1tsin2,thui1tsin2,thuitsin,thuitsin,tt,tt,True,False
+推進,thui-tsín,25,thui-chín,thui1tsin2,thui1chin2,thuitsin,thuichin,tt,tc,True,False
 掰會,pué-huē,25,póe-hōe,pue2hue7,poe2hoe7,puehue,poehoe,ph,ph,True,False
 換逝,uānn-tsuā,25,ōaⁿ-chōa,uann7tsua7,oann7choa7,uanntsua,oannchoa,ut,oc,True,False
 揤鈕,tshi̍h-liú,25,chhi̍h-liú,tshih8liu2,chhih8liu2,tshihliu,chhihliu,tl,cl,True,False
@@ -296,7 +295,6 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 柔道,jiû-tō,25,jiû-tō,jiu5to7,jiu5to7,jiuto,jiuto,jt,jt,True,False
 柴狗,tshâ-káu,25,chhâ-káu,tsha5kau2,chha5kau2,tshakau,chhakau,tk,ck,True,False
 栓窒,sng-that,25,sng-that,sng1that4,sng1that4,sngthat,sngthat,st,st,True,False
-栗子,la̍t-tsí,25,la̍t-tsí,lat8tsi2,lat8tsi2,lattsi,lattsi,lt,lt,True,False
 桌球,toh-kiû,25,toh-kiû,toh4kiu5,toh4kiu5,tohkiu,tohkiu,tk,tk,True,False
 桌遊,toh-iû,25,toh-iû,toh4iu5,toh4iu5,tohiu,tohiu,ti,ti,True,False
 條碼,tiâu-bé,25,tiâu-bé,tiau5be2,tiau5be2,tiaube,tiaube,tb,tb,True,False
@@ -328,18 +326,18 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 正齒,tsiànn-khí,25,chiàⁿ-khí,tsiann3khi2,chiann3khi2,tsiannkhi,chiannkhi,tk,ck,True,False
 武術,bú-su̍t,25,bú-su̍t,bu2sut8,bu2sut8,busut,busut,bs,bs,True,False
 歹球,pháinn-kiû,25,pháiⁿ-kiû,phainn2kiu5,phainn2kiu5,phainnkiu,phainnkiu,pk,pk,True,False
-殘壘,tsân-luí,25,chân-luí,tsan5lui2,chan5lui2,tsanlui,chanlui,tl,cl,True,False
+殘壘,tsân-luí,25,chân-lúi,tsan5lui2,chan5lui2,tsanlui,chanlui,tl,cl,True,False
 段位,tuānn-uī,25,tōaⁿ-ūi,tuann7ui7,toann7ui7,tuannui,toannui,tu,tu,True,False
 段落,tuānn-lo̍h,25,tōaⁿ-lo̍h,tuann7loh8,toann7loh8,tuannloh,toannloh,tl,tl,True,False
 殺球,sat-kiû,25,sat-kiû,sat4kiu5,sat4kiu5,satkiu,satkiu,sk,sk,True,False
-毛筅,mn̂g-tshíng,25,mn̂g-tshíng,mng5tshing2,mng5tshing2,mngtshing,mngtshing,mt,mt,True,False
+毛筅,mn̂g-tshíng,25,mn̂g-chhéng,mng5tshing2,mng5chheng2,mngtshing,mngchheng,mt,mc,True,False
 毛豆,môo-tāu,25,mô͘-tāu,moo5tau7,moo5tau7,mootau,mootau,mt,mt,True,False
 氣糋,khì-tsìnn,25,khì-chìⁿ,khi3tsinn3,khi3chinn3,khitsinn,khichinn,kt,kc,True,False
-水球,tsuí-kiû,25,chuí-kiû,tsui2kiu5,chui2kiu5,tsuikiu,chuikiu,tk,ck,True,False
-水蓮,tsuí-liân,25,chuí-liân,tsui2lian5,chui2lian5,tsuilian,chuilian,tl,cl,True,False
-水螅,tsuí-sik,25,chuí-sek,tsui2sik4,chui2sek4,tsuisik,chuisek,ts,cs,True,False
-水豬,tsuí-ti,25,chuí-ti,tsui2ti1,chui2ti1,tsuiti,chuiti,tt,ct,True,False
-水豬,tsuí-tu,25,chuí-tu,tsui2tu1,chui2tu1,tsuitu,chuitu,tt,ct,True,False
+水球,tsuí-kiû,25,chúi-kiû,tsui2kiu5,chui2kiu5,tsuikiu,chuikiu,tk,ck,True,False
+水蓮,tsuí-liân,25,chúi-liân,tsui2lian5,chui2lian5,tsuilian,chuilian,tl,cl,True,False
+水螅,tsuí-sik,25,chúi-sek,tsui2sik4,chui2sek4,tsuisik,chuisek,ts,cs,True,False
+水豬,tsuí-ti,25,chúi-ti,tsui2ti1,chui2ti1,tsuiti,chuiti,tt,ct,True,False
+水豬,tsuí-tu,25,chúi-tu,tsui2tu1,chui2tu1,tsuitu,chuitu,tt,ct,True,False
 決賽,kuat-sài,25,koat-sài,kuat4sai3,koat4sai3,kuatsai,koatsai,ks,ks,True,False
 沉球,tîm-kiû,25,tîm-kiû,tim5kiu5,tim5kiu5,timkiu,timkiu,tk,tk,True,False
 沙拉,sa-la,25,sa-la,sa1la1,sa1la1,sala,sala,sl,sl,True,False
@@ -360,14 +358,14 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 游標,iû-piau,25,iû-piau,iu5piau1,iu5piau1,iupiau,iupiau,ip,ip,True,False
 湯餃,thng-kiáu,25,thng-kiáu,thng1kiau2,thng1kiau2,thngkiau,thngkiau,tk,tk,True,False
 滑球,ku̍t-kiû,25,ku̍t-kiû,kut8kiu5,kut8kiu5,kutkiu,kutkiu,kk,kk,True,False
-滑鼠,ku̍t-tshí,25,ku̍t-tshí,kut8tshi2,kut8tshi2,kuttshi,kuttshi,kt,kt,True,False
+滑鼠,ku̍t-tshí,25,ku̍t-chhí,kut8tshi2,kut8chhi2,kuttshi,kutchhi,kt,kc,True,False
 滑鼠,ku̍t-tshú,25,ku̍t-chhú,kut8tshu2,kut8chhu2,kuttshu,kutchhu,kt,kc,True,False
 滾輪,kún-lûn,25,kún-lûn,kun2lun5,kun2lun5,kunlun,kunlun,kl,kl,True,False
 漏球,lāu-kiû,25,lāu-kiû,lau7kiu5,lau7kiu5,laukiu,laukiu,lk,lk,True,False
 漸層,tsiām-tsân,25,chiām-chân,tsiam7tsan5,chiam7chan5,tsiamtsan,chiamchan,tt,cc,True,False
 灌籃,kuàn-nâ,25,koàn-nâ,kuan3na5,koan3na5,kuanna,koanna,kn,kn,True,False
-火腿,hué-thuí,25,hóe-thuí,hue2thui2,hoe2thui2,huethui,hoethui,ht,ht,True,False
-火腿,hé-thuí,25,hé-thuí,he2thui2,he2thui2,hethui,hethui,ht,ht,True,False
+火腿,hué-thuí,25,hóe-thúi,hue2thui2,hoe2thui2,huethui,hoethui,ht,ht,True,False
+火腿,hé-thuí,25,hé-thúi,he2thui2,he2thui2,hethui,hethui,ht,ht,True,False
 炊飯,tshe-pn̄g,25,chhe-pn̄g,tshe1png7,chhe1png7,tshepng,chhepng,tp,cp,True,False
 炊飯,tshue-pn̄g,25,chhoe-pn̄g,tshue1png7,chhoe1png7,tshuepng,chhoepng,tp,cp,True,False
 烏麥,oo-be̍h,25,o͘-be̍h,oo1beh8,oo1beh8,oobeh,oobeh,ob,ob,True,False
@@ -413,7 +411,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 田徑,tiân-kìng,25,tiân-kèng,tian5king3,tian5keng3,tianking,tiankeng,tk,tk,True,False
 甲烷,kah-uân,25,kah-oân,kah4uan5,kah4oan5,kahuan,kahoan,ku,ko,True,True
 甲醇,kah-sûn,25,kah-sûn,kah4sun5,kah4sun5,kahsun,kahsun,ks,ks,True,True
-番鼠,huan-tshí,25,hoan-tshí,huan1tshi2,hoan1tshi2,huantshi,hoantshi,ht,ht,True,False
+番鼠,huan-tshí,25,hoan-chhí,huan1tshi2,hoan1chhi2,huantshi,hoanchhi,ht,hc,True,False
 番鼠,huan-tshú,25,hoan-chhú,huan1tshu2,hoan1chhu2,huantshu,hoanchhu,ht,hc,True,False
 畫素,uē-sòo,25,ōe-sò͘,ue7soo3,oe7soo3,uesoo,oesoo,us,os,True,False
 畫素,uī-sòo,25,ūi-sò͘,ui7soo3,ui7soo3,uisoo,uisoo,us,us,True,False
@@ -426,7 +424,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 登板,ting-pán,25,teng-pán,ting1pan2,teng1pan2,tingpan,tengpan,tp,tp,True,False
 發球,huat-kiû,25,hoat-kiû,huat4kiu5,hoat4kiu5,huatkiu,hoatkiu,hk,hk,True,False
 白醬,pe̍h-tsiùnn,25,pe̍h-chiùⁿ,peh8tsiunn3,peh8chiunn3,pehtsiunn,pehchiunn,pt,pc,True,False
-盜壘,tō-luí,25,tō-luí,to7lui2,to7lui2,tolui,tolui,tl,tl,True,False
+盜壘,tō-luí,25,tō-lúi,to7lui2,to7lui2,tolui,tolui,tl,tl,True,False
 監交,kàm-kau,25,kàm-kau,kam3kau1,kam3kau1,kamkau,kamkau,kk,kk,True,False
 盤舌,puânn-tsi̍h,25,pôaⁿ-chi̍h,puann5tsih8,poann5chih8,puanntsih,poannchih,pt,pc,True,False
 目巡,ba̍k-sûn,25,ba̍k-sûn,bak8sun5,bak8sun5,baksun,baksun,bs,bs,True,False
@@ -473,7 +471,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 素肉,sòo-bah,25,sò͘-bah,soo3bah4,soo3bah4,soobah,soobah,sb,sb,True,False
 素顏,sòo-gân,25,sò͘-gân,soo3gan5,soo3gan5,soogan,soogan,sg,sg,True,False
 組手,tsoo-tshiú,25,cho͘-chhiú,tsoo1tshiu2,choo1chhiu2,tsootshiu,choochhiu,tt,cc,True,False
-網址,bāng-tsí,25,bāng-tsí,bang7tsi2,bang7tsi2,bangtsi,bangtsi,bt,bt,True,False
+網址,bāng-tsí,25,bāng-chí,bang7tsi2,bang7chi2,bangtsi,bangchi,bt,bc,True,False
 網球,bāng-kiû,25,bāng-kiû,bang7kiu5,bang7kiu5,bangkiu,bangkiu,bk,bk,True,False
 網紅,bāng-âng,25,bāng-âng,bang7ang5,bang7ang5,bangang,bangang,ba,ba,True,False
 網衝,bāng-tshìng,25,bāng-chhèng,bang7tshing3,bang7chheng3,bangtshing,bangchheng,bt,bc,True,False
@@ -486,7 +484,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 老妝,lāu-tsong,25,lāu-chong,lau7tsong1,lau7chong1,lautsong,lauchong,lt,lc,True,False
 老茶,lāu-tê,25,lāu-tê,lau7te5,lau7te5,laute,laute,lt,lt,True,False
 考銃,khó-tshìng,25,khó-chhèng,kho2tshing3,kho2chheng3,khotshing,khochheng,kt,kc,True,False
-職場,tsit-tiûnn,25,chit-tiûnn,tsit4tiunn5,chit4tiunn5,tsittiunn,chittiunn,tt,ct,True,False
+職場,tsit-tiûnn,25,chit-tiûⁿ,tsit4tiunn5,chit4tiunn5,tsittiunn,chittiunn,tt,ct,True,False
 聽牌,thiann-pâi,25,thiaⁿ-pâi,thiann1pai5,thiann1pai5,thiannpai,thiannpai,tp,tp,True,False
 肉叉,bah-tshah,25,bah-chhah,bah4tshah4,bah4chhah4,bahtshah,bahchhah,bt,bc,True,False
 肉桂,lio̍k-kuì,25,lio̍k-kùi,liok8kui3,liok8kui3,liokkui,liokkui,lk,lk,True,False
@@ -497,15 +495,14 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 腰果,io-kó,25,io-kó,io1ko2,io1ko2,ioko,ioko,ik,ik,True,False
 腹地,pak-tuē,25,pak-tōe,pak4tue7,pak4toe7,paktue,paktoe,pt,pt,True,False
 腹地,pak-tē,25,pak-tē,pak4te7,pak4te7,pakte,pakte,pt,pt,True,False
-腿捒,thuí-sak,25,thuí-sak,thui2sak4,thui2sak4,thuisak,thuisak,ts,ts,True,False
-腿法,thuí-huat,25,thuí-hoat,thui2huat4,thui2hoat4,thuihuat,thuihoat,th,th,True,False
+腿捒,thuí-sak,25,thúi-sak,thui2sak4,thui2sak4,thuisak,thuisak,ts,ts,True,False
+腿法,thuí-huat,25,thúi-hoat,thui2huat4,thui2hoat4,thuihuat,thuihoat,th,th,True,False
 膠質,ka-tsit,25,ka-chit,ka1tsit4,ka1chit4,katsit,kachit,kt,kc,True,False
 膨粉,phòng-hún,25,phòng-hún,phong3hun2,phong3hun2,phonghun,phonghun,ph,ph,True,False
 臍帶,tsâi-tuà,25,châi-tòa,tsai5tua3,chai5toa3,tsaitua,chaitoa,tt,ct,True,True
 航線,hâng-suànn,25,hâng-sòaⁿ,hang5suann3,hang5soann3,hangsuann,hangsoann,hs,hs,True,False
-船桮,tsûn-pe,25,tsûn-pe,tsun5pe1,tsun5pe1,tsunpe,tsunpe,tp,tp,True,False
-船桮,tsûn-pue,25,tsûn-poe,tsun5pue1,tsun5poe1,tsunpue,tsunpoe,tp,tp,True,False
-船槳,tsûn-tsiúnn,25,tsûn-chiúⁿ,tsun5tsiunn2,tsun5chiunn2,tsuntsiunn,tsunchiunn,tt,tc,True,False
+船桮,tsûn-pe,25,chûn-pe,tsun5pe1,chun5pe1,tsunpe,chunpe,tp,cp,True,False
+船桮,tsûn-pue,25,chûn-poe,tsun5pue1,chun5poe1,tsunpue,chunpoe,tp,cp,True,False
 色票,sik-phiò,25,sek-phiò,sik4phio3,sek4phio3,sikphio,sekphio,sp,sp,True,False
 色素,sik-sòo,25,sek-sò͘,sik4soo3,sek4soo3,siksoo,seksoo,ss,ss,True,False
 芋泥,ōo-nî,25,ō͘-nî,oo7ni5,oo7ni5,ooni,ooni,on,on,True,False
@@ -517,7 +514,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 落球,lak-kiû,25,lak-kiû,lak4kiu5,lak4kiu5,lakkiu,lakkiu,lk,lk,True,False
 蒲燒,pôo-sio,25,pô͘-sio,poo5sio1,poo5sio1,poosio,poosio,ps,ps,True,False
 蒸餾,tsing-liū,25,cheng-liū,tsing1liu7,cheng1liu7,tsingliu,chengliu,tl,cl,True,False
-蓄水,thiok-tsuí,25,thiok-chuí,thiok4tsui2,thiok4chui2,thioktsui,thiokchui,tt,tc,True,False
+蓄水,thiok-tsuí,25,thiok-chúi,thiok4tsui2,thiok4chui2,thioktsui,thiokchui,tt,tc,True,False
 蕨貓,keh-niau,25,keh-niau,keh4niau1,keh4niau1,kehniau,kehniau,kn,kn,True,False
 蕨貓,kueh-niau,25,koeh-niau,kueh4niau1,koeh4niau1,kuehniau,koehniau,kn,kn,True,False
 薄妝,po̍h-tsong,25,po̍h-chong,poh8tsong1,poh8chong1,pohtsong,pohchong,pt,pc,True,False
@@ -539,7 +536,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 街舞,ke-bú,25,ke-bú,ke1bu2,ke1bu2,kebu,kebu,kb,kb,True,False
 街舞,kue-bú,25,koe-bú,kue1bu2,koe1bu2,kuebu,koebu,kb,kb,True,False
 衝懸,tshìng-kuân,25,chhèng-koân,tshing3kuan5,chheng3koan5,tshingkuan,chhengkoan,tk,ck,True,False
-衝湧,tshiong-íng,25,chhiong-íng,tshiong1ing2,chhiong1ing2,tshionging,chhionging,ti,ci,True,True
+衝湧,tshiong-íng,25,chhiong-éng,tshiong1ing2,chhiong1eng2,tshionging,chhiongeng,ti,ce,True,True
 表單,pió-tuann,25,pió-toaⁿ,pio2tuann1,pio2toann1,piotuann,piotoann,pt,pt,True,False
 裁判,tshâi-phuànn,25,chhâi-phòaⁿ,tshai5phuann3,chhai5phoann3,tshaiphuann,chhaiphoann,tp,cp,True,False
 補位,póo-uī,25,pó͘-ūi,poo2ui7,poo2ui7,pooui,pooui,pu,pu,True,False
@@ -550,7 +547,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 角球,khòo-nah,25,khò͘-nah,khoo3nah4,khoo3nah4,khoonah,khoonah,kn,kn,True,False
 角膜,kak-mo̍oh,25,kak-mo̍͘h,kak4mooh8,kak4mooh8,kakmooh,kakmooh,km,km,True,False
 觱卡,pi-khah,25,pi-khah,pi1khah4,pi1khah4,pikhah,pikhah,pk,pk,True,True
-讀取,tho̍k-tshí,25,tho̍k-tshí,thok8tshi2,thok8tshi2,thoktshi,thoktshi,tt,tt,True,False
+讀取,tho̍k-tshí,25,tho̍k-chhí,thok8tshi2,thok8chhi2,thoktshi,thokchhi,tt,tc,True,False
 讀取,tho̍k-tshú,25,tho̍k-chhú,thok8tshu2,thok8chhu2,thoktshu,thokchhu,tt,tc,True,False
 豁免,hat-bián,25,hat-bián,hat4bian2,hat4bian2,hatbian,hatbian,hb,hb,True,False
 豆包,tāu-pau,25,tāu-pau,tau7pau1,tau7pau1,taupau,taupau,tp,tp,True,False
@@ -562,25 +559,25 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 貼圖,tah-tôo,25,tah-tô͘,tah4too5,tah4too5,tahtoo,tahtoo,tt,tt,True,False
 贊助,tsàn-tsōo,25,chàn-chō͘,tsan3tsoo7,chan3choo7,tsantsoo,chanchoo,tt,cc,True,False
 赤砂,tshiah-sua,25,chhiah-soa,tshiah4sua1,chhiah4soa1,tshiahsua,chhiahsoa,ts,cs,True,True
-走壘,tsáu-luí,25,cháu-luí,tsau2lui2,chau2lui2,tsaului,chaului,tl,cl,True,False
+走壘,tsáu-luí,25,cháu-lúi,tsau2lui2,chau2lui2,tsaului,chaului,tl,cl,True,False
 超馬,tshiau-má,25,chhiau-má,tshiau1ma2,chhiau1ma2,tshiauma,chhiauma,tm,cm,True,False
 越位,ua̍t-uī,25,oa̍t-ūi,uat8ui7,oat8ui7,uatui,oatui,uu,ou,True,False
 趨冰,tshu-ping,25,chhu-peng,tshu1ping1,chhu1peng1,tshuping,chhupeng,tp,cp,True,False
-趨壘,tshu-luí,25,chhu-luí,tshu1lui2,chhu1lui2,tshului,chhului,tl,cl,True,False
+趨壘,tshu-luí,25,chhu-lúi,tshu1lui2,chhu1lui2,tshului,chhului,tl,cl,True,False
 趨枋,tshu-pang,25,chhu-pang,tshu1pang1,chhu1pang1,tshupang,chhupang,tp,cp,True,False
-趨水,tshu-tsuí,25,chhu-chuí,tshu1tsui2,chhu1chui2,tshutsui,chhuchui,tt,cc,True,False
+趨水,tshu-tsuí,25,chhu-chúi,tshu1tsui2,chhu1chui2,tshutsui,chhuchui,tt,cc,True,False
 跑者,pháu-tsiá,25,pháu-chiá,phau2tsia2,phau2chia2,phautsia,phauchia,pt,pc,True,False
 跑酷,pháu-khok,25,pháu-khok,phau2khok4,phau2khok4,phaukhok,phaukhok,pk,pk,True,False
 跤球,kha-kiû,25,kha-kiû,kha1kiu5,kha1kiu5,khakiu,khakiu,kk,kk,True,False
 跨年,khuà-nî,25,khòa-nî,khua3ni5,khoa3ni5,khuani,khoani,kn,kn,True,False
 跨欄,khuà-lân,25,khòa-lân,khua3lan5,khoa3lan5,khualan,khoalan,kl,kl,True,False
 跳床,thiàu-tshn̂g,25,thiàu-chhn̂g,thiau3tshng5,thiau3chhng5,thiautshng,thiauchhng,tt,tc,True,False
-跳水,thiàu-tsuí,25,thiàu-chuí,thiau3tsui2,thiau3chui2,thiautsui,thiauchui,tt,tc,True,False
+跳水,thiàu-tsuí,25,thiàu-chúi,thiau3tsui2,thiau3chui2,thiautsui,thiauchui,tt,tc,True,False
 跳遠,thiàu-hn̄g,25,thiàu-hn̄g,thiau3hng7,thiau3hng7,thiauhng,thiauhng,th,th,True,False
 跳馬,thiàu-bé,25,thiàu-bé,thiau3be2,thiau3be2,thiaube,thiaube,tb,tb,True,False
-踏壘,ta̍h-luí,25,ta̍h-luí,tah8lui2,tah8lui2,tahlui,tahlui,tl,tl,True,False
+踏壘,ta̍h-luí,25,ta̍h-lúi,tah8lui2,tah8lui2,tahlui,tahlui,tl,tl,True,False
 踢拳,that-kûn,25,that-kûn,that4kun5,that4kun5,thatkun,thatkun,tk,tk,True,False
-蹋壘,lap-luí,25,lap-luí,lap4lui2,lap4lui2,laplui,laplui,ll,ll,True,False
+蹋壘,lap-luí,25,lap-lúi,lap4lui2,lap4lui2,laplui,laplui,ll,ll,True,False
 軍刀,kun-to,25,kun-to,kun1to1,kun1to1,kunto,kunto,kt,kt,True,False
 軍棋,kun-kî,25,kun-kî,kun1ki5,kun1ki5,kunki,kunki,kk,kk,True,False
 軍閥,kun-hua̍t,25,kun-hoa̍t,kun1huat8,kun1hoat8,kunhuat,kunhoat,kh,kh,True,False
@@ -604,13 +601,13 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 逝距,tsuā-kū,25,chōa-kū,tsua7ku7,choa7ku7,tsuaku,choaku,tk,ck,True,False
 速球,sok-kiû,25,sok-kiû,sok4kiu5,sok4kiu5,sokkiu,sokkiu,sk,sk,True,False
 連結,liân-kiat,25,liân-kiat,lian5kiat4,lian5kiat4,liankiat,liankiat,lk,lk,True,False
-進壘,tsìn-luí,25,chìn-luí,tsin3lui2,chin3lui2,tsinlui,chinlui,tl,cl,True,False
+進壘,tsìn-luí,25,chìn-lúi,tsin3lui2,chin3lui2,tsinlui,chinlui,tl,cl,True,False
 運球,ūn-kiû,25,ūn-kiû,un7kiu5,un7kiu5,unkiu,unkiu,uk,uk,True,False
-遏子,at-tsí,25,at-tsí,at4tsi2,at4tsi2,attsi,attsi,at,at,True,False
+遏子,at-tsí,25,at-chí,at4tsi2,at4chi2,attsi,atchi,at,ac,True,False
 遮罩,jia-tà,25,jia-tà,jia1ta3,jia1ta3,jiata,jiata,jt,jt,True,False
 遮罩,jia-tàu,25,jia-tàu,jia1tau3,jia1tau3,jiatau,jiatau,jt,jt,True,True
 選球,suán-kiû,25,soán-kiû,suan2kiu5,soan2kiu5,suankiu,soankiu,sk,sk,True,False
-邊境,pian-kíng,25,pian-kíng,pian1king2,pian1king2,pianking,pianking,pk,pk,True,False
+邊境,pian-kíng,25,pian-kéng,pian1king2,pian1keng2,pianking,piankeng,pk,pk,True,False
 配套,phuè-thò,25,phòe-thò,phue3tho3,phoe3tho3,phuetho,phoetho,pt,pt,True,False
 配套,phè-thò,25,phè-thò,phe3tho3,phe3tho3,phetho,phetho,pt,pt,True,False
 配送,phuè-sàng,25,phòe-sàng,phue3sang3,phoe3sang3,phuesang,phoesang,ps,ps,True,False
@@ -634,7 +631,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 針織,tsiam-tsit,25,chiam-chit,tsiam1tsit4,chiam1chit4,tsiamtsit,chiamchit,tt,cc,True,False
 鈍劍,tun-kiàm,25,tun-kiàm,tun1kiam3,tun1kiam3,tunkiam,tunkiam,tk,tk,True,False
 鉛球,iân-kiû,25,iân-kiû,ian5kiu5,ian5kiu5,iankiu,iankiu,ik,ik,True,False
-鉼頂,pín-tíng,25,pín-tíng,pin2ting2,pin2ting2,pinting,pinting,pt,pt,True,False
+鉼頂,pín-tíng,25,pín-téng,pin2ting2,pin2teng2,pinting,pinteng,pt,pt,True,False
 鋒面,hong-bīn,25,hong-bīn,hong1bin7,hong1bin7,hongbin,hongbin,hb,hb,True,False
 鋪文,phoo-bûn,25,pho͘-bûn,phoo1bun5,phoo1bun5,phoobun,phoobun,pb,pb,True,False
 鍋貼,ko-tah,25,ko-tah,ko1tah4,ko1tah4,kotah,kotah,kt,kt,True,False
@@ -727,29 +724,29 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 齒仔,gí-á,25,gí-á,gi2a2,gi2a2,gia,gia,ga,ga,True,False
 齒仔,khí-á,25,khí-á,khi2a2,khi2a2,khia,khia,ka,ka,True,False
 齒盤,khí-puânn,25,khí-pôaⁿ,khi2puann5,khi2poann5,khipuann,khipoann,kp,kp,True,False
-龍船,liông-tsûn,25,liông-tsûn,liong5tsun5,liong5tsun5,liongtsun,liongtsun,lt,lt,True,False
-龍船,lîng-tsûn,25,lêng-tsûn,ling5tsun5,leng5tsun5,lingtsun,lengtsun,lt,lt,True,False
+龍船,liông-tsûn,25,liông-chûn,liong5tsun5,liong5chun5,liongtsun,liongchun,lt,lc,True,False
+龍船,lîng-tsûn,25,lêng-chûn,ling5tsun5,leng5chun5,lingtsun,lengchun,lt,lc,True,False
 𠕇仁,tīng-jîn,25,tēng-jîn,ting7jin5,teng7jin5,tingjin,tengjin,tj,tj,True,False
 𠕇仁,tīng-lîn,25,tēng-lîn,ting7lin5,teng7lin5,tinglin,tenglin,tl,tl,True,False
-𢯾枕,mooh-tsím,25,mo͘h-tsím,mooh4tsim2,mooh4tsim2,moohtsim,moohtsim,mt,mt,True,False
+𢯾枕,mooh-tsím,25,mo͘h-chím,mooh4tsim2,mooh4chim2,moohtsim,moohchim,mt,mc,True,False
 𪐞染,tòo-ní,25,tò͘-ní,too3ni2,too3ni2,tooni,tooni,tn,tn,True,False
-一壘審,it-luí-sím,16,it-luí-sím,it4lui2sim2,it4lui2sim2,itluisim,itluisim,ils,ils,True,False
-一壘手,it-luí-tshiú,16,it-luí-chhiú,it4lui2tshiu2,it4lui2chhiu2,itluitshiu,itluichhiu,ilt,ilc,True,False
+一壘審,it-luí-sím,16,it-lúi-sím,it4lui2sim2,it4lui2sim2,itluisim,itluisim,ils,ils,True,False
+一壘手,it-luí-tshiú,16,it-lúi-chhiú,it4lui2tshiu2,it4lui2chhiu2,itluitshiu,itluichhiu,ilt,ilc,True,False
 一夜干,it-iā-kuann,16,it-iā-koaⁿ,it4ia7kuann1,it4ia7koann1,itiakuann,itiakoann,iik,iik,True,False
-三不等,sam-put-tíng,16,sam-put-tíng,sam1put4ting2,sam1put4ting2,samputting,samputting,spt,spt,True,False
+三不等,sam-put-tíng,16,sam-put-téng,sam1put4ting2,sam1put4teng2,samputting,samputteng,spt,spt,True,False
 三分球,sann-hun-kiû,16,saⁿ-hun-kiû,sann1hun1kiu5,sann1hun1kiu5,sannhunkiu,sannhunkiu,shk,shk,True,False
-三壘審,sann-luí-sím,16,saⁿ-luí-sím,sann1lui2sim2,sann1lui2sim2,sannluisim,sannluisim,sls,sls,True,False
-三壘手,sann-luí-tshiú,16,saⁿ-luí-chhiú,sann1lui2tshiu2,sann1lui2chhiu2,sannluitshiu,sannluichhiu,slt,slc,True,False
+三壘審,sann-luí-sím,16,saⁿ-lúi-sím,sann1lui2sim2,sann1lui2sim2,sannluisim,sannluisim,sls,sls,True,False
+三壘手,sann-luí-tshiú,16,saⁿ-lúi-chhiú,sann1lui2tshiu2,sann1lui2chhiu2,sannluitshiu,sannluichhiu,slt,slc,True,False
 三日賽,sann-ji̍t-sài,16,saⁿ-ji̍t-sài,sann1jit8sai3,sann1jit8sai3,sannjitsai,sannjitsai,sjs,sjs,True,False
 三日賽,sann-li̍t-sài,16,saⁿ-li̍t-sài,sann1lit8sai3,sann1lit8sai3,sannlitsai,sannlitsai,sls,sls,True,False
 三殺打,sam-sat-tánn,16,sam-sat-táⁿ,sam1sat4tann2,sam1sat4tann2,samsattann,samsattann,sst,sst,True,False
 三角錐,sann-kak-tsui,16,saⁿ-kak-chui,sann1kak4tsui1,sann1kak4chui1,sannkaktsui,sannkakchui,skt,skc,True,False
 三項賽,sann-hāng-sài,16,saⁿ-hāng-sài,sann1hang7sai3,sann1hang7sai3,sannhangsai,sannhangsai,shs,shs,True,False
-上壘率,tsiūnn-luí-lu̍t,16,chiūⁿ-luí-lu̍t,tsiunn7lui2lut8,chiunn7lui2lut8,tsiunnluilut,chiunnluilut,tll,cll,True,False
+上壘率,tsiūnn-luí-lu̍t,16,chiūⁿ-lúi-lu̍t,tsiunn7lui2lut8,chiunn7lui2lut8,tsiunnluilut,chiunnluilut,tll,cll,True,False
 上細化,siōng-suè-huà,16,siōng-sòe-hòa,siong7sue3hua3,siong7soe3hoa3,siongsuehua,siongsoehoa,ssh,ssh,True,False
 上細化,siōng-sè-huà,16,siōng-sè-hòa,siong7se3hua3,siong7se3hoa3,siongsehua,siongsehoa,ssh,ssh,True,False
 下一步,ē-tsi̍t-pōo,16,ē-chi̍t-pō͘,e7tsit8poo7,e7chit8poo7,etsitpoo,echitpoo,etp,ecp,True,False
-下半場,ē-puànn-tiûnn,16,ē-pòaⁿ-tiûnn,e7puann3tiunn5,e7poann3tiunn5,epuanntiunn,epoanntiunn,ept,ept,True,False
+下半場,ē-puànn-tiûnn,16,ē-pòaⁿ-tiûⁿ,e7puann3tiunn5,e7poann3tiunn5,epuanntiunn,epoanntiunn,ept,ept,True,False
 下目箍,ē-ba̍k-khoo,16,ē-ba̍k-kho͘,e7bak8khoo1,e7bak8khoo1,ebakkhoo,ebakkhoo,ebk,ebk,True,False
 下目蚶,ē-ba̍k-ham,16,ē-ba̍k-ham,e7bak8ham1,e7bak8ham1,ebakham,ebakham,ebh,ebh,True,False
 下頦線,ē-hâi-suànn,16,ē-hâi-sòaⁿ,e7hai5suann3,e7hai5soann3,ehaisuann,ehaisoann,ehs,ehs,True,False
@@ -766,10 +763,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 二七仔,jī-tshit-á,16,jī-chhit-á,ji7tshit4a2,ji7chhit4a2,jitshita,jichhita,jta,jca,True,True
 二七仔,lī-tshit-á,16,lī-chhit-á,li7tshit4a2,li7chhit4a2,litshita,lichhita,lta,lca,True,True
 二刀流,jī-to-liû,16,jī-to-liû,ji7to1liu5,ji7to1liu5,jitoliu,jitoliu,jtl,jtl,True,False
-二壘審,jī-luí-sím,16,jī-luí-sím,ji7lui2sim2,ji7lui2sim2,jiluisim,jiluisim,jls,jls,True,False
-二壘審,lī-luí-sím,16,lī-luí-sím,li7lui2sim2,li7lui2sim2,liluisim,liluisim,lls,lls,True,False
-二壘手,jī-luí-tshiú,16,jī-luí-chhiú,ji7lui2tshiu2,ji7lui2chhiu2,jiluitshiu,jiluichhiu,jlt,jlc,True,False
-二壘手,lī-luí-tshiú,16,lī-luí-chhiú,li7lui2tshiu2,li7lui2chhiu2,liluitshiu,liluichhiu,llt,llc,True,False
+二壘審,jī-luí-sím,16,jī-lúi-sím,ji7lui2sim2,ji7lui2sim2,jiluisim,jiluisim,jls,jls,True,False
+二壘審,lī-luí-sím,16,lī-lúi-sím,li7lui2sim2,li7lui2sim2,liluisim,liluisim,lls,lls,True,False
+二壘手,jī-luí-tshiú,16,jī-lúi-chhiú,ji7lui2tshiu2,ji7lui2chhiu2,jiluitshiu,jiluichhiu,jlt,jlc,True,False
+二壘手,lī-luí-tshiú,16,lī-lúi-chhiú,li7lui2tshiu2,li7lui2chhiu2,liluitshiu,liluichhiu,llt,llc,True,False
 二進位,jī-tsìn-uī,16,jī-chìn-ūi,ji7tsin3ui7,ji7chin3ui7,jitsinui,jichinui,jtu,jcu,True,False
 二頭肌,jī-thâu-ki,16,jī-thâu-ki,ji7thau5ki1,ji7thau5ki1,jithauki,jithauki,jtk,jtk,True,False
 二頭肌,lī-thâu-ki,16,lī-thâu-ki,li7thau5ki1,li7thau5ki1,lithauki,lithauki,ltk,ltk,True,False
@@ -793,7 +790,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 個人賽,kò-lîn-sài,16,kò-lîn-sài,ko3lin5sai3,ko3lin5sai3,kolinsai,kolinsai,kls,kls,True,False
 倒徛騰,tò-khiā-thîng,16,tò-khiā-thêng,to3khia7thing5,to3khia7theng5,tokhiathing,tokhiatheng,tkt,tkt,True,False
 倒線審,tò-suànn-sím,16,tò-sòaⁿ-sím,to3suann3sim2,to3soann3sim2,tosuannsim,tosoannsim,tss,tss,True,False
-倖存者,hīng-tsûn-tsiá,16,hēng-tsûn-chiá,hing7tsun5tsia2,heng7tsun5chia2,hingtsuntsia,hengtsunchia,htt,htc,True,False
+倖存者,hīng-tsûn-tsiá,16,hēng-chûn-chiá,hing7tsun5tsia2,heng7chun5chia2,hingtsuntsia,hengchunchia,htt,hcc,True,False
 倚身球,uá-sin-kiû,16,óa-sin-kiû,ua2sin1kiu5,oa2sin1kiu5,uasinkiu,oasinkiu,usk,osk,True,False
 假動作,ké tōng-tsok,16,ké tōng-chok,ke2tong7tsok4,ke2tong7chok4,ketongtsok,ketongchok,ktt,ktc,True,False
 做散工,tsuè suánn-kang,16,chòe sóaⁿ-kang,tsue3suann2kang1,choe3soann2kang1,tsuesuannkang,choesoannkang,tsk,csk,True,False
@@ -802,7 +799,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 側平夯,tshik-pênn-giâ,16,chhek-pêⁿ-giâ,tshik4penn5gia5,chhek4penn5gia5,tshikpenngia,chhekpenngia,tpg,cpg,True,False
 側平夯,tshik-pînn-giâ,16,chhek-pîⁿ-giâ,tshik4pinn5gia5,chhek4pinn5gia5,tshikpinngia,chhekpinngia,tpg,cpg,True,False
 側旋踢,tshik-suân-that,16,chhek-soân-that,tshik4suan5that4,chhek4soan5that4,tshiksuanthat,chheksoanthat,tst,cst,True,False
-偷本壘,thau-pún-luí,16,thau-pún-luí,thau1pun2lui2,thau1pun2lui2,thaupunlui,thaupunlui,tpl,tpl,True,False
+偷本壘,thau-pún-luí,16,thau-pún-lúi,thau1pun2lui2,thau1pun2lui2,thaupunlui,thaupunlui,tpl,tpl,True,False
 傳播鍊,thuân-pò-liān,16,thoân-pò-liān,thuan5po3lian7,thoan5po3lian7,thuanpolian,thoanpolian,tpl,tpl,True,False
 僻智識,phiah-tì-sik,16,phiah-tì-sek,phiah4ti3sik4,phiah4ti3sek4,phiahtisik,phiahtisek,pts,pts,True,False
 儀表板,gî-pió-pán,16,gî-pió-pán,gi5pio2pan2,gi5pio2pan2,gipiopan,gipiopan,gpp,gpp,True,False
@@ -813,10 +810,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 內輪差,lāi-lián-tsha,16,lāi-lián-chha,lai7lian2tsha1,lai7lian2chha1,lailiantsha,lailianchha,llt,llc,True,False
 內重巡,lāi-tîng-sûn,16,lāi-têng-sûn,lai7ting5sun5,lai7teng5sun5,laitingsun,laitengsun,lts,lts,True,False
 內野手,lāi-iá-tshiú,16,lāi-iá-chhiú,lai7ia2tshiu2,lai7ia2chhiu2,laiiatshiu,laiiachhiu,lit,lic,True,False
-全壘打,tsuân-luí-tánn,16,choân-luí-táⁿ,tsuan5lui2tann2,choan5lui2tann2,tsuanluitann,choanluitann,tlt,clt,True,False
+全壘打,tsuân-luí-tánn,16,choân-lúi-táⁿ,tsuan5lui2tann2,choan5lui2tann2,tsuanluitann,choanluitann,tlt,clt,True,False
 冰風暴,ping-hong-pō,16,peng-hong-pō,ping1hong1po7,peng1hong1po7,pinghongpo,penghongpo,php,php,True,False
-冷智識,líng-tì-sik,16,líng-tì-sek,ling2ti3sik4,ling2ti3sek4,lingtisik,lingtisek,lts,lts,True,False
-出場數,tshut-tiûnn-sòo,16,chhut-tiûnn-sò͘,tshut4tiunn5soo3,chhut4tiunn5soo3,tshuttiunnsoo,chhuttiunnsoo,tts,cts,True,False
+冷智識,líng-tì-sik,16,léng-tì-sek,ling2ti3sik4,leng2ti3sek4,lingtisik,lengtisek,lts,lts,True,False
+出場數,tshut-tiûnn-sòo,16,chhut-tiûⁿ-sò͘,tshut4tiunn5soo3,chhut4tiunn5soo3,tshuttiunnsoo,chhuttiunnsoo,tts,cts,True,False
 出手點,tshut-tshiú-tiám,16,chhut-chhiú-tiám,tshut4tshiu2tiam2,chhut4chhiu2tiam2,tshuttshiutiam,chhutchhiutiam,ttt,cct,True,False
 出賽數,tshut-sài-sòo,16,chhut-sài-sò͘,tshut4sai3soo3,chhut4sai3soo3,tshutsaisoo,chhutsaisoo,tss,css,True,False
 分析師,hun-sik-su,16,hun-sek-su,hun1sik4su1,hun1sek4su1,hunsiksu,hunseksu,hss,hss,True,False
@@ -835,8 +832,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 助聽器,tsōo-thiann-khì,16,chō͘-thiaⁿ-khì,tsoo7thiann1khi3,choo7thiann1khi3,tsoothiannkhi,choothiannkhi,ttk,ctk,True,False
 化妝台,huà-tsong-tâi,16,hòa-chong-tâi,hua3tsong1tai5,hoa3chong1tai5,huatsongtai,hoachongtai,htt,hct,True,False
 化妝棉,huà-tsong-mî,16,hòa-chong-mî,hua3tsong1mi5,hoa3chong1mi5,huatsongmi,hoachongmi,htm,hcm,True,False
-化妝水,huà-tsong-tsuí,16,hòa-chong-chuí,hua3tsong1tsui2,hoa3chong1chui2,huatsongtsui,hoachongchui,htt,hcc,True,False
-化妝筅,huà-tsong-tshíng,16,hòa-chong-tshíng,hua3tsong1tshing2,hoa3chong1tshing2,huatsongtshing,hoachongtshing,htt,hct,True,False
+化妝水,huà-tsong-tsuí,16,hòa-chong-chúi,hua3tsong1tsui2,hoa3chong1chui2,huatsongtsui,hoachongchui,htt,hcc,True,False
+化妝筅,huà-tsong-tshíng,16,hòa-chong-chhéng,hua3tsong1tshing2,hoa3chong1chheng2,huatsongtshing,hoachongchheng,htt,hcc,True,False
 化妝鏡,huà-tsong-kiànn,16,hòa-chong-kiàⁿ,hua3tsong1kiann3,hoa3chong1kiann3,huatsongkiann,hoachongkiann,htk,hck,True,False
 匿名者,li̍k-miâ-tsiá,16,le̍k-miâ-chiá,lik8mia5tsia2,lek8mia5chia2,likmiatsia,lekmiachia,lmt,lmc,True,False
 十進位,tsa̍p-tsìn-uī,16,cha̍p-chìn-ūi,tsap8tsin3ui7,chap8chin3ui7,tsaptsinui,chapchinui,ttu,ccu,True,False
@@ -849,7 +846,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 卡巴迪,kha-pá-tih,16,kha-pá-tih,kha1pa2tih4,kha1pa2tih4,khapatih,khapatih,kpt,kpt,True,False
 卵白霜,nn̄g-pe̍h-song,16,nn̄g-pe̍h-song,nng7peh8song1,nng7peh8song1,nngpehsong,nngpehsong,nps,nps,True,False
 卸妝乳,sià-tsong-jú,16,sià-chong-jú,sia3tsong1ju2,sia3chong1ju2,siatsongju,siachongju,stj,scj,True,False
-卸妝水,sià-tsong-tsuí,16,sià-chong-chuí,sia3tsong1tsui2,sia3chong1chui2,siatsongtsui,siachongchui,stt,scc,True,False
+卸妝水,sià-tsong-tsuí,16,sià-chong-chúi,sia3tsong1tsui2,sia3chong1chui2,siatsongtsui,siachongchui,stt,scc,True,False
 卸妝油,sià-tsong-iû,16,sià-chong-iû,sia3tsong1iu5,sia3chong1iu5,siatsongiu,siachongiu,sti,sci,True,False
 厚喙脣,kāu tshuì-tûn,16,kāu chhùi-tûn,kau7tshui3tun5,kau7chhui3tun5,kautshuitun,kauchhuitun,ktt,kct,True,False
 厚藻鹽,kāu-tsó-iâm,16,kāu-chó-iâm,kau7tso2iam5,kau7cho2iam5,kautsoiam,kauchoiam,kti,kci,True,False
@@ -897,11 +894,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 壓炒房,ah tshá-pâng,16,ah chhá-pâng,ah4tsha2pang5,ah4chha2pang5,ahtshapang,ahchhapang,atp,acp,True,False
 壓縮檔,ap-sok-tòng,16,ap-sok-tòng,ap4sok4tong3,ap4sok4tong3,apsoktong,apsoktong,ast,ast,True,False
 壓縮檔,ap-sok-tóng,16,ap-sok-tóng,ap4sok4tong2,ap4sok4tong2,apsoktong,apsoktong,ast,ast,True,False
-壘打數,luí-tánn-sòo,16,luí-táⁿ-sò͘,lui2tann2soo3,lui2tann2soo3,luitannsoo,luitannsoo,lts,lts,True,False
+壘打數,luí-tánn-sòo,16,lúi-táⁿ-sò͘,lui2tann2soo3,lui2tann2soo3,luitannsoo,luitannsoo,lts,lts,True,False
 外役監,guā-i̍k-kann,16,gōa-e̍k-kaⁿ,gua7ik8kann1,goa7ek8kann1,guaikkann,goaekkann,gik,gek,True,True
 外角球,guā-kak-kiû,16,gōa-kak-kiû,gua7kak4kiu5,goa7kak4kiu5,guakakkiu,goakakkiu,gkk,gkk,True,True
 外野手,guā-iá-tshiú,16,gōa-iá-chhiú,gua7ia2tshiu2,goa7ia2chhiu2,guaiatshiu,goaiachhiu,git,gic,True,True
-多壘打,to-luí-tánn,16,to-luí-táⁿ,to1lui2tann2,to1lui2tann2,toluitann,toluitann,tlt,tlt,True,False
+多壘打,to-luí-tánn,16,to-lúi-táⁿ,to1lui2tann2,to1lui2tann2,toluitann,toluitann,tlt,tlt,True,False
 多巴胺,to-pa-an,16,to-pa-an,to1pa1an1,to1pa1an1,topaan,topaan,tpa,tpa,True,False
 多選框,to-suán-khing,16,to-soán-kheng,to1suan2khing1,to1soan2kheng1,tosuankhing,tosoankheng,tsk,tsk,True,False
 夜光粉,iā-kng-hún,16,iā-kng-hún,ia7kng1hun2,ia7kng1hun2,iaknghun,iaknghun,ikh,ikh,True,False
@@ -909,7 +906,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 大使館,tāi-sài-kuán,16,tāi-sài-koán,tai7sai3kuan2,tai7sai3koan2,taisaikuan,taisaikoan,tsk,tsk,True,False
 大數據,tuā sòo-kì,16,tōa sò͘-kì,tua7soo3ki3,toa7soo3ki3,tuasooki,toasooki,tsk,tsk,True,False
 大數據,tuā sòo-kù,16,tōa sò͘-kù,tua7soo3ku3,toa7soo3ku3,tuasooku,toasooku,tsk,tsk,True,False
-大水雨,tuā-tsuí-hōo,16,tōa-chuí-hō͘,tua7tsui2hoo7,toa7chui2hoo7,tuatsuihoo,toachuihoo,tth,tch,True,False
+大水雨,tuā-tsuí-hōo,16,tōa-chúi-hō͘,tua7tsui2hoo7,toa7chui2hoo7,tuatsuihoo,toachuihoo,tth,tch,True,False
 大粒攄,tuā-lia̍p-lu,16,tōa-lia̍p-lu,tua7liap8lu1,toa7liap8lu1,tualiaplu,toaliaplu,tll,tll,True,False
 大頭貼,tuā-thâu-tah,16,tōa-thâu-tah,tua7thau5tah4,toa7thau5tah4,tuathautah,toathautah,ttt,ttt,True,False
 大骨湯,tuā-kut-thng,16,tōa-kut-thng,tua7kut4thng1,toa7kut4thng1,tuakutthng,toakutthng,tkt,tkt,True,False
@@ -948,13 +945,13 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 尾番箠,bé-huan-tshê,16,bé-hoan-chhê,be2huan1tshe5,be2hoan1chhe5,behuantshe,behoanchhe,bht,bhc,True,False
 展好額,tián-hó-gia̍h,16,tián-hó-gia̍h,tian2ho2giah8,tian2ho2giah8,tianhogiah,tianhogiah,thg,thg,True,False
 崁名者,khàm-miâ-tsiá,16,khàm-miâ-chiá,kham3mia5tsia2,kham3mia5chia2,khammiatsia,khammiachia,kmt,kmc,True,False
-崁斑筅,khàm-pan-tshíng,16,khàm-pan-tshíng,kham3pan1tshing2,kham3pan1tshing2,khampantshing,khampantshing,kpt,kpt,True,False
+崁斑筅,khàm-pan-tshíng,16,khàm-pan-chhéng,kham3pan1tshing2,kham3pan1chheng2,khampantshing,khampanchheng,kpt,kpc,True,False
 崁斑膏,khàm-pan-ko,16,khàm-pan-ko,kham3pan1ko1,kham3pan1ko1,khampanko,khampanko,kpk,kpk,True,False
-巡洋艦,sûn-iûnn-lām,16,sûn-iûnn-lām,sun5iunn5lam7,sun5iunn5lam7,suniunnlam,suniunnlam,sil,sil,True,False
+巡洋艦,sûn-iûnn-lām,16,sûn-iûⁿ-lām,sun5iunn5lam7,sun5iunn5lam7,suniunnlam,suniunnlam,sil,sil,True,False
 工具人,kang-kū-jîn,16,kang-kū-jîn,kang1ku7jin5,kang1ku7jin5,kangkujin,kangkujin,kkj,kkj,True,False
 工具列,kang-khū-lia̍t,16,kang-khū-lia̍t,kang1khu7liat8,kang1khu7liat8,kangkhuliat,kangkhuliat,kkl,kkl,True,False
 工具列,kang-kū-lia̍t,16,kang-kū-lia̍t,kang1ku7liat8,kang1ku7liat8,kangkuliat,kangkuliat,kkl,kkl,True,False
-工課場,khang-khuè-tiûnn,16,khang-khòe-tiûnn,khang1khue3tiunn5,khang1khoe3tiunn5,khangkhuetiunn,khangkhoetiunn,kkt,kkt,True,False
+工課場,khang-khuè-tiûnn,16,khang-khòe-tiûⁿ,khang1khue3tiunn5,khang1khoe3tiunn5,khangkhuetiunn,khangkhoetiunn,kkt,kkt,True,False
 左打者,tsó-tánn-tsiá,16,chó-táⁿ-chiá,tso2tann2tsia2,cho2tann2chia2,tsotanntsia,chotannchia,ttt,ctc,True,False
 巧固球,khá-kòo-kiû,16,khá-kò͘-kiû,kha2koo3kiu5,kha2koo3kiu5,khakookiu,khakookiu,kkk,kkk,True,False
 巨集齒,kī-tsi̍p-khí,16,kī-chi̍p-khí,ki7tsip8khi2,ki7chip8khi2,kitsipkhi,kichipkhi,ktk,kck,True,False
@@ -964,8 +961,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 布篷厝,pòo-phâng-tshù,16,pò͘-phâng-chhù,poo3phang5tshu3,poo3phang5chhu3,poophangtshu,poophangchhu,ppt,ppc,True,True
 帶風向,tài-hong-hiòng,16,tài-hong-hiòng,tai3hong1hiong3,tai3hong1hiong3,taihonghiong,taihonghiong,thh,thh,True,False
 平衡木,pîng-hîng-bo̍k,16,pêng-hêng-bo̍k,ping5hing5bok8,peng5heng5bok8,pinghingbok,penghengbok,phb,phb,True,False
-平頭筅,pênn-thâu-tshíng,16,pêⁿ-thâu-tshíng,penn5thau5tshing2,penn5thau5tshing2,pennthautshing,pennthautshing,ptt,ptt,True,False
-平頭筅,pînn-thâu-tshíng,16,pîⁿ-thâu-tshíng,pinn5thau5tshing2,pinn5thau5tshing2,pinnthautshing,pinnthautshing,ptt,ptt,True,False
+平頭筅,pênn-thâu-tshíng,16,pêⁿ-thâu-chhéng,penn5thau5tshing2,penn5thau5chheng2,pennthautshing,pennthauchheng,ptt,ptc,True,False
+平頭筅,pînn-thâu-tshíng,16,pîⁿ-thâu-chhéng,pinn5thau5tshing2,pinn5thau5chheng2,pinnthautshing,pinnthauchheng,ptt,ptc,True,False
 幹細胞,kàn-suè-pau,16,kàn-sòe-pau,kan3sue3pau1,kan3soe3pau1,kansuepau,kansoepau,ksp,ksp,True,True
 幹細胞,kàn-sè-pau,16,kàn-sè-pau,kan3se3pau1,kan3se3pau1,kansepau,kansepau,ksp,ksp,True,True
 庫德族,khòo-tik-tso̍k,16,khò͘-tek-cho̍k,khoo3tik4tsok8,khoo3tek4chok8,khootiktsok,khootekchok,ktt,ktc,True,False
@@ -994,7 +991,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 憂鬱症,iu-ut-tsìng,16,iu-ut-chèng,iu1ut4tsing3,iu1ut4cheng3,iuuttsing,iuutcheng,iut,iuc,True,False
 懸低槓,kuân-kē-kǹg,16,koân-kē-kǹg,kuan5ke7kng3,koan5ke7kng3,kuankekng,koankekng,kkk,kkk,True,False
 戮銃術,lak-tshìng-su̍t,16,lak-chhèng-su̍t,lak4tshing3sut8,lak4chheng3sut8,laktshingsut,lakchhengsut,lts,lcs,True,False
-扇形筅,sìnn-hîng-tshíng,16,sìⁿ-hêng-tshíng,sinn3hing5tshing2,sinn3heng5tshing2,sinnhingtshing,sinnhengtshing,sht,sht,True,False
+扇形筅,sìnn-hîng-tshíng,16,sìⁿ-hêng-chhéng,sinn3hing5tshing2,sinn3heng5chheng2,sinnhingtshing,sinnhengchheng,sht,shc,True,False
 手摵杯,tshiú-tshi̍k-pue,16,chhiú-chhe̍k-poe,tshiu2tshik8pue1,chhiu2chhek8poe1,tshiutshikpue,chhiuchhekpoe,ttp,ccp,True,False
 手摵茶,tshiú-tshi̍k-tê,16,chhiú-chhe̍k-tê,tshiu2tshik8te5,chhiu2chhek8te5,tshiutshikte,chhiuchhekte,ttt,cct,True,False
 手肚仁,tshiú-tóo-jîn,16,chhiú-tó͘-jîn,tshiu2too2jin5,chhiu2too2jin5,tshiutoojin,chhiutoojin,ttj,ctj,True,False
@@ -1005,11 +1002,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 抗力肌,khòng-li̍k-ki,16,khòng-le̍k-ki,khong3lik8ki1,khong3lek8ki1,khonglikki,khonglekki,klk,klk,True,False
 抗𤶃仔,khòng thiāu-á,16,khòng thiāu-á,khong3thiau7a2,khong3thiau7a2,khongthiaua,khongthiaua,kta,kta,True,False
 抹粉底,buah hún-té,16,boah hún-té,buah4hun2te2,boah4hun2te2,buahhunte,boahhunte,bht,bht,True,False
-抾面筅,khioh-bīn-tshíng,16,khioh-bīn-tshíng,khioh4bin7tshing2,khioh4bin7tshing2,khiohbintshing,khiohbintshing,kbt,kbt,True,False
+抾面筅,khioh-bīn-tshíng,16,khioh-bīn-chhéng,khioh4bin7tshing2,khioh4bin7chheng2,khiohbintshing,khiohbinchheng,kbt,kbc,True,False
 拋電龜,pha-tiān-ku,16,pha-tiān-ku,pha1tian7ku1,pha1tian7ku1,phatianku,phatianku,ptk,ptk,True,False
 拍光條,phah-kng-tiâu,16,phah-kng-tiâu,phah4kng1tiau5,phah4kng1tiau5,phahkngtiau,phahkngtiau,pkt,pkt,True,False
 拍光盤,phah-kng-puânn,16,phah-kng-pôaⁿ,phah4kng1puann5,phah4kng1poann5,phahkngpuann,phahkngpoann,pkp,pkp,True,False
-拍光筅,phah-kng-tshíng,16,phah-kng-tshíng,phah4kng1tshing2,phah4kng1tshing2,phahkngtshing,phahkngtshing,pkt,pkt,True,False
+拍光筅,phah-kng-tshíng,16,phah-kng-chhéng,phah4kng1tshing2,phah4kng1chheng2,phahkngtshing,phahkngchheng,pkt,pkc,True,False
 拍光粉,phah-kng-hún,16,phah-kng-hún,phah4kng1hun2,phah4kng1hun2,phahknghun,phahknghun,pkh,pkh,True,False
 拍光膏,phah-kng-ko,16,phah-kng-ko,phah4kng1ko1,phah4kng1ko1,phahkngko,phahkngko,pkk,pkk,True,False
 拍卵器,phah-nn̄g-khì,16,phah-nn̄g-khì,phah4nng7khi3,phah4nng7khi3,phahnngkhi,phahnngkhi,pnk,pnk,True,False
@@ -1027,14 +1024,14 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 挾的,gia̍p--ê,16,gia̍p--ê,giap8e5,giap8e5,giape,giape,ge,ge,True,False
 捋仔田,lua̍h-á-tshân,16,loa̍h-á-chhân,luah8a2tshan5,loah8a2chhan5,luahatshan,loahachhan,lat,lac,True,False
 捘卵機,tsūn-nn̄g-ki,16,chūn-nn̄g-ki,tsun7nng7ki1,chun7nng7ki1,tsunnngki,chunnngki,tnk,cnk,True,False
-捲螺筅,kńg-lê-tshíng,16,kńg-lê-tshíng,kng2le5tshing2,kng2le5tshing2,kngletshing,kngletshing,klt,klt,True,True
+捲螺筅,kńg-lê-tshíng,16,kńg-lê-chhéng,kng2le5tshing2,kng2le5chheng2,kngletshing,knglechheng,klt,klc,True,True
 捽槌仔,sut-thuî-á,16,sut-thûi-á,sut4thui5a2,sut4thui5a2,sutthuia,sutthuia,sta,sta,True,False
 掌心球,tsiáng-sim-kiû,16,chiáng-sim-kiû,tsiang2sim1kiu5,chiang2sim1kiu5,tsiangsimkiu,chiangsimkiu,tsk,csk,True,False
 排名賽,pâi-miâ-sài,16,pâi-miâ-sài,pai5mia5sai3,pai5mia5sai3,paimiasai,paimiasai,pms,pms,True,False
 掠篙泅,lia̍h-ko-siû,16,lia̍h-ko-siû,liah8ko1siu5,liah8ko1siu5,liahkosiu,liahkosiu,lks,lks,True,False
 掠龍椅,lia̍h-lîng-í,16,lia̍h-lêng-í,liah8ling5i2,liah8leng5i2,liahlingi,liahlengi,lli,lli,True,False
 接骨木,tsiap-kut-bo̍k,16,chiap-kut-bo̍k,tsiap4kut4bok8,chiap4kut4bok8,tsiapkutbok,chiapkutbok,tkb,ckb,True,False
-揀色器,kíng-sik-khì,16,kíng-sek-khì,king2sik4khi3,king2sek4khi3,kingsikkhi,kingsekkhi,ksk,ksk,True,False
+揀色器,kíng-sik-khì,16,kéng-sek-khì,king2sik4khi3,keng2sek4khi3,kingsikkhi,kengsekkhi,ksk,ksk,True,False
 提示詞,thê-sī-sû,16,thê-sī-sû,the5si7su5,the5si7su5,thesisu,thesisu,tss,tss,True,False
 揤兩下,tshi̍h-nn̄g-ē,16,chhi̍h-nn̄g-ē,tshih8nng7e7,chhih8nng7e7,tshihnnge,chhihnnge,tne,cne,True,False
 揮空率,hui-khong-lu̍t,16,hui-khong-lu̍t,hui1khong1lut8,hui1khong1lut8,huikhonglut,huikhonglut,hkl,hkl,True,False
@@ -1062,7 +1059,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 日系妝,ji̍t-hē-tsong,16,ji̍t-hē-chong,jit8he7tsong1,jit8he7chong1,jithetsong,jithechong,jht,jhc,True,False
 日系妝,li̍t-hē-tsong,16,li̍t-hē-chong,lit8he7tsong1,lit8he7chong1,lithetsong,lithechong,lht,lhc,True,False
 早晝頓,tsá-tàu-tǹg,16,chá-tàu-tǹg,tsa2tau3tng3,cha2tau3tng3,tsatautng,chatautng,ttt,ctt,True,False
-明太子,bîng-thài-tsí,16,bêng-thài-tsí,bing5thai3tsi2,beng5thai3tsi2,bingthaitsi,bengthaitsi,btt,btt,True,False
+明太子,bîng-thài-tsí,16,bêng-thài-chí,bing5thai3tsi2,beng5thai3chi2,bingthaitsi,bengthaichi,btt,btc,True,False
 明太子,mê-thài-khòo,16,mê-thài-khò͘,me5thai3khoo3,me5thai3khoo3,methaikhoo,methaikhoo,mtk,mtk,True,False
 普洱茶,phóo-ní-tê,16,phó͘-ní-tê,phoo2ni2te5,phoo2ni2te5,phoonite,phoonite,pnt,pnt,True,False
 暗擊手,àm-kik-tshiú,16,àm-kek-chhiú,am3kik4tshiu2,am3kek4chhiu2,amkiktshiu,amkekchhiu,akt,akc,True,False
@@ -1076,8 +1073,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 杜賓狗,tōo-pin-káu,16,tō͘-pin-káu,too7pin1kau2,too7pin1kau2,toopinkau,toopinkau,tpk,tpk,True,False
 枋仔牚,pang-á-thènn,16,pang-á-thèⁿ,pang1a2thenn3,pang1a2thenn3,pangathenn,pangathenn,pat,pat,True,False
 枋仔牚,pang-á-thìnn,16,pang-á-thìⁿ,pang1a2thinn3,pang1a2thinn3,pangathinn,pangathinn,pat,pat,True,False
-果子乾,kué-tsí-kuann,16,kóe-tsí-koaⁿ,kue2tsi2kuann1,koe2tsi2koann1,kuetsikuann,koetsikoann,ktk,ktk,True,False
-果子乾,ké-tsí-kuann,16,ké-tsí-koaⁿ,ke2tsi2kuann1,ke2tsi2koann1,ketsikuann,ketsikoann,ktk,ktk,True,False
+果子乾,kué-tsí-kuann,16,kóe-chí-koaⁿ,kue2tsi2kuann1,koe2chi2koann1,kuetsikuann,koechikoann,ktk,kck,True,False
+果子乾,ké-tsí-kuann,16,ké-chí-koaⁿ,ke2tsi2kuann1,ke2chi2koann1,ketsikuann,kechikoann,ktk,kck,True,False
 果汁機,kó-tsiap-ki,16,kó-chiap-ki,ko2tsiap4ki1,ko2chiap4ki1,kotsiapki,kochiapki,ktk,kck,True,False
 染目眉,ní ba̍k-bâi,16,ní ba̍k-bâi,ni2bak8bai5,ni2bak8bai5,nibakbai,nibakbai,nbb,nbb,True,False
 染眉膏,ní-bâi-ko,16,ní-bâi-ko,ni2bai5ko1,ni2bai5ko1,nibaiko,nibaiko,nbk,nbk,True,False
@@ -1098,8 +1095,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 棉仔糖,mî-á-thn̂g,16,mî-á-thn̂g,mi5a2thng5,mi5a2thng5,miathng,miathng,mat,mat,True,False
 椒麻雞,tsio-bâ-ke,16,chio-bâ-ke,tsio1ba5ke1,chio1ba5ke1,tsiobake,chiobake,tbk,cbk,True,False
 椒麻雞,tsio-bâ-kue,16,chio-bâ-koe,tsio1ba5kue1,chio1ba5koe1,tsiobakue,chiobakoe,tbk,cbk,True,False
-椰子奶,iâ-tsí-ling,16,iâ-tsí-leng,ia5tsi2ling1,ia5tsi2leng1,iatsiling,iatsileng,itl,itl,True,False
-椰子奶,iâ-tsí-ni,16,iâ-tsí-ni,ia5tsi2ni1,ia5tsi2ni1,iatsini,iatsini,itn,itn,True,False
+椰子奶,iâ-tsí-ling,16,iâ-chí-leng,ia5tsi2ling1,ia5chi2leng1,iatsiling,iachileng,itl,icl,True,False
+椰子奶,iâ-tsí-ni,16,iâ-chí-ni,ia5tsi2ni1,ia5chi2ni1,iatsini,iachini,itn,icn,True,False
 榴彈炮,liû-tuânn-phàu,16,liû-tôaⁿ-phàu,liu5tuann5phau3,liu5toann5phau3,liutuannphau,liutoannphau,ltp,ltp,True,False
 橄欖球,kan-ná-kiû,16,kan-ná-kiû,kan1na2kiu5,kan1na2kiu5,kannakiu,kannakiu,knk,knk,True,False
 機械舞,ki-hāi-bú,16,ki-hāi-bú,ki1hai7bu2,ki1hai7bu2,kihaibu,kihaibu,khb,khb,True,False
@@ -1108,14 +1105,14 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 歐美妝,au-bí-tsong,16,au-bí-chong,au1bi2tsong1,au1bi2chong1,aubitsong,aubichong,abt,abc,True,False
 正線審,tsiànn-suànn-sím,16,chiàⁿ-sòaⁿ-sím,tsiann3suann3sim2,chiann3soann3sim2,tsiannsuannsim,chiannsoannsim,tss,css,True,False
 歹牢胎,pháinn-tiâu-the,16,pháiⁿ-tiâu-the,phainn2tiau5the1,phainn2tiau5the1,phainntiauthe,phainntiauthe,ptt,ptt,True,False
-殘壘率,tsân-luí-lu̍t,16,chân-luí-lu̍t,tsan5lui2lut8,chan5lui2lut8,tsanluilut,chanluilut,tll,cll,True,False
+殘壘率,tsân-luí-lu̍t,16,chân-lúi-lu̍t,tsan5lui2lut8,chan5lui2lut8,tsanluilut,chanluilut,tll,cll,True,False
 氣糋鍋,khì-tsìnn-ko,16,khì-chìⁿ-ko,khi3tsinn3ko1,khi3chinn3ko1,khitsinnko,khichinnko,ktk,kck,True,False
-水流屍,tsuí-lâu-si,16,chuí-lâu-si,tsui2lau5si1,chui2lau5si1,tsuilausi,chuilausi,tls,cls,True,False
-水浸粿,tsuí-tsìm-kué,16,chuí-chìm-kóe,tsui2tsim3kue2,chui2chim3koe2,tsuitsimkue,chuichimkoe,ttk,cck,True,False
-水煎包,tsuí-tsian-pau,16,chuí-chian-pau,tsui2tsian1pau1,chui2chian1pau1,tsuitsianpau,chuichianpau,ttp,ccp,True,False
-水粉膏,tsuí-hún-ko,16,chuí-hún-ko,tsui2hun2ko1,chui2hun2ko1,tsuihunko,chuihunko,thk,chk,True,False
-水粉餅,tsuí-hún-piánn,16,chuí-hún-piáⁿ,tsui2hun2piann2,chui2hun2piann2,tsuihunpiann,chuihunpiann,thp,chp,True,False
-水雞泅,tsuí-ke-siû,16,chuí-ke-siû,tsui2ke1siu5,chui2ke1siu5,tsuikesiu,chuikesiu,tks,cks,True,False
+水流屍,tsuí-lâu-si,16,chúi-lâu-si,tsui2lau5si1,chui2lau5si1,tsuilausi,chuilausi,tls,cls,True,False
+水浸粿,tsuí-tsìm-kué,16,chúi-chìm-kóe,tsui2tsim3kue2,chui2chim3koe2,tsuitsimkue,chuichimkoe,ttk,cck,True,False
+水煎包,tsuí-tsian-pau,16,chúi-chian-pau,tsui2tsian1pau1,chui2chian1pau1,tsuitsianpau,chuichianpau,ttp,ccp,True,False
+水粉膏,tsuí-hún-ko,16,chúi-hún-ko,tsui2hun2ko1,chui2hun2ko1,tsuihunko,chuihunko,thk,chk,True,False
+水粉餅,tsuí-hún-piánn,16,chúi-hún-piáⁿ,tsui2hun2piann2,chui2hun2piann2,tsuihunpiann,chuihunpiann,thp,chp,True,False
+水雞泅,tsuí-ke-siû,16,chúi-ke-siû,tsui2ke1siu5,chui2ke1siu5,tsuikesiu,chuikesiu,tks,cks,True,False
 沉浸式,tîm-tsìm-sik,16,tîm-chìm-sek,tim5tsim3sik4,tim5chim3sek4,timtsimsik,timchimsek,tts,tcs,True,False
 沙沙醬,sa-sa-tsiùnn,16,sa-sa-chiùⁿ,sa1sa1tsiunn3,sa1sa1chiunn3,sasatsiunn,sasachiunn,sst,ssc,True,False
 沙皮狗,sua-phuê-káu,16,soa-phôe-káu,sua1phue5kau2,soa1phoe5kau2,suaphuekau,soaphoekau,spk,spk,True,False
@@ -1123,27 +1120,27 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 沙礫岩,sua-li̍k-gâm,16,soa-le̍k-gâm,sua1lik8gam5,soa1lek8gam5,sualikgam,soalekgam,slg,slg,True,False
 油壓剪,iû-ap-tsián,16,iû-ap-chián,iu5ap4tsian2,iu5ap4chian2,iuaptsian,iuapchian,iat,iac,True,False
 沿岸流,iân-huānn-lâu,16,iân-hōaⁿ-lâu,ian5huann7lau5,ian5hoann7lau5,ianhuannlau,ianhoannlau,ihl,ihl,True,False
-泅水池,siû-tsuí-tî,16,siû-chuí-tî,siu5tsui2ti5,siu5chui2ti5,siutsuiti,siuchuiti,stt,sct,True,False
-泅水鏡,siû-tsuí-kiànn,16,siû-chuí-kiàⁿ,siu5tsui2kiann3,siu5chui2kiann3,siutsuikiann,siuchuikiann,stk,sck,True,False
+泅水池,siû-tsuí-tî,16,siû-chúi-tî,siu5tsui2ti5,siu5chui2ti5,siutsuiti,siuchuiti,stt,sct,True,False
+泅水鏡,siû-tsuí-kiànn,16,siû-chúi-kiàⁿ,siu5tsui2kiann3,siu5chui2kiann3,siutsuikiann,siuchuikiann,stk,sck,True,False
 泉裕泰,tsuânn jū-thài,16,chôaⁿ jū-thài,tsuann5ju7thai3,choann5ju7thai3,tsuannjuthai,choannjuthai,tjt,cjt,True,False
 泉裕泰,tsuânn lū-thài,16,chôaⁿ lū-thài,tsuann5lu7thai3,choann5lu7thai3,tsuannluthai,choannluthai,tlt,clt,True,False
 泔模粿,ám-bôo-kué,16,ám-bô͘-kóe,am2boo5kue2,am2boo5koe2,ambookue,ambookoe,abk,abk,True,False
 泔模粿,ám-bôo-ké,16,ám-bô͘-ké,am2boo5ke2,am2boo5ke2,ambooke,ambooke,abk,abk,True,False
 法令痕,huat-līng-hûn,16,hoat-lēng-hûn,huat4ling7hun5,hoat4leng7hun5,huatlinghun,hoatlenghun,hlh,hlh,True,False
-洋刺波,iûnn-tshì-pho,16,iûnn-chhì-pho,iunn5tshi3pho1,iunn5chhi3pho1,iunntshipho,iunnchhipho,itp,icp,True,False
-洋芳瓜,iûnn-phang-kue,16,iûnn-phang-koe,iunn5phang1kue1,iunn5phang1koe1,iunnphangkue,iunnphangkoe,ipk,ipk,True,False
+洋刺波,iûnn-tshì-pho,16,iûⁿ-chhì-pho,iunn5tshi3pho1,iunn5chhi3pho1,iunntshipho,iunnchhipho,itp,icp,True,False
+洋芳瓜,iûnn-phang-kue,16,iûⁿ-phang-koe,iunn5phang1kue1,iunn5phang1koe1,iunnphangkue,iunnphangkoe,ipk,ipk,True,False
 洗面乳,sé-bīn-jú,16,sé-bīn-jú,se2bin7ju2,se2bin7ju2,sebinju,sebinju,sbj,sbj,True,False
 海山醬,hái-san-tsiùnn,16,hái-san-chiùⁿ,hai2san1tsiunn3,hai2san1chiunn3,haisantsiunn,haisanchiunn,hst,hsc,True,False
 海洛因,hái-lo̍k-in,16,hái-lo̍k-in,hai2lok8in1,hai2lok8in1,hailokin,hailokin,hli,hli,True,False
-海綿筅,hái-mî-tshíng,16,hái-mî-tshíng,hai2mi5tshing2,hai2mi5tshing2,haimitshing,haimitshing,hmt,hmt,True,False
+海綿筅,hái-mî-tshíng,16,hái-mî-chhéng,hai2mi5tshing2,hai2mi5chheng2,haimitshing,haimichheng,hmt,hmc,True,False
 海豬泅,hái-ti-siû,16,hái-ti-siû,hai2ti1siu5,hai2ti1siu5,haitisiu,haitisiu,hts,hts,True,False
 消磨量,siau-môo-liōng,16,siau-mô͘-liōng,siau1moo5liong7,siau1moo5liong7,siaumooliong,siaumooliong,sml,sml,True,False
 淘汰賽,tô-thài sài,16,tô-thài sài,to5thai3sai3,to5thai3sai3,tothaisai,tothaisai,tts,tts,True,False
 游擊手,iû-kik-tshiú,16,iû-kek-chhiú,iu5kik4tshiu2,iu5kek4chhiu2,iukiktshiu,iukekchhiu,ikt,ikc,True,False
 游擊隊,iû-kik-tuī,16,iû-kek-tūi,iu5kik4tui7,iu5kek4tui7,iukiktui,iukektui,ikt,ikt,True,False
-游泳池,iû-íng-tî,16,iû-íng-tî,iu5ing2ti5,iu5ing2ti5,iuingti,iuingti,iit,iit,True,True
-游泳衫,iû-íng-sann,16,iû-íng-saⁿ,iu5ing2sann1,iu5ing2sann1,iuingsann,iuingsann,iis,iis,True,True
-游泳鏡,iû-íng-kiànn,16,iû-íng-kiàⁿ,iu5ing2kiann3,iu5ing2kiann3,iuingkiann,iuingkiann,iik,iik,True,True
+游泳池,iû-íng-tî,16,iû-éng-tî,iu5ing2ti5,iu5eng2ti5,iuingti,iuengti,iit,iet,True,True
+游泳衫,iû-íng-sann,16,iû-éng-saⁿ,iu5ing2sann1,iu5eng2sann1,iuingsann,iuengsann,iis,ies,True,True
+游泳鏡,iû-íng-kiànn,16,iû-éng-kiàⁿ,iu5ing2kiann3,iu5eng2kiann3,iuingkiann,iuengkiann,iik,iek,True,True
 準決賽,tsún-kuat-sài,16,chún-koat-sài,tsun2kuat4sai3,chun2koat4sai3,tsunkuatsai,chunkoatsai,tks,cks,True,False
 滅火器,bia̍t-hué-khì,16,bia̍t-hóe-khì,biat8hue2khi3,biat8hoe2khi3,biathuekhi,biathoekhi,bhk,bhk,True,False
 滅火器,bia̍t-hé-khì,16,bia̍t-hé-khì,biat8he2khi3,biat8he2khi3,biathekhi,biathekhi,bhk,bhk,True,False
@@ -1155,7 +1152,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 漚查埔,àu-tsa-poo,16,àu-cha-po͘,au3tsa1poo1,au3cha1poo1,autsapoo,auchapoo,atp,acp,True,False
 漩尿球,suān-jiō-kiû,16,soān-jiō-kiû,suan7jio7kiu5,soan7jio7kiu5,suanjiokiu,soanjiokiu,sjk,sjk,True,False
 漸層色,tsiām-tsân-sik,16,chiām-chân-sek,tsiam7tsan5sik4,chiam7chan5sek4,tsiamtsansik,chiamchansek,tts,ccs,True,False
-潛艇堡,tsiâm-thíng-pó,16,chiâm-thíng-pó,tsiam5thing2po2,chiam5thing2po2,tsiamthingpo,chiamthingpo,ttp,ctp,True,False
+潛艇堡,tsiâm-thíng-pó,16,chiâm-théng-pó,tsiam5thing2po2,chiam5theng2po2,tsiamthingpo,chiamthengpo,ttp,ctp,True,False
 激外外,kik-guā-guā,16,kek-gōa-gōa,kik4gua7gua7,kek4goa7goa7,kikguagua,kekgoagoa,kgg,kgg,True,True
 瀏覽器,liû-lám-khì,16,liû-lám-khì,liu5lam2khi3,liu5lam2khi3,liulamkhi,liulamkhi,llk,llk,True,False
 火燒山,hué sio suann,16,hóe sio soaⁿ,hue2sio1suann1,hoe2sio1soann1,huesiosuann,hoesiosoann,hss,hss,True,False
@@ -1203,11 +1200,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 牛奶酥,gû-ni-soo,16,gû-ni-so͘,gu5ni1soo1,gu5ni1soo1,gunisoo,gunisoo,gns,gns,True,False
 牛奶霜,gû-ling-song,16,gû-leng-song,gu5ling1song1,gu5leng1song1,gulingsong,gulengsong,gls,gls,True,False
 牛奶霜,gû-ni-song,16,gû-ni-song,gu5ni1song1,gu5ni1song1,gunisong,gunisong,gns,gns,True,False
-牛腱子,gû kiàn-tsí,16,gû kiàn-tsí,gu5kian3tsi2,gu5kian3tsi2,gukiantsi,gukiantsi,gkt,gkt,True,False
+牛腱子,gû kiàn-tsí,16,gû kiàn-chí,gu5kian3tsi2,gu5kian3chi2,gukiantsi,gukianchi,gkt,gkc,True,False
 牛角麭,gû-kak-pháng,16,gû-kak-pháng,gu5kak4phang2,gu5kak4phang2,gukakphang,gukakphang,gkp,gkp,True,False
 牛頭狗,gû-thâu-káu,16,gû-thâu-káu,gu5thau5kau2,gu5thau5kau2,guthaukau,guthaukau,gtk,gtk,True,False
 物聯網,bu̍t-liân-bāng,16,bu̍t-liân-bāng,but8lian5bang7,but8lian5bang7,butlianbang,butlianbang,blb,blb,True,False
-猛打賞,bíng-tánn-siúnn,16,bíng-táⁿ-siúⁿ,bing2tann2siunn2,bing2tann2siunn2,bingtannsiunn,bingtannsiunn,bts,bts,True,False
+猛打賞,bíng-tánn-siúnn,16,béng-táⁿ-siúⁿ,bing2tann2siunn2,beng2tann2siunn2,bingtannsiunn,bengtannsiunn,bts,bts,True,False
 猴頭果,kâu-thâu-kó,16,kâu-thâu-kó,kau5thau5ko2,kau5thau5ko2,kauthauko,kauthauko,ktk,ktk,True,False
 獅仔狗,sai-á-káu,16,sai-á-káu,sai1a2kau2,sai1a2kau2,saiakau,saiakau,sak,sak,True,False
 瑞士捲,suī-sū-kńg,16,sūi-sū-kńg,sui7su7kng2,sui7su7kng2,suisukng,suisukng,ssk,ssk,True,False
@@ -1223,7 +1220,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 界內球,kài-lāi-kiû,16,kài-lāi-kiû,kai3lai7kiu5,kai3lai7kiu5,kailaikiu,kailaikiu,klk,klk,True,False
 界外球,kài-guā-kiû,16,kài-gōa-kiû,kai3gua7kiu5,kai3goa7kiu5,kaiguakiu,kaigoakiu,kgk,kgk,True,True
 番薯球,han-tsî-kiû,16,han-chî-kiû,han1tsi5kiu5,han1chi5kiu5,hantsikiu,hanchikiu,htk,hck,True,False
-番薯球,han-tsû-kiû,16,han-tsû-kiû,han1tsu5kiu5,han1tsu5kiu5,hantsukiu,hantsukiu,htk,htk,True,False
+番薯球,han-tsû-kiû,16,han-chû-kiû,han1tsu5kiu5,han1chu5kiu5,hantsukiu,hanchukiu,htk,hck,True,False
 番麥枝,huan-be̍h-ki,16,hoan-be̍h-ki,huan1beh8ki1,hoan1beh8ki1,huanbehki,hoanbehki,hbk,hbk,True,False
 畫圖板,uē-tôo-pán,16,ōe-tô͘-pán,ue7too5pan2,oe7too5pan2,uetoopan,oetoopan,utp,otp,True,False
 畫圖板,uī-tôo-pán,16,ūi-tô͘-pán,ui7too5pan2,ui7too5pan2,uitoopan,uitoopan,utp,utp,True,False
@@ -1235,15 +1232,15 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 發球權,huat-kiû-khuân,16,hoat-kiû-khoân,huat4kiu5khuan5,hoat4kiu5khoan5,huatkiukhuan,hoatkiukhoan,hkk,hkk,True,False
 發球權,huat-kiû-kuân,16,hoat-kiû-koân,huat4kiu5kuan5,hoat4kiu5koan5,huatkiukuan,hoatkiukoan,hkk,hkk,True,False
 益生菌,ik-sing-khún,16,ek-seng-khún,ik4sing1khun2,ek4seng1khun2,iksingkhun,eksengkhun,isk,esk,True,False
-盜本壘,tō-pún-luí,16,tō-pún-luí,to7pun2lui2,to7pun2lui2,topunlui,topunlui,tpl,tpl,True,False
+盜本壘,tō-pún-luí,16,tō-pún-lúi,to7pun2lui2,to7pun2lui2,topunlui,topunlui,tpl,tpl,True,False
 監視器,kàm-sī-khì,16,kàm-sī-khì,kam3si7khi3,kam3si7khi3,kamsikhi,kamsikhi,ksk,ksk,True,False
 目墘線,ba̍k-kînn-suànn,16,ba̍k-kîⁿ-sòaⁿ,bak8kinn5suann3,bak8kinn5soann3,bakkinnsuann,bakkinnsoann,bks,bks,True,False
 目尾痕,ba̍k-bué-hûn,16,ba̍k-bóe-hûn,bak8bue2hun5,bak8boe2hun5,bakbuehun,bakboehun,bbh,bbh,True,False
 目尾痕,ba̍k-bé-hûn,16,ba̍k-bé-hûn,bak8be2hun5,bak8be2hun5,bakbehun,bakbehun,bbh,bbh,True,False
 目屎溝,ba̍k-sái-kau,16,ba̍k-sái-kau,bak8sai2kau1,bak8sai2kau1,baksaikau,baksaikau,bsk,bsk,True,False
 目彩盤,ba̍k-tshái-puânn,16,ba̍k-chhái-pôaⁿ,bak8tshai2puann5,bak8chhai2poann5,baktshaipuann,bakchhaipoann,btp,bcp,True,False
-目彩筅,ba̍k-tshái-tshíng,16,ba̍k-chhái-tshíng,bak8tshai2tshing2,bak8chhai2tshing2,baktshaitshing,bakchhaitshing,btt,bct,True,False
-目眉筅,ba̍k-bâi-tshíng,16,ba̍k-bâi-tshíng,bak8bai5tshing2,bak8bai5tshing2,bakbaitshing,bakbaitshing,bbt,bbt,True,False
+目彩筅,ba̍k-tshái-tshíng,16,ba̍k-chhái-chhéng,bak8tshai2tshing2,bak8chhai2chheng2,baktshaitshing,bakchhaichheng,btt,bcc,True,False
+目眉筅,ba̍k-bâi-tshíng,16,ba̍k-bâi-chhéng,bak8bai5tshing2,bak8bai5chheng2,bakbaitshing,bakbaichheng,bbt,bbc,True,False
 目眉筆,ba̍k-bâi-pit,16,ba̍k-bâi-pit,bak8bai5pit4,bak8bai5pit4,bakbaipit,bakbaipit,bbp,bbp,True,False
 目眉粉,ba̍k-bâi-hún,16,ba̍k-bâi-hún,bak8bai5hun2,bak8bai5hun2,bakbaihun,bakbaihun,bbh,bbh,True,False
 目眉膠,ba̍k-bâi-ka,16,ba̍k-bâi-ka,bak8bai5ka1,bak8bai5ka1,bakbaika,bakbaika,bbk,bbk,True,False
@@ -1252,7 +1249,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 直的,ti̍t--ê,16,ti̍t--ê,tit8e5,tit8e5,tite,tite,te,te,True,False
 真假值,tsin-ké-ta̍t,16,chin-ké-ta̍t,tsin1ke2tat8,chin1ke2tat8,tsinketat,chinketat,tkt,ckt,True,False
 眼影盤,gán-iánn-puânn,16,gán-iáⁿ-pôaⁿ,gan2iann2puann5,gan2iann2poann5,ganiannpuann,ganiannpoann,gip,gip,True,False
-眼影筅,gán-iánn-tshíng,16,gán-iáⁿ-tshíng,gan2iann2tshing2,gan2iann2tshing2,ganianntshing,ganianntshing,git,git,True,False
+眼影筅,gán-iánn-tshíng,16,gán-iáⁿ-chhéng,gan2iann2tshing2,gan2iann2chheng2,ganianntshing,ganiannchheng,git,gic,True,False
 碳跤跡,thuànn-kha-jiah,16,thòaⁿ-kha-jiah,thuann3kha1jiah4,thoann3kha1jiah4,thuannkhajiah,thoannkhajiah,tkj,tkj,True,True
 碳跤跡,thuànn-kha-liah,16,thòaⁿ-kha-liah,thuann3kha1liah4,thoann3kha1liah4,thuannkhaliah,thoannkhaliah,tkl,tkl,True,True
 確認框,khak-jīn-khing,16,khak-jīn-kheng,khak4jin7khing1,khak4jin7kheng1,khakjinkhing,khakjinkheng,kjk,kjk,True,False
@@ -1270,11 +1267,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 米割包,bí-kuah-pau,16,bí-koah-pau,bi2kuah4pau1,bi2koah4pau1,bikuahpau,bikoahpau,bkp,bkp,True,False
 米格魯,bí-gū-luh,16,bí-gū-luh,bi2gu7luh4,bi2gu7luh4,biguluh,biguluh,bgl,bgl,True,False
 粉刺鋏,hún-tshì-giap,16,hún-chhì-giap,hun2tshi3giap4,hun2chhi3giap4,huntshigiap,hunchhigiap,htg,hcg,True,False
-粉尾筅,hún-bué-tshíng,16,hún-bóe-tshíng,hun2bue2tshing2,hun2boe2tshing2,hunbuetshing,hunboetshing,hbt,hbt,True,False
-粉尾筅,hún-bé-tshíng,16,hún-bé-tshíng,hun2be2tshing2,hun2be2tshing2,hunbetshing,hunbetshing,hbt,hbt,True,False
+粉尾筅,hún-bué-tshíng,16,hún-bóe-chhéng,hun2bue2tshing2,hun2boe2chheng2,hunbuetshing,hunboechheng,hbt,hbc,True,False
+粉尾筅,hún-bé-tshíng,16,hún-bé-chhéng,hun2be2tshing2,hun2be2chheng2,hunbetshing,hunbechheng,hbt,hbc,True,False
 粉底液,hún-té-i̍k,16,hún-té-e̍k,hun2te2ik8,hun2te2ek8,hunteik,hunteek,hti,hte,True,False
-粉底筅,hún-tué-tshíng,16,hún-tóe-tshíng,hun2tue2tshing2,hun2toe2tshing2,huntuetshing,huntoetshing,htt,htt,True,False
-粉底筅,hún-té-tshíng,16,hún-té-tshíng,hun2te2tshing2,hun2te2tshing2,huntetshing,huntetshing,htt,htt,True,False
+粉底筅,hún-tué-tshíng,16,hún-tóe-chhéng,hun2tue2tshing2,hun2toe2chheng2,huntuetshing,huntoechheng,htt,htc,True,False
+粉底筅,hún-té-tshíng,16,hún-té-chhéng,hun2te2tshing2,hun2te2chheng2,huntetshing,huntechheng,htt,htc,True,False
 粉拭仔,hún-tshit-á,16,hún-chhit-á,hun2tshit4a2,hun2chhit4a2,huntshita,hunchhita,hta,hca,True,False
 粉撲仔,hún-phok-á,16,hún-phok-á,hun2phok4a2,hun2phok4a2,hunphoka,hunphoka,hpa,hpa,True,False
 粉紅醬,hún-âng-tsiùnn,16,hún-âng-chiùⁿ,hun2ang5tsiunn3,hun2ang5chiunn3,hunangtsiunn,hunangchiunn,hat,hac,True,False
@@ -1297,7 +1294,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 總教練,tsóng-kàu-liān,16,chóng-kàu-liān,tsong2kau3lian7,chong2kau3lian7,tsongkaulian,chongkaulian,tkl,ckl,True,False
 羅宋湯,lô-sòng-thng,16,lô-sòng-thng,lo5song3thng1,lo5song3thng1,losongthng,losongthng,lst,lst,True,False
 羅素狗,lô-sòo-káu,16,lô-sò͘-káu,lo5soo3kau2,lo5soo3kau2,losookau,losookau,lsk,lsk,True,False
-羊駱駝,iûnn-lo̍k-tô,16,iûnn-lo̍k-tô,iunn5lok8to5,iunn5lok8to5,iunnlokto,iunnlokto,ilt,ilt,True,False
+羊駱駝,iûnn-lo̍k-tô,16,iûⁿ-lo̍k-tô,iunn5lok8to5,iunn5lok8to5,iunnlokto,iunnlokto,ilt,ilt,True,False
 羌仔虎,kiunn-á-hóo,16,kiuⁿ-á-hó͘,kiunn1a2hoo2,kiunn1a2hoo2,kiunnahoo,kiunnahoo,kah,kah,True,True
 美妝卵,bí-tsong-nn̄g,16,bí-chong-nn̄g,bi2tsong1nng7,bi2chong1nng7,bitsongnng,bichongnng,btn,bcn,True,False
 羽絨衫,ú-jiông-sann,16,ú-jiông-saⁿ,u2jiong5sann1,u2jiong5sann1,ujiongsann,ujiongsann,ujs,ujs,True,False
@@ -1321,7 +1318,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 脈衝光,me̍h-tshiong-kng,16,me̍h-chhiong-kng,meh8tshiong1kng1,meh8chhiong1kng1,mehtshiongkng,mehchhiongkng,mtk,mck,True,True
 脣線筆,tûn-suànn-pit,16,tûn-sòaⁿ-pit,tun5suann3pit4,tun5soann3pit4,tunsuannpit,tunsoannpit,tsp,tsp,True,False
 膨獅狗,phòng-sai-káu,16,phòng-sai-káu,phong3sai1kau2,phong3sai1kau2,phongsaikau,phongsaikau,psk,psk,True,False
-膨粉筅,phòng-hún tshíng,16,phòng-hún tshíng,phong3hun2tshing2,phong3hun2tshing2,phonghuntshing,phonghuntshing,pht,pht,True,False
+膨粉筅,phòng-hún tshíng,16,phòng-hún chhéng,phong3hun2tshing2,phong3hun2chheng2,phonghuntshing,phonghunchheng,pht,phc,True,False
 膨粉餅,phòng-hún-piánn,16,phòng-hún-piáⁿ,phong3hun2piann2,phong3hun2piann2,phonghunpiann,phonghunpiann,php,php,True,False
 膽固醇,tánn-kòo-sûn,16,táⁿ-kò͘-sûn,tann2koo3sun5,tann2koo3sun5,tannkoosun,tannkoosun,tks,tks,True,False
 自由跤,tsū-iû-kha,16,chū-iû-kha,tsu7iu5kha1,chu7iu5kha1,tsuiukha,chuiukha,tik,cik,True,False
@@ -1347,13 +1344,13 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 葉黃素,ia̍p-hông-sòo,16,ia̍p-hông-sò͘,iap8hong5soo3,iap8hong5soo3,iaphongsoo,iaphongsoo,ihs,ihs,True,False
 著球點,tio̍h-kiû-tiám,16,tio̍h-kiû-tiám,tioh8kiu5tiam2,tioh8kiu5tiam2,tiohkiutiam,tiohkiutiam,tkt,tkt,True,False
 蒙古巡,bông-kóo-sûn,16,bông-kó͘-sûn,bong5koo2sun5,bong5koo2sun5,bongkoosun,bongkoosun,bks,bks,True,False
-蓄水池,thiok-tsuí-tî,16,thiok-chuí-tî,thiok4tsui2ti5,thiok4chui2ti5,thioktsuiti,thiokchuiti,ttt,tct,True,False
-蓄水率,thiok-tsuí-lu̍t,16,thiok-chuí-lu̍t,thiok4tsui2lut8,thiok4chui2lut8,thioktsuilut,thiokchuilut,ttl,tcl,True,False
-蓄水量,thiok-tsuí-liōng,16,thiok-chuí-liōng,thiok4tsui2liong7,thiok4chui2liong7,thioktsuiliong,thiokchuiliong,ttl,tcl,True,False
+蓄水池,thiok-tsuí-tî,16,thiok-chúi-tî,thiok4tsui2ti5,thiok4chui2ti5,thioktsuiti,thiokchuiti,ttt,tct,True,False
+蓄水率,thiok-tsuí-lu̍t,16,thiok-chúi-lu̍t,thiok4tsui2lut8,thiok4chui2lut8,thioktsuilut,thiokchuilut,ttl,tcl,True,False
+蓄水量,thiok-tsuí-liōng,16,thiok-chúi-liōng,thiok4tsui2liong7,thiok4chui2liong7,thioktsuiliong,thiokchuiliong,ttl,tcl,True,False
 蓮苞頭,liân-pau-thâu,16,liân-pau-thâu,lian5pau1thau5,lian5pau1thau5,lianpauthau,lianpauthau,lpt,lpt,True,False
 薄喙脣,po̍h tshuì-tûn,16,po̍h chhùi-tûn,poh8tshui3tun5,poh8chhui3tun5,pohtshuitun,pohchhuitun,ptt,pct,True,False
 薰衫草,hun-sann-tsháu,16,hun-saⁿ-chháu,hun1sann1tshau2,hun1sann1chhau2,hunsanntshau,hunsannchhau,hst,hsc,True,False
-藏水艦,tshàng-tsuí-lām,16,chhàng-chuí-lām,tshang3tsui2lam7,chhang3chui2lam7,tshangtsuilam,chhangchuilam,ttl,ccl,True,False
+藏水艦,tshàng-tsuí-lām,16,chhàng-chúi-lām,tshang3tsui2lam7,chhang3chui2lam7,tshangtsuilam,chhangchuilam,ttl,ccl,True,False
 蘋果光,phōng-kó-kng,16,phōng-kó-kng,phong7ko2kng1,phong7ko2kng1,phongkokng,phongkokng,pkk,pkk,True,False
 蘋果派,phōng-kó-phài,16,phōng-kó-phài,phong7ko2phai3,phong7ko2phai3,phongkophai,phongkophai,pkp,pkp,True,False
 蘋果肌,phōng-kó-ki,16,phōng-kó-ki,phong7ko2ki1,phong7ko2ki1,phongkoki,phongkoki,pkk,pkk,True,False
@@ -1371,7 +1368,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 被安打,pī an-tánn,16,pī an-táⁿ,pi7an1tann2,pi7an1tann2,piantann,piantann,pat,pat,True,False
 複合弓,ho̍k-ha̍p king,16,ho̍k-ha̍p keng,hok8hap8king1,hok8hap8keng1,hokhapking,hokhapkeng,hhk,hhk,True,False
 西施狗,se-si-káu,16,se-si-káu,se1si1kau2,se1si1kau2,sesikau,sesikau,ssk,ssk,True,False
-西洋棋,se-iûnn-kî,16,se-iûnn-kî,se1iunn5ki5,se1iunn5ki5,seiunnki,seiunnki,sik,sik,True,False
+西洋棋,se-iûnn-kî,16,se-iûⁿ-kî,se1iunn5ki5,se1iunn5ki5,seiunnki,seiunnki,sik,sik,True,False
 視神經,sī-sîn-king,16,sī-sîn-keng,si7sin5king1,si7sin5keng1,sisinking,sisinkeng,ssk,ssk,True,False
 視網膜,sī-bāng-mo̍oh,16,sī-bāng-mo̍͘h,si7bang7mooh8,si7bang7mooh8,sibangmooh,sibangmooh,sbm,sbm,True,False
 解析度,kái-sik-tōo,16,kái-sek-tō͘,kai2sik4too7,kai2sek4too7,kaisiktoo,kaisektoo,kst,kst,True,False
@@ -1405,7 +1402,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 超音波,tshiau-im-pho,16,chhiau-im-pho,tshiau1im1pho1,chhiau1im1pho1,tshiauimpho,chhiauimpho,tip,cip,True,False
 越武道,ua̍t-bú-tō,16,oa̍t-bú-tō,uat8bu2to7,oat8bu2to7,uatbuto,oatbuto,ubt,obt,True,False
 趖蟲類,sô-thâng-luī,16,sô-thâng-lūi,so5thang5lui7,so5thang5lui7,sothanglui,sothanglui,stl,stl,True,False
-趨角筅,tshu-kak-tshíng,16,chhu-kak-tshíng,tshu1kak4tshing2,chhu1kak4tshing2,tshukaktshing,chhukaktshing,tkt,ckt,True,False
+趨角筅,tshu-kak-tshíng,16,chhu-kak-chhéng,tshu1kak4tshing2,chhu1kak4chheng2,tshukaktshing,chhukakchheng,tkt,ckc,True,False
 趨輪枋,tshu-lián-pang,16,chhu-lián-pang,tshu1lian2pang1,chhu1lian2pang1,tshulianpang,chhulianpang,tlp,clp,True,False
 趨過頭,tshu-kuè-thâu,16,chhu-kòe-thâu,tshu1kue3thau5,chhu1koe3thau5,tshukuethau,chhukoethau,tkt,ckt,True,False
 趨過頭,tshu-kè-thâu,16,chhu-kè-thâu,tshu1ke3thau5,chhu1ke3thau5,tshukethau,chhukethau,tkt,ckt,True,False
@@ -1433,25 +1430,25 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 遠近法,hn̄g-kīn-huat,16,hn̄g-kīn-hoat,hng7kin7huat4,hng7kin7hoat4,hngkinhuat,hngkinhoat,hkh,hkh,True,False
 遠近法,hn̄g-kūn-huat,16,hn̄g-kūn-hoat,hng7kun7huat4,hng7kun7hoat4,hngkunhuat,hngkunhoat,hkh,hkh,True,False
 邊緣人,pian-iân-jîn,16,pian-iân-jîn,pian1ian5jin5,pian1ian5jin5,pianianjin,pianianjin,pij,pij,True,False
-酸種麭,sng-tsíng-pháng,16,sng-tsíng-pháng,sng1tsing2phang2,sng1tsing2phang2,sngtsingphang,sngtsingphang,stp,stp,True,False
+酸種麭,sng-tsíng-pháng,16,sng-chéng-pháng,sng1tsing2phang2,sng1cheng2phang2,sngtsingphang,sngchengphang,stp,scp,True,False
 酸薟湯,sng-hiam-thng,16,sng-hiam-thng,sng1hiam1thng1,sng1hiam1thng1,snghiamthng,snghiamthng,sht,sht,True,False
 重巡膠,tîng-sûn-ka,16,têng-sûn-ka,ting5sun5ka1,teng5sun5ka1,tingsunka,tengsunka,tsk,tsk,True,False
 重巡貼,tîng-sûn-tah,16,têng-sûn-tah,ting5sun5tah4,teng5sun5tah4,tingsuntah,tengsuntah,tst,tst,True,False
-重整理,tîng tsíng-lí,16,têng tsíng-lí,ting5tsing2li2,teng5tsing2li2,tingtsingli,tengtsingli,ttl,ttl,True,False
+重整理,tîng tsíng-lí,16,têng chéng-lí,ting5tsing2li2,teng5cheng2li2,tingtsingli,tengchengli,ttl,tcl,True,False
 重載入,tîng tsài-ji̍p,16,têng chài-ji̍p,ting5tsai3jip8,teng5chai3jip8,tingtsaijip,tengchaijip,ttj,tcj,True,False
 金屬感,kim-sio̍k-kám,16,kim-sio̍k-kám,kim1siok8kam2,kim1siok8kam2,kimsiokkam,kimsiokkam,ksk,ksk,True,False
 金滑感,kim-ku̍t-kám,16,kim-ku̍t-kám,kim1kut8kam2,kim1kut8kam2,kimkutkam,kimkutkam,kkk,kkk,True,False
 金萱茶,kim-suan-tê,16,kim-soan-tê,kim1suan1te5,kim1soan1te5,kimsuante,kimsoante,kst,kst,True,False
 鈉含量,nà-hâm-liōng,16,nà-hâm-liōng,na3ham5liong7,na3ham5liong7,nahamliong,nahamliong,nhl,nhl,True,False
 鈕仔餅,liú-á-piánn,16,liú-á-piáⁿ,liu2a2piann2,liu2a2piann2,liuapiann,liuapiann,lap,lap,True,False
-銃子球,tshìng-tsí-kiû,16,chhèng-tsí-kiû,tshing3tsi2kiu5,chheng3tsi2kiu5,tshingtsikiu,chhengtsikiu,ttk,ctk,True,False
+銃子球,tshìng-tsí-kiû,16,chhèng-chí-kiû,tshing3tsi2kiu5,chheng3chi2kiu5,tshingtsikiu,chhengchikiu,ttk,cck,True,False
 鋁箔紙,lī-po̍h-tsuá,16,lī-po̍h-chóa,li7poh8tsua2,li7poh8choa2,lipohtsua,lipohchoa,lpt,lpc,True,False
 鋁箔紙,lū-po̍h-tsuá,16,lū-po̍h-chóa,lu7poh8tsua2,lu7poh8choa2,lupohtsua,lupohchoa,lpt,lpc,True,False
 鎮暴銃,tìn-pō-tshìng,16,tìn-pō-chhèng,tin3po7tshing3,tin3po7chheng3,tinpotshing,tinpochheng,tpt,tpc,True,False
 長打率,tn̂g-tánn-lu̍t,16,tn̂g-táⁿ-lu̍t,tng5tann2lut8,tng5tann2lut8,tngtannlut,tngtannlut,ttl,ttl,True,False
 開發者,khai-huat-tsiá,16,khai-hoat-chiá,khai1huat4tsia2,khai1hoat4chia2,khaihuattsia,khaihoatchia,kht,khc,True,False
 開講室,khai-káng-sik,16,khai-káng-sek,khai1kang2sik4,khai1kang2sek4,khaikangsik,khaikangsek,kks,kks,True,False
-閣踏壘,koh ta̍h-luí,16,koh ta̍h-luí,koh4tah8lui2,koh4tah8lui2,kohtahlui,kohtahlui,ktl,ktl,True,False
+閣踏壘,koh ta̍h-luí,16,koh ta̍h-lúi,koh4tah8lui2,koh4tah8lui2,kohtahlui,kohtahlui,ktl,ktl,True,False
 閬位坐,làng-uī-tsē,16,làng-ūi-chē,lang3ui7tse7,lang3ui7che7,languitse,languiche,lut,luc,True,False
 防曝乳,hông-pha̍k-jú,16,hông-pha̍k-jú,hong5phak8ju2,hong5phak8ju2,hongphakju,hongphakju,hpj,hpj,True,False
 防曝乳,hông-pha̍k-lú,16,hông-pha̍k-lú,hong5phak8lu2,hong5phak8lu2,hongphaklu,hongphaklu,hpl,hpl,True,False
@@ -1462,10 +1459,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 隔暝醉,keh-mî-tsuì,16,keh-mî-chùi,keh4mi5tsui3,keh4mi5chui3,kehmitsui,kehmichui,kmt,kmc,True,False
 隔離霜,keh-lī-song,16,keh-lī-song,keh4li7song1,keh4li7song1,kehlisong,kehlisong,kls,kls,True,False
 隨身碟,suî-sin-tia̍p,16,sûi-sin-tia̍p,sui5sin1tiap8,sui5sin1tiap8,suisintiap,suisintiap,sst,sst,True,False
-雙偷壘,siang-thau-luí,16,siang-thau-luí,siang1thau1lui2,siang1thau1lui2,siangthaului,siangthaului,stl,stl,True,False
+雙偷壘,siang-thau-luí,16,siang-thau-lúi,siang1thau1lui2,siang1thau1lui2,siangthaului,siangthaului,stl,stl,True,False
 雙刀流,siang-to-liû,16,siang-to-liû,siang1to1liu5,siang1to1liu5,siangtoliu,siangtoliu,stl,stl,True,False
 雙殺打,siang-sat-tánn,16,siang-sat-táⁿ,siang1sat4tann2,siang1sat4tann2,siangsattann,siangsattann,sst,sst,True,False
-雙盜壘,siang-tō-luí,16,siang-tō-luí,siang1to7lui2,siang1to7lui2,siangtolui,siangtolui,stl,stl,True,False
+雙盜壘,siang-tō-luí,16,siang-tō-lúi,siang1to7lui2,siang1to7lui2,siangtolui,siangtolui,stl,stl,True,False
 雙蹄目,siang-tuê-bo̍k,16,siang-tôe-bo̍k,siang1tue5bok8,siang1toe5bok8,siangtuebok,siangtoebok,stb,stb,True,False
 雙蹄目,siang-tê-bo̍k,16,siang-tê-bo̍k,siang1te5bok8,siang1te5bok8,siangtebok,siangtebok,stb,stb,True,False
 雙響炮,siang-hiáng-phàu,16,siang-hiáng-phàu,siang1hiang2phau3,siang1hiang2phau3,sianghiangphau,sianghiangphau,shp,shp,True,False
@@ -1475,8 +1472,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 雪納瑞,si-náu-sò,16,si-náu-sò,si1nau2so3,si1nau2so3,sinauso,sinauso,sns,sns,True,False
 雪花冰,seh-hue-ping,16,seh-hoe-peng,seh4hue1ping1,seh4hoe1peng1,sehhueping,sehhoepeng,shp,shp,True,False
 電扶梯,tiān-hû-thui,16,tiān-hû-thui,tian7hu5thui1,tian7hu5thui1,tianhuthui,tianhuthui,tht,tht,True,False
-電磁爐,tiān-tsû-lôo,16,tiān-tsû-lô͘,tian7tsu5loo5,tian7tsu5loo5,tiantsuloo,tiantsuloo,ttl,ttl,True,False
-電腦鼠,tiān-náu-tshí,16,tiān-náu-tshí,tian7nau2tshi2,tian7nau2tshi2,tiannautshi,tiannautshi,tnt,tnt,True,False
+電磁爐,tiān-tsû-lôo,16,tiān-chû-lô͘,tian7tsu5loo5,tian7chu5loo5,tiantsuloo,tianchuloo,ttl,tcl,True,False
+電腦鼠,tiān-náu-tshí,16,tiān-náu-chhí,tian7nau2tshi2,tian7nau2chhi2,tiannautshi,tiannauchhi,tnt,tnc,True,False
 電腦鼠,tiān-náu-tshú,16,tiān-náu-chhú,tian7nau2tshu2,tian7nau2chhu2,tiannautshu,tiannauchhu,tnt,tnc,True,False
 霜淇淋,sng-kî-lîm,16,sng-kî-lîm,sng1ki5lim5,sng1ki5lim5,sngkilim,sngkilim,skl,skl,True,False
 霧目眉,bū-ba̍k-bâi,16,bū-ba̍k-bâi,bu7bak8bai5,bu7bak8bai5,bubakbai,bubakbai,bbb,bbb,True,False
@@ -1484,8 +1481,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 青奶茶,tshenn-ling-tê,16,chheⁿ-leng-tê,tshenn1ling1te5,chhenn1leng1te5,tshennlingte,chhennlengte,tlt,clt,True,True
 青奶茶,tshinn-ni-tê,16,chhiⁿ-ni-tê,tshinn1ni1te5,chhinn1ni1te5,tshinnnite,chhinnnite,tnt,cnt,True,True
 韓系妝,hân-hē-tsong,16,hân-hē-chong,han5he7tsong1,han5he7chong1,hanhetsong,hanhechong,hht,hhc,True,False
-頂一步,tíng-tsi̍t-pōo,16,tíng-chi̍t-pō͘,ting2tsit8poo7,ting2chit8poo7,tingtsitpoo,tingchitpoo,ttp,tcp,True,False
-頂半場,tíng-puànn-tiûnn,16,tíng-pòaⁿ-tiûnn,ting2puann3tiunn5,ting2poann3tiunn5,tingpuanntiunn,tingpoanntiunn,tpt,tpt,True,False
+頂一步,tíng-tsi̍t-pōo,16,téng-chi̍t-pō͘,ting2tsit8poo7,teng2chit8poo7,tingtsitpoo,tengchitpoo,ttp,tcp,True,False
+頂半場,tíng-puànn-tiûnn,16,téng-pòaⁿ-tiûⁿ,ting2puann3tiunn5,teng2poann3tiunn5,tingpuanntiunn,tengpoanntiunn,tpt,tpt,True,False
 預售厝,ī-siū-tshù,16,ī-siū-chhù,i7siu7tshu3,i7siu7chhu3,isiutshu,isiuchhu,ist,isc,True,False
 預售厝,ū-siū-tshù,16,ū-siū-chhù,u7siu7tshu3,u7siu7chhu3,usiutshu,usiuchhu,ust,usc,True,False
 頭前番,thâu-tsîng-huan,16,thâu-chêng-hoan,thau5tsing5huan1,thau5cheng5hoan1,thautsinghuan,thauchenghoan,tth,tch,True,False
@@ -1505,53 +1502,52 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 驗證碼,giām-tsìng-bé,16,giām-chèng-bé,giam7tsing3be2,giam7cheng3be2,giamtsingbe,giamchengbe,gtb,gcb,True,False
 鬚鯨類,tshiu-king-luī,16,chhiu-keng-lūi,tshiu1king1lui7,chhiu1keng1lui7,tshiukinglui,chhiukenglui,tkl,ckl,True,False
 魁北克,khue-pak-khik,16,khoe-pak-khek,khue1pak4khik4,khoe1pak4khek4,khuepakkhik,khoepakkhek,kpk,kpk,True,False
-魚子醬,hî-tsí-tsiùnn,16,hî-tsí-chiùⁿ,hi5tsi2tsiunn3,hi5tsi2chiunn3,hitsitsiunn,hitsichiunn,htt,htc,True,False
+魚子醬,hî-tsí-tsiùnn,16,hî-chí-chiùⁿ,hi5tsi2tsiunn3,hi5chi2chiunn3,hitsitsiunn,hichichiunn,htt,hcc,True,False
 鮮奶捲,tshinn-ling-kńg,16,chhiⁿ-leng-kńg,tshinn1ling1kng2,chhinn1leng1kng2,tshinnlingkng,chhinnlengkng,tlk,clk,True,False
 鮮奶捲,tshinn-ni-kńg,16,chhiⁿ-ni-kńg,tshinn1ni1kng2,chhinn1ni1kng2,tshinnnikng,chhinnnikng,tnk,cnk,True,False
 鱘龍魚,sîm-liông-hî,16,sîm-liông-hî,sim5liong5hi5,sim5liong5hi5,simlionghi,simlionghi,slh,slh,True,False
 鱘龍魚,sîm-liông-hû,16,sîm-liông-hû,sim5liong5hu5,sim5liong5hu5,simlionghu,simlionghu,slh,slh,True,False
-鳥鼠仔,niáu-tshí-á,16,niáu-tshí-á,niau2tshi2a2,niau2tshi2a2,niautshia,niautshia,nta,nta,True,False
-鹼水麭,kinn-tsuí-pháng,16,kiⁿ-chuí-pháng,kinn1tsui2phang2,kinn1chui2phang2,kinntsuiphang,kinnchuiphang,ktp,kcp,True,False
+鹼水麭,kinn-tsuí-pháng,16,kiⁿ-chúi-pháng,kinn1tsui2phang2,kinn1chui2phang2,kinntsuiphang,kinnchuiphang,ktp,kcp,True,False
 麥當勞,be̍h-tong-lô,16,be̍h-tong-lô,beh8tong1lo5,beh8tong1lo5,behtonglo,behtonglo,btl,btl,True,False
 麥當勞,bi̍k-tong-lô,16,be̍k-tong-lô,bik8tong1lo5,bek8tong1lo5,biktonglo,bektonglo,btl,btl,True,False
 麻仔葉,muâ-á-hio̍h,16,môa-á-hio̍h,mua5a2hioh8,moa5a2hioh8,muaahioh,moaahioh,mah,mah,True,False
 黏錫筆,liâm-siah-pit,16,liâm-siah-pit,liam5siah4pit4,liam5siah4pit4,liamsiahpit,liamsiahpit,lsp,lsp,True,False
 點陣圖,tiám-tīn-tôo,16,tiám-tīn-tô͘,tiam2tin7too5,tiam2tin7too5,tiamtintoo,tiamtintoo,ttt,ttt,True,False
-鼻影筅,phīnn-iánn-tshíng,16,phīⁿ-iáⁿ-tshíng,phinn7iann2tshing2,phinn7iann2tshing2,phinnianntshing,phinnianntshing,pit,pit,True,False
+鼻影筅,phīnn-iánn-tshíng,16,phīⁿ-iáⁿ-chhéng,phinn7iann2tshing2,phinn7iann2chheng2,phinnianntshing,phinniannchheng,pit,pic,True,False
 鼻暗影,phīnn-àm-iánn,16,phīⁿ-àm-iáⁿ,phinn7am3iann2,phinn7am3iann2,phinnamiann,phinnamiann,pai,pai,True,False
 鼻竇炎,phīnn-tōo-iām,16,phīⁿ-tō͘-iām,phinn7too7iam7,phinn7too7iam7,phinntooiam,phinntooiam,pti,pti,True,False
 鼻胃管,phīnn-uī-kóng,16,phīⁿ-ūi-kóng,phinn7ui7kong2,phinn7ui7kong2,phinnuikong,phinnuikong,puk,puk,True,False
 龍骨髓,liông-kut-tshué,16,liông-kut-chhóe,liong5kut4tshue2,liong5kut4chhoe2,liongkuttshue,liongkutchhoe,lkt,lkc,True,False
 龍骨髓,lîng-kut-tshé,16,lêng-kut-chhé,ling5kut4tshe2,leng5kut4chhe2,lingkuttshe,lengkutchhe,lkt,lkc,True,False
 𪐞染液,tòo-ní-i̍k,16,tò͘-ní-e̍k,too3ni2ik8,too3ni2ek8,tooniik,tooniek,tni,tne,True,False
-𪐞染筅,tòo-ní-tshíng,16,tò͘-ní-tshíng,too3ni2tshing2,too3ni2tshing2,toonitshing,toonitshing,tnt,tnt,True,False
+𪐞染筅,tòo-ní-tshíng,16,tò͘-ní-chhéng,too3ni2tshing2,too3ni2chheng2,toonitshing,toonichheng,tnt,tnc,True,False
 䖙倒坐起,the-tó-tsē-khí,12,the-tó-chē-khí,the1to2tse7khi2,the1to2che7khi2,thetotsekhi,thetochekhi,tttk,ttck,True,False
 一人倒投,tsi̍t-lâng-tò-tâu,12,chi̍t-lâng-tò-tâu,tsit8lang5to3tau5,chit8lang5to3tau5,tsitlangtotau,chitlangtotau,tltt,cltt,True,False
-一壘安打,it-luí an-tánn,12,it-luí an-táⁿ,it4lui2an1tann2,it4lui2an1tann2,itluiantann,itluiantann,ilat,ilat,True,False
-一壘教練,it-luí kàu-liān,12,it-luí kàu-liān,it4lui2kau3lian7,it4lui2kau3lian7,itluikaulian,itluikaulian,ilkl,ilkl,True,False
+一壘安打,it-luí an-tánn,12,it-lúi an-táⁿ,it4lui2an1tann2,it4lui2an1tann2,itluiantann,itluiantann,ilat,ilat,True,False
+一壘教練,it-luí kàu-liān,12,it-lúi kàu-liān,it4lui2kau3lian7,it4lui2kau3lian7,itluikaulian,itluikaulian,ilkl,ilkl,True,False
 一線速球,tsi̍t-suànn sok-kiû,12,chi̍t-sòaⁿ sok-kiû,tsit8suann3sok4kiu5,chit8soann3sok4kiu5,tsitsuannsokkiu,chitsoannsokkiu,tssk,cssk,True,False
 七戰四勝,tshit-tsiàn sì-sìng,12,chhit-chiàn sì-sèng,tshit4tsian3si3sing3,chhit4chian3si3seng3,tshittsiansising,chhitchiansiseng,ttss,ccss,True,False
 三上三落,sann-tsiūnn sann-lo̍h,12,saⁿ-chiūⁿ saⁿ-lo̍h,sann1tsiunn7sann1loh8,sann1chiunn7sann1loh8,sanntsiunnsannloh,sannchiunnsannloh,stsl,scsl,True,False
-三壘安打,sann-luí an-tánn,12,saⁿ-luí an-táⁿ,sann1lui2an1tann2,sann1lui2an1tann2,sannluiantann,sannluiantann,slat,slat,True,False
-三壘教練,sann-luí kàu-liān,12,saⁿ-luí kàu-liān,sann1lui2kau3lian7,sann1lui2kau3lian7,sannluikaulian,sannluikaulian,slkl,slkl,True,False
+三壘安打,sann-luí an-tánn,12,saⁿ-lúi an-táⁿ,sann1lui2an1tann2,sann1lui2an1tann2,sannluiantann,sannluiantann,slat,slat,True,False
+三壘教練,sann-luí kàu-liān,12,saⁿ-lúi kàu-liān,sann1lui2kau3lian7,sann1lui2kau3lian7,sannluikaulian,sannluikaulian,slkl,slkl,True,False
 三線選單,sann-suànn suán-tuann,12,saⁿ-sòaⁿ soán-toaⁿ,sann1suann3suan2tuann1,sann1soann3soan2toann1,sannsuannsuantuann,sannsoannsoantoann,ssst,ssst,True,False
 三項全能,sann-hāng tsuân-lîng,12,saⁿ-hāng choân-lêng,sann1hang7tsuan5ling5,sann1hang7choan5leng5,sannhangtsuanling,sannhangchoanleng,shtl,shcl,True,False
-上壘次數,tsiūnn-luí tshù-sòo,12,chiūⁿ-luí chhù-sò͘,tsiunn7lui2tshu3soo3,chiunn7lui2chhu3soo3,tsiunnluitshusoo,chiunnluichhusoo,tlts,clcs,True,False
+上壘次數,tsiūnn-luí tshù-sòo,12,chiūⁿ-lúi chhù-sò͘,tsiunn7lui2tshu3soo3,chiunn7lui2chhu3soo3,tsiunnluitshusoo,chiunnluichhusoo,tlts,clcs,True,False
 下目睫毛,ē ba̍k-tsiah-mn̂g,12,ē ba̍k-chiah-mn̂g,e7bak8tsiah4mng5,e7bak8chiah4mng5,ebaktsiahmng,ebakchiahmng,ebtm,ebcm,True,False
 下目睫毛,ē ba̍k-tsiap-mn̂g,12,ē ba̍k-chiap-mn̂g,e7bak8tsiap4mng5,e7bak8chiap4mng5,ebaktsiapmng,ebakchiapmng,ebtm,ebcm,True,False
 中國割包,tiong-kok kuah-pau,12,tiong-kok koah-pau,tiong1kok4kuah4pau1,tiong1kok4koah4pau1,tiongkokkuahpau,tiongkokkoahpau,tkkp,tkkp,True,False
-中場歇睏,tiông-tiûnn hioh-khùn,12,tiông-tiûnn hioh-khùn,tiong5tiunn5hioh4khun3,tiong5tiunn5hioh4khun3,tiongtiunnhiohkhun,tiongtiunnhiohkhun,tthk,tthk,True,False
+中場歇睏,tiông-tiûnn hioh-khùn,12,tiông-tiûⁿ hioh-khùn,tiong5tiunn5hioh4khun3,tiong5tiunn5hioh4khun3,tiongtiunnhiohkhun,tiongtiunnhiohkhun,tthk,tthk,True,False
 中外野手,tiong-guā-iá-tshiú,12,tiong-gōa-iá-chhiú,tiong1gua7ia2tshiu2,tiong1goa7ia2chhiu2,tiongguaiatshiu,tionggoaiachhiu,tgit,tgic,True,True
 中心打者,tiong-sim tánn-tsiá,12,tiong-sim táⁿ-chiá,tiong1sim1tann2tsia2,tiong1sim1tann2chia2,tiongsimtanntsia,tiongsimtannchia,tstt,tstc,True,False
 中繼成功,tiong-kè sîng-kong,12,tiong-kè sêng-kong,tiong1ke3sing5kong1,tiong1ke3seng5kong1,tiongkesingkong,tiongkesengkong,tksk,tksk,True,False
 中繼投手,tiong-kè tâu-tshiú,12,tiong-kè tâu-chhiú,tiong1ke3tau5tshiu2,tiong1ke3tau5chhiu2,tiongketautshiu,tiongketauchhiu,tktt,tktc,True,False
-串仔卵餅,tshǹg-á nn̄g-piánn,12,tshǹg-á nn̄g-piáⁿ,tshng3a2nng7piann2,tshng3a2nng7piann2,tshnganngpiann,tshnganngpiann,tanp,tanp,True,False
+串仔卵餅,tshǹg-á nn̄g-piánn,12,chhǹg-á nn̄g-piáⁿ,tshng3a2nng7piann2,chhng3a2nng7piann2,tshnganngpiann,chhnganngpiann,tanp,canp,True,False
 串流媒體,tshuàn-liû muî-thé,12,chhoàn-liû mûi-thé,tshuan3liu5mui5the2,chhoan3liu5mui5the2,tshuanliumuithe,chhoanliumuithe,tlmt,clmt,True,False
 九一連線,kiú-it liân-suànn,12,kiú-it liân-sòaⁿ,kiu2it4lian5suann3,kiu2it4lian5soann3,kiuitliansuann,kiuitliansoann,kils,kils,True,False
 乳突病毒,jú-tu̍t pēnn-to̍k,12,jú-tu̍t pēⁿ-to̍k,ju2tut8penn7tok8,ju2tut8penn7tok8,jututpenntok,jututpenntok,jtpt,jtpt,True,False
 乳突病毒,lú-tu̍t pīnn-to̍k,12,lú-tu̍t pīⁿ-to̍k,lu2tut8pinn7tok8,lu2tut8pinn7tok8,lututpinntok,lututpinntok,ltpt,ltpt,True,False
 予球擉著,hōo kiû tia̍k-tio̍h,12,hō͘ kiû tia̍k-tio̍h,hoo7kiu5tiak8tioh8,hoo7kiu5tiak8tioh8,hookiutiaktioh,hookiutiaktioh,hktt,hktt,True,False
-二壘安打,jī-luí an-tánn,12,jī-luí an-táⁿ,ji7lui2an1tann2,ji7lui2an1tann2,jiluiantann,jiluiantann,jlat,jlat,True,False
+二壘安打,jī-luí an-tánn,12,jī-lúi an-táⁿ,ji7lui2an1tann2,ji7lui2an1tann2,jiluiantann,jiluiantann,jlat,jlat,True,False
 五戰三勝,gōo-tsiàn sann-sìng,12,gō͘-chiàn saⁿ-sèng,goo7tsian3sann1sing3,goo7chian3sann1seng3,gootsiansannsing,goochiansannseng,gtss,gcss,True,False
 人字拖仔,jîn-jī thua-á,12,jîn-jī thoa-á,jin5ji7thua1a2,jin5ji7thoa1a2,jinjithuaa,jinjithoaa,jjta,jjta,True,False
 人字拖仔,lîn-lī thua-á,12,lîn-lī thoa-á,lin5li7thua1a2,lin5li7thoa1a2,linlithuaa,linlithoaa,llta,llta,True,False
@@ -1579,14 +1575,14 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 傳說對決,thuân-suat tuì-kuat,12,thoân-soat tùi-koat,thuan5suat4tui3kuat4,thoan5soat4tui3koat4,thuansuattuikuat,thoansoattuikoat,tstk,tstk,True,False
 傷停補時,siong-thîng-póo-sî,12,siong-thêng-pó͘-sî,siong1thing5poo2si5,siong1theng5poo2si5,siongthingpoosi,siongthengpoosi,stps,stps,True,False
 優質先發,iu-tsit sian-huat,12,iu-chit sian-hoat,iu1tsit4sian1huat4,iu1chit4sian1hoat4,iutsitsianhuat,iuchitsianhoat,itsh,icsh,True,False
-儲存容量,tû-tsûn iông-liōng,12,tû-tsûn iông-liōng,tu5tsun5iong5liong7,tu5tsun5iong5liong7,tutsuniongliong,tutsuniongliong,ttil,ttil,True,False
-儲存空間,tû-tsûn khong-kan,12,tû-tsûn khong-kan,tu5tsun5khong1kan1,tu5tsun5khong1kan1,tutsunkhongkan,tutsunkhongkan,ttkk,ttkk,True,False
+儲存容量,tû-tsûn iông-liōng,12,tû-chûn iông-liōng,tu5tsun5iong5liong7,tu5chun5iong5liong7,tutsuniongliong,tuchuniongliong,ttil,tcil,True,False
+儲存空間,tû-tsûn khong-kan,12,tû-chûn khong-kan,tu5tsun5khong1kan1,tu5chun5khong1kan1,tutsunkhongkan,tuchunkhongkan,ttkk,tckk,True,False
 先發投手,sian-huat tâu-tshiú,12,sian-hoat tâu-chhiú,sian1huat4tau5tshiu2,sian1hoat4tau5chhiu2,sianhuattautshiu,sianhoattauchhiu,shtt,shtc,True,False
 先發球員,sian-huat kiû-uân,12,sian-hoat kiû-oân,sian1huat4kiu5uan5,sian1hoat4kiu5oan5,sianhuatkiuuan,sianhoatkiuoan,shku,shko,True,False
 先發輪值,sian-huat lûn-ti̍t,12,sian-hoat lûn-ti̍t,sian1huat4lun5tit8,sian1hoat4lun5tit8,sianhuatluntit,sianhoatluntit,shlt,shlt,True,False
-內容農場,luē-iông lông-tiûnn,12,lōe-iông lông-tiûnn,lue7iong5long5tiunn5,loe7iong5long5tiunn5,lueionglongtiunn,loeionglongtiunn,lilt,lilt,True,False
+內容農場,luē-iông lông-tiûnn,12,lōe-iông lông-tiûⁿ,lue7iong5long5tiunn5,loe7iong5long5tiunn5,lueionglongtiunn,loeionglongtiunn,lilt,lilt,True,False
 內線跑道,lāi-suànn pháu-tō,12,lāi-sòaⁿ pháu-tō,lai7suann3phau2to7,lai7soann3phau2to7,laisuannphauto,laisoannphauto,lspt,lspt,True,False
-全壘打率,tsuân-luí-tánn-lu̍t,12,choân-luí-táⁿ-lu̍t,tsuan5lui2tann2lut8,choan5lui2tann2lut8,tsuanluitannlut,choanluitannlut,tltl,cltl,True,False
+全壘打率,tsuân-luí-tánn-lu̍t,12,choân-lúi-táⁿ-lu̍t,tsuan5lui2tann2lut8,choan5lui2tann2lut8,tsuanluitannlut,choanluitannlut,tltl,cltl,True,False
 兩線速球,nn̄g-suànn sok-kiû,12,nn̄g-sòaⁿ sok-kiû,nng7suann3sok4kiu5,nng7soann3sok4kiu5,nngsuannsokkiu,nngsoannsokkiu,nssk,nssk,True,False
 共伴效應,kiōng-phuān hāu-ìng,12,kiōng-phoān hāu-èng,kiong7phuan7hau7ing3,kiong7phoan7hau7eng3,kiongphuanhauing,kiongphoanhaueng,kphi,kphe,True,False
 共融公園,kiōng-iông kong-hn̂g,12,kiōng-iông kong-hn̂g,kiong7iong5kong1hng5,kiong7iong5kong1hng5,kiongiongkonghng,kiongiongkonghng,kikh,kikh,True,False
@@ -1604,7 +1600,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 勝利投手,sìng-lī tâu-tshiú,12,sèng-lī tâu-chhiú,sing3li7tau5tshiu2,seng3li7tau5chhiu2,singlitautshiu,senglitauchhiu,sltt,sltc,True,False
 匿蹤戰機,li̍k-tsong tsiàn-ki,12,le̍k-chong chiàn-ki,lik8tsong1tsian3ki1,lek8chong1chian3ki1,liktsongtsianki,lekchongchianki,lttk,lcck,True,False
 十六進位,tsa̍p-la̍k-tsìn-uī,12,cha̍p-la̍k-chìn-ūi,tsap8lak8tsin3ui7,chap8lak8chin3ui7,tsaplaktsinui,chaplakchinui,tltu,clcu,True,False
-卡布奇諾,kha-pu-tshí-nooh,12,kha-pu-tshí-no͘h,kha1pu1tshi2nooh4,kha1pu1tshi2nooh4,khaputshinooh,khaputshinooh,kptn,kptn,True,False
+卡布奇諾,kha-pu-tshí-nooh,12,kha-pu-chhí-no͘h,kha1pu1tshi2nooh4,kha1pu1chhi2nooh4,khaputshinooh,khapuchhinooh,kptn,kpcn,True,False
 印度烘餅,ìn-tōo hang-piánn,12,ìn-tō͘ hang-piáⁿ,in3too7hang1piann2,in3too7hang1piann2,intoohangpiann,intoohangpiann,ithp,ithp,True,False
 厚肉植物,kāu-bah si̍t-bu̍t,12,kāu-bah si̍t-bu̍t,kau7bah4sit8but8,kau7bah4sit8but8,kaubahsitbut,kaubahsitbut,kbsb,kbsb,True,False
 反常投球,huán-siông tâu-kiû,12,hoán-siông tâu-kiû,huan2siong5tau5kiu5,hoan2siong5tau5kiu5,huansiongtaukiu,hoansiongtaukiu,hstk,hstk,True,False
@@ -1625,7 +1621,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 地板動作,tē-pán tōng-tsok,12,tē-pán tōng-chok,te7pan2tong7tsok4,te7pan2tong7chok4,tepantongtsok,tepantongchok,tptt,tptc,True,False
 坉海造地,thūn-hái tsō-tuē,12,thūn-hái chō-tōe,thun7hai2tso7tue7,thun7hai2cho7toe7,thunhaitsotue,thunhaichotoe,thtt,thct,True,False
 坉海造地,thūn-hái tsō-tē,12,thūn-hái chō-tē,thun7hai2tso7te7,thun7hai2cho7te7,thunhaitsote,thunhaichote,thtt,thct,True,False
-埋糞埽場,tâi-pùn-sò-tiûnn,12,tâi-pùn-sò-tiûnn,tai5pun3so3tiunn5,tai5pun3so3tiunn5,taipunsotiunn,taipunsotiunn,tpst,tpst,True,False
+埋糞埽場,tâi-pùn-sò-tiûnn,12,tâi-pùn-sò-tiûⁿ,tai5pun3so3tiunn5,tai5pun3so3tiunn5,taipunsotiunn,taipunsotiunn,tpst,tpst,True,False
 基因改造,ki-in kái-tsò,12,ki-in kái-chò,ki1in1kai2tso3,ki1in1kai2cho3,kiinkaitso,kiinkaicho,kikt,kikc,True,False
 外掛程式,guā-kuà thîng-sik,12,gōa-kòa thêng-sek,gua7kua3thing5sik4,goa7koa3theng5sek4,guakuathingsik,goakoathengsek,gkts,gkts,True,True
 外掛程式,guā-kuà tîng-sik,12,gōa-kòa têng-sek,gua7kua3ting5sik4,goa7koa3teng5sek4,guakuatingsik,goakoatengsek,gkts,gkts,True,True
@@ -1637,7 +1633,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 天光之暝,thinn kng tsi mê,12,thiⁿ kng chi mê,thinn1kng1tsi1me5,thinn1kng1chi1me5,thinnkngtsime,thinnkngchime,tktm,tkcm,True,False
 天光之暝,thinn kng tsi mî,12,thiⁿ kng chi mî,thinn1kng1tsi1mi5,thinn1kng1chi1mi5,thinnkngtsimi,thinnkngchimi,tktm,tkcm,True,False
 太陽能枋,thài-iông-lîng pang,12,thài-iông-lêng pang,thai3iong5ling5pang1,thai3iong5leng5pang1,thaiionglingpang,thaiionglengpang,tilp,tilp,True,False
-妨礙走壘,hông-gāi tsáu-luí,12,hông-gāi cháu-luí,hong5gai7tsau2lui2,hong5gai7chau2lui2,honggaitsaului,honggaichaului,hgtl,hgcl,True,False
+妨礙走壘,hông-gāi tsáu-luí,12,hông-gāi cháu-lúi,hong5gai7tsau2lui2,hong5gai7chau2lui2,honggaitsaului,honggaichaului,hgtl,hgcl,True,False
 子宮喙癌,tsú-kiong-tshuì-gâm,12,chú-kiong-chhùi-gâm,tsu2kiong1tshui3gam5,chu2kiong1chhui3gam5,tsukiongtshuigam,chukiongchhuigam,tktg,ckcg,True,False
 子宮肌瘤,tsú-kiong ki-liû,12,chú-kiong ki-liû,tsu2kiong1ki1liu5,chu2kiong1ki1liu5,tsukiongkiliu,chukiongkiliu,tkkl,ckkl,True,False
 子宮肌瘤,tsú-kiong-ki-liû,12,chú-kiong-ki-liû,tsu2kiong1ki1liu5,chu2kiong1ki1liu5,tsukiongkiliu,chukiongkiliu,tkkl,ckkl,True,False
@@ -1647,10 +1643,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 字距微調,jī-kī bî-tiâu,12,jī-kī bî-tiâu,ji7ki7bi5tiau5,ji7ki7bi5tiau5,jikibitiau,jikibitiau,jkbt,jkbt,True,False
 字距微調,lī-kū-bî-tiâu,12,lī-kū-bî-tiâu,li7ku7bi5tiau5,li7ku7bi5tiau5,likubitiau,likubitiau,lkbt,lkbt,True,False
 守備教練,siú-pī kàu-liān,12,siú-pī kàu-liān,siu2pi7kau3lian7,siu2pi7kau3lian7,siupikaulian,siupikaulian,spkl,spkl,True,False
-安全上壘,an-tsuân tsiūnn luí,12,an-choân chiūⁿ luí,an1tsuan5tsiunn7lui2,an1choan5chiunn7lui2,antsuantsiunnlui,anchoanchiunnlui,attl,accl,True,False
+安全上壘,an-tsuân tsiūnn luí,12,an-choân chiūⁿ lúi,an1tsuan5tsiunn7lui2,an1choan5chiunn7lui2,antsuantsiunnlui,anchoanchiunnlui,attl,accl,True,False
 安全人員,an-tsuân jîn-uân,12,an-choân jîn-oân,an1tsuan5jin5uan5,an1choan5jin5oan5,antsuanjinuan,anchoanjinoan,atju,acjo,True,False
 安非他命,an-hui-tha-bīng,12,an-hui-tha-bēng,an1hui1tha1bing7,an1hui1tha1beng7,anhuithabing,anhuithabeng,ahtb,ahtb,True,False
-完全停止,uân-tsuân thîng-tsí,12,oân-choân thêng-tsí,uan5tsuan5thing5tsi2,oan5choan5theng5tsi2,uantsuanthingtsi,oanchoanthengtsi,uttt,octt,True,False
+完全停止,uân-tsuân thîng-tsí,12,oân-choân thêng-chí,uan5tsuan5thing5tsi2,oan5choan5theng5chi2,uantsuanthingtsi,oanchoanthengchi,uttt,octc,True,False
 完全打擊,uân-tsuân tánn-kik,12,oân-choân táⁿ-kek,uan5tsuan5tann2kik4,oan5choan5tann2kek4,uantsuantannkik,oanchoantannkek,uttk,octk,True,False
 完全比賽,uân-tsuân pí-sài,12,oân-choân pí-sài,uan5tsuan5pi2sai3,oan5choan5pi2sai3,uantsuanpisai,oanchoanpisai,utps,ocps,True,False
 定向越野,tīng-hiòng ua̍t-iá,12,tēng-hiòng oa̍t-iá,ting7hiong3uat8ia2,teng7hiong3oat8ia2,tinghionguatia,tenghiongoatia,thui,thoi,True,False
@@ -1661,9 +1657,9 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 小抹香鯨,sió-buah-hiang-king,12,sió-boah-hiang-keng,sio2buah4hiang1king1,sio2boah4hiang1keng1,siobuahhiangking,sioboahhiangkeng,sbhk,sbhk,True,False
 尪仔粉條,ang-á-hún-tiâu,12,ang-á-hún-tiâu,ang1a2hun2tiau5,ang1a2hun2tiau5,angahuntiau,angahuntiau,aaht,aaht,True,False
 尪仔粉盤,ang-á-hún-puânn,12,ang-á-hún-pôaⁿ,ang1a2hun2puann5,ang1a2hun2poann5,angahunpuann,angahunpoann,aahp,aahp,True,False
-尪仔粉筅,ang-á-hún-tshíng,12,ang-á-hún-tshíng,ang1a2hun2tshing2,ang1a2hun2tshing2,angahuntshing,angahuntshing,aaht,aaht,True,False
+尪仔粉筅,ang-á-hún-tshíng,12,ang-á-hún-chhéng,ang1a2hun2tshing2,ang1a2hun2chheng2,angahuntshing,angahunchheng,aaht,aahc,True,False
 尪仔粉膏,ang-á-hún-ko,12,ang-á-hún-ko,ang1a2hun2ko1,ang1a2hun2ko1,angahunko,angahunko,aahk,aahk,True,False
-山頂山跤,suann-tíng suann-kha,12,soaⁿ-tíng soaⁿ-kha,suann1ting2suann1kha1,soann1ting2soann1kha1,suanntingsuannkha,soanntingsoannkha,stsk,stsk,True,False
+山頂山跤,suann-tíng suann-kha,12,soaⁿ-téng soaⁿ-kha,suann1ting2suann1kha1,soann1teng2soann1kha1,suanntingsuannkha,soanntengsoannkha,stsk,stsk,True,False
 巡弋飛彈,sûn-ik hui-tuânn,12,sûn-ek hui-tôaⁿ,sun5ik4hui1tuann5,sun5ek4hui1toann5,sunikhuituann,sunekhuitoann,siht,seht,True,False
 帕金森症,phà-kim-sim-tsìng,12,phà-kim-sim-chèng,pha3kim1sim1tsing3,pha3kim1sim1cheng3,phakimsimtsing,phakimsimcheng,pkst,pksc,True,False
 平板電腦,pênn-pán-tiān-náu,12,pêⁿ-pán-tiān-náu,penn5pan2tian7nau2,penn5pan2tian7nau2,pennpantiannau,pennpantiannau,pptn,pptn,True,False
@@ -1671,10 +1667,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 延延投球,iân-tshiân tâu-kiû,12,iân-chhiân tâu-kiû,ian5tshian5tau5kiu5,ian5chhian5tau5kiu5,iantshiantaukiu,ianchhiantaukiu,ittk,ictk,True,False
 引體搝起,ín-thé-giú-khí,12,ín-thé-giú-khí,in2the2giu2khi2,in2the2giu2khi2,inthegiukhi,inthegiukhi,itgk,itgk,True,False
 引體搝起,ín-thé-khiú-khí,12,ín-thé-khiú-khí,in2the2khiu2khi2,in2the2khiu2khi2,inthekhiukhi,inthekhiukhi,itkk,itkk,True,False
-強欲絕種,kiông-beh tse̍h-tsíng,12,kiông-beh che̍h-tsíng,kiong5beh4tseh8tsing2,kiong5beh4cheh8tsing2,kiongbehtsehtsing,kiongbehchehtsing,kbtt,kbct,True,False
-強欲絕種,kiông-beh tsua̍t-tsíng,12,kiông-beh choa̍t-tsíng,kiong5beh4tsuat8tsing2,kiong5beh4choat8tsing2,kiongbehtsuattsing,kiongbehchoattsing,kbtt,kbct,True,False
+強欲絕種,kiông-beh tse̍h-tsíng,12,kiông-beh che̍h-chéng,kiong5beh4tseh8tsing2,kiong5beh4cheh8cheng2,kiongbehtsehtsing,kiongbehchehcheng,kbtt,kbcc,True,False
+強欲絕種,kiông-beh tsua̍t-tsíng,12,kiông-beh choa̍t-chéng,kiong5beh4tsuat8tsing2,kiong5beh4choat8cheng2,kiongbehtsuattsing,kiongbehchoatcheng,kbtt,kbcc,True,False
 強迫取分,kiông-pik tshú-hun,12,kiông-pek chhú-hun,kiong5pik4tshu2hun1,kiong5pek4chhu2hun1,kiongpiktshuhun,kiongpekchhuhun,kpth,kpch,True,False
-強迫進壘,kiông-pik tsìn-luí,12,kiông-pek chìn-luí,kiong5pik4tsin3lui2,kiong5pek4chin3lui2,kiongpiktsinlui,kiongpekchinlui,kptl,kpcl,True,False
+強迫進壘,kiông-pik tsìn-luí,12,kiông-pek chìn-lúi,kiong5pik4tsin3lui2,kiong5pek4chin3lui2,kiongpiktsinlui,kiongpekchinlui,kptl,kpcl,True,False
 後備選手,āu-pī suán-tshiú,12,āu-pī soán-chhiú,au7pi7suan2tshiu2,au7pi7soan2chhiu2,aupisuantshiu,aupisoanchhiu,apst,apsc,True,False
 後援出賽,āu-uān tshut-sài,12,āu-oān chhut-sài,au7uan7tshut4sai3,au7oan7chhut4sai3,auuantshutsai,auoanchhutsai,auts,aocs,True,False
 後援投手,āu-uān tâu-tshiú,12,āu-oān tâu-chhiú,au7uan7tau5tshiu2,au7oan7tau5chhiu2,auuantautshiu,auoantauchhiu,autt,aotc,True,False
@@ -1684,20 +1680,20 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 德國煙腸,tik-kok ian-tshiâng,12,tek-kok ian-chhiâng,tik4kok4ian1tshiang5,tek4kok4ian1chhiang5,tikkokiantshiang,tekkokianchhiang,tkit,tkic,True,False
 心肌梗塞,sim-ki kīng-sik,12,sim-ki kēng-sek,sim1ki1king7sik4,sim1ki1keng7sek4,simkikingsik,simkikengsek,skks,skks,True,False
 心肌梗窒,sim-ki kénn-that,12,sim-ki kéⁿ-that,sim1ki1kenn2that4,sim1ki1kenn2that4,simkikennthat,simkikennthat,skkt,skkt,True,False
-心肌梗窒,sim-ki kínn-that,12,sim-ki kínn-that,sim1ki1kinn2that4,sim1ki1kinn2that4,simkikinnthat,simkikinnthat,skkt,skkt,True,False
+心肌梗窒,sim-ki kínn-that,12,sim-ki kíⁿ-that,sim1ki1kinn2that4,sim1ki1kinn2that4,simkikinnthat,simkikinnthat,skkt,skkt,True,False
 心血管病,sim-hueh-kńg-pēnn,12,sim-hoeh-kńg-pēⁿ,sim1hueh4kng2penn7,sim1hoeh4kng2penn7,simhuehkngpenn,simhoehkngpenn,shkp,shkp,True,False
 心血管病,sim-huih-kńg-pīnn,12,sim-huih-kńg-pīⁿ,sim1huih4kng2pinn7,sim1huih4kng2pinn7,simhuihkngpinn,simhuihkngpinn,shkp,shkp,True,False
 快樂棒球,khuài-lo̍k pāng-kiû,12,khoài-lo̍k pāng-kiû,khuai3lok8pang7kiu5,khoai3lok8pang7kiu5,khuailokpangkiu,khoailokpangkiu,klpk,klpk,True,False
 快樂野球,khuài-lo̍k iá-kiû,12,khoài-lo̍k iá-kiû,khuai3lok8ia2kiu5,khoai3lok8ia2kiu5,khuailokiakiu,khoailokiakiu,klik,klik,True,False
 情緒叨撚,tsîng-sū lo-lián,12,chêng-sū lo-lián,tsing5su7lo1lian2,cheng5su7lo1lian2,tsingsulolian,chengsulolian,tsll,csll,True,False
-惡性腫瘤,ok-sìng tsíng-liû,12,ok-sèng tsíng-liû,ok4sing3tsing2liu5,ok4seng3tsing2liu5,oksingtsingliu,oksengtsingliu,ostl,ostl,True,False
+惡性腫瘤,ok-sìng tsíng-liû,12,ok-sèng chéng-liû,ok4sing3tsing2liu5,ok4seng3cheng2liu5,oksingtsingliu,oksengchengliu,ostl,oscl,True,False
 應用程式,ìng-iōng thîng-sik,12,èng-iōng thêng-sek,ing3iong7thing5sik4,eng3iong7theng5sek4,ingiongthingsik,engiongthengsek,iits,eits,True,False
 應用程式,ìng-iōng tîng-sik,12,èng-iōng têng-sek,ing3iong7ting5sik4,eng3iong7teng5sek4,ingiongtingsik,engiongtengsek,iits,eits,True,False
 打擊教練,tánn-kik kàu-liān,12,táⁿ-kek kàu-liān,tann2kik4kau3lian7,tann2kek4kau3lian7,tannkikkaulian,tannkekkaulian,tkkl,tkkl,True,False
 打擊順序,tánn-kik sūn-sī,12,táⁿ-kek sūn-sī,tann2kik4sun7si7,tann2kek4sun7si7,tannkiksunsi,tannkeksunsi,tkss,tkss,True,False
 打擊順序,tánn-kik sūn-sū,12,táⁿ-kek sūn-sū,tann2kik4sun7su7,tann2kek4sun7su7,tannkiksunsu,tannkeksunsu,tkss,tkss,True,False
 打跑戰術,tánn-pháu tsiàn-su̍t,12,táⁿ-pháu chiàn-su̍t,tann2phau2tsian3sut8,tann2phau2chian3sut8,tannphautsiansut,tannphauchiansut,tpts,tpcs,True,False
-技術委員,ki-su̍t uí-uân,12,ki-su̍t uí-oân,ki1sut8ui2uan5,ki1sut8ui2oan5,kisutuiuan,kisutuioan,ksuu,ksuo,True,False
+技術委員,ki-su̍t uí-uân,12,ki-su̍t úi-oân,ki1sut8ui2uan5,ki1sut8ui2oan5,kisutuiuan,kisutuioan,ksuu,ksuo,True,False
 投手教練,tâu-tshiú kàu-liān,12,tâu-chhiú kàu-liān,tau5tshiu2kau3lian7,tau5chhiu2kau3lian7,tautshiukaulian,tauchhiukaulian,ttkl,tckl,True,False
 投手犯規,tâu-tshiú huān-kui,12,tâu-chhiú hoān-kui,tau5tshiu2huan7kui1,tau5chhiu2hoan7kui1,tautshiuhuankui,tauchhiuhoankui,tthk,tchk,True,False
 投捕教練,tâu-póo kàu-liān,12,tâu-pó͘ kàu-liān,tau5poo2kau3lian7,tau5poo2kau3lian7,taupookaulian,taupookaulian,tpkl,tpkl,True,False
@@ -1708,10 +1704,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 拍光粉餅,phah-kng hún-piánn,12,phah-kng hún-piáⁿ,phah4kng1hun2piann2,phah4kng1hun2piann2,phahknghunpiann,phahknghunpiann,pkhp,pkhp,True,False
 拗式手機,áu-sik tshiú-ki,12,áu-sek chhiú-ki,au2sik4tshiu2ki1,au2sek4chhiu2ki1,ausiktshiuki,ausekchhiuki,astk,asck,True,False
 拿鐵咖啡,la-thé ka-pi,12,la-thé ka-pi,la1the2ka1pi1,la1the2ka1pi1,lathekapi,lathekapi,ltkp,ltkp,True,False
-指定打擊,tsí-tīng-tánn-kik,12,tsí-tēng-táⁿ-kek,tsi2ting7tann2kik4,tsi2teng7tann2kek4,tsitingtannkik,tsitengtannkek,tttk,tttk,True,False
-指定讓渡,tsí-tīng jiōng-tōo,12,tsí-tēng jiōng-tō͘,tsi2ting7jiong7too7,tsi2teng7jiong7too7,tsitingjiongtoo,tsitengjiongtoo,ttjt,ttjt,True,False
-指定讓渡,tsí-tīng liōng-tōo,12,tsí-tēng liōng-tō͘,tsi2ting7liong7too7,tsi2teng7liong7too7,tsitingliongtoo,tsitengliongtoo,ttlt,ttlt,True,False
-指紋解鎖,tsí-bûn kái-só,12,tsí-bûn kái-só,tsi2bun5kai2so2,tsi2bun5kai2so2,tsibunkaiso,tsibunkaiso,tbks,tbks,True,False
+指定打擊,tsí-tīng-tánn-kik,12,chí-tēng-táⁿ-kek,tsi2ting7tann2kik4,chi2teng7tann2kek4,tsitingtannkik,chitengtannkek,tttk,cttk,True,False
+指定讓渡,tsí-tīng jiōng-tōo,12,chí-tēng jiōng-tō͘,tsi2ting7jiong7too7,chi2teng7jiong7too7,tsitingjiongtoo,chitengjiongtoo,ttjt,ctjt,True,False
+指定讓渡,tsí-tīng liōng-tōo,12,chí-tēng liōng-tō͘,tsi2ting7liong7too7,chi2teng7liong7too7,tsitingliongtoo,chitengliongtoo,ttlt,ctlt,True,False
+指紋解鎖,tsí-bûn kái-só,12,chí-bûn kái-só,tsi2bun5kai2so2,chi2bun5kai2so2,tsibunkaiso,chibunkaiso,tbks,cbks,True,False
 捕手妨礙,póo-tshiú hông-gāi,12,pó͘-chhiú hông-gāi,poo2tshiu2hong5gai7,poo2chhiu2hong5gai7,pootshiuhonggai,poochhiuhonggai,pthg,pchg,True,False
 捕手教練,póo-tshiú kàu-liān,12,pó͘-chhiú kàu-liān,poo2tshiu2kau3lian7,poo2chhiu2kau3lian7,pootshiukaulian,poochhiukaulian,ptkl,pckl,True,False
 授權鎖匙,siū-khuân só-sî,12,siū-khoân só-sî,siu7khuan5so2si5,siu7khoan5so2si5,siukhuansosi,siukhoansosi,skss,skss,True,False
@@ -1726,7 +1722,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 擴充功能,khok-tshiong kong-lîng,12,khok-chhiong kong-lêng,khok4tshiong1kong1ling5,khok4chhiong1kong1leng5,khoktshiongkongling,khokchhiongkongleng,ktkl,kckl,True,False
 收烏西錢,siu oo-se-tsînn,12,siu o͘-se-chîⁿ,siu1oo1se1tsinn5,siu1oo1se1chinn5,siuoosetsinn,siuoosechinn,sost,sosc,True,False
 攻守陣容,kong-siú tīn-iông,12,kong-siú tīn-iông,kong1siu2tin7iong5,kong1siu2tin7iong5,kongsiutiniong,kongsiutiniong,ksti,ksti,True,False
-攻擊指數,kong-kik tsí-sòo,12,kong-kek tsí-sò͘,kong1kik4tsi2soo3,kong1kek4tsi2soo3,kongkiktsisoo,kongkektsisoo,kkts,kkts,True,False
+攻擊指數,kong-kik tsí-sòo,12,kong-kek chí-sò͘,kong1kik4tsi2soo3,kong1kek4chi2soo3,kongkiktsisoo,kongkekchisoo,kkts,kkcs,True,False
 政治分贓,tsìng-tī pun-tsng,12,chèng-tī pun-chng,tsing3ti7pun1tsng1,cheng3ti7pun1chng1,tsingtipuntsng,chengtipunchng,ttpt,ctpc,True,False
 故意保送,kòo-ì pó-sàng,12,kò͘-ì pó-sàng,koo3i3po2sang3,koo3i3po2sang3,kooiposang,kooiposang,kips,kips,True,False
 故意四䆀,kòo-ì sì-bái,12,kò͘-ì sì-bái,koo3i3si3bai2,koo3i3si3bai2,kooisibai,kooisibai,kisb,kisb,True,False
@@ -1742,7 +1738,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 文字樣式,bûn-lī iūnn-sik,12,bûn-lī iūⁿ-sek,bun5li7iunn7sik4,bun5li7iunn7sek4,bunliiunnsik,bunliiunnsek,blis,blis,True,False
 文字游標,bûn-jī iû-piau,12,bûn-jī iû-piau,bun5ji7iu5piau1,bun5ji7iu5piau1,bunjiiupiau,bunjiiupiau,bjip,bjip,True,False
 文字游標,bûn-lī iû-phiau,12,bûn-lī iû-phiau,bun5li7iu5phiau1,bun5li7iu5phiau1,bunliiuphiau,bunliiuphiau,blip,blip,True,False
-斑腿青虳,pan-thuí tshenn-ioh,12,pan-thuí chheⁿ-ioh,pan1thui2tshenn1ioh4,pan1thui2chhenn1ioh4,panthuitshennioh,panthuichhennioh,ptti,ptci,True,False
+斑腿青虳,pan-thuí tshenn-ioh,12,pan-thúi chheⁿ-ioh,pan1thui2tshenn1ioh4,pan1thui2chhenn1ioh4,panthuitshennioh,panthuichhennioh,ptti,ptci,True,False
 斷籬倒壁,tn̄g-lî tó-piah,12,tn̄g-lî tó-piah,tng7li5to2piah4,tng7li5to2piah4,tnglitopiah,tnglitopiah,tltp,tltp,True,False
 易科罰金,i̍k-kho hua̍t-kim,12,e̍k-kho hoa̍t-kim,ik8kho1huat8kim1,ek8kho1hoat8kim1,ikkhohuatkim,ekkhohoatkim,ikhk,ekhk,True,False
 智力運動,tì-li̍k ūn-tōng,12,tì-le̍k ūn-tōng,ti3lik8un7tong7,ti3lek8un7tong7,tilikuntong,tilekuntong,tlut,tlut,True,False
@@ -1750,12 +1746,12 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 最佳紀錄,tsuè-ka kì-lo̍k,12,chòe-ka kì-lo̍k,tsue3ka1ki3lok8,choe3ka1ki3lok8,tsuekakilok,choekakilok,tkkl,ckkl,True,False
 有氧運動,iú-ióng ūn-tōng,12,iú-ióng ūn-tōng,iu2iong2un7tong7,iu2iong2un7tong7,iuionguntong,iuionguntong,iiut,iiut,True,False
 有氧體操,iú-ióng thé-tshau,12,iú-ióng thé-chhau,iu2iong2the2tshau1,iu2iong2the2chhau1,iuiongthetshau,iuiongthechhau,iitt,iitc,True,False
-本壘相挵,pún-luí sio-lòng,12,pún-luí sio-lòng,pun2lui2sio1long3,pun2lui2sio1long3,punluisiolong,punluisiolong,plsl,plsl,True,False
+本壘相挵,pún-luí sio-lòng,12,pún-lúi sio-lòng,pun2lui2sio1long3,pun2lui2sio1long3,punluisiolong,punluisiolong,plsl,plsl,True,False
 核心肌群,hi̍k-sim ki-kûn,12,he̍k-sim ki-kûn,hik8sim1ki1kun5,hek8sim1ki1kun5,hiksimkikun,heksimkikun,hskk,hskk,True,False
 核酸檢測,hi̍k-sng kiám-tshik,12,he̍k-sng kiám-chhek,hik8sng1kiam2tshik4,hek8sng1kiam2chhek4,hiksngkiamtshik,heksngkiamchhek,hskt,hskc,True,False
 框線粗幼,khing-suànn tshoo-iù,12,kheng-sòaⁿ chho͘-iù,khing1suann3tshoo1iu3,kheng1soann3chhoo1iu3,khingsuanntshooiu,khengsoannchhooiu,ksti,ksci,True,False
-桌面背景,toh-bīn puē-kíng,12,toh-bīn pōe-kíng,toh4bin7pue7king2,toh4bin7poe7king2,tohbinpueking,tohbinpoeking,tbpk,tbpk,True,False
-桌頂遊戲,toh-tíng iû-hì,12,toh-tíng iû-hì,toh4ting2iu5hi3,toh4ting2iu5hi3,tohtingiuhi,tohtingiuhi,ttih,ttih,True,False
+桌面背景,toh-bīn puē-kíng,12,toh-bīn pōe-kéng,toh4bin7pue7king2,toh4bin7poe7keng2,tohbinpueking,tohbinpoekeng,tbpk,tbpk,True,False
+桌頂遊戲,toh-tíng iû-hì,12,toh-téng iû-hì,toh4ting2iu5hi3,toh4teng2iu5hi3,tohtingiuhi,tohtengiuhi,ttih,ttih,True,False
 極限運動,ki̍k-hān ūn-tōng,12,ke̍k-hān ūn-tōng,kik8han7un7tong7,kek8han7un7tong7,kikhanuntong,kekhanuntong,khut,khut,True,False
 槓桿原理,kǹg-kuáinn guân-lí,12,kǹg-koáiⁿ goân-lí,kng3kuainn2guan5li2,kng3koainn2goan5li2,kngkuainnguanli,kngkoainngoanli,kkgl,kkgl,True,False
 標靶藥物,piau-pé io̍h-bu̍t,12,piau-pé io̍h-bu̍t,piau1pe2ioh8but8,piau1pe2ioh8but8,piaupeiohbut,piaupeiohbut,ppib,ppib,True,False
@@ -1775,41 +1771,41 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 殕色地帶,phú-sik tē-tài,12,phú-sek tē-tài,phu2sik4te7tai3,phu2sek4te7tai3,phusiktetai,phusektetai,pstt,pstt,True,False
 毛管空粗,mn̂g-kńg-khang tshoo,12,mn̂g-kńg-khang chho͘,mng5kng2khang1tshoo1,mng5kng2khang1chhoo1,mngkngkhangtshoo,mngkngkhangchhoo,mkkt,mkkc,True,False
 氣墊粉餅,khì-tiām hún-piánn,12,khì-tiām hún-piáⁿ,khi3tiam7hun2piann2,khi3tiam7hun2piann2,khitiamhunpiann,khitiamhunpiann,kthp,kthp,True,False
-水上比賽,tsuí-siōng pí-sài,12,chuí-siōng pí-sài,tsui2siong7pi2sai3,chui2siong7pi2sai3,tsuisiongpisai,chuisiongpisai,tsps,csps,True,False
-水上活動,tsuí-siōng ua̍h-tāng,12,chuí-siōng oa̍h-tāng,tsui2siong7uah8tang7,chui2siong7oah8tang7,tsuisionguahtang,chuisiongoahtang,tsut,csot,True,False
-水上活動,tsuí-siōng ua̍h-tōng,12,chuí-siōng oa̍h-tōng,tsui2siong7uah8tong7,chui2siong7oah8tong7,tsuisionguahtong,chuisiongoahtong,tsut,csot,True,False
-水上芭蕾,tsuí-siōng pa-lé,12,chuí-siōng pa-lé,tsui2siong7pa1le2,chui2siong7pa1le2,tsuisiongpale,chuisiongpale,tspl,cspl,True,False
-水上警察,tsuí-siōng kíng-tshat,12,chuí-siōng kíng-chhat,tsui2siong7king2tshat4,chui2siong7king2chhat4,tsuisiongkingtshat,chuisiongkingchhat,tskt,cskc,True,False
-水上運動,tsuí-siōng ūn-tōng,12,chuí-siōng ūn-tōng,tsui2siong7un7tong7,chui2siong7un7tong7,tsuisionguntong,chuisionguntong,tsut,csut,True,False
+水上比賽,tsuí-siōng pí-sài,12,chúi-siōng pí-sài,tsui2siong7pi2sai3,chui2siong7pi2sai3,tsuisiongpisai,chuisiongpisai,tsps,csps,True,False
+水上活動,tsuí-siōng ua̍h-tāng,12,chúi-siōng oa̍h-tāng,tsui2siong7uah8tang7,chui2siong7oah8tang7,tsuisionguahtang,chuisiongoahtang,tsut,csot,True,False
+水上活動,tsuí-siōng ua̍h-tōng,12,chúi-siōng oa̍h-tōng,tsui2siong7uah8tong7,chui2siong7oah8tong7,tsuisionguahtong,chuisiongoahtong,tsut,csot,True,False
+水上芭蕾,tsuí-siōng pa-lé,12,chúi-siōng pa-lé,tsui2siong7pa1le2,chui2siong7pa1le2,tsuisiongpale,chuisiongpale,tspl,cspl,True,False
+水上警察,tsuí-siōng kíng-tshat,12,chúi-siōng kéng-chhat,tsui2siong7king2tshat4,chui2siong7keng2chhat4,tsuisiongkingtshat,chuisiongkengchhat,tskt,cskc,True,False
+水上運動,tsuí-siōng ūn-tōng,12,chúi-siōng ūn-tōng,tsui2siong7un7tong7,chui2siong7un7tong7,tsuisionguntong,chuisionguntong,tsut,csut,True,False
 沖泡飲品,tshiong-phàu ím-phín,12,chhiong-phàu ím-phín,tshiong1phau3im2phin2,chhiong1phau3im2phin2,tshiongphauimphin,chhiongphauimphin,tpip,cpip,True,False
 沙埔排球,sua-poo pâi-kiû,12,soa-po͘ pâi-kiû,sua1poo1pai5kiu5,soa1poo1pai5kiu5,suapoopaikiu,soapoopaikiu,sppk,sppk,True,False
-油水平衡,iû-tsuí pîng-hîng,12,iû-chuí pêng-hêng,iu5tsui2ping5hing5,iu5chui2peng5heng5,iutsuipinghing,iuchuipengheng,itph,icph,True,False
+油水平衡,iû-tsuí pîng-hîng,12,iû-chúi pêng-hêng,iu5tsui2ping5hing5,iu5chui2peng5heng5,iutsuipinghing,iuchuipengheng,itph,icph,True,False
 法國長麭,huat-kok tn̂g-pháng,12,hoat-kok tn̂g-pháng,huat4kok4tng5phang2,hoat4kok4tng5phang2,huatkoktngphang,hoatkoktngphang,hktp,hktp,True,False
 法式輾球,huat-sik liàn-kiû,12,hoat-sek liàn-kiû,huat4sik4lian3kiu5,hoat4sek4lian3kiu5,huatsikliankiu,hoatsekliankiu,hslk,hslk,True,False
 法式輾球,huat-sik lìn-kiû,12,hoat-sek lìn-kiû,huat4sik4lin3kiu5,hoat4sek4lin3kiu5,huatsiklinkiu,hoatseklinkiu,hslk,hslk,True,False
 泰式奶茶,thài-sik ling-tê,12,thài-sek leng-tê,thai3sik4ling1te5,thai3sek4leng1te5,thaisiklingte,thaiseklengte,tslt,tslt,True,False
 泰式奶茶,thài-sik ni-tê,12,thài-sek ni-tê,thai3sik4ni1te5,thai3sek4ni1te5,thaisiknite,thaiseknite,tsnt,tsnt,True,False
-洋九層塔,iûnn-káu-tsàn-thah,12,iûnn-káu-chàn-thah,iunn5kau2tsan3thah4,iunn5kau2chan3thah4,iunnkautsanthah,iunnkauchanthah,iktt,ikct,True,False
+洋九層塔,iûnn-káu-tsàn-thah,12,iûⁿ-káu-chàn-thah,iunn5kau2tsan3thah4,iunn5kau2chan3thah4,iunnkautsanthah,iunnkauchanthah,iktt,ikct,True,False
 活取器官,ua̍h-tshú khì-kuan,12,oa̍h-chhú khì-koan,uah8tshu2khi3kuan1,oah8chhu2khi3koan1,uahtshukhikuan,oahchhukhikoan,utkk,ockk,True,False
-海水浴場,hái-tsuí i̍k-tiûnn,12,hái-chuí e̍k-tiûnn,hai2tsui2ik8tiunn5,hai2chui2ek8tiunn5,haitsuiiktiunn,haichuiektiunn,htit,hcet,True,False
+海水浴場,hái-tsuí i̍k-tiûnn,12,hái-chúi e̍k-tiûⁿ,hai2tsui2ik8tiunn5,hai2chui2ek8tiunn5,haitsuiiktiunn,haichuiektiunn,htit,hcet,True,False
 淨零排放,tsīng-lîng pâi-hòng,12,chēng-lêng pâi-hòng,tsing7ling5pai5hong3,cheng7leng5pai5hong3,tsinglingpaihong,chenglengpaihong,tlph,clph,True,False
 深色模式,tshim-sik bôo-sik,12,chhim-sek bô͘-sek,tshim1sik4boo5sik4,chhim1sek4boo5sek4,tshimsikboosik,chhimsekboosek,tsbs,csbs,True,False
 混合雙打,hūn-ha̍p siang-tánn,12,hūn-ha̍p siang-táⁿ,hun7hap8siang1tann2,hun7hap8siang1tann2,hunhapsiangtann,hunhapsiangtann,hhst,hhst,True,False
 淺色模式,tshián-sik bôo-sik,12,chhián-sek bô͘-sek,tshian2sik4boo5sik4,chhian2sek4boo5sek4,tshiansikboosik,chhiansekboosek,tsbs,csbs,True,False
-清壘打者,tshing-luí tánn-tsiá,12,chheng-luí táⁿ-chiá,tshing1lui2tann2tsia2,chheng1lui2tann2chia2,tshingluitanntsia,chhengluitannchia,tltt,cltc,True,False
+清壘打者,tshing-luí tánn-tsiá,12,chheng-lúi táⁿ-chiá,tshing1lui2tann2tsia2,chheng1lui2tann2chia2,tshingluitanntsia,chhengluitannchia,tltt,cltc,True,False
 溫室效應,un-sik hāu-ìng,12,un-sek hāu-èng,un1sik4hau7ing3,un1sek4hau7eng3,unsikhauing,unsekhaueng,ushi,ushe,True,False
 溫室氣體,un-sik khì-thé,12,un-sek khì-thé,un1sik4khi3the2,un1sek4khi3the2,unsikkhithe,unsekkhithe,uskt,uskt,True,False
 滑輪搝落,ku̍t-lián giú-lo̍h,12,ku̍t-lián giú-lo̍h,kut8lian2giu2loh8,kut8lian2giu2loh8,kutliangiuloh,kutliangiuloh,klgl,klgl,True,False
 滑輪搝落,ku̍t-lián khiú-lo̍h,12,ku̍t-lián khiú-lo̍h,kut8lian2khiu2loh8,kut8lian2khiu2loh8,kutliankhiuloh,kutliankhiuloh,klkl,klkl,True,False
-滑鼠停留,ku̍t-tshí thîng-liû,12,ku̍t-tshí thêng-liû,kut8tshi2thing5liu5,kut8tshi2theng5liu5,kuttshithingliu,kuttshithengliu,kttl,kttl,True,False
+滑鼠停留,ku̍t-tshí thîng-liû,12,ku̍t-chhí thêng-liû,kut8tshi2thing5liu5,kut8chhi2theng5liu5,kuttshithingliu,kutchhithengliu,kttl,kctl,True,False
 滑鼠停留,ku̍t-tshú thîng-liû,12,ku̍t-chhú thêng-liû,kut8tshu2thing5liu5,kut8chhu2theng5liu5,kuttshuthingliu,kutchhuthengliu,kttl,kctl,True,False
-潛艇割包,tsiâm-thíng kuah-pau,12,chiâm-thíng koah-pau,tsiam5thing2kuah4pau1,chiam5thing2koah4pau1,tsiamthingkuahpau,chiamthingkoahpau,ttkp,ctkp,True,False
+潛艇割包,tsiâm-thíng kuah-pau,12,chiâm-théng koah-pau,tsiam5thing2kuah4pau1,chiam5theng2koah4pau1,tsiamthingkuahpau,chiamthengkoahpau,ttkp,ctkp,True,False
 濃縮咖啡,lông-sok ka-pi,12,lông-sok ka-pi,long5sok4ka1pi1,long5sok4ka1pi1,longsokkapi,longsokkapi,lskp,lskp,True,False
 濾掛咖啡,lī-kuà ka-pi,12,lī-kòa ka-pi,li7kua3ka1pi1,li7koa3ka1pi1,likuakapi,likoakapi,lkkp,lkkp,True,False
 濾掛咖啡,lū-kuà ka-pi,12,lū-kòa ka-pi,lu7kua3ka1pi1,lu7koa3ka1pi1,lukuakapi,lukoakapi,lkkp,lkkp,True,False
 烏頭粉刺,oo-thâu hún-tshì,12,o͘-thâu hún-chhì,oo1thau5hun2tshi3,oo1thau5hun2chhi3,oothauhuntshi,oothauhunchhi,otht,othc,True,False
 無痕模式,bô-hûn bôo-sik,12,bô-hûn bô͘-sek,bo5hun5boo5sik4,bo5hun5boo5sek4,bohunboosik,bohunboosek,bhbs,bhbs,True,False
-無線滑鼠,bô-suànn ku̍t-tshí,12,bô-sòaⁿ ku̍t-tshí,bo5suann3kut8tshi2,bo5soann3kut8tshi2,bosuannkuttshi,bosoannkuttshi,bskt,bskt,True,False
+無線滑鼠,bô-suànn ku̍t-tshí,12,bô-sòaⁿ ku̍t-chhí,bo5suann3kut8tshi2,bo5soann3kut8chhi2,bosuannkuttshi,bosoannkutchhi,bskt,bskc,True,False
 無線滑鼠,bô-suànn ku̍t-tshú,12,bô-sòaⁿ ku̍t-chhú,bo5suann3kut8tshu2,bo5soann3kut8chhu2,bosuannkuttshu,bosoannkutchhu,bskt,bskc,True,False
 無線耳機,bô-suànn hī-ki,12,bô-sòaⁿ hī-ki,bo5suann3hi7ki1,bo5soann3hi7ki1,bosuannhiki,bosoannhiki,bshk,bshk,True,False
 無線耳機,bô-suànn hīnn-ki,12,bô-sòaⁿ hīⁿ-ki,bo5suann3hinn7ki1,bo5soann3hinn7ki1,bosuannhinnki,bosoannhinnki,bshk,bshk,True,False
@@ -1817,11 +1813,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 熟似人客,si̍k-sāi lâng-kheh,12,se̍k-sāi lâng-kheh,sik8sai7lang5kheh4,sek8sai7lang5kheh4,siksailangkheh,seksailangkheh,sslk,sslk,True,False
 熱壓俗麭,jia̍t-ap sio̍k-pháng,12,jia̍t-ap sio̍k-pháng,jiat8ap4siok8phang2,jiat8ap4siok8phang2,jiatapsiokphang,jiatapsiokphang,jasp,jasp,True,False
 熱壓俗麭,lia̍t-ap sio̍k-pháng,12,lia̍t-ap sio̍k-pháng,liat8ap4siok8phang2,liat8ap4siok8phang2,liatapsiokphang,liatapsiokphang,lasp,lasp,True,False
-熱脹冷縮,jia̍t-tiòng-líng-sok,12,jia̍t-tiòng-líng-sok,jiat8tiong3ling2sok4,jiat8tiong3ling2sok4,jiattionglingsok,jiattionglingsok,jtls,jtls,True,False
-熱脹冷縮,lia̍t-tiòng-líng-sok,12,lia̍t-tiòng-líng-sok,liat8tiong3ling2sok4,liat8tiong3ling2sok4,liattionglingsok,liattionglingsok,ltls,ltls,True,False
+熱脹冷縮,jia̍t-tiòng-líng-sok,12,jia̍t-tiòng-léng-sok,jiat8tiong3ling2sok4,jiat8tiong3leng2sok4,jiattionglingsok,jiattionglengsok,jtls,jtls,True,False
+熱脹冷縮,lia̍t-tiòng-líng-sok,12,lia̍t-tiòng-léng-sok,liat8tiong3ling2sok4,liat8tiong3leng2sok4,liattionglingsok,liattionglengsok,ltls,ltls,True,False
 燒一下,sio--tsi̍t-ē,12,sio--chi̍t-ē,sio1tsit8e7,sio1chit8e7,siotsite,siochite,ste,sce,True,False
-燒幾粒仔,sio kuí lia̍p-á,12,sio kuí lia̍p-á,sio1kui2liap8a2,sio1kui2liap8a2,siokuiliapa,siokuiliapa,skla,skla,True,False
-燒膨冷縮,sio-phòng-líng-sok,12,sio-phòng-líng-sok,sio1phong3ling2sok4,sio1phong3ling2sok4,siophonglingsok,siophonglingsok,spls,spls,True,False
+燒幾粒仔,sio kuí lia̍p-á,12,sio kúi lia̍p-á,sio1kui2liap8a2,sio1kui2liap8a2,siokuiliapa,siokuiliapa,skla,skla,True,False
+燒膨冷縮,sio-phòng-líng-sok,12,sio-phòng-léng-sok,sio1phong3ling2sok4,sio1phong3leng2sok4,siophonglingsok,siophonglengsok,spls,spls,True,False
 營養午餐,îng-ióng ngóo-tshan,12,êng-ióng ngó͘-chhan,ing5iong2ngoo2tshan1,eng5iong2ngoo2chhan1,ingiongngootshan,engiongngoochhan,iint,einc,True,False
 牛牢捕手,gû-tiâu póo-tshiú,12,gû-tiâu pó͘-chhiú,gu5tiau5poo2tshiu2,gu5tiau5poo2chhiu2,gutiaupootshiu,gutiaupoochhiu,gtpt,gtpc,True,False
 牛牢教練,gû-tiâu kàu-liān,12,gû-tiâu kàu-liān,gu5tiau5kau3lian7,gu5tiau5kau3lian7,gutiaukaulian,gutiaukaulian,gtkl,gtkl,True,False
@@ -1851,12 +1847,12 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 白紙革命,pe̍h-tsuá kik-bīng,12,pe̍h-chóa kek-bēng,peh8tsua2kik4bing7,peh8choa2kek4beng7,pehtsuakikbing,pehchoakekbeng,ptkb,pckb,True,False
 百頁豆腐,pah-ia̍h tāu-hū,12,pah-ia̍h tāu-hū,pah4iah8tau7hu7,pah4iah8tau7hu7,pahiahtauhu,pahiahtauhu,pith,pith,True,False
 盛裝舞步,sīng-tsong-bú-pōo,12,sēng-chong-bú-pō͘,sing7tsong1bu2poo7,seng7chong1bu2poo7,singtsongbupoo,sengchongbupoo,stbp,scbp,True,False
-盜壘失敗,tō-luí sit-pāi,12,tō-luí sit-pāi,to7lui2sit4pai7,to7lui2sit4pai7,toluisitpai,toluisitpai,tlsp,tlsp,True,False
+盜壘失敗,tō-luí sit-pāi,12,tō-lúi sit-pāi,to7lui2sit4pai7,to7lui2sit4pai7,toluisitpai,toluisitpai,tlsp,tlsp,True,False
 目墘線液,ba̍k-kînn-suànn-i̍k,12,ba̍k-kîⁿ-sòaⁿ-e̍k,bak8kinn5suann3ik8,bak8kinn5soann3ek8,bakkinnsuannik,bakkinnsoannek,bksi,bkse,True,False
-目墘線筅,ba̍k-kînn-suànn-tshíng,12,ba̍k-kîⁿ-sòaⁿ-tshíng,bak8kinn5suann3tshing2,bak8kinn5soann3tshing2,bakkinnsuanntshing,bakkinnsoanntshing,bkst,bkst,True,False
+目墘線筅,ba̍k-kînn-suànn-tshíng,12,ba̍k-kîⁿ-sòaⁿ-chhéng,bak8kinn5suann3tshing2,bak8kinn5soann3chheng2,bakkinnsuanntshing,bakkinnsoannchheng,bkst,bksc,True,False
 目墘線筆,ba̍k-kînn-suànn-pit,12,ba̍k-kîⁿ-sòaⁿ-pit,bak8kinn5suann3pit4,bak8kinn5soann3pit4,bakkinnsuannpit,bakkinnsoannpit,bksp,bksp,True,False
 目墘膠筆,ba̍k-kînn-ka-pit,12,ba̍k-kîⁿ-ka-pit,bak8kinn5ka1pit4,bak8kinn5ka1pit4,bakkinnkapit,bakkinnkapit,bkkp,bkkp,True,False
-目睫毛筅,ba̍k-tsiah-mn̂g-tshíng,12,ba̍k-chiah-mn̂g-tshíng,bak8tsiah4mng5tshing2,bak8chiah4mng5tshing2,baktsiahmngtshing,bakchiahmngtshing,btmt,bcmt,True,False
+目睫毛筅,ba̍k-tsiah-mn̂g-tshíng,12,ba̍k-chiah-mn̂g-chhéng,bak8tsiah4mng5tshing2,bak8chiah4mng5chheng2,baktsiahmngtshing,bakchiahmngchheng,btmt,bcmc,True,False
 目睫毛膏,ba̍k-tsiah-mn̂g-ko,12,ba̍k-chiah-mn̂g-ko,bak8tsiah4mng5ko1,bak8chiah4mng5ko1,baktsiahmngko,bakchiahmngko,btmk,bcmk,True,False
 目睫毛膏,ba̍k-tsiap-mn̂g-ko,12,ba̍k-chiap-mn̂g-ko,bak8tsiap4mng5ko1,bak8chiap4mng5ko1,baktsiapmngko,bakchiapmngko,btmk,bcmk,True,False
 目睫毛膠,ba̍k-tsiah-mn̂g-ka,12,ba̍k-chiah-mn̂g-ka,bak8tsiah4mng5ka1,bak8chiah4mng5ka1,baktsiahmngka,bakchiahmngka,btmk,bcmk,True,False
@@ -1906,8 +1902,8 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 聖嬰現象,sìng-ing hiān-siōng,12,sèng-eng hiān-siōng,sing3ing1hian7siong7,seng3eng1hian7siong7,singinghiansiong,sengenghiansiong,sihs,sehs,True,False
 肇事逃逸,tiāu-sū tô-i̍k,12,tiāu-sū tô-e̍k,tiau7su7to5ik8,tiau7su7to5ek8,tiausutoik,tiausutoek,tsti,tste,True,False
 育成教練,io̍k-sîng kàu-liān,12,io̍k-sêng kàu-liān,iok8sing5kau3lian7,iok8seng5kau3lian7,ioksingkaulian,ioksengkaulian,iskl,iskl,True,False
-腿二頭肌,thuí-jī-thâu-ki,12,thuí-jī-thâu-ki,thui2ji7thau5ki1,thui2ji7thau5ki1,thuijithauki,thuijithauki,tjtk,tjtk,True,False
-腿二頭肌,thuí-lī-thâu-ki,12,thuí-lī-thâu-ki,thui2li7thau5ki1,thui2li7thau5ki1,thuilithauki,thuilithauki,tltk,tltk,True,False
+腿二頭肌,thuí-jī-thâu-ki,12,thúi-jī-thâu-ki,thui2ji7thau5ki1,thui2ji7thau5ki1,thuijithauki,thuijithauki,tjtk,tjtk,True,False
+腿二頭肌,thuí-lī-thâu-ki,12,thúi-lī-thâu-ki,thui2li7thau5ki1,thui2li7thau5ki1,thuilithauki,thuilithauki,tltk,tltk,True,False
 自培的,tsū-puê--ê,12,chū-pôe--ê,tsu7pue5e5,chu7poe5e5,tsupuee,chupoee,tpe,cpe,True,False
 自培選手,tsū-puê suán-tshiú,12,chū-pôe soán-chhiú,tsu7pue5suan2tshiu2,chu7poe5soan2chhiu2,tsupuesuantshiu,chupoesoanchhiu,tpst,cpsc,True,False
 自由組手,tsū-iû tsoo-tshiú,12,chū-iû cho͘-chhiú,tsu7iu5tsoo1tshiu2,chu7iu5choo1chhiu2,tsuiutsootshiu,chuiuchoochhiu,titt,cicc,True,False
@@ -1938,10 +1934,10 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 行動條碼,hîng-tōng tiâu-bé,12,hêng-tōng tiâu-bé,hing5tong7tiau5be2,heng5tong7tiau5be2,hingtongtiaube,hengtongtiaube,httb,httb,True,False
 街式趨枋,ke-sik tshu-pang,12,ke-sek chhu-pang,ke1sik4tshu1pang1,ke1sek4chhu1pang1,kesiktshupang,kesekchhupang,kstp,kscp,True,False
 表情符號,piáu-tsîng hû-hō,12,piáu-chêng hû-hō,piau2tsing5hu5ho7,piau2cheng5hu5ho7,piautsinghuho,piauchenghuho,pthh,pchh,True,False
-被全壘打,pī tsuân-luí-tánn,12,pī choân-luí-táⁿ,pi7tsuan5lui2tann2,pi7choan5lui2tann2,pitsuanluitann,pichoanluitann,ptlt,pclt,True,False
+被全壘打,pī tsuân-luí-tánn,12,pī choân-lúi-táⁿ,pi7tsuan5lui2tann2,pi7choan5lui2tann2,pitsuanluitann,pichoanluitann,ptlt,pclt,True,False
 被打擊率,pī tánn-kik-lu̍t,12,pī táⁿ-kek-lu̍t,pi7tann2kik4lut8,pi7tann2kek4lut8,pitannkiklut,pitannkeklut,ptkl,ptkl,True,False
 製造得分,tsè-tsō tit-hun,12,chè-chō tit-hun,tse3tso7tit4hun1,che3cho7tit4hun1,tsetsotithun,chechotithun,ttth,ccth,True,False
-西洋燜飯,se-iûnn būn-pn̄g,12,se-iûnn būn-pn̄g,se1iunn5bun7png7,se1iunn5bun7png7,seiunnbunpng,seiunnbunpng,sibp,sibp,True,False
+西洋燜飯,se-iûnn būn-pn̄g,12,se-iûⁿ būn-pn̄g,se1iunn5bun7png7,se1iunn5bun7png7,seiunnbunpng,seiunnbunpng,sibp,sibp,True,False
 覆地牚身,phak-tuē-thìnn-sin,12,phak-tōe-thìⁿ-sin,phak4tue7thinn3sin1,phak4toe7thinn3sin1,phaktuethinnsin,phaktoethinnsin,ptts,ptts,True,False
 覆地牚身,phak-tē-thènn-sin,12,phak-tē-thèⁿ-sin,phak4te7thenn3sin1,phak4te7thenn3sin1,phaktethennsin,phaktethennsin,ptts,ptts,True,False
 觸控螢幕,tshiok-khòng îng-bōo,12,chhiok-khòng êng-bō͘,tshiok4khong3ing5boo7,chhiok4khong3eng5boo7,tshiokkhongingboo,chhiokkhongengboo,tkib,ckeb,True,False
@@ -1950,7 +1946,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 豪雨特報,hô-ú ti̍k-pò,12,hô-ú te̍k-pò,ho5u2tik8po3,ho5u2tek8po3,houtikpo,houtekpo,hutp,hutp,True,False
 貼起去,tah--khí-khì,12,tah--khí-khì,tah4khi2khi3,tah4khi2khi3,tahkhikhi,tahkhikhi,tkk,tkk,True,False
 資料鋏仔,tsu-liāu giap-á,12,chu-liāu giap-á,tsu1liau7giap4a2,chu1liau7giap4a2,tsuliaugiapa,chuliaugiapa,tlga,clga,True,False
-走壘教練,tsáu-luí kàu-liān,12,cháu-luí kàu-liān,tsau2lui2kau3lian7,chau2lui2kau3lian7,tsauluikaulian,chauluikaulian,tlkl,clkl,True,False
+走壘教練,tsáu-luí kàu-liān,12,cháu-lúi kàu-liān,tsau2lui2kau3lian7,chau2lui2kau3lian7,tsauluikaulian,chauluikaulian,tlkl,clkl,True,False
 走橫的,tsáu huâinn--ê,12,cháu hoâiⁿ--ê,tsau2huainn5e5,chau2hoainn5e5,tsauhuainne,chauhoainne,the,che,True,False
 走直的,tsáu ti̍t--ê,12,cháu ti̍t--ê,tsau2tit8e5,chau2tit8e5,tsautite,chautite,tte,cte,True,False
 超級雷暴,tshiau-kip luî-pō,12,chhiau-kip lûi-pō,tshiau1kip4lui5po7,chhiau1kip4lui5po7,tshiaukipluipo,chhiaukipluipo,tklp,cklp,True,False
@@ -1959,17 +1955,17 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 趨輪運動,tshu-lián ūn-tōng,12,chhu-lián ūn-tōng,tshu1lian2un7tong7,chhu1lian2un7tong7,tshulianuntong,chhulianuntong,tlut,clut,True,False
 跑打戰術,pháu-tánn tsiàn-su̍t,12,pháu-táⁿ chiàn-su̍t,phau2tann2tsian3sut8,phau2tann2chian3sut8,phautanntsiansut,phautannchiansut,ptts,ptcs,True,False
 跔厝經濟,ku-tshù king-tsè,12,ku-chhù keng-chè,ku1tshu3king1tse3,ku1chhu3keng1che3,kutshukingtse,kuchhukengche,ktkt,kckc,True,False
-跳台跳水,thiàu-tâi thiàu-tsuí,12,thiàu-tâi thiàu-chuí,thiau3tai5thiau3tsui2,thiau3tai5thiau3chui2,thiautaithiautsui,thiautaithiauchui,tttt,tttc,True,False
-跳板跳水,thiàu-pán thiáu-tsuí,12,thiàu-pán thiáu-chuí,thiau3pan2thiau2tsui2,thiau3pan2thiau2chui2,thiaupanthiautsui,thiaupanthiauchui,tptt,tptc,True,False
+跳台跳水,thiàu-tâi thiàu-tsuí,12,thiàu-tâi thiàu-chúi,thiau3tai5thiau3tsui2,thiau3tai5thiau3chui2,thiautaithiautsui,thiautaithiauchui,tttt,tttc,True,False
+跳板跳水,thiàu-pán thiáu-tsuí,12,thiàu-pán thiáu-chúi,thiau3pan2thiau2tsui2,thiau3pan2thiau2chui2,thiaupanthiautsui,thiaupanthiauchui,tptt,tptc,True,False
 身軀乳液,sin-khu jú-i̍k,12,sin-khu jú-e̍k,sin1khu1ju2ik8,sin1khu1ju2ek8,sinkhujuik,sinkhujuek,skji,skje,True,False
 身軀乳液,sin-khu lú-i̍k,12,sin-khu lú-e̍k,sin1khu1lu2ik8,sin1khu1lu2ek8,sinkhuluik,sinkhuluek,skli,skle,True,False
 身體重塑,sin-thé tîng-sok,12,sin-thé têng-sok,sin1the2ting5sok4,sin1the2teng5sok4,sinthetingsok,sinthetengsok,stts,stts,True,False
 軟式網球,nńg-sik bāng-kiû,12,nńg-sek bāng-kiû,nng2sik4bang7kiu5,nng2sek4bang7kiu5,nngsikbangkiu,nngsekbangkiu,nsbk,nsbk,True,False
-輕艇掣流,khin-thíng tshuah-lâu,12,khin-thíng chhoah-lâu,khin1thing2tshuah4lau5,khin1thing2chhoah4lau5,khinthingtshuahlau,khinthingchhoahlau,kttl,ktcl,True,False
-輕艇水球,khin-thíng tsuí-kiû,12,khin-thíng chuí-kiû,khin1thing2tsui2kiu5,khin1thing2chui2kiu5,khinthingtsuikiu,khinthingchuikiu,kttk,ktck,True,False
-輕艇競速,khin-thíng kīng-sok,12,khin-thíng kēng-sok,khin1thing2king7sok4,khin1thing2keng7sok4,khinthingkingsok,khinthingkengsok,ktks,ktks,True,False
-輻射冷卻,hok-siā líng-khiok,12,hok-siā líng-khiok,hok4sia7ling2khiok4,hok4sia7ling2khiok4,hoksialingkhiok,hoksialingkhiok,hslk,hslk,True,False
-農場主管,lông-tiûnn tsú-kuán,12,lông-tiûnn chú-koán,long5tiunn5tsu2kuan2,long5tiunn5chu2koan2,longtiunntsukuan,longtiunnchukoan,lttk,ltck,True,False
+輕艇掣流,khin-thíng tshuah-lâu,12,khin-théng chhoah-lâu,khin1thing2tshuah4lau5,khin1theng2chhoah4lau5,khinthingtshuahlau,khinthengchhoahlau,kttl,ktcl,True,False
+輕艇水球,khin-thíng tsuí-kiû,12,khin-théng chúi-kiû,khin1thing2tsui2kiu5,khin1theng2chui2kiu5,khinthingtsuikiu,khinthengchuikiu,kttk,ktck,True,False
+輕艇競速,khin-thíng kīng-sok,12,khin-théng kēng-sok,khin1thing2king7sok4,khin1theng2keng7sok4,khinthingkingsok,khinthengkengsok,ktks,ktks,True,False
+輻射冷卻,hok-siā líng-khiok,12,hok-siā léng-khiok,hok4sia7ling2khiok4,hok4sia7leng2khiok4,hoksialingkhiok,hoksialengkhiok,hslk,hslk,True,False
+農場主管,lông-tiûnn tsú-kuán,12,lông-tiûⁿ chú-koán,long5tiunn5tsu2kuan2,long5tiunn5chu2koan2,longtiunntsukuan,longtiunnchukoan,lttk,ltck,True,False
 透視畫法,thàu-sī uē-huat,12,thàu-sī ōe-hoat,thau3si7ue7huat4,thau3si7oe7hoat4,thausiuehuat,thausioehoat,tsuh,tsoh,True,False
 透視畫法,thàu-sī uī-huat,12,thàu-sī ūi-hoat,thau3si7ui7huat4,thau3si7ui7hoat4,thausiuihuat,thausiuihoat,tsuh,tsuh,True,False
 通貨膨脹,thong-huè phòng-tiòng,12,thong-hòe phòng-tiòng,thong1hue3phong3tiong3,thong1hoe3phong3tiong3,thonghuephongtiong,thonghoephongtiong,thpt,thpt,True,False
@@ -1987,11 +1983,11 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 野手選擇,iá-tshiú suán-ti̍k,12,iá-chhiú soán-te̍k,ia2tshiu2suan2tik8,ia2chhiu2soan2tek8,iatshiusuantik,iachhiusoantek,itst,icst,True,False
 金璇王梨,kim-suān ông-lâi,12,kim-soān ông-lâi,kim1suan7ong5lai5,kim1soan7ong5lai5,kimsuanonglai,kimsoanonglai,ksol,ksol,True,False
 鉸落來,ka--lo̍h-lâi,12,ka--lo̍h-lâi,ka1loh8lai5,ka1loh8lai5,kalohlai,kalohlai,kll,kll,True,False
-銃子篋仔,tshìng-tsí kheh-á,12,chhèng-tsí kheh-á,tshing3tsi2kheh4a2,chheng3tsi2kheh4a2,tshingtsikheha,chhengtsikheha,ttka,ctka,True,False
+銃子篋仔,tshìng-tsí kheh-á,12,chhèng-chí kheh-á,tshing3tsi2kheh4a2,chheng3chi2kheh4a2,tshingtsikheha,chhengchikheha,ttka,ccka,True,False
 鋸齒打線,kì-khí tánn-suànn,12,kì-khí táⁿ-sòaⁿ,ki3khi2tann2suann3,ki3khi2tann2soann3,kikhitannsuann,kikhitannsoann,kkts,kkts,True,False
 鋸齒打線,kù-khí tánn-suànn,12,kù-khí táⁿ-sòaⁿ,ku3khi2tann2suann3,ku3khi2tann2soann3,kukhitannsuann,kukhitannsoann,kkts,kkts,True,False
 鐵人三項,thih-lâng sann-hāng,12,thih-lâng saⁿ-hāng,thih4lang5sann1hang7,thih4lang5sann1hang7,thihlangsannhang,thihlangsannhang,tlsh,tlsh,True,False
-開場投手,khui-tiûnn tâu-tshiú,12,khui-tiûnn tâu-chhiú,khui1tiunn5tau5tshiu2,khui1tiunn5tau5chhiu2,khuitiunntautshiu,khuitiunntauchhiu,kttt,kttc,True,False
+開場投手,khui-tiûnn tâu-tshiú,12,khui-tiûⁿ tâu-chhiú,khui1tiunn5tau5tshiu2,khui1tiunn5tau5chhiu2,khuitiunntautshiu,khuitiunntauchhiu,kttt,kttc,True,False
 開路先鋒,khai-lōo sian-hong,12,khai-lō͘ sian-hong,khai1loo7sian1hong1,khai1loo7sian1hong1,khailoosianhong,khailoosianhong,klsh,klsh,True,False
 開路的,khui-lōo--ê,12,khui-lō͘--ê,khui1loo7e5,khui1loo7e5,khuilooe,khuilooe,kle,kle,True,False
 閬歇時間,làng-hioh sî-kan,12,làng-hioh sî-kan,lang3hioh4si5kan1,lang3hioh4si5kan1,langhiohsikan,langhiohsikan,lhsk,lhsk,True,False
@@ -2003,7 +1999,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 防曝係數,hông-pha̍k hē-sòo,12,hông-pha̍k hē-sò͘,hong5phak8he7soo3,hong5phak8he7soo3,hongphakhesoo,hongphakhesoo,hphs,hphs,True,False
 附加功能,hù-ka kong-lîng,12,hù-ka kong-lêng,hu3ka1kong1ling5,hu3ka1kong1leng5,hukakongling,hukakongleng,hkkl,hkkl,True,False
 附加功能,hū-ka kong-lîng,12,hū-ka kong-lêng,hu7ka1kong1ling5,hu7ka1kong1leng5,hukakongling,hukakongleng,hkkl,hkkl,True,False
-隨溶咖啡,suî-iûnn ka-pi,12,sûi-iûnn ka-pi,sui5iunn5ka1pi1,sui5iunn5ka1pi1,suiiunnkapi,suiiunnkapi,sikp,sikp,True,False
+隨溶咖啡,suî-iûnn ka-pi,12,sûi-iûⁿ ka-pi,sui5iunn5ka1pi1,sui5iunn5ka1pi1,suiiunnkapi,suiiunnkapi,sikp,sikp,True,False
 隱形目鏡,ún-hîng ba̍k-kiànn,12,ún-hêng ba̍k-kiàⁿ,un2hing5bak8kiann3,un2heng5bak8kiann3,unhingbakkiann,unhengbakkiann,uhbk,uhbk,True,False
 隱形缺氧,ún-hîng khuat-ióng,12,ún-hêng khoat-ióng,un2hing5khuat4iong2,un2heng5khoat4iong2,unhingkhuationg,unhengkhoationg,uhki,uhki,True,False
 雙殺機會,siang-sat ki-huē,12,siang-sat ki-hōe,siang1sat4ki1hue7,siang1sat4ki1hoe7,siangsatkihue,siangsatkihoe,sskh,sskh,True,False
@@ -2014,30 +2010,30 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 靜態伸輪,tsīng-thài tshun-lûn,12,chēng-thài chhun-lûn,tsing7thai3tshun1lun5,cheng7thai3chhun1lun5,tsingthaitshunlun,chengthaichhunlun,tttl,ctcl,True,False
 非自責分,hui-tsū-tsik-hun,12,hui-chū-chek-hun,hui1tsu7tsik4hun1,hui1chu7chek4hun1,huitsutsikhun,huichuchekhun,htth,hcch,True,False
 韻律體操,ūn-lu̍t thé-tshau,12,ūn-lu̍t thé-chhau,un7lut8the2tshau1,un7lut8the2chhau1,unlutthetshau,unlutthechhau,ultt,ultc,True,False
-頂目睫毛,tíng ba̍k-tsiah-mn̂g,12,tíng ba̍k-chiah-mn̂g,ting2bak8tsiah4mng5,ting2bak8chiah4mng5,tingbaktsiahmng,tingbakchiahmng,tbtm,tbcm,True,False
-頂目睫毛,tíng ba̍k-tsiap-mn̂g,12,tíng ba̍k-chiap-mn̂g,ting2bak8tsiap4mng5,ting2bak8chiap4mng5,tingbaktsiapmng,tingbakchiapmng,tbtm,tbcm,True,False
+頂目睫毛,tíng ba̍k-tsiah-mn̂g,12,téng ba̍k-chiah-mn̂g,ting2bak8tsiah4mng5,teng2bak8chiah4mng5,tingbaktsiahmng,tengbakchiahmng,tbtm,tbcm,True,False
+頂目睫毛,tíng ba̍k-tsiap-mn̂g,12,téng ba̍k-chiap-mn̂g,ting2bak8tsiap4mng5,teng2bak8chiap4mng5,tingbaktsiapmng,tengbakchiapmng,tbtm,tbcm,True,False
 預備裁判,ī-pī tshâi-phuànn,12,ī-pī chhâi-phòaⁿ,i7pi7tshai5phuann3,i7pi7chhai5phoann3,ipitshaiphuann,ipichhaiphoann,iptp,ipcp,True,False
 預備裁判,ū-pī tshâi-phuànn,12,ū-pī chhâi-phòaⁿ,u7pi7tshai5phuann3,u7pi7chhai5phoann3,upitshaiphuann,upichhaiphoann,uptp,upcp,True,False
 預備選手,ī-pī suán-tshiú,12,ī-pī soán-chhiú,i7pi7suan2tshiu2,i7pi7soan2chhiu2,ipisuantshiu,ipisoanchhiu,ipst,ipsc,True,False
 預備選手,ū-pī suán-tshiú,12,ū-pī soán-chhiú,u7pi7suan2tshiu2,u7pi7soan2chhiu2,upisuantshiu,upisoanchhiu,upst,upsc,True,False
 頭毛試火,thâu-mn̂g tshì hué,12,thâu-mn̂g chhì hóe,thau5mng5tshi3hue2,thau5mng5chhi3hoe2,thaumngtshihue,thaumngchhihoe,tmth,tmch,True,False
 頭毛試火,thâu-mn̂g tshì hé,12,thâu-mn̂g chhì hé,thau5mng5tshi3he2,thau5mng5chhi3he2,thaumngtshihe,thaumngchhihe,tmth,tmch,True,False
-頭部趨壘,thâu-pōo tshu-luí,12,thâu-pō͘ chhu-luí,thau5poo7tshu1lui2,thau5poo7chhu1lui2,thaupootshului,thaupoochhului,tptl,tpcl,True,False
+頭部趨壘,thâu-pōo tshu-luí,12,thâu-pō͘ chhu-lúi,thau5poo7tshu1lui2,thau5poo7chhu1lui2,thaupootshului,thaupoochhului,tptl,tpcl,True,False
 飛球投手,hui-kiû tâu-tshiú,12,hui-kiû tâu-chhiú,hui1kiu5tau5tshiu2,hui1kiu5tau5chhiu2,huikiutautshiu,huikiutauchhiu,hktt,hktc,True,False
 飛靶射擊,hui-pé siā-kik,12,hui-pé siā-kek,hui1pe2sia7kik4,hui1pe2sia7kek4,huipesiakik,huipesiakek,hpsk,hpsk,True,False
 食食纖維,tsia̍h-si̍t tshiam-uî,12,chia̍h-si̍t chhiam-ûi,tsiah8sit8tshiam1ui5,chiah8sit8chhiam1ui5,tsiahsittshiamui,chiahsitchhiamui,tstu,cscu,True,False
 飽和脂肪,pá-hô tsi-hong,12,pá-hô chi-hong,pa2ho5tsi1hong1,pa2ho5chi1hong1,pahotsihong,pahochihong,phth,phch,True,False
 首席教練,siú-sik kàu-liān,12,siú-sek kàu-liān,siu2sik4kau3lian7,siu2sek4kau3lian7,siusikkaulian,siusekkaulian,sskl,sskl,True,False
-馬場馬術,bé-tiûnn bé-su̍t,12,bé-tiûnn bé-su̍t,be2tiunn5be2sut8,be2tiunn5be2sut8,betiunnbesut,betiunnbesut,btbs,btbs,True,False
+馬場馬術,bé-tiûnn bé-su̍t,12,bé-tiûⁿ bé-su̍t,be2tiunn5be2sut8,be2tiunn5be2sut8,betiunnbesut,betiunnbesut,btbs,btbs,True,False
 馬鈴薯條,má-lîng-tsî-tiâu,12,má-lêng-chî-tiâu,ma2ling5tsi5tiau5,ma2leng5chi5tiau5,malingtsitiau,malengchitiau,mltt,mlct,True,False
-馬鈴薯條,má-lîng-tsû-tiâu,12,má-lêng-tsû-tiâu,ma2ling5tsu5tiau5,ma2leng5tsu5tiau5,malingtsutiau,malengtsutiau,mltt,mltt,True,False
+馬鈴薯條,má-lîng-tsû-tiâu,12,má-lêng-chû-tiâu,ma2ling5tsu5tiau5,ma2leng5chu5tiau5,malingtsutiau,malengchutiau,mltt,mlct,True,False
 馬鈴薯泥,má-lîng-tsî-nî,12,má-lêng-chî-nî,ma2ling5tsi5ni5,ma2leng5chi5ni5,malingtsini,malengchini,mltn,mlcn,True,False
-馬鈴薯泥,má-lîng-tsû-nî,12,má-lêng-tsû-nî,ma2ling5tsu5ni5,ma2leng5tsu5ni5,malingtsuni,malengtsuni,mltn,mltn,True,False
+馬鈴薯泥,má-lîng-tsû-nî,12,má-lêng-chû-nî,ma2ling5tsu5ni5,ma2leng5chu5ni5,malingtsuni,malengchuni,mltn,mlcn,True,False
 馬鈴薯片,má-lîng-tsî-phìnn,12,má-lêng-chî-phìⁿ,ma2ling5tsi5phinn3,ma2leng5chi5phinn3,malingtsiphinn,malengchiphinn,mltp,mlcp,True,False
-馬鈴薯片,má-lîng-tsû-phìnn,12,má-lêng-tsû-phìⁿ,ma2ling5tsu5phinn3,ma2leng5tsu5phinn3,malingtsuphinn,malengtsuphinn,mltp,mltp,True,False
+馬鈴薯片,má-lîng-tsû-phìnn,12,má-lêng-chû-phìⁿ,ma2ling5tsu5phinn3,ma2leng5chu5phinn3,malingtsuphinn,malengchuphinn,mltp,mlcp,True,False
 馬鈴薯球,má-lîng-tsî-kiû,12,má-lêng-chî-kiû,ma2ling5tsi5kiu5,ma2leng5chi5kiu5,malingtsikiu,malengchikiu,mltk,mlck,True,False
 馬鈴薯餅,má-lîng-tsî-piánn,12,má-lêng-chî-piáⁿ,ma2ling5tsi5piann2,ma2leng5chi5piann2,malingtsipiann,malengchipiann,mltp,mlcp,True,False
-馬鈴薯餅,má-lîng-tsû-piánn,12,má-lêng-tsû-piáⁿ,ma2ling5tsu5piann2,ma2leng5tsu5piann2,malingtsupiann,malengtsupiann,mltp,mltp,True,False
+馬鈴薯餅,má-lîng-tsû-piánn,12,má-lêng-chû-piáⁿ,ma2ling5tsu5piann2,ma2leng5chu5piann2,malingtsupiann,malengchupiann,mltp,mlcp,True,False
 體能教練,thé-lîng kàu-liān,12,thé-lêng kàu-liān,the2ling5kau3lian7,the2leng5kau3lian7,thelingkaulian,thelengkaulian,tlkl,tlkl,True,False
 體脂肪率,thé tsi-hong-lu̍t,12,thé chi-hong-lu̍t,the2tsi1hong1lut8,the2chi1hong1lut8,thetsihonglut,thechihonglut,tthl,tchl,True,False
 高壓投法,ko-ap tâu-huat,12,ko-ap tâu-hoat,ko1ap4tau5huat4,ko1ap4tau5hoat4,koaptauhuat,koaptauhoat,kath,kath,True,False
@@ -2051,17 +2047,19 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 龍骨歪斜,liông-kut uai-tshua̍h,12,liông-kut oai-chhoa̍h,liong5kut4uai1tshuah8,liong5kut4oai1chhoah8,liongkutuaitshuah,liongkutoaichhoah,lkut,lkoc,True,False
 龍骨歪斜,lîng-kut uai-tshua̍h,12,lêng-kut oai-chhoa̍h,ling5kut4uai1tshuah8,leng5kut4oai1chhoah8,lingkutuaitshuah,lengkutoaichhoah,lkut,lkoc,True,False
 中人,tiong-lâng,10,tiong-lâng,tiong1lang5,tiong1lang5,tionglang,tionglang,tl,tl,True,False
+划船,kò-tsûn,10,kò-chûn,ko3tsun5,ko3chun5,kotsun,kochun,kt,kc,True,False
 卵白質,nn̄g-pe̍h-tsit,10,nn̄g-pe̍h-chit,nng7peh8tsit4,nng7peh8chit4,nngpehtsit,nngpehchit,npt,npc,True,False
 口座,kháu-tsō,10,kháu-chō,khau2tso7,khau2cho7,khautso,khaucho,kt,kc,True,False
 團體,thuân-thé,10,thoân-thé,thuan5the2,thoan5the2,thuanthe,thoanthe,tt,tt,True,False
 多倫多,to-lûn-to,10,to-lûn-to,to1lun5to1,to1lun5to1,tolunto,tolunto,tlt,tlt,True,False
 抹粉,buah-hún,10,boah-hún,buah4hun2,boah4hun2,buahhun,boahhun,bh,bh,True,False
 排球,pâi-kiû,10,pâi-kiû,pai5kiu5,pai5kiu5,paikiu,paikiu,pk,pk,True,False
+栗子,la̍t-tsí,10,la̍t-chí,lat8tsi2,lat8chi2,lattsi,latchi,lt,lc,True,False
 格式,keh-sik,10,keh-sek,keh4sik4,keh4sek4,kehsik,kehsek,ks,ks,True,False
 桔仔,kiat-á,10,kiat-á,kiat4a2,kiat4a2,kiata,kiata,ka,ka,True,False
 梅仔,m̂-á,10,m̂-á,m5a2,m5a2,ma,ma,ma,ma,True,False
 標題,phiau-tê,10,phiau-tê,phiau1te5,phiau1te5,phiaute,phiaute,pt,pt,True,False
-泅水衫,siû-tsuí-sann,10,siû-chuí-saⁿ,siu5tsui2sann1,siu5chui2sann1,siutsuisann,siuchuisann,sts,scs,True,False
+泅水衫,siû-tsuí-sann,10,siû-chúi-saⁿ,siu5tsui2sann1,siu5chui2sann1,siutsuisann,siuchuisann,sts,scs,True,False
 火龍果,hué-liông-kó,10,hóe-liông-kó,hue2liong5ko2,hoe2liong5ko2,hueliongko,hoeliongko,hlk,hlk,True,False
 煮食,tsú-tsia̍h,10,chú-chia̍h,tsu2tsiah8,chu2chiah8,tsutsiah,chuchiah,tt,cc,True,False
 留話,lâu-uē,10,lâu-ōe,lau5ue7,lau5oe7,lauue,lauoe,lu,lo,True,False
@@ -2100,6 +2098,7 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 粿仔,ké-á,1,ké-á,ke2a2,ke2a2,kea,kea,ka,ka,True,False
 耳機,hī-ki,1,hī-ki,hi7ki1,hi7ki1,hiki,hiki,hk,hk,True,False
 耳機,hīnn-ki,1,hīⁿ-ki,hinn7ki1,hinn7ki1,hinnki,hinnki,hk,hk,True,False
+船槳,tsûn-tsiúnn,1,chûn-chiúⁿ,tsun5tsiunn2,chun5chiunn2,tsuntsiunn,chunchiunn,tt,cc,True,False
 葡萄牙,phû-tô-gâ,1,phû-tô-gâ,phu5to5ga5,phu5to5ga5,phutoga,phutoga,ptg,ptg,True,False
 論壇,lūn-tuânn,1,lūn-tôaⁿ,lun7tuann5,lun7toann5,luntuann,luntoann,lt,lt,True,False
 象棋,tshiūnn-kî,1,chhiūⁿ-kî,tshiunn7ki5,chhiunn7ki5,tshiunnki,chhiunnki,tk,ck,True,False
@@ -2116,4 +2115,5 @@ hanzi,tl,frequency,poj,tl_num,poj_num,tl_notone,poj_notone,tl_abbrev,poj_abbrev,
 香茅,hiang-m̂,1,hiang-m̂,hiang1m5,hiang1m5,hiangm,hiangm,hm,hm,True,False
 體操,thé-tshau,1,thé-chhau,the2tshau1,the2chhau1,thetshau,thechhau,tt,tc,True,False
 鱸魚,lôo-hî,1,lô͘-hî,loo5hi5,loo5hi5,loohi,loohi,lh,lh,True,False
+鳥鼠仔,niáu-tshí-á,1,niáu-chhí-á,niau2tshi2a2,niau2chhi2a2,niautshia,niauchhia,nta,nca,True,False
 鳥鼠仔,niáu-tshú-á,1,niáu-chhú-á,niau2tshu2a2,niau2chhu2a2,niautshua,niauchhua,nta,nca,True,False

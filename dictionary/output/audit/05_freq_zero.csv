@@ -71,6 +71,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 佾,i̍t,i̍t,0,False,False,False,False,False,False,False,False,False,False
 使,sù,sù,0,False,True,False,False,False,False,False,False,False,False
 來,lài,lài,0,False,False,False,False,False,False,False,False,False,False
+侈,tshí,chhí,0,False,True,False,False,False,True,False,False,False,False
 侖,lûn,lûn,0,False,True,False,False,False,False,False,False,False,False
 侯,hiô,hiô,0,False,True,False,False,False,False,False,False,False,False
 俎,tsóo,chó͘,0,False,True,False,False,False,False,False,False,False,False
@@ -86,9 +87,10 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 倪,gô̤e,gô̤e,0,False,False,False,False,False,False,False,False,False,False
 做,tsòo,chò͘,0,False,False,False,False,False,False,False,False,False,False
 偷,thoo,tho͘,0,False,True,False,False,False,False,False,False,False,False
-傀,khuí,khuí,0,False,True,False,False,False,False,False,False,False,False
+傀,khuí,khúi,0,False,True,False,False,False,False,False,False,False,False
 傍,pông,pông,0,False,False,False,False,False,False,True,False,False,False
 傲,gō,gō,0,False,True,False,False,False,False,False,False,False,False
+傳,thuînn,thûiⁿ,0,False,True,False,False,False,False,False,False,False,False
 像,tshiāng,chhiāng,0,False,True,False,False,False,False,True,False,False,False
 僕,po̍k,po̍k,0,False,True,False,False,False,False,True,False,False,False
 僣,tshiàm,chhiàm,0,False,True,False,False,False,False,False,False,False,False
@@ -103,6 +105,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 先,sainn,saiⁿ,0,False,False,False,False,False,False,False,False,False,True
 先,sṳiⁿ,sṳiⁿ,0,False,False,False,False,False,False,False,False,False,False
 兌,tuê,tôe,0,False,False,False,False,False,False,True,False,False,False
+全,tsuînn,chûiⁿ,0,False,True,False,False,False,False,False,False,False,False
 兩,liáng,liáng,0,False,True,False,False,False,False,False,False,False,False
 兵,phiann,phiaⁿ,0,False,False,False,False,False,False,False,False,False,False
 兵,piann,piaⁿ,0,False,False,False,False,False,False,True,False,False,False
@@ -130,6 +133,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 券,khuàn,khoàn,0,False,False,False,False,False,False,False,False,False,False
 刼,kiap,kiap,0,False,False,False,False,False,False,False,False,False,False
 削,siat,siat,0,False,True,False,False,False,False,True,False,False,False
+前,tsuînn,chûiⁿ,0,False,False,False,False,False,False,False,False,False,True
 前,tsâinn,châiⁿ,0,False,True,False,False,False,False,False,False,False,False
 剽,phiáu,phiáu,0,False,True,False,False,False,False,False,False,False,False
 劇,kia̍k,kia̍k,0,False,True,False,False,False,True,False,False,False,False
@@ -173,6 +177,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 去,khú,khú,0,False,False,False,False,False,False,False,False,False,False
 双,song,song,0,False,True,False,False,False,False,False,False,False,False
 叔,siok,siok,0,False,True,False,False,False,False,False,False,False,False
+取,tshí,chhí,0,False,True,False,False,False,False,False,False,False,False
 口,khió,khió,0,False,True,False,False,False,False,False,False,False,False
 叫,kiàu,kiàu,0,False,True,False,False,False,False,False,False,False,False
 叭,phuat,phoat,0,False,True,False,False,False,False,False,False,False,False
@@ -309,7 +314,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 字,jū,jū,0,False,True,False,False,False,False,False,False,False,False
 孛,pu̍t,pu̍t,0,False,True,False,False,False,False,True,False,False,False
 孜,chṳ,chṳ,0,False,False,False,False,False,False,False,False,False,False
-宄,khuí,khuí,0,False,True,False,False,False,False,False,False,False,False
+宄,khuí,khúi,0,False,True,False,False,False,False,False,False,False,False
 宅,thi̍k,the̍k,0,False,True,False,False,False,False,False,False,False,False
 宇,í,í,0,False,True,False,False,False,False,False,False,False,False
 安,án,án,0,False,False,False,False,False,False,False,False,False,False
@@ -418,7 +423,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 恬,tiâm,tiâm,0,False,False,False,False,False,False,False,False,False,False
 悠,iu,iu,0,False,True,False,False,False,False,False,False,False,False
 悪,ok,ok,0,False,False,False,False,False,False,False,False,False,False
-悪,ònn,ò͘ⁿ,0,False,False,False,False,False,False,False,False,False,False
+悪,ònn,òⁿ,0,False,False,False,False,False,False,False,False,False,False
 惧,kī,kī,0,False,False,False,False,False,False,False,False,False,False
 想,siúnn,siúⁿ,0,False,False,False,False,False,False,True,False,False,False
 愕,go̍k,go̍k,0,False,True,False,False,False,False,False,False,False,False
@@ -459,10 +464,11 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 拖,thoo,tho͘,0,False,True,False,False,False,False,False,False,False,False
 拙,tsuat,choat,0,False,True,False,False,False,False,True,False,False,False
 拳,khuân,khoân,0,False,False,False,False,False,False,False,False,False,False
+指,tsńg,chńg,0,False,True,False,False,False,False,True,False,False,False
 挛,luân,loân,0,False,False,False,False,False,False,False,False,False,False
 挨,o̤e,o̤e,0,False,False,False,False,False,False,False,False,False,False
 振動,tín,tín,0,False,False,False,False,False,False,False,False,False,False
-挺,thíng,thíng,0,False,True,False,False,False,False,False,False,False,False
+挺,thíng,théng,0,False,True,False,False,False,False,False,False,False,False
 捉,tshiok,chhiok,0,False,True,False,False,False,False,False,False,False,False
 捽,tsut,chut,0,False,False,False,False,False,False,False,False,False,False
 捽,tsu̍t,chu̍t,0,False,False,False,False,False,True,False,False,False,False
@@ -477,9 +483,9 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 提,thue̍h,thoe̍h,0,False,True,False,False,False,False,False,False,False,False
 揖,ip,ip,0,False,True,False,False,False,False,True,False,False,False
 揚,iâng,iâng,0,False,True,False,False,False,False,False,False,False,False
-揣,tshuí,chhuí,0,False,True,False,False,False,False,True,False,False,False
+揣,tshuí,chhúi,0,False,True,False,False,False,False,True,False,False,False
 揭,kia̍t,kia̍t,0,False,True,False,False,False,False,True,False,False,False
-損,suínn,suínn,0,False,True,False,False,False,False,False,False,False,False
+損,suínn,súiⁿ,0,False,True,False,False,False,False,False,False,False,False
 搬,puan,poan,0,False,True,False,False,False,False,True,False,False,False
 搭,tap,tap,0,False,True,False,False,False,False,False,False,False,False
 搶,tshiáng,chhiáng,0,False,True,False,False,False,False,False,False,False,False
@@ -496,7 +502,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 擁,iòng,iòng,0,False,False,False,False,False,False,False,False,False,False
 擧,kia̍h,kia̍h,0,False,False,False,False,False,False,False,False,False,False
 攣,luân,loân,0,False,True,False,False,False,False,False,False,False,False
-攷,khónn,khó͘ⁿ,0,False,False,False,False,False,False,False,False,False,False
+攷,khónn,khóⁿ,0,False,False,False,False,False,False,False,False,False,False
 数,sòo,sò͘,0,False,False,False,False,False,False,False,False,False,False
 數,sok,sok,0,False,False,False,False,False,False,False,False,False,False
 文,bun,bun,0,False,False,False,False,False,False,False,False,False,False
@@ -505,7 +511,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 斈,ha̍k,ha̍k,0,False,True,False,False,False,False,False,False,False,False
 斉,tsuê,chôe,0,False,False,False,False,False,False,False,False,False,False
 斉,tsê,chê,0,False,False,False,False,False,False,False,False,False,False
-斗,ta̍uh,ta̍uh,0,False,False,False,False,False,False,False,False,False,False
+斗,ta̍uh,tau̍h,0,False,False,False,False,False,False,False,False,False,False
 斗,tió,tió,0,False,True,False,False,False,False,False,False,False,False
 斛,ha̍k,ha̍k,0,False,True,False,False,False,False,False,False,False,False
 斤,kṳn,kṳn,0,False,False,False,False,False,False,False,False,False,False
@@ -675,6 +681,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 涛,tô,tô,0,False,False,False,False,False,False,False,False,False,False
 涰,tuat,toat,0,False,False,False,False,False,False,False,False,False,False
 淺,khín,khín,0,False,True,False,False,False,False,True,False,False,False
+淺,tshínn,chhíⁿ,0,False,False,False,False,False,False,True,False,False,False
 清,tshiann,chhiaⁿ,0,False,False,False,False,False,False,False,False,False,False
 済,tsê,chê,0,False,False,False,False,False,False,False,False,False,False
 渺,biáu,biáu,0,False,True,False,False,False,False,False,False,False,False
@@ -812,7 +819,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 矧,sín,sín,0,False,True,False,False,False,False,False,False,False,False
 矮,ái,ái,0,False,True,False,False,False,False,False,False,False,False
 研,gán,gán,0,False,True,False,False,False,False,False,False,False,False
-研,nguí,nguí,0,False,True,False,True,False,False,False,False,False,False
+研,nguí,ngúi,0,False,True,False,True,False,False,False,False,False,False
 研,ngái,ngái,0,False,True,False,True,False,False,False,False,False,False
 硈,khia̍t,khia̍t,0,False,True,False,False,False,False,False,False,False,False
 硬,gīng,gēng,0,False,True,False,False,False,False,False,False,False,False
@@ -989,7 +996,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 般,pua̍t,poa̍t,0,False,False,False,False,False,False,False,False,False,False
 船,suân,soân,0,False,True,False,False,False,False,False,False,False,False
 艄,sau,sau,0,False,False,False,False,False,False,False,False,False,False
-艇,thíng,thíng,0,False,True,False,False,False,True,True,False,False,False
+艇,thíng,théng,0,False,True,False,False,False,True,True,False,False,False
 艦,kàm,kàm,0,False,True,False,False,False,False,False,False,False,False
 艮,kìn,kìn,0,False,False,False,False,False,False,False,False,False,False
 艮,kùn,kùn,0,False,True,False,False,False,False,True,False,False,False
@@ -1037,6 +1044,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 葱,tshong,chhong,0,False,True,False,False,False,False,False,False,False,False
 葱,tsháng,chháng,0,False,False,False,False,False,False,False,False,False,False
 葵,kho̤,kho̤,0,False,False,False,False,False,False,False,False,False,False
+葵,kuî,kûi,0,False,True,False,False,False,False,True,False,False,False
 蒞,nī,nī,0,False,False,False,False,False,False,False,False,False,False
 蒡,pông,pông,0,False,True,False,False,False,False,False,False,False,False
 蒨,tshiàn,chhiàn,0,False,True,False,False,False,False,False,False,False,False
@@ -1070,6 +1078,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 蘼,bî,bî,0,False,True,False,False,False,False,False,False,False,False
 虐,gia̍k,gia̍k,0,False,True,False,False,False,False,False,False,False,False
 虐,gio̍k,gio̍k,0,False,True,False,False,False,False,False,False,False,False
+處,tshí,chhí,0,False,True,False,False,False,False,False,False,False,False
 處,tò̤,tò̤,0,False,False,False,False,False,False,False,False,False,False
 虛,hṳ,hṳ,0,False,False,False,False,False,False,False,False,False,False
 虫,thiông,thiông,0,False,True,False,False,False,False,False,False,False,False
@@ -1125,7 +1134,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 訖,gut,gut,0,False,True,False,False,False,False,False,False,False,False
 詛,tsòo,chò͘,0,False,False,False,False,False,False,False,False,False,False
 詛,tsóo,chó͘,0,False,True,False,False,False,False,False,False,False,False
-詭,khuí,khuí,0,False,True,False,False,False,True,False,False,False,False
+詭,khuí,khúi,0,False,True,False,False,False,True,False,False,False,False
 詮,tshuan,chhoan,0,False,True,False,False,False,False,False,False,False,False
 話,huā,hōa,0,False,True,False,False,False,False,False,False,False,False
 話,uā,ōa,0,False,True,False,False,False,False,True,False,False,False
@@ -1186,9 +1195,9 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 蹶,khuat,khoat,0,False,True,False,False,False,False,False,False,False,False
 躍,ia̍k,ia̍k,0,False,True,False,False,False,False,False,False,False,False
 車,kṳ,kṳ,0,False,False,False,False,False,False,False,False,False,False
-軌,khuí,khuí,0,False,True,False,False,False,True,False,False,False,False
+軌,khuí,khúi,0,False,True,False,False,False,True,False,False,False,False
 軟,juán,joán,0,False,False,False,False,False,False,False,False,False,False
-軟,nuí,nuí,0,False,True,False,False,False,False,False,False,False,False
+軟,nuí,núi,0,False,True,False,False,False,False,False,False,False,False
 軸,tio̍k,tio̍k,0,False,True,False,False,False,False,False,False,False,False
 載,tsái,chái,0,False,True,False,False,False,False,False,False,False,False
 輒,tiap,tiap,0,False,True,False,False,False,True,True,False,False,False
@@ -1347,7 +1356,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 驟,tsōo,chō͘,0,False,True,False,False,False,False,False,False,False,False
 驫,piu,piu,0,False,False,False,False,False,False,False,False,False,True
 髓,chhó̤,chhó̤,0,False,False,False,False,False,False,False,False,False,False
-髓,tshuí,chhuí,0,False,True,False,False,False,False,False,False,False,False
+髓,tshuí,chhúi,0,False,True,False,False,False,False,False,False,False,False
 魨,tûn,tûn,0,False,True,False,False,False,False,False,False,False,False
 魯,nóo,nó͘,0,False,False,False,False,False,False,False,False,False,False
 鮑,páu,páu,0,False,True,False,False,False,False,False,False,False,False
@@ -1389,6 +1398,7 @@ hanzi,tl,poj,frequency,is_variant,kautian,taigitv,itaigi,sitbut,taihoa,taijit,ku
 鼻,pi̍t,pi̍t,0,False,False,False,False,False,False,False,False,False,False
 鼻,pī,pī,0,False,True,False,False,False,False,False,False,False,False
 齊,chṳ,chṳ,0,False,False,False,False,False,False,False,False,False,False
+齒,tshí,chhí,0,False,True,False,False,False,False,False,False,False,False
 龥,io̍k,io̍k,0,False,True,False,False,False,False,False,False,False,False
 𠁣,inn,iⁿ,0,False,False,False,False,False,False,False,False,False,False
 𠁣,i̍hⁿ,i̍hⁿ,0,False,False,False,False,False,False,False,False,False,False

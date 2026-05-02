@@ -125,7 +125,8 @@ def compute_associations(
     accumulation order. This matches SQLite's `ORDER BY count DESC`
     rowid-implicit ordering (entries inserted in CSV iteration order).
     """
-    df = pd.read_csv(csv_path)
+    from common import read_dictionary_csv
+    df = read_dictionary_csv(csv_path)
 
     df_multi = df[df["hanzi"].apply(
         lambda x: isinstance(x, str) and MIN_WORD_LEN <= len(x) <= MAX_WORD_LEN

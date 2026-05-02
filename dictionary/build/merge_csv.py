@@ -32,6 +32,7 @@ from common.notone import remove_tone
 from common.romanization import to_numeric_tone
 from common.source_bits import MAIN_SOURCE_COLUMNS
 from common.taigi_bridge import convert_poj_to_tl_strict, convert_tl_to_poj_strict
+from common import read_dictionary_csv
 
 INPUT_FILES = [
     ("sources/official/kautian/data/kautian.csv", "kautian"),
@@ -67,7 +68,7 @@ def main():
             logger.warning(f"  [skip] {filepath} not found")
             continue
 
-        df = pd.read_csv(full_path)
+        df = read_dictionary_csv(full_path)
         logger.info(f"  [load] {filepath}: {len(df)} records")
         all_dfs.append(df)
 
@@ -289,8 +290,14 @@ def _load_khiin_new_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -
             continue
 
         try:
-            poj = inp.lower().replace(" ", "-")
-            tl = convert_poj_to_tl_strict(poj).lower().replace(" ", "-")
+            khiin_poj = inp.lower().replace(" ", "-")
+            tl = convert_poj_to_tl_strict(khiin_poj).lower().replace(" ", "-")
+            # Re-derive POJ from TL via the canonical converter so the
+            # `poj == convert_tl_to_poj(tl)` invariant (enforced by
+            # build/audit.py 12_stale_poj) holds for khiin entries too.
+            # Without this, khiin's idiosyncratic POJ encodings (e.g.,
+            # `hoonn` → `hò͘ⁿ` instead of standard `hòⁿ`) trip the audit.
+            poj = convert_tl_to_poj_strict(tl).lower().replace(" ", "-")
         except Exception:
             continue
 
@@ -334,7 +341,7 @@ def _load_dev_supplement(existing_df: pd.DataFrame, base_dir: Path, logger) -> p
         logger.warning("  [skip] dev supplement CSV not found")
         return None
 
-    dev_df = pd.read_csv(dev_path)
+    dev_df = read_dictionary_csv(dev_path)
     if dev_df.empty:
         logger.info("  [dev] dev.csv is empty, skipping")
         return None
@@ -407,7 +414,7 @@ def _load_lkk_entries(existing_df: pd.DataFrame, base_dir: Path, logger) -> pd.D
         logger.warning("  [skip] LKK CSV not found")
         return None
 
-    lkk_df = pd.read_csv(lkk_path)
+    lkk_df = read_dictionary_csv(lkk_path)
     if lkk_df.empty:
         logger.info("  [lkk] lkk.csv is empty, skipping")
         return None

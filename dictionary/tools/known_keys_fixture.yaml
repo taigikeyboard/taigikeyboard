@@ -1,0 +1,47 @@
+# Post-build smoke verification: prefix → minimum hit count.
+#
+# Each line asserts that querying the FST for the given prefix returns at
+# least `min_hits` results. Numbers are chosen conservatively (well below
+# current actual counts on a healthy build) so legitimate dictionary
+# revisions don't trigger false alarms.
+#
+# Bug surface this fixture defends:
+# - Stale POJ regression (PR #175 + PR #184 incident, May 2026): typing
+#   `chi2` (POJ for chí) hit 0 entries because dictionary.csv shipped with
+#   poj=<TL spelling>.
+# - TL→POJ rule coverage (ts→ch / ing→eng / o͘→oo / nn→ⁿ / tone position).
+# - Hanzi reverse-lookup invariant.
+#
+# Used by: dictionary/tools/verify_known_keys.py (run after build.audit
+# in dictionary/build.sh).
+
+# ── User-reported bug: chi2 (POJ for chí) — must catch regression ──
+# Current stale fst: poj:chi2=7; post-fix expected ≈ tl:tsi2 (~261).
+# Threshold > current stale count so this fixture FAILS on the broken
+# build and PASSES after rebuild.
+poj:chi2: 100    # 子/止/只/姊/姐/指/紫/址/旨/...
+tl:tsi2: 100
+
+# ── ts → ch tone-on-head-vowel cases (the regression class) ──
+poj:cheng2: 30   # chéng (TL: tsíng) — current stale: 6
+tl:tsing2: 30
+poj:teng2: 100   # téng  (TL: tíng)  — current stale: 6
+tl:ting2: 100
+
+# ── ts → ch with medial vowel (worked partially in old converter) ──
+poj:chui2: 200   # chúi (TL: tsuí) — sanity, not bug-affected
+tl:tsui2: 200
+
+# ── nn → ⁿ POJ nasal (after ASCII fold both forms collapse to nn) ──
+poj:soann1: 100  # soaⁿ → soann1
+tl:suann1: 100
+poj:tiunn5: 5    # tiûⁿ → tiunn5
+tl:tiunn5: 5
+
+# ── o͘ → oo ASCII fold ──
+poj:hoo7: 100    # hō͘ family (予 etc.)
+tl:hoo7: 100
+
+# ── Hanzi reverse-lookup sanity (unaffected by POJ bug, smoke only) ──
+hanzi:子: 50
+hanzi:山: 100

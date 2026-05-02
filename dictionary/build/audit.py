@@ -17,11 +17,29 @@
     ├── 08_hanzi_digit.csv        漢字含數字
     ├── 09_tl_punctuation.csv     TL 含標點
     ├── 10_empty_poj.csv          POJ 為空
-    └── 11_empty_tl_num.csv       tl_num 為空
+    ├── 11_empty_tl_num.csv       tl_num 為空
+    ├── 12_stale_poj.csv          poj ≠ convert_tl_to_poj(tl) ❌ FATAL
+    ├── 13_stale_poj_derived.csv  any of {poj_num, poj_notone, poj_abbrev} ≠ expected ❌ FATAL
+    └── 14_kesi_divergence.csv    KeSi disagrees with taigi-converter (REPORT-ONLY)
+
+Fatal categories halt the build (`sys.exit(1)`) so deploy/regen never ships
+stale data. PR #175 + PR #184 incident: a converter submodule bump didn't
+trigger a per-source rebuild and 4.8 % of rows shipped with poj=<TL spelling>.
+The trie keys are built from `poj_num` / `poj_notone` / `poj_abbrev` (see
+`build/create_fst.py`), so the audit checks `poj` itself AND every derived
+column under one combined fatal category.
+
+KeSi cross-validation (14_kesi_divergence) is REPORT-ONLY — it loads the
+local KeSi vendored at `references/KeSi` and runs an independent TL→POJ
+conversion to flag rows where KeSi and taigi-converter disagree. KeSi has
+no SYLLABLE_RE-class tokenization, so divergence lights up taigi-converter
+output bugs that 12_stale_poj alone (single-engine self-check) cannot
+catch. Skipped silently if KeSi is unavailable.
 """
 
 import re
 import sys
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -30,6 +48,44 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 from common.source_bits import MAIN_SOURCE_COLUMNS  # noqa: E402
+from common.taigi_bridge import convert_tl_to_poj_strict  # noqa: E402
+from common.romanization import to_numeric_tone  # noqa: E402
+from common.notone import remove_tone  # noqa: E402
+from common.abbrev import extract_abbrev  # noqa: E402
+
+# KeSi cross-validation — independent Python TL→POJ converter at
+# `references/KeSi` (vendored, gitignored — see CLAUDE.md project structure).
+# Used to cross-check taigi-converter output. Skipped if not present so the
+# audit still runs on machines without the vendored copy.
+_KESI_PATH = BASE_DIR.parent / "references" / "KeSi"
+_kesi_ku: type | None = None
+if _KESI_PATH.is_dir():
+    sys.path.insert(0, str(_KESI_PATH))
+    try:
+        from kesi.butkian.ku import Ku as _kesi_ku  # type: ignore  # noqa: E402
+    except ImportError:
+        _kesi_ku = None
+
+
+def _kesi_tl_to_poj(tl: str) -> str:
+    """Independent TL→POJ via KeSi. Returns empty string on empty input or
+    on KeSi parse failure (preserves report-only semantics)."""
+    if not tl or _kesi_ku is None:
+        return ""
+    try:
+        return _kesi_ku(lomaji=tl).POJ().lomaji
+    except Exception:
+        return ""
+
+
+def _norm(text: str) -> str:
+    """Canonical form for comparing romanization columns: NFC + casefold.
+
+    Pure `.lower()` would let mixed NFC/NFD source data trip the audit
+    (e.g. precomposed `ó` vs `o` + combining acute). NFC + casefold is
+    the safe boundary recommended by Codex pre-impl review.
+    """
+    return unicodedata.normalize("NFC", text or "").casefold()
 
 INPUT_FILE = BASE_DIR / "output" / "dictionary.csv"
 OUTPUT_FILE = BASE_DIR / "output" / "audit_report.txt"
@@ -70,7 +126,12 @@ def main():
         return
 
     AUDIT_DIR.mkdir(parents=True, exist_ok=True)
-    df = pd.read_csv(INPUT_FILE)
+    from common import read_dictionary_csv  # noqa: E402
+    df = read_dictionary_csv(INPUT_FILE)
+
+    # Fatal errors block the deploy step. Append a one-line summary; the
+    # detail CSV is the row-level evidence.
+    fatal_errors: list[str] = []
 
     # Pre-compute flags
     has_hanzi = df["hanzi"].notna() & (df["hanzi"].astype(str).str.strip() != "")
@@ -292,6 +353,109 @@ def main():
     if cnt > 0:
         w(f"  CSV: {path}")
 
+    # Stale POJ — fail-fast invariant: every row's `poj` MUST equal
+    # `convert_tl_to_poj(tl)`. Any divergence means the trie ships
+    # `poj:<wrong key>` and POJ-mode users miss those entries.
+    # Uses the STRICT converter so a Node IPC failure aborts the audit
+    # rather than silently returning input (which could let stale
+    # `poj == tl` rows pass — Codex pre-impl P1).
+    expected_poj = df["tl"].fillna("").astype(str).map(
+        lambda s: convert_tl_to_poj_strict(s) if s else ""
+    )
+    expected_poj_norm = expected_poj.map(_norm)
+    poj_norm = df["poj"].fillna("").astype(str).map(_norm)
+    stale_mask = poj_norm != expected_poj_norm
+    stale = df[stale_mask].copy()
+    stale["expected_poj"] = expected_poj[stale_mask].values
+    path, cnt = save_csv(
+        stale,
+        "12_stale_poj.csv",
+        extra_cols=["hanzi", "tl", "poj", "expected_poj"],
+    )
+    w(f"  Stale POJ (tl→poj mismatch): {cnt}")
+    if cnt > 0:
+        w(f"  CSV: {path}")
+        fatal_errors.append(
+            f"Stale POJ: {cnt} rows; poj column doesn't match "
+            f"convert_tl_to_poj(tl). See {path.relative_to(BASE_DIR)}"
+        )
+
+    # Stale poj_num / poj_notone / poj_abbrev — every column the trie
+    # actually indexes (see build/create_fst.py). Even with a correct
+    # `poj`, a stale numtone / notone / abbrev stage could ship bad
+    # `poj:` keys. Re-derive each from the canonical expected_poj and
+    # compare. All three are checked under one fatal category since
+    # they cascade from the same expected_poj source.
+    expected_poj_num = expected_poj.map(
+        lambda s: to_numeric_tone(s, ascii_only=True) if s else ""
+    )
+    expected_poj_notone = expected_poj_num.map(remove_tone)
+    expected_poj_abbrev = expected_poj.map(extract_abbrev)
+
+    def _stale(actual_col: str, expected_series: pd.Series) -> pd.Series:
+        actual_norm = df[actual_col].fillna("").astype(str).map(_norm)
+        expected_norm = expected_series.map(_norm)
+        return actual_norm != expected_norm
+
+    stale_num_mask = _stale("poj_num", expected_poj_num)
+    stale_notone_mask = _stale("poj_notone", expected_poj_notone)
+    stale_abbrev_mask = _stale("poj_abbrev", expected_poj_abbrev)
+    derived_stale_mask = stale_num_mask | stale_notone_mask | stale_abbrev_mask
+    derived_stale = df[derived_stale_mask].copy()
+    derived_stale["expected_poj_num"] = expected_poj_num[derived_stale_mask].values
+    derived_stale["expected_poj_notone"] = expected_poj_notone[derived_stale_mask].values
+    derived_stale["expected_poj_abbrev"] = expected_poj_abbrev[derived_stale_mask].values
+    path, cnt = save_csv(
+        derived_stale,
+        "13_stale_poj_derived.csv",
+        extra_cols=[
+            "hanzi", "tl", "poj",
+            "poj_num", "expected_poj_num",
+            "poj_notone", "expected_poj_notone",
+            "poj_abbrev", "expected_poj_abbrev",
+        ],
+    )
+    w(
+        f"  Stale poj_num/notone/abbrev (derived columns ≠ expected): {cnt}"
+        f" (num={stale_num_mask.sum()} notone={stale_notone_mask.sum()}"
+        f" abbrev={stale_abbrev_mask.sum()})"
+    )
+    if cnt > 0:
+        w(f"  CSV: {path}")
+        fatal_errors.append(
+            f"Stale poj derived columns: {cnt} rows; trie keys "
+            f"`poj:<num|notone|abbrev>` would not match user input. "
+            f"See {path.relative_to(BASE_DIR)}"
+        )
+
+    # KeSi cross-validation — REPORT-ONLY. Independent Python TL→POJ
+    # converter (at references/KeSi). Flags rows where KeSi and the
+    # taigi-converter expected_poj disagree. Catches taigi-converter
+    # output bugs that 12_stale_poj alone (single-engine self-check)
+    # cannot — see PR #175 + PR #184 incident where SYLLABLE_RE silently
+    # bypassed `tsí` / `tíng` / `tiûnn` and shipped stale POJ. KeSi has no
+    # SYLLABLE_RE tokenization layer so it doesn't share the failure mode.
+    if _kesi_ku is not None:
+        kesi_poj = df["tl"].fillna("").astype(str).map(_kesi_tl_to_poj)
+        kesi_poj_norm = kesi_poj.map(_norm)
+        # Compare against expected_poj_norm (already computed above) — this
+        # isolates "KeSi vs taigi-converter" as a clean signal independent
+        # of the actual `poj` column staleness.
+        divergence_mask = kesi_poj_norm != expected_poj_norm
+        divergence = df[divergence_mask].copy()
+        divergence["expected_poj_taigi"] = expected_poj[divergence_mask].values
+        divergence["kesi_poj"] = kesi_poj[divergence_mask].values
+        path, cnt = save_csv(
+            divergence,
+            "14_kesi_divergence.csv",
+            extra_cols=["hanzi", "tl", "expected_poj_taigi", "kesi_poj"],
+        )
+        w(f"  KeSi vs taigi-converter divergence: {cnt}  (report-only)")
+        if cnt > 0:
+            w(f"  CSV: {path}")
+    else:
+        w(f"  KeSi cross-validation: SKIPPED (vendored copy not at {_KESI_PATH.relative_to(BASE_DIR.parent)})")
+
     # Cleanup temp columns
     df.drop(columns=["_nsyl", "_sources"], inplace=True)
 
@@ -303,6 +467,14 @@ def main():
     print(report)
     print(f"\nReport saved: {OUTPUT_FILE}")
     print(f"Detail CSVs:  {AUDIT_DIR}/")
+
+    if fatal_errors:
+        print()
+        print("─" * 60)
+        print("BUILD FAILED — fatal audit errors:")
+        for err in fatal_errors:
+            print(f"  • {err}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

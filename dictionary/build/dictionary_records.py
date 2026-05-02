@@ -79,7 +79,8 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
     INSERT OR IGNORE — both for byte-for-byte parity of dictionary.bin and
     for fst rowid alignment.
     """
-    df = pd.read_csv(csv_path)
+    from common import read_dictionary_csv
+    df = read_dictionary_csv(csv_path)
     missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise RuntimeError(f"dictionary.csv missing columns: {missing}")
