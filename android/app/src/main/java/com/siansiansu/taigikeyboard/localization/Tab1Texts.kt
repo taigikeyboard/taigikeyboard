@@ -71,6 +71,13 @@ object Tab1Texts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.6",
+                "2026/05/02",
+                listOf(
+                    "Internal: dictionary read path rewritten in Rust (no behavior change).",
+                ),
+            ),
+            VersionEntry(
                 "3.5.5",
                 "2026/05/02",
                 listOf(
