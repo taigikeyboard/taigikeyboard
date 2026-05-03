@@ -22,7 +22,6 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.localization.Tab4Texts
@@ -299,21 +298,10 @@ class KeyView(
                 else -> InputMode.POJ
             }
 
-        return when {
-            taigikeyboard?.textInputManager?.capsLock == true -> {
-                // Caps Lock: fully uppercase ("tsh" → "TSH")
-                ToneUtilities.fullUppercaseToneLetter(baseLabel, inputMode)
-            }
-
-            taigikeyboard?.textInputManager?.caps == true -> {
-                // Sentence case: first letter only ("tsh" → "Tsh")
-                ToneUtilities.uppercaseToneLetter(baseLabel, inputMode)
-            }
-
-            else -> {
-                ToneUtilities.lowercaseToneLetter(baseLabel, inputMode)
-            }
-        }
+        // Render-path FFI cache (R3 mitigation) — see KeyLabelCaseCache.kt.
+        val caps = taigikeyboard?.textInputManager?.caps == true
+        val capsLock = taigikeyboard?.textInputManager?.capsLock == true
+        return KeyLabelCaseCache.getOrCompute(baseLabel, inputMode, caps, capsLock)
     }
 
     /**

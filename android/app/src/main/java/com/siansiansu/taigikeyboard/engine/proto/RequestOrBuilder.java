@@ -87,5 +87,16 @@ public interface RequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.NextWordRequest getNextword();
 
+  /**
+   * <code>.taigi.engine.CaseRequest case_transform = 14;</code>
+   * @return Whether the caseTransform field is set.
+   */
+  boolean hasCaseTransform();
+  /**
+   * <code>.taigi.engine.CaseRequest case_transform = 14;</code>
+   * @return The caseTransform.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CaseRequest getCaseTransform();
+
   public com.siansiansu.taigikeyboard.engine.proto.Request.PayloadCase getPayloadCase();
 }

@@ -844,4 +844,3 @@ public  final class PhoneticsResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

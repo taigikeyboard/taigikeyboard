@@ -16,7 +16,7 @@ public interface FilterResultOrBuilder extends
    *
    * <code>repeated .taigi.engine.EnginePrediction predictions = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.EnginePrediction> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.EnginePrediction>
       getPredictionsList();
   /**
    * <pre>

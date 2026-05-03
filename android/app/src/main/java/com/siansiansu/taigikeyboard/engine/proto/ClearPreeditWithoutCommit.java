@@ -182,4 +182,3 @@ public  final class ClearPreeditWithoutCommit extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

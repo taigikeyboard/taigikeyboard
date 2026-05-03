@@ -22,6 +22,7 @@ public  final class Response extends
     COMPOSING(11),
     LEXICON(12),
     NEXTWORD(13),
+    CASE_TRANSFORM(14),
     PAYLOAD_NOT_SET(0);
     private final int value;
     private PayloadCase(int value) {
@@ -41,6 +42,7 @@ public  final class Response extends
         case 11: return COMPOSING;
         case 12: return LEXICON;
         case 13: return NEXTWORD;
+        case 14: return CASE_TRANSFORM;
         case 0: return PAYLOAD_NOT_SET;
         default: return null;
       }
@@ -77,7 +79,7 @@ public  final class Response extends
    * @param value The id to set.
    */
   private void setId(int value) {
-    
+
     id_ = value;
   }
   /**
@@ -145,7 +147,7 @@ public  final class Response extends
    * @param value The generation to set.
    */
   private void setGeneration(long value) {
-    
+
     generation_ = value;
   }
   /**
@@ -351,6 +353,56 @@ public  final class Response extends
    */
   private void clearNextword() {
     if (payloadCase_ == 13) {
+      payloadCase_ = 0;
+      payload_ = null;
+    }
+  }
+
+  public static final int CASE_TRANSFORM_FIELD_NUMBER = 14;
+  /**
+   * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+   */
+  @java.lang.Override
+  public boolean hasCaseTransform() {
+    return payloadCase_ == 14;
+  }
+  /**
+   * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CaseResponse getCaseTransform() {
+    if (payloadCase_ == 14) {
+       return (com.siansiansu.taigikeyboard.engine.proto.CaseResponse) payload_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.CaseResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+   */
+  private void setCaseTransform(com.siansiansu.taigikeyboard.engine.proto.CaseResponse value) {
+    value.getClass();
+  payload_ = value;
+    payloadCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+   */
+  private void mergeCaseTransform(com.siansiansu.taigikeyboard.engine.proto.CaseResponse value) {
+    value.getClass();
+  if (payloadCase_ == 14 &&
+        payload_ != com.siansiansu.taigikeyboard.engine.proto.CaseResponse.getDefaultInstance()) {
+      payload_ = com.siansiansu.taigikeyboard.engine.proto.CaseResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CaseResponse) payload_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      payload_ = value;
+    }
+    payloadCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+   */
+  private void clearCaseTransform() {
+    if (payloadCase_ == 14) {
       payloadCase_ = 0;
       payload_ = null;
     }
@@ -759,6 +811,54 @@ public  final class Response extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    @java.lang.Override
+    public boolean hasCaseTransform() {
+      return instance.hasCaseTransform();
+    }
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CaseResponse getCaseTransform() {
+      return instance.getCaseTransform();
+    }
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    public Builder setCaseTransform(com.siansiansu.taigikeyboard.engine.proto.CaseResponse value) {
+      copyOnWrite();
+      instance.setCaseTransform(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    public Builder setCaseTransform(
+        com.siansiansu.taigikeyboard.engine.proto.CaseResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCaseTransform(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    public Builder mergeCaseTransform(com.siansiansu.taigikeyboard.engine.proto.CaseResponse value) {
+      copyOnWrite();
+      instance.mergeCaseTransform(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CaseResponse case_transform = 14;</code>
+     */
+    public Builder clearCaseTransform() {
+      copyOnWrite();
+      instance.clearCaseTransform();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Response)
   }
   @java.lang.Override
@@ -784,10 +884,11 @@ public  final class Response extends
             com.siansiansu.taigikeyboard.engine.proto.ComposingResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.CaseResponse.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u0001\r\u0007\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003" +
-              "\u0003\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000";
+              "\u0000\b\u0001\u0000\u0001\u000e\b\u0000\u0000\u0000\u0001\u000b\u0002\f\u0003\u0003" +
+              "\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
@@ -841,4 +942,3 @@ public  final class Response extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

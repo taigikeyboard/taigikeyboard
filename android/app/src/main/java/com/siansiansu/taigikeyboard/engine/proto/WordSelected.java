@@ -50,7 +50,7 @@ public  final class WordSelected extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -97,7 +97,7 @@ public  final class WordSelected extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -133,7 +133,7 @@ public  final class WordSelected extends
    * @param value The requireRomanMode to set.
    */
   private void setRequireRomanMode(boolean value) {
-    
+
     requireRomanMode_ = value;
   }
   /**
@@ -159,7 +159,7 @@ public  final class WordSelected extends
    * @param value The triggerPrediction to set.
    */
   private void setTriggerPrediction(boolean value) {
-    
+
     triggerPrediction_ = value;
   }
   /**
@@ -599,4 +599,3 @@ public  final class WordSelected extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

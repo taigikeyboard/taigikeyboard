@@ -48,7 +48,7 @@ public  final class RawNextWordPrediction extends
   private void setHanzi(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     hanzi_ = value;
   }
   /**
@@ -95,7 +95,7 @@ public  final class RawNextWordPrediction extends
   private void setTl(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     tl_ = value;
   }
   /**
@@ -131,7 +131,7 @@ public  final class RawNextWordPrediction extends
    * @param value The count to set.
    */
   private void setCount(long value) {
-    
+
     count_ = value;
   }
   /**
@@ -157,7 +157,7 @@ public  final class RawNextWordPrediction extends
    * @param value The lastUsedMs to set.
    */
   private void setLastUsedMs(long value) {
-    
+
     lastUsedMs_ = value;
   }
   /**
@@ -590,4 +590,3 @@ public  final class RawNextWordPrediction extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

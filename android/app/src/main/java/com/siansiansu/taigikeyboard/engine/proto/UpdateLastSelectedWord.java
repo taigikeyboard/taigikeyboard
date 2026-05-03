@@ -49,7 +49,7 @@ public  final class UpdateLastSelectedWord extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -96,7 +96,7 @@ public  final class UpdateLastSelectedWord extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -487,4 +487,3 @@ public  final class UpdateLastSelectedWord extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

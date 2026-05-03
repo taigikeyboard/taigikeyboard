@@ -1046,4 +1046,3 @@ public  final class LexiconResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

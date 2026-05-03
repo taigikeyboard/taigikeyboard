@@ -16,7 +16,7 @@ public interface DecideResultOrBuilder extends
    *
    * <code>repeated .taigi.engine.NextWordEffect effects = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.NextWordEffect> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.NextWordEffect>
       getEffectsList();
   /**
    * <pre>

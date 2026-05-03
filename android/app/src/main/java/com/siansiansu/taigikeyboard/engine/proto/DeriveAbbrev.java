@@ -49,7 +49,7 @@ public  final class DeriveAbbrev extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -296,4 +296,3 @@ public  final class DeriveAbbrev extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

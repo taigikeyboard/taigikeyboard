@@ -36,7 +36,7 @@ public  final class FilterResult extends
    *
    * <code>repeated .taigi.engine.EnginePrediction predictions = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.EnginePredictionOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.EnginePredictionOrBuilder>
       getPredictionsOrBuilderList() {
     return predictions_;
   }
@@ -177,7 +177,7 @@ public  final class FilterResult extends
    * @param value The wasStale to set.
    */
   private void setWasStale(boolean value) {
-    
+
     wasStale_ = value;
   }
   /**
@@ -555,4 +555,3 @@ public  final class FilterResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -28,7 +28,7 @@ public  final class RecordCompoundAssociations extends
   /**
    * <code>repeated .taigi.engine.AssociationPair pairs = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.AssociationPairOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.AssociationPairOrBuilder>
       getPairsOrBuilderList() {
     return pairs_;
   }
@@ -383,4 +383,3 @@ public  final class RecordCompoundAssociations extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

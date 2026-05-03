@@ -39,7 +39,8 @@ protoc \
     "$PROTO_DIR/phonetics.proto" \
     "$PROTO_DIR/composing.proto" \
     "$PROTO_DIR/lexicon.proto" \
-    "$PROTO_DIR/nextword.proto"
+    "$PROTO_DIR/nextword.proto" \
+    "$PROTO_DIR/case.proto"
 
 # Java output: --java_out=lite for protobuf-javalite runtime. The
 # `option java_package` in the .proto files puts files under
@@ -51,7 +52,8 @@ protoc \
     "$PROTO_DIR/phonetics.proto" \
     "$PROTO_DIR/composing.proto" \
     "$PROTO_DIR/lexicon.proto" \
-    "$PROTO_DIR/nextword.proto"
+    "$PROTO_DIR/nextword.proto" \
+    "$PROTO_DIR/case.proto"
 
 # Post-process generated Java: protoc-gen-java emits trailing whitespace and
 # an extra blank line at EOF that fail `git diff --check` and dirty the tree

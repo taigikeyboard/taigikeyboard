@@ -443,4 +443,3 @@ public  final class BoostResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

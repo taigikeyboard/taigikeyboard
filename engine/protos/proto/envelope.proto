@@ -6,6 +6,7 @@ import "phonetics.proto";
 import "composing.proto";
 import "lexicon.proto";
 import "nextword.proto";
+import "case.proto";
 
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
@@ -20,6 +21,7 @@ enum CommandType {
   CMD_COMPOSING = 2;
   CMD_LEXICON = 3;
   CMD_NEXTWORD = 4;
+  CMD_CASE = 5;
 }
 
 enum ErrorCode {
@@ -72,6 +74,7 @@ message Request {
     ComposingRequest composing = 11;
     LexiconRequest lexicon = 12;
     NextWordRequest nextword = 13;
+    CaseRequest case_transform = 14;
   }
 }
 
@@ -84,6 +87,7 @@ message Response {
     ComposingResponse composing = 11;
     LexiconResponse lexicon = 12;
     NextWordResponse nextword = 13;
+    CaseResponse case_transform = 14;
   }
 }
 

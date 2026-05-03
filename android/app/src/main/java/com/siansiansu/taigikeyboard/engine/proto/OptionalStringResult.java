@@ -48,7 +48,7 @@ public  final class OptionalStringResult extends
   private void setOutput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     output_ = value;
   }
   /**
@@ -84,7 +84,7 @@ public  final class OptionalStringResult extends
    * @param value The present to set.
    */
   private void setPresent(boolean value) {
-    
+
     present_ = value;
   }
   /**
@@ -350,4 +350,3 @@ public  final class OptionalStringResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

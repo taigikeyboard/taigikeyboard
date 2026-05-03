@@ -46,7 +46,7 @@ public  final class TaigiWord extends
    * @param value The id to set.
    */
   private void setId(long value) {
-    
+
     id_ = value;
   }
   /**
@@ -83,7 +83,7 @@ public  final class TaigiWord extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -622,4 +622,3 @@ public  final class TaigiWord extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

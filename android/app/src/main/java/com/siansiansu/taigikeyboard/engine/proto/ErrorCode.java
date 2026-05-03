@@ -98,13 +98,13 @@ public enum ErrorCode
           }
         };
 
-  public static com.google.protobuf.Internal.EnumVerifier 
+  public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
     return ErrorCodeVerifier.INSTANCE;
   }
 
-  private static final class ErrorCodeVerifier implements 
-       com.google.protobuf.Internal.EnumVerifier { 
+  private static final class ErrorCodeVerifier implements
+       com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new ErrorCodeVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
@@ -120,4 +120,3 @@ public enum ErrorCode
 
   // @@protoc_insertion_point(enum_scope:taigi.engine.ErrorCode)
 }
-

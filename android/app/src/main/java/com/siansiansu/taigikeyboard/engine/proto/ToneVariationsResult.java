@@ -588,4 +588,3 @@ com.siansiansu.taigikeyboard.engine.proto.ToneVariationList defaultValue) {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

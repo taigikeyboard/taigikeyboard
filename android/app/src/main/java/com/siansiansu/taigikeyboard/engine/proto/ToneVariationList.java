@@ -371,4 +371,3 @@ public  final class ToneVariationList extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

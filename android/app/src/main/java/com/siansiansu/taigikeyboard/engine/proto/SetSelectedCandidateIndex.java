@@ -35,7 +35,7 @@ public  final class SetSelectedCandidateIndex extends
    * @param value The index to set.
    */
   private void setIndex(int value) {
-    
+
     index_ = value;
   }
   /**
@@ -249,4 +249,3 @@ public  final class SetSelectedCandidateIndex extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

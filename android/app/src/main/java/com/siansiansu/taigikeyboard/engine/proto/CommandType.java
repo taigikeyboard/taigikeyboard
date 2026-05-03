@@ -30,6 +30,10 @@ public enum CommandType
    * <code>CMD_NEXTWORD = 4;</code>
    */
   CMD_NEXTWORD(4),
+  /**
+   * <code>CMD_CASE = 5;</code>
+   */
+  CMD_CASE(5),
   UNRECOGNIZED(-1),
   ;
 
@@ -53,6 +57,10 @@ public enum CommandType
    * <code>CMD_NEXTWORD = 4;</code>
    */
   public static final int CMD_NEXTWORD_VALUE = 4;
+  /**
+   * <code>CMD_CASE = 5;</code>
+   */
+  public static final int CMD_CASE_VALUE = 5;
 
 
   @java.lang.Override
@@ -81,6 +89,7 @@ public enum CommandType
       case 2: return CMD_COMPOSING;
       case 3: return CMD_LEXICON;
       case 4: return CMD_NEXTWORD;
+      case 5: return CMD_CASE;
       default: return null;
     }
   }
@@ -98,13 +107,13 @@ public enum CommandType
           }
         };
 
-  public static com.google.protobuf.Internal.EnumVerifier 
+  public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
     return CommandTypeVerifier.INSTANCE;
   }
 
-  private static final class CommandTypeVerifier implements 
-       com.google.protobuf.Internal.EnumVerifier { 
+  private static final class CommandTypeVerifier implements
+       com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new CommandTypeVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
@@ -120,4 +129,3 @@ public enum CommandType
 
   // @@protoc_insertion_point(enum_scope:taigi.engine.CommandType)
 }
-

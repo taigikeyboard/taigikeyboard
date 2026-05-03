@@ -54,7 +54,7 @@ public  final class StateSnapshot extends
   private void setLastSelectedWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     lastSelectedWord_ = value;
   }
   /**
@@ -98,7 +98,7 @@ public  final class StateSnapshot extends
    * @param value The isShowing to set.
    */
   private void setIsShowing(boolean value) {
-    
+
     isShowing_ = value;
   }
   /**
@@ -124,7 +124,7 @@ public  final class StateSnapshot extends
    * @param value The currentGeneration to set.
    */
   private void setCurrentGeneration(long value) {
-    
+
     currentGeneration_ = value;
   }
   /**
@@ -433,4 +433,3 @@ public  final class StateSnapshot extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -63,6 +63,8 @@ message Request {
     PhoneticsRequest phonetics = 10;
     ComposingRequest composing = 11;
     LexiconRequest lexicon = 12;
+    NextWordRequest nextword = 13;
+    CaseRequest case_transform = 14;   // case-transform slice — own .proto file
   }
 }
 
@@ -74,6 +76,8 @@ message Response {
     PhoneticsResponse phonetics = 10;
     ComposingResponse composing = 11;
     LexiconResponse lexicon = 12;
+    NextWordResponse nextword = 13;
+    CaseResponse case_transform = 14;
   }
 }
 
@@ -82,8 +86,15 @@ enum CommandType {
   CMD_PHONETICS = 1;
   CMD_COMPOSING = 2;
   CMD_LEXICON = 3;
+  CMD_NEXTWORD = 4;
+  CMD_CASE = 5;
 }
 ```
+
+> **Field name `case_transform` (not `case`)**: `case` is a Swift keyword;
+> SwiftProtobuf would backtick-escape it (`\`case\``) which is awkward at the
+> bridge sites. Rust prost generates PascalCase variant `Payload::CaseTransform`
+> either way. Cross-language safe.
 
 - **`id`** prevents ordering races when the platform fires intent N+1 before N's response arrives. khiin-rs uses the same pattern (`references/khiin-rs/README.md:149-152` — "Clients should tag each Request with an id").
 - **`generation`** — see §5.
@@ -250,6 +261,48 @@ message ResetAutocompleteContext {}
 - The 3 autocomplete-control effects MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side in Phase II.5; only the cross-subsystem signals cross the FFI.
 - `selected_candidate_index` on `ComposingResponse` mirrors `ComposingTransition.newSelectedIndex` (`ComposingTransition.swift:48`, `ComposingTransition.kt:28`). Semantics: `-1` in idle, `0` on fresh composition, **preserved on `ReplaceLast`** (`ComposingState.swift:126-132`). Platform commit paths (e.g. iOS `ComposingManager.confirmSelectedCandidate` → `availableTexts[selectedCandidateIndex]`) depend on this field — without it, append/delete/reset/replaceLast cannot synchronize the index and a stale index could commit the wrong suggestion.
 - **Prediction-related effects** (`QueryPredictions`, candidate-list updates) are NOT in this slice — they belong to NextWord, which is Phase III.
+
+---
+
+## 8.5. Case-transform slice — AS-IMPLEMENTED (case-transform-slice)
+
+Canonical source: `engine/protos/proto/case.proto`. Own file (NOT a `lexicon.proto` extension) — case logic is conceptually phonetics-aware string transformation independent of lexicon search. See `case-transform-slice-plan.md` §4 for the full proto shape; sketch:
+
+```protobuf
+message CaseRequest {
+  // Tag 30 reserved — `AdjustNasalMarkerCase` was drafted but removed in
+  // mid-slice review (no platform call site uses it standalone — only via
+  // `transform_suggestion` post-process and `Method::NormalizeTone` in-band).
+  reserved 30;
+
+  oneof method {
+    UppercaseToneChar       uppercase_tone_char        = 10;
+    FullUppercaseToneString full_uppercase_tone_string = 11;
+    LowercaseToneChar       lowercase_tone_char        = 12;
+    TransformInputCase      transform_input_case       = 20;
+    CapitalizeCandidate     capitalize_candidate       = 21;
+    TransformSuggestion     transform_suggestion       = 22;
+  }
+}
+
+enum LetterCase {
+  LETTER_CASE_UNSPECIFIED = 0;
+  LETTER_CASE_LOWERCASED  = 1;
+  LETTER_CASE_UPPERCASED  = 2;
+  LETTER_CASE_CAPS_LOCKED = 3;
+}
+
+message CaseResponse {
+  oneof result {
+    CaseStringResult string_result = 10;  // locally defined — no cross-module proto coupling
+  }
+}
+```
+
+- **Mode comes from envelope `AppConfig.input_mode`** (per phonetics convention) — messages don't re-specify mode per call.
+- **`CaseStringResult` defined locally** rather than reusing `phonetics.proto::StringResult`. Avoids cross-module proto coupling so case-transform can evolve independently.
+- **`LetterCase` enum** carries `LETTER_CASE_UNSPECIFIED = 0` per proto3 best practice. Engine maps Unspecified to `Lowercased` as safe-fallback (matches the safe-fallback contract used by other dispatch error paths).
+- **Suggestion skip rules stay platform-side** — iOS uses `additionalInfo` flag-based markers, Android uses numeric `id` markers. Each platform's bridge filters before calling `transform_suggestion(...)`.
 
 ---
 

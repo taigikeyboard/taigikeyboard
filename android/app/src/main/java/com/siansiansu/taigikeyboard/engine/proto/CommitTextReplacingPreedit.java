@@ -42,7 +42,7 @@ public  final class CommitTextReplacingPreedit extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -282,4 +282,3 @@ public  final class CommitTextReplacingPreedit extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

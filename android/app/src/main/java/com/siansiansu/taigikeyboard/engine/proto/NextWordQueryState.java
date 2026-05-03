@@ -182,4 +182,3 @@ public  final class NextWordQueryState extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

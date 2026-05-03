@@ -88,13 +88,13 @@ public enum Source
           }
         };
 
-  public static com.google.protobuf.Internal.EnumVerifier 
+  public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
     return SourceVerifier.INSTANCE;
   }
 
-  private static final class SourceVerifier implements 
-       com.google.protobuf.Internal.EnumVerifier { 
+  private static final class SourceVerifier implements
+       com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new SourceVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
@@ -110,4 +110,3 @@ public enum Source
 
   // @@protoc_insertion_point(enum_scope:taigi.engine.Source)
 }
-

@@ -36,7 +36,7 @@ public  final class SetIsShowing extends
    * @param value The isShowing to set.
    */
   private void setIsShowing(boolean value) {
-    
+
     isShowing_ = value;
   }
   /**
@@ -251,4 +251,3 @@ public  final class SetIsShowing extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

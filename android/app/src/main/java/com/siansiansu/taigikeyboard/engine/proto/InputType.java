@@ -95,13 +95,13 @@ public enum InputType
           }
         };
 
-  public static com.google.protobuf.Internal.EnumVerifier 
+  public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
     return InputTypeVerifier.INSTANCE;
   }
 
-  private static final class InputTypeVerifier implements 
-       com.google.protobuf.Internal.EnumVerifier { 
+  private static final class InputTypeVerifier implements
+       com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new InputTypeVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
@@ -117,4 +117,3 @@ public enum InputType
 
   // @@protoc_insertion_point(enum_scope:taigi.engine.InputType)
 }
-

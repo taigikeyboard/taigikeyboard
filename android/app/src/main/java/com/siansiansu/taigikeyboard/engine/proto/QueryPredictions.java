@@ -43,7 +43,7 @@ public  final class QueryPredictions extends
   private void setWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     word_ = value;
   }
   /**
@@ -90,7 +90,7 @@ public  final class QueryPredictions extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -126,7 +126,7 @@ public  final class QueryPredictions extends
    * @param value The generation to set.
    */
   private void setGeneration(long value) {
-    
+
     generation_ = value;
   }
   /**
@@ -164,7 +164,7 @@ public  final class QueryPredictions extends
    * @param value The nowMs to set.
    */
   private void setNowMs(long value) {
-    
+
     nowMs_ = value;
   }
   /**
@@ -527,4 +527,3 @@ public  final class QueryPredictions extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

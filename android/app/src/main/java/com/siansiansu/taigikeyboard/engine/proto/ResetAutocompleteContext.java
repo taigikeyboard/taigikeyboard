@@ -182,4 +182,3 @@ public  final class ResetAutocompleteContext extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -35,7 +35,7 @@ public  final class InstallResponse extends
    * @param value The dictionaryRecordCount to set.
    */
   private void setDictionaryRecordCount(long value) {
-    
+
     dictionaryRecordCount_ = value;
   }
   /**
@@ -61,7 +61,7 @@ public  final class InstallResponse extends
    * @param value The prefixIndexEntryCount to set.
    */
   private void setPrefixIndexEntryCount(long value) {
-    
+
     prefixIndexEntryCount_ = value;
   }
   /**
@@ -305,4 +305,3 @@ public  final class InstallResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

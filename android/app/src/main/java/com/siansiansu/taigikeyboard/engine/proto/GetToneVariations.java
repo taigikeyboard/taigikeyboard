@@ -194,4 +194,3 @@ public  final class GetToneVariations extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

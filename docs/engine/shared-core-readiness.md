@@ -20,12 +20,14 @@ Snapshot of which iOS engine-layer files are ready for cross-platform extraction
 
 ---
 
-## Candidate roster (43 files, ~3000 LOC)
+## Candidate roster (41 files, ~2840 LOC after case-transform slice)
 
 G5-impl (2026-04-19, PR #137) added three NextWord engine files. G4-impl
-(same day, this PR) adds three composing-engine files plus promotes
-`Phonetics/ToneConverter.swift` once `SharedSettings.shared` is removed
-behind a `ToneToggles` parameter.
+(same day, this PR) added three composing-engine files plus promoted
+`Phonetics/ToneConverter.swift` once `SharedSettings.shared` was removed
+behind a `ToneToggles` parameter. The case-transform slice (post-v3.5.7)
+removed `Phonetics/ToneUtilities.swift` and `Input/CaseTransformer.swift`
+from the roster — both now live in `engine/phonetics/src/case_transform.rs`.
 
 ### Phonetics — 10 files, 700 LOC
 
@@ -39,7 +41,7 @@ behind a `ToneToggles` parameter.
 | `Phonetics/Converter/PhoneticsConverter.swift`      | 121 | High-level display round-trips (POJ↔TL).                           |
 | `Phonetics/Converter/RomanizationConverter.swift`   |  20 | Thin wrapper around the formatter/parser pair.                     |
 | `Phonetics/ToneRestoration.swift`                   |  36 | NFD-based tone-mark stripping for backspace.                       |
-| `Phonetics/ToneUtilities.swift`                     |  60 | Nasal-marker case adapter. **Platform-stays (PR #187)** — Android JVM unit tests can't load `.so`; mirrored helper kept at `ToneUtilities.kt`. Rust crate retains canonical `case_adjust::adjust_nasal_marker_case` and `Method::NormalizeTone` applies it in-band. |
+| ~~`Phonetics/ToneUtilities.swift`~~ (DELETED — case-transform slice) | — | **MIGRATED** to `engine/phonetics/src/case_transform.rs` (`adjust_nasal_marker_case`, `uppercase_tone_char`, `lowercase_tone_char`, `full_uppercase_tone_string`). PR #187 platform-stays decision SUPERSEDED by Path G. |
 | `Phonetics/ToneConverter.swift`                     |  95 | POJ/TL tone conversion. POJ preprocessing toggles passed in as `ToneToggles` (G4-impl). Logs via `LoggerBackend` — no `SharedSettings.shared` / OSLog. |
 
 ### Input — 9 files, ~1160 LOC
@@ -47,7 +49,7 @@ behind a `ToneToggles` parameter.
 | File                                                | LOC | Notes                                                              |
 |-----------------------------------------------------|-----|--------------------------------------------------------------------|
 | `Input/CharacterInputPipeline.swift`                |  51 | Keystroke → normalized syllable pipeline.                          |
-| `Input/CaseTransformer.swift`                       | 111 | `LetterCase` enum + candidate capitalization. KK-free after Phase 4. |
+| ~~`Input/CaseTransformer.swift`~~ (DELETED — case-transform slice) | — | **MIGRATED** to `engine/phonetics/src/case_transform.rs` (`transform_input_case`, `capitalize_candidate`, `LetterCase` enum). Bridged via `RustEngineBridge.transformInputCase` / `.capitalizeCandidate`. |
 | `Input/TPS/TPSConverter.swift`                      |  63 | TPS tone mapping façade.                                           |
 | `Input/TPS/TPSTables.swift`                         | 242 | TPS initial/final tables + `containsTPS`.                          |
 | `Input/TPS/TPSInputAdjuster.swift`                  | 129 | TPS composition order fix-ups.                                     |
@@ -68,7 +70,7 @@ behind a `ToneToggles` parameter.
 | `Lexicon/Models/LexiconConstants.swift`             |  29 | Constants; logging subsystem name is iOS-bundle-specific but harmless as a string. |
 | `Lexicon/Models/LexiconError.swift`                 |  34 | `LocalizedError` over Foundation only.                             |
 | `Lexicon/Utils/TaigiUnicode.swift`                  |  27 | `nfdPreprocessed` — mirrors Android `TaigiUnicode.kt`. **Platform-stays (PR #187)** — Android JVM unit tests can't load `.so`; helper kept on platform. Rust crate retains canonical implementation but is not invoked at search-key build sites. |
-| `Lexicon/Utils/CandidateProcessor.swift`            | 267 | Classify / capitalize / dedupe / score / sort. Callers inject `inputMode`, `isAutoCap`, `FrequencyData`, `currentTime`. Logs via `LoggerBackend`. Carries the tier-based `baseFreqScore` multiplier (`SOURCE_TIERS` — kautian/taigitv/stti/kungge, first-match-wins over `word.sourceBitmask`). |
+| `Lexicon/Utils/CandidateProcessor.swift`            |  28 | **MIGRATED** body. Was 267 LOC (classify/capitalize/dedupe/score/sort). Now: `capitalize` 1-line bridge to `RustEngineBridge.capitalizeCandidate` (case-transform slice) + `startsWithRomanLetter` 3-line predicate. Score/sort/dedupe in v3.5.2 ranking; classify in v3.5.7 lexicon classification. |
 | `Lexicon/Trie/InputNormalizer.swift`                |  92 | Mode-agnostic normalization → numeric tones. Logs via `LoggerBackend`. |
 | `Lexicon/Database/CustomDictionaryDerivation.swift` |  80 | Pure derivation of `notone` / `abbrev` / `roman_num` search keys.  |
 
@@ -118,7 +120,7 @@ EngineSettings              ←──────── (all services)
 
 InputType  ──────────────── used by TaigiWord siblings, CandidateProcessor
 InputMode  ──────────────── CandidateProcessor, InputNormalizer, CustomDictionaryDerivation,
-                            CaseTransformer, PhoneticsConverter (via `.poj/.tl`)
+                            PhoneticsConverter (via `.poj/.tl`)
 
 LoggerBackend (+ LoggerFactory) ─── CandidateProcessor, InputNormalizer
 FrequencyData ─── CandidateProcessor (ranking input)
@@ -129,10 +131,9 @@ TaigiUnicode ─── CandidateProcessor, InputNormalizer,
 PhoneticsTables
     ↑
     ├── SyllableParser ─── TLFormatter, POJFormatter, PhoneticsConverter, RomanizationConverter
-    ├── ToneRestoration (reads combining scalars only)
-    └── ToneUtilities   (reads nasal-marker tables only)
+    └── ToneRestoration (reads combining scalars only)
 
-TaigiPhonetics (facade) ─── InputNormalizer, CandidateProcessor (via ToneUtilities/Tables)
+TaigiPhonetics (facade) ─── InputNormalizer, CandidateProcessor (via Tables)
 
 TPSTables ──── TPSToTL, TLToTPS, TPSInputAdjuster, TPSConverter, InputNormalizer
 TPSToTL  ───── InputNormalizer, CustomDictionaryDerivation.generateRomanNum
@@ -150,7 +151,7 @@ EnginePrediction ──── AutocompleteProviders (protocol signature), (NextW
 AutocompleteInputClassifier ── consumes: InputType, CandidateProcessor, InputNormalizer, TPSTables, TPSToTL
 
 NextWordScorer, AutocompleteContextBooster — leaves
-CaseTransformer, CharacterInputPipeline — leaves
+CharacterInputPipeline — leaf (CaseTransformer migrated to Rust in case-transform slice)
 ```
 
 Every candidate's compile-time references now resolve to another candidate. The former soft dependencies (`DebugLogger` references, `InputMode` colocation with `FontType`, `FrequencyData` nested inside `UserFrequencyRepository`) were cleared in the 2026-04-19 follow-up; see §Blockers → Resolved for details.
@@ -214,9 +215,7 @@ ios/Sources/TaigiKeyboard/Phonetics/Formatter/POJFormatter.swift
 ios/Sources/TaigiKeyboard/Phonetics/Converter/PhoneticsConverter.swift
 ios/Sources/TaigiKeyboard/Phonetics/Converter/RomanizationConverter.swift
 ios/Sources/TaigiKeyboard/Phonetics/ToneRestoration.swift
-ios/Sources/TaigiKeyboard/Phonetics/ToneUtilities.swift
 ios/Sources/TaigiKeyboard/Input/CharacterInputPipeline.swift
-ios/Sources/TaigiKeyboard/Input/CaseTransformer.swift
 ios/Sources/TaigiKeyboard/Input/TPS/TPSConverter.swift
 ios/Sources/TaigiKeyboard/Input/TPS/TPSTables.swift
 ios/Sources/TaigiKeyboard/Input/TPS/TPSInputAdjuster.swift

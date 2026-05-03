@@ -965,4 +965,3 @@ public  final class Effect extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

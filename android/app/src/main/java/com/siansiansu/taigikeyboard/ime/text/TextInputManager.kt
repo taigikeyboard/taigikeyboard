@@ -18,9 +18,9 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.dictionary.ToneUtilities
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
@@ -843,12 +843,12 @@ class TextInputManager(
                 "tl", "tps" -> InputMode.TL
                 else -> InputMode.POJ
             }
-        var char =
-            when {
-                capsLock -> ToneUtilities.fullUppercaseToneLetter(baseText, inputMode)
-                caps -> ToneUtilities.uppercaseToneLetter(baseText, inputMode)
-                else -> ToneUtilities.lowercaseToneLetter(baseText, inputMode)
-            }
+        // Per-keystroke (not per-frame) — no cache needed; direct bridge call.
+        var char = CaseTransformBridge.transformInputCase(
+            text = baseText,
+            letterCase = CaseTransformBridge.LetterCase.from(caps = caps, capsLock = capsLock),
+            mode = inputMode,
+        )
 
         // TPS layout: context-aware character adjustments via CharacterInputPipeline
         // (mirrors iOS CharacterInputPipeline.adjust collapsed entry point).

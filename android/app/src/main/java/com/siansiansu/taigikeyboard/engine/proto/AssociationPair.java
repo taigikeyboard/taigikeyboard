@@ -45,7 +45,7 @@ public  final class AssociationPair extends
   private void setPrev(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     prev_ = value;
   }
   /**
@@ -92,7 +92,7 @@ public  final class AssociationPair extends
   private void setPrevTl(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     prevTl_ = value;
   }
   /**
@@ -139,7 +139,7 @@ public  final class AssociationPair extends
   private void setNext(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     next_ = value;
   }
   /**
@@ -186,7 +186,7 @@ public  final class AssociationPair extends
   private void setNextTl(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     nextTl_ = value;
   }
   /**
@@ -577,4 +577,3 @@ public  final class AssociationPair extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

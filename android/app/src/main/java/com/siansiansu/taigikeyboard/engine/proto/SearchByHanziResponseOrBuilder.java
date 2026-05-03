@@ -12,7 +12,7 @@ public interface SearchByHanziResponseOrBuilder extends
   /**
    * <code>repeated .taigi.engine.TaigiWord rows = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord>
       getRowsList();
   /**
    * <code>repeated .taigi.engine.TaigiWord rows = 1;</code>

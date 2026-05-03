@@ -642,4 +642,3 @@ public  final class NextWordResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

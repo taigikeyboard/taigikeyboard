@@ -49,7 +49,7 @@ public  final class TpsAdjustResult extends
   private void setAdjusted(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     adjusted_ = value;
   }
   /**
@@ -391,4 +391,3 @@ public  final class TpsAdjustResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

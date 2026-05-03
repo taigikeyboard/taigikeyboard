@@ -844,4 +844,3 @@ public  final class NextWordEffect extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

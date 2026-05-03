@@ -194,4 +194,3 @@ public  final class Reset extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

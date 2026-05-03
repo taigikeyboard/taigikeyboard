@@ -12,7 +12,7 @@ public interface ProcessCandidatesRequestOrBuilder extends
   /**
    * <code>repeated .taigi.engine.TaigiWord raw = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord>
       getRawList();
   /**
    * <code>repeated .taigi.engine.TaigiWord raw = 1;</code>
@@ -44,7 +44,7 @@ public interface ProcessCandidatesRequestOrBuilder extends
   /**
    * <code>repeated .taigi.engine.FrequencyEntry freq = 5;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry>
       getFreqList();
   /**
    * <code>repeated .taigi.engine.FrequencyEntry freq = 5;</code>

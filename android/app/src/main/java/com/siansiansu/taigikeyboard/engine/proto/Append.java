@@ -46,7 +46,7 @@ public  final class Append extends
   private void setChar(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     char_ = value;
   }
   /**
@@ -290,4 +290,3 @@ public  final class Append extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

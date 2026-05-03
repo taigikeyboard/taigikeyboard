@@ -1678,4 +1678,3 @@ public  final class NextWordRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -8,7 +8,8 @@
 pub mod api;
 pub mod dispatch;
 
-mod case_adjust;
+mod case_tables;
+pub mod case_transform;
 mod derivation;
 mod normalization;
 mod poj;
@@ -23,9 +24,7 @@ mod tps_adjust;
 // `cli` crate and integration tests. The cross-platform FFI envelope
 // is `engine/dispatch::process_request`; this crate exposes only the
 // in-process Rust API.
-pub use api::{
-    contains_tps, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System,
-};
+pub use api::{contains_tps, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System};
 pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;
 pub use syllable::{normalize_to_tl, strip_tone_mark};

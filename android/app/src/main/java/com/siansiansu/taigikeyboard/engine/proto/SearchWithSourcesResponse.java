@@ -28,7 +28,7 @@ public  final class SearchWithSourcesResponse extends
   /**
    * <code>repeated .taigi.engine.TaigiWord rows = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder>
       getRowsOrBuilderList() {
     return rows_;
   }
@@ -383,4 +383,3 @@ public  final class SearchWithSourcesResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

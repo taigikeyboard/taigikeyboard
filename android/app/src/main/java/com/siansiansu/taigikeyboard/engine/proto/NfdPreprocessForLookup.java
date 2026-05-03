@@ -57,7 +57,7 @@ public  final class NfdPreprocessForLookup extends
   private void setInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     input_ = value;
   }
   /**
@@ -312,4 +312,3 @@ public  final class NfdPreprocessForLookup extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

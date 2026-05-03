@@ -30,7 +30,7 @@ public  final class ClearPredictionsUI extends
    * @param value The generation to set.
    */
   private void setGeneration(long value) {
-    
+
     generation_ = value;
   }
   /**
@@ -239,4 +239,3 @@ public  final class ClearPredictionsUI extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

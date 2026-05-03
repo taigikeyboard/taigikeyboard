@@ -12,7 +12,7 @@ public interface RecordCompoundAssociationsOrBuilder extends
   /**
    * <code>repeated .taigi.engine.AssociationPair pairs = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.AssociationPair> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.AssociationPair>
       getPairsList();
   /**
    * <code>repeated .taigi.engine.AssociationPair pairs = 1;</code>

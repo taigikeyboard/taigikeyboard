@@ -38,7 +38,7 @@ public  final class ProcessCandidatesResponse extends
   /**
    * <code>repeated .taigi.engine.TaigiWord ranked = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder>
       getRankedOrBuilderList() {
     return ranked_;
   }
@@ -132,7 +132,7 @@ public  final class ProcessCandidatesResponse extends
   /**
    * <code>repeated .taigi.engine.ScoreBreakdown breakdown = 2;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdownOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdownOrBuilder>
       getBreakdownOrBuilderList() {
     return breakdown_;
   }
@@ -601,4 +601,3 @@ public  final class ProcessCandidatesResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

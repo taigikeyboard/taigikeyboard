@@ -280,4 +280,3 @@ public  final class RecordAssociation extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

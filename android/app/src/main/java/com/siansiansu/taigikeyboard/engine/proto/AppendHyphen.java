@@ -192,4 +192,3 @@ public  final class AppendHyphen extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

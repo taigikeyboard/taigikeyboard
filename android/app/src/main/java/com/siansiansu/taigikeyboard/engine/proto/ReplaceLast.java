@@ -48,7 +48,7 @@ public  final class ReplaceLast extends
   private void setReplacement(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     replacement_ = value;
   }
   /**
@@ -294,4 +294,3 @@ public  final class ReplaceLast extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

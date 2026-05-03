@@ -12,7 +12,7 @@ public interface ProcessCandidatesResponseOrBuilder extends
   /**
    * <code>repeated .taigi.engine.TaigiWord ranked = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.TaigiWord>
       getRankedList();
   /**
    * <code>repeated .taigi.engine.TaigiWord ranked = 1;</code>
@@ -26,7 +26,7 @@ public interface ProcessCandidatesResponseOrBuilder extends
   /**
    * <code>repeated .taigi.engine.ScoreBreakdown breakdown = 2;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown>
       getBreakdownList();
   /**
    * <code>repeated .taigi.engine.ScoreBreakdown breakdown = 2;</code>

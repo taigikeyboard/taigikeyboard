@@ -47,7 +47,7 @@ public  final class Backspace extends
   private void setLastChar(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     lastChar_ = value;
   }
   /**
@@ -387,4 +387,3 @@ public  final class Backspace extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

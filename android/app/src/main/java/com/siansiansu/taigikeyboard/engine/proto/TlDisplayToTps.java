@@ -47,7 +47,7 @@ public  final class TlDisplayToTps extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -83,7 +83,7 @@ public  final class TlDisplayToTps extends
    * @param value The orMapsToEr to set.
    */
   private void setOrMapsToEr(boolean value) {
-    
+
     orMapsToEr_ = value;
   }
   /**
@@ -348,4 +348,3 @@ public  final class TlDisplayToTps extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

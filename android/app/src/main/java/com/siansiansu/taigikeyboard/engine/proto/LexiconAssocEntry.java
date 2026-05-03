@@ -55,7 +55,7 @@ public  final class LexiconAssocEntry extends
   private void setPreviousWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     previousWord_ = value;
   }
   /**
@@ -102,7 +102,7 @@ public  final class LexiconAssocEntry extends
   private void setCandidateWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     candidateWord_ = value;
   }
   /**
@@ -138,7 +138,7 @@ public  final class LexiconAssocEntry extends
    * @param value The count to set.
    */
   private void setCount(int value) {
-    
+
     count_ = value;
   }
   /**
@@ -175,7 +175,7 @@ public  final class LexiconAssocEntry extends
   private void setCandidateTl(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     candidateTl_ = value;
   }
   /**
@@ -556,4 +556,3 @@ public  final class LexiconAssocEntry extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

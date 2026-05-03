@@ -4,7 +4,7 @@
 //! `rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
-use crate::case_adjust::adjust_nasal_marker_case;
+use crate::case_transform::adjust_nasal_marker_case;
 use crate::poj::to_poj;
 use crate::syllable::{is_stop_tone, normalize_to_tl, split_initial_final, strip_tone_mark};
 use crate::tl::to_tl;
@@ -29,7 +29,9 @@ pub enum System {
 
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
-    #[error("unsupported op (e.g. PhoneticsRequest.method is None — likely proto schema mismatch)")]
+    #[error(
+        "unsupported op (e.g. PhoneticsRequest.method is None — likely proto schema mismatch)"
+    )]
     UnsupportedOp,
 }
 

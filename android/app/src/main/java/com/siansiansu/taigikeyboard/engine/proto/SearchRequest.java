@@ -60,7 +60,7 @@ public  final class SearchRequest extends
   private void setInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     input_ = value;
   }
   /**
@@ -180,7 +180,7 @@ public  final class SearchRequest extends
    * @param value The limit to set.
    */
   private void setLimit(int value) {
-    
+
     limit_ = value;
   }
   /**
@@ -206,7 +206,7 @@ public  final class SearchRequest extends
    * @param value The tpsOrMappedToEr to set.
    */
   private void setTpsOrMappedToEr(boolean value) {
-    
+
     tpsOrMappedToEr_ = value;
   }
   /**
@@ -232,7 +232,7 @@ public  final class SearchRequest extends
    * @param value The enabledSourcesBitmask to set.
    */
   private void setEnabledSourcesBitmask(int value) {
-    
+
     enabledSourcesBitmask_ = value;
   }
   /**
@@ -662,4 +662,3 @@ public  final class SearchRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

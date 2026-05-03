@@ -192,4 +192,3 @@ public  final class CommitRaw extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

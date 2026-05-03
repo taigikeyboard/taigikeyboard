@@ -42,7 +42,7 @@ public  final class NormalizeToTl extends
   private void setInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     input_ = value;
   }
   /**
@@ -282,4 +282,3 @@ public  final class NormalizeToTl extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

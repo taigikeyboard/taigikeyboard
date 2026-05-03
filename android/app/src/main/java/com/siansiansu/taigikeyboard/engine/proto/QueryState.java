@@ -194,4 +194,3 @@ public  final class QueryState extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

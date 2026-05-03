@@ -48,7 +48,7 @@ public  final class DeriveNotone extends
   private void setRoman(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     roman_ = value;
   }
   /**
@@ -294,4 +294,3 @@ public  final class DeriveNotone extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

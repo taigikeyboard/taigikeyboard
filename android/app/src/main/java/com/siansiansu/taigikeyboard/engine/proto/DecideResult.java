@@ -37,7 +37,7 @@ public  final class DecideResult extends
    *
    * <code>repeated .taigi.engine.NextWordEffect effects = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.NextWordEffectOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.NextWordEffectOrBuilder>
       getEffectsOrBuilderList() {
     return effects_;
   }
@@ -170,7 +170,7 @@ public  final class DecideResult extends
    * @param value The currentGeneration to set.
    */
   private void setCurrentGeneration(long value) {
-    
+
     currentGeneration_ = value;
   }
   /**
@@ -196,7 +196,7 @@ public  final class DecideResult extends
    * @param value The isShowing to set.
    */
   private void setIsShowing(boolean value) {
-    
+
     isShowing_ = value;
   }
   /**
@@ -251,7 +251,7 @@ public  final class DecideResult extends
   private void setLastSelectedWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     lastSelectedWord_ = value;
   }
   /**
@@ -744,4 +744,3 @@ public  final class DecideResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

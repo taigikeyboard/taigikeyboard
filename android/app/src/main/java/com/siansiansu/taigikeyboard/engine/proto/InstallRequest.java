@@ -70,7 +70,7 @@ public  final class InstallRequest extends
   private void setTriePath(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     triePath_ = value;
   }
   /**
@@ -137,7 +137,7 @@ public  final class InstallRequest extends
   private void setDictionaryBinPath(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     dictionaryBinPath_ = value;
   }
   /**
@@ -204,7 +204,7 @@ public  final class InstallRequest extends
   private void setAssociationBinPath(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     associationBinPath_ = value;
   }
   /**
@@ -256,7 +256,7 @@ public  final class InstallRequest extends
    * @param value The dictionaryVersion to set.
    */
   private void setDictionaryVersion(int value) {
-    
+
     dictionaryVersion_ = value;
   }
   /**
@@ -706,4 +706,3 @@ public  final class InstallRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

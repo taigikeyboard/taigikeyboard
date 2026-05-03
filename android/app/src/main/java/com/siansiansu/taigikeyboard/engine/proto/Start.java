@@ -47,7 +47,7 @@ public  final class Start extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -292,4 +292,3 @@ public  final class Start extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

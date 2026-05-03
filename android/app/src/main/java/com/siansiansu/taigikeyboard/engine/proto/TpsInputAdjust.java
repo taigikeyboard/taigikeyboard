@@ -50,7 +50,7 @@ public  final class TpsInputAdjust extends
   private void setIncoming(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     incoming_ = value;
   }
   /**
@@ -97,7 +97,7 @@ public  final class TpsInputAdjust extends
   private void setRawInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     rawInput_ = value;
   }
   /**
@@ -395,4 +395,3 @@ public  final class TpsInputAdjust extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

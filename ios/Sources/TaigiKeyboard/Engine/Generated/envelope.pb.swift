@@ -27,6 +27,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   case cmdComposing // = 2
   case cmdLexicon // = 3
   case cmdNextword // = 4
+  case cmdCase // = 5
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -40,6 +41,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     case 2: self = .cmdComposing
     case 3: self = .cmdLexicon
     case 4: self = .cmdNextword
+    case 5: self = .cmdCase
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -51,6 +53,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     case .cmdComposing: return 2
     case .cmdLexicon: return 3
     case .cmdNextword: return 4
+    case .cmdCase: return 5
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -62,6 +65,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
     .cmdComposing,
     .cmdLexicon,
     .cmdNextword,
+    .cmdCase,
   ]
 
 }
@@ -256,6 +260,14 @@ public struct Taigi_Engine_Request: @unchecked Sendable {
     set {_uniqueStorage()._payload = .nextword(newValue)}
   }
 
+  public var caseTransform: Taigi_Engine_CaseRequest {
+    get {
+      if case .caseTransform(let v)? = _storage._payload {return v}
+      return Taigi_Engine_CaseRequest()
+    }
+    set {_uniqueStorage()._payload = .caseTransform(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Payload: Equatable, Sendable {
@@ -263,6 +275,7 @@ public struct Taigi_Engine_Request: @unchecked Sendable {
     case composing(Taigi_Engine_ComposingRequest)
     case lexicon(Taigi_Engine_LexiconRequest)
     case nextword(Taigi_Engine_NextWordRequest)
+    case caseTransform(Taigi_Engine_CaseRequest)
 
   }
 
@@ -316,6 +329,14 @@ public struct Taigi_Engine_Response: Sendable {
     set {payload = .nextword(newValue)}
   }
 
+  public var caseTransform: Taigi_Engine_CaseResponse {
+    get {
+      if case .caseTransform(let v)? = payload {return v}
+      return Taigi_Engine_CaseResponse()
+    }
+    set {payload = .caseTransform(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Payload: Equatable, Sendable {
@@ -323,6 +344,7 @@ public struct Taigi_Engine_Response: Sendable {
     case composing(Taigi_Engine_ComposingResponse)
     case lexicon(Taigi_Engine_LexiconResponse)
     case nextword(Taigi_Engine_NextWordResponse)
+    case caseTransform(Taigi_Engine_CaseResponse)
 
   }
 
@@ -365,7 +387,7 @@ public struct Taigi_Engine_Command: Sendable {
 fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{1}CMD_COMPOSING\0\u{1}CMD_LEXICON\0\u{1}CMD_NEXTWORD\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{1}CMD_COMPOSING\0\u{1}CMD_LEXICON\0\u{1}CMD_NEXTWORD\0\u{1}CMD_CASE\0")
 }
 
 extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
@@ -438,7 +460,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
 
 extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
 
   fileprivate class _StorageClass {
     var _id: UInt32 = 0
@@ -535,6 +557,19 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
             _storage._payload = .nextword(v)
           }
         }()
+        case 14: try {
+          var v: Taigi_Engine_CaseRequest?
+          var hadOneofValue = false
+          if let current = _storage._payload {
+            hadOneofValue = true
+            if case .caseTransform(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payload = .caseTransform(v)
+          }
+        }()
         default: break
         }
       }
@@ -576,6 +611,10 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
         guard case .nextword(let v)? = _storage._payload else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
       }()
+      case .caseTransform?: try {
+        guard case .caseTransform(let v)? = _storage._payload else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
+      }()
       case nil: break
       }
     }
@@ -603,7 +642,7 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
 
 extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -666,6 +705,19 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
           self.payload = .nextword(v)
         }
       }()
+      case 14: try {
+        var v: Taigi_Engine_CaseResponse?
+        var hadOneofValue = false
+        if let current = self.payload {
+          hadOneofValue = true
+          if case .caseTransform(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.payload = .caseTransform(v)
+        }
+      }()
       default: break
       }
     }
@@ -701,6 +753,10 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
     case .nextword?: try {
       guard case .nextword(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    case .caseTransform?: try {
+      guard case .caseTransform(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
     case nil: break
     }

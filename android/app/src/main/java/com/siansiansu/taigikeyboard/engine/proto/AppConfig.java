@@ -58,7 +58,7 @@ public  final class AppConfig extends
   private void setToneMode(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     toneMode_ = value;
   }
   /**
@@ -105,7 +105,7 @@ public  final class AppConfig extends
   private void setInputMode(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     inputMode_ = value;
   }
   /**
@@ -141,7 +141,7 @@ public  final class AppConfig extends
    * @param value The ooDoubletapEnabled to set.
    */
   private void setOoDoubletapEnabled(boolean value) {
-    
+
     ooDoubletapEnabled_ = value;
   }
   /**
@@ -167,7 +167,7 @@ public  final class AppConfig extends
    * @param value The nnDoubletapEnabled to set.
    */
   private void setNnDoubletapEnabled(boolean value) {
-    
+
     nnDoubletapEnabled_ = value;
   }
   /**
@@ -193,7 +193,7 @@ public  final class AppConfig extends
    * @param value The isTranslateSwapped to set.
    */
   private void setIsTranslateSwapped(boolean value) {
-    
+
     isTranslateSwapped_ = value;
   }
   /**
@@ -219,7 +219,7 @@ public  final class AppConfig extends
    * @param value The isAssociationRecordingEnabled to set.
    */
   private void setIsAssociationRecordingEnabled(boolean value) {
-    
+
     isAssociationRecordingEnabled_ = value;
   }
   /**
@@ -720,4 +720,3 @@ public  final class AppConfig extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

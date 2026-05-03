@@ -182,4 +182,3 @@ public  final class PerformAutocomplete extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -42,7 +42,7 @@ public  final class StringResult extends
   private void setOutput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     output_ = value;
   }
   /**
@@ -282,4 +282,3 @@ public  final class StringResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

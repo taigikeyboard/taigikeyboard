@@ -27,7 +27,7 @@ public interface ComposingResponseOrBuilder extends
    *
    * <code>repeated .taigi.engine.Effect effect = 2;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.Effect> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.Effect>
       getEffectList();
   /**
    * <pre>

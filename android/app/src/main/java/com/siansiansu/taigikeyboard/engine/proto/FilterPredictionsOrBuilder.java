@@ -12,7 +12,7 @@ public interface FilterPredictionsOrBuilder extends
   /**
    * <code>repeated .taigi.engine.RawNextWordPrediction raw = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction>
       getRawList();
   /**
    * <code>repeated .taigi.engine.RawNextWordPrediction raw = 1;</code>

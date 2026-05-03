@@ -18,6 +18,8 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use prost::Message;
 use protos::engine::{request, response, ErrorCode, Request, Response};
 
+mod case;
+
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
 /// from the IME are kilobytes at worst; 2 MB is generous slack for proto
 /// envelope overhead. Single source of truth — `swift-ffi` and
@@ -160,6 +162,18 @@ fn run(bytes: &[u8]) -> Response {
                 }
             }
         }
+        request::Payload::CaseTransform(case_req) => match case::handle(&case_req, &config) {
+            Some(case_resp) => Response {
+                id,
+                error: ErrorCode::Ok as i32,
+                generation,
+                payload: Some(response::Payload::CaseTransform(case_resp)),
+            },
+            None => {
+                log::warn!("case request missing method (id={id})");
+                error_response(id, ErrorCode::FailInvariant, generation)
+            }
+        },
     }
 }
 

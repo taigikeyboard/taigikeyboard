@@ -49,7 +49,7 @@ public  final class NormalizeInput extends
   private void setInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     input_ = value;
   }
   /**
@@ -296,4 +296,3 @@ public  final class NormalizeInput extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

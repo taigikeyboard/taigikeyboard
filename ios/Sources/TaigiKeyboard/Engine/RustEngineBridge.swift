@@ -746,6 +746,57 @@ public enum RustEngineBridge {
         return s.output
     }
 
+    /// Case-transform dispatch — single FFI hop per word/char. Mode is
+    /// carried via envelope `AppConfig.input_mode` (engine reads it for
+    /// tone-table lookup). No `ToneToggles` needed: case-transform is
+    /// independent of POJ doubletap preprocessing.
+    static func caseDispatch(
+        method: Taigi_Engine_CaseRequest.OneOf_Method,
+        op: String,
+        mode: InputMode
+    ) -> Taigi_Engine_CaseResponse? {
+        var caseReq = Taigi_Engine_CaseRequest()
+        caseReq.method = method
+
+        var request = Taigi_Engine_Request()
+        request.id = nextRequestID()
+        request.payload = .caseTransform(caseReq)
+        // Case-transform is independent of POJ doubletap preprocessing —
+        // pass an explicit "all-off" snapshot so the engine `AppConfig`
+        // doesn't accidentally pick up unrelated state.
+        request.configSnapshot = appConfig(
+            mode: mode,
+            toggles: ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+        )
+
+        let bytes: [UInt8]
+        do {
+            bytes = try Array(request.serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+
+        let responseBytes = bytes.withUnsafeBufferPointer { buf in
+            process_request_bytes(buf).toArray()
+        }
+        guard let response = try? Taigi_Engine_Response(
+            serializedBytes: Data(responseBytes)
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            return nil
+        }
+        guard response.error == .ok else {
+            recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
+            return nil
+        }
+        guard case let .caseTransform(payload) = response.payload else {
+            recordFailure(op: op, message: "missing case payload")
+            return nil
+        }
+        return payload
+    }
+
     static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,
         op: String

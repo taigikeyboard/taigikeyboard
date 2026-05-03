@@ -189,16 +189,16 @@ public extension RustEngineBridge {
 
     /// Classifier output — pairs the resolved `InputType` with the
     /// engine-built `searchKey` (TPS-converted on the engine side).
-    struct ClassificationResult: Equatable {
-        public let inputType: InputType
-        public let searchKey: String
+    internal struct ClassificationResult: Equatable {
+        let inputType: InputType
+        let searchKey: String
     }
 
     /// Classify `rawInput` into `(InputType, searchKey)`. Single FFI hop
     /// replaces the per-keystroke ladder of `hasToneMarks` /
     /// `containsTPS` / `tpsToTL` calls. See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
-    static func classifyInput(_ raw: String) -> ClassificationResult {
+    internal static func classifyInput(_ raw: String) -> ClassificationResult {
         var payload = Taigi_Engine_ClassifyInputRequest()
         payload.raw = raw
         guard let resp = lexiconDispatch(method: .classifyInput(payload), op: "classifyInput") else {

@@ -30,7 +30,7 @@ public  final class BoolResult extends
    * @param value The value to set.
    */
   private void setValue(boolean value) {
-    
+
     value_ = value;
   }
   /**
@@ -239,4 +239,3 @@ public  final class BoolResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

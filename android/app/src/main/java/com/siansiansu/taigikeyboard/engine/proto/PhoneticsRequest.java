@@ -2190,4 +2190,3 @@ public  final class PhoneticsRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

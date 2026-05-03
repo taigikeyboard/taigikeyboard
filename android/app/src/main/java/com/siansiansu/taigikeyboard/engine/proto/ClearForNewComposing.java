@@ -290,4 +290,3 @@ public  final class ClearForNewComposing extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

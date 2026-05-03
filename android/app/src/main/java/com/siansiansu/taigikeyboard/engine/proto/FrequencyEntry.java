@@ -49,7 +49,7 @@ public  final class FrequencyEntry extends
   private void setDisplayTextKey(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     displayTextKey_ = value;
   }
   /**
@@ -85,7 +85,7 @@ public  final class FrequencyEntry extends
    * @param value The count to set.
    */
   private void setCount(int value) {
-    
+
     count_ = value;
   }
   /**
@@ -111,7 +111,7 @@ public  final class FrequencyEntry extends
    * @param value The lastUsedMs to set.
    */
   private void setLastUsedMs(long value) {
-    
+
     lastUsedMs_ = value;
   }
   /**
@@ -407,4 +407,3 @@ public  final class FrequencyEntry extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

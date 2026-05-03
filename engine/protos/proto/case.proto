@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package taigi.engine;
+
+option java_package = "com.siansiansu.taigikeyboard.engine.proto";
+option java_multiple_files = true;
+
+// Case-transform module — POJ/TL tone-letter case mapping, candidate
+// capitalization, per-suggestion case transformation, nasal marker case
+// adjustment. Replaces iOS `Input/CaseTransformer.swift` +
+// `Input/ToneUtilities.swift` + body of `Autocomplete/Services/
+// SuggestionCaseTransformer.swift`, and Android counterparts
+// `dictionary/ToneUtilities.kt` + body of `dictionary/SuggestionCaseTransformer.kt`.
+//
+// `AppConfig.input_mode` (envelope.proto) carries the per-request POJ/TL
+// mode; messages here do NOT re-specify mode per call — engine reads from
+// `config_snapshot` per the same convention as `phonetics.proto` ops.
+//
+// Canonical form for combining-mark round-trip: explicit POJ + TL
+// lowercase↔uppercase mapping tables (Android tables — Kotlin/Swift stdlib
+// case APIs do not round-trip combining sequences like `a̍`, `o̍͘`,
+// `n̂`, `m̀` reliably).
+
+// =========================================================================
+// Shared enum
+// =========================================================================
+
+// Three-state shift / case indicator used by the engine layer.
+// Mirrors iOS `LetterCase` enum + Android (`caps` + `capsLock` boolean
+// pair adapted at the bridge call site).
+enum LetterCase {
+  LETTER_CASE_UNSPECIFIED = 0;
+  LETTER_CASE_LOWERCASED  = 1;
+  LETTER_CASE_UPPERCASED  = 2;  // one-shot shift — first letter upper, rest lower
+  LETTER_CASE_CAPS_LOCKED = 3;  // every letter upper
+}
+
+// =========================================================================
+// Request envelope
+// =========================================================================
+
+message CaseRequest {
+  // Tag 30 reserved — `AdjustNasalMarkerCase` was drafted in commit 2 but
+  // removed in the mid-slice Codex amend pass: no platform call site uses
+  // it standalone (only via `transform_suggestion` post-process and
+  // `Method::NormalizeTone` in-band). Reserve to prevent silent re-use.
+  reserved 30;
+
+  oneof method {
+    // --- Per-char (single grapheme cluster) helpers ---
+    UppercaseToneChar       uppercase_tone_char        = 10;
+    FullUppercaseToneString full_uppercase_tone_string = 11;
+    LowercaseToneChar       lowercase_tone_char        = 12;
+
+    // --- Per-string compound transforms ---
+    TransformInputCase      transform_input_case       = 20;
+    CapitalizeCandidate     capitalize_candidate       = 21;
+    TransformSuggestion     transform_suggestion       = 22;
+  }
+}
+
+// =========================================================================
+// Per-char request payloads
+// =========================================================================
+
+// `UppercaseToneChar` uppercases a single char/grapheme using mode-aware
+// tone tables. For multi-character inputs (e.g. "tsh") only the first
+// letter is uppercased. Matches Android `ToneUtilities.uppercaseToneLetter`
+// (`replaceFirstChar`) semantics.
+message UppercaseToneChar { string input = 1; }
+
+// `FullUppercaseToneString` uppercases ALL characters in `input` using
+// mode-aware tone tables. Matches Android
+// `ToneUtilities.fullUppercaseToneLetter` (`uppercase()` per char) semantics.
+// Used by Caps Lock paths.
+message FullUppercaseToneString { string input = 1; }
+
+// `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
+// tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
+message LowercaseToneChar { string input = 1; }
+
+// =========================================================================
+// Per-string compound request payloads
+// =========================================================================
+
+// `TransformInputCase` applies the LetterCase to `text` per
+// `CaseTransformer.transformForInput` semantics:
+// - LOWERCASED: lowercase per `LowercaseToneChar`
+// - UPPERCASED: first letter upper (`UppercaseToneChar` on first), rest lower
+// - CAPS_LOCKED: full upper per `FullUppercaseToneString`
+message TransformInputCase {
+  string     text        = 1;
+  LetterCase letter_case = 2;
+}
+
+// `CapitalizeCandidate` gates on `auto_cap_enabled` + `input` first char's
+// case. If both true, the candidate's first letter is uppercased via tone
+// tables; otherwise returned as-is. Matches `CaseTransformer.capitalizeCandidate`.
+message CapitalizeCandidate {
+  string text             = 1;
+  string input            = 2;
+  bool   auto_cap_enabled = 3;
+}
+
+// `TransformSuggestion` applies the SuggestionCaseTransformer per-word
+// case transformation:
+// - CAPS_LOCKED: full upper
+// - else with non-empty composing_text: split typed-portion (matchCase to
+//   composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
+// - empty composing: original returned as-is
+//
+// Output is post-processed via `adjust_nasal_marker_case` so the engine
+// returns the final-form string ready for display. Suggestion skip rules
+// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
+// — only transform-eligible items reach this op.
+message TransformSuggestion {
+  string     original_text  = 1;
+  string     composing_text = 2;
+  LetterCase letter_case    = 3;
+}
+
+// =========================================================================
+// Response envelope
+// =========================================================================
+
+message CaseResponse {
+  oneof result {
+    CaseStringResult string_result = 10;
+  }
+}
+
+// Locally defined (not re-exported from phonetics.proto) to keep case.proto
+// independent of phonetics.proto — avoids cross-module proto coupling.
+message CaseStringResult { string output = 1; }

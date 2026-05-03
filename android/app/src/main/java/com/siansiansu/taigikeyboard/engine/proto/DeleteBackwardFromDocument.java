@@ -182,4 +182,3 @@ public  final class DeleteBackwardFromDocument extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -52,7 +52,7 @@ public  final class EnginePrediction extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -120,7 +120,7 @@ public  final class EnginePrediction extends
   private void setSubtitle(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     subtitle_ = value;
   }
   /**
@@ -181,7 +181,7 @@ public  final class EnginePrediction extends
   private void setHanzi(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     hanzi_ = value;
   }
   /**
@@ -228,7 +228,7 @@ public  final class EnginePrediction extends
   private void setTl(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     tl_ = value;
   }
   /**
@@ -274,7 +274,7 @@ public  final class EnginePrediction extends
    * @param value The score to set.
    */
   private void setScore(double value) {
-    
+
     score_ = value;
   }
   /**
@@ -746,4 +746,3 @@ public  final class EnginePrediction extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

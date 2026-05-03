@@ -110,7 +110,7 @@ public  final class ComposingResponse extends
     private void setRawInput(
         java.lang.String value) {
       java.lang.Class<?> valueClass = value.getClass();
-  
+
       rawInput_ = value;
     }
     /**
@@ -177,7 +177,7 @@ public  final class ComposingResponse extends
     private void setDisplayText(
         java.lang.String value) {
       java.lang.Class<?> valueClass = value.getClass();
-  
+
       displayText_ = value;
     }
     /**
@@ -584,7 +584,7 @@ public  final class ComposingResponse extends
    *
    * <code>repeated .taigi.engine.Effect effect = 2;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.EffectOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.EffectOrBuilder>
       getEffectOrBuilderList() {
     return effect_;
   }
@@ -725,7 +725,7 @@ public  final class ComposingResponse extends
    * @param value The selectedCandidateIndex to set.
    */
   private void setSelectedCandidateIndex(int value) {
-    
+
     selectedCandidateIndex_ = value;
   }
   /**
@@ -763,7 +763,7 @@ public  final class ComposingResponse extends
    * @param value The isComposing to set.
    */
   private void setIsComposing(boolean value) {
-    
+
     isComposing_ = value;
   }
   /**
@@ -1231,4 +1231,3 @@ public  final class ComposingResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

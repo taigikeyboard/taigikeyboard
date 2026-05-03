@@ -567,4 +567,3 @@ public  final class BoostCandidates extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

@@ -18,13 +18,15 @@ extension ActionHandler {
             return false
         }
 
-        // Unified case transformation.
-        // Adapter: KK's Keyboard.KeyboardCase → engine's LetterCase.
-        let processedChar = CaseTransformer.transformForInput(
+        // Unified case transformation. Adapter: KK's Keyboard.KeyboardCase →
+        // RustEngineBridge.CaseTransformLetterCase. `autoCap` is read for
+        // logging but not passed to `transformInputCase` — the legacy
+        // `CaseTransformer.transformForInput` ignored the flag too;
+        // auto-cap is consumed by `capitalizeCandidate` instead.
+        let processedChar = RustEngineBridge.transformInputCase(
             char,
             letterCase: currentCase.asLetterCase,
-            isAutoCapitalizationEnabled: autoCap,
-            inputMode: settings.inputMode,
+            mode: settings.inputMode
         )
 
         // TPS key-level adjustments via pure pipeline (returns adjusted char +

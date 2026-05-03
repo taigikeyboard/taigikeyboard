@@ -50,7 +50,7 @@ public  final class ProcessCandidatesRequest extends
   /**
    * <code>repeated .taigi.engine.TaigiWord raw = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.TaigiWordOrBuilder>
       getRawOrBuilderList() {
     return raw_;
   }
@@ -158,7 +158,7 @@ public  final class ProcessCandidatesRequest extends
   private void setNormalizedInput(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     normalizedInput_ = value;
   }
   /**
@@ -194,7 +194,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The tpsDedupEnabled to set.
    */
   private void setTpsDedupEnabled(boolean value) {
-    
+
     tpsDedupEnabled_ = value;
   }
   /**
@@ -217,7 +217,7 @@ public  final class ProcessCandidatesRequest extends
   /**
    * <code>repeated .taigi.engine.FrequencyEntry freq = 5;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder>
       getFreqOrBuilderList() {
     return freq_;
   }
@@ -314,7 +314,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The nowMs to set.
    */
   private void setNowMs(long value) {
-    
+
     nowMs_ = value;
   }
   /**
@@ -340,7 +340,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The includeBreakdown to set.
    */
   private void setIncludeBreakdown(boolean value) {
-    
+
     includeBreakdown_ = value;
   }
   /**
@@ -390,7 +390,7 @@ public  final class ProcessCandidatesRequest extends
    * @param value The mergeOrderOnly to set.
    */
   private void setMergeOrderOnly(boolean value) {
-    
+
     mergeOrderOnly_ = value;
   }
   /**
@@ -1013,4 +1013,3 @@ public  final class ProcessCandidatesRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

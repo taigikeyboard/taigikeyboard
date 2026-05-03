@@ -54,7 +54,7 @@ public  final class AssocLookupRequest extends
   private void setPreviousWord(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     previousWord_ = value;
   }
   /**
@@ -90,7 +90,7 @@ public  final class AssocLookupRequest extends
    * @param value The limit to set.
    */
   private void setLimit(int value) {
-    
+
     limit_ = value;
   }
   /**
@@ -134,7 +134,7 @@ public  final class AssocLookupRequest extends
    * @param value The enabledSourcesBitmask to set.
    */
   private void setEnabledSourcesBitmask(int value) {
-    
+
     enabledSourcesBitmask_ = value;
   }
   /**
@@ -471,4 +471,3 @@ public  final class AssocLookupRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

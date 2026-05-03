@@ -1451,4 +1451,3 @@ public  final class ComposingRequest extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

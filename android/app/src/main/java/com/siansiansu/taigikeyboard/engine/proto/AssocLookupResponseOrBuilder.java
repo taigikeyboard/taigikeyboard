@@ -12,7 +12,7 @@ public interface AssocLookupResponseOrBuilder extends
   /**
    * <code>repeated .taigi.engine.LexiconAssocEntry entries = 1;</code>
    */
-  java.util.List<com.siansiansu.taigikeyboard.engine.proto.LexiconAssocEntry> 
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.LexiconAssocEntry>
       getEntriesList();
   /**
    * <code>repeated .taigi.engine.LexiconAssocEntry entries = 1;</code>

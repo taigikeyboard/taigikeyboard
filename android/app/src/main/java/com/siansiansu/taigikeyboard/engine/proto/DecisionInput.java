@@ -34,7 +34,7 @@ public  final class DecisionInput extends
    * @param value The nowMs to set.
    */
   private void setNowMs(long value) {
-    
+
     nowMs_ = value;
   }
   /**
@@ -247,4 +247,3 @@ public  final class DecisionInput extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

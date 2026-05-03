@@ -47,7 +47,7 @@ public  final class SelectSuggestion extends
   private void setText(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     text_ = value;
   }
   /**
@@ -292,4 +292,3 @@ public  final class SelectSuggestion extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

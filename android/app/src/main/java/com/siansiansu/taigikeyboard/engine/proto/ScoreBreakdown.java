@@ -36,7 +36,7 @@ public  final class ScoreBreakdown extends
    * @param value The userFreqScore to set.
    */
   private void setUserFreqScore(int value) {
-    
+
     userFreqScore_ = value;
   }
   /**
@@ -62,7 +62,7 @@ public  final class ScoreBreakdown extends
    * @param value The recencyBonus to set.
    */
   private void setRecencyBonus(int value) {
-    
+
     recencyBonus_ = value;
   }
   /**
@@ -88,7 +88,7 @@ public  final class ScoreBreakdown extends
    * @param value The exactBonus to set.
    */
   private void setExactBonus(int value) {
-    
+
     exactBonus_ = value;
   }
   /**
@@ -114,7 +114,7 @@ public  final class ScoreBreakdown extends
    * @param value The completionPenalty to set.
    */
   private void setCompletionPenalty(int value) {
-    
+
     completionPenalty_ = value;
   }
   /**
@@ -140,7 +140,7 @@ public  final class ScoreBreakdown extends
    * @param value The closenessBonus to set.
    */
   private void setClosenessBonus(int value) {
-    
+
     closenessBonus_ = value;
   }
   /**
@@ -166,7 +166,7 @@ public  final class ScoreBreakdown extends
    * @param value The baseFreqScore to set.
    */
   private void setBaseFreqScore(int value) {
-    
+
     baseFreqScore_ = value;
   }
   /**
@@ -527,4 +527,3 @@ public  final class ScoreBreakdown extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

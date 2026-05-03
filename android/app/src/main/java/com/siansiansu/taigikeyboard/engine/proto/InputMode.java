@@ -97,13 +97,13 @@ public enum InputMode
           }
         };
 
-  public static com.google.protobuf.Internal.EnumVerifier 
+  public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
     return InputModeVerifier.INSTANCE;
   }
 
-  private static final class InputModeVerifier implements 
-       com.google.protobuf.Internal.EnumVerifier { 
+  private static final class InputModeVerifier implements
+       com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier           INSTANCE = new InputModeVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
@@ -119,4 +119,3 @@ public enum InputMode
 
   // @@protoc_insertion_point(enum_scope:taigi.engine.InputMode)
 }
-

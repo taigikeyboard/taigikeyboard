@@ -48,7 +48,7 @@ public  final class StripToneResult extends
   private void setBare(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     bare_ = value;
   }
   /**
@@ -95,7 +95,7 @@ public  final class StripToneResult extends
   private void setTone(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     tone_ = value;
   }
   /**
@@ -391,4 +391,3 @@ public  final class StripToneResult extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

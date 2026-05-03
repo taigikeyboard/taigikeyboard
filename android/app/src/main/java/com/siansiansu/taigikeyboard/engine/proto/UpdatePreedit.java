@@ -42,7 +42,7 @@ public  final class UpdatePreedit extends
   private void setDisplay(
       java.lang.String value) {
     java.lang.Class<?> valueClass = value.getClass();
-  
+
     display_ = value;
   }
   /**
@@ -282,4 +282,3 @@ public  final class UpdatePreedit extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

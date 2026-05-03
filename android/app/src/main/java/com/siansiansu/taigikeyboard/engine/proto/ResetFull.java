@@ -288,4 +288,3 @@ public  final class ResetFull extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

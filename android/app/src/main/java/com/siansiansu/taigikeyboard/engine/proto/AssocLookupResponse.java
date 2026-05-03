@@ -34,7 +34,7 @@ public  final class AssocLookupResponse extends
   /**
    * <code>repeated .taigi.engine.LexiconAssocEntry entries = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.LexiconAssocEntryOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.LexiconAssocEntryOrBuilder>
       getEntriesOrBuilderList() {
     return entries_;
   }
@@ -395,4 +395,3 @@ public  final class AssocLookupResponse extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-

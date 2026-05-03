@@ -37,7 +37,7 @@ public  final class FilterPredictions extends
   /**
    * <code>repeated .taigi.engine.RawNextWordPrediction raw = 1;</code>
    */
-  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.RawNextWordPredictionOrBuilder> 
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.RawNextWordPredictionOrBuilder>
       getRawOrBuilderList() {
     return raw_;
   }
@@ -142,7 +142,7 @@ public  final class FilterPredictions extends
    * @param value The queryGeneration to set.
    */
   private void setQueryGeneration(long value) {
-    
+
     queryGeneration_ = value;
   }
   /**
@@ -180,7 +180,7 @@ public  final class FilterPredictions extends
    * @param value The nowMs to set.
    */
   private void setNowMs(long value) {
-    
+
     nowMs_ = value;
   }
   /**
@@ -218,7 +218,7 @@ public  final class FilterPredictions extends
    * @param value The limit to set.
    */
   private void setLimit(int value) {
-    
+
     limit_ = value;
   }
   /**
@@ -639,4 +639,3 @@ public  final class FilterPredictions extends
     return DEFAULT_INSTANCE.getParserForType();
   }
 }
-
