@@ -83,6 +83,11 @@ android/app/src/main/jniLibs/
 # iOS xcframework + bridge .swift are committed under ios/RustEngine/ for
 # stable Xcode source references — see plan v4 R3-H3 fix.
 
+# === Xcode build cache ===
+# DerivedData lives outside the repo by default, but xcodebuild with
+# `-derivedDataPath build/` (or a script that does) drops XCBuildData here.
+ios/build/
+
 # === Claude Code ===
 .claude/settings.local.json
 .claude/projects/

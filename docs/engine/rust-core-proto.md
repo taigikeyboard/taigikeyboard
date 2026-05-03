@@ -183,7 +183,7 @@ message PhoneticsResponse {
 
 ## 8. Composing slice — AS-IMPLEMENTED (v3.5.4)
 
-> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 + `CMD_COMPOSING = 2` were unreserved. Field naming uses `oneof method` (Phonetics convention). Two methods were added beyond the original §8 design draft: `SetSelectedCandidateIndex` (UI-driven candidate-bar tap mutator) and `QueryState` (pure read replacing the platform `manager.isComposingText` getter). Plus `is_composing` boolean on `ComposingResponse` so the platform stops shadowing engine state. See `composing-slice-plan.md` §2.3 for the rationale.
+> **Status**: AS-IMPLEMENTED post v3.5.4. The proto landed in `engine/protos/proto/composing.proto`; envelope tag 11 + `CMD_COMPOSING = 2` were unreserved. Field naming uses `oneof method` (Phonetics convention). Two methods were added beyond the original §8 design draft: `SetSelectedCandidateIndex` (UI-driven candidate-bar tap mutator) and `QueryState` (pure read replacing the platform `manager.isComposingText` getter). Plus `is_composing` boolean on `ComposingResponse` so the platform stops shadowing engine state.
 
 ```protobuf
 message ComposingRequest {
@@ -266,7 +266,7 @@ message ResetAutocompleteContext {}
 
 ## 8.5. Case-transform slice — AS-IMPLEMENTED (case-transform-slice)
 
-Canonical source: `engine/protos/proto/case.proto`. Own file (NOT a `lexicon.proto` extension) — case logic is conceptually phonetics-aware string transformation independent of lexicon search. See `case-transform-slice-plan.md` §4 for the full proto shape; sketch:
+Canonical source: `engine/protos/proto/case.proto`. Own file (NOT a `lexicon.proto` extension) — case logic is conceptually phonetics-aware string transformation independent of lexicon search. Sketch:
 
 ```protobuf
 message CaseRequest {
@@ -314,7 +314,7 @@ message CaseResponse {
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
 - **No candidate ids in the Composing slice.** `SelectSuggestion` carries text the platform already resolved.
 - **No Lexicon / NextWord proto** — Phase III deliverable. This includes prediction queries, prediction results, and candidate-list updates.
-- **No SQLite I/O proto.** DB stays platform-side until Phase IV-B, per `shared-core-readiness.md` §Criteria (no DB / App Group / FileManager / file-system access in candidates) and the §Exclusions list (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`).
+- **No SQLite I/O proto.** User-data DB stays platform-side permanently per `feedback_user_data_sqlite_stays_native` and the criteria in `rules/ios-architecture.md` §4 (no DB / App Group / FileManager / file-system access in candidates). Excluded files appear with `status=wont_migrate` in `migration-inventory.csv` (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.).
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
 
 ---

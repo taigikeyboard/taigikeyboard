@@ -1,6 +1,6 @@
 # Keyboard Keystroke Latency Baseline — 2026-04
 
-**Status** (revised 2026-04-19): methodology frozen, **quantitative capture deferred**. Phase I G0 adopts a qualitative dogfooding gate (see `docs/architecture/ios-exemplar-plan.md` §G0, §Phase I gating signal #6) instead of P50/P95 numbers. This document is retained as a template for a future CI perf lane / team workflow where Instruments numbers become worth the capture overhead.
+**Status** (revised 2026-04-19, qualitative-gate philosophy ratified by `feedback_perf_gate.md`): methodology frozen, **quantitative capture deferred**. The project uses a qualitative dogfooding gate (S1/S2/S3 typing feels right, no keyboard dismiss, no leaks) instead of P50/P95 numbers. This document is retained as a template for a future CI perf lane / team workflow where Instruments numbers become worth the capture overhead.
 
 **Why deferred**: solo-dev IME cadence — the user is the QA, perceptible regression on S1/S2/S3 is the acceptance criterion. Instruments signposts + per-refactor re-measurement cost exceeds the benefit of catching microsecond-level regressions the user cannot feel.
 
@@ -135,6 +135,6 @@ Pick one for run 1 and record it. Subsequent runs should use the same host.
 
 ## 6. Cross-references
 
-- Phase I gating signals: `docs/architecture/ios-exemplar-plan.md` §Phase I gating signals.
+- Qualitative-gate philosophy: memory `feedback_perf_gate.md` (Claude auto-memory).
 - Memory counterpart: `docs/perf/extension-memory-2026-04.md`.
 - Candidate scoring / NextWord decay invariants exercised by S1/S3: `docs/architecture/behavioral-invariants.md` §6, §7.

@@ -2,7 +2,7 @@
 
 > **Type**: Feature
 > **Keywords**: `CustomDictionary`, `Import`, `Export`, `CSV`
-> **Related**: autocomplete.md, trie.md
+> **Related**: autocomplete.md, binary-format.md
 
 ---
 

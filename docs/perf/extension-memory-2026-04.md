@@ -1,6 +1,6 @@
 # Keyboard Extension Memory Baseline — 2026-04
 
-**Status** (revised 2026-04-19): methodology frozen, **quantitative capture deferred**. Phase I G0 adopts a qualitative gate (see `docs/architecture/ios-exemplar-plan.md` §G0, §Phase I gating signal #7): no keyboard dismiss (the 64 MB termination signal), and no progressive memory growth during an extended typing session. Since Phase I is refactor-only (no new features), steady-state capacity should not change — so the gate is leak-free, not a number.
+**Status** (revised 2026-04-19, qualitative-gate philosophy ratified by `feedback_perf_gate.md`): methodology frozen, **quantitative capture deferred**. Phase I G0 adopted a qualitative gate (no keyboard dismiss = 64 MB termination signal, plus no progressive memory growth during an extended typing session). Since refactor-only slices should not change steady-state capacity, the gate is leak-free, not a number.
 
 **Why deferred**: solo-dev IME cadence. The iOS platform already enforces a hard 64 MB cap on keyboard extensions — if a refactor breaks capacity headroom, the keyboard visibly dismisses and the user notices immediately. Persistent Instruments capture adds overhead without catching anything the platform cap does not already catch.
 
@@ -20,7 +20,7 @@ Same three sequences as the latency baseline (`keyboard-baseline-2026-04.md` §1
 |---|---|---|
 | S1 | POJ diacritic composition (`gua2si7soo`, repeated) | `ComposingManager` state, SwiftUI view tree, tone-mark formatter caches |
 | S2 | TPS composition (`ㄍㄨㄚˋ`, repeated) | TPS tables kept resident, converter closures |
-| S3 | Hanji candidate scroll (type `gua` + swipe 3 pages) | MARISA trie pages faulted in, candidate view recycling, SQLite page cache |
+| S3 | Hanji candidate scroll (type `gua` + swipe 3 pages) | fst pages faulted in, candidate view recycling, SQLite page cache |
 
 An additional reading is taken **at rest** (keyboard activated, zero keystrokes) to isolate load-time cost from interaction cost.
 
@@ -131,5 +131,5 @@ Extension termination at 64 MB is abrupt (no warning, keyboard dismisses). A P95
 ## 6. Cross-references
 
 - Latency counterpart: `docs/perf/keyboard-baseline-2026-04.md`.
-- Phase I gating signals: `docs/architecture/ios-exemplar-plan.md` §Phase I gating signals.
-- Data-artifact load cost (MARISA trie, `dictionary.bin`, `association.bin`): tracked under G10 deliverable `docs/architecture/data-artifacts-portability.md` (not yet authored).
+- Qualitative-gate philosophy: memory `feedback_perf_gate.md` (Claude auto-memory).
+- Data-artifact load cost (`dictionary.fst`, `dictionary.bin`, `association.bin`): tracked under `docs/architecture/data-artifacts-portability.md`.

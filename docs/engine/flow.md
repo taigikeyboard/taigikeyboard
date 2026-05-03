@@ -72,17 +72,22 @@ Text output
 
 ### AutocompleteService
 
-1. Get `rawInput` (for search)
-2. Determine input type
-3. Call `LexiconService.search()`
-4. Insert composingText at position 0
+1. Get `rawInput` (for search) from the composing engine snapshot.
+2. `RustEngineBridge.classifyInput(rawInput)` → `(input_type, search_key)` (Rust `lexicon::classify_input`).
+3. `RustEngineBridge.search(...)` (Rust `lexicon::search`) — fst prefix scan + DictionaryReader rowid resolution + source-bitmask filter.
+4. `RustEngineBridge.processCandidates(raw, ..., frequencyData: ..., nowMs: ...)` — Rust `ranking::process_candidates` runs dedup + score + sort.
+5. Platform layer prepends `composingText` at index 0 and applies suggestion case-transform via `RustEngineBridge.transformSuggestion`.
 
-### LexiconService.search()
+### Engine search ownership
 
-1. InputNormalizer normalizes
-2. TrieService prefix search → rowid list
-3. DictionaryBinaryReader batch lookup + bitmask filter
-4. UserFrequency sort
+| Step | Rust crate / function |
+|------|----------------------|
+| Input classification | `engine/lexicon::classify_input` |
+| Trie-key normalization | `engine/lexicon::key_normalizer::build` (calls `phonetics::normalize_input`) |
+| fst prefix scan | `engine/lexicon::prefix_index::PrefixIndex` |
+| Rowid → record resolution | `engine/lexicon::dictionary_reader::DictionaryReader` |
+| Source bitmask filter | `engine/lexicon::dictionary_reader::Filter` |
+| Candidate dedup / score / sort | `engine/ranking::process_candidates` |
 
 ---
 
@@ -133,14 +138,19 @@ Text output
 
 ## Key Files
 
-| Phase | iOS | Android |
-|-------|-----|---------|
-| Input | `ActionHandler.swift` + extensions | `TextInputManager.kt` |
-| Composing | `ComposingManager.swift` | `ComposingManager.kt` |
-| Search | `AutocompleteService.swift`, `LexiconService.swift` | `TaigiAutocompleteService.kt`, `LexiconService.kt` |
-| Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` |
-| Selection | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
-| NextWord | `NextWordService.swift` | `NextWordHandler.kt`, `NextWordService.kt` |
+| Phase | iOS | Android | Rust crate (if any) |
+|-------|-----|---------|----------------------|
+| Input dispatch | `ActionHandler.swift` + extensions | `TextInputManager.kt` | — |
+| Composing engine | (Rust) | (Rust) | `engine/composing` |
+| Composing wrapper | `ComposingManager.swift` + `ComposingDelegate.swift` | `ComposingManager.kt` + `ComposingDelegate.kt` | — |
+| Classify + search | `AutocompleteService.swift`, `Lexicon/Services/LexiconService.swift` | `TaigiAutocompleteService.kt`, `ime/dictionary/LexiconService.kt` | `engine/lexicon` |
+| Ranking | (calls `processCandidates`) | (calls `processCandidates`) | `engine/ranking` |
+| Phonetics / case | (calls bridge) | (calls bridge) | `engine/phonetics` |
+| Display | `TaigiKeyboardView.swift`, `CandidateView.swift` | `SmartbarView.kt`, `CandidateAdapter.kt` | — |
+| Selection | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` | — |
+| NextWord engine | (Rust) | (Rust) | `engine/nextword` |
+| NextWord platform glue | `NextWord/NextWordController.swift`, `NextWord/Services/NextWordService.swift` | `ime/text/smartbar/NextWordHandler.kt`, `ime/dictionary/NextWordService.kt` | — |
+| FFI seam | `Engine/RustEngineBridge.swift` (+ extensions) | `engine/RustEngineBridge.kt` (+ `LexiconBridge.kt`, `CaseTransformBridge.kt`) | `engine/dispatch` + `engine/swift-ffi` / `engine/android-jni` |
 
 ### Keyboard Overlays (v3.4.5+)
 

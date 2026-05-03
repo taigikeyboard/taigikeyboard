@@ -1,12 +1,14 @@
-# Phase 0 — Behavioral Invariants
+# Behavioral Invariants
 
-**Status**: authored 2026-04-19 as the Phase 0 gate before the iOS exemplar Phase I plan (`ios-exemplar-plan.md`) begins. Required by Codex strategic review finding C2 to keep the shared-core contract neutral instead of Swift/KeyboardKit-shaped.
+**Status**: originally authored 2026-04-19 as the Phase 0 gate; remains the immutable cross-platform behavior contract through and beyond the Phase IV-B Rust extraction (slices v3.5.1 → case-transform). Each Rust slice must preserve every invariant in this document.
 
-**Purpose**: enumerate the cross-platform behaviors the shared-core candidates (36 at authoring; roster grew to 43 after iOS G4-impl PR #138 (2026-04-19) + G5-impl PR #137 (2026-04-19) — see `docs/engine/shared-core-readiness.md`) must uphold on both iOS and Android. Refactors inside Phase I must preserve every invariant in this document. Phase II (Android alignment), Phase III (≥95% + FFI POC), and Phase IV-A (Rust phonetics slice) treat these as the immutable contract.
+**Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on both iOS and Android.
 
-**Scope boundary**: this doc captures *behavior* only. Architecture purity (DI, ObservableObject, singletons) lives in `shared-core-readiness.md`; data-artifact portability (MARISA / SQLite / `dictionary.bin`) lives in the G10 deliverable.
+**Scope boundary**: this doc captures *behavior* only. Architecture purity (DI, ObservableObject, singletons, candidate-purity criteria) lives in `rules/ios-architecture.md` §4 + `rules/cross-platform-alignment.md`. The current Rust / pending / wont-migrate inventory is `docs/engine/migration-inventory.csv`. Data-artifact portability (`dictionary.fst`, `dictionary.bin`, `association.bin`, SQLite user data) lives in `data-artifacts-portability.md`.
 
-**Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Those labels are placeholders for G9 to wire into `ios/TaigiKeyboardTests` (and the mirror Android suite). An unwired label is allowed in Phase 0; an invariant without a label is not.
+**Implementation pointer**: most "Scope" lines below name the Rust crate that now owns the behavior plus the cross-platform bridge call. Where a behavior is partly platform-side (UI / SQLite / KeyboardKit / IME glue), both halves are listed.
+
+**Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Rust slices wire labels into `engine/<crate>/tests/`; platform tests cover bridge + integration paths.
 
 **Drift policy**: if iOS and Android behavior diverge on any invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code.
 
@@ -38,7 +40,7 @@
 
 **Why**: the engine freely rewrites the same syllable across both scripts for UI display and dictionary lookup. Any lossy step silently rewrites user data.
 
-**Scope**: `Phonetics/Parser/SyllableParser.swift`, `Phonetics/Formatter/{TLFormatter,POJFormatter}.swift`, `Phonetics/Converter/PhoneticsConverter.swift`, `Phonetics/Converter/RomanizationConverter.swift`.
+**Scope**: Rust `engine/phonetics` (`syllable.rs`, `tl.rs`, `poj.rs`, `api::poj_display_to_tl_display` / `tl_display_to_poj_display`). Bridged via `RustEngineBridge.pojToTl` / `tlToPoj` / `normalizeToTl`.
 
 **Corner cases that must hold**:
 - Tone 1 and tone 4 with no trailing digit round-trip (numeric tone preserved only during composition, not in display forms).
@@ -58,9 +60,9 @@
 
 **Invariant**: `TaigiUnicode.nfdPreprocessed(s)` produces the same byte sequence on iOS (Swift `decomposedStringWithCanonicalMapping`) and Android (Kotlin `Normalizer.Form.NFD`) for every input that the keyboard may see — POJ nasal marker substitution, NFD decomposition, and `o͘` collapse to `o`.
 
-**Why**: downstream consumers (`CandidateProcessor.romanToBase`, `InputNormalizer`, `CustomDictionaryDerivation`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every trie lookup.
+**Why**: downstream consumers (Rust `ranking::score::roman_to_base`, `phonetics::normalization::normalize_input`, platform `CustomDictionaryDerivation`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every fst lookup.
 
-**Scope**: `Lexicon/Utils/TaigiUnicode.swift` + Android mirror.
+**Scope**: Rust `engine/phonetics::normalization::taigi_unicode_base_form` (canonical, since v3.5.3 PR #192). Bridged via `RustEngineBridge.nfdPreprocessForLookup`. Platform-side `TaigiUnicode.{swift,kt}` helpers were deleted under Path G.
 
 **Corner cases**:
 - Combining tone marks remain decomposed after the function returns; caller strips them.
@@ -80,7 +82,7 @@
 
 **Why**: TPS mode shares the same candidate/scoring pipeline as POJ/TL via `InputNormalizer`. Divergent TPS conversion between platforms means the same keystroke shows different candidates.
 
-**Scope**: `Input/TPS/{TPSTables,TPSConverter,TPSInputAdjuster,TPSToTL,TLToTPS}.swift`.
+**Scope**: Rust `engine/phonetics::tps` + `tps_adjust` + `api` (since v3.5.1 PR #186). Bridged via `RustEngineBridge.tpsToTL` / `tlNumericToTPS` / `tlDisplayToTPS` / `tpsInputAdjust` / `containsTPS` / `isTPSToneMark`. iOS / Android `TPS*.swift` / `.kt` files were deleted under Path G.
 
 **Corner cases**:
 - `TPSInputAdjuster` reorders initial/medial/final before conversion; round-trip must account for adjuster output, not raw keystrokes.
@@ -96,11 +98,11 @@
 
 ## 4. Input normalization — mode-agnostic numeric tones
 
-**Invariant**: `InputNormalizer.normalize(rawInput, inputMode:)` always emits a `notone`- or `roman_num`-style key (lowercase, hyphens collapsed, diacritics stripped, tones expressed as trailing digits) regardless of the user's input mode (`.poj`, `.tl`, `.tps`, `.english`). The output is the primary MARISA trie lookup key.
+**Invariant**: `phonetics::normalization::normalize_input(rawInput)` always emits a `notone`- or `roman_num`-style key (lowercase, hyphens collapsed, diacritics stripped, tones expressed as trailing digits) regardless of the user's input mode (`.poj`, `.tl`, `.tps`, `.english`). The output is the primary fst lookup key.
 
-**Why**: the trie is stored in a single canonical form; any mode-dependent drift in the key changes which candidates appear.
+**Why**: the fst is stored in a single canonical form; any mode-dependent drift in the key changes which candidates appear.
 
-**Scope**: `Lexicon/Trie/InputNormalizer.swift` + `Input/TPS/TPSToTL.swift` for the TPS path.
+**Scope**: Rust `engine/phonetics::normalization::normalize_input` (single source); TPS path delegates to `phonetics::tps::from_zhuyin` first. Bridged via `RustEngineBridge.normalizeInput`.
 
 **Corner cases**:
 - POJ-specific tone marks (`á`, `ê`, `ō`, etc.) normalize to trailing digits.
@@ -125,7 +127,7 @@ Reversing or merging these two passes changes ordering. Running display dedup be
 
 **Why**: the keyboard shows TPS symbols to the left of candidates; visually identical hanzi with different roman forms is confusing, but the ranked winner must be retained.
 
-**Scope**: `Lexicon/Utils/CandidateProcessor.swift`.
+**Scope**: Rust `engine/ranking::dedup` + `ranking::process_candidates` (single source, since v3.5.2). Bridged via `RustEngineBridge.processCandidates(_:tpsDedupEnabled:...)`.
 
 **Test labels**:
 - `INVARIANT_engine_dedup_keys_on_roman_plus_hanzi`
@@ -136,7 +138,7 @@ Reversing or merging these two passes changes ordering. Running display dedup be
 
 ## 6. Candidate scoring — determinism + ordering
 
-**Invariant**: `CandidateProcessor.calculateScore` is **pure** — same inputs yield the same `ScoreBreakdown`. Given identical `(word, normalizedInput, frequencyData, currentTime)`, iOS and Android return the same total.
+**Invariant**: Rust `ranking::score` is **pure** — same inputs yield the same `ScoreBreakdown`. Given identical `(word, normalizedInput, frequencyData, currentTime)`, iOS and Android return the same total because both call into the same Rust crate via the FFI seam.
 
 Priority ordering (typical regime):
 
@@ -190,7 +192,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 **Why**: the scoring formula is the user-visible ordering of every candidate. Drift means the keyboard ranks differently on iOS vs Android for the same word + same user state.
 
-**Scope**: `Lexicon/Utils/CandidateProcessor.swift` — `calculateScore`, `romanToBase`, `inputToBase`, `sortByScore`, `tierNumerator`, `SOURCE_TIERS`.
+**Scope**: Rust `engine/ranking/src/{score,sort,process}.rs` — `score_candidate`, `roman_to_base`, `input_to_base`, `sort_by_score`, `tier_numerator`, `SOURCE_TIERS` (constants pinned in `score.rs`). Bridged via `RustEngineBridge.processCandidates`.
 
 **Corner cases**:
 - `currentTime` is injected at the call site (ms since epoch). No call inside the engine reads the clock.
@@ -263,7 +265,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 **Why**: candidate capitalization is visible on every keystroke. Divergence means the keyboard feels inconsistent between devices.
 
-**Scope**: `Input/CaseTransformer.swift`.
+**Scope**: Rust `engine/phonetics::case_transform::capitalize_candidate` + `transform_input_case` (canonical, since case-transform slice / PR #205). Bridged via `RustEngineBridge.capitalizeCandidate` and `RustEngineBridge.transformInputCase`. Platform `CaseTransformer.{swift,kt}` deleted under Path G.
 
 **Corner cases**:
 - Leading-uppercase input (`"G"`) with `isAutoCap = false` still applies case per `inputMode` rules.
@@ -278,11 +280,11 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 ## 10. Custom-dictionary search-key derivation
 
-**Invariant**: `CustomDictionaryDerivation.derive(roman:)` produces three keys (`notone`, `abbrev`, `roman_num`) using the same normalization pipeline as `InputNormalizer`. Keys are lowercase, diacritic-stripped, with documented hyphen behavior per key.
+**Invariant**: `CustomDictionaryDerivation.derive(roman:)` produces three keys (`notone`, `abbrev`, `roman_num`) using the same normalization pipeline as the engine `phonetics::normalize_input`. Keys are lowercase, diacritic-stripped, with documented hyphen behavior per key.
 
-**Why**: custom-dictionary entries must be searchable by the same keys the MARISA trie uses, or the user's added words will not surface.
+**Why**: custom-dictionary entries must be searchable by the same keys the engine fst uses, or the user's added words will not surface.
 
-**Scope**: `Lexicon/Database/CustomDictionaryDerivation.swift`.
+**Scope**: iOS `Lexicon/Database/CustomDictionaryDerivation.swift` + Android `ime/dictionary/CustomDictionaryDerivation.kt` — they live on the user-data SQLite write path (`status=native_pending` / `wont_migrate` per `migration-inventory.csv`). Both platforms call `RustEngineBridge.normalizeInput` for the heavy lifting; only the per-syllable hyphen / abbrev rules stay native.
 
 **Corner cases**:
 - `abbrev` key is one character per syllable (initial letter of each hyphen-separated part).
@@ -319,7 +321,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 **Why**: logging is the easiest place for a platform dependency to sneak back into the shared core. A stray `os.Logger` import breaks the Foundation-only requirement.
 
-**Scope**: `Common/LoggerBackend.swift` + every candidate that logs (`CandidateProcessor`, `InputNormalizer` today).
+**Scope**: iOS `Common/LoggerBackend.swift` + Android `ime/core/logging/LoggerBackend.kt`. Rust crates emit via the `log` crate; the platform sinks (`SwiftLoggerSink` / `RustEngineBridge.dispatchLog`) bounce records back into `LoggerBackend`.
 
 **Test labels**:
 - `INVARIANT_candidates_only_depend_on_logger_backend_protocol`
@@ -334,7 +336,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 **Why**: external `reset` callers — keyboard subtype switch, session teardown, mode change — assume composing state is discarded, not flushed. A silent commit means tone-marked but un-confirmed text leaks into the editor whenever the keyboard is dismissed mid-composition.
 
 **Scope**:
-- iOS engine: `Input/Composing/ComposingState.swift` `.reset` intent emits `[.clearPreeditWithoutCommit, .resetAutocomplete]`.
+- Engine: Rust `engine/composing` `Intent::Reset` emits `[ClearPreeditWithoutCommit, ResetAutocomplete]` (canonical, since v3.5.4 / PR #197). Platform `ComposingState.{swift,kt}` files deleted under Path G.
 - iOS binding: `KeyboardExtension/KeyboardViewController+TextInput.swift` `clearMarkedText()` calls `setMarkedText("", …)` + `unmarkText()` — no `insertText`.
 - Android binding (composing-aware path): `ime/text/composing/ComposingManager.kt` `reset(ic)` and `startComposing(...)` mid-composition restart both call `ic.setComposingText("", 1)` BEFORE `ic.finishComposingText()`. Pre-zero is mandatory because `InputConnection.finishComposingText()` commits the active composing region by default — see `composing-state-boundary.md` §11.2 rule 1.
 - Android binding (bare-IC fallback path): `ime/text/TextInputManager.kt` `resetComposingText()` (4 call-sites: session start, DELETE / ENTER non-composing fallback, NUMERIC-PHONE key event) delegates to the top-level helper `clearHostComposingRegion(ic)` in `ComposingManager.kt`, which issues the same zero-then-finish pair. The helper colocates with the sibling `hostReportsNoComposingRegion` policy helper so both IC-layer invariant safeguards live next to the composing wrapper they protect.
@@ -377,10 +379,10 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 ## Cross-references
 
-- Architectural surface of the shared-core candidates (43 as of Phase I close): `docs/engine/shared-core-readiness.md`.
-- Phase I task plan referencing this doc as prerequisite: `docs/architecture/ios-exemplar-plan.md` (G0).
-- Codex review findings C2 / I7 that motivated this doc: `docs/architecture/codex-review-2026-04-19.md`.
-- Data-artifact portability (MARISA / SQLite / `dictionary.bin`) tracked separately under G10.
+- Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
+- Per-platform criteria + exclusions: `rules/ios-architecture.md` §4, `rules/android-guidelines.md` §1.
+- Original strategic context: `docs/architecture/codex-review-2026-04-19.md` (Codex review findings C2 / I7).
+- Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.
 
 ---
 
@@ -401,7 +403,7 @@ The Unicode bucket is partial coverage of the existing umbrella label and need n
 
 ## 14. Lexicon — hanzi-input search guard (D-8 parity correction)
 
-**Added**: 2026-05-01 (v3.5.6 lexicon read-path slice). Auto-mode joint Claude + Codex sign-off Option A + 2 mods (91% confidence). See `docs/engine/lexicon-slice-audit.md` D-8 + `docs/engine/lexicon-slice-plan.md` §11.
+**Added**: 2026-05-01 (v3.5.6 lexicon read-path slice). Auto-mode joint Claude + Codex sign-off Option A + 2 mods (91% confidence). Implementation in Rust `engine/lexicon::api::search` — hanzi `InputType` short-circuit returns empty before consulting `EngineHandle.with_state`.
 
 **Behavior**: when `LexiconService.search` is called with `inputType == .hanzi` (iOS) / `InputType.Hanzi` (Android), the function returns an empty result list `[]` WITHOUT consulting the custom-dictionary, system-dictionary, or association binaries.
 
@@ -423,7 +425,7 @@ The platform-layer tests are required (NOT only the Rust unit) because D-8's reg
 
 ## 15. Lexicon — input classification (v3.5.7)
 
-**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. See `docs/engine/v3.5.7-classification-slice-audit.md` and `docs/engine/v3.5.7-classification-slice-plan.md`.
+**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::{classify_input, is_hanzi, contains_numeric_tone}`.
 
 This umbrella label has four named subcases. Same `raw` string ⇒ same `(InputType, search_key)` tuple regardless of input mode, settings, or platform.
 

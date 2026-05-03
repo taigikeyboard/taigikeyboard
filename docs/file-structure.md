@@ -2,34 +2,38 @@
 
 > **Type**: Index
 > **Keywords**: `Files`, `Structure`, `Mapping`, `Naming`
-> **Related**: README.md
+> **Related**: README.md, engine/migration-inventory.csv
 
 ---
 
 ## Summary
 
-- iOS/Android cross-platform file correspondence table
-- Covers both IME (keyboard extension) and App (main app) files
-- Unified naming conventions and directory structure
+- iOS / Android cross-platform file correspondence (post-Rust extraction).
+- Engine logic lives in `engine/` Rust crates; platforms hold thin bridges + glue.
+- For row-level Rust pub-item inventory see `engine/migration-inventory.csv`.
 
 ---
 
-## Feature Module Correspondence
+## Feature Module Correspondence (logical owner)
 
-| Feature Code | iOS Directory | Android Directory |
-|--------------|---------------|-------------------|
-| `Composing` | `Input/` | `ime/text/composing/` |
-| `Autocomplete` | `Autocomplete/` | `ime/text/composing/` |
-| `Lexicon` | `Lexicon/` | `ime/dictionary/` |
-| `BinaryReader` | `Lexicon/Database/` | `ime/dictionary/` |
-| `Trie` | `Lexicon/Trie/` | `ime/dictionary/` |
-| `Tone` | `Input/Tone/` | `ime/dictionary/` |
-| `UserFrequency` | `Lexicon/` | `ime/text/composing/` |
-| `NextWord` | `Lexicon/` | `ime/dictionary/` |
-| `Layout` | `Layout/` | `ime/text/layout/` |
-| `Smartbar` | `Autocomplete/Views/` | `ime/text/smartbar/` |
-| `Settings` | `Settings/` | `settings/` |
-| `Styling` | `Styling/` | `ui/theme/` |
+| Feature Code | Rust crate | iOS Directory | Android Directory |
+|--------------|------------|---------------|-------------------|
+| `Phonetics` | `engine/phonetics` | `Engine/` (bridge) | `engine/` (bridge) |
+| `Composing` | `engine/composing` | `Input/Composing/` (wrapper) | `ime/text/composing/` |
+| `Autocomplete` | `engine/lexicon` + `engine/ranking` | `Autocomplete/` | `ime/text/composing/` |
+| `Lexicon` | `engine/lexicon` (+ `engine/mmap-host`) | `Lexicon/` | `ime/dictionary/` |
+| `BinaryReader` | `engine/lexicon` (mmap dictionary.bin / association.bin) | (Rust) | (Rust) |
+| `Tone` | `engine/phonetics` | `Engine/RustEngineBridge.swift` | `engine/RustEngineBridge.kt` |
+| `CaseTransform` | `engine/phonetics::case_transform` | `Engine/RustEngineBridge+CaseTransform.swift` | `engine/CaseTransformBridge.kt` |
+| `NextWord` | `engine/nextword` | `NextWord/` (controller + service glue) | `ime/dictionary/` + `ime/text/smartbar/NextWordHandler.kt` |
+| `UserFrequency` | — (platform SQLite, `wont_migrate`) | `Lexicon/Database/` | `ime/text/composing/UserFrequencyService.kt` |
+| `CustomDictionary` | — (platform SQLite, `wont_migrate`) | `Lexicon/Database/` + `Lexicon/Services/` | `ime/dictionary/CustomDictionary*.kt` |
+| `Layout` | — | `Layout/` | `ime/text/layout/` |
+| `Smartbar` | — | `Autocomplete/Views/` | `ime/text/smartbar/` |
+| `Settings` | — | `Settings/` | `settings/` + `ime/core/settings/` |
+| `Styling` | — | `Styling/` | `ui/theme/` |
+| `Diagnostics` | — | `Diagnostics/` | `diagnostics/` |
+| `FFI` | `engine/dispatch` + `engine/swift-ffi` + `engine/android-jni` | `Engine/RustEngineBridge.swift` | `engine/RustEngineBridge.kt` |
 
 ---
 
@@ -42,14 +46,20 @@
 | Main entry | `KeyboardViewController.swift` | `TaigiKeyboard.kt` |
 | Keyboard View | `TaigiKeyboardView.swift` | `KeyboardView.kt` |
 | Preferences | `SharedSettings.swift` | `PrefHelper.kt` |
+| Rust FFI bridge | `Engine/RustEngineBridge.swift` | `engine/RustEngineBridge.kt` |
+| Lexicon bridge | `Engine/RustEngineBridge+Lexicon.swift` | `engine/LexiconBridge.kt` |
+| Case-transform bridge | `Engine/RustEngineBridge+CaseTransform.swift` | `engine/CaseTransformBridge.kt` |
+| NextWord bridge | `Engine/RustEngineBridge+NextWord.swift` | (in `RustEngineBridge.kt`) |
 
 ### Composing
 
+Pure state machine lives in `engine/composing` (Rust). Platform side holds the effect interpreter.
+
 | Function | iOS | Android |
 |----------|-----|---------|
-| Composing manager | `ComposingManager.swift` | `ComposingManager.kt` |
-| TPS conversion | `TPSConverter.swift` | `TPSConverter.kt` |
-| Case transformation | `CaseTransformationService.swift` | `SuggestionCaseTransformer.kt` |
+| Engine state machine | (Rust `engine/composing`) | (Rust `engine/composing`) |
+| Platform wrapper | `ComposingManager.swift` | `ComposingManager.kt` |
+| Effect interpreter | `ComposingDelegate.swift` | `ComposingDelegate.kt` |
 | Caps state | (KeyboardKit managed) | `CapsStateManager.kt` |
 | Candidate coordinator | (inline in AutocompleteService) | `CandidateUpdateCoordinator.kt` |
 
@@ -57,6 +67,7 @@
 
 | Function | iOS | Android |
 |----------|-----|---------|
+| Input classifier | `AutocompleteInputClassifier.swift` (calls Rust) | `AutocompleteInputClassifier.kt` (calls Rust) |
 | Taigi autocomplete | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
 | English autocomplete | `EnglishAutocompleteService.swift` | `EnglishAutocompleteService.kt` |
 | Candidate View | `CandidateView.swift` | `SmartbarView.kt` |
@@ -71,39 +82,33 @@
 
 ### Lexicon
 
-| Function | iOS | Android |
-|----------|-----|---------|
-| Dictionary service | `LexiconService.swift` | `LexiconService.kt` |
-| Dictionary binary reader | `DictionaryBinaryReader.swift` | `DictionaryBinaryReader.kt` |
-| Association binary reader | `AssociationBinaryReader.swift` | `AssociationBinaryReader.kt` |
-| Enabled dictionaries | `EnabledDictionaries.swift` | `EnabledDictionaries.kt` |
-| Trie service | `TrieService.swift` | `TrieService.kt` |
-| Input normalization | `InputNormalizer.swift` | `InputNormalizer.kt` |
-| Word model | `TaigiWord.swift` | `DictionaryModels.kt` |
-| Custom dictionary | `CustomDictionaryService.swift` | `CustomDictionaryService.kt` |
-| Custom dict repo | `CustomDictionaryRepository.swift` | (built into Service) |
-| Custom dict model | `CustomDictionaryEntry.swift` | (in `DictionaryModels.kt`) |
-| Search result | `DictionarySearchResult.swift` | `DictionarySearchResult.kt` |
-| Next word | `NextWordService.swift` | `NextWordService.kt` |
-| Next word handler | `NextWordController.swift` | `NextWordHandler.kt` |
-| Backup | `BackupService.swift` | `BackupService.kt` |
-
-### Tone
+fst prefix index + dictionary.bin / association.bin readers all live in Rust `engine/lexicon`. Platform side holds asset paths + lifecycle + UI glue.
 
 | Function | iOS | Android |
 |----------|-----|---------|
-| Tone conversion | `ToneConverter.swift` | `ToneConverter.kt` |
-| Phonetics engine | `TaigiPhonetics.swift` | `TaigiPhonetics.kt` |
-| Tone restoration | `ToneRestoration.swift` | `ToneRestoration.kt` |
-| Tone utilities | `ToneUtilities.swift` | `ToneUtilities.kt` |
-| Tone models | - | `ToneConverterModels.kt` |
+| Engine search / classify / assoc | (Rust `engine/lexicon`) | (Rust `engine/lexicon`) |
+| Lifecycle service | `Lexicon/Services/LexiconService.swift` | `ime/dictionary/LexiconService.kt` |
+| Search service | `Lexicon/Services/DictionarySearchService.swift` | (in `LexiconService.kt`) |
+| Word model | `Lexicon/Models/TaigiWord.swift` | `ime/dictionary/TaigiWord.kt` |
+| Enabled dictionaries | `Lexicon/Models/EnabledDictionaries.swift` | `ime/dictionary/EnabledDictionaries.kt` |
+| Custom dictionary service | `Lexicon/Services/CustomDictionaryService.swift` | `ime/dictionary/CustomDictionaryService.kt` |
+| Custom dict repo (iOS) | `Lexicon/Database/CustomDictionaryRepository.swift` | (built into Service) |
+| Custom dict model | `Lexicon/Models/CustomDictionaryEntry.swift` | (in `TaigiWord.kt` + `CustomDictionaryService.kt`) |
+| Custom dict derivation | `Lexicon/Database/CustomDictionaryDerivation.swift` | `ime/dictionary/CustomDictionaryDerivation.kt` |
+| Search result UI model | `Lexicon/Models/DictionarySearchResult.swift` | `ime/dictionary/DictionarySearchResult.kt` |
+| External lookup URL | `Lexicon/Utils/ExternalLookupURLBuilder.swift` | `ime/dictionary/ExternalLookupURLBuilder.kt` |
+| NextWord service | `NextWord/Services/NextWordService.swift` | `ime/dictionary/NextWordService.kt` |
+| NextWord controller | `NextWord/NextWordController.swift` | `ime/text/smartbar/NextWordHandler.kt` |
+| Backup | `Lexicon/Services/BackupService.swift` | `ime/dictionary/BackupService.kt` |
 
-### UserFrequency
+### UserFrequency (platform SQLite — `wont_migrate`)
 
 | Function | iOS | Android |
 |----------|-----|---------|
-| Frequency service | `UserFrequencyService.swift` | `UserFrequencyService.kt` |
-| Frequency repository | `UserFrequencyRepository.swift` | (built-in) |
+| Frequency service | `Lexicon/Services/UserFrequencyService.swift` | `ime/text/composing/UserFrequencyService.kt` |
+| Frequency repository | `Lexicon/Database/UserFrequencyRepository.swift` | (built-in) |
+| Schema / pruner | `Lexicon/Database/UserFrequencySchema.swift`, `UserFrequencyPruner.swift` | (in service) |
+| SQLite plumbing | `Lexicon/Database/SQLiteConnectionManager.swift`, `SQLiteBindingHelpers.swift`, `SharedDatabasePath.swift` | (Android Room / SQLiteOpenHelper internal) |
 
 ---
 
@@ -161,11 +166,6 @@
 | `Tab2Texts.swift` | `Tab2Texts.kt` | Tab2 text |
 | `Tab3Texts.swift` | `Tab3Texts.kt` | Tab3 text |
 | `Tab4Texts.swift` | `Tab4Texts.kt` | Tab4 text |
-
-### Localization (continued)
-
-| iOS File | Android File | Content |
-|----------|--------------|---------|
 | `KeyboardTexts.swift` | (in `Tab4Texts.kt`) | Keyboard UI text (e.g. confirmKey) |
 
 ### Shared Components
@@ -180,17 +180,34 @@
 | iOS File | Android File | Description |
 |----------|--------------|-------------|
 | `DiagnosticService.swift` | `DiagnosticService.kt` | Device/app diagnostic info |
-| `DiagnosticTexts.kt` | `DiagnosticTexts.kt` | Diagnostic string localization |
+| `DiagnosticTexts.swift` | `DiagnosticTexts.kt` | Diagnostic string localization |
 
 ---
 
 ## Directory Structure
 
+### Rust workspace (`engine/`)
+
+```
+engine/
+├── phonetics/         # POJ/TL/TPS conversion + normalize + case-transform
+├── composing/         # Composing state machine (Phase × Intent → Effect)
+├── nextword/          # NextWord prediction (decay/score/booster)
+├── ranking/           # Candidate dedup / score / sort
+├── lexicon/           # fst prefix index + dictionary/association mmap readers
+├── dispatch/          # Top-level FFI dispatch (bytes-in / bytes-out + catch_unwind)
+├── swift-ffi/         # iOS swift-bridge entry point
+├── android-jni/       # Android JNI entry point
+├── mmap-host/         # Centralized mmap unsafe carve-out
+├── protos/            # prost-build proto codegen
+└── build-helpers/
+    └── fst-builder/   # Offline FST builder (dictionary.fst producer)
+```
+
 ### iOS (`ios/Sources/TaigiKeyboard/`)
 
 ```
 TaigiKeyboard/
-├── _Keyboard/       # IME main entry (KeyboardViewController + extensions)
 ├── Actions/         # Action handlers (ActionHandler + extensions)
 ├── App/             # Main App UI
 │   ├── Components/  # Shared components
@@ -200,24 +217,38 @@ TaigiKeyboard/
 │       │   ├── DetailViews/ # Feature/FAQ/Feedback/Copyright views
 │       │   └── SetupGuide/  # Setup guide views
 │       └── Tab3/    # Data management
-├── Autocomplete/    # Autocomplete
+├── Autocomplete/    # Autocomplete + classifier glue
 │   ├── Models/      # CandidateViewModels, SymbolData
-│   ├── Services/    # AutocompleteService, SuggestionCaseTransformer
+│   ├── Services/    # AutocompleteService, AutocompleteInputClassifier, AutocompleteProviders
 │   └── Views/       # CandidateView, overlays (Layout/Symbol/Settings)
 ├── Callouts/        # Long-press menus
+├── Common/          # LoggerBackend protocol + LoggerFactory
+├── Composition/     # Cross-tab composition root (DI)
 ├── Diagnostics/     # DiagnosticService
 ├── Emojis/          # Emoji related
-├── Input/           # Input and composing
-│   └── Tone/        # Tone processing
+├── Engine/          # Rust FFI bridge
+│   ├── Generated/   # swift-bridge generated bindings + proto .pb.swift
+│   ├── RustEngineBridge.swift
+│   ├── RustEngineBridge+Lexicon.swift
+│   ├── RustEngineBridge+CaseTransform.swift
+│   └── RustEngineBridge+NextWord.swift
+├── Input/           # Input pipeline + composing platform wrapper
+│   └── Composing/   # ComposingManager, ComposingDelegate
+├── KeyboardExtension/ # KeyboardViewController + extensions
 ├── Layout/          # Keyboard layout
-├── Lexicon/         # Dictionary query
-│   ├── Database/    # Binary readers (DictionaryBinaryReader, AssociationBinaryReader), SQLite repos
-│   ├── Models/      # TaigiWord, CustomDictionaryEntry, EnabledDictionaries, etc.
-│   ├── Services/    # LexiconService, NextWordService, CustomDictionaryService, BackupService
-│   ├── Trie/        # TrieService (handle-based multi-trie), InputNormalizer
-│   └── Utils/       # TextProcessor, ResourceBundleResolver
+├── Lexicon/         # Dictionary glue (Rust does the actual queries)
+│   ├── Database/    # SQLite repos (custom-dict + user-freq) + asset path resolver
+│   ├── Models/      # TaigiWord, CustomDictionaryEntry, EnabledDictionaries, FrequencyData, etc.
+│   ├── Services/    # LexiconService, DictionarySearchService, UserFrequencyService, CustomDictionaryService, BackupService
+│   └── Utils/       # CandidateProcessor (residual), ExternalLookupURLBuilder
+├── NextWord/        # NextWord platform glue
+│   ├── Repository/  # SQLite repo (legacy) + schema
+│   ├── Services/    # NextWordService
+│   └── NextWordController.swift
 ├── Localization/    # Localization
-├── Settings/        # SharedSettings, InputMode
+├── Overlays/        # System overlays
+├── Settings/        # SharedSettings, EngineSettings/Provider, InputMode, ToneToggles
+├── Strings/         # Strings catalogs
 └── Styling/         # Button styling & theming
     ├── Helpers/
     └── Providers/
@@ -227,27 +258,32 @@ TaigiKeyboard/
 
 ```
 taigikeyboard/
+├── engine/          # Rust JNI bridge
+│   ├── RustEngineBridge.kt
+│   ├── LexiconBridge.kt
+│   ├── CaseTransformBridge.kt
+│   └── proto/       # prost / generated proto Java
 ├── ime/
 │   ├── core/        # TaigiKeyboard, PrefHelper, InputView, Subtype
-│   ├── dictionary/  # Trie, Lexicon, Tone, TPS, CustomDictionary, NextWord, Backup
-│   ├── keyboard/    # EmojiSkinTone
+│   │   ├── settings/    # EngineSettings/Provider, InputMode, ToneToggles
+│   │   └── logging/     # AndroidLoggerBackend, LoggerBackend
+│   ├── dictionary/  # Lexicon glue, Custom dict, NextWord, Backup, SuggestionCaseTransformer
 │   ├── lifecycle/   # LifecycleInputMethodService
 │   ├── media/       # MediaInputManager
 │   │   └── emoji/   # EmojiKeyboardView, EmojiPaletteView
 │   ├── popup/       # Key popups
 │   └── text/
-│       ├── composing/   # ComposingManager, Autocomplete, UserFrequency
-│       ├── key/         # KeyView, KeyData, KeyCode, KeyType
+│       ├── composing/   # ComposingManager, ComposingDelegate, AutocompleteServices, classifier, UserFrequency
+│       ├── key/         # KeyView, KeyData, KeyCode, KeyType, KeyLabelCaseCache
 │       ├── keyboard/    # KeyboardView, KeyboardRowView
 │       ├── layout/      # LayoutManager, LayoutData
-│       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, ToolbarManager
-├── diagnostics/     # DiagnosticService
+│       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, NextWordHandler, ToolbarManager
+├── content/         # ContentResolver entry point
 ├── localization/    # LocalizedText, LanguageManager, Tab1-4Texts
-├── model/           # FeatureContent, CopyrightData
 ├── settings/        # Activity wrappers (Compose host)
 ├── ui/
-│   ├── components/  # Reusable Compose components (SwitchRow, ColorRow, etc.)
-│   ├── settings/    # Compose settings screens
+│   ├── components/  # Reusable Compose components
+│   ├── tabs/        # tab1 / tab2 / tab3 / tab4 Compose screens
 │   └── theme/       # Theme, Type
 └── util/            # AppVersionUtils, FontUtils, etc.
 ```
@@ -260,7 +296,7 @@ taigikeyboard/
 
 | File | Size | Description |
 |------|------|-------------|
-| `dictionary.trie` | ~4.5 MB | MARISA trie (tl:/poj:/hanzi: keys → rowid) |
+| `dictionary.fst` | ~9.1 MB | Burntsushi `fst` prefix index (`tl:` / `poj:` / `hanzi:` keys → rowid) — replaced MARISA in v3.5.6 |
 | `dictionary.bin` | ~4.4 MB | Binary mmap dictionary (rowid → record) |
 | `association.bin` | ~3.1 MB | Binary mmap word associations |
 
@@ -274,12 +310,12 @@ Fonts in `ios/Resources/`:
 
 | File | Size | Description |
 |------|------|-------------|
-| `dictionary.trie` | ~4.5 MB | MARISA trie (same as iOS) |
+| `dictionary.fst` | ~9.1 MB | Burntsushi `fst` prefix index (same as iOS) |
 | `dictionary.bin` | ~4.4 MB | Binary mmap dictionary (same as iOS) |
 | `association.bin` | ~3.1 MB | Binary mmap word associations (same as iOS) |
 
 Binary files are **platform-independent** — identical files on both platforms.
-SQLite only for writable user data: `user_frequency.db`, `user_association.db`, `custom_dictionary.db`.
+SQLite only for writable user data: `user_frequency.db`, `user_association.db`, `custom_dictionary.db` (`status=wont_migrate`).
 
 ---
 
@@ -291,3 +327,5 @@ SQLite only for writable user data: `user_frequency.db`, `user_association.db`, 
 | Manager | `XxxManager.swift` | `XxxManager.kt` |
 | View | `XxxView.swift` | `XxxView.kt` |
 | Models | `XxxModels.swift` | `XxxModels.kt` |
+| Rust crate | `engine/<area>` | `engine/<area>` |
+| FFI bridge | `Engine/RustEngineBridge*.swift` | `engine/<X>Bridge.kt` |

@@ -1,17 +1,18 @@
 # NextWord Prediction
 
 > **Type**: Feature
-> **Keywords**: `NextWord`, `Bigram`, `WordAssociation`, `UserLearning`
-> **Related**: autocomplete.md, sort.md
+> **Keywords**: `NextWord`, `Bigram`, `WordAssociation`, `UserLearning`, `nextword crate`
+> **Related**: autocomplete.md, sort.md, architecture/nextword-engine-boundary.md, binary-format.md
 
 ---
 
 ## Summary
 
-- Predicts next possible word after composition ends
-- Hybrid Bigram: dictionary (character-level) + user learning (word-level)
-- Time-decay weighting (one-week half-life)
-- User associations capped at 50,000 entries
+- Predicts next possible word after a candidate commit.
+- Hybrid: dictionary bigram (`association.bin`, read-only mmap, byte-identical cross-platform) + user learning (`user_association.db`, SQLite, `wont_migrate`).
+- Decay-weighted scoring with generation-tagged async queries.
+- User associations capped at 50,000 entries (platform-side enforcement).
+- Engine state machine + scoring lives in Rust `engine/nextword` (since v3.5.5 / PR #198).
 
 ---
 
@@ -73,23 +74,15 @@ Merge and sort, display candidates
 
 ## Weight Calculation
 
-### Score Formula
+Authoritative scoring lives in Rust `engine/nextword/src/scorer.rs`. The decay constants and per-source weights are pinned by `architecture/behavioral-invariants.md` §7-§8 and the boundary doc `architecture/nextword-engine-boundary.md` §13.3.
 
-```kotlin
-// User score = count × 50 × decay
-// Dictionary score = count × 1
+| Source | Score component |
+|--------|----------------|
+| User association (`user_association.db`) | `count × USER_BONUS × decay(ageHours)` plus `LEARNING_BONUS` for fresh learns |
+| Dictionary bigram (`association.bin`) | `count × DICT_WEIGHT` |
+| Decay model | RIME-style exponential, ~one-week half-life (configurable in `scorer.rs`) |
 
-decay = exp(-ageHours / 168.0 * 0.693)  // One-week half-life
-```
-
-### Decay Effect
-
-| Time | Decay factor |
-|------|--------------|
-| Just used | 1.0 |
-| 1 week later | 0.5 |
-| 2 weeks later | 0.25 |
-| 1 month later | 0.06 |
+Refer to `engine/nextword/src/scorer.rs` for the exact constants — they are the single source of truth and may evolve between releases.
 
 ---
 
@@ -120,29 +113,22 @@ Characters not recorded as associations:
 
 ---
 
-## Implementation Status
+## Ownership
 
-### Android ✅
+Engine state machine + decision tables + scoring all live in Rust `engine/nextword`. Platform side handles timer / threading / SQLite reads + user-association writes.
 
-- NextWordService.kt (predict, recordAssociation)
-- Time decay calculation
-- User association cap (50,000 entries)
-- Noise filtering
-
-### iOS ✅
-
-- NextWordService.swift
-- Same logic as Android
-
----
-
-## Platform Correspondence
-
-| Component | Android | iOS |
-|-----------|---------|-----|
-| Service | `NextWordService.kt` | `NextWordService.swift` |
-| Manager | `SmartbarManager.kt` | `ActionHandler+NextWord.swift` |
-| Dict data | `association.bin` (binary mmap) + `user_association.db` (SQLite) | Same |
+| Component | Location |
+|-----------|----------|
+| Persisted state (`last_selected_word`, `last_selection_time_ms`, `is_showing`, `current_generation`) | Rust `nextword::api::PersistedState` |
+| Intent set (`WordSelected`, `Backspace`, `ContextTimeoutFired`, `ClearForNewComposing`, `ResetFull`, `UpdateLastSelectedWord`, `SetIsShowing`) | Rust `nextword::api::Intent` |
+| Decide / filter / score / booster | Rust `engine/nextword/src/{decide,filter,scorer,booster}.rs` |
+| Generation guard (drops stale async results) | Rust `nextword::PersistedState.current_generation` |
+| Bigram source (read-only) | `association.bin` via Rust `engine/lexicon::assoc_lookup` |
+| User association source | `user_association.db` SQLite, platform-side (`wont_migrate`) — iOS `UserFrequencyService.swift` / Android `UserFrequencyService.kt` |
+| iOS bridge | `Engine/RustEngineBridge+NextWord.swift` |
+| Android bridge | `engine/RustEngineBridge.kt` |
+| iOS platform executor | `NextWord/NextWordController.swift` (Timer, DispatchQueue.main, @MainActor) |
+| Android platform executor | `ime/text/smartbar/NextWordHandler.kt`, `ime/dictionary/NextWordService.kt` |
 
 ---
 
@@ -185,7 +171,7 @@ fun onWordSelected(word: String) {
 
 | | librime-predict | Taigi Keyboard |
 |--|-----------------|----------------|
-| Storage | DoubleArray Trie (mmap, read-only) | Binary mmap (dict) + SQLite (user) |
+| Storage | DoubleArray Trie (mmap, read-only) | Burntsushi fst + binary mmap (dict) + SQLite (user) |
 | User learning | None | Yes |
 | Sentence-start | `$` symbol | Not yet |
 | Iteration limit | `max_iterations` config | Not yet (timeout only) |

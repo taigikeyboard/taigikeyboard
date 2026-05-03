@@ -125,20 +125,6 @@
 			);
 			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
 		};
-		F3ECE8862EFFFD5B002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboardExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			additionalCompilerFlagsByRelativePath = {
-				"grimoire/vector/bit-vector.cc" = "-Wno-shorten-64-to-32";
-			};
-			target = F3264F692E523B37002E99A4 /* TaigiKeyboardExtension */;
-		};
-		F3ECE8872EFFFD98002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboard" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			additionalCompilerFlagsByRelativePath = {
-				"grimoire/vector/bit-vector.cc" = "-Wno-shorten-64-to-32";
-			};
-			target = F3264F092E5238AD002E99A4 /* TaigiKeyboard */;
-		};
 		F3F3C9282E8969170050BE44 /* Exceptions for "Resources/Fonts" folder in "TaigiKeyboardExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -267,16 +253,6 @@
 			path = Sources/TaigiKeyboard/Overlays;
 			sourceTree = "<group>";
 		};
-		F39C27AA2EEE980700AA2361 /* marisa */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				F3ECE8872EFFFD98002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboard" target */,
-				F3ECE8862EFFFD5B002FCA11 /* Exceptions for "marisa" folder in "TaigiKeyboardExtension" target */,
-			);
-			name = marisa;
-			path = "../libs/marisa-trie/lib/marisa";
-			sourceTree = SOURCE_ROOT;
-		};
 		F39D1D4B2F9E8C030053D307 /* Engine */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = Engine;
@@ -352,7 +328,6 @@
 				2A2882FB2EAF0DA000AE3C75 /* Layout */,
 				2A2882FF2EAF0DAE00AE3C75 /* Lexicon */,
 				2A2883032EAF0DBE00AE3C75 /* Strings */,
-				F39C27AA2EEE980700AA2361 /* marisa */,
 				F354362F2E5C437C0004DFAB /* Resources/Dictionaries */,
 				F35436232E5C43680004DFAB /* Resources/Fonts */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
@@ -410,7 +385,6 @@
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
-				F39C27AA2EEE980700AA2361 /* marisa */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F3EFE0DB2F93656800696406 /* Common */,
@@ -454,7 +428,6 @@
 				F35BA8872F89F134004657F0 /* Assets */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
-				F39C27AA2EEE980700AA2361 /* marisa */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F3EFE0DB2F93656800696406 /* Common */,
@@ -807,11 +780,7 @@
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../libs/marisa-trie/include",
-					"$(SRCROOT)/../libs/marisa-trie/lib",
-					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
-				);
+				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "Sources/TaigiKeyboard-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "台語齒盤";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -845,11 +814,7 @@
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../libs/marisa-trie/include",
-					"$(SRCROOT)/../libs/marisa-trie/lib",
-					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
-				);
+				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = "Sources/TaigiKeyboard-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "台語齒盤";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -880,11 +845,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../libs/marisa-trie/include",
-					"$(SRCROOT)/../libs/marisa-trie/lib",
-					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
-				);
+				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -912,11 +873,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 257NDUUBD3;
 				GENERATE_INFOPLIST_FILE = NO;
-				HEADER_SEARCH_PATHS = (
-					"$(SRCROOT)/../libs/marisa-trie/include",
-					"$(SRCROOT)/../libs/marisa-trie/lib",
-					"$(SRCROOT)/Sources/TaigiKeyboard/Lexicon/Trie",
-				);
+				HEADER_SEARCH_PATHS = "";
 				INFOPLIST_FILE = Sources/TaigiKeyboard/KeyboardExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TaigiKeyboardExtension;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

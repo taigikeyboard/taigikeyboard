@@ -2,7 +2,7 @@
 
 Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) extraction harder. Applies to every code change until Phase IV-B completes. Phase II code-close (2026-04-22) did not relax this rule — the v3.5.0 release window operates under the shared-core-candidate bug-fix constraint in §1c plus the emergency (§1a) and parity-correction (§1b) tiers.
 
-References: Claude auto-memory `project_shared_core_roadmap.md` (Claude session-persistent state) for current phase status · `docs/architecture/ios-exemplar-plan.md` for Phase I history · `docs/architecture/android-state-audit.md` for Phase II task groups · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `rules/ios-guidelines.md` / `rules/android-guidelines.md` for platform idioms.
+References: Claude auto-memory `project_shared_core_roadmap.md` (session-persistent state) for current phase status · `docs/engine/migration-inventory.csv` for the live Rust / native ownership inventory · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `rules/ios-guidelines.md` / `rules/android-guidelines.md` for platform idioms.
 
 ## 1. Refactor phases are behavior-frozen
 
@@ -43,7 +43,7 @@ Active from Phase II code-complete (2026-04-22) through Phase IV-B. Governs ever
 Any change touching a shared-core-candidate file must:
 
 1. Accept only **immutable value inputs** OR inject services through interfaces **already declared** in the shared-core contract (e.g. `EngineSettings`, `LoggerBackend`, `NextWordPredictor` on Android; `EngineSettingsProvider`, `LoggerBackend` on iOS). Legitimate immutable-context structs, DTO mappers, and batching objects are permitted; they are not banned as "stateful" merely because they carry multiple fields.
-2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `docs/engine/shared-core-readiness.md` §Criteria (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `rules/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations during Phase II.
+2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `rules/ios-architecture.md` §4 (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `rules/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations during Phase II.
 3. **Mirror any new heuristic or tunable constant** on the other platform in the same PR, with a `CROSS-PLATFORM INVARIANT` comment citing `<mirror file>:<line>`. §3a drift-detection still applies.
 4. Pass **Codex + `/simplify` pre-implementation review** for any change introducing a new stateful dependency into a candidate file. Pure refactors, constant-tweak bug fixes, and fixes without new state are exempt from the pre-impl review (post-draft review still applies per `rules/claude-workflow.md`). The Codex pass checks correctness + FFI-safety intent; the `/simplify` pass (Claude Code official skill) checks reuse, quality, and dead-code before implementation lands. Run both in parallel per `rules/claude-workflow.md` §Subagent Usage.
 
@@ -51,7 +51,7 @@ A PR in violation is rejected at review regardless of whether the fix itself is 
 
 ## 2. Android mirrors the iOS exemplar through Phase II
 
-Until Phase II gating conditions in `docs/architecture/android-state-audit.md` §9 are met, Android structural changes must match the iOS reference at `docs/architecture/ios-exemplar.md` — module boundaries, DI shape, data model types, threading model, naming.
+Phase II is closed (concluded 2026-04-22, PR #166); Android structural changes continue to match the iOS reference at `docs/architecture/ios-exemplar.md` — module boundaries, DI shape, data model types, threading model, naming.
 
 Deliberate structural divergence (e.g., FlorisBoard forces a different ownership pattern than KeyboardKit) requires explicit user sign-off and a written justification in the PR description before merge.
 

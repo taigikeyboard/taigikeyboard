@@ -4,7 +4,7 @@ Mandatory architectural contract for the iOS target. Read before any non-trivial
 
 **Status**: iOS structure refactor Phase 0–11 closed 2026-04-19 (PRs #131–#133). iOS Phase I exemplar plan closed same day (PR #141). This doc is now a stable reference — Phase I tactical TODO blocks removed 2026-04-19.
 
-**Phase context**: shared-core extraction roadmap is tracked in `docs/architecture/ios-exemplar-plan.md` (Phase I history) and `docs/architecture/android-state-audit.md` (Phase II plan); session-persistent phase state is kept in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo). iOS is currently the architectural exemplar; Android Phase II mirrors the shape documented at `docs/architecture/ios-exemplar.md`.
+**Phase context**: shared-core extraction roadmap is tracked in Claude auto-memory (`project_shared_core_roadmap.md`, not in-repo); the per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`. iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. Phase I and Phase II audit docs (ios-exemplar-plan, android-state-audit) have been retired post-completion.
 
 ---
 
@@ -142,11 +142,11 @@ Files that are engine-layer but **do not** qualify should begin with a one-line 
 
 ### Candidate roster
 
-**Authoritative table with LOC, notes, dependency graph, and verification script: `docs/engine/shared-core-readiness.md`.** Do not re-enumerate here — update the readiness doc and point back. Current count as of end of Phase I: 43 files.
+**Authoritative inventory: `docs/engine/migration-inventory.csv`** (148 rows, 13-col schema). Filter `status=rust_shipped` for already-migrated items; `native_pending` / `native_keep` for residual platform candidates; `wont_migrate` for explicit exclusions (UI / SQLite user-data / KeyboardKit wrappers / etc.). Do not re-enumerate here — update the CSV and point back.
 
 ### Exclusions, soft dependencies, verification
 
-See `docs/engine/shared-core-readiness.md` §Exclusions, §Blockers, §Verification. Those are the single source of truth; do not duplicate the tables here.
+`migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Per-criterion enforcement is documented in §4 above; running the original verification greps against `Foundation`-only candidate files still applies but the candidate set is the live `native_pending` / `native_keep` filter on the CSV.
 
 Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`; `EnginePrediction` documents that it does *not* `import KeyboardKit`).
 
@@ -264,4 +264,4 @@ Apply to any non-trivial structural change:
 - `rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
 - `rules/code-review-rules.md` — review checklist
 - `docs/architecture/ios-exemplar.md` — Phase II alignment target for Android
-- `docs/engine/shared-core-readiness.md` — authoritative candidate roster
+- `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + native pending / keep / wont-migrate roster

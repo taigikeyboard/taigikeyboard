@@ -73,7 +73,7 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 
 ## 4. Android lifecycle + DI `[B]` `[A]`
 
-- Use the three-scope model from `docs/architecture/android-state-audit.md` §2.2:
+- Use the three-scope model:
   1. **App-tab graph** — `Application` scope, consumed by `Activity` / Compose UI.
   2. **IME service graph** — `TaigiKeyboard : LifecycleInputMethodService` scope.
   3. **Per-input-session state** — `onStartInput` / `onFinishInput`.
@@ -154,7 +154,7 @@ Durable checklist for every Android refactor PR:
 - [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `rules/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
 
-Phase II-specific task labels (A0–A10) and sequencing live in `docs/architecture/android-state-audit.md` §7; avoid duplicating them here so this doc does not age with the phase. **Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`); the audit doc §9.1 table is a point-in-time snapshot, not a living counter.
+**Phase II code work closed 2026-04-22** (last round: PR #166 parity fix); the A0–A10 labels are now historical. Current round-by-round state is tracked in auto-memory (`project_android_phase_ii_audit.md`). The Phase II state-audit doc has been retired post-completion.
 
 During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
 
@@ -163,7 +163,7 @@ During the v3.5.0 release bug-fix window, every Android PR touching a shared-cor
 - Companion documents on the iOS side: `rules/ios-guidelines.md` (day-to-day), `rules/ios-architecture.md` (structural).
 - Cross-platform behavior contract: `rules/cross-platform-alignment.md`.
 - Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android Phase II aligns toward).
-- Current Android state and Phase II task groups: `docs/architecture/android-state-audit.md`.
+- Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Invariants to preserve: `docs/architecture/behavioral-invariants.md`.
 - Code review checklist: `rules/code-review-rules.md`.
 - Naming + comment rules (cross-platform): `rules/ai-friendly-code.md`.

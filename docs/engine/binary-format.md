@@ -1,9 +1,9 @@
 # Binary Asset Formats
 
 > **Type**: Reference
-> **Keywords**: `dictionary.bin`, `association.bin`, `dictionary.trie`, `MARISA`, `bitmask`, `mmap`, `cross-platform invariant`
-> **Related**: `trie.md`, `nextword.md`, `custom-dictionary.md`
-> **Audience**: anyone touching `DictionaryBinaryReader`, `AssociationBinaryReader`, `TrieService`, `EnabledDictionaries`, or the build script that generates these assets.
+> **Keywords**: `dictionary.bin`, `association.bin`, `dictionary.fst`, `fst`, `bitmask`, `mmap`, `cross-platform invariant`
+> **Related**: `nextword.md`, `custom-dictionary.md`, `engine/lexicon`
+> **Audience**: anyone touching the Rust `engine/lexicon` readers (`DictionaryReader`, `AssociationReader`, `PrefixIndex`), the platform `EnabledDictionaries` DTOs, or the Python build script (`dictionary/build/`).
 
 ---
 
@@ -59,23 +59,22 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 ### 1.3 Constraints
 
 - `tl_len > 0` for every record (TL is required; hanzi may be absent).
-- `hanzi == ""` is encoded as `hanzi_len == 0` and yields `null`/`nil` in the reader, **not** an empty string.
-- UTF-8 must be valid; readers reject the record (return `null`) on `CharacterCodingException` (Android) or `String(bytes:encoding:)` failure (iOS).
-- Record bytes are not aligned; both readers use `loadUnaligned` (Swift) / absolute-position `getInt` (Java NIO) accordingly.
+- `hanzi == ""` is encoded as `hanzi_len == 0` and yields `None` in the reader, **not** an empty string.
+- UTF-8 must be valid; the Rust reader skips the record (returns `None`) on `from_utf8` failure for `tl`; `hanzi` decode failure leaves `hanzi = None` but keeps the record.
+- Record bytes are not aligned; the Rust reader uses unaligned little-endian reads via `byteorder::LE`.
 
-### 1.4 Validation performed by reader
+### 1.4 Validation performed by reader (Rust `engine/lexicon::dictionary_reader`)
 
 | Check | Reader behaviour on failure |
 |---|---|
-| File ≥ 16 bytes | `init?` returns `nil` |
-| Magic == `TKDB` | `init?` returns `nil` |
-| Version == 1 | `init?` returns `nil` |
-| File ≥ `header + record_count × 4` | `init?` returns `nil` |
-| `record_count ≤ Int.MAX_VALUE` (Android only — u32 → Int) | `open` returns `null` |
-| Per-record bounds (`recordEnd ≤ data.count`) | `record()` returns `null` |
-| Per-record min size 8 bytes | `record()` returns `null` |
-| `pos + hanziLen + tlLen ≤ recordEnd` | `record()` returns `null` |
-| TL UTF-8 valid | `record()` returns `null` |
+| File ≥ 16 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Magic == `TKDB` | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 1 | `open` returns `Err(LexiconError::InvalidBinary)` |
+| File ≥ `header + record_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Per-record bounds (`recordEnd ≤ data.len()`) | `record()` returns `None` |
+| Per-record min size 8 bytes | `record()` returns `None` |
+| `pos + hanzi_len + tl_len ≤ record_end` | `record()` returns `None` |
+| TL UTF-8 valid | `record()` returns `None` |
 
 ---
 
@@ -133,63 +132,67 @@ The byte-wise comparison is critical: any sort order divergence between build sc
 - `next_tl` UTF-8 invalid → entry skipped (reader continues with next entry).
 - `next_word` UTF-8 invalid → entry skipped, but `pos` advances past `next_tl` to stay synchronized with the format.
 
-### 2.4 Validation performed by reader
+### 2.4 Validation performed by reader (Rust `engine/lexicon::association_reader`)
 
 | Check | Reader behaviour on failure |
 |---|---|
-| File ≥ 20 bytes | `init?` returns `nil` |
-| Magic == `TKWA` | `init?` returns `nil` |
-| Version == 1 | `init?` returns `nil` |
-| File ≥ `header + key_count × 4` | `init?` returns `nil` |
-| `keyOffset < buffer.capacity()` | comparison returns `-1` (treated as key < target) |
-| `keyStart + keyLen ≤ buffer.capacity()` | comparison returns `-1` |
-| `metaPos + 6 ≤ capacity` | `readEntries` returns `[]` |
-| `entryOffset ≤ capacity` | `readEntries` returns `[]` |
-| Per-entry `pos + 8 ≤ capacity` | loop breaks |
-| Per-entry `pos + nwLen + ntLen ≤ capacity` | loop breaks |
+| File ≥ 20 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Magic == `TKWA` | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 1 | `open` returns `Err(LexiconError::InvalidBinary)` |
+| File ≥ `header + key_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
+| `key_offset < buffer.len()` | binary search treats key as < target |
+| `key_start + key_len ≤ buffer.len()` | binary search treats key as < target |
+| `meta_pos + 6 ≤ capacity` | `read_entries` returns empty `Vec` |
+| `entry_offset ≤ capacity` | `read_entries` returns empty `Vec` |
+| Per-entry `pos + 8 ≤ capacity` | loop terminates |
+| Per-entry `pos + nw_len + nt_len ≤ capacity` | loop terminates |
 
 ---
 
-## 3. `dictionary.trie` — MARISA RecordTrie
+## 3. `dictionary.fst` — Burntsushi FST Prefix Index
 
 ### 3.1 Format
 
-`dictionary.trie` is a **MARISA RecordTrie**: a prefix trie over keys with auxiliary `uint32` payload per key.
+`dictionary.fst` is a Burntsushi [`fst`](https://github.com/BurntSushi/fst) Set. Each entry is a single byte sequence:
 
 ```
-raw_key_in_trie = utf8_key + 0xFF + uint32_le(rowid)
+key_bytes (UTF-8)  ||  0xFF separator  ||  rowid_le_4 (u32 little-endian)
 ```
 
-The `0xFF` byte is the [Python `marisa_trie`](https://github.com/pytries/marisa-trie) `RecordTrie` separator. UTF-8 never produces a `0xFF` byte, so it is safe as a separator within keys that may contain arbitrary UTF-8.
+The `0xFF` separator is safe inside otherwise-UTF-8 keys (UTF-8 never produces a `0xFF` byte). Multiple rowids per key are encoded as multiple distinct entries sharing the `key + 0xFF` prefix; per-key insertion order is preserved through fst's deterministic byte-sorted iteration plus a stable sort over `(key, rowid)` at build time.
+
+The fst is built offline by the Rust binary `engine/build-helpers/fst-builder` (invoked from Python `create_fst.py`) and consumed by Rust `engine/lexicon::prefix_index::PrefixIndex` via `mmap-host` + `fst::Set`. Replaces the historical MARISA RecordTrie (v3.5.6, PR #199).
 
 ### 3.2 Key prefixes
 
-All trie keys carry one of three semantic prefixes (also UTF-8 ASCII, no separator collision):
+Logical keys (the `key_bytes` part before the separator) carry one of three semantic prefixes (UTF-8 ASCII):
 
-| Prefix | Indexed against | Example |
+| Prefix | Indexed against | Example logical key |
 |---|---|---|
 | `tl:` | TL numeric, TL no-tone, TL abbreviation | `tl:hoo2boo5`, `tl:hooboo`, `tl:hb` |
 | `poj:` | POJ numeric, POJ no-tone, POJ abbreviation | `poj:ho2bo5`, `poj:hobo`, `poj:hb` |
 | `hanzi:` | hanzi (for reverse lookup, prefix search only) | `hanzi:好` |
 
-**Invariant**: `LexiconService` chooses the prefix from `InputMode`. Callers MUST NOT prepend the prefix in `InputNormalizer.buildSearchKey()`; it is added at the `TrieService` boundary. (See `trie.md` §"Query Flow" for the canonical flow.)
+**Invariant**: the prefix is added by `lexicon::key_normalizer::build` based on `(KeyType, KeyMode)` at the engine seam. Callers (platform classifiers, `lexicon::search`) MUST NOT prepend the prefix themselves.
 
-### 3.3 Bridge layer
+### 3.3 Reader & host crate
 
-| Platform | Bridge | API style |
-|---|---|---|
-| iOS | `marisa_bridge.cpp` / `.h` | C, handle-based (`trie_handle_t`), supports up to 8 simultaneous tries |
-| Android | `trie_jni.cpp` | JNI |
+| Concern | Location |
+|---|---|
+| fst load + range/prefix search | Rust `engine/lexicon::prefix_index::PrefixIndex` |
+| mmap unsafe boundary | Rust `engine/mmap-host::MmapHandle` (only crate not `forbid unsafe_code`) |
+| Lookup orchestration | Rust `engine/lexicon::search::search` |
+| Platform bridge | `RustEngineBridge.search` / `searchByHanzi` / `searchWithSources` (iOS `RustEngineBridge+Lexicon.swift`, Android `LexiconBridge.kt`) |
 
-`extractRowId()` parses the `0xFF` separator and decodes the trailing `uint32_le`. Returns `-1` if the separator is absent or fewer than 4 trailing bytes — caller treats `-1` as "skip this entry".
+There is no on-device build pathway — the fst is a read-only asset shipped in `ios/Resources/Dictionaries/dictionary.fst` and `android/app/src/main/assets/dictionary.fst` (byte-identical).
 
 ### 3.4 Operations
 
-| Op | Underlying MARISA call | Notes |
+| Op | Call | Notes |
 |---|---|---|
-| `prefixSearch(prefix, limit)` | `predictive_search(query=prefix)` | Returns up to `limit` rowids whose key starts with `prefix`. |
-| `lookup(key, limit)` | `predictive_search(query=key+0xFF)` | Filters results that match `key` exactly before the separator. |
-| `getKeyCount()` | `num_keys()` | Total trie keys (incl. all prefix variants). |
+| Prefix range scan | `Set::range().ge(prefix_bytes).lt(next_lex_sibling(prefix_bytes))` | Iterates every wire entry whose logical key starts with the prefix; trailing 4 bytes are decoded as `u32` little-endian rowid. Returns `Vec<u32>` in fst byte-sort order. |
+| Exact lookup | range scan over `[key + 0xFF, key + 0x100)` | Returns all rowids stored against `key` — multiple rowids per logical key are supported via repeated entries. |
+| Key count | `Set::len()` | Total fst entries (NOT distinct logical keys; each (key, rowid) pair is one entry). |
 
 ---
 
@@ -218,23 +221,23 @@ bits 13–15  reserved
 
 `associationBitmask()` masks `sourceBitmask() & 0x1FF`. Bits 9–15 are not present in association entries.
 
-### 4.2 Filter layers (`DictionaryBinaryReader.passesFilter`)
+### 4.2 Filter layers (`engine/lexicon::dictionary_reader::Filter`)
 
 ```
 Layer 1 — Variant exclusion:   if !enabled.variant && record has bit 12 → reject
 Layer 2 — Khiin exclusion:     if !enabled.khiin   && record has bit 9  → reject
 Layer 3 — Source OR match:
-    if enabled.allEnabled                                                → accept
-    elif (record & enabledMask) != 0  || (record & devBit) != 0          → accept
+    if enabled.all_enabled                                               → accept
+    elif (record & enabled_mask) != 0  || (record & DEV_BIT) != 0        → accept
     else                                                                 → reject
 ```
 
-### 4.3 Filter layers (`AssociationBinaryReader.passesFilter`)
+### 4.3 Filter layers (`engine/lexicon::association_reader::AssocFilter`)
 
 ```
-if enabled.allAssociationSourcesEnabled                                  → accept
-elif enabledMask == 0                                                    → reject
-elif (entry & enabledMask) != 0                                          → accept
+if enabled.all_association_sources_enabled                               → accept
+elif enabled_mask == 0                                                   → reject
+elif (entry & enabled_mask) != 0                                         → accept
 else                                                                     → reject
 ```
 
@@ -257,14 +260,13 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 
 | Invariant | Files that depend on it |
 |---|---|
-| `dictionary.bin` byte layout | build script, iOS `DictionaryBinaryReader.swift`, Android `DictionaryBinaryReader.kt`, this doc |
-| `association.bin` byte layout | build script, iOS `AssociationBinaryReader.swift`, Android `AssociationBinaryReader.kt`, this doc |
-| Bitmask bit positions | build script, iOS `EnabledDictionaries.swift`, Android `EnabledDictionaries.kt`, both `BinaryReader`s (filter constants), this doc |
-| Trie key prefix list (`tl:` / `poj:` / `hanzi:`) | build script, `LexiconService` (both platforms), `InputNormalizer` (both), `DictionaryConstants.kt` (Android), `LexiconConstants.swift` (iOS), this doc, `trie.md` |
-| RecordTrie separator (`0xFF`) | build script, `marisa_bridge.cpp`, `trie_jni.cpp`, this doc |
-| Magic bytes (`TKDB` / `TKWA`) | build script, both `BinaryReader`s, this doc |
-| File version (`1`) | build script, both `BinaryReader`s, this doc |
-| Endianness (little-endian) | build script, both `BinaryReader`s |
+| `dictionary.bin` byte layout | build script, Rust `engine/lexicon::dictionary_reader`, this doc |
+| `association.bin` byte layout | build script, Rust `engine/lexicon::association_reader`, this doc |
+| Bitmask bit positions | build script, iOS `EnabledDictionaries.swift`, Android `EnabledDictionaries.kt`, Rust filter constants in `engine/lexicon`, this doc |
+| Key prefix list (`tl:` / `poj:` / `hanzi:`) | build script (`create_fst.py`), Rust `lexicon::key_normalizer`, this doc |
+| Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |
+| File version (`1`) | build script, Rust readers, this doc |
+| Endianness (little-endian) | build script, Rust readers |
 
 ### 5.1 No-checksum acknowledgement
 
@@ -278,11 +280,7 @@ If silent corruption ever becomes a real-world concern, add a header-level CRC32
 
 ### 5.2 Recommended startup assertion (debug only)
 
-To catch build-script ↔ reader drift early, the app SHOULD assert at debug build startup that:
-
-- `DictionaryBinaryReader.open()` returns non-nil.
-- `AssociationBinaryReader.open()` returns non-nil.
-- `TrieService.lookup("tl:tsit-ma")` (or any well-known sentinel key) returns at least one rowid, and the resulting record's TL begins with `tsit-ma`.
+To catch build-script ↔ reader drift early, the engine `LexiconService.install()` (called once at app start via `RustEngineBridge.install`) returns `dictionary_record_count` + `prefix_index_entry_count`; both platforms should assert these are non-zero and equal across builds. A debug-build round-trip lookup of a well-known sentinel key (e.g. `tl:tsit-ma`) via `RustEngineBridge.search` should also return at least one record whose TL begins with `tsit-ma`.
 
 This cheap round-trip catches every drift category above except bit-layout swaps among already-set bits.
 
@@ -307,7 +305,7 @@ The build pipeline must:
 
 1. Sort `association.bin` keys by raw UTF-8 byte order ascending.
 2. Sort each association key's entries by `count` DESC.
-3. Emit fst with `0xFF` separator and `uint32_le` rowid payload (`engine/build-helpers/fst-builder`).
+3. Emit fst via `engine/build-helpers/fst-builder` — keys carry the prefix (`tl:` / `poj:` / `hanzi:`) and the value packs rowid in the low 32 bits.
 4. Use bit positions exactly per §4.
 5. Set magic bytes per §1, §2.
 6. Use version `1` for both `.bin` files.
@@ -317,12 +315,12 @@ The build pipeline must:
 
 ## 7. Test Coverage Today
 
-| Format | iOS test | Android test |
-|---|---|---|
-| `dictionary.bin` (content) | `DictionaryContentTests` (counts) | `DictionaryCoverageTest` (counts) |
-| `dictionary.bin` (parser) | — | — |
-| `association.bin` | — | — |
-| `dictionary.trie` | — (only via integration) | — (only via integration) |
-| Bitmask filter | — | — |
+| Format | Test |
+|---|---|
+| `dictionary.bin` (content count) | iOS `DictionaryContentTests` / Android `DictionaryCoverageTest` |
+| `dictionary.bin` (parser) | Rust `engine/lexicon/tests/parity.rs` |
+| `association.bin` | Rust `engine/lexicon/tests/parity.rs` |
+| `dictionary.fst` | Rust `engine/lexicon/tests/parity.rs` (round-trip a sentinel key set) |
+| Bitmask filter | Rust `engine/lexicon::dictionary_reader` unit tests + integration via `parity.rs` |
 
-§6 of `lexicon-refactor-plan.md` lists these as Stage-0 characterization-test targets.
+The Rust `parity.rs` test suite is the canonical check; platform tests cover content/coverage at the asset bundle level only.

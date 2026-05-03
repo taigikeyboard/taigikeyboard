@@ -1,6 +1,3 @@
-[submodule "libs/marisa-trie"]
-	path = libs/marisa-trie
-	url = https://github.com/s-yata/marisa-trie.git
 [submodule "taigi-converter"]
 	path = taigi-converter
 	url = git@github.com:taigikeyboard/taigi-converter.git

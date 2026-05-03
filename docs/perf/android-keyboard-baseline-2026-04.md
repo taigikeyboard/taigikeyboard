@@ -1,6 +1,6 @@
 # Android Keyboard Keystroke Latency Baseline — 2026-04
 
-**Status** (authored 2026-04-19 as Phase II A0 sibling artifact to `keyboard-baseline-2026-04.md`): methodology frozen, **quantitative capture deferred**. Phase II A0 adopts a qualitative dogfooding gate (see `docs/architecture/android-state-audit.md` §A0 and Phase II gating signal #6) instead of P50/P95 numbers. This document is the Android equivalent of the iOS template — same three sequences (S1 / S2 / S3), same deferred-quantitative policy, Android-specific tooling surface.
+**Status** (authored 2026-04-19 as Phase II A0 sibling artifact to `keyboard-baseline-2026-04.md`, qualitative-gate philosophy ratified by `feedback_perf_gate.md`): methodology frozen, **quantitative capture deferred**. Project uses a qualitative dogfooding gate (S1/S2/S3 typing feels right) instead of P50/P95 numbers. This document is the Android equivalent of the iOS template — same three sequences (S1 / S2 / S3), same deferred-quantitative policy, Android-specific tooling surface.
 
 **Why deferred**: solo-dev IME cadence — the user is the QA, perceptible regression on S1 / S2 / S3 is the acceptance criterion. Perfetto capture + per-refactor re-measurement cost exceeds the benefit of catching microsecond-level regressions the user cannot feel.
 
@@ -193,16 +193,16 @@ Pick one for run 1 and record it. Subsequent runs should use the same host on th
 
 - Cold-start latency of the IME service (first keystroke after subtype switch or after Android force-kills the IME) — different measurement, different baseline. Track separately if it becomes a concern.
 - Dictionary binary load time — one-shot at `LexiconService.init(context)`, covered by memory baseline (Android-side addendum TBD).
-- DataStore flush latency for settings writes — not a keystroke path. `PrefHelper.cachedPrefs` serves reads synchronously per §4 of `android-state-audit.md`.
-- JNI trie lookup overhead (`trie_jni.cpp`) — embedded inside `LexiconService.search`, captured indirectly via S3 scroll latency. If isolating is needed, add a dedicated `Trace.beginSection("trie_lookup")` inside the JNI boundary.
+- DataStore flush latency for settings writes — not a keystroke path. `PrefHelper.cachedPrefs` serves reads synchronously.
+- Rust JNI / fst lookup overhead — embedded inside `RustEngineBridge.search` (Rust `engine/lexicon`), captured indirectly via S3 scroll latency. If isolating is needed, add a dedicated `Trace.beginSection("rust_lexicon_search")` around the bridge call.
 
 ---
 
 ## 6. Cross-references
 
 - iOS sibling baseline: `docs/perf/keyboard-baseline-2026-04.md`.
-- Phase II plan (A0 defines the qualitative gate): `docs/architecture/android-state-audit.md` §A0 and §9 gating signal #6.
-- Android invariants coverage (sibling A0 artifact): `docs/architecture/android-g9-coverage-matrix.md`.
+- Qualitative-gate philosophy: memory `feedback_perf_gate.md` (Claude auto-memory).
+- Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Behavioral invariants exercised per sequence:
   - S1 · POJ diacritic composition — `behavioral-invariants.md` §1 (TL ↔ POJ roundtrip), §4 (input normalization), §9 (case transformation).
   - S2 · TPS composition — `behavioral-invariants.md` §3 (TPS roundtrip), §4 (input normalization through the converted path).

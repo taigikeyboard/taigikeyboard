@@ -75,21 +75,30 @@
 
 ---
 
-## Platform Correspondence
+## Ownership
 
-| Item | iOS | Android |
-|------|-----|---------|
-| Composing manager | `Input/Composing/ComposingManager.swift` | `ime/text/composing/ComposingManager.kt` |
-| Delegate protocol | `Input/Composing/ComposingDelegate.swift` | (inline `InputConnection` calls — no protocol) |
-| Tone converter | `Phonetics/ToneConverter.swift` | `ime/dictionary/ToneConverter.kt` |
-| Phonetics engine | `Phonetics/TaigiPhonetics.swift` | `ime/dictionary/TaigiPhonetics.kt` |
-| TPS pipeline glue | `Input/CharacterInputPipeline.swift` | (inline in `TextInputManager.handleTaigiInput()`) |
+Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / PR #197). Platform side holds the wrapper + effect interpreter; tone math sits in `engine/phonetics`.
+
+| Item | Location |
+|------|----------|
+| State machine (`Phase × Intent → (state', Effect[])`) | Rust `engine/composing` (`api.rs`, `transition.rs`, `derived.rs`) |
+| FFI singleton + generation guard | Rust `engine/composing::EngineHandle` |
+| Tone-mark application + POJ doubletap (`oo→o͘`, `nn→ⁿ`) | Rust `engine/phonetics` |
+| iOS bridge + 12 op surface | `Engine/RustEngineBridge.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset / SetSelectedCandidateIndex / QueryState) |
+| iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Combine + KeyboardKit context wiring) |
+| iOS effect interpreter | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) |
+| Android bridge | `engine/RustEngineBridge.kt` (matching 12-op surface) |
+| Android platform wrapper | `ime/text/composing/ComposingManager.kt` |
+| Android effect interpreter | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`; **must zero composing region via `setComposingText("", 1)` before `finishComposingText()`** to honor `clearPreeditWithoutCommit` semantics) |
+
+For per-pub-item descriptions in 台灣華語, see `migration-inventory.csv` (filter `area=composing`). Architectural contract — including Effect ordering rules + Android binding addendum — lives in `architecture/composing-state-boundary.md`.
 
 ## Tests
 
 | Platform | File | Coverage |
 |----------|------|----------|
-| iOS | `TaigiKeyboardTests/ComposingManagerTests.swift` | State + delegate-call order per operation |
+| Rust engine | `engine/composing/tests/{intent_coverage,invariants,lifecycle,proptest_sequences}.rs` | State machine semantics + property-based tests |
+| iOS wrapper | `TaigiKeyboardTests/ComposingManagerTests.swift` | Effect-execution order per intent |
 
 ---
 

@@ -1,16 +1,17 @@
 # Tone Processing
 
 > **Type**: Feature
-> **Keywords**: `Tone`, `ToneConverter`, `TaigiPhonetics`, `ToneRestoration`
-> **Related**: composing.md
+> **Keywords**: `Tone`, `phonetics`, `numericTone`, `toneMarks`, `restoreTone`
+> **Related**: composing.md, binary-format.md, migration-inventory.csv
 
 ---
 
 ## Summary
 
-- Taiwanese has 8 tones; tones 1/4 have no diacritics
-- Input numeric tones, display converted to diacritics (except 1/4)
-- Supports POJ and TL romanization systems
+- Taiwanese has 8+1 tones; tones 1/4 carry no diacritic.
+- Input is numeric tone (e.g. `gua2`); display converts to diacritics.
+- POJ and TL romanizations supported with separate tone-mark tables.
+- All tone math lives in Rust crate `engine/phonetics`. Platform side calls it via `RustEngineBridge`.
 
 ---
 
@@ -32,29 +33,33 @@
 
 ## Core Logic
 
-### 1. Input Display (ToneConverter)
+### 1. Input Display (`normalizeTone`)
 
-| Input | rawInput | composingText |
-|-------|----------|---------------|
-| `gua1` | `gua1` | `gua1` |
-| `gua2` | `gua2` | `guá` |
-| `at4` | `at4` | `at4` |
+| Input | rawInput | Display (TL) | Display (POJ) |
+|-------|----------|--------------|----------------|
+| `gua1` | `gua1` | `gua1` | `gua1` |
+| `gua2` | `gua2` | `guá` | `guá` |
+| `at4` | `at4` | `at4` | `at4` |
+| `hoo2` | `hoo2` | `hóo` | `hó͘` |
 
-### 2. Dictionary Generation (to_numeric_tone)
+Rust entry: `phonetics::api::normalize_tone(input, &AppConfig)`. Bridge: `RustEngineBridge.normalizeTone(_, mode:, toggles:)`.
 
-```python
-# Syllables without tone diacritics get tone based on final
-if syllable[-1] in "ptkh":
-    syllable += "4"  # Entering tone (入聲)
-else:
-    syllable += "1"  # Yin-ping
+### 2. Default-Tone Heuristic (`normalize_input`)
+
+Syllables without an explicit tone digit get one inferred from the final consonant:
+
+```
+last char ∈ {p, t, k, h} → tone "4" (entering tone, 入聲)
+otherwise                → tone "1" (yin-ping)
 ```
 
-### 3. Tone Restoration (ToneRestoration)
+This runs inside `phonetics::normalization::normalize_input`, which builds the lookup-side TL numeric form.
 
-Restores diacritics to base characters when deleting:
-- `guá` → `gua`
-- `hó͘` → `ho͘` (POJ)
+### 3. Tone Restoration (`restoreTone`)
+
+Backspace path: locate the LAST combining tone mark (NFD), drop it, NFC-recompose. Returns `None` if the input has no tone mark.
+
+Rust entry: `phonetics::normalization::restore_tone`. Bridge: `RustEngineBridge.restoreTone(_)` returning `String?`.
 
 ---
 
@@ -62,8 +67,8 @@ Restores diacritics to base characters when deleting:
 
 | Item | POJ | TL |
 |------|-----|-----|
-| Vowel oo | `o͘` (U+006F+U+0358) | `oo` |
-| Nasalization | `ⁿ` (U+207F) | `nn` |
+| Vowel oo | `o͘` (U+006F + U+0358 combining dot above right) | `oo` |
+| Nasalization | `ⁿ` (U+207F) / `ᴺ` (U+1D3A) | `nn` |
 | Tone 9 | `̆` breve (U+0306) | `̋` double acute (U+030B) |
 | Initial ts | `ch` | `ts` |
 | Initial tsh | `chh` | `tsh` |
@@ -72,17 +77,27 @@ Restores diacritics to base characters when deleting:
 | Final ing | `eng` | `ing` |
 | Final ik | `ek` | `ik` |
 
+POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl_display_to_poj_display` (rebuilds via `strip_tone_mark` + `to_poj` / `to_tl`).
+
 ---
 
-## Platform Correspondence
+## Ownership
 
-| Item | iOS | Android |
-|------|-----|---------|
-| Phonetics engine | `TaigiPhonetics.swift` | `TaigiPhonetics.kt` |
-| Converter | `ToneConverter.swift` | `ToneConverter.kt` |
-| Restoration | `ToneRestoration.swift` | `ToneRestoration.kt` |
-| Utilities | `ToneUtilities.swift` | `ToneConverterModels.kt` + `ToneCharacterUtils.kt` |
-| POJ↔TL conversion | `RomanizationConverter.swift` | (in `TaigiPhonetics.kt`) |
+| Concern | Location |
+|---------|----------|
+| Tone mark tables (POJ + TL combining-mark lookup) | Rust `phonetics::tables`, `phonetics::case_tables` |
+| Numeric-tone → tone-mark | Rust `phonetics::api::to_tone_marks` |
+| Tone-mark → numeric | Rust `phonetics::api::to_tone_number` |
+| POJ doubletap preprocess (`oo`→`o͘`, `nn`→`ⁿ`) | Rust `phonetics::api::preprocess_for_normalize_tone` |
+| Nasal-marker case adjust (`ⁿ` ↔ `ᴺ`) | Rust `phonetics::case_transform::adjust_nasal_marker_case` |
+| Lookup-side Unicode prep (NFD + nasal → `nn`, dot → `o`) | Rust `phonetics::normalization::taigi_unicode_base_form` |
+| Tone restoration on backspace | Rust `phonetics::normalization::restore_tone` |
+| Tone-letter case mapping (POJ/TL aware upper/lower) | Rust `phonetics::case_transform` |
+| Bridge surface (iOS) | `Engine/RustEngineBridge.swift` (9 phonetics ops + case extension) |
+| Bridge surface (Android) | `engine/RustEngineBridge.kt` + `CaseTransformBridge.kt` |
+| Flick tone UI mapping (left=2, top=3, right=5, bottom=7, long-press=8) | iOS `FlickDirection` (UI only; tone math via Rust) |
+
+For per-pub-item descriptions in 台灣華語, see `migration-inventory.csv` (filter `area=phonetics`).
 
 ---
 
@@ -94,3 +109,5 @@ Restores diacritics to base characters when deleting:
 | `gua2` | `guá` | `guá` |
 | `hoo2` | `hó͘` | `hóo` |
 | `phiann` | `phiaⁿ` | `phiann` |
+
+Rust crate-side tests: `engine/phonetics/tests/normalize_tone_nasal_case.rs`, `case_transform_golden.rs`, `roundtrip.rs`, `op_coverage.rs`.

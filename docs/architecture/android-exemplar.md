@@ -8,10 +8,7 @@ once in `ios-exemplar.md` / `rules/android-guidelines.md` and referenced from he
 
 ## 1. Purpose
 
-`ios-exemplar.md` is the cross-platform alignment target. Android converges toward that
-shape through Phase II rounds A0–A10 per `android-state-audit.md` §7. Where Android
-*must* diverge from iOS — for platform, framework, or language-semantic reasons — this
-doc records the divergence so future rounds do not re-litigate it.
+`ios-exemplar.md` is the cross-platform alignment target. Phase II rounds A0–A10 are now closed; Android has converged on the shape described here, and engine logic lives in Rust crates (`engine/<area>`). Where Android *must* diverge from iOS — for platform, framework, or language-semantic reasons — this doc records the divergence so future rounds do not re-litigate it.
 
 ## 2. Android-specific deviations from the iOS exemplar
 
@@ -26,7 +23,7 @@ extension wiring hook (`TaigiKeyboard/KeyboardRoot.swift`). Android has two live
 - **App-tab graph** — currently ephemeral: `PrefHelper(context)` is constructed per
   `Activity`, no `Application` subclass exists. **Decision 2026-04-20 (Claude + Codex
   joint, auto-mode)**: `TaigiKeyboardApplication : Application` lands in A7, bundled
-  with the IME manager-graph unwind — see `android-state-audit.md` §8 #1. Until A7
+  with the IME manager-graph unwind — see `the Phase II state audit (retired)` §8 #1. Until A7
   closes, `CompositionRoot.shared(context)` continues as the process-wide service
   holder (A1 deliverable) that both scopes reach into. Post-A7: `Application.onCreate`
   owns the warmup chain (`prefs.warmUp()` + `migrateFromSharedPreferences` + per-service
@@ -89,7 +86,7 @@ iOS target layout (`ios-exemplar.md` §5.1): `Lexicon/`, `NextWord/`, `Phonetics
 `Settings/` as sibling package trees. Android current: `ime/dictionary/*` catch-all with
 `ime/core/{logging,nextword,settings}/*` subtrees introduced by A1/A2/A5-design.
 
-Per `android-state-audit.md` §8 #6, package-tree reshuffle to match iOS is **deferred**
+Per `the Phase II state audit (retired)` §8 #6, package-tree reshuffle to match iOS is **deferred**
 until A8-sweep finishes. Moving files across packages invalidates the refactor-freeze
 observability claim and churns every import in the module; a single rename PR after all
 splits settle is the planned path (also satisfies the Phase III Gradle `:shared-core`
@@ -110,7 +107,7 @@ import ...
 
 Android Studio treats the paired `region` / `endregion` as a foldable code block (same
 UX as Swift `// MARK:`). The grep verification in
-`../engine/shared-core-readiness.md` §Verification looks for the literal string
+Verification greps look for the literal string
 `Shared-Core Candidate` on a comment line, so either the paired form above or a single
 `// region` label satisfies it.
 
@@ -126,7 +123,7 @@ before applying the marker to a new file; it lists every forbidden import and th
 grep -rln "region Shared-Core Candidate" android/app/src/main/java
 ```
 
-Expected count after each round is tracked in `android-state-audit.md` §3.7 and bumps
+Expected count after each round is tracked in `the Phase II state audit (retired)` §3.7 and bumps
 monotonically toward the ≥ 40 gating target (§9 signal #3).
 
 ## 4. `CROSS-PLATFORM INVARIANT` comment convention
@@ -159,7 +156,7 @@ lives in `rules/cross-platform-alignment.md` §3a.
 
 ## 5. Roster target
 
-Phase II gating target per `android-state-audit.md` §9 signal #3: ≥ 40 files carrying the
+Phase II gating target per `the Phase II state audit (retired)` §9 signal #3: ≥ 40 files carrying the
 `// region Shared-Core Candidate` marker (mirrors iOS 43). Current progress:
 
 | Round | Files marked | Running total |
@@ -175,15 +172,15 @@ Phase II gating target per `android-state-audit.md` §9 signal #3: ≥ 40 files 
 
 ### 5.1 Gate shortfall (≥40 target — 6 short)
 
-Post-DictionaryError/Outcome, the running total is 34 vs the Phase II gating target of ≥40 (`android-state-audit.md` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. No remaining single-file structural blockers.
+Post-DictionaryError/Outcome, the running total is 34 vs the Phase II gating target of ≥40 (`the Phase II state audit (retired)` §9 signal #3). The shortfall is **not** the result of missed candidates — Codex pre-review (2026-04-20) confirmed no additional pure-lexicon / pure-phonetics / pure-composing candidates were overlooked. No remaining single-file structural blockers.
 
 The remaining 6 come from splitting a few lexicon files the audit flagged as "needs split" (`CustomDictionaryService` derivation helpers not yet extracted, etc.) — those land as post-Phase-II cleanup or a later A-round. Gate is achievable without another large A-round.
 
-Detailed roster + per-file audit lives in `../engine/shared-core-readiness.md`.
+Detailed roster + per-file ownership lives in `../engine/migration-inventory.csv`.
 
 ## 6. Where to apply the marker during Phase II
 
-Round-by-round intent (full spec in `android-state-audit.md` §7):
+Round-by-round intent (full spec in `the Phase II state audit (retired)` §7):
 
 - **A8-skeleton** — 5 terminal files only (this PR). Terminal = not reshaped by A4-impl
   or A5-impl. Documents the convention so later rounds have a reference.
@@ -238,12 +235,12 @@ following Kotlin-specific refinements from `rules/android-guidelines.md`:
 ## 9. Cross-references
 
 - iOS alignment target: `ios-exemplar.md`.
-- Audit driving Phase II rounds: `android-state-audit.md`.
+- Audit driving Phase II rounds: `the Phase II state audit (retired)`.
 - Kotlin rules (marker criteria, invariant syntax, DI, coroutines, IME lifecycle):
   `rules/android-guidelines.md`.
 - Cross-platform policy (refactor-freeze, invariant-discipline, divergence docs):
   `rules/cross-platform-alignment.md`.
 - Composing-state boundary + Android binding: `composing-state-boundary.md` §11.
 - NextWord-engine boundary + Android binding: `nextword-engine-boundary.md` §13.
-- Shared-core roster + verification greps: `../engine/shared-core-readiness.md`.
+- Live Rust / native ownership inventory: `../engine/migration-inventory.csv`.
 - Behavioral invariants both platforms must preserve: `behavioral-invariants.md`.

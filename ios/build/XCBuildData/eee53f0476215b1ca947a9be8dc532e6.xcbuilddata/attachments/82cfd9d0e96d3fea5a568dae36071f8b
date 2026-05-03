@@ -1,4 +1,0 @@
-module ISEmojiView {
-header "ISEmojiView-Swift.h"
-export *
-}

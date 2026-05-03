@@ -26,7 +26,7 @@
 | **Combine publication** | `ObservableObject`, four `@Published` properties, `syncStateToProperties()` idle/no-op guards. |
 | **Platform side effects** | `ComposingDelegate` calls (`insertText`, `deleteBackward`, `setMarkedText`, `clearMarkedText`, `resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`) + `ComposingContextSink.isComposingText`. |
 
-Only the first two are Foundation-pure (once Precondition lands). The other two are what blocks `ComposingManager` from joining the 36-file shared-core roster (see `shared-core-readiness.md` Exclusions).
+**Status (post-v3.5.4)**: the engine state machine is now Rust `engine/composing` — `ComposingState.swift` / `ComposingState.kt` were deleted under Path G (PR #197). `ComposingManager` and `ComposingDelegate` remain platform-side as the effect interpreter wrapping `RustEngineBridge.composing*`. They are explicitly `wont_migrate` per `migration-inventory.csv` (KeyboardKit + `UITextDocumentProxy` / `InputConnection` glue).
 
 **Ordering contracts that must survive the split** (non-obvious):
 
@@ -265,7 +265,7 @@ Net: roster **+4 files** (ComposingState, ComposingTransition, ToneToggles, prom
 | `commitTextReplacingPreedit` on Android double-commits if the binding issues `finishComposingText()` before `commitText()`. | Binding contract forbids pre-finish before commit; `commitText()` atomically replaces the composing region on Android. G9 test covers this sequence explicitly. |
 | `@Published` fan-out order changes and UI flashes between transitions. | Phase 1 of §2.4 applies all `@Published` writes atomically inside one synchronous call — SwiftUI batches. Keep the no-op inequality guards. G9 adds a golden-text regression test for `commitRawInput`-at-index-0 (Enter-on-English) path. |
 | `selectSuggestion`'s intentional skip of `updateComposingState(.idle)` gets re-introduced as a bug during refactor. | Expressed as the explicit single-effect `commitTextReplacingPreedit` in `ComposingState.apply(.selectSuggestion)`. Unit test asserts the Effect list contains `commitTextReplacingPreedit` and NOT the two-step pair. |
-| `derivedDisplay` reads `TPSTables` / `ToneConverter` — both must be Foundation-pure after G4. | Precondition parameterizes `ToneConverter.preprocessPojInput`. Shared-core verification greps (`shared-core-readiness.md` §Verification) must pass on both files at G4-impl merge time. |
+| `derivedDisplay` reads phonetic tables (POJ doubletap, TPS, tone marks). | Resolved post-Rust extraction: `phonetics::api::normalize_tone` is called inline by `composing::derived` with `ToneToggles` carried on `AppConfig`. No platform-side phonetics code remains in the composing path. |
 | Live settings change mid-composition renders stale display. | `apply` is called per-intent; the wrapper passes `settingsProvider.current.inputMode` and `settingsProvider.current.toneToggles` at call time. A settings change between keystrokes takes effect on the next keystroke — matches invariant §11 (live read, no snapshot). |
 | Platform keeps an obsolete `selectedCandidateIndex` highlight after idle transition. | Pure state enforces `selectedCandidateIndex = -1` in idle. G9 test `INVARIANT_composing_idle_has_no_selected_candidate` covers `reset`, `deleteBackward`-to-idle, `commit*`, `selectSuggestion`. |
 
@@ -305,9 +305,9 @@ Already decided (moved out of "deferred" after review cycle):
 
 ## 10. Cross-references
 
-- Phase I plan: `ios-exemplar-plan.md` §G4.
+- Live Rust / native ownership inventory: `../engine/migration-inventory.csv` (filter `area=composing`).
 - G5-design counterpart (same pattern for Timer-driven decay): `nextword-engine-boundary.md`.
-- Shared-core readiness contract: `../engine/shared-core-readiness.md`.
+- Behavioral invariant pin: `behavioral-invariants.md` §13 (composing-buffer reset semantics).
 - Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§1–3, 9, 11.
 - Codex review (roadmap-level, 2026-04-19): `codex-review-2026-04-19.md`.
 - Docs-review cycle (2026-04-19, same day): findings incorporated above.
@@ -459,7 +459,7 @@ Tracked under `rules/cross-platform-alignment.md` §1b tier; not scheduled in Ph
 ### 11.11 Cross-references
 
 - iOS boundary contract: §§1–10 above.
-- A4-impl deliverable: `android-state-audit.md` §7 A4-impl.
+- A4-impl shipped via Phase II Round A4 (Android binding addendum); engine logic now in Rust `engine/composing` (since v3.5.4).
 - Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
 - Android guidelines (IME, DI, coroutines): `rules/android-guidelines.md` §§4, 5, 8.
 - `clearPreeditWithoutCommit` test label: see §8 of this doc and `behavioral-invariants.md` §13 (full Composing-buffer reset semantics + cross-platform test mapping).

@@ -58,12 +58,16 @@ func syncToKeyboardContext(_ context: KeyboardContext) {
 
 ## Core Components
 
-| Component | File | Description |
-|-----------|------|-------------|
-| `CaseTransformer` | `CaseTransformationService.swift` | Unified conversion entry |
-| `ToneUtilities` | `ToneUtilities.swift` | Tone letter conversion |
-| `TaigiPhonetics` | `TaigiPhonetics.swift` | POJ/TL phonetics engine |
-| `SharedSettings` | `SharedSettings.swift` | Settings and sync |
+All case-mapping math lives in Rust `engine/phonetics::case_transform` (since case-transform slice / PR #205). Platform side calls via `RustEngineBridge`.
+
+| Component | Location | Description |
+|-----------|----------|-------------|
+| Case-letter math (POJ/TL aware upper/lower, full-upper, candidate capitalization, suggestion transform, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
+| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `capitalizeCandidate` / `transformSuggestion` / `uppercaseToneChar` / `fullUppercaseToneString` / `lowercaseToneChar` |
+| Android bridge | `engine/CaseTransformBridge.kt` | Same surface, JVM signatures |
+| iOS shift / capslock state | KeyboardKit (managed) | Drives `LetterCase` value passed into bridge |
+| Android shift / capslock state | `ime/text/CapsStateManager.kt` | Same role, calls bridge per keystroke |
+| Settings sync | iOS `SharedSettings.swift` / Android `PrefHelper.kt` | `isAutoCapitalizationEnabled` → `auto_cap_enabled` parameter on bridge |
 
 ---
 
@@ -89,4 +93,4 @@ func syncToKeyboardContext(_ context: KeyboardContext) {
 | State tracking | KeyboardKit managed | `CapsStateManager.kt` (extracted from TextInputManager in v3.4.6) |
 | Control method | Settings sync | `updateCapsState()` |
 | Real-time update | NotificationCenter | DataStore Flow |
-| Suggestion case | `SuggestionCaseTransformer.swift` | `SuggestionCaseTransformer.kt` |
+| Suggestion case | `RustEngineBridge.transformSuggestion(...)` (called from `Autocomplete/Services/SuggestionCaseTransformer.swift` thin wrapper) | `RustEngineBridge.transformSuggestion(...)` (called from `ime/dictionary/SuggestionCaseTransformer.kt` thin wrapper that retains platform skip-rule guards) |

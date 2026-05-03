@@ -2,54 +2,47 @@
 
 Snapshot of how the five data artifacts that back the IME are produced, stored, and consumed on iOS and Android, plus the open decisions that must be resolved before any shared Rust core owns them. Not a design doc for the Rust side — an inventory of constraints.
 
-- **Date**: 2026-04-19
-- **Phase**: I (iOS exemplar), task G10
-- **Gating signal**: this file's existence closes Phase I gate #8 (`docs/architecture/ios-exemplar-plan.md`).
-- **Scope**: shipped and runtime artifacts whose byte layout or schema crosses platforms. UI assets (keyboard layouts, fonts, images), persisted preferences (`SharedSettings` / DataStore blobs), and logs are out of scope — they are not candidates for shared-core ownership.
+- **Originally authored**: 2026-04-19 as Phase I G10 deliverable.
+- **Current state**: dictionary read path is now in Rust `engine/lexicon` (since v3.5.6); SQLite user-data stays platform-side permanently (`status=wont_migrate` per `migration-inventory.csv`).
+- **Scope**: shipped and runtime artifacts whose byte layout or schema crosses platforms. UI assets (keyboard layouts, fonts, images), persisted preferences (`SharedSettings` / DataStore blobs), and logs are out of scope.
 
 ## Summary
 
-| Artifact | Status | Risk to Rust extraction |
+| Artifact | Status | Owner |
 |---|---|---|
-| `dictionary.trie` (MARISA) | **Portable as-is** | Low — identical bytes, identical C++ lib |
-| `dictionary.bin` | **Portable as-is** | Low — LE / UTF-8 / fixed layout; bitmask semantics duplicated across platforms |
-| `association.bin` | **Portable as-is** | Low — LE / UTF-8 / sorted keys; bitmask is a 9-bit subset of dictionary.bin |
-| `user_frequency.db` (SQLite) | **Portable** | Low — schemas aligned; version spaces aligned |
-| `user_association.db` (SQLite) | **Portable** | Low — schemas aligned; `PRAGMA user_version` aligned on both platforms |
-| `custom_dictionary.db` (SQLite) | **Portable with caveat** | Medium — schemas converge but version numbers + migration mechanisms diverge |
+| `dictionary.fst` (Burntsushi fst) | **Shipped in Rust** | Rust `engine/lexicon::prefix_index::PrefixIndex` (replaced MARISA in v3.5.6) |
+| `dictionary.bin` | **Shipped in Rust** | Rust `engine/lexicon::dictionary_reader` |
+| `association.bin` | **Shipped in Rust** | Rust `engine/lexicon::association_reader` |
+| `user_frequency.db` (SQLite) | **Native — `wont_migrate`** | iOS `UserFrequencyService.swift` / Android `UserFrequencyService.kt` |
+| `user_association.db` (SQLite) | **Native — `wont_migrate`** | iOS `Lexicon/Database/` / Android `ime/text/composing/UserFrequencyService.kt` |
+| `custom_dictionary.db` (SQLite) | **Native — `wont_migrate`** | iOS `Lexicon/Database/CustomDictionaryRepository.swift` / Android `ime/dictionary/CustomDictionaryService.kt` |
 
-No artifact is a blocker for Phase II. Seven open decisions (D1–D7) are registered below for resolution before the relevant Rust slice lands.
+Per `feedback_user_data_sqlite_stays_native`, all writable user-data DBs stay native (better integration with platform backup / file-provider / encryption). The three read-only assets are byte-identical across iOS and Android and are now consumed by the Rust crate via `mmap-host`.
 
 ---
 
-## 1. `dictionary.trie` — MARISA trie
+## 1. `dictionary.fst` — Burntsushi fst prefix index
 
-Compressed prefix trie holding dictionary keys (`tl:`, `poj:`, `hanzi:` plus toneless / abbrev / numeric variants) mapped to rowids.
+Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`, `hanzi:` plus toneless / abbrev / numeric variants) mapped to rowids.
 
 ### Pipeline
 
-- **Producer**: `dictionary/build/04_create_trie.py` — `marisa_trie.RecordTrie("<I", pairs)`. Key layout: `utf8_key + 0xFF + LE u32 rowid`.
-- **Shipped path**: `ios/Resources/Dictionaries/dictionary.trie` · `android/app/src/main/assets/dictionary.trie`.
-- **Size**: 5.2 MB, byte-identical both platforms (same build script, same file).
+- **Producer**: `dictionary/build/create_fst.py` shells to the Rust binary `engine/build-helpers/fst-builder`. Value layout: rowid packed in the low 32 bits of the `u64` value; high bits reserved.
+- **Shipped path**: `ios/Resources/Dictionaries/dictionary.fst` · `android/app/src/main/assets/dictionary.fst`.
+- **Size**: ~9.1 MB, byte-identical on both platforms (same build, same file).
 
-### Readers
+### Reader
 
-| Platform | Entry point | Underlying lib |
-|---|---|---|
-| iOS | `ios/Sources/TaigiKeyboard/Lexicon/Services/TrieService.swift` → `marisa_bridge.{h,cpp}` | Vendored MARISA-trie C++ |
-| Android | `android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TrieService.kt` → `trie_jni.cpp` | Vendored MARISA-trie C++ (same source) |
+| Platform | Entry point |
+|---|---|
+| iOS | `RustEngineBridge.search` / `searchByHanzi` / `searchWithSources` → Rust `engine/lexicon` |
+| Android | `LexiconBridge.search` / `searchByHanzi` / `searchWithSources` → same Rust crate |
 
-Both sides hard-code `VALUE_SEPARATOR = 0xFF` and unpack the trailing u32 rowid as little-endian.
+Rust `engine/lexicon::prefix_index::PrefixIndex` opens the file via `mmap-host` (the only crate not `forbid(unsafe_code)`) and exposes `Map::range` / `Map::get` for prefix scans + exact lookup.
 
-### Rust-core path
+### History
 
-Two viable options, deferred to Phase IV-A:
-- Bind the same vendored C++ lib from Rust via `cxx` / build-script.
-- Swap to a Rust-native trie (`fst`, `marisa-rs`) and re-validate byte-level reproducibility.
-
-### Open decisions
-
-- **D1**. MARISA lib strategy — C++ bind vs Rust port. _Resolve by Phase IV-A design._
+D1 (MARISA C++ bind vs Rust port) was **resolved** in v3.5.6 by switching to a Rust-native `fst` index. The C++ bridges (`marisa_bridge.cpp`, `trie_jni.cpp`) and the platform `TrieService.swift` / `TrieService.kt` files were deleted under Path G.
 
 ---
 
@@ -268,46 +261,44 @@ Terminal schema converges. Version _numbers_ diverge because Android recorded ea
 
 ## Update / delivery
 
-Dictionary updates today: `dictionary.trie` + `dictionary.bin` + `association.bin` are regenerated by the Python build pipeline and shipped in the app bundle (iOS) / assets (Android). No OTA channel exists. `build_ts` in `dictionary.bin` and `association.bin` is the only version signal readers expose.
+Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin` are regenerated by the Python build pipeline (the fst step shells to Rust `engine/build-helpers/fst-builder`) and shipped in the app bundle (iOS) / assets (Android). No OTA channel exists. `build_ts` in `dictionary.bin` and `association.bin` is the only version signal readers expose.
 
-**Invariants the delivery mechanism must preserve** — regardless of whether a future Rust core changes the distribution channel:
+**Invariants the delivery mechanism must preserve**:
 
 1. The two binary artifacts with a header (`dictionary.bin`, `association.bin`) carry a matching `build_ts` — enforced by the shared `.build_ts` file in the build pipeline.
-2. `dictionary.trie` has **no timestamp or version in its bytes** — the format is a raw MARISA RecordTrie. Today the three artifacts' cohesion relies entirely on the build script producing all three in the same run; readers cannot detect a stale trie paired with fresh bins.
-3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`) are per-install and must not be shipped as read-only assets.
+2. `dictionary.fst` has **no timestamp or version in its bytes** — the format is a raw Burntsushi fst. Today the three artifacts' cohesion relies entirely on the build script producing all three in the same run; readers cannot detect a stale fst paired with fresh bins (see `binary-format.md` §5.1 no-checksum acknowledgement).
+3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`) are per-install and must not be shipped as read-only assets. They stay native (`status=wont_migrate`) per `feedback_user_data_sqlite_stays_native`.
 4. Schema migrations run on first open after an app update; the delivery mechanism does not modify these files directly.
 
-Distribution-channel design (OTA vs app-bundle) is out of scope for this audit — to be revisited during Phase IV-B planning.
+Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
 
 ---
 
 ## Decision register
 
-| # | Item | Resolve by |
+| # | Item | Status |
 |---|---|---|
-| D1 | MARISA lib strategy (C++ bind vs Rust port) | Phase IV-A design |
-| D2 | `dictionary.bin` + `association.bin` UTF-8 error policy | Before Rust parser lands |
-| D3 | `dictionary.bin` + `association.bin` version-bump policy | Before Rust parser lands |
-| D4 | Lift bitmask semantics to single shared-core enum | Phase IV-A (Phonetics slice prep) |
-| D5 | `custom_dictionary` version-namespace unification — plus derivation-version stamp so pure-logic migrations (v2→v3, v3→v4 on Android) are expressible in both worlds | Before shared migration code |
-| D6 | Lift `CustomDictionaryDerivation` to shared core | Phase IV-A (bundled with Phonetics slice) |
-| D7 | Cross-artifact cohesion check for the shipped trio — e.g., embed a trie header or compute a manifest hash covering all three files so readers can detect a stale `dictionary.trie` paired with fresh `.bin` files | Before any OTA / incremental delivery mechanism |
-
-None of D1–D7 blocks Phase II. All must be catalogued before Phase IV-A design freezes.
+| D1 | MARISA lib strategy (C++ bind vs Rust port) | **Resolved 2026-05-02** — chose Rust-native `fst` (v3.5.6 / PR #199); MARISA C++ bridges deleted under Path G. |
+| D2 | `dictionary.bin` + `association.bin` UTF-8 error policy | **Resolved** — Rust readers in `engine/lexicon` follow the platform "hanzi-optional, tl-required" contract; invalid records return `null`/`None`. |
+| D3 | `dictionary.bin` + `association.bin` version-bump policy | **Resolved** — both files use `version: u32 = 1`; Rust readers reject mismatch at `init?` time. |
+| D4 | Lift bitmask semantics to single shared-core enum | **Resolved** — bitmask constants now live in Rust `engine/lexicon` (`KHIIN_BIT`, `DEV_BIT`, `VARIANT_BIT`). Platform `EnabledDictionaries` DTOs mirror the layout for UI toggles only. |
+| D5 | `custom_dictionary` version-namespace unification | **Open** — both platforms keep native SQLite (`wont_migrate`); unification only matters if a future Rust slice ever owns custom-dict writes (no plan to do so). |
+| D6 | Lift `CustomDictionaryDerivation` to shared core | **Open** — currently `native_pending` in `migration-inventory.csv`; could be folded into `engine/lexicon::key_normalizer` if user-data write path ever moves. |
+| D7 | Cross-artifact cohesion check for the shipped trio | **Open** — see `binary-format.md` §5.1 (no checksum acknowledgement); revisit only if OTA delivery ships. |
 
 ---
 
 ## 7. Android addendum — storage paths, asset copy, update-in-place
 
-Phase II A10 deliverable (2026-04-21). Fills `docs/architecture/android-state-audit.md` §9 gate #8. Pure append — iOS §§1–6, §Update / delivery, and §Decision register are untouched. Cross-references back into those sections by anchor; does not restate their content.
+Originally authored as Phase II A10 deliverable (2026-04-21). Updated for v3.5.6 fst migration. Pure append — iOS §§1–6, §Update / delivery, and §Decision register are untouched. Cross-references back into those sections by anchor; does not restate their content.
 
 ### 7.1 On-disk paths
 
 | Artifact | Android on-disk location | Access mechanism |
 |---|---|---|
-| `dictionary.trie` | `{filesDir}/dictionary.trie` (copied from `assets/dictionary.trie`) | JNI MARISA (`trie_jni.cpp`) via `nativeLoad(path)` |
-| `dictionary.bin` | `{filesDir}/dictionary.bin` (copied from `assets/dictionary.bin`) | `RandomAccessFile` → `MappedByteBuffer` (READ_ONLY) |
-| `association.bin` | `{filesDir}/association.bin` (copied from `assets/association.bin`) | `MappedByteBuffer` (READ_ONLY) |
+| `dictionary.fst` | `{filesDir}/dictionary.fst` (copied from `assets/dictionary.fst`) | Rust `engine/lexicon` via `mmap-host::MmapHandle` |
+| `dictionary.bin` | `{filesDir}/dictionary.bin` (copied from `assets/dictionary.bin`) | Rust `engine/lexicon::dictionary_reader` via `mmap-host` |
+| `association.bin` | `{filesDir}/association.bin` (copied from `assets/association.bin`) | Rust `engine/lexicon::association_reader` via `mmap-host` |
 | `user_frequency.db` | `{databases}/user_frequency.db` (`SQLiteOpenHelper`-managed) | `SQLiteOpenHelper.readableDatabase` / `writableDatabase` |
 | `user_association.db` | `{filesDir}/user_association.db` (**not** under `databases/`) | `SQLiteDatabase.openOrCreateDatabase(File, null)` |
 | `custom_dictionary.db` | `{databases}/custom_dictionary.db` (`SQLiteOpenHelper`-managed) | `SQLiteOpenHelper.readableDatabase` / `writableDatabase` |
@@ -318,17 +309,17 @@ Divergence — `user_association.db` lives in `filesDir/`, not `databases/`. It 
 
 ### 7.2 Asset copy semantics — shipped trio
 
-All three read-only artifacts ship inside the APK at `android/app/src/main/assets/`. None are read directly from the APK: `android/app/build.gradle.kts` does not declare `noCompress("bin", "trie")`, so AAPT2 compresses them by default. Compressed zip entries cannot be memory-mapped, and the MARISA JNI loader calls `marisa::Trie::mmap(path)` (`android/app/src/main/cpp/trie_jni.cpp:87`) — it needs a real uncompressed filesystem path. Every boot therefore resolves to the uncompressed copy under `{filesDir}`.
+All three read-only artifacts ship inside the APK at `android/app/src/main/assets/`. They are copied to `{filesDir}` on boot so the Rust mmap layer can map a real filesystem path. Rust `engine/lexicon` (via `mmap-host`) opens them through `memmap2`; AAPT2-compressed zip entries cannot be mapped directly, hence the copy.
 
 | Artifact | Stamp file | Copier call-site |
 |---|---|---|
-| `dictionary.trie` | `{filesDir}/trie_app_version.txt` | `TrieService.getTriePath` (`TrieService.kt:124`) |
-| `dictionary.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the .bin pair)* | `LexiconService.copyAssetsIfNeeded` (`LexiconService.kt:430`) |
-| `association.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the .bin pair)* | `LexiconService.copyAssetsIfNeeded` (`LexiconService.kt:430`) |
+| `dictionary.fst` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the trio)* | `LexiconService.copyAssetsIfNeeded` (Android Kotlin) |
+| `dictionary.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the trio)* | `LexiconService.copyAssetsIfNeeded` |
+| `association.bin` | `{filesDir}/dictionary_app_version.txt` *(shared stamp for the trio)* | `LexiconService.copyAssetsIfNeeded` |
 
-Each copier on boot reads its stamp file, compares against `BuildConfig.VERSION_CODE`, and re-copies the asset(s) if the stamp is behind — OR if the destination file is missing regardless of stamp. Stamp-rewrite timing is **not** symmetric across the two copiers: `TrieService` rewrites `trie_app_version.txt` unconditionally after every successful trie copy; `LexiconService.copyAssetsIfNeeded` only rewrites `dictionary_app_version.txt` when `currentAppVersion > lastCopiedVersion`, so a same-version boot that has to repair a missing `.bin` file (e.g. user cleared app data partially, or a prior copy failed) runs the copy but leaves the stamp untouched.
+The copier reads the stamp, compares against `BuildConfig.VERSION_CODE`, and re-copies all three assets if the stamp is behind — OR if any destination file is missing regardless of stamp. Post-v3.5.6, the historical separate `trie_app_version.txt` stamp is gone (TrieService deleted under Path G); a single stamp now covers all three artifacts.
 
-**Cohesion risk — Android-specific sub-case of D7.** The trie stamp and the `.bin`-pair stamp are two files written independently, each after its own copy loop succeeds, with no cross-file transaction. The two stamps therefore do not move atomically even on the happy path, and any interruption (process kill, power loss, uncaught copy failure) between the two writers can leave the two stamps transiently out of sync. Readers trust whichever file is on disk; no manifest hash or combined check exists today. This is a narrower Android restatement of the iOS-authored D7 item ("embed a trie header or compute a manifest hash covering all three files") — tracked there, not as a new decision.
+**Cohesion risk — D7 sub-case.** The three artifacts move together because they share one stamp file written after the copy loop succeeds. An interruption between artifact writes can still leave a partial-copy state on disk; recovery requires `BuildConfig.VERSION_CODE` to bump again or a manual app-data clear. No manifest hash or combined check exists today.
 
 ### 7.3 SQLite open mechanism — three patterns
 
@@ -346,7 +337,7 @@ Two of the four `custom_dictionary.db` steps (`v2→v3`, `v3→v4`) are pure der
 
 ### 7.4 Update-in-place — APK upgrade semantics
 
-1. **Read-only trio** — installing a new APK bumps `BuildConfig.VERSION_CODE`. On next boot both copiers (`TrieService`, `LexiconService`) detect stale stamps and overwrite `{filesDir}/dictionary.trie`, `{filesDir}/dictionary.bin`, `{filesDir}/association.bin` with the new asset bytes. **Partial-copy semantics** — both copiers write through `FileOutputStream(destFile)` (no append, no tmp-and-rename), which truncates the destination to 0 bytes on open. An interruption mid-stream (process kill, I/O error, power loss) therefore leaves the target truncated or partially written — the prior bytes are **not** preserved. On the next boot the reader's length / magic / version checks fail (`DictionaryBinaryReader.open` returns null; JNI `marisa::Trie::mmap` returns false), `binaryReader` stays null, and subsequent queries surface `DictionaryError.DatabaseNotAvailable`. Recovery paths: (a) a version-bump boot always re-runs the copy because `currentAppVersion > lastCopiedVersion` (stamp is only rewritten after the copy loop completes — an interrupted run leaves the stamp behind); (b) a same-`VERSION_CODE` boot with a truncated-but-present destination is **not** auto-repaired (`needsCopy=false` AND `destFile.exists()=true` → copier skips), leaving the keyboard degraded until app-data clear or reinstall. No OTA channel — every artifact refresh ships as an app update (parity with iOS §Update / delivery).
+1. **Read-only trio** — installing a new APK bumps `BuildConfig.VERSION_CODE`. On next boot `LexiconService` detects a stale stamp and overwrites `{filesDir}/dictionary.fst`, `{filesDir}/dictionary.bin`, `{filesDir}/association.bin` with the new asset bytes. **Partial-copy semantics** — the copier writes through `FileOutputStream(destFile)` (no append, no tmp-and-rename), which truncates the destination to 0 bytes on open. An interruption mid-stream (process kill, I/O error, power loss) leaves the target truncated. On the next boot Rust readers fail their magic / version / fst-header checks; `RustEngineBridge.install` returns a `FailIo` error and the platform surfaces `DictionaryError.DatabaseNotAvailable`. Recovery paths: (a) a version-bump boot always re-runs the copy because `currentAppVersion > lastCopiedVersion`; (b) a same-`VERSION_CODE` boot with a truncated-but-present destination is **not** auto-repaired today — leaving the keyboard degraded until app-data clear or reinstall. No OTA channel.
 2. **User SQLite DBs** — `user_frequency.db`, `user_association.db`, `custom_dictionary.db` all persist across APK replacement (both `filesDir` and `databases/` survive app update). Uninstalling the app is the only way to lose them. Schema migrations run on first open after update per §7.3.
 3. **DataStore** — the main `Preferences<Preferences>` file is `{filesDir}/datastore/taigi_keyboard_prefs.preferences_pb` (declared at `PreferenceDataStore.kt:16`). A second DataStore `{filesDir}/datastore/emoji_preferences.preferences_pb` holds the emoji skin-tone selection (`EmojiPreferences.kt:20`). Both persist across APK replacement. `PrefHelper.migrateFromSharedPreferences` (`PrefHelper.kt:625`) pulls legacy Android `PreferenceManager` SharedPreferences values forward exactly once, gated on a DataStore-empty check.
 
@@ -364,7 +355,7 @@ This section is pointer-only — the substantive contract lives in iOS §§1–3
 
 - iOS readers / writers: §§1–6 above.
 - Cross-platform invariants the delivery mechanism must preserve: §Update / delivery items 1–4. Android additions in §7.2 (stamp cohesion) and §7.4 (DataStore out-of-scope reminder).
-- Phase II gate #8: `docs/architecture/android-state-audit.md` §9 #8.
+- Phase II gate #8: closed (Phase II audit doc retired post-completion).
 - Android exemplar roster and marker convention: `docs/architecture/android-exemplar.md` §§3, 5 (I/O wrappers are explicitly excluded from the candidate roster there).
 - Candidate-class markers on the Android readers: `DictionaryBinaryReader.kt` / `AssociationBinaryReader.kt` are platform-only I/O wrappers by construction (mmap over `MappedByteBuffer`) and are not carried on the Shared-Core candidate roster.
 

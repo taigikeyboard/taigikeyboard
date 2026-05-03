@@ -1,8 +1,8 @@
 # Autocomplete
 
 > **Type**: Feature
-> **Keywords**: `Autocomplete`, `Suggestion`, `Candidate`, `AutocompleteService`
-> **Related**: composing.md, sort.md, trie.md
+> **Keywords**: `Autocomplete`, `Suggestion`, `Candidate`, `classifyInput`
+> **Related**: composing.md, sort.md, binary-format.md
 
 ---
 
@@ -17,14 +17,14 @@
 ## Core Flow
 
 ```
-rawInput → determineInputType → LexiconService.search → sort → candidate list
+rawInput → RustEngineBridge.classifyInput → RustEngineBridge.search → RustEngineBridge.processCandidates → candidate list (with composingText at index 0)
 ```
 
-1. Get `rawInput` from ComposingManager
-2. Determine input type (Hanzi/with tone/without tone)
-3. Search dictionary
-4. Insert composingText at position 0
-5. Return candidate list
+1. Get `rawInput` from `ComposingManager`.
+2. Classify via `lexicon::classify_input` → `(input_type, search_key)`.
+3. Search via `lexicon::search` (fst prefix lookup → DictionaryReader rows).
+4. Rank via `ranking::process_candidates` (dedup → score → sort).
+5. Platform layer prepends `composingText` at index 0 and applies suggestion case-transform (`engine/phonetics::transform_suggestion`).
 
 ---
 
@@ -65,13 +65,18 @@ Index 2: candidate 2 (e.g., 瓜)
 
 ---
 
-## Platform Correspondence
+## Ownership
 
-| Item | iOS | Android |
-|------|-----|---------|
-| Service | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
-| Search | `LexiconService.swift` | `LexiconService.kt` |
-| Trigger | `autocompleteText` property | `getSuggestions()` direct call |
+| Item | Location |
+|------|----------|
+| Input classification (`Hanzi` / `RomanWithTone` / `RomanNoTone` + search key) | Rust `engine/lexicon::classification::classify_input` |
+| Lexicon search | Rust `engine/lexicon::search` (fst lookup + DictionaryReader) |
+| Candidate dedup / score / sort | Rust `engine/ranking::process_candidates` |
+| Per-suggestion case transform | Rust `engine/phonetics::case_transform::transform_suggestion` |
+| Platform service (iOS) | `Autocomplete/Services/AutocompleteService.swift` (orchestrator) + `AutocompleteInputClassifier.swift` (thin shell over Rust) |
+| Platform service (Android) | `ime/text/composing/TaigiAutocompleteService.kt` + `AutocompleteInputClassifier.kt` |
+| Trigger (iOS) | `autocompleteText` KeyboardKit property |
+| Trigger (Android) | `SmartbarManager.getSuggestions()` direct call |
 
 ---
 

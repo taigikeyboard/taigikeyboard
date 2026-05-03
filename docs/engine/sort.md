@@ -1,8 +1,8 @@
 # UserFrequency and Sorting
 
 > **Type**: Feature
-> **Keywords**: `UserFrequency`, `Sort`, `Score`, `FrequencyData`
-> **Related**: autocomplete.md, trie.md
+> **Keywords**: `UserFrequency`, `Sort`, `Score`, `FrequencyData`, `ranking`
+> **Related**: autocomplete.md, binary-format.md
 
 ---
 
@@ -108,13 +108,17 @@ CREATE TABLE user_frequency (
 
 ---
 
-## Platform Correspondence
+## Ownership
 
-| Item | iOS | Android |
-|------|-----|---------|
-| Scoring | `CandidateProcessor.calculateScore()` | `LexiconService.calculateScore()` |
-| Frequency service | `UserFrequencyService.swift` | `UserFrequencyService.kt` |
-| Database | `UserFrequencyRepository.swift` | Built into Service |
+Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage stays platform-side SQLite (`wont_migrate`).
+
+| Item | Location |
+|------|----------|
+| Dedup / score / sort | Rust `engine/ranking::process_candidates` |
+| Score formula constants (`USER_FREQ_CAP=100`, `USER_FREQ_WEIGHT=100`, `RECENCY_WINDOW_MS=3_600_000`, `RECENCY_BONUS=200`, `EXACT_BONUS=100`, `COMPLETION_PENALTY=-1000`, `CLOSENESS_WEIGHT=500`, `BASE_FREQ_DIVISOR=10`) | Rust `engine/ranking/src/score.rs` |
+| iOS frequency service (SQLite) | `Lexicon/Services/UserFrequencyService.swift` + `Lexicon/Database/UserFrequencyRepository.swift` |
+| Android frequency service (SQLite) | `ime/text/composing/UserFrequencyService.kt` |
+| Bridge | `RustEngineBridge.processCandidates(_:normalizedInput:tpsDedupEnabled:frequencyData:nowMs:mergeOrderOnly:)` (iOS) / matching Kotlin signature (Android) |
 
 ---
 
@@ -163,13 +167,8 @@ Result: `gua2-ho2` > `gua2` > `gua` (user frequency still dominates over penalty
 
 ## Notes
 
-### MARISA-trie Sorting Characteristics
+### fst Range Scan Characteristics
 
-- `predictive_search` returns depth-first, longer words first
-- Short words easily truncated by limit
-
-### Solutions
-
-1. Combine exact match + prefix search
-2. In-memory sort by frequency after binary mmap read
-3. notone index allows toneless words to exact match
+- `Map::range().ge(prefix).lt(prefix_upper_bound)` returns keys in lexicographic byte order — short keys naturally come before longer keys with the same prefix.
+- Caller applies `limit` AFTER the range scan; ranking layer dedups + reorders, so trim points are insensitive to fst iteration order.
+- Toneless / abbrev / numeric-tone variants are all stored under the same `tl:` / `poj:` prefix family, so a single range scan covers exact + completion together.

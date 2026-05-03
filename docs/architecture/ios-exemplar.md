@@ -4,7 +4,7 @@
 
 **Audience**: whoever is doing Android Phase II alignment (and later, the Rust Phase IV-A author who needs to know what behavioral surface survives).
 
-**Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; file roster of what is portable lives in `../engine/shared-core-readiness.md`; data-artifact portability (MARISA / SQLite / binary formats) is the G10 deliverable — all three are referenced but not duplicated here.
+**Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; the live Rust / native ownership inventory lives in `../engine/migration-inventory.csv` (replaces the retired `shared-core-readiness.md` roster); data-artifact portability (`dictionary.fst` / `dictionary.bin` / SQLite) lives in `data-artifacts-portability.md` — all three are referenced but not duplicated here.
 
 **Contract of this doc**: if Android's Phase II code diverges from the pattern below, fix Android (not this doc) unless the divergence is justified by a platform constraint documented inline.
 
@@ -261,7 +261,7 @@ Sources/TaigiKeyboard/
 // endregion
 ```
 
-Android Studio's `// region` / `// endregion` pair gives the same code-folding hint as Swift's `// MARK:`. The grep verification in `../engine/shared-core-readiness.md` §Verification looks for the literal string `Shared-Core Candidate` on a comment line — both syntaxes satisfy it.
+Android Studio's `// region` / `// endregion` pair gives the same code-folding hint as Swift's `// MARK:`. Verification greps look for the literal string `Shared-Core Candidate` on a comment line — both syntaxes satisfy it. Per-file ownership now lives in `../engine/migration-inventory.csv`; the historical roster doc has been retired.
 
 ### 5.3 Cross-platform invariant comment (required when a constant must mirror Android)
 
@@ -373,7 +373,7 @@ The AndroidX `ViewModel` class is for tab / settings app code, not for IME-inter
 
 ## 7. Immutable contract surface — 36 shared-core candidates (→ 43 after G4 + G5 impl)
 
-Full roster at `../engine/shared-core-readiness.md`. By category (pre-G4/G5-impl):
+Live Rust / native roster lives in `../engine/migration-inventory.csv`. The historical Phase I categorisation is preserved below for context; most items now belong to Rust crates.
 
 - **Phonetics** (9): `TaigiPhonetics`, `PhoneticsTables`, `SyllableParser`, `TLFormatter`, `POJFormatter`, `PhoneticsConverter`, `RomanizationConverter`, `ToneRestoration`, `ToneUtilities`.
 - **Input** (7): `CharacterInputPipeline`, `CaseTransformer`, TPS (`TPSConverter`, `TPSTables`, `TPSInputAdjuster`, `TPSToTL`, `TLToTPS`).
@@ -404,7 +404,7 @@ The refactors in Phase I exist because these previously slipped in. They must no
 4. **Direct repository call from a View.** Always a ViewModel in between.
 5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; if DI defaults are gone after G7, do not reintroduce `shared`.
 6. **Combine / Flow publishers crossing target boundaries.** Extension and host app each own their own object graph.
-7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Phonetics/` / `Lexicon/Models/` / `Lexicon/Utils/` / `NextWord/*Engine.swift` / `Input/Composing/ComposingState.swift`.** Enforced by greps 1 & 2 in `shared-core-readiness.md` §Verification.
+7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `rules/rust-best-practices.md`.
 8. **Platform-bound DTOs in engine signatures.** `NextWordService.Prediction` leaking into `filterPredictions` was the Codex finding that motivated `RawNextWordPrediction`. Rule: services map their rows to shared-core DTOs at the service boundary.
 9. **`SharedPreferences` snapshot via `val`.** See §3. Every settings field must be re-read on access.
 
@@ -426,8 +426,8 @@ Phase II delivers an Android target in the same shape:
 
 ## 10. Cross-references
 
-- 36-file immutable roster (→ 43 after Phase I impl): `../engine/shared-core-readiness.md`.
-- Phase I task plan: `ios-exemplar-plan.md`.
+- Live Rust / native ownership inventory: `../engine/migration-inventory.csv`.
+- Phase I G0–G10 plan: closed and removed; see git history for the historical task list.
 - Behavioral invariants: `behavioral-invariants.md`.
 - Engine/platform split exemplars: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
 - Latency + memory gates that protect this architecture: `../perf/keyboard-baseline-2026-04.md`, `../perf/extension-memory-2026-04.md`.

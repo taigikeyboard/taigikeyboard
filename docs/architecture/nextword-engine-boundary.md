@@ -1,15 +1,13 @@
-# G5-design — NextWord Engine / Platform Boundary
+# NextWord Engine / Platform Boundary
 
-**Status**: design-only deliverable for Phase I G5, authored 2026-04-19 alongside G4-design. Revised same day after Codex + Gemini review of the G4/G5/G8 docs cycle. Implementation (G5-impl) runs after G4-impl — this doc commits the scheduling contract early so later groups do not encode Timer-specific or DTO-leak assumptions.
+**Status (post-v3.5.5)**: engine state machine + decision tables + scoring all live in Rust `engine/nextword` (since PR #198, 2026-05-02). Pre-Rust `NextWord/NextWordEngine.swift` and `ime/core/nextword/NextWordEngine.kt` were deleted under Path G; the boundary contract documented below is now upheld by the Rust crate plus thin platform executors.
 
-**Goal**: split `NextWord/NextWordController.swift` into
+**Today's split**:
 
-1. **`NextWordEngine`** — pure Foundation-only logic (validate input, decide whether to record / reset / predict, normalize romanization, filter compound-word emissions), shared-core candidate.
-2. **`NextWordController`** — iOS platform executor: owns the `Timer` for context timeout, `@MainActor` hops for UI updates, `DispatchQueue.main` dispatch, settings snapshot, and query-generation bookkeeping.
+1. **`engine/nextword`** — Rust state machine (validate input, decide whether to record / reset / predict, score + filter raw predictions, generation guard). Cross-platform canonical.
+2. **`NextWordController.swift`** (iOS) / **`ime/text/smartbar/NextWordHandler.kt`** + **`ime/dictionary/NextWordService.kt`** (Android) — platform executors: own the `Timer` / coroutine for context timeout, `@MainActor` / Main-dispatcher hops, settings snapshot, and bridging to SQLite user-association reads / writes.
 
-…without changing decay math, association-window semantics, or the user-perceived prediction lifecycle.
-
-**Non-goal**: do not implement here. G5-impl takes this sketch, writes code, and G9 wires scheduling-parity tests against it.
+The Rust crate preserves the exact decay math, association-window semantics, and user-perceived prediction lifecycle that this doc continues to describe — see Rust `engine/nextword/src/scorer.rs` for the canonical constants.
 
 ---
 
@@ -350,12 +348,11 @@ Already decided (moved out of "deferred" after review cycle):
 
 ## 12. Cross-references
 
-- Phase I plan: `ios-exemplar-plan.md` §G5.
-- G4-design counterpart (same pattern for SwiftUI-scheduled state): `composing-state-boundary.md`.
+- Live Rust / native ownership inventory: `../engine/migration-inventory.csv` (filter `area=nextword`).
+- Composing counterpart (same pattern for SwiftUI-scheduled state): `composing-state-boundary.md`.
 - Behavioral invariants this doc must not regress: `behavioral-invariants.md` §§7, 8, 11.
-- Shared-core readiness contract: `../engine/shared-core-readiness.md`.
-- Codex review (roadmap-level): `codex-review-2026-04-19.md`.
-- Docs-review cycle (2026-04-19, same day): findings incorporated above.
+- Engine implementation: Rust `engine/nextword` (since v3.5.5 / PR #198).
+- Original Codex strategic review: `codex-review-2026-04-19.md`.
 
 ---
 
@@ -483,12 +480,12 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 - Concrete executor class layout (owned-Job field name, `handleQueryResult` entry-point naming) — A5-impl picks.
 - `NextWordService.predict` full signature change (adding `nowMs`) — folded into A5-impl PR as the clock-injection step, not a separate PR.
 - StateFlow migration — deferred per §13.2 table.
-- A9 `INVARIANT_*` test wiring — deferred by A0 decision; A5-impl dogfoods S1/S2/S3 per `android-g9-coverage-matrix.md`.
+- A9 `INVARIANT_*` test wiring — deferred by A0 decision; A5-impl dogfooded S1/S2/S3 (Phase II coverage matrix retired post-completion).
 
 ### 13.12 Cross-references
 
 - iOS boundary contract: §§1–12 above.
-- A5-impl deliverable: `android-state-audit.md` §7 A5-impl.
+- A5-impl shipped via Phase II Round A5; engine logic now in Rust `engine/nextword` (since v3.5.5).
 - Parity-correction policy: `rules/cross-platform-alignment.md` §1b.
 - Android guidelines (shared-core purity, clock, coroutines): `rules/android-guidelines.md` §§1, 5.
 - Engine settings live-read rule: `rules/android-guidelines.md` §6 + `ios-exemplar.md` §3.

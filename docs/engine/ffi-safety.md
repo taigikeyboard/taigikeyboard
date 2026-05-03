@@ -140,9 +140,10 @@ Rust core never sees platform-only surfaces. The authoritative exclude lists liv
 
 - `../architecture/ios-exemplar.md` §1
 - `../architecture/android-exemplar.md` §2.2–§2.4
-- `shared-core-readiness.md` §Criteria
+- `../../rules/ios-architecture.md` §4 (criteria + exclusions; replaces the retired shared-core-readiness.md)
 - `../../rules/android-guidelines.md` §1
 - `../../rules/cross-platform-alignment.md` §1c
+- `migration-inventory.csv` (live roster — filter `status=wont_migrate` for the current exclusion set)
 
 This document does not re-enumerate those symbols. Adding a third copy of the same blacklist would force every future expansion to update three places — see `rules/cross-platform-alignment.md` §1c for the authoritative-list pointer rationale.
 

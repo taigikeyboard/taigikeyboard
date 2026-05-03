@@ -7,62 +7,71 @@ Standardized keyword mapping for core input method functionality and UI componen
 ## Core Input Method Keywords
 
 ### 1. Composing (`engine/composing.md`)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| **rawInput** | Original keystrokes (e.g. `gua2`) — used for Trie search | `ComposingManager.rawInput` |
-| **composingText** | Derived display text (e.g. `guá`) — computed via ToneConverter | `ComposingManager.composingText` |
-| **ComposingState** | Dual-state model: `.idle` / `.composing(raw:)` | `ComposingManager.state` |
-| **commitComposition** | Finalize composing text and insert into text field | `ComposingManager.commitComposition()` |
-| **selectSuggestion** | Pick a candidate, clear composing state, insert text | `ComposingManager.selectSuggestion()` |
-| **markedText** | iOS inline composition display via `setMarkedText` | `KeyboardViewController.setMarkedText()` |
+Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform side is the effect interpreter.
+
+| Keyword | Definition | Owner |
+|---------|-----------|-------|
+| **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Composing { raw }` |
+| **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
+| **ComposingState** | `Phase::Idle` or `Phase::Composing { raw }` + `selected_candidate_index` | Rust `composing::EngineState` |
+| **Intent** | 12 input intents (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset / SetSelectedCandidateIndex / QueryState) | Rust `composing::Intent` |
+| **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / deleteBackwardFromDocument / resetAutocomplete / performAutocomplete / resetAutocompleteContext) | Rust `composing::transition` |
+| **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
+| **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
 
 ### 2. Autocomplete (`engine/autocomplete.md`)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| **Suggestion** | A candidate word (text + title + subtitle + metadata) | `Autocomplete.Suggestion` |
-| **InputType** | Classification: `.hanzi` / `.romanWithTone` / `.romanWithoutTone` | `AutocompleteService.determineInputType()` |
-| **composingTextSuggestion** | Position 0 candidate — always the current composing text | `createComposingTextSuggestion()` |
-| **contextBoost** | Promote candidates matching bigram predictions from last selected word | `applyContextBoost()` |
-| **phraseSuggestion** | Learned phrase candidates inserted at position 1 | `queryPhraseSuggestions()` |
-| **searchKey** | Segmented + tone-filled key for Trie lookup | `buildSearchKey()` |
+| Keyword | Definition | Owner |
+|---------|-----------|-------|
+| **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
+| **InputType** | Classification: `Hanzi` / `RomanWithTone` / `RomanNoTone`. Engine returns `(input_type, search_key)` | Rust `lexicon::classification::classify_input` |
+| **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
+| **contextBoost** | Promote candidates matching bigram predictions from last selected word | Rust `nextword::booster` |
+| **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
+| **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
 
 ### 3. Tone Engine (`engine/tone.md`)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| **numericTone** | Tone as digit suffix: 1-8 (1,4 = no diacritic) | `TaigiPhonetics.combiningToToneNum` |
-| **toneMarks** | Unicode diacritics: á(2), à(3), â(5), ā(7), a̍(8) | `ToneConverter.convertToToneMarks()` |
-| **tonePosition** | Vowel receiving the diacritic (TL vs POJ rules differ) | `TaigiPhonetics.placeTLToneMark / placePOJToneMark` |
-| **toneRestoration** | Re-apply tone after backspace deletes a diacritic | `ToneConverter.restoreTone()` |
-| **flickTone** | Swipe direction maps to tone: left(2), top(3), right(5), bottom(7), long-press(8) | `FlickDirection` |
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge.normalizeTone` / `restoreTone` / `hasToneMarks` / etc.
 
-### 4. Dictionary & Trie (`engine/trie.md`, `engine/sort.md`)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| **MARISA Trie** | Compact prefix trie storing `key→rowid` mappings with `tl:`/`poj:`/`hanzi:` prefixes | `TrieService` |
-| **prefixSearch** | Find all entries matching a key prefix | `TrieService.prefixSearch()` |
-| **DictionaryBinaryReader** | Binary mmap reader: rowid → {hanzi, tl, frequency, bitmask} | `DictionaryBinaryReader` |
-| **AssociationBinaryReader** | Binary mmap reader: prev_word → next_word predictions | `AssociationBinaryReader` |
-| **EnabledDictionaries** | Dictionary source toggle + bitmask generation for binary filter | `EnabledDictionaries` |
-| **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | `passesFilter()` |
-| **InputNormalizer** | Converts any input form to TL numeric tone format | `InputNormalizer.normalize()` |
-| **trieKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | `InputNormalizer` |
-| **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | `calculateScore()` |
-| **userFrequency** | Per-word usage count, dominates ranking | `recordUsage()` |
-| **timeDecay** | Exponential decay with 1-week half-life for recency | `calculateWeight()` |
+| Keyword | Definition | Owner |
+|---------|-----------|-------|
+| **numericTone** | Tone as digit suffix: 1-9 (1,4 = no diacritic) | Rust `phonetics::tables::COMBINING_TO_TONE_NUM` |
+| **toneMarks** | Unicode diacritics: á(2), à(3), â(5), ā(7), a̍(8) | Rust `phonetics::api::to_tone_marks` |
+| **tonePosition** | Vowel receiving the diacritic (TL vs POJ rules differ) | Rust `phonetics::poj::to_poj` / `phonetics::tl::to_tl` |
+| **toneRestoration** | Re-apply tone after backspace deletes a diacritic | Rust `phonetics::normalization::restore_tone` |
+| **flickTone** | Swipe direction maps to tone: left(2), top(3), right(5), bottom(7), long-press(8) | iOS `FlickDirection` (UI-only; tone math via Rust) |
+
+### 4. Dictionary & Lexicon (`engine/binary-format.md`, `engine/sort.md`)
+fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap readers all live in Rust `engine/lexicon`.
+
+| Keyword | Definition | Owner |
+|---------|-----------|-------|
+| **fst prefix index** | `dictionary.fst` — Burntsushi `fst` crate, stores `key → rowid` for `tl:` / `poj:` / `hanzi:` keys | Rust `lexicon::prefix_index::PrefixIndex` |
+| **prefixSearch** | Iterate keys with a given prefix, returning rowid list | Rust `lexicon::search::search` |
+| **DictionaryReader** | Binary mmap reader: rowid → `{hanzi, tl, length_score, source_bitmask}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
+| **AssociationReader** | Binary mmap reader: prev_word → bigram entries | Rust `lexicon::association_reader::AssociationReader` |
+| **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | iOS `EnabledDictionaries.swift` / Android `.kt` (DTO; bitmask layout from `binary-format.md`) |
+| **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
+| **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
+| **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `lexicon::key_normalizer::build` |
+| **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | Rust `ranking::score` |
+| **userFrequency** | Per-word usage count, dominates ranking. Storage stays platform SQLite (`wont_migrate`) | iOS `UserFrequencyService.swift` / Android `.kt` |
+| **timeDecay** | Exponential decay with 1-hour recency window for ranking-side bonus | Rust `ranking::score` constants (`RECENCY_WINDOW_MS=3_600_000`) |
 
 ### 5. Segmentation — ARCHIVED (removed in v3.4.6)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| ~~**SyllableSegmenter**~~ | Removed in v3.4.6. See `engine/segmentation.md` for historical reference | (deleted) |
+| Keyword | Definition | Notes |
+|---------|-----------|-------|
+| ~~**SyllableSegmenter**~~ | Removed in v3.4.6 | Historical analysis: `reports/segmentation-tie-bug.md` |
 
 ### 6. Next-Word Prediction (`engine/nextword.md`)
-| Keyword | Definition | Key Class/Method |
-|---------|-----------|-----------------|
-| **bigram** | Character-level prediction from dictionary data | `NextWordService.predict()` |
-| **userAssociation** | Word-level associations learned from user selections | `user_association` table |
-| **lastSelectedWord** | Context trigger for next-word prediction | `ActionHandler.lastSelectedWord` |
-| **phraseLearning** | Multi-word sequences learned from user input patterns | `NextWordService.queryPhrases()` |
-| **sentenceStart** | Special token `$` for beginning-of-sentence predictions | bigram table |
+NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform glue handles timer/threading + UI.
+
+| Keyword | Definition | Owner |
+|---------|-----------|-------|
+| **bigram** | Word-level prediction from association.bin (lookup by previous word) | Rust `lexicon::assoc_lookup` |
+| **userAssociation** | User-learned word associations (SQLite, `wont_migrate`) | iOS `Lexicon/Database/` / Android `ime/text/composing/UserFrequencyService.kt` |
+| **lastSelectedWord** | Context trigger for next-word prediction | Rust `nextword::PersistedState.last_selected_word` |
+| **decayScoring** | RIME-style decay + dict/user weighting | Rust `nextword::scorer` |
+| **currentGeneration** | u64 counter that drops stale async results | Rust `nextword::PersistedState.current_generation` |
 
 ### 7. Custom Dictionary (`engine/custom-dictionary.md`)
 | Keyword | Definition | Key Class/Method |
@@ -93,7 +102,7 @@ Standardized keyword mapping for core input method functionality and UI componen
 |---------|-----------|-----------------|
 | **BackupService** | Export/import user data (custom dict, frequency, associations) | `BackupService` |
 | **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
-| **DictionarySearch** | In-app dictionary search from settings | `DictionarySearchViewModel` |
+| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | `DictionarySearchViewModel` |
 
 ### 11. Input Flow (`engine/flow.md`)
 | Keyword | Definition | Key Class/Method |
