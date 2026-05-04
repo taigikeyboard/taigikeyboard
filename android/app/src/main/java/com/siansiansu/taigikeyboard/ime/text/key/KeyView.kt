@@ -21,6 +21,9 @@ import com.google.android.flexbox.FlexboxLayout
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
+import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
@@ -352,7 +355,12 @@ class KeyView(
                         object : Runnable {
                             override fun run() {
                                 if (isKeyPressed) {
-                                    taigikeyboard?.textInputManager?.sendKeyPress(data)
+                                    TraceContext.withTrace(TraceId.next()) {
+                                        taigikeyboard?.compositionRoot?.logger?.tdebug("KeyView") {
+                                            "[INPUT] fn=onFlorisTouchEvent gesture=repeat-delete code=${data.code} (${data.label})"
+                                        }
+                                        taigikeyboard?.textInputManager?.sendKeyPress(data)
+                                    }
                                     osHandler?.postDelayed(this, 50)
                                 }
                             }
@@ -365,22 +373,32 @@ class KeyView(
                         keyboardView.popupManager.extend(this)
                     }
                     if (data.code == KeyCode.SPACE) {
-                        taigikeyboard?.textInputManager?.sendKeyPress(
-                            KeyData(
-                                KeyCode.SHOW_INPUT_METHOD_PICKER,
-                                type = KeyType.FUNCTION,
-                            ),
-                        )
+                        TraceContext.withTrace(TraceId.next()) {
+                            taigikeyboard?.compositionRoot?.logger?.tdebug("KeyView") {
+                                "[INPUT] fn=onFlorisTouchEvent gesture=long-press key=SPACE"
+                            }
+                            taigikeyboard?.textInputManager?.sendKeyPress(
+                                KeyData(
+                                    KeyCode.SHOW_INPUT_METHOD_PICKER,
+                                    type = KeyType.FUNCTION,
+                                ),
+                            )
+                        }
                         shouldBlockNextKeyCode = true
                     }
                     if (data.code == KeyCode.LANGUAGE_SWITCH) {
                         // 長按顯示輸入法選單
-                        taigikeyboard?.textInputManager?.sendKeyPress(
-                            KeyData(
-                                KeyCode.SHOW_INPUT_METHOD_PICKER,
-                                type = KeyType.FUNCTION,
-                            ),
-                        )
+                        TraceContext.withTrace(TraceId.next()) {
+                            taigikeyboard?.compositionRoot?.logger?.tdebug("KeyView") {
+                                "[INPUT] fn=onFlorisTouchEvent gesture=long-press key=LANGUAGE_SWITCH"
+                            }
+                            taigikeyboard?.textInputManager?.sendKeyPress(
+                                KeyData(
+                                    KeyCode.SHOW_INPUT_METHOD_PICKER,
+                                    type = KeyType.FUNCTION,
+                                ),
+                            )
+                        }
                         shouldBlockNextKeyCode = true
                     }
                 }, delayMillis.toLong())
@@ -413,15 +431,13 @@ class KeyView(
                 val retData = keyboardView.popupManager.getActiveKeyData(this)
                 keyboardView.popupManager.hide()
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && !shouldBlockNextKeyCode && retData != null) {
-                    if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
-                        android.util.Log.d(
-                            "KeyView",
-                            "[TOUCH] UP → sendKeyPress: " +
-                                "code=${retData.code} (${retData.label})",
-                        )
+                    TraceContext.withTrace(TraceId.next()) {
+                        taigikeyboard?.compositionRoot?.logger?.tdebug("KeyView") {
+                            "[INPUT] fn=onFlorisTouchEvent gesture=ACTION_UP code=${retData.code} (${retData.label})"
+                        }
+                        taigikeyboard?.textInputManager?.sendKeyPress(retData)
+                        performClick()
                     }
-                    taigikeyboard?.textInputManager?.sendKeyPress(retData)
-                    performClick()
                 } else {
                     if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
                         android.util.Log.w(

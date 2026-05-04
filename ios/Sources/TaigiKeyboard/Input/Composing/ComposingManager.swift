@@ -50,6 +50,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     weak var delegate: (any ComposingDelegate)?
 
     private let settingsProvider: EngineSettingsProvider
+    private let logger = DebugLogger(category: "ComposingManager")
 
     // MARK: - Init
 
@@ -71,6 +72,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     // MARK: - Composing Operations
 
     public func startComposing(with text: String) {
+        logger.debug("[COMPOSE] fn=startComposing text='\(text)'")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingStart(
             text,
@@ -81,6 +83,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func appendCharacter(_ char: String) {
+        logger.debug("[COMPOSE] fn=appendCharacter char='\(char)'")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingAppend(
             char,
@@ -91,6 +94,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func appendHyphen() {
+        logger.debug("[COMPOSE] fn=appendHyphen")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingAppendHyphen(
             mode: settings.inputMode,
@@ -101,6 +105,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
 
     /// TPS auto-correct — preserves `selectedCandidateIndex`.
     public func replaceLastCharacter(with replacement: String) {
+        logger.debug("[COMPOSE] fn=replaceLastCharacter replacement='\(replacement)'")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingReplaceLast(
             replacement,
@@ -111,6 +116,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func deleteBackward() {
+        logger.debug("[COMPOSE] fn=deleteBackward")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingDeleteBackward(
             mode: settings.inputMode,
@@ -120,6 +126,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func commitComposition() {
+        logger.debug("[COMPOSE] fn=commitComposition")
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
             mode: settings.inputMode,
@@ -129,14 +136,17 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func commitRawInput() {
+        logger.debug("[COMPOSE] fn=commitRawInput")
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(generation: currentGeneration))
     }
 
     public func selectSuggestion(text: String) {
+        logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
         applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(text, generation: currentGeneration))
     }
 
     public func commitPreeditThenInsertExternal(_ text: String) {
+        logger.debug("[COMPOSE] fn=commitPreeditThenInsertExternal len=\(text.count)")
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             text,
@@ -149,6 +159,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     /// Commit the currently-selected candidate, given the visible candidate
     /// strings. KK-side callers pass `suggestions.map(\.text)`.
     public func confirmSelectedCandidate(availableTexts: [String]) -> Bool {
+        logger.debug("[COMPOSE] fn=confirmSelectedCandidate index=\(selectedCandidateIndex) count=\(availableTexts.count)")
         guard isComposing,
               selectedCandidateIndex >= 0,
               selectedCandidateIndex < availableTexts.count
@@ -158,10 +169,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     }
 
     public func reset() {
+        logger.debug("[COMPOSE] fn=reset")
         applyAsSelfCommit(RustEngineBridge.composingReset(generation: currentGeneration))
     }
 
     public func setSelectedCandidateIndex(_ index: Int) {
+        logger.debug("[COMPOSE] fn=setSelectedCandidateIndex index=\(index)")
         apply(RustEngineBridge.composingSetSelectedCandidateIndex(index, generation: currentGeneration))
     }
 

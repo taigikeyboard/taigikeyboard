@@ -830,6 +830,7 @@ public enum RustEngineBridge {
         generation: UInt64,
         config: Taigi_Engine_AppConfig?
     ) -> ComposingTransition {
+        let logger = LoggerFactory.make(category: "RustEngineBridge")
         var composing = Taigi_Engine_ComposingRequest()
         composing.method = method
 
@@ -847,6 +848,7 @@ public enum RustEngineBridge {
             return .noop
         }
 
+        logger.debug("[FFI->] fn=composingDispatch op=\(op) id=\(request.id) generation=\(generation)")
         let responseBytes = bytes.withUnsafeBufferPointer { buf in
             process_request_bytes(buf).toArray()
         }
@@ -864,7 +866,9 @@ public enum RustEngineBridge {
             recordFailure(op: op, message: "missing composing payload")
             return .noop
         }
-        return synthComposing(payload)
+        let transition = synthComposing(payload)
+        logger.debug("[FFI<-] fn=composingDispatch op=\(op) id=\(request.id) effects=\(transition.effects.count) composing=\(transition.isComposing)")
+        return transition
     }
 
     private static func synthComposing(_ proto: Taigi_Engine_ComposingResponse) -> ComposingTransition {

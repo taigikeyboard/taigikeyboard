@@ -12,6 +12,8 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
@@ -181,7 +183,9 @@ class SmartbarManager(
                     R.id.number_row_9 -> KeyData(57, "9")
                     else -> KeyData(0)
                 }
-            taigikeyboard.textInputManager.sendKeyPress(keyData)
+            TraceContext.withTrace(TraceId.next()) {
+                taigikeyboard.textInputManager.sendKeyPress(keyData)
+            }
         }
 
     companion object {

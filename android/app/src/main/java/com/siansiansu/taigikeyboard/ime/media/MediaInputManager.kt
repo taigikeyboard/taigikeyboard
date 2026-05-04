@@ -13,6 +13,8 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyData
 import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyboardView
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
@@ -113,7 +115,9 @@ class MediaInputManager(
                         object : Runnable {
                             override fun run() {
                                 if (isDeletePressed) {
-                                    taigikeyboard.textInputManager.sendKeyPress(data)
+                                    TraceContext.withTrace(TraceId.next()) {
+                                        taigikeyboard.textInputManager.sendKeyPress(data)
+                                    }
                                     osHandler?.postDelayed(this, 50)
                                 }
                             }
@@ -126,7 +130,9 @@ class MediaInputManager(
                 isDeletePressed = false
                 osHandler?.removeCallbacksAndMessages(null)
                 if (event.actionMasked != MotionEvent.ACTION_CANCEL && data != null) {
-                    taigikeyboard.textInputManager.sendKeyPress(data)
+                    TraceContext.withTrace(TraceId.next()) {
+                        taigikeyboard.textInputManager.sendKeyPress(data)
+                    }
                 }
             }
         }

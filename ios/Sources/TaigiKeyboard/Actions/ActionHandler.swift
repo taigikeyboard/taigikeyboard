@@ -81,7 +81,10 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             if action == .backspace {
                 // Allow backspace repeat-press gesture
                 if gesture == .repeatPress {
-                    _ = handleBackspaceAction()
+                    TraceContext.with(TraceId.next()) {
+                        logger.debug("[INPUT] fn=handle gesture=repeatPress action=\(String(describing: action))")
+                        _ = handleBackspaceAction()
+                    }
                 }
                 return
             }
@@ -90,11 +93,15 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             return
         }
 
-        let handled = handleTaigiSpecificAction(action)
-        if handled {
-            if !shouldSkipAutocomplete(for: action) {
+        var handled = false
+        TraceContext.with(TraceId.next()) {
+            logger.debug("[INPUT] fn=handle gesture=release action=\(String(describing: action))")
+            handled = handleTaigiSpecificAction(action)
+            if handled, !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
             }
+        }
+        if handled {
             return
         }
         super.handle(gesture, on: action)
@@ -116,7 +123,9 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
             return
         }
         // Taigi mode: custom handling
-        handleSuggestionSelection(suggestion)
+        TraceContext.with(TraceId.next()) {
+            handleSuggestionSelection(suggestion)
+        }
     }
 
     override public func handle(_ action: KeyboardAction) {

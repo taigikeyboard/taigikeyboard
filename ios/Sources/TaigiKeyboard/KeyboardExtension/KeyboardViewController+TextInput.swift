@@ -9,6 +9,26 @@ extension KeyboardViewController {
     /// to the iOS `UITextDocumentProxy` surface. Binding contract (iOS +
     /// Android) is documented in `composing-state-boundary.md` §2.2.
     func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
+        logger.debug({
+            let kind: String
+            switch effect {
+            case let .updatePreedit(text):
+                kind = "updatePreedit len=\(text.count)"
+            case .clearPreeditWithoutCommit:
+                kind = "clearPreeditWithoutCommit"
+            case let .commitTextReplacingPreedit(text):
+                kind = "commitTextReplacingPreedit len=\(text.count)"
+            case .deleteBackwardFromDocument:
+                kind = "deleteBackwardFromDocument"
+            case .resetAutocomplete:
+                kind = "resetAutocomplete"
+            case .performAutocomplete:
+                kind = "performAutocomplete"
+            case .resetAutocompleteContext:
+                kind = "resetAutocompleteContext"
+            }
+            return "[COMMIT] fn=execute effect=\(kind)"
+        }())
         switch effect {
         case let .updatePreedit(text):
             setMarkedText(text)

@@ -4,6 +4,9 @@ import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
+import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import java.util.concurrent.atomic.AtomicLong
@@ -34,6 +37,7 @@ import java.util.concurrent.atomic.AtomicLong
 class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
+    private val logger: LoggerBackend = NullLoggerBackend,
 ) {
     @Volatile
     private var cachedRawInput: String = ""
@@ -89,6 +93,8 @@ class ComposingManager(
     }
 
     companion object {
+        private const val TAG = "ComposingManager"
+
         // Starts at 1; first bump → 2. Engine-side `last_generation`
         // initializes to 0 so the very first request is already a
         // mismatch (silent reset of fresh engine = no-op).
@@ -98,6 +104,7 @@ class ComposingManager(
     // region Intent dispatch API
 
     fun startComposing(char: String, ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
         val mode = resolveMode(settings.inputMode)
         if (cachedIsComposing) {
@@ -119,6 +126,7 @@ class ComposingManager(
     }
 
     fun appendCharacter(char: String, ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=appendCharacter char='$char'" }
         val settings = settingsProvider.current
         applyTransition(
             RustEngineBridge.composingAppend(
@@ -132,6 +140,7 @@ class ComposingManager(
     }
 
     fun appendHyphen(ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=appendHyphen" }
         val settings = settingsProvider.current
         applyTransition(
             RustEngineBridge.composingAppendHyphen(
@@ -144,6 +153,7 @@ class ComposingManager(
     }
 
     fun replaceLastCharacter(replacement: String, ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=replaceLastCharacter replacement='$replacement'" }
         val settings = settingsProvider.current
         applyTransition(
             RustEngineBridge.composingReplaceLast(
@@ -172,6 +182,7 @@ class ComposingManager(
      * per backspace vs. issuing `composingQueryState` first.
      */
     fun deleteBackward(ic: InputConnection): Boolean {
+        logger.tdebug(TAG) { "[COMPOSE] fn=deleteBackward" }
         if (!cachedIsComposing || cachedRawInput.isEmpty()) return false
         val transition = if (cachedRawInput.length == 1) {
             RustEngineBridge.composingReset(currentGeneration)
@@ -188,6 +199,7 @@ class ComposingManager(
     }
 
     fun commitComposition(ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=commitComposition" }
         if (!cachedIsComposing) return
         val settings = settingsProvider.current
         applyAsSelfCommit(
@@ -201,6 +213,7 @@ class ComposingManager(
     }
 
     fun commitRawInput(ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=commitRawInput" }
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(currentGeneration),
             ic,
@@ -208,6 +221,7 @@ class ComposingManager(
     }
 
     fun selectSuggestion(suggestion: String, ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=selectSuggestion len=${suggestion.length}" }
         applyAsSelfCommit(
             RustEngineBridge.composingSelectSuggestion(suggestion, currentGeneration),
             ic,
@@ -215,6 +229,7 @@ class ComposingManager(
     }
 
     fun commitPreeditThenInsertExternal(text: String, ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=commitPreeditThenInsertExternal len=${text.length}" }
         val settings = settingsProvider.current
         applyAsSelfCommit(
             RustEngineBridge.composingCommitPreeditThenInsertExternal(
@@ -228,6 +243,7 @@ class ComposingManager(
     }
 
     fun reset(ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=reset" }
         applyAsSelfCommit(
             RustEngineBridge.composingReset(currentGeneration),
             ic,
@@ -277,6 +293,26 @@ class ComposingManager(
         cachedIsComposing = transition.isComposing
         cachedSelectedCandidateIndex = transition.selectedCandidateIndex
         for (effect in transition.effects) {
+            logger.tdebug("ComposingDelegate") {
+                val kind =
+                    when (effect) {
+                        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit ->
+                            "UpdatePreedit len=${effect.display.length}"
+                        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit ->
+                            "ClearPreeditWithoutCommit"
+                        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit ->
+                            "CommitTextReplacingPreedit len=${effect.text.length}"
+                        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument ->
+                            "DeleteBackwardFromDocument"
+                        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete ->
+                            "ResetAutocomplete"
+                        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete ->
+                            "PerformAutocomplete"
+                        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext ->
+                            "ResetAutocompleteContext"
+                    }
+                "[COMMIT] fn=applyTransition effect=$kind"
+            }
             delegate.execute(effect, ic)
         }
     }

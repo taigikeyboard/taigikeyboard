@@ -3,6 +3,8 @@ package com.siansiansu.taigikeyboard.ime.text
 import android.util.Log
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
+import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
@@ -45,11 +47,17 @@ class CandidateUpdateCoordinator(
      */
     fun updateTaigiCandidatesDebounced() {
         candidateUpdateJob?.cancel()
+        val trace = TraceContext.current
 
         candidateUpdateJob =
             scope.launch {
                 delay(CANDIDATE_DEBOUNCE_MS)
                 if (!isActive) return@launch
+
+                val traceId = trace ?: TraceId.untraced
+                if (BuildConfig.DEBUG) {
+                    Log.d(TAG, "[trace=$traceId] [CANDIDATE] fn=updateTaigiCandidatesDebounced debounce-fire (untraced from here)")
+                }
 
                 val candidateStart = System.currentTimeMillis()
                 updateTaigiCandidates()

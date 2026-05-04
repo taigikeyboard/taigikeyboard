@@ -36,6 +36,7 @@ import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
+import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
@@ -650,7 +651,11 @@ object RustEngineBridge {
         if (config != null) {
             requestBuilder.configSnapshot = config
         }
-        val response = sendRawBytes(requestBuilder.build().toByteArray())
+        val request = requestBuilder.build()
+        installedBackend.tdebug("RustEngineBridge") {
+            "[FFI->] fn=composingDispatch op=$op id=${request.id} generation=$generation"
+        }
+        val response = sendRawBytes(request.toByteArray())
         if (response == null) {
             recordFailure(op, "response decode failed")
             return ComposingTransition.NOOP
@@ -663,7 +668,11 @@ object RustEngineBridge {
             recordFailure(op, "missing composing payload")
             return ComposingTransition.NOOP
         }
-        return synthComposing(response.composing)
+        val transition = synthComposing(response.composing)
+        installedBackend.tdebug("RustEngineBridge") {
+            "[FFI<-] fn=composingDispatch op=$op id=${request.id} effects=${transition.effects.size} composing=${transition.isComposing}"
+        }
+        return transition
     }
 
     private fun synthComposing(

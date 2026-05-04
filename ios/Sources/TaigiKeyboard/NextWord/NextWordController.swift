@@ -285,11 +285,14 @@ final class NextWordController: SelectionContextProvider {
     private func startContextTimeoutTimer(afterMs: UInt64) {
         stopContextTimeoutTimer()
         let interval = TimeInterval(afterMs) / 1000.0
+        let captured = TraceContext.current
         contextTimeoutTimer = Timer.scheduledTimer(
             withTimeInterval: interval,
             repeats: false,
         ) { [weak self] _ in
-            self?.handleContextTimeout()
+            TraceContext.with(captured ?? TraceId.untraced) {
+                self?.handleContextTimeout()
+            }
         }
     }
 

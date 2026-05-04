@@ -18,6 +18,7 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
@@ -243,7 +244,10 @@ class TextInputManager(
         synchronized(composingLock) {
             composingManager =
                 if (isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS) {
-                    ComposingManager(settingsProvider = taigikeyboard.prefs)
+                    ComposingManager(
+                        settingsProvider = taigikeyboard.prefs,
+                        logger = taigikeyboard.compositionRoot.logger,
+                    )
                 } else {
                     null
                 }
@@ -667,6 +671,9 @@ class TextInputManager(
      * Main logic point for sending a key press.
      */
     fun sendKeyPress(keyData: KeyData) {
+        taigikeyboard.compositionRoot.logger.tdebug(TAG) {
+            "[SEND] fn=sendKeyPress code=${keyData.code} label='${keyData.label}' type=${keyData.type}"
+        }
         val ic = taigikeyboard.currentInputConnection
 
         when (keyData.code) {
@@ -827,6 +834,9 @@ class TextInputManager(
     private fun handleTaigiInput(keyData: KeyData) {
         val inputStart = System.currentTimeMillis()
         val ic = taigikeyboard.currentInputConnection ?: return
+        taigikeyboard.compositionRoot.logger.tdebug(TAG) {
+            "[TAIGI] fn=handleTaigiInput code=${keyData.code} label='${keyData.label}'"
+        }
 
         val baseText =
             if (keyData.label.isNotEmpty() &&
