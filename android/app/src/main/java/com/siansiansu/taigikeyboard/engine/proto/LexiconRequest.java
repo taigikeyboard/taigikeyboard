@@ -26,6 +26,7 @@ public  final class LexiconRequest extends
     ASSOC_LOOKUP(15),
     CLASSIFY_INPUT(16),
     IS_HANZI(17),
+    DICTIONARY_FILTERS(18),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -49,6 +50,7 @@ public  final class LexiconRequest extends
         case 15: return ASSOC_LOOKUP;
         case 16: return CLASSIFY_INPUT;
         case 17: return IS_HANZI;
+        case 18: return DICTIONARY_FILTERS;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -625,6 +627,76 @@ public  final class LexiconRequest extends
    */
   private void clearIsHanzi() {
     if (methodCase_ == 17) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int DICTIONARY_FILTERS_FIELD_NUMBER = 18;
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   */
+  @java.lang.Override
+  public boolean hasDictionaryFilters() {
+    return methodCase_ == 18;
+  }
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest getDictionaryFilters() {
+    if (methodCase_ == 18) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   */
+  private void setDictionaryFilters(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest value) {
+    value.getClass();
+  method_ = value;
+    methodCase_ = 18;
+  }
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   */
+  private void mergeDictionaryFilters(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest value) {
+    value.getClass();
+  if (methodCase_ == 18 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 18;
+  }
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   */
+  private void clearDictionaryFilters() {
+    if (methodCase_ == 18) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1315,6 +1387,78 @@ public  final class LexiconRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    @java.lang.Override
+    public boolean hasDictionaryFilters() {
+      return instance.hasDictionaryFilters();
+    }
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest getDictionaryFilters() {
+      return instance.getDictionaryFilters();
+    }
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    public Builder setDictionaryFilters(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest value) {
+      copyOnWrite();
+      instance.setDictionaryFilters(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    public Builder setDictionaryFilters(
+        com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDictionaryFilters(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    public Builder mergeDictionaryFilters(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest value) {
+      copyOnWrite();
+      instance.mergeDictionaryFilters(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 toggles → bitmasks + enabled codes
+     * </pre>
+     *
+     * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+     */
+    public Builder clearDictionaryFilters() {
+      copyOnWrite();
+      instance.clearDictionaryFilters();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.LexiconRequest)
   }
   @java.lang.Override
@@ -1341,10 +1485,11 @@ public  final class LexiconRequest extends
             com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest.class,
+            com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\n\u0011\b\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000";
+              "\u0000\t\u0001\u0000\n\u0012\t\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

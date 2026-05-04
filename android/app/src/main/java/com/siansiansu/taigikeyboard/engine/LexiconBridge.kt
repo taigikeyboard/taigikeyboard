@@ -2,6 +2,9 @@ package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
 import com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest
+import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
+import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
+import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
@@ -14,6 +17,8 @@ import com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
 
 /**
@@ -71,6 +76,61 @@ object LexiconBridge {
         POJ(2),
         TPS(3),
     }
+
+    /**
+     * 12-toggle snapshot of the user's dictionary preference state. Field
+     * order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`.
+     * Build via `from(settings)`; never construct piecemeal at search call
+     * sites — that splits the snapshot.
+     */
+    data class DictionaryToggles(
+        val kautian: Boolean,
+        val taigitv: Boolean,
+        val itaigi: Boolean,
+        val sitbut: Boolean,
+        val taihoa: Boolean,
+        val taijit: Boolean,
+        val kungge: Boolean,
+        val stti: Boolean,
+        val khpoo: Boolean,
+        val variant: Boolean,
+        val khiin: Boolean,
+        val lkk: Boolean,
+    ) {
+        companion object {
+            fun from(settings: EngineSettings): DictionaryToggles =
+                DictionaryToggles(
+                    kautian = settings.isMoeDictEnabled,
+                    taigitv = settings.isNewwordDictEnabled,
+                    itaigi = settings.isITaigiDictEnabled,
+                    sitbut = settings.isTaiwanPlantDictEnabled,
+                    taihoa = settings.isTaiHuaDictEnabled,
+                    taijit = settings.isTaiwanJapanDictEnabled,
+                    kungge = settings.isKunggeDictEnabled,
+                    stti = settings.isSttiDictEnabled,
+                    khpoo = settings.isKhpooDictEnabled,
+                    variant = settings.isVariantEnabled,
+                    khiin = settings.isKhiinEnabled,
+                    lkk = settings.isLkkDictEnabled,
+                )
+        }
+    }
+
+    /**
+     * Output of `dictionaryFilters` — ready-to-send bitmasks plus the
+     * decoded enabled-source set for Tab3 retag. Replaces verbatim
+     * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
+     *
+     * `assocLookupBitmask` carries the `UInt.MAX_VALUE` sentinel when all 9
+     * association sources are on — preserves the documented
+     * `lexicon.proto:166-173` shortcut. Caller forwards directly to
+     * `assocLookup(enabledSourcesBitmask = ...)`.
+     */
+    data class DictionaryFilters(
+        val dictionaryFilterBitmask: UInt,
+        val assocLookupBitmask: UInt,
+        val enabledSources: Set<DictionarySource>,
+    )
 
     /**
      * Install (or atomically reinstall) the lexicon engine state. Called
@@ -215,6 +275,52 @@ object LexiconBridge {
     }
 
     /**
+     * Resolve user's 12-toggle dictionary preferences into ready-to-send
+     * filter bitmasks + enabled-source set. Single FFI hop replaces the
+     * pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
+     *
+     * Call ONCE per query and pass the result down the search pipeline;
+     * resolving again inside Tab3's badge filter would split the snapshot.
+     */
+    fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters {
+        val protoToggles = ProtoDictionaryToggles.newBuilder()
+            .setKautian(toggles.kautian)
+            .setTaigitv(toggles.taigitv)
+            .setItaigi(toggles.itaigi)
+            .setSitbut(toggles.sitbut)
+            .setTaihoa(toggles.taihoa)
+            .setTaijit(toggles.taijit)
+            .setKungge(toggles.kungge)
+            .setStti(toggles.stti)
+            .setKhpoo(toggles.khpoo)
+            .setVariant(toggles.variant)
+            .setKhiin(toggles.khiin)
+            .setLkk(toggles.lkk)
+            .build()
+        val payload = DictionaryFiltersRequest.newBuilder()
+            .setToggles(protoToggles)
+            .build()
+        // Binary skew fallback: when method 18 dispatch fails (e.g. Kotlin
+        // updated but Rust .so not rebuilt) but methods 12-17 still work,
+        // the dev-only fallback would silently strip user-enabled dictionaries.
+        // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
+        // here so search/assoc call paths continue to honor user toggles.
+        // Codex PR #210 r3182714295.
+        val resp = dispatch(LexiconRequest.newBuilder().setDictionaryFilters(payload).build())
+        if (resp == null || !resp.hasDictionaryFiltersResult()) {
+            return platformFallbackFilters(toggles)
+        }
+        val r = resp.dictionaryFiltersResult
+        return DictionaryFilters(
+            dictionaryFilterBitmask = r.dictionaryFilterBitmask.toUInt(),
+            assocLookupBitmask = r.assocLookupBitmask.toUInt(),
+            enabledSources = r.enabledSourceCodesList
+                .mapNotNull(::platformDictionarySource)
+                .toSet(),
+        )
+    }
+
+    /**
      * Tab3 short-circuit predicate. True iff `text` contains any CJK
      * codepoint (Unified + Extensions A-E). See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
@@ -238,6 +344,81 @@ object LexiconBridge {
             InputType.INPUT_TYPE_HANZI           -> DictInputType.Hanzi
             InputType.INPUT_TYPE_ROMAN_WITH_TONE -> DictInputType.RomanWithTone
             else                                 -> DictInputType.RomanWithoutTone
+        }
+
+    /**
+     * Fallback only for platform/Rust binary skew where method 18 is absent.
+     * Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters` is
+     * authoritative; keep this bit layout in sync with
+     * `engine/protos/proto/lexicon.proto`. Bit positions pinned by the
+     * 6 inline Rust golden tests. Mirrors iOS
+     * `RustEngineBridge.platformFallbackFilters` — must drift together.
+     */
+    private fun platformFallbackFilters(toggles: DictionaryToggles): DictionaryFilters {
+        var dictMask = 0u
+        if (toggles.kautian) dictMask = dictMask or (1u shl 0)
+        if (toggles.taigitv) dictMask = dictMask or (1u shl 1)
+        if (toggles.itaigi)  dictMask = dictMask or (1u shl 2)
+        if (toggles.sitbut)  dictMask = dictMask or (1u shl 3)
+        if (toggles.taihoa)  dictMask = dictMask or (1u shl 4)
+        if (toggles.taijit)  dictMask = dictMask or (1u shl 5)
+        if (toggles.kungge)  dictMask = dictMask or (1u shl 6)
+        if (toggles.stti)    dictMask = dictMask or (1u shl 7)
+        if (toggles.khpoo)   dictMask = dictMask or (1u shl 8)
+        if (toggles.khiin)   dictMask = dictMask or (1u shl 9)
+        dictMask = dictMask or (1u shl 10) // dev always
+        if (toggles.lkk)     dictMask = dictMask or (1u shl 11)
+        if (toggles.variant) dictMask = dictMask or (1u shl 12)
+
+        val allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi &&
+            toggles.sitbut && toggles.taihoa && toggles.taijit &&
+            toggles.kungge && toggles.stti && toggles.khpoo
+        val assocMask: UInt = if (allAssocOn) UInt.MAX_VALUE else (dictMask and 0x1FFu)
+
+        val enabled = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
+        if (toggles.kautian) enabled.add(DictionarySource.KAUTIAN)
+        if (toggles.taigitv) enabled.add(DictionarySource.TAIGITV)
+        if (toggles.itaigi)  enabled.add(DictionarySource.ITAIGI)
+        if (toggles.sitbut)  enabled.add(DictionarySource.SITBUT)
+        if (toggles.taihoa)  enabled.add(DictionarySource.TAIHOA)
+        if (toggles.taijit)  enabled.add(DictionarySource.TAIJIT)
+        if (toggles.kungge)  enabled.add(DictionarySource.KUNGGE)
+        if (toggles.stti)    enabled.add(DictionarySource.STTI)
+        if (toggles.khpoo)   enabled.add(DictionarySource.KHPOO)
+        if (toggles.khiin)   enabled.add(DictionarySource.KHIIN)
+        if (toggles.lkk)     enabled.add(DictionarySource.LKK)
+        return DictionaryFilters(
+            dictionaryFilterBitmask = dictMask,
+            assocLookupBitmask = assocMask,
+            enabledSources = enabled,
+        )
+    }
+
+    /**
+     * Map proto `DictionarySourceCode` to the platform `DictionarySource`
+     * enum. Explicit `when` (no `ordinal` reliance — Kotlin enum has no
+     * stable numeric value; codes are wire-stable per
+     * `lexicon.proto::DictionarySourceCode`). Unspecified / unrecognised
+     * codes return `null` and the caller drops them. Mirrors iOS
+     * `RustEngineBridge.platformDictionarySource` — must drift together.
+     */
+    private fun platformDictionarySource(code: DictionarySourceCode): DictionarySource? =
+        when (code) {
+            DictionarySourceCode.DICT_SOURCE_KAUTIAN -> DictionarySource.KAUTIAN
+            DictionarySourceCode.DICT_SOURCE_TAIGITV -> DictionarySource.TAIGITV
+            DictionarySourceCode.DICT_SOURCE_ITAIGI  -> DictionarySource.ITAIGI
+            DictionarySourceCode.DICT_SOURCE_SITBUT  -> DictionarySource.SITBUT
+            DictionarySourceCode.DICT_SOURCE_TAIHOA  -> DictionarySource.TAIHOA
+            DictionarySourceCode.DICT_SOURCE_TAIJIT  -> DictionarySource.TAIJIT
+            DictionarySourceCode.DICT_SOURCE_KUNGGE  -> DictionarySource.KUNGGE
+            DictionarySourceCode.DICT_SOURCE_STTI    -> DictionarySource.STTI
+            DictionarySourceCode.DICT_SOURCE_KHPOO   -> DictionarySource.KHPOO
+            DictionarySourceCode.DICT_SOURCE_KHIIN   -> DictionarySource.KHIIN
+            DictionarySourceCode.DICT_SOURCE_LKK     -> DictionarySource.LKK
+            DictionarySourceCode.DICT_SOURCE_DEV     -> DictionarySource.DEV
+            DictionarySourceCode.DICT_SOURCE_CUSTOM  -> DictionarySource.CUSTOM
+            DictionarySourceCode.DICT_SOURCE_UNSPECIFIED,
+            DictionarySourceCode.UNRECOGNIZED        -> null
         }
 
     // endregion Classification

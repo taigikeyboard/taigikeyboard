@@ -67,17 +67,24 @@ final class DictionarySearchService: @unchecked Sendable {
         let isCJK = RustEngineBridge.isHanzi(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
+        // Resolve filter bitmask + enabled-source set ONCE per query and
+        // hand both down the pipeline. Splitting the snapshot (resolving
+        // again in retag) would let toggle changes mid-search produce a
+        // mask/badge mismatch (Codex pre-impl BLOCK 5).
+        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
+        let filters = RustEngineBridge.lexiconDictionaryFilters(toggles: toggles)
+
         let systemResults = fetchSystemResults(
             query: query,
             inputMode: inputMode,
             isCJK: isCJK,
             limit: limit,
+            filterBitmask: filters.dictionaryFilterBitmask,
         )
         let customResults = isCJK ? [] : lookupCustomDictionary(query: query)
 
-        let enabled = EnabledDictionaries(from: settingsProvider.current).enabledSources
         let prepared = sortByMoeThenFrequency(systemResults)
-            .map { retagSources($0, enabled: enabled) }
+            .map { retagSources($0, enabled: filters.enabledSources) }
 
         return customResults + prepared
     }
@@ -89,6 +96,7 @@ final class DictionarySearchService: @unchecked Sendable {
         inputMode: InputMode,
         isCJK: Bool,
         limit: Int,
+        filterBitmask: UInt32,
     ) -> [DictionarySearchResult] {
         // .english unreachable — keyboard passthrough never invokes lexicon
         // search; mirrors Android `InputMode.ENGLISH -> LexiconInputMode.TL`.
@@ -98,23 +106,18 @@ final class DictionarySearchService: @unchecked Sendable {
         case .tps: .tps
         case .english: .tl
         }
-        // Engine `dictionary.bin` filter expects exact bitmask layout
-        // (sources 0-8,11 + khiin@9 + dev@10 + variant@12). Don't use
-        // UInt32.max as a "all-enabled" sentinel here — it would force
-        // variant + khiin on regardless of user toggles.
-        let bitmask = EnabledDictionaries(from: settingsProvider.current).dictionaryFilterBitmask()
         let rows = isCJK
             ? RustEngineBridge.lexiconSearchByHanzi(
                 query: query,
                 inputMode: bridgeMode,
                 limit: UInt32(limit),
-                enabledSourcesBitmask: bitmask,
+                enabledSourcesBitmask: filterBitmask,
             )
             : RustEngineBridge.lexiconSearchWithSources(
                 input: query,
                 inputMode: bridgeMode,
                 limit: UInt32(limit),
-                enabledSourcesBitmask: bitmask,
+                enabledSourcesBitmask: filterBitmask,
             )
         return rows.map { row in
             // Engine returns raw `tl`; render to POJ when in POJ mode.

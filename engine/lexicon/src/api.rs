@@ -4,12 +4,14 @@
 
 use protos::engine::{
     AssocLookupRequest, AssocLookupResponse, ClassifyInputRequest, ClassifyInputResponse,
-    InstallRequest, InstallResponse, IsHanziRequest, IsHanziResponse, LexiconAssocEntry,
-    SearchByHanziRequest, SearchByHanziResponse, SearchRequest, SearchResponse,
-    SearchWithSourcesRequest, SearchWithSourcesResponse, TaigiWord,
+    DictionaryFiltersRequest, DictionaryFiltersResponse, InstallRequest, InstallResponse,
+    IsHanziRequest, IsHanziResponse, LexiconAssocEntry, SearchByHanziRequest,
+    SearchByHanziResponse, SearchRequest, SearchResponse, SearchWithSourcesRequest,
+    SearchWithSourcesResponse, TaigiWord,
 };
 
 use crate::classification;
+use crate::dictionary_filters::compute_filters;
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;
@@ -129,6 +131,13 @@ pub fn is_hanzi(req: IsHanziRequest) -> Result<IsHanziResponse, LexiconError> {
     Ok(IsHanziResponse {
         is_hanzi: classification::is_hanzi(&req.text),
     })
+}
+
+pub fn dictionary_filters(
+    req: DictionaryFiltersRequest,
+) -> Result<DictionaryFiltersResponse, LexiconError> {
+    let toggles = req.toggles.unwrap_or_default();
+    Ok(compute_filters(&toggles))
 }
 
 fn build_search_params(req: &SearchRequest) -> Result<SearchParams, LexiconError> {

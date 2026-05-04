@@ -36,6 +36,7 @@ message LexiconRequest {
     AssocLookupRequest        assoc_lookup          = 15;  // bundled bigram
     ClassifyInputRequest      classify_input        = 16;  // v3.5.7 IME classifier
     IsHanziRequest            is_hanzi              = 17;  // v3.5.7 Tab3 short-circuit
+    DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
   }
 }
 
@@ -191,6 +192,42 @@ message IsHanziRequest {
   string text = 1;
 }
 
+// `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
+// preferences into the ready-to-send bitmasks consumed by `SearchRequest` /
+// `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
+//
+// Single Rust source of truth replaces verbatim-mirrored bit math previously
+// in `ios/.../EnabledDictionaries.swift` + `android/.../EnabledDictionaries.kt`
+// (~80 LOC pure-logic duplication, audit residue 2026-05-04 § A.1 P2).
+//
+// `toggles` may be absent on the wire (prost `Option<DictionaryToggles>`);
+// the engine treats absence as `DictionaryToggles::default()` (all false).
+message DictionaryFiltersRequest {
+  DictionaryToggles toggles = 1;
+}
+
+// `DictionaryFiltersResponse` carries ready-to-send outputs:
+// - `dictionary_filter_bitmask` plumbs straight into
+//   `SearchRequest.enabled_sources_bitmask` / `SearchWithSourcesRequest` /
+//   `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
+//   bit 10 dev (always set), bit 12 variant.
+// - `assoc_lookup_bitmask` plumbs straight into
+//   `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
+//   ALL 9 association sources are enabled (preserves the documented
+//   sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
+//   association mask (bits 0-8). Platform NextWord callers forward
+//   directly without re-branching.
+// - `enabled_source_codes` lists every `DictionarySourceCode` whose source
+//   the user has toggled on. `DEV` + `CUSTOM` are always present
+//   (non-toggleable). Platforms decode via explicit switch/map into their
+//   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
+//   `ordinal` since the platform enums lack stable numeric values.
+message DictionaryFiltersResponse {
+  uint32                          dictionary_filter_bitmask  = 1;
+  uint32                          assoc_lookup_bitmask       = 2;
+  repeated DictionarySourceCode   enabled_source_codes       = 3;
+}
+
 // =========================================================================
 // Response envelope
 // =========================================================================
@@ -205,6 +242,7 @@ message LexiconResponse {
     AssocLookupResponse        assoc_lookup_result         = 15;
     ClassifyInputResponse      classify_input_result       = 16;
     IsHanziResponse            is_hanzi_result             = 17;
+    DictionaryFiltersResponse  dictionary_filters_result   = 18;
   }
 }
 
@@ -346,4 +384,50 @@ enum InputMode {
   INPUT_MODE_TL           = 1;
   INPUT_MODE_POJ          = 2;
   INPUT_MODE_TPS          = 3;
+}
+
+// `DictionaryToggles` is the 12-boolean snapshot of user dictionary
+// preferences that drives `DictionaryFiltersRequest`. Field tags map
+// directly to the bit positions the engine consumes; reordering tags is
+// a wire break.
+//
+// Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
+// surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
+message DictionaryToggles {
+  bool kautian = 1;  // 教育部臺灣台語常用詞辭典
+  bool taigitv = 2;  // 台語新詞辭庫
+  bool itaigi  = 3;  // iTaigi 華台對照典
+  bool sitbut  = 4;  // 台灣植物名彙
+  bool taihoa  = 5;  // 台華線頂對照典
+  bool taijit  = 6;  // 台日大辭典
+  bool kungge  = 7;  // 台語工藝詞庫
+  bool stti    = 8;  // 學科術語辭典
+  bool khpoo   = 9;  // 腔口補充資料
+  bool variant = 10; // 異用字 (filter bit 12)
+  bool khiin   = 11; // 在來字 (filter bit 9)
+  bool lkk     = 12; // LKK漢羅合用建議用字
+}
+
+// `DictionarySourceCode` is the wire-stable mapping for
+// `DictionaryFiltersResponse.enabled_source_codes`. Decoupled from platform
+// `DictionarySource` enum raw values — Swift uses `String` raw values and
+// Kotlin has no stable numeric value beyond `ordinal`. Platforms decode
+// via explicit switch/map.
+//
+// DO NOT renumber: this is wire format. New sources append at the end.
+enum DictionarySourceCode {
+  DICT_SOURCE_UNSPECIFIED = 0;
+  DICT_SOURCE_KAUTIAN     = 1;
+  DICT_SOURCE_TAIGITV     = 2;
+  DICT_SOURCE_ITAIGI      = 3;
+  DICT_SOURCE_SITBUT      = 4;
+  DICT_SOURCE_TAIHOA      = 5;
+  DICT_SOURCE_TAIJIT      = 6;
+  DICT_SOURCE_KUNGGE      = 7;
+  DICT_SOURCE_STTI        = 8;
+  DICT_SOURCE_KHPOO       = 9;
+  DICT_SOURCE_KHIIN       = 10;
+  DICT_SOURCE_LKK         = 11;
+  DICT_SOURCE_DEV         = 12;  // always-on (non-toggleable)
+  DICT_SOURCE_CUSTOM      = 13;  // always-on (non-toggleable)
 }

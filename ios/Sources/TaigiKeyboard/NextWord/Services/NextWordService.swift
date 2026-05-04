@@ -266,12 +266,11 @@ final class NextWordService: @unchecked Sendable {
         // Bridge call into engine/lexicon — engine applies the 1-layer source
         // filter (low 9 bits of bitmask) internally per audit §4. Over-fetch
         // limit*2 for merge-slack (Codex post-impl P2-1 carry-over from
-        // v3.5.5 NextWord slice). Bitmask plumbed end-to-end since
-        // r3173013233 (prior to that, api.rs hardcoded u32::MAX).
-        let enabled = EnabledDictionaries(from: settingsProvider.current)
-        let bitmask: UInt32 = enabled.allAssociationSourcesEnabled
-            ? UInt32.max
-            : UInt32(enabled.associationBitmask())
+        // v3.5.5 NextWord slice). `assocLookupBitmask` is engine-resolved
+        // (`UInt32.max` sentinel when all 9 sources on, else exact mask) —
+        // pre-v3.5.8 the platform branched on `allAssociationSourcesEnabled`.
+        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
+        let bitmask = RustEngineBridge.lexiconDictionaryFilters(toggles: toggles).assocLookupBitmask
         let entries = RustEngineBridge.lexiconAssocLookup(
             previousWord: lastChar,
             limit: UInt32(limit * 2),

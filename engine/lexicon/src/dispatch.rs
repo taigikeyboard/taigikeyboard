@@ -1,14 +1,15 @@
-//! Dispatch: route `LexiconRequest.method` oneof variants 11-17 to the
+//! Dispatch: route `LexiconRequest.method` oneof variants 11-18 to the
 //! per-method API. Tag 10 (process_candidates) stays routed to `ranking`
 //! by `engine/dispatch::lib.rs`; this crate owns the read-path variants
-//! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup) and the
-//! classification variants (ClassifyInput/IsHanzi).
+//! (Install/Search/SearchWithSources/SearchByHanzi/AssocLookup), the
+//! classification variants (ClassifyInput/IsHanzi), and the v3.5.8
+//! DictionaryFilters variant.
 
 use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
-    AssocLookupRequest, ClassifyInputRequest, InstallRequest, IsHanziRequest, LexiconResponse,
-    SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
+    AssocLookupRequest, ClassifyInputRequest, DictionaryFiltersRequest, InstallRequest,
+    IsHanziRequest, LexiconResponse, SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
 };
 
 use crate::api;
@@ -65,6 +66,15 @@ pub fn handle_is_hanzi(req: IsHanziRequest) -> Result<LexiconResponse, LexiconEr
     })
 }
 
+pub fn handle_dictionary_filters(
+    req: DictionaryFiltersRequest,
+) -> Result<LexiconResponse, LexiconError> {
+    let resp = api::dictionary_filters(req)?;
+    Ok(LexiconResponse {
+        result: Some(LexResult::DictionaryFiltersResult(resp)),
+    })
+}
+
 /// Convenience: dispatch `LexiconRequest.method` directly to the matching
 /// handler. Returns `None` for tag 10 (process_candidates) — callers must
 /// route that through the `ranking` crate per plan §6.
@@ -80,5 +90,6 @@ pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
         Method::AssocLookup(req) => handle_assoc_lookup(req),
         Method::ClassifyInput(req) => handle_classify_input(req),
         Method::IsHanzi(req) => handle_is_hanzi(req),
+        Method::DictionaryFilters(req) => handle_dictionary_filters(req),
     }
 }

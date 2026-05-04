@@ -54,6 +54,39 @@ public extension RustEngineBridge {
         case tps = 3
     }
 
+    /// 12-toggle snapshot the user's dictionary preference state.
+    /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`.
+    /// Build via `init(from settings: EngineSettings)`; never construct
+    /// piecemeal at search call sites — that splits the snapshot.
+    struct DictionaryToggles: Equatable, Sendable {
+        public let kautian: Bool
+        public let taigitv: Bool
+        public let itaigi: Bool
+        public let sitbut: Bool
+        public let taihoa: Bool
+        public let taijit: Bool
+        public let kungge: Bool
+        public let stti: Bool
+        public let khpoo: Bool
+        public let variant: Bool
+        public let khiin: Bool
+        public let lkk: Bool
+    }
+
+    /// Output of `lexiconDictionaryFilters` — ready-to-send bitmasks plus
+    /// the decoded enabled-source set for Tab3 retag. Replaces verbatim
+    /// platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
+    ///
+    /// `assocLookupBitmask` carries the `UInt32.max` sentinel when all 9
+    /// association sources are on — preserves the documented
+    /// `lexicon.proto:166-173` shortcut. Caller forwards directly to
+    /// `lexiconAssocLookup(enabledSourcesBitmask:)`.
+    struct DictionaryFilters: Equatable, Sendable {
+        public let dictionaryFilterBitmask: UInt32
+        public let assocLookupBitmask: UInt32
+        public let enabledSources: Set<DictionarySource>
+    }
+
     // MARK: - Methods
 
     /// Install (or atomically reinstall) the lexicon engine state. Called
@@ -215,6 +248,48 @@ public extension RustEngineBridge {
         )
     }
 
+    /// Resolve user's 12-toggle dictionary preferences into ready-to-send
+    /// filter bitmasks + enabled-source set. Single FFI hop replaces the
+    /// pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
+    ///
+    /// Call ONCE per query and pass the result down the search pipeline;
+    /// re-resolving inside `fetchSystemResults` would split the snapshot.
+    static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
+        var togglesProto = Taigi_Engine_DictionaryToggles()
+        togglesProto.kautian = toggles.kautian
+        togglesProto.taigitv = toggles.taigitv
+        togglesProto.itaigi = toggles.itaigi
+        togglesProto.sitbut = toggles.sitbut
+        togglesProto.taihoa = toggles.taihoa
+        togglesProto.taijit = toggles.taijit
+        togglesProto.kungge = toggles.kungge
+        togglesProto.stti = toggles.stti
+        togglesProto.khpoo = toggles.khpoo
+        togglesProto.variant = toggles.variant
+        togglesProto.khiin = toggles.khiin
+        togglesProto.lkk = toggles.lkk
+        var payload = Taigi_Engine_DictionaryFiltersRequest()
+        payload.toggles = togglesProto
+        // Binary skew fallback: when method 18 dispatch fails (e.g. Swift
+        // updated but xcframework not rebuilt) but methods 12-17 still work,
+        // the dev-only fallback would silently strip user-enabled dictionaries.
+        // Mirror Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters`
+        // here so search/assoc call paths continue to honor user toggles.
+        // Codex PR #210 r3182714295.
+        guard let resp = lexiconDispatch(method: .dictionaryFilters(payload), op: "lexiconDictionaryFilters") else {
+            return platformFallbackFilters(toggles: toggles)
+        }
+        guard case let .dictionaryFiltersResult(r)? = resp.result else {
+            recordFailure(op: "lexiconDictionaryFilters", message: "missing dictionary_filters result")
+            return platformFallbackFilters(toggles: toggles)
+        }
+        return DictionaryFilters(
+            dictionaryFilterBitmask: r.dictionaryFilterBitmask,
+            assocLookupBitmask: r.assocLookupBitmask,
+            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:)))
+        )
+    }
+
     /// Tab3 short-circuit predicate. True iff `text` contains any CJK
     /// codepoint (Unified + Extensions A-E). See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
@@ -256,5 +331,96 @@ public extension RustEngineBridge {
         case .unspecified, .UNRECOGNIZED:
             return .romanWithoutTone
         }
+    }
+
+    /// Fallback only for platform/Rust binary skew where method 18 is absent.
+    /// Rust `engine/lexicon/src/dictionary_filters.rs::compute_filters` is
+    /// authoritative; keep this bit layout in sync with
+    /// `engine/protos/proto/lexicon.proto`. Bit positions pinned by the
+    /// 6 inline Rust golden tests.
+    private static func platformFallbackFilters(toggles: DictionaryToggles) -> DictionaryFilters {
+        var dictMask: UInt32 = 0
+        if toggles.kautian { dictMask |= 1 << 0 }
+        if toggles.taigitv { dictMask |= 1 << 1 }
+        if toggles.itaigi  { dictMask |= 1 << 2 }
+        if toggles.sitbut  { dictMask |= 1 << 3 }
+        if toggles.taihoa  { dictMask |= 1 << 4 }
+        if toggles.taijit  { dictMask |= 1 << 5 }
+        if toggles.kungge  { dictMask |= 1 << 6 }
+        if toggles.stti    { dictMask |= 1 << 7 }
+        if toggles.khpoo   { dictMask |= 1 << 8 }
+        if toggles.khiin   { dictMask |= 1 << 9 }
+        dictMask |= 1 << 10 // dev always
+        if toggles.lkk     { dictMask |= 1 << 11 }
+        if toggles.variant { dictMask |= 1 << 12 }
+
+        let allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi
+            && toggles.sitbut && toggles.taihoa && toggles.taijit
+            && toggles.kungge && toggles.stti && toggles.khpoo
+        let assocMask: UInt32 = allAssocOn ? UInt32.max : (dictMask & 0x1FF)
+
+        var enabled: Set<DictionarySource> = [.dev, .custom]
+        if toggles.kautian { enabled.insert(.kautian) }
+        if toggles.taigitv { enabled.insert(.taigitv) }
+        if toggles.itaigi  { enabled.insert(.itaigi) }
+        if toggles.sitbut  { enabled.insert(.sitbut) }
+        if toggles.taihoa  { enabled.insert(.taihoa) }
+        if toggles.taijit  { enabled.insert(.taijit) }
+        if toggles.kungge  { enabled.insert(.kungge) }
+        if toggles.stti    { enabled.insert(.stti) }
+        if toggles.khpoo   { enabled.insert(.khpoo) }
+        if toggles.khiin   { enabled.insert(.khiin) }
+        if toggles.lkk     { enabled.insert(.lkk) }
+        return DictionaryFilters(
+            dictionaryFilterBitmask: dictMask,
+            assocLookupBitmask: assocMask,
+            enabledSources: enabled
+        )
+    }
+
+    /// Map proto `DictionarySourceCode` to the platform `DictionarySource`
+    /// enum. Explicit switch (no `rawValue` / `ordinal` reliance — Swift
+    /// `DictionarySource` is `String`-backed; codes are wire-stable per
+    /// `lexicon.proto::DictionarySourceCode`).
+    /// Unspecified / unrecognised codes return `nil` and the caller drops them.
+    private static func platformDictionarySource(from code: Taigi_Engine_DictionarySourceCode) -> DictionarySource? {
+        switch code {
+        case .dictSourceKautian: return .kautian
+        case .dictSourceTaigitv: return .taigitv
+        case .dictSourceItaigi:  return .itaigi
+        case .dictSourceSitbut:  return .sitbut
+        case .dictSourceTaihoa:  return .taihoa
+        case .dictSourceTaijit:  return .taijit
+        case .dictSourceKungge:  return .kungge
+        case .dictSourceStti:    return .stti
+        case .dictSourceKhpoo:   return .khpoo
+        case .dictSourceKhiin:   return .khiin
+        case .dictSourceLkk:     return .lkk
+        case .dictSourceDev:     return .dev
+        case .dictSourceCustom:  return .custom
+        case .dictSourceUnspecified, .UNRECOGNIZED:
+            return nil
+        }
+    }
+}
+
+/// Build `DictionaryToggles` from an `EngineSettings` snapshot. Centralises
+/// the boolean assembly so search call sites can't accidentally diverge.
+extension RustEngineBridge.DictionaryToggles {
+    init(from settings: EngineSettings) {
+        self.init(
+            kautian: settings.isMoeDictEnabled,
+            taigitv: settings.isNewwordDictEnabled,
+            itaigi: settings.isITaigiDictEnabled,
+            sitbut: settings.isTaiwanPlantDictEnabled,
+            taihoa: settings.isTaiHuaDictEnabled,
+            taijit: settings.isTaiwanJapanDictEnabled,
+            kungge: settings.isKunggeDictEnabled,
+            stti: settings.isSttiDictEnabled,
+            khpoo: settings.isKhpooDictEnabled,
+            variant: settings.isVariantEnabled,
+            khiin: settings.isKhiinEnabled,
+            lkk: settings.isLkkDictEnabled
+        )
     }
 }

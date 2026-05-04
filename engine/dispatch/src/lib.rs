@@ -125,14 +125,15 @@ fn run(bytes: &[u8]) -> Response {
                         )),
                     }
                 }
-                // Tags 11-17 — engine/lexicon.
+                // Tags 11-18 — engine/lexicon.
                 lex_method @ (protos::engine::lexicon_request::Method::Install(_)
                 | protos::engine::lexicon_request::Method::Search(_)
                 | protos::engine::lexicon_request::Method::SearchWithSources(_)
                 | protos::engine::lexicon_request::Method::SearchByHanzi(_)
                 | protos::engine::lexicon_request::Method::AssocLookup(_)
                 | protos::engine::lexicon_request::Method::ClassifyInput(_)
-                | protos::engine::lexicon_request::Method::IsHanzi(_)) => {
+                | protos::engine::lexicon_request::Method::IsHanzi(_)
+                | protos::engine::lexicon_request::Method::DictionaryFilters(_)) => {
                     match lexicon::dispatch::handle(lex_method) {
                         Ok(lex_resp) => Response {
                             id,

@@ -202,13 +202,14 @@ class NextWordService(
                     // bitmask) per audit §4. Over-fetch limit * 2 so the Rust
                     // filter step has slack to merge (hanzi, tl) collisions
                     // across dict + user without dropping below the caller's
-                    // requested limit.
-                    val enabled = EnabledDictionaries.fromSettings(settings)
-                    val bitmask: UInt = if (enabled.allAssociationSourcesEnabled()) {
-                        UInt.MAX_VALUE
-                    } else {
-                        enabled.associationBitmask().toUInt()
-                    }
+                    // requested limit. `assocLookupBitmask` is engine-resolved
+                    // (`UInt.MAX_VALUE` sentinel when all 9 sources on, else
+                    // exact mask) — pre-v3.5.8 the platform branched on
+                    // `allAssociationSourcesEnabled`.
+                    val toggles = com.siansiansu.taigikeyboard.engine.LexiconBridge
+                        .DictionaryToggles.from(settings)
+                    val bitmask = com.siansiansu.taigikeyboard.engine.LexiconBridge
+                        .dictionaryFilters(toggles).assocLookupBitmask
                     val entries = com.siansiansu.taigikeyboard.engine.LexiconBridge.assocLookup(
                         previousWord = lastChar,
                         limit = (limit * 2).toUInt(),

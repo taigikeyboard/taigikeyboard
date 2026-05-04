@@ -47,23 +47,6 @@ class DictionarySearchViewModel(
         observeSearchText()
     }
 
-    // Build set of enabled dictionary sources from current preferences
-    private fun buildEnabledSources(): Set<DictionarySource> {
-        val sources = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
-        if (prefs.moeDictEnabled) sources.add(DictionarySource.KAUTIAN)
-        if (prefs.newwordDictEnabled) sources.add(DictionarySource.TAIGITV)
-        if (prefs.kunggeDictEnabled) sources.add(DictionarySource.KUNGGE)
-        if (prefs.itaigiDictEnabled) sources.add(DictionarySource.ITAIGI)
-        if (prefs.taiwanJapanDictEnabled) sources.add(DictionarySource.TAIJIT)
-        if (prefs.taiHuaDictEnabled) sources.add(DictionarySource.TAIHOA)
-        if (prefs.taiwanPlantDictEnabled) sources.add(DictionarySource.SITBUT)
-        if (prefs.sttiDictEnabled) sources.add(DictionarySource.STTI)
-        if (prefs.khpooDictEnabled) sources.add(DictionarySource.KHPOO)
-        if (prefs.khiin) sources.add(DictionarySource.KHIIN)
-        if (prefs.lkkDictEnabled) sources.add(DictionarySource.LKK)
-        return sources
-    }
-
     fun updateSearchText(text: String) {
         _searchText.value = text
     }
@@ -105,17 +88,27 @@ class DictionarySearchViewModel(
                 Log.d(TAG, "[SEARCH] query='$query' isCJK=$isCJK inputMode=$inputMode")
             }
 
+            // Resolve filter bitmask + enabled-source set ONCE per query and
+            // hand both down the pipeline (mask into LexiconService, codes
+            // into retag). Splitting the snapshot would let toggle changes
+            // mid-search produce a mask/badge mismatch (Codex pre-impl
+            // BLOCK 6).
+            val toggles = LexiconBridge.DictionaryToggles.from(prefs)
+            val filters = LexiconBridge.dictionaryFilters(toggles)
+
             val outcome =
                 if (isCJK) {
                     root.lexicon.searchByHanzi(
                         input = query,
                         inputMode = inputMode,
+                        filterBitmask = filters.dictionaryFilterBitmask,
                         limit = SEARCH_RESULT_LIMIT,
                     )
                 } else {
                     root.lexicon.searchWithSources(
                         input = query,
                         inputMode = inputMode,
+                        filterBitmask = filters.dictionaryFilterBitmask,
                         limit = SEARCH_RESULT_LIMIT,
                     )
                 }
@@ -151,10 +144,9 @@ class DictionarySearchViewModel(
                     compareByDescending<DictionarySearchResult> { DictionarySource.KAUTIAN in it.sources }
                         .thenByDescending { it.frequency },
                 )
-            val enabledSources = buildEnabledSources()
             val filtered =
                 sorted.map { result ->
-                    result.copy(sources = result.sources.filter { it in enabledSources })
+                    result.copy(sources = result.sources.filter { it in filters.enabledSources })
                 }
             _results.value = customResults + filtered
             _isSearching.value = false

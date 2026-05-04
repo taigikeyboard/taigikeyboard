@@ -13,6 +13,7 @@
 pub mod api;
 pub mod association_reader;
 pub mod classification;
+mod dictionary_filters;
 pub mod dictionary_reader;
 pub mod dispatch;
 pub mod error;

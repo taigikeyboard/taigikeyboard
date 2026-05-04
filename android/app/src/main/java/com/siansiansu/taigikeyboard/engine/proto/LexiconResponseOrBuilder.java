@@ -97,5 +97,16 @@ public interface LexiconResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult();
 
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   * @return Whether the dictionaryFiltersResult field is set.
+   */
+  boolean hasDictionaryFiltersResult();
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   * @return The dictionaryFiltersResult.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse getDictionaryFiltersResult();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconResponse.ResultCase getResultCase();
 }

@@ -158,11 +158,13 @@ final class LexiconService: @unchecked Sendable {
         case .tps: .tps
         case .english: .tl
         }
-        // Use the exact dictionary filter mask (sources 0-8,11 + khiin@9 +
-        // dev@10 + variant@12). Pre-fix this branched on `allEnabled` and
-        // sent `UInt32.max`, which forced variant + khiin on regardless of
-        // user toggles (r3173440126).
-        let bitmask = EnabledDictionaries(from: settingsProvider.current).dictionaryFilterBitmask()
+        // Resolve the user's 12 dictionary toggles → ready-to-send bitmask
+        // via the engine. Pre-v3.5.8 this branched on `allEnabled` and sent
+        // `UInt32.max`, which forced variant + khiin on regardless of user
+        // toggles (r3173440126); we now route through Rust per audit
+        // residue § A.1.
+        let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
+        let bitmask = RustEngineBridge.lexiconDictionaryFilters(toggles: toggles).dictionaryFilterBitmask
         let rows = RustEngineBridge.lexiconSearch(
             input: segmentedInput,
             inputType: bridgeInputType,

@@ -161,5 +161,24 @@ public interface LexiconRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest getIsHanzi();
 
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   * @return Whether the dictionaryFilters field is set.
+   */
+  boolean hasDictionaryFilters();
+  /**
+   * <pre>
+   * v3.5.8 toggles → bitmasks + enabled codes
+   * </pre>
+   *
+   * <code>.taigi.engine.DictionaryFiltersRequest dictionary_filters = 18;</code>
+   * @return The dictionaryFilters.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest getDictionaryFilters();
+
   public com.siansiansu.taigikeyboard.engine.proto.LexiconRequest.MethodCase getMethodCase();
 }

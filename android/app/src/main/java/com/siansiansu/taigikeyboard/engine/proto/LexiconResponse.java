@@ -26,6 +26,7 @@ public  final class LexiconResponse extends
     ASSOC_LOOKUP_RESULT(15),
     CLASSIFY_INPUT_RESULT(16),
     IS_HANZI_RESULT(17),
+    DICTIONARY_FILTERS_RESULT(18),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -49,6 +50,7 @@ public  final class LexiconResponse extends
         case 15: return ASSOC_LOOKUP_RESULT;
         case 16: return CLASSIFY_INPUT_RESULT;
         case 17: return IS_HANZI_RESULT;
+        case 18: return DICTIONARY_FILTERS_RESULT;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -465,6 +467,56 @@ public  final class LexiconResponse extends
    */
   private void clearIsHanziResult() {
     if (resultCase_ == 17) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int DICTIONARY_FILTERS_RESULT_FIELD_NUMBER = 18;
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   */
+  @java.lang.Override
+  public boolean hasDictionaryFiltersResult() {
+    return resultCase_ == 18;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse getDictionaryFiltersResult() {
+    if (resultCase_ == 18) {
+       return (com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   */
+  private void setDictionaryFiltersResult(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse value) {
+    value.getClass();
+  result_ = value;
+    resultCase_ = 18;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   */
+  private void mergeDictionaryFiltersResult(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse value) {
+    value.getClass();
+  if (resultCase_ == 18 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 18;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+   */
+  private void clearDictionaryFiltersResult() {
+    if (resultCase_ == 18) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -963,6 +1015,54 @@ public  final class LexiconResponse extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    @java.lang.Override
+    public boolean hasDictionaryFiltersResult() {
+      return instance.hasDictionaryFiltersResult();
+    }
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse getDictionaryFiltersResult() {
+      return instance.getDictionaryFiltersResult();
+    }
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    public Builder setDictionaryFiltersResult(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse value) {
+      copyOnWrite();
+      instance.setDictionaryFiltersResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    public Builder setDictionaryFiltersResult(
+        com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setDictionaryFiltersResult(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    public Builder mergeDictionaryFiltersResult(com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse value) {
+      copyOnWrite();
+      instance.mergeDictionaryFiltersResult(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DictionaryFiltersResponse dictionary_filters_result = 18;</code>
+     */
+    public Builder clearDictionaryFiltersResult() {
+      copyOnWrite();
+      instance.clearDictionaryFiltersResult();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.LexiconResponse)
   }
   @java.lang.Override
@@ -989,10 +1089,11 @@ public  final class LexiconResponse extends
             com.siansiansu.taigikeyboard.engine.proto.AssocLookupResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.ClassifyInputResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\n\u0011\b\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000";
+              "\u0000\t\u0001\u0000\n\u0012\t\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

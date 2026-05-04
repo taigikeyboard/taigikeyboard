@@ -77,11 +77,12 @@ class LexiconService(
         return withContext(Dispatchers.IO) {
             val searchStart = System.currentTimeMillis()
             val activeSettings: EngineSettings = settings ?: PrefHelper(appContext)
-            val enabledDicts = EnabledDictionaries.fromSettings(activeSettings)
+            val toggles = LexiconBridge.DictionaryToggles.from(activeSettings)
+            val filterBitmask = LexiconBridge.dictionaryFilters(toggles).dictionaryFilterBitmask
 
             try {
                 val customWords = lookupCustomDictionary(input, activeSettings)
-                val systemWords = querySystemDictionaries(input, inputMode, limit, enabledDicts, activeSettings)
+                val systemWords = querySystemDictionaries(input, inputMode, limit, filterBitmask, activeSettings)
                 val merged = customWords + systemWords
 
                 val sortStart = System.currentTimeMillis()
@@ -142,7 +143,7 @@ class LexiconService(
         input: String,
         inputMode: InputMode,
         limit: Int,
-        enabledDicts: EnabledDictionaries,
+        filterBitmask: UInt,
         settings: EngineSettings,
     ): List<TaigiWord> {
         // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
@@ -154,18 +155,13 @@ class LexiconService(
             InputMode.TL -> LexiconBridge.LexiconInputMode.TL
             InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
         }
-        // Use the exact dictionary filter mask (sources 0-8,11 + khiin@9 +
-        // dev@10 + variant@12). Pre-fix this branched on `allEnabled` and
-        // sent `UInt.MAX_VALUE`, which forced variant + khiin on regardless
-        // of user toggles (r3173440126).
-        val bitmask = enabledDicts.dictionaryFilterBitmask().toUInt()
         val rows = LexiconBridge.search(
             input = input,
             inputType = LexiconBridge.LexiconInputType.ROMAN_WITH_TONE,
             inputMode = bridgeMode,
             limit = limit.toUInt(),
             tpsOrMappedToER = settings.isTpsOrMappedToER,
-            enabledSourcesBitmask = bitmask,
+            enabledSourcesBitmask = filterBitmask,
         )
         return rows.map { row ->
             val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
@@ -201,10 +197,18 @@ class LexiconService(
         )
     }
 
-    /** Search with source metadata (tab3 dictionary exploration). */
+    /**
+     * Search with source metadata (tab3 dictionary exploration).
+     *
+     * `filterBitmask` is resolved by the caller (Tab3 VM) once per query
+     * via `LexiconBridge.dictionaryFilters(...)` and reused for retag —
+     * keeping mask and badge filter on the same snapshot per Codex
+     * pre-impl BLOCK 6.
+     */
     suspend fun searchWithSources(
         input: String,
         inputMode: InputMode,
+        filterBitmask: UInt,
         limit: Int = 50,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
@@ -214,7 +218,7 @@ class LexiconService(
 
         return withContext(Dispatchers.IO) {
             try {
-                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, isCJK = false)
+                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, filterBitmask, isCJK = false)
                 Outcome.Success(rowsToSearchResults(rows, inputMode, limit))
             } catch (e: CancellationException) {
                 throw e
@@ -229,6 +233,7 @@ class LexiconService(
     suspend fun searchByHanzi(
         input: String,
         inputMode: InputMode,
+        filterBitmask: UInt,
         limit: Int = 50,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
@@ -239,7 +244,7 @@ class LexiconService(
         return withContext(Dispatchers.IO) {
             logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
             try {
-                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, isCJK = true)
+                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, filterBitmask, isCJK = true)
                 val results = rowsToSearchResults(rows, inputMode, limit)
                 if (BuildConfig.DEBUG) {
                     logger.d(TAG, "[HANZI-SEARCH] returned ${results.size} results")
@@ -258,6 +263,7 @@ class LexiconService(
         input: String,
         inputMode: InputMode,
         limit: Int,
+        filterBitmask: UInt,
         isCJK: Boolean,
     ): List<LexiconBridge.Row> {
         // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
@@ -269,17 +275,10 @@ class LexiconService(
             InputMode.TL -> LexiconBridge.LexiconInputMode.TL
             InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
         }
-        // Pull current source toggles for Tab3 mask. Tab3 vm doesn't pass
-        // settings (mirrors iOS, which reads via SharedSettings); fall back
-        // to PrefHelper here matching `search()` line 73 fallback.
-        val bitmask = EnabledDictionaries
-            .fromSettings(PrefHelper(appContext))
-            .dictionaryFilterBitmask()
-            .toUInt()
         return if (isCJK) {
-            LexiconBridge.searchByHanzi(query = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = bitmask)
+            LexiconBridge.searchByHanzi(query = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = filterBitmask)
         } else {
-            LexiconBridge.searchWithSources(input = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = bitmask)
+            LexiconBridge.searchWithSources(input = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = filterBitmask)
         }
     }
 
