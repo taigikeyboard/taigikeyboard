@@ -11,7 +11,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Phonetics core (9 ops) ---
+   * --- Phonetics core (8 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
@@ -20,7 +20,7 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasNormalizeTone();
   /**
    * <pre>
-   * --- Phonetics core (9 ops) ---
+   * --- Phonetics core (8 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.NormalizeTone normalize_tone = 10;</code>
@@ -95,17 +95,6 @@ public interface PhoneticsRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.RestoreTone getRestoreTone();
 
   /**
-   * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
-   * @return Whether the hasToneMarks field is set.
-   */
-  boolean hasHasToneMarks();
-  /**
-   * <code>.taigi.engine.HasToneMarks has_tone_marks = 17;</code>
-   * @return The hasToneMarks.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.HasToneMarks getHasToneMarks();
-
-  /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
    * @return Whether the getToneVariations field is set.
    */
@@ -159,7 +148,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- TPS (6 ops) ---
+   * --- TPS (5 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
@@ -168,24 +157,13 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasContainsTps();
   /**
    * <pre>
-   * --- TPS (6 ops) ---
+   * --- TPS (5 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.ContainsTps contains_tps = 30;</code>
    * @return The containsTps.
    */
   com.siansiansu.taigikeyboard.engine.proto.ContainsTps getContainsTps();
-
-  /**
-   * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
-   * @return Whether the tpsToTl field is set.
-   */
-  boolean hasTpsToTl();
-  /**
-   * <code>.taigi.engine.TpsToTl tps_to_tl = 31;</code>
-   * @return The tpsToTl.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.TpsToTl getTpsToTl();
 
   /**
    * <code>.taigi.engine.TlNumericToTps tl_numeric_to_tps = 32;</code>

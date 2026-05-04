@@ -6,10 +6,10 @@ import SwiftProtobuf
 /// Thin Swift wrapper around the Rust shared-core FFI exposed by
 /// `engine/swift-ffi/src/lib.rs`.
 ///
-/// D9.4 surface: 17 typed methods + lazy `toneVariations` cache + structured
-/// error visibility. Production phonetics call sites route through these
-/// methods; legacy `Phonetics/*` and `Input/TPS/*` modules are deleted in
-/// later commits.
+/// D9.4 surface: 15 typed phonetics methods + lazy `toneVariations` cache +
+/// structured error visibility. Composing / NextWord / Lexicon / case-transform
+/// methods live in dedicated `RustEngineBridge+*.swift` extensions. See
+/// `engine/protos/proto/phonetics.proto` reserved-tag block for retired ops.
 ///
 /// Per `feedback_codex_review_sandwich.md` Codex v2 §7: every method
 /// requiring AppConfig (currently NormalizeTone for POJ preprocessing)
@@ -40,7 +40,7 @@ public enum RustEngineBridge {
         installed = true
     }
 
-    // MARK: Phonetics core (9 ops)
+    // MARK: Phonetics core (8 ops)
 
     /// `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
     /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
@@ -132,12 +132,6 @@ public enum RustEngineBridge {
         return r.present ? r.output : nil
     }
 
-    public static func hasToneMarks(_ text: String) -> Bool {
-        var payload = Taigi_Engine_HasToneMarks()
-        payload.text = text
-        return boolDispatch(method: .hasToneMarks_p(payload), op: "hasToneMarks")
-    }
-
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.
     public static let toneVariations: ToneVariationsCache = {
@@ -168,18 +162,12 @@ public enum RustEngineBridge {
         return stringDispatch(method: .deriveAbbrev(payload), input: roman, op: "deriveAbbrev", config: nil)
     }
 
-    // MARK: TPS (6 ops)
+    // MARK: TPS (5 ops)
 
     public static func containsTPS(_ text: String) -> Bool {
         var payload = Taigi_Engine_ContainsTps()
         payload.text = text
         return boolDispatch(method: .containsTps(payload), op: "containsTps")
-    }
-
-    public static func tpsToTL(_ text: String) -> String {
-        var payload = Taigi_Engine_TpsToTl()
-        payload.text = text
-        return stringDispatch(method: .tpsToTl(payload), input: text, op: "tpsToTl", config: nil)
     }
 
     public static func tlNumericToTPS(_ text: String, orMapsToER: Bool) -> String {

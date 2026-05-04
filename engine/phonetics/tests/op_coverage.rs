@@ -9,10 +9,10 @@ use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
     AppConfig, BoolResult, ContainsTps, DeriveAbbrev, DeriveNotone, GetToneVariations,
-    HasToneMarks, IsTpsToneMark, NfdPreprocessForLookup, NormalizeInput, NormalizeToTl,
-    NormalizeTone, OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone,
-    StringResult, StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj,
-    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust, TpsToTl,
+    IsTpsToneMark, NfdPreprocessForLookup, NormalizeInput, NormalizeToTl, NormalizeTone,
+    OptionalStringResult, PhoneticsRequest, PhoneticsResponse, PojToTl, RestoreTone, StringResult,
+    StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj, ToneVariationsResult,
+    TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -295,28 +295,6 @@ fn restore_tone_returns_none_when_no_tone_mark() {
 }
 
 #[test]
-fn has_tone_marks_true_for_diacritic() {
-    let resp = run(
-        Method::HasToneMarks(HasToneMarks {
-            text: "hó".to_string(),
-        }),
-        tl_config(),
-    );
-    assert!(bool_result(&resp));
-}
-
-#[test]
-fn has_tone_marks_false_for_plain_ascii() {
-    let resp = run(
-        Method::HasToneMarks(HasToneMarks {
-            text: "ho".to_string(),
-        }),
-        tl_config(),
-    );
-    assert!(!bool_result(&resp));
-}
-
-#[test]
 fn get_tone_variations_returns_both_modes() {
     let resp = run(Method::GetToneVariations(GetToneVariations {}), tl_config());
     let result = tone_variations_result(&resp);
@@ -450,18 +428,6 @@ fn contains_tps_false_for_latin() {
         tl_config(),
     );
     assert!(!bool_result(&resp));
-}
-
-#[test]
-fn tps_to_tl_basic() {
-    let resp = run(
-        Method::TpsToTl(TpsToTl {
-            text: "ㄉㄧㄠˊ".to_string(),
-        }),
-        tl_config(),
-    );
-    let out = string_result(&resp);
-    assert!(out.contains("tiau"), "got {out:?}");
 }
 
 #[test]

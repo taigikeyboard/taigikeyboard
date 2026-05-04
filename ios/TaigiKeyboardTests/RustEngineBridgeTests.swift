@@ -7,11 +7,9 @@ import XCTest
 /// `engine/scripts/build-xcframework-dev.sh` (i.e. with the `panic-injector`
 /// Cargo feature) so T1 actually panics inside the FFI catch boundary.
 ///
-/// D9.4 expanded the bridge surface from 4 to 17 ops. This file keeps the
-/// D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and adds
-/// smoke coverage for every new op. Branch-level fixture coverage lives in
-/// `engine/phonetics/tests/d9_4_ops.rs`; call-site parity coverage lands
-/// alongside the platform call-site swaps in commits 7–8.
+/// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and
+/// adds smoke coverage for every phonetics op on the bridge. Branch-level
+/// fixture coverage lives in `engine/phonetics/tests/op_coverage.rs`.
 final class RustEngineBridgeTests: XCTestCase {
     override class func setUp() {
         super.setUp()
@@ -25,7 +23,7 @@ final class RustEngineBridgeTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    // MARK: - Phonetics core (9 ops)
+    // MARK: - Phonetics core (8 ops)
 
     func test_op_normalizeTone_TL() {
         let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
@@ -65,14 +63,6 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNil(RustEngineBridge.restoreTone("ho"))
     }
 
-    func test_op_hasToneMarks_trueForDiacritic() {
-        XCTAssertTrue(RustEngineBridge.hasToneMarks("hó"))
-    }
-
-    func test_op_hasToneMarks_falseForPlain() {
-        XCTAssertFalse(RustEngineBridge.hasToneMarks("ho"))
-    }
-
     func test_op_toneVariations_lazyCache_returnsBothModes() {
         let cache = RustEngineBridge.toneVariations
         XCTAssertFalse(cache.poj.isEmpty, "POJ map should populate")
@@ -93,7 +83,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.deriveAbbrev("gâu-tsá"), "gt")
     }
 
-    // MARK: - TPS (6 ops)
+    // MARK: - TPS (5 ops)
 
     func test_op_containsTPS_trueForZhuyin() {
         XCTAssertTrue(RustEngineBridge.containsTPS("ㄉㄧㄠ"))
@@ -101,11 +91,6 @@ final class RustEngineBridgeTests: XCTestCase {
 
     func test_op_containsTPS_falseForLatin() {
         XCTAssertFalse(RustEngineBridge.containsTPS("tiau"))
-    }
-
-    func test_op_tpsToTL_basic() {
-        let out = RustEngineBridge.tpsToTL("ㄉㄧㄠˊ")
-        XCTAssertTrue(out.contains("tiau"), "got: \(out)")
     }
 
     func test_op_tlNumericToTPS_basic() {

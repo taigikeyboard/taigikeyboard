@@ -11,7 +11,6 @@ import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
-import com.siansiansu.taigikeyboard.engine.proto.HasToneMarks
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
@@ -35,7 +34,6 @@ import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
 import com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
-import com.siansiansu.taigikeyboard.engine.proto.TpsToTl
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
@@ -50,10 +48,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * Thin Kotlin wrapper around the Rust shared-core FFI exposed by
  * `engine/android-jni/src/lib.rs`.
  *
- * D9.4 surface: 17 typed methods + lazy `toneVariations` cache + structured
- * error visibility. Production phonetics call sites swap to these methods
- * in commit 8; legacy `TaigiPhonetics` / `TPSConverter` deletes land in
- * commit 9.
+ * D9.4 surface: 15 typed phonetics methods + lazy `toneVariations` cache +
+ * structured error visibility. Composing / NextWord / Lexicon / case-transform
+ * methods live on dedicated bridge files. See
+ * `engine/protos/proto/phonetics.proto` reserved-tag block for retired ops.
  *
  * Per Codex v2 §7: `normalizeTone` requires `ToneToggles` mandatory
  * parameter — no `ToneToggles(true, true)` silent default.
@@ -100,7 +98,7 @@ object RustEngineBridge {
         }
     }
 
-    // region Phonetics core (9 ops)
+    // region Phonetics core (8 ops)
 
     /**
      * `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
@@ -177,11 +175,6 @@ object RustEngineBridge {
         return if (r.present) r.output else null
     }
 
-    fun hasToneMarks(text: String): Boolean {
-        val payload = HasToneMarks.newBuilder().setText(text).build()
-        return boolDispatch({ it.hasToneMarks = payload }, "hasToneMarks")
-    }
-
     /**
      * Lazy-init cache for Method::GetToneVariations. Kotlin `by lazy` defaults
      * to `LazyThreadSafetyMode.SYNCHRONIZED` — single execution + thread
@@ -217,16 +210,11 @@ object RustEngineBridge {
     }
 
     // endregion
-    // region TPS (6 ops)
+    // region TPS (5 ops)
 
     fun containsTps(text: String): Boolean {
         val payload = ContainsTps.newBuilder().setText(text).build()
         return boolDispatch({ it.containsTps = payload }, "containsTps")
-    }
-
-    fun tpsToTl(text: String): String {
-        val payload = TpsToTl.newBuilder().setText(text).build()
-        return stringDispatch({ it.tpsToTl = payload }, text, "tpsToTl", null)
     }
 
     fun tlNumericToTps(text: String, orMapsToER: Boolean): String {

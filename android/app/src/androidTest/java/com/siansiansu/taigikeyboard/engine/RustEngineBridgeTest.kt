@@ -20,11 +20,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * **Requires** the dev `.so` built by `engine/scripts/build-android-libs-dev.sh`
  * (with the `panic-injector` Cargo feature) so `panicForTest` resolves.
  *
- * D9.4 expanded the bridge surface from 4 to 17 ops. This file keeps the
- * D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and adds smoke
- * coverage for every new op. Branch-level fixture coverage already lives in
- * `engine/phonetics/tests/d9_4_ops.rs` (44 tests). Call-site parity coverage
- * lands in commit 8 alongside the production swap.
+ * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and
+ * adds smoke coverage for every phonetics op on the bridge. Branch-level
+ * fixture coverage lives in `engine/phonetics/tests/op_coverage.rs`.
  */
 @RunWith(AndroidJUnit4::class)
 class RustEngineBridgeTest {
@@ -39,7 +37,7 @@ class RustEngineBridgeTest {
 
     private fun togglesOff() = ToneTogglesCarrier(false, false)
 
-    // region Phonetics core (9 ops)
+    // region Phonetics core (8 ops)
 
     @Test fun op_normalizeTone_TL() {
         assertEquals(
@@ -78,14 +76,6 @@ class RustEngineBridgeTest {
         assertNull(RustEngineBridge.restoreTone("ho"))
     }
 
-    @Test fun op_hasToneMarks_trueForDiacritic() {
-        assertTrue(RustEngineBridge.hasToneMarks("hó"))
-    }
-
-    @Test fun op_hasToneMarks_falseForPlain() {
-        assertFalse(RustEngineBridge.hasToneMarks("ho"))
-    }
-
     @Test fun op_toneVariations_lazyCache_returnsBothModes() {
         val cache = RustEngineBridge.toneVariations
         assertTrue("POJ map should populate", cache.poj.isNotEmpty())
@@ -108,7 +98,7 @@ class RustEngineBridgeTest {
     }
 
     // endregion
-    // region TPS (6 ops)
+    // region TPS (5 ops)
 
     @Test fun op_containsTps_trueForZhuyin() {
         assertTrue(RustEngineBridge.containsTps("ㄉㄧㄠ"))
@@ -116,11 +106,6 @@ class RustEngineBridgeTest {
 
     @Test fun op_containsTps_falseForLatin() {
         assertFalse(RustEngineBridge.containsTps("tiau"))
-    }
-
-    @Test fun op_tpsToTl_basic() {
-        val out = RustEngineBridge.tpsToTl("ㄉㄧㄠˊ")
-        assertTrue("got: $out", out.contains("tiau"))
     }
 
     @Test fun op_tlNumericToTps_basic() {

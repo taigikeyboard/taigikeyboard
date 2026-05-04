@@ -411,3 +411,16 @@ enum Part {
 fn is_pt_or_k_stop(tl: &str) -> bool {
     matches!(tl, "p4" | "t4" | "k4" | "p8" | "t8" | "k8")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Exact-output pin for the `phonetics::tps_to_tl` re-export consumed by
+    /// `lexicon::classify_input`. The lexicon-side test only asserts ASCII /
+    /// non-raw; this guards the literal romanization.
+    #[test]
+    fn from_zhuyin_basic_round_trip() {
+        assert_eq!(from_zhuyin("ㄉㄧㄠˊ"), "tiau5");
+    }
+}

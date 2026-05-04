@@ -194,9 +194,10 @@ public extension RustEngineBridge {
         let searchKey: String
     }
 
-    /// Classify `rawInput` into `(InputType, searchKey)`. Single FFI hop
-    /// replaces the per-keystroke ladder of `hasToneMarks` /
-    /// `containsTPS` / `tpsToTL` calls. See
+    /// Classify `rawInput` into `(InputType, searchKey)`. Single FFI hop —
+    /// `lexicon::classify_input` keeps tone / TPS detection inside Rust,
+    /// replacing the platform-side per-keystroke ladder that previously
+    /// chained multiple phonetics ops per keypress. See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
     internal static func classifyInput(_ raw: String) -> ClassificationResult {
         var payload = Taigi_Engine_ClassifyInputRequest()

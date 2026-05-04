@@ -28,10 +28,16 @@ message PhoneticsRequest {
   // `NfdPreprocess`; removed in the PR #187 follow-up after their only
   // callers reverted to platform-side helpers for JVM unit-test
   // compatibility.
-  reserved 1, 2, 40, 41;
+  // Tags 17, 31 reserved — previously `HasToneMarks` and `TpsToTl`;
+  // removed in dead-surface cleanup (2026-05-04) after the v3.5.7
+  // classification slice consolidated the per-keystroke ladder ops
+  // into `Method::ClassifyInput`. Both helpers remain inside Rust
+  // (see `phonetics::has_tone_marks` + `phonetics::tps_to_tl`) but no
+  // longer cross the FFI boundary.
+  reserved 1, 2, 17, 31, 40, 41;
 
   oneof method {
-    // --- Phonetics core (9 ops) ---
+    // --- Phonetics core (8 ops) ---
     NormalizeTone normalize_tone = 10;
     StripTone strip_tone = 11;
     PojToTl poj_to_tl = 12;
@@ -39,7 +45,6 @@ message PhoneticsRequest {
     NormalizeToTl normalize_to_tl = 14;
     NormalizeInput normalize_input = 15;
     RestoreTone restore_tone = 16;
-    HasToneMarks has_tone_marks = 17;
     GetToneVariations get_tone_variations = 18;
     NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
@@ -47,9 +52,8 @@ message PhoneticsRequest {
     DeriveNotone derive_notone = 20;
     DeriveAbbrev derive_abbrev = 21;
 
-    // --- TPS (6 ops) ---
+    // --- TPS (5 ops) ---
     ContainsTps contains_tps = 30;
-    TpsToTl tps_to_tl = 31;
     TlNumericToTps tl_numeric_to_tps = 32;
     TlDisplayToTps tl_display_to_tps = 33;
     IsTpsToneMark is_tps_tone_mark = 34;
@@ -80,10 +84,6 @@ message NormalizeInput { string input = 1; }
 // recomposes. Returns absent if no tone mark found. Replaces both
 // platforms' `ToneRestoration.restore`.
 message RestoreTone { string text = 1; }
-
-// `HasToneMarks` true if `text` (after NFD) contains any combining tone
-// mark. Replaces `InputNormalizer.hasToneMarks`.
-message HasToneMarks { string text = 1; }
 
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
@@ -124,7 +124,6 @@ message DeriveAbbrev { string roman = 1; }
 // =========================================================================
 
 message ContainsTps { string text = 1; }
-message TpsToTl { string text = 1; }
 
 // `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
 // iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.

@@ -194,9 +194,11 @@ object LexiconBridge {
     )
 
     /**
-     * Classify `raw` into `(InputType, search_key)`. Single FFI hop replaces
-     * the per-keystroke ladder of `hasToneMarks` / `containsTPS` /
-     * `tpsToTL` calls. See `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
+     * Classify `raw` into `(InputType, search_key)`. Single FFI hop —
+     * `lexicon::classify_input` keeps tone / TPS detection inside Rust,
+     * replacing the platform-side per-keystroke ladder that previously
+     * chained multiple phonetics ops per keypress. See
+     * `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
      */
     fun classifyInput(raw: String): ClassificationResult {
         val payload = ClassifyInputRequest.newBuilder().setRaw(raw).build()

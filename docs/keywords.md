@@ -30,7 +30,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge.normalizeTone` / `restoreTone` / `hasToneMarks` / etc.
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge.normalizeTone` / `restoreTone` / etc.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|

@@ -75,9 +75,6 @@ pub fn handle(
                 present: false,
             }),
         },
-        Method::HasToneMarks(payload) => PhonResult::BoolResult(BoolResult {
-            value: normalization::has_tone_marks(&payload.text),
-        }),
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
         Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
             output: normalization::taigi_unicode_base_form(&payload.input),
@@ -94,9 +91,6 @@ pub fn handle(
         // --- TPS ---
         Method::ContainsTps(payload) => PhonResult::BoolResult(BoolResult {
             value: tps::is_zhuyin(&payload.text),
-        }),
-        Method::TpsToTl(payload) => PhonResult::StringResult(StringResult {
-            output: tps::from_zhuyin(&payload.text),
         }),
         Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
             output: tps_to_tps_numeric(&payload.text, payload.or_maps_to_er),

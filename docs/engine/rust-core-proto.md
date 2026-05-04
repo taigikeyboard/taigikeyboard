@@ -130,7 +130,7 @@ Phase II.5 just lifts the existing platform-side mechanism (iOS G5-impl + Androi
 
 ## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
 
-The merged D9.4 shape uses an `oneof method` dispatch with 17 ops grouped into 3 families. Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
+The merged D9.4 shape uses an `oneof method` dispatch with 15 ops grouped into 3 families. Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
@@ -139,12 +139,14 @@ message PhoneticsRequest {
   // Tags 40, 41 reserved — previously AdjustNasalMarkerCase + NfdPreprocess;
   // removed in PR #187 follow-up after their only callers reverted to
   // platform-side helpers for JVM unit-test compatibility.
-  reserved 1, 2, 40, 41;
+  // Tags 17, 31 reserved — previously HasToneMarks + TpsToTl; removed in
+  // dead-surface cleanup (2026-05-04) after the v3.5.7 classification slice
+  // consolidated the per-keystroke ladder into `Method::ClassifyInput`.
+  reserved 1, 2, 17, 31, 40, 41;
 
   oneof method {
-    // Phonetics core (9 ops): NormalizeTone, StripTone, PojToTl, TlToPoj,
-    // NormalizeToTl, NormalizeInput, RestoreTone, HasToneMarks,
-    // GetToneVariations.
+    // Phonetics core (8 ops): NormalizeTone, StripTone, PojToTl, TlToPoj,
+    // NormalizeToTl, NormalizeInput, RestoreTone, GetToneVariations.
     NormalizeTone normalize_tone = 10;
     // ... (see phonetics.proto for full list)
 
@@ -152,7 +154,7 @@ message PhoneticsRequest {
     DeriveNotone derive_notone = 20;
     DeriveAbbrev derive_abbrev = 21;
 
-    // TPS (6 ops): ContainsTps, TpsToTl, TlNumericToTps, TlDisplayToTps,
+    // TPS (5 ops): ContainsTps, TlNumericToTps, TlDisplayToTps,
     // IsTpsToneMark, TpsInputAdjust.
     TpsInputAdjust tps_input_adjust = 35;
     // ...
@@ -173,7 +175,7 @@ message PhoneticsResponse {
 ```
 
 - **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
-- **`oneof result`** with 6 result shapes covers all 17 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; nullable-string ops use `OptionalStringResult`; `HasToneMarks` / `IsTpsToneMark` / `ContainsTps` use `BoolResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- **`oneof result`** with 6 result shapes covers all 15 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; nullable-string ops use `OptionalStringResult`; `IsTpsToneMark` / `ContainsTps` use `BoolResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
 - Pure, stateless. Settings consulted via `AppConfig.input_mode` / `oo_doubletap_enabled` / `nn_doubletap_enabled` from §6 (no engine-side caching).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
 - **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after v3.5.3 follow-up — see `feedback_path_g_delete_mirrors.md`.)** Path G deleted the platform mirrors + their JVM unit tests; `Method::NormalizeTone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
