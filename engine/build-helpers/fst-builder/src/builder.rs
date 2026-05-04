@@ -16,7 +16,7 @@ pub struct BuildStats {
     pub distinct_keys: usize,
 }
 
-pub fn run_build(output_path: &str) -> Result<BuildStats, String> {
+pub(crate) fn run_build(output_path: &str) -> Result<BuildStats, String> {
     let stdin = io::stdin();
     let mut entries: Vec<Vec<u8>> = Vec::new();
     let mut distinct_keys = std::collections::HashSet::new();

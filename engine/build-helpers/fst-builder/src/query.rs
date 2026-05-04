@@ -6,8 +6,6 @@
 use fst::{IntoStreamer, Set, Streamer};
 use std::fs;
 
-const SEPARATOR: u8 = 0xFF;
-
 /// Returns the next lex sibling — smallest byte sequence strictly greater
 /// than `prefix` such that no string starting with `prefix` is `>= sibling`.
 /// Mirrors `engine/lexicon::prefix_index::next_lex_sibling`.
@@ -23,7 +21,7 @@ fn next_lex_sibling(prefix: &[u8]) -> Option<Vec<u8>> {
     None
 }
 
-pub fn run_query(fst_path: &str, prefix: &str) -> Result<(), String> {
+pub(crate) fn run_query(fst_path: &str, prefix: &str) -> Result<(), String> {
     let bytes = fs::read(fst_path).map_err(|e| format!("read `{}`: {}", fst_path, e))?;
     let set = Set::new(bytes).map_err(|e| format!("fst load: {}", e))?;
 
@@ -42,10 +40,9 @@ pub fn run_query(fst_path: &str, prefix: &str) -> Result<(), String> {
         if entry.len() < prefix_bytes.len() + 1 + 4 {
             continue;
         }
-        // Find the SEPARATOR byte to slice key from rowid (entries have
-        // form: key + 0xFF + rowid_le_4; rowid_le_4 may itself contain
-        // 0xFF bytes, so scan from the end-of-key boundary which is
-        // `entry.len() - 5`).
+        // Slice key from rowid (entries have form: key + 0xFF + rowid_le_4;
+        // rowid_le_4 may itself contain 0xFF bytes, so scan from the
+        // end-of-key boundary which is `entry.len() - 5`).
         let key_end = entry.len() - 5;
         let key = std::str::from_utf8(&entry[..key_end])
             .map_err(|e| format!("entry utf8: {}", e))?;

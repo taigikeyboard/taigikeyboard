@@ -55,8 +55,11 @@ pub fn parse_input_mode(mode: &str) -> InputMode {
 
 /// POJ doubletap preprocessing: `oo`→`o\u{0358}` + `nn`→nasal marker, gated
 /// by `AppConfig.{oo,nn}_doubletap_enabled`. No-op for non-POJ modes.
-/// Mirrors `phonetics::dispatch::preprocess_for_normalize_tone`.
-pub fn preprocess_for_normalize_tone(input: &str, mode: InputMode, config: &AppConfig) -> String {
+pub(crate) fn preprocess_for_normalize_tone(
+    input: &str,
+    mode: InputMode,
+    config: &AppConfig,
+) -> String {
     if !matches!(mode, InputMode::Poj) {
         return input.to_string();
     }

@@ -88,7 +88,7 @@ POJ ↔ TL display conversion: `phonetics::api::poj_display_to_tl_display` / `tl
 | Tone mark tables (POJ + TL combining-mark lookup) | Rust `phonetics::tables`, `phonetics::case_tables` |
 | Numeric-tone → tone-mark | Rust `phonetics::api::to_tone_marks` |
 | Tone-mark → numeric | Rust `phonetics::api::to_tone_number` |
-| POJ doubletap preprocess (`oo`→`o͘`, `nn`→`ⁿ`) | Rust `phonetics::api::preprocess_for_normalize_tone` |
+| POJ doubletap preprocess (`oo`→`o͘`, `nn`→`ⁿ`) | Rust `phonetics::api::normalize_tone` (internally calls crate-private `preprocess_for_normalize_tone`) |
 | Nasal-marker case adjust (`ⁿ` ↔ `ᴺ`) | Rust `phonetics::case_transform::adjust_nasal_marker_case` |
 | Lookup-side Unicode prep (NFD + nasal → `nn`, dot → `o`) | Rust `phonetics::normalization::taigi_unicode_base_form` |
 | Tone restoration on backspace | Rust `phonetics::normalization::restore_tone` |
