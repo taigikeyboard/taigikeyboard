@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.content
 
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.Tab1Texts
+import com.siansiansu.taigikeyboard.localization.HomeTexts
 
-// Static copyright data for fonts, dictionaries, and data sources displayed in Tab1
+// Static copyright data for fonts, dictionaries, and data sources displayed in the Home tab
 
 private const val SIL_OFL_LICENSE_URL = "https://openfontlicense.org/"
 private const val CC_BY_SA_4_LICENSE_URL =
@@ -28,13 +28,13 @@ object CopyrightDataSource {
             // 字體
             CopyrightPage(
                 id = 0,
-                title = Tab1Texts.openFontTitle,
-                description = Tab1Texts.openFontCopyright,
-                license = Tab1Texts.silOpenFontLicense,
+                title = HomeTexts.openFontTitle,
+                description = HomeTexts.openFontCopyright,
+                license = HomeTexts.silOpenFontLicense,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -45,13 +45,13 @@ object CopyrightDataSource {
             ),
             CopyrightPage(
                 id = 1,
-                title = Tab1Texts.iansuiFontTitle,
-                description = Tab1Texts.iansuiFontCopyright,
-                license = Tab1Texts.silOpenFontLicense11,
+                title = HomeTexts.iansuiFontTitle,
+                description = HomeTexts.iansuiFontCopyright,
+                license = HomeTexts.silOpenFontLicense11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -63,13 +63,13 @@ object CopyrightDataSource {
             // 源樣明體
             CopyrightPage(
                 id = 2,
-                title = Tab1Texts.genYoMinFontTitle,
-                description = Tab1Texts.butTaiwanCopyright,
-                license = Tab1Texts.silOpenFontLicense11,
+                title = HomeTexts.genYoMinFontTitle,
+                description = HomeTexts.butTaiwanCopyright,
+                license = HomeTexts.silOpenFontLicense11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -81,13 +81,13 @@ object CopyrightDataSource {
             // 源樣黑體
             CopyrightPage(
                 id = 3,
-                title = Tab1Texts.genYoGothicFontTitle,
-                description = Tab1Texts.butTaiwanCopyright,
-                license = Tab1Texts.silOpenFontLicense11,
+                title = HomeTexts.genYoGothicFontTitle,
+                description = HomeTexts.butTaiwanCopyright,
+                license = HomeTexts.silOpenFontLicense11,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = SIL_OFL_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -101,12 +101,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 4,
                 title = CommonTexts.moeDict,
-                description = Tab1Texts.moeCopyright,
-                license = Tab1Texts.ccLicense,
+                description = HomeTexts.moeCopyright,
+                license = HomeTexts.ccLicense,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = "https://creativecommons.org/licenses/by-nd/3.0/tw/",
                         ),
                         CopyrightButton(
@@ -119,12 +119,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 5,
                 title = CommonTexts.newwordDict,
-                description = Tab1Texts.newwordCopyright,
-                license = Tab1Texts.ccBy4License,
+                description = HomeTexts.newwordCopyright,
+                license = HomeTexts.ccBy4License,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = "https://creativecommons.org/licenses/by/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
@@ -137,12 +137,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 6,
                 title = CommonTexts.kunggeDict,
-                description = Tab1Texts.kunggeCopyright,
-                license = Tab1Texts.ccByNcLicense,
+                description = HomeTexts.kunggeCopyright,
+                license = HomeTexts.ccByNcLicense,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = "https://creativecommons.org/licenses/by-nc/4.0/deed.zh-hant",
                         ),
                         CopyrightButton(
@@ -155,12 +155,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 7,
                 title = CommonTexts.iTaigiDict,
-                description = Tab1Texts.iTaigiCopyright,
-                license = Tab1Texts.cc0License,
+                description = HomeTexts.iTaigiCopyright,
+                license = HomeTexts.cc0License,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = "https://creativecommons.org/public-domain/cc0/",
                         ),
                         CopyrightButton(
@@ -173,12 +173,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 8,
                 title = CommonTexts.taiwanJapanDict,
-                description = Tab1Texts.taiwanJapanCopyright,
-                license = Tab1Texts.ccByNcSA3License,
+                description = HomeTexts.taiwanJapanCopyright,
+                license = HomeTexts.ccByNcSA3License,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = "https://creativecommons.org/licenses/by-nc-sa/3.0/tw/",
                         ),
                         CopyrightButton(
@@ -191,12 +191,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 9,
                 title = CommonTexts.taiHuaDict,
-                description = Tab1Texts.taiHuaCopyright,
-                license = Tab1Texts.ccBySA4License,
+                description = HomeTexts.taiHuaCopyright,
+                license = HomeTexts.ccBySA4License,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = CC_BY_SA_4_LICENSE_URL,
                         ),
                     ),
@@ -205,12 +205,12 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 10,
                 title = CommonTexts.taiwanPlantDict,
-                description = Tab1Texts.taiwanPlantCopyright,
-                license = Tab1Texts.ccBySA4License,
+                description = HomeTexts.taiwanPlantCopyright,
+                license = HomeTexts.ccBySA4License,
                 buttons =
                     listOf(
                         CopyrightButton(
-                            text = Tab1Texts.viewLicense,
+                            text = HomeTexts.viewLicense,
                             url = CC_BY_SA_4_LICENSE_URL,
                         ),
                         CopyrightButton(
@@ -223,7 +223,7 @@ object CopyrightDataSource {
             CopyrightPage(
                 id = 11,
                 title = CommonTexts.khpooDict,
-                description = Tab1Texts.accentDictCredit,
+                description = HomeTexts.accentDictCredit,
                 license = "",
                 buttons = emptyList(),
             ),

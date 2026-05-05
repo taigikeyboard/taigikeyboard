@@ -4,7 +4,7 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-// Loads Tab1 content from bundled JSON assets.
+// Loads Home tab content from bundled JSON assets.
 object FeatureContentLoader {
     private const val FEATURES_ASSET = "tab1-features.json"
     private const val FAQS_ASSET = "tab1-faq.json"

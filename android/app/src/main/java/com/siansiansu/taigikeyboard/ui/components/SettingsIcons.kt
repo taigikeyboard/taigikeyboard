@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 /**
  * Shared icon definitions for settings screens.
  *
- * Used by both InputSettingsScreen (Tab4) and SettingsOverlayContent (keyboard overlay)
+ * Used by both InputSettingsScreen (Settings tab) and SettingsOverlayContent (keyboard overlay)
  * to keep icons in sync across the app and keyboard.
  */
 object SettingsIcons {

@@ -18,7 +18,7 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.localization.Tab2Texts
+import com.siansiansu.taigikeyboard.localization.LayoutTexts
 
 /**
  * Layout selection overlay view.
@@ -54,16 +54,16 @@ class LayoutSelectionOverlayView : FrameLayout {
 
     private val romanizationLayouts: List<LayoutOption> by lazy {
         listOf(
-            LayoutOption("phahTaigi", { Tab2Texts.phahTaigiLayout }, R.drawable.layout_phahtaigi_preview),
-            LayoutOption("qwerty", { Tab2Texts.standardLayout }, R.drawable.layout_standard_preview),
-            LayoutOption("moe1", { Tab2Texts.moe1Layout }, R.drawable.layout_moe1_preview),
-            LayoutOption("moe2", { Tab2Texts.moe2Layout }, R.drawable.layout_moe2_preview),
+            LayoutOption("phahTaigi", { LayoutTexts.phahTaigiLayout }, R.drawable.layout_phahtaigi_preview),
+            LayoutOption("qwerty", { LayoutTexts.standardLayout }, R.drawable.layout_standard_preview),
+            LayoutOption("moe1", { LayoutTexts.moe1Layout }, R.drawable.layout_moe1_preview),
+            LayoutOption("moe2", { LayoutTexts.moe2Layout }, R.drawable.layout_moe2_preview),
         )
     }
 
     private val phoneticLayouts: List<LayoutOption> by lazy {
         listOf(
-            LayoutOption("tps", { Tab2Texts.tpsLayout }, R.drawable.layout_tps_preview),
+            LayoutOption("tps", { LayoutTexts.tpsLayout }, R.drawable.layout_tps_preview),
         )
     }
 
@@ -84,9 +84,9 @@ class LayoutSelectionOverlayView : FrameLayout {
 
         // Set section headers
         findViewById<TextView>(R.id.layout_overlay_romanization_header)?.text =
-            Tab2Texts.romanizationKeyboard
+            LayoutTexts.romanizationKeyboard
         findViewById<TextView>(R.id.layout_overlay_phonetic_header)?.text =
-            Tab2Texts.taigiPhonetic
+            LayoutTexts.taigiPhonetic
     }
 
     /**
@@ -217,7 +217,7 @@ class LayoutSelectionOverlayView : FrameLayout {
         imageContainer.addView(imageView)
 
         if (layout.isDisabled) {
-            // Dark overlay for disabled cards (40% black, matching Tab2)
+            // Dark overlay for disabled cards (40% black, matching Layout tab)
             val darkOverlay =
                 View(context).apply {
                     layoutParams =
@@ -239,7 +239,7 @@ class LayoutSelectionOverlayView : FrameLayout {
                 }
             imageContainer.addView(darkOverlay)
 
-            // "Coming Soon" text with capsule background (matching Tab2)
+            // "Coming Soon" text with capsule background (matching Layout tab)
             val comingSoonText =
                 TextView(context).apply {
                     layoutParams =
@@ -248,7 +248,7 @@ class LayoutSelectionOverlayView : FrameLayout {
                             FrameLayout.LayoutParams.WRAP_CONTENT,
                             Gravity.CENTER,
                         )
-                    text = Tab2Texts.comingSoon
+                    text = LayoutTexts.comingSoon
                     setTextColor(resolveForegroundColor())
                     textSize = 11f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)

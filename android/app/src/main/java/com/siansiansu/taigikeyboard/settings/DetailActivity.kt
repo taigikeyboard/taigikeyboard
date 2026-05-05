@@ -9,7 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ui.tabs.tab1.DetailScreen
+import com.siansiansu.taigikeyboard.ui.tabs.home.DetailScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.FontUtils
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge

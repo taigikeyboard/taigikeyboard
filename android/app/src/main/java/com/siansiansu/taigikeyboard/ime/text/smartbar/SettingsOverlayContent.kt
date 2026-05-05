@@ -23,7 +23,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import kotlinx.coroutines.delay
@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 /**
  * Compose content for the keyboard settings overlay.
  *
- * Renders the same settings as InputSettingsScreen (Tab4) but styled
+ * Renders the same settings as InputSettingsScreen (Settings tab) but styled
  * for the keyboard overlay context. Uses shared SwitchRow and SettingsIcons.
  */
 @Composable
@@ -88,7 +88,7 @@ fun SettingsOverlayContent(
     ) {
         // General settings
         SwitchRow(
-            label = Tab4Texts.outputBothScripts,
+            label = SettingsTexts.outputBothScripts,
             checked = outputBoth,
             icon = SettingsIcons.outputBothScripts,
             iconTint = iconTint,
@@ -101,7 +101,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.autoCapitalization,
+            label = SettingsTexts.autoCapitalization,
             checked = autoCap,
             icon = SettingsIcons.autoCapitalization,
             iconTint = iconTint,
@@ -114,7 +114,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.autoSpace,
+            label = SettingsTexts.autoSpace,
             checked = autoSpace,
             icon = SettingsIcons.autoSpace,
             iconTint = iconTint,
@@ -127,7 +127,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.toolbarAutoCollapse,
+            label = SettingsTexts.toolbarAutoCollapse,
             checked = toolbarAutoCollapse,
             icon = SettingsIcons.toolbar,
             iconTint = iconTint,
@@ -140,7 +140,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.globeKey,
+            label = SettingsTexts.globeKey,
             checked = isGlobeKeyEnabled,
             icon = SettingsIcons.globe,
             iconTint = iconTint,
@@ -155,7 +155,7 @@ fun SettingsOverlayContent(
 
         // Feedback settings
         SwitchRow(
-            label = Tab4Texts.soundFeedback,
+            label = SettingsTexts.soundFeedback,
             checked = soundFeedback,
             icon = SettingsIcons.sound,
             iconTint = iconTint,
@@ -168,7 +168,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.vibrationFeedback,
+            label = SettingsTexts.vibrationFeedback,
             checked = vibrationFeedback,
             icon = SettingsIcons.vibration,
             iconTint = iconTint,
@@ -183,7 +183,7 @@ fun SettingsOverlayContent(
 
         // POJ settings
         SwitchRow(
-            label = Tab4Texts.doubleTapOO,
+            label = SettingsTexts.doubleTapOO,
             checked = doubleOO,
             onCheckedChange = {
                 doubleOO = it
@@ -194,7 +194,7 @@ fun SettingsOverlayContent(
             fontFamily = fontFamily,
         )
         SwitchRow(
-            label = Tab4Texts.doubleTapNN,
+            label = SettingsTexts.doubleTapNN,
             checked = doubleNN,
             onCheckedChange = {
                 doubleNN = it
@@ -207,7 +207,7 @@ fun SettingsOverlayContent(
 
         // TPS settings
         SwitchRow(
-            label = Tab4Texts.tpsOrMapsToER,
+            label = SettingsTexts.tpsOrMapsToER,
             checked = tpsOrER,
             onCheckedChange = {
                 tpsOrER = it
@@ -229,7 +229,7 @@ fun SettingsOverlayContent(
             modifier = Modifier.align(Alignment.CenterHorizontally),
         ) {
             Text(
-                text = Tab4Texts.openApp,
+                text = SettingsTexts.openApp,
                 fontFamily = fontFamily,
             )
         }

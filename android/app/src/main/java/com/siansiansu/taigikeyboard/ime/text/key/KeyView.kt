@@ -27,7 +27,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
-import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.util.getColorFromAttr
 import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
 import java.util.Locale
@@ -201,7 +201,7 @@ class KeyView(
     /**
      * Apply background drawable, corner radius, border, and color tint from current prefs.
      * Safe to invoke repeatedly — also called from KeyboardView.applyAppearanceChanges()
-     * when appearance settings are dragged live in the Tab2 preview.
+     * when appearance settings are dragged live in the Layout tab preview.
      */
     internal fun applyAppearance() {
         val isFunctionKey =
@@ -669,7 +669,7 @@ class KeyView(
                         if (isComposing) {
                             // 組字模式：依輸入模式顯示對應確認文字（選/soán/suán）
                             label =
-                                Tab4Texts.confirmKeyLabel(
+                                SettingsTexts.confirmKeyLabel(
                                     keyboardView.prefs.inputMode,
                                     keyboardView.prefs.isTranslateSwapped,
                                 )

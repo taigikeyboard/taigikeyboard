@@ -161,4 +161,4 @@ id: "default-tsiah-pa-bue",  roman: "tsia̍h-pá--buē",  hanzi: "食飽未"
 | Entry model | `CustomDictionaryEntry.swift` | `CustomDictionaryEntry.kt` |
 | List view | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` |
 | Edit view | `CustomDictionaryEditView.swift` | (inline dialog) |
-| Localization | `Tab3Texts.swift` | `Tab3Texts.kt` |
+| Localization | `DictionaryTexts.swift` | `DictionaryTexts.kt` |

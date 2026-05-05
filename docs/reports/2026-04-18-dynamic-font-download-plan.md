@@ -19,7 +19,7 @@ UI 需延續目前設定頁風格，不另外引入新的視覺語言。
 
 ### Android
 
-- 字型選單在 [android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/tab2/FontPickerContent.kt](/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/tab2/FontPickerContent.kt)
+- 字型選單在 [android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt](/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/java/com/siansiansu/taigikeyboard/ui/tabs/layout/FontPickerContent.kt)
 - 字型解析集中在 [android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt](/Users/alexsu/Workspace/taigikeyboard/android/app/src/main/java/com/siansiansu/taigikeyboard/util/FontUtils.kt)
 - 設定值存於 `PrefHelper.fontType`
 - 目前 `iansui`、`genYoMin`、`genYoGothic` 都直接從 `res/font` 載入
@@ -27,7 +27,7 @@ UI 需延續目前設定頁風格，不另外引入新的視覺語言。
 
 ### iOS
 
-- 字型設定頁在 [ios/Sources/TaigiKeyboard/App/Tabs/Tab2/AppearanceSettingsView.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/App/Tabs/Tab2/AppearanceSettingsView.swift)
+- 字型設定頁在 [ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/App/Tabs/Layout/AppearanceSettingsView.swift)
 - 字型型別定義在 [ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/Settings/SettingsTypes.swift)
 - 使用者設定存於 [ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift)
 - 主 app 透過 `UIAppFonts` 預載字型，定義於 [ios/Sources/TaigiKeyboard-Info.plist](/Users/alexsu/Workspace/taigikeyboard/ios/Sources/TaigiKeyboard-Info.plist)

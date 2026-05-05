@@ -14,16 +14,16 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.localization.Tab4Texts
+import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
-import com.siansiansu.taigikeyboard.ui.tabs.tab1.HomeScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab2.LayoutScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySearchViewModel
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.DictionarySettingsScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab4.DiagnosticViewModel
-import com.siansiansu.taigikeyboard.ui.tabs.tab4.InputSettingsScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab4.SettingsResetViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.home.HomeScreen
+import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutScreen
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySearchViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.settings.DiagnosticViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.settings.InputSettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.settings.SettingsResetViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import com.siansiansu.taigikeyboard.util.LauncherIconUtils
@@ -164,7 +164,7 @@ class SettingsMainActivity : AppCompatActivity() {
                                 diagnosticViewModel = diagnosticViewModel,
                                 onResetSettings = {
                                     resetViewModel.resetAllSettings(prefs) { success ->
-                                        val message = if (success) Tab4Texts.resetSuccess else Tab4Texts.resetFailed
+                                        val message = if (success) SettingsTexts.resetSuccess else SettingsTexts.resetFailed
                                         Toast
                                             .makeText(this, message, Toast.LENGTH_SHORT)
                                             .show()

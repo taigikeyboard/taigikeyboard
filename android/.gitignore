@@ -1,5 +1,6 @@
 # === Android / Gradle ===
 .gradle
+.gradle-home
 !gradle/wrapper/gradle-wrapper.jar
 .gradletasknamecache
 local.properties

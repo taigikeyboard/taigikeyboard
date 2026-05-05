@@ -60,7 +60,7 @@ User taps button (Copy/Share/Email)
 
 ## User Interface
 
-Located in **Tab4** (Settings), "裝置資訊" section.
+Located in the **Settings** tab, "裝置資訊" section.
 
 | Action | Label | Mechanism |
 |--------|-------|-----------|
@@ -84,6 +84,6 @@ Located in **Tab4** (Settings), "裝置資訊" section.
 | Function | iOS | Android |
 |----------|-----|---------|
 | Service | `DiagnosticService.swift` | `DiagnosticService.kt` |
-| UI | `Tab4.swift` (lines 92-130) | `InputSettingsScreen.kt` (lines 204-257) |
-| Strings | `Tab4Texts.swift` | `DiagnosticTexts.kt` |
+| UI | `SettingsTab.swift` (lines 92-130) | `InputSettingsScreen.kt` (lines 204-257) |
+| Strings | `SettingsTexts.swift` | `SettingsTexts.kt` |
 | Pattern | Enum with static methods | Singleton object |

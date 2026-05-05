@@ -119,12 +119,12 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 | iOS File | Android File | Description |
 |----------|--------------|-------------|
 | `ContentView.swift` | `MainSettingsScreen.kt` | Tab container |
-| `Tab1.swift` | `HomeScreen.kt` | Home |
-| `Tab2.swift` | `LayoutScreen.kt` | Layout |
-| `Tab3.swift` | `DictionarySettingsScreen.kt` | Dictionary |
-| `Tab4.swift` | `InputSettingsScreen.kt` | Settings |
+| `HomeTab.swift` | `HomeScreen.kt` | Home |
+| `LayoutTab.swift` | `LayoutScreen.kt` | Layout |
+| `DictionaryTab.swift` | `DictionarySettingsScreen.kt` | Dictionary |
+| `SettingsTab.swift` | `InputSettingsScreen.kt` | Settings |
 
-### Tab1 Sub-pages
+### Home Sub-pages
 
 | iOS Page | iOS File | Android File |
 |----------|----------|--------------|
@@ -136,14 +136,14 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 | Copyright | `CopyrightView.swift` | `CopyrightScreen.kt` |
 | AppearanceSettings | `AppearanceSettingsView.swift` | `AppearanceSettingsScreen.kt` |
 
-### Tab1 Content Models
+### Home Content Models
 
 | iOS File | Android File | Description |
 |----------|--------------|-------------|
 | `FeatureContent.swift` | `FeatureContent.kt` | Feature data model |
 | `FeatureContentLoader.swift` | `FeatureContentLoader.kt` | JSON loader |
 
-### Tab3 Sub-pages
+### Dictionary Sub-pages
 
 | iOS Page | iOS File | Android File |
 |----------|----------|--------------|
@@ -162,11 +162,11 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 | - | `LocalizedText.kt` | Core structure (Android only) |
 | - | `DisplayLanguage.kt` | Display language enum |
 | - | `LanguageManager.kt` | Language management (StateFlow) |
-| `Tab1Texts.swift` | `Tab1Texts.kt` | Tab1 text |
-| `Tab2Texts.swift` | `Tab2Texts.kt` | Tab2 text |
-| `Tab3Texts.swift` | `Tab3Texts.kt` | Tab3 text |
-| `Tab4Texts.swift` | `Tab4Texts.kt` | Tab4 text |
-| `KeyboardTexts.swift` | (in `Tab4Texts.kt`) | Keyboard UI text (e.g. confirmKey) |
+| `HomeTexts.swift` | `HomeTexts.kt` | Home tab text |
+| `LayoutTexts.swift` | `LayoutTexts.kt` | Layout tab text |
+| `DictionaryTexts.swift` | `DictionaryTexts.kt` | Dictionary tab text |
+| `SettingsTexts.swift` | `SettingsTexts.kt` | Settings tab text |
+| `KeyboardTexts.swift` | (in `SettingsTexts.kt`) | Keyboard UI text (e.g. confirmKey) |
 
 ### Shared Components
 
@@ -212,11 +212,13 @@ TaigiKeyboard/
 ├── App/             # Main App UI
 │   ├── Components/  # Shared components
 │   └── Tabs/        # Tab pages
-│       ├── Tab1/    # Home (setup guide, features, FAQ)
+│       ├── Home/        # Home tab (setup guide, features, FAQ)
 │       │   ├── Models/      # FeatureContent, FeatureContentLoader
 │       │   ├── DetailViews/ # Feature/FAQ/Feedback/Copyright views
 │       │   └── SetupGuide/  # Setup guide views
-│       └── Tab3/    # Data management
+│       ├── Layout/      # Layout tab
+│       ├── Dictionary/  # Dictionary tab (data management)
+│       └── Settings/    # Settings tab
 ├── Autocomplete/    # Autocomplete + classifier glue
 │   ├── Models/      # CandidateViewModels, SymbolData
 │   ├── Services/    # AutocompleteService, AutocompleteInputClassifier, AutocompleteProviders
@@ -279,11 +281,11 @@ taigikeyboard/
 │       ├── layout/      # LayoutManager, LayoutData
 │       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, NextWordHandler, ToolbarManager
 ├── content/         # ContentResolver entry point
-├── localization/    # LocalizedText, LanguageManager, Tab1-4Texts
+├── localization/    # LocalizedText, LanguageManager, {Home/Layout/Dictionary/Settings}Texts
 ├── settings/        # Activity wrappers (Compose host)
 ├── ui/
 │   ├── components/  # Reusable Compose components
-│   ├── tabs/        # tab1 / tab2 / tab3 / tab4 Compose screens
+│   ├── tabs/        # home / layout / dictionary / settings Compose screens
 │   └── theme/       # Theme, Type
 └── util/            # AppVersionUtils, FontUtils, etc.
 ```

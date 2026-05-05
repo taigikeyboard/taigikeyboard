@@ -18,10 +18,10 @@
 
 | Tab | iOS | Android |
 |-----|-----|---------|
-| Tab1 Home (頭頁) | `Tab1.swift` | `HomeScreen.kt` |
-| Tab2 Layout (佈局) | `Tab2.swift` | `LayoutScreen.kt` |
-| Tab3 Dictionary (詞庫) | `Tab3.swift` | `DictionarySettingsScreen.kt` |
-| Tab4 Settings (設定) | `Tab4.swift` | `InputSettingsScreen.kt` |
+| Home (頭頁) | `HomeTab.swift` | `HomeScreen.kt` |
+| Layout (佈局) | `LayoutTab.swift` | `LayoutScreen.kt` |
+| Dictionary (詞庫) | `DictionaryTab.swift` | `DictionarySettingsScreen.kt` |
+| Settings (設定) | `SettingsTab.swift` | `InputSettingsScreen.kt` |
 
 Android uses Jetpack Compose screens (not Fragments). Tab container: `MainSettingsScreen.kt`.
 
@@ -82,9 +82,9 @@ Android uses Jetpack Compose screens (not Fragments). Tab container: `MainSettin
 
 ---
 
-## Tab1 Content Architecture (v3.4.7+)
+## Home Content Architecture (v3.4.7+)
 
-Tab1 (Home) content is **JSON-driven** — feature descriptions and FAQ are loaded from shared JSON files instead of hardcoded enums.
+Home tab content is **JSON-driven** — feature descriptions and FAQ are loaded from shared JSON files instead of hardcoded enums.
 
 | File | Platform | Description |
 |------|----------|-------------|
@@ -101,9 +101,9 @@ Editing `content/tab1-*.json` is immediately visible on both platforms — no sy
 
 ---
 
-## Tab3 Data Management (v3.4.5+)
+## Dictionary Data Management (v3.4.5+)
 
-Tab3 expanded from basic dictionary settings to full data management:
+The Dictionary tab expanded from basic dictionary settings to full data management:
 
 | Sub-screen | iOS | Android | Description |
 |------------|-----|---------|-------------|
@@ -121,10 +121,10 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 | File | Purpose |
 |------|---------|
 | `LocalizedText.kt` | Core structure (Android only) |
-| `Tab1Texts.swift` / `.kt` | Tab1 text |
-| `Tab2Texts.swift` / `.kt` | Tab2 text |
-| `Tab3Texts.swift` / `.kt` | Tab3 text |
-| `Tab4Texts.swift` / `.kt` | Tab4 text |
+| `HomeTexts.swift` / `.kt` | Home tab text |
+| `LayoutTexts.swift` / `.kt` | Layout tab text |
+| `DictionaryTexts.swift` / `.kt` | Dictionary tab text |
+| `SettingsTexts.swift` / `.kt` | Settings tab text |
 | `LanguageManager.kt` | Android language selection (StateFlow) |
 | `DisplayLanguage.kt` | Android display language enum |
 
@@ -144,7 +144,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 | Layout preview | 180×120pt | 540×360px |
 | Screenshots | Adaptive | Varies |
 
-### Tab2 Layout Preview Screenshots
+### Layout Preview Screenshots
 
 When layout appearance changes (font size, key labels, etc.), update these screenshots.
 
@@ -182,7 +182,7 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 |-----------|------|
 | Tab container | `ContentView.swift` |
 | Theme colors | KeyboardKit adaptive colors + `SharedSettings.colorSettings` |
-| Localization | `CommonTexts.swift`, `Tab*Texts.swift` |
+| Localization | `CommonTexts.swift`, `HomeTexts.swift`, `LayoutTexts.swift`, `DictionaryTexts.swift`, `SettingsTexts.swift` |
 | Image assets | `Assets.xcassets/` |
 
 ### Android
@@ -192,4 +192,4 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 | Tab container | `SettingsMainActivity.kt` + `MainSettingsScreen.kt` |
 | Navigation | Compose Navigation (no XML) |
 | Theme | `Theme.kt` + `Type.kt` |
-| Strings | `LocalizedText.kt` + `Tab1-4Texts.kt` |
+| Strings | `LocalizedText.kt` + `HomeTexts.kt` / `LayoutTexts.kt` / `DictionaryTexts.kt` / `SettingsTexts.kt` |

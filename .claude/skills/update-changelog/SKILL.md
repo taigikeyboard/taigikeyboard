@@ -1,6 +1,6 @@
 ---
 name: update-changelog
-description: Update changelog/<version>.md + CHANGELOG.md index + Tab1 version history based on commits since main (last release). Run on develop branch when preparing a release.
+description: Update changelog/<version>.md + CHANGELOG.md index + Home tab version history based on commits since main (last release). Run on develop branch when preparing a release.
 disable-model-invocation: false
 ---
 
@@ -47,9 +47,9 @@ Keep the existing CHANGELOG style and formatting. Only add missing items — do 
 
 **Also update `versionHistoryEntries` on both platforms**:
 
-- **iOS** — `ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift`
+- **iOS** — `ios/Sources/TaigiKeyboard/Strings/HomeTexts.swift`
   - Format: `("x.y.z", "YYYY/MM/DD", [LocalizedText(hanji: "..."), ...])`
-- **Android** — `android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt`
+- **Android** — `android/app/src/main/java/com/siansiansu/taigikeyboard/localization/HomeTexts.kt`
   - Format: `VersionEntry("x.y.z", "YYYY/MM/DD", listOf(LocalizedText(hanji = "..."), ...))`
 
 Common rules for both:
@@ -73,7 +73,7 @@ Common rules for both:
 Stage and commit only the changelog-related files:
 
 ```
-git add CHANGELOG.md changelog/<version>.md ios/Sources/TaigiKeyboard/Localization/Tab1Texts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/Tab1Texts.kt
+git add CHANGELOG.md changelog/<version>.md ios/Sources/TaigiKeyboard/Strings/HomeTexts.swift android/app/src/main/java/com/siansiansu/taigikeyboard/localization/HomeTexts.kt
 git commit -m "<version>: Update changelog and version history"
 ```
 
@@ -84,7 +84,7 @@ git commit -m "<version>: Update changelog and version history"
 
 ## Important
 
-- Do NOT modify source code files other than the two `Tab1Texts` files — only `CHANGELOG.md` (index), `changelog/<version>.md`, iOS/Android Tab1Texts
+- Do NOT modify source code files other than the two `HomeTexts` files — only `CHANGELOG.md` (index), `changelog/<version>.md`, iOS/Android `HomeTexts`
 - Do NOT alter any functionality
 - If the changelog version file is already complete, inform the user — nothing to do
 - For new releases: create `changelog/<version>.md` and add it to the `CHANGELOG.md` index

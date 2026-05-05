@@ -413,7 +413,7 @@ class KeyboardView : LinearLayout {
 
     /**
      * Re-applies appearance settings (background drawable, corner radius, border, color tint,
-     * font typeface) to every key without recreating the view hierarchy. Invoked by the Tab2
+     * font typeface) to every key without recreating the view hierarchy. Invoked by the Layout tab
      * preview's AndroidView update lambda when the user drags appearance sliders or picks a color.
      */
     fun applyAppearanceChanges() {

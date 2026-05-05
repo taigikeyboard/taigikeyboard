@@ -198,9 +198,9 @@ class LexiconService(
     }
 
     /**
-     * Search with source metadata (tab3 dictionary exploration).
+     * Search with source metadata (Dictionary tab exploration).
      *
-     * `filterBitmask` is resolved by the caller (Tab3 VM) once per query
+     * `filterBitmask` is resolved by the caller (Dictionary tab VM) once per query
      * via `LexiconBridge.dictionaryFilters(...)` and reused for retag —
      * keeping mask and badge filter on the same snapshot per Codex
      * pre-impl BLOCK 6.
@@ -229,7 +229,7 @@ class LexiconService(
         }
     }
 
-    /** Search by hanzi prefix (tab3 dictionary exploration). */
+    /** Search by hanzi prefix (Dictionary tab exploration). */
     suspend fun searchByHanzi(
         input: String,
         inputMode: InputMode,

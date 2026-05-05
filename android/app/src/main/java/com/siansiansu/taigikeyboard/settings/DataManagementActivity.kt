@@ -12,9 +12,9 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.localization.CommonTexts
-import com.siansiansu.taigikeyboard.localization.Tab3Texts
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.DataManagementViewModel
+import com.siansiansu.taigikeyboard.localization.DictionaryTexts
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +47,7 @@ class DataManagementActivity : ComponentActivity() {
                             contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
                         }
                     }
-                    Toast.makeText(this@DataManagementActivity, Tab3Texts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@DataManagementActivity, DictionaryTexts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
                 } catch (_: Exception) {
                     Toast.makeText(this@DataManagementActivity, CommonTexts.exportFailed, Toast.LENGTH_SHORT).show()
                 }
@@ -66,7 +66,7 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            String.format(Tab3Texts.importBackupResult, result.customDict, result.frequency, result.association),
+                            String.format(DictionaryTexts.importBackupResult, result.customDict, result.frequency, result.association),
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (_: Exception) {

@@ -6,10 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.AssociationDataScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.AssociationDataViewModel
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataScreen
-import com.siansiansu.taigikeyboard.ui.tabs.tab3.FrequencyDataViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataViewModel
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataScreen
+import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
 

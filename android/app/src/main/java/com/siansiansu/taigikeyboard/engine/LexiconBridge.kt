@@ -118,7 +118,7 @@ object LexiconBridge {
 
     /**
      * Output of `dictionaryFilters` — ready-to-send bitmasks plus the
-     * decoded enabled-source set for Tab3 retag. Replaces verbatim
+     * decoded enabled-source set for Dictionary tab retag. Replaces verbatim
      * platform `EnabledDictionaries` bit math (deleted in v3.5.8 slice).
      *
      * `assocLookupBitmask` carries the `UInt.MAX_VALUE` sentinel when all 9
@@ -186,7 +186,7 @@ object LexiconBridge {
         return resp.searchResult.rowsList.map(::taigiWordToRow)
     }
 
-    /** Tab3 multi-source dictionary lookup. */
+    /** Dictionary tab multi-source lookup. */
     fun searchWithSources(
         input: String,
         inputMode: LexiconInputMode,
@@ -204,7 +204,7 @@ object LexiconBridge {
         return resp.searchWithSourcesResult.rowsList.map(::taigiWordToRow)
     }
 
-    /** Tab3 hanzi-prefix dictionary lookup. */
+    /** Dictionary tab hanzi-prefix lookup. */
     fun searchByHanzi(
         query: String,
         inputMode: LexiconInputMode,
@@ -280,7 +280,7 @@ object LexiconBridge {
      * pre-v3.5.8 verbatim-mirrored `EnabledDictionaries` bit math.
      *
      * Call ONCE per query and pass the result down the search pipeline;
-     * resolving again inside Tab3's badge filter would split the snapshot.
+     * resolving again inside the Dictionary tab's badge filter would split the snapshot.
      */
     fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters {
         val protoToggles = ProtoDictionaryToggles.newBuilder()
@@ -321,7 +321,7 @@ object LexiconBridge {
     }
 
     /**
-     * Tab3 short-circuit predicate. True iff `text` contains any CJK
+     * Dictionary tab short-circuit predicate. True iff `text` contains any CJK
      * codepoint (Unified + Extensions A-E). See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
      */
