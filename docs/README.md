@@ -89,6 +89,7 @@
 
 | File | Description | Status |
 |------|-------------|--------|
+| `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
 | `keywords.md` | Standardized keyword mapping for core logic and UI | Reference |
 | `file-structure.md` | File index, directory structure, naming conventions | Reference |
 | `simplify.md` | Simplify-pass review log (historical) | Historical |
