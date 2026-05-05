@@ -81,10 +81,14 @@ public extension RustEngineBridge {
     /// association sources are on — preserves the documented
     /// `lexicon.proto:166-173` shortcut. Caller forwards directly to
     /// `lexiconAssocLookup(enabledSourcesBitmask:)`.
-    struct DictionaryFilters: Equatable, Sendable {
-        public let dictionaryFilterBitmask: UInt32
-        public let assocLookupBitmask: UInt32
-        public let enabledSources: Set<DictionarySource>
+    ///
+    /// `internal` (not `public`) because `enabledSources` references the
+    /// internal `DictionarySource` enum; matches `ClassificationResult`'s
+    /// pattern below.
+    internal struct DictionaryFilters: Equatable, Sendable {
+        let dictionaryFilterBitmask: UInt32
+        let assocLookupBitmask: UInt32
+        let enabledSources: Set<DictionarySource>
     }
 
     // MARK: - Methods
@@ -254,7 +258,7 @@ public extension RustEngineBridge {
     ///
     /// Call ONCE per query and pass the result down the search pipeline;
     /// re-resolving inside `fetchSystemResults` would split the snapshot.
-    static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
+    internal static func lexiconDictionaryFilters(toggles: DictionaryToggles) -> DictionaryFilters {
         var togglesProto = Taigi_Engine_DictionaryToggles()
         togglesProto.kautian = toggles.kautian
         togglesProto.taigitv = toggles.taigitv
