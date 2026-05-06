@@ -17,6 +17,8 @@
 //! `LoggerFactory`, Android uses `LoggerBackend`); engine returns the
 //! data and lets the platform format / emit.
 
+// 中文: process_candidates 的整體流程協調者:去重 → 評分排序 → (TPS 模式)顯示去重 → 回傳結果。
+
 use std::collections::HashMap;
 
 use protos::engine::{
@@ -29,6 +31,7 @@ use crate::sort::{self, FrequencyMap};
 
 /// Run the merged-candidate ranking pipeline against `req` and return the
 /// proto response. Stateless and panic-free for well-formed input.
+// 中文: ranking crate 對外入口:吃 proto 請求,執行整套排序管線後回傳 proto 結果。
 pub fn process_candidates(req: ProcessCandidatesRequest) -> ProcessCandidatesResponse {
     if req.merge_order_only {
         return process_merge_order(req);
@@ -69,6 +72,7 @@ pub fn process_candidates(req: ProcessCandidatesRequest) -> ProcessCandidatesRes
 /// DB had warmed up. The `tps_dedup_enabled` gate still applies — display
 /// dedup must run AFTER engine dedup, same invariant as the scoring path.
 /// `breakdown` is always empty (no scoring took place).
+// 中文: 冷啟動分支(使用者頻率 DB 尚未 warm),只去重、保留輸入順序,不做評分排序。
 fn process_merge_order(req: ProcessCandidatesRequest) -> ProcessCandidatesResponse {
     let merged_unique = dedup::remove_duplicates(req.raw);
     let ranked = if req.tps_dedup_enabled {
@@ -86,6 +90,7 @@ fn process_merge_order(req: ProcessCandidatesRequest) -> ProcessCandidatesRespon
 /// `FrequencyEntry.display_text_key` matches `TaigiWord.displayText`
 /// (`hanji` if non-empty else `roman`); that pairing lives at the
 /// platform → engine boundary.
+// 中文: 從 proto 的 FrequencyEntry 陣列建立查詢用 HashMap,key 為候選詞顯示文字。
 fn build_frequency_map(entries: &[FrequencyEntry]) -> FrequencyMap {
     let mut map = HashMap::with_capacity(entries.len());
     for entry in entries {
@@ -109,6 +114,7 @@ fn build_frequency_map(entries: &[FrequencyEntry]) -> FrequencyMap {
 /// [`dedup::remove_display_duplicates`] so the canonical dedup logic
 /// stays in one place. The populated path inlines a single-pass dedup
 /// to drop the breakdown at the same index as its dropped word.
+// 中文: 排序後的顯示去重(TPS 模式),保持平行的 breakdown 陣列同步丟棄被去掉的項目。
 fn post_sort_display_dedup(
     sorted_words: Vec<protos::engine::TaigiWord>,
     sorted_breakdowns: Vec<ScoreBreakdown>,

@@ -11,6 +11,9 @@
 //! with-dev) filter; mirrors iOS `DictionaryBinaryReader.passesFilter` and
 //! Android equivalent.
 
+// 中文: DictionaryReader — TKDB 詞庫二進位 mmap 讀取器。
+// 中文: 以 1-based rowid 索引;passes_filter 為 3 層過濾 (variant → khiin → 來源 OR + dev)。
+
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
@@ -22,18 +25,27 @@ const SUPPORTED_VERSION: u32 = 1;
 /// Bit positions for the 12-source bitmask. Mirrors
 /// `dictionary/common/source_bits.py::SOURCE_BITS` (positions 0-11) +
 /// `IS_VARIANT_BIT` at bit 12. Drift causes silent filter divergence.
+// 中文: khiin 來源位元 (bit 9)。
 pub const KHIIN_BIT: u16 = 1 << 9;
+// 中文: dev 來源位元 (bit 10),永遠視為啟用。
 pub const DEV_BIT: u16 = 1 << 10;
+// 中文: 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
 pub const VARIANT_BIT: u16 = 1 << 12;
 
+// 中文: 字典紀錄 — 來源 bitmask、出現頻率、漢字 (可選) 與 TL 羅馬字。
 #[derive(Debug, Clone)]
 pub struct DictionaryRecord {
+    // 中文: 來源 + 異體字標記的 13 位元 bitmask。
     pub bitmask: u16,
+    // 中文: 詞頻,用於候選詞排序 (DESC)。
     pub frequency: u32,
+    // 中文: 漢字寫法 (可選,部分音節無對應漢字)。
     pub hanzi: Option<String>,
+    // 中文: TL 羅馬字寫法 (必填)。
     pub tl: String,
 }
 
+// 中文: TKDB mmap 讀取器,持有 mmap handle 與紀錄數等 header 資訊。
 pub struct DictionaryReader {
     handle: MmapHandle,
     record_count: u32,
@@ -49,19 +61,25 @@ impl std::fmt::Debug for DictionaryReader {
     }
 }
 
+// 中文: 3 層過濾條件 — variant、khiin、來源 mask 三段獨立控制。
 #[derive(Debug, Clone, Copy)]
 pub struct Filter {
     /// All variant entries excluded when false.
+    // 中文: false 時排除所有異體字紀錄 (bit 12)。
     pub variant: bool,
     /// Khiin source excluded when false.
+    // 中文: false 時排除 khiin 來源紀錄 (bit 9)。
     pub khiin: bool,
     /// All sources enabled when true (skips per-source mask check).
+    // 中文: true 時略過 enabled_mask 比對,直接通過。
     pub all_enabled: bool,
     /// Per-source enable bitmask (12 bits, low-order = source bit).
+    // 中文: 啟用來源的 12 位元 bitmask。
     pub enabled_mask: u16,
 }
 
 impl DictionaryReader {
+    // 中文: 開啟並驗證 dictionary.bin — 檢查 magic、版本與 offset 表大小。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -104,16 +122,19 @@ impl DictionaryReader {
         })
     }
 
+    // 中文: 回傳 dictionary.bin 中紀錄總數。
     pub fn record_count(&self) -> u32 {
         self.record_count
     }
 
+    // 中文: 回傳 dictionary.bin 的 build timestamp (供版本對齊驗證使用)。
     pub fn build_timestamp(&self) -> u32 {
         self.build_timestamp
     }
 
     /// Read a record by 1-based rowid. Returns `None` if rowid is out of
     /// range or the record bytes are malformed.
+    // 中文: 以 1-based rowid 讀取單筆字典紀錄;rowid 越界或格式錯誤回傳 None。
     pub fn record(&self, rowid: u32) -> Option<DictionaryRecord> {
         if rowid == 0 || rowid > self.record_count {
             return None;
@@ -170,6 +191,7 @@ impl DictionaryReader {
 
     /// 3-layer filter: variant exclusion → khiin exclusion →
     /// source-OR-with-dev. Mirrors iOS / Android `passesFilter`.
+    // 中文: 3 層過濾 — variant 排除 → khiin 排除 → 來源 OR 比對 (dev 永遠通過)。
     pub fn passes_filter(record_bitmask: u16, filter: &Filter) -> bool {
         if !filter.variant && (record_bitmask & VARIANT_BIT) != 0 {
             return false;

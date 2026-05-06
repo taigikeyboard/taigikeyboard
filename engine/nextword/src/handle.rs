@@ -18,12 +18,16 @@
 //! `wrapping_add(1)`; `u64::MAX + 1 = 0` is a fresh current value, NOT a
 //! reset.
 
+// 中文: `EngineHandle` 是 nextword 引擎的全行程單例,每行程一個 `Mutex<Engine>`。
+// 中文: envelope 世代不符時靜默重置狀態並 +1 current_generation,確保在途查詢一定判定 stale。
+
 use crate::api::{Engine, NextWordError};
 use crate::dispatch;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, NextWordRequest, NextWordResponse};
 use std::sync::Mutex;
 
+// 中文: 行程單例的引擎包裝;持有引擎本體與最後一次看到的 envelope 世代值。
 pub struct EngineHandle {
     nextword: Mutex<Engine>,
     last_generation: Mutex<u64>,
@@ -38,6 +42,7 @@ impl EngineHandle {
     }
 
     /// Process-wide singleton. Constructed lazily on first access.
+    // 中文: 取得行程單例;首次呼叫時惰性建立。
     pub fn instance() -> &'static EngineHandle {
         static HANDLE: OnceCell<EngineHandle> = OnceCell::new();
         HANDLE.get_or_init(EngineHandle::new)
@@ -49,6 +54,8 @@ impl EngineHandle {
     /// LOCK ORDER: always lock `nextword` first, then `last_generation`.
     /// Never call platform / FFI / log code while either lock is held.
     /// Mirrors composing/src/handle.rs:55-60.
+    // 中文: nextword 最上層分派;先做 envelope 世代檢查與重置,再呼叫純分派表。
+    // 中文: 鎖順序固定先 nextword 後 last_generation,持鎖期間禁止呼叫平台 / FFI / log。
     pub fn handle(
         &self,
         req: &NextWordRequest,

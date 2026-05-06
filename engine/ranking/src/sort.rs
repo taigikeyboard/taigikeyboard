@@ -7,6 +7,8 @@
 //! debug logging. Stable: equal totals preserve input order, matching
 //! Swift `Array.sorted(by:)` and Kotlin `sortedByDescending` semantics.
 
+// 中文: 穩定排序模組,依候選詞總分由高到低排;同分時保留輸入順序,行為與 iOS/Android 平台一致。
+
 use std::collections::HashMap;
 
 use protos::engine::{ScoreBreakdown, TaigiWord};
@@ -17,6 +19,7 @@ use crate::score::{self, FrequencyData};
 /// (= `hanji` if non-empty else `roman`). Engine builds this once per
 /// request from the proto's `FrequencyEntry` list and reuses it across
 /// the whole batch.
+// 中文: 使用者頻率查詢表,key 為候選詞顯示文字(漢字優先,否則用羅馬字)。
 pub(crate) type FrequencyMap = HashMap<String, FrequencyData>;
 
 /// Score every input word, sort descending by total, return both the
@@ -30,6 +33,7 @@ pub(crate) type FrequencyMap = HashMap<String, FrequencyData>;
 ///
 /// Stable sort: `slice::sort_by` (used here) is guaranteed-stable in
 /// std, matching the platform implementations' `sorted` semantics.
+// 中文: 對候選詞評分後依總分由高到低排序,並依需求回傳對應的 ScoreBreakdown 陣列。
 pub(crate) fn sort_by_score(
     words: Vec<TaigiWord>,
     normalized_input: &str,
@@ -80,6 +84,7 @@ fn sort_with_breakdown(
 /// the `ScoreBreakdown` after consuming its total. Saves one allocation
 /// plus the per-word `ScoreBreakdown` struct copy in release builds where
 /// the caller did not request breakdowns.
+// 中文: hot path 用版本,只留 i32 總分,省下 ScoreBreakdown 的配置成本。
 fn sort_totals_only(
     words: Vec<TaigiWord>,
     normalized_input: &str,
@@ -108,6 +113,7 @@ fn sort_totals_only(
 /// Display text used as the user-frequency map key. Mirrors
 /// `TaigiWord.displayText` accessor on both platforms (`hanji` if non-empty
 /// else `roman`).
+// 中文: 取得頻率表 key:漢字非空時用漢字,否則退回羅馬字。
 pub(crate) fn display_text_key(word: &TaigiWord) -> String {
     match word.hanji.as_deref() {
         Some(h) if !h.is_empty() => h.to_owned(),

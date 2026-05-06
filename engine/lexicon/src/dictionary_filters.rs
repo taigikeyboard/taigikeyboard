@@ -15,16 +15,20 @@
 //!  2 = itaigi    5 = taijit   8 = khpoo   11 = lkk
 //! ```
 
+// 中文: 字典開關 → bitmask 換算的單一真實來源,取代平台端 ~80 行的 EnabledDictionaries 鏡像實作。
+
 use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionaryToggles};
 
 /// Sentinel value for `assoc_lookup_bitmask` — preserves the documented
 /// shortcut at `lexicon.proto:166-173`. When the platform receives this
 /// value it forwards to `AssocLookupRequest.enabled_sources_bitmask`
 /// without further processing; the engine treats it as "filter disabled".
+// 中文: 9 個 association 來源全開時使用的 sentinel 值,代表「過濾停用」。
 const ASSOC_ALL_ENABLED_SENTINEL: u32 = u32::MAX;
 
 /// Compute filter bitmasks + enabled-source codes from the user's
 /// 12-toggle preference snapshot.
+// 中文: 由 12 個字典開關計算 dictionary.bin / association.bin bitmask 與啟用來源代碼清單。
 pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersResponse {
     DictionaryFiltersResponse {
         dictionary_filter_bitmask: dictionary_filter_bitmask(toggles),
@@ -37,6 +41,7 @@ pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersR
 }
 
 /// Full `dictionary.bin` filter bitmask (bits 0-12).
+// 中文: dictionary.bin 完整 13 位元 bitmask;bit 10 (dev) 永遠開啟。
 fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     let mut mask: u32 = 0;
     if t.kautian {
@@ -83,6 +88,7 @@ fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
 /// Returns `u32::MAX` sentinel when ALL 9 association sources are on,
 /// preserving the documented shortcut consumed by
 /// `AssocLookupRequest.enabled_sources_bitmask`.
+// 中文: association.bin 的 9 位元 bitmask;9 個來源全開時回傳 u32::MAX sentinel。
 fn assoc_lookup_bitmask(t: &DictionaryToggles) -> u32 {
     if all_association_sources_enabled(t) {
         return ASSOC_ALL_ENABLED_SENTINEL;
@@ -133,6 +139,7 @@ fn all_association_sources_enabled(t: &DictionaryToggles) -> bool {
 /// `DictionarySourceCode` set the platform should mark as enabled when
 /// retagging Tab3 result badges. `DEV` + `CUSTOM` are non-toggleable and
 /// always present; `variant` is a filter bit, not a source code.
+// 中文: 提供 Tab3 標籤重貼用的啟用來源清單;DEV + CUSTOM 永遠存在,variant 是過濾位元 (非來源)。
 fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
     use DictionarySourceCode as C;
     let mut codes = vec![C::DictSourceDev, C::DictSourceCustom];

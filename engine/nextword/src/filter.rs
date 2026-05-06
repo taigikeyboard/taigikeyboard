@@ -9,6 +9,9 @@
 //! `FailInvariant`. Empty `hanzi` rows dropped silently (cannot become
 //! UI-meaningful).
 
+// 中文: 過濾 + 合併 + 評分 + 排序 + 截斷的後處理管線;同時負責顯示模式的轉換與整形。
+// 中文: 世代不符回傳 was_stale=true;Source::Unspecified 視為錯誤;空 hanzi 條目靜默丟棄。
+
 use crate::api::{NextWordError, PersistedState};
 use crate::scorer;
 use indexmap::IndexMap;
@@ -22,6 +25,7 @@ struct MergedRow {
     score: f64,
 }
 
+// 中文: 主後處理入口;依世代決定 stale,接著評分、合併、整形、排序、截斷。
 pub(crate) fn filter(
     state: &PersistedState,
     raw: Vec<RawNextWordPrediction>,

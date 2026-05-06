@@ -12,6 +12,8 @@
 //! response is `Ok` — proving "bounded" via "completes without crash"
 //! rather than "rejects".
 
+// 中文: 驗證 dispatcher 對超大輸入採「完成不崩潰」的有界行為,2 MB 上限由 swift-ffi / android-jni 端把關。
+
 use prost::Message;
 use protos::engine::phonetics_request::Method;
 use protos::engine::{request, ErrorCode, NormalizeTone, PhoneticsRequest, Request, Response};

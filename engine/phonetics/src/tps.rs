@@ -5,6 +5,8 @@
 //! them next to their primary consumer keeps `tables.rs` focused on
 //! cross-module shared data (TL / tone diacritics).
 
+// 中文: TPS / 注音雙向轉換 (TL ↔ TPS) 與表音符號偵測;六張查找表都收在此檔,因為只有 TPS 領域使用。
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::collections::HashMap;
@@ -178,6 +180,7 @@ pub(crate) fn is_zhuyin(text: &str) -> bool {
 ///   (`\u{311b}`); `true` renders it as ㄜ (`\u{311c}`), matching the iOS
 ///   `orMapsToER` toggle. Override is per-token (only applied when the
 ///   matched vowel slot is exactly `"or"`); other vowels are unaffected.
+// 中文: 把單一 TL token (含聲調數字) 轉成 TPS;`encode_safe` 用獨立空白點符號讓 TPS 能通過會剝組合符號的系統,`or_maps_to_er` 切換母音 `or` 的渲染。
 pub(crate) fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> String {
     let mut remaining: String = text.to_lowercase();
     let mut pre_punct = String::new();
@@ -294,6 +297,7 @@ pub(crate) fn to_zhuyin(text: &str, encode_safe: bool, or_maps_to_er: bool) -> S
 /// Convert a TPS string to a TL tone-numbered string. Mirrors `fromZhuyin` in
 /// `zhuyin.js`. Word segmentation is **not** performed here — that is the
 /// segmenter's job, which belongs with the Lexicon slice.
+// 中文: 把 TPS 字串轉回 TL 聲調數字形;此處不做斷詞,斷詞屬於 Lexicon 的職責。
 pub fn from_zhuyin(text: &str) -> String {
     let rev_punct = [
         ("\u{3002}", "."),

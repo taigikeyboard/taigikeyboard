@@ -5,6 +5,9 @@
 //! Effect ordering matters; iOS/Android downstream wrappers consume effects
 //! in proto-list order. `prost` preserves order on `repeated Effect` fields.
 
+// 中文: 純粹的狀態轉移函式,不做 log/FFI/平台型別轉換。
+// 中文: Effect 順序攸關平台端消化,prost 對 repeated Effect 會保留順序。
+
 use crate::api::{EngineState, Intent, Phase};
 use crate::derived::derived_display;
 use protos::engine::composing_response::Preedit;
@@ -17,6 +20,7 @@ use protos::engine::{
 };
 
 /// Apply `intent` against `state`, mutate, return the proto response.
+// 中文: 依 intent 變更 state,並回傳 proto 組字回應 (狀態機核心)。
 pub(crate) fn apply(
     state: &mut EngineState,
     intent: Intent,
@@ -59,6 +63,7 @@ pub(crate) fn apply(
 
 /// Drop the last `char` from `s` in a single UTF-8 walk via `Chars::as_str`.
 /// Returns "" if `s` is empty.
+// 中文: 安全移除字串最後一個 Unicode 字元 (單次 UTF-8 走訪),空字串回傳 ""。
 fn drop_last_char(s: &str) -> String {
     let mut it = s.chars();
     it.next_back();
@@ -68,6 +73,7 @@ fn drop_last_char(s: &str) -> String {
 /// Build a `composing` step response (typing / replace-last / delete-backward
 /// non-empty branches). All three update the preedit + request a fresh
 /// autocomplete query against the new buffer.
+// 中文: 組成「組字進行中」的回應,負責同時更新預編輯並觸發候選詞查詢。
 fn step_response(raw: String, display: String, selected_index: i32) -> ComposingResponse {
     ComposingResponse {
         preedit: Some(Preedit {
@@ -82,6 +88,7 @@ fn step_response(raw: String, display: String, selected_index: i32) -> Composing
 
 /// Enter or update the composing phase. A fresh composition step resets
 /// `selected_candidate_index` to 0.
+// 中文: 進入或更新 Composing 階段;每次新輸入會把候選索引重設為 0。
 fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> ComposingResponse {
     state.phase = Phase::Composing { raw: raw.clone() };
     state.selected_candidate_index = 0;
@@ -91,6 +98,7 @@ fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> 
 
 /// TPS auto-correct. Preserves `selected_candidate_index` (correction on top
 /// of an in-progress selection).
+// 中文: TPS 自動修正:替換尾端字元,保留目前候選索引 (修正疊在已選擇之上)。
 fn replace_last(
     state: &mut EngineState,
     replacement: String,

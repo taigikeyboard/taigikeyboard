@@ -9,6 +9,9 @@
 //! with each other and with `install`. No read/write split until
 //! profiling proves contention (audit § scope D8 deferred).
 
+// 中文: 進程級單例 — 持有 Mutex<Option<EngineState>>,install 成功才原子置換,失敗保留舊狀態。
+// 中文: 並發 search 與 install 透過同一把 mutex 序列化,目前無讀寫分離。
+
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
@@ -22,20 +25,29 @@ use crate::prefix_index::PrefixIndex;
 /// Active lexicon state. All fields are populated on a successful install;
 /// `with_state` callers verify they are present (defensive — not expected
 /// to fail post-install).
+// 中文: 安裝成功後的引擎狀態快照;install 失敗時整個 EngineState 不會替換。
 pub struct EngineState {
+    // 中文: 平台告知的字典版本號 (用於與 association.bin / dictionary.bin 對齊驗證)。
     pub dictionary_version: u32,
+    // 中文: FST 前綴索引 (供羅馬字 / 漢字前綴查詢)。
     pub prefix_index: Option<PrefixIndex>,
+    // 中文: TKDB 字典讀取器 (rowid → 詞條)。
     pub dictionary: Option<DictionaryReader>,
+    // 中文: TKWA bigram 讀取器 (前一詞 → 後續候選詞)。
     pub association: Option<AssociationReader>,
 }
 
+// 中文: 引擎控制句柄 — 純 zero-sized type,所有 API 為靜態方法。
 pub struct EngineHandle;
 
 static STATE: Lazy<Mutex<Option<EngineState>>> = Lazy::new(|| Mutex::new(None));
 
+// 中文: install 完成後回傳的統計數據,供平台 UI 顯示與健康檢查。
 #[derive(Debug, Clone, Copy)]
 pub struct InstallStats {
+    // 中文: dictionary.bin 紀錄總數。
     pub dictionary_record_count: u64,
+    // 中文: FST 前綴索引條目數。
     pub prefix_index_entry_count: u64,
 }
 
@@ -43,6 +55,7 @@ impl EngineHandle {
     /// Install (or reinstall) the lexicon state. Idempotent: on success the
     /// new state atomically replaces any previous; on failure (open / mmap
     /// / format error) the previous state stays intact.
+    // 中文: 安裝 (或重裝) 引擎狀態 — 成功時原子置換,失敗時保留舊狀態。
     pub fn install(paths: LexiconPaths) -> Result<InstallStats, LexiconError> {
         let prefix_index = PrefixIndex::open(&paths.fst)?;
         let dictionary = DictionaryReader::open(&paths.dictionary_bin)?;
@@ -68,6 +81,7 @@ impl EngineHandle {
         Ok(stats)
     }
 
+    // 中文: 在 mutex 保護下借用目前的 EngineState 執行 closure;尚未 install 時回傳 NotInitialized。
     pub fn with_state<F, R>(f: F) -> Result<R, LexiconError>
     where
         F: FnOnce(&EngineState) -> Result<R, LexiconError>,

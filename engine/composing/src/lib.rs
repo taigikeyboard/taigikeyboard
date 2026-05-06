@@ -9,6 +9,9 @@
 //!
 //! Plan ref: `docs/engine/composing-slice-plan.md`.
 
+// 中文: 組字 (composing) slice 的 crate 入口,提供 Intent → Effect 狀態機。
+// 中文: 平台端透過 dispatch::handle 呼叫,引擎本身在 FFI 邊界由 Mutex<Engine> 包覆。
+
 pub mod api;
 pub mod dispatch;
 pub mod handle;

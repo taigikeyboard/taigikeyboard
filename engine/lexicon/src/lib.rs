@@ -10,6 +10,9 @@
 //! Crate is `unsafe_code = "forbid"`. The mmap unsafe carve-out lives
 //! exclusively in `engine/mmap-host`.
 
+// 中文: lexicon crate — 詞庫讀取路徑的 Rust 實作。
+// 中文: 包含 FST 前綴索引、TKDB/TKWA 二進位讀取器與搜尋協調邏輯,服務 IME 候選詞、Tab3 字典查詢與 NextWord bigram 查詢。
+
 pub mod api;
 pub mod association_reader;
 pub mod classification;

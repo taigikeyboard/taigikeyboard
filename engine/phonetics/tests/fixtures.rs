@@ -7,6 +7,8 @@
 //! provenance fast. Per the §4 cross-validation plan, failures here must trigger
 //! a tri-state diagnosis (canonical-missing / iOS-Android-drift / intentional).
 
+// 中文: 跨來源的 fixture 測試集,合併 taigi-converter (canonical) + iOS + Android 三方的測例;每筆都標 `// SOURCE:` 以利日後追溯。
+
 use phonetics::{normalize_to_tl, strip_tone_mark, to_poj, to_tl};
 
 // MARK: - strip_tone_mark — covers all 7 tones + no-mark + trailing digit.

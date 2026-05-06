@@ -6,20 +6,28 @@
 //! paths + introduce extra syscalls) — it accepts the platform-supplied
 //! path verbatim.
 
+// 中文: 安裝期間的絕對路徑快照 — 拒絕 NUL byte 與相對路徑;不做 canonicalize 以避免 iOS Bundle 路徑被改寫。
+
 use std::path::{Path, PathBuf};
 
 use crate::error::LexiconError;
 
+// 中文: 安裝時的絕對路徑與字典版本快照,作為 EngineHandle::install 的輸入。
 #[derive(Debug, Clone)]
 pub struct LexiconPaths {
+    // 中文: dictionary.fst 的絕對路徑 (前綴索引)。
     pub fst: PathBuf,
+    // 中文: dictionary.bin 的絕對路徑 (TKDB 詞庫)。
     pub dictionary_bin: PathBuf,
+    // 中文: association.bin 的絕對路徑 (TKWA bigram)。
     pub association_bin: PathBuf,
+    // 中文: 字典版本號,供平台對齊驗證。
     pub dictionary_version: u32,
 }
 
 impl LexiconPaths {
     /// Build from raw `InstallRequest` fields. Validates each path.
+    // 中文: 從原始 InstallRequest 字串建立 LexiconPaths,並驗證三個路徑。
     pub fn validated(
         fst: &str,
         dictionary_bin: &str,

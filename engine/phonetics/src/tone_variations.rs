@@ -7,6 +7,8 @@
 //!
 //! Pattern matches khiin-rs `loadSettings → AppConfig` cached snapshot.
 
+// 中文: `Method::GetToneVariations` 啟動時批次拉取 callout 聲調變體表;一次回傳 POJ + TL 兩組,平台端 init 時快取。
+
 use crate::tables::TONE_NUM_TO_COMBINING;
 use protos::engine::{ToneVariationList, ToneVariationsResult};
 use std::collections::HashMap;
@@ -17,6 +19,7 @@ const VOWEL_BASES: [&str; 5] = ["a", "e", "i", "o", "u"];
 const CONSONANT_BASES: [&str; 2] = ["n", "m"];
 
 /// Combining mark resolver matching iOS `combiningMark(for:mode:)`.
+// 中文: 依模式取聲調組合符號;9 聲在 TL 模式走雙重銳音符。
 fn combining_mark(tone: &str, is_tl: bool) -> &'static str {
     if tone == "9" && is_tl {
         // TL tone 9: double acute U+030B (POJ uses breve U+0306).
@@ -28,6 +31,7 @@ fn combining_mark(tone: &str, is_tl: bool) -> &'static str {
 
 /// Build toned variations by inserting combining mark between `base` and
 /// `suffix`. Output is NFC-recomposed.
+// 中文: 在 `base` 與 `suffix` 之間插入聲調組合符號,產出 callout 變體清單 (NFC)。
 fn build_variations(base: &str, suffix: &str, is_tl: bool) -> Vec<String> {
     TONE_NUMBERS
         .iter()
@@ -107,6 +111,7 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
 }
 
 /// Returns POJ + TL tone-variation maps in one response.
+// 中文: 一次建出 POJ + TL 兩套聲調變體表,給 callout 顯示用。
 pub(crate) fn build() -> ToneVariationsResult {
     let poj_variations = build_mode_map(false);
     let tl_variations = build_mode_map(true);

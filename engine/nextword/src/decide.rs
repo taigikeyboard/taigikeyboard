@@ -7,6 +7,9 @@
 //! `UpdateLastSelectedWord` bumps `current_generation`. Wrapping add —
 //! `u64::MAX + 1 = 0` is a fresh value.
 
+// 中文: 純決策表;移植自兩平台 NextWordEngine.decide,以 platform_id 處理兩處已知差異(複合詞拆字、噪音標點)。
+// 中文: 世代規則:除 UpdateLastSelectedWord 外的狀態變更 intent 都會 +1 current_generation(wrapping_add)。
+
 use crate::api::{Intent, NextWordError, PersistedState};
 use protos::engine::{
     next_word_effect, AppConfig, AssociationPair, CancelContextTimeout, ClearPredictionsUi,
@@ -15,18 +18,22 @@ use protos::engine::{
 };
 
 /// Strict-`<` association window (10 s).
+// 中文: association 紀錄時間窗,10 秒嚴格小於。
 pub(crate) const ASSOCIATION_TIMEOUT_MS: i64 = 10_000;
 
 /// Context timeout (30 s) — wire field is u64 ms; iOS bridge converts to
 /// `TimeInterval` seconds, Android uses `delay(Long ms)`.
+// 中文: 上下文逾時 (30 秒),平台側依此重設預測排程。
 const CONTEXT_TIMEOUT_MS: u64 = 30_000;
 
 /// Sentence-end punctuation. Common across both platforms (iOS
 /// `NextWordEngine.swift:33`; Android `NextWordEngine.kt:42`).
+// 中文: 句尾標點集合,iOS / Android 共用。
 const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
 
 /// iOS noise-punctuation set (`NextWordEngine.swift:38`). Used by
 /// iOS-only branch of `is_noise_text`.
+// 中文: iOS 雜訊標點集合,用於 iOS 特有的文字過濾分支。
 const IOS_NOISE_PUNCTUATION: &[char] = &[
     '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', '「', '」', '『', '』',
     '"', '“', '”', '\u{2018}', '\u{2019}', '（', '）', '(', ')', '【', '】', '[', ']', '{', '}',
@@ -35,6 +42,7 @@ const IOS_NOISE_PUNCTUATION: &[char] = &[
 
 /// Android noise-punctuation superset (`NextWordEngine.kt:53-93`). Adds
 /// ASCII space + full-width space (audit §5 #2).
+// 中文: Android 雜訊標點超集,額外納入 ASCII 空白與全形空白。
 const ANDROID_NOISE_PUNCTUATION: &[char] = &[
     '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', '「', '」', '『', '』',
     '"', '“', '”', '\'', '（', '）', '(', ')', '【', '】', '[', ']', '{', '}', '—', '–', '-', '～',
@@ -43,6 +51,7 @@ const ANDROID_NOISE_PUNCTUATION: &[char] = &[
 
 /// Apply `intent` against `state`, returning the platform-neutral
 /// `DecideResult`. Validates `Platform::Unspecified` upfront.
+// 中文: 決策表入口;先擋掉未指定平台,再依 intent 分派到對應的 decide_* 子函式。
 pub(crate) fn apply(
     state: &mut PersistedState,
     intent: Intent,
@@ -207,6 +216,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
 
 /// Shared reset path used by sentence-end punctuation, context timeout,
 /// and `ResetFull` intents.
+// 中文: 共用重置路徑;句尾標點、上下文逾時、ResetFull 都走這裡。
 fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
     let was_showing = state.is_showing;
     let new_generation = state.current_generation.wrapping_add(1);
@@ -235,6 +245,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
 /// Android-only Space-path: mutates state without bumping generation
 /// or scheduling the timeout. Records compound associations only (no
 /// `prev → this` bigram). Audit §5 #5 / Codex v1 P1.
+// 中文: Android 限定 Space 路徑;只更新狀態,不增世代、不重排 timer,只記錄複合詞 association。
 fn decide_update_last_selected_word(
     state: &mut PersistedState,
     text: String,
@@ -278,6 +289,7 @@ fn decide_update_last_selected_word(
 /// the predict() round-trip whose render produced this update already
 /// completed; subsequent intents will bump as usual. Returns the current
 /// snapshot so the platform receives a consistent value echo.
+// 中文: 平台告知候選詞顯示狀態;只同步 is_showing,不發 effect 也不增世代,僅回傳最新快照。
 fn decide_set_is_showing(state: &mut PersistedState, is_showing: bool) -> DecideResult {
     state.is_showing = is_showing;
     snapshot_into_decide_result(state, Vec::new())
@@ -286,6 +298,7 @@ fn decide_set_is_showing(state: &mut PersistedState, is_showing: bool) -> Decide
 /// Strict-`<` window check; non-negative lower bound rejects clock-skew /
 /// wrapping. Mirrors iOS `shouldRecordAssociation` /
 /// Android `shouldRecordAssociation`.
+// 中文: 判斷是否落在 association 窗內;以嚴格小於 + 非負下限阻擋時鐘倒退或溢位。
 pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> bool {
     if state.last_selected_word.is_none() {
         return false;
@@ -295,6 +308,7 @@ pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> 
 }
 
 /// Split a compound word. iOS: `-` only. Android: `-` and whitespace.
+// 中文: 拆解複合詞;iOS 只切連字符,Android 連字符與空白都當分隔。
 pub(crate) fn split_compound(word: &str, platform: Platform) -> Vec<String> {
     if word.is_empty() {
         return Vec::new();
@@ -316,6 +330,7 @@ pub(crate) fn split_compound(word: &str, platform: Platform) -> Vec<String> {
 /// Build sequential bigram pairs from a compound word; order preserved so
 /// the platform executor records sequentially (parallel writes race on
 /// the SQLite UNIQUE constraint).
+// 中文: 把複合詞拆成前後連續 bigram;保留順序避免平台側並行寫入撞 SQLite UNIQUE。
 pub(crate) fn compound_association_pairs(
     display_text: &str,
     roman: &str,
@@ -340,6 +355,7 @@ pub(crate) fn compound_association_pairs(
 
 /// iOS: punctuation / whitespace / pure-ASCII-digit text never triggers.
 /// Android: ALL chars are noise-punct or ASCII digit.
+// 中文: 噪音文字判斷;iOS 看首字 + 純 ASCII 數字,Android 則整串檢查每個字元。
 pub(crate) fn is_noise_text(text: &str, platform: Platform) -> bool {
     if text.is_empty() {
         return true;
@@ -365,6 +381,7 @@ pub(crate) fn is_noise_text(text: &str, platform: Platform) -> bool {
     }
 }
 
+// 中文: 判斷首字是否為句尾標點(。!?.!?),用來觸發共用重置路徑。
 pub(crate) fn is_sentence_end_punctuation(text: &str) -> bool {
     text.chars()
         .next()

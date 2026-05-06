@@ -2,6 +2,8 @@
 //! Mirrors `TaigiPhoneticsTests.swift` test_INVARIANT_* methods so the iOS
 //! production fixtures travel intact into the Rust crate.
 
+// 中文: D9 規定的 INVARIANT_* 測試,把 iOS 的 test_INVARIANT_* 方法原樣搬到 Rust。
+
 use phonetics::api::{poj_display_to_tl_display, tl_display_to_poj_display};
 
 const TL_POJ_FIXTURES: &[(&str, &str)] = &[

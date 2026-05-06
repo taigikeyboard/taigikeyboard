@@ -8,19 +8,25 @@
 //! All consumers (currently `engine/lexicon`) take a `&[u8]` whose lifetime
 //! is tied to the `&MmapHandle` borrow, so the unsafe-ness does not leak.
 
+// 中文: 唯讀記憶體映射輔助 crate,集中管理整個 workspace 唯一的 unsafe 開放區。
+// 中文: 對外只暴露受借用生命週期約束的 &[u8],使 unsafe 不外漏給呼叫端。
+
 use std::fs::File;
 use std::path::Path;
 
 use memmap2::Mmap;
 
+// 中文: mmap-host 的錯誤型別,區分檔案開啟失敗與記憶體映射失敗兩種情境。
 #[derive(thiserror::Error, Debug)]
 pub enum MmapError {
+    // 中文: 檔案無法開啟,通常是路徑不存在或權限不足。
     #[error("open `{path}`: {source}")]
     Open {
         path: String,
         #[source]
         source: std::io::Error,
     },
+    // 中文: 檔案開啟成功但 mmap 系統呼叫失敗。
     #[error("mmap `{path}`: {source}")]
     Map {
         path: String,
@@ -30,6 +36,7 @@ pub enum MmapError {
 }
 
 /// Read-only mmap handle. Drop closes the mmap.
+// 中文: 唯讀的 mmap 把手,Drop 時自動釋放映射區。
 pub struct MmapHandle {
     mmap: Mmap,
 }
@@ -40,6 +47,7 @@ impl MmapHandle {
     /// # Errors
     /// Returns [`MmapError::Open`] when the file cannot be opened or
     /// [`MmapError::Map`] when mmap fails.
+    // 中文: 以唯讀模式開啟檔案並對整份內容做記憶體映射,失敗時回傳對應錯誤分支。
     pub fn open_readonly(path: &Path) -> Result<Self, MmapError> {
         let path_string = path.display().to_string();
         let file = File::open(path).map_err(|source| MmapError::Open {

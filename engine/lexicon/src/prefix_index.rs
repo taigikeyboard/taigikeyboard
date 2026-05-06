@@ -8,13 +8,18 @@
 //! preserved through fst's deterministic byte-sorted iteration. Replaces
 //! both platforms' MARISA-trie + native-bridge stack.
 
+// 中文: PrefixIndex — 包裝 mmap 過的 dictionary.fst 提供前綴查詢。
+// 中文: 條目格式為 key_bytes || 0xFF || rowid_le_4;以 byte-range 掃描搭配 0xFF 分隔符即可決定前綴邊界。
+
 use fst::{IntoStreamer, Set, Streamer};
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
 
+// 中文: key 與 rowid 之間的分隔位元組;選用 0xFF 是因為它大於任何合法 UTF-8 byte,可保證掃描邊界正確。
 const SEPARATOR: u8 = 0xFF;
 
+// 中文: 對外的前綴索引 — 持有 fst::Set 與條目數。
 pub struct PrefixIndex {
     set: Set<MmappedSetData>,
     entry_count: u64,
@@ -35,6 +40,7 @@ impl AsRef<[u8]> for MmappedSetData {
 impl PrefixIndex {
     /// Open `dictionary.fst` mmap'd readonly. Validates that fst can parse
     /// the bytes; deeper format checks happen on first use.
+    // 中文: 以唯讀 mmap 開啟 dictionary.fst,並驗證 fst crate 能解析。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -48,6 +54,7 @@ impl PrefixIndex {
         Ok(Self { set, entry_count })
     }
 
+    // 中文: 回傳前綴索引的條目總數。
     pub fn entry_count(&self) -> u64 {
         self.entry_count
     }
@@ -60,6 +67,7 @@ impl PrefixIndex {
     /// next sibling prefix in lex order (last byte +1). All wire entries
     /// of the form `key + 0xFF + rowid_le_4` whose `key` starts with
     /// `prefix` fall in this range.
+    // 中文: 前綴查詢 — 回傳所有 key 以 prefix 開頭的 rowid,維持 fst byte-sort 的插入順序。
     pub fn lookup_prefix(&self, prefix: &str) -> Vec<u32> {
         let prefix_bytes = prefix.as_bytes();
         if prefix_bytes.is_empty() {
@@ -85,6 +93,7 @@ impl PrefixIndex {
 
     /// Exact-match lookup — returns rowids whose key equals `key` exactly.
     /// Filters the prefix-scan output by entry-length parity.
+    // 中文: 完全比對查詢 — 僅回傳 key 完全相等的 rowid;以條目長度等於 key+1+4 過濾掉同前綴的較長條目。
     pub fn lookup_exact(&self, key: &str) -> Vec<u32> {
         let key_bytes = key.as_bytes();
         if key_bytes.is_empty() {

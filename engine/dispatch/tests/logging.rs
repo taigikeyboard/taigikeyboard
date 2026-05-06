@@ -4,6 +4,8 @@
 //! trip through `OSLog` / `android.util.Log` is exercised separately
 //! by the platform test targets.
 
+// 中文: 驗證 dispatch 路徑會透過 log crate 發出記錄;FFI 端橋接到 OSLog / android.util.Log 由平台測試另行覆蓋。
+
 use log::{Level, Metadata, Record};
 use std::sync::{Mutex, OnceLock};
 

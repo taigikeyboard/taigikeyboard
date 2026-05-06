@@ -7,6 +7,8 @@
 //!   build <output.fst>          — read stdin TL\tkey\trowid pairs, write fst
 //!   query <input.fst> <prefix>  — list keys + rowids whose key has prefix
 
+// 中文: 字典 fst 前綴索引的建置 / 查詢命令列工具,取代舊版 marisa_trie Python 綁定。
+
 mod builder;
 mod query;
 

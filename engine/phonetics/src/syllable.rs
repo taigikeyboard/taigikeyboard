@@ -1,11 +1,14 @@
 //! Syllable parsing — ported from `taigi-converter/src/phonetics.js`.
 
+// 中文: 音節解析,把字串拆成 (聲母, 韻母, 聲調),並提供 POJ→TL 拼寫正規化、聲調符號剝離等基礎工具。
+
 use crate::tables::{COMBINING_TO_TONE_NUM, TL_FINALS, TL_INITIALS};
 use unicode_normalization::UnicodeNormalization;
 
 /// Strip the tone mark from `text`, returning `(bare NFC text, tone digit)`.
 /// Recognises both NFD combining marks and trailing ASCII digits 1..=9.
 /// `tone` is the empty string when no mark is present.
+// 中文: 把聲調符號從字串裡剝出來,回傳 (去聲調 NFC 字串, 聲調數字);辨識 NFD 組合符號跟結尾 ASCII 數字 1..=9。
 pub fn strip_tone_mark(text: &str) -> (String, String) {
     // Fast path: pure-ASCII input cannot carry combining marks. NFD/NFC are
     // no-ops on ASCII, so skip the allocation. This is the common case for
@@ -49,6 +52,7 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
 /// Lowercase, then map POJ-style spellings into TL spellings.
 /// Order is meaningful: `oonn` collapses into `onn` only after `oo` substitutions
 /// have already happened, mirroring the JS source.
+// 中文: 小寫後把 POJ 寫法替換成 TL 寫法;替換順序有意義,跟 JS 來源一致。
 pub fn normalize_to_tl(text: &str) -> String {
     text.replace("ch", "ts")
         .replace("ou", "oo")
@@ -63,6 +67,7 @@ pub fn normalize_to_tl(text: &str) -> String {
 
 /// True when the final ends with a stop consonant (p, t, k, h), ignoring trailing
 /// nasal `nn`. `kah4` → true; `kann2` → false.
+// 中文: 判斷韻母是否以入聲子音 (p/t/k/h) 結尾;結尾的鼻化 `nn` 不計入。
 pub(crate) fn is_stop_tone(final_str: &str) -> bool {
     let cleaned = final_str.to_lowercase().replace("nn", "");
     cleaned.ends_with('p')
@@ -73,6 +78,7 @@ pub(crate) fn is_stop_tone(final_str: &str) -> bool {
 
 /// Split `text` into `(initial, final)` by iterating prefixes against the TL
 /// initial / final tables. `text` must already be lowercase + TL-normalised.
+// 中文: 把音節拆成 (聲母, 韻母);輸入必須先小寫化並正規化成 TL 拼寫。
 pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
     for i in 0..=text.len() {
         if !text.is_char_boundary(i) {
@@ -95,6 +101,7 @@ pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
 /// Currently only used by this module's unit tests — the runtime
 /// `*_display_to_*_display` path uses `strip_tone_mark` + `split_initial_final`
 /// directly. Kept as a primitive for future callers.
+// 中文: 把音節解析成 (聲母, 韻母, 聲調);無聲調時依入聲韻母推 4、其他推 1。目前僅單元測試使用。
 #[cfg(test)]
 fn parse_syllable(text: &str) -> Option<(String, String, String)> {
     let (bare, tone) = strip_tone_mark(text);

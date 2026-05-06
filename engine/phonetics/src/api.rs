@@ -4,6 +4,8 @@
 //! `rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
+// 中文: Phonetics 高階 Rust API,給 cli/測試/dispatch 直接呼叫;不負責解碼最外層 Request 或 panic 邊界。
+
 use crate::case_transform::adjust_nasal_marker_case;
 use crate::poj::to_poj;
 use crate::syllable::{is_stop_tone, normalize_to_tl, split_initial_final, strip_tone_mark};
@@ -13,6 +15,7 @@ use protos::engine::AppConfig;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
+// 中文: 鍵盤輸入模式,對應 `AppConfig.input_mode` 字串。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
     Tl,
@@ -20,6 +23,7 @@ pub enum InputMode {
     English,
 }
 
+// 中文: 表音系統 enum,用於選擇要轉換成的目標羅馬字 (TL/POJ) 或注音 (TPS)。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum System {
     Tl,
@@ -27,6 +31,7 @@ pub enum System {
     Tps,
 }
 
+// 中文: Phonetics 對外錯誤型別。目前只有「不支援的 op」,通常代表 proto schema 跟平台不一致。
 #[derive(Debug, Error)]
 pub enum PhoneticsError {
     #[error(
@@ -45,6 +50,7 @@ fn capitalize_first(text: &str) -> String {
 
 /// Translate the proto `AppConfig.input_mode` string into the typed enum.
 /// Unknown / empty / "tl" → `Tl`. Mirrors `phonetics::dispatch::parse_input_mode`.
+// 中文: 把 `AppConfig.input_mode` 字串轉成型別化 enum;未知/空字串/"tl" 一律當作 TL。
 pub fn parse_input_mode(mode: &str) -> InputMode {
     match mode {
         "poj" | "POJ" => InputMode::Poj,
@@ -101,6 +107,7 @@ fn convert_nasal_double_n(input: &str) -> String {
 /// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
 /// tone-mark application → nasal-marker case adjustment. The `Method::NormalizeTone`
 /// dispatch arm and `composing::derived` both call this directly. Plan §3.2a.
+// 中文: 聲調正規化主流程:判斷模式 → POJ 雙擊預處理 → 套用聲調符號 → 鼻化符號大小寫對齊。
 pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
     let mode = parse_input_mode(&config.input_mode);
     let preprocessed = preprocess_for_normalize_tone(input, mode, config);
@@ -111,6 +118,7 @@ pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
 /// `true` if the text contains TPS (Taiwanese Phonetic Symbols / Zhuyin)
 /// codepoints. Used by composing-derived display to skip POJ/TL tone-mark
 /// conversion (TPS strings are already display-ready).
+// 中文: 判斷字串是否含有 TPS (台羅注音/Zhuyin) 字元;有的話組字區的 derived 顯示就直接跳過聲調轉換。
 pub fn contains_tps(text: &str) -> bool {
     is_zhuyin(text)
 }
@@ -118,6 +126,7 @@ pub fn contains_tps(text: &str) -> bool {
 /// Convert hyphen-separated syllables to tone marks. Tone digits 1 and 4 are
 /// kept as-is — matches the keyboard convention in iOS `convertSyllable` and
 /// Android `convertSyllable`.
+// 中文: 把 hyphen 分隔的數字聲調音節串轉成聲調符號形式;聲調 1、4 留著當數字 (跟兩平台鍵盤一致)。
 pub fn to_tone_marks(input: &str, mode: InputMode) -> String {
     if input.is_empty() {
         return String::new();
@@ -174,6 +183,7 @@ fn convert_syllable(syllable: &str, mode: InputMode) -> String {
 
 /// Convert tone-marked text to numeric-tone form. Mirrors `toToneNumber` in
 /// `converter.js`, including the NFD / per-syllable boundary scan.
+// 中文: 反向轉換,把聲調符號形式換成聲調數字形式 (NFD 拆解後逐音節掃描)。
 pub fn to_tone_number(text: &str) -> String {
     let decomposed: Vec<char> = text.nfd().collect();
     let mut result = String::new();
@@ -229,10 +239,12 @@ fn is_combining(c: char) -> bool {
 // MARK: - Display-level helpers (iOS / Android `pojDisplayToTLDisplay` / `tlDisplayToPOJDisplay`).
 //        Exposed so the iOS+Android fixture suite can exercise them.
 
+// 中文: 顯示層 POJ → TL 轉換 (給跨平台 fixture 測試使用)。
 pub fn poj_display_to_tl_display(text: &str) -> String {
     rewrite_display(text, System::Tl)
 }
 
+// 中文: 顯示層 TL → POJ 轉換 (給跨平台 fixture 測試使用)。
 pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj)
 }

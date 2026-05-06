@@ -7,6 +7,9 @@
 //! length-checks the `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an
 //! oversized payload is rejected without the matching allocation.
 
+// 中文: Android JNI 入口,包覆 dispatch 並把 log 回呼透過快取的 JavaVM 反彈回 JVM。
+// 中文: 所有 extern "system" 導出函式皆以 catch_unwind 包覆,並先做長度檢查再複製 jbyteArray。
+
 use dispatch::MAX_REQUEST_BYTES;
 use jni::objects::{GlobalRef, JByteArray, JClass, JObject, JStaticMethodID, JValue};
 use jni::signature::{Primitive, ReturnType};
@@ -25,6 +28,7 @@ const DISPATCH_SIG: &str = "(ILjava/lang/String;Ljava/lang/String;)V";
 
 /// `external fun processRequestBytes(bytes: ByteArray): ByteArray` declared on
 /// `com.siansiansu.taigikeyboard.engine.RustEngineBridge`.
+// 中文: Kotlin 端 processRequestBytes 的 JNI 對應實作,負責長度檢查與 dispatch 呼叫。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_processRequestBytes<
     'local,
@@ -63,6 +67,7 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 /// `external fun registerLogger(): Unit`. Caches `JavaVM` + a `GlobalRef` to
 /// the bridge class + the `dispatchLog` static method ID, then installs the
 /// Rust `log` adapter.
+// 中文: 快取 JavaVM、橋接類別 GlobalRef 與 dispatchLog 方法 ID,並安裝 Rust log adapter。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_registerLogger<
     'local,
@@ -111,6 +116,7 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 ///
 /// Levels: 0=Off, 1=Error, 2=Warn, 3=Info, 4=Debug, 5=Trace; anything
 /// else → `Off`.
+// 中文: swift-ffi set_log_level 的 JNI 對應版,執行期調整 log::max_level,釋出版不付格式化成本。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_setLogLevel<
     'local,
@@ -136,6 +142,7 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 /// T1 panic injector. Available only when the `panic-injector` feature is
 /// enabled (dev `.so`). Release builds omit this symbol; verified by `nm` in
 /// `build-android-libs.sh`.
+// 中文: T1 恐慌注入點,只在開發版 .so(panic-injector feature)出現,釋出版不存在此符號。
 #[cfg(feature = "panic-injector")]
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_panicForTest<
@@ -162,6 +169,7 @@ struct LoggerDispatch {
     /// `JStaticMethodID` borrows lifetime from the `JNIEnv` it was looked up
     /// on, so we round-trip through the raw `jmethodID` pointer bits and
     /// reconstruct on use. The class is kept alive by `class_global`.
+    // 中文: 把 jmethodID 指標轉成位元保存,使用時再還原;class_global 保證類別不會被卸載。
     method_id_bits: usize,
 }
 
@@ -239,6 +247,7 @@ fn jmethod_id_to_bits(id: JStaticMethodID) -> usize {
 }
 
 /// SAFETY contract is documented at the call-site in `PlatformLogger::log`.
+// 中文: 把先前保存的位元還原為 jmethodID;呼叫端提供安全性保證。
 unsafe fn bits_to_jmethod_id(bits: usize) -> JStaticMethodID {
     JStaticMethodID::from_raw(bits as *mut _)
 }

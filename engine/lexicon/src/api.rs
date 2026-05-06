@@ -2,6 +2,8 @@
 //! and returns proto-shaped outputs; the dispatch module wraps these into
 //! envelope responses.
 
+// 中文: 對外 API 層 — 每個方法以 proto 訊息為輸入/輸出,由 dispatch 模組包成 envelope 回應。
+
 use protos::engine::{
     AssocLookupRequest, AssocLookupResponse, ClassifyInputRequest, ClassifyInputResponse,
     DictionaryFiltersRequest, DictionaryFiltersResponse, InstallRequest, InstallResponse,
@@ -19,6 +21,7 @@ use crate::search::{
     self, LexiconAssocOut, LexiconRowOut, SearchInputMode, SearchInputType, SearchParams,
 };
 
+// 中文: 安裝 (或重裝) 詞庫狀態 — 驗證路徑、開啟 FST/TKDB/TKWA,並原子性置換到 EngineHandle。
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
     let paths = LexiconPaths::validated(
         &req.trie_path,
@@ -33,6 +36,7 @@ pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
     })
 }
 
+// 中文: IME 候選詞查詢主入口 — 依 SearchRequest 建立參數,經前綴索引與 TKDB 過濾後回傳候選詞。
 pub fn search(req: SearchRequest) -> Result<SearchResponse, LexiconError> {
     let params = build_search_params(&req)?;
     EngineHandle::with_state(|state| {
@@ -51,6 +55,7 @@ pub fn search(req: SearchRequest) -> Result<SearchResponse, LexiconError> {
     })
 }
 
+// 中文: Tab3 多字典來源羅馬字查詢 — 強制以 RomanWithTone 模式進行,並套用使用者啟用的字典來源 bitmask。
 pub fn search_with_sources(
     req: SearchWithSourcesRequest,
 ) -> Result<SearchWithSourcesResponse, LexiconError> {
@@ -78,6 +83,7 @@ pub fn search_with_sources(
     })
 }
 
+// 中文: Tab3 漢字查詢路徑 — 以 hanzi: 前綴掃描索引,套用字典來源 bitmask 過濾。
 pub fn search_by_hanzi(req: SearchByHanziRequest) -> Result<SearchByHanziResponse, LexiconError> {
     EngineHandle::with_state(|state| {
         let prefix_index = state
@@ -101,6 +107,7 @@ pub fn search_by_hanzi(req: SearchByHanziRequest) -> Result<SearchByHanziRespons
     })
 }
 
+// 中文: NextWord bigram 查詢 — 以前一個詞為 key 進行二分搜尋,套用 9-bit 來源過濾後回傳排序後的後續候選詞。
 pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, LexiconError> {
     EngineHandle::with_state(|state| {
         let assoc = state
@@ -119,6 +126,7 @@ pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, Lexi
     })
 }
 
+// 中文: IME 自動完成輸入分類器 — 判斷輸入屬於漢字、有聲調羅馬字或無聲調羅馬字,並回傳轉換後的查詢 key。
 pub fn classify_input(req: ClassifyInputRequest) -> Result<ClassifyInputResponse, LexiconError> {
     let result = classification::classify_input(&req.raw);
     Ok(ClassifyInputResponse {
@@ -127,12 +135,14 @@ pub fn classify_input(req: ClassifyInputRequest) -> Result<ClassifyInputResponse
     })
 }
 
+// 中文: Tab3 漢字判斷捷徑 — 給定文字內含任一 CJK 漢字 (含 Extensions A-E) 即回傳 true。
 pub fn is_hanzi(req: IsHanziRequest) -> Result<IsHanziResponse, LexiconError> {
     Ok(IsHanziResponse {
         is_hanzi: classification::is_hanzi(&req.text),
     })
 }
 
+// 中文: 將使用者的字典開關偏好換算為 dictionary.bin / association.bin 的 bitmask 與啟用來源代碼清單。
 pub fn dictionary_filters(
     req: DictionaryFiltersRequest,
 ) -> Result<DictionaryFiltersResponse, LexiconError> {

@@ -16,6 +16,9 @@
 //! DictionaryReader's 3-layer filter (no variant/khiin/dev bits in
 //! association entries) — see `docs/engine/binary-format.md` §4.3.
 
+// 中文: AssociationReader — TKWA bigram 二進位 mmap 讀取器。
+// 中文: 以前一詞為 key 做 UTF-8 位元組二分搜尋,僅有 1 層 9-bit 來源過濾 (與 TKDB 的 3 層過濾刻意不同)。
+
 use std::cmp::Ordering;
 
 use mmap_host::MmapHandle;
@@ -26,27 +29,37 @@ const MAGIC: &[u8; 4] = b"TKWA";
 const HEADER_SIZE: usize = 20;
 const SUPPORTED_VERSION: u32 = 1;
 
+// 中文: bigram 紀錄 — 「前一個詞 → 候選詞 (next_word + next_tl)」 + 出現次數 + 來源 bitmask。
 #[derive(Debug, Clone)]
 pub struct AssociationEntry {
+    // 中文: 後續候選詞 (漢字)。
     pub next_word: String,
+    // 中文: 後續候選詞的 TL 羅馬字。
     pub next_tl: String,
+    // 中文: 該 bigram 在語料中的出現次數,用於排序 (DESC)。
     pub count: u32,
+    // 中文: 該紀錄的字典來源 bitmask (僅低 9 位)。
     pub bitmask: u16,
 }
 
+// 中文: TKWA mmap 讀取器,持有 mmap handle 與 key 數量等 header 資訊。
 pub struct AssociationReader {
     handle: MmapHandle,
     key_count: u32,
     build_timestamp: u32,
 }
 
+// 中文: bigram 來源過濾條件 — all_enabled 為 true 時略過 mask 比對。
 #[derive(Debug, Clone, Copy)]
 pub struct AssocFilter {
+    // 中文: 所有來源皆啟用時為 true (對應 u32::MAX sentinel)。
     pub all_enabled: bool,
+    // 中文: 啟用來源的低 9 位元 bitmask。
     pub enabled_mask: u16,
 }
 
 impl AssociationReader {
+    // 中文: 開啟並驗證 association.bin — 檢查 magic、版本與 offset 表大小。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
         let handle = MmapHandle::open_readonly(path).map_err(|source| LexiconError::Mmap {
             path: path.display().to_string(),
@@ -88,12 +101,14 @@ impl AssociationReader {
         })
     }
 
+    // 中文: 回傳 association.bin 的 build timestamp (供版本對齊驗證使用)。
     pub fn build_timestamp(&self) -> u32 {
         self.build_timestamp
     }
 
     /// Binary search by prev_word; returns up to `limit` entries in their
     /// stored order (sorted by count DESC per build).
+    // 中文: 以前一詞做位元組二分搜尋,回傳至多 limit 筆原始順序 (依 count DESC) 的紀錄。
     pub fn lookup(&self, prev_word: &str, limit: usize) -> Vec<AssociationEntry> {
         if prev_word.is_empty() || self.key_count == 0 {
             return Vec::new();
@@ -114,6 +129,7 @@ impl AssociationReader {
         Vec::new()
     }
 
+    // 中文: 1 層來源過濾 — all_enabled 直接通過,否則 entry_bitmask 與 enabled_mask 至少要有一個共同位元。
     pub fn passes_filter(entry_bitmask: u16, filter: &AssocFilter) -> bool {
         if filter.all_enabled {
             return true;

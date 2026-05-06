@@ -3,34 +3,46 @@
 //! `behavioral-invariants.md` §§7, 8 — modifying any value here requires
 //! invariant-doc + parity-test updates in the same PR.
 
+// 中文: NextWord 純評分邏輯,對齊 iOS / Android 同名類別。
+// 中文: 此處常數受 behavioral-invariants.md §§7、8 鎖定,改動須同步更新文件與 parity 測試。
+
 /// Source weight applied to user-learned bigrams.
+// 中文: 使用者習得 bigram 的權重(高權重凸顯個人習慣)。
 pub(crate) const USER_WEIGHT: f64 = 50.0;
 
 /// Source weight applied to dictionary bigrams.
+// 中文: 字典 bigram 的權重(基準值 1.0)。
 pub(crate) const DICT_WEIGHT: f64 = 1.0;
 
 /// RIME-style exponential decay half-life (1 week).
+// 中文: RIME 風格的指數衰減半衰期,設為一週(168 小時)。
 pub(crate) const DECAY_HALF_LIFE_HOURS: f64 = 168.0;
 
 /// Additive bonus ensuring user entries outrank dict entries.
+// 中文: 學習加成;確保使用者紀錄一律排在字典之上。
 pub(crate) const LEARNING_BONUS: f64 = 300.0;
 
 /// Minimum decay retained for frequently-used entries (count >= threshold).
+// 中文: 高頻使用條目的衰減下限(超過門檻才保留 0.95 以上)。
 pub(crate) const HIGH_USAGE_DECAY_FLOOR: f64 = 0.95;
 
 /// Minimum decay retained for infrequent entries.
+// 中文: 低頻條目的衰減下限。
 pub(crate) const LOW_USAGE_DECAY_FLOOR: f64 = 0.30;
 
 /// Usage count above which the high-usage floor kicks in.
+// 中文: 觸發高頻下限的使用次數門檻。
 pub(crate) const HIGH_USAGE_THRESHOLD: i64 = 3;
 
 /// Hard-coded `ln(2)` literal (3-digit). Constant must match iOS inline
 /// `0.693` literal at `NextWordScorer.swift:62` and Android
 /// `NextWordScorer.kt:46` `LN_2 = 0.693`. Drift over a 1-week window is
 /// ~0.03% — acceptable per the Android scorer doc comment.
+// 中文: 3 位數 ln(2) 字面量;與 iOS / Android 端寫死值一致,以維持跨平台同分。
 pub(crate) const LN_2: f64 = 0.693;
 
 /// Dictionary-layer score: raw count × `DICT_WEIGHT`.
+// 中文: 字典層分數,直接是 count × DICT_WEIGHT。
 pub(crate) fn score_dict(count: i64) -> f64 {
     count as f64 * DICT_WEIGHT
 }
@@ -39,6 +51,7 @@ pub(crate) fn score_dict(count: i64) -> f64 {
 /// Recent usage ≈ 1.0; one week out ≈ 0.5; one month out ≈ 0.06. Negative
 /// age (clock rewind) yields a factor > 1 — callers must not rely on
 /// `decay <= 1`.
+// 中文: 指數時間衰減;最近使用 ≈ 1.0、一週 ≈ 0.5、一個月 ≈ 0.06,時鐘倒退會 >1。
 pub(crate) fn calculate_decay(last_used_ms: i64, now_ms: i64) -> f64 {
     let age_hours = (now_ms - last_used_ms) as f64 / 3_600_000.0;
     (-age_hours / DECAY_HALF_LIFE_HOURS * LN_2).exp()
@@ -47,6 +60,7 @@ pub(crate) fn calculate_decay(last_used_ms: i64, now_ms: i64) -> f64 {
 /// User-layer score with decay floor + learning bonus. Guarantees a user
 /// entry always outranks an equal-count dict entry by at least
 /// `LEARNING_BONUS`.
+// 中文: 使用者層分數;含衰減下限與學習加成,確保同 count 下永遠贏字典條目。
 pub(crate) fn calculate_user_score(count: i64, last_used_ms: i64, now_ms: i64) -> f64 {
     let decay = calculate_decay(last_used_ms, now_ms);
     let raw_score = count as f64 * USER_WEIGHT;

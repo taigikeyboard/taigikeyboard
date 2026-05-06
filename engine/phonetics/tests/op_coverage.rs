@@ -4,6 +4,8 @@
 //! coverage for the TPS input adjuster and NBSP-as-non-delimiter for
 //! `derive_abbrev`.
 
+// 中文: 走過每一個 `PhoneticsRequest.method` 變體的端到端測試,確保 wire 格式、分派路由、實作三者保持同步。
+
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;

@@ -9,6 +9,9 @@
 //!
 //! Plan ref: `docs/engine/nextword-slice-plan.md`.
 
+// 中文: NextWord 切片 — 下一個詞預測引擎的 Intent → Effect 狀態機。
+// 中文: 對外透過 `dispatch::handle` 呼叫,引擎本體由 FFI 邊界的 `EngineHandle` 單例持有。
+
 pub mod api;
 pub mod dispatch;
 pub mod handle;

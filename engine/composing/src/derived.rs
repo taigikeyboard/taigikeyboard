@@ -6,6 +6,8 @@
 //! plan §3.2a. The platform `RustEngineBridge.normalizeTone` call sites are
 //! replaced by this in-process call.
 
+// 中文: 計算組字緩衝區的顯示形式;TPS 直接回傳,POJ/TL 走 phonetics 正規化流程。
+
 use protos::engine::AppConfig;
 
 pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {

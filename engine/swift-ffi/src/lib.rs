@@ -6,6 +6,9 @@
 //! plan v3 §B3 so an oversized payload returns `FAIL_INVARIANT` instead of
 //! allocating without bound.
 
+// 中文: iOS / macOS swift-bridge 入口,負責包覆 dispatch 並註冊 Swift 端的 logger sink。
+// 中文: 所有跨 FFI 邊界的呼叫皆以 catch_unwind 包覆,並對請求大小設限避免無上限配置。
+
 use dispatch::MAX_REQUEST_BYTES;
 use prost::Message;
 use protos::engine::{ErrorCode, Response};
@@ -33,6 +36,8 @@ use std::sync::{Mutex, Once, OnceLock};
 // `SwiftLoggerSink`: Swift class registered through `install_logger_sink`
 // that receives every `log::Record`. The Swift side maps `level` to the
 // `LoggerBackend` protocol method (`error`, `warning`, `info`, `debug`).
+//
+// 中文: swift-bridge 模組,定義 Swift 與 Rust 雙向呼叫的 FFI 介面。
 #[swift_bridge::bridge]
 mod ffi {
     extern "Rust" {
@@ -48,6 +53,7 @@ mod ffi {
     }
 }
 
+// 中文: Swift 端唯一的請求入口,解碼 Request、分派、回傳已編碼 Response。
 fn process_request_bytes(bytes: &[u8]) -> Vec<u8> {
     catch_unwind(AssertUnwindSafe(|| {
         if bytes.len() > MAX_REQUEST_BYTES {
@@ -62,6 +68,7 @@ fn process_request_bytes(bytes: &[u8]) -> Vec<u8> {
     .unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0))
 }
 
+// 中文: 註冊 Swift 端的 logger sink,並一次性安裝 Rust log adapter,預設 Warn 等級。
 fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let mutex = LOGGER_SINK.get_or_init(|| Mutex::new(None));
@@ -94,6 +101,7 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
 /// NOT the same as `SwiftLoggerSink`'s callback bytes (`level_to_byte` /
 /// Swift constants `levelError=0..levelTrace=4`). Off is reserved here
 /// because callers can disable; the callback never receives Off.
+// 中文: 執行期調整 log::max_level,讓 DEBUG 版可開更詳細,釋出版不付格式化成本。
 fn set_log_level(level: u8) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let filter = match level {
@@ -109,6 +117,7 @@ fn set_log_level(level: u8) {
     }));
 }
 
+// 中文: T1 恐慌注入點;符號永遠存在但內容受 panic-injector feature 控管,釋出版回傳良性錯誤。
 fn panic_for_test() -> Vec<u8> {
     catch_unwind(AssertUnwindSafe(|| -> Vec<u8> {
         #[cfg(feature = "panic-injector")]
@@ -135,6 +144,7 @@ fn panic_for_test() -> Vec<u8> {
 /// to be thread-safe by the registration contract — the only conforming
 /// implementation in this project routes through `LoggerFactory.make`, which
 /// is `NSLock`-guarded.
+// 中文: 把 SwiftLoggerSink 包成可跨執行緒邊界的型別;Swift 端 log 方法需自行確保執行緒安全。
 struct SinkCell(ffi::SwiftLoggerSink);
 unsafe impl Send for SinkCell {}
 unsafe impl Sync for SinkCell {}
