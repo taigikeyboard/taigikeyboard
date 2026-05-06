@@ -12,7 +12,7 @@ Guidelines for **Claude Code (claude.ai/code)** when working with this codebase.
 taigikeyboard/
 ├── android/           # Android (Kotlin + FlorisBoard)
 ├── ios/               # iOS (Swift + KeyboardKit)
-├── docs/              # Specs: engine/, ui/, references/, keywords.md, README.md
+├── docs/              # Specs: engine/, architecture/, ui/, references/, reports/, README.md
 ├── knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)
 ├── taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
 ├── rules/             # Mandatory rules (must read before relevant changes)

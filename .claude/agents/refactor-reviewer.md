@@ -8,8 +8,8 @@ You are reviewing refactored code in a cross-platform Taiwanese keyboard project
 
 ## Context
 
-- Read `docs/file-structure.md` to understand iOS ↔ Android file pairs
-- Read `docs/keywords.md` for domain terminology
+- Read `docs/architecture/file-structure.md` to understand iOS ↔ Android file pairs
+- Read `docs/references/keywords.md` for domain terminology
 - The project uses KeyboardKit (iOS) and FlorisBoard (Android)
 
 ## Your job
@@ -20,7 +20,7 @@ Given a list of changed files (provided by the caller):
 2. For each change, verify:
    - No behavior was altered (refactoring must be semantically equivalent)
    - No public API signatures changed unintentionally
-   - Cross-platform counterpart still aligns (check the other platform's file via `docs/file-structure.md`)
+   - Cross-platform counterpart still aligns (check the other platform's file via `docs/architecture/file-structure.md`)
    - No dead code was introduced (unused imports, variables, functions)
    - Comments still match the code they describe
    - No memory management issues (weak references on delegates, no retain cycles)

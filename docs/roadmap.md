@@ -76,13 +76,16 @@
   - Added date prefix to one-off reports (`architecture-review`, `codebase-health`, `segmentation-tie-bug`); kept evergreen `khiin-lattice-research` and live `refactor-backlog` undated
 - **Why P3**: Mixes report lifecycle with spec lifecycle; readers can't tell what's still authoritative
 
-#### P4 — `docs/` root-level orphans
+#### P4 — `docs/` root-level orphans ✅ DONE
 
-- `docs/file-structure.md` → `docs/architecture/file-structure.md`
-- `docs/keywords.md` → `docs/references/keywords.md`
-- `docs/simplify.md` → `docs/reports/simplify.md` (it's a historical log)
-- **Action**: Move + update `docs/README.md` index
-- **Why P4**: Root-level files imply top-level importance; these are reference/historical
+- **Done**:
+  - `docs/file-structure.md` → `docs/architecture/file-structure.md`
+  - `docs/keywords.md` → `docs/references/keywords.md`
+  - `docs/simplify.md` → `docs/reports/2026-03-21-simplify-pass.md` (date-prefixed per P3 convention; `-pass` disambiguates from `/simplify` slash command)
+  - Updated `docs/README.md` index — moved entries from root table into `architecture/` / `references/` / `reports/` tables; root table now only lists `roadmap.md`
+  - Updated sweep sites: `CLAUDE.md` tree comment, `docs/ui/layout.md` relative ref, `.claude/agents/refactor-reviewer.md` (×3), `.claude/commands/port-feature.md`
+  - Out of scope: `changelog/v3.4.5.md` historical refs frozen by release-history policy; `docs/reports/2026-03-11-audit-report.md` historical narrative refs left as-is
+- **Why P4**: Root-level files imply top-level importance; these are reference/architecture/historical
 
 ### Minor observations (not action items)
 

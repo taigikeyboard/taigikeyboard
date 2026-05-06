@@ -43,6 +43,7 @@
 | `architecture/ios-exemplar.md` | iOS architectural pattern (alignment target for Android) | Reference |
 | `architecture/android-exemplar.md` | Android-specific deviations from iOS exemplar | Reference |
 | `architecture/codex-review-2026-04-19.md` | Strategic Codex review of shared-core roadmap | Historical |
+| `architecture/file-structure.md` | File index, directory structure, naming conventions | Reference |
 
 ### `ui/` — Presentation & Layout (6)
 
@@ -64,6 +65,7 @@
 | `references/moe-taigi-reference.md` | MOE Taigi IME analysis (Segmentation, Nail) | Reference |
 | `references/moe-taigi-asr-reference.md` | MOE Taigi IME ASR implementation analysis | Reference |
 | `references/rime-reference.md` | librime research (Pipeline, DAG, SpellingAlgebra) | Reference |
+| `references/keywords.md` | Standardized keyword mapping for core logic and UI | Reference |
 
 ### `reports/` — Audit & Analysis Reports (historical)
 
@@ -74,6 +76,7 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | `reports/2026-03-11-audit-report.md` | Combined audit report (docs, health, research) | Historical |
 | `reports/2026-03-11-codebase-health.md` | Pre-migration health snapshot | Historical |
 | `reports/2026-03-11-segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis — obsolete, segmenter removed v3.4.6 | Historical |
+| `reports/2026-03-21-simplify-pass.md` | Simplify-pass review log (24 batches, all resolved) | Historical |
 | `reports/2026-04-03-architecture-review.md` | Cross-platform architecture review (B+ baseline) | Historical |
 | `reports/2026-04-18-dynamic-font-download-plan.md` | Forward-looking feature plan | Plan |
 | `reports/2026-05-04-migration-residue.md` | Rust migration residue audit (P1/P2/P3 dimensions) | Historical |
@@ -93,9 +96,6 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | File | Description | Status |
 |------|-------------|--------|
 | `roadmap.md` | Forward-looking work items not yet scheduled into a release slice | Active |
-| `keywords.md` | Standardized keyword mapping for core logic and UI | Reference |
-| `file-structure.md` | File index, directory structure, naming conventions | Reference |
-| `simplify.md` | Simplify-pass review log (historical) | Historical |
 
 ---
 
@@ -106,7 +106,7 @@ Dated reports are one-off snapshots ordered chronologically. Undated entries are
 | Engine spec | `engine/{module}.md` | `engine/composing.md` |
 | UI spec | `ui/{module}.md` | `ui/layout.md` |
 | External reference | `references/{project}-reference.md` | `references/khiin-reference.md` |
-| Guide / Planning | `{descriptive-name}.md` (root) | `keywords.md` |
+| Guide / Planning | `{descriptive-name}.md` (root) | `roadmap.md` |
 
 ---
 
