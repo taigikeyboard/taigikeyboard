@@ -1,10 +1,9 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 
 // Reads and tracks app version info for install/last-use preferences
-object AppVersionUtils {
+object AppVersionTracker {
     const val DEFAULT_VERSION_RAW: String = "0.0.0"
 
     @Suppress("DEPRECATION")

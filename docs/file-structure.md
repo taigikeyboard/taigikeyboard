@@ -224,7 +224,7 @@ TaigiKeyboard/
 │   ├── Services/    # AutocompleteService, AutocompleteInputClassifier, AutocompleteProviders
 │   └── Views/       # CandidateView, overlays (Layout/Symbol/Settings)
 ├── Callouts/        # Long-press menus
-├── Common/          # LoggerBackend protocol + LoggerFactory
+├── Logging/         # LoggerBackend protocol + LoggerFactory
 ├── Composition/     # Cross-tab composition root (DI)
 ├── Diagnostics/     # DiagnosticService
 ├── Emojis/          # Emoji related
@@ -266,14 +266,15 @@ taigikeyboard/
 │   ├── CaseTransformBridge.kt
 │   └── proto/       # prost / generated proto Java
 ├── ime/
-│   ├── core/        # TaigiKeyboard, PrefHelper, InputView, Subtype
+│   ├── core/        # TaigiKeyboard, PrefHelper, InputView, Subtype, AppVersionTracker, SubtypeLocaleAdapter
 │   │   ├── settings/    # EngineSettings/Provider, InputMode, ToneToggles
 │   │   └── logging/     # AndroidLoggerBackend, LoggerBackend
-│   ├── dictionary/  # Lexicon glue, Custom dict, NextWord, Backup, SuggestionCaseTransformer
+│   ├── dictionary/  # Lexicon glue, Custom dict, NextWord, Backup, SuggestionCaseTransformer, DictionaryCsvCodec
 │   ├── lifecycle/   # LifecycleInputMethodService
 │   ├── media/       # MediaInputManager
 │   │   └── emoji/   # EmojiKeyboardView, EmojiPaletteView
 │   ├── popup/       # Key popups
+│   ├── theme/       # ThemeAttributeColors (theme-attr → color resolver for IME rendering)
 │   └── text/
 │       ├── composing/   # ComposingManager, ComposingDelegate, AutocompleteServices, classifier, UserFrequency
 │       ├── key/         # KeyView, KeyData, KeyCode, KeyType, KeyLabelCaseCache
@@ -282,12 +283,13 @@ taigikeyboard/
 │       └── smartbar/    # SmartbarManager, CandidateAdapter, overlays, NextWordHandler, ToolbarManager
 ├── content/         # ContentResolver entry point
 ├── localization/    # LocalizedText, LanguageManager, {Home/Layout/Dictionary/Settings}Texts
-├── settings/        # Activity wrappers (Compose host)
+├── settings/        # Activity wrappers (Compose host) + LauncherIconController
+├── typeface/        # TypefaceLoader (R.font → android.graphics.Typeface)
 ├── ui/
-│   ├── components/  # Reusable Compose components
+│   ├── components/  # Reusable Compose components + DrawableResourceResolver
 │   ├── tabs/        # home / layout / dictionary / settings Compose screens
-│   └── theme/       # Theme, Type
-└── util/            # AppVersionUtils, FontUtils, etc.
+│   ├── theme/       # Compose Material theme (Type)
+│   └── EdgeToEdgeActivityExtensions.kt
 ```
 
 ---

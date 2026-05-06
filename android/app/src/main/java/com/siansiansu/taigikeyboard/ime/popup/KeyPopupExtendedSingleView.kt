@@ -9,7 +9,8 @@ import androidx.core.content.ContextCompat.getDrawable
 import androidx.core.graphics.BlendModeColorFilterCompat
 import androidx.core.graphics.BlendModeCompat
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.util.*
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.setBackgroundTintColor
 
 @SuppressLint("ViewConstructor")
 class KeyPopupExtendedSingleView(

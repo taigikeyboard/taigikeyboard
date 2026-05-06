@@ -321,7 +321,7 @@ Bit positions mirror `dictionary/build/10_create_dictionary_bin.py`. `stti` is i
 
 **Why**: logging is the easiest place for a platform dependency to sneak back into the shared core. A stray `os.Logger` import breaks the Foundation-only requirement.
 
-**Scope**: iOS `Common/LoggerBackend.swift` + Android `ime/core/logging/LoggerBackend.kt`. Rust crates emit via the `log` crate; the platform sinks (`SwiftLoggerSink` / `RustEngineBridge.dispatchLog`) bounce records back into `LoggerBackend`.
+**Scope**: iOS `Logging/LoggerBackend.swift` + Android `ime/core/logging/LoggerBackend.kt`. Rust crates emit via the `log` crate; the platform sinks (`SwiftLoggerSink` / `RustEngineBridge.dispatchLog`) bounce records back into `LoggerBackend`.
 
 **Test labels**:
 - `INVARIANT_candidates_only_depend_on_logger_backend_protocol`

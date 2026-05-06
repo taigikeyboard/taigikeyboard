@@ -19,7 +19,7 @@ Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. 
 3. No clock reads — caller supplies `nowMs: Long` at call boundaries. No `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`.
 4. No I/O — no SQLite, no File, no SharedPreferences, no DataStore.
 5. No coroutines or `Dispatchers.*`. Executor / async lives in the platform wrapper.
-6. No logging inside candidate logic. If a candidate must emit a diagnostic, it accepts a `LoggerBackend` interface (the Android equivalent of iOS `Common/LoggerBackend.swift`) via constructor/function parameter. The `LoggerBackend` interface itself is shared-core; concrete `AndroidLogLoggerBackend` lives in platform code and wraps `android.util.Log`. Candidates never call `android.util.Log` directly.
+6. No logging inside candidate logic. If a candidate must emit a diagnostic, it accepts a `LoggerBackend` interface (the Android equivalent of iOS `Logging/LoggerBackend.swift`) via constructor/function parameter. The `LoggerBackend` interface itself is shared-core; concrete `AndroidLogLoggerBackend` lives in platform code and wraps `android.util.Log`. Candidates never call `android.util.Log` directly.
 
 ### File header marker
 

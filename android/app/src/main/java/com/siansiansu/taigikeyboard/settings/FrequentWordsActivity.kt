@@ -11,7 +11,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Viewer for user frequency and word association data
 class FrequentWordsActivity : ComponentActivity() {

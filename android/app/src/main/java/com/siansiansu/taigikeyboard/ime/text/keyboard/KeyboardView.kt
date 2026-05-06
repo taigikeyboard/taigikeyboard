@@ -23,7 +23,7 @@ import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyView
 import com.siansiansu.taigikeyboard.ime.text.layout.ComputedLayoutData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
-import com.siansiansu.taigikeyboard.util.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 
 class KeyboardView : LinearLayout {
     companion object {
@@ -74,7 +74,7 @@ class KeyboardView : LinearLayout {
         return cachedColorSettings
     }
 
-    // Cached typeface — avoids FontUtils.getTypefaceByType() call on every onDraw
+    // Cached typeface — avoids TypefaceLoader.getTypefaceByType() call on every onDraw
     private var cachedFontType: String = ""
     var cachedTypeface: android.graphics.Typeface = android.graphics.Typeface.DEFAULT
         private set
@@ -85,7 +85,7 @@ class KeyboardView : LinearLayout {
         if (fontType != cachedFontType) {
             cachedFontType = fontType
             cachedTypeface =
-                com.siansiansu.taigikeyboard.util.FontUtils
+                com.siansiansu.taigikeyboard.typeface.TypefaceLoader
                     .getTypefaceByType(fontType, context)
         }
         return cachedTypeface

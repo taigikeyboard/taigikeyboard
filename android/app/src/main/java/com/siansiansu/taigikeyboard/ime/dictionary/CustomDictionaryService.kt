@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.util.CsvUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -249,7 +248,7 @@ class CustomDictionaryService(
             val entries = fetchAll()
             val sb = StringBuilder()
             for (entry in entries) {
-                sb.append("${CsvUtils.escape(entry.roman)},${CsvUtils.escape(entry.hanzi)}\n")
+                sb.append("${DictionaryCsvCodec.escape(entry.roman)},${DictionaryCsvCodec.escape(entry.hanzi)}\n")
             }
             sb.toString()
         }
@@ -373,7 +372,7 @@ class CustomDictionaryService(
             val line = lines[i].trim()
             if (line.isEmpty()) continue
 
-            val columns = CsvUtils.parseLine(line)
+            val columns = DictionaryCsvCodec.parseLine(line)
             if (columns.size < 2) continue
 
             val roman = columns[0].trim()

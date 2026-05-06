@@ -27,7 +27,7 @@ import com.siansiansu.taigikeyboard.localization.LayoutTexts
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
-import com.siansiansu.taigikeyboard.util.FontUtils.FontType
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader.FontType
 
 // Font selection sub-page for choosing keyboard typeface
 

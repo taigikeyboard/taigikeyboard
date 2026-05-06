@@ -28,8 +28,8 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.localization.SettingsTexts
-import com.siansiansu.taigikeyboard.util.getColorFromAttr
-import com.siansiansu.taigikeyboard.util.setBackgroundTintColor
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.setBackgroundTintColor
 import java.util.Locale
 
 @SuppressLint("ViewConstructor")

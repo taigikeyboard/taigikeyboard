@@ -113,7 +113,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
 
                     // 設定字體：根據 fontType 決定
                     val prefs = com.siansiansu.taigikeyboard.ime.core.PrefHelper(keyView.context)
-                    textView.typeface = com.siansiansu.taigikeyboard.util.FontUtils.getTypefaceByType(
+                    textView.typeface = com.siansiansu.taigikeyboard.typeface.TypefaceLoader.getTypefaceByType(
                         fontType = prefs.fontType,
                         context = keyView.context
                     )

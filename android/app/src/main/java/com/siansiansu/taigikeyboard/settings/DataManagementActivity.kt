@@ -16,7 +16,7 @@ import com.siansiansu.taigikeyboard.localization.DictionaryTexts
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

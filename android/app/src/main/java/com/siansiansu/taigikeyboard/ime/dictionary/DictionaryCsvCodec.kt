@@ -1,7 +1,7 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.ime.dictionary
 
 // Single-line CSV parsing and escaping for frequency/association data export/import
-object CsvUtils {
+object DictionaryCsvCodec {
     // Handles RFC 4180 "" escaping so round-trip with escape() is lossless
     fun parseLine(line: String): List<String> {
         val fields = mutableListOf<String>()

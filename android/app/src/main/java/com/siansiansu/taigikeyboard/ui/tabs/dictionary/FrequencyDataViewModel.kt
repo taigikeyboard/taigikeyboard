@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
-import com.siansiansu.taigikeyboard.util.CsvUtils
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryCsvCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,7 +71,7 @@ class FrequencyDataViewModel(
             val data = userFreq.getAllFrequencies()
             buildString {
                 for ((word, count) in data) {
-                    append("${CsvUtils.escape(word)},$count\n")
+                    append("${DictionaryCsvCodec.escape(word)},$count\n")
                 }
             }
         }
@@ -100,7 +100,7 @@ class FrequencyDataViewModel(
         for (line in csv.split("\n")) {
             val trimmed = line.trim()
             if (trimmed.isEmpty()) continue
-            val columns = CsvUtils.parseLine(trimmed)
+            val columns = DictionaryCsvCodec.parseLine(trimmed)
             if (columns.size < 2) continue
             val word = columns[0].trim()
             val count = columns[1].trim().toIntOrNull() ?: continue

@@ -37,8 +37,8 @@ import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
-import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 // Live keyboard preview panel with candidate bar for appearance settings
 
@@ -131,7 +131,7 @@ private fun CandidatePreviewRow(
     val context = LocalContext.current
     val typeface =
         remember(fontType) {
-            FontUtils.getTypefaceByType(fontType, context)
+            TypefaceLoader.getTypefaceByType(fontType, context)
         }
     val fontFamily = remember(typeface) { FontFamily(typeface) }
 

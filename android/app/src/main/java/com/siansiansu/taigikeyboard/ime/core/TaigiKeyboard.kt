@@ -31,7 +31,6 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
-import com.siansiansu.taigikeyboard.util.*
 import com.squareup.moshi.Json
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -167,7 +166,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         setTheme(R.style.KeyboardTheme)
 
-        AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
+        AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
 
         super.onCreate()
         textInputManager.onCreate()

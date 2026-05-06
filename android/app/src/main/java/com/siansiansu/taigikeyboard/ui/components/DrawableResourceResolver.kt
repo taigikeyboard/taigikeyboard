@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.ui.components
 
 import android.content.Context
 import androidx.annotation.DrawableRes

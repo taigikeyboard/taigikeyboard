@@ -12,7 +12,6 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
-import com.siansiansu.taigikeyboard.util.AppVersionUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -158,13 +157,13 @@ class PrefHelper(
 
     // Internal settings
     var versionOnInstall: String
-        get() = cached(PreferenceKeys.VERSION_ON_INSTALL, AppVersionUtils.DEFAULT_VERSION_RAW)
+        get() = cached(PreferenceKeys.VERSION_ON_INSTALL, AppVersionTracker.DEFAULT_VERSION_RAW)
         set(value) {
             updateCacheAndPersist(PreferenceKeys.VERSION_ON_INSTALL, value)
         }
 
     var versionLastUse: String
-        get() = cached(PreferenceKeys.VERSION_LAST_USE, AppVersionUtils.DEFAULT_VERSION_RAW)
+        get() = cached(PreferenceKeys.VERSION_LAST_USE, AppVersionTracker.DEFAULT_VERSION_RAW)
         set(value) {
             updateCacheAndPersist(PreferenceKeys.VERSION_LAST_USE, value)
         }
@@ -644,11 +643,11 @@ class PrefHelper(
 
                 // Internal settings
                 prefs[PreferenceKeys.VERSION_ON_INSTALL] =
-                    sharedPrefs.getString("internal__version_on_install", AppVersionUtils.DEFAULT_VERSION_RAW)
-                        ?: AppVersionUtils.DEFAULT_VERSION_RAW
+                    sharedPrefs.getString("internal__version_on_install", AppVersionTracker.DEFAULT_VERSION_RAW)
+                        ?: AppVersionTracker.DEFAULT_VERSION_RAW
                 prefs[PreferenceKeys.VERSION_LAST_USE] =
-                    sharedPrefs.getString("internal__version_last_use", AppVersionUtils.DEFAULT_VERSION_RAW)
-                        ?: AppVersionUtils.DEFAULT_VERSION_RAW
+                    sharedPrefs.getString("internal__version_last_use", AppVersionTracker.DEFAULT_VERSION_RAW)
+                        ?: AppVersionTracker.DEFAULT_VERSION_RAW
 
                 // Keyboard settings
                 prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] =

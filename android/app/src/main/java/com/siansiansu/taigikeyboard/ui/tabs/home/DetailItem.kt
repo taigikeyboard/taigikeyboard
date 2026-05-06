@@ -6,7 +6,7 @@ import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.content.FeatureContent
 import com.siansiansu.taigikeyboard.content.ParagraphAttachment
 import com.siansiansu.taigikeyboard.localization.HomeTexts
-import com.siansiansu.taigikeyboard.util.resolveDrawableResId
+import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
 
 // Detail screen data model and content builders for feature/FAQ/feedback/version pages
 sealed interface DetailItem {

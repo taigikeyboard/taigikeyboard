@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.ui
 
 import android.content.res.Configuration
 import androidx.activity.ComponentActivity

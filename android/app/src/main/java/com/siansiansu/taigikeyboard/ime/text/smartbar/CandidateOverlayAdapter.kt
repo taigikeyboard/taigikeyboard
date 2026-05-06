@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.util.FontUtils
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
  * RecyclerView adapter for candidate overlay grid.
@@ -51,7 +51,7 @@ class CandidateOverlayAdapter(
     private fun getTypeface(): Typeface {
         val currentFontType = fontType()
         if (cachedFontType != currentFontType) {
-            cachedTypeface = FontUtils.getTypefaceByType(currentFontType, context)
+            cachedTypeface = TypefaceLoader.getTypefaceByType(currentFontType, context)
             cachedFontType = currentFontType
         }
         return cachedTypeface ?: Typeface.DEFAULT

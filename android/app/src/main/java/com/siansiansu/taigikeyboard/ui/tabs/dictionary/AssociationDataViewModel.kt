@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
-import com.siansiansu.taigikeyboard.util.CsvUtils
+import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryCsvCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -79,11 +79,11 @@ class AssociationDataViewModel(
             buildString {
                 for (entry in data) {
                     append(
-                        "${CsvUtils.escape(
+                        "${DictionaryCsvCodec.escape(
                             entry.prevWord,
-                        )},${CsvUtils.escape(
+                        )},${DictionaryCsvCodec.escape(
                             entry.prevTl,
-                        )},${CsvUtils.escape(entry.nextWord)},${CsvUtils.escape(entry.nextTl)},${entry.count}\n",
+                        )},${DictionaryCsvCodec.escape(entry.nextWord)},${DictionaryCsvCodec.escape(entry.nextTl)},${entry.count}\n",
                     )
                 }
             }
@@ -113,7 +113,7 @@ class AssociationDataViewModel(
         for (line in csv.split("\n")) {
             val trimmed = line.trim()
             if (trimmed.isEmpty()) continue
-            val columns = CsvUtils.parseLine(trimmed)
+            val columns = DictionaryCsvCodec.parseLine(trimmed)
             if (columns.size < 5) continue
             val prevWord = columns[0].trim()
             val prevTl = columns[1].trim()

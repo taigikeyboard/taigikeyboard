@@ -218,7 +218,7 @@ Sources/TaigiKeyboard/
 ├── Actions/                  # KK ActionHandler seams (platform-side)
 ├── Autocomplete/             # Autocomplete service + views + VMs
 ├── Callouts/, Emojis/, Layout/, Overlays/, Styling/    # UI only
-├── Common/                   # Cross-cutting: LoggerBackend
+├── Logging/                  # Cross-cutting: LoggerBackend
 ├── Input/                    # Input pipeline (shared-core heavy)
 │   ├── Composing/
 │   │   ├── ComposingState.swift         # PURE (G4-impl)
@@ -381,7 +381,7 @@ Live Rust / native roster lives in `../engine/migration-inventory.csv`. The hist
 - **NextWord** (3): `EnginePrediction`, `NextWordScorer`, `AutocompleteContextBooster`.
 - **Autocomplete** (2): `AutocompleteInputClassifier`, `AutocompleteProviders`.
 - **Settings** (3): `EngineSettings`, `EngineSettingsProvider`, `InputMode`.
-- **Common** (1): `LoggerBackend`.
+- **Logging** (1): `LoggerBackend`.
 
 Planned additions after Phase I implementation:
 

@@ -1,11 +1,11 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.settings
 
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 
 // Controls app launcher icon visibility via component enabled state
-object LauncherIconUtils {
+object LauncherIconController {
     private const val SETTINGS_ACTIVITY_NAME = "com.siansiansu.taigikeyboard.SettingsLauncherAlias"
 
     fun hideAppIcon(context: Context) {

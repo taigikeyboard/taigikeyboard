@@ -25,9 +25,8 @@ import com.siansiansu.taigikeyboard.ui.tabs.settings.DiagnosticViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.settings.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.settings.SettingsResetViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.AppVersionUtils
-import com.siansiansu.taigikeyboard.util.LauncherIconUtils
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Main settings host — tabbed UI for home, layout, dictionary, and input settings
 class SettingsMainActivity : AppCompatActivity() {
@@ -73,7 +72,7 @@ class SettingsMainActivity : AppCompatActivity() {
 
         setupEdgeToEdge()
 
-        AppVersionUtils.updateVersionOnInstallAndLastUse(this, prefs)
+        AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
 
         val initialTab = intent.getIntExtra(EXTRA_START_TAB, TAB_HOME)
 
@@ -199,9 +198,9 @@ class SettingsMainActivity : AppCompatActivity() {
 
     private fun updateLauncherIconStatus() {
         if (prefs.showAppIcon) {
-            LauncherIconUtils.showAppIcon(this)
+            LauncherIconController.showAppIcon(this)
         } else {
-            LauncherIconUtils.hideAppIcon(this)
+            LauncherIconController.hideAppIcon(this)
         }
     }
 

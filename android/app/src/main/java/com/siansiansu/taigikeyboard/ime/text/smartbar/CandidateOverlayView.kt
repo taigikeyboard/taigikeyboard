@@ -19,7 +19,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.util.FontUtils
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
  * Candidate overlay view — grid display over the keyboard.
@@ -280,7 +280,7 @@ class CandidateOverlayView : FrameLayout {
     private fun ensurePaintsConfigured() {
         val currentFontType = prefs.fontType
         if (measurementFontType != currentFontType) {
-            val typeface = FontUtils.getTypefaceByType(currentFontType, context)
+            val typeface = TypefaceLoader.getTypefaceByType(currentFontType, context)
             primaryPaint.typeface = typeface
             primaryPaint.textSize = PRIMARY_TEXT_SIZE_SP * resources.displayMetrics.scaledDensity
             subtitlePaint.typeface = typeface

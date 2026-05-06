@@ -6,7 +6,7 @@ package com.siansiansu.taigikeyboard.ime.core.logging
 /**
  * Shared-core logging contract. Engine code emits diagnostics through this
  * interface; platform adapters (Android, iOS, tests) decide where the
- * messages go. Mirrors iOS `Common/LoggerBackend.swift`.
+ * messages go. Mirrors iOS `Logging/LoggerBackend.swift`.
  *
  * Callers on hot paths should prefer the inline `d { ... }` extension so
  * that string interpolation is skipped entirely when [isDebugEnabled] is

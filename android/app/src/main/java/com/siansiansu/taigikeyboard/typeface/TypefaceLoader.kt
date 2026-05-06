@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.typeface
 
 import android.content.Context
 import android.graphics.Typeface
@@ -7,7 +7,7 @@ import androidx.core.content.res.ResourcesCompat
 import com.siansiansu.taigikeyboard.R
 
 // Loads custom typefaces (OpenHuninn, Iansui) with safe fallback to system default
-object FontUtils {
+object TypefaceLoader {
     enum class FontType(
         val value: String,
     ) {

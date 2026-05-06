@@ -120,7 +120,7 @@ When custom background is set: uses that color, ignores Liquid Glass.
 | Color definitions | SwiftUI `Color` + KeyboardKit adaptive | `colors.xml` + `themes.xml` (light/dark) |
 | Custom colors | `SharedSettings.colorSettings` | `PrefHelper` → `KeyboardColorSettings` |
 | Button styling | `Styling/Providers/` (`ButtonFont/Text/ImageProvider`) | Theme attributes + runtime overrides |
-| Font management | `FontManager` (@ObservedObject) | `FontUtils` + `PrefHelper` |
+| Font management | `FontManager` (@ObservedObject) | `TypefaceLoader` + `PrefHelper` |
 | Appearance settings UI | `AppearanceSettingsView.swift` (SwiftUI) | `AppearanceSettingsScreen.kt` (Compose) |
 | Settings sync | `UserDefaults.didChangeNotification` | DataStore Flow observation |
 

@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.tabs.layout.AppearanceSettingsScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Keyboard appearance and font settings
 class AppearanceSettingsActivity : ComponentActivity() {

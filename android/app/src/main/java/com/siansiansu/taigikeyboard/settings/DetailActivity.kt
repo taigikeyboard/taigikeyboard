@@ -11,8 +11,8 @@ import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.tabs.home.DetailScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 // Generic detail page for feature explanations, FAQ, feedback, and version history
@@ -21,7 +21,7 @@ class DetailActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val prefs = PrefHelper(this)
-        val typeface = FontUtils.getTypefaceByType(prefs.fontType, this)
+        val typeface = TypefaceLoader.getTypefaceByType(prefs.fontType, this)
         val fontFamily = FontFamily(ComposeTypeface(typeface))
 
         val titleKey = intent.getStringExtra(EXTRA_TITLE_KEY) ?: ""

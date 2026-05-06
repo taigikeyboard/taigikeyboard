@@ -39,7 +39,7 @@ import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 import com.siansiansu.taigikeyboard.ui.theme.SectionHeader
-import com.siansiansu.taigikeyboard.util.resolveDrawableResId
+import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
 
 private val chevronRight = Icons.AutoMirrored.Filled.KeyboardArrowRight
 

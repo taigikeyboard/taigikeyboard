@@ -1,7 +1,6 @@
 
 package com.siansiansu.taigikeyboard.ime.core
 
-import com.siansiansu.taigikeyboard.util.LocaleUtils
 import com.squareup.moshi.Json
 import java.util.*
 
@@ -34,7 +33,7 @@ data class Subtype(
                     "Given string contains more or less than 3 properties...",
                 )
             } else {
-                val locale = LocaleUtils.stringToLocale(data[1])
+                val locale = SubtypeLocaleAdapter.stringToLocale(data[1])
                 return Subtype(
                     data[0].toInt(),
                     locale,

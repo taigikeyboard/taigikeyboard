@@ -14,8 +14,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
  * 候選詞 RecyclerView Adapter
@@ -124,7 +124,7 @@ class CandidateAdapter(
 
             // 設定字體（快取以避免重複載入）
             if (cachedFontType != currentFontType) {
-                cachedTypeface = FontUtils.getTypefaceByType(currentFontType, context)
+                cachedTypeface = TypefaceLoader.getTypefaceByType(currentFontType, context)
                 cachedFontType = currentFontType
             }
 

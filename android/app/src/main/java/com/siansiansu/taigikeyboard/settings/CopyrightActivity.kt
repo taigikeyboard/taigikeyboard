@@ -10,8 +10,8 @@ import com.siansiansu.taigikeyboard.content.CopyrightDataSource
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ui.tabs.home.CopyrightScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.util.FontUtils
-import com.siansiansu.taigikeyboard.util.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 // Copyright and license information display
@@ -20,7 +20,7 @@ class CopyrightActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val prefs = PrefHelper(this)
-        val typeface = FontUtils.getTypefaceByType(prefs.fontType, this)
+        val typeface = TypefaceLoader.getTypefaceByType(prefs.fontType, this)
         val fontFamily = FontFamily(ComposeTypeface(typeface))
 
         setupEdgeToEdge()

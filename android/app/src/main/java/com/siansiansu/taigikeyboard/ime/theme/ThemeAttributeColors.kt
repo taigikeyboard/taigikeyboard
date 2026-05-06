@@ -1,4 +1,4 @@
-package com.siansiansu.taigikeyboard.util
+package com.siansiansu.taigikeyboard.ime.theme
 
 import android.content.Context
 import android.content.res.ColorStateList
