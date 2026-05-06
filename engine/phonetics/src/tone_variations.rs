@@ -7,7 +7,7 @@
 //!
 //! Pattern matches khiin-rs `loadSettings → AppConfig` cached snapshot.
 
-use crate::tables::{COMBINING_TO_TONE_NUM, TONE_NUM_TO_COMBINING};
+use crate::tables::TONE_NUM_TO_COMBINING;
 use protos::engine::{ToneVariationList, ToneVariationsResult};
 use std::collections::HashMap;
 use unicode_normalization::UnicodeNormalization;
@@ -99,10 +99,6 @@ fn build_mode_map(is_tl: bool) -> HashMap<String, ToneVariationList> {
     // POJ + TL: append "ⁿ" (U+207F) to existing "n" entry.
     let n_entry = mapping.entry("n".to_string()).or_default();
     n_entry.push("\u{207f}".to_string());
-
-    // Also keep the combining_to_tone_num table referenced (lint suppression
-    // if unused).
-    let _ = COMBINING_TO_TONE_NUM.len();
 
     mapping
         .into_iter()
