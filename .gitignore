@@ -70,6 +70,10 @@ ENV/
 # === Gradle ===
 .gradle/
 
+# === Dictionary pipeline ===
+# Build/run logs from dictionary/ Python pipeline (build.sh, run.sh).
+dictionary/**/logs/
+
 # === Rust ===
 /engine/target/
 **/*.rs.bk
@@ -91,6 +95,7 @@ ios/build/
 # === Claude Code ===
 .claude/settings.local.json
 .claude/projects/
+.claude/scheduled_tasks.lock
 
 references
 !spec/references
