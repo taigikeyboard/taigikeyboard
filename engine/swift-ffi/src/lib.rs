@@ -87,9 +87,13 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
 /// bridges to bump verbosity in DEBUG builds without paying the format
 /// cost in release.
 ///
-/// Levels mirror `SwiftLoggerSink`: 0=Off, 1=Error, 2=Warn, 3=Info,
-/// 4=Debug, 5=Trace. Anything outside the range is treated as `Off`
-/// (defensive — keeps an integer typo from accidentally enabling trace).
+/// Input mapping: 0=Off, 1=Error, 2=Warn, 3=Info, 4=Debug, 5=Trace.
+/// Anything outside the range is treated as `Off` (defensive — keeps an
+/// integer typo from accidentally enabling trace).
+///
+/// NOT the same as `SwiftLoggerSink`'s callback bytes (`level_to_byte` /
+/// Swift constants `levelError=0..levelTrace=4`). Off is reserved here
+/// because callers can disable; the callback never receives Off.
 fn set_log_level(level: u8) {
     let _ = catch_unwind(AssertUnwindSafe(|| {
         let filter = match level {

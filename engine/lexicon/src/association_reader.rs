@@ -16,6 +16,8 @@
 //! DictionaryReader's 3-layer filter (no variant/khiin/dev bits in
 //! association entries) — see `docs/engine/binary-format.md` §4.3.
 
+use std::cmp::Ordering;
+
 use mmap_host::MmapHandle;
 
 use crate::error::LexiconError;
@@ -144,11 +146,7 @@ impl AssociationReader {
                 };
             }
         }
-        match key_len.cmp(&target.len()) {
-            std::cmp::Ordering::Less => Ordering::Less,
-            std::cmp::Ordering::Equal => Ordering::Equal,
-            std::cmp::Ordering::Greater => Ordering::Greater,
-        }
+        key_len.cmp(&target.len())
     }
 
     fn key_offset_at(&self, index: u32, bytes: &[u8]) -> usize {
@@ -168,9 +166,11 @@ impl AssociationReader {
         }
         let entry_offset =
             u32::from_le_bytes(bytes[meta_pos..meta_pos + 4].try_into().expect("4 bytes")) as usize;
-        let entry_count =
-            u16::from_le_bytes(bytes[meta_pos + 4..meta_pos + 6].try_into().expect("2 bytes"))
-                as usize;
+        let entry_count = u16::from_le_bytes(
+            bytes[meta_pos + 4..meta_pos + 6]
+                .try_into()
+                .expect("2 bytes"),
+        ) as usize;
         if entry_offset > bytes.len() {
             return Vec::new();
         }
@@ -217,11 +217,4 @@ impl AssociationReader {
         }
         out
     }
-}
-
-#[derive(Clone, Copy)]
-enum Ordering {
-    Less,
-    Equal,
-    Greater,
 }

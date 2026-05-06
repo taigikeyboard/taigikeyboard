@@ -44,8 +44,8 @@ pub(crate) fn run_query(fst_path: &str, prefix: &str) -> Result<(), String> {
         // rowid_le_4 may itself contain 0xFF bytes, so scan from the
         // end-of-key boundary which is `entry.len() - 5`).
         let key_end = entry.len() - 5;
-        let key = std::str::from_utf8(&entry[..key_end])
-            .map_err(|e| format!("entry utf8: {}", e))?;
+        let key =
+            std::str::from_utf8(&entry[..key_end]).map_err(|e| format!("entry utf8: {}", e))?;
         let mut rowid_buf = [0u8; 4];
         rowid_buf.copy_from_slice(&entry[entry.len() - 4..]);
         let rowid = u32::from_le_bytes(rowid_buf);

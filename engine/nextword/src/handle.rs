@@ -55,7 +55,10 @@ impl EngineHandle {
         config: &AppConfig,
         generation: u64,
     ) -> Result<NextWordResponse, NextWordError> {
-        let mut engine = self.nextword.lock().expect("nextword engine mutex poisoned");
+        let mut engine = self
+            .nextword
+            .lock()
+            .expect("nextword engine mutex poisoned");
         let mut last_gen = self
             .last_generation
             .lock()
@@ -114,7 +117,10 @@ mod tests {
 
         assert_eq!(engine.state.current_generation, 6);
         assert!(!engine.state.is_showing, "is_showing reset");
-        assert_eq!(engine.state.last_selected_word, None, "last_selected_word reset");
+        assert_eq!(
+            engine.state.last_selected_word, None,
+            "last_selected_word reset"
+        );
 
         // Filter the pre-reset query against the post-reset state.
         let result = engine

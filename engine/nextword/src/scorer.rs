@@ -97,10 +97,11 @@ mod tests {
         let very_old = now - (DECAY_HALF_LIFE_HOURS * 3_600_000.0 * 365.0) as i64;
         let high = calculate_user_score(HIGH_USAGE_THRESHOLD, very_old, now);
         let low = calculate_user_score(HIGH_USAGE_THRESHOLD - 1, very_old, now);
-        let high_expected = (HIGH_USAGE_THRESHOLD as f64) * USER_WEIGHT * HIGH_USAGE_DECAY_FLOOR
-            + LEARNING_BONUS;
-        let low_expected = ((HIGH_USAGE_THRESHOLD - 1) as f64) * USER_WEIGHT * LOW_USAGE_DECAY_FLOOR
-            + LEARNING_BONUS;
+        let high_expected =
+            (HIGH_USAGE_THRESHOLD as f64) * USER_WEIGHT * HIGH_USAGE_DECAY_FLOOR + LEARNING_BONUS;
+        let low_expected =
+            ((HIGH_USAGE_THRESHOLD - 1) as f64) * USER_WEIGHT * LOW_USAGE_DECAY_FLOOR
+                + LEARNING_BONUS;
         assert!((high - high_expected).abs() < TOLERANCE);
         assert!((low - low_expected).abs() < TOLERANCE);
     }
@@ -122,7 +123,11 @@ mod tests {
     fn decay_at_two_half_lives_is_quarter() {
         let two_half_lives_ms = (DECAY_HALF_LIFE_HOURS * 3_600_000.0 * 2.0) as i64;
         let decay = calculate_decay(0, two_half_lives_ms);
-        assert!((decay - 0.25).abs() < 1e-3, "decay={} expected ≈ 0.25", decay);
+        assert!(
+            (decay - 0.25).abs() < 1e-3,
+            "decay={} expected ≈ 0.25",
+            decay
+        );
     }
 
     #[test]

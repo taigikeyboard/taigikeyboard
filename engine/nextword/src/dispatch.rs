@@ -77,9 +77,9 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
                 now_ms,
             })
         }
-        Method::SetIsShowing(m) => {
-            DecodedRequest::Decide(Intent::SetIsShowing { is_showing: m.is_showing })
-        }
+        Method::SetIsShowing(m) => DecodedRequest::Decide(Intent::SetIsShowing {
+            is_showing: m.is_showing,
+        }),
         Method::FilterPredictions(m) => DecodedRequest::Filter {
             raw: m.raw,
             query_generation: m.query_generation,
@@ -140,9 +140,7 @@ pub fn handle(
             let words = booster::boost_words(words, predicted_first_chars);
             next_word_response::Result::Boost(BoostResult { words })
         }
-        DecodedRequest::QueryState => {
-            next_word_response::Result::StateSnapshot(engine.snapshot())
-        }
+        DecodedRequest::QueryState => next_word_response::Result::StateSnapshot(engine.snapshot()),
     };
     Ok(NextWordResponse {
         result: Some(result),

@@ -42,11 +42,7 @@ impl PrefixIndex {
         })?;
         let data = MmappedSetData { handle };
         let set = Set::new(data).map_err(|e| {
-            LexiconError::InvalidBinary(format!(
-                "fst load `{}`: {}",
-                path.display(),
-                e
-            ))
+            LexiconError::InvalidBinary(format!("fst load `{}`: {}", path.display(), e))
         })?;
         let entry_count = set.len() as u64;
         Ok(Self { set, entry_count })

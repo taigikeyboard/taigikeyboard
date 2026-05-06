@@ -35,7 +35,7 @@ public enum RustEngineBridge {
         guard !installed else { return }
         install_logger_sink(SwiftLoggerSink())
         #if DEBUG
-        set_log_level(4) // 4 = Debug, see SwiftLoggerSink level constants
+        set_log_level(4) // 4 = Debug per set_log_level Rust-side mapping (engine/swift-ffi)
         #endif
         installed = true
     }

@@ -61,7 +61,9 @@ pub(crate) enum Intent {
     /// no effects, no generation bump. Called by the platform after
     /// rendering the result of an async predict() so subsequent clear/reset
     /// paths know whether to emit `ClearPredictionsUI`.
-    SetIsShowing { is_showing: bool },
+    SetIsShowing {
+        is_showing: bool,
+    },
 }
 
 /// Engine errors surface as `ErrorCode::FailInvariant` at the FFI seam.
@@ -121,14 +123,7 @@ impl Engine {
         limit: i32,
         config: &AppConfig,
     ) -> Result<FilterResult, NextWordError> {
-        crate::filter::filter(
-            &self.state,
-            raw,
-            query_generation,
-            now_ms,
-            limit,
-            config,
-        )
+        crate::filter::filter(&self.state, raw, query_generation, now_ms, limit, config)
     }
 
     /// Reset on envelope-mismatch (IME-session ID change). Zeroes the

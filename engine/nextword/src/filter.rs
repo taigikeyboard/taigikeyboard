@@ -231,8 +231,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
         let p = &result.predictions[0];
-        let expected =
-            scorer::score_dict(5) + scorer::calculate_user_score(1, 1_000, 1_000);
+        let expected = scorer::score_dict(5) + scorer::calculate_user_score(1, 1_000, 1_000);
         assert!((p.score - expected).abs() < 1e-9);
     }
 
@@ -312,7 +311,10 @@ mod tests {
             &config_tl_mode_translate_swapped(false), // not Hanji mode
         )
         .unwrap();
-        assert!(result.predictions.is_empty(), "empty roman in roman mode dropped");
+        assert!(
+            result.predictions.is_empty(),
+            "empty roman in roman mode dropped"
+        );
     }
 
     #[test]

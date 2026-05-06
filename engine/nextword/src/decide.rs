@@ -69,9 +69,7 @@ pub(crate) fn apply(
             config,
             platform,
         ),
-        Intent::Backspace { last_char, now_ms } => {
-            decide_backspace(state, last_char, now_ms)
-        }
+        Intent::Backspace { last_char, now_ms } => decide_backspace(state, last_char, now_ms),
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state),
         Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state),
         Intent::ResetFull { now_ms: _ } => reset_and_clear_predictions(state),
@@ -157,10 +155,7 @@ fn decide_word_selected(
     state.current_generation = state.current_generation.wrapping_add(1);
 
     if trigger_prediction {
-        let word = state
-            .last_selected_word
-            .clone()
-            .unwrap_or_default();
+        let word = state.last_selected_word.clone().unwrap_or_default();
         effects.push(NextWordEffect {
             kind: Some(next_word_effect::Kind::QueryPredictions(QueryPredictions {
                 word,
@@ -174,11 +169,7 @@ fn decide_word_selected(
     snapshot_into_decide_result(state, effects)
 }
 
-fn decide_backspace(
-    state: &mut PersistedState,
-    last_char: String,
-    now_ms: i64,
-) -> DecideResult {
+fn decide_backspace(state: &mut PersistedState, last_char: String, now_ms: i64) -> DecideResult {
     state.last_selected_word = Some(last_char.clone());
     state.last_selected_roman = None;
     state.last_selection_time_ms = now_ms;
@@ -310,10 +301,16 @@ pub(crate) fn split_compound(word: &str, platform: Platform) -> Vec<String> {
     }
     let split: Vec<&str> = match platform {
         Platform::Ios => word.split('-').collect(),
-        Platform::Android => word.split(|c: char| c == '-' || c.is_whitespace()).collect(),
+        Platform::Android => word
+            .split(|c: char| c == '-' || c.is_whitespace())
+            .collect(),
         Platform::Unspecified => return Vec::new(), // unreachable — apply() validates
     };
-    split.into_iter().filter(|s| !s.is_empty()).map(String::from).collect()
+    split
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .map(String::from)
+        .collect()
 }
 
 /// Build sequential bigram pairs from a compound word; order preserved so
@@ -431,12 +428,7 @@ mod tests {
             platform_id: Platform::Unspecified as i32,
         };
         let mut state = PersistedState::default();
-        let err = apply(
-            &mut state,
-            Intent::ResetFull { now_ms: 0 },
-            &config,
-        )
-        .unwrap_err();
+        let err = apply(&mut state, Intent::ResetFull { now_ms: 0 }, &config).unwrap_err();
         assert!(matches!(err, NextWordError::InvalidPlatform));
     }
 
@@ -508,7 +500,11 @@ mod tests {
         assert_eq!(state.last_selected_word, None);
         assert_eq!(state.is_showing, false);
         assert_eq!(state.current_generation, 6);
-        let kinds: Vec<_> = result.effects.iter().filter_map(|e| e.kind.as_ref()).collect();
+        let kinds: Vec<_> = result
+            .effects
+            .iter()
+            .filter_map(|e| e.kind.as_ref())
+            .collect();
         assert!(matches!(
             kinds[0],
             next_word_effect::Kind::CancelContextTimeout(_)
@@ -564,7 +560,10 @@ mod tests {
             &android_config(true, false),
         )
         .unwrap();
-        assert_eq!(state.current_generation, 7, "must NOT bump on UpdateLastSelectedWord");
+        assert_eq!(
+            state.current_generation, 7,
+            "must NOT bump on UpdateLastSelectedWord"
+        );
         assert_eq!(state.last_selected_word, Some("早安".to_owned()));
     }
 
@@ -659,12 +658,10 @@ mod tests {
             &ios_config(true, false),
         )
         .unwrap();
-        let has_record = result.effects.iter().any(|e| {
-            matches!(
-                e.kind,
-                Some(next_word_effect::Kind::RecordAssociation(_))
-            )
-        });
+        let has_record = result
+            .effects
+            .iter()
+            .any(|e| matches!(e.kind, Some(next_word_effect::Kind::RecordAssociation(_))));
         assert!(has_record, "should record bigram within 10 s window");
     }
 
@@ -688,12 +685,10 @@ mod tests {
             &ios_config(true, false),
         )
         .unwrap();
-        let has_record = result.effects.iter().any(|e| {
-            matches!(
-                e.kind,
-                Some(next_word_effect::Kind::RecordAssociation(_))
-            )
-        });
+        let has_record = result
+            .effects
+            .iter()
+            .any(|e| matches!(e.kind, Some(next_word_effect::Kind::RecordAssociation(_))));
         assert!(!has_record, "outside 10 s window must not record");
     }
 

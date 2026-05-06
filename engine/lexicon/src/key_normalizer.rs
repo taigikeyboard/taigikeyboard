@@ -60,7 +60,10 @@ mod tests {
 
     #[test]
     fn romanization_poj_uses_poj_prefix() {
-        assert_eq!(build("goa2", KeyType::Romanization, KeyMode::Poj), "poj:goa2");
+        assert_eq!(
+            build("goa2", KeyType::Romanization, KeyMode::Poj),
+            "poj:goa2"
+        );
     }
 
     #[test]
@@ -71,6 +74,9 @@ mod tests {
     #[test]
     fn tps_mode_keys_into_tl_family() {
         let result = build("hf", KeyType::Romanization, KeyMode::Tps);
-        assert!(result.starts_with("tl:"), "tps falls through tl: family: {result}");
+        assert!(
+            result.starts_with("tl:"),
+            "tps falls through tl: family: {result}"
+        );
     }
 }

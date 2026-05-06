@@ -79,9 +79,6 @@ mod tests {
         )
         .expect("validated paths");
         assert_eq!(paths.dictionary_version, 42);
-        assert_eq!(
-            paths.fst.to_string_lossy(),
-            "/var/lib/taigi/dictionary.fst"
-        );
+        assert_eq!(paths.fst.to_string_lossy(), "/var/lib/taigi/dictionary.fst");
     }
 }

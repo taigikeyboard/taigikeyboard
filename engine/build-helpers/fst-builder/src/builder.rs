@@ -74,11 +74,11 @@ pub(crate) fn run_build(output_path: &str) -> Result<BuildStats, String> {
     entries.sort_unstable();
     entries.dedup();
 
-    let file = File::create(output_path)
-        .map_err(|e| format!("create output `{}`: {}", output_path, e))?;
+    let file =
+        File::create(output_path).map_err(|e| format!("create output `{}`: {}", output_path, e))?;
     let writer = BufWriter::new(file);
-    let mut builder = fst::SetBuilder::new(writer)
-        .map_err(|e| format!("fst SetBuilder init: {}", e))?;
+    let mut builder =
+        fst::SetBuilder::new(writer).map_err(|e| format!("fst SetBuilder init: {}", e))?;
 
     for entry in &entries {
         builder
@@ -86,9 +86,7 @@ pub(crate) fn run_build(output_path: &str) -> Result<BuildStats, String> {
             .map_err(|e| format!("fst insert: {}", e))?;
     }
 
-    builder
-        .finish()
-        .map_err(|e| format!("fst finish: {}", e))?;
+    builder.finish().map_err(|e| format!("fst finish: {}", e))?;
 
     Ok(BuildStats {
         entries: entries.len(),

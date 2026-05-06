@@ -114,7 +114,12 @@ pub fn search(
         }
     }
 
-    Ok(collect_filtered_sorted(rowids, dict, params.enabled_sources_bitmask, params.limit))
+    Ok(collect_filtered_sorted(
+        rowids,
+        dict,
+        params.enabled_sources_bitmask,
+        params.limit,
+    ))
 }
 
 pub fn search_with_sources(
@@ -145,7 +150,12 @@ pub fn search_by_hanzi(
     for id in prefix_index.lookup_prefix(&key) {
         rowids.insert(id);
     }
-    Ok(collect_filtered_sorted(rowids, dict, enabled_sources_bitmask, limit))
+    Ok(collect_filtered_sorted(
+        rowids,
+        dict,
+        enabled_sources_bitmask,
+        limit,
+    ))
 }
 
 /// Filter rowids through `passesFilter`, then sort by `frequency` descending,
@@ -175,7 +185,10 @@ fn collect_filtered_sorted(
     staged.sort_by(|a, b| b.1.frequency.cmp(&a.1.frequency));
     let limit_usize = limit as usize;
     staged.truncate(limit_usize);
-    staged.into_iter().map(|(rowid, record)| record_to_row(rowid, record)).collect()
+    staged
+        .into_iter()
+        .map(|(rowid, record)| record_to_row(rowid, record))
+        .collect()
 }
 
 pub fn assoc_lookup(

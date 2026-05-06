@@ -112,7 +112,11 @@ fn invariant_lex_fst_rowid_payload_round_trip() {
     );
 
     let exact_gua2 = index.lookup_exact("tl:gua2");
-    assert_eq!(exact_gua2, vec![100, 200], "exact match returns both rowids in insertion order");
+    assert_eq!(
+        exact_gua2,
+        vec![100, 200],
+        "exact match returns both rowids in insertion order"
+    );
 
     let hanzi_hits = index.lookup_prefix("hanzi:好");
     assert_eq!(hanzi_hits, vec![50]);
@@ -126,25 +130,28 @@ fn invariant_lex_lookup_rowids_order_preserves_insertion() {
     // exact-match rowids THEN prefix-only rowids, deduped via IndexSet
     // (insertion-order). Within each lookup, rowids surface in fst's
     // byte-sort order which is deterministic per build.
-    let pairs: &[(&str, u32)] = &[
-        ("tl:abc", 7),
-        ("tl:abc", 3),
-        ("tl:abcd", 9),
-        ("tl:abcd", 1),
-    ];
+    let pairs: &[(&str, u32)] = &[("tl:abc", 7), ("tl:abc", 3), ("tl:abcd", 9), ("tl:abcd", 1)];
     let path = write_synthetic_fst("order.fst", pairs);
     let index = PrefixIndex::open(&path).expect("fst opens");
 
     // lookup_exact("tl:abc") returns rowids in fst byte-order: 3, 7
     let exact = index.lookup_exact("tl:abc");
-    assert_eq!(exact, vec![3, 7], "exact-match rowids ascending in fst byte-order");
+    assert_eq!(
+        exact,
+        vec![3, 7],
+        "exact-match rowids ascending in fst byte-order"
+    );
 
     // lookup_prefix("tl:abc") returns ALL matching rowids byte-sorted by
     // entry. Because '\xFF' (0xFF) > 'd' (0x64), longer keys "tl:abcd*"
     // come BEFORE "tl:abc\xFF*" in the fst:
     //     tl:abcd\xFF\x01 < tl:abcd\xFF\x09 < tl:abc\xFF\x03 < tl:abc\xFF\x07
     let prefix = index.lookup_prefix("tl:abc");
-    assert_eq!(prefix, vec![1, 9, 3, 7], "fst byte-sort order across prefix scan");
+    assert_eq!(
+        prefix,
+        vec![1, 9, 3, 7],
+        "fst byte-sort order across prefix scan"
+    );
 }
 
 // --- INVARIANT_LEX_HANZI_GUARD (Rust unit) -----------------------------
@@ -168,7 +175,11 @@ fn invariant_lex_hanzi_guard_short_circuits() {
         enabled_sources_bitmask: u32::MAX,
     };
     let rows = search::search(&params, &index, &dict).expect("guard short-circuits");
-    assert!(rows.is_empty(), "INVARIANT_LEX_HANZI_GUARD: hanzi → []; got {} rows", rows.len());
+    assert!(
+        rows.is_empty(),
+        "INVARIANT_LEX_HANZI_GUARD: hanzi → []; got {} rows",
+        rows.len()
+    );
 }
 
 // --- INVARIANT_LEX_ASSOC_BITMASK_FILTER --------------------------------
@@ -239,10 +250,17 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
         enabled_sources_bitmask: mask,
     };
     let hit = api::search_with_sources(make_with_sources(0x0001)).expect("hit");
-    assert_eq!(hit.rows.len(), 1, "search_with_sources with matching mask returns entry");
+    assert_eq!(
+        hit.rows.len(),
+        1,
+        "search_with_sources with matching mask returns entry"
+    );
 
     let miss = api::search_with_sources(make_with_sources(0x0002)).expect("miss");
-    assert!(miss.rows.is_empty(), "search_with_sources with non-matching mask filters entry");
+    assert!(
+        miss.rows.is_empty(),
+        "search_with_sources with non-matching mask filters entry"
+    );
 
     // search_by_hanzi: same assertions, hanzi-prefix path.
     let make_by_hanzi = |mask: u32| SearchByHanziRequest {
@@ -252,18 +270,25 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
         enabled_sources_bitmask: mask,
     };
     let hit_h = api::search_by_hanzi(make_by_hanzi(0x0001)).expect("hit_h");
-    assert_eq!(hit_h.rows.len(), 1, "search_by_hanzi with matching mask returns entry");
+    assert_eq!(
+        hit_h.rows.len(),
+        1,
+        "search_by_hanzi with matching mask returns entry"
+    );
 
     let miss_h = api::search_by_hanzi(make_by_hanzi(0x0002)).expect("miss_h");
-    assert!(miss_h.rows.is_empty(), "search_by_hanzi with non-matching mask filters entry");
+    assert!(
+        miss_h.rows.is_empty(),
+        "search_by_hanzi with non-matching mask filters entry"
+    );
 }
 
 // --- INVARIANT_LEX_INSTALL_PATH_VALIDATION -----------------------------
 
 #[test]
 fn invariant_lex_install_path_validation_rejects_nul() {
-    let err =
-        LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", 1).expect_err("nul rejected");
+    let err = LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", 1)
+        .expect_err("nul rejected");
     assert!(matches!(err, LexiconError::InvalidPath(_)), "{err:?}");
 }
 

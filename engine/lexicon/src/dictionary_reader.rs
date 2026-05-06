@@ -129,7 +129,8 @@ impl DictionaryReader {
         } else {
             bytes.len()
         };
-        if record_end <= record_offset || record_end > bytes.len() || record_offset + 8 > record_end {
+        if record_end <= record_offset || record_end > bytes.len() || record_offset + 8 > record_end
+        {
             return None;
         }
         let mut pos = record_offset;
@@ -155,7 +156,9 @@ impl DictionaryReader {
             return None;
         }
         pos += hanzi_len;
-        let tl = std::str::from_utf8(&bytes[pos..pos + tl_len]).ok()?.to_string();
+        let tl = std::str::from_utf8(&bytes[pos..pos + tl_len])
+            .ok()?
+            .to_string();
 
         Some(DictionaryRecord {
             bitmask,
