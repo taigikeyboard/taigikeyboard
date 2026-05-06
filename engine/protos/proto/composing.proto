@@ -21,7 +21,11 @@ option java_multiple_files = true;
 // `docs/engine/composing-slice-plan.md §5b.2` for the full semantic table.
 
 message ComposingRequest {
+  // Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
+  // read) in 20s. Spacing leaves room for future families without renumbering
+  // existing variants.
   oneof method {
+    // --- Text-input mutators (10s) ---
     Start                           start                                = 10;
     Append                          append                               = 11;
     AppendHyphen                    append_hyphen                        = 12;
@@ -32,6 +36,8 @@ message ComposingRequest {
     SelectSuggestion                select_suggestion                    = 17;
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
+
+    // --- UI-driven ops (20s) ---
     SetSelectedCandidateIndex       set_selected_candidate_index         = 20;
     QueryState                      query_state                          = 21;
   }

@@ -25,8 +25,11 @@ option java_multiple_files = true;
 // state invalidation. See nextword-engine-boundary.md §3 + §13.6.
 
 message NextWordRequest {
+  // Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
+  // pure reads in 30s. Spacing keeps each family self-contained — adding a new
+  // mutator never disturbs filter/boost/query tags, and vice versa.
   oneof method {
-    // State-mutating intents — return DecideResult.
+    // --- State-mutating intents (10s) — return DecideResult ---
     WordSelected         word_selected           = 10;
     Backspace            backspace               = 11;
     ContextTimeoutFired  context_timeout_fired   = 12;
@@ -50,6 +53,7 @@ message NextWordRequest {
     // Returns DecideResult with empty effects + snapshot of state.
     SetIsShowing set_is_showing = 16;
 
+    // --- Pure post-query helpers (20s) ---
     // Pure post-query filter+merge+sort+limit — return FilterResult
     // (handles stale-gen drop).
     FilterPredictions    filter_predictions      = 20;
@@ -59,7 +63,7 @@ message NextWordRequest {
     // EngineHandle::handle path (brief mutex acquire — no observable cost).
     BoostCandidates      boost_candidates        = 21;
 
-    // Pure read — return StateSnapshot.
+    // --- Pure reads (30s) — return StateSnapshot ---
     NextWordQueryState   query_state             = 30;
   }
 }
