@@ -1,6 +1,6 @@
 ---
 name: migration-residue
-description: Audit Rust core ↔ iOS/Android platform code for residue, duplication, and redundancy left over from slice migrations. Produces a dated report at docs/engine/migration-residue-<YYYY-MM-DD>.md with P1/P2/P3 findings across seven dimensions (cross-language duplication, cross-crate duplication, over-public surface, stale comments, build-broken JVM tests, bridge surface parity, memory hygiene). Pure measurement — no auto-fix. Run before each Rust slice migration to seed the audit doc, and after each merge to verify cleanliness.
+description: Audit Rust core ↔ iOS/Android platform code for residue, duplication, and redundancy left over from slice migrations. Produces a dated report at docs/reports/<YYYY-MM-DD>-migration-residue.md with P1/P2/P3 findings across seven dimensions (cross-language duplication, cross-crate duplication, over-public surface, stale comments, build-broken JVM tests, bridge surface parity, memory hygiene). Pure measurement — no auto-fix. Run before each Rust slice migration to seed the audit doc, and after each merge to verify cleanliness.
 disable-model-invocation: true
 ---
 
@@ -16,7 +16,7 @@ Scan the Taigi Keyboard codebase for migration debt left after a Rust slice swap
 
 ## Output
 
-`docs/engine/migration-residue-<YYYY-MM-DD>.md` (UTC). If same-date file exists, suffix `-rN`. Report template at the bottom of this file.
+`docs/reports/<YYYY-MM-DD>-migration-residue.md` (UTC). If same-date file exists, suffix `-rN`. Report template at the bottom of this file.
 
 ## When to run
 

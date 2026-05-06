@@ -67,15 +67,18 @@
 
 ### `reports/` — Audit & Analysis Reports (historical)
 
+Dated reports are one-off snapshots ordered chronologically. Undated entries are evergreen references / live backlogs.
+
 | File | Description | Status |
 |------|-------------|--------|
-| `reports/architecture-review.md` | 2026-04-03 cross-platform architecture review (B+ baseline) | Historical |
-| `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
-| `reports/codebase-health.md` | Pre-migration health snapshot | Historical |
-| `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
-| `reports/segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis — obsolete, segmenter removed v3.4.6 | Historical |
 | `reports/2026-03-11-audit-report.md` | Combined audit report (docs, health, research) | Historical |
+| `reports/2026-03-11-codebase-health.md` | Pre-migration health snapshot | Historical |
+| `reports/2026-03-11-segmentation-tie-bug.md` | CVC+V segmentation tie-breaking analysis — obsolete, segmenter removed v3.4.6 | Historical |
+| `reports/2026-04-03-architecture-review.md` | Cross-platform architecture review (B+ baseline) | Historical |
 | `reports/2026-04-18-dynamic-font-download-plan.md` | Forward-looking feature plan | Plan |
+| `reports/2026-05-04-migration-residue.md` | Rust migration residue audit (P1/P2/P3 dimensions) | Historical |
+| `reports/refactor-backlog.md` | Pruned refactor backlog (live items only) | Active |
+| `reports/khiin-lattice-research.md` | Word-lattice architecture research | Reference |
 
 ### `perf/` — Performance Methodology (3)
 

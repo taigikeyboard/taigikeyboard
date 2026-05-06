@@ -67,13 +67,13 @@
 - **Action**: Rename behavior-first; relocate to feature directories
 - **Why P2**: `*Utils` is a known anti-pattern (Robert Martin, Kotlin style guide); files lose discoverability
 
-#### P3 — `docs/` one-off reports vs evergreen specs
+#### P3 — `docs/` one-off reports vs evergreen specs ✅ DONE
 
-- `docs/engine/migration-residue-2026-05-04.md` is a single-pass audit report sitting alongside evergreen design specs (`autocomplete.md / binary-format.md / composing.md / ...`)
-- `docs/reports/` itself is inconsistent: `2026-03-11-audit-report.md` (dated prefix) vs `architecture-review.md / codebase-health.md` (no date)
-- **Action**:
-  - Move `docs/engine/migration-residue-2026-05-04.md` → `docs/reports/`
-  - Add date prefix to all one-off reports in `docs/reports/`; keep evergreen specs date-free
+- `docs/engine/migration-residue-2026-05-04.md` was a single-pass audit report sitting alongside evergreen design specs (`autocomplete.md / binary-format.md / composing.md / ...`)
+- `docs/reports/` was inconsistent: `2026-03-11-audit-report.md` (dated prefix) vs `architecture-review.md / codebase-health.md` (no date)
+- **Done**:
+  - Moved `docs/engine/migration-residue-2026-05-04.md` → `docs/reports/2026-05-04-migration-residue.md`
+  - Added date prefix to one-off reports (`architecture-review`, `codebase-health`, `segmentation-tie-bug`); kept evergreen `khiin-lattice-research` and live `refactor-backlog` undated
 - **Why P3**: Mixes report lifecycle with spec lifecycle; readers can't tell what's still authoritative
 
 #### P4 — `docs/` root-level orphans

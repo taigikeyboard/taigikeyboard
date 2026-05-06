@@ -1,6 +1,6 @@
 # Codebase Health Check (2026-03-11)
 
-> **Note (2026-04)**: Pre-migration snapshot. dictionary.db eliminated since — file sizes and LOC counts may differ. See `architecture-review.md` for more recent structural analysis.
+> **Note (2026-04)**: Pre-migration snapshot. dictionary.db eliminated since — file sizes and LOC counts may differ. See `2026-04-03-architecture-review.md` for more recent structural analysis.
 
 **Codebase size**: iOS 97 Swift files (14,363 LOC) | Android 100+ Kotlin files (20,431+ LOC)
 

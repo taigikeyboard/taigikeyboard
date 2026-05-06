@@ -60,7 +60,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 ### 5. Segmentation — ARCHIVED (removed in v3.4.6)
 | Keyword | Definition | Notes |
 |---------|-----------|-------|
-| ~~**SyllableSegmenter**~~ | Removed in v3.4.6 | Historical analysis: `reports/segmentation-tie-bug.md` |
+| ~~**SyllableSegmenter**~~ | Removed in v3.4.6 | Historical analysis: `reports/2026-03-11-segmentation-tie-bug.md` |
 
 ### 6. Next-Word Prediction (`engine/nextword.md`)
 NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform glue handles timer/threading + UI.
