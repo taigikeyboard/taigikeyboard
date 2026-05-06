@@ -16,6 +16,3 @@ log = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 indexmap = { workspace = true }
-
-[dev-dependencies]
-proptest = { workspace = true }

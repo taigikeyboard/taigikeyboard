@@ -367,7 +367,6 @@ dependencies = [
  "log",
  "once_cell",
  "phonetics",
- "proptest",
  "protos",
  "thiserror",
 ]
