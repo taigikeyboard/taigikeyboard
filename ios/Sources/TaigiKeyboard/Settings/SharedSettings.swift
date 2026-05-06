@@ -451,7 +451,7 @@ final class SharedSettings {
         isKhpooDictEnabled = true
         isVariantEnabled = false
         isKhiinEnabled = false
-        isLkkDictEnabled = false
+        isLkkDictEnabled = true
         // Toolbar
         isToolbarAutoCollapse = true
         // Globe key: remove stored value so device-based default takes effect
