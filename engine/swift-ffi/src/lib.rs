@@ -91,16 +91,18 @@ fn install_logger_sink(sink: ffi::SwiftLoggerSink) {
 /// 4=Debug, 5=Trace. Anything outside the range is treated as `Off`
 /// (defensive — keeps an integer typo from accidentally enabling trace).
 fn set_log_level(level: u8) {
-    let filter = match level {
-        1 => log::LevelFilter::Error,
-        2 => log::LevelFilter::Warn,
-        3 => log::LevelFilter::Info,
-        4 => log::LevelFilter::Debug,
-        5 => log::LevelFilter::Trace,
-        _ => log::LevelFilter::Off,
-    };
-    log::set_max_level(filter);
-    log::info!("rust log level set to {filter:?}");
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        let filter = match level {
+            1 => log::LevelFilter::Error,
+            2 => log::LevelFilter::Warn,
+            3 => log::LevelFilter::Info,
+            4 => log::LevelFilter::Debug,
+            5 => log::LevelFilter::Trace,
+            _ => log::LevelFilter::Off,
+        };
+        log::set_max_level(filter);
+        log::info!("rust log level set to {filter:?}");
+    }));
 }
 
 fn panic_for_test() -> Vec<u8> {
