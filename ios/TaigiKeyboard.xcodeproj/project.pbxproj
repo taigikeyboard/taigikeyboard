@@ -259,16 +259,16 @@
 			path = Sources/TaigiKeyboard/Engine;
 			sourceTree = "<group>";
 		};
+		F3C05ADF2FABCC1900CB82BE /* Logging */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Logging;
+			path = Sources/TaigiKeyboard/Logging;
+			sourceTree = "<group>";
+		};
 		F3E176912F8824050017FB6D /* NextWord */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			name = NextWord;
 			path = Sources/TaigiKeyboard/NextWord;
-			sourceTree = "<group>";
-		};
-		F3EFE0DB2F93656800696406 /* Common */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Common;
-			path = Sources/TaigiKeyboard/Common;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -309,11 +309,11 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F3C05ADF2FABCC1900CB82BE /* Logging */,
 				F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */,
 				F312E9262F9E93A300E53A7F /* RustTaigi.swift */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
-				F3EFE0DB2F93656800696406 /* Common */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
 				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
@@ -386,8 +386,8 @@
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
+				F3C05ADF2FABCC1900CB82BE /* Logging */,
 				F3E176912F8824050017FB6D /* NextWord */,
-				F3EFE0DB2F93656800696406 /* Common */,
 			);
 			name = TaigiKeyboard;
 			packageProductDependencies = (
@@ -429,8 +429,8 @@
 				F35E7D5E2F94C2AF008B62C0 /* Composition */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
+				F3C05ADF2FABCC1900CB82BE /* Logging */,
 				F3E176912F8824050017FB6D /* NextWord */,
-				F3EFE0DB2F93656800696406 /* Common */,
 			);
 			name = TaigiKeyboardExtension;
 			packageProductDependencies = (

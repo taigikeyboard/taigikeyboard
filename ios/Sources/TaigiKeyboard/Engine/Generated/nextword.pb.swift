@@ -65,9 +65,12 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
+  /// pure reads in 30s. Spacing keeps each family self-contained — adding a new
+  /// mutator never disturbs filter/boost/query tags, and vice versa.
   public var method: Taigi_Engine_NextWordRequest.OneOf_Method? = nil
 
-  /// State-mutating intents — return DecideResult.
+  /// --- State-mutating intents (10s) — return DecideResult ---
   public var wordSelected: Taigi_Engine_WordSelected {
     get {
       if case .wordSelected(let v)? = method {return v}
@@ -138,6 +141,7 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .setIsShowing(newValue)}
   }
 
+  /// --- Pure post-query helpers (20s) ---
   /// Pure post-query filter+merge+sort+limit — return FilterResult
   /// (handles stale-gen drop).
   public var filterPredictions: Taigi_Engine_FilterPredictions {
@@ -159,7 +163,7 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .boostCandidates(newValue)}
   }
 
-  /// Pure read — return StateSnapshot.
+  /// --- Pure reads (30s) — return StateSnapshot ---
   public var queryState: Taigi_Engine_NextWordQueryState {
     get {
       if case .queryState(let v)? = method {return v}
@@ -170,8 +174,11 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  /// Tag layout: state-mutating intents in 10s, pure post-query helpers in 20s,
+  /// pure reads in 30s. Spacing keeps each family self-contained — adding a new
+  /// mutator never disturbs filter/boost/query tags, and vice versa.
   public enum OneOf_Method: Equatable, Sendable {
-    /// State-mutating intents — return DecideResult.
+    /// --- State-mutating intents (10s) — return DecideResult ---
     case wordSelected(Taigi_Engine_WordSelected)
     case backspace(Taigi_Engine_Backspace)
     case contextTimeoutFired(Taigi_Engine_ContextTimeoutFired)
@@ -193,6 +200,7 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
     /// result already won the race; later intents will bump as usual).
     /// Returns DecideResult with empty effects + snapshot of state.
     case setIsShowing(Taigi_Engine_SetIsShowing)
+    /// --- Pure post-query helpers (20s) ---
     /// Pure post-query filter+merge+sort+limit — return FilterResult
     /// (handles stale-gen drop).
     case filterPredictions(Taigi_Engine_FilterPredictions)
@@ -200,7 +208,7 @@ public struct Taigi_Engine_NextWordRequest: Sendable {
     /// Pure function; engine state untouched. Routes through standard
     /// EngineHandle::handle path (brief mutex acquire — no observable cost).
     case boostCandidates(Taigi_Engine_BoostCandidates)
-    /// Pure read — return StateSnapshot.
+    /// --- Pure reads (30s) — return StateSnapshot ---
     case queryState(Taigi_Engine_NextWordQueryState)
 
   }

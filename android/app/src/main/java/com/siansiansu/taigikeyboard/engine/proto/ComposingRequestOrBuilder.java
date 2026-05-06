@@ -10,11 +10,19 @@ public interface ComposingRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    * @return Whether the start field is set.
    */
   boolean hasStart();
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    * @return The start.
    */
@@ -120,11 +128,19 @@ public interface ComposingRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.Reset getReset();
 
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    * @return Whether the setSelectedCandidateIndex field is set.
    */
   boolean hasSetSelectedCandidateIndex();
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    * @return The setSelectedCandidateIndex.
    */

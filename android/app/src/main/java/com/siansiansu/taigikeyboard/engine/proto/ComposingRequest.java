@@ -80,6 +80,10 @@ public  final class ComposingRequest extends
 
   public static final int START_FIELD_NUMBER = 10;
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   @java.lang.Override
@@ -87,6 +91,10 @@ public  final class ComposingRequest extends
     return methodCase_ == 10;
   }
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   @java.lang.Override
@@ -97,6 +105,10 @@ public  final class ComposingRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.Start.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void setStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -105,6 +117,10 @@ public  final class ComposingRequest extends
     methodCase_ = 10;
   }
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void mergeStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -119,6 +135,10 @@ public  final class ComposingRequest extends
     methodCase_ = 10;
   }
   /**
+   * <pre>
+   * --- Text-input mutators (10s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.Start start = 10;</code>
    */
   private void clearStart() {
@@ -580,6 +600,10 @@ public  final class ComposingRequest extends
 
   public static final int SET_SELECTED_CANDIDATE_INDEX_FIELD_NUMBER = 20;
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    */
   @java.lang.Override
@@ -587,6 +611,10 @@ public  final class ComposingRequest extends
     return methodCase_ == 20;
   }
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    */
   @java.lang.Override
@@ -597,6 +625,10 @@ public  final class ComposingRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    */
   private void setSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
@@ -605,6 +637,10 @@ public  final class ComposingRequest extends
     methodCase_ = 20;
   }
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    */
   private void mergeSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
@@ -619,6 +655,10 @@ public  final class ComposingRequest extends
     methodCase_ = 20;
   }
   /**
+   * <pre>
+   * --- UI-driven ops (20s) ---
+   * </pre>
+   *
    * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
    */
   private void clearSetSelectedCandidateIndex() {
@@ -788,6 +828,10 @@ public  final class ComposingRequest extends
 
 
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     @java.lang.Override
@@ -795,6 +839,10 @@ public  final class ComposingRequest extends
       return instance.hasStart();
     }
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     @java.lang.Override
@@ -802,6 +850,10 @@ public  final class ComposingRequest extends
       return instance.getStart();
     }
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder setStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -810,6 +862,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder setStart(
@@ -819,6 +875,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder mergeStart(com.siansiansu.taigikeyboard.engine.proto.Start value) {
@@ -827,6 +887,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Text-input mutators (10s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.Start start = 10;</code>
      */
     public Builder clearStart() {
@@ -1268,6 +1332,10 @@ public  final class ComposingRequest extends
     }
 
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     @java.lang.Override
@@ -1275,6 +1343,10 @@ public  final class ComposingRequest extends
       return instance.hasSetSelectedCandidateIndex();
     }
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     @java.lang.Override
@@ -1282,6 +1354,10 @@ public  final class ComposingRequest extends
       return instance.getSetSelectedCandidateIndex();
     }
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     public Builder setSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
@@ -1290,6 +1366,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     public Builder setSetSelectedCandidateIndex(
@@ -1299,6 +1379,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     public Builder mergeSetSelectedCandidateIndex(com.siansiansu.taigikeyboard.engine.proto.SetSelectedCandidateIndex value) {
@@ -1307,6 +1391,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- UI-driven ops (20s) ---
+     * </pre>
+     *
      * <code>.taigi.engine.SetSelectedCandidateIndex set_selected_candidate_index = 20;</code>
      */
     public Builder clearSetSelectedCandidateIndex() {

@@ -25,8 +25,12 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
+  /// read) in 20s. Spacing leaves room for future families without renumbering
+  /// existing variants.
   public var method: Taigi_Engine_ComposingRequest.OneOf_Method? = nil
 
+  /// --- Text-input mutators (10s) ---
   public var start: Taigi_Engine_Start {
     get {
       if case .start(let v)? = method {return v}
@@ -107,6 +111,7 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .reset(newValue)}
   }
 
+  /// --- UI-driven ops (20s) ---
   public var setSelectedCandidateIndex: Taigi_Engine_SetSelectedCandidateIndex {
     get {
       if case .setSelectedCandidateIndex(let v)? = method {return v}
@@ -125,7 +130,11 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
+  /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
+  /// read) in 20s. Spacing leaves room for future families without renumbering
+  /// existing variants.
   public enum OneOf_Method: Equatable, Sendable {
+    /// --- Text-input mutators (10s) ---
     case start(Taigi_Engine_Start)
     case append(Taigi_Engine_Append)
     case appendHyphen(Taigi_Engine_AppendHyphen)
@@ -136,6 +145,7 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
     case selectSuggestion(Taigi_Engine_SelectSuggestion)
     case commitPreeditThenInsertExternal(Taigi_Engine_CommitPreeditThenInsertExternal)
     case reset(Taigi_Engine_Reset)
+    /// --- UI-driven ops (20s) ---
     case setSelectedCandidateIndex(Taigi_Engine_SetSelectedCandidateIndex)
     case queryState(Taigi_Engine_QueryState)
 

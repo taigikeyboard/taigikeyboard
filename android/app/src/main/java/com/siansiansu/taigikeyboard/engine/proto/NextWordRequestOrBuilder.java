@@ -11,7 +11,7 @@ public interface NextWordRequestOrBuilder extends
 
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -20,7 +20,7 @@ public interface NextWordRequestOrBuilder extends
   boolean hasWordSelected();
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -136,6 +136,7 @@ public interface NextWordRequestOrBuilder extends
 
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -146,6 +147,7 @@ public interface NextWordRequestOrBuilder extends
   boolean hasFilterPredictions();
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -180,7 +182,7 @@ public interface NextWordRequestOrBuilder extends
 
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -189,7 +191,7 @@ public interface NextWordRequestOrBuilder extends
   boolean hasQueryState();
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>

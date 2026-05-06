@@ -77,7 +77,7 @@ public  final class NextWordRequest extends
   public static final int WORD_SELECTED_FIELD_NUMBER = 10;
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -88,7 +88,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -102,7 +102,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -114,7 +114,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -132,7 +132,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * State-mutating intents — return DecideResult.
+   * --- State-mutating intents (10s) — return DecideResult ---
    * </pre>
    *
    * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -547,6 +547,7 @@ public  final class NextWordRequest extends
   public static final int FILTER_PREDICTIONS_FIELD_NUMBER = 20;
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -559,6 +560,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -574,6 +576,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -587,6 +590,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -606,6 +610,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
+   * --- Pure post-query helpers (20s) ---
    * Pure post-query filter+merge+sort+limit — return FilterResult
    * (handles stale-gen drop).
    * </pre>
@@ -702,7 +707,7 @@ public  final class NextWordRequest extends
   public static final int QUERY_STATE_FIELD_NUMBER = 30;
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -713,7 +718,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -727,7 +732,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -739,7 +744,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -757,7 +762,7 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Pure read — return StateSnapshot.
+   * --- Pure reads (30s) — return StateSnapshot ---
    * </pre>
    *
    * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -880,7 +885,7 @@ public  final class NextWordRequest extends
 
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -891,7 +896,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -902,7 +907,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -914,7 +919,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -927,7 +932,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -939,7 +944,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * State-mutating intents — return DecideResult.
+     * --- State-mutating intents (10s) — return DecideResult ---
      * </pre>
      *
      * <code>.taigi.engine.WordSelected word_selected = 10;</code>
@@ -1360,6 +1365,7 @@ public  final class NextWordRequest extends
 
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1372,6 +1378,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1384,6 +1391,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1397,6 +1405,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1411,6 +1420,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1424,6 +1434,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
+     * --- Pure post-query helpers (20s) ---
      * Pure post-query filter+merge+sort+limit — return FilterResult
      * (handles stale-gen drop).
      * </pre>
@@ -1522,7 +1533,7 @@ public  final class NextWordRequest extends
 
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -1533,7 +1544,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -1544,7 +1555,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -1556,7 +1567,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -1569,7 +1580,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
@@ -1581,7 +1592,7 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Pure read — return StateSnapshot.
+     * --- Pure reads (30s) — return StateSnapshot ---
      * </pre>
      *
      * <code>.taigi.engine.NextWordQueryState query_state = 30;</code>
