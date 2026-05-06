@@ -40,12 +40,6 @@ enum LetterCase {
 // =========================================================================
 
 message CaseRequest {
-  // Tag 30 reserved — `AdjustNasalMarkerCase` was drafted in commit 2 but
-  // removed in the mid-slice Codex amend pass: no platform call site uses
-  // it standalone (only via `transform_suggestion` post-process and
-  // `Method::NormalizeTone` in-band). Reserve to prevent silent re-use.
-  reserved 30;
-
   oneof method {
     // --- Per-char (single grapheme cluster) helpers ---
     UppercaseToneChar       uppercase_tone_char        = 10;

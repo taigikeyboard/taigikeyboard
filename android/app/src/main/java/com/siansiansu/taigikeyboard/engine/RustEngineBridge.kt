@@ -51,8 +51,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * D9.4 surface: 15 typed phonetics methods + lazy `toneVariations` cache +
  * structured error visibility. Composing / NextWord / Lexicon / case-transform
- * methods live on dedicated bridge files. See
- * `engine/protos/proto/phonetics.proto` reserved-tag block for retired ops.
+ * methods live on dedicated bridge files. Retired-op history available via
+ * git log on `engine/protos/proto/phonetics.proto`.
  *
  * Per Codex v2 §7: `normalizeTone` requires `ToneToggles` mandatory
  * parameter — no `ToneToggles(true, true)` silent default.

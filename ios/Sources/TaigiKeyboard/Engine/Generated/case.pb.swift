@@ -303,7 +303,7 @@ extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding {
 
 extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{3}capitalize_candidate\0\u{3}transform_suggestion\0\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{3}capitalize_candidate\0\u{3}transform_suggestion\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {

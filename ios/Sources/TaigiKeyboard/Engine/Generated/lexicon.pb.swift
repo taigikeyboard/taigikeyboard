@@ -1218,7 +1218,7 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProcessCandidatesRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0\u{3}normalized_input\0\u{4}\u{2}tps_dedup_enabled\0\u{1}freq\0\u{3}now_ms\0\u{3}include_breakdown\0\u{3}merge_order_only\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0\u{3}normalized_input\0\u{4}\u{2}tps_dedup_enabled\0\u{1}freq\0\u{3}now_ms\0\u{3}include_breakdown\0\u{3}merge_order_only\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {

@@ -134,16 +134,6 @@ The merged D9.4 shape uses an `oneof method` dispatch with 15 ops grouped into 3
 
 ```protobuf
 message PhoneticsRequest {
-  // D9.2 legacy flat fields (`op` enum + `string input`) replaced by
-  // oneof method in D9.4. Tags 1, 2 reserved.
-  // Tags 40, 41 reserved — previously AdjustNasalMarkerCase + NfdPreprocess;
-  // removed in PR #187 follow-up after their only callers reverted to
-  // platform-side helpers for JVM unit-test compatibility.
-  // Tags 17, 31 reserved — previously HasToneMarks + TpsToTl; removed in
-  // dead-surface cleanup (2026-05-04) after the v3.5.7 classification slice
-  // consolidated the per-keystroke ladder into `Method::ClassifyInput`.
-  reserved 1, 2, 17, 31, 40, 41;
-
   oneof method {
     // Phonetics core (8 ops): NormalizeTone, StripTone, PojToTl, TlToPoj,
     // NormalizeToTl, NormalizeInput, RestoreTone, GetToneVariations.
@@ -162,7 +152,6 @@ message PhoneticsRequest {
 }
 
 message PhoneticsResponse {
-  reserved 1, 2;                       // D9.2 legacy flat fields
   oneof result {
     StringResult string_result = 10;
     StripToneResult strip_tone_result = 11;
@@ -272,11 +261,6 @@ Canonical source: `engine/protos/proto/case.proto`. Own file (NOT a `lexicon.pro
 
 ```protobuf
 message CaseRequest {
-  // Tag 30 reserved — `AdjustNasalMarkerCase` was drafted but removed in
-  // mid-slice review (no platform call site uses it standalone — only via
-  // `transform_suggestion` post-process and `Method::NormalizeTone` in-band).
-  reserved 30;
-
   oneof method {
     UppercaseToneChar       uppercase_tone_char        = 10;
     FullUppercaseToneString full_uppercase_tone_string = 11;
@@ -325,7 +309,6 @@ message CaseResponse {
 
 - Bytes vs string vs repeated for candidate lists (perf measurement needed).
 - Streaming responses for incremental candidate updates (vs full snapshot).
-- Versioning strategy: enum reserved values + field number reservation policy.
 - Whether NextWord generation ownership migrates from platform to Rust.
 - UI-driven candidate selection (e.g. candidate-bar tap, arrow-key navigation) currently mutates `selectedCandidateIndex` directly via the platform-side `setSelectedCandidateIndex` mutator (`ComposingState.swift:69-77`), bypassing `apply(Intent, ...)`. A wire intent (`SetSelectedCandidateIndex { index }`) lands when navigation-bar interaction is integrated into the Rust composing slice — Phase III decision based on D9 measurements.
 

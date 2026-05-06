@@ -8,8 +8,8 @@ import SwiftProtobuf
 ///
 /// D9.4 surface: 15 typed phonetics methods + lazy `toneVariations` cache +
 /// structured error visibility. Composing / NextWord / Lexicon / case-transform
-/// methods live in dedicated `RustEngineBridge+*.swift` extensions. See
-/// `engine/protos/proto/phonetics.proto` reserved-tag block for retired ops.
+/// methods live in dedicated `RustEngineBridge+*.swift` extensions. Retired-op
+/// history available via git log on `engine/protos/proto/phonetics.proto`.
 ///
 /// Per `feedback_codex_review_sandwich.md` Codex v2 §7: every method
 /// requiring AppConfig (currently NormalizeTone for POJ preprocessing)

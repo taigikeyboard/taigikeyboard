@@ -64,11 +64,6 @@ message LexiconRequest {
 message ProcessCandidatesRequest {
   repeated TaigiWord raw = 1;
   string normalized_input = 2;
-  // Tag 3 was originally reserved in audit § 6.2 for `InputMode mode`,
-  // dropped during impl per audit § 3 (engine never derives the
-  // tps-dedup gate from input_mode; platform decides). Reserved to
-  // preserve the audit's wire layout and prevent accidental reuse.
-  reserved 3;
   bool tps_dedup_enabled = 4;
   repeated FrequencyEntry freq = 5;
   int64 now_ms = 6;

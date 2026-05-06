@@ -21,21 +21,6 @@ option java_multiple_files = true;
 // =========================================================================
 
 message PhoneticsRequest {
-  // D9.2 legacy flat fields (`op` enum + `string input`) replaced by
-  // oneof intent in D9.4. Field numbers 1–2 reserved to prevent silent
-  // wire-format collision if any old bytes are encountered.
-  // Tags 40, 41 reserved — previously `AdjustNasalMarkerCase` and
-  // `NfdPreprocess`; removed in the PR #187 follow-up after their only
-  // callers reverted to platform-side helpers for JVM unit-test
-  // compatibility.
-  // Tags 17, 31 reserved — previously `HasToneMarks` and `TpsToTl`;
-  // removed in dead-surface cleanup (2026-05-04) after the v3.5.7
-  // classification slice consolidated the per-keystroke ladder ops
-  // into `Method::ClassifyInput`. Both helpers remain inside Rust
-  // (see `phonetics::has_tone_marks` + `phonetics::tps_to_tl`) but no
-  // longer cross the FFI boundary.
-  reserved 1, 2, 17, 31, 40, 41;
-
   oneof method {
     // --- Phonetics core (8 ops) ---
     NormalizeTone normalize_tone = 10;
@@ -158,10 +143,6 @@ message TpsInputAdjust {
 // =========================================================================
 
 message PhoneticsResponse {
-  // D9.2 legacy flat fields (`output` + `tone_restored`) replaced by
-  // oneof result in D9.4.
-  reserved 1, 2;
-
   oneof result {
     StringResult string_result = 10;
     StripToneResult strip_tone_result = 11;

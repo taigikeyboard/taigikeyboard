@@ -611,7 +611,7 @@ fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{4}\u{2}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{4}\u{2}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{11}\u{1}\u{c}\u{1f}\u{1}\u{c}(\u{1}\u{c})\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{4}\u{2}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{4}\u{2}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1400,7 +1400,7 @@ extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftProtobuf._Mes
 
 extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{3}optional_string_result\0\u{3}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{3}optional_string_result\0\u{3}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
