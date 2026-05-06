@@ -1,9 +1,13 @@
+// 中文: 整體備份 / 復原子頁。
+// 中文: 透過 .taigi 備份檔一次匯入匯出全部使用者資料(自訂詞庫、詞頻、聯想資料)。
+
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
 /// Backup/Restore sub-page
 /// Provides export and import of all user data
+// 中文: 備份 / 復原子頁的根 View。資料層由 DataManagementViewModel + BackupService 提供。
 struct DataManagementView: View {
     @StateObject private var viewModel = DataManagementViewModel()
 
@@ -89,6 +93,7 @@ struct DataManagementView: View {
 
     // MARK: - Backup / Restore
 
+    // 中文: 觸發匯出流程 — 從 ViewModel 取 BackupExportPayload,設定檔名與 BackupDocument,彈出 fileExporter。
     private func exportBackup() {
         Task {
             do {
@@ -103,6 +108,7 @@ struct DataManagementView: View {
         }
     }
 
+    // 中文: 處理 fileImporter 結果 — 呼叫 ViewModel.importBackup,組三類資料筆數訊息,彈 alert + haptic。
     private func handleBackupImport(_ result: Result<[URL], Error>) {
         switch result {
         case let .success(urls):

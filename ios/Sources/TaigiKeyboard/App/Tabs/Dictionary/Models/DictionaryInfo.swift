@@ -1,6 +1,10 @@
+// 中文: DictionaryTab 詞典 info button 用的 metadata — 顯示說明文字與外部連結。
+// 中文: extension 內每個 static 對應一個系統詞典(教育部 / iTaigi / 台日大辭典 …)。
+
 import Foundation
 
 /// Dictionary metadata for info buttons in DictionaryTab.
+// 中文: 詞典資訊資料 model:說明文字 + 詞典官網連結。
 struct DictionaryInfo {
     let description: String
     let websiteURL: URL?

@@ -1,3 +1,6 @@
+// 中文: AppearanceSettingsView 的 ViewModel。集中管理外觀相關的 published state
+// 中文: 與其 SharedSettings 持久化動作。
+
 import Foundation
 import SwiftUI
 
@@ -6,10 +9,13 @@ import SwiftUI
 /// Owns every piece of appearance state (colors, sliders, font) plus its
 /// defaults and persistence. The view binds directly to published properties
 /// and calls the `set…` / `reset…` methods for side effects.
+// 中文: 外觀設定 ViewModel(@MainActor + ObservableObject)。
+// 中文: 持有所有 slider / 顏色 / 字型 published 屬性,並透過 SharedSettings 落盤。
 @MainActor
 final class AppearanceSettingsViewModel: ObservableObject {
     // MARK: - Defaults
 
+    // 中文: 外觀設定的預設值常數集合(顏色、slider 範圍、字型)。
     enum Defaults {
         static let keyboardBackground = Color.keyboardBackground
         static let keyText = Color.keyboardButtonForeground
@@ -48,6 +54,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     @Published var candidateBackground: Color
 
     /// Tracks which colors have been explicitly customized (non-nil = customized).
+    // 中文: 記錄哪幾個顏色 row 被使用者改過(non-nil 即代表已自訂),驅動 reset 按鈕顯示。
     @Published var savedColors: KeyboardColorSettings
 
     // MARK: - Dependencies
@@ -103,6 +110,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     // MARK: - Color persistence
 
     /// Persist a color change for `keyPath` and mark it as customized.
+    // 中文: 寫入單一顏色 row 的最新值並標記為已自訂(savedColors 同步更新)。
     func applyColorChange(
         _ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>,
         to color: Color,
@@ -114,6 +122,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
 
     /// Reset a single color row to default (marks as not customized).
+    // 中文: 把單一顏色 row 還原為 nil(預設色),解除自訂標記。
     func resetColor(
         _ keyPath: WritableKeyPath<KeyboardColorSettings, CodableColor?>,
     ) {
@@ -126,6 +135,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     // MARK: - Reset all
 
     /// Reset every appearance setting (sliders, font, colors) to defaults.
+    // 中文: 一次重置所有外觀設定(slider、字型、顏色)到 Defaults 並落盤。
     func resetAllAppearance() {
         selectedFontType = Defaults.fontType
         settings.fontType = Defaults.fontType

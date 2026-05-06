@@ -1,7 +1,11 @@
+// 中文: LayoutTab(齒佈)所有 UI 文字常數。包含 4 種版面挑選 + 外觀設定子頁的所有
+// 中文: row label / Section header / 重置按鈕文字。
+
 // MARK: - LayoutTab 齒佈文字
 
 // 包含：齒佈選擇頁面
 
+// 中文: 齒佈頁文字 namespace。MARK 子區塊對應「外觀設定」子頁的 Form Section 切分。
 enum LayoutTexts {
     // MARK: - Tab 標題
 

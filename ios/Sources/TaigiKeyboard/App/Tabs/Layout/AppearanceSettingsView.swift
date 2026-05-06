@@ -1,3 +1,6 @@
+// 中文: Layout Tab 下的「外觀設定」子頁。提供字型、配色、按鍵尺寸、候選列字級
+// 中文: 等可調項目,並在底部錨定 KeyboardPreviewPanel 預覽。
+
 import KeyboardKit
 import SwiftUI
 
@@ -5,6 +8,8 @@ import SwiftUI
 ///
 /// Provides font selection, 4 sliders for key height, key font size, candidate text size,
 /// and key corner radius, with a keyboard preview anchored at the bottom.
+// 中文: 外觀設定 SwiftUI 子頁。包含字型挑選、4 條尺寸 slider、配色 row,
+// 中文: 與底部固定的 KeyboardPreviewPanel。
 struct AppearanceSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = AppearanceSettingsViewModel()
@@ -206,6 +211,7 @@ struct AppearanceSettingsView: View {
 
 // MARK: - Font Picker Subpage
 
+// 中文: 字型挑選子頁。列出 FontType.allCases,點選即更新 binding 與通知 viewModel。
 private struct AppearanceFontPickerView: View {
     @Binding var selectedFont: FontType
     var onChange: (FontType) -> Void

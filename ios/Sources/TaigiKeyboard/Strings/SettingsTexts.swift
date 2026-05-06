@@ -1,7 +1,11 @@
+// 中文: SettingsTab(齒盤設定)所有 UI 文字常數。包含輸入模式、拍字行為、回饋、
+// 中文: POJ / TPS、診斷複製、重置等所有 row label 與資訊提示文字。
+
 // MARK: - SettingsTab 設定文字
 
 // 包含：鍵盤設定頁面
 
+// 中文: 設定頁文字 namespace。MARK 子區塊對應 SettingsTab 的每一個 Form Section。
 enum SettingsTexts {
     // MARK: - Tab 標題
 

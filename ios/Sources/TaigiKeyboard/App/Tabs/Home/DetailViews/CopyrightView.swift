@@ -1,6 +1,9 @@
+// 中文: 字型 / 詞典 / 開源專案的版權聲明頁。
+
 import SwiftUI
 
 /// Copyright notices for dictionaries and open-source projects.
+// 中文: 版權聲明頁。各區段透過 CopyrightSection 渲染:title、描述、授權、連結。
 struct CopyrightView: View {
     var body: some View {
         Form {
@@ -130,6 +133,7 @@ struct CopyrightView: View {
 
 // MARK: - Copyright Section
 
+// 中文: 單一版權項目的 Section 子 View。licenseURL 必填,websiteURL 可選。
 private struct CopyrightSection: View {
     let title: String
     let description: String

@@ -1,8 +1,13 @@
+// 中文: 自訂詞庫資料管理子頁。
+// 中文: 含啟用開關、CSV 匯入匯出、新增 / 編輯(alert 表單)、單筆刪除、全部清除、過濾搜尋。
+
 import SwiftUI
 import UniformTypeIdentifiers
 
 /// Custom dictionary subpage
 /// Lists all user-added entries with add/edit/delete and import/export
+// 中文: 自訂詞庫管理子頁的根 View。資料層由 CustomDictionaryViewModel 提供;
+// 中文: 匯入匯出由 ImportExportHandler 負責。
 struct CustomDictionaryView: View {
     @StateObject private var viewModel = CustomDictionaryViewModel()
     @StateObject private var importExport = ImportExportHandler()
@@ -14,6 +19,8 @@ struct CustomDictionaryView: View {
     @State private var hanziInput = ""
     @State private var showDeleteAllAlert = false
 
+    // 中文: 依 filterText 對 roman / hanzi 做大小寫不敏感子字串比對;
+    // 中文: 無關鍵字時最多顯示 100 筆以避免大量列表卡頓。
     private var filteredEntries: [CustomDictionaryEntry] {
         if filterText.isEmpty {
             return Array(viewModel.entries.prefix(100))
@@ -206,6 +213,7 @@ struct CustomDictionaryView: View {
 
     // MARK: - Actions
 
+    // 中文: alert 表單儲存動作 — trim 兩欄並驗證非空,然後依 editingEntry 是否存在新增/更新。
     private func saveEntryFromAlert() {
         let trimmedRoman = romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedHanzi = hanziInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -226,6 +234,7 @@ struct CustomDictionaryView: View {
         Task { await viewModel.save(entry) }
     }
 
+    // 中文: 把 fileImporter 結果轉交 ImportExportHandler;完成後重新載入清單。
     private func handleImport(_ result: Result<[URL], Error>) {
         importExport.handleFileImport(
             result,

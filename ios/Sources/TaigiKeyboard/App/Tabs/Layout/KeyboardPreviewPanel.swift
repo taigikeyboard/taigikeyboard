@@ -1,3 +1,5 @@
+// 中文: 外觀設定子頁底部的鍵盤預覽面板。重用真實 TaigiKeyboardView 並注入 mock 候選列。
+
 import KeyboardKit
 import SwiftUI
 
@@ -5,6 +7,8 @@ import SwiftUI
 /// All appearance settings (key height, font size, candidate text size, corner radius, font)
 /// propagate automatically through the injected `KeyboardEnvironment` →
 /// `CustomLayoutService` / `ButtonFontProvider`.
+// 中文: 顯示用鍵盤預覽 View。外觀參數透過注入的 KeyboardEnvironment 自動傳遞,
+// 中文: 不接受實際輸入,候選列為靜態 mock 項。
 struct KeyboardPreviewPanel: View {
     let keyHeightScale: Double
     let keyFontSizeScale: Double
@@ -42,6 +46,7 @@ struct KeyboardPreviewPanel: View {
         }
     }
 
+    // 中文: 在 onAppear 設定預覽用 KeyboardContext + 注入 mock 候選詞,讓使用者看到視覺效果。
     private func configurePreviewContext() {
         let ctx = previewState.keyboardContext
         ctx.isLiquidGlassEnabled = false
@@ -54,6 +59,7 @@ struct KeyboardPreviewPanel: View {
         ]
     }
 
+    // 中文: 依 fontType 產生對應的 KeyboardKit Callout 樣式,確保彈出 callout 的字型與按鍵一致。
     private static func createCalloutStyle(fontType: FontType) -> Callouts.CalloutStyle {
         switch fontType {
         case .system:

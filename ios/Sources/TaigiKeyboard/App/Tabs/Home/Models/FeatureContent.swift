@@ -1,24 +1,32 @@
+// 中文: HomeTab 的 features / FAQ 內容資料模型。
+// 中文: JSON 檔內以 {"hanji": "..."} 包裝在地化文字以同時支援 iOS / Android,
+// 中文: iOS 端只取 hanji 欄位解出 String。
+
 import Foundation
 
 // MARK: - HomeTab content models (parsed from tab1-features.json / tab1-faq.json)
 
 /// Root container for the features JSON file.
+// 中文: tab1-features.json 的根容器。
 struct FeaturesFile: Codable {
     let features: [FeatureContent]
 }
 
 /// Root container for the FAQ JSON file.
+// 中文: tab1-faq.json 的根容器。
 struct FAQsFile: Codable {
     let faqs: [FeatureContent]
 }
 
 /// JSON stores localized text as {"hanji": "..."} for cross-platform compatibility.
 /// iOS only uses the hanji value, so we decode it into a plain String.
+// 中文: 跨平台 JSON 共用格式 — Android 也讀同份檔。iOS 只取 hanji。
 private struct HanjiText: Decodable {
     let hanji: String
 }
 
 /// A single feature description entry.
+// 中文: 單筆 feature / FAQ 項目。title / summary 走 hanji 欄位解碼。
 struct FeatureContent: Codable, Identifiable {
     let id: String
     let title: String
@@ -41,6 +49,7 @@ struct FeatureContent: Codable, Identifiable {
 }
 
 /// A paragraph with optional media attachment.
+// 中文: 一個段落:文字 + 可選 media / link / navigation attachment。
 struct FeatureParagraph: Codable {
     let text: String
     let attachment: ParagraphAttachment?
@@ -57,12 +66,14 @@ struct FeatureParagraph: Codable {
 }
 
 /// Platform-specific icon names.
+// 中文: 跨平台 icon 名稱對照(iOS = SF Symbol;Android = Material name)。
 struct PlatformIcon: Codable {
     let ios: String
     let android: String
 }
 
 /// Media attachment on a paragraph.
+// 中文: 段落附件:slideshow(輪播)/ image / link(外部連結)/ navigation(in-app 導覽)。
 enum ParagraphAttachment: Codable {
     case slideshow(images: [String], interval: Double)
     case image(name: String)

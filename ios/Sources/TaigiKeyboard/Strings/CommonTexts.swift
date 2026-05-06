@@ -1,8 +1,11 @@
+// 中文: 跨 Tab 共用的 UI 文字常數集中地。對應 Android `CommonTexts.kt`。
+
 // MARK: - 共用文字
 
 // 跨 Tab 共用 ê 文字常數
 // 對應 Android CommonTexts.kt
 
+// 中文: 共用文字 namespace。包含詞典顯示名、字型顯示名與基本通用詞彙。
 enum CommonTexts {
     // MARK: - 辭典名稱
 

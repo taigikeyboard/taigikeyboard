@@ -1,7 +1,11 @@
+// 中文: DictionaryTab(詞庫管理)所有 UI 文字常數。包含詞庫切換、CSV 匯入/匯出、
+// 中文: 詞頻、詞關聯、備份還原、隱私警語等所有 row 顯示字串。
+
 // MARK: - DictionaryTab 詞庫文字
 
 // 包含：詞庫管理頁面
 
+// 中文: 詞庫管理頁文字 namespace。每個 MARK 子區塊對應 UI 上的一個 Section/子頁。
 enum DictionaryTexts {
     // MARK: - Tab 標題
 

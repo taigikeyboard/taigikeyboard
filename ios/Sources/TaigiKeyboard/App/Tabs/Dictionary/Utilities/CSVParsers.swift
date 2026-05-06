@@ -1,8 +1,12 @@
+// 中文: CSVDocument 的 decode/encode 擴充 — 詞頻 (word,count) + 聯想詞 5 欄格式。
+// 中文: 解析時跳過空行、缺欄、計數非正整數的列;NextWordService.AssociationEntry 為來源型別。
+
 import Foundation
 
 extension CSVDocument {
     // MARK: - Frequency
 
+    // 中文: 解析詞頻 CSV(2 欄:word,count);過濾掉空 word 與非正整數 count。
     static func decodeFrequencyCSV(_ csv: String) -> [(word: String, count: Int)] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [(word: String, count: Int)] = []
@@ -20,6 +24,7 @@ extension CSVDocument {
         return entries
     }
 
+    // 中文: 把詞頻清單編成 CSV 字串(每列 word,count\n);word 走 escape() 轉義。
     static func encodeFrequencyCSV(_ entries: [(word: String, count: Int)]) -> String {
         var csv = ""
         for item in entries {
@@ -30,6 +35,7 @@ extension CSVDocument {
 
     // MARK: - Association
 
+    // 中文: 聯想詞 CSV 一列的具名 tuple — 5 欄:prev/next 漢字 + prev/next TL + count。
     typealias AssociationCSVRow = (
         prevWord: String,
         prevTl: String,
@@ -38,6 +44,7 @@ extension CSVDocument {
         count: Int
     )
 
+    // 中文: 解析聯想詞 CSV(5 欄);過濾掉空 nextWord 與非正整數 count 的列。
     static func decodeAssociationCSV(_ csv: String) -> [AssociationCSVRow] {
         let lines = csv.components(separatedBy: .newlines)
         var entries: [AssociationCSVRow] = []
@@ -57,6 +64,7 @@ extension CSVDocument {
         return entries
     }
 
+    // 中文: 把聯想詞清單編成 CSV(5 欄);每個字串欄都走 escape() 轉義。
     static func encodeAssociationCSV(_ entries: [NextWordService.AssociationEntry]) -> String {
         var csv = ""
         for item in entries {

@@ -1,9 +1,14 @@
+// 中文: Dictionary 分頁主畫面 — 詞典開關、自訂詞庫、頻率/聯想資料管理、跨詞典搜尋。
+// 中文: 各 NavigationLink 子畫面分別由 CustomDictionaryView / FrequencyDataView /
+// 中文: AssociationDataView / DataManagementView 處理。
+
 import SwiftUI
 import UIKit
 
 /// Dictionary tab.
 ///
 /// Manage dictionary toggles, custom dictionary, frequency/association data, and search.
+// 中文: Dictionary 分頁的根 View,組裝詞典開關區塊、底部搜尋列與查詢結果浮層。
 struct DictionaryTab: View {
     @StateObject private var searchVM = DictionarySearchViewModel()
 
@@ -263,6 +268,7 @@ struct DictionaryTab: View {
 
     // MARK: - Dictionary Toggle with Description + Link
 
+    // 中文: 帶外部連結 + 說明文字的詞典開關列(MOE / 補充類詞典使用)。
     private func dictToggleWithDescription(
         title: String,
         url: String,
@@ -300,6 +306,7 @@ struct DictionaryTab: View {
 
     // MARK: - Dictionary Toggle with Info Button
 
+    // 中文: 帶資訊按鈕的詞典開關列(顯示 DictionaryInfo.description 彈窗)。
     private func dictionaryToggle(
         _ text: String,
         isOn: Binding<Bool>,

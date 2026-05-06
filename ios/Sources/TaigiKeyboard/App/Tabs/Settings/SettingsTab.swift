@@ -1,3 +1,7 @@
+// 中文: Settings Tab — App 主要設定頁。內含輸入模式、輸入行為、鍵盤、回饋、
+// 中文: POJ / TPS 切換、診斷複製/分享/Email、重置等 Section。
+// 中文: 部分開關透過 KeyboardKit @AppStorage 與 keyboard extension 共用 App Group。
+
 import KeyboardKit
 import SwiftUI
 import UIKit
@@ -5,6 +9,8 @@ import UIKit
 /// Settings tab.
 ///
 /// Input mode, typing options, keyboard toggles, feedback, and diagnostics.
+// 中文: Settings Tab View。集中所有設定 row,並透過 SharedSettings / KeyboardKit
+// 中文: App Group UserDefaults 雙路徑落盤。
 struct SettingsTab: View {
     private let settings = SharedSettings.shared
 
@@ -260,6 +266,7 @@ struct SettingsTab: View {
 
     // MARK: - Feature Summary Lookup
 
+    // 中文: 依 featureId 從 FeatureContentLoader 找對應的功能摘要,供 SettingInfoButton 顯示。
     private func featureSummary(_ featureId: String) -> String {
         FeatureContentLoader.features
             .first(where: { $0.id == featureId })?
@@ -268,6 +275,8 @@ struct SettingsTab: View {
 
     // MARK: - Actions
 
+    // 中文: 觸發 SettingsResetCoordinator 全量重置(設定 + 使用者資料),並把本地 @State
+    // 中文: 同步回預設,最後給一次 medium 觸覺回饋。
     private func resetAllSettings() {
         SettingsResetCoordinator.resetAll()
         SettingsResetCoordinator.resetAllUserData()

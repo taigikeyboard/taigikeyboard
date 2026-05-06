@@ -1,8 +1,14 @@
+// 中文: HomeTab(頭頁)所有 UI 文字常數。包含啟用導引、功能說明、版本歷史、
+// 中文: 寄付支持、版權聲明等。對應 Android `HomeTexts.kt`。
+// 中文: Feature / FAQ 內容已外移到 content/tab1-features.json + tab1-faq.json,
+// 中文: 由 FeatureContentLoader 動態載入。
+
 // MARK: - HomeTab 頭頁文字
 
 // 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、問題回報、版權聲明
 // 對應 Android HomeTexts.kt
 
+// 中文: 頭頁文字 namespace。MARK 子區塊與頁面 Section 對應。
 enum HomeTexts {
     // MARK: - Tab 標題
 
@@ -54,6 +60,8 @@ enum HomeTexts {
     static let version = "當前版本"
     static let versionHistory = "版本紀錄"
 
+    // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
+    // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
         ("3.5.6", "2026/05/02", [
             "Internal: dictionary read path rewritten in Rust (no behavior change).",
