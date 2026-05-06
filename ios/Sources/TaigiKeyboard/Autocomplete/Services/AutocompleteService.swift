@@ -1,3 +1,6 @@
+// 中文: Taigi 候選詞 autocomplete service — 串接 input classifier、LexiconService、
+// 中文: NextWord boost、SuggestionCaseTransformer 共四個階段,輸出 KeyboardKit Suggestion 列表。
+
 import Foundation
 import KeyboardKit
 
@@ -69,10 +72,12 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - 公開介面
 
+    // 中文: 注入組字狀態 provider(通常是 ComposingManager)。
     func setComposingManager(_ provider: any ComposingStateProvider) {
         composingState = provider
     }
 
+    // 中文: 注入選詞上下文 provider(通常是 NextWordController)。
     func setSelectionContextProvider(_ provider: any SelectionContextProvider) {
         selectionContext = provider
     }
@@ -87,6 +92,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// captured at entry; if it changed (buffer cleared by backspace or new
     /// keystroke arrived), return `isOutdated: true` so KeyboardKit ignores
     /// this stale result instead of overwriting the cleared context.
+    // 中文: 過期結果防護 — KeyboardKit 內部 spawn 的 Task 無法取消,所以每次 await
+    // 中文: 之後都重檢 rawInput,變動則回 isOutdated: true 讓 KeyboardKit 丟棄結果。
     func autocomplete(_ text: String) async throws -> Autocomplete.Result {
         guard !text.isEmpty, let composing = activeComposingContext() else {
             return Autocomplete.Result(inputText: text, suggestions: [])
@@ -148,6 +155,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// platform `[TaigiWord] ↔ [String]` round-trip preserves intra-partition
     /// order so original `TaigiWord` identity (`id`, `hanzi`, etc.) is
     /// recovered post-bridge.
+    // 中文: 走 Rust nextwordBoostCandidates 做 context partition,平台只負責 round-trip
+    // 中文: 把 String 結果再對回原本的 TaigiWord,保留 id / hanzi 等欄位。
     private func applyContextBoost(words: [TaigiWord]) async -> [TaigiWord] {
         guard let selection = selectionContext,
               let lastWord = selection.lastSelectedWord, !lastWord.isEmpty
@@ -176,6 +185,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// preserving original word identity. Walks `displayOrder` and pulls the
     /// next `TaigiWord` from a per-display-text FIFO. Any size mismatch falls
     /// back to original order so a bridge failure cannot drop candidates.
+    // 中文: 把 bridge 回傳的 String 順序對回原 TaigiWord 列表 — 走每個 displayText 的 FIFO,
+    // 中文: 數量不符時 fallback 回原順序,避免 bridge 失敗導致掉候選詞。
     private static func remapBoostedWords(
         _ original: [TaigiWord],
         displayOrder: [String],

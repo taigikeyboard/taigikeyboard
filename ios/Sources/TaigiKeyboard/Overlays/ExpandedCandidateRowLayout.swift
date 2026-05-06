@@ -1,3 +1,6 @@
+// 中文: 展開候選 overlay 的 row 排版工具。
+// 中文: 依預先量測好的寬度把 suggestions 拆成多行,寬度不夠就換行。
+
 import CoreGraphics
 import KeyboardKit
 
@@ -5,13 +8,16 @@ import KeyboardKit
 ///
 /// UI-adjacent helper: depends on `Autocomplete.Suggestion` (KeyboardKit type).
 /// Not shared-core — inputs (available width, spacing, measurement) are injected.
+// 中文: 展開候選的 wrapping row 排版命名空間 — 不歸 shared-core,所有量測由外部注入。
 enum ExpandedCandidateRowLayout {
+    // 中文: 一個候選詞在排版後的位置資訊 — 原始 index + 量測寬度。
     struct RowItem {
         let suggestion: Autocomplete.Suggestion
         let originalIndex: Int
         let measuredWidth: CGFloat
     }
 
+    // 中文: 把 suggestions 依寬度排成多行 — 累計寬度超過 availableWidth 就換行。
     static func arrangeRows(
         suggestions: [Autocomplete.Suggestion],
         availableWidth: CGFloat,

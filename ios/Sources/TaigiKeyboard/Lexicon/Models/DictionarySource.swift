@@ -1,3 +1,6 @@
+// 中文: 辭典來源 enum — 對應 dictionary.csv 欄位,用於搜尋結果的 source 標籤與 badge 顯示。
+// 中文: bit 位置由 dictionary/common/source_bits.py 與 LexiconBitmask 共同擁有,allCases 順序非載入相依。
+
 import Foundation
 
 /// Dictionary source enum matching dictionary.csv column names.
@@ -12,6 +15,7 @@ import Foundation
 // MARK: - Shared-Core Candidate
 
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
+// 中文: 對應 dictionary.csv 欄位的辭典來源,custom 為 UI 標記用,沒有 dictionary.bin bit。
 enum DictionarySource: String, CaseIterable {
     case kautian // 教育部臺灣台語常用詞辭典
     case taigitv // 台語新詞辭庫
@@ -28,6 +32,7 @@ enum DictionarySource: String, CaseIterable {
     case custom // 自訂詞庫
 
     /// Short display name for badge.
+    // 中文: badge 顯示用的短名稱(中文)。
     var displayName: String {
         switch self {
         case .kautian: "教典"

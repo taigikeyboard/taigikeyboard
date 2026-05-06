@@ -1,3 +1,6 @@
+// 中文: 使用者自訂詞庫 repository — CRUD、prefix search(async + sync hot path)、
+// 中文: CSV 批次匯入。schema / migration / capacity / derivation 都拆到鄰近檔案。
+
 import Foundation
 import SQLite3
 
@@ -10,6 +13,7 @@ import SQLite3
 /// - `CustomDictionaryMigrator`: forward data migrations (ALTER + backfill)
 /// - `CustomDictionaryCapacityPolicy`: row-count cap + TOCTOU-safe guard
 /// - `CustomDictionaryDerivation`: pure derivation of search-key variants
+// 中文: 自訂詞庫 repository 主類 — 對外 API 與 single-flight schema gate。
 final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - Properties
 
@@ -45,6 +49,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     // MARK: - CRUD
 
     /// Insert or update an entry (upsert by id).
+    // 中文: 依 id upsert 一筆。容量 guard 與寫入在同一個 transaction,避免 TOCTOU。
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -71,6 +76,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Fetch all entries ordered by updated_at descending.
+    // 中文: 取出所有 row,依 updated_at 由新到舊排序。
     func fetchAll() async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -100,6 +106,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     ///   - prefix: Preprocessed search prefix (`roman_num` key for toned,
     ///     `notone` key for toneless).
     ///   - isToneAware: When true, matches `roman_num`; otherwise `notone`.
+    // 中文: 依 prefix 查詢(async)。toneAware → 比對 roman_num,toneless → 比對 notone。
     func search(prefix: String, isToneAware: Bool, limit: Int = 50) async throws -> [CustomDictionaryEntry] {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -110,6 +117,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Search entries synchronously (for the keyboard extension hot path).
     /// Returns `[]` when the DB is not yet connected — callers must accept
     /// empty results on the very first keystroke rather than blocking.
+    // 中文: keyboard extension hot path 用的同步版本。連線未就緒就回空陣列,絕不 block。
     func searchSync(prefix: String, isToneAware: Bool, limit: Int = 50) -> [CustomDictionaryEntry] {
         guard connectionManager.isConnected() else { return [] }
         do {
@@ -122,6 +130,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Delete an entry by id.
+    // 中文: 依 id 刪除一筆。
     func delete(id: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -136,6 +145,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Delete all entries.
+    // 中文: 清空整張表。
     func deleteAll() async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -144,6 +154,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Total entry count.
+    // 中文: 總 row 數。
     func count() async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -159,6 +170,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// so a single transaction can never hold locks for long, and stops
     /// early when `maxEntries` is reached. Duplicates (same `roman|hanzi`
     /// key) are skipped.
+    // 中文: CSV 批次匯入 — 每 importBatchSize 筆 commit 一次,鎖不會抓太久;
+    // 中文: 達到 maxEntries 即停止;以 roman|hanzi 為去重鍵跳過重複。
     func batchImport(_ entries: [CustomDictionaryEntry]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -239,6 +252,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Single-flight schema + migration initialization. Concurrent callers
     /// await the same `Task`; once it succeeds subsequent calls await a
     /// completed task (near-free). Failures clear the cache for retry.
+    // 中文: schema + migration 的 single-flight gate — 並行呼叫共用同一個 Task,
+    // 中文: 失敗時清掉 cache 讓下次 retry。
     private func createTablesIfNeeded() async throws {
         let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
             if let existing = _tableCreationTask {

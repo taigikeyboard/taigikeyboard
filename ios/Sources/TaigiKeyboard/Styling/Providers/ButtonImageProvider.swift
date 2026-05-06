@@ -1,3 +1,6 @@
+// 中文: 鍵面圖示 provider — 渲染鏈第一棒。
+// 中文: 只負責 globe / return / settings / translate 等圖示鍵,其餘 nil 交給 ButtonTextProvider 接手。
+
 import KeyboardKit
 import SwiftUI
 
@@ -9,6 +12,7 @@ import SwiftUI
 /// Created by: `TaigiKeyboardView.RenderProviders`
 /// Queried by: `TaigiButtonContent.body` (first priority check)
 /// Depends on: `KeyboardContext` (composing state, translate toggle state)
+// 中文: 鍵面圖示 provider — 渲染鏈第一棒,nil 即放行給文字 provider。
 final class ButtonImageProvider {
     private let keyboardContext: KeyboardContext
 
@@ -17,6 +21,8 @@ final class ButtonImageProvider {
     }
 
     /// Returns an SF Symbol image, or nil to defer to text rendering.
+    // 中文: 回傳 SF Symbol;nil 表示讓 ButtonTextProvider 接手。
+    // 中文: return 鍵在組字中時不顯示圖示,讓文字 provider 顯示「選 / soán / suán」確認字。
     func buttonImage(for action: KeyboardAction) -> Image? {
         switch action {
         case .nextKeyboard:

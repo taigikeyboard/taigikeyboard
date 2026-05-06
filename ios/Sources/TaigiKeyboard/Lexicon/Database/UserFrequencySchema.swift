@@ -1,3 +1,5 @@
+// 中文: 使用者詞頻 DB 的 DDL — 主表 + 索引 + metadata 補種子,純結構。
+
 import Foundation
 import SQLite3
 
@@ -7,11 +9,13 @@ import SQLite3
 /// No pruning, capacity, or scoring policy — those live in
 /// `UserFrequencyPruner` / the repository.
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
+// 中文: 使用者詞頻 schema — DDL only。pruning / capacity / scoring 政策都不在這裡。
 enum UserFrequencySchema {
     static let tableName = "user_frequency"
     static let metadataTableName = "metadata"
 
     /// Create all tables + indexes and seed metadata. Idempotent.
+    // 中文: 建立全部表 + 索引並補 metadata 種子。冪等。
     static func ensureTables(db: OpaquePointer) throws {
         try createFrequencyTable(db: db)
         createFrequencyIndexes(db: db)

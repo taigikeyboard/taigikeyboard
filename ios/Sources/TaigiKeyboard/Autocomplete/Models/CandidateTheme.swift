@@ -1,3 +1,6 @@
+// 中文: 候選詞 UI 主題 — 從使用者設定派生出尺寸 / 顏色,
+// 中文: 透過 SwiftUI environment 傳遞,讓 view 不必直接讀 SharedSettings。
+
 import SwiftUI
 
 /// Settings-dependent candidate UI theme.
@@ -6,6 +9,7 @@ import SwiftUI
 /// resolved once from `candidateTextSizeScale` + `KeyboardColorSettings` at the
 /// composition root. Passed down through the SwiftUI environment so
 /// `CandidateViewModels` no longer reaches out to `SharedSettings.shared`.
+// 中文: 候選詞 view 用的主題。組合根計算一次,沿著 environment 傳給所有候選詞 view。
 struct CandidateTheme: Equatable {
     // MARK: - Baseline constants
 
@@ -38,6 +42,7 @@ struct CandidateTheme: Equatable {
     // MARK: - Factory
 
     /// Derive a theme from user-adjustable settings.
+    // 中文: 從使用者可調設定 + 螢幕尺寸類別解析出主題。組合根呼叫一次。
     static func resolved(
         candidateTextSizeScale: CGFloat,
         colorSettings: KeyboardColorSettings,
@@ -69,6 +74,7 @@ struct CandidateTheme: Equatable {
 
     /// Baseline theme (scale = 1.0, default system colors). Used as the
     /// SwiftUI environment fallback when no composition root is in scope.
+    // 中文: 沒有組合根時的 environment fallback 主題(scale = 1.0、系統預設顏色)。
     static let standard: CandidateTheme = .init(
         height: baseHeight + bottomPadding,
         primaryFontSize: basePrimaryFontSize,

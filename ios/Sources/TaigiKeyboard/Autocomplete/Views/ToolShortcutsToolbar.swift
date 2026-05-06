@@ -1,3 +1,5 @@
+// 中文: 候選詞列上的工具快捷鍵 toolbar — `+` 切換按鈕與 9 個等寬功能按鈕(輸入模式 / 符號 / 佈局 / globe / 收合 / 設定)。
+
 import KeyboardKit
 import SwiftUI
 

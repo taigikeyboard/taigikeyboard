@@ -1,3 +1,6 @@
+// 中文: 鍵盤按鍵寬度的百分比常數 — 直向 / 橫向兩套參數。
+// 中文: 數值參考 iOS 標準鍵盤與 KeyboardKit 預設,LayoutConverter 用來算 itemWidth。
+
 import CoreGraphics
 
 /// 鍵盤佈局寬度比例常數

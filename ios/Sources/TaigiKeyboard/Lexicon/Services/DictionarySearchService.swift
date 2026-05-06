@@ -1,3 +1,6 @@
+// 中文: Dictionary tab(Tab 3)用的搜尋服務 — 與 keyboard 候選詞流程不同,
+// 中文: 提供 CJK / roman 路徑分流、kautian 優先排序、source bitmask filter 與 retag。
+
 import Foundation
 
 /// Search service backing the Dictionary tab.
@@ -12,6 +15,7 @@ import Foundation
 /// least one enabled source still arrive with their full source bitmask.
 /// `retagSources` then trims each row's `sources` array to enabled-only so
 /// the badge UI reflects the user's current toggles.
+// 中文: Tab 3 詞典搜尋 service — 與 keyboard 路徑分離,有自己的 source filter / 排序邏輯。
 final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Dependencies
 
@@ -37,6 +41,8 @@ final class DictionarySearchService: @unchecked Sendable {
     /// Eagerly open the custom-dictionary DB when the injected settings enable
     /// it, so `searchSync` has a live connection the moment a search arrives.
     /// Failures are logged and left to graceful degradation at lookup time.
+    // 中文: 設定有開啟自訂詞庫時,提早把 DB 連線打開,讓 searchSync 第一次呼叫就有連線可用。
+    // 中文: 連線失敗只 log,查詢時會 graceful degrade。
     private func bootstrapCustomDictionary() {
         guard settingsProvider.current.isCustomDictEnabled else { return }
         Task { [customDictionaryRepository, logger] in
@@ -57,6 +63,8 @@ final class DictionarySearchService: @unchecked Sendable {
     /// custom dictionary. Results are sorted with kautian (教育部) first, then
     /// by frequency; custom-dict hits lead the list. Awaits Trie readiness so
     /// searches arriving during the bootstrap window don't return empty.
+    // 中文: Tab 3 主搜尋 — 漢字走 CJK 路徑,羅馬字額外查自訂詞庫。
+    // 中文: 排序為 custom-dict → 教育部教典優先 → 頻率,filter / retag 用同一份 toggles snapshot。
     func search(
         query: String,
         limit: Int = 20,
@@ -155,6 +163,7 @@ final class DictionarySearchService: @unchecked Sendable {
     }
 
     /// Kautian (教育部) results first, then descending frequency.
+    // 中文: 教育部教典優先,其餘依 frequency 由大到小排序。
     private func sortByMoeThenFrequency(_ results: [DictionarySearchResult]) -> [DictionarySearchResult] {
         results.sorted { a, b in
             let aMoe = a.sources.contains(.kautian)
@@ -166,6 +175,8 @@ final class DictionarySearchService: @unchecked Sendable {
 
     /// Drop source tags the user has disabled so badges reflect current toggles.
     /// DB-layer filtering has already excluded results whose sources are all disabled.
+    // 中文: 把使用者關閉的 source tag 從顯示陣列移除,讓 badge 反映當前設定。
+    // 中文: DB 已經把全部 source 都關掉的 row 過濾掉了,這裡只處理多 source row 的呈現裁切。
     private func retagSources(
         _ result: DictionarySearchResult,
         enabled: Set<DictionarySource>,

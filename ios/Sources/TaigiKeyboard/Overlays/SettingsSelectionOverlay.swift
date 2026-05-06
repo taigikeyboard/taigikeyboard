@@ -1,3 +1,6 @@
+// 中文: 從工具列叫出的「設定」overlay — 不必離開鍵盤就能切換常用設定。
+// 中文: 涵蓋通用 / 回饋 / POJ 雙擊 / TPS or→ㄜ 對應 / 開啟主 App。
+
 import KeyboardKit
 import SwiftUI
 
@@ -6,6 +9,7 @@ import SwiftUI
 /// Displays keyboard behavior settings (toggles) directly from the keyboard toolbar,
 /// allowing the user to change settings without leaving the keyboard context.
 /// Follows the same overlay pattern as `LayoutSelectionOverlay`.
+// 中文: 鍵盤設定選擇面板 — 與 LayoutSelectionOverlay 採用相同的 overlay 樣式。
 struct SettingsSelectionOverlay: View {
     let isExpanded: Bool
     let onDismiss: () -> Void
@@ -23,6 +27,7 @@ struct SettingsSelectionOverlay: View {
     @State private var isGlobeKeyEnabled: Bool
 
     /// Prevents auto-dismiss during initial onAppear sync
+    // 中文: onAppear 同步狀態時暫時擋住 auto-dismiss,避免一開啟就被收合。
     @State private var isReady = false
 
     @Environment(\.colorScheme) private var colorScheme
@@ -184,6 +189,7 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Auto-dismiss
 
+    // 中文: 切換設定後若使用者啟用「自動收合工具列」則延遲 0.3 秒收合 overlay。
     private func autoDismissIfNeeded() {
         guard isReady, SharedSettings.shared.isToolbarAutoCollapse else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {

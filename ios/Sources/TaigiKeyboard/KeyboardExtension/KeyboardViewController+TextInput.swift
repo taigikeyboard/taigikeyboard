@@ -1,3 +1,6 @@
+// 中文: KeyboardViewController 的 ComposingDelegate 實作擴充。
+// 中文: 把跨平台中性的 ComposingTransition.Effect 翻譯成 UITextDocumentProxy 動作。
+
 import Foundation
 import KeyboardKit
 import UIKit
@@ -8,6 +11,7 @@ extension KeyboardViewController {
     /// Translate a platform-neutral `RustEngineBridge.ComposingTransition.Effect`
     /// to the iOS `UITextDocumentProxy` surface. Binding contract (iOS +
     /// Android) is documented in `composing-state-boundary.md` §2.2.
+    // 中文: 把 ComposingTransition.Effect 派送到 UITextDocumentProxy 對應動作。
     func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
         logger.debug({
             let kind: String
@@ -54,12 +58,14 @@ extension KeyboardViewController {
     /// Set marked (composing) text with the caret placed at the end.
     /// Used by `.updatePreedit(_)` effect and by the explicit preedit
     /// clears in the textDidChange handler.
+    // 中文: 設定組字中的 marked text,游標放在尾端。供 updatePreedit / textDidChange 使用。
     func setMarkedText(_ text: String) {
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
     }
 
     /// Clear marked text + unmark (two steps required by UITextInput).
     /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
+    // 中文: 清掉 marked text 並 unmark — UITextInput 需要分兩步,缺一不可。
     func clearMarkedText() {
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         textDocumentProxy.unmarkText()

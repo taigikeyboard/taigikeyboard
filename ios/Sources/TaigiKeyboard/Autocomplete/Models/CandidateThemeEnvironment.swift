@@ -1,3 +1,5 @@
+// 中文: CandidateTheme 的 SwiftUI environment 注入點與便利 modifier。
+
 import SwiftUI
 
 extension EnvironmentValues {

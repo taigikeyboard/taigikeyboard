@@ -1,3 +1,7 @@
+// 中文: 主 App 與鍵盤擴充共用的服務組裝點 (Composition Root)。
+// 中文: 順序固定:repositories → leaf services → composite services。
+// 中文: lexicon engine 安裝由啟動點各自負責,這裡不持有引擎狀態。
+
 import Foundation
 
 /// Production service graph. Wiring order matches constructor dependencies:
@@ -8,6 +12,7 @@ import Foundation
 /// happens once at process startup via `RustEngineBridge.lexiconInstall(...)`
 /// from `TaigiKeyboardApp.installLexiconEngineForMainApp()` and
 /// `KeyboardViewController.installLexiconEngine()`.
+// 中文: 服務相依圖的組裝點,所有單例服務都從這裡取出。
 enum CompositionRoot {
     // MARK: - Repositories
 

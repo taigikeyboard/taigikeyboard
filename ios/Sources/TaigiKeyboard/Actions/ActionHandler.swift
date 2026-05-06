@@ -1,3 +1,6 @@
+// 中文: 鍵盤手勢入口 — 把 KeyboardKit gesture 派送到各 action 處理器。
+// 中文: 主檔負責 dispatch + KeyboardKit 覆寫;細部邏輯在 ActionHandler+*.swift 各擴充檔。
+
 import Foundation
 import KeyboardKit
 
@@ -13,6 +16,8 @@ import KeyboardKit
 ///    - `handleBackspaceAction` → delete / re-predict NextWord  (KeyActions)
 ///    - `handleSuggestionSelection` → commit + frequency + NextWord  (Suggestions)
 /// 4. `nextWordController.process()` — record association → update state → predict  (NextWordController)
+// 中文: 台語鍵盤的 ActionHandler。手勢入口走 handle(_:on:),收 release / repeatPress 後派送。
+// 中文: 跨檔協作:KeyActions / Suggestions / CustomActions / Utilities 各掌一塊,主檔只做 dispatch。
 public class ActionHandler: KeyboardAction.StandardActionHandler {
     // MARK: - Properties
 
@@ -23,11 +28,13 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
     let nextWordController = NextWordController()
 
     /// Distinguishes space-drag (cursor move) from space-tap (insert space)
+    // 中文: 區分 space-drag(游標移動)與 space-tap(插入空白) — 由手勢序列判定。
     private var isSpaceDragInProgress = false
 
     // MARK: - Action Dispatch
 
     /// - Returns: true if handled (skip KeyboardKit default)
+    // 中文: 把 KeyboardAction 派送到對應的 handler。回 true 代表已處理,跳過 KeyboardKit 預設行為。
     private func handleTaigiSpecificAction(_ action: KeyboardAction) -> Bool {
         switch action {
         case .settings:
@@ -57,6 +64,8 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     // MARK: - KeyboardKit Override
 
+    // 中文: KeyboardKit 手勢覆寫入口。先處理 space drag → 過濾 release / repeatPress → 派送給 Taigi handler,
+    // 中文: 未處理者最後落到 super 的預設行為。
     override public func handle(_ gesture: Keyboard.Gesture, on action: KeyboardAction) {
         // Space drag state tracking
         if action == .space {
@@ -109,6 +118,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
     /// Align with Android: skip autocomplete to preserve NextWord suggestions
     /// when not composing and pressing space or "-" during NextWord
+    // 中文: 在 NextWord 顯示中按空白或 "-" 時跳過 autocomplete,避免清掉 NextWord 候選。與 Android 對齊。
     private func shouldSkipAutocomplete(for action: KeyboardAction) -> Bool {
         guard !composingManager.isComposing else { return false }
         if action == .space { return true }
@@ -116,6 +126,7 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
         return false
     }
 
+    // 中文: 候選詞點選的 KeyboardKit 入口。English 模式走 KK 預設,Taigi 模式走自家路徑。
     override public func handle(_ suggestion: Autocomplete.Suggestion) {
         // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
@@ -166,11 +177,14 @@ public class ActionHandler: KeyboardAction.StandardActionHandler {
 
 // MARK: - AutocompleteContextUpdater
 
+// 中文: 把 NextWord 引擎結果寫進 KeyboardKit autocomplete context 的單一通道。
+// 中文: 這是引擎端 prediction 唯一接觸 KeyboardKit 型別的地方。
 extension ActionHandler: AutocompleteContextUpdater {
     /// Engine-side predictions arrive here and are mapped to KeyboardKit
     /// `Autocomplete.Suggestion` values. This is the only place the
     /// engine's `RustEngineBridge.NextWordEnginePrediction` touches
     /// KeyboardKit types.
+    // 中文: 把引擎回傳的 NextWord 預測映射為 KeyboardKit 的 Autocomplete.Suggestion。
     func setNextWordPredictions(_ predictions: [RustEngineBridge.NextWordEnginePrediction]) {
         let suggestions = predictions.map { prediction in
             Autocomplete.Suggestion(
@@ -192,6 +206,7 @@ extension ActionHandler: AutocompleteContextUpdater {
         keyboardController?.state.autocompleteContext.suggestionsFromService = suggestions
     }
 
+    // 中文: 清空 NextWord 顯示 — 走 KeyboardKit autocomplete reset。
     func resetNextWordSuggestions() {
         keyboardController?.state.autocompleteContext.reset()
     }

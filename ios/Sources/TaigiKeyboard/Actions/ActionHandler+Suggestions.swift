@@ -1,4 +1,5 @@
 // ActionHandler extension: suggestion selection (candidate commit, output formatting).
+// 中文: ActionHandler 的候選詞選取擴充 — 解析建議內容、組出輸出字串、送出並交給 NextWord 記錄關聯。
 
 import Foundation
 import KeyboardKit
@@ -6,6 +7,7 @@ import KeyboardKit
 extension ActionHandler {
     // MARK: - Suggestion Selection
 
+    // 中文: 候選詞點選主入口。先處理 raw-input 直送,再依組字 / NextWord 路徑組出 commit 字串並更新使用頻率。
     func handleSuggestionSelection(_ suggestion: Autocomplete.Suggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
@@ -59,6 +61,7 @@ extension ActionHandler {
     // MARK: - Suggestion Helpers
 
     /// Extract romanization and Hanji from suggestion based on display mode
+    // 中文: 依顯示模式從候選建議中拆出羅馬字 + 漢字。NextWord 路徑要把先前 swap 過的欄位還原。
     private func parseRomanAndHanzi(
         from suggestion: Autocomplete.Suggestion,
         isNextWord: Bool,
@@ -91,6 +94,7 @@ extension ActionHandler {
     }
 
     /// Format output text based on display mode (roman, Hanji, or both scripts)
+    // 中文: 依顯示模式組出最終輸出字串(純羅馬字 / 純漢字 / 兩種並陳)。TPS layout 時用 TPS bracket 顯示。
     private func formatOutputText(roman: String, hanzi: String?, isTPSLayout: Bool, effectiveSwapped: Bool) -> String {
         let bracketRoman = isTPSLayout
             ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: settings.isTpsOrMappedToER)
@@ -110,6 +114,7 @@ extension ActionHandler {
     /// Commit text via proxy (NextWord) or composing manager (regular candidate).
     /// The `suggestion` parameter is kept for future telemetry/logging use
     /// but ComposingManager only needs the candidate text.
+    // 中文: NextWord 直接走 textDocumentProxy 插字;一般候選走 ComposingManager.selectSuggestion。
     private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: Autocomplete.Suggestion) {
         if isNextWord {
             keyboardContext.textDocumentProxy.insertText(text)

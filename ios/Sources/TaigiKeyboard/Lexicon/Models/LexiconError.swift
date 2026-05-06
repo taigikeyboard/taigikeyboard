@@ -1,3 +1,6 @@
+// 中文: lexicon 模組的錯誤型別 — 由所有 user-data SQLite repository 共用。
+// 中文: 唯讀辭典的錯誤走 Rust 引擎,經 RustEngineBridge 回傳,不在這裡。
+
 import Foundation
 
 /// Errors raised by the lexicon module (user-data SQLite repositories +
@@ -10,6 +13,7 @@ import Foundation
 // MARK: - Shared-Core Candidate
 
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
+// 中文: lexicon 共用錯誤 enum — 連線、查詢準備、查詢執行、Trie 未載入等。
 enum LexiconError: LocalizedError {
     case databaseNotFound
     case databaseNotAvailable

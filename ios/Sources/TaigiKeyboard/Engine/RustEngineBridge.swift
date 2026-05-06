@@ -1,3 +1,7 @@
+// 中文: Rust shared-core FFI 的 Swift 端薄包裝層。
+// 中文: 對應 engine/swift-ffi/src/lib.rs;Composing / NextWord / Lexicon / case-transform
+// 中文: 等切片各自有獨立的 RustEngineBridge+*.swift extension 檔。
+
 import Foundation
 import SwiftProtobuf
 
@@ -19,6 +23,11 @@ import SwiftProtobuf
 /// failure; release returns a graceful fallback + logs + records a
 /// structured `DiagnosticsEntry` in a bounded in-memory queue accessible
 /// via `diagnostics()` for dogfood inspection.
+// 中文: Rust 引擎橋接層的對外型別。所有 phonetics / composing / lexicon /
+// 中文: case-transform / nextword 操作都從這個 enum 進入。
+// 中文: AppConfig 採每呼叫顯式傳入策略,不留全域預設。
+// 中文: 錯誤路徑於 DEBUG 會 assertionFailure;Release 走 fallback + 寫入
+// 中文: 上限 32 筆的診斷環形緩衝,供 diagnostics() 讀取。
 public enum RustEngineBridge {
     private static let installLock = NSLock()
     private static var installed = false
@@ -29,6 +38,8 @@ public enum RustEngineBridge {
     /// dogfood traces are visible. Release stays at default `Warn` so
     /// `log::debug!`/`log::info!` macros short-circuit before format —
     /// no FFI cost for the no-op render path on `DebugLogger`.
+    // 中文: 安裝 Rust log sink + DEBUG 時調整 max_level。冪等,內部用 NSLock 防重入。
+    // 中文: Release 維持 Warn 等級,debug! / info! 巨集短路,不付 FFI 成本。
     public static func install() {
         installLock.lock()
         defer { installLock.unlock() }
@@ -45,6 +56,7 @@ public enum RustEngineBridge {
     /// `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
     /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
     /// them per request (live-read invariant).
+    // 中文: 把數字調 ASCII 輸入轉為帶調符字串。ToneToggles 必填,引擎每次呼叫時讀取。
     public static func normalizeTone(
         _ input: String,
         mode: InputMode,
@@ -110,6 +122,8 @@ public enum RustEngineBridge {
     /// Distinct semantics from `normalizeInput` — this preserves tone
     /// diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
     /// `\u{0358}` → `o` are rewritten.
+    // 中文: 查詢用 NFD 前處理 — 保留調符,僅改寫鼻音標記與孤立 \u{0358}。
+    // 中文: 與 normalizeInput 語意不同,後者會脫掉調符。
     public static func nfdPreprocessForLookup(_ input: String) -> String {
         var payload = Taigi_Engine_NfdPreprocessForLookup()
         payload.input = input
@@ -134,6 +148,8 @@ public enum RustEngineBridge {
 
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
     /// initializer is dispatch_once-equivalent — thread-safe by construction.
+    // 中文: 調符變體表的延遲初始化快取 — 首次存取時才從 Rust 拉資料。
+    // 中文: Swift 的 static let 初始化等同 dispatch_once,天然 thread-safe。
     public static let toneVariations: ToneVariationsCache = {
         let resp = dispatch(method: .getToneVariations(Taigi_Engine_GetToneVariations()),
                             op: "getToneVariations",
@@ -239,6 +255,10 @@ public enum RustEngineBridge {
     /// alongside the ranked list so dogfood traces match the legacy
     /// `CandidateProcessor.logScoreDetails` output. Release builds skip
     /// the breakdown (zero serialization overhead).
+    // 中文: 候選詞排序管線 — dedup → score → sort → 可選 TPS display-dedup,全在 Rust 端 atomic 執行。
+    // 中文: tpsDedupEnabled 由平台決定(看是否為 TPS layout),不從 AppConfig 推導。
+    // 中文: nowMs 由 caller 提供,讓 recency 視窗運算在測試中可重現。
+    // 中文: DEBUG 模式會額外要求 ScoreBreakdown 並寫入 log,Release 跳過該欄位節省序列化成本。
     public static func processCandidates(
         raw: [TaigiWord],
         normalizedInput: String,
@@ -280,6 +300,7 @@ public enum RustEngineBridge {
 
     /// Per-candidate score breakdown returned alongside `ranked` when the
     /// caller opts in. Six fields sum to the engine's sort key.
+    // 中文: 單一候選詞的分數細項。六個欄位加總即引擎的 sort key。
     public struct ScoreBreakdown: Equatable {
         public let userFreqScore: Int
         public let recencyBonus: Int
@@ -296,6 +317,7 @@ public enum RustEngineBridge {
     /// Composite return for the lexicon ranking pipeline. Production
     /// callers typically just read `ranked`; tests inspect `breakdowns`
     /// to pin scoring math on the bridge boundary.
+    // 中文: 排序管線的複合回傳值。Production 通常只用 ranked,測試用 breakdowns 鎖住分數運算。
     public struct CandidateRanking: Equatable {
         public let ranked: [TaigiWord]
         public let breakdowns: [ScoreBreakdown]
@@ -307,6 +329,8 @@ public enum RustEngineBridge {
     /// engine's score arithmetic; production code stays on the public
     /// `processCandidates` method which discards the breakdown after
     /// debug logging.
+    // 中文: 測試專用接口 — 與 processCandidates 同一條 FFI 呼叫,但會回傳分數細項。
+    // 中文: 給 RustEngineBridgeRankingTests 鎖住引擎側的分數算法,Production 用上面那個版本。
     public static func processCandidatesDetailed(
         raw: [TaigiWord],
         normalizedInput: String,
@@ -354,6 +378,8 @@ public enum RustEngineBridge {
     /// that silently masked Rust dispatch bugs. `tpsDedupEnabled` is
     /// kept on the signature for caller-shape parity with the Android
     /// mirror (Codex audit § 1 Q3).
+    // 中文: FFI 失敗時的 fallback — 直接回傳原始清單。tpsDedupEnabled 參數保留,
+    // 中文: 純粹是為了與 Android 的 caller shape 對齊。
     private static func fallbackRanked(raw: [TaigiWord], tpsDedupEnabled _: Bool) -> [TaigiWord] {
         raw
     }
@@ -393,6 +419,8 @@ public enum RustEngineBridge {
 
     /// Bridge-synthesized companion to the proto `ComposingResponse`.
     /// Consumed by `ComposingManager` and its delegate.
+    // 中文: 對應 proto ComposingResponse 的 Swift 端 struct,由 bridge 解碼後組成。
+    // 中文: ComposingManager 與其 delegate 用這個型別決定要對輸入框做什麼動作。
     public struct ComposingTransition: Equatable {
         public enum Effect: Equatable {
             case updatePreedit(String)
@@ -579,6 +607,7 @@ public enum RustEngineBridge {
 
     // MARK: Diagnostics (Codex v2 §8 / v3 §7)
 
+    // 中文: 單筆診斷紀錄 — 失敗時的時間、op 名稱、錯誤碼與訊息。
     public struct DiagnosticsEntry: Equatable {
         public let timestamp: Date
         public let op: String
@@ -590,6 +619,8 @@ public enum RustEngineBridge {
     /// + test inspection. Counter increments on every fallback path
     /// (encode error, decode error, dispatch returned non-OK, missing
     /// result variant). Recent entries capped at 32 to bound memory.
+    // 中文: 唯讀的診斷快照 — 給 debug 選單與測試看。計數器在所有 fallback
+    // 中文: 路徑都會 +1,最近紀錄 ring buffer 上限 32 筆。
     public static func diagnostics() -> (failureCount: Int, recentErrors: [DiagnosticsEntry]) {
         diagnosticsLock.lock()
         defer { diagnosticsLock.unlock() }
@@ -911,6 +942,7 @@ public enum RustEngineBridge {
 /// Init-bulk-pull cache for the callout tone variation tables. Loaded once
 /// at first access via `RustEngineBridge.toneVariations`; both POJ + TL
 /// maps live in a single payload to amortize FFI cost.
+// 中文: 長按 callout 用的調符變體表快取。首次存取時一次拉完 POJ + TL 兩張表,攤提 FFI 成本。
 public struct ToneVariationsCache {
     public let poj: [String: [String]]
     public let tl: [String: [String]]
@@ -918,6 +950,7 @@ public struct ToneVariationsCache {
 
 // MARK: - Logger sink
 
+// 中文: Swift 端實作的 log sink,讓 Rust 的 log!/warn!/error! 都流回平台 LoggerBackend。
 public final class SwiftLoggerSink {
     static let levelError: UInt8 = 0
     static let levelWarn: UInt8 = 1

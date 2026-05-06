@@ -1,3 +1,6 @@
+// 中文: KeyboardKit 10 的 Layout Service 實作。
+// 中文: 根據 keyboardType / 使用者設定 / 裝置決定 [[KeyDef]],再交給 LayoutConverter 轉成 KeyboardLayout。
+
 import KeyboardKit
 
 private let layoutLogger = DebugLogger(category: "CustomLayoutService")
@@ -24,6 +27,7 @@ class CustomLayoutService {
     // MARK: - Private
 
     /// Returns the globe or iPhone variant based on device requirements
+    // 中文: 依是否需要地球鍵,在 withGlobe / iPhone 兩種變體之間擇一。
     private func resolveLayout(
         withGlobe: [[KeyDef]],
         iPhone: [[KeyDef]],
@@ -52,6 +56,8 @@ class CustomLayoutService {
     /// Determines whether the globe key should be shown.
     /// English mode: preserves device-dependent behavior (iPad/iPhone SE).
     /// Other modes: uses user toggle setting.
+    // 中文: 是否要顯示地球鍵。English 模式依裝置(iPad / iPhone SE)決定;其他模式看使用者開關。
+    // 中文: TPS 佈局按鍵已多,永遠不顯示地球鍵。
     private func needsGlobeKey(for context: KeyboardContext) -> Bool {
         let settings = SharedSettings.shared
         if context.keyboardType == .alphabetic, settings.inputMode == .english {

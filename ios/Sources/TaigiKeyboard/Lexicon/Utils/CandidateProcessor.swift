@@ -1,3 +1,6 @@
+// 中文: 候選詞處理的薄包裝層 — 主要邏輯都遷到 Rust,iOS 端只剩 capitalize 入口
+// 中文: 與羅馬字母首字判斷。
+
 import Foundation
 
 /// Candidate-processing utilities retained on the iOS platform side.
@@ -12,6 +15,8 @@ import Foundation
 /// Rust shared core in the case-transform slice
 /// (`RustEngineBridge.capitalizeCandidate`); this file now only retains
 /// `startsWithRomanLetter` which is a 3-line predicate.
+// 中文: 平台端只剩兩個薄包裝 — capitalize 轉發到 Rust,
+// 中文: startsWithRomanLetter 為 3 行平台端判斷,沒搬到 Rust 的價值。
 enum CandidateProcessor {
     static func capitalize(_ text: String, basedOn input: String, inputMode: InputMode, isAutoCap: Bool) -> String {
         RustEngineBridge.capitalizeCandidate(

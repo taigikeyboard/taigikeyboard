@@ -1,6 +1,10 @@
+// 中文: 鍵盤擴充的最外層 SwiftUI View — 拼起候選列、KeyboardKit 鍵盤本體、四個 overlay 與背景。
+// 中文: 變動的設定值(顏色 / 字型大小 / 邊框)透過 UserDefaults didChange 即時 sync 進 @State。
+
 import KeyboardKit
 import SwiftUI
 
+// 中文: 主鍵盤 View,組裝 CandidateView + KeyboardView + Overlay + 背景。
 struct TaigiKeyboardView: View {
     let settings: any KeyboardEnvironment
     let services: Keyboard.Services
@@ -57,6 +61,7 @@ struct TaigiKeyboardView: View {
 
     /// Per-render-cycle cached settings and providers.
     /// Created once per body evaluation to avoid repeated UserDefaults reads.
+    // 中文: 一次 render 內共用的 settings snapshot 與 button content 各 provider,避免重複讀 UserDefaults。
     private struct RenderProviders {
         let settings: SettingsSnapshot
         let keyTextColor: Color
@@ -167,6 +172,7 @@ struct TaigiKeyboardView: View {
 
     /// Core keyboard + overlay panels + state change handlers.
     /// Extracted from body to reduce type-checker complexity.
+    // 中文: 把核心鍵盤 + 四個 overlay + 狀態 onChange 串在一起,從 body 抽出來壓低 type-checker 複雜度。
     private func keyboardWithOverlays(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
@@ -221,6 +227,7 @@ struct TaigiKeyboardView: View {
 
     /// Builds the KeyboardView with button content, style, and toolbar.
     /// Extracted from body to reduce type-checker complexity.
+    // 中文: 組出 KeyboardKit KeyboardView 主體 — 按鍵內容 / 樣式 / candidate toolbar / callout。
     private func coreKeyboard(
         p: RenderProviders,
         suggestions: [Autocomplete.Suggestion],
@@ -345,6 +352,7 @@ struct TaigiKeyboardView: View {
         .keyboardCalloutStyle(calloutStyle)
     }
 
+    // 中文: 依當前 keyboardContext 與顏色設定組合出 CandidateView 樣式,套用使用者選的高度與背景。
     private static func candidateStyle(
         for context: KeyboardContext,
         colorSettings: KeyboardColorSettings,

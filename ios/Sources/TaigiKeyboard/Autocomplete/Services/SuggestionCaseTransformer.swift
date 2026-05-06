@@ -1,3 +1,6 @@
+// 中文: 候選詞大小寫轉換的 per-word bridge。skip 規則(組字文字 / NextWord 候選)
+// 中文: 留在平台端,真正轉換交給 RustEngineBridge.transformSuggestionCase。
+
 import Foundation
 import KeyboardKit
 
@@ -26,6 +29,8 @@ enum SuggestionCaseTransformer {
         }
     }
 
+    // 中文: 對單一候選詞套用 case 轉換。先看 additionalInfo 跳過組字文字 / NextWord 候選,
+    // 中文: 其餘交給 Rust bridge 處理。
     private static func transformSuggestion(
         _ suggestion: Autocomplete.Suggestion,
         composingText: String,

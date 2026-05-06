@@ -1,3 +1,6 @@
+// 中文: user_association.db 的無狀態 SQLite CRUD 封裝。
+// 中文: 所有方法接收 OpaquePointer,序列化與表結構由呼叫端負責。
+
 import Foundation
 import SQLite3
 
@@ -6,8 +9,10 @@ import SQLite3
 /// All methods take a live `OpaquePointer`. Callers are responsible for:
 /// - serializing DB access (typically via `SQLiteConnectionManager.execute`),
 /// - ensuring tables exist (via `NextWordSchema.ensureTables`).
+// 中文: NextWord 使用者關聯資料表的 CRUD 工具 enum(全部 static method)。
 enum NextWordRepository {
     /// Raw user-association row for prediction scoring.
+    // 中文: 預測評分用的單筆使用者關聯資料(漢字 / TL / 累計次數 / 最後使用時間)。
     struct UserRow {
         let hanzi: String
         let tl: String
@@ -16,6 +21,7 @@ enum NextWordRepository {
     }
 
     /// Full user-association row (all columns) for listing/backup.
+    // 中文: 列表 / 備份用的完整列(含 prev / next 兩端的 hanji + TL)。
     struct AssociationRow {
         let prevWord: String
         let prevTl: String
@@ -27,6 +33,7 @@ enum NextWordRepository {
     // MARK: - Writes
 
     /// Insert or increment count on UNIQUE(prev_word, next_word, next_tl) conflict.
+    // 中文: 插入或在 UNIQUE 衝突時把 count + 1、更新 last_used。
     static func insertOrUpdate(
         db: OpaquePointer,
         prev: String,
@@ -58,6 +65,7 @@ enum NextWordRepository {
 
     /// Batch-import with merge-by-max semantics (keep the higher count).
     /// Returns the number of entries imported successfully.
+    // 中文: 批次匯入 — 衝突時取較高 count(merge-by-max),回傳成功匯入筆數。
     static func batchImport(
         db: OpaquePointer,
         entries: [(prevWord: String, prevTl: String, nextWord: String, nextTl: String, count: Int)],
@@ -98,6 +106,7 @@ enum NextWordRepository {
     }
 
     /// Delete a single entry by (prev_word, prev_tl, next_word, next_tl).
+    // 中文: 依四元組刪除一筆關聯。
     static func deleteOne(
         db: OpaquePointer,
         prev: String,
@@ -117,12 +126,14 @@ enum NextWordRepository {
     }
 
     /// Delete all rows.
+    // 中文: 清空整張表。
     static func deleteAll(db: OpaquePointer) {
         sqliteExecSimple(db: db, "DELETE FROM user_association")
     }
 
     /// Delete the oldest/lowest-count rows up to `limit`.
     /// Selection order: count ASC, last_used ASC (low-usage + stale first).
+    // 中文: 刪除最舊 / 最少使用的 limit 筆,優先順序為 count ASC、last_used ASC。
     static func pruneOldest(db: OpaquePointer, limit: Int) {
         let sql = """
             DELETE FROM user_association
@@ -143,6 +154,7 @@ enum NextWordRepository {
 
     /// Query next-word candidates by previous word (+ optional TL disambiguator).
     /// Returns at most `limit` rows ordered by count DESC.
+    // 中文: 用 prev_word(+ 可選 prev_tl)查預測候選,count DESC 排序、最多回傳 limit 筆。
     static func fetchUserRows(
         db: OpaquePointer,
         word: String,
@@ -176,6 +188,7 @@ enum NextWordRepository {
     }
 
     /// Fetch every row for backup/UI listing, sorted by count DESC, last_used DESC.
+    // 中文: 列表 / 備份用途 — 撈出全部列,依 count DESC、last_used DESC 排序。
     static func fetchAllRows(db: OpaquePointer) -> [AssociationRow] {
         let sql = """
             SELECT prev_word, prev_tl, next_word, next_tl, count
@@ -203,6 +216,7 @@ enum NextWordRepository {
     }
 
     /// Total row count.
+    // 中文: 表中總列數(用於 capacity 判斷)。
     static func count(db: OpaquePointer) -> Int {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }

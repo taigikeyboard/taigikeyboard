@@ -1,3 +1,5 @@
+// 中文: 為 KeyboardKit KeyboardContext 加上漢字 / 羅馬字顯示切換的擴充,後端寫進 SharedSettings。
+
 import Combine
 import KeyboardKit
 import SwiftUI

@@ -1,3 +1,6 @@
+// 中文: keyboard 候選詞流程的詞典 service — D8 hanzi guard、自訂詞庫優先、
+// 中文: 系統詞典經 RustEngineBridge.lexiconSearch、case 處理、Rust 排序管線 atomic 執行。
+
 import Foundation
 
 /// 詞典服務
@@ -99,6 +102,8 @@ final class LexiconService: @unchecked Sendable {
     ///
     /// Tone-aware inputs (contain a digit) match the `roman_num` column; toneless
     /// inputs match the `notone` column. Returns `[]` when the feature is disabled.
+    // 中文: 用未斷音的原始輸入查自訂詞庫。含數字 → roman_num 欄;否則 notone 欄。
+    // 中文: 設定關閉時直接回空陣列。
     private func lookupCustomDictionary(
         rawInput: String?,
         segmentedInput: String,
@@ -139,6 +144,8 @@ final class LexiconService: @unchecked Sendable {
     /// `tpsOrMappedToER` is set and the normalized key contains "er", per
     /// `engine/lexicon/src/search.rs`. iOS no longer runs the variant-search
     /// loop platform-side (audit D-1 + D-2 resolution).
+    // 中文: 走 Rust 詞典引擎查系統詞典。TPS er↔or 變體展開在引擎內處理,
+    // 中文: 平台端不再跑變體搜尋迴圈。dictionary toggle 透過引擎統一決議成 bitmask。
     private func querySystemDictionaries(
         segmentedInput: String,
         inputType: InputType,
@@ -187,6 +194,7 @@ final class LexiconService: @unchecked Sendable {
     }
 
     /// Apply auto-capitalization to roman and hanzi forms based on the input shape.
+    // 中文: 依輸入形狀對 roman / hanzi 套用 auto-cap。hanzi 只有以羅馬字母開頭時才處理。
     private func applyCaseProcessing(
         _ words: [TaigiWord],
         basedOn input: String,
@@ -224,6 +232,10 @@ final class LexiconService: @unchecked Sendable {
     /// candidates until the freq DB warms up. Android has no equivalent
     /// branch because its `UserFrequencyService.frequencyDataBatch` is
     /// always callable.
+    // 中文: 把合併後的候選詞送進 Rust 排序管線。
+    // 中文: 已連線:dedup → score → sort → 可選 TPS display-dedup,全在 Rust 內 atomic 執行。
+    // 中文: 冷啟動(頻率 DB 還沒就緒):走 mergeOrderOnly,只 dedup 不排序,
+    // 中文: 保留 iOS 既有「合併順序」行為(custom dict 在前)。Android 無此分支。
     private func processCandidates(
         _ merged: [TaigiWord],
         segmentedInput: String,

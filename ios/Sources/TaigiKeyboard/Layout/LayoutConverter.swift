@@ -1,12 +1,18 @@
+// 中文: KeyDef → KeyboardKit KeyboardLayout 的轉換器。
+// 中文: 處理 char 的全形/半形切換(isTranslateSwapped、TPS 永遠全形)、
+// 中文: 各功能鍵對應的 KeyboardAction,以及方向感知的按鍵寬度。
+
 import KeyboardKit
 import UIKit
 
 /// Converts KeyDef layout to KeyboardKit's KeyboardLayout
+// 中文: 將 [[KeyDef]] 轉換為 KeyboardKit 的 KeyboardLayout。
 struct LayoutConverter {
     let context: KeyboardContext
     let config: KeyboardLayout.DeviceConfiguration
 
     /// Converts [[KeyDef]] to KeyboardLayout
+    // 中文: 進入點 — 把外部 [[KeyDef]] 轉成 KeyboardLayout。
     func convert(_ keyDefs: [[KeyDef]]) -> KeyboardLayout {
         let itemRows = keyDefs.map { row in
             row.map { keyDef in
@@ -25,6 +31,7 @@ struct LayoutConverter {
     }
 
     /// Converts KeyDef to KeyboardAction
+    // 中文: KeyDef → KeyboardAction 對應表。char 會依 isTranslateSwapped / TPS 決定半形或全形。
     private func keyDefToAction(_ keyDef: KeyDef) -> KeyboardAction {
         switch keyDef {
         case let .char(char, fullWidth):
@@ -70,6 +77,7 @@ struct LayoutConverter {
     }
 
     /// Determines key width
+    // 中文: 依 KeyDef 種類與螢幕方向決定寬度比例;.char 回 nil 走預設輸入鍵寬。
     private func widthFor(_ keyDef: KeyDef) -> KeyboardLayout.ItemWidth? {
         // Use UIKit native API for orientation (KeyboardKit 10 no longer provides interfaceOrientation)
         let screenBounds = UIScreen.main.bounds

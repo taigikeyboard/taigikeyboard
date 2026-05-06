@@ -1,3 +1,5 @@
+// 中文: 把鍵盤擴充的四個 overlay(展開候選列 + 版面 / 符號 / 設定面板)貼到主 View 上的 SwiftUI helper。
+
 import KeyboardKit
 import SwiftUI
 
@@ -8,6 +10,7 @@ extension View {
     /// The parent view retains ownership of `CandidateExpandState` and
     /// `OverlayPanelState`, plus any `onChange` handlers that bridge to state
     /// the overlays themselves don't need to see (e.g. `composingManager`).
+    // 中文: 主 View 呼叫此 modifier 一次掛上四個 overlay。狀態仍由父 View 持有。
     func withKeyboardOverlays(
         panels: Binding<OverlayPanelState>,
         expandState: CandidateExpandState,

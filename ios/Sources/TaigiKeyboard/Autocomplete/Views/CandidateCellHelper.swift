@@ -1,3 +1,6 @@
+// 中文: 候選詞 cell 的純函式工具 — 顯示文字 / commit 文字 / 寬度量測都集中在這裡。
+// 中文: TPS 模式與 isTranslateSwapped 由呼叫端傳入,不直接讀 SharedSettings,方便測試。
+
 import KeyboardKit
 import SwiftUI
 

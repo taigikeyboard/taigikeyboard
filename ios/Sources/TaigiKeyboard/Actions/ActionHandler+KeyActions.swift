@@ -1,5 +1,7 @@
 // ActionHandler extension: per-key action handlers (character, space, backspace, return).
 // Each handler returns true if handled (skips KeyboardKit default).
+// 中文: ActionHandler 的核心鍵動作擴充 — 字元 / 空白 / 退格 / Return。
+// 中文: 每個 handler 回 true 代表已處理,呼叫端會跳過 KeyboardKit 預設行為。
 
 import Foundation
 import KeyboardKit
@@ -8,6 +10,7 @@ extension ActionHandler {
     // MARK: - Character Input
 
     /// Returns true if handled (skip KeyboardKit default)
+    // 中文: 字元鍵入口。會做大小寫轉換、TPS 鍵層調整,再依模式進入組字或直接送字。
     func handleCharacterInput(_ char: String) -> Bool {
         let currentCase = keyboardContext.keyboardCase
         let autoCap = keyboardContext.settings.isAutocapitalizationEnabled
@@ -108,6 +111,8 @@ extension ActionHandler {
 
     // MARK: - Space
 
+    // 中文: 空白鍵 — drag 中略過;English 直接插入;TPS 模式視為音節邊界 / 調 1 標記;
+    // 中文: Taigi 模式組字中時送出當前 derived,並交給 NextWord 記錄關聯。
     func handleSpaceAction() -> Bool {
         // Ignore during cursor-drag
         if let keyboardController {
@@ -155,6 +160,8 @@ extension ActionHandler {
 
     // MARK: - Backspace
 
+    // 中文: 退格鍵 — English 直接 deleteBackward;Taigi 組字中走引擎退格,
+    // 中文: 否則對輸入框退格並依剩餘上下文重新預測 NextWord。
     func handleBackspaceAction() -> Bool {
         let caseBefore = String(describing: keyboardContext.keyboardCase)
         logger.debug("[AUTOCAP][BACKSPACE] BEFORE delete: \(caseBefore)")
@@ -182,6 +189,7 @@ extension ActionHandler {
 
     /// Re-predict NextWord after backspace based on last remaining character.
     /// Extracts context from text proxy, then delegates to NextWordController.
+    // 中文: 退格後依剩下的最後一個字元重新預測 NextWord(非候選詞選取,不記錄關聯)。
     private func handleBackspaceForNextWord() {
         let textBeforeCursor = keyboardContext.textDocumentProxy.documentContextBeforeInput ?? ""
         let trimmedText = textBeforeCursor.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -197,6 +205,8 @@ extension ActionHandler {
 
     // MARK: - Return
 
+    // 中文: Return 鍵 — English 直接插入換行;Taigi 組字中時 index 0 送 raw、其它送選中候選,
+    // 中文: 並依 isAutoSpaceEnabled 決定是否自動補空白。
     func handleReturnAction() -> Bool {
         // English mode: insert newline directly
         if settings.inputMode == .english {

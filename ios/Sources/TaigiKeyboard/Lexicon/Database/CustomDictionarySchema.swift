@@ -1,3 +1,6 @@
+// 中文: 自訂詞庫 DB 的 DDL 定義 — 表格、索引、column-existence 檢查。
+// 中文: 純 DDL,沒有 derivation / migration / capacity 邏輯,那些在另外的檔案。
+
 import Foundation
 import SQLite3
 
@@ -8,19 +11,24 @@ import SQLite3
 /// search keys) live in `CustomDictionaryMigrator` so this type stays purely
 /// DDL — no domain logic, no derivation, no capacity policy.
 /// Callers must serialize access (typically via `SQLiteConnectionManager.execute`).
+// 中文: 自訂詞庫 schema — 表格 + 索引 DDL 集中地。
 enum CustomDictionarySchema {
     static let tableName = "custom_dictionary"
 
     /// Bump when `CustomDictionaryDerivation` logic changes or new derived
     /// columns are added — `CustomDictionaryMigrator` re-runs ALTER + backfill
     /// against any DB whose `PRAGMA user_version` is below this value.
+    // 中文: schema 版本號 — 衍生欄位邏輯改動時要 bump,
+    // 中文: migrator 會對 PRAGMA user_version 低於此值的 DB 重跑 ALTER + backfill。
     static let schemaVersion = 1
 
     /// Derived column names backed by `CustomDictionaryDerivation`.
     /// Single source of truth for the `ALTER TABLE` migrator.
+    // 中文: 衍生欄位名清單,作為 ALTER TABLE migrator 的單一資料來源。
     static let derivedColumns = ["notone", "abbrev", "roman_num"]
 
     /// Create the primary table + all indexes. Idempotent via `IF NOT EXISTS`.
+    // 中文: 建立主表與全部索引,IF NOT EXISTS 保證冪等。
     static func ensureTables(db: OpaquePointer) throws {
         try createMainTable(db: db)
         createIndexes(db: db)
@@ -28,6 +36,7 @@ enum CustomDictionarySchema {
 
     /// Check whether a column exists on `custom_dictionary`.
     /// Public so `CustomDictionaryMigrator` can gate `ALTER TABLE` calls.
+    // 中文: 檢查 custom_dictionary 是否已有指定欄位,給 migrator 判斷要不要 ALTER。
     static func columnExists(db: OpaquePointer, column: String) -> Bool {
         let sql = "SELECT COUNT(*) FROM pragma_table_info('\(tableName)') WHERE name = ?;"
         var stmt: OpaquePointer?

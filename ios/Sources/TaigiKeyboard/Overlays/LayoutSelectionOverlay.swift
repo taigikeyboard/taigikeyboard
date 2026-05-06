@@ -1,3 +1,6 @@
+// 中文: 從工具列叫出的「鍵盤佈局選擇」overlay。
+// 中文: 把可用佈局以卡片陳列,讓使用者不必離開鍵盤就能切換 layout。
+
 import SwiftUI
 
 /// Layout selection overlay panel
@@ -5,6 +8,7 @@ import SwiftUI
 /// Displays available keyboard layouts as compact cards, allowing
 /// the user to switch layouts directly from the keyboard toolbar.
 /// Follows the same overlay pattern as `ExpandedCandidateOverlay`.
+// 中文: 鍵盤佈局選擇面板 — 與 ExpandedCandidateOverlay 採用相同的 overlay 樣式。
 struct LayoutSelectionOverlay: View {
     let isExpanded: Bool
     let onDismiss: () -> Void
@@ -101,6 +105,7 @@ struct LayoutSelectionOverlay: View {
 
     // MARK: - Selection
 
+    // 中文: 寫入 SharedSettings 並排程短暫延遲後自動收合 overlay。
     private func selectLayout(_ layout: KeyboardLayoutType) {
         withAnimation(.easeInOut(duration: 0.15)) {
             selectedLayout = layout

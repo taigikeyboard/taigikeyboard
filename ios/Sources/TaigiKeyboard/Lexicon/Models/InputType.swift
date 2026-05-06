@@ -1,3 +1,5 @@
+// 中文: 詞典查詢的輸入類型分類,決定走哪一條 trie / 索引欄位。
+
 import Foundation
 
 // MARK: - Shared-Core Candidate

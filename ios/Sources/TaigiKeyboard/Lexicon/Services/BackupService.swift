@@ -1,9 +1,13 @@
+// 中文: 全使用者資料的備份 / 還原服務 — 將自訂詞庫、頻率、聯想資料一次匯入 / 匯出
+// 中文: 為單一 .taigi JSON 檔,給跨機備援用。
+
 import Foundation
 
 /// All-in-one user data backup and restore service
 ///
 /// Exports and imports all user data (custom dictionary, frequency, associations)
 /// as a single `.taigi` JSON file for device migration.
+// 中文: 整體備份服務 — 一個檔案匯出 / 匯入所有 user data。
 final class BackupService: @unchecked Sendable {
     // MARK: - Dependencies
 
@@ -26,6 +30,7 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Models
 
+    // 中文: 備份檔的根 Codable — 版本 / 時戳 / 平台 / 三類 user data。
     struct BackupData: Codable {
         let version: Int
         let exportedAt: String
@@ -36,17 +41,20 @@ final class BackupService: @unchecked Sendable {
         let userAssociation: [AssociationBackupEntry]
     }
 
+    // 中文: 備份檔內自訂詞庫項目 — 只保留 roman + hanzi,不存內部 id 與時戳。
     struct CustomDictEntry: Codable {
         let roman: String
         let hanzi: String
     }
 
+    // 中文: 備份檔內頻率項目 — 詞、count 與最後使用時間字串。
     struct FrequencyEntry: Codable {
         let word: String
         let count: Int
         let lastUsed: String
     }
 
+    // 中文: 備份檔內聯想項目 — prev / next 詞 + 對應 TL + count。
     struct AssociationBackupEntry: Codable {
         let prevWord: String
         let prevTl: String?
@@ -56,6 +64,7 @@ final class BackupService: @unchecked Sendable {
         let lastUsed: String
     }
 
+    // 中文: 匯入結果 — 三類資料各別實際匯入的筆數。
     struct ImportResult {
         let customDict: Int
         let frequency: Int
@@ -64,6 +73,7 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Export
 
+    // 中文: 匯出全部 user data 為 JSON Data。
     func exportAll() async throws -> Data {
         let customEntries = try await customDictionaryService.fetchAll()
         let frequencyData = await userFrequencyRepository.topWordsAsync(limit: Int.max)
@@ -103,6 +113,7 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Import
 
+    // 中文: 從備份 Data 匯入全部資料 — 三類各自走不同 merge 策略。
     func importAll(from data: Data) async throws -> ImportResult {
         let decoder = JSONDecoder()
         let backup = try decoder.decode(BackupData.self, from: data)
@@ -126,6 +137,7 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Private Import Helpers
 
+    // 中文: 匯入自訂詞庫 — 以 roman+hanzi 為去重鍵,只新增,不覆寫既有資料。
     private func importCustomDictionary(_ entries: [CustomDictEntry]) async throws -> Int {
         let existing = try await customDictionaryService.fetchAll()
         let existingPairs = Set(existing.map { "\($0.roman)\t\($0.hanzi)" })
@@ -142,6 +154,7 @@ final class BackupService: @unchecked Sendable {
         return imported
     }
 
+    // 中文: 匯入頻率資料 — merge-by-max,還原舊備份不會把使用者較高的 count 蓋掉。
     private func importFrequency(_ entries: [FrequencyEntry]) async -> Int {
         guard !entries.isEmpty else { return 0 }
         do {
@@ -155,6 +168,7 @@ final class BackupService: @unchecked Sendable {
         }
     }
 
+    // 中文: 匯入聯想資料 — POJ 形式的舊 / 跨平台備份會被先 normalize 成 TL 再寫入。
     private func importAssociations(_ entries: [AssociationBackupEntry]) async -> Int {
         guard !entries.isEmpty else { return 0 }
         do {
@@ -175,6 +189,7 @@ final class BackupService: @unchecked Sendable {
 
 // MARK: - Errors
 
+// 中文: 備份模組的錯誤型別 — 目前只有不支援的 schema 版本一種情境。
 enum BackupError: LocalizedError {
     case unsupportedVersion(Int)
 

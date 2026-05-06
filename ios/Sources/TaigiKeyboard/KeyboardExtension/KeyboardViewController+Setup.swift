@@ -1,3 +1,6 @@
+// 中文: 鍵盤擴充設定 / 服務初始化擴充。
+// 中文: 安裝 lexicon engine、串接 ActionHandler / AutocompleteService、處理設定變動同步。
+
 import KeyboardKit
 import SwiftUI
 import UIKit
@@ -7,6 +10,7 @@ import UIKit
 private let setupLogger = DebugLogger(category: "KeyboardViewController+Setup")
 
 extension KeyboardViewController {
+    // 中文: 主初始化序 — 必須在第一次存取 KeyboardSettings 前呼叫。
     func setupServices() {
         // Must be called before any KeyboardSettings access
         KeyboardSettings.setupStore(forAppGroup: SharedSettings.appGroupId)
@@ -23,6 +27,8 @@ extension KeyboardViewController {
     /// single install is sufficient. Failures are logged and left to graceful
     /// degradation at first search call (engine returns
     /// `LexiconError::NotInitialized` → bridge returns `[]`).
+    // 中文: 在 extension 啟動時安裝 Rust lexicon engine,bundle 資源整個生命週期都是唯讀,所以只裝一次。
+    // 中文: 失敗就記 log,首次查詢時引擎自然回 [] 走 graceful 降級。
     func installLexiconEngine() {
         let bundle = ResourceBundleResolver.dictionaryBundle
         guard
@@ -49,6 +55,7 @@ extension KeyboardViewController {
         }
     }
 
+    // 中文: 在支援 Liquid Glass 的裝置上開啟對應視覺效果。
     func setupLiquidGlass() {
         let context = state.keyboardContext
         if context.isLiquidGlassAvailable {
@@ -57,6 +64,7 @@ extension KeyboardViewController {
     }
 
     /// Order matters: AutocompleteService → ActionHandler → link them together.
+    // 中文: 順序敏感的服務組裝 — 先建 AutocompleteService,再建 ActionHandler,最後串連兩邊。
     func setupCoreServices() {
         // 1. Configure AutocompleteContext
         state.autocompleteContext.settings.suggestionsDisplayCount = 100
@@ -94,6 +102,8 @@ extension KeyboardViewController {
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.
+    // 中文: 依當前 inputMode 安裝對應的 AutocompleteService。English 模式用 EnglishAutocompleteService,
+    // 中文: 其它模式用 Taigi 自家的 AutocompleteService。在初始 setup 與 settings 變動時都會呼叫。
     func setupAutocompleteServiceForCurrentMode() {
         if keyboardSettings.inputMode == .english {
             services.autocompleteService = EnglishAutocompleteService()
@@ -133,6 +143,8 @@ extension KeyboardViewController {
     /// Re-read settings from App Group UserDefaults.
     /// @AppStorage didSet doesn't fire for changes from an external process,
     /// so this is triggered via UserDefaults.didChangeNotification.
+    // 中文: 從 App Group UserDefaults 重新讀取設定,@AppStorage 對跨 process 變動不會觸發 didSet,
+    // 中文: 所以由外部 didChangeNotification 主動驅動。
     func syncSettings() {
         var needsAutocompleteReset = false
 
@@ -180,6 +192,7 @@ extension KeyboardViewController {
         }
     }
 
+    // 中文: 依使用者選擇的字型生成長按 callout 視覺樣式。
     func createCalloutStyle() -> Callouts.CalloutStyle {
         guard let fontName = keyboardSettings.fontType.customFontName else {
             return Callouts.CalloutStyle.standard

@@ -1,6 +1,9 @@
+// 中文: 符號選擇 overlay 的資料來源 — 五大分類(全形/半形/平假名/片假名/顏文字)的符號表。
+
 import Foundation
 
 /// Symbol category for the symbol selection overlay
+// 中文: 符號 overlay 的分類 enum — 全形 / 半形 / 平仮名 / 片仮名 / 顏文字。
 enum SymbolCategory: CaseIterable {
     case fullWidth
     case halfWidth
@@ -34,6 +37,7 @@ enum SymbolCategory: CaseIterable {
 }
 
 /// Symbol data for the symbol selection overlay
+// 中文: 五大分類的符號資料表;每個分類是 [[String]]。
 enum SymbolData {
     // MARK: - Tab 1: Full-width (14 rows x 6 cols)
 
@@ -119,6 +123,7 @@ enum SymbolData {
     ]
 
     /// Returns rows for the given category
+    // 中文: 依分類回傳對應的符號 rows。
     static func rows(for category: SymbolCategory) -> [[String]] {
         switch category {
         case .fullWidth: return fullWidthRows

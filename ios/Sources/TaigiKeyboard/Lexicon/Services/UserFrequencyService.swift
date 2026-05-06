@@ -1,3 +1,5 @@
+// 中文: 使用者詞頻 service — 對 UserFrequencyRepository 做薄包裝,提供候選詞流程使用。
+
 import Foundation
 
 /// 使用者詞頻服務
@@ -19,6 +21,7 @@ final class UserFrequencyService: @unchecked Sendable {
     /// Ensure the underlying frequency DB is open and schema is applied.
     /// LexiconService calls this before a search arrives so candidate ranking
     /// can read frequencies without a cold-connect penalty on the first query.
+    // 中文: 確保底層頻率 DB 已打開且 schema 套用 — 第一次查詢前先呼叫,避免 cold-connect 延遲。
     func ensureInitialized() async throws {
         try await repository.ensureInitialized()
     }

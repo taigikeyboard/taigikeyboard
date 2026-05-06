@@ -1,3 +1,5 @@
+// 中文: 候選詞橫向滾動列 — 台語模式下顯示 LazyHStack + 展開 chevron;英打模式下交給 KeyboardKit。
+
 import KeyboardKit
 import SwiftUI
 

@@ -1,10 +1,16 @@
+// 中文: Taigi 鍵盤所有版面的資料定義 — 每張版面都是 [[KeyDef]]。
+// 中文: _withGlobe 變體由 withGlobeKey 在底列 index 1 插入 .globe 自動衍生;
+// 中文: .char(half, fullWidth:) 預設顯示半形,isTranslateSwapped 切到全形(TPS 永遠全形)。
+
 /// Taigi keyboard layout definitions — each layout is [[KeyDef]]
 ///
 /// _withGlobe variants are derived by inserting .globe at bottom-row index 1.
 /// .char(half, fullWidth: full) shows half-width by default,
 /// full-width when isTranslateSwapped = true (or always for TPS layout).
+// 中文: Taigi 鍵盤所有版面的資料命名空間 — Alphabetic / Numeric / Symbolic 三大類。
 enum TaigiLayouts {
     /// Derives a withGlobe variant by inserting .globe at index 1 of the bottom row
+    // 中文: 衍生 withGlobe 變體的工具 — 在底列 index 1 插入 .globe。
     private static func withGlobeKey(_ layout: [[KeyDef]]) -> [[KeyDef]] {
         var result = layout
         result[result.count - 1].insert(.globe, at: 1)
@@ -13,6 +19,7 @@ enum TaigiLayouts {
 
     // MARK: - Alphabetic Keyboards
 
+    // 中文: 字母鍵盤命名空間 — 涵蓋 PhahTaigi / QWERTY(TL/POJ/英文)/ TPS / MOE1 / MOE2。
     enum Alphabetic {
         // MARK: PhahTaigi Layout
 
@@ -160,6 +167,7 @@ enum TaigiLayouts {
 
     // 5-row design: High-frequency symbols + Quotation marks & brackets + Punctuation + Common symbols + Bottom row
 
+    // 中文: 數字鍵盤命名空間 — 高頻符號、引號括號、標點、常用符號等五列。
     enum Numeric {
         /// Numeric - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [
@@ -202,6 +210,7 @@ enum TaigiLayouts {
     // 5-row design: Programming brackets + Arrows & special symbols + Currency + Math + Bottom row
     // Does not overlap with Numeric keyboard
 
+    // 中文: 進階符號鍵盤命名空間 — 程式括號、箭頭、貨幣、數學符號等;與 Numeric 不重複。
     enum Symbolic {
         /// Symbolic - iPhone (no globe key)
         static let iPhone: [[KeyDef]] = [

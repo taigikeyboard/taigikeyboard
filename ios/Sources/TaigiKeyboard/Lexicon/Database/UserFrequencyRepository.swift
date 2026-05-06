@@ -1,3 +1,6 @@
+// 中文: 使用者詞頻 repository — 紀錄每個詞使用次數,給排序管線當分數依據。
+// 中文: schema、pruning 已拆到鄰近檔案,本檔只剩對外 API 與 single-flight schema gate。
+
 import Foundation
 import SQLite3
 
@@ -9,6 +12,7 @@ import SQLite3
 /// Split responsibilities:
 /// - `UserFrequencySchema`: DDL (CREATE TABLE / CREATE INDEX / metadata seed)
 /// - `UserFrequencyPruner`: capacity (`maxEntries`) + delete-oldest algorithm
+// 中文: 使用者詞頻主類 — 對外 API + 節流計數器 + single-flight schema gate。
 final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Properties
 
@@ -38,6 +42,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Ensure the DB connection is open and schema has been applied.
+    // 中文: 確保 DB 連線打開且 schema 已套用 — 寫入前必呼叫。
     func ensureInitialized() async throws {
         try await connectionManager.ensureInitialized(
             flags: SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
@@ -50,6 +55,8 @@ final class UserFrequencyRepository: @unchecked Sendable {
     /// Record a word usage. Periodically triggers background pruning once
     /// every `UserFrequencyPruner.recordCheckInterval` records so the table
     /// stays under capacity without adding latency to every single write.
+    // 中文: 紀錄一次詞使用。每 recordCheckInterval 次觸發一次背景 prune,
+    // 中文: 表會控制在上限內,但不會讓每次寫入都付 prune 成本。
     func recordWord(_ word: String) async {
         do {
             try await ensureInitialized()
@@ -78,11 +85,13 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Queries
 
     /// Usage count for a single word.
+    // 中文: 取得單一詞的使用次數。
     func count(for word: String) -> Int {
         frequencyData(for: word).count
     }
 
     /// Full frequency snapshot for a single word (count + last-used millis).
+    // 中文: 取得單一詞的完整頻率快照(count + 上次使用毫秒)。
     func frequencyData(for word: String) -> FrequencyData {
         guard connectionManager.isConnected() else { return .empty }
         do {
@@ -95,6 +104,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Batch lookup — one SQL round-trip for many words.
+    // 中文: 批次查詢 — 一個 SQL round-trip 拿多筆,排序管線用這個。
     func frequencyDataBatch(for words: [String]) -> [String: FrequencyData] {
         guard connectionManager.isConnected(), !words.isEmpty else { return [:] }
         do {
@@ -108,6 +118,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     /// Top N words by count then recency. Sync variant used by the UI layer
     /// that already awaited `ensureInitialized()` upstream.
+    // 中文: 取使用次數最多的前 N 個詞(同步版),呼叫端要先 ensureInitialized。
     func topWords(limit: Int = 100) -> [(word: String, count: Int)] {
         guard connectionManager.isConnected() else { return [] }
         do {
@@ -120,6 +131,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Top N words with explicit init — safer from backup / management flows.
+    // 中文: 取使用次數最多的前 N 個詞(async 版),含明確初始化,適合備份 / 管理流程。
     func topWordsAsync(limit: Int = 100) async -> [(word: String, count: Int)] {
         do {
             try await ensureInitialized()
@@ -135,6 +147,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
 
     /// Import with merge-by-max strategy so restoring an older backup never
     /// stomps the user's current (higher) counts.
+    // 中文: 批次匯入 — merge-by-max 策略,還原舊備份不會把當前較高的 count 蓋掉。
     func batchImportMerge(entries: [(word: String, count: Int)]) async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -168,6 +181,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Delete a single word from the frequency table.
+    // 中文: 從頻率表刪除單一詞。
     func deleteWord(_ word: String) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
@@ -186,6 +200,8 @@ final class UserFrequencyRepository: @unchecked Sendable {
     // MARK: - Lifecycle
 
     /// Close the connection and remove the on-disk file.
+    // 中文: 關閉連線並移除檔案。在關閉前先取消正在進行中的初始化 Task,
+    // 中文: 避免它與下一個 caller 安裝的新 Task 賽跑。
     func deleteDatabase() throws {
         // Cancel the in-flight init Task (if any) BEFORE closing the
         // connection so it bails out rather than racing against a fresh
@@ -211,6 +227,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     }
 
     /// Total entry count for the frequency table, or `-1` if the DB is closed.
+    // 中文: 頻率表總 row 數,連線壞掉回 -1。
     func totalCount() -> Int {
         guard connectionManager.isConnected() else { return -1 }
         do {
@@ -227,6 +244,7 @@ final class UserFrequencyRepository: @unchecked Sendable {
     /// Single-flight schema initialization. Concurrent callers await the
     /// same `Task`; once it succeeds subsequent calls await a completed
     /// task (near-free). Failures clear the cache so the next caller retries.
+    // 中文: schema 初始化 single-flight gate — 並行呼叫共用一個 Task,失敗清掉 cache。
     private func createTablesIfNeeded() async throws {
         let (task, generation) = stateLock.withLock { () -> (Task<Void, Error>, UInt64) in
             if let existing = _tableCreationTask {
