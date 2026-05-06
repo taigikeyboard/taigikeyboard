@@ -17,7 +17,7 @@ data class KeyboardColorSettings(
     val normalKeyFillColor: Int? = null,
     val specialKeyFillColor: Int? = null,
     val candidateTextColor: Int? = null,
-    val candidateBackgroundColor: Int? = null
+    val candidateBackgroundColor: Int? = null,
 ) {
     fun toJson(): String {
         val json = JSONObject()
@@ -41,7 +41,7 @@ data class KeyboardColorSettings(
                     normalKeyFillColor = obj.optIntOrNull("normalKeyFillColor"),
                     specialKeyFillColor = obj.optIntOrNull("specialKeyFillColor"),
                     candidateTextColor = obj.optIntOrNull("candidateTextColor"),
-                    candidateBackgroundColor = obj.optIntOrNull("candidateBackgroundColor")
+                    candidateBackgroundColor = obj.optIntOrNull("candidateBackgroundColor"),
                 )
             } catch (e: Exception) {
                 KeyboardColorSettings()

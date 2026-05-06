@@ -48,5 +48,4 @@ enum CustomDictionaryDerivation {
         }
         return (key, isToneAware)
     }
-
 }

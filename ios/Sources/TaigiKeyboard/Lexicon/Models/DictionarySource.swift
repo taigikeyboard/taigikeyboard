@@ -10,6 +10,7 @@ import Foundation
 /// entries).
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum DictionarySource: String, CaseIterable {
     case kautian // 教育部臺灣台語常用詞辭典

@@ -19,8 +19,7 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyView
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 
-class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) {
-
+class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD) {
     private var anchorLeft: Boolean = false
     private var anchorRight: Boolean = false
     private var anchorOffset: Int = 0
@@ -29,7 +28,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         KeyCode.ENTER,
         KeyCode.LANGUAGE_SWITCH,
         KeyCode.SWITCH_TO_TEXT_CONTEXT,
-        KeyCode.SWITCH_TO_MEDIA_CONTEXT
+        KeyCode.SWITCH_TO_MEDIA_CONTEXT,
     )
     private var keyPopupWidth: Int
     private var keyPopupHeight: Int
@@ -44,6 +43,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
     /** Is true if the preview popup is visible to the user, else false */
     val isShowingPopup: Boolean
         get() = popupView.visibility == View.VISIBLE
+
     /** Is true if the extended popup is visible to the user, else false */
     val isShowingExtendedPopup: Boolean
         get() = windowExt.isShowing
@@ -53,12 +53,14 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         keyPopupHeight = keyboardView.resources.getDimension(R.dimen.key_height).toInt()
         popupView = View.inflate(
             keyboardView.context,
-            R.layout.key_popup, null
+            R.layout.key_popup,
+            null,
         ) as LinearLayout
         popupView.visibility = View.INVISIBLE
         popupViewExt = View.inflate(
             keyboardView.context,
-            R.layout.key_popup_extended, null
+            R.layout.key_popup_extended,
+            null,
         ) as FlexboxLayout
         window = createPopupWindow(popupView)
         windowExt = createPopupWindow(popupViewExt)
@@ -77,7 +79,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         keyView: T_KV,
         k: Int,
         isInitActive: Boolean = false,
-        isWrapBefore: Boolean = false
+        isWrapBefore: Boolean = false,
     ): KeyPopupExtendedSingleView? {
         val textView = KeyPopupExtendedSingleView(keyView.context, isInitActive)
         val lp = FlexboxLayout.LayoutParams(keyPopupWidth, keyView.measuredHeight)
@@ -89,24 +91,32 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
             when (keyView.data.popup[k].code) {
                 KeyCode.SETTINGS -> {
                     textView.iconDrawable = getDrawable(
-                        keyView.context, R.drawable.ic_settings
+                        keyView.context,
+                        R.drawable.ic_settings,
                     )
                 }
+
                 KeyCode.SWITCH_TO_TEXT_CONTEXT -> {
                     textView.text = keyView.resources.getString(R.string.key__view_characters)
                 }
+
                 KeyCode.SWITCH_TO_MEDIA_CONTEXT -> {
                     textView.iconDrawable = getDrawable(
-                        keyView.context, R.drawable.ic_sentiment_satisfied
+                        keyView.context,
+                        R.drawable.ic_sentiment_satisfied,
                     )
                 }
+
                 else -> {
                     textView.setTextSize(
-                        TypedValue.COMPLEX_UNIT_PX, when (keyView.data.popup[k].code) {
+                        TypedValue.COMPLEX_UNIT_PX,
+                        when (keyView.data.popup[k].code) {
                             KeyCode.URI_COMPONENT_TLD,
-                            KeyCode.SWITCH_TO_TEXT_CONTEXT -> textSize * 0.6f
+                            KeyCode.SWITCH_TO_TEXT_CONTEXT,
+                            -> textSize * 0.6f
+
                             else -> textSize
-                        }
+                        },
                     )
                     val computedLetter = keyView.getComputedLetter(keyView.data.popup[k])
                     textView.text = computedLetter
@@ -115,7 +125,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
                     val prefs = com.siansiansu.taigikeyboard.ime.core.PrefHelper(keyView.context)
                     textView.typeface = com.siansiansu.taigikeyboard.typeface.TypefaceLoader.getTypefaceByType(
                         fontType = prefs.fontType,
-                        context = keyView.context
+                        context = keyView.context,
                     )
                 }
             }
@@ -153,7 +163,8 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
     fun show(keyView: T_KV) {
         if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
             && !exceptionsForKeyCodes.contains(keyView.data.code)
-            && keyView.data.popup.isEmpty()) {
+            && keyView.data.popup.isEmpty()
+        ) {
             return
         }
 
@@ -164,6 +175,7 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
                     keyPopupWidth = (keyboardView.desiredKeyWidth * 0.6f).toInt()
                     keyPopupHeight = (keyboardView.desiredKeyHeight * 3.0f).toInt()
                 }
+
                 else -> {
                     keyPopupWidth = (keyboardView.desiredKeyWidth * 1.1f).toInt()
                     keyPopupHeight = (keyboardView.desiredKeyHeight * 2.5f).toInt()
@@ -219,7 +231,8 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
     fun extend(keyView: T_KV) {
         if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
             && !exceptionsForKeyCodes.contains(keyView.data.code)
-            && keyView.data.popup.isEmpty()) {
+            && keyView.data.popup.isEmpty()
+        ) {
             return
         }
 
@@ -239,10 +252,12 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
                 row1count = 0
                 row0count = popupCount
             }
+
             popupCount > 10 && popupCount % 2 == 1 -> {
                 row1count = (popupCount - 1) / 2
                 row0count = (popupCount + 1) / 2
             }
+
             else -> {
                 row1count = popupCount / 2
                 row0count = popupCount / 2
@@ -252,7 +267,10 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         // Calculate anchor offset (always positive int, direction depends on anchorLeft and
         // anchorRight state)
         anchorOffset = when {
-            row0count <= 1 -> 0
+            row0count <= 1 -> {
+                0
+            }
+
             else -> {
                 var offset = when {
                     row0count % 2 == 1 -> (row0count - 1) / 2
@@ -260,10 +278,18 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
                     else -> 0
                 }
                 val availableSpace = when {
-                    anchorLeft -> keyView.x.toInt() + keyPopupDiffX
-                    anchorRight -> keyboardView.measuredWidth -
+                    anchorLeft -> {
+                        keyView.x.toInt() + keyPopupDiffX
+                    }
+
+                    anchorRight -> {
+                        keyboardView.measuredWidth -
                             (keyView.x.toInt() + keyPopupDiffX + keyPopupWidth)
-                    else -> 0
+                    }
+
+                    else -> {
+                        0
+                    }
                 }
                 while (offset > 0) {
                     if (availableSpace >= offset * keyPopupWidth) {
@@ -286,11 +312,14 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
         for (k in indices) {
             val isInitActive =
                 anchorLeft && (idx - row1count == anchorOffset) ||
-                anchorRight && (idx - row1count == row0count - 1 - anchorOffset)
+                    anchorRight && (idx - row1count == row0count - 1 - anchorOffset)
             popupViewExt.addView(
                 createTextView(
-                    keyView, k, isInitActive, (row1count > 0) && (idx - row1count == 0)
-                )
+                    keyView,
+                    k,
+                    isInitActive,
+                    (row1count > 0) && (idx - row1count == 0),
+                ),
             )
             if (isInitActive) {
                 activeExtIndex = idx
@@ -362,46 +391,62 @@ class KeyPopupManager<T_KBD: View, T_KV: View>(private val keyboardView: T_KBD) 
             anchorLeft -> when {
                 // check if out of boundary on x-axis
                 event.x < keyPopupDiffX - (anchorOffset + 1) * keyPopupWidth ||
-                event.x > (keyPopupDiffX + (row0count + 1 - anchorOffset) * keyPopupWidth) -> {
+                    event.x > (keyPopupDiffX + (row0count + 1 - anchorOffset) * keyPopupWidth) -> {
                     return false
                 }
+
                 // row 1
-                event.y < 0 && row1count > 0 -> when {
-                    kX >= row1count - anchorOffset -> row1count - 1
-                    kX < -anchorOffset -> 0
-                    kX < 0 -> kX.toInt() - 1 + anchorOffset
-                    else -> kX.toInt() + anchorOffset
+                event.y < 0 && row1count > 0 -> {
+                    when {
+                        kX >= row1count - anchorOffset -> row1count - 1
+                        kX < -anchorOffset -> 0
+                        kX < 0 -> kX.toInt() - 1 + anchorOffset
+                        else -> kX.toInt() + anchorOffset
+                    }
                 }
+
                 // row 0
-                else -> when {
-                    kX >= row0count - anchorOffset -> row1count + row0count - 1
-                    kX < -anchorOffset -> row1count
-                    kX < 0 -> row1count + kX.toInt() - 1 + anchorOffset
-                    else -> row1count + kX.toInt() + anchorOffset
+                else -> {
+                    when {
+                        kX >= row0count - anchorOffset -> row1count + row0count - 1
+                        kX < -anchorOffset -> row1count
+                        kX < 0 -> row1count + kX.toInt() - 1 + anchorOffset
+                        else -> row1count + kX.toInt() + anchorOffset
+                    }
                 }
             }
+
             anchorRight -> when {
                 // check if out of boundary on x-axis
                 event.x > keyView.measuredWidth - keyPopupDiffX + (anchorOffset + 1) * keyPopupWidth ||
-                event.x < (keyView.measuredWidth -
-                        keyPopupDiffX - (row0count + 1 - anchorOffset) * keyPopupWidth) -> {
+                    event.x < (
+                        keyView.measuredWidth -
+                            keyPopupDiffX - (row0count + 1 - anchorOffset) * keyPopupWidth
+                    ) -> {
                     return false
                 }
+
                 // row 1
-                event.y < 0 && row1count > 0 -> when {
-                    kX >= anchorOffset -> row1count - 1
-                    kX < -(row1count - 1 - anchorOffset) -> 0
-                    kX < 0 -> row1count - 2 + kX.toInt() - anchorOffset
-                    else -> row1count - 1 + kX.toInt() - anchorOffset
+                event.y < 0 && row1count > 0 -> {
+                    when {
+                        kX >= anchorOffset -> row1count - 1
+                        kX < -(row1count - 1 - anchorOffset) -> 0
+                        kX < 0 -> row1count - 2 + kX.toInt() - anchorOffset
+                        else -> row1count - 1 + kX.toInt() - anchorOffset
+                    }
                 }
+
                 // row 0
-                else -> when {
-                    kX >= anchorOffset -> row1count + row0count - 1
-                    kX < -(row0count - 1 - anchorOffset) -> row1count
-                    kX < 0 -> row1count + row0count - 2 + kX.toInt() - anchorOffset
-                    else -> row1count + row0count - 1 + kX.toInt() - anchorOffset
+                else -> {
+                    when {
+                        kX >= anchorOffset -> row1count + row0count - 1
+                        kX < -(row0count - 1 - anchorOffset) -> row1count
+                        kX < 0 -> row1count + row0count - 2 + kX.toInt() - anchorOffset
+                        else -> row1count + row0count - 1 + kX.toInt() - anchorOffset
+                    }
                 }
             }
+
             else -> -1
         }
 

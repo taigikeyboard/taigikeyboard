@@ -8,7 +8,8 @@ enum class KeyVariation {
     EMAIL_ADDRESS,
     NORMAL,
     PASSWORD,
-    URI;
+    URI,
+    ;
 
     companion object {
         @SuppressLint("DefaultLocale")

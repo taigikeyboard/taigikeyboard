@@ -14,14 +14,14 @@ enum SuggestionCaseTransformer {
         _ suggestions: [Autocomplete.Suggestion],
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
-        inputMode: InputMode
+        inputMode: InputMode,
     ) -> [Autocomplete.Suggestion] {
         suggestions.map { suggestion in
             transformSuggestion(
                 suggestion,
                 composingText: composingText,
                 keyboardCase: keyboardCase,
-                inputMode: inputMode
+                inputMode: inputMode,
             )
         }
     }
@@ -30,7 +30,7 @@ enum SuggestionCaseTransformer {
         _ suggestion: Autocomplete.Suggestion,
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
-        inputMode: InputMode
+        inputMode: InputMode,
     ) -> Autocomplete.Suggestion {
         // Skip rules — match Android `id < 0 && id != -2` numeric markers
         // via iOS's `additionalInfo` flag-based equivalent.
@@ -45,14 +45,14 @@ enum SuggestionCaseTransformer {
             original: suggestion.text,
             composing: composingText,
             letterCase: keyboardCase.asLetterCase,
-            mode: inputMode
+            mode: inputMode,
         )
 
         return Autocomplete.Suggestion(
             text: transformedText,
             title: transformedText,
             subtitle: suggestion.subtitle,
-            additionalInfo: suggestion.additionalInfo
+            additionalInfo: suggestion.additionalInfo,
         )
     }
 }

@@ -31,9 +31,8 @@ class CandidateOverlayAdapter(
     private val layoutType: () -> String = { "" },
     private val orMapsToER: () -> Boolean = { false },
     private val isClickEnabled: () -> Boolean,
-    private val onCellClick: (TaigiWord, Int) -> Unit
+    private val onCellClick: (TaigiWord, Int) -> Unit,
 ) : ListAdapter<CandidateOverlayAdapter.CandidateRow, CandidateOverlayAdapter.RowViewHolder>(RowDiffCallback()) {
-
     companion object {
         // Pre-inflated pool size: covers most phones (44dp min cell + 1dp spacing).
         // If a row has more items, bind() inflates additional cells on demand.
@@ -129,7 +128,7 @@ class CandidateOverlayAdapter(
                 val lp = LinearLayout.LayoutParams(
                     item.measuredWidth,
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    if (isComposing) 0f else 1.0f
+                    if (isComposing) 0f else 1.0f,
                 ).apply {
                     if (cellIndex > 0) {
                         marginStart = spacing
@@ -163,7 +162,7 @@ class CandidateOverlayAdapter(
             word: TaigiWord,
             primaryText: TextView,
             subtitleText: TextView,
-            isSwapped: Boolean
+            isSwapped: Boolean,
         ) {
             val isTPSLayout = layoutType() == "tps"
             val displayRoman = if (isTPSLayout) {
@@ -177,16 +176,19 @@ class CandidateOverlayAdapter(
                     primaryText.text = displayRoman
                     subtitleText.visibility = View.GONE
                 }
+
                 isTPSLayout -> {
                     // TPS mode: always show hanzi only
                     primaryText.text = word.hanzi
                     subtitleText.visibility = View.GONE
                 }
+
                 isSwapped -> {
                     primaryText.text = word.hanzi
                     subtitleText.text = displayRoman
                     subtitleText.visibility = View.VISIBLE
                 }
+
                 else -> {
                     primaryText.text = displayRoman
                     subtitleText.text = word.hanzi
@@ -194,19 +196,18 @@ class CandidateOverlayAdapter(
                 }
             }
         }
-
     }
 
     // --- Data classes ---
 
     data class CandidateRow(
-        val items: List<CandidateItem>
+        val items: List<CandidateItem>,
     )
 
     data class CandidateItem(
         val word: TaigiWord,
         val originalIndex: Int,
-        val measuredWidth: Int
+        val measuredWidth: Int,
     )
 
     // --- DiffUtil ---

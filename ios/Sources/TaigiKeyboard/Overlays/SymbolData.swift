@@ -35,7 +35,6 @@ enum SymbolCategory: CaseIterable {
 
 /// Symbol data for the symbol selection overlay
 enum SymbolData {
-
     // MARK: - Tab 1: Full-width (14 rows x 6 cols)
 
     static let fullWidthRows: [[String]] = [

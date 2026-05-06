@@ -1,6 +1,7 @@
 import Foundation
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 
 /// Supplies the engine with an `EngineSettings` that reflects the current

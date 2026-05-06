@@ -3,6 +3,7 @@ import Foundation
 /// Custom dictionary entry model
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 struct CustomDictionaryEntry: Identifiable, Equatable {
     let id: String
@@ -16,7 +17,7 @@ struct CustomDictionaryEntry: Identifiable, Equatable {
         roman: String,
         hanzi: String,
         createdAt: Date = Date(),
-        updatedAt: Date = Date()
+        updatedAt: Date = Date(),
     ) {
         self.id = id
         self.roman = roman

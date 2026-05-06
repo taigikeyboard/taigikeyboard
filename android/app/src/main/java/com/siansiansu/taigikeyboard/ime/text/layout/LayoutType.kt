@@ -14,7 +14,8 @@ enum class LayoutType {
     SYMBOLS,
     SYMBOLS_MOD,
     SYMBOLS2,
-    SYMBOLS2_MOD;
+    SYMBOLS2_MOD,
+    ;
 
     @SuppressLint("DefaultLocale")
     override fun toString(): String {

@@ -21,7 +21,6 @@ enum class SymbolCategory(
  * Provides symbol rows for each category in the symbol panel.
  */
 object SymbolData {
-
     /** Full-width symbols (14 rows x 6 cols) */
     val fullWidthRows: List<List<String>> = listOf(
         listOf("，", "。", "！", "？", "；", "："),

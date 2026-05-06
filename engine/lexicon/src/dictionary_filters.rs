@@ -244,7 +244,8 @@ mod tests {
     /// Bit position truth table — each toggle drives the documented bit.
     #[test]
     fn bit_positions_match_layout() {
-        let cases: [(fn(&mut DictionaryToggles), u32); 12] = [
+        type ToggleCase = (fn(&mut DictionaryToggles), u32);
+        let cases: [ToggleCase; 12] = [
             (|t| t.kautian = true, 1 << 0),
             (|t| t.taigitv = true, 1 << 1),
             (|t| t.itaigi = true, 1 << 2),

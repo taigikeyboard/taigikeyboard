@@ -13,7 +13,7 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 class CapsStateManager(
     private val taigikeyboard: TaigiKeyboard,
     private val onInvalidateAllKeys: () -> Unit,
-    private val onInvalidateCharacterKeys: () -> Unit
+    private val onInvalidateCharacterKeys: () -> Unit,
 ) {
     // Dedicated handler for caps double-tap detection — avoids interference with
     // TextInputManager's osHandler (double-space period, etc.)
@@ -93,6 +93,6 @@ class CapsStateManager(
         ALL,
         NONE,
         SENTENCES,
-        WORDS;
+        WORDS,
     }
 }

@@ -27,9 +27,9 @@ import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
-import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.ime.theme.setBackgroundTintColor
+import com.siansiansu.taigikeyboard.localization.SettingsTexts
 import java.util.Locale
 
 @SuppressLint("ViewConstructor")

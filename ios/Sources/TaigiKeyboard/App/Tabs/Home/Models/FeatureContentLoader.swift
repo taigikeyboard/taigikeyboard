@@ -2,7 +2,6 @@ import Foundation
 
 /// Loads HomeTab content from bundled JSON files.
 enum FeatureContentLoader {
-
     /// Cached features, loaded once from JSON.
     static let features: [FeatureContent] = {
         guard let url = Bundle.main.url(forResource: "tab1-features", withExtension: "json"),

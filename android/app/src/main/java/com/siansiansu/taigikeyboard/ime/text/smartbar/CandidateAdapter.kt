@@ -29,9 +29,8 @@ class CandidateAdapter(
     private val fontType: () -> String,
     private val layoutType: () -> String = { "" },
     private val orMapsToER: () -> Boolean = { false },
-    private val onCandidateClick: (TaigiWord, Int) -> Unit
+    private val onCandidateClick: (TaigiWord, Int) -> Unit,
 ) : ListAdapter<TaigiWord, CandidateAdapter.CandidateViewHolder>(CandidateDiffCallback()) {
-
     // 快取的資源值（避免重複取得）
     private val margin: Int by lazy {
         context.resources.getDimensionPixelSize(R.dimen.smartbar_button_margin)
@@ -69,7 +68,7 @@ class CandidateAdapter(
         // Margin: margin*6 top + margin*6 bottom = margin*12
         val verticalPaddingPx = padding * 2 / 3
         val verticalMarginPx = margin * 4
-        val subtitleGapPx = 2 * density  // ~2dp gap between title and subtitle
+        val subtitleGapPx = 2 * density // ~2dp gap between title and subtitle
         val availablePx = (smartbarHeight - verticalPaddingPx - verticalMarginPx - subtitleGapPx)
             .coerceAtLeast(20f * density)
 
@@ -132,7 +131,7 @@ class CandidateAdapter(
             val isNextWordCandidate = word.id < 0
             if (position == 0 && !isNextWordCandidate) {
                 val bg = ContextCompat.getDrawable(context, R.drawable.candidate_composing_background)
-                val verticalInset = padding / 2   // shrink height to wrap text
+                val verticalInset = padding / 2 // shrink height to wrap text
                 container.background = InsetDrawable(bg, 0, verticalInset, 0, verticalInset)
             } else {
                 container.setBackgroundResource(R.drawable.candidate_button_background)
@@ -144,7 +143,7 @@ class CandidateAdapter(
 
             val lp = container.layoutParams as? RecyclerView.LayoutParams ?: RecyclerView.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.MATCH_PARENT,
             )
             val horizontalSpacing = margin * 3
             val verticalSpacing = margin * 2
@@ -166,15 +165,18 @@ class CandidateAdapter(
                     titleText = displayRoman
                     subtitleText = null
                 }
+
                 isTPSLayout -> {
                     // TPS mode: always show hanzi only
                     titleText = word.hanzi
                     subtitleText = null
                 }
+
                 isSwapped -> {
                     titleText = word.hanzi
                     subtitleText = displayRoman
                 }
+
                 else -> {
                     titleText = displayRoman
                     subtitleText = word.hanzi
@@ -231,8 +233,8 @@ class CandidateAdapter(
         override fun areContentsTheSame(oldItem: TaigiWord, newItem: TaigiWord): Boolean {
             // 比較內容是否相同
             return oldItem.roman == newItem.roman &&
-                   oldItem.hanzi == newItem.hanzi &&
-                   oldItem.lengthScore == newItem.lengthScore
+                oldItem.hanzi == newItem.hanzi &&
+                oldItem.lengthScore == newItem.lengthScore
         }
     }
 }

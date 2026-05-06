@@ -14,10 +14,10 @@ struct DiagnosticInfo {
     /// Formats the info as plain text suitable for copy/share in a bug report.
     func formatted() -> String {
         return """
-App: v\(appVersion) (\(buildNumber))
-OS: iOS \(osVersion)
-Device: \(deviceModel)
-"""
+        App: v\(appVersion) (\(buildNumber))
+        OS: iOS \(osVersion)
+        Device: \(deviceModel)
+        """
     }
 }
 
@@ -26,7 +26,6 @@ Device: \(deviceModel)
 /// Gathers local diagnostic information on demand.
 /// All methods are static — no instance state needed.
 enum DiagnosticService {
-
     @MainActor
     static func gather() -> DiagnosticInfo {
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
@@ -38,7 +37,7 @@ enum DiagnosticService {
             appVersion: appVersion,
             buildNumber: buildNumber,
             osVersion: osVersion,
-            deviceModel: deviceModel
+            deviceModel: deviceModel,
         )
     }
 

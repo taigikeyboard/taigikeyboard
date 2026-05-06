@@ -296,20 +296,33 @@ class ComposingManager(
             logger.tdebug("ComposingDelegate") {
                 val kind =
                     when (effect) {
-                        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit ->
+                        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> {
                             "UpdatePreedit len=${effect.display.length}"
-                        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit ->
+                        }
+
+                        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
                             "ClearPreeditWithoutCommit"
-                        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit ->
+                        }
+
+                        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> {
                             "CommitTextReplacingPreedit len=${effect.text.length}"
-                        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument ->
+                        }
+
+                        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> {
                             "DeleteBackwardFromDocument"
-                        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete ->
+                        }
+
+                        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete -> {
                             "ResetAutocomplete"
-                        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete ->
+                        }
+
+                        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete -> {
                             "PerformAutocomplete"
-                        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext ->
+                        }
+
+                        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext -> {
                             "ResetAutocompleteContext"
+                        }
                     }
                 "[COMMIT] fn=applyTransition effect=$kind"
             }

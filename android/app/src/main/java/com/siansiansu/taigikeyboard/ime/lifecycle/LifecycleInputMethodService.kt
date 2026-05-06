@@ -22,9 +22,11 @@ import kotlinx.coroutines.CoroutineScope
  * 提供 LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner 支援
  * 讓 ComposeView 可以正確找到 Lifecycle
  */
-open class LifecycleInputMethodService : InputMethodService(),
-    LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
-
+open class LifecycleInputMethodService :
+    InputMethodService(),
+    LifecycleOwner,
+    ViewModelStoreOwner,
+    SavedStateRegistryOwner {
     private val lifecycleRegistry by lazy { LifecycleRegistry(this) }
     private val store by lazy { ViewModelStore() }
     private val savedStateRegistryController by lazy { SavedStateRegistryController.create(this) }

@@ -53,7 +53,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         baselineGen = baseline.currentGeneration
         XCTAssertNil(baseline.lastSelectedWord)
@@ -70,11 +70,11 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = wordSelected(text: "安", roman: "an", nowMs: 5_000)
         XCTAssertEqual(result.currentGeneration, baselineGen &+ 2)
         let expected = RustEngineBridge.NextWordAssociationPair(
-            prev: "早", prevTl: "tsá", next: "安", nextTl: "an"
+            prev: "早", prevTl: "tsá", next: "安", nextTl: "an",
         )
         XCTAssertTrue(
             result.effects.contains(.recordAssociation(expected)),
-            "effects=\(result.effects)"
+            "effects=\(result.effects)",
         )
     }
 
@@ -91,11 +91,11 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     func testWordSelected_recordingDisabled_emitsNoRecord() {
         _ = wordSelected(
             text: "早", roman: "tsá", nowMs: 0,
-            associationRecordingEnabled: false
+            associationRecordingEnabled: false,
         )
         let result = wordSelected(
             text: "安", roman: "an", nowMs: 5_000,
-            associationRecordingEnabled: false
+            associationRecordingEnabled: false,
         )
         for effect in result.effects {
             switch effect {
@@ -117,7 +117,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         }
         XCTAssertEqual(pairs, [
             RustEngineBridge.NextWordAssociationPair(
-                prev: "tshit", prevTl: "tshit", next: "niû", nextTl: "niû"
+                prev: "tshit", prevTl: "tshit", next: "niû", nextTl: "niû",
             ),
         ])
     }
@@ -139,7 +139,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     func testWordSelected_requireRomanModeInSwappedMode_isNoop() {
         let result = wordSelected(
             text: "abc", roman: "abc", nowMs: 0,
-            requireRomanMode: true, translateSwapped: true
+            requireRomanMode: true, translateSwapped: true,
         )
         XCTAssertEqual(result.effects, [])
         XCTAssertEqual(result.currentGeneration, baselineGen)
@@ -148,7 +148,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     func testWordSelected_triggerPredictionFalse_recordsButSkipsQuery() {
         let result = wordSelected(
             text: "早", roman: "tsá", nowMs: 0,
-            triggerPrediction: false
+            triggerPrediction: false,
         )
         var sawReschedule = false
         for effect in result.effects {
@@ -167,7 +167,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
         let result = wordSelected(text: "安", roman: "", nowMs: 5_000)
         let expected = RustEngineBridge.NextWordAssociationPair(
-            prev: "早", prevTl: "tsá", next: "安", nextTl: ""
+            prev: "早", prevTl: "tsá", next: "安", nextTl: "",
         )
         XCTAssertTrue(result.effects.contains(.recordAssociation(expected)))
     }
@@ -221,7 +221,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertNil(result.lastSelectedWord)
         XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
@@ -237,7 +237,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         let result = clearForNewComposing(nowMs: 100)
         var sawClear = false
@@ -254,7 +254,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
         XCTAssertTrue(result.isShowing)
@@ -269,7 +269,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(snapshot.lastSelectedWord, "早")
         XCTAssertFalse(snapshot.isShowing, "is_showing is platform-driven, not engine-set")
@@ -289,7 +289,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertFalse(result.wasStale)
         XCTAssertEqual(result.predictions.first?.hanzi, "早", "user entry must outrank dict via learningBonus")
@@ -306,7 +306,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1, "(好, hó) merges across sources")
         // Score = scoreDict(5) + calculateUserScore(1, lastUsedMs=now, nowMs=now)
@@ -315,7 +315,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(
             result.predictions[0].score, expected,
             accuracy: Self.parityTolerance,
-            "merged score must equal sum of dict + user contributions"
+            "merged score must equal sum of dict + user contributions",
         )
     }
 
@@ -330,7 +330,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1)
         XCTAssertEqual(result.predictions[0].hanzi, "好")
@@ -347,7 +347,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .tl, translateSwapped: true, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 2)
     }
@@ -360,7 +360,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .poj, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 1)
         // tl_display_to_poj_display("tsiok") → "chiok"; the assertion guards the
@@ -377,7 +377,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertTrue(result.wasStale)
         XCTAssertTrue(result.predictions.isEmpty)
@@ -394,7 +394,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1_000,
             limit: 3,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result.predictions.count, 3)
     }
@@ -407,7 +407,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             words: words,
             predictedFirstChars: [],
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result, words)
     }
@@ -418,7 +418,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             words: words,
             predictedFirstChars: ["九"],
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         // 九-prefixed entries float to the top, original order preserved.
         XCTAssertEqual(result, ["九份", "九龍", "甲級", "alpha"])
@@ -430,7 +430,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             words: words,
             predictedFirstChars: ["九"],
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         XCTAssertEqual(result, words)
     }
@@ -444,7 +444,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         requireRomanMode: Bool = false,
         triggerPrediction: Bool = true,
         translateSwapped: Bool = false,
-        associationRecordingEnabled: Bool = true
+        associationRecordingEnabled: Bool = true,
     ) -> RustEngineBridge.NextWordDecideResult {
         RustEngineBridge.nextwordWordSelected(
             text: text,
@@ -455,13 +455,13 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: translateSwapped,
             associationRecordingEnabled: associationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
     }
 
     private func backspace(
         lastChar: String,
-        nowMs: Int64
+        nowMs: Int64,
     ) -> RustEngineBridge.NextWordDecideResult {
         RustEngineBridge.nextwordBackspace(
             lastChar: lastChar,
@@ -469,7 +469,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
     }
 
@@ -479,7 +479,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
     }
 
@@ -489,7 +489,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
     }
 
@@ -498,7 +498,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             mode: .tl,
             translateSwapped: false,
             associationRecordingEnabled: true,
-            generation: envelopeGen
+            generation: envelopeGen,
         ).currentGeneration
     }
 
@@ -507,12 +507,12 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         tl: String,
         count: Int64,
         lastUsedMs: Int64 = 0,
-        source: RustEngineBridge.NextWordRawRow.Source
+        source: RustEngineBridge.NextWordRawRow.Source,
     ) -> RustEngineBridge.NextWordRawRow {
         RustEngineBridge.NextWordRawRow(
             hanzi: hanzi, tl: tl,
             count: count, lastUsedMs: lastUsedMs,
-            source: source
+            source: source,
         )
     }
 }

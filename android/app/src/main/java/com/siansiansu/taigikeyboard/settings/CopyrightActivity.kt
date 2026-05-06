@@ -8,10 +8,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
 import com.siansiansu.taigikeyboard.content.CopyrightDataSource
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ui.tabs.home.CopyrightScreen
-import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
+import com.siansiansu.taigikeyboard.ui.tabs.home.CopyrightScreen
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 // Copyright and license information display

@@ -42,7 +42,7 @@ public extension RustEngineBridge {
             effects: [],
             currentGeneration: 0,
             isShowing: false,
-            lastSelectedWord: nil
+            lastSelectedWord: nil,
         )
     }
 
@@ -115,7 +115,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_WordSelected()
         payload.text = text
@@ -127,7 +127,7 @@ public extension RustEngineBridge {
             method: .wordSelected(payload),
             op: "nextwordWordSelected",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -137,7 +137,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_Backspace()
         payload.lastChar = lastChar
@@ -146,7 +146,7 @@ public extension RustEngineBridge {
             method: .backspace(payload),
             op: "nextwordBackspace",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -155,7 +155,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ContextTimeoutFired()
         payload.input = decisionInput(nowMs: nowMs)
@@ -163,7 +163,7 @@ public extension RustEngineBridge {
             method: .contextTimeoutFired(payload),
             op: "nextwordContextTimeoutFired",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -172,7 +172,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ClearForNewComposing()
         payload.input = decisionInput(nowMs: nowMs)
@@ -182,7 +182,7 @@ public extension RustEngineBridge {
             method: .clearForNewComposing_p(payload),
             op: "nextwordClearForNewComposing",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -191,7 +191,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ResetFull()
         payload.input = decisionInput(nowMs: nowMs)
@@ -199,7 +199,7 @@ public extension RustEngineBridge {
             method: .resetFull(payload),
             op: "nextwordResetFull",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -213,7 +213,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_SetIsShowing()
         payload.isShowing = isShowing
@@ -221,7 +221,7 @@ public extension RustEngineBridge {
             method: .setIsShowing(payload),
             op: "nextwordSetIsShowing",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         )
     }
 
@@ -235,7 +235,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordFilterResult {
         var payload = Taigi_Engine_FilterPredictions()
         payload.raw = raw.map { row in
@@ -255,7 +255,7 @@ public extension RustEngineBridge {
             method: .filterPredictions(payload),
             op: "nextwordFilter",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         ) else {
             return NextWordFilterResult(predictions: [], wasStale: false)
         }
@@ -269,7 +269,7 @@ public extension RustEngineBridge {
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
                 hanzi: p.hanzi,
                 tl: p.tl,
-                score: p.score
+                score: p.score,
             )
         }
         return NextWordFilterResult(predictions: predictions, wasStale: filter.wasStale)
@@ -281,7 +281,7 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> [String] {
         var payload = Taigi_Engine_BoostCandidates()
         payload.words = words
@@ -291,7 +291,7 @@ public extension RustEngineBridge {
             method: .boostCandidates(payload),
             op: "nextwordBoostCandidates",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         ) else {
             return words
         }
@@ -306,14 +306,14 @@ public extension RustEngineBridge {
         mode: InputMode,
         translateSwapped: Bool,
         associationRecordingEnabled: Bool,
-        generation: UInt64
+        generation: UInt64,
     ) -> NextWordStateSnapshot {
         let payload = Taigi_Engine_NextWordQueryState()
         guard let resp = nextwordDispatch(
             method: .queryState(payload),
             op: "nextwordQueryState",
             generation: generation,
-            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled)
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
         ) else {
             return NextWordStateSnapshot(lastSelectedWord: nil, isShowing: false, currentGeneration: 0)
         }
@@ -324,7 +324,7 @@ public extension RustEngineBridge {
         return NextWordStateSnapshot(
             lastSelectedWord: snapshot.lastSelectedWord.isEmpty ? nil : snapshot.lastSelectedWord,
             isShowing: snapshot.isShowing,
-            currentGeneration: snapshot.currentGeneration
+            currentGeneration: snapshot.currentGeneration,
         )
     }
 
@@ -343,7 +343,7 @@ public extension RustEngineBridge {
     private static func nextwordConfig(
         mode: InputMode,
         translateSwapped: Bool,
-        associationRecordingEnabled: Bool
+        associationRecordingEnabled: Bool,
     ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
         switch mode {
@@ -369,7 +369,7 @@ public extension RustEngineBridge {
         method: Taigi_Engine_NextWordRequest.OneOf_Method,
         op: String,
         generation: UInt64,
-        config: Taigi_Engine_AppConfig
+        config: Taigi_Engine_AppConfig,
     ) -> Taigi_Engine_NextWordResponse? {
         var nextword = Taigi_Engine_NextWordRequest()
         nextword.method = method
@@ -392,7 +392,7 @@ public extension RustEngineBridge {
             process_request_bytes(buf).toArray()
         }
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
+            serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return nil
@@ -413,7 +413,7 @@ public extension RustEngineBridge {
         method: Taigi_Engine_NextWordRequest.OneOf_Method,
         op: String,
         generation: UInt64,
-        config: Taigi_Engine_AppConfig
+        config: Taigi_Engine_AppConfig,
     ) -> NextWordDecideResult {
         guard let resp = nextwordDispatch(method: method, op: op, generation: generation, config: config) else {
             return .noop
@@ -447,7 +447,7 @@ public extension RustEngineBridge {
             effects: effects,
             currentGeneration: proto.currentGeneration,
             isShowing: proto.isShowing,
-            lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord
+            lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord,
         )
     }
 
@@ -456,7 +456,7 @@ public extension RustEngineBridge {
             prev: proto.prev,
             prevTl: proto.prevTl,
             next: proto.next,
-            nextTl: proto.nextTl
+            nextTl: proto.nextTl,
         )
     }
 }

@@ -102,7 +102,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         applyDecideResult(result)
     }
@@ -115,7 +115,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         applyDecideResult(result)
     }
@@ -127,7 +127,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         applyDecideResult(result)
     }
@@ -139,7 +139,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         applyDecideResult(result)
     }
@@ -237,7 +237,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         if filterResult.wasStale {
             logger.debug("[TRIGGER] dropping stale result gen=\(queryGeneration)")
@@ -258,7 +258,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         cachedIsShowing = synced.isShowing
         cachedLastSelectedWord = synced.lastSelectedWord
@@ -309,7 +309,7 @@ final class NextWordController: SelectionContextProvider {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: envelopeGen
+            generation: envelopeGen,
         )
         applyDecideResult(result)
     }

@@ -9,5 +9,5 @@ enum class KeyboardMode {
     NUMERIC_ADVANCED,
     PHONE,
     PHONE2,
-    CLIPBOARD
+    CLIPBOARD,
 }

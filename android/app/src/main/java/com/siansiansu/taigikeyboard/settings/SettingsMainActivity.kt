@@ -12,21 +12,21 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.content.ContentType
+import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.localization.SettingsTexts
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.MainSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.TabItem
-import com.siansiansu.taigikeyboard.ui.tabs.home.HomeScreen
-import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySearchViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DictionarySettingsScreen
+import com.siansiansu.taigikeyboard.ui.tabs.home.HomeScreen
+import com.siansiansu.taigikeyboard.ui.tabs.layout.LayoutScreen
 import com.siansiansu.taigikeyboard.ui.tabs.settings.DiagnosticViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.settings.InputSettingsScreen
 import com.siansiansu.taigikeyboard.ui.tabs.settings.SettingsResetViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.ime.core.AppVersionTracker
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Main settings host — tabbed UI for home, layout, dictionary, and input settings
 class SettingsMainActivity : AppCompatActivity() {

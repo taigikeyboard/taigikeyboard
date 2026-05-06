@@ -1,5 +1,4 @@
 import XCTest
-
 @testable import TaigiKeyboard
 
 /// `INVARIANT_LEX_HANZI_GUARD` — D-8 parity correction toward Android
@@ -30,7 +29,7 @@ final class LexiconServiceHanziGuardTests: XCTestCase {
         XCTAssertTrue(
             result.isEmpty,
             "INVARIANT_LEX_HANZI_GUARD: hanzi inputType must return [], "
-                + "got \(result.count) rows"
+                + "got \(result.count) rows",
         )
     }
 

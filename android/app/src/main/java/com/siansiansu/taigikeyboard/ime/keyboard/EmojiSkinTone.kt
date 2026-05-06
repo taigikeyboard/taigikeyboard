@@ -40,7 +40,8 @@ enum class EmojiSkinTone(val codePoint: Int) {
      * 深膚色 🏿
      * U+1F3FF EMOJI MODIFIER FITZPATRICK TYPE-6
      */
-    DARK(0x1F3FF);
+    DARK(0x1F3FF),
+    ;
 
     companion object {
         /**

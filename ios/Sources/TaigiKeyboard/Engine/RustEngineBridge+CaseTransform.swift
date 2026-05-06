@@ -64,7 +64,7 @@ public extension RustEngineBridge {
     static func transformInputCase(
         _ text: String,
         letterCase: CaseTransformLetterCase,
-        mode: InputMode
+        mode: InputMode,
     ) -> String {
         var payload = Taigi_Engine_TransformInputCase()
         payload.text = text
@@ -79,7 +79,7 @@ public extension RustEngineBridge {
         _ text: String,
         basedOn input: String,
         autoCapEnabled: Bool,
-        mode: InputMode
+        mode: InputMode,
     ) -> String {
         var payload = Taigi_Engine_CapitalizeCandidate()
         payload.text = text
@@ -95,7 +95,7 @@ public extension RustEngineBridge {
         original: String,
         composing: String,
         letterCase: CaseTransformLetterCase,
-        mode: InputMode
+        mode: InputMode,
     ) -> String {
         var payload = Taigi_Engine_TransformSuggestion()
         payload.originalText = original
@@ -113,7 +113,7 @@ public extension RustEngineBridge {
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
         mode: InputMode,
-        fallback: String
+        fallback: String,
     ) -> String {
         guard let resp = caseDispatch(method: method, op: op, mode: mode) else {
             return fallback

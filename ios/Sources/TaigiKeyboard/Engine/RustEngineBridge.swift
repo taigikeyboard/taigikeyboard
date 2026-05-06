@@ -35,7 +35,7 @@ public enum RustEngineBridge {
         guard !installed else { return }
         install_logger_sink(SwiftLoggerSink())
         #if DEBUG
-        set_log_level(4) // 4 = Debug per set_log_level Rust-side mapping (engine/swift-ffi)
+            set_log_level(4) // 4 = Debug per set_log_level Rust-side mapping (engine/swift-ffi)
         #endif
         installed = true
     }
@@ -48,7 +48,7 @@ public enum RustEngineBridge {
     public static func normalizeTone(
         _ input: String,
         mode: InputMode,
-        toggles: ToneToggles
+        toggles: ToneToggles,
     ) -> String {
         var payload = Taigi_Engine_NormalizeTone()
         payload.input = input
@@ -56,7 +56,7 @@ public enum RustEngineBridge {
             method: .normalizeTone(payload),
             input: input,
             op: "normalizeTone",
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
@@ -90,7 +90,7 @@ public enum RustEngineBridge {
             method: .normalizeToTl(payload),
             input: input,
             op: "normalizeToTl",
-            config: nil
+            config: nil,
         )
     }
 
@@ -101,7 +101,7 @@ public enum RustEngineBridge {
             method: .normalizeInput(payload),
             input: input,
             op: "normalizeInput",
-            config: nil
+            config: nil,
         )
     }
 
@@ -117,7 +117,7 @@ public enum RustEngineBridge {
             method: .nfdPreprocessForLookup(payload),
             input: input,
             op: "nfdPreprocessForLookup",
-            config: nil
+            config: nil,
         )
     }
 
@@ -144,7 +144,7 @@ public enum RustEngineBridge {
         }
         return ToneVariationsCache(
             poj: r.pojVariations.mapValues { $0.variations },
-            tl: r.tlVariations.mapValues { $0.variations }
+            tl: r.tlVariations.mapValues { $0.variations },
         )
     }()
 
@@ -178,7 +178,7 @@ public enum RustEngineBridge {
             method: .tlNumericToTps(payload),
             input: text,
             op: "tlNumericToTps",
-            config: nil
+            config: nil,
         )
     }
 
@@ -190,7 +190,7 @@ public enum RustEngineBridge {
             method: .tlDisplayToTps(payload),
             input: text,
             op: "tlDisplayToTps",
-            config: nil
+            config: nil,
         )
     }
 
@@ -202,7 +202,7 @@ public enum RustEngineBridge {
 
     public static func tpsInputAdjust(
         incoming: String,
-        rawInput: String
+        rawInput: String,
     ) -> (adjusted: String, replaceLast: String?) {
         var payload = Taigi_Engine_TpsInputAdjust()
         payload.incoming = incoming
@@ -245,7 +245,7 @@ public enum RustEngineBridge {
         tpsDedupEnabled: Bool,
         frequencyData: [String: FrequencyData],
         nowMs: Int64,
-        mergeOrderOnly: Bool = false
+        mergeOrderOnly: Bool = false,
     ) -> [TaigiWord] {
         #if DEBUG
             let detailed = processCandidatesDetailed(
@@ -314,7 +314,7 @@ public enum RustEngineBridge {
         frequencyData: [String: FrequencyData],
         nowMs: Int64,
         includeBreakdown: Bool,
-        mergeOrderOnly: Bool = false
+        mergeOrderOnly: Bool = false,
     ) -> CandidateRanking {
         var payload = Taigi_Engine_ProcessCandidatesRequest()
         payload.raw = raw.map(taigiWordToProto)
@@ -385,7 +385,7 @@ public enum RustEngineBridge {
             roman: proto.roman,
             hanzi: proto.hasHanji ? proto.hanji : nil,
             lengthScore: proto.hasLengthScore ? Int(proto.lengthScore) : nil,
-            sourceBitmask: proto.hasSourceBitmask ? UInt16(truncatingIfNeeded: proto.sourceBitmask) : nil
+            sourceBitmask: proto.hasSourceBitmask ? UInt16(truncatingIfNeeded: proto.sourceBitmask) : nil,
         )
     }
 
@@ -415,7 +415,7 @@ public enum RustEngineBridge {
             displayText: "",
             effects: [],
             selectedCandidateIndex: -1,
-            isComposing: false
+            isComposing: false,
         )
     }
 
@@ -423,7 +423,7 @@ public enum RustEngineBridge {
         _ text: String,
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Start()
         payload.text = text
@@ -431,7 +431,7 @@ public enum RustEngineBridge {
             method: .start(payload),
             op: "composingStart",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
@@ -439,7 +439,7 @@ public enum RustEngineBridge {
         _ char: String,
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Append()
         payload.char = char
@@ -447,20 +447,20 @@ public enum RustEngineBridge {
             method: .append(payload),
             op: "composingAppend",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
     public static func composingAppendHyphen(
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .appendHyphen(Taigi_Engine_AppendHyphen()),
             op: "composingAppendHyphen",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
@@ -468,7 +468,7 @@ public enum RustEngineBridge {
         _ replacement: String,
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_ReplaceLast()
         payload.replacement = replacement
@@ -476,33 +476,33 @@ public enum RustEngineBridge {
             method: .replaceLast(payload),
             op: "composingReplaceLast",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
     public static func composingDeleteBackward(
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
     public static func composingCommitDerived(
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .commitDerived(Taigi_Engine_CommitDerived()),
             op: "composingCommitDerived",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
@@ -511,13 +511,13 @@ public enum RustEngineBridge {
             method: .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
     public static func composingSelectSuggestion(
         _ text: String,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_SelectSuggestion()
         payload.text = text
@@ -525,7 +525,7 @@ public enum RustEngineBridge {
             method: .selectSuggestion(payload),
             op: "composingSelectSuggestion",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
@@ -533,7 +533,7 @@ public enum RustEngineBridge {
         _ text: String,
         mode: InputMode,
         toggles: ToneToggles,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitPreeditThenInsertExternal()
         payload.text = text
@@ -541,7 +541,7 @@ public enum RustEngineBridge {
             method: .commitPreeditThenInsertExternal(payload),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles)
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 
@@ -550,13 +550,13 @@ public enum RustEngineBridge {
             method: .reset(Taigi_Engine_Reset()),
             op: "composingReset",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
     public static func composingSetSelectedCandidateIndex(
         _ index: Int,
-        generation: UInt64
+        generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_SetSelectedCandidateIndex()
         payload.index = Int32(index)
@@ -564,7 +564,7 @@ public enum RustEngineBridge {
             method: .setSelectedCandidateIndex(payload),
             op: "composingSetSelectedCandidateIndex",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
@@ -573,7 +573,7 @@ public enum RustEngineBridge {
             method: .queryState(Taigi_Engine_QueryState()),
             op: "composingQueryState",
             generation: generation,
-            config: nil
+            config: nil,
         )
     }
 
@@ -653,7 +653,7 @@ public enum RustEngineBridge {
             timestamp: Date(),
             op: op,
             errorCode: code,
-            message: message
+            message: message,
         )
         recentErrorBuffer.append(entry)
         if recentErrorBuffer.count > recentErrorCap {
@@ -662,7 +662,7 @@ public enum RustEngineBridge {
         let logger = LoggerFactory.make(category: "RustEngineBridge")
         logger.warning("[\(op)] \(message)")
         #if DEBUG
-        assertionFailure("RustEngineBridge.\(op) failed: \(message)")
+            assertionFailure("RustEngineBridge.\(op) failed: \(message)")
         #endif
     }
 
@@ -682,7 +682,7 @@ public enum RustEngineBridge {
     private static func dispatch(
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         op: String,
-        config: Taigi_Engine_AppConfig?
+        config: Taigi_Engine_AppConfig?,
     ) -> Taigi_Engine_PhoneticsResponse? {
         var phonetics = Taigi_Engine_PhoneticsRequest()
         phonetics.method = method
@@ -704,7 +704,7 @@ public enum RustEngineBridge {
             process_request_bytes(buf).toArray()
         }
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
+            serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return nil
@@ -724,7 +724,7 @@ public enum RustEngineBridge {
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
         input: String,
         op: String,
-        config: Taigi_Engine_AppConfig?
+        config: Taigi_Engine_AppConfig?,
     ) -> String {
         guard let resp = dispatch(method: method, op: op, config: config) else { return input }
         guard case let .stringResult(s)? = resp.result else {
@@ -741,7 +741,7 @@ public enum RustEngineBridge {
     static func caseDispatch(
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
-        mode: InputMode
+        mode: InputMode,
     ) -> Taigi_Engine_CaseResponse? {
         var caseReq = Taigi_Engine_CaseRequest()
         caseReq.method = method
@@ -754,7 +754,7 @@ public enum RustEngineBridge {
         // doesn't accidentally pick up unrelated state.
         request.configSnapshot = appConfig(
             mode: mode,
-            toggles: ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+            toggles: ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false),
         )
 
         let bytes: [UInt8]
@@ -769,7 +769,7 @@ public enum RustEngineBridge {
             process_request_bytes(buf).toArray()
         }
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
+            serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return nil
@@ -787,7 +787,7 @@ public enum RustEngineBridge {
 
     static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,
-        op: String
+        op: String,
     ) -> Taigi_Engine_LexiconResponse? {
         var lexicon = Taigi_Engine_LexiconRequest()
         lexicon.method = method
@@ -808,7 +808,7 @@ public enum RustEngineBridge {
             process_request_bytes(buf).toArray()
         }
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
+            serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return nil
@@ -828,7 +828,7 @@ public enum RustEngineBridge {
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
-        config: Taigi_Engine_AppConfig?
+        config: Taigi_Engine_AppConfig?,
     ) -> ComposingTransition {
         let logger = LoggerFactory.make(category: "RustEngineBridge")
         var composing = Taigi_Engine_ComposingRequest()
@@ -853,7 +853,7 @@ public enum RustEngineBridge {
             process_request_bytes(buf).toArray()
         }
         guard let response = try? Taigi_Engine_Response(
-            serializedBytes: Data(responseBytes)
+            serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
             return .noop
@@ -889,13 +889,13 @@ public enum RustEngineBridge {
             displayText: proto.preedit.displayText,
             effects: effects,
             selectedCandidateIndex: Int(proto.selectedCandidateIndex),
-            isComposing: proto.isComposing
+            isComposing: proto.isComposing,
         )
     }
 
     private static func boolDispatch(
         method: Taigi_Engine_PhoneticsRequest.OneOf_Method,
-        op: String
+        op: String,
     ) -> Bool {
         guard let resp = dispatch(method: method, op: op, config: nil) else { return false }
         guard case let .boolResult(b)? = resp.result else {

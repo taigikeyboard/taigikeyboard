@@ -102,7 +102,7 @@ public extension RustEngineBridge {
         triePath: String,
         dictionaryBinPath: String,
         associationBinPath: String,
-        dictionaryVersion: UInt32
+        dictionaryVersion: UInt32,
     ) -> LexiconInstallStats? {
         var payload = Taigi_Engine_InstallRequest()
         payload.triePath = triePath
@@ -118,7 +118,7 @@ public extension RustEngineBridge {
         }
         return LexiconInstallStats(
             dictionaryRecordCount: r.dictionaryRecordCount,
-            prefixIndexEntryCount: r.prefixIndexEntryCount
+            prefixIndexEntryCount: r.prefixIndexEntryCount,
         )
     }
 
@@ -131,7 +131,7 @@ public extension RustEngineBridge {
         inputMode: LexiconInputMode,
         limit: UInt32,
         tpsOrMappedToER: Bool,
-        enabledSourcesBitmask: UInt32
+        enabledSourcesBitmask: UInt32,
     ) -> [LexiconRow] {
         var payload = Taigi_Engine_SearchRequest()
         payload.input = input
@@ -155,7 +155,7 @@ public extension RustEngineBridge {
         input: String,
         inputMode: LexiconInputMode,
         limit: UInt32,
-        enabledSourcesBitmask: UInt32
+        enabledSourcesBitmask: UInt32,
     ) -> [LexiconRow] {
         var payload = Taigi_Engine_SearchWithSourcesRequest()
         payload.input = input
@@ -177,7 +177,7 @@ public extension RustEngineBridge {
         query: String,
         inputMode: LexiconInputMode,
         limit: UInt32,
-        enabledSourcesBitmask: UInt32
+        enabledSourcesBitmask: UInt32,
     ) -> [LexiconRow] {
         var payload = Taigi_Engine_SearchByHanziRequest()
         payload.query = query
@@ -199,7 +199,7 @@ public extension RustEngineBridge {
     static func lexiconAssocLookup(
         previousWord: String,
         limit: UInt32,
-        enabledSourcesBitmask: UInt32
+        enabledSourcesBitmask: UInt32,
     ) -> [LexiconAssocEntry] {
         var payload = Taigi_Engine_AssocLookupRequest()
         payload.previousWord = previousWord
@@ -217,7 +217,7 @@ public extension RustEngineBridge {
                 previousWord: entry.previousWord,
                 candidateWord: entry.candidateWord,
                 candidateTl: entry.candidateTl,
-                count: entry.count
+                count: entry.count,
             )
         }
     }
@@ -248,7 +248,7 @@ public extension RustEngineBridge {
         }
         return ClassificationResult(
             inputType: platformInputType(from: r.inputType),
-            searchKey: r.searchKey
+            searchKey: r.searchKey,
         )
     }
 
@@ -290,7 +290,7 @@ public extension RustEngineBridge {
         return DictionaryFilters(
             dictionaryFilterBitmask: r.dictionaryFilterBitmask,
             assocLookupBitmask: r.assocLookupBitmask,
-            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:)))
+            enabledSources: Set(r.enabledSourceCodes.compactMap(platformDictionarySource(from:))),
         )
     }
 
@@ -318,7 +318,7 @@ public extension RustEngineBridge {
             roman: proto.roman,
             hanzi: proto.hasHanji ? proto.hanji : nil,
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
-            sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil
+            sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
         )
     }
 
@@ -329,9 +329,9 @@ public extension RustEngineBridge {
     /// must drift together.
     private static func platformInputType(from proto: Taigi_Engine_InputType) -> InputType {
         switch proto {
-        case .hanzi:           return .hanzi
-        case .romanWithTone:   return .romanWithTone
-        case .romanNoTone:     return .romanWithoutTone
+        case .hanzi: return .hanzi
+        case .romanWithTone: return .romanWithTone
+        case .romanNoTone: return .romanWithoutTone
         case .unspecified, .UNRECOGNIZED:
             return .romanWithoutTone
         }
@@ -346,16 +346,16 @@ public extension RustEngineBridge {
         var dictMask: UInt32 = 0
         if toggles.kautian { dictMask |= 1 << 0 }
         if toggles.taigitv { dictMask |= 1 << 1 }
-        if toggles.itaigi  { dictMask |= 1 << 2 }
-        if toggles.sitbut  { dictMask |= 1 << 3 }
-        if toggles.taihoa  { dictMask |= 1 << 4 }
-        if toggles.taijit  { dictMask |= 1 << 5 }
-        if toggles.kungge  { dictMask |= 1 << 6 }
-        if toggles.stti    { dictMask |= 1 << 7 }
-        if toggles.khpoo   { dictMask |= 1 << 8 }
-        if toggles.khiin   { dictMask |= 1 << 9 }
+        if toggles.itaigi { dictMask |= 1 << 2 }
+        if toggles.sitbut { dictMask |= 1 << 3 }
+        if toggles.taihoa { dictMask |= 1 << 4 }
+        if toggles.taijit { dictMask |= 1 << 5 }
+        if toggles.kungge { dictMask |= 1 << 6 }
+        if toggles.stti { dictMask |= 1 << 7 }
+        if toggles.khpoo { dictMask |= 1 << 8 }
+        if toggles.khiin { dictMask |= 1 << 9 }
         dictMask |= 1 << 10 // dev always
-        if toggles.lkk     { dictMask |= 1 << 11 }
+        if toggles.lkk { dictMask |= 1 << 11 }
         if toggles.variant { dictMask |= 1 << 12 }
 
         let allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi
@@ -366,19 +366,19 @@ public extension RustEngineBridge {
         var enabled: Set<DictionarySource> = [.dev, .custom]
         if toggles.kautian { enabled.insert(.kautian) }
         if toggles.taigitv { enabled.insert(.taigitv) }
-        if toggles.itaigi  { enabled.insert(.itaigi) }
-        if toggles.sitbut  { enabled.insert(.sitbut) }
-        if toggles.taihoa  { enabled.insert(.taihoa) }
-        if toggles.taijit  { enabled.insert(.taijit) }
-        if toggles.kungge  { enabled.insert(.kungge) }
-        if toggles.stti    { enabled.insert(.stti) }
-        if toggles.khpoo   { enabled.insert(.khpoo) }
-        if toggles.khiin   { enabled.insert(.khiin) }
-        if toggles.lkk     { enabled.insert(.lkk) }
+        if toggles.itaigi { enabled.insert(.itaigi) }
+        if toggles.sitbut { enabled.insert(.sitbut) }
+        if toggles.taihoa { enabled.insert(.taihoa) }
+        if toggles.taijit { enabled.insert(.taijit) }
+        if toggles.kungge { enabled.insert(.kungge) }
+        if toggles.stti { enabled.insert(.stti) }
+        if toggles.khpoo { enabled.insert(.khpoo) }
+        if toggles.khiin { enabled.insert(.khiin) }
+        if toggles.lkk { enabled.insert(.lkk) }
         return DictionaryFilters(
             dictionaryFilterBitmask: dictMask,
             assocLookupBitmask: assocMask,
-            enabledSources: enabled
+            enabledSources: enabled,
         )
     }
 
@@ -391,17 +391,17 @@ public extension RustEngineBridge {
         switch code {
         case .dictSourceKautian: return .kautian
         case .dictSourceTaigitv: return .taigitv
-        case .dictSourceItaigi:  return .itaigi
-        case .dictSourceSitbut:  return .sitbut
-        case .dictSourceTaihoa:  return .taihoa
-        case .dictSourceTaijit:  return .taijit
-        case .dictSourceKungge:  return .kungge
-        case .dictSourceStti:    return .stti
-        case .dictSourceKhpoo:   return .khpoo
-        case .dictSourceKhiin:   return .khiin
-        case .dictSourceLkk:     return .lkk
-        case .dictSourceDev:     return .dev
-        case .dictSourceCustom:  return .custom
+        case .dictSourceItaigi: return .itaigi
+        case .dictSourceSitbut: return .sitbut
+        case .dictSourceTaihoa: return .taihoa
+        case .dictSourceTaijit: return .taijit
+        case .dictSourceKungge: return .kungge
+        case .dictSourceStti: return .stti
+        case .dictSourceKhpoo: return .khpoo
+        case .dictSourceKhiin: return .khiin
+        case .dictSourceLkk: return .lkk
+        case .dictSourceDev: return .dev
+        case .dictSourceCustom: return .custom
         case .dictSourceUnspecified, .UNRECOGNIZED:
             return nil
         }
@@ -424,7 +424,7 @@ extension RustEngineBridge.DictionaryToggles {
             khpoo: settings.isKhpooDictEnabled,
             variant: settings.isVariantEnabled,
             khiin: settings.isKhiinEnabled,
-            lkk: settings.isLkkDictEnabled
+            lkk: settings.isLkkDictEnabled,
         )
     }
 }

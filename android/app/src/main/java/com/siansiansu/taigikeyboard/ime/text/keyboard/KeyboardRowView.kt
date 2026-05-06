@@ -13,8 +13,10 @@ class KeyboardRowView(context: Context) : FlexboxLayout(context) {
     init {
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             setMargins(
-                resources.getDimension(R.dimen.keyboard_row_marginH).toInt(), 0,
-                resources.getDimension(R.dimen.keyboard_row_marginH).toInt(), 0
+                resources.getDimension(R.dimen.keyboard_row_marginH).toInt(),
+                0,
+                resources.getDimension(R.dimen.keyboard_row_marginH).toInt(),
+                0,
             )
         }
         flexDirection = FlexDirection.ROW

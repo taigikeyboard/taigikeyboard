@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Version history page showing app update changelog.
 struct VersionHistoryDetailView: View {
-
     var body: some View {
         Form {
             ForEach(HomeTexts.versionHistoryEntries.indices, id: \.self) { index in

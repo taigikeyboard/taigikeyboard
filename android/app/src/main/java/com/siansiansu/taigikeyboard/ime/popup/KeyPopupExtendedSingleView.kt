@@ -14,11 +14,13 @@ import com.siansiansu.taigikeyboard.ime.theme.setBackgroundTintColor
 
 @SuppressLint("ViewConstructor")
 class KeyPopupExtendedSingleView(
-    context: Context, var isActive: Boolean = false
+    context: Context,
+    var isActive: Boolean = false,
 ) : androidx.appcompat.widget.AppCompatTextView(
-    context, null, 0
-) {
-
+        context,
+        null,
+        0,
+    ) {
     var iconDrawable: Drawable? = null
 
     init {
@@ -28,10 +30,13 @@ class KeyPopupExtendedSingleView(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        setBackgroundTintColor(this, when {
-            isActive -> R.attr.key_popup_extended_bgColorActive
-            else -> R.attr.key_popup_extended_bgColor
-        })
+        setBackgroundTintColor(
+            this,
+            when {
+                isActive -> R.attr.key_popup_extended_bgColorActive
+                else -> R.attr.key_popup_extended_bgColor
+            },
+        )
 
         val drawable = iconDrawable
         val drawablePadding = (0.2f * measuredHeight).toInt()
@@ -47,10 +52,11 @@ class KeyPopupExtendedSingleView(
                 marginH + drawablePadding,
                 marginV + drawablePadding,
                 measuredWidth - marginH - drawablePadding,
-                measuredHeight - marginV - drawablePadding)
+                measuredHeight - marginV - drawablePadding,
+            )
             drawable.colorFilter = BlendModeColorFilterCompat.createBlendModeColorFilterCompat(
                 getColorFromAttr(context, R.attr.key_popup_fgColor),
-                BlendModeCompat.SRC_ATOP
+                BlendModeCompat.SRC_ATOP,
             )
             drawable.draw(canvas)
         }

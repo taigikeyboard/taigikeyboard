@@ -3,6 +3,7 @@ package com.siansiansu.taigikeyboard.ime.media.emoji
 
 import android.annotation.SuppressLint
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.siansiansu.taigikeyboard.ui.components.EmojiEmotions
 import com.siansiansu.taigikeyboard.ui.components.EmojiEvents
 import com.siansiansu.taigikeyboard.ui.components.EmojiFlags
@@ -12,7 +13,6 @@ import com.siansiansu.taigikeyboard.ui.components.EmojiObjects
 import com.siansiansu.taigikeyboard.ui.components.EmojiPeople
 import com.siansiansu.taigikeyboard.ui.components.EmojiSymbols
 import com.siansiansu.taigikeyboard.ui.components.EmojiTransportation
-import androidx.compose.ui.graphics.vector.ImageVector
 
 enum class EmojiCategory {
     SMILEYS_EMOTION,
@@ -23,7 +23,8 @@ enum class EmojiCategory {
     ACTIVITIES,
     OBJECTS,
     SYMBOLS,
-    FLAGS;
+    FLAGS,
+    ;
 
     override fun toString(): String {
         return super.toString().replace("_", " & ")

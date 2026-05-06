@@ -10,6 +10,7 @@ import Foundation
 /// Non-TPS input modes pass through unchanged.
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum CharacterInputPipeline {
     /// Result of TPS key-level adjustment.

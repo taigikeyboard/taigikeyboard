@@ -5,7 +5,6 @@ import com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate
 import com.siansiansu.taigikeyboard.engine.proto.CaseRequest
 import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
 import com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString
-import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 import com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
@@ -13,6 +12,7 @@ import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
 import com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion
 import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 /**
  * Case-transform bridge. Top-level object (mirrors `LexiconBridge` pattern).

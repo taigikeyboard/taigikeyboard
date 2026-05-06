@@ -10,10 +10,10 @@ import com.siansiansu.taigikeyboard.engine.proto.DeriveNotone
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
-import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
+import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.NormalizeInput
 import com.siansiansu.taigikeyboard.engine.proto.NormalizeToTl
 import com.siansiansu.taigikeyboard.engine.proto.NormalizeTone
@@ -40,10 +40,10 @@ import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.FrequencyData
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
-import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
-import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
+import com.siansiansu.taigikeyboard.engine.proto.ScoreBreakdown as ProtoScoreBreakdown
+import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
 
 /**
  * Thin Kotlin wrapper around the Rust shared-core FFI exposed by
@@ -447,11 +447,17 @@ object RustEngineBridge {
     ) {
         sealed class Effect {
             data class UpdatePreedit(val display: String) : Effect()
+
             object ClearPreeditWithoutCommit : Effect()
+
             data class CommitTextReplacingPreedit(val text: String) : Effect()
+
             object DeleteBackwardFromDocument : Effect()
+
             object ResetAutocomplete : Effect()
+
             object PerformAutocomplete : Effect()
+
             object ResetAutocompleteContext : Effect()
         }
 
@@ -680,15 +686,37 @@ object RustEngineBridge {
     ): ComposingTransition {
         val effects: List<ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
             when {
-                eff.hasUpdatePreedit() -> ComposingTransition.Effect.UpdatePreedit(eff.updatePreedit.display)
-                eff.hasClearPreeditWithoutCommit() -> ComposingTransition.Effect.ClearPreeditWithoutCommit
-                eff.hasCommitTextReplacingPreedit() ->
+                eff.hasUpdatePreedit() -> {
+                    ComposingTransition.Effect.UpdatePreedit(eff.updatePreedit.display)
+                }
+
+                eff.hasClearPreeditWithoutCommit() -> {
+                    ComposingTransition.Effect.ClearPreeditWithoutCommit
+                }
+
+                eff.hasCommitTextReplacingPreedit() -> {
                     ComposingTransition.Effect.CommitTextReplacingPreedit(eff.commitTextReplacingPreedit.text)
-                eff.hasDeleteBackwardFromDocument() -> ComposingTransition.Effect.DeleteBackwardFromDocument
-                eff.hasResetAutocomplete() -> ComposingTransition.Effect.ResetAutocomplete
-                eff.hasPerformAutocomplete() -> ComposingTransition.Effect.PerformAutocomplete
-                eff.hasResetAutocompleteContext() -> ComposingTransition.Effect.ResetAutocompleteContext
-                else -> null
+                }
+
+                eff.hasDeleteBackwardFromDocument() -> {
+                    ComposingTransition.Effect.DeleteBackwardFromDocument
+                }
+
+                eff.hasResetAutocomplete() -> {
+                    ComposingTransition.Effect.ResetAutocomplete
+                }
+
+                eff.hasPerformAutocomplete() -> {
+                    ComposingTransition.Effect.PerformAutocomplete
+                }
+
+                eff.hasResetAutocompleteContext() -> {
+                    ComposingTransition.Effect.ResetAutocompleteContext
+                }
+
+                else -> {
+                    null
+                }
             }
         }
         return ComposingTransition(
@@ -721,9 +749,13 @@ object RustEngineBridge {
     ) {
         sealed class Effect {
             data class RescheduleContextTimeout(val afterMs: Long) : Effect()
+
             object CancelContextTimeout : Effect()
+
             data class RecordAssociation(val pair: NextWordAssociationPair) : Effect()
+
             data class RecordCompoundAssociations(val pairs: List<NextWordAssociationPair>) : Effect()
+
             /**
              * `nowMs` is reused by the platform predict() call so the
              * association-window clock and the user-row decay scoring see
@@ -736,6 +768,7 @@ object RustEngineBridge {
                 val generation: Long,
                 val nowMs: Long,
             ) : Effect()
+
             data class ClearPredictionsUI(val generation: Long) : Effect()
         }
 
@@ -1155,25 +1188,40 @@ object RustEngineBridge {
     ): NextWordDecideResult {
         val effects: List<NextWordDecideResult.Effect> = proto.effectsList.mapNotNull { eff ->
             when {
-                eff.hasRescheduleContextTimeout() ->
+                eff.hasRescheduleContextTimeout() -> {
                     NextWordDecideResult.Effect.RescheduleContextTimeout(eff.rescheduleContextTimeout.afterMs)
-                eff.hasCancelContextTimeout() -> NextWordDecideResult.Effect.CancelContextTimeout
-                eff.hasRecordAssociation() ->
+                }
+
+                eff.hasCancelContextTimeout() -> {
+                    NextWordDecideResult.Effect.CancelContextTimeout
+                }
+
+                eff.hasRecordAssociation() -> {
                     NextWordDecideResult.Effect.RecordAssociation(synthAssociationPair(eff.recordAssociation.pair))
-                eff.hasRecordCompoundAssociations() ->
+                }
+
+                eff.hasRecordCompoundAssociations() -> {
                     NextWordDecideResult.Effect.RecordCompoundAssociations(
                         eff.recordCompoundAssociations.pairsList.map(::synthAssociationPair),
                     )
-                eff.hasQueryPredictions() ->
+                }
+
+                eff.hasQueryPredictions() -> {
                     NextWordDecideResult.Effect.QueryPredictions(
                         word = eff.queryPredictions.word,
                         roman = eff.queryPredictions.roman,
                         generation = eff.queryPredictions.generation,
                         nowMs = eff.queryPredictions.nowMs,
                     )
-                eff.hasClearPredictionsUi() ->
+                }
+
+                eff.hasClearPredictionsUi() -> {
                     NextWordDecideResult.Effect.ClearPredictionsUI(eff.clearPredictionsUi.generation)
-                else -> null
+                }
+
+                else -> {
+                    null
+                }
             }
         }
         return NextWordDecideResult(

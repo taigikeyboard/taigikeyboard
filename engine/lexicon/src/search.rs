@@ -213,8 +213,8 @@ fn collect_filtered_sorted(
         }
     }
     // Stable sort by frequency descending. Tied scores fall back to
-    // insertion order (IndexSet rowid order preserved by `sort_by`).
-    staged.sort_by(|a, b| b.1.frequency.cmp(&a.1.frequency));
+    // insertion order (IndexSet rowid order preserved by `sort_by_key`).
+    staged.sort_by_key(|entry| std::cmp::Reverse(entry.1.frequency));
     let limit_usize = limit as usize;
     staged.truncate(limit_usize);
     staged

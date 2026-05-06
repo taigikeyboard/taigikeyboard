@@ -16,8 +16,8 @@ import java.util.*
 private const val TAG = "EmojiLayoutData"
 
 // CLDR 格式的分類標記
-private const val CATEGORY_START            = "["
-private const val CATEGORY_END              = "]"
+private const val CATEGORY_START = "["
+private const val CATEGORY_END = "]"
 
 typealias EmojiLayoutDataMap = EnumMap<EmojiCategory, MutableList<EmojiSet>>
 
@@ -34,7 +34,8 @@ private fun emojiStringToCodePoints(emoji: String): List<Int> {
 }
 
 fun parseRawEmojiSpecsFile(
-    context: Context, path: String
+    context: Context,
+    path: String,
 ): EmojiLayoutDataMap {
     val layouts = EmojiLayoutDataMap(EmojiCategory::class.java)
     for (category in EmojiCategory.values()) {
@@ -43,7 +44,7 @@ fun parseRawEmojiSpecsFile(
     var reader: BufferedReader? = null
     try {
         reader = BufferedReader(
-            InputStreamReader(context.assets.open(path))
+            InputStreamReader(context.assets.open(path)),
         )
         val paint = Paint().apply {
             typeface = Typeface.DEFAULT

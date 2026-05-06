@@ -7,7 +7,6 @@ import UIKit
 /// 使用 Apple 的 UITextChecker 提供英文自動完成與拼字建議。
 /// 完全依賴 KeyboardKit 框架，不使用組字邏輯。
 class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
-
     // MARK: - Properties
 
     private let checker = UITextChecker()
@@ -35,17 +34,17 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
         let suggestions = getSuggestions(for: text)
         return Autocomplete.Result(
             inputText: text,
-            suggestions: suggestions
+            suggestions: suggestions,
         )
     }
 
     func hasIgnoredWord(_ word: String) -> Bool { ignoredWords.contains(word) }
     func hasLearnedWord(_ word: String) -> Bool { learnedWords.contains(word) }
 
-    func ignoreWord(_ word: String) { }
-    func learnWord(_ word: String) { }
-    func removeIgnoredWord(_ word: String) { }
-    func unlearnWord(_ word: String) { }
+    func ignoreWord(_ word: String) {}
+    func learnWord(_ word: String) {}
+    func removeIgnoredWord(_ word: String) {}
+    func unlearnWord(_ word: String) {}
 
     // MARK: - Private Helpers
 
@@ -56,11 +55,11 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
         var suggestions: [Autocomplete.Suggestion] = []
 
         // 取得當前單字的自動完成建議
-        let range = NSRange(0..<currentWord.utf16.count)
+        let range = NSRange(0 ..< currentWord.utf16.count)
         if let completions = checker.completions(
             forPartialWordRange: range,
             in: currentWord,
-            language: language
+            language: language,
         ) {
             suggestions = completions.prefix(3).map { completion in
                 Autocomplete.Suggestion(text: completion)
@@ -74,14 +73,14 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
                 range: range,
                 startingAt: 0,
                 wrap: false,
-                language: language
+                language: language,
             )
 
             if misspelledRange.location != NSNotFound {
                 if let guesses = checker.guesses(
                     forWordRange: misspelledRange,
                     in: currentWord,
-                    language: language
+                    language: language,
                 ) {
                     suggestions = guesses.prefix(3).map { guess in
                         Autocomplete.Suggestion(text: guess)

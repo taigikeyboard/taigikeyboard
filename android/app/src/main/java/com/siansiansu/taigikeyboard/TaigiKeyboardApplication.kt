@@ -69,7 +69,9 @@ class TaigiKeyboardApplication : Application() {
         val currentVersion = BuildConfig.VERSION_CODE
         val lastCopiedVersion = if (versionFile.exists()) {
             versionFile.readText().trim().toIntOrNull() ?: 0
-        } else 0
+        } else {
+            0
+        }
         val needsCopy = currentVersion > lastCopiedVersion
 
         val filesToCopy = listOf(

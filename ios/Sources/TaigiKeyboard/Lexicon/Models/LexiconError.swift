@@ -8,6 +8,7 @@ import Foundation
 /// through `RustEngineBridge` instead.)
 
 // MARK: - Shared-Core Candidate
+
 // Pure logic, Foundation-only. Eligible for cross-platform extraction.
 enum LexiconError: LocalizedError {
     case databaseNotFound

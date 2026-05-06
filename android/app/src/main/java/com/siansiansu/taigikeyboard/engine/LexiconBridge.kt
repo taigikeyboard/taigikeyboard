@@ -4,7 +4,6 @@ import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
 import com.siansiansu.taigikeyboard.engine.proto.ClassifyInputRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
-import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InputType
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
@@ -19,6 +18,7 @@ import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
+import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
 import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
 
 /**
@@ -341,9 +341,9 @@ object LexiconBridge {
      */
     private fun platformInputType(proto: InputType): DictInputType =
         when (proto) {
-            InputType.INPUT_TYPE_HANZI           -> DictInputType.Hanzi
+            InputType.INPUT_TYPE_HANZI -> DictInputType.Hanzi
             InputType.INPUT_TYPE_ROMAN_WITH_TONE -> DictInputType.RomanWithTone
-            else                                 -> DictInputType.RomanWithoutTone
+            else -> DictInputType.RomanWithoutTone
         }
 
     /**
@@ -358,16 +358,16 @@ object LexiconBridge {
         var dictMask = 0u
         if (toggles.kautian) dictMask = dictMask or (1u shl 0)
         if (toggles.taigitv) dictMask = dictMask or (1u shl 1)
-        if (toggles.itaigi)  dictMask = dictMask or (1u shl 2)
-        if (toggles.sitbut)  dictMask = dictMask or (1u shl 3)
-        if (toggles.taihoa)  dictMask = dictMask or (1u shl 4)
-        if (toggles.taijit)  dictMask = dictMask or (1u shl 5)
-        if (toggles.kungge)  dictMask = dictMask or (1u shl 6)
-        if (toggles.stti)    dictMask = dictMask or (1u shl 7)
-        if (toggles.khpoo)   dictMask = dictMask or (1u shl 8)
-        if (toggles.khiin)   dictMask = dictMask or (1u shl 9)
+        if (toggles.itaigi) dictMask = dictMask or (1u shl 2)
+        if (toggles.sitbut) dictMask = dictMask or (1u shl 3)
+        if (toggles.taihoa) dictMask = dictMask or (1u shl 4)
+        if (toggles.taijit) dictMask = dictMask or (1u shl 5)
+        if (toggles.kungge) dictMask = dictMask or (1u shl 6)
+        if (toggles.stti) dictMask = dictMask or (1u shl 7)
+        if (toggles.khpoo) dictMask = dictMask or (1u shl 8)
+        if (toggles.khiin) dictMask = dictMask or (1u shl 9)
         dictMask = dictMask or (1u shl 10) // dev always
-        if (toggles.lkk)     dictMask = dictMask or (1u shl 11)
+        if (toggles.lkk) dictMask = dictMask or (1u shl 11)
         if (toggles.variant) dictMask = dictMask or (1u shl 12)
 
         val allAssocOn = toggles.kautian && toggles.taigitv && toggles.itaigi &&
@@ -378,15 +378,15 @@ object LexiconBridge {
         val enabled = mutableSetOf(DictionarySource.DEV, DictionarySource.CUSTOM)
         if (toggles.kautian) enabled.add(DictionarySource.KAUTIAN)
         if (toggles.taigitv) enabled.add(DictionarySource.TAIGITV)
-        if (toggles.itaigi)  enabled.add(DictionarySource.ITAIGI)
-        if (toggles.sitbut)  enabled.add(DictionarySource.SITBUT)
-        if (toggles.taihoa)  enabled.add(DictionarySource.TAIHOA)
-        if (toggles.taijit)  enabled.add(DictionarySource.TAIJIT)
-        if (toggles.kungge)  enabled.add(DictionarySource.KUNGGE)
-        if (toggles.stti)    enabled.add(DictionarySource.STTI)
-        if (toggles.khpoo)   enabled.add(DictionarySource.KHPOO)
-        if (toggles.khiin)   enabled.add(DictionarySource.KHIIN)
-        if (toggles.lkk)     enabled.add(DictionarySource.LKK)
+        if (toggles.itaigi) enabled.add(DictionarySource.ITAIGI)
+        if (toggles.sitbut) enabled.add(DictionarySource.SITBUT)
+        if (toggles.taihoa) enabled.add(DictionarySource.TAIHOA)
+        if (toggles.taijit) enabled.add(DictionarySource.TAIJIT)
+        if (toggles.kungge) enabled.add(DictionarySource.KUNGGE)
+        if (toggles.stti) enabled.add(DictionarySource.STTI)
+        if (toggles.khpoo) enabled.add(DictionarySource.KHPOO)
+        if (toggles.khiin) enabled.add(DictionarySource.KHIIN)
+        if (toggles.lkk) enabled.add(DictionarySource.LKK)
         return DictionaryFilters(
             dictionaryFilterBitmask = dictMask,
             assocLookupBitmask = assocMask,
@@ -405,20 +405,34 @@ object LexiconBridge {
     private fun platformDictionarySource(code: DictionarySourceCode): DictionarySource? =
         when (code) {
             DictionarySourceCode.DICT_SOURCE_KAUTIAN -> DictionarySource.KAUTIAN
+
             DictionarySourceCode.DICT_SOURCE_TAIGITV -> DictionarySource.TAIGITV
-            DictionarySourceCode.DICT_SOURCE_ITAIGI  -> DictionarySource.ITAIGI
-            DictionarySourceCode.DICT_SOURCE_SITBUT  -> DictionarySource.SITBUT
-            DictionarySourceCode.DICT_SOURCE_TAIHOA  -> DictionarySource.TAIHOA
-            DictionarySourceCode.DICT_SOURCE_TAIJIT  -> DictionarySource.TAIJIT
-            DictionarySourceCode.DICT_SOURCE_KUNGGE  -> DictionarySource.KUNGGE
-            DictionarySourceCode.DICT_SOURCE_STTI    -> DictionarySource.STTI
-            DictionarySourceCode.DICT_SOURCE_KHPOO   -> DictionarySource.KHPOO
-            DictionarySourceCode.DICT_SOURCE_KHIIN   -> DictionarySource.KHIIN
-            DictionarySourceCode.DICT_SOURCE_LKK     -> DictionarySource.LKK
-            DictionarySourceCode.DICT_SOURCE_DEV     -> DictionarySource.DEV
-            DictionarySourceCode.DICT_SOURCE_CUSTOM  -> DictionarySource.CUSTOM
+
+            DictionarySourceCode.DICT_SOURCE_ITAIGI -> DictionarySource.ITAIGI
+
+            DictionarySourceCode.DICT_SOURCE_SITBUT -> DictionarySource.SITBUT
+
+            DictionarySourceCode.DICT_SOURCE_TAIHOA -> DictionarySource.TAIHOA
+
+            DictionarySourceCode.DICT_SOURCE_TAIJIT -> DictionarySource.TAIJIT
+
+            DictionarySourceCode.DICT_SOURCE_KUNGGE -> DictionarySource.KUNGGE
+
+            DictionarySourceCode.DICT_SOURCE_STTI -> DictionarySource.STTI
+
+            DictionarySourceCode.DICT_SOURCE_KHPOO -> DictionarySource.KHPOO
+
+            DictionarySourceCode.DICT_SOURCE_KHIIN -> DictionarySource.KHIIN
+
+            DictionarySourceCode.DICT_SOURCE_LKK -> DictionarySource.LKK
+
+            DictionarySourceCode.DICT_SOURCE_DEV -> DictionarySource.DEV
+
+            DictionarySourceCode.DICT_SOURCE_CUSTOM -> DictionarySource.CUSTOM
+
             DictionarySourceCode.DICT_SOURCE_UNSPECIFIED,
-            DictionarySourceCode.UNRECOGNIZED        -> null
+            DictionarySourceCode.UNRECOGNIZED,
+            -> null
         }
 
     // endregion Classification

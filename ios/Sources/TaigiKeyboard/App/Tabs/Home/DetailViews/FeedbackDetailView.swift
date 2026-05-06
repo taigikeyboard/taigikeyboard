@@ -2,7 +2,6 @@ import SwiftUI
 
 /// Donation / feedback page with support link.
 struct FeedbackDetailView: View {
-
     private let supportURL = "https://p.ecpay.com.tw/AA663DE"
 
     var body: some View {

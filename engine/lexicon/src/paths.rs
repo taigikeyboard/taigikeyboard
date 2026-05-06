@@ -64,16 +64,14 @@ mod tests {
     #[test]
     fn rejects_nul_byte() {
         let err = LexiconPaths::validated("/foo\0bar.fst", "/dict.bin", "/assoc.bin", 1)
-            .err()
-            .expect("expected NUL byte rejection");
+            .expect_err("expected NUL byte rejection");
         assert!(matches!(err, LexiconError::InvalidPath(_)), "{err:?}");
     }
 
     #[test]
     fn rejects_non_absolute() {
         let err = LexiconPaths::validated("relative.fst", "/dict.bin", "/assoc.bin", 1)
-            .err()
-            .expect("expected non-absolute rejection");
+            .expect_err("expected non-absolute rejection");
         assert!(matches!(err, LexiconError::PathNotAbsolute(_)), "{err:?}");
     }
 

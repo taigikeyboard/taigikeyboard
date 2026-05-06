@@ -24,7 +24,7 @@ import kotlin.coroutines.suspendCoroutine
  * - 自動補全：根據部分輸入預測完整單字（受系統限制）
  */
 class EnglishAutocompleteService(
-    private val context: Context
+    private val context: Context,
 ) {
     companion object {
         private const val MAX_SUGGESTIONS = 3
@@ -120,7 +120,7 @@ class EnglishAutocompleteService(
                 Bundle(),
                 Locale.ENGLISH,
                 spellCheckerListener,
-                false  // referToSpellCheckerLanguageSettings
+                false, // referToSpellCheckerLanguageSettings
             )
 
             if (spellCheckerSession != null) {
@@ -193,7 +193,8 @@ class EnglishAutocompleteService(
         if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] Session available, calling suspendCoroutine...")
 
         return try {
-            kotlinx.coroutines.withTimeout(2000L) { // 2秒超時
+            kotlinx.coroutines.withTimeout(2000L) {
+                // 2秒超時
                 suspendCoroutine { continuation ->
                     pendingSuggestions = { suggestions ->
                         if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-CALLBACK] Received ${suggestions.size} suggestions")
@@ -260,5 +261,5 @@ class EnglishAutocompleteService(
  * 英文建議資料類別
  */
 data class EnglishSuggestion(
-    val text: String
+    val text: String,
 )

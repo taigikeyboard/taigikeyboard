@@ -41,17 +41,17 @@ class NextWordHandler(
     private val onUpdateCandidates: (List<TaigiWord>) -> Unit,
     private val onClearCandidates: () -> Unit,
 ) {
-    /// Cached state echoed from every decide call. Synchronous read for
-    /// SmartbarManager / CandidateClickHandler.
+    // / Cached state echoed from every decide call. Synchronous read for
+    // / SmartbarManager / CandidateClickHandler.
     private var cachedLastSelectedWord: String? = null
     private var cachedIsShowing: Boolean = false
 
-    /// Active context-timeout job. `null` when no timeout scheduled.
+    // / Active context-timeout job. `null` when no timeout scheduled.
     private var contextTimeoutJob: Job? = null
 
-    /// Per-IME-session envelope generation. Engine `EngineHandle` resets state
-    /// on mismatch BEFORE applying the request. Bumped on real input-context
-    /// changes via [resetContext] (called from `onStartInputView`).
+    // / Per-IME-session envelope generation. Engine `EngineHandle` resets state
+    // / on mismatch BEFORE applying the request. Bumped on real input-context
+    // / changes via [resetContext] (called from `onStartInputView`).
     private var envelopeGen: Long = 1L
 
     fun getLastSelectedWord(): String? = cachedLastSelectedWord
@@ -264,8 +264,8 @@ class NextWordHandler(
 
     // region Effect interpretation
 
-    /// Mirror engine state echo, then run effects in the order the engine
-    /// emitted. Runs on the IME main thread (caller invariant).
+    // / Mirror engine state echo, then run effects in the order the engine
+    // / emitted. Runs on the IME main thread (caller invariant).
     private fun applyDecideResult(result: RustEngineBridge.NextWordDecideResult) {
         cachedLastSelectedWord = result.lastSelectedWord
         cachedIsShowing = result.isShowing
@@ -276,25 +276,30 @@ class NextWordHandler(
 
     private fun execute(effect: RustEngineBridge.NextWordDecideResult.Effect) {
         when (effect) {
-            is RustEngineBridge.NextWordDecideResult.Effect.RescheduleContextTimeout ->
+            is RustEngineBridge.NextWordDecideResult.Effect.RescheduleContextTimeout -> {
                 scheduleContextTimeout(afterMs = effect.afterMs)
+            }
 
-            RustEngineBridge.NextWordDecideResult.Effect.CancelContextTimeout ->
+            RustEngineBridge.NextWordDecideResult.Effect.CancelContextTimeout -> {
                 cancelContextTimeoutJob()
+            }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation ->
+            is RustEngineBridge.NextWordDecideResult.Effect.RecordAssociation -> {
                 recordAssociationAsync(effect.pair)
+            }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations ->
+            is RustEngineBridge.NextWordDecideResult.Effect.RecordCompoundAssociations -> {
                 recordCompoundAssociationsAsync(effect.pairs)
+            }
 
-            is RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions ->
+            is RustEngineBridge.NextWordDecideResult.Effect.QueryPredictions -> {
                 dispatchPredictionQuery(
                     word = effect.word,
                     roman = effect.roman,
                     queryGeneration = effect.generation,
                     nowMs = effect.nowMs,
                 )
+            }
 
             is RustEngineBridge.NextWordDecideResult.Effect.ClearPredictionsUI -> {
                 onClearCandidates()

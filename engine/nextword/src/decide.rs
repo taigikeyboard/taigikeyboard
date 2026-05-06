@@ -75,8 +75,7 @@ pub(crate) fn apply(
             require_roman_mode,
             trigger_prediction,
             now_ms,
-            config,
-            platform,
+            DecideContext { config, platform },
         ),
         Intent::Backspace { last_char, now_ms } => decide_backspace(state, last_char, now_ms),
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state),
@@ -91,6 +90,11 @@ pub(crate) fn apply(
     })
 }
 
+struct DecideContext<'a> {
+    config: &'a AppConfig,
+    platform: Platform,
+}
+
 fn decide_word_selected(
     state: &mut PersistedState,
     text: String,
@@ -98,9 +102,9 @@ fn decide_word_selected(
     require_roman_mode: bool,
     trigger_prediction: bool,
     now_ms: i64,
-    config: &AppConfig,
-    platform: Platform,
+    ctx: DecideContext<'_>,
 ) -> DecideResult {
+    let DecideContext { config, platform } = ctx;
     // Enter commits raw romanization only; skip entirely in Hanji mode.
     if require_roman_mode && config.is_translate_swapped {
         return result_unchanged(state);
@@ -304,7 +308,7 @@ pub(crate) fn should_record_association(state: &PersistedState, now_ms: i64) -> 
         return false;
     }
     let delta = now_ms - state.last_selection_time_ms;
-    delta >= 0 && delta < ASSOCIATION_TIMEOUT_MS
+    (0..ASSOCIATION_TIMEOUT_MS).contains(&delta)
 }
 
 /// Split a compound word. iOS: `-` only. Android: `-` and whitespace.
@@ -515,7 +519,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(state.last_selected_word, None);
-        assert_eq!(state.is_showing, false);
+        assert!(!state.is_showing);
         assert_eq!(state.current_generation, 6);
         let kinds: Vec<_> = result
             .effects
@@ -764,7 +768,7 @@ mod tests {
             &ios_config(true, false),
         )
         .unwrap();
-        assert_eq!(state.is_showing, false);
+        assert!(!state.is_showing);
         assert_eq!(state.current_generation, 4);
         assert!(matches!(
             result.effects[0].kind,

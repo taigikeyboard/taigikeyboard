@@ -34,23 +34,29 @@ object DefaultComposingDelegate : ComposingDelegate {
             is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> {
                 ic.setComposingText(effect.display, 1)
             }
+
             RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
                 // INVARIANT_composing_clear_preedit_does_not_commit:
                 // finishComposingText alone commits the active region; zero first.
                 ic.setComposingText("", 1)
                 ic.finishComposingText()
             }
+
             is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> {
                 // Atomic — `commitText` replaces the composing region in one call.
                 ic.commitText(effect.text, 1)
             }
+
             RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> {
                 ic.deleteSurroundingText(1, 0)
             }
+
             RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete,
             RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete,
             RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext,
-            -> Unit
+            -> {
+                Unit
+            }
         }
     }
 }

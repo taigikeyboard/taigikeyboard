@@ -14,7 +14,7 @@ import androidx.datastore.preferences.preferencesDataStore
  * Singleton pattern using extension property.
  */
 val Context.preferencesDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "taigi_keyboard_prefs"
+    name = "taigi_keyboard_prefs",
 )
 
 /**
@@ -61,10 +61,13 @@ object PreferenceKeys {
 
     // 詞頻紀錄開關
     val FREQUENCY_RECORDING_ENABLED = booleanPreferencesKey("dictionary__frequency_recording_enabled")
+
     // 詞關聯紀錄開關
     val ASSOCIATION_RECORDING_ENABLED = booleanPreferencesKey("dictionary__association_recording_enabled")
+
     // 自訂詞庫開關
     val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
+
     // 詞庫開關設定
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")
@@ -75,10 +78,13 @@ object PreferenceKeys {
     val KUNGGE_DICT_ENABLED = booleanPreferencesKey("dictionary__kungge_dict_enabled")
     val STTI_DICT_ENABLED = booleanPreferencesKey("dictionary__stti_dict_enabled")
     val KHPOO_DICT_ENABLED = booleanPreferencesKey("dictionary__khpoo_dict_enabled")
+
     // 異用字開關
     val VARIANT_DICT_ENABLED = booleanPreferencesKey("dictionary__variant_enabled")
+
     // 在來字開關
     val KHIIN_ENABLED = booleanPreferencesKey("dictionary__khiin_enabled")
+
     // LKK漢羅合用建議用字
     val LKK_DICT_ENABLED = booleanPreferencesKey("dictionary__lkk_dict_enabled")
 

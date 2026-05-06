@@ -18,7 +18,7 @@ enum CandidateProcessor {
             text,
             basedOn: input,
             autoCapEnabled: isAutoCap,
-            mode: inputMode
+            mode: inputMode,
         )
     }
 

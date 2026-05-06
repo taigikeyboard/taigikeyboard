@@ -26,7 +26,7 @@ extension ActionHandler {
         let processedChar = RustEngineBridge.transformInputCase(
             char,
             letterCase: currentCase.asLetterCase,
-            mode: settings.inputMode
+            mode: settings.inputMode,
         )
 
         // TPS key-level adjustments via pure pipeline (returns adjusted char +

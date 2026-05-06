@@ -15,7 +15,6 @@ import com.siansiansu.taigikeyboard.BuildConfig
  * 讓鍵盤背景自然延伸到導覽列區域
  */
 class NavigationBarManager {
-
     /**
      * 判斷當前是否為深色模式
      */

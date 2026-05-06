@@ -7,9 +7,9 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.home.SetupGuideScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Setup guide for enabling the keyboard — shared between Home tab sub-page and first-launch full-screen mode
 class SetupGuideActivity : ComponentActivity() {

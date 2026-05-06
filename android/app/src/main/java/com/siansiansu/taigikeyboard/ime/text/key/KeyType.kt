@@ -11,7 +11,8 @@ enum class KeyType {
     NAVIGATION,
     FUNCTION,
     NUMERIC,
-    LOCK;
+    LOCK,
+    ;
 
     companion object {
         @SuppressLint("DefaultLocale")

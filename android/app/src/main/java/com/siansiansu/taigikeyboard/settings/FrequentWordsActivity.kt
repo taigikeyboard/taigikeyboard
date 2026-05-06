@@ -6,12 +6,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.AssociationDataViewModel
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.FrequencyDataViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Viewer for user frequency and word association data
 class FrequentWordsActivity : ComponentActivity() {

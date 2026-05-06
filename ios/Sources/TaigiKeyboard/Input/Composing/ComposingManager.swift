@@ -78,7 +78,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             text,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -89,7 +89,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             char,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -99,7 +99,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         apply(RustEngineBridge.composingAppendHyphen(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -111,7 +111,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             replacement,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -121,7 +121,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         apply(RustEngineBridge.composingDeleteBackward(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -131,7 +131,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
         applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 
@@ -152,7 +152,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             text,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration
+            generation: currentGeneration,
         ))
     }
 

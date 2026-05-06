@@ -6,10 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.CustomDictionaryViewModel
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
-import com.siansiansu.taigikeyboard.ui.setupEdgeToEdge
 
 // Custom dictionary management
 class CustomDictionaryActivity : ComponentActivity() {

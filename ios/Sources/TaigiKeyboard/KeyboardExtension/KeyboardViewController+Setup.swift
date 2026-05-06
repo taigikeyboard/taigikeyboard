@@ -42,7 +42,7 @@ extension KeyboardViewController {
         ) {
             setupLogger.info(
                 "[LEXICON] installed: dict=\(stats.dictionaryRecordCount) "
-                    + "fst_entries=\(stats.prefixIndexEntryCount) version=\(stamp)"
+                    + "fst_entries=\(stats.prefixIndexEntryCount) version=\(stamp)",
             )
         } else {
             setupLogger.warning("[LEXICON] install returned nil; engine not installed")

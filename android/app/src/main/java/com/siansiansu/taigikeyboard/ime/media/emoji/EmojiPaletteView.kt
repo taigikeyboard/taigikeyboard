@@ -22,11 +22,12 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -40,7 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
@@ -83,7 +83,7 @@ fun EmojiPaletteView(
     preferredSkinTone: com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone,
     onEmojiClick: (EmojiKeyData) -> Unit,
     onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var activeCategory by remember { mutableStateOf(EmojiCategory.SMILEYS_EMOTION) }
     val scope = rememberCoroutineScope()
@@ -99,13 +99,13 @@ fun EmojiPaletteView(
                 scope.launch {
                     pagerState.animateScrollToPage(EmojiCategoryValues.indexOf(category))
                 }
-            }
+            },
         )
 
         // 分頁內容
         HorizontalPager(
             state = pagerState,
-            beyondViewportPageCount = 2
+            beyondViewportPageCount = 2,
         ) { page ->
             val lazyGridState = rememberLazyGridState()
 
@@ -132,14 +132,14 @@ fun EmojiPaletteView(
                         columns = GridCells.Fixed(7),
                         state = lazyGridState,
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         items(emojiList) { emojiSet ->
                             EmojiKey(
                                 emojiSet = emojiSet,
                                 preferredSkinTone = preferredSkinTone,
                                 onEmojiClick = onEmojiClick,
-                                onSkinToneSelected = onSkinToneSelected
+                                onSkinToneSelected = onSkinToneSelected,
                             )
                         }
                     }
@@ -155,7 +155,7 @@ fun EmojiPaletteView(
 @Composable
 private fun EmojiCategoriesTabRow(
     activeCategory: EmojiCategory,
-    onCategoryChange: (EmojiCategory) -> Unit
+    onCategoryChange: (EmojiCategory) -> Unit,
 ) {
     val selectedTabIndex = EmojiCategoryValues.indexOf(activeCategory)
 
@@ -170,9 +170,9 @@ private fun EmojiCategoriesTabRow(
             TabRowDefaults.PrimaryIndicator(
                 modifier = Modifier.tabIndicatorOffset(selectedTabIndex, matchContentSize = false),
                 height = 4.dp,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
             )
-        }
+        },
     ) {
         EmojiCategoryValues.forEachIndexed { index, category ->
             Tab(
@@ -182,9 +182,9 @@ private fun EmojiCategoriesTabRow(
                     Icon(
                         imageVector = category.icon(),
                         contentDescription = category.toString(),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
-                }
+                },
             )
         }
     }
@@ -198,7 +198,7 @@ private fun EmojiKey(
     emojiSet: EmojiSet,
     preferredSkinTone: com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone,
     onEmojiClick: (EmojiKeyData) -> Unit,
-    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit
+    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
 ) {
     // 使用 remember 快取計算結果，避免每次重組都重新計算
     val variations = remember(emojiSet) { emojiSet.variations() }
@@ -224,16 +224,16 @@ private fun EmojiKey(
                         if (hasVariations) {
                             showVariantsPopup = true
                         }
-                    }
+                    },
                 )
-            }
+            },
     ) {
         // Emoji 文字
         Text(
             modifier = Modifier.align(Alignment.Center),
             text = base.getCodePointsAsString(),
             fontSize = EmojiDefaultFontSize,
-            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+            color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
         )
 
         // 變體指示器
@@ -249,8 +249,8 @@ private fun EmojiKey(
                     .size(4.dp)
                     .background(
                         androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                        shape
-                    )
+                        shape,
+                    ),
             )
         }
 
@@ -268,7 +268,7 @@ private fun EmojiKey(
                 },
                 onDismiss = {
                     showVariantsPopup = false
-                }
+                },
             )
         }
     }
@@ -281,7 +281,7 @@ private fun EmojiKey(
 private fun EmojiVariationsPopup(
     variations: List<EmojiKeyData>,
     onEmojiTap: (EmojiKeyData, com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val emojiKeyHeight = 48.dp
 
@@ -291,13 +291,13 @@ private fun EmojiVariationsPopup(
             val y = -emojiKeyHeight * ceil(variations.size / 6f)
             IntOffset(x = 0, y = y.toPx().toInt())
         },
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
     ) {
         Box(
             modifier = Modifier
                 .widthIn(max = EmojiBaseWidth * 6)
                 .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant)
-                .padding(8.dp)
+                .padding(8.dp),
         ) {
             Column {
                 variations.chunked(6).forEach { row ->
@@ -312,13 +312,13 @@ private fun EmojiVariationsPopup(
                                     .height(emojiKeyHeight)
                                     .pointerInput(Unit) {
                                         detectTapGestures { onEmojiTap(emoji, skinTone) }
-                                    }
+                                    },
                             ) {
                                 Text(
                                     modifier = Modifier.align(Alignment.Center),
                                     text = emoji.getCodePointsAsString(),
                                     fontSize = EmojiDefaultFontSize,
-                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }

@@ -29,7 +29,7 @@ final class RustEngineBridgeTests: XCTestCase {
         let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
         XCTAssertEqual(
             RustEngineBridge.normalizeTone("gua2", mode: .tl, toggles: toggles),
-            "guá"
+            "guá",
         )
     }
 
@@ -188,7 +188,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(response)
         XCTAssertTrue(
             response?.error == .failInvariant || response?.error == .failParse,
-            "got \(String(describing: response?.error))"
+            "got \(String(describing: response?.error))",
         )
     }
 }

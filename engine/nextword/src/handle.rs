@@ -88,7 +88,6 @@ impl Default for EngineHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::PersistedState;
     use protos::engine::Platform;
 
     fn ios_config() -> AppConfig {

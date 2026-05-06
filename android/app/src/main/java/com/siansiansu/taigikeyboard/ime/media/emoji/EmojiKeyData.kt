@@ -8,7 +8,7 @@ data class EmojiKeyData(
     val codePoints: List<Int>,
     val label: String = "",
     val name: String = "",
-    val keywords: List<String> = emptyList()
+    val keywords: List<String> = emptyList(),
 ) {
     // 快取字串轉換結果，避免重複計算
     private val cachedString: String by lazy {

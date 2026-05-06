@@ -20,7 +20,6 @@ import org.junit.Test
  * §14 implementation-status note.
  */
 class LexiconServiceHanziGuardTest {
-
     @Test
     @Ignore("D-8 platform parity test pending — see file-level KDoc + invariants.md §14")
     fun `hanzi inputType returns empty list short-circuiting before bridge`() {

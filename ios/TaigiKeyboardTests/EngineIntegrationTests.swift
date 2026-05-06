@@ -3,7 +3,6 @@ import XCTest
 
 /// Cross-component engine integration tests
 final class EngineIntegrationTests: XCTestCase {
-
     // MARK: - A. Normalization Pipeline
 
     func testNormalizationPipeline_tlDiacriticInput() {
@@ -40,10 +39,9 @@ final class EngineIntegrationTests: XCTestCase {
 
     func testToneMarkRoundTrip_pojMode() {
         let marked = TaigiPhonetics.convertSyllable("ka2", mode: .poj)
-        XCTAssertEqual(marked, "k\u{00E1}")  // ká (same for simple vowel)
+        XCTAssertEqual(marked, "k\u{00E1}") // ká (same for simple vowel)
 
         let restored = ToneRestoration.restore(marked, mode: .poj)
         XCTAssertEqual(restored, "ka")
     }
-
 }

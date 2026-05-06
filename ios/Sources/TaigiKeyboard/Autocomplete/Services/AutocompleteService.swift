@@ -167,7 +167,7 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
             associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: selection.nextwordEnvelopeGeneration
+            generation: selection.nextwordEnvelopeGeneration,
         )
         return Self.remapBoostedWords(words, displayOrder: reordered)
     }
