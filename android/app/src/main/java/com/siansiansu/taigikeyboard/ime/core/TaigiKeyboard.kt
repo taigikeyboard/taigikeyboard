@@ -10,6 +10,7 @@ import android.os.*
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.view.inputmethod.CursorAnchorInfo
@@ -19,6 +20,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.BuildConfig
@@ -179,7 +183,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
         baseContext.setTheme(R.style.KeyboardTheme)
 
-        inputView = layoutInflater.inflate(R.layout.taigikeyboard, null) as InputView
+        // Assign before manager.onCreateInputView() — managers read `inputView` directly.
+        val view = layoutInflater.inflate(R.layout.taigikeyboard, null) as InputView
+        inputView = view
 
         // 設定 ViewTree owners 讓 ComposeView 能找到 LifecycleOwner
         installViewTreeOwners()
@@ -190,8 +196,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             Log.d("TaigiKeyboard", "Setting up WindowInsets listener on inputView")
         }
 
-        val currentInputView = inputView ?: return inputView
-        ViewCompat.setOnApplyWindowInsetsListener(currentInputView) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             if (BuildConfig.DEBUG) {
                 Log.d("TaigiKeyboard", "=== WindowInsets listener called ===")
             }
@@ -253,7 +258,21 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         // InputMethodService 需要使用 getWindow().getWindow() 來取得真正的 Window 物件
         getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
 
-        return inputView
+        // Compose host shell — inner subtrees migrate to native Compose
+        // incrementally while the legacy InputView remains the keyboard body.
+        return ComposeView(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+            // `onConfigurationChanged` calls `setInputView` again, detaching this
+            // host. Dispose on detach (not on lifecycle destroy) so an old
+            // composition does not linger until the IME service ends.
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                AndroidView(factory = { view })
+            }
+        }
     }
 
     fun registerInputView(inputView: InputView) {
