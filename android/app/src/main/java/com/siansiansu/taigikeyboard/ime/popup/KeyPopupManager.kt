@@ -17,7 +17,11 @@ import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyboardView
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyView
+import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
+import com.siansiansu.taigikeyboard.ime.text.keyboard.ExtendedPopupGeometryInput
+import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
+import com.siansiansu.taigikeyboard.ime.text.keyboard.PopupDimensionsInput
 
 class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD) {
     private var anchorLeft: Boolean = false
@@ -168,21 +172,25 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
             return
         }
 
-        // Update keyPopupWidth and keyPopupHeight
         if (keyboardView is KeyboardView) {
-            when (keyboardView.resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> {
-                    keyPopupWidth = (keyboardView.desiredKeyWidth * 0.6f).toInt()
-                    keyPopupHeight = (keyboardView.desiredKeyHeight * 3.0f).toInt()
-                }
-
-                else -> {
-                    keyPopupWidth = (keyboardView.desiredKeyWidth * 1.1f).toInt()
-                    keyPopupHeight = (keyboardView.desiredKeyHeight * 2.5f).toInt()
-                }
-            }
-        } // EmojiKeyboardView no longer uses PopupManager (Compose implementation)
-        keyPopupDiffX = (keyView.measuredWidth - keyPopupWidth) / 2
+            val popupDims = KeyboardLayoutSolver.solvePopupDimensions(
+                PopupDimensionsInput(
+                    desiredKeyWidth = keyboardView.desiredKeyWidth,
+                    desiredKeyHeight = keyboardView.desiredKeyHeight,
+                    keyViewMeasuredWidth = keyView.measuredWidth,
+                    isLandscape =
+                        keyboardView.resources.configuration.orientation ==
+                            Configuration.ORIENTATION_LANDSCAPE,
+                ),
+            )
+            keyPopupWidth = popupDims.popupWidth
+            keyPopupHeight = popupDims.popupHeight
+            keyPopupDiffX = popupDims.popupDiffX
+        } else {
+            // EmojiKeyboardView fallback (Compose path no longer routes here): keep
+            // existing keyPopupWidth/keyPopupHeight, only recompute the diff.
+            keyPopupDiffX = (keyView.measuredWidth - keyPopupWidth) / 2
+        }
         // Calculating is done, so exit show() here if this key view is a special one.
         if (keyView is KeyView && exceptionsForKeyCodes.contains(keyView.data.code)) {
             return
@@ -236,71 +244,25 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
             return
         }
 
-        // Anchor left if keyView is in left half of keyboardView, else anchor right
-        if (keyView is KeyView) {
-            anchorLeft = keyView.x < keyboardView.measuredWidth / 2
-        } // EmojiKeyView is no longer used (Compose implementation)
-        anchorRight = !anchorLeft
-
-        // 決定每一行的按鍵數量
-        val popupCount = when (keyView) {
-            is KeyView -> keyView.data.popup.size
-            else -> 0 // EmojiKeyView is no longer used (Compose implementation)
-        }
-        when {
-            popupCount <= 10 -> {
-                row1count = 0
-                row0count = popupCount
-            }
-
-            popupCount > 10 && popupCount % 2 == 1 -> {
-                row1count = (popupCount - 1) / 2
-                row0count = (popupCount + 1) / 2
-            }
-
-            else -> {
-                row1count = popupCount / 2
-                row0count = popupCount / 2
-            }
-        }
-
-        // Calculate anchor offset (always positive int, direction depends on anchorLeft and
-        // anchorRight state)
-        anchorOffset = when {
-            row0count <= 1 -> {
-                0
-            }
-
-            else -> {
-                var offset = when {
-                    row0count % 2 == 1 -> (row0count - 1) / 2
-                    row0count % 2 == 0 -> (row0count / 2) - 1
-                    else -> 0
-                }
-                val availableSpace = when {
-                    anchorLeft -> {
-                        keyView.x.toInt() + keyPopupDiffX
-                    }
-
-                    anchorRight -> {
-                        keyboardView.measuredWidth -
-                            (keyView.x.toInt() + keyPopupDiffX + keyPopupWidth)
-                    }
-
-                    else -> {
-                        0
-                    }
-                }
-                while (offset > 0) {
-                    if (availableSpace >= offset * keyPopupWidth) {
-                        break
-                    } else {
-                        offset -= 1
-                    }
-                }
-                offset
-            }
-        }
+        // EmojiKeyView is no longer used (Compose implementation), so the
+        // popup count for the non-KeyView branch defaults to 0.
+        val popupCount = if (keyView is KeyView) keyView.data.popup.size else 0
+        val geometry = KeyboardLayoutSolver.solveExtendedPopupGeometry(
+            ExtendedPopupGeometryInput(
+                popupCount = popupCount,
+                keyViewX = keyView.x,
+                keyboardViewMeasuredWidth = keyboardView.measuredWidth,
+                keyViewMeasuredWidth = keyView.measuredWidth,
+                keyViewMeasuredHeight = keyView.measuredHeight,
+                keyPopupWidth = keyPopupWidth,
+                keyPopupHeight = keyPopupHeight,
+            ),
+        )
+        anchorLeft = geometry.anchorSide == AnchorSide.LEFT
+        anchorRight = geometry.anchorSide == AnchorSide.RIGHT
+        row0count = geometry.row0count
+        row1count = geometry.row1count
+        anchorOffset = geometry.anchorOffset
 
         // Build UI
         popupViewExt.removeAllViews()
@@ -328,42 +290,28 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
         }
         popupView.findViewById<ImageView>(R.id.key_popup_threedots)?.visibility = View.INVISIBLE
 
-        // Calculate layout params
-        val extWidth = row0count * keyPopupWidth
-        val extHeight = when {
-            row1count > 0 -> keyView.measuredHeight * 2
-            else -> keyView.measuredHeight
-        }
+        // Apply solver output to the FlexboxLayout container.
         popupViewExt.justifyContent = if (anchorLeft) {
             JustifyContent.FLEX_START
         } else {
             JustifyContent.FLEX_END
         }
         if (popupViewExt.layoutParams == null) {
-            popupViewExt.layoutParams = ViewGroup.LayoutParams(extWidth, extHeight)
+            popupViewExt.layoutParams = ViewGroup.LayoutParams(geometry.extWidth, geometry.extHeight)
         } else {
             popupViewExt.layoutParams.apply {
-                width = extWidth
-                height = extHeight
+                width = geometry.extWidth
+                height = geometry.extHeight
             }
-        }
-        val x = ((keyView.measuredWidth - keyPopupWidth) / 2) + when {
-            anchorLeft -> -anchorOffset * keyPopupWidth
-            anchorRight -> -extWidth + keyPopupWidth + anchorOffset * keyPopupWidth
-            else -> 0
-        }
-        val y = -keyPopupHeight - when {
-            row1count > 0 -> keyView.measuredHeight
-            else -> 0
         }
 
         // Position and show popup window
         if (windowExt.isShowing) {
-            windowExt.update(keyView, x, y, extWidth, extHeight)
+            windowExt.update(keyView, geometry.popupX, geometry.popupY, geometry.extWidth, geometry.extHeight)
         } else {
-            windowExt.width = extWidth
-            windowExt.height = extHeight
-            windowExt.showAsDropDown(keyView, x, y, Gravity.NO_GRAVITY)
+            windowExt.width = geometry.extWidth
+            windowExt.height = geometry.extHeight
+            windowExt.showAsDropDown(keyView, geometry.popupX, geometry.popupY, Gravity.NO_GRAVITY)
         }
     }
 

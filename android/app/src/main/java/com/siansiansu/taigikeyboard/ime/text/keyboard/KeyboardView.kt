@@ -40,8 +40,10 @@ class KeyboardView : LinearLayout {
         set(v) {
             if (BuildConfig.DEBUG) Log.d(TAG, "[LAYOUT] computedLayout setter called: name=${v?.name}, mode=${v?.mode}")
             field = v
+            keyboardLayoutData = v?.let { KeyboardLayoutData.from(it) }
             buildLayout()
         }
+    private var keyboardLayoutData: KeyboardLayoutData? = null
     var desiredKeyWidth: Int = resources.getDimension(R.dimen.key_width).toInt()
     var desiredKeyHeight: Int = resources.getDimension(R.dimen.key_height).toInt()
     var taigikeyboard: TaigiKeyboard? = null
@@ -108,24 +110,24 @@ class KeyboardView : LinearLayout {
      */
     private fun buildLayout() {
         destroyLayout()
-        val computedLayout = computedLayout ?: return
-        if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi")) {
-            Log.d(TAG, "[LAYOUT] Building phahTaigi layout: ${computedLayout.name}")
+        val layoutData = keyboardLayoutData ?: return
+        if (BuildConfig.DEBUG && layoutData.name.contains("phah_taigi")) {
+            Log.d(TAG, "[LAYOUT] Building phahTaigi layout: ${layoutData.name}")
         }
-        for ((rowIndex, row) in computedLayout.arrangement.withIndex()) {
+        for ((rowIndex, row) in layoutData.rows.withIndex()) {
             val rowView = KeyboardRowView(context)
             for ((keyIndex, key) in row.withIndex()) {
                 val keyView = KeyView(this, key)
                 keyView.taigikeyboard = taigikeyboard
                 rowView.addView(keyView)
-                if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi") && rowIndex == 2 && keyIndex >= 8) {
+                if (BuildConfig.DEBUG && layoutData.name.contains("phah_taigi") && rowIndex == 2 && keyIndex >= 8) {
                     Log.d(
                         TAG,
                         "[LAYOUT]     Row $rowIndex Key $keyIndex: label='${key.label}' code=${key.code} type=${key.type} variation=${key.variation}",
                     )
                 }
             }
-            if (BuildConfig.DEBUG && computedLayout.name.contains("phah_taigi")) {
+            if (BuildConfig.DEBUG && layoutData.name.contains("phah_taigi")) {
                 Log.d(TAG, "[LAYOUT]   Row $rowIndex: added ${row.size} KeyViews to rowView (childCount=${rowView.childCount})")
                 if (rowIndex == 2) {
                     post {
@@ -380,33 +382,23 @@ class KeyboardView : LinearLayout {
         widthMeasureSpec: Int,
         heightMeasureSpec: Int,
     ) {
-        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
-
-        val keyMarginH = resources.getDimension((R.dimen.key_marginH)).toInt()
-        desiredKeyWidth = (widthSize / 10) - (2 * keyMarginH)
-
-        val factor = prefs.heightFactor
-        val keyHeightFactor =
-            when (resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> 0.85f
-                else -> 1.0f
-            } *
-                when (factor) {
-                    "extra_short" -> 0.85f
-                    "short" -> 0.90f
-                    "mid_short" -> 0.95f
-                    "normal" -> 1.00f
-                    "mid_tall" -> 1.05f
-                    "tall" -> 1.10f
-                    "extra_tall" -> 1.15f
-                    else -> 1.00f
-                } * prefs.keyHeightScale
-        desiredKeyHeight = (resources.getDimension(R.dimen.key_height) * keyHeightFactor).toInt()
+        val dims = KeyboardLayoutSolver.solveKeyDimensions(
+            KeyDimensionsInput(
+                containerWidth = MeasureSpec.getSize(widthMeasureSpec),
+                keyMarginH = resources.getDimension(R.dimen.key_marginH).toInt(),
+                baseKeyHeight = resources.getDimension(R.dimen.key_height),
+                isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
+                heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
+                keyHeightScale = prefs.keyHeightScale,
+            ),
+        )
+        desiredKeyWidth = dims.desiredKeyWidth
+        desiredKeyHeight = dims.desiredKeyHeight
         taigikeyboard
             ?.textInputManager
             ?.smartbarManager
             ?.smartbarView
-            ?.setHeightFactor(keyHeightFactor)
+            ?.setHeightFactor(dims.keyHeightFactor)
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
