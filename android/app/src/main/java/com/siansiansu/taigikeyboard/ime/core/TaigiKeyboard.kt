@@ -20,6 +20,8 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import androidx.compose.runtime.Recomposer
+import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.viewinterop.AndroidView
@@ -37,7 +39,9 @@ import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import com.squareup.moshi.Json
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -64,6 +68,24 @@ class TaigiKeyboard : LifecycleInputMethodService() {
      * scope outside the app module.
      */
     internal val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /**
+     * Service-scoped Compose [Recomposer] that drives popup `ComposeView`
+     * compositions hosted inside [android.widget.PopupWindow]. Set as the
+     * `parentCompositionContext` on every popup ComposeView via
+     * [com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager], bypassing
+     * Compose's default `WindowRecomposerFactory.LifecycleAware` lookup —
+     * which fails on PopupWindow because `PopupDecorView` has no
+     * `ViewTreeLifecycleOwner` tag set on it.
+     *
+     * Uses [AndroidUiDispatcher.CurrentThread] so the recomposer ships with
+     * a [androidx.compose.runtime.MonotonicFrameClock] for animation /
+     * frame-aware Compose APIs. Cancelled in [onDestroy] before the
+     * service scope itself.
+     */
+    internal lateinit var popupRecomposer: Recomposer
+        private set
+    private var popupRecomposerJob: Job? = null
 
     lateinit var subtypeManager: SubtypeManager
     lateinit var activeSubtype: Subtype
@@ -173,6 +195,19 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         AppVersionTracker.updateVersionOnInstallAndLastUse(this, prefs)
 
         super.onCreate()
+
+        // Bootstrap the popup Recomposer before any popup ComposeView is
+        // created (KeyPopupManager is constructed lazily by the first
+        // KeyboardView, but this is safer to wire eagerly).
+        val popupRecomposerContext = AndroidUiDispatcher.CurrentThread
+        popupRecomposer = Recomposer(popupRecomposerContext)
+        popupRecomposerJob = serviceScope.launch(
+            popupRecomposerContext,
+            start = CoroutineStart.UNDISPATCHED,
+        ) {
+            popupRecomposer.runRecomposeAndApplyChanges()
+        }
+
         textInputManager.onCreate()
         mediaInputManager.onCreate()
     }
@@ -287,6 +322,10 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     override fun onDestroy() {
         if (BuildConfig.DEBUG) Log.i(this::class.simpleName, "onDestroy()")
 
+        if (::popupRecomposer.isInitialized) {
+            popupRecomposer.cancel()
+        }
+        popupRecomposerJob?.cancel()
         serviceScope.cancel()
         osHandler.removeCallbacksAndMessages(null)
 
