@@ -7,6 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="@dimen/smartbar_height"
     android:background="?smartbar_bgColor"
+    android:baselineAligned="false"
     android:clipChildren="true">
 
     <!-- Toolbar toggle button: top-level, always visible (except number_row / layout_selection) -->
@@ -34,23 +35,30 @@
         android:layout_weight="1"
         android:clipChildren="true">
 
-        <!-- Candidate container: RecyclerView with horizontal scrolling -->
+        <!-- Candidate container: candidate strip (Compose) + divider + expand toggle -->
         <LinearLayout
             android:id="@+id/candidates_container"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:baselineAligned="false"
             android:orientation="horizontal"
             android:visibility="gone">
 
-            <!-- Candidate RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/candidates_recycler_view"
+            <!--
+                Candidate strip (Compose). `android:baselineAligned="false"` on
+                BOTH this container and the outer SmartbarView is required: with
+                the default baselineAligned=true, AOSP LinearLayout.measureHorizontal
+                pre-measures `width=0+weight>0` children with UNSPECIFIED width
+                to query baseline, propagating Constraints.Infinity to the inner
+                LazyRow and crashing
+                "Horizontally scrollable component was measured with an infinity
+                maximum width constraints".
+            -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/candidates_compose"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:paddingEnd="48dp"
-                android:clipToPadding="false"
-                android:scrollbars="none" />
+                android:layout_weight="1" />
 
             <!-- Vertical divider -->
             <View
@@ -88,28 +96,10 @@
             android:gravity="center_vertical"
             android:visibility="gone">
 
-            <Button
-                android:id="@+id/english_candidate_1"
-                style="@style/SmartbarEnglishCandidate"
-                android:text="" />
-
-            <View
-                android:id="@+id/english_divider_1"
-                style="@style/SmartbarCandidateDivider" />
-
-            <Button
-                android:id="@+id/english_candidate_2"
-                style="@style/SmartbarEnglishCandidate"
-                android:text="" />
-
-            <View
-                android:id="@+id/english_divider_2"
-                style="@style/SmartbarCandidateDivider" />
-
-            <Button
-                android:id="@+id/english_candidate_3"
-                style="@style/SmartbarEnglishCandidate"
-                android:text="" />
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/english_candidates_compose"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
         </LinearLayout>
 

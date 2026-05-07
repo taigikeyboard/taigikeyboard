@@ -17,21 +17,6 @@
         <item name="android:textStyle">normal</item>
     </style>
 
-    <!-- 英文三欄式候選詞：較小字體，無左 margin -->
-    <style name="SmartbarEnglishCandidate" parent="SmartbarCandidate">
-        <item name="android:layout_marginStart">0dp</item>
-        <item name="android:textSize">18sp</item>
-        <item name="android:textColor">?smartbar_candidate_fgColor</item>
-    </style>
-
-    <!-- 英文候選詞分隔線 -->
-    <style name="SmartbarCandidateDivider">
-        <item name="android:layout_width">1dp</item>
-        <item name="android:layout_height">24dp</item>
-        <item name="android:layout_gravity">center_vertical</item>
-        <item name="android:background">?semiTransparentColor</item>
-    </style>
-
     <!-- Smartbar 按鈕基礎樣式 -->
     <style name="SmartbarActionButton">
         <item name="android:layout_height">36dp</item>

@@ -7,19 +7,20 @@ import android.util.AttributeSet
 import android.util.Log
 import android.util.TypedValue
 import android.view.View
-import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import androidx.recyclerview.widget.RecyclerView
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**
- * Smartbar 視圖
- *
- * 提供候選詞顯示、數字列、快捷動作等功能
- * 候選詞支援左右滑動，可動態顯示最多 100 個候選詞
+ * Smartbar 視圖：候選詞、英文三欄、數字列、Toolbar 容器。
+ * 候選 strip 由 Compose 渲染（Taigi LazyRow + English Row）。
  */
 class SmartbarView : LinearLayout {
     // A7: `SmartbarView` is only inflated inside the IME input view tree, so
@@ -27,10 +28,10 @@ class SmartbarView : LinearLayout {
     private val smartbarManager: SmartbarManager
         get() = (context as TaigiKeyboard).smartbarManager
 
-    // 候選詞相關視圖
+    // 候選詞容器（ToolbarManager visibility-swap target — keep）
     var candidatesContainer: LinearLayout? = null
         private set
-    var candidatesRecyclerView: RecyclerView? = null
+    var candidatesComposeView: ComposeView? = null
         private set
 
     // 展開收合相關視圖
@@ -43,14 +44,10 @@ class SmartbarView : LinearLayout {
     var numberRowView: LinearLayout? = null
         private set
 
-    // 英文三欄式候選詞容器
+    // 英文三欄式候選詞容器（ToolbarManager visibility-swap target — keep）
     var englishCandidatesContainer: LinearLayout? = null
         private set
-    var englishCandidate1: Button? = null
-        private set
-    var englishCandidate2: Button? = null
-        private set
-    var englishCandidate3: Button? = null
+    var englishCandidatesComposeView: ComposeView? = null
         private set
 
     // Toolbar views
@@ -70,9 +67,9 @@ class SmartbarView : LinearLayout {
 
         super.onAttachedToWindow()
 
-        // 候選詞視圖
+        // 候選詞容器 + Compose 子視圖
         candidatesContainer = findViewById(R.id.candidates_container)
-        candidatesRecyclerView = findViewById(R.id.candidates_recycler_view)
+        candidatesComposeView = findViewById(R.id.candidates_compose)
 
         // 展開收合按鈕與分隔線
         expandToggleButton = findViewById(R.id.expand_toggle_button)
@@ -84,18 +81,56 @@ class SmartbarView : LinearLayout {
         // 其他視圖
         numberRowView = findViewById(R.id.number_row)
 
-        // 英文三欄式候選詞
+        // 英文三欄式候選詞容器 + Compose 子視圖
         englishCandidatesContainer = findViewById(R.id.english_candidates_container)
-        englishCandidate1 = findViewById(R.id.english_candidate_1)
-        englishCandidate2 = findViewById(R.id.english_candidate_2)
-        englishCandidate3 = findViewById(R.id.english_candidate_3)
+        englishCandidatesComposeView = findViewById(R.id.english_candidates_compose)
 
         // Toolbar views
         toolbarContainer = findViewById(R.id.toolbar_container)
         toolbarToggleButton = findViewById(R.id.toolbar_toggle_button)
         toolbarGlobeButton = findViewById(R.id.toolbar_globe_button)
 
+        installCandidateComposeContent()
+
         smartbarManager.registerSmartbarView(this)
+    }
+
+    private fun installCandidateComposeContent() {
+        // Disposal strategy matches Phase A root host (TaigiKeyboard.kt:271):
+        // configChange detaches the input view while the IME service Lifecycle
+        // stays alive, so DisposeOnViewTreeLifecycleDestroyed would NOT dispose
+        // stale compositions. DisposeOnDetachedFromWindow is the correct
+        // boundary for hot-path candidate rendering.
+        candidatesComposeView?.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                TaigiKeyboardTheme {
+                    val state by smartbarManager.candidateStripState
+                        .collectAsStateWithLifecycle()
+                    TaigiCandidateStrip(
+                        state = state,
+                        onCandidateClick = { word, index ->
+                            smartbarManager.onTaigiCandidateClicked(word, index)
+                        },
+                    )
+                }
+            }
+        }
+        englishCandidatesComposeView?.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                TaigiKeyboardTheme {
+                    val state by smartbarManager.candidateStripState
+                        .collectAsStateWithLifecycle()
+                    EnglishCandidateStrip(
+                        state = state,
+                        onEnglishCandidateClick = { index ->
+                            smartbarManager.onEnglishCandidateClicked(index)
+                        },
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -143,14 +178,6 @@ class SmartbarView : LinearLayout {
         val baseSize = resources.getDimension(R.dimen.smartbar_height)
         val size = (baseSize * factor).toInt()
         layoutParams?.height = size
-    }
-
-    /**
-     * 重置候選詞列滑動位置至起點
-     * 確保新候選詞總是從起點開始顯示，改善使用者體驗
-     */
-    fun resetCandidateScrollPosition() {
-        candidatesRecyclerView?.scrollToPosition(0)
     }
 
     /**

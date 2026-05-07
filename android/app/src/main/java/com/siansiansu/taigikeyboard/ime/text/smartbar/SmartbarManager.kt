@@ -5,8 +5,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import androidx.core.view.children
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
@@ -15,15 +13,20 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
+import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -72,8 +75,21 @@ class SmartbarManager(
     private var cachedIsTranslateSwapped: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
 
-    // RecyclerView Adapter
-    private var candidateAdapter: CandidateAdapter? = null
+    // Compose-side render state. Subsystems that read `currentSuggestions` /
+    // `hasCandidates` continue to do so directly; this flow drives only the
+    // candidate strip + English 3-col rendering.
+    private var candidateUpdateSeq: Long = 0L
+    private var cachedColorSettingsJson: String? = null
+    private var cachedColorSettings: KeyboardColorSettings? = null
+    private val _candidateStripState =
+        MutableStateFlow(
+            CandidateStripState(
+                mode = CandidateMode.Empty,
+                display = INITIAL_DISPLAY_PARAMS,
+                updateSeq = 0L,
+            ),
+        )
+    val candidateStripState: StateFlow<CandidateStripState> = _candidateStripState.asStateFlow()
 
     // --- Delegated handlers ---
 
@@ -190,6 +206,22 @@ class SmartbarManager(
 
     companion object {
         private const val TAG = "SmartbarManager"
+
+        private val INITIAL_DISPLAY_PARAMS =
+            CandidateDisplayParams(
+                isTranslateSwapped = false,
+                fontType = "",
+                layoutType = "",
+                orMapsToER = false,
+                textSizeScale = 1.0f,
+                candidateTextColor = null,
+                candidateBackgroundColor = null,
+                themeTitleColor = 0,
+                themeSubtitleColor = 0,
+                themeKeyBgColor = 0,
+                themePressedHighlightColor = 0,
+                smartbarHeightPx = 0,
+            )
     }
 
     fun registerSmartbarView(smartbarView: SmartbarView) {
@@ -204,9 +236,6 @@ class SmartbarManager(
             }
         }
 
-        // Initialize RecyclerView and Adapter
-        setupCandidateRecyclerView(smartbarView)
-
         // Expand/collapse button click
         smartbarView.expandToggleButton?.setOnClickListener {
             toggleExpandState()
@@ -215,51 +244,20 @@ class SmartbarManager(
         // Toolbar toggle and actions (delegated)
         toolbarManager.setupToolbar(smartbarView)
 
-        // English 3-column candidate click events
-        setupEnglishCandidates(smartbarView)
+        // Re-publish state with fresh display params so the new Compose strip
+        // picks up the latest theme colors / height / font scale immediately
+        // after onConfigurationChanged recreates the input view; otherwise
+        // stale CandidateDisplayParams persist until the next updateCandidates
+        // / updateEnglishCandidates / clearCandidates call.
+        pushCandidateState(_candidateStripState.value.mode)
     }
 
-    private fun setupCandidateRecyclerView(smartbarView: SmartbarView) {
-        val recyclerView = smartbarView.candidatesRecyclerView ?: return
-
-        val layoutManager =
-            LinearLayoutManager(
-                taigikeyboard.context,
-                LinearLayoutManager.HORIZONTAL,
-                false,
-            )
-        recyclerView.layoutManager = layoutManager
-
-        candidateAdapter =
-            CandidateAdapter(
-                context = taigikeyboard.context,
-                isTranslateSwapped = { cachedIsTranslateSwapped },
-                fontType = { prefs.fontType },
-                layoutType = { prefs.keyboardLayoutType },
-                orMapsToER = { prefs.tpsOrMapsToER },
-                onCandidateClick = { word, index ->
-                    candidateClickHandler.handleCandidateClick(word, index)
-                },
-            )
-
-        recyclerView.adapter = candidateAdapter
-        recyclerView.itemAnimator = null
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "[RECYCLER] RecyclerView and Adapter initialized")
-        }
+    fun onTaigiCandidateClicked(word: TaigiWord, index: Int) {
+        candidateClickHandler.handleCandidateClick(word, index)
     }
 
-    private fun setupEnglishCandidates(smartbarView: SmartbarView) {
-        smartbarView.englishCandidate1?.setOnClickListener {
-            candidateClickHandler.handleEnglishCandidateClick(0)
-        }
-        smartbarView.englishCandidate2?.setOnClickListener {
-            candidateClickHandler.handleEnglishCandidateClick(1)
-        }
-        smartbarView.englishCandidate3?.setOnClickListener {
-            candidateClickHandler.handleEnglishCandidateClick(2)
-        }
+    fun onEnglishCandidateClicked(index: Int) {
+        candidateClickHandler.handleEnglishCandidateClick(index)
     }
 
     fun registerLayoutSelectionOverlayView(overlayView: LayoutSelectionOverlayView) {
@@ -380,7 +378,6 @@ class SmartbarManager(
 
     fun updateCandidates(suggestions: List<TaigiWord>) {
         val view = smartbarView ?: return
-        val adapter = candidateAdapter ?: return
 
         if (suggestions.isEmpty()) {
             clearCandidates()
@@ -428,30 +425,18 @@ class SmartbarManager(
             activeContainerId = R.id.candidates_container
         }
 
-        val res = taigikeyboard.context.resources
-        val smartbarHeight =
-            view.height.takeIf { it > 0 }
-                ?: res.getDimension(R.dimen.smartbar_height).toInt()
-        adapter.setTextSizeScale(prefs.candidateTextSizeScale)
-        val colorSettings =
-            com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
-                .fromJson(prefs.colorSettings)
-        adapter.setCustomTextColor(colorSettings.candidateTextColor)
-        view.applyCustomBackgroundColor(colorSettings.candidateBackgroundColor)
-        adapter.setTextSize(smartbarHeight)
-
-        adapter.submitList(transformedSuggestions) {
-            view.resetCandidateScrollPosition()
-        }
+        view.applyCustomBackgroundColor(colorSettings().candidateBackgroundColor)
 
         if (BuildConfig.DEBUG) {
             Log.d(
                 TAG,
-                "[DEBUG] updateCandidates completed: itemCount=${adapter.itemCount}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}",
+                "[DEBUG] updateCandidates completed: count=${transformedSuggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}",
             )
         }
 
         updateExpandButtonVisibility()
+
+        pushCandidateState(CandidateMode.Taigi(transformedSuggestions))
     }
 
     fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
@@ -463,7 +448,6 @@ class SmartbarManager(
 
         if (currentSuggestions.isNotEmpty()) {
             updateCandidates(currentSuggestions)
-            candidateAdapter?.notifyDataSetChanged()
 
             if (isExpanded) {
                 candidateOverlayView?.updateSuggestions(currentSuggestions)
@@ -493,9 +477,6 @@ class SmartbarManager(
         hasCandidates = false
         nextWordHandler.clearNextWordState()
 
-        smartbarView?.resetCandidateScrollPosition()
-        candidateAdapter?.submitList(emptyList())
-
         if (activeContainerId == R.id.candidates_container ||
             activeContainerId == R.id.english_candidates_container
         ) {
@@ -507,6 +488,8 @@ class SmartbarManager(
         if (isExpanded) {
             collapseCandidateView()
         }
+
+        pushCandidateState(CandidateMode.Empty)
     }
 
     private fun toggleExpandState() {
@@ -565,7 +548,7 @@ class SmartbarManager(
     }
 
     fun updateEnglishCandidates(suggestions: List<TaigiWord>) {
-        val view = smartbarView ?: return
+        smartbarView ?: return
 
         if (suggestions.isEmpty()) {
             clearCandidates()
@@ -580,32 +563,52 @@ class SmartbarManager(
             activeContainerId = R.id.english_candidates_container
         }
 
-        val res = taigikeyboard.context.resources
-        val smartbarHeight =
-            view.height.takeIf { it > 0 }
-                ?: res.getDimension(R.dimen.smartbar_height).toInt()
-        val englishTextSizePx = smartbarHeight * 0.36f
-        val scaledDensity = res.displayMetrics.density * res.configuration.fontScale
-        val englishTextSizeSp = englishTextSizePx / scaledDensity
-
-        view.englishCandidate1?.apply {
-            textSize = englishTextSizeSp
-            text = currentSuggestions.getOrNull(0)?.roman ?: ""
-            visibility = if (currentSuggestions.isNotEmpty()) View.VISIBLE else View.INVISIBLE
-        }
-        view.englishCandidate2?.apply {
-            textSize = englishTextSizeSp
-            text = currentSuggestions.getOrNull(1)?.roman ?: ""
-            visibility = if (currentSuggestions.size > 1) View.VISIBLE else View.INVISIBLE
-        }
-        view.englishCandidate3?.apply {
-            textSize = englishTextSizeSp
-            text = currentSuggestions.getOrNull(2)?.roman ?: ""
-            visibility = if (currentSuggestions.size > 2) View.VISIBLE else View.INVISIBLE
-        }
-
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[ENGLISH] Updated 3-column candidates: ${currentSuggestions.map { it.roman }}")
         }
+
+        pushCandidateState(CandidateMode.English(currentSuggestions))
+    }
+
+    private fun pushCandidateState(mode: CandidateMode) {
+        candidateUpdateSeq += 1
+        _candidateStripState.value =
+            CandidateStripState(
+                mode = mode,
+                display = currentDisplay(),
+                updateSeq = candidateUpdateSeq,
+            )
+    }
+
+    private fun colorSettings(): KeyboardColorSettings {
+        val json = prefs.colorSettings
+        val cached = cachedColorSettings
+        if (cached != null && cachedColorSettingsJson == json) return cached
+        return KeyboardColorSettings.fromJson(json).also {
+            cachedColorSettings = it
+            cachedColorSettingsJson = json
+        }
+    }
+
+    private fun currentDisplay(): CandidateDisplayParams {
+        val context = taigikeyboard.context
+        val colorSettings = colorSettings()
+        val height =
+            smartbarView?.height?.takeIf { it > 0 }
+                ?: context.resources.getDimension(R.dimen.smartbar_height).toInt()
+        return CandidateDisplayParams(
+            isTranslateSwapped = cachedIsTranslateSwapped,
+            fontType = prefs.fontType,
+            layoutType = prefs.keyboardLayoutType,
+            orMapsToER = prefs.tpsOrMapsToER,
+            textSizeScale = prefs.candidateTextSizeScale,
+            candidateTextColor = colorSettings.candidateTextColor,
+            candidateBackgroundColor = colorSettings.candidateBackgroundColor,
+            themeTitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_fgColor),
+            themeSubtitleColor = getColorFromAttr(context, R.attr.smartbar_candidate_subtitle_fgColor),
+            themeKeyBgColor = getColorFromAttr(context, R.attr.key_bgColor),
+            themePressedHighlightColor = getColorFromAttr(context, R.attr.semiTransparentColor),
+            smartbarHeightPx = height,
+        )
     }
 }
