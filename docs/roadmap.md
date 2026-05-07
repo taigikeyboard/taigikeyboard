@@ -3,7 +3,7 @@
 > **Type**: Planning
 > **Keywords**: `roadmap`, `planning`, `refactor`, `structure`
 > **Status**: Active
-> **Last updated**: 2026-05-05
+> **Last updated**: 2026-05-07
 
 ---
 
@@ -198,4 +198,84 @@ Phases A and B can ship ahead of the user-visible feature — zero-impact storag
 
 ---
 
-<!-- Add new roadmap items below as Item 4, Item 5, ... -->
+## Item 4 — Android UI architecture: align with `rules/android-guidelines.md` best practices
+
+**Status**: Proposed
+**Target release tag for first round (P1)**: `v3.5.7` (per user directive 2026-05-07). v3.5.7 will bundle accumulated unreleased work since `v3.5.6` plus Item 4 P1. P2 / P3 round version assignments TBD per round.
+**Source**: 2026-05-07 Taigi Android vs FlorisBoard architecture comparison (in-conversation; `references/florisboard/` as upstream best-practice reference). Latest released tag at proposal time = `v3.5.6`.
+**Rationale**: Three concrete gaps where the Taigi Android IME diverges from project-documented best practices (`rules/android-guidelines.md` §4 lifecycle/DI, §7 Compose patterns, §8 IME-specific) and from FlorisBoard's modern IME idioms. Together they (a) eliminate the IME window/inset hazard class documented in auto-memory `project_ime_window_arch.md`, (b) cut canvas-render bug surface, (c) unblock JVM-side keyboard-layout testing. Goal anchor is **project Android best practices**, not feature parity with FlorisBoard's plugin / extension / NLP stack (see "What NOT to adopt" below).
+**Risk**: Phased — P1/P2 are mechanical and contained; P3 (Compose migration of keyboard rendering) is a multi-PR slice on par with a release round. Each phase is independently shippable. UI-layer only — no Rust shared-core impact (Phase IV-B closed at v3.5.8 covers algorithm extraction; this item covers presentation).
+
+### What NOT to adopt from FlorisBoard (out of scope)
+
+- **Extension / plugin system** (theme addons, keyboard addons via zip extensions) — single-language IME has no third-party plugin demand; adds attack surface (zip parsing) and maintenance cost
+- **Java NLP stack** (`ime.nlp.NlpManager`, spell-check service) — Rust shared core already owns morphology, lookup, case transforms; a parallel Kotlin NLP layer would be redundant
+- **jetpref preference DSL** — current `PreferenceKeys` + `PrefHelper` + DataStore meets `rules/android-guidelines.md` §6; jetpref's KSP code-gen adds build complexity for no gain at our scale
+- **Snygg stylesheet system** + theme extension bundles — current XML themes + `KeyboardColorSettings` JSON is sufficient for single-locale theming
+- **Multi-module Gradle split** — solo-maintainer YAGNI; single `app/` module is appropriate for current scope
+
+### Issues (priority order)
+
+#### P1 — Weak-reference singleton accessor for IME service `[B]` `[A]`
+
+- The Android IME service (`TaigiKeyboard`) is reachable today via `CompositionRoot.shared(context)` and direct references held by managers. After A7 audit (Phase II) the IME path was decoupled from Application-singleton, but Activity / settings-UI paths can still hold a strong reference to an IME service that has been destroyed (system reclaim, IME swap, configuration change), risking memory leak and use-after-destroy.
+- FlorisBoard pattern at `references/florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt:83` — `private var FlorisImeServiceReference = WeakReference<FlorisImeService?>(null)`. Set in `onCreate` (line 281), cleared in `onDestroy` (line 357). Public typed accessors at line 94+ (`currentInputConnection()` etc.) safely return `null` if the service is gone.
+- **Action**:
+  1. Keep the weak ref **private**: `companion object { private var instance: WeakReference<TaigiKeyboard?> = WeakReference(null); ... }` in `TaigiKeyboard.kt`. Do **not** expose a raw `current()` getter — that invites broad service reach-ins from ViewModels / engine code, which contradicts `rules/android-guidelines.md` §4 ("Constructor injection preferred. No `.INSTANCE` global reach-ins").
+  2. Expose **typed, IME-only helpers** instead — e.g. `currentInputConnectionOrNull(): InputConnection?`, `withImeService(block: (TaigiKeyboard) -> Unit)`. Each helper is restricted to operations that genuinely require the live IME service (InputConnection / InputBinding / language switch).
+  3. Set `instance = WeakReference(this)` in `onCreate`; `instance = WeakReference(null)` in `onDestroy`.
+  4. Audit non-IME-context call sites that today hold a captured service reference; route them through the typed helpers, not the raw weak ref. Settings UI / ViewModel paths that don't need `InputConnection` should not gain new access — keep them on the constructor-injected dependencies they already have.
+- **Files affected**: `ime/core/TaigiKeyboard.kt` + audit pass over `settings/`, `ui/`, manager classes (expected ≤ 10 call sites)
+- **Why P1**: Smallest change, highest safety win. Removes a leak class flagged in auto-memory `project_ime_window_arch.md`. Aligns with `rules/android-guidelines.md` §4 ("Never store an `Activity` Context inside an `object` or a long-lived `class`") and §4 DI principle (no global reach-ins) by gating access through typed helpers rather than a public service handle.
+
+#### P2 — Decouple keyboard layout data from rendering `[B]` `[A]`
+
+- Current keyboard geometry (key widths, popup anchor positions, extended-popup overflow) is computed inside the `View` hierarchy (`KeyboardView`, `KeyboardRowView`) and interleaved with `onMeasure` / `onLayout` / `onDraw`. Layout math cannot be unit-tested without instrumentation.
+- FlorisBoard pattern: keyboard structure lives in `TextKeyboard` / `TextKey` model objects, and bounds are computed in `TextKeyboard.layout()` (`references/florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/ime/text/keyboard/TextKeyboard.kt:25-30, 46-152`). This is a useful separation from rendering, **but it is not a pure immutable solver** — `TextKeyboard.layout()` mutates `TextKey.computedData` / `touchBounds` / `visibleBounds` in place, and popup state lives in a `MutablePopupSet`. Taigi should go one step further: extract immutable `KeyboardLayoutData` plus a pure solver, instead of porting FlorisBoard's mutable model verbatim.
+- **Action**:
+  1. Extract **immutable** DTOs first — `KeyboardLayoutData` (rows + keys + popup mapping) using `data class` + read-only `List`. Do **not** mark these as `// region Shared-Core Candidate` until the migration also removes/wraps any mutable surface ported across (e.g. `TextKey.computedData` / `computed*` `var` fields, `MutablePopupSet` popup containers, `KeyboardMode` coupling) into stdlib-only value types per `rules/android-guidelines.md` §1. Premature shared-core marking would lock in coupling that fails the §1 criteria.
+  2. Move geometry computation into a stateless `KeyboardLayoutSolver` — pure function `(KeyboardLayoutData, ContainerSize) -> SolverResult`. Solver returns geometry; it does not mutate the input.
+  3. `KeyboardView` consumes `(KeyboardLayoutData, SolverResult)` instead of holding the math.
+  4. Add JVM unit tests for the solver (`./gradlew test`) — overflow row, popup anchor near screen edge, popup overflow at screen edges — without instrumentation. Run alongside existing `INVARIANT_*` tests per `rules/android-guidelines.md` §9.
+- **Files affected**: `ime/text/keyboard/KeyboardView.kt`, `KeyboardRowView.kt`, `ime/popup/KeyPopupManager.kt` (if exists), new `ime/text/keyboard/KeyboardLayoutData.kt` + `KeyboardLayoutSolver.kt`
+- **Why P2**: **Pre-condition for P3 Phase D only.** P3 Phase A/B/C can start without P2 if they avoid keyboard-body geometry — popup work (Phase C) depends on an explicit anchoring contract, which P2 also provides but is not strictly blocking until Phase D. Independently valuable: converts dogfood-only layout bugs into JVM-testable. Adheres to `rules/android-guidelines.md` §1 Kotlin-to-Rust shape preferences; the solver may be a future shared-core extraction candidate (out of scope for this item).
+
+#### P3 — Migrate keyboard rendering to Compose `[B]` `[A]`
+
+- Current keyboard rendering is custom canvas-drawn `View` subclasses (`KeyboardView : LinearLayout` overrides `onDraw`). Window-inset workarounds in `InputView.onApplyWindowInsets` + `requestApplyInsets()` (API 35 compat) are documented in auto-memory `project_ime_window_arch.md` as a known hazard (MATCH_PARENT × MATCH_PARENT + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE` historically caused dismiss bugs; Option A workaround shipped via PR #180). Touch bounds and visual bounds live in separate code paths and can drift.
+- FlorisBoard pattern: full Compose tree (`ImeRootView` → `TextKeyboard` composable). `WindowInsets` API handles inset state declaratively; `Modifier.pointerInput { ... }` ties touch to the visible bounding box automatically.
+- **Action** (multi-phase slice — each phase is its own PR per `feedback_branching` + `feedback_round_hygiene`):
+  1. **Phase A — Compose host shell** — replace XML root inside `InputView` with a `ComposeView` host. Existing custom views remain inside as Compose-View interop fallbacks. No visual change; no behavior change. Establishes the host without committing to migration.
+  2. **Phase B — Smartbar + candidate strip to Compose** — convert candidate UI **only after** defining a stable state contract from `SmartbarManager` / `CandidateUpdateCoordinator` (a `data class` snapshot exposed as `StateFlow<CandidateStripState>`). Preserve candidate **selection order**, **scroll reset on input change**, **selected index**, and **update latency**. Treat any timing or selection change as *behavior* under `rules/cross-platform-alignment.md` §1 — that requires the parity-correction tier (§1b), not refactor-freeze.
+  3. **Phase C — Popup layer to Compose** — convert popup hierarchy (`KeyPopupManager` + extended popups) to Compose. Define an explicit anchoring contract first (anchor key bounds + screen-edge clamp rule); popups are otherwise state-isolated and visually verifiable.
+  4. **Phase D — Keyboard body to Compose** — convert `KeyboardView` + `KeyboardRowView` + per-key rendering to a single Compose tree consuming P2's `KeyboardLayoutData`. Drop custom-view subclasses. Remove `InputView.onApplyWindowInsets` workaround. This phase is the largest and ships the hazard-class removal.
+- **Files affected**: `ime/core/InputView.kt`, `ime/text/keyboard/KeyboardView.kt`, `KeyboardRowView.kt`, smartbar XML + manager, candidate overlay XML + coordinator, popup hierarchy
+- **Compose IME risks (per-phase regression checks)**: `ComposeView` disposal / `LifecycleOwner` mismatch when the IME service is recreated; `AndroidView` interop event leakage (touch / IME action bypasses); nested-scroll height feedback loops; popup window-token mismatch (popups live on a separate window from the IME service window); pointer cancellation under multi-touch; minimum touch-target compliance; long-press cancellation thresholds; popup drag-selection. **Each phase needs real-device S1/S2/S3 dogfood plus an explicit candidate-tap-latency regression check.**
+- **Why P3**: Largest hazard-class removal — Compose `WindowInsets` API replaces hand-rolled inset routing, eliminating the `project_ime_window_arch.md` trap by design. Compose **reduces** touch / visual drift, but pointer hit boxes, minimum touch targets, long-press cancellation, and popup drag-selection still need explicit tests; the invariant is not free. Unifies settings-preview rendering (already Compose) with keyboard rendering (currently custom Views) — same theme/color path. Adheres to `rules/android-guidelines.md` §7.
+
+### Suggested execution order
+
+1. **P1 first** — single-PR mechanical change; ship and observe in one release window
+2. **P2 second** — depends on nothing; independently shippable; pre-condition for **P3 Phase D only**
+3. **P3** — multi-PR slice (A → B → C → D); each phase is a release-cycle round
+
+P1 is independent and can ship alongside anything. P3 Phase A/B/C can run concurrently with or before P2 (they avoid keyboard-body geometry); **P3 Phase D should not start before P2 lands** (Phase D consumes `KeyboardLayoutData`).
+
+### Per-round gates (apply to every PR in this item)
+
+- Refactor-freeze observed per `rules/cross-platform-alignment.md` §1 — UI-only, no behavior change. Any visible behavior change uses the parity-correction tier (§1b) and labels accordingly.
+- Codex + `/simplify` pre-impl review per `rules/android-guidelines.md` §11 + `feedback_review_before_impl` + `feedback_codex_review_sandwich`
+- Codex post-edit review on git diff per `feedback_codex_post_edit_review`
+- Qualitative dogfood pass on real Android device (S1 / S2 / S3) per `feedback_perf_gate`
+- No fallback toggle per `feedback_no_slice_toggles` — ship as direct swap, revert via PR if regression
+- Manual `pbxproj`-equivalent: Android `build.gradle` + resource changes are user-handled per `feedback_xcode_manual.md` (extends to Android per project-wide manual-build policy `feedback_manual_build_test`)
+
+### Cross-references
+
+- Project memory: `project_ime_window_arch.md` (IME window/inset hazard class), `feedback_no_slice_toggles.md`, `feedback_review_before_impl.md`, `feedback_codex_review_sandwich.md`
+- Reference upstream: `references/florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/FlorisImeService.kt:83-94,281,357` (weak-ref accessor), `.../ime/text/keyboard/TextKeyboard.kt` (data + layout split)
+- Project rules: `rules/android-guidelines.md` §1 shared-core candidate / §4 lifecycle+DI / §7 Compose / §8 IME-specific / §11 refactor-round checklist
+
+---
+
+<!-- Add new roadmap items below as Item 5, Item 6, ... -->
