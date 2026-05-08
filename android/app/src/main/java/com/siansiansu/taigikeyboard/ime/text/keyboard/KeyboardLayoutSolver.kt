@@ -1,3 +1,6 @@
+// 中文: 純算式鍵盤幾何 solver — 所有輸入皆為純值型別,可在 JVM 單元測試直接跑,不需 Android 儀器化。
+// 中文: 三大職責:per-key 尺寸與 keyHeightFactor、preview popup 尺寸與位移、extended popup 錨點與螢幕邊夾擠。
+
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 /**

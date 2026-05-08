@@ -22,10 +22,10 @@ use protos::engine::TaigiWord;
 /// Drop entries whose `(roman, hanji)` pair has already been seen.
 /// First occurrence wins; ordering of survivors matches input order.
 ///
-/// CROSS-PLATFORM INVARIANT — mirrors `CandidateProcessor.removeDuplicates`
-/// on both iOS (`Lexicon/Utils/CandidateProcessor.swift`) and Android
-/// (`ime/dictionary/CandidateProcessor.kt`). The pipe-delimited key shape
-/// must match exactly so the deduped sets align across platforms.
+/// Pre-Path-G this mirrored `CandidateProcessor.removeDuplicates` on
+/// both platforms; today this crate is the single source of truth and
+/// the Kotlin mirror has been deleted (PR #192). iOS keeps only a
+/// 4-LOC residual unrelated to this function.
 // 中文: 排序前去重,以「羅馬字|漢字」為 key,只保留首次出現,維持原順序。
 pub(crate) fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen: HashSet<String> = HashSet::with_capacity(words.len());
@@ -45,8 +45,9 @@ pub(crate) fn remove_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
 /// occurrence. Words with absent or empty hanji always pass through.
 ///
 /// MUST be called only after sorting so the highest-ranked entry per
-/// hanji survives — this matches the platform contract documented in
-/// `CandidateProcessor.removeDisplayDuplicates`.
+/// hanji survives — this is the v3.5.2 ranking-slice contract that
+/// previously lived in `CandidateProcessor.removeDisplayDuplicates`
+/// (Android mirror deleted PR #192; iOS residual is unrelated).
 // 中文: TPS 模式專用顯示去重,排序後呼叫;漢字相同只留排名最高的;漢字空/缺一律保留。
 pub(crate) fn remove_display_duplicates(words: Vec<TaigiWord>) -> Vec<TaigiWord> {
     let mut seen_hanji: HashSet<String> = HashSet::with_capacity(words.len());

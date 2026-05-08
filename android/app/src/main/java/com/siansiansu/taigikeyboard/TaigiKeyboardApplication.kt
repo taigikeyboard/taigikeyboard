@@ -1,3 +1,7 @@
+// 中文: Application 根 — 程序級服務圖(CompositionRoot + PrefHelper)+ 字典資產解壓 + Rust JNI bootstrap。
+// 中文: applicationScope 為 process-lifetime SupervisorJob,只用於不可繫於 IME service 生命週期的工作
+// 中文: (例如 prefs migration、字典 bin 解壓到 internalStorage)。
+
 package com.siansiansu.taigikeyboard
 
 import android.app.Application

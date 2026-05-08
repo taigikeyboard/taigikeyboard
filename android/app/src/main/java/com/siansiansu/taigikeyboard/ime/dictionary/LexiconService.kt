@@ -1,3 +1,6 @@
+// 中文: 字典查詢編排器 — bootstrap RustEngineBridge.install + custom-dict 寫路徑 + Tab3 字典查詢協調。
+// 中文: 流程:Hanzi guard short-circuit → custom dict → system dict(Rust lexicon::search)→ ranking。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context

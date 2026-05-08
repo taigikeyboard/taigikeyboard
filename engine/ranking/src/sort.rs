@@ -1,7 +1,9 @@
 //! Stable descending-by-total sort with caller-supplied frequency snapshot.
 //!
-//! Mirrors `CandidateProcessor.sortByScore` on both platforms. Pure: takes
-//! a `Vec<TaigiWord>` plus the frequency map and `now_ms`, returns a
+//! Single source of truth for `sortByScore`; the v3.5.2 ranking slice
+//! collapsed both platform mirrors into this crate (Android mirror
+//! deleted PR #192, iOS residual is unrelated). Pure: takes a
+//! `Vec<TaigiWord>` plus the frequency map and `now_ms`, returns a
 //! reordered `Vec<TaigiWord>` paired with each candidate's score
 //! breakdown so the orchestrator can optionally serialize breakdowns for
 //! debug logging. Stable: equal totals preserve input order, matching

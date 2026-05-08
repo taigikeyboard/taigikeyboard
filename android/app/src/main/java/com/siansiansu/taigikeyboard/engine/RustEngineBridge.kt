@@ -1,3 +1,8 @@
+// 中文: Rust shared-core 的 Kotlin 薄殼 — 對應 engine/android-jni FFI。
+// 中文: 包覆 phonetics / lexicon / composing / nextword / case-transform 等 op,
+// 中文: 處理錯誤統計、log 註冊、ToneVariations 快取等平台粘合,失敗永不丟例外。
+// 中文: 對應 iOS RustEngineBridge.swift。
+
 package com.siansiansu.taigikeyboard.engine
 
 import android.util.Log
@@ -63,6 +68,8 @@ import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
  * `Log.e` for logcat traceability — NEVER throws (would kill IME
  * mid-keystroke).
  */
+// 中文: 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
+// 中文: DEBUG 同時打 Log.e 方便 logcat 追蹤。
 object RustEngineBridge {
     init {
         System.loadLibrary("rust_taigi")

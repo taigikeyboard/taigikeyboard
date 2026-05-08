@@ -1,3 +1,6 @@
+// 中文: 跨產物備份/還原服務 — 以 .taigi 為單一 JSON 文件,封裝自訂字典 + 使用者頻次 + NextWord 關聯。
+// 中文: 由 CompositionRoot 持有,實際讀寫委派給 CustomDictionaryService / UserFrequencyService / NextWordService。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context

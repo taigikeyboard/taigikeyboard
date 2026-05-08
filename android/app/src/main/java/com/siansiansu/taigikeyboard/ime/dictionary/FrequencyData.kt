@@ -1,6 +1,10 @@
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
+
+// 中文: 單一詞的使用者頻次值型別 —(count, lastUsedMillis)。
+// 中文: 從 UserFrequencyService 抽出以對齊 iOS Lexicon/Models/FrequencyData.swift。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**

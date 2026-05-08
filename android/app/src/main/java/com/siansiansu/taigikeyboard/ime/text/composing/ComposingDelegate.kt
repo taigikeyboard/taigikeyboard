@@ -1,3 +1,8 @@
+// 中文: Composing Effect 平台直譯器 — 將 Rust composing engine 回傳的 Effect 套用到
+// 中文: Android InputConnection。對應 iOS Input/Composing/ComposingDelegate.swift。
+// 中文: 規則:zero-then-finish 清 preedit、commitText 原子更新 preedit;
+// 中文: ResetAutocomplete / PerformAutocomplete 在此層 no-op,留給 CandidateUpdateCoordinator 處理。
+
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection

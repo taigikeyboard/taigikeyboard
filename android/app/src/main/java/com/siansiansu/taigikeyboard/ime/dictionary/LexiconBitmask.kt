@@ -1,3 +1,6 @@
+// 中文: bitmask 解碼器 — 把 dictionary.bin 的 source bitmask 拆成 List<DictionarySource> 給 UI 顯示。
+// 中文: 跨平台不變式:bit 位置必須與 source_bits.py / Rust dictionary_reader / iOS LexiconBitmask 三者對齊。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**

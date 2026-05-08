@@ -1,3 +1,6 @@
+// 中文: 鍵盤大小寫/Shift 狀態機 — 從 TextInputManager 抽出獨立管理。
+// 中文: 處理:auto-capitalization、單擊 Shift、雙擊 caps lock、依游標位置自動切大小寫模式。
+
 package com.siansiansu.taigikeyboard.ime.text
 
 import android.os.Handler

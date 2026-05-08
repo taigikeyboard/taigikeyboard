@@ -1,3 +1,6 @@
+// 中文: Case-transform 橋 — 把字元/字串大小寫處理(含 POJ/TL 聲調符號 case 對應)
+// 中文: 委派給 Rust phonetics::case_transform 子系統。對應 iOS RustEngineBridge+CaseTransform.swift。
+
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
@@ -27,6 +30,7 @@ import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
  * Suggestion skip rules (`id < 0 && id != -2` and `id == 0`) stay platform-side
  * — only transform-eligible items reach `transformSuggestion(...)`.
  */
+// 中文: skip 規則(id<0 且 ≠-2、id==0)保留在平台側,只有合格的 suggestion 才進來轉換。
 object CaseTransformBridge {
     private const val TAG = "CaseTransformBridge"
 

@@ -1,3 +1,8 @@
+// 中文: 台語 autocomplete 服務:把原始 composing 字串轉成排序後的候選清單。
+// 中文: 實際 lookup 走 LexiconService(Rust lexicon crate),context boost 取自
+// 中文: NextWordService 的 bigram 預測。第 0 位永遠是當前 composing 字串(對齊 iOS)。
+// 中文: 每次 input mode 切換會重建此 service。
+
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.BuildConfig

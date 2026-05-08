@@ -47,7 +47,7 @@ Type: g u a
 Then: swipe candidate bar 3 full pages (≈ 12 candidates visible per page on iPhone 12-class).
 ```
 
-Exercises: `DictionarySearchService`, `CandidateProcessor.sortByScore` + dedup, SwiftUI `LazyHStack` scroll dispatch on the hottest UI path.
+Exercises: `DictionarySearchService`, Rust `ranking::process_candidates` (sort + dedup + optional TPS display dedup; routed via `RustEngineBridge.processCandidates`. iOS `CandidateProcessor.swift` retains only a 4-LOC residual unrelated to ranking math), SwiftUI `LazyHStack` scroll dispatch on the hottest UI path.
 
 ---
 

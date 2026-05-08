@@ -1,3 +1,6 @@
+// 中文: 自訂鍵盤色彩設定值型別 — 6 個欄位都可為 null(代表「沿用主題預設」)。
+// 中文: 以 JSON 格式持久化於 DataStore.colorSettings;對齊 iOS KeyboardColorSettings 結構。
+
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.graphics.Color

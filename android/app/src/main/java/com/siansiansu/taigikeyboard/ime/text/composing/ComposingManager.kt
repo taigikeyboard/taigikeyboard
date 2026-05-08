@@ -1,3 +1,8 @@
+// 中文: Android composing 平台殼 — 將 Rust composing engine(engine/composing crate)
+// 中文: 的 Intent → Effect 串到 InputConnection。狀態實質存在 Rust singleton EngineHandle,
+// 中文: 此層只 cache 最新 raw/display/isComposing 給既有呼叫者讀取,不重建狀態機。
+// 中文: bumpGeneration 在 onStartInputView(restarting=false) 觸發,讓 Rust 偵測 input-context 變動。
+
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection

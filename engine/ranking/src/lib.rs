@@ -6,13 +6,12 @@
 //!
 //! # Cross-platform invariants
 //!
-//! Mirrors `ios/Sources/TaigiKeyboard/Lexicon/Utils/CandidateProcessor.swift`
-//! and `android/.../ime/dictionary/CandidateProcessor.kt`. The Kotlin /
-//! Swift sides retain platform copies of `removeDuplicates`,
-//! `removeDisplayDuplicates`, `calculateScore`, `sortByScore`,
-//! `romanToBase`, `inputToBase` so JVM unit tests in `src/test/` can
-//! exercise the math without loading `librust_taigi.so`. Production paths
-//! route through this crate.
+//! Single source of truth for the score / dedup / sort math. The Android
+//! `CandidateProcessor.kt` mirror was deleted via PR #192 (v3.5.3 Path G);
+//! iOS retains only a 4-LOC residual (`capitalize` 1-line bridge +
+//! `startsWithRomanLetter` predicate, see
+//! `migration-inventory.csv` row for `CandidateProcessor.swift`). Both
+//! production paths route through this crate via FFI.
 //!
 //! Score formula constants (`USER_FREQ_CAP=100`, `USER_FREQ_WEIGHT=100`,
 //! `RECENCY_WINDOW_MS=3_600_000`, `RECENCY_BONUS=200`, `EXACT_BONUS=100`,

@@ -1,6 +1,10 @@
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
+
+// 中文: 字典操作常數 — 預設搜尋上限、subsystem 名稱、trie key 前綴(tl:/poj:/hanzi:)、bin 檔名。
+// 中文: triePrefix(mode) 依輸入模式選 prefix:POJ → poj:、其他(TL/TPS/English)→ tl:。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode

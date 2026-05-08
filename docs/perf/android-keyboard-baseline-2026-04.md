@@ -50,7 +50,7 @@ Then: wait ≤ 200 ms for candidate bar to populate, then horizontal scroll
       the leading edge (≈ 36 candidates have passed the viewport origin).
 ```
 
-Exercises: `LexiconService.search` path, Android `CandidateProcessor.sortByScore` + `removeDuplicates` + `removeDisplayDuplicates`, `RecyclerView` + `CandidateAdapter` scroll dispatch in `SmartbarManager` candidate strip (Android smartbar is not Compose — `CandidateAdapter` + `CandidateOverlayAdapter` back the `RecyclerView`).
+Exercises: `LexiconService.search` path, Rust `ranking::process_candidates` (sort + dedup + optional TPS display dedup; routed via `RustEngineBridge.processCandidates`. Android `CandidateProcessor.kt` mirror was deleted in PR #192 — calls now hit Rust directly), `RecyclerView` + `CandidateAdapter` scroll dispatch in `SmartbarManager` candidate strip (Android smartbar is not Compose — `CandidateAdapter` + `CandidateOverlayAdapter` back the `RecyclerView`).
 
 ---
 

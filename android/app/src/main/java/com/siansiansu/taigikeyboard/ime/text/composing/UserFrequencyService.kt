@@ -1,3 +1,8 @@
+// 中文: 使用者用詞頻次服務 — 紀錄每個 displayed word 被選用的次數,
+// 中文: 餵給 Rust ranking pipeline(RustEngineBridge.processCandidates)做頻率加權。
+// 中文: 屬 user_data SQLite,平台側保留(設計如此,不進 Rust;見 feedback_user_data_sqlite_stays_native)。
+// 中文: 由 CompositionRoot 持有。
+
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.content.Context

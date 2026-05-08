@@ -1,3 +1,7 @@
+// 中文: 自訂字典 CRUD + CSV 匯出 + 檔案匯入服務。
+// 中文: 持久化於 custom_dictionary.db(SQLiteOpenHelper);user_data SQLite 平台原生(設計如此)。
+// 中文: 由 CompositionRoot 持有。對應 iOS CustomDictionaryService.swift。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context

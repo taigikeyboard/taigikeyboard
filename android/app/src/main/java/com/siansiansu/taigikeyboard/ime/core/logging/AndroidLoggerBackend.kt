@@ -1,6 +1,10 @@
 // NOTE: Not shared-core — Android-side adapter that forwards LoggerBackend
 // calls to android.util.Log. The LoggerBackend interface itself (in
 // LoggerBackend.kt) is the shared-core contract.
+
+// 中文: Android 平台 logger adapter — 將 LoggerBackend 介面接到 android.util.Log。
+// 中文: d/i/w 受 BuildConfig.DEBUG 控制(release build dead-code 消除),e 永遠輸出。
+
 package com.siansiansu.taigikeyboard.ime.core.logging
 
 import android.util.Log

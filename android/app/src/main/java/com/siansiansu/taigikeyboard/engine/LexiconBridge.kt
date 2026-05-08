@@ -1,3 +1,7 @@
+// 中文: Lexicon 讀路徑橋:將 install / search / searchByHanzi / assocLookup /
+// 中文: classifyInput / isHanzi / dictionaryFilters 等 op 包成 Kotlin API,
+// 中文: 共用 RustEngineBridge.dispatchRaw 做 JNI roundtrip。對應 iOS RustEngineBridge+Lexicon.swift。
+
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest
@@ -35,6 +39,8 @@ import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
  * NextWord persistence is out of scope for this bridge; only the
  * bundled `association.bin` read-only half goes through here.
  */
+// 中文: 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
+// 中文: 此橋只走 `association.bin` 唯讀資料(bundle 字典+ngram)。
 object LexiconBridge {
     private const val TAG = "LexiconBridge"
 

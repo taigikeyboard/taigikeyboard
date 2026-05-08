@@ -1,9 +1,10 @@
 //! Per-candidate ranking score.
 //!
-//! Pure-CPU formula mirroring `CandidateProcessor.calculateScore` on both
-//! platforms. Constants verified byte-identical at audit time
-//! (`docs/engine/ranking-slice-audit.md` § 1.3) and are pinned here as
-//! the single source of truth.
+//! Pure-CPU formula; the v3.5.2 ranking slice collapsed
+//! `CandidateProcessor.calculateScore` from both platforms into this
+//! crate (Android mirror deleted PR #192). Constants verified
+//! byte-identical at audit time (`docs/engine/ranking-slice-audit.md`
+//! § 1.3) and are pinned here as the single source of truth.
 //!
 //! ```text
 //! total = userFreqScore
@@ -31,8 +32,9 @@ use protos::engine::{ScoreBreakdown, TaigiWord};
 use phonetics::taigi_unicode_base_form;
 
 // ---------------------------------------------------------------------------
-// Cross-platform invariant constants — DO NOT drift without updating
-// CandidateProcessor.swift / .kt in lock-step (per audit § 1.3).
+// Cross-platform invariant constants — single source of truth for both
+// platforms (Android mirror deleted PR #192; iOS residual unrelated).
+// Pinned by `docs/engine/ranking-slice-audit.md` § 1.3.
 // ---------------------------------------------------------------------------
 
 // 中文: 使用者頻率次數上限。
@@ -151,18 +153,18 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 /// [`input_to_base`]) the input side of the exact / completion
 /// comparison.
 ///
-/// CROSS-PLATFORM INVARIANT: predicates must match
-/// `ios/.../CandidateProcessor.romanToBase` (Swift
+/// CROSS-PLATFORM INVARIANT (pre-Path-G platform parity contract): the
+/// pre-PR-#192 Android `CandidateProcessor.romanToBase` used Kotlin
+/// `Character.NON_SPACING_MARK` + `Char.isDigit`, and the original iOS
+/// mirror (now deleted save residual) used Swift
 /// `Unicode.Scalar.Properties.generalCategory == .nonspacingMark` +
-/// `Character.isNumber`) and
-/// `android/.../CandidateProcessor.romanToBase` (Kotlin
-/// `Character.NON_SPACING_MARK` + `Char.isDigit`). Rust uses strict
+/// `Character.isNumber`. Rust uses strict
 /// `GeneralCategory::NonspacingMark` (`Mn`) + `DecimalNumber` (`Nd`) —
 /// Nd ⊂ Swift's `isNumber` (Nd ∪ Nl ∪ No), Nd == Kotlin's `isDigit`.
 /// For the actual Taigi input space (Latin + POJ/TL diacritics + ASCII
-/// tone digits 1-9) all three platforms produce byte-identical output;
-/// the strict Nd choice keeps Rust aligned with the narrower Kotlin
-/// contract while remaining a subset of Swift's predicate.
+/// tone digits 1-9) all three predicates produced byte-identical output;
+/// the strict Nd choice retains alignment with the narrower historical
+/// Kotlin contract while remaining a subset of Swift's predicate.
 // 中文: 把候選羅馬字轉成比對用的 base 形式:去連字號/空白、處理 POJ 鼻音與 o͘、去 Mn/Nd、轉小寫。
 fn roman_to_base(roman: &str) -> String {
     let no_hyphens: String = roman.chars().filter(|c| *c != '-' && *c != ' ').collect();
@@ -175,11 +177,12 @@ fn roman_to_base(roman: &str) -> String {
         .collect()
 }
 
-/// Strip tone digits from a normalized input and lowercase. Mirrors
-/// `CandidateProcessor.inputToBase`. Note: input is assumed already in
-/// numeric tone form (no diacritics) — the digit filter catches the
-/// trailing tone digit (`tai5tsi3` → `taitsi`). Uses the same strict
-/// `Nd` predicate as [`roman_to_base`] for cross-platform parity.
+/// Strip tone digits from a normalized input and lowercase. Replaces the
+/// historical platform `CandidateProcessor.inputToBase`. Note: input is
+/// assumed already in numeric tone form (no diacritics) — the digit
+/// filter catches the trailing tone digit (`tai5tsi3` → `taitsi`). Uses
+/// the same strict `Nd` predicate as [`roman_to_base`] for parity with
+/// the pre-Path-G platform contract.
 // 中文: 把使用者輸入轉成比對用 base:輸入已是數字調(無變音符號),只去尾調數字並轉小寫。
 fn input_to_base(normalized_input: &str) -> String {
     normalized_input

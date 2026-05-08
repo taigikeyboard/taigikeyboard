@@ -1,3 +1,6 @@
+// 中文: 一份計算完成的鍵盤佈局快照,提供唯讀 rows: List<List<KeyData>>。
+// 中文: 外層列拓撲不可變;個別 KeyData 仍可變(LayoutManager.mergeLayouts 在建構後填 popup)。
+
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData

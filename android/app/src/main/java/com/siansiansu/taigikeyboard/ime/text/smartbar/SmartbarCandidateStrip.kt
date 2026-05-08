@@ -1,3 +1,6 @@
+// 中文: 候選列主 Composable — LazyRow 渲染 Taigi 候選 + English 建議 row;
+// 中文: 點擊由外部 callback 注入(見 CandidateClickHandler)。被 SmartbarView 內 ComposeView 主機 host。
+
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import androidx.compose.foundation.background

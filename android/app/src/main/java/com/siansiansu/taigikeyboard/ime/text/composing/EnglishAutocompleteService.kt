@@ -1,3 +1,7 @@
+// 中文: 英文輸入模式的拼字建議服務 — 使用 Android SpellCheckerSession,
+// 中文: 對應 iOS UITextChecker。提供拼字校正 + 受限的自動補全(系統限制)。
+// 中文: 僅 English InputMode 使用,Taigi 路徑走 TaigiAutocompleteService + Rust lexicon。
+
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.content.Context

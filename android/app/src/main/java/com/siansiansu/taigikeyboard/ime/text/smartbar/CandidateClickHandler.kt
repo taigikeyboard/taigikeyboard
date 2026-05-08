@@ -1,3 +1,6 @@
+// 中文: 候選點擊處理器 — 從 SmartbarManager 抽出。
+// 中文: 處理 Taigi 候選選擇、英文建議替換、overlay 候選選擇,並做 outputText 格式化。
+
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.util.Log

@@ -1,6 +1,11 @@
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
+
+// 中文: Lexicon / 輸入引擎用的唯讀設定介面 — 由 EngineSettingsProvider 提供。
+// 中文: 純 Kotlin stdlib(無 android.* / androidx.* / coroutines),engine 層可直接依賴。
+// 中文: 所有 getter 必須 live-read,具體實作不可在初始化時快照。對應 iOS Settings/EngineSettings.swift。
+
 package com.siansiansu.taigikeyboard.ime.core.settings
 
 /**

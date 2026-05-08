@@ -1,3 +1,6 @@
+// 中文: 候選 overlay(展開鍵盤上方覆蓋的全畫面候選格)— 使用 RecyclerView 列回收以省 inflate 成本。
+// 中文: 僅可見列會 inflate;捲動時 ViewHolder 回收。Smartbar 一般 LazyRow 不夠用時的擴充顯示。
+
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import android.content.Context

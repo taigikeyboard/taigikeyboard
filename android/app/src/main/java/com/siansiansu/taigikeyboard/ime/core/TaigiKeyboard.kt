@@ -1,3 +1,6 @@
+// 中文: IME service 主類 — 繼承 LifecycleInputMethodService,作為 InputMethodService 的入口點。
+// 中文: 持有 TextInputManager / SmartbarManager / MediaInputManager / SubtypeManager 等 IME-scoped 元件;
+// 中文: 透過 EventListener 把按鍵事件發到 TextInputManager,自身負責生命週期與 Compose Recomposer 注入。
 
 package com.siansiansu.taigikeyboard.ime.core
 

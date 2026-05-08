@@ -4,7 +4,7 @@
 
 **Audience**: whoever is doing Android Phase II alignment (and later, the Rust Phase IV-A author who needs to know what behavioral surface survives).
 
-**Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; the live Rust / native ownership inventory lives in `../engine/migration-inventory.csv` (replaces the retired `shared-core-readiness.md` roster); data-artifact portability (`dictionary.fst` / `dictionary.bin` / SQLite) lives in `data-artifacts-portability.md` — all three are referenced but not duplicated here.
+**Scope**: architectural pattern only. Behavioral contracts live in `behavioral-invariants.md`; the live Rust / native ownership inventory lives in `../engine/migration-inventory.csv`; data-artifact portability (`dictionary.fst` / `dictionary.bin` / SQLite) lives in `data-artifacts-portability.md` — all three are referenced but not duplicated here.
 
 **Contract of this doc**: if Android's Phase II code diverges from the pattern below, fix Android (not this doc) unless the divergence is justified by a platform constraint documented inline.
 

@@ -1,6 +1,10 @@
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
+
+// 中文: 字典來源 enum — 用於候選結果歸屬顯示(教典/iTaigi/...)。
+// 中文: bit 位置由 dictionary/common/source_bits.py 釘住,engine/lexicon/src/dictionary_reader.rs 讀取。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 /**

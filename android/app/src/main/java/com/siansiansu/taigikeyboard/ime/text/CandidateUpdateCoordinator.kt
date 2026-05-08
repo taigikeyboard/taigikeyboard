@@ -1,3 +1,7 @@
+// 中文: 候選詞更新作業協調器 — 從 TextInputManager 抽出。
+// 中文: 管理 Taigi / English 候選 debounce 流程、display 衍生排程、生命週期取消;
+// 中文: 並對 TaigiAutocompleteService 做 inputMode-aware 快取以省重建成本。
+
 package com.siansiansu.taigikeyboard.ime.text
 
 import android.util.Log

@@ -3,6 +3,11 @@
 // accepted per the InputNormalizer / java.text.Normalizer precedent).
 // Eligible for cross-platform extraction.
 // endregion
+
+// 中文: 外部字典查詢 URL 組裝器 — MOE / Chhoe Taigi 兩家。
+// 中文: tone digit 1/4 在 URL 上省略以匹配對方介面慣例;
+// 中文: 鼻音 ⁿ/ᴺ → "nn" inline fast-path(刻意保留為 sanctioned divergence,見 feedback_phonetic_completeness.md)。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge

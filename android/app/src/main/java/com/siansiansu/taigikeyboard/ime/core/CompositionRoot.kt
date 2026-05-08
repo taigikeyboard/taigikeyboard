@@ -1,3 +1,8 @@
+// 中文: 服務注入根(手寫 DI,沒用 Hilt)— 持有所有有狀態的引擎服務(Lexicon / NextWord / Backup /
+// 中文: CustomDictionary / UserFrequency / Logger),IME service / Settings Activity / Compose 畫面共用同一份。
+// 中文: 由 TaigiKeyboardApplication 持有;IME 內部 manager(TextInputManager / SmartbarManager)生命週期
+// 中文: 隨 IME service,故由 TaigiKeyboard.onCreate 自行建構,刻意不放在這裡。
+
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context

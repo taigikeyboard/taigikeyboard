@@ -1,3 +1,5 @@
+// 中文: 鍵盤 subtype 值型別 — 一個 (id, locale, layout) 三元組。
+// 中文: 序列化格式 "<id>/<languageTag>/<layout>",由 PrefHelper.subtypes 字串清單持久化。
 
 package com.siansiansu.taigikeyboard.ime.core
 

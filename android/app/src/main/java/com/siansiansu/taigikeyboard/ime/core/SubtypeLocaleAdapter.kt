@@ -1,3 +1,5 @@
+// 中文: Subtype 用 Locale ↔ 字串的 Moshi 轉接器 — 處理底線/連字號兩種 locale 字串格式。
+
 package com.siansiansu.taigikeyboard.ime.core
 
 import com.squareup.moshi.FromJson

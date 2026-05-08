@@ -1,3 +1,7 @@
+// 中文: 候選大小寫轉換 thin wrapper — Path G 後保留為 platform skip-rule 執行器。
+// 中文: skip 規則:composing-text 候選 (id == 0) 與 NextWord/English (id < 0 且 ≠ -2) 不轉;
+// 中文: custom dict (id == -2) 仍會轉。實際大小寫邏輯在 Rust phonetics::case_transform。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.CaseTransformBridge

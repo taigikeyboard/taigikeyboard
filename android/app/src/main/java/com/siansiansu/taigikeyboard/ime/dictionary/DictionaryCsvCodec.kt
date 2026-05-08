@@ -1,3 +1,6 @@
+// 中文: 單行 CSV 解析與跳脫(RFC 4180 雙引號規則)— 用於頻次 / NextWord 關聯資料的匯出匯入。
+// 中文: parseLine + escape 為對等對應,確保 round-trip 不失真。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 // Single-line CSV parsing and escaping for frequency/association data export/import

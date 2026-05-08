@@ -1,6 +1,10 @@
 // region Shared-Core Candidate
 // Pure logic, Kotlin stdlib only. Eligible for cross-platform extraction.
 // endregion
+
+// 中文: 自訂字典欄位的衍生函式群 — 全為 Rust phonetics::derivation 的 thin wrapper。
+// 中文: 包含 generateNotone / generateAbbrev / generateRomanNum;iOS 對應 CustomDictionaryDerivation.swift。
+
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge

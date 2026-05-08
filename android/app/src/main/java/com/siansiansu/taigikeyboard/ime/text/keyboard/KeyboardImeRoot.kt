@@ -1,3 +1,7 @@
+// 中文: IME 根 Composable 容器 — 套 TaigiKeyboardTheme、解析 navbar inset、解算每鍵幾何、
+// 中文: 把 keyHeightFactor 推回 smartbar、依當前 mode 掛載 KeyboardLayout。
+// 中文: navbar inset 改走宣告式 WindowInsets,擺脫 project_ime_window_arch.md 的 dismiss bug 路徑。
+
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import androidx.compose.foundation.layout.Box
