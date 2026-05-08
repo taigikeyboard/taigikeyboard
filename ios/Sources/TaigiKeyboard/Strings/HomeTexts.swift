@@ -63,6 +63,12 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.7", "2026/05/09", [
+            "Fixed: LKK 漢羅文 mixed-script suggestions now correctly stay enabled after a settings reset.",
+            "Renamed font display name 源樣黑體 → 源樣烏體 (matches official ButTaiwan naming).",
+            "Updated dictionary data — regenerated POJ entries and corrected the Tab3 (Hanji) character range.",
+            "Internal: end-to-end keystroke trace IDs for debug-build diagnostics.",
+        ]),
         ("3.5.6", "2026/05/02", [
             "Internal: dictionary read path rewritten in Rust (no behavior change).",
         ]),

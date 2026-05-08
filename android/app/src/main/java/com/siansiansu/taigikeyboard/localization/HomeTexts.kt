@@ -71,6 +71,17 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.7",
+                "2026/05/09",
+                listOf(
+                    "Restored support for older 32-bit ARM devices (armeabi-v7a).",
+                    "Fixed: keyboard crash on release builds caused by ProGuard/R8 stripping Rust engine classes.",
+                    "Renamed font display name 源樣黑體 → 源樣烏體 (matches official ButTaiwan naming).",
+                    "Updated dictionary data — regenerated POJ entries and corrected the Tab3 (Hanji) character range.",
+                    "Internal: keyboard UI rewritten in Jetpack Compose (no behavior change).",
+                ),
+            ),
+            VersionEntry(
                 "3.5.6",
                 "2026/05/02",
                 listOf(
