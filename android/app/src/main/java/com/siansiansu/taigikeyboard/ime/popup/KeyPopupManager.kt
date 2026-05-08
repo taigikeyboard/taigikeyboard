@@ -1,6 +1,5 @@
 package com.siansiansu.taigikeyboard.ime.popup
 
-import android.content.res.Configuration
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -16,14 +15,12 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.media.emoji.EmojiKeyData
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
-import com.siansiansu.taigikeyboard.ime.text.key.KeyView
 import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
 import com.siansiansu.taigikeyboard.ime.text.keyboard.ExtendedPopupGeometryInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView
 import com.siansiansu.taigikeyboard.ime.text.keyboard.PopupDimensionsInput
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
@@ -32,21 +29,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD) {
-    private var anchorSide: AnchorSide = AnchorSide.LEFT
-    private var anchorOffset: Int = 0
-    private var activeExtIndex: Int? = null
-    private val exceptionsForKeyCodes = listOf(
-        KeyCode.ENTER,
-        KeyCode.LANGUAGE_SWITCH,
-        KeyCode.SWITCH_TO_TEXT_CONTEXT,
-        KeyCode.SWITCH_TO_MEDIA_CONTEXT,
-    )
-    private var keyPopupWidth: Int
-    private var keyPopupHeight: Int
-    private var keyPopupDiffX: Int = 0
-    private var row0count: Int = 0
-    private var row1count: Int = 0
+/**
+ * Drives the preview + extended popup [PopupWindow]s for the Compose keyboard
+ * body. Decoupled from the keyboard layer via [KeyAnchor] so the popup layer
+ * never reaches back into [com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayout]
+ * for view geometry or label resolution — both are pre-resolved by the
+ * caller and passed in as anchor fields.
+ *
+ * Construct once per IME-service lifecycle. The owning IME ([TaigiKeyboard])
+ * provides the popup [androidx.compose.runtime.Recomposer] and the host
+ * [View] used as the `showAtLocation` parent.
+ */
+class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
 
     private val composeView: ComposeView
     private val composeViewExt: ComposeView
@@ -55,29 +49,49 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
 
     private val _previewState = MutableStateFlow<PreviewState>(PreviewState.Hidden)
     private val _extendedState = MutableStateFlow<ExtendedState>(ExtendedState.Hidden)
-    val previewState = _previewState.asStateFlow()
-    val extendedState = _extendedState.asStateFlow()
+    val previewState: StateFlow<PreviewState> = _previewState.asStateFlow()
+    val extendedState: StateFlow<ExtendedState> = _extendedState.asStateFlow()
 
     private var ownersInstalled = false
 
-    /** Resolved once per show() and reused by the immediately-following extend()
-     *  during a long-press; cleared on hide() so a fresh touch-down picks up
-     *  any theme/font change between popups. */
+    /** Window-attached host view used as the `showAtLocation` parent. Set by
+     *  [attachHostView] once the IME root has been registered; null in early
+     *  startup or after detach. */
+    private var hostView: View? = null
+
+    /** Most recent anchor passed to [show] / [extend]. Reused by
+     *  [propagateMotionEvent] / [activeKeyData] so callers don't repeat the
+     *  anchor on every motion event. */
+    private var lastAnchor: KeyAnchor? = null
+    private var keyPopupWidth: Int
+    private var keyPopupHeight: Int
+    private var keyPopupDiffX: Int = 0
+
+    /** Geometry from the most recent [extend]. Drives [propagateMotionEvent]
+     *  hit-test math without re-deriving anchor side / row split. */
+    private var anchorSide: AnchorSide = AnchorSide.LEFT
+    private var anchorOffset: Int = 0
+    private var row0count: Int = 0
+    private var row1count: Int = 0
+    private var activeExtIndex: Int? = null
+
+    /** Resolved once per [show] and reused by the immediately-following
+     *  [extend] during a long-press; cleared on [hide] so a fresh touch-down
+     *  picks up any theme/font change between popups. */
     private var cachedDisplay: PopupDisplayParams? = null
 
-    /** True while the preview popup composable is rendering a Visible state. */
-    val isShowingPopup: Boolean
+    override val isShowingPopup: Boolean
         get() = _previewState.value is PreviewState.Visible
 
     /** True while the extended popup window is on screen. Tracks the window
      *  rather than [_extendedState] because dismiss() detaches the ComposeView
      *  before the state mutation can be observed. */
-    val isShowingExtendedPopup: Boolean
+    override val isShowingExtendedPopup: Boolean
         get() = windowExt.isShowing
 
     init {
-        keyPopupWidth = keyboardView.resources.getDimension(R.dimen.key_width).toInt()
-        keyPopupHeight = keyboardView.resources.getDimension(R.dimen.key_height).toInt()
+        keyPopupWidth = ime.resources.getDimension(R.dimen.key_width).toInt()
+        keyPopupHeight = ime.resources.getDimension(R.dimen.key_height).toInt()
 
         composeView = popupComposeView(_previewState) { state ->
             if (state is PreviewState.Visible) KeyPopupBox(state)
@@ -94,7 +108,7 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
         state: StateFlow<S>,
         content: @Composable (S) -> Unit,
     ): ComposeView {
-        return ComposeView(keyboardView.context).apply {
+        return ComposeView(ime).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -110,7 +124,7 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
     }
 
     private fun createPopupWindow(view: View): PopupWindow {
-        return PopupWindow(keyboardView.context).apply {
+        return PopupWindow(ime).apply {
             animationStyle = 0
             contentView = view
             enterTransition = null
@@ -123,7 +137,7 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
     }
 
     /**
-     * Wire the popup [ComposeView]s to the IME service so they can compose
+     * Wires the popup [ComposeView]s to the IME service so they can compose
      * inside their host [PopupWindow]. Two pieces are required and neither
      * substitutes for the other:
      *
@@ -145,14 +159,10 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
      *    these tags would replace the `PopupDecorView` crash with a
      *    different one inside `AndroidComposeView`.
      *
-     * Idempotent + lazy: settings preview path (KeyboardPreviewPanel)
-     * leaves `taigikeyboard` null and never triggers show()/extend(),
-     * so this is a no-op there.
+     * Idempotent — safe to call repeatedly.
      */
-    private fun installPopupViewTreeOwnersIfNeeded() {
+    fun installPopupViewTreeOwnersIfNeeded() {
         if (ownersInstalled) return
-        val ime = (keyboardView as? KeyboardView)?.taigikeyboard ?: return
-
         composeView.setParentCompositionContext(ime.popupRecomposer)
         composeViewExt.setParentCompositionContext(ime.popupRecomposer)
 
@@ -165,24 +175,30 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
         ownersInstalled = true
     }
 
+    /** Attaches the host [View] used as the `showAtLocation` parent. Called
+     *  by [com.siansiansu.taigikeyboard.ime.text.TextInputManager] once the
+     *  IME root view is registered. */
+    fun attachHostView(view: View) {
+        hostView = view
+    }
+
     private fun resolveDisplayParams(): PopupDisplayParams {
-        val ctx = keyboardView.context
-        val res = ctx.resources
+        val res = ime.resources
         val density = res.displayMetrics.density
-        val prefs = (keyboardView as? KeyboardView)?.prefs ?: PrefHelper(ctx)
+        val prefs: PrefHelper = ime.prefs
         return PopupDisplayParams(
-            fgColorArgb = getColorFromAttr(ctx, R.attr.key_popup_fgColor),
-            bgColorArgb = getColorFromAttr(ctx, R.attr.key_popup_bgColor),
-            extBgColorArgb = getColorFromAttr(ctx, R.attr.key_popup_extended_bgColor),
-            extBgColorActiveArgb = getColorFromAttr(ctx, R.attr.key_popup_extended_bgColorActive),
-            shadowColorArgb = getColorFromAttr(ctx, R.attr.key_popup_extended_shadowColor),
+            fgColorArgb = getColorFromAttr(ime, R.attr.key_popup_fgColor),
+            bgColorArgb = getColorFromAttr(ime, R.attr.key_popup_bgColor),
+            extBgColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColor),
+            extBgColorActiveArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColorActive),
+            shadowColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_shadowColor),
             cornerRadiusPx = res.getDimension(R.dimen.key_borderRadius),
             keyHeightPx = res.getDimension(R.dimen.key_height).toInt(),
             popupTextSizePx = res.getDimension(R.dimen.key_popup_textSize),
             threeDotsSizePx = (16f * density).toInt(),
             ringWidthPx = (1f * density).toInt().coerceAtLeast(1),
             iconPaddingFraction = 0.2f,
-            typeface = TypefaceLoader.getTypefaceByType(prefs.fontType, ctx),
+            typeface = TypefaceLoader.getTypefaceByType(prefs.fontType, ime),
         )
     }
 
@@ -192,140 +208,79 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
     private fun reuseDisplayParams(): PopupDisplayParams =
         cachedDisplay ?: freshDisplayParams()
 
-    private fun buildPopupCell(keyView: KeyView, k: Int): PopupCell {
-        val popupKeyData = keyView.data.popup[k]
-        return when (popupKeyData.code) {
-            KeyCode.SETTINGS ->
-                PopupCell(
-                    label = null,
-                    icon = PopupIcon.Settings,
-                    textScale = 1.0f,
-                    useCustomTypeface = false,
-                )
-            KeyCode.SWITCH_TO_TEXT_CONTEXT ->
-                // Legacy KeyPopupExtendedSingleView did NOT apply the custom
-                // typeface on this branch — preserve that behavior.
-                PopupCell(
-                    label = keyView.resources.getString(R.string.key__view_characters),
-                    icon = null,
-                    textScale = 1.0f,
-                    useCustomTypeface = false,
-                )
-            KeyCode.SWITCH_TO_MEDIA_CONTEXT ->
-                PopupCell(
-                    label = null,
-                    icon = PopupIcon.SentimentSatisfied,
-                    textScale = 1.0f,
-                    useCustomTypeface = false,
-                )
-            else -> {
-                val textScale =
-                    if (popupKeyData.code == KeyCode.URI_COMPONENT_TLD) 0.6f else 1.0f
-                PopupCell(
-                    label = keyView.getComputedLetter(popupKeyData),
-                    icon = null,
-                    textScale = textScale,
-                    useCustomTypeface = true,
-                )
-            }
-        }
-    }
-
     /**
-     * Shows a preview popup for the passed [keyView]. Ignores show requests for key views which
-     * key code is equal to or less than [KeyCode.SPACE]. KeyViews with a code defined in
-     * [exceptionsForKeyCodes] will only shadow-calculating the size of the key popup, as these
-     * sizes are needed for the extended popup. No popup will be shown to the user in this case.
-     *
-     * @param keyView Reference to the keyView currently controlling the popup.
+     * Shows a preview popup for the given [anchor]. Mirrors the legacy
+     * `KeyView.onFlorisTouchEvent ACTION_DOWN` path: keys with code <= SPACE
+     * and no popup cells (and not in [ANCHOR_EXCEPTIONS]) skip the visual
+     * popup but the manager still records the anchor so a subsequent
+     * [extend] sees consistent dimensions.
      */
-    fun show(keyView: T_KV) {
-        if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
-            && !exceptionsForKeyCodes.contains(keyView.data.code)
-            && keyView.data.popup.isEmpty()
-        ) {
-            return
-        }
+    override fun show(anchor: KeyAnchor) {
+        val popupDims = KeyboardLayoutSolver.solvePopupDimensions(
+            PopupDimensionsInput(
+                desiredKeyWidth = anchor.desiredKeyWidth,
+                desiredKeyHeight = anchor.desiredKeyHeight,
+                keyViewMeasuredWidth = anchor.measuredWidth,
+                isLandscape = anchor.isLandscape,
+            ),
+        )
+        keyPopupWidth = popupDims.popupWidth
+        keyPopupHeight = popupDims.popupHeight
+        keyPopupDiffX = popupDims.popupDiffX
+        lastAnchor = anchor
 
-        if (keyboardView is KeyboardView) {
-            val popupDims = KeyboardLayoutSolver.solvePopupDimensions(
-                PopupDimensionsInput(
-                    desiredKeyWidth = keyboardView.desiredKeyWidth,
-                    desiredKeyHeight = keyboardView.desiredKeyHeight,
-                    keyViewMeasuredWidth = keyView.measuredWidth,
-                    isLandscape =
-                        keyboardView.resources.configuration.orientation ==
-                            Configuration.ORIENTATION_LANDSCAPE,
-                ),
-            )
-            keyPopupWidth = popupDims.popupWidth
-            keyPopupHeight = popupDims.popupHeight
-            keyPopupDiffX = popupDims.popupDiffX
-        } else {
-            // EmojiKeyboardView fallback (Compose path no longer routes here): keep
-            // existing keyPopupWidth/keyPopupHeight, only recompute the diff.
-            keyPopupDiffX = (keyView.measuredWidth - keyPopupWidth) / 2
-        }
-        // Calculating is done, so exit show() here if this key view is a special one.
-        if (keyView is KeyView && exceptionsForKeyCodes.contains(keyView.data.code)) {
+        // Two skip paths share the same outcome (no preview popup, but
+        // dimensions stay cached for a follow-up extend()):
+        //  - low key codes with no popup variants (legacy "code <= SPACE
+        //    with empty popup" filter)
+        //  - codes in ANCHOR_EXCEPTIONS that always opt out of the preview
+        if ((anchor.data.code <= KeyCode.SPACE && anchor.data.popup.isEmpty()) ||
+            ANCHOR_EXCEPTIONS.contains(anchor.data.code)
+        ) {
             return
         }
 
         installPopupViewTreeOwnersIfNeeded()
 
         val display = freshDisplayParams()
-        val label = (keyView as? KeyView)?.getComputedLetter().orEmpty()
-        val showThreeDots = (keyView as? KeyView)?.data?.popup?.isNotEmpty() ?: false
-
         _previewState.value = PreviewState.Visible(
-            label = label,
-            showThreeDots = showThreeDots,
+            label = anchor.computedLabel,
+            showThreeDots = anchor.data.popup.isNotEmpty(),
             popupWidthPx = keyPopupWidth,
             popupHeightPx = keyPopupHeight,
             display = display,
         )
 
-        val keyPopupX = keyPopupDiffX
-        val keyPopupY = -keyPopupHeight
+        val host = hostView ?: return
+        val popupX = anchor.xInWindow + keyPopupDiffX
+        val popupY = anchor.yInWindow + anchor.measuredHeight + (-keyPopupHeight)
         if (window.isShowing) {
-            window.update(keyView, keyPopupX, keyPopupY, keyPopupWidth, keyPopupHeight)
+            window.update(popupX, popupY, keyPopupWidth, keyPopupHeight)
         } else {
             window.width = keyPopupWidth
             window.height = keyPopupHeight
-            window.showAsDropDown(keyView, keyPopupX, keyPopupY, Gravity.NO_GRAVITY)
+            window.showAtLocation(host, Gravity.NO_GRAVITY, popupX, popupY)
         }
     }
 
     /**
-     * Extends the currently showing key preview popup if there are popup keys defined in the
-     * key data of the passed [keyView]. Ignores extend requests for key views which key code
-     * is equal to or less than [KeyCode.SPACE]. An exception is made for the codes defined in
-     * [exceptionsForKeyCodes], as they most likely have special keys bound to them.
-     *
-     * Layout shape (anchorSide / row0count / row1count) is owned by
-     * [KeyboardLayoutSolver.solveExtendedPopupGeometry]; this method consumes
-     * its outputs without re-deriving thresholds.
-     *
-     * @param keyView Reference to the keyView currently controlling the popup.
+     * Extends the currently showing preview popup with the popup-cell grid
+     * from [anchor]. Layout shape (anchor side / row split / anchor offset)
+     * is owned by [KeyboardLayoutSolver.solveExtendedPopupGeometry];
+     * [propagateMotionEvent] consumes its outputs without re-deriving
+     * thresholds.
      */
-    fun extend(keyView: T_KV) {
-        if (keyView is KeyView && keyView.data.code <= KeyCode.SPACE
-            && !exceptionsForKeyCodes.contains(keyView.data.code)
-            && keyView.data.popup.isEmpty()
-        ) {
-            return
-        }
+    override fun extend(anchor: KeyAnchor) {
+        val popupCount = anchor.data.popup.size
+        if (popupCount == 0) return
 
-        // EmojiKeyView is no longer used (Compose implementation), so the
-        // popup count for the non-KeyView branch defaults to 0.
-        val popupCount = if (keyView is KeyView) keyView.data.popup.size else 0
         val geometry = KeyboardLayoutSolver.solveExtendedPopupGeometry(
             ExtendedPopupGeometryInput(
                 popupCount = popupCount,
-                keyViewX = keyView.x,
-                keyboardViewMeasuredWidth = keyboardView.measuredWidth,
-                keyViewMeasuredWidth = keyView.measuredWidth,
-                keyViewMeasuredHeight = keyView.measuredHeight,
+                keyViewX = anchor.xInKeyboard.toFloat(),
+                keyboardViewMeasuredWidth = anchor.keyboardWidth,
+                keyViewMeasuredWidth = anchor.measuredWidth,
+                keyViewMeasuredHeight = anchor.measuredHeight,
                 keyPopupWidth = keyPopupWidth,
                 keyPopupHeight = keyPopupHeight,
             ),
@@ -334,24 +289,22 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
         row0count = geometry.row0count
         row1count = geometry.row1count
         anchorOffset = geometry.anchorOffset
+        lastAnchor = anchor
 
         installPopupViewTreeOwnersIfNeeded()
 
         val display = reuseDisplayParams()
-        val cells: List<PopupCell> =
-            if (keyView is KeyView) {
-                keyView.data.popup.indices.map { k -> buildPopupCell(keyView, k) }
-            } else {
-                emptyList()
-            }
+        val cells = anchor.popupCells
 
-        var initialActive = -1
-        cells.indices.forEach { idx ->
-            val isInitActive =
-                (anchorSide == AnchorSide.LEFT && (idx - row1count == anchorOffset)) ||
-                    (anchorSide == AnchorSide.RIGHT && (idx - row1count == row0count - 1 - anchorOffset))
-            if (isInitActive) initialActive = idx
-        }
+        // Closed-form: the initially-active cell sits at row1count + offset
+        // for LEFT anchors and at row1count + (row0count - 1 - offset) for
+        // RIGHT anchors. Falls back to -1 when the cell list is empty so
+        // ExtendedState carries the legacy "no active highlight" sentinel.
+        val initialActive = when {
+            cells.isEmpty() -> -1
+            anchorSide == AnchorSide.LEFT -> row1count + anchorOffset
+            else -> row1count + row0count - 1 - anchorOffset
+        }.takeIf { it in cells.indices } ?: -1
         activeExtIndex = if (initialActive >= 0) initialActive else null
 
         _extendedState.value = ExtendedState.Visible(
@@ -361,106 +314,90 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
             row0count = geometry.row0count,
             row1count = geometry.row1count,
             cellWidthPx = keyPopupWidth,
-            cellHeightPx = keyView.measuredHeight,
+            cellHeightPx = anchor.measuredHeight,
             totalWidthPx = geometry.extWidth,
             totalHeightPx = geometry.extHeight,
             display = display,
         )
 
-        // Hide the three-dots indicator on the preview popup while the extended
-        // popup is showing — preview text content stays visible.
+        // Hide the three-dots indicator on the preview popup while the
+        // extended popup is showing — preview text content stays visible.
         val previewVisible = _previewState.value as? PreviewState.Visible
         if (previewVisible != null) {
             _previewState.value = previewVisible.copy(showThreeDots = false)
         }
 
-        // Position and show popup window
+        val host = hostView ?: return
+        val popupX = anchor.xInWindow + geometry.popupX
+        val popupY = anchor.yInWindow + anchor.measuredHeight + geometry.popupY
         if (windowExt.isShowing) {
-            windowExt.update(keyView, geometry.popupX, geometry.popupY, geometry.extWidth, geometry.extHeight)
+            windowExt.update(popupX, popupY, geometry.extWidth, geometry.extHeight)
         } else {
             windowExt.width = geometry.extWidth
             windowExt.height = geometry.extHeight
-            windowExt.showAsDropDown(keyView, geometry.popupX, geometry.popupY, Gravity.NO_GRAVITY)
+            windowExt.showAtLocation(host, Gravity.NO_GRAVITY, popupX, popupY)
         }
     }
 
     /**
-     * Updates the current selected key in extended popup according to the passed [event].
-     * This function does nothing if the extended popup is not showing and will return false.
+     * Updates the active popup cell from a key-relative [event]. Returns
+     * `true` while the pointer remains within the extended-popup grid;
+     * `false` once it leaves so the caller (KeyTouchCoordinator) can cancel.
      *
-     * @param keyView Reference to the keyView currently controlling the popup.
-     * @param event The [MotionEvent] passed from the parent keyboard view's onTouch event.
-     * @return True if the pointer movement is within the elements bounds, false otherwise.
+     * Coord math is a direct port of the legacy
+     * [com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardView]
+     * implementation — the pointer is expressed in key-relative pixels and
+     * the math walks anchor-side rows backwards from the anchor offset.
      */
-    fun propagateMotionEvent(keyView: T_KV, event: MotionEvent): Boolean {
-        if (!isShowingExtendedPopup) {
-            return false
-        }
+    override fun propagateMotionEvent(event: MotionEvent): Boolean {
+        if (!isShowingExtendedPopup) return false
+        val anchor = lastAnchor ?: return false
 
         val kX: Float = event.x / keyPopupWidth.toFloat()
 
-        // Check if out of boundary on y-axis
         if (event.y < -keyPopupHeight || event.y > 0.9f * keyPopupHeight) {
             return false
         }
 
         val newActiveIndex = when (anchorSide) {
             AnchorSide.LEFT -> when {
-                // check if out of boundary on x-axis
                 event.x < keyPopupDiffX - (anchorOffset + 1) * keyPopupWidth ||
                     event.x > (keyPopupDiffX + (row0count + 1 - anchorOffset) * keyPopupWidth) -> {
                     return false
                 }
-
-                // row 1
-                event.y < 0 && row1count > 0 -> {
-                    when {
-                        kX >= row1count - anchorOffset -> row1count - 1
-                        kX < -anchorOffset -> 0
-                        kX < 0 -> kX.toInt() - 1 + anchorOffset
-                        else -> kX.toInt() + anchorOffset
-                    }
+                event.y < 0 && row1count > 0 -> when {
+                    kX >= row1count - anchorOffset -> row1count - 1
+                    kX < -anchorOffset -> 0
+                    kX < 0 -> kX.toInt() - 1 + anchorOffset
+                    else -> kX.toInt() + anchorOffset
                 }
-
-                // row 0
-                else -> {
-                    when {
-                        kX >= row0count - anchorOffset -> row1count + row0count - 1
-                        kX < -anchorOffset -> row1count
-                        kX < 0 -> row1count + kX.toInt() - 1 + anchorOffset
-                        else -> row1count + kX.toInt() + anchorOffset
-                    }
+                else -> when {
+                    kX >= row0count - anchorOffset -> row1count + row0count - 1
+                    kX < -anchorOffset -> row1count
+                    kX < 0 -> row1count + kX.toInt() - 1 + anchorOffset
+                    else -> row1count + kX.toInt() + anchorOffset
                 }
             }
 
             AnchorSide.RIGHT -> when {
-                // check if out of boundary on x-axis
-                event.x > keyView.measuredWidth - keyPopupDiffX + (anchorOffset + 1) * keyPopupWidth ||
+                event.x > anchor.measuredWidth - keyPopupDiffX + (anchorOffset + 1) * keyPopupWidth ||
                     event.x < (
-                        keyView.measuredWidth -
+                        anchor.measuredWidth -
                             keyPopupDiffX - (row0count + 1 - anchorOffset) * keyPopupWidth
                     ) -> {
                     return false
                 }
-
-                // row 1
-                event.y < 0 && row1count > 0 -> {
-                    when {
-                        kX >= anchorOffset -> row1count - 1
-                        kX < -(row1count - 1 - anchorOffset) -> 0
-                        kX < 0 -> row1count - 2 + kX.toInt() - anchorOffset
-                        else -> row1count - 1 + kX.toInt() - anchorOffset
-                    }
+                event.y < 0 && row1count > 0 -> when {
+                    kX >= anchorOffset -> row1count - 1
+                    kX < -(row1count - 1 - anchorOffset) -> 0
+                    kX < 0 -> row1count - 2 + kX.toInt() - anchorOffset
+                    else -> row1count - 1 + kX.toInt() - anchorOffset
                 }
-
-                // row 0
-                else -> {
-                    when {
-                        kX >= anchorOffset -> row1count + row0count - 1
-                        kX < -(row0count - 1 - anchorOffset) -> row1count
-                        kX < 0 -> row1count + row0count - 2 + kX.toInt() - anchorOffset
-                        else -> row1count + row0count - 1 + kX.toInt() - anchorOffset
-                    }
+                else -> when {
+                    kX >= anchorOffset -> row1count + row0count - 1
+                    kX < -(row0count - 1 - anchorOffset) -> row1count
+                    kX < 0 -> row1count + row0count - 2 + kX.toInt() - anchorOffset
+                    else -> row1count + row0count - 1 + kX.toInt() - anchorOffset
                 }
             }
         }
@@ -472,53 +409,46 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
                 _extendedState.value = current.copy(activeIndex = newActiveIndex)
             }
         }
-
         return true
     }
 
     /**
-     * Gets the [KeyData] of the currently active key. May be either the key of the popup preview
-     * or one of the keys in extended popup, if shown. Returns null if type parameter [T_KV]
-     * is not [KeyView].
-     *
-     * @param keyView Reference to the keyView currently controlling the popup.
-     * @return The [KeyData] object of the currently active key or null.
+     * Returns the [KeyData] of the currently active extended-popup cell, or
+     * the anchor's own [KeyData] if no extended cell is active. Drives the
+     * commit-on-UP path inside [com.siansiansu.taigikeyboard.ime.text.keyboard.KeyTouchCoordinator].
      */
-    fun getActiveKeyData(keyView: T_KV): KeyData? {
-        return if (keyView is KeyView) {
-            keyView.data.popup.getOrNull(activeExtIndex ?: -1) ?: keyView.data
-        } else {
-            null
-        }
+    override fun activeKeyData(): KeyData? {
+        val anchor = lastAnchor ?: return null
+        return anchor.data.popup.getOrNull(activeExtIndex ?: -1) ?: anchor.data
     }
 
-    /**
-     * Gets the [EmojiKeyData] of the currently active key. EmojiKeyView is no
-     * longer routed through this manager (the emoji palette is fully Compose),
-     * so this always returns null.
-     */
-    fun getActiveEmojiKeyData(keyView: T_KV): EmojiKeyData? {
-        return null
-    }
-
-    /**
-     * Hides the key preview popup as well as the extended popup.
-     */
-    fun hide() {
+    override fun hide() {
         _previewState.value = PreviewState.Hidden
         _extendedState.value = ExtendedState.Hidden
+        // Tear down the preview window, not just the Compose state.
+        // Phase D's switch from `showAsDropDown(keyView, …)` to
+        // `showAtLocation(rootView, …)` removed the implicit anchor-View
+        // lifecycle cleanup, so toggling `_previewState` to Hidden alone
+        // leaves the previous frame painted on the popup decor view until
+        // a new press triggers redraw — visible as a lingering callout on
+        // tap UP. Mirrors `dismissAllPopups()`. Pins
+        // `INVARIANT_keyboard_popup_hide_dismisses_preview_window`.
+        if (window.isShowing) {
+            window.dismiss()
+        }
         if (windowExt.isShowing) {
             windowExt.dismiss()
         }
         activeExtIndex = null
         cachedDisplay = null
+        // Clear the anchor so a subsequent press whose hit-test misses
+        // (`activeKey == null`) doesn't read the previous press's KeyData
+        // through `activeKeyData()`. Pins
+        // `INVARIANT_keyboard_popup_hide_clears_anchor`.
+        lastAnchor = null
     }
 
-    /**
-     * Dismisses all currently shown popups. Should be called by the parent keyboard view when it
-     * is closing.
-     */
-    fun dismissAllPopups() {
+    override fun dismissAllPopups() {
         _previewState.value = PreviewState.Hidden
         _extendedState.value = ExtendedState.Hidden
         if (window.isShowing) {
@@ -529,5 +459,18 @@ class KeyPopupManager<T_KBD : View, T_KV : View>(private val keyboardView: T_KBD
         }
         activeExtIndex = null
         cachedDisplay = null
+        lastAnchor = null
+    }
+
+    private companion object {
+        /** Key codes whose touch-down does NOT trigger a preview popup but
+         *  may trigger an extended popup on long-press (legacy
+         *  `KeyPopupManager.exceptionsForKeyCodes`). */
+        val ANCHOR_EXCEPTIONS = setOf(
+            KeyCode.ENTER,
+            KeyCode.LANGUAGE_SWITCH,
+            KeyCode.SWITCH_TO_TEXT_CONTEXT,
+            KeyCode.SWITCH_TO_MEDIA_CONTEXT,
+        )
     }
 }

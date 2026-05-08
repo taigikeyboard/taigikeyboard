@@ -8,25 +8,17 @@ import android.content.res.Configuration
 import android.media.AudioManager
 import android.os.*
 import android.util.Log
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.LinearLayout
 import androidx.compose.runtime.Recomposer
 import androidx.compose.ui.platform.AndroidUiDispatcher
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.TaigiKeyboardApplication
@@ -197,8 +189,9 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         super.onCreate()
 
         // Bootstrap the popup Recomposer before any popup ComposeView is
-        // created (KeyPopupManager is constructed lazily by the first
-        // KeyboardView, but this is safer to wire eagerly).
+        // created. KeyPopupManager is constructed eagerly inside
+        // [TextInputManager], so this must be ready before the manager
+        // installs popup view-tree owners on first show().
         val popupRecomposerContext = AndroidUiDispatcher.CurrentThread
         popupRecomposer = Recomposer(popupRecomposerContext)
         popupRecomposerJob = serviceScope.launch(
@@ -222,69 +215,12 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         val view = layoutInflater.inflate(R.layout.taigikeyboard, null) as InputView
         inputView = view
 
-        // 設定 ViewTree owners 讓 ComposeView 能找到 LifecycleOwner
+        // 設定 ViewTree owners 讓 ComposeView 能找到 LifecycleOwner.
+        // Bottom inset padding for the keyboard body now lives declaratively
+        // inside `KeyboardImeRoot` via `WindowInsets.navigationBars` (Phase D
+        // §1b parity-correction); media_input still owns its own padding via
+        // `InputView.onApplyWindowInsets`.
         installViewTreeOwners()
-
-        // Apply navigation bar insets as margin to inner container
-        // Use robust detection following fcitx5-android's approach
-        if (BuildConfig.DEBUG) {
-            Log.d("TaigiKeyboard", "Setting up WindowInsets listener on inputView")
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
-            if (BuildConfig.DEBUG) {
-                Log.d("TaigiKeyboard", "=== WindowInsets listener called ===")
-            }
-
-            val innerContainer = v.findViewById<LinearLayout>(R.id.inner_input_view_container)
-
-            if (innerContainer != null) {
-                // Try multiple sources for navigation bar height
-                val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
-                val mandatory = insets.getInsets(WindowInsetsCompat.Type.mandatorySystemGestures())
-                val systemGestures = insets.getInsets(WindowInsetsCompat.Type.systemGestures())
-
-                if (BuildConfig.DEBUG) {
-                    Log.d("TaigiKeyboard", "Navigation bar detection:")
-                    Log.d("TaigiKeyboard", "  navigationBars: ${navBars.bottom}")
-                    Log.d("TaigiKeyboard", "  mandatorySystemGestures: ${mandatory.bottom}")
-                    Log.d("TaigiKeyboard", "  systemGestures: ${systemGestures.bottom}")
-                }
-
-                // Use the maximum value from different sources
-                val navBarHeight = maxOf(navBars.bottom, mandatory.bottom, systemGestures.bottom)
-
-                if (navBarHeight > 0) {
-                    // 使用 padding 而不是 margin，讓背景可以延伸到導覽列區域
-                    // Slightly reduce padding so keyboard sits closer to nav bar
-                    val adjustedHeight = (navBarHeight * 0.90f).toInt()
-                    if (innerContainer.paddingBottom != adjustedHeight) {
-                        innerContainer.setPadding(
-                            innerContainer.paddingLeft,
-                            innerContainer.paddingTop,
-                            innerContainer.paddingRight,
-                            adjustedHeight,
-                        )
-                    }
-
-                    if (BuildConfig.DEBUG) {
-                        Log.d("TaigiKeyboard", "  Final height used: $navBarHeight")
-                        Log.d("TaigiKeyboard", "  Applied as bottom padding: ${innerContainer.paddingBottom}")
-                    }
-                } else {
-                    if (BuildConfig.DEBUG) {
-                        Log.w("TaigiKeyboard", "  WARNING: No navigation bar height detected! All insets are 0")
-                    }
-                }
-            } else {
-                if (BuildConfig.DEBUG) {
-                    Log.e("TaigiKeyboard", "  ERROR: innerContainer not found!")
-                }
-            }
-
-            // Don't consume insets - let them propagate
-            insets
-        }
 
         textInputManager.onCreateInputView()
         mediaInputManager.onCreateInputView()
@@ -429,8 +365,11 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /**
-     * Makes a key press vibration.
-     * Uses performHapticFeedback which automatically respects system settings.
+     * Makes a key press vibration through [view]'s
+     * [android.view.View.performHapticFeedback]. The text-input keyboard body
+     * routes vibration through `TextInputManager.ImeKeyEventDispatcher`
+     * directly; this overload remains for the legacy view-based media input
+     * (`MediaInputManager` bottom buttons).
      */
     fun keyPressVibrate(view: View) {
         if (!prefs.isVibrationFeedbackEnabled) return
@@ -506,17 +445,18 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     fun setActiveInput(type: Int) {
-        when (type) {
-            R.id.text_input -> {
-                inputView?.mainViewFlipper?.displayedChild =
-                    inputView?.mainViewFlipper?.indexOfChild(textInputManager.textViewGroup) ?: 0
-            }
-
-            R.id.media_input -> {
-                inputView?.mainViewFlipper?.displayedChild =
-                    inputView?.mainViewFlipper?.indexOfChild(mediaInputManager.mediaViewGroup) ?: 0
-            }
+        val flipper = inputView?.mainViewFlipper ?: return
+        val target = when (type) {
+            R.id.text_input -> textInputManager.textViewGroup
+            R.id.media_input -> mediaInputManager.mediaViewGroup
+            else -> return
         }
+        // `indexOfChild` returns -1 when the lookup view is null or not in
+        // the flipper. Without this clamp, `ViewAnimator.setDisplayedChild(-1)`
+        // wraps to `childCount - 1` and silently flips to the wrong tab —
+        // the historical "emoji keyboard on first install" symptom.
+        val index = (target?.let { flipper.indexOfChild(it) } ?: -1).coerceAtLeast(0)
+        flipper.displayedChild = index
     }
 
     interface EventListener {
