@@ -7,9 +7,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `ScoreBreakdown` mirrors iOS `CandidateProcessor.ScoreBreakdown` /
- * Android `CandidateProcessor.ScoreBreakdown`. Single source of truth
- * for both ranking math and debug logging — total = sum of the six fields.
+ * `ScoreBreakdown` is the single source of truth for both ranking math
+ * and debug logging — total = sum of the six fields. The pre-Path-G iOS
+ * `CandidateProcessor.ScoreBreakdown` and Android
+ * `CandidateProcessor.ScoreBreakdown` mirrors are gone (Android deleted
+ * PR #192; iOS retains only an unrelated 4-LOC residual).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ScoreBreakdown}
@@ -262,9 +264,11 @@ public  final class ScoreBreakdown extends
 
   /**
    * <pre>
-   * `ScoreBreakdown` mirrors iOS `CandidateProcessor.ScoreBreakdown` /
-   * Android `CandidateProcessor.ScoreBreakdown`. Single source of truth
-   * for both ranking math and debug logging — total = sum of the six fields.
+   * `ScoreBreakdown` is the single source of truth for both ranking math
+   * and debug logging — total = sum of the six fields. The pre-Path-G iOS
+   * `CandidateProcessor.ScoreBreakdown` and Android
+   * `CandidateProcessor.ScoreBreakdown` mirrors are gone (Android deleted
+   * PR #192; iOS retains only an unrelated 4-LOC residual).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ScoreBreakdown}

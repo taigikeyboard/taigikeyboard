@@ -22,16 +22,17 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        versionCode = 356
-        versionName = "3.5.6"
+        versionCode = 357
+        versionName = "3.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             debugSymbolLevel = "FULL"
-            // D9.2 — Rust shared-core ships only arm64-v8a; Play Store
-            // 64-bit policy + minSdk 28 + no Chromebook target.
-            abiFilters += listOf("arm64-v8a")
+            // v3.5.7 — Rust shared-core ships arm64-v8a + armeabi-v7a;
+            // recovers 3,806 32-bit ARM devices flagged by Play Console
+            // after the D9.2 arm64-only cut. Play 64-bit policy met.
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
     }
 
