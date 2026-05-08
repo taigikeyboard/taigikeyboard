@@ -211,6 +211,7 @@ class CandidateOverlayView : FrameLayout {
     /**
      * Update candidate list.
      */
+    @android.annotation.SuppressLint("NotifyDataSetChanged")
     fun updateSuggestions(suggestions: List<TaigiWord>) {
         this.suggestions = suggestions
         if (isVisible) {

@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -74,6 +75,7 @@ fun KeyboardPreviewPanel(
         )
 
         val context = LocalContext.current
+        val resources = LocalResources.current
         // Force Taigi mode preview when user is in English mode — mirrors
         // `LayoutManager.fetchComputedLayoutForPreview`.
         val previewInputMode = if (prefs.inputMode == "english") "tl" else prefs.inputMode
@@ -120,9 +122,9 @@ fun KeyboardPreviewPanel(
             val containerWidthPx = constraints.maxWidth
             if (containerWidthPx == 0) return@BoxWithConstraints
             val keyMarginH = with(density) {
-                context.resources.getDimension(R.dimen.key_marginH).toInt()
+                resources.getDimension(R.dimen.key_marginH).toInt()
             }
-            val baseKeyHeight = context.resources.getDimension(R.dimen.key_height)
+            val baseKeyHeight = resources.getDimension(R.dimen.key_height)
             val keyDimensions = KeyboardLayoutSolver.solveKeyDimensions(
                 KeyDimensionsInput(
                     containerWidth = containerWidthPx,

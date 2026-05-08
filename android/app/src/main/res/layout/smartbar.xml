@@ -8,7 +8,8 @@
     android:layout_height="@dimen/smartbar_height"
     android:background="?smartbar_bgColor"
     android:baselineAligned="false"
-    android:clipChildren="true">
+    android:clipChildren="true"
+    tools:ignore="Overdraw">
 
     <!-- Toolbar toggle button: top-level, always visible (except number_row / layout_selection) -->
     <com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarQuickActionButton
@@ -112,7 +113,8 @@
             android:orientation="horizontal"
             android:paddingStart="1dp"
             android:paddingEnd="1dp"
-            android:visibility="gone">
+            android:visibility="gone"
+            tools:ignore="HardcodedText">
 
             <Button
                 android:id="@+id/toolbar_mode_poj"

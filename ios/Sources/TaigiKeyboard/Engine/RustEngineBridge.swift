@@ -906,9 +906,9 @@ public enum RustEngineBridge {
         let effects: [ComposingTransition.Effect] = proto.effect.compactMap { eff -> ComposingTransition.Effect? in
             guard let kind = eff.kind else { return nil }
             switch kind {
-            case .updatePreedit(let m): return .updatePreedit(m.display)
+            case let .updatePreedit(m): return .updatePreedit(m.display)
             case .clearPreeditWithoutCommit_p: return .clearPreeditWithoutCommit
-            case .commitTextReplacingPreedit(let m): return .commitTextReplacingPreedit(m.text)
+            case let .commitTextReplacingPreedit(m): return .commitTextReplacingPreedit(m.text)
             case .deleteBackwardFromDocument: return .deleteBackwardFromDocument
             case .resetAutocomplete: return .resetAutocomplete
             case .performAutocomplete: return .performAutocomplete

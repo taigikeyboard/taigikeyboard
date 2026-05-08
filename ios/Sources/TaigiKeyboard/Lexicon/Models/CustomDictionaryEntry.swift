@@ -2,7 +2,7 @@
 
 import Foundation
 
-/// Custom dictionary entry model
+// Custom dictionary entry model
 
 // MARK: - Shared-Core Candidate
 

@@ -86,7 +86,7 @@ final class NextWordController: SelectionContextProvider {
 
     // 中文: 跨欄位切換 IME session 時呼叫 — 推進 generation 並強制清除快取與 UI,
     // 中文: 避免引擎 was_showing gate 已被 envelope 重置而吞掉 ClearPredictionsUI。
-    public func bumpEnvelopeGeneration() {
+    func bumpEnvelopeGeneration() {
         envelopeGen &+= 1
         // Cross-field IME-session boundary. Rust engine state will be wiped
         // on the next bridge call (envelope mismatch sets is_showing=false
@@ -308,7 +308,7 @@ final class NextWordController: SelectionContextProvider {
     /// CROSS-PLATFORM INVARIANT: changing this value requires a paired update
     /// in the Rust crate + an `INVARIANT_*` parity-test mirror.
     // 中文: 與 Rust decide.rs 對齊的 30 秒 context timeout。修改需同步更新 Rust 與 parity test。
-    static let contextTimeoutMs: UInt64 = 30_000
+    static let contextTimeoutMs: UInt64 = 30000
 
     // 中文: 啟動 context timeout 計時器 — 帶上 trace id 以便日誌串接。
     private func startContextTimeoutTimer(afterMs: UInt64) {

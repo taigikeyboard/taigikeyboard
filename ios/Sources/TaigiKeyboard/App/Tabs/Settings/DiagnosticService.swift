@@ -18,7 +18,7 @@ struct DiagnosticInfo {
     /// Formats the info as plain text suitable for copy/share in a bug report.
     // 中文: 把欄位格式化為純文字,供使用者複製到 bug report。
     func formatted() -> String {
-        return """
+        """
         App: v\(appVersion) (\(buildNumber))
         OS: iOS \(osVersion)
         Device: \(deviceModel)

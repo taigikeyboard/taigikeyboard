@@ -57,13 +57,11 @@ object AppStyle {
 @Composable
 fun SectionHeader(
     text: String,
-    modifier: Modifier =
-        Modifier
-            .padding(start = 16.dp, bottom = AppStyle.sectionHeaderBottomPadding),
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = text,
-        modifier = modifier,
+        modifier = modifier.padding(start = 16.dp, bottom = AppStyle.sectionHeaderBottomPadding),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.titleMedium,
     )

@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.settings
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -190,7 +190,7 @@ class SettingsMainActivity : AppCompatActivity() {
 
     private fun openUrl(url: String) {
         try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
         } catch (_: Exception) {
             // No browser available to handle the URL
         }

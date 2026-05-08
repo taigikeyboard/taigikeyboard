@@ -24,10 +24,10 @@ fun SliderRow(
     valueFrom: Float,
     valueTo: Float,
     stepSize: Float,
-    defaultValue: Float? = null,
     onValueChange: (Float) -> Unit,
-    onValueChangeFinished: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    defaultValue: Float? = null,
+    onValueChangeFinished: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Row(

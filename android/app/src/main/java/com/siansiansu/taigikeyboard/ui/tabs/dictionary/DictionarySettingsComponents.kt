@@ -1,7 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -29,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySearchResult
 import com.siansiansu.taigikeyboard.localization.DictionaryTexts
@@ -127,7 +127,7 @@ internal fun SearchResultRow(
                     TextButton(onClick = {
                         onToggle()
                         try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(moeUrl)))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, moeUrl.toUri()))
                         } catch (_: Exception) {
                         }
                     }) {
@@ -144,7 +144,7 @@ internal fun SearchResultRow(
                     TextButton(onClick = {
                         onToggle()
                         try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(chhoeUrl)))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, chhoeUrl.toUri()))
                         } catch (_: Exception) {
                         }
                     }) {
@@ -222,7 +222,7 @@ internal fun DictionaryRowWithDescription(
                 modifier =
                     Modifier.clickable {
                         try {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                         } catch (_: Exception) {
                         }
                     },

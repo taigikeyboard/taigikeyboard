@@ -449,17 +449,17 @@ public extension RustEngineBridge {
         let effects: [NextWordDecideResult.Effect] = proto.effects.compactMap { eff in
             guard let kind = eff.kind else { return nil }
             switch kind {
-            case .rescheduleContextTimeout(let m):
+            case let .rescheduleContextTimeout(m):
                 return .rescheduleContextTimeout(afterMs: m.afterMs)
             case .cancelContextTimeout:
                 return .cancelContextTimeout
-            case .recordAssociation(let m):
+            case let .recordAssociation(m):
                 return .recordAssociation(synthAssociationPair(m.pair))
-            case .recordCompoundAssociations(let m):
+            case let .recordCompoundAssociations(m):
                 return .recordCompoundAssociations(m.pairs.map(synthAssociationPair))
-            case .queryPredictions(let m):
+            case let .queryPredictions(m):
                 return .queryPredictions(word: m.word, roman: m.roman, generation: m.generation, nowMs: m.nowMs)
-            case .clearPredictionsUi_p(let m):
+            case let .clearPredictionsUi_p(m):
                 return .clearPredictionsUI(generation: m.generation)
             }
         }

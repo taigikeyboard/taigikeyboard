@@ -1,10 +1,12 @@
 package com.siansiansu.taigikeyboard.ui.components
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.DrawableRes
 
 // Resolves a drawable resource ID by name, returning fallback if not found.
 @DrawableRes
+@SuppressLint("DiscouragedApi")
 fun resolveDrawableResId(
     context: Context,
     name: String,

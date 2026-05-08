@@ -122,6 +122,7 @@ fun FrequencyDataScreen(
                     val outcome = viewModel.importCSV(uri)
                     resultMessage =
                         String.format(
+                            Locale.TAIWAN,
                             DictionaryTexts.frequencyImportResult,
                             outcome.imported,
                             outcome.skipped,

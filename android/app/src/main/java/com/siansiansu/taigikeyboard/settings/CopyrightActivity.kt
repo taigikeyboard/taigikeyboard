@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.settings
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.core.net.toUri
 import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
 import com.siansiansu.taigikeyboard.content.CopyrightDataSource
@@ -31,7 +31,7 @@ class CopyrightActivity : ComponentActivity() {
                     copyrightPages = CopyrightDataSource.copyrightPages,
                     fontFamily = fontFamily,
                     onButtonClick = { url ->
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
                     },
                     onNavigateBack = {
                         onBackPressedDispatcher.onBackPressed()

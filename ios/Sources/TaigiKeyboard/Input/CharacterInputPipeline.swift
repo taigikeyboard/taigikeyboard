@@ -3,14 +3,14 @@
 
 import Foundation
 
-/// Pure-function pipeline for TPS key-level character preprocessing.
-///
-/// Separates "what character should be emitted" and "does the raw buffer need a
-/// retroactive last-char replacement" from the composing state machine. The caller
-/// (`ActionHandler+KeyActions`) reads the result and issues `replaceLastCharacter`
-/// when `replaceLast` is non-nil — no hidden mutations happen inside the pipeline.
-///
-/// Non-TPS input modes pass through unchanged.
+// Pure-function pipeline for TPS key-level character preprocessing.
+//
+// Separates "what character should be emitted" and "does the raw buffer need a
+// retroactive last-char replacement" from the composing state machine. The caller
+// (`ActionHandler+KeyActions`) reads the result and issues `replaceLastCharacter`
+// when `replaceLast` is non-nil — no hidden mutations happen inside the pipeline.
+//
+// Non-TPS input modes pass through unchanged.
 
 // MARK: - Shared-Core Candidate
 

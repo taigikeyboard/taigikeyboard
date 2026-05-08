@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
+import androidx.core.database.sqlite.transaction
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import kotlinx.coroutines.Dispatchers
@@ -307,8 +308,7 @@ class CustomDictionaryService(
             var skippedCount = 0
 
             for (batch in entries.chunked(IMPORT_BATCH_SIZE)) {
-                db.beginTransaction()
-                try {
+                db.transaction {
                     for (entry in batch) {
                         val key = "${entry.roman}|${entry.hanzi}"
                         if (key in existingKeys) {
@@ -316,16 +316,13 @@ class CustomDictionaryService(
                             continue
                         }
                         try {
-                            executeUpsert(db, entry)
+                            executeUpsert(this, entry)
                             existingKeys.add(key)
                             importedCount++
                         } catch (e: Exception) {
                             logger.w(TAG, "[IMPORT] Skipped entry: ${entry.roman}", e)
                         }
                     }
-                    db.setTransactionSuccessful()
-                } finally {
-                    db.endTransaction()
                 }
             }
 

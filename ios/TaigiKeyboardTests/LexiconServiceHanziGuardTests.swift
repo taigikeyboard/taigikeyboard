@@ -1,5 +1,5 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// `INVARIANT_LEX_HANZI_GUARD` — D-8 parity correction toward Android
 /// (v3.5.6). Pinned at the iOS lexicon-service layer per Codex Mod 1 of the

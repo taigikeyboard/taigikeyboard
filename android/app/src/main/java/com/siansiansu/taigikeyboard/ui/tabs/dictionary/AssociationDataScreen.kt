@@ -127,6 +127,7 @@ fun AssociationDataScreen(
                     val outcome = viewModel.importCSV(uri)
                     resultMessage =
                         String.format(
+                            Locale.TAIWAN,
                             DictionaryTexts.associationImportResult,
                             outcome.imported,
                             outcome.skipped,

@@ -1,5 +1,5 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// D9.2/D9.4 platform-side acceptance tests for the Rust shared-core FFI.
 ///
@@ -204,10 +204,21 @@ private final class TestLogSink: LoggerBackend, @unchecked Sendable {
         return lines
     }
 
-    func debug(_ message: @autoclosure () -> String) { record(message()) }
-    func info(_ message: @autoclosure () -> String) { record(message()) }
-    func warning(_ message: @autoclosure () -> String) { record(message()) }
-    func error(_ message: @autoclosure () -> String) { record(message()) }
+    func debug(_ message: @autoclosure () -> String) {
+        record(message())
+    }
+
+    func info(_ message: @autoclosure () -> String) {
+        record(message())
+    }
+
+    func warning(_ message: @autoclosure () -> String) {
+        record(message())
+    }
+
+    func error(_ message: @autoclosure () -> String) {
+        record(message())
+    }
 
     private func record(_ message: String) {
         lock.lock(); defer { lock.unlock() }

@@ -1,5 +1,5 @@
-import XCTest
 @testable import TaigiKeyboard
+import XCTest
 
 /// Cross-component engine integration tests
 final class EngineIntegrationTests: XCTestCase {

@@ -1,6 +1,9 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
 import android.graphics.Bitmap
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
+import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -231,7 +234,7 @@ fun ColorPickerDialog(
                         hexInput = input
                         val hex = input.trim().removePrefix("#")
                         if (hex.length == 6 && hex.all { it.digitToIntOrNull(16) != null }) {
-                            val parsed = AndroidColor.parseColor("#$hex")
+                            val parsed = "#$hex".toColorInt()
                             val hsv = floatArrayOf(0f, 0f, 0f)
                             AndroidColor.colorToHSV(parsed, hsv)
                             hue = hsv[0]
@@ -308,7 +311,7 @@ private fun ColorSpectrumContent(
         remember {
             val w = SPECTRUM_BITMAP_WIDTH
             val h = SPECTRUM_BITMAP_HEIGHT
-            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(w, h)
             val hsv = floatArrayOf(0f, 0f, 0f)
             for (x in 0 until w) {
                 val ratio = x.toFloat() / (w - 1)
@@ -323,7 +326,7 @@ private fun ColorSpectrumContent(
                 }
                 for (y in 0 until h) {
                     hsv[0] = y.toFloat() / (h - 1) * 360f
-                    bitmap.setPixel(x, y, AndroidColor.HSVToColor(hsv))
+                    bitmap[x, y] = AndroidColor.HSVToColor(hsv)
                 }
             }
             bitmap.asImageBitmap()

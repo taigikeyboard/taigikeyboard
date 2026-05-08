@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import com.siansiansu.taigikeyboard.R
@@ -85,11 +86,11 @@ private fun KeyboardSurface(
     popupHost: PopupHost,
     onHeightFactorChanged: (Float) -> Unit,
 ) {
-    val resources = LocalContext.current.resources
+    val resources = LocalResources.current
     val density = LocalDensity.current
     val isLandscape = isLandscape()
-    val baseKeyHeight = remember { resources.getDimension(R.dimen.key_height) }
-    val keyMarginH = remember(density) {
+    val baseKeyHeight = remember(resources) { resources.getDimension(R.dimen.key_height) }
+    val keyMarginH = remember(density, resources) {
         with(density) { resources.getDimension(R.dimen.key_marginH).toInt() }
     }
 

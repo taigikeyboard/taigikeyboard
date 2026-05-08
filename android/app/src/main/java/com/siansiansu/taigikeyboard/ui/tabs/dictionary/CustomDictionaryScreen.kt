@@ -119,6 +119,7 @@ fun CustomDictionaryScreen(
                     val result = viewModel.importFile(uri)
                     resultMessage =
                         String.format(
+                            Locale.TAIWAN,
                             DictionaryTexts.importResult,
                             result.imported,
                             result.skipped,

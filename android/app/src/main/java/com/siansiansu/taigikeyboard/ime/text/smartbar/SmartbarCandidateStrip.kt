@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -163,10 +164,9 @@ private fun CandidateCell(
     fontFamily: FontFamily,
     onClick: () -> Unit,
 ) {
-    val context = LocalContext.current
     val density = LocalDensity.current
     val configuration = LocalConfiguration.current
-    val res = context.resources
+    val res = LocalResources.current
 
     val paddingPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_padding) }
     val marginPx = remember(configuration) { res.getDimensionPixelSize(R.dimen.smartbar_button_margin) }
@@ -228,7 +228,7 @@ private fun CandidateCell(
                 paddingPx = paddingPx,
                 marginPx = marginPx,
                 density = res.displayMetrics.density,
-                fontScale = res.configuration.fontScale,
+                fontScale = configuration.fontScale,
                 textSizeScale = display.textSizeScale,
             )
         }

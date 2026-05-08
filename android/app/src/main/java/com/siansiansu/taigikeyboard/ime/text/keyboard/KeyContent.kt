@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -75,7 +75,6 @@ internal fun KeyContent(
     pressed: Boolean,
     themeColors: ThemePalette,
 ) {
-    val context = LocalContext.current
     val isFunctionKey = isFunctionKey(data)
     val isSpecial = isFunctionKey || data.code == KeyCode.ENTER
 
@@ -106,7 +105,7 @@ internal fun KeyContent(
     }
 
     Box(modifier = borderedModifier) {
-        val resources = context.resources
+        val resources = LocalResources.current
         val visual = remember(
             data.code,
             data.type,

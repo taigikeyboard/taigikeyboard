@@ -18,8 +18,13 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
 
     var locale: Locale = .current
 
-    var canIgnoreWords: Bool { false }
-    var canLearnWords: Bool { false }
+    var canIgnoreWords: Bool {
+        false
+    }
+
+    var canLearnWords: Bool {
+        false
+    }
 
     var ignoredWords: [String] = []
     var learnedWords: [String] = []
@@ -41,13 +46,18 @@ class EnglishAutocompleteService: KeyboardKit.AutocompleteService {
         )
     }
 
-    func hasIgnoredWord(_ word: String) -> Bool { ignoredWords.contains(word) }
-    func hasLearnedWord(_ word: String) -> Bool { learnedWords.contains(word) }
+    func hasIgnoredWord(_ word: String) -> Bool {
+        ignoredWords.contains(word)
+    }
 
-    func ignoreWord(_ word: String) {}
-    func learnWord(_ word: String) {}
-    func removeIgnoredWord(_ word: String) {}
-    func unlearnWord(_ word: String) {}
+    func hasLearnedWord(_ word: String) -> Bool {
+        learnedWords.contains(word)
+    }
+
+    func ignoreWord(_: String) {}
+    func learnWord(_: String) {}
+    func removeIgnoredWord(_: String) {}
+    func unlearnWord(_: String) {}
 
     // MARK: - Private Helpers
 

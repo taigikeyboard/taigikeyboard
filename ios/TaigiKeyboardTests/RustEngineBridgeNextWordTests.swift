@@ -67,7 +67,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(primed.currentGeneration, baselineGen &+ 1)
         XCTAssertEqual(primed.lastSelectedWord, "早")
 
-        let result = wordSelected(text: "安", roman: "an", nowMs: 5_000)
+        let result = wordSelected(text: "安", roman: "an", nowMs: 5000)
         XCTAssertEqual(result.currentGeneration, baselineGen &+ 2)
         let expected = RustEngineBridge.NextWordAssociationPair(
             prev: "早", prevTl: "tsá", next: "安", nextTl: "an",
@@ -80,7 +80,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testWordSelected_skipsRecordOutsideWindow() {
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = wordSelected(text: "安", roman: "an", nowMs: 20_000)
+        let result = wordSelected(text: "安", roman: "an", nowMs: 20000)
         for effect in result.effects {
             if case .recordAssociation = effect {
                 XCTFail("association at 20s should be dropped (>= 10s window)")
@@ -94,7 +94,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             associationRecordingEnabled: false,
         )
         let result = wordSelected(
-            text: "安", roman: "an", nowMs: 5_000,
+            text: "安", roman: "an", nowMs: 5000,
             associationRecordingEnabled: false,
         )
         for effect in result.effects {
@@ -165,7 +165,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         // Mirrors `ActionHandler+Suggestions` hanzi-only path:
         // associationRoman="" → nextTl="" preserved end-to-end.
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = wordSelected(text: "安", roman: "", nowMs: 5_000)
+        let result = wordSelected(text: "安", roman: "", nowMs: 5000)
         let expected = RustEngineBridge.NextWordAssociationPair(
             prev: "早", prevTl: "tsá", next: "安", nextTl: "",
         )
@@ -198,7 +198,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     func testContextTimeoutFired_resetsStateAndCancelsTimer() {
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = contextTimeoutFired(nowMs: 30_000)
+        let result = contextTimeoutFired(nowMs: 30000)
         XCTAssertNil(result.lastSelectedWord)
         XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
     }
@@ -283,10 +283,10 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordFilter(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 100, source: .dict),
-                row(hanzi: "早", tl: "tsá", count: 1, lastUsedMs: 1_000, source: .user),
+                row(hanzi: "早", tl: "tsá", count: 1, lastUsedMs: 1000, source: .user),
             ],
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -300,10 +300,10 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordFilter(
             raw: [
                 row(hanzi: "好", tl: "hó", count: 5, source: .dict),
-                row(hanzi: "好", tl: "hó", count: 1, lastUsedMs: 1_000, source: .user),
+                row(hanzi: "好", tl: "hó", count: 1, lastUsedMs: 1000, source: .user),
             ],
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -311,7 +311,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.predictions.count, 1, "(好, hó) merges across sources")
         // Score = scoreDict(5) + calculateUserScore(1, lastUsedMs=now, nowMs=now)
         //       = 5*1 + (1*50*1 + 300) = 355.
-        let expected: Double = 5.0 + (1.0 * 50.0 + 300.0)
+        let expected = 5.0 + (1.0 * 50.0 + 300.0)
         XCTAssertEqual(
             result.predictions[0].score, expected,
             accuracy: Self.parityTolerance,
@@ -327,7 +327,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
                 row(hanzi: "安", tl: "", count: 5, source: .dict),
             ],
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -344,7 +344,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
                 row(hanzi: "安", tl: "", count: 5, source: .dict),
             ],
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .tl, translateSwapped: true, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -357,7 +357,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordFilter(
             raw: [row(hanzi: "好", tl: "tsiok", count: 5, source: .dict)],
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .poj, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -374,7 +374,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordFilter(
             raw: [row(hanzi: "好", tl: "hó", count: 5, source: .dict)],
             queryGeneration: gen &- 1, // mismatch
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 10,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,
@@ -391,7 +391,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordFilter(
             raw: raw,
             queryGeneration: gen,
-            nowMs: 1_000,
+            nowMs: 1000,
             limit: 3,
             mode: .tl, translateSwapped: false, associationRecordingEnabled: true,
             generation: envelopeGen,

@@ -99,7 +99,7 @@ public extension RustEngineBridge {
     /// pattern below.
     // 中文: lexiconDictionaryFilters 的輸出 — 含可直接送出的 bitmask 與 Tab3 retag 用的啟用 source 集合。
     // 中文: 9 顆 assoc source 全開時 assocLookupBitmask 走 UInt32.max sentinel,保留 proto 的捷徑語意。
-    internal struct DictionaryFilters: Equatable, Sendable {
+    internal struct DictionaryFilters: Equatable {
         let dictionaryFilterBitmask: UInt32
         let assocLookupBitmask: UInt32
         let enabledSources: Set<DictionarySource>
@@ -356,11 +356,11 @@ public extension RustEngineBridge {
     // 中文: 必須與 Android LexiconBridge.platformInputType 同步漂移。
     private static func platformInputType(from proto: Taigi_Engine_InputType) -> InputType {
         switch proto {
-        case .hanzi: return .hanzi
-        case .romanWithTone: return .romanWithTone
-        case .romanNoTone: return .romanWithoutTone
+        case .hanzi: .hanzi
+        case .romanWithTone: .romanWithTone
+        case .romanNoTone: .romanWithoutTone
         case .unspecified, .UNRECOGNIZED:
-            return .romanWithoutTone
+            .romanWithoutTone
         }
     }
 
@@ -420,21 +420,21 @@ public extension RustEngineBridge {
     // 中文: 不依賴 rawValue / ordinal,因為 Swift DictionarySource 是 String-backed。未知碼回 nil,呼叫端丟棄。
     private static func platformDictionarySource(from code: Taigi_Engine_DictionarySourceCode) -> DictionarySource? {
         switch code {
-        case .dictSourceKautian: return .kautian
-        case .dictSourceTaigitv: return .taigitv
-        case .dictSourceItaigi: return .itaigi
-        case .dictSourceSitbut: return .sitbut
-        case .dictSourceTaihoa: return .taihoa
-        case .dictSourceTaijit: return .taijit
-        case .dictSourceKungge: return .kungge
-        case .dictSourceStti: return .stti
-        case .dictSourceKhpoo: return .khpoo
-        case .dictSourceKhiin: return .khiin
-        case .dictSourceLkk: return .lkk
-        case .dictSourceDev: return .dev
-        case .dictSourceCustom: return .custom
+        case .dictSourceKautian: .kautian
+        case .dictSourceTaigitv: .taigitv
+        case .dictSourceItaigi: .itaigi
+        case .dictSourceSitbut: .sitbut
+        case .dictSourceTaihoa: .taihoa
+        case .dictSourceTaijit: .taijit
+        case .dictSourceKungge: .kungge
+        case .dictSourceStti: .stti
+        case .dictSourceKhpoo: .khpoo
+        case .dictSourceKhiin: .khiin
+        case .dictSourceLkk: .lkk
+        case .dictSourceDev: .dev
+        case .dictSourceCustom: .custom
         case .dictSourceUnspecified, .UNRECOGNIZED:
-            return nil
+            nil
         }
     }
 }

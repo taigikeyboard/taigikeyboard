@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Keyboard targets phone-shaped Android devices; ChromeOS x86_64 split is out of scope -->
+    <issue id="ChromeOsAbiSupport" severity="ignore" />
+
+    <!-- mipmap-anydpi-v26 holds adaptive launcher icons; folder retained for clarity even though minSdk=28 -->
+    <issue id="ObsoleteSdkInt" severity="ignore" />
+
+    <!-- App ships a single appearance_preview asset; per-night-config variant intentionally identical -->
+    <issue id="IconDuplicatesConfig" severity="ignore" />
+
+    <!-- FAQ/dictionary illustration PNGs live in res/drawable/ as density-independent help imagery -->
+    <issue id="IconLocation" severity="ignore" />
+    <issue id="IconDensities" severity="ignore" />
+    <issue id="IconMissingDensityFolder" severity="ignore" />
+</lint>

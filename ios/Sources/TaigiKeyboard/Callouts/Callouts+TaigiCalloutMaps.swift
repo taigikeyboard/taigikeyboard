@@ -23,8 +23,13 @@ public extension Callouts {
     // 中文: POJ / TL 的調符變體查表 — D9.4 起改由 RustEngineBridge.toneVariations 提供,
     // 中文: 平台端不再自行建表(對齊 McBopomofo / khiin-rs 的「平台零語音邏輯」架構)。
     enum TaigiToneMaps {
-        static var poj: [String: [String]] { RustEngineBridge.toneVariations.poj }
-        static var tl: [String: [String]] { RustEngineBridge.toneVariations.tl }
+        static var poj: [String: [String]] {
+            RustEngineBridge.toneVariations.poj
+        }
+
+        static var tl: [String: [String]] {
+            RustEngineBridge.toneVariations.tl
+        }
     }
 
     /// TPS layout callouts (方音符號 long-press variants)

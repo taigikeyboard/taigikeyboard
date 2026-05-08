@@ -66,7 +66,7 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            String.format(DictionaryTexts.importBackupResult, result.customDict, result.frequency, result.association),
+                            String.format(Locale.TAIWAN, DictionaryTexts.importBackupResult, result.customDict, result.frequency, result.association),
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (_: Exception) {

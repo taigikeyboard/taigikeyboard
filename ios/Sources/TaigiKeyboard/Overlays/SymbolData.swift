@@ -13,25 +13,25 @@ enum SymbolCategory: CaseIterable {
 
     var label: String {
         switch self {
-        case .fullWidth: return "全形"
-        case .halfWidth: return "半形"
-        case .hiragana: return "平仮名"
-        case .katakana: return "片仮名"
-        case .kaomoji: return "顏文字"
+        case .fullWidth: "全形"
+        case .halfWidth: "半形"
+        case .hiragana: "平仮名"
+        case .katakana: "片仮名"
+        case .kaomoji: "顏文字"
         }
     }
 
     var columnCount: Int {
         switch self {
-        case .kaomoji: return 2
-        default: return 6
+        case .kaomoji: 2
+        default: 6
         }
     }
 
     var fontSize: CGFloat {
         switch self {
-        case .kaomoji: return 14
-        default: return 20
+        case .kaomoji: 14
+        default: 20
         }
     }
 }
@@ -126,11 +126,11 @@ enum SymbolData {
     // 中文: 依分類回傳對應的符號 rows。
     static func rows(for category: SymbolCategory) -> [[String]] {
         switch category {
-        case .fullWidth: return fullWidthRows
-        case .halfWidth: return halfWidthRows
-        case .hiragana: return hiraganaRows
-        case .katakana: return katakanaRows
-        case .kaomoji: return kaomojiRows
+        case .fullWidth: fullWidthRows
+        case .halfWidth: halfWidthRows
+        case .hiragana: hiraganaRows
+        case .katakana: katakanaRows
+        case .kaomoji: kaomojiRows
         }
     }
 }

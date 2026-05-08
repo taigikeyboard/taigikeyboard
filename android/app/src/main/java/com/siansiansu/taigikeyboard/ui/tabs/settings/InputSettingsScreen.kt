@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -361,7 +362,7 @@ private fun DiagnosticSection(viewModel: DiagnosticViewModel) {
                 val info = viewModel.gather()
                 val subject = Uri.encode("台語齒盤 Bug 回報 (v${info.appVersion})")
                 val body = Uri.encode(info.formatted())
-                val uri = Uri.parse("mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body")
+                val uri = "mailto:$DIAGNOSTIC_EMAIL?subject=$subject&body=$body".toUri()
                 try {
                     context.startActivity(Intent(Intent.ACTION_SENDTO, uri))
                 } catch (_: Exception) {

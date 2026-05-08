@@ -3,14 +3,14 @@
 
 import Foundation
 
-/// Dictionary source enum matching dictionary.csv column names.
-///
-/// Used for search-result attribution and badge display. The bitmask layout
-/// is owned by `dictionary/common/source_bits.py` and decoded explicitly by
-/// `LexiconBitmask` (which maps each bit position to its `DictionarySource`
-/// value), so `allCases` ordering is NOT load-bearing — the `.custom` case
-/// in particular has no `dictionary.bin` bit (UI-only marker for user-added
-/// entries).
+// Dictionary source enum matching dictionary.csv column names.
+//
+// Used for search-result attribution and badge display. The bitmask layout
+// is owned by `dictionary/common/source_bits.py` and decoded explicitly by
+// `LexiconBitmask` (which maps each bit position to its `DictionarySource`
+// value), so `allCases` ordering is NOT load-bearing — the `.custom` case
+// in particular has no `dictionary.bin` bit (UI-only marker for user-added
+// entries).
 
 // MARK: - Shared-Core Candidate
 

@@ -14,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
@@ -390,7 +391,7 @@ class LayoutSelectionOverlayView : FrameLayout {
         return if (context.theme.resolveAttribute(R.attr.smartbar_accentColor, typedValue, true)) {
             typedValue.data
         } else {
-            Color.parseColor("#007AFF") // Fallback iOS blue
+            "#007AFF".toColorInt() // Fallback iOS blue
         }
     }
 

@@ -14,22 +14,21 @@ extension KeyboardViewController {
     // 中文: 把 ComposingTransition.Effect 派送到 UITextDocumentProxy 對應動作。
     func execute(_ effect: RustEngineBridge.ComposingTransition.Effect) {
         logger.debug({
-            let kind: String
-            switch effect {
+            let kind = switch effect {
             case let .updatePreedit(text):
-                kind = "updatePreedit len=\(text.count)"
+                "updatePreedit len=\(text.count)"
             case .clearPreeditWithoutCommit:
-                kind = "clearPreeditWithoutCommit"
+                "clearPreeditWithoutCommit"
             case let .commitTextReplacingPreedit(text):
-                kind = "commitTextReplacingPreedit len=\(text.count)"
+                "commitTextReplacingPreedit len=\(text.count)"
             case .deleteBackwardFromDocument:
-                kind = "deleteBackwardFromDocument"
+                "deleteBackwardFromDocument"
             case .resetAutocomplete:
-                kind = "resetAutocomplete"
+                "resetAutocomplete"
             case .performAutocomplete:
-                kind = "performAutocomplete"
+                "performAutocomplete"
             case .resetAutocompleteContext:
-                kind = "resetAutocompleteContext"
+                "resetAutocompleteContext"
             }
             return "[COMMIT] fn=execute effect=\(kind)"
         }())

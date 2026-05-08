@@ -77,13 +77,23 @@ import Foundation
 #else
     enum TraceId {
         static let untraced = ""
-        @inline(__always) static func next() -> String { "" }
+        @inline(__always) static func next() -> String {
+            ""
+        }
     }
 
     enum TraceContext {
-        static var current: String? { nil }
-        @inline(__always) static func with<T>(_ id: String, _ body: () throws -> T) rethrows -> T { try body() }
-        @inline(__always) static func with<T>(_ id: String, _ body: () async throws -> T) async rethrows -> T { try await body() }
+        static var current: String? {
+            nil
+        }
+
+        @inline(__always) static func with<T>(_: String, _ body: () throws -> T) rethrows -> T {
+            try body()
+        }
+
+        @inline(__always) static func with<T>(_: String, _ body: () async throws -> T) async rethrows -> T {
+            try await body()
+        }
     }
 
     struct DebugLogger: LoggerBackend {

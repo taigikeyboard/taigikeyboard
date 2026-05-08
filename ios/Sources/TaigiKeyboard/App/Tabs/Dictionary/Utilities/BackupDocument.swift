@@ -13,7 +13,9 @@ extension UTType {
 /// FileDocument wrapper for .taigi backup export via fileExporter
 // 中文: SwiftUI fileExporter 用的 FileDocument,單純把 Data 包成可讀寫 wrapper。
 struct BackupDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.taigiBackup, .json] }
+    static var readableContentTypes: [UTType] {
+        [.taigiBackup, .json]
+    }
 
     var data: Data
 
@@ -31,7 +33,7 @@ struct BackupDocument: FileDocument {
     }
 
     // 中文: 寫檔時把 Data 包成 regular FileWrapper 給 fileExporter 落地。
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    func fileWrapper(configuration _: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: data)
     }
 }
