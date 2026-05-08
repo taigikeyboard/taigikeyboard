@@ -6,7 +6,7 @@ A Taiwanese (Tâi-gí / 台語) input method for iOS and Android. Romanization i
 [![Security](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-lightgrey)](LICENSE)
 
 ## Features
 
@@ -38,4 +38,4 @@ Both platforms share a Rust core. Algorithms (phonetics, composing, lexicon, ran
 
 ## License
 
-Released under [MIT](LICENSE).
+Released under [CC BY-NC-SA 4.0](LICENSE) — non-commercial use only; derivative works must be shared under the same license.
