@@ -69,6 +69,9 @@ ENV/
 
 # === Gradle ===
 .gradle/
+# Sandboxed GRADLE_USER_HOME (Claude Code bash redirects gradle downloads here
+# instead of polluting ~/.gradle/). Empty wrapper/dists/ leftovers are harmless.
+.gradle-home/
 
 # === Dictionary pipeline ===
 # Build/run logs from dictionary/ Python pipeline (build.sh, run.sh).
