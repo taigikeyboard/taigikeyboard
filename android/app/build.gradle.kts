@@ -22,12 +22,11 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        // versionCode = MAJOR*1_000_000 + MINOR*10_000 + PATCH*100 + BUILD,
-        // gives 100 internal-test build slots per patch release without
-        // conflicting with Play Console's monotonic-versionCode rule.
-        // 3.5.7 build #2 = 3_050_702 (build #1 = 3_050_701 was the
-        // arm64-only AAB that triggered the 3,806-device warning).
-        versionCode = 3_050_702
+        // versionCode scheme: <versionName-packed><build>, e.g. 357 + 001
+        // = 357001. Gives ~100 build slots per patch (357001-357099) and
+        // jumps to 358001 at the next release. Stays monotonic against
+        // Play Console's prior rejected-but-consumed 357 upload.
+        versionCode = 357001
         versionName = "3.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
