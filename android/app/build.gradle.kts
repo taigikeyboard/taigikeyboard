@@ -22,11 +22,13 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        // versionCode scheme: <versionName-packed><build>, e.g. 357 + 001
-        // = 357001. Gives ~100 build slots per patch (357001-357099) and
-        // jumps to 358001 at the next release. Stays monotonic against
-        // Play Console's prior rejected-but-consumed 357 upload.
-        versionCode = 357002
+        // versionCode scheme: MAJOR*1_000_000 + MINOR*10_000 + PATCH*100
+        // + BUILD. Forced to this 7-digit form because an earlier upload
+        // consumed `3_050_702` on Play Console — the 357xxx scheme would
+        // be < that floor and Play rejects monotonic regressions
+        // ("existing users cannot upgrade"). v3.5.7 build #3 = 3_050_703;
+        // v3.5.8 starts at 3_050_800.
+        versionCode = 3_050_703
         versionName = "3.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
