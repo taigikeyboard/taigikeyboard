@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,8 +81,17 @@ fun KeyboardPreviewPanel(
         // `LayoutManager.fetchComputedLayoutForPreview`.
         val previewInputMode = if (prefs.inputMode == "english") "tl" else prefs.inputMode
 
-        val layoutData = remember(layoutType, previewInputMode, context) {
-            val themedContext = ContextThemeWrapper(context, R.style.KeyboardTheme)
+        // Settings activity runs under SettingsTheme; the IME runtime runs under
+        // KeyboardTheme. `KeyboardLayout` / `KeyContent` resolve key colors via
+        // `LocalContext.current` + `getColorFromAttr(R.attr.key_*)` — under
+        // SettingsTheme those attrs miss and resolve to 0 (transparent), which
+        // hides the entire keyboard body. Provide a themed context to the
+        // preview subtree so attr lookups land on KeyboardTheme.
+        val themedContext = remember(context) {
+            ContextThemeWrapper(context, R.style.KeyboardTheme)
+        }
+
+        val layoutData = remember(layoutType, previewInputMode, themedContext) {
             val layoutManager = LayoutManager(themedContext, prefs)
             KeyboardLayoutData.from(
                 layoutManager.fetchComputedLayoutForPreview(
@@ -136,15 +146,17 @@ fun KeyboardPreviewPanel(
                 ),
             )
             val coordinator = remember { KeyTouchCoordinator(NoOpPopupHost, NoOpKeyEventDispatcher) }
-            KeyboardLayout(
-                layoutData = layoutData,
-                keyDimensions = keyDimensions,
-                appearance = appearance,
-                keyVariation = KeyVariation.NORMAL,
-                coordinator = coordinator,
-                popupHost = NoOpPopupHost,
-                isPreview = true,
-            )
+            CompositionLocalProvider(LocalContext provides themedContext) {
+                KeyboardLayout(
+                    layoutData = layoutData,
+                    keyDimensions = keyDimensions,
+                    appearance = appearance,
+                    keyVariation = KeyVariation.NORMAL,
+                    coordinator = coordinator,
+                    popupHost = NoOpPopupHost,
+                    isPreview = true,
+                )
+            }
         }
     }
 }
