@@ -172,9 +172,18 @@ jobs:
       # - Most Kotlin code is platform glue (post-Path-G migration); JVM
       #   unit-test coverage value was low
       # - No Rust .so cross-compile needed (lintDebug is static analysis)
+      #
+      # `-x lintAnalyzeDebugUnitTest` skips lint analysis of unit-test code
+      # (~1m49s observed → entire job stays under 4 min). Same reasoning for
+      # the androidTest variant. Cleaner long-term fix is
+      # `lint { ignoreTestSources = true }` in app/build.gradle.kts.
       - name: gradle lintDebug
         working-directory: android
-        run: ./gradlew lintDebug --no-daemon --stacktrace
+        run: |
+          ./gradlew lintDebug \
+            -x :app:lintAnalyzeDebugUnitTest \
+            -x :app:lintAnalyzeDebugAndroidTest \
+            --no-daemon --stacktrace
 
       - name: Upload lint report on failure
         if: failure()
