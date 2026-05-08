@@ -78,7 +78,7 @@ object CopyrightDataSource {
                         ),
                     ),
             ),
-            // 源樣黑體
+            // 源樣烏體
             CopyrightPage(
                 id = 3,
                 title = HomeTexts.genYoGothicFontTitle,

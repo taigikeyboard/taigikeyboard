@@ -116,7 +116,7 @@ object HomeTexts {
                 "3.5.0",
                 "2026/04/25",
                 listOf(
-                    "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+                    "Added 源樣明體 (serif) and 源樣烏體 (sans-serif) font options.",
                     "Restored POJ candidates for words containing o͘ / ⁿ — about 21% of romanization queries had been missing matches.",
                     "Fixed candidates occasionally remaining on screen after backspacing.",
                     "Fixed emoji key not committing the active candidate before inserting the emoji.",
@@ -288,10 +288,10 @@ object HomeTexts {
     const val iansuiFontCopyright = "© ButTaiwan"
     const val silOpenFontLicense11 = "SIL Open Font License 1.1"
 
-    // ButTaiwan 字型（源樣明體、源樣黑體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
+    // ButTaiwan 字型（源樣明體、源樣烏體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
     const val butTaiwanCopyright = "© ButTaiwan"
     const val genYoMinFontTitle = "源樣明體"
-    const val genYoGothicFontTitle = "源樣黑體"
+    const val genYoGothicFontTitle = "源樣烏體"
 
     // 台灣植物名彙
     const val taiwanPlantCopyright = "© 佐佐木舜一"

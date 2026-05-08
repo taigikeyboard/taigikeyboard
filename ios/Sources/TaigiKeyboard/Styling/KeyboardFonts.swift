@@ -26,7 +26,7 @@ enum KeyboardFonts {
     static let iansuiFontName = "Iansui-Regular"
     /// PostScript font name for GenYoMin (源樣明體)
     static let genYoMinFontName = "GenYoMin2TW-R"
-    /// PostScript font name for GenYoGothic (源樣黑體)
+    /// PostScript font name for GenYoGothic (源樣烏體)
     static let genYoGothicFontName = "GenYoGothic2TW-R"
 
     /// SwiftUI Font based on the user's font setting.

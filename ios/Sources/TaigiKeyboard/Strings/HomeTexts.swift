@@ -82,7 +82,7 @@ enum HomeTexts {
             "Internal: phonetics conversion engine rewritten in Rust (no behavior change).",
         ]),
         ("3.5.0", "2026/04/25", [
-            "Added 源樣明體 (serif) and 源樣黑體 (sans-serif) font options.",
+            "Added 源樣明體 (serif) and 源樣烏體 (sans-serif) font options.",
             "Restored POJ candidates for words containing o͘ / ⁿ — about 21% of romanization queries had been missing matches.",
             "Fixed next-word candidate inserting raw TL form instead of POJ when typing in POJ mode.",
             "Fixed candidates occasionally remaining on screen after backspacing.",
@@ -202,7 +202,7 @@ enum HomeTexts {
     static let iansuiFontCopyright = "© ButTaiwan"
     static let silOpenFontLicense11 = "SIL Open Font License 1.1"
 
-    /// ButTaiwan 字型（源樣明體、源樣黑體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
+    /// ButTaiwan 字型（源樣明體、源樣烏體、源泉圓體、源石黑體、源起明體、源起黑體、源雲明體）
     static let butTaiwanCopyright = "© ButTaiwan"
 
     // 台灣植物名彙

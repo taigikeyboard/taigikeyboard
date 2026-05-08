@@ -34,7 +34,7 @@ struct CopyrightView: View {
                 websiteURL: "https://github.com/ButTaiwan/genyo-font",
             )
 
-            // GenYoGothic (源樣黑體)
+            // GenYoGothic (源樣烏體)
             CopyrightSection(
                 title: CommonTexts.fontGenYoGothic,
                 description: HomeTexts.butTaiwanCopyright,

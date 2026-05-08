@@ -33,8 +33,8 @@ enum FontType: String, CaseIterable {
     case iansui // 芫荽
     // 中文: 源樣明體 (Gen Yo Min),襯線字。
     case genYoMin // 源樣明體
-    // 中文: 源樣黑體 (Gen Yo Gothic),非襯線字。
-    case genYoGothic // 源樣黑體
+    // 中文: 源樣烏體 (Gen Yo Gothic),非襯線字。
+    case genYoGothic // 源樣烏體
 
     /// PostScript font name for custom fonts, nil for system
     // 中文: 自訂字體的 PostScript 名稱;system 回傳 nil 走系統預設。
