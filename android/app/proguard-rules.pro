@@ -102,3 +102,29 @@
     public static *** w(...);
     public static *** e(...);
 }
+
+# ---- Rust JNI bridge ----
+# `RustEngineBridge` class name + the static `dispatchLog` callback are
+# looked up by Rust at runtime via JNI FindClass / GetStaticMethodID
+# (engine/android-jni/src/lib.rs constants BRIDGE_CLASS + DISPATCH_METHOD).
+# R8 obfuscation of either path breaks System.loadLibrary's lookup chain
+# and the app fails on first install via Play Store split APKs.
+# (proguard-android-optimize.txt already keeps `native <methods>`.)
+-keep class com.siansiansu.taigikeyboard.engine.RustEngineBridge {
+    public *;
+    public static *** dispatchLog(int, java.lang.String, java.lang.String);
+}
+
+# ---- Engine protobuf wire-format generated classes ----
+# Generated builders + parsers depend on field-name reflection
+# (Message.Builder, GeneratedMessageV3 internals). Strip-safe stripping
+# is impractical; keep all proto-generated classes wholesale.
+-keep class com.siansiansu.taigikeyboard.engine.proto.** { *; }
+-keepclassmembers class com.siansiansu.taigikeyboard.engine.proto.** { *; }
+
+# ---- protobuf-java runtime ----
+# Heavily reflective; required by every proto Builder.build() call from
+# RustEngineBridge / LexiconBridge / CaseTransformBridge dispatchers.
+-keep class com.google.protobuf.** { *; }
+-keepclassmembers class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
