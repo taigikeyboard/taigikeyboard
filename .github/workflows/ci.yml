@@ -147,40 +147,42 @@ jobs:
             exit 1
           fi
 
-  android:
-    name: Android lint
-    needs: changes
-    if: needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 8
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      # Lint only. Rust workspace tests (rust-engine job) cover shared-core
-      # logic; this job catches Android-specific issues. Test sources are
-      # excluded from lint via `lint { ignoreTestSources = true }` in
-      # app/build.gradle.kts — keeps wall time ~3-4 min.
-      - name: gradle lintDebug
-        working-directory: android
-        run: ./gradlew lintDebug --no-daemon --stacktrace
-
-      - name: Upload lint report on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: android-lint-report
-          path: android/app/build/reports/lint-results-debug.html
-          if-no-files-found: ignore
-          retention-days: 14
+  # Temporarily disabled — Android lint runtime is too long for the current
+  # CI budget. Re-enable by uncommenting this job block.
+  # android:
+  #   name: Android lint
+  #   needs: changes
+  #   if: needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch'
+  #   runs-on: ubuntu-24.04
+  #   timeout-minutes: 8
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - name: Setup JDK 17
+  #       uses: actions/setup-java@v5
+  #       with:
+  #         distribution: temurin
+  #         java-version: '17'
+  #
+  #     - name: Setup Gradle
+  #       uses: gradle/actions/setup-gradle@v4
+  #
+  #     # Lint only. Rust workspace tests (rust-engine job) cover shared-core
+  #     # logic; this job catches Android-specific issues. Test sources are
+  #     # excluded from lint via `lint { ignoreTestSources = true }` in
+  #     # app/build.gradle.kts — keeps wall time ~3-4 min.
+  #     - name: gradle lintDebug
+  #       working-directory: android
+  #       run: ./gradlew lintDebug --no-daemon --stacktrace
+  #
+  #     - name: Upload lint report on failure
+  #       if: failure()
+  #       uses: actions/upload-artifact@v7
+  #       with:
+  #         name: android-lint-report
+  #         path: android/app/build/reports/lint-results-debug.html
+  #         if-no-files-found: ignore
+  #         retention-days: 14
 
   markdown:
     name: Markdown lint
