@@ -23,7 +23,7 @@ repository = "https://github.com/siansiansu/taigikeyboard"
 
 [workspace.dependencies]
 prost = "0.14"
-prost-build = "0.12"
+prost-build = "0.14"
 unicode-normalization = "0.1"
 unicode-properties = "0.1"
 regex = "1"
