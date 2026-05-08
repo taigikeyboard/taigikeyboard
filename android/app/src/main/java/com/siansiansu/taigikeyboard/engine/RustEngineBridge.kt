@@ -92,6 +92,7 @@ object RustEngineBridge {
      * so `log::debug!` / `log::info!` short-circuit before format — no JNI
      * cost for the no-op render path.
      */
+    // 中文: 冪等安裝 JNI logger 橋。DEBUG 模式 Rust log level 拉到 Debug,release 保持 Warn 走 zero-cost。
     @JvmStatic
     fun install(backend: LoggerBackend) {
         synchronized(installLock) {
@@ -113,6 +114,7 @@ object RustEngineBridge {
      * tone-marked string. `mode` and `toggles` are mandatory (no default)
      * to enforce the live-read invariant per Codex v2 §7.
      */
+    // 中文: 把數字調 ASCII 輸入轉為帶調符字串;mode 與 toggles 必填以強制 live-read 不快照。
     fun normalizeTone(input: String, mode: NormalizeMode, toggles: ToneTogglesCarrier): String {
         val payload = NormalizeTone.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -123,6 +125,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 把音節聲調 combining mark 剝離,回傳 (bare, tone) 對;無聲調時 tone 為空字串。
     fun stripTone(input: String): StripToneOutcome {
         val payload = StripTone.newBuilder().setInput(input).build()
         val resp = dispatch({ it.stripTone = payload }, "stripTone", null)
@@ -135,21 +138,25 @@ object RustEngineBridge {
         return StripToneOutcome(r.bare, r.tone)
     }
 
+    // 中文: POJ 顯示字串 → TL 顯示字串轉換,逐音節重排版,保留聲調記號。
     fun pojToTl(input: String): String {
         val payload = PojToTl.newBuilder().setInput(input).build()
         return stringDispatch({ it.pojToTl = payload }, input, "pojToTl", null)
     }
 
+    // 中文: TL 顯示字串 → POJ 顯示字串轉換,逐音節重排版,保留聲調記號。
     fun tlToPoj(input: String): String {
         val payload = TlToPoj.newBuilder().setInput(input).build()
         return stringDispatch({ it.tlToPoj = payload }, input, "tlToPoj", null)
     }
 
+    // 中文: 將輸入規範化為 TL 拼寫形式(POJ 拼法→TL 拼法)以便後續解析。
     fun normalizeToTl(input: String): String {
         val payload = NormalizeToTl.newBuilder().setInput(input).build()
         return stringDispatch({ it.normalizeToTl = payload }, input, "normalizeToTl", null)
     }
 
+    // 中文: NormalizeInput 完整管線:TPS preprocess → 小寫 → 切音節 → 鼻音/o͘ 預處理 + checked-ending 推論,產 trie-query key。
     fun normalizeInput(input: String): String {
         val payload = NormalizeInput.newBuilder().setInput(input).build()
         return stringDispatch({ it.normalizeInput = payload }, input, "normalizeInput", null)
@@ -162,6 +169,7 @@ object RustEngineBridge {
      * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
      * `\u{0358}` → `o` are rewritten.
      */
+    // 中文: 外部查詢 URL 用的 NFD 預處理 — 保留聲調符號,只把鼻音(ⁿ/ᴺ)→"nn" 與 ͘ → o。
     fun nfdPreprocessForLookup(input: String): String {
         val payload = NfdPreprocessForLookup.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -172,6 +180,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: Backspace 路徑用 — 找到最後一個 NFD 聲調 mark 拔掉、NFC 重組;無 mark 回 null。
     fun restoreTone(text: String): String? {
         val payload = RestoreTone.newBuilder().setText(text).build()
         val resp = dispatch({ it.restoreTone = payload }, "restoreTone", null) ?: return null
@@ -207,11 +216,13 @@ object RustEngineBridge {
     // endregion
     // region Derivation (2 ops)
 
+    // 中文: 自訂字典 search-key 衍生 — 去聲調的 toneless 形式,給 toneless prefix search 用。
     fun deriveNotone(roman: String): String {
         val payload = DeriveNotone.newBuilder().setRoman(roman).build()
         return stringDispatch({ it.deriveNotone = payload }, roman, "deriveNotone", null)
     }
 
+    // 中文: 自訂字典 search-key 衍生 — 取每音節首字母縮寫(連字號/空白切),單音節回空字串。
     fun deriveAbbrev(roman: String): String {
         val payload = DeriveAbbrev.newBuilder().setRoman(roman).build()
         return stringDispatch({ it.deriveAbbrev = payload }, roman, "deriveAbbrev", null)
@@ -220,26 +231,32 @@ object RustEngineBridge {
     // endregion
     // region TPS (5 ops)
 
+    // 中文: 判斷字串是否含 TPS(注音符號)— Composing 衍生顯示用來略過 POJ/TL 聲調轉換。
     fun containsTps(text: String): Boolean {
         val payload = ContainsTps.newBuilder().setText(text).build()
         return boolDispatch({ it.containsTps = payload }, "containsTps")
     }
 
+    // 中文: TL 數字調 → TPS(注音);orMapsToER 控制 er↔or 變體對應。
     fun tlNumericToTps(text: String, orMapsToER: Boolean): String {
         val payload = TlNumericToTps.newBuilder().setText(text).setOrMapsToEr(orMapsToER).build()
         return stringDispatch({ it.tlNumericToTps = payload }, text, "tlNumericToTps", null)
     }
 
+    // 中文: TL 顯示字串 → TPS(注音);orMapsToER 同 tlNumericToTps。
     fun tlDisplayToTps(text: String, orMapsToER: Boolean): String {
         val payload = TlDisplayToTps.newBuilder().setText(text).setOrMapsToEr(orMapsToER).build()
         return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps", null)
     }
 
+    // 中文: 判斷字元是否為 TPS 聲調記號(用於鍵盤觸發後處理 + composing 預編輯顯示判斷)。
     fun isTpsToneMark(char: Char): Boolean {
         val payload = IsTpsToneMark.newBuilder().setChar(char.toString()).build()
         return boolDispatch({ it.isTpsToneMark = payload }, "isTpsToneMark")
     }
 
+    // 中文: TPS 鍵級輸入調整 — 依 incoming 字元與當前 rawInput 決定 (adjusted, replaceLast?);
+    // 中文: replaceLast 非空時呼叫端應把上一字以 replaceLast 取代。
     fun tpsInputAdjust(incoming: String, rawInput: String): TpsAdjustOutcome {
         val payload = TpsInputAdjust.newBuilder().setIncoming(incoming).setRawInput(rawInput).build()
         val resp = dispatch({ it.tpsInputAdjust = payload }, "tpsInputAdjust", null)
@@ -301,6 +318,8 @@ object RustEngineBridge {
      * `ScoreBreakdown` so dogfood traces include the score arithmetic.
      * Release builds skip the breakdown (zero serialization overhead).
      */
+    // 中文: 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
+    // 中文: tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
     fun processCandidates(
         raw: List<TaigiWord>,
         normalizedInput: String,
@@ -342,6 +361,7 @@ object RustEngineBridge {
      * parity is verified by the Rust workspace tests + iOS XCTest
      * (links the xcframework) + Android instrumented dogfood.
      */
+    // 中文: 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
     fun processCandidatesDetailed(
         raw: List<TaigiWord>,
         normalizedInput: String,
@@ -479,6 +499,7 @@ object RustEngineBridge {
         }
     }
 
+    // 中文: 開始 composing — Idle → Composing { raw=text };發出對應 UpdatePreedit Effect。
     @JvmStatic
     fun composingStart(
         text: String,
@@ -495,6 +516,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 追加一個字元到 composing buffer 末端;raw += ch,Engine 重算 displayText。
     @JvmStatic
     fun composingAppend(
         ch: String,
@@ -511,6 +533,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 追加音節分隔連字號 — 區分 raw "tai-uan" 與 "taiuan",影響候選 trie key。
     @JvmStatic
     fun composingAppendHyphen(
         mode: NormalizeMode,
@@ -526,6 +549,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 取代 raw 最後一個字元(用於 TPS 鍵級調整、聲調覆蓋等場景)。
     @JvmStatic
     fun composingReplaceLast(
         replacement: String,
@@ -543,6 +567,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: composing buffer 退一格;Engine 處理「刪到空就回 Idle」與 1-char delete 的特殊路徑(避免誤刪文件字)。
     @JvmStatic
     fun composingDeleteBackward(
         mode: NormalizeMode,
@@ -558,6 +583,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 提交 derived(顯示用)字串到文件 — 例如 "ho2" 顯示為 "hó",commit "hó"。
     @JvmStatic
     fun composingCommitDerived(
         mode: NormalizeMode,
@@ -573,6 +599,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 提交 raw(原始 ASCII)字串到文件 — 例如 commit "ho2" 而非 "hó"。
     @JvmStatic
     fun composingCommitRaw(generation: Long): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw.newBuilder().build()
@@ -584,6 +611,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
     @JvmStatic
     fun composingSelectSuggestion(text: String, generation: Long): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder()
@@ -596,6 +624,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 先 commit 當前 preedit、再插入外部字串(空白 / Enter / 標點等),原子操作避免閃爍。
     @JvmStatic
     fun composingCommitPreeditThenInsertExternal(
         text: String,
@@ -614,6 +643,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 清空 composing buffer 不 commit — 用於切 input mode、切焦點欄位、退出 composing 等狀況。
     @JvmStatic
     fun composingReset(generation: Long): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.Reset.newBuilder().build()
@@ -625,6 +655,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: UI 端通知當前選中候選 index — 給 NextWord/Booster 取 contextword 用,不 commit。
     @JvmStatic
     fun composingSetSelectedCandidateIndex(index: Int, generation: Long): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto
@@ -638,6 +669,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 純讀 — 取當前 composing 狀態快照,不變更 Engine。1-char delete 路徑用此查 buffer 長度。
     @JvmStatic
     fun composingQueryState(generation: Long): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.QueryState.newBuilder().build()
@@ -850,6 +882,7 @@ object RustEngineBridge {
 
     // -- Decide intents (6 — UpdateLastSelectedWord is Android-only) --
 
+    // 中文: 使用者選定一個候選詞 — 觸發 association 紀錄、context 計時、可選的下個詞預測查詢。
     @JvmStatic
     fun nextwordWordSelected(
         text: String,
@@ -877,6 +910,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 退格通知 — 視 lastChar 是否邊界字符決定是否清 NextWord 顯示與重排 timer。
     @JvmStatic
     fun nextwordBackspace(
         lastChar: String,
@@ -898,6 +932,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: context timeout 觸發 — 平台 timer 到時呼叫,Engine 視當下狀態決定是否清 NextWord UI。
     @JvmStatic
     fun nextwordContextTimeoutFired(
         nowMs: Long,
@@ -917,6 +952,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 開始新 composing 時清掉 NextWord 顯示但保留 lastSelectedWord(下次選詞時仍能用)。
     @JvmStatic
     fun nextwordClearForNewComposing(
         nowMs: Long,
@@ -936,6 +972,7 @@ object RustEngineBridge {
         )
     }
 
+    // 中文: 完整重置 — 清 lastSelectedWord/lastSelectionTimeMs/isShowing,適用切焦點欄位 / 切 input mode 等情境。
     @JvmStatic
     fun nextwordResetFull(
         nowMs: Long,
@@ -963,6 +1000,7 @@ object RustEngineBridge {
      * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
      * No effects, no `current_generation` bump.
      */
+    // 中文: 平台 → engine 同步 NextWord UI 是否顯示中;讓 engine 後續 clear 路徑正確 gate ClearPredictionsUI Effect。
     @JvmStatic
     fun nextwordSetIsShowing(
         isShowing: Boolean,
@@ -988,6 +1026,7 @@ object RustEngineBridge {
      * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
      * The iOS bridge intentionally omits this intent.
      */
+    // 中文: Android 限定意圖(Space 路徑)— 只更新 lastSelectedWord、不重排 timer、不 bump generation;iOS 故意不做此 op。
     @JvmStatic
     fun nextwordUpdateLastSelectedWord(
         text: String,
@@ -1013,6 +1052,8 @@ object RustEngineBridge {
 
     // -- Filter / Boost / QueryState --
 
+    // 中文: 把平台 SQL 撈到的原始 raw 預測列(dict + user)送進 Rust 做 score+merge+sort+limit;
+    // 中文: queryGeneration 對不上 currentGeneration 時回 wasStale=true,呼叫端應丟棄。
     @JvmStatic
     fun nextwordFilter(
         raw: List<NextWordRawRow>,
@@ -1067,6 +1108,7 @@ object RustEngineBridge {
         return NextWordFilterResult(predictions = predictions, wasStale = filter.wasStale)
     }
 
+    // 中文: 用 NextWord 預測首字集合對 autocomplete 候選做重排 — 首字命中者上浮(autocomplete context booster)。
     @JvmStatic
     fun nextwordBoostCandidates(
         words: List<String>,
@@ -1093,6 +1135,7 @@ object RustEngineBridge {
         return resp.boost.wordsList.toList()
     }
 
+    // 中文: 純讀 — 取 NextWord 當前狀態(lastSelectedWord/isShowing/currentGeneration),不 mutate。
     @JvmStatic
     fun nextwordQueryState(
         mode: InputMode,
@@ -1264,6 +1307,7 @@ object RustEngineBridge {
      * (encode error, dispatch returned non-OK, missing result variant).
      * Recent entries capped at 32 to bound memory. NEVER throws.
      */
+    // 中文: 取目前累計的 FFI 失敗統計(總次數 + 最近 32 筆 entry);供 debug menu 與測試檢視。永不丟例外。
     @JvmStatic
     fun diagnostics(): DiagnosticsSnapshot {
         synchronized(diagnosticsLock) {

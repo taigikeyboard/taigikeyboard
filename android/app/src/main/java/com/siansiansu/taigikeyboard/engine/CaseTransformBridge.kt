@@ -61,6 +61,7 @@ object CaseTransformBridge {
     // region Per-char helpers
 
     /** Replaces `ToneUtilities.uppercaseToneLetter`. */
+    // 中文: 單字元(含 combining mark)依模式查 POJ/TL 聲調表轉大寫;多字元僅將首字大寫。
     fun uppercaseToneChar(input: String, mode: InputMode): String {
         val payload = UppercaseToneChar.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -72,6 +73,7 @@ object CaseTransformBridge {
     }
 
     /** Replaces `ToneUtilities.fullUppercaseToneLetter`. */
+    // 中文: 整字串全部依模式聲調表轉大寫;CapsLock 路徑用此函式。
     fun fullUppercaseToneString(input: String, mode: InputMode): String {
         val payload = FullUppercaseToneString.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -83,6 +85,7 @@ object CaseTransformBridge {
     }
 
     /** Replaces `ToneUtilities.lowercaseToneLetter`. */
+    // 中文: 單字元依模式聲調表轉小寫,含 ᴺ→ⁿ 鼻音記號 shortcut。
     fun lowercaseToneChar(input: String, mode: InputMode): String {
         val payload = LowercaseToneChar.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -98,6 +101,7 @@ object CaseTransformBridge {
     // region Per-string compound transforms
 
     /** Apply `letterCase` to `text` per the engine's input-case pipeline. */
+    // 中文: 對輸入字串套用 LetterCase(Lowercased/Uppercased/CapsLocked);對應 KeyLabelCaseCache 路徑。
     fun transformInputCase(text: String, letterCase: LetterCase, mode: InputMode): String {
         val payload = TransformInputCase.newBuilder()
             .setText(text)
@@ -115,6 +119,8 @@ object CaseTransformBridge {
      * Per-suggestion case transformation. Output is post-processed via
      * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed).
      */
+    // 中文: 對 suggestion 候選字做大小寫轉換 — CapsLock → 全大寫;其他依 composing 已輸入字數切兩段
+    // 中文: (typed-portion 比對大小寫、remaining-portion 首字大寫或全小寫),最後 adjust_nasal_marker_case 後處理。
     fun transformSuggestion(
         original: String,
         composing: String,
