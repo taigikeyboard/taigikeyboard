@@ -90,7 +90,7 @@
 ### Minor observations (not action items)
 
 - iOS `RustEngineBridge+Lexicon.swift` (Swift extension files) vs Android `LexiconBridge.kt` (Kotlin top-level) — each follows platform idiom, leave as-is
-- `changelog/` missing `v3.5.4 / v3.5.7 / v3.5.8` files — consistent with `feedback_changelog_timing` policy (only update at release time), not an issue
+- `changelog/` missing `v3.5.4 / v3.5.7` files — consistent with `feedback_changelog_timing` policy (only update at release time), not an issue
 - Top-level `Makefile` + `engine/Makefile.toml` coexist — verify root `Makefile` still in use
 - iOS `Lexicon/Database/` has 11 files but each is SRP (Schema / Repository / Migrator / Pruner / Capacity / BindingHelpers / ConnectionManager) — acceptable
 
@@ -204,7 +204,7 @@ Phases A and B can ship ahead of the user-visible feature — zero-impact storag
 **Target release tag for first round (P1)**: `v3.5.7` (per user directive 2026-05-07). v3.5.7 will bundle accumulated unreleased work since `v3.5.6` plus Item 4 P1. P2 / P3 round version assignments TBD per round.
 **Source**: 2026-05-07 Taigi Android vs FlorisBoard architecture comparison (in-conversation; `references/florisboard/` as upstream best-practice reference). Latest released tag at proposal time = `v3.5.6`.
 **Rationale**: Three concrete gaps where the Taigi Android IME diverges from project-documented best practices (`rules/android-guidelines.md` §4 lifecycle/DI, §7 Compose patterns, §8 IME-specific) and from FlorisBoard's modern IME idioms. Together they (a) eliminate the IME window/inset hazard class documented in auto-memory `project_ime_window_arch.md`, (b) cut canvas-render bug surface, (c) unblock JVM-side keyboard-layout testing. Goal anchor is **project Android best practices**, not feature parity with FlorisBoard's plugin / extension / NLP stack (see "What NOT to adopt" below).
-**Risk**: Phased — P1/P2 are mechanical and contained; P3 (Compose migration of keyboard rendering) is a multi-PR slice on par with a release round. Each phase is independently shippable. UI-layer only — no Rust shared-core impact (Phase IV-B closed at v3.5.8 covers algorithm extraction; this item covers presentation).
+**Risk**: Phased — P1/P2 are mechanical and contained; P3 (Compose migration of keyboard rendering) is a multi-PR slice on par with a release round. Each phase is independently shippable. UI-layer only — no Rust shared-core impact (Phase IV-B already closed at the EnabledDictionaries slice covers algorithm extraction; this item covers presentation).
 
 ### What NOT to adopt from FlorisBoard (out of scope)
 
