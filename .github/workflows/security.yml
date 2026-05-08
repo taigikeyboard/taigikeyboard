@@ -1,0 +1,54 @@
+name: Security
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/Cargo.lock'
+      - 'engine/**/Cargo.toml'
+      - 'engine/deny.toml'
+      - '.github/workflows/security.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: cargo audit + cargo deny
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup protoc 27.5
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '27.5'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: engine -> target
+          shared-key: rust-security
+
+      - name: Install cargo-audit + cargo-deny
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-deny --locked
+
+      - name: cargo audit
+        working-directory: engine
+        run: cargo audit
+
+      - name: cargo deny check
+        working-directory: engine
+        run: cargo deny check
