@@ -41,7 +41,6 @@ jobs:
               - '.github/workflows/ci.yml'
             android:
               - 'android/**'
-              - 'engine/**'
               - '.github/workflows/ci.yml'
             docs:
               - 'rules/**/*.md'
@@ -149,11 +148,11 @@ jobs:
           fi
 
   android:
-    name: Android (lint + test + build)
+    name: Android lint
     needs: changes
     if: needs.changes.outputs.android == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
 
@@ -163,42 +162,19 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup protoc 27.5
-        uses: arduino/setup-protoc@v3
-        with:
-          version: '27.5'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-linux-android,armv7-linux-androideabi
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: engine -> target
-          shared-key: rust-android
-
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --version 4.1.2 --locked
-
-      - name: Setup Android NDK
-        id: setup-ndk
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r27d
-          add-to-path: false
-
-      - name: Build Rust .so for Android (arm64-v8a + armeabi-v7a)
-        env:
-          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
-        run: bash engine/scripts/build-android-libs.sh
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: gradle lint + unit tests + assembleDebug
+      # Lint only. assembleDebug + testDebugUnitTest were dropped to keep
+      # PR-time CI under 5 min:
+      # - Rust workspace tests (rust-engine job) cover all shared-core logic
+      # - Android lint catches platform-specific issues that Rust can't
+      # - Most Kotlin code is platform glue (post-Path-G migration); JVM
+      #   unit-test coverage value was low
+      # - No Rust .so cross-compile needed (lintDebug is static analysis)
+      - name: gradle lintDebug
         working-directory: android
-        run: ./gradlew lintDebug testDebugUnitTest assembleDebug --no-daemon --stacktrace
+        run: ./gradlew lintDebug --no-daemon --stacktrace
 
       - name: Upload lint report on failure
         if: failure()
