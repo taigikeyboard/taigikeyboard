@@ -1,6 +1,6 @@
 ---
 name: release-helper
-description: Cut a release on main. Diff against base tag, rebuild dict + Rust engine, update 4 changelog files, commit, force-retag, push. Args:&nbsp;<base-tag>&nbsp;<target-version>. Re-run safe — overrides existing tag, dedupes entries.
+description: Cut a release on main. Diff against base tag, rebuild dict + Rust engine, update 4 changelog files, commit, force-retag, push. Args:&nbsp;<base-tag>&nbsp;<target-version>. Re-run safe — auto picks full vs incremental, overrides existing tag, dedupes entries by topic.
 disable-model-invocation: false
 ---
 
@@ -9,7 +9,7 @@ disable-model-invocation: false
 Run from `main`. User supplies `<base-tag> <target>`.
 Example: `/release-helper v3.5.0 v3.5.7`
 
-Re-run safe: existing `<target>` tag is force-overwritten; existing changelog entries are replaced in place, never appended.
+Re-run safe: existing `<target>` tag is force-overwritten; existing changelog entries are merged in place by topic, never blindly appended. Step 4.5 auto-selects full regenerate vs incremental.
 
 ## 1. Sanity (abort on failure)
 
@@ -37,9 +37,31 @@ If `<target>` tag exists locally or on origin, note it once; step 6 will overwri
 - `make dict`
 - `make build`
 
+## 4.5 Mode selection (auto)
+
+Default: **full regenerate** (current SKILL behavior, safest).
+
+Switch to **incremental** only if **all** checks pass — otherwise run full:
+
+- `<target>` tag exists locally: `git rev-parse <target>` succeeds
+- No history rewrite below tag: `git merge-base --is-ancestor <target> HEAD` succeeds
+- Tag not force-pushed apart: local `<target>` SHA == `origin/<target>` SHA (or origin tag absent)
+- New range non-empty and clean: `git rev-list <target>..HEAD` has ≥1 commit and **zero** subjects starting with `Revert "`
+- `changelog/<target>.md` exists and is non-empty
+- `<base>` arg is an ancestor of `<target>`: `git merge-base --is-ancestor <base> <target>` (otherwise base shifted, full regenerate)
+
+State the chosen mode before step 5 ("mode: incremental, N new commits since `<target>`" or "mode: full regenerate, reason: …").
+
 ## 5. Update 4 files (idempotent)
 
-For each file: if a `<target>` block already exists, **replace** its body in place. Otherwise insert at the top (newest first).
+**Full mode**: regenerate `<target>` block content from `<base>..HEAD` diff. For each file: if a `<target>` block already exists, **replace** its body in place. Otherwise insert at the top (newest first).
+
+**Incremental mode**: only classify commits in `<target>..HEAD`. Read each existing file's `<target>` block as the base; merge new entries **by topic, not by SHA**:
+
+- If a new commit's topic matches an existing line → extend / refine that line (e.g. "fixed A" → "fixed A and B"); do **not** add a second line
+- If a new commit's topic is genuinely new → add a single line under the right category
+- Re-classification: if a previously listed item now spans more platforms, extend the existing line's scope rather than duplicate
+- Never append below an existing `<target>` block; always edit in place
 
 | File | Form |
 | --- | --- |
