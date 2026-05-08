@@ -92,6 +92,10 @@ android {
         disable += "GradleDependency"
         disable += "OldTargetApi"
         disable += "AndroidGradlePluginVersion"
+        // Skip lint on src/test/ + src/androidTest/. CI Android job otherwise
+        // spends ~2 min lint-analyzing test code (lintAnalyzeDebugUnitTest +
+        // lintAnalyzeDebugAndroidTest); main-source lint covers production code.
+        ignoreTestSources = true
     }
 }
 
