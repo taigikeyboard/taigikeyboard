@@ -6,7 +6,7 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test doc dict-run dict-build help
+.PHONY: build test doc dict help
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
 # + Android jniLibs, run tests. The only build entry point.
@@ -36,19 +36,14 @@ test:
 doc:
 	cd $(ENGINE) && cargo doc --no-deps --workspace --document-private-items --exclude android-jni --open
 
-# Per-source pipeline: raw → cleaned → data/<key>.csv (run when source config
-# or raw data changes; safe to skip if only re-merging existing per-source CSVs).
-dict-run:
+# Full dictionary regeneration: per-source pipeline (run.sh) then aggregate
+# merge + bin + fst + audit + deploy to Android/iOS (build.sh).
+dict:
 	bash $(DICT)/run.sh
-
-# Aggregate build: merge_csv → dictionary.bin → fst → association.bin → audit
-# → verify_known_keys → deploy to Android/iOS.
-dict-build:
 	bash $(DICT)/build.sh
 
 help:
-	@echo "  make build       Full Rust rebuild: proto regen + iOS + Android + tests"
-	@echo "  make test        cargo test --workspace"
-	@echo "  make doc         Build rustdoc HTML for engine workspace and open in browser"
-	@echo "  make dict-run    Per-source dictionary pipeline (raw → data/<key>.csv)"
-	@echo "  make dict-build  Aggregate dictionary build + deploy to Android/iOS"
+	@echo "  make build  Full Rust rebuild: proto regen + iOS + Android + tests"
+	@echo "  make test   cargo test --workspace"
+	@echo "  make doc    Build rustdoc HTML for engine workspace and open in browser"
+	@echo "  make dict   Full dictionary regen + deploy to Android/iOS"
