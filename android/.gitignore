@@ -1,7 +1,6 @@
 # === Android / Gradle ===
 .gradle
 .gradle-home
-!gradle/wrapper/gradle-wrapper.jar
 .gradletasknamecache
 local.properties
 app/.cxx
@@ -21,3 +20,7 @@ app/.cxx
 *.tar.gz
 *.rar
 hs_err_pid*
+
+# Track the Gradle wrapper jar despite the *.jar exclusion above.
+# gitignore rules are order-dependent: this `!` must come after `*.jar`.
+!gradle/wrapper/gradle-wrapper.jar
