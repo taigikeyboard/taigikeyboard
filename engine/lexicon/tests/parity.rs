@@ -22,6 +22,9 @@ use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
 use lexicon::LexiconError;
 
+mod common;
+use common::{build_tkdb_v2, write_temp};
+
 const SEPARATOR: u8 = 0xFF;
 
 /// Process-wide serialization for tests that call `EngineHandle::install`.
@@ -79,7 +82,7 @@ fn invariant_lex_filter_bitmask_three_layers() {
 
 #[test]
 fn invariant_lex_binary_format_rejects_bad_magic() {
-    let bad = synth_dictionary_bin(b"BAD!", 1, &[]);
+    let bad = synth_dictionary_bin_with_version(b"BAD!", 2, &[]);
     let path = write_temp("bad-magic.bin", &bad);
     let err = DictionaryReader::open(&path).expect_err("bad magic must fail");
     assert!(matches!(err, LexiconError::InvalidBinary(_)), "{err:?}");
@@ -87,7 +90,7 @@ fn invariant_lex_binary_format_rejects_bad_magic() {
 
 #[test]
 fn invariant_lex_binary_format_rejects_bad_version() {
-    let bad = synth_dictionary_bin(b"TKDB", 99, &[]);
+    let bad = synth_dictionary_bin_with_version(b"TKDB", 99, &[]);
     let path = write_temp("bad-version.bin", &bad);
     let err = DictionaryReader::open(&path).expect_err("bad version must fail");
     assert!(matches!(err, LexiconError::InvalidBinary(_)), "{err:?}");
@@ -231,7 +234,7 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     // it as a tiebreaker; a `0` frequency would be valid but tests with a
     // realistic non-zero value catch sort regressions too.
     let fst_path = write_synthetic_fst("api-bitmask.fst", &[("tl:test", 1), ("hanzi:好", 1)]);
-    let dict_bytes = synth_dictionary_bin(b"TKDB", 1, &[(0x0001u16, 100, "好", "ho2")]);
+    let dict_bytes = synth_dictionary_bin(b"TKDB", 2, &[(0x0001u16, 100, "好", "ho2")]);
     let dict_path = write_temp("api-bitmask-dict.bin", &dict_bytes);
     let assoc_path = write_temp("api-bitmask-assoc.bin", &synth_association_bin());
 
@@ -372,51 +375,47 @@ fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
     path
 }
 
-/// Build a TKDB byte sequence with the given (rowid, bitmask, hanzi, tl)
-/// rows. rowids are 1-based; supply rows in rowid order.
+/// Convenience wrapper: emits a v2 TKDB binary with `syllable_count = 1` on
+/// every row. Callers that assert on syllable_count should use
+/// `common::build_tkdb_v2` directly.
 fn synth_dictionary_bin(magic: &[u8; 4], version: u32, rows: &[(u16, u32, &str, &str)]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(magic);
-    out.extend_from_slice(&version.to_le_bytes());
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
+    assert_eq!(version, 2, "synth_dictionary_bin only emits v2; pass v=2");
+    let rows_v2: Vec<(u16, u32, u8, &str, &str)> = rows
+        .iter()
+        .map(|(bm, freq, hanzi, tl)| (*bm, *freq, 1u8, *hanzi, *tl))
+        .collect();
+    build_tkdb_v2(magic, &rows_v2)
+}
 
-    // Compute offsets (header + offset_table) then payload.
-    let header_size = 16usize;
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for (bitmask, freq, hanzi, tl) in rows {
-        offsets.push((header_size + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&bitmask.to_le_bytes());
-        payload.extend_from_slice(&freq.to_le_bytes());
-        payload.push(hanzi.len() as u8);
-        payload.push(tl.len() as u8);
-        payload.extend_from_slice(hanzi.as_bytes());
-        payload.extend_from_slice(tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
+/// `bad-version` regression test still needs to forge an arbitrary version
+/// number, so it goes through `build_tkdb_bin` directly.
+fn synth_dictionary_bin_with_version(
+    magic: &[u8; 4],
+    version: u32,
+    rows: &[(u16, u32, &str, &str)],
+) -> Vec<u8> {
+    let dict_rows: Vec<common::DictRow<'_>> = rows
+        .iter()
+        .map(|(bm, freq, hanzi, tl)| common::DictRow {
+            bitmask: *bm,
+            frequency: *freq,
+            syllable_count: Some(1),
+            hanzi,
+            tl,
+        })
+        .collect();
+    common::build_tkdb_bin(magic, version, &dict_rows)
 }
 
 fn synth_dictionary_reader(rows: &[(u16, u32, &str, &str)]) -> DictionaryReader {
-    let bytes = synth_dictionary_bin(b"TKDB", 1, rows);
+    let bytes = synth_dictionary_bin(b"TKDB", 2, rows);
     let path = write_temp(&format!("dict-{}.bin", rows.len()), &bytes);
     DictionaryReader::open(&path).expect("synth dict opens")
 }
 
-fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}"));
-    std::fs::write(&path, bytes).expect("write temp");
-    path
-}
-
 fn build_minimal_install_fixture(prefix: &str) -> (PathBuf, PathBuf, PathBuf) {
     let fst_path = write_synthetic_fst(&format!("{prefix}.fst"), &[("tl:test", 1)]);
-    let dict_bytes = synth_dictionary_bin(b"TKDB", 1, &[(0, 1, "好", "ho2")]);
+    let dict_bytes = synth_dictionary_bin(b"TKDB", 2, &[(0, 1, "好", "ho2")]);
     let dict_path = write_temp(&format!("{prefix}-dict.bin"), &dict_bytes);
     let assoc_bytes = synth_association_bin();
     let assoc_path = write_temp(&format!("{prefix}-assoc.bin"), &assoc_bytes);

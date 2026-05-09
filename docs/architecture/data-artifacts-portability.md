@@ -52,27 +52,25 @@ Custom binary format holding per-rowid dictionary entries.
 
 ### Format
 
-- **Producer**: `dictionary/build/10_create_dictionary_bin.py`.
-- **Header (16 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `1`) · `count: u32` · `build_ts: u32`.
+Authoritative spec lives in [`docs/engine/binary-format.md`](../engine/binary-format.md). Summary:
+
+- **Producer**: `dictionary/build/create_dictionary_bin.py`.
+- **Header (16 bytes)**: magic `"TKDB"` (4) · `version: u32` (currently `2`) · `count: u32` · `build_ts: u32`.
 - **Offset table**: `count × u32` absolute byte offsets (LE).
-- **Record**: `bitmask: u16 · frequency: u32 · hanzi_len: u8 · tl_len: u8 · hanzi_bytes · tl_bytes` — UTF-8 strings, fixed-layout prefix.
+- **Record**: `bitmask: u16 · frequency: u32 · hanzi_len: u8 · tl_len: u8 · syllable_count: u8 · hanzi_bytes · tl_bytes` — UTF-8 strings, fixed-layout prefix. v2 (v3.5.8 Phase 1) added the `syllable_count` byte for span-local candidate ranking.
 - **Bitmask (13 bits)**: bits 0–7 = eight text sources (`kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti`); bits 8–11 = four Hoklo-sourced dicts (`khpoo, khiin, dev, lkk`); bit 12 = `is_variant`.
 
-### Readers
+### Readers (Rust-only post-Phase IV-B)
 
-| Platform | Entry point | Mapping |
+| Consumer | Entry point | Mapping |
 |---|---|---|
-| iOS | `ios/.../Lexicon/Database/DictionaryBinaryReader.swift` | `Data(contentsOf:options:.mappedIfSafe)` + `UnsafeRawPointer.loadUnaligned` |
-| Android | `android/.../ime/dictionary/DictionaryBinaryReader.kt` | `RandomAccessFile → MappedByteBuffer` (READ_ONLY) |
+| Rust core | `engine/lexicon/src/dictionary_reader.rs` | `mmap_host::MmapHandle::open_readonly` + manual LE field reads |
 
-### Divergence
+iOS (`DictionaryBinaryReader.swift`) and Android (`DictionaryBinaryReader.kt`) byte-level readers were deleted in v3.5.6 / Path G (PR #199); platforms now copy the bundled `.bin` to a writable location and hand the path to `engine/lexicon::EngineHandle::install`.
 
-- **Endianness**: both hardcoded LE; no byte-swap paths.
-- **UTF-8 error policy (convergent)**: both platforms treat `hanzi` as optional and `tl` as required.
-  - iOS (`DictionaryBinaryReader.swift:136-152`): `hanzi` decode failure → record returned with `hanzi = nil`; `tl` decode failure → record dropped (`return nil`).
-  - Android (`DictionaryBinaryReader.kt:76-88`): same contract — `hanzi` uses `decodeUtf8Strict` returning `null` on invalid bytes (code comment: `// matches iOS`); `tl` uses the same helper and the record is dropped on `null` (`?: return null`, comment: `// matches iOS`).
-  - Neither platform logs on failure. The "hanzi-optional, tl-required" contract is shared — this is today's invariant, not a divergence to resolve.
-- **Bitmask semantics duplication**: iOS `sourcesFromBitmask()` and Android `BIT_TO_SOURCE` define identical bit-to-source mapping in separate code. Silent drift risk.
+### UTF-8 error policy
+
+The Rust reader returns `None` for the whole record when `from_utf8` fails for either `hanzi` (when `hanzi_len > 0`) or `tl`. This is stricter than the pre-Phase-IV-B platform contract, which preserved records on bad `hanzi` bytes by setting `hanzi = nil/null`. No callers depend on the looser behavior.
 
 ### Rust-core path
 
@@ -280,7 +278,7 @@ Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.
 |---|---|---|
 | D1 | MARISA lib strategy (C++ bind vs Rust port) | **Resolved 2026-05-02** — chose Rust-native `fst` (v3.5.6 / PR #199); MARISA C++ bridges deleted under Path G. |
 | D2 | `dictionary.bin` + `association.bin` UTF-8 error policy | **Resolved** — Rust readers in `engine/lexicon` follow the platform "hanzi-optional, tl-required" contract; invalid records return `null`/`None`. |
-| D3 | `dictionary.bin` + `association.bin` version-bump policy | **Resolved** — both files use `version: u32 = 1`; Rust readers reject mismatch at `init?` time. |
+| D3 | `dictionary.bin` + `association.bin` version-bump policy | **Resolved** — `dictionary.bin` is at `version: u32 = 2` (v3.5.8 Phase 1, added `syllable_count`); `association.bin` remains at `version: u32 = 1`. Rust readers reject mismatch at open time, with `dictionary.bin` v1 surfacing an explicit `v1→v2` rebuild message. |
 | D4 | Lift bitmask semantics to single shared-core enum | **Resolved** — bitmask constants now live in Rust `engine/lexicon` (`KHIIN_BIT`, `DEV_BIT`, `VARIANT_BIT`). Platform `EnabledDictionaries` DTOs mirror the layout for UI toggles only. |
 | D5 | `custom_dictionary` version-namespace unification | **Open** — both platforms keep native SQLite (`wont_migrate`); unification only matters if a future Rust slice ever owns custom-dict writes (no plan to do so). |
 | D6 | Lift `CustomDictionaryDerivation` to shared core | **Open** — currently `native_pending` in `migration-inventory.csv`; could be folded into `engine/lexicon::key_normalizer` if user-data write path ever moves. |

@@ -3,7 +3,7 @@
 > **Type**: Planning
 > **Keywords**: `roadmap`, `planning`, `v3.5.8`, `continuous-input`, `連續輸入`
 > **Status**: Active
-> **Last updated**: 2026-05-10
+> **Last updated**: 2026-05-10 (Phase 1 merged; next = Phase 1b)
 
 ---
 
@@ -142,16 +142,18 @@ tone-mark `ˊ` 是 unambiguous terminator → endings 直接由 mark 位置決�
 
 ### Phase 1 — dict.bin v2 + syllable_count
 
-**Files**:
-- `engine/lexicon/src/dictionary_reader.rs:3-16` — bump `SUPPORTED_VERSION: u32 = 2`,record layout 加 `u8 syllable_count` 在 `tl_len` 之後
-- `dictionary/build/build_dictionary.py` (或對應 Rust builder) — 寫入時補 syllable_count 欄位;source 為 TL key 的音節數 (由 `phonetics::syllable::split` 計算)
-- `engine/lexicon/src/handle.rs` — 載入失敗訊息明確指出 v1→v2 不相容
+**Files** (post-Phase-1 ground truth — corrects three plan-author file-path errors caught in pre-impl review):
+- `engine/lexicon/src/dictionary_reader.rs` — bump `SUPPORTED_VERSION: u32 = 2`, add `u8 syllable_count` after `tl_len`, advance `RECORD_FIXED_PREFIX` 8→9, surface `v1→v2` rebuild guidance in the version-mismatch error (the version check lives here, not in `handle.rs` as the original plan said)
+- `dictionary/build/create_dictionary_bin.py` (the canonical builder; the original plan referenced a non-existent `build_dictionary.py`) — bump `VERSION = 2`, encode + verify `syllable_count`
+- `dictionary/build/dictionary_records.py` — populate `syllable_count` on `DictionaryRecord` from the existing `_syllable_count(tl)` hyphen-count helper (the original plan referenced `phonetics::syllable::split`, which is not a public Rust API)
+- `docs/engine/binary-format.md` — v1→v2 layout diff
+- `dictionary/output/dictionary.bin` + iOS / Android assets — regenerated in lockstep so installs do not fail the version check
 
 **Out of scope for this phase**:**不**動 FST trailer (`derivation_type_u8` / `form_u8`)。candidate 消耗計算改用顯式 span (見 Phase 5)。
 
 **Tests**:
-- `engine/lexicon/tests/dictionary_reader_v2.rs` — 讀取手刻 v2 binary、驗證 syllable_count
-- `engine/lexicon/tests/rejects_v1.rs` — 期待 `LexiconError::InvalidBinary` 含 "v1→v2"
+- `engine/lexicon/tests/dictionary_reader_v2.rs` — 讀取手刻 v2 binary、驗證 syllable_count + truncated/min-size 邊界
+- `engine/lexicon/tests/rejects_v1.rs` — 期待 `LexiconError::InvalidBinary` 含 "v1→v2",且未相關版本 (e.g. v99) 不外洩此字樣
 
 **規模**:S (~150 LOC + 1 binary fixture)
 
@@ -427,7 +429,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 | Phase | 規模 (LOC 估) | Blocking 後續 | Visible to user | Status |
 |---|---|---|---|---|
 | 0 — roadmap rewrite | ~300 docs | 1, 1b, ... | (admin) | **Merged in PR #248** |
-| 1 — dict.bin v2 + syllable_count | ~150 + tests | 5 | No | Pending |
+| 1 — dict.bin v2 + syllable_count | ~150 + tests | 5 | No | **Merged in PR #249** |
 | **1b — FST fused toneless key** | ~200 + tests | **3, 5, 7, 8** | **No (但 user-visible 硬前置)** | Pending |
 | 2 — syllable inventory FST | ~300 + tests | 3 | No | Pending |
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | Pending |
@@ -440,7 +442,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = Phase 1 (dict.bin v2 + per-record `syllable_count`)。Phase 0 已 merge in PR #248。
+**Active PR pointer**:next round = Phase 1b (FST fused toneless key)。Phase 0 merged in PR #248,Phase 1 merged in PR #249。
 
 **總計**:11 個 PR,加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
 

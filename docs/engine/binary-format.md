@@ -32,7 +32,7 @@ All formats use **little-endian** integers and **strict UTF-8** strings. Both pl
 +---------------------------------------------------+
 | Header (16 bytes)                                 |
 |   "TKDB"                4 bytes                   |
-|   version (u32 LE)      4 bytes  (currently 1)    |
+|   version (u32 LE)      4 bytes  (currently 2)    |
 |   record_count (u32 LE) 4 bytes                   |
 |   build_ts (u32 LE)     4 bytes  (unix epoch)     |
 +---------------------------------------------------+
@@ -45,10 +45,20 @@ All formats use **little-endian** integers and **strict UTF-8** strings. Both pl
 |   frequency      u32 LE  (4 bytes)                |
 |   hanzi_len      u8      (1 byte; may be 0)       |
 |   tl_len         u8      (1 byte; must be > 0)    |
+|   syllable_count u8      (1 byte; v2; 1..=4)      |
 |   hanzi          hanzi_len bytes UTF-8            |
 |   tl             tl_len   bytes UTF-8             |
 +---------------------------------------------------+
 ```
+
+**v1 → v2 (v3.5.8 Phase 1)**: added per-record `syllable_count` u8 between
+`tl_len` and the `hanzi` payload. Used by Phase 5 span-local candidate
+ranking to disambiguate same-toneless-key entries with different syllable
+counts (e.g. `tsua` → `紙` (syll=1) vs `珠仔` (syll=2)). Range is
+`1..=4` (capped by `MAX_SYLLABLES` in
+`dictionary/build/dictionary_records.py`); `0` is reserved. The v2 reader
+will not parse v1 binaries — rebuild + redeploy artifacts in lockstep
+(see `dictionary/build/deploy.sh`).
 
 ### 1.2 Record access
 
@@ -60,7 +70,7 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 
 - `tl_len > 0` for every record (TL is required; hanzi may be absent).
 - `hanzi == ""` is encoded as `hanzi_len == 0` and yields `None` in the reader, **not** an empty string.
-- UTF-8 must be valid; the Rust reader skips the record (returns `None`) on `from_utf8` failure for `tl`; `hanzi` decode failure leaves `hanzi = None` but keeps the record.
+- UTF-8 must be valid; the Rust reader returns `None` for the whole record on `from_utf8` failure for either `tl` or `hanzi` (when `hanzi_len > 0`). Pre-Phase IV-B platform readers tolerated bad `hanzi` bytes by setting `hanzi = None` and keeping the record; the Rust reader is stricter.
 - Record bytes are not aligned; the Rust reader uses unaligned little-endian reads via `byteorder::LE`.
 
 ### 1.4 Validation performed by reader (Rust `engine/lexicon::dictionary_reader`)
@@ -69,10 +79,10 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 |---|---|
 | File ≥ 16 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Magic == `TKDB` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Version == 1 | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 2 (v1 surfaces explicit `v1→v2` rebuild guidance) | `open` returns `Err(LexiconError::InvalidBinary)` |
 | File ≥ `header + record_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Per-record bounds (`recordEnd ≤ data.len()`) | `record()` returns `None` |
-| Per-record min size 8 bytes | `record()` returns `None` |
+| Per-record min size 9 bytes (v2 fixed prefix) | `record()` returns `None` |
 | `pos + hanzi_len + tl_len ≤ record_end` | `record()` returns `None` |
 | TL UTF-8 valid | `record()` returns `None` |
 
@@ -265,7 +275,7 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 | Bitmask bit positions | build script, iOS `EnabledDictionaries.swift`, Android `EnabledDictionaries.kt`, Rust filter constants in `engine/lexicon`, this doc |
 | Key prefix list (`tl:` / `poj:` / `hanzi:`) | build script (`create_fst.py`), Rust `lexicon::key_normalizer`, this doc |
 | Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |
-| File version (`1`) | build script, Rust readers, this doc |
+| File version (`dictionary.bin = 2`, `association.bin = 1`) | build script, Rust readers, this doc |
 | Endianness (little-endian) | build script, Rust readers |
 
 ### 5.1 No-checksum acknowledgement
@@ -308,7 +318,7 @@ The build pipeline must:
 3. Emit fst via `engine/build-helpers/fst-builder` — keys carry the prefix (`tl:` / `poj:` / `hanzi:`) and the value packs rowid in the low 32 bits.
 4. Use bit positions exactly per §4.
 5. Set magic bytes per §1, §2.
-6. Use version `1` for both `.bin` files.
+6. Use version `2` for `dictionary.bin` (Phase 1 added per-record `syllable_count`) and version `1` for `association.bin`.
 7. Include all six trie key forms (TL num/no-tone/abbrev, POJ num/no-tone/abbrev) plus `hanzi:` keys for reverse lookup.
 
 ---

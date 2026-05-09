@@ -6,10 +6,10 @@
 輸入：output/dictionary.csv
 輸出：output/dictionary.bin
 
-Binary 格式（little-endian）：
+Binary 格式（version 2,little-endian）：
   Header (16 bytes):
     magic:    4 bytes  "TKDB"
-    version:  u32      1
+    version:  u32      2
     count:    u32      record count
     build_ts: u32      Unix timestamp
 
@@ -18,17 +18,22 @@ Binary 格式（little-endian）：
     Mapping: rowId (1-based) → offsets[rowId - 1]
 
   Records (variable-length, one per rowid):
-    bitmask:   u16   source flags
-    frequency: u32   frequency value
-    hanzi_len: u8    UTF-8 byte count (0 = NULL)
-    tl_len:    u8    UTF-8 byte count
-    hanzi:     [u8]  UTF-8 bytes
-    tl:        [u8]  UTF-8 bytes
+    bitmask:        u16  source flags
+    frequency:      u32  frequency value
+    hanzi_len:      u8   UTF-8 byte count (0 = NULL)
+    tl_len:         u8   UTF-8 byte count
+    syllable_count: u8   TL syllable count (v2; 1..=MAX_SYLLABLES)
+    hanzi:          [u8] UTF-8 bytes
+    tl:             [u8] UTF-8 bytes
 
   Bitmask bit layout (u16):
     0=kautian  1=taigitv  2=itaigi   3=sitbut  4=taihoa   5=taijit
     6=kungge   7=stti     8=khpoo    9=khiin   10=dev     11=lkk
     12=is_variant  13-15=reserved
+
+  v1 → v2 (v3.5.8 Phase 1): added per-record `syllable_count` u8 between
+  `tl_len` and the `hanzi` payload. v1 binaries are NOT readable by the
+  Rust v2 reader; rebuild + redeploy artifacts in lockstep.
 
 用法：
   python3 create_dictionary_bin.py            # 建立 binary
@@ -48,10 +53,13 @@ OUTPUT_FILE = OUTPUT_DIR / "dictionary.bin"
 SCRIPT_NAME = "create_dictionary_bin"
 
 MAGIC = b"TKDB"
-VERSION = 1
+VERSION = 2
 
-# Bitmask bit layout — must match Swift / Kotlin readers (CROSS-PLATFORM INVARIANT).
-# Authoritative definition: common/source_bits.py:SOURCE_BITS + IS_VARIANT_BIT.
+# Bitmask bit layout — must match `engine/lexicon/src/dictionary_reader.rs`
+# (CROSS-CRATE INVARIANT). Authoritative source for both bit positions and
+# field semantics: `common/source_bits.py::SOURCE_BITS` + `IS_VARIANT_BIT`.
+# iOS / Android no longer parse dictionary.bin directly post-Phase IV-B;
+# the Rust reader is the sole consumer of this layout.
 SOURCE_COLUMNS = DICT_BIN_COLUMNS
 
 
@@ -74,11 +82,12 @@ def encode_record(record: DictionaryRecord) -> bytes:
     tl_bytes = record.tl.encode("utf-8")
 
     return struct.pack(
-        f"<HIBB{len(hanzi_bytes)}s{len(tl_bytes)}s",
+        f"<HIBBB{len(hanzi_bytes)}s{len(tl_bytes)}s",
         bitmask,
         frequency,
         len(hanzi_bytes),
         len(tl_bytes),
+        record.syllable_count,
         hanzi_bytes,
         tl_bytes,
     )
@@ -173,8 +182,10 @@ def verify(logger):
         rec_end = offsets[i + 1] if i + 1 < count else len(data)
         rec_data = data[offset:rec_end]
 
-        bitmask, frequency, hanzi_len, tl_len = struct.unpack_from("<HIBB", rec_data, 0)
-        pos = 8
+        bitmask, frequency, hanzi_len, tl_len, syllable_count = struct.unpack_from(
+            "<HIBBB", rec_data, 0
+        )
+        pos = 9  # 2 bitmask + 4 freq + 1 hanzi_len + 1 tl_len + 1 syllable_count
         hanzi_bytes = rec_data[pos: pos + hanzi_len]
         pos += hanzi_len
         tl_bytes = rec_data[pos: pos + tl_len]
@@ -186,6 +197,7 @@ def verify(logger):
         expected_tl = rec.tl
         expected_freq = rec.frequency or 0
         expected_bitmask = encode_bitmask(rec)
+        expected_syllables = rec.syllable_count
 
         if hanzi != expected_hanzi:
             logger.error(f"  Row {i + 1}: hanzi mismatch: '{hanzi}' vs '{expected_hanzi}'")
@@ -199,6 +211,11 @@ def verify(logger):
         if bitmask != expected_bitmask:
             logger.error(
                 f"  Row {i + 1}: bitmask mismatch: {bitmask:#06x} vs {expected_bitmask:#06x}"
+            )
+            errors += 1
+        if syllable_count != expected_syllables:
+            logger.error(
+                f"  Row {i + 1}: syllable_count mismatch: {syllable_count} vs {expected_syllables}"
             )
             errors += 1
 

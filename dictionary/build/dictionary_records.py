@@ -55,6 +55,10 @@ class DictionaryRecord:
     poj_notone: str | None
     poj_abbrev: str | None
     sources: tuple[tuple[str, bool], ...]
+    # Number of TL syllables in `tl`, computed from hyphen / space count
+    # (see `_syllable_count`). Always 1..=MAX_SYLLABLES — out-of-range rows
+    # are filtered before construction. Encoded as `u8` in dictionary.bin v2.
+    syllable_count: int
 
     def source_dict(self) -> dict[str, bool]:
         return dict(self.sources)
@@ -93,7 +97,8 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
         if pd.isna(tl_raw):
             continue
         tl = str(tl_raw)
-        if tl == "" or _syllable_count(tl) > MAX_SYLLABLES:
+        syllable_count = _syllable_count(tl)
+        if tl == "" or syllable_count > MAX_SYLLABLES:
             continue
 
         hanzi = _normalise_optional(row["hanzi"])
@@ -119,6 +124,7 @@ def load_dictionary_records(csv_path: Path) -> list[DictionaryRecord]:
             poj_notone=_normalise_optional(row["poj_notone"]),
             poj_abbrev=_normalise_optional(row["poj_abbrev"]),
             sources=sources,
+            syllable_count=syllable_count,
         ))
 
     return records

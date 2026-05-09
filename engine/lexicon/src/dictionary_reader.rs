@@ -1,15 +1,16 @@
 //! `DictionaryReader` — TKDB mmap reader.
 //!
-//! Binary format (little-endian; mirrors iOS / Android readers byte-for-byte):
+//! Binary format (little-endian; canonical spec: `docs/engine/binary-format.md`):
 //!     Header: "TKDB" (4) || version u32 || count u32 || build_ts u32   (16 bytes)
 //!     Offset table: count × u32 (absolute byte offset to each record)
 //!     Records: bitmask u16 || frequency u32 || hanzi_len u8 || tl_len u8
-//!              || hanzi || tl
+//!              || syllable_count u8 || hanzi || tl
 //!
-//! `lookup` accesses by 1-based rowid (matches MARISA RecordTrie payload).
-//! `passes_filter` is the 3-layer (variant excl → khiin excl → source-OR
-//! with-dev) filter; mirrors iOS `DictionaryBinaryReader.passesFilter` and
-//! Android equivalent.
+//! `syllable_count` is the number of TL syllables in the entry, range 1..=4
+//! (capped by `MAX_SYLLABLES` at builder side).
+//!
+//! `lookup` accesses by 1-based rowid. `passes_filter` is the 3-layer
+//! (variant excl → khiin excl → source-OR with-dev) filter.
 
 // 中文: DictionaryReader — TKDB 詞庫二進位 mmap 讀取器。
 // 中文: 以 1-based rowid 索引;passes_filter 為 3 層過濾 (variant → khiin → 來源 OR + dev)。
@@ -20,7 +21,9 @@ use crate::error::LexiconError;
 
 const MAGIC: &[u8; 4] = b"TKDB";
 const HEADER_SIZE: usize = 16;
-const SUPPORTED_VERSION: u32 = 1;
+const SUPPORTED_VERSION: u32 = 2;
+/// bitmask(2) + frequency(4) + hanzi_len(1) + tl_len(1) + syllable_count(1).
+const RECORD_FIXED_PREFIX: usize = 9;
 
 /// Bit positions for the 12-source bitmask. Mirrors
 /// `dictionary/common/source_bits.py::SOURCE_BITS` (positions 0-11) +
@@ -32,7 +35,7 @@ pub const DEV_BIT: u16 = 1 << 10;
 // 中文: 異體字標記位元 (bit 12),由 variant 過濾邏輯使用。
 pub const VARIANT_BIT: u16 = 1 << 12;
 
-// 中文: 字典紀錄 — 來源 bitmask、出現頻率、漢字 (可選) 與 TL 羅馬字。
+// 中文: 字典紀錄 — 來源 bitmask、出現頻率、漢字 (可選)、TL 羅馬字、音節數。
 #[derive(Debug, Clone)]
 pub struct DictionaryRecord {
     // 中文: 來源 + 異體字標記的 13 位元 bitmask。
@@ -43,6 +46,8 @@ pub struct DictionaryRecord {
     pub hanzi: Option<String>,
     // 中文: TL 羅馬字寫法 (必填)。
     pub tl: String,
+    // 中文: TL key 的音節數 (1..=4)。
+    pub syllable_count: u8,
 }
 
 // 中文: TKDB mmap 讀取器,持有 mmap handle 與紀錄數等 header 資訊。
@@ -100,9 +105,17 @@ impl DictionaryReader {
         }
         let version = u32::from_le_bytes(bytes[4..8].try_into().expect("4 bytes"));
         if version != SUPPORTED_VERSION {
-            return Err(LexiconError::InvalidBinary(format!(
-                "dictionary.bin: unsupported version {version}"
-            )));
+            let detail = if version == 1 {
+                format!(
+                    "dictionary.bin: unsupported version 1 (expected {SUPPORTED_VERSION}; \
+                     v1→v2 binary layouts are not compatible — rebuild dictionary.bin)"
+                )
+            } else {
+                format!(
+                    "dictionary.bin: unsupported version {version} (expected {SUPPORTED_VERSION})"
+                )
+            };
+            return Err(LexiconError::InvalidBinary(detail));
         }
         let count = u32::from_le_bytes(bytes[8..12].try_into().expect("4 bytes"));
         let build_timestamp = u32::from_le_bytes(bytes[12..16].try_into().expect("4 bytes"));
@@ -150,7 +163,9 @@ impl DictionaryReader {
         } else {
             bytes.len()
         };
-        if record_end <= record_offset || record_end > bytes.len() || record_offset + 8 > record_end
+        if record_end <= record_offset
+            || record_end > bytes.len()
+            || record_offset + RECORD_FIXED_PREFIX > record_end
         {
             return None;
         }
@@ -162,6 +177,8 @@ impl DictionaryReader {
         let hanzi_len = bytes[pos] as usize;
         pos += 1;
         let tl_len = bytes[pos] as usize;
+        pos += 1;
+        let syllable_count = bytes[pos];
         pos += 1;
         if pos + hanzi_len + tl_len > record_end {
             return None;
@@ -186,6 +203,7 @@ impl DictionaryReader {
             frequency,
             hanzi,
             tl,
+            syllable_count,
         })
     }
 
