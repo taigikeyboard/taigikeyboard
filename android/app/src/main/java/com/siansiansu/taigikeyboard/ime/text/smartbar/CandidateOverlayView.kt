@@ -194,8 +194,10 @@ class CandidateOverlayView : FrameLayout {
     fun hide() {
         if (BuildConfig.DEBUG) {
             val stackTrace = Thread.currentThread().stackTrace
-            val caller = stackTrace.getOrNull(3)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: "unknown"
-            val caller2 = stackTrace.getOrNull(4)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: ""
+            val caller =
+                stackTrace.getOrNull(3)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: "unknown"
+            val caller2 =
+                stackTrace.getOrNull(4)?.let { "${it.className.substringAfterLast('.')}.${it.methodName}" } ?: ""
             Log.d(TAG, "[HIDE] hide() called from: $caller <- $caller2, isVisible=$isVisible")
         }
         if (!isVisible) return

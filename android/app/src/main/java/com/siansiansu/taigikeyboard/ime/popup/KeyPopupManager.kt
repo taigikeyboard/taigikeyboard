@@ -40,8 +40,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * provides the popup [androidx.compose.runtime.Recomposer] and the host
  * [View] used as the `showAtLocation` parent.
  */
-class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
-
+class KeyPopupManager(
+    private val ime: TaigiKeyboard,
+) : PopupHost {
     private val composeView: ComposeView
     private val composeViewExt: ComposeView
     private val window: PopupWindow
@@ -107,8 +108,8 @@ class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
     private fun <S> popupComposeView(
         state: StateFlow<S>,
         content: @Composable (S) -> Unit,
-    ): ComposeView {
-        return ComposeView(ime).apply {
+    ): ComposeView =
+        ComposeView(ime).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -121,10 +122,9 @@ class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
                 }
             }
         }
-    }
 
-    private fun createPopupWindow(view: View): PopupWindow {
-        return PopupWindow(ime).apply {
+    private fun createPopupWindow(view: View): PopupWindow =
+        PopupWindow(ime).apply {
             animationStyle = 0
             contentView = view
             enterTransition = null
@@ -134,7 +134,6 @@ class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
             isTouchable = false
             setBackgroundDrawable(null)
         }
-    }
 
     /**
      * Wires the popup [ComposeView]s to the IME service so they can compose
@@ -202,11 +201,9 @@ class KeyPopupManager(private val ime: TaigiKeyboard) : PopupHost {
         )
     }
 
-    private fun freshDisplayParams(): PopupDisplayParams =
-        resolveDisplayParams().also { cachedDisplay = it }
+    private fun freshDisplayParams(): PopupDisplayParams = resolveDisplayParams().also { cachedDisplay = it }
 
-    private fun reuseDisplayParams(): PopupDisplayParams =
-        cachedDisplay ?: freshDisplayParams()
+    private fun reuseDisplayParams(): PopupDisplayParams = cachedDisplay ?: freshDisplayParams()
 
     /**
      * Shows a preview popup for the given [anchor]. Mirrors the legacy

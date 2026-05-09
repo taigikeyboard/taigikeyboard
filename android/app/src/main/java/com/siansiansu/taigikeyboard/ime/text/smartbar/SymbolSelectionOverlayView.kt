@@ -117,7 +117,11 @@ class SymbolSelectionOverlayView : FrameLayout {
 
         selectedTab = SymbolCategory.FULL_WIDTH
         updateTabStyles()
-        buildGrid(SymbolData.rows(SymbolCategory.FULL_WIDTH), SymbolCategory.FULL_WIDTH.columnCount, SymbolCategory.FULL_WIDTH.fontSize)
+        buildGrid(
+            SymbolData.rows(SymbolCategory.FULL_WIDTH),
+            SymbolCategory.FULL_WIDTH.columnCount,
+            SymbolCategory.FULL_WIDTH.fontSize,
+        )
 
         visibility = VISIBLE
         isShowing = true

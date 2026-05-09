@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.map
  * Emoji 偏好設定管理器
  * 負責儲存和管理使用者的 emoji 相關偏好設定
  */
-class EmojiPreferences(private val context: Context) {
+class EmojiPreferences(
+    private val context: Context,
+) {
     companion object {
         private val Context.emojiPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
             name = "emoji_preferences",
@@ -26,12 +28,11 @@ class EmojiPreferences(private val context: Context) {
      * 觀察使用者偏好的膚色設定
      * 返回 EmojiSkinTone 的 Flow
      */
-    fun getPreferredSkinTone(): Flow<EmojiSkinTone> {
-        return context.emojiPreferencesDataStore.data.map { preferences ->
+    fun getPreferredSkinTone(): Flow<EmojiSkinTone> =
+        context.emojiPreferencesDataStore.data.map { preferences ->
             val codePoint = preferences[PREFERRED_SKIN_TONE_KEY] ?: EmojiSkinTone.DEFAULT.codePoint
             EmojiSkinTone.fromCodePoint(codePoint)
         }
-    }
 
     /**
      * 儲存使用者偏好的膚色設定

@@ -5,6 +5,19 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("jacoco")
+    id("com.diffplug.spotless")
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        targetExclude("**/build/**", "**/generated/**")
+        ktlint("1.5.0")
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint("1.5.0")
+    }
 }
 
 jacoco {
@@ -62,7 +75,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             // 確保 release 建置包含完整符號檔供 Google Play 使用
             ndk {

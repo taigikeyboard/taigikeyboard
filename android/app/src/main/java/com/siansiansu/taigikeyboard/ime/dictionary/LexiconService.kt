@@ -279,9 +279,19 @@ class LexiconService(
             InputMode.ENGLISH -> LexiconBridge.LexiconInputMode.TL
         }
         return if (isCJK) {
-            LexiconBridge.searchByHanzi(query = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = filterBitmask)
+            LexiconBridge.searchByHanzi(
+                query = input,
+                inputMode = bridgeMode,
+                limit = limit.toUInt(),
+                enabledSourcesBitmask = filterBitmask,
+            )
         } else {
-            LexiconBridge.searchWithSources(input = input, inputMode = bridgeMode, limit = limit.toUInt(), enabledSourcesBitmask = filterBitmask)
+            LexiconBridge.searchWithSources(
+                input = input,
+                inputMode = bridgeMode,
+                limit = limit.toUInt(),
+                enabledSourcesBitmask = filterBitmask,
+            )
         }
     }
 
@@ -289,18 +299,18 @@ class LexiconService(
         rows: List<LexiconBridge.Row>,
         inputMode: InputMode,
         limit: Int,
-    ): List<DictionarySearchResult> {
-        return rows.map { row ->
-            val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
-            val bitmask = row.sourceBitmask?.toInt() ?: 0
-            DictionarySearchResult(
-                id = row.id.toInt(),
-                roman = roman,
-                tl = row.roman,
-                hanzi = row.hanzi,
-                frequency = row.lengthScore ?: 0,
-                sources = LexiconBitmask.sourcesFromBitmask(bitmask),
-            )
-        }.take(limit)
-    }
+    ): List<DictionarySearchResult> =
+        rows
+            .map { row ->
+                val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
+                val bitmask = row.sourceBitmask?.toInt() ?: 0
+                DictionarySearchResult(
+                    id = row.id.toInt(),
+                    roman = roman,
+                    tl = row.roman,
+                    hanzi = row.hanzi,
+                    frequency = row.lengthScore ?: 0,
+                    sources = LexiconBitmask.sourcesFromBitmask(bitmask),
+                )
+            }.take(limit)
 }

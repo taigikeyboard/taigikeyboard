@@ -58,7 +58,9 @@ data class PopupCell(
     val useCustomTypeface: Boolean,
 )
 
-enum class PopupIcon(val drawableRes: Int) {
+enum class PopupIcon(
+    val drawableRes: Int,
+) {
     Settings(R.drawable.ic_settings),
     SentimentSatisfied(R.drawable.ic_sentiment_satisfied),
 }

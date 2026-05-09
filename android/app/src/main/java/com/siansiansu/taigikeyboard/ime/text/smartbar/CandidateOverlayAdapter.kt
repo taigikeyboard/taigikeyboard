@@ -56,18 +56,26 @@ class CandidateOverlayAdapter(
         return cachedTypeface ?: Typeface.DEFAULT
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RowViewHolder {
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): RowViewHolder {
         val rowView = gridCellInflater.inflate(R.layout.candidate_overlay_row, parent, false)
         return RowViewHolder(rowView)
     }
 
-    override fun onBindViewHolder(holder: RowViewHolder, position: Int) {
+    override fun onBindViewHolder(
+        holder: RowViewHolder,
+        position: Int,
+    ) {
         val row = getItem(position)
         val isLastRow = position == itemCount - 1
         holder.bind(row, isLastRow)
     }
 
-    inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class RowViewHolder(
+        itemView: View,
+    ) : RecyclerView.ViewHolder(itemView) {
         private val itemsLayout: LinearLayout = itemView.findViewById(R.id.row_items_layout)
         private val divider: View = itemView.findViewById(R.id.row_divider)
 
@@ -91,7 +99,10 @@ class CandidateOverlayAdapter(
             }
         }
 
-        fun bind(row: CandidateRow, isLastRow: Boolean) {
+        fun bind(
+            row: CandidateRow,
+            isLastRow: Boolean,
+        ) {
             val typeface = getTypeface()
             val isSwapped = isTranslateSwapped()
 
@@ -125,15 +136,16 @@ class CandidateOverlayAdapter(
 
                 // Pixel-based layout: measuredWidth as base, weight=1 for equal flex
                 // Composing cell: weight=0 to prevent stretching beyond content width
-                val lp = LinearLayout.LayoutParams(
-                    item.measuredWidth,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    if (isComposing) 0f else 1.0f,
-                ).apply {
-                    if (cellIndex > 0) {
-                        marginStart = spacing
+                val lp = LinearLayout
+                    .LayoutParams(
+                        item.measuredWidth,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        if (isComposing) 0f else 1.0f,
+                    ).apply {
+                        if (cellIndex > 0) {
+                            marginStart = spacing
+                        }
                     }
-                }
                 cellView.layoutParams = lp
 
                 // Composing cell: key_bgColor with InsetDrawable (match smartbar approach)
@@ -213,7 +225,10 @@ class CandidateOverlayAdapter(
     // --- DiffUtil ---
 
     class RowDiffCallback : DiffUtil.ItemCallback<CandidateRow>() {
-        override fun areItemsTheSame(oldItem: CandidateRow, newItem: CandidateRow): Boolean {
+        override fun areItemsTheSame(
+            oldItem: CandidateRow,
+            newItem: CandidateRow,
+        ): Boolean {
             // Rows don't have stable IDs; compare by position (handled by ListAdapter)
             // Use content-based identity: same items in same order
             if (oldItem.items.size != newItem.items.size) return false
@@ -222,8 +237,9 @@ class CandidateOverlayAdapter(
             }
         }
 
-        override fun areContentsTheSame(oldItem: CandidateRow, newItem: CandidateRow): Boolean {
-            return oldItem == newItem
-        }
+        override fun areContentsTheSame(
+            oldItem: CandidateRow,
+            newItem: CandidateRow,
+        ): Boolean = oldItem == newItem
     }
 }

@@ -47,7 +47,12 @@ class DataManagementActivity : ComponentActivity() {
                             contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray(Charsets.UTF_8)) }
                         }
                     }
-                    Toast.makeText(this@DataManagementActivity, DictionaryTexts.exportBackupSuccess, Toast.LENGTH_SHORT).show()
+                    Toast
+                        .makeText(
+                            this@DataManagementActivity,
+                            DictionaryTexts.exportBackupSuccess,
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 } catch (_: Exception) {
                     Toast.makeText(this@DataManagementActivity, CommonTexts.exportFailed, Toast.LENGTH_SHORT).show()
                 }
@@ -66,7 +71,13 @@ class DataManagementActivity : ComponentActivity() {
                     Toast
                         .makeText(
                             this@DataManagementActivity,
-                            String.format(Locale.TAIWAN, DictionaryTexts.importBackupResult, result.customDict, result.frequency, result.association),
+                            String.format(
+                                Locale.TAIWAN,
+                                DictionaryTexts.importBackupResult,
+                                result.customDict,
+                                result.frequency,
+                                result.association,
+                            ),
                             Toast.LENGTH_LONG,
                         ).show()
                 } catch (_: Exception) {

@@ -13,15 +13,11 @@ enum class KeyVariation {
 
     companion object {
         @SuppressLint("DefaultLocale")
-        fun fromString(string: String): KeyVariation {
-            return valueOf(string.uppercase())
-        }
+        fun fromString(string: String): KeyVariation = valueOf(string.uppercase())
     }
 }
 
 class KeyVariationAdapter {
     @FromJson
-    fun fromJson(raw: String): KeyVariation {
-        return KeyVariation.fromString(raw)
-    }
+    fun fromJson(raw: String): KeyVariation = KeyVariation.fromString(raw)
 }

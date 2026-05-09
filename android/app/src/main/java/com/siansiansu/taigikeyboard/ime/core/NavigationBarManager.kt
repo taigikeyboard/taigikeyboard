@@ -31,7 +31,10 @@ class NavigationBarManager {
      * @param window IME 的 Window
      * @param context Context
      */
-    fun updateNavigationBar(window: Window, context: Context) {
+    fun updateNavigationBar(
+        window: Window,
+        context: Context,
+    ) {
         val isDark = isDarkMode(context)
 
         if (BuildConfig.DEBUG) {
@@ -42,7 +45,8 @@ class NavigationBarManager {
 
         // 設定導覽列前景色（圖示顏色）
         // light mode: 深色圖示，dark mode: 淺色圖示
-        WindowCompat.getInsetsController(window, window.decorView)
+        WindowCompat
+            .getInsetsController(window, window.decorView)
             .isAppearanceLightNavigationBars = !isDark
 
         if (BuildConfig.DEBUG) {

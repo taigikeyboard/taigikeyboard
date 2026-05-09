@@ -23,9 +23,13 @@ data class CandidateStripState(
 sealed class CandidateMode {
     data object Empty : CandidateMode()
 
-    data class Taigi(val items: List<TaigiWord>) : CandidateMode()
+    data class Taigi(
+        val items: List<TaigiWord>,
+    ) : CandidateMode()
 
-    data class English(val items: List<TaigiWord>) : CandidateMode()
+    data class English(
+        val items: List<TaigiWord>,
+    ) : CandidateMode()
 }
 
 data class CandidateDisplayParams(

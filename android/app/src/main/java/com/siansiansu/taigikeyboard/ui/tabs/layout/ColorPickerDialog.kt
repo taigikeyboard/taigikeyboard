@@ -1,9 +1,5 @@
 package com.siansiansu.taigikeyboard.ui.tabs.layout
 
-import android.graphics.Bitmap
-import androidx.core.graphics.createBitmap
-import androidx.core.graphics.set
-import androidx.core.graphics.toColorInt
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,6 +57,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.set
+import androidx.core.graphics.toColorInt
 import com.siansiansu.taigikeyboard.localization.LayoutTexts
 import kotlin.math.roundToInt
 import android.graphics.Color as AndroidColor
@@ -384,8 +383,18 @@ private fun ColorSpectrumContent(
         )
         val sx = selectorNormX * size.width
         val sy = selectorNormY * size.height
-        drawCircle(Color.Black, SELECTOR_OUTER_RADIUS.toPx(), Offset(sx, sy), style = Stroke(SELECTOR_OUTER_STROKE.toPx()))
-        drawCircle(Color.White, SELECTOR_INNER_RADIUS.toPx(), Offset(sx, sy), style = Stroke(SELECTOR_INNER_STROKE.toPx()))
+        drawCircle(
+            Color.Black,
+            SELECTOR_OUTER_RADIUS.toPx(),
+            Offset(sx, sy),
+            style = Stroke(SELECTOR_OUTER_STROKE.toPx()),
+        )
+        drawCircle(
+            Color.White,
+            SELECTOR_INNER_RADIUS.toPx(),
+            Offset(sx, sy),
+            style = Stroke(SELECTOR_INNER_STROKE.toPx()),
+        )
     }
 }
 

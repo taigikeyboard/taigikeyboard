@@ -6,7 +6,9 @@ package com.siansiansu.taigikeyboard.ime.keyboard
  *
  * 參考：https://unicode.org/reports/tr51/#Emoji_Modifiers
  */
-enum class EmojiSkinTone(val codePoint: Int) {
+enum class EmojiSkinTone(
+    val codePoint: Int,
+) {
     /**
      * 預設（無膚色修飾符）
      */
@@ -48,15 +50,11 @@ enum class EmojiSkinTone(val codePoint: Int) {
          * 從 codePoint 取得對應的 EmojiSkinTone
          * 如果找不到對應的值，回傳 DEFAULT
          */
-        fun fromCodePoint(codePoint: Int): EmojiSkinTone {
-            return entries.find { it.codePoint == codePoint } ?: DEFAULT
-        }
+        fun fromCodePoint(codePoint: Int): EmojiSkinTone = entries.find { it.codePoint == codePoint } ?: DEFAULT
 
         /**
          * 取得所有可用的膚色選項（不含 DEFAULT）
          */
-        fun availableTones(): List<EmojiSkinTone> {
-            return entries.filter { it != DEFAULT }
-        }
+        fun availableTones(): List<EmojiSkinTone> = entries.filter { it != DEFAULT }
     }
 }

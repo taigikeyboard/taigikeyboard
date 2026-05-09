@@ -1,3 +1,9 @@
+--swiftversion 5.9
+
+# Excludes
+#   ios/Sources/TaigiKeyboard/Engine/Generated  protobuf-generated *.pb.swift
+#   ios/RustEngine                              swift-bridge FFI shim + xcframework
 --exclude ios/Sources/TaigiKeyboard/Engine/Generated
+--exclude ios/RustEngine
 --exclude ios/build
 --exclude references

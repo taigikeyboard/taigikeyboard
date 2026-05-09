@@ -6,7 +6,11 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test doc dict help
+.PHONY: build test doc dict help \
+        fmt fmt-check lint \
+        fmt-rust fmt-check-rust lint-rust \
+        fmt-swift fmt-check-swift \
+        fmt-kotlin fmt-check-kotlin lint-kotlin
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
 # + Android jniLibs, run tests. The only build entry point.
@@ -42,8 +46,62 @@ dict:
 	bash $(DICT)/run.sh
 	bash $(DICT)/build.sh
 
+# ---------------------------------------------------------------------------
+# Formatting & lint
+# ---------------------------------------------------------------------------
+# Umbrella targets fan out to per-platform recipes. Per-platform recipes can
+# also be invoked directly (e.g. `make fmt-rust`) when iterating on one stack.
+#
+#   Rust    rustfmt + clippy (matches CI .github/workflows/ci.yml)
+#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat
+#           Install:  brew install swiftformat
+#   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle
+#           No extra install; uses the project's Gradle wrapper.
+
+fmt: fmt-rust fmt-swift fmt-kotlin
+
+fmt-check: fmt-check-rust fmt-check-swift fmt-check-kotlin
+
+lint: lint-rust lint-kotlin
+
+# --- Rust ---
+fmt-rust:
+	cd $(ENGINE) && cargo fmt --all
+
+fmt-check-rust:
+	cd $(ENGINE) && cargo fmt --all -- --check
+
+lint-rust:
+	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
+
+# --- Swift ---
+fmt-swift:
+	swiftformat ios
+
+fmt-check-swift:
+	swiftformat --lint ios
+
+# --- Kotlin ---
+# Requires Spotless plugin in android/app/build.gradle (see CLAUDE-managed
+# Makefile docs). `spotlessCheck` doubles as ktlint lint.
+fmt-kotlin:
+	cd android && ./gradlew spotlessApply
+
+fmt-check-kotlin:
+	cd android && ./gradlew spotlessCheck
+
+lint-kotlin: fmt-check-kotlin
+
 help:
-	@echo "  make build  Full Rust rebuild: proto regen + iOS + Android + tests"
-	@echo "  make test   cargo test --workspace"
-	@echo "  make doc    Build rustdoc HTML for engine workspace and open in browser"
-	@echo "  make dict   Full dictionary regen + deploy to Android/iOS"
+	@echo "  make build       Full Rust rebuild: proto regen + iOS + Android + tests"
+	@echo "  make test        cargo test --workspace"
+	@echo "  make doc         Build rustdoc HTML for engine workspace and open in browser"
+	@echo "  make dict        Full dictionary regen + deploy to Android/iOS"
+	@echo ""
+	@echo "  make fmt         Apply formatting across Rust + Swift + Kotlin"
+	@echo "  make fmt-check   Verify formatting without writes (CI-style)"
+	@echo "  make lint        cargo clippy + spotlessCheck (Android Lint disabled)"
+	@echo ""
+	@echo "  Per-platform: fmt-rust / fmt-swift / fmt-kotlin"
+	@echo "                fmt-check-rust / fmt-check-swift / fmt-check-kotlin"
+	@echo "                lint-rust / lint-kotlin"

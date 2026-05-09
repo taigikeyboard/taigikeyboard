@@ -26,15 +26,13 @@ enum class EmojiCategory {
     FLAGS,
     ;
 
-    override fun toString(): String {
-        return super.toString().replace("_", " & ")
-    }
+    override fun toString(): String = super.toString().replace("_", " & ")
 
     /**
      * 取得對應的 Material Icon
      */
-    fun icon(): ImageVector {
-        return when (this) {
+    fun icon(): ImageVector =
+        when (this) {
             SMILEYS_EMOTION -> Icons.Default.EmojiEmotions
             PEOPLE_BODY -> Icons.Default.EmojiPeople
             ANIMALS_NATURE -> Icons.Default.EmojiNature
@@ -45,12 +43,9 @@ enum class EmojiCategory {
             SYMBOLS -> Icons.Default.EmojiSymbols
             FLAGS -> Icons.Default.EmojiFlags
         }
-    }
 
     companion object {
         @SuppressLint("DefaultLocale")
-        fun fromString(string: String): EmojiCategory {
-            return valueOf(string.replace(" & ", "_").uppercase())
-        }
+        fun fromString(string: String): EmojiCategory = valueOf(string.replace(" & ", "_").uppercase())
     }
 }

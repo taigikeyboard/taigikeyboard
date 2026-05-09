@@ -4,6 +4,7 @@
 .gradletasknamecache
 local.properties
 app/.cxx
+**/build/
 **/release/
 **/debug/
 *.aab

@@ -31,7 +31,13 @@ class CandidateClickHandler(
     private val getOutputBothScripts: () -> Boolean,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
-    private val onNextWordPrediction: (displayText: String, committedText: String, roman: String, hanzi: String?, rawInput: String) -> Unit,
+    private val onNextWordPrediction: (
+        displayText: String,
+        committedText: String,
+        roman: String,
+        hanzi: String?,
+        rawInput: String,
+    ) -> Unit,
 ) {
     /**
      * Handle candidate click from RecyclerView.
@@ -47,7 +53,10 @@ class CandidateClickHandler(
 
             if (BuildConfig.DEBUG) {
                 val isNextWord = getCurrentSuggestions().firstOrNull()?.id?.let { it < 0 } ?: false
-                Log.d(TAG, "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${getCurrentSuggestions().size}")
+                Log.d(
+                    TAG,
+                    "[CLICK-ENTRY] onClick triggered, isNextWordMode=$isNextWord, suggestionsCount=${getCurrentSuggestions().size}",
+                )
                 Log.d(TAG, "[CLICK] index=$index, suggestionsSize=${getCurrentSuggestions().size}")
             }
 
@@ -96,12 +105,18 @@ class CandidateClickHandler(
                 }
 
             if (BuildConfig.DEBUG) {
-                Log.d(TAG, "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'")
+                Log.d(
+                    TAG,
+                    "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'",
+                )
                 Log.d(
                     TAG,
                     "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
                 )
-                Log.d(TAG, "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion")
+                Log.d(
+                    TAG,
+                    "[CLICK] textToCommit='$textToCommit', isNextWord=$isNextWordPrediction, isEnglish=$isEnglishSuggestion",
+                )
             }
 
             if (isEnglishSuggestion) {

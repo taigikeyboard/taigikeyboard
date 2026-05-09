@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
@@ -161,7 +161,10 @@ internal fun KeyContent(
 }
 
 @Composable
-private fun IconContent(visual: KeyVisual.Icon, colors: KeyboardColorSettings) {
+private fun IconContent(
+    visual: KeyVisual.Icon,
+    colors: KeyboardColorSettings,
+) {
     // Legacy `KeyView.onDraw` icon sizing: aspect-ratio center crop to a
     // square of side = min(w,h), then inset 0.15 × height padding on all
     // four sides. Result: icon side length = min(w,h) - 2 × 0.15h.
@@ -207,8 +210,18 @@ private fun LabelContent(
     } else {
         colors.keyTextColor ?: themeColors.keyFg
     }
-    val labelPaint = remember { Paint().apply { isAntiAlias = true; textAlign = Paint.Align.CENTER } }
-    val hintPaint = remember { Paint().apply { isAntiAlias = true; textAlign = Paint.Align.CENTER } }
+    val labelPaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+    }
+    val hintPaint = remember {
+        Paint().apply {
+            isAntiAlias = true
+            textAlign = Paint.Align.CENTER
+        }
+    }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val w = size.width
@@ -314,21 +327,26 @@ private fun scaleTextSizeForKey(
     label: String,
     baseTextSize: Float,
     keyboardLayoutType: String,
-): Float = when {
-    data.code == KeyCode.VIEW_SYMBOLS -> baseTextSize * 0.80f
-    data.code == KeyCode.ENTER && label.isNotEmpty() -> baseTextSize * 0.85f
-    data.code == KeyCode.VIEW_NUMERIC_ADVANCED ->
-        if (label == "、") baseTextSize else baseTextSize * 0.55f
-    data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.SPACE -> baseTextSize * 0.55f
-    data.type == KeyType.CHARACTER && keyboardLayoutType == "moe2" && label.length >= 3 ->
-        baseTextSize * 0.75f
-    else -> baseTextSize
-}
+): Float =
+    when {
+        data.code == KeyCode.VIEW_SYMBOLS -> baseTextSize * 0.80f
+        data.code == KeyCode.ENTER && label.isNotEmpty() -> baseTextSize * 0.85f
+        data.code == KeyCode.VIEW_NUMERIC_ADVANCED ->
+            if (label == "、") baseTextSize else baseTextSize * 0.55f
+        data.code == KeyCode.VIEW_NUMERIC || data.code == KeyCode.SPACE -> baseTextSize * 0.55f
+        data.type == KeyType.CHARACTER && keyboardLayoutType == "moe2" && label.length >= 3 ->
+            baseTextSize * 0.75f
+        else -> baseTextSize
+    }
 
 /** Sealed visual content — exactly one of icon, label, or empty per key. */
 private sealed interface KeyVisual {
     data object Empty : KeyVisual
-    data class Label(val label: String) : KeyVisual
+
+    data class Label(
+        val label: String,
+    ) : KeyVisual
+
     data class Icon(
         @DrawableRes val drawableRes: Int,
         val tintArgb: Int,
@@ -353,18 +371,19 @@ internal data class ThemePalette(
     val keyEnterBgPressed: Int,
 ) {
     companion object {
-        fun from(context: Context): ThemePalette = ThemePalette(
-            keyFg = getColorFromAttr(context, R.attr.key_fgColor),
-            keyEnterFg = getColorFromAttr(context, R.attr.key_enter_fgColor),
-            accent = getColorFromAttr(context, R.attr.colorAccent),
-            keyBg = getColorFromAttr(context, R.attr.key_bgColor),
-            keyBgPressed = getColorFromAttr(context, R.attr.key_bgColorPressed),
-            keyBgActive = getColorFromAttr(context, R.attr.key_bgColorActive),
-            keyFunctionBg = getColorFromAttr(context, R.attr.key_function_bgColor),
-            keyFunctionBgPressed = getColorFromAttr(context, R.attr.key_function_bgColorPressed),
-            keyEnterBg = getColorFromAttr(context, R.attr.key_enter_bgColor),
-            keyEnterBgPressed = getColorFromAttr(context, R.attr.key_enter_bgColorPressed),
-        )
+        fun from(context: Context): ThemePalette =
+            ThemePalette(
+                keyFg = getColorFromAttr(context, R.attr.key_fgColor),
+                keyEnterFg = getColorFromAttr(context, R.attr.key_enter_fgColor),
+                accent = getColorFromAttr(context, R.attr.colorAccent),
+                keyBg = getColorFromAttr(context, R.attr.key_bgColor),
+                keyBgPressed = getColorFromAttr(context, R.attr.key_bgColorPressed),
+                keyBgActive = getColorFromAttr(context, R.attr.key_bgColorActive),
+                keyFunctionBg = getColorFromAttr(context, R.attr.key_function_bgColor),
+                keyFunctionBgPressed = getColorFromAttr(context, R.attr.key_function_bgColorPressed),
+                keyEnterBg = getColorFromAttr(context, R.attr.key_enter_bgColor),
+                keyEnterBgPressed = getColorFromAttr(context, R.attr.key_enter_bgColorPressed),
+            )
     }
 }
 
@@ -413,7 +432,8 @@ private fun resolveKeyVisual(
         KeyCode.SWITCH_TO_MEDIA_CONTEXT ->
             KeyVisual.Icon(R.drawable.ic_sentiment_satisfied, themeColors.keyFg, useEnterColor = false)
         KeyCode.SWITCH_TO_TEXT_CONTEXT,
-        KeyCode.VIEW_CHARACTERS -> KeyVisual.Label(resources.getString(R.string.key__view_characters))
+        KeyCode.VIEW_CHARACTERS,
+        -> KeyVisual.Label(resources.getString(R.string.key__view_characters))
         KeyCode.VIEW_NUMERIC -> KeyVisual.Label(resources.getString(R.string.key__view_numeric))
         KeyCode.VIEW_NUMERIC_ADVANCED -> {
             // In SYMBOLS mode with translate-swapped, this slot becomes "、".
@@ -452,7 +472,8 @@ private fun resolveEnterVisual(
             EditorInfo.IME_ACTION_DONE -> R.drawable.ic_done
             EditorInfo.IME_ACTION_GO,
             EditorInfo.IME_ACTION_NEXT,
-            EditorInfo.IME_ACTION_PREVIOUS -> R.drawable.ic_arrow_right_alt
+            EditorInfo.IME_ACTION_PREVIOUS,
+            -> R.drawable.ic_arrow_right_alt
             EditorInfo.IME_ACTION_NONE -> R.drawable.ic_keyboard_return
             EditorInfo.IME_ACTION_SEARCH -> R.drawable.ic_search
             EditorInfo.IME_ACTION_SEND -> R.drawable.ic_send
@@ -479,23 +500,25 @@ private fun resolveSpaceVisual(
     mode: KeyboardMode,
     inputMode: String,
     keyFg: Int,
-): KeyVisual = when (mode) {
-    KeyboardMode.NUMERIC,
-    KeyboardMode.NUMERIC_ADVANCED,
-    KeyboardMode.PHONE,
-    KeyboardMode.PHONE2 -> KeyVisual.Icon(R.drawable.ic_space_bar, keyFg, useEnterColor = false)
-    KeyboardMode.CHARACTERS -> {
-        val label = when (inputMode) {
-            "poj" -> "POJ"
-            "tl" -> "TL"
-            "tps" -> "TPS"
-            "english" -> "EN"
-            else -> null
+): KeyVisual =
+    when (mode) {
+        KeyboardMode.NUMERIC,
+        KeyboardMode.NUMERIC_ADVANCED,
+        KeyboardMode.PHONE,
+        KeyboardMode.PHONE2,
+        -> KeyVisual.Icon(R.drawable.ic_space_bar, keyFg, useEnterColor = false)
+        KeyboardMode.CHARACTERS -> {
+            val label = when (inputMode) {
+                "poj" -> "POJ"
+                "tl" -> "TL"
+                "tps" -> "TPS"
+                "english" -> "EN"
+                else -> null
+            }
+            if (label != null) KeyVisual.Label(label) else KeyVisual.Empty
         }
-        if (label != null) KeyVisual.Label(label) else KeyVisual.Empty
+        else -> KeyVisual.Empty
     }
-    else -> KeyVisual.Empty
-}
 
 /**
  * Direct port of `KeyView.getComputedLetter`. Exposed as `internal` so the
@@ -509,8 +532,11 @@ internal fun computeKeyLetter(
     capsLock: Boolean,
 ): String {
     if (data.code == KeyCode.URI_COMPONENT_TLD) {
-        return if (caps) data.label.uppercase(Locale.getDefault())
-        else data.label.lowercase(Locale.getDefault())
+        return if (caps) {
+            data.label.uppercase(Locale.getDefault())
+        } else {
+            data.label.lowercase(Locale.getDefault())
+        }
     }
     val baseLabel = if (data.label.isNotEmpty() && data.label != data.code.toChar().toString()) {
         data.label
@@ -580,7 +606,10 @@ private val toneHints = mapOf(
 /** No tone marks for "0", "1", "4" — render space for layout consistency. */
 private val noToneHintCodes = setOf(48, 49, 52)
 
-internal fun toneHintForCode(code: Int, inputMode: String?): String? {
+internal fun toneHintForCode(
+    code: Int,
+    inputMode: String?,
+): String? {
     if (inputMode == "english") return null
     if (code == 57) {
         // Tone 9: POJ uses breve (˘ U+02D8); TL uses double prime (ʺ U+02BA).

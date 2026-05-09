@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,7 +44,6 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 /** Taigi candidate strip — horizontally scrolling lazy row of candidates. */

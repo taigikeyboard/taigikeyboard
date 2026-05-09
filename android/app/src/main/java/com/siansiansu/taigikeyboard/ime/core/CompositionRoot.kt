@@ -62,14 +62,15 @@ class CompositionRoot private constructor(
      * / `NextWordService.predict` to completion with empty-result
      * fallback instead of honoring the cancel (Codex r3173789380).
      */
-    suspend fun awaitLexiconReady(): Boolean = try {
-        lexiconReady.await()
-        true
-    } catch (ce: kotlinx.coroutines.CancellationException) {
-        throw ce
-    } catch (_: Throwable) {
-        false
-    }
+    suspend fun awaitLexiconReady(): Boolean =
+        try {
+            lexiconReady.await()
+            true
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
+        } catch (_: Throwable) {
+            false
+        }
 
     companion object {
         @Volatile private var instance: CompositionRoot? = null

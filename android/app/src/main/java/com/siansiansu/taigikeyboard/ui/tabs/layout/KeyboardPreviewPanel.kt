@@ -39,6 +39,7 @@ import com.siansiansu.taigikeyboard.ime.popup.NoOpPopupHost
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyBounds
+import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyDimensionsInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyEventDispatcher
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyTouchCoordinator
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
@@ -47,7 +48,6 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayout
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyDimensionsInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.isLandscape
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
@@ -167,10 +167,15 @@ fun KeyboardPreviewPanel(
 // The stub satisfies the type contract; the methods are unreachable.
 private object NoOpKeyEventDispatcher : KeyEventDispatcher {
     override fun dispatchKeyPress(data: KeyData) = Unit
+
     override fun showInputMethodPicker() = Unit
+
     override fun keyPressVibrate() = Unit
+
     override fun keyPressSound(data: KeyData) = Unit
+
     override val longPressDelayMs: Long = 0L
+
     override fun resolveAnchor(
         bounds: KeyBounds,
         keyboardWidth: Int,
@@ -229,8 +234,10 @@ private fun CandidatePreviewRow(
     // Key on isDarkTheme so colors refresh on light/dark mode changes
     val isDarkTheme = isSystemInDarkTheme()
     val defaultBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_bgColor) }
-    val defaultTextColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_fgColor) }
-    val subtitleColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_subtitle_fgColor) }
+    val defaultTextColor =
+        remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_fgColor) }
+    val subtitleColor =
+        remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_candidate_subtitle_fgColor) }
     val composingBgColor = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.semiTransparentColor) }
     val iconTint = remember(isDarkTheme) { resolveKeyboardThemeColor(context, R.attr.smartbar_fgColor) }
 

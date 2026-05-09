@@ -157,7 +157,11 @@ fun HomeScreen(
                     icon = painterResource(R.drawable.ic_open_in_new),
                     label = HomeTexts.rateUs,
                     labelColor = linkBlue,
-                    onClick = { onUrlClick("https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard") },
+                    onClick = {
+                        onUrlClick(
+                            "https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard",
+                        )
+                    },
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(

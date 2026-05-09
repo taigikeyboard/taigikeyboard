@@ -178,9 +178,16 @@ fun KeyboardLayout(
 }
 
 /** Resolved placement of a single key composable. */
-private data class Placement(val placeable: androidx.compose.ui.layout.Placeable, val x: Int, val y: Int)
+private data class Placement(
+    val placeable: androidx.compose.ui.layout.Placeable,
+    val x: Int,
+    val y: Int,
+)
 
-private data class RowLayoutResult(val placements: List<Placement>, val bounds: List<KeyBounds>)
+private data class RowLayoutResult(
+    val placements: List<Placement>,
+    val bounds: List<KeyBounds>,
+)
 
 /**
  * Per-row flex algorithm — port of FlexboxLayout's behavior under the legacy
@@ -303,65 +310,82 @@ private fun desiredWidthFor(
     mode: KeyboardMode,
     desiredKeyWidth: Int,
     keyboardLayoutType: String,
-): Int = when (mode) {
-    KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 ->
-        (desiredKeyWidth * 2.68f).toInt()
-    KeyboardMode.NUMERIC_ADVANCED -> when (key.code) {
-        44, 46 -> desiredKeyWidth
-        KeyCode.VIEW_SYMBOLS, 61 -> (desiredKeyWidth * 1.34f).toInt()
-        else -> (desiredKeyWidth * 1.56f).toInt()
-    }
-    else -> when (key.code) {
-        KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
-        KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER ->
-            (desiredKeyWidth * 1.56f).toInt()
-        KeyCode.TRANSLATE -> {
-            val scale = when (keyboardLayoutType) {
-                "phahTaigi", "moe1" -> 2.0f
-                else -> 1.5f
-            }
-            (desiredKeyWidth * scale).toInt()
+): Int =
+    when (mode) {
+        KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 ->
+            (desiredKeyWidth * 2.68f).toInt()
+        KeyboardMode.NUMERIC_ADVANCED -> when (key.code) {
+            44, 46 -> desiredKeyWidth
+            KeyCode.VIEW_SYMBOLS, 61 -> (desiredKeyWidth * 1.34f).toInt()
+            else -> (desiredKeyWidth * 1.56f).toInt()
         }
-        KeyCode.SPACE -> when (mode) {
-            KeyboardMode.SYMBOLS -> (desiredKeyWidth * 0.56f).toInt()
+        else -> when (key.code) {
+            KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
+            KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER,
+            ->
+                (desiredKeyWidth * 1.56f).toInt()
+            KeyCode.TRANSLATE -> {
+                val scale = when (keyboardLayoutType) {
+                    "phahTaigi", "moe1" -> 2.0f
+                    else -> 1.5f
+                }
+                (desiredKeyWidth * scale).toInt()
+            }
+            KeyCode.SPACE -> when (mode) {
+                KeyboardMode.SYMBOLS -> (desiredKeyWidth * 0.56f).toInt()
+                else -> desiredKeyWidth
+            }
             else -> desiredKeyWidth
         }
-        else -> desiredKeyWidth
     }
-}
 
-private fun flexShrinkFor(key: KeyData, mode: KeyboardMode): Float = when (mode) {
-    KeyboardMode.NUMERIC, KeyboardMode.NUMERIC_ADVANCED,
-    KeyboardMode.PHONE, KeyboardMode.PHONE2 -> 1f
-    else -> when (key.code) {
-        KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
-        KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER, KeyCode.TRANSLATE -> 0f
-        else -> 1f
+private fun flexShrinkFor(
+    key: KeyData,
+    mode: KeyboardMode,
+): Float =
+    when (mode) {
+        KeyboardMode.NUMERIC, KeyboardMode.NUMERIC_ADVANCED,
+        KeyboardMode.PHONE, KeyboardMode.PHONE2,
+        -> 1f
+        else -> when (key.code) {
+            KeyCode.SHIFT, KeyCode.VIEW_CHARACTERS, KeyCode.VIEW_SYMBOLS,
+            KeyCode.VIEW_SYMBOLS2, KeyCode.DELETE, KeyCode.ENTER, KeyCode.TRANSLATE,
+            -> 0f
+            else -> 1f
+        }
     }
-}
 
-private fun flexGrowFor(key: KeyData, mode: KeyboardMode): Float = when (mode) {
-    KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 -> 0f
-    KeyboardMode.NUMERIC_ADVANCED -> when (key.type) {
-        KeyType.NUMERIC -> 1f
-        else -> 0f
+private fun flexGrowFor(
+    key: KeyData,
+    mode: KeyboardMode,
+): Float =
+    when (mode) {
+        KeyboardMode.NUMERIC, KeyboardMode.PHONE, KeyboardMode.PHONE2 -> 0f
+        KeyboardMode.NUMERIC_ADVANCED -> when (key.type) {
+            KeyType.NUMERIC -> 1f
+            else -> 0f
+        }
+        else -> when (key.code) {
+            KeyCode.SPACE -> 1f
+            else -> 0f
+        }
     }
-    else -> when (key.code) {
-        KeyCode.SPACE -> 1f
-        else -> 0f
-    }
-}
 
 /**
  * Visibility predicate — direct port of `KeyView.updateVisibility`. ALL is
  * always visible; NORMAL is visible for NORMAL/PASSWORD variation; otherwise
  * exact match required.
  */
-private fun keyVisible(key: KeyData, keyVariation: KeyVariation): Boolean {
+private fun keyVisible(
+    key: KeyData,
+    keyVariation: KeyVariation,
+): Boolean {
     if (key.variation == KeyVariation.ALL) return true
     if (key.variation == KeyVariation.NORMAL &&
         (keyVariation == KeyVariation.NORMAL || keyVariation == KeyVariation.PASSWORD)
-    ) return true
+    ) {
+        return true
+    }
     return key.variation == keyVariation
 }
 
@@ -369,8 +393,10 @@ private fun keyVisible(key: KeyData, keyVariation: KeyVariation): Boolean {
  *  is unique by construction — keying on `KeyData.code` would collide for
  *  TPS / MOE2 layouts that contain multiple `code == 0` placeholder keys
  *  in the same row (each carries distinct popup variants). */
-internal fun idFor(rowIndex: Int, indexInRow: Int): Long =
-    (rowIndex.toLong() shl 32) or (indexInRow.toLong() and 0xFFFFFFFFL)
+internal fun idFor(
+    rowIndex: Int,
+    indexInRow: Int,
+): Long = (rowIndex.toLong() shl 32) or (indexInRow.toLong() and 0xFFFFFFFFL)
 
 /**
  * Aggregates the runtime appearance + caps + composing state the keyboard
@@ -403,5 +429,4 @@ data class KeyboardAppearance(
 /** Detect landscape orientation — used inside [KeyboardImeRoot] when solving
  *  [KeyDimensionsInput.isLandscape] and inside the settings preview panel. */
 @Composable
-fun isLandscape(): Boolean =
-    LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+fun isLandscape(): Boolean = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE

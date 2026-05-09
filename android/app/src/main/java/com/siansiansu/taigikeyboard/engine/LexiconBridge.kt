@@ -38,9 +38,10 @@ import com.siansiansu.taigikeyboard.ime.dictionary.InputType as DictInputType
  * Read-path only — the mutable `user_association.db` SQLite half of
  * NextWord persistence is out of scope for this bridge; only the
  * bundled `association.bin` read-only half goes through here.
+ *
+ * 中文: 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
+ *       此橋只走 `association.bin` 唯讀資料(bundle 字典+ngram)。
  */
-// 中文: 唯讀路徑 — `user_association.db` 由 Android 平台 SQLite 處理(設計如此),
-// 中文: 此橋只走 `association.bin` 唯讀資料(bundle 字典+ngram)。
 object LexiconBridge {
     private const val TAG = "LexiconBridge"
 
@@ -68,7 +69,9 @@ object LexiconBridge {
     )
 
     /** Lexicon engine `inputType` enum (mirrors proto `InputType`). */
-    enum class LexiconInputType(val protoValue: Int) {
+    enum class LexiconInputType(
+        val protoValue: Int,
+    ) {
         UNSPECIFIED(0),
         ROMAN_NO_TONE(1),
         ROMAN_WITH_TONE(2),
@@ -76,7 +79,9 @@ object LexiconBridge {
     }
 
     /** Lexicon engine `inputMode` enum (mirrors proto `InputMode`). */
-    enum class LexiconInputMode(val protoValue: Int) {
+    enum class LexiconInputMode(
+        val protoValue: Int,
+    ) {
         UNSPECIFIED(0),
         TL(1),
         POJ(2),
@@ -142,15 +147,18 @@ object LexiconBridge {
      * Install (or atomically reinstall) the lexicon engine state. Called
      * from `AppInitializer` after `copyAssetsIfNeeded` finishes; idempotent.
      * Returns `null` on failure (logged via `RustEngineBridge.diagnostics()`).
+     *
+     * 中文: 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
+     *       失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
      */
-    // 中文: 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
     fun install(
         triePath: String,
         dictionaryBinPath: String,
         associationBinPath: String,
         dictionaryVersion: UInt,
     ): InstallStats? {
-        val payload = InstallRequest.newBuilder()
+        val payload = InstallRequest
+            .newBuilder()
             .setTriePath(triePath)
             .setDictionaryBinPath(dictionaryBinPath)
             .setAssociationBinPath(associationBinPath)
@@ -171,8 +179,9 @@ object LexiconBridge {
      * IME autocomplete entry. Hanzi `inputType` returns `[]` per D-8 hard
      * guard (pinned by INVARIANT_LEX_HANZI_GUARD; commit 12 adds the
      * platform parity test).
+     *
+     * 中文: IME autocomplete 進入點;inputType==Hanzi 直接回 []。Engine 內部走 phonetics::normalize_input + trie 查詢。
      */
-    // 中文: IME autocomplete 進入點;inputType==Hanzi 直接回 []。Engine 內部走 phonetics::normalize_input + trie 查詢。
     fun search(
         input: String,
         inputType: LexiconInputType,
@@ -181,7 +190,8 @@ object LexiconBridge {
         tpsOrMappedToER: Boolean,
         enabledSourcesBitmask: UInt,
     ): List<Row> {
-        val payload = SearchRequest.newBuilder()
+        val payload = SearchRequest
+            .newBuilder()
             .setInput(input)
             .setInputType(InputType.forNumber(inputType.protoValue) ?: InputType.INPUT_TYPE_UNSPECIFIED)
             .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
@@ -194,15 +204,19 @@ object LexiconBridge {
         return resp.searchResult.rowsList.map(::taigiWordToRow)
     }
 
-    /** Dictionary tab multi-source lookup. */
-    // 中文: Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
+    /**
+     * Dictionary tab multi-source lookup.
+     *
+     * 中文: Tab3 多來源查詢 — input 可為羅馬字或漢字,engine 內自行分類;sources bitmask 由平台端 toggle 結果決定。
+     */
     fun searchWithSources(
         input: String,
         inputMode: LexiconInputMode,
         limit: UInt,
         enabledSourcesBitmask: UInt,
     ): List<Row> {
-        val payload = SearchWithSourcesRequest.newBuilder()
+        val payload = SearchWithSourcesRequest
+            .newBuilder()
             .setInput(input)
             .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
             .setLimit(limit.toInt())
@@ -213,15 +227,19 @@ object LexiconBridge {
         return resp.searchWithSourcesResult.rowsList.map(::taigiWordToRow)
     }
 
-    /** Dictionary tab hanzi-prefix lookup. */
-    // 中文: Tab3 漢字前綴查詢 — query 必為漢字。供 Tab3 漢字 short-circuit 路徑使用。
+    /**
+     * Dictionary tab hanzi-prefix lookup.
+     *
+     * 中文: Tab3 漢字前綴查詢 — query 必為漢字。供 Tab3 漢字 short-circuit 路徑使用。
+     */
     fun searchByHanzi(
         query: String,
         inputMode: LexiconInputMode,
         limit: UInt,
         enabledSourcesBitmask: UInt,
     ): List<Row> {
-        val payload = SearchByHanziRequest.newBuilder()
+        val payload = SearchByHanziRequest
+            .newBuilder()
             .setQuery(query)
             .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
             .setLimit(limit.toInt())
@@ -232,14 +250,18 @@ object LexiconBridge {
         return resp.searchByHanziResult.rowsList.map(::taigiWordToRow)
     }
 
-    /** Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows. */
-    // 中文: 內建 bigram 查詢(association.bin)— previousWord → 後續候選清單。NextWordService.predict 用來補 dict 來源預測。
+    /**
+     * Bundled-bigram lookup. Called by `NextWordService.predict` for dict rows.
+     *
+     * 中文: 內建 bigram 查詢(association.bin)— previousWord → 後續候選清單。NextWordService.predict 用來補 dict 來源預測。
+     */
     fun assocLookup(
         previousWord: String,
         limit: UInt,
         enabledSourcesBitmask: UInt,
     ): List<AssocEntry> {
-        val payload = AssocLookupRequest.newBuilder()
+        val payload = AssocLookupRequest
+            .newBuilder()
             .setPreviousWord(previousWord)
             .setLimit(limit.toInt())
             .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
@@ -270,8 +292,9 @@ object LexiconBridge {
      * replacing the platform-side per-keystroke ladder that previously
      * chained multiple phonetics ops per keypress. See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
+     *
+     * 中文: 把 raw 分類成 (InputType, searchKey) 二元組;v3.5.7 後改成單次 FFI,取代過去每按鍵都串多個 phonetics op 的階梯邏輯。
      */
-    // 中文: 把 raw 分類成 (InputType, searchKey) 二元組;v3.5.7 後改成單次 FFI,取代過去每按鍵都串多個 phonetics op 的階梯邏輯。
     fun classifyInput(raw: String): ClassificationResult {
         val payload = ClassifyInputRequest.newBuilder().setRaw(raw).build()
         val resp = dispatch(LexiconRequest.newBuilder().setClassifyInput(payload).build())
@@ -293,12 +316,14 @@ object LexiconBridge {
      *
      * Call ONCE per query and pass the result down the search pipeline;
      * resolving again inside the Dictionary tab's badge filter would split the snapshot.
+     *
+     * 中文: 把使用者 12 個字典 toggle 解析成 (dictionaryFilterBitmask, assocLookupBitmask, enabledSources)。
+     *       每次查詢「呼叫一次」,結果傳遞到整個 search 管線;Tab3 badge filter 不可重新解析(會把 snapshot 切兩份)。
+     *       FFI 失敗時 fallback 跑平台側對齊版 compute_filters,避免 dev 環境 Rust .so 未重 build 時誤失能。
      */
-    // 中文: 把使用者 12 個字典 toggle 解析成 (dictionaryFilterBitmask, assocLookupBitmask, enabledSources)。
-    // 中文: 每次查詢「呼叫一次」,結果傳遞到整個 search 管線;Tab3 badge filter 不可重新解析(會把 snapshot 切兩份)。
-    // 中文: FFI 失敗時 fallback 跑平台側對齊版 compute_filters,避免 dev 環境 Rust .so 未重 build 時誤失能。
     fun dictionaryFilters(toggles: DictionaryToggles): DictionaryFilters {
-        val protoToggles = ProtoDictionaryToggles.newBuilder()
+        val protoToggles = ProtoDictionaryToggles
+            .newBuilder()
             .setKautian(toggles.kautian)
             .setTaigitv(toggles.taigitv)
             .setItaigi(toggles.itaigi)
@@ -312,7 +337,8 @@ object LexiconBridge {
             .setKhiin(toggles.khiin)
             .setLkk(toggles.lkk)
             .build()
-        val payload = DictionaryFiltersRequest.newBuilder()
+        val payload = DictionaryFiltersRequest
+            .newBuilder()
             .setToggles(protoToggles)
             .build()
         // Binary skew fallback: when method 18 dispatch fails (e.g. Kotlin
@@ -339,9 +365,10 @@ object LexiconBridge {
      * Dictionary tab short-circuit predicate. True iff `text` contains any CJK
      * codepoint (Unified + Extensions A-E). See
      * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
+     *
+     * 中文: Tab3 漢字短路徑判斷 — text 含 CJK Unified + Ext A-E 任一字即 true;
+     *       修正 v3.5.7 前 Kotlin Char.code(16-bit)漏判 Ext B/C/D/E 的舊 bug。
      */
-    // 中文: Tab3 漢字短路徑判斷 — text 含 CJK Unified + Ext A-E 任一字即 true;
-    // 中文: 修正 v3.5.7 前 Kotlin Char.code(16-bit)漏判 Ext B/C/D/E 的舊 bug。
     fun isHanzi(text: String): Boolean {
         val payload = IsHanziRequest.newBuilder().setText(text).build()
         val resp = dispatch(LexiconRequest.newBuilder().setIsHanzi(payload).build()) ?: return false
@@ -455,7 +482,8 @@ object LexiconBridge {
     // endregion Classification
 
     private fun dispatch(lexiconRequest: LexiconRequest): LexiconResponse? {
-        val request = Request.newBuilder()
+        val request = Request
+            .newBuilder()
             .setId(RustEngineBridge.nextRequestIdInternal())
             .setLexicon(lexiconRequest)
             .build()
@@ -478,13 +506,12 @@ object LexiconBridge {
         return if (response.hasLexicon()) response.lexicon else null
     }
 
-    private fun taigiWordToRow(proto: TaigiWord): Row {
-        return Row(
+    private fun taigiWordToRow(proto: TaigiWord): Row =
+        Row(
             id = proto.id,
             roman = proto.roman,
             hanzi = if (proto.hasHanji()) proto.hanji else null,
             lengthScore = if (proto.hasLengthScore()) proto.lengthScore else null,
             sourceBitmask = if (proto.hasSourceBitmask()) proto.sourceBitmask.toUInt() else null,
         )
-    }
 }

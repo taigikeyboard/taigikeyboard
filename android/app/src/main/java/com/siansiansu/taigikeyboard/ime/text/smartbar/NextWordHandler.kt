@@ -7,7 +7,6 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
@@ -508,9 +507,10 @@ class NextWordHandler(
  * `CandidateUpdateCoordinator`. `"tps"` is a layout, not an engine
  * mode — falls back to TL because the NextWord engine has no TPS arm.
  */
-private fun String.toEngineInputMode(): InputMode = when (this) {
-    "poj" -> InputMode.POJ
-    "tl", "tps" -> InputMode.TL
-    "english" -> InputMode.ENGLISH
-    else -> InputMode.POJ
-}
+private fun String.toEngineInputMode(): InputMode =
+    when (this) {
+        "poj" -> InputMode.POJ
+        "tl", "tps" -> InputMode.TL
+        "english" -> InputMode.ENGLISH
+        else -> InputMode.POJ
+    }

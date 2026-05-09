@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.core.net.toUri
 import androidx.activity.compose.setContent
 import androidx.compose.ui.text.font.FontFamily
+import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.ContentType
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader

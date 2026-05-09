@@ -4,7 +4,6 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
-import com.siansiansu.taigikeyboard.engine.proto.CapitalizeCandidate
 import com.siansiansu.taigikeyboard.engine.proto.CaseRequest
 import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
 import com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString
@@ -29,8 +28,9 @@ import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
  *
  * Suggestion skip rules (`id < 0 && id != -2` and `id == 0`) stay platform-side
  * — only transform-eligible items reach `transformSuggestion(...)`.
+ *
+ * 中文: skip 規則(id<0 且 ≠-2、id==0)保留在平台側,只有合格的 suggestion 才進來轉換。
  */
-// 中文: skip 規則(id<0 且 ≠-2、id==0)保留在平台側,只有合格的 suggestion 才進來轉換。
 object CaseTransformBridge {
     private const val TAG = "CaseTransformBridge"
 
@@ -41,7 +41,9 @@ object CaseTransformBridge {
      * call site (CapsLock=true → CapsLocked; caps=true → Uppercased;
      * else Lowercased) — see `from()` factory.
      */
-    enum class LetterCase(val protoValue: Int) {
+    enum class LetterCase(
+        val protoValue: Int,
+    ) {
         LOWERCASED(1),
         UPPERCASED(2),
         CAPS_LOCKED(3),
@@ -50,19 +52,29 @@ object CaseTransformBridge {
         companion object {
             /** Adapter from Android's existing caps + capsLock boolean pair. */
             @JvmStatic
-            fun from(caps: Boolean, capsLock: Boolean): LetterCase = when {
-                capsLock -> CAPS_LOCKED
-                caps -> UPPERCASED
-                else -> LOWERCASED
-            }
+            fun from(
+                caps: Boolean,
+                capsLock: Boolean,
+            ): LetterCase =
+                when {
+                    capsLock -> CAPS_LOCKED
+                    caps -> UPPERCASED
+                    else -> LOWERCASED
+                }
         }
     }
 
     // region Per-char helpers
 
-    /** Replaces `ToneUtilities.uppercaseToneLetter`. */
-    // 中文: 單字元(含 combining mark)依模式查 POJ/TL 聲調表轉大寫;多字元僅將首字大寫。
-    fun uppercaseToneChar(input: String, mode: InputMode): String {
+    /**
+     * Replaces `ToneUtilities.uppercaseToneLetter`.
+     *
+     * 中文: 單字元(含 combining mark)依模式查 POJ/TL 聲調表轉大寫;多字元僅將首字大寫。
+     */
+    fun uppercaseToneChar(
+        input: String,
+        mode: InputMode,
+    ): String {
         val payload = UppercaseToneChar.newBuilder().setInput(input).build()
         return stringDispatch(
             CaseRequest.newBuilder().setUppercaseToneChar(payload).build(),
@@ -72,9 +84,15 @@ object CaseTransformBridge {
         )
     }
 
-    /** Replaces `ToneUtilities.fullUppercaseToneLetter`. */
-    // 中文: 整字串全部依模式聲調表轉大寫;CapsLock 路徑用此函式。
-    fun fullUppercaseToneString(input: String, mode: InputMode): String {
+    /**
+     * Replaces `ToneUtilities.fullUppercaseToneLetter`.
+     *
+     * 中文: 整字串全部依模式聲調表轉大寫;CapsLock 路徑用此函式。
+     */
+    fun fullUppercaseToneString(
+        input: String,
+        mode: InputMode,
+    ): String {
         val payload = FullUppercaseToneString.newBuilder().setInput(input).build()
         return stringDispatch(
             CaseRequest.newBuilder().setFullUppercaseToneString(payload).build(),
@@ -84,9 +102,15 @@ object CaseTransformBridge {
         )
     }
 
-    /** Replaces `ToneUtilities.lowercaseToneLetter`. */
-    // 中文: 單字元依模式聲調表轉小寫,含 ᴺ→ⁿ 鼻音記號 shortcut。
-    fun lowercaseToneChar(input: String, mode: InputMode): String {
+    /**
+     * Replaces `ToneUtilities.lowercaseToneLetter`.
+     *
+     * 中文: 單字元依模式聲調表轉小寫,含 ᴺ→ⁿ 鼻音記號 shortcut。
+     */
+    fun lowercaseToneChar(
+        input: String,
+        mode: InputMode,
+    ): String {
         val payload = LowercaseToneChar.newBuilder().setInput(input).build()
         return stringDispatch(
             CaseRequest.newBuilder().setLowercaseToneChar(payload).build(),
@@ -100,10 +124,18 @@ object CaseTransformBridge {
 
     // region Per-string compound transforms
 
-    /** Apply `letterCase` to `text` per the engine's input-case pipeline. */
-    // 中文: 對輸入字串套用 LetterCase(Lowercased/Uppercased/CapsLocked);對應 KeyLabelCaseCache 路徑。
-    fun transformInputCase(text: String, letterCase: LetterCase, mode: InputMode): String {
-        val payload = TransformInputCase.newBuilder()
+    /**
+     * Apply `letterCase` to `text` per the engine's input-case pipeline.
+     *
+     * 中文: 對輸入字串套用 LetterCase(Lowercased/Uppercased/CapsLocked);對應 KeyLabelCaseCache 路徑。
+     */
+    fun transformInputCase(
+        text: String,
+        letterCase: LetterCase,
+        mode: InputMode,
+    ): String {
+        val payload = TransformInputCase
+            .newBuilder()
             .setText(text)
             .setLetterCase(ProtoLetterCase.forNumber(letterCase.protoValue) ?: ProtoLetterCase.LETTER_CASE_UNSPECIFIED)
             .build()
@@ -118,16 +150,18 @@ object CaseTransformBridge {
     /**
      * Per-suggestion case transformation. Output is post-processed via
      * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed).
+     *
+     * 中文: 對 suggestion 候選字做大小寫轉換 — CapsLock → 全大寫;其他依 composing 已輸入字數切兩段
+     *       (typed-portion 比對大小寫、remaining-portion 首字大寫或全小寫),最後 adjust_nasal_marker_case 後處理。
      */
-    // 中文: 對 suggestion 候選字做大小寫轉換 — CapsLock → 全大寫;其他依 composing 已輸入字數切兩段
-    // 中文: (typed-portion 比對大小寫、remaining-portion 首字大寫或全小寫),最後 adjust_nasal_marker_case 後處理。
     fun transformSuggestion(
         original: String,
         composing: String,
         letterCase: LetterCase,
         mode: InputMode,
     ): String {
-        val payload = TransformSuggestion.newBuilder()
+        val payload = TransformSuggestion
+            .newBuilder()
             .setOriginalText(original)
             .setComposingText(composing)
             .setLetterCase(ProtoLetterCase.forNumber(letterCase.protoValue) ?: ProtoLetterCase.LETTER_CASE_UNSPECIFIED)
@@ -158,8 +192,12 @@ object CaseTransformBridge {
         return resp.stringResult.output
     }
 
-    private fun dispatch(caseRequest: CaseRequest, mode: InputMode): CaseResponse? {
-        val request = Request.newBuilder()
+    private fun dispatch(
+        caseRequest: CaseRequest,
+        mode: InputMode,
+    ): CaseResponse? {
+        val request = Request
+            .newBuilder()
             .setId(RustEngineBridge.nextRequestIdInternal())
             .setConfigSnapshot(appConfig(mode))
             .setCaseTransform(caseRequest)
@@ -184,15 +222,15 @@ object CaseTransformBridge {
     }
 
     private fun appConfig(mode: InputMode): AppConfig =
-        AppConfig.newBuilder()
+        AppConfig
+            .newBuilder()
             .setInputMode(
                 when (mode) {
                     InputMode.POJ -> "poj"
                     InputMode.TL -> "tl"
                     InputMode.ENGLISH -> "english"
                 },
-            )
-            .build()
+            ).build()
 
     // endregion
 }

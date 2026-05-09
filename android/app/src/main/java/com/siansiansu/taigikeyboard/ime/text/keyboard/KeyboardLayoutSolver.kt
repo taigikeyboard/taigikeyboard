@@ -115,7 +115,9 @@ object KeyboardLayoutSolver {
     }
 }
 
-enum class KeyboardHeightFactor(val multiplier: Float) {
+enum class KeyboardHeightFactor(
+    val multiplier: Float,
+) {
     EXTRA_SHORT(0.85f),
     SHORT(0.90f),
     MID_SHORT(0.95f),

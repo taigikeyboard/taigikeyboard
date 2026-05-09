@@ -21,10 +21,15 @@ import com.siansiansu.taigikeyboard.ime.text.key.KeyType
  */
 interface KeyEventDispatcher {
     fun dispatchKeyPress(data: KeyData)
+
     fun showInputMethodPicker()
+
     fun keyPressVibrate()
+
     fun keyPressSound(data: KeyData)
+
     val longPressDelayMs: Long
+
     /** Resolves the [KeyAnchor] for popup show / extend. Done by the caller
      *  (not the coordinator) because anchor construction needs label
      *  formatting + popup-cell resolution that depend on `TaigiKeyboard` state.
@@ -62,13 +67,23 @@ data class KeyBounds(
     val isLastInRow: Boolean,
 )
 
-data class Bounds(val left: Int, val top: Int, val right: Int, val bottom: Int) {
+data class Bounds(
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int,
+) {
     val width: Int get() = right - left
     val height: Int get() = bottom - top
+
     /** Half-open `[left, right) × [top, bottom)` to match `android.graphics.Rect.contains`
      *  semantics — boundary pixels resolve to the next-key side, not the
      *  previous key. Mirrors the legacy `KeyView.touchHitBox.contains` path. */
-    fun contains(x: Int, y: Int): Boolean = x >= left && x < right && y >= top && y < bottom
+    fun contains(
+        x: Int,
+        y: Int,
+    ): Boolean = x >= left && x < right && y >= top && y < bottom
+
     fun toRect(): Rect = Rect(left, top, right, bottom)
 }
 
@@ -128,7 +143,10 @@ class KeyTouchCoordinator(
      *  [onMotionEvent], so it needs to consult the resolved bounds without
      *  going through the full state machine. Returns the key id under the
      *  pointer (or null if no key contains the point). */
-    fun previewHitTest(x: Int, y: Int): Long? = findKeyAt(x, y)?.keyId
+    fun previewHitTest(
+        x: Int,
+        y: Int,
+    ): Long? = findKeyAt(x, y)?.keyId
 
     fun cancelActiveKey() {
         cancelScheduled()
@@ -174,7 +192,11 @@ class KeyTouchCoordinator(
         }
     }
 
-    private fun handleDown(event: MotionEvent, pointerIndex: Int, pointerId: Int) {
+    private fun handleDown(
+        event: MotionEvent,
+        pointerIndex: Int,
+        pointerId: Int,
+    ) {
         val newX = event.getX(pointerIndex).toInt()
         val newY = event.getY(pointerIndex).toInt()
 
@@ -221,8 +243,12 @@ class KeyTouchCoordinator(
             val relX = (activeX - key.visible.left).toFloat()
             val relY = (activeY - key.visible.top).toFloat()
             val relEvent = MotionEvent.obtain(
-                event.downTime, event.eventTime, MotionEvent.ACTION_MOVE,
-                relX, relY, 0,
+                event.downTime,
+                event.eventTime,
+                MotionEvent.ACTION_MOVE,
+                relX,
+                relY,
+                0,
             )
             try {
                 val withinBounds = popupHost.propagateMotionEvent(relEvent)
@@ -255,7 +281,11 @@ class KeyTouchCoordinator(
         // `INVARIANT_keyboard_press_starts_only_on_down`.
     }
 
-    private fun handleUpOrCancel(event: MotionEvent, pointerId: Int, isCancel: Boolean) {
+    private fun handleUpOrCancel(
+        event: MotionEvent,
+        pointerId: Int,
+        isCancel: Boolean,
+    ) {
         if (isCancel) {
             // ACTION_CANCEL is a gesture-level abort: the framework does not
             // guarantee `actionIndex` reports the active pointer id, so the
@@ -341,7 +371,10 @@ class KeyTouchCoordinator(
         longPressRunnable = null
     }
 
-    private fun findKeyAt(x: Int, y: Int): KeyBounds? = bounds.firstOrNull { it.hit.contains(x, y) }
+    private fun findKeyAt(
+        x: Int,
+        y: Int,
+    ): KeyBounds? = bounds.firstOrNull { it.hit.contains(x, y) }
 
     companion object {
         private const val DELETE_REPEAT_INITIAL_DELAY_MS = 500L

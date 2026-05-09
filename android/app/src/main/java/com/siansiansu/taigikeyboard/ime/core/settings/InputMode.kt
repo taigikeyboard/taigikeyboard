@@ -35,11 +35,12 @@ enum class InputMode {
          *  TPS shares the TL phonetic-table path; unknown values fall back
          *  to [POJ] (matches the legacy `KeyView.getComputedLetter` and
          *  `TextInputManager.handleTaigiInput` defaults). */
-        fun fromPrefString(value: String): InputMode = when (value) {
-            "poj" -> POJ
-            "tl", "tps" -> TL
-            "english" -> ENGLISH
-            else -> POJ
-        }
+        fun fromPrefString(value: String): InputMode =
+            when (value) {
+                "poj" -> POJ
+                "tl", "tps" -> TL
+                "english" -> ENGLISH
+                else -> POJ
+            }
     }
 }

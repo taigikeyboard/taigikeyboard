@@ -67,9 +67,10 @@ import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
  * 32-entry bounded queue (synchronized). DEBUG additionally calls
  * `Log.e` for logcat traceability — NEVER throws (would kill IME
  * mid-keystroke).
+ *
+ * 中文: 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
+ *       DEBUG 同時打 Log.e 方便 logcat 追蹤。
  */
-// 中文: 失敗一律不丟例外(否則會中斷打字),改記入 32-entry diagnostics 環狀佇列;
-// 中文: DEBUG 同時打 Log.e 方便 logcat 追蹤。
 object RustEngineBridge {
     init {
         System.loadLibrary("rust_taigi")
@@ -91,8 +92,9 @@ object RustEngineBridge {
      * `Debug` so dogfood traces are visible. Release stays at default `Warn`
      * so `log::debug!` / `log::info!` short-circuit before format — no JNI
      * cost for the no-op render path.
+     *
+     * 中文: 冪等安裝 JNI logger 橋。DEBUG 模式 Rust log level 拉到 Debug,release 保持 Warn 走 zero-cost。
      */
-    // 中文: 冪等安裝 JNI logger 橋。DEBUG 模式 Rust log level 拉到 Debug,release 保持 Warn 走 zero-cost。
     @JvmStatic
     fun install(backend: LoggerBackend) {
         synchronized(installLock) {
@@ -113,9 +115,14 @@ object RustEngineBridge {
      * `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
      * tone-marked string. `mode` and `toggles` are mandatory (no default)
      * to enforce the live-read invariant per Codex v2 §7.
+     *
+     * 中文: 把數字調 ASCII 輸入轉為帶調符字串;mode 與 toggles 必填以強制 live-read 不快照。
      */
-    // 中文: 把數字調 ASCII 輸入轉為帶調符字串;mode 與 toggles 必填以強制 live-read 不快照。
-    fun normalizeTone(input: String, mode: NormalizeMode, toggles: ToneTogglesCarrier): String {
+    fun normalizeTone(
+        input: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+    ): String {
         val payload = NormalizeTone.newBuilder().setInput(input).build()
         return stringDispatch(
             methodSetter = { it.normalizeTone = payload },
@@ -168,8 +175,9 @@ object RustEngineBridge {
      * Distinct semantics from [normalizeInput] — this preserves tone
      * diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
      * `\u{0358}` → `o` are rewritten.
+     *
+     * 中文: 外部查詢 URL 用的 NFD 預處理 — 保留聲調符號,只把鼻音(ⁿ/ᴺ)→"nn" 與 ͘ → o。
      */
-    // 中文: 外部查詢 URL 用的 NFD 預處理 — 保留聲調符號,只把鼻音(ⁿ/ᴺ)→"nn" 與 ͘ → o。
     fun nfdPreprocessForLookup(input: String): String {
         val payload = NfdPreprocessForLookup.newBuilder().setInput(input).build()
         return stringDispatch(
@@ -238,14 +246,28 @@ object RustEngineBridge {
     }
 
     // 中文: TL 數字調 → TPS(注音);orMapsToER 控制 er↔or 變體對應。
-    fun tlNumericToTps(text: String, orMapsToER: Boolean): String {
-        val payload = TlNumericToTps.newBuilder().setText(text).setOrMapsToEr(orMapsToER).build()
+    fun tlNumericToTps(
+        text: String,
+        orMapsToER: Boolean,
+    ): String {
+        val payload = TlNumericToTps
+            .newBuilder()
+            .setText(text)
+            .setOrMapsToEr(orMapsToER)
+            .build()
         return stringDispatch({ it.tlNumericToTps = payload }, text, "tlNumericToTps", null)
     }
 
     // 中文: TL 顯示字串 → TPS(注音);orMapsToER 同 tlNumericToTps。
-    fun tlDisplayToTps(text: String, orMapsToER: Boolean): String {
-        val payload = TlDisplayToTps.newBuilder().setText(text).setOrMapsToEr(orMapsToER).build()
+    fun tlDisplayToTps(
+        text: String,
+        orMapsToER: Boolean,
+    ): String {
+        val payload = TlDisplayToTps
+            .newBuilder()
+            .setText(text)
+            .setOrMapsToEr(orMapsToER)
+            .build()
         return stringDispatch({ it.tlDisplayToTps = payload }, text, "tlDisplayToTps", null)
     }
 
@@ -257,8 +279,15 @@ object RustEngineBridge {
 
     // 中文: TPS 鍵級輸入調整 — 依 incoming 字元與當前 rawInput 決定 (adjusted, replaceLast?);
     // 中文: replaceLast 非空時呼叫端應把上一字以 replaceLast 取代。
-    fun tpsInputAdjust(incoming: String, rawInput: String): TpsAdjustOutcome {
-        val payload = TpsInputAdjust.newBuilder().setIncoming(incoming).setRawInput(rawInput).build()
+    fun tpsInputAdjust(
+        incoming: String,
+        rawInput: String,
+    ): TpsAdjustOutcome {
+        val payload = TpsInputAdjust
+            .newBuilder()
+            .setIncoming(incoming)
+            .setRawInput(rawInput)
+            .build()
         val resp = dispatch({ it.tpsInputAdjust = payload }, "tpsInputAdjust", null)
             ?: return TpsAdjustOutcome(incoming, null)
         if (!resp.hasTpsAdjustResult()) {
@@ -317,9 +346,10 @@ object RustEngineBridge {
      * In `BuildConfig.DEBUG` builds, requests + emits the per-candidate
      * `ScoreBreakdown` so dogfood traces include the score arithmetic.
      * Release builds skip the breakdown (zero serialization overhead).
+     *
+     * 中文: 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
+     *       tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
      */
-    // 中文: 排序生產入口 — 單次 FFI 跑完 dedup→score→sort→(TPS 模式)display-dedup;
-    // 中文: tpsDedupEnabled 由平台端決定(讀 settings.inputMode == "tps"),Engine 不自行推。
     fun processCandidates(
         raw: List<TaigiWord>,
         normalizedInput: String,
@@ -360,8 +390,9 @@ object RustEngineBridge {
      * `System.loadLibrary("rust_taigi")` fails on host JVM. Bridge
      * parity is verified by the Rust workspace tests + iOS XCTest
      * (links the xcframework) + Android instrumented dogfood.
+     *
+     * 中文: 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
      */
-    // 中文: 測試用入口,可取出每筆候選的 ScoreBreakdown(六項分數);production 走 processCandidates 即可。
     fun processCandidatesDetailed(
         raw: List<TaigiWord>,
         normalizedInput: String,
@@ -370,7 +401,8 @@ object RustEngineBridge {
         nowMs: Long,
         includeBreakdown: Boolean,
     ): CandidateRanking {
-        val payloadBuilder = ProcessCandidatesRequest.newBuilder()
+        val payloadBuilder = ProcessCandidatesRequest
+            .newBuilder()
             .setNormalizedInput(normalizedInput)
             .setTpsDedupEnabled(tpsDedupEnabled)
             .setNowMs(nowMs)
@@ -380,7 +412,8 @@ object RustEngineBridge {
         }
         for ((key, value) in frequencyData) {
             payloadBuilder.addFreq(
-                FrequencyEntry.newBuilder()
+                FrequencyEntry
+                    .newBuilder()
                     .setDisplayTextKey(key)
                     .setCount(maxOf(0, value.count))
                     .setLastUsedMs(value.lastUsedMillis)
@@ -430,7 +463,8 @@ object RustEngineBridge {
     ): List<TaigiWord> = raw
 
     private fun taigiWordToProto(word: TaigiWord): ProtoTaigiWord {
-        val builder = ProtoTaigiWord.newBuilder()
+        val builder = ProtoTaigiWord
+            .newBuilder()
             .setId(word.id.toLong())
             .setRoman(word.roman)
         word.hanzi?.let { builder.setHanji(it) }
@@ -473,11 +507,15 @@ object RustEngineBridge {
         val isComposing: Boolean,
     ) {
         sealed class Effect {
-            data class UpdatePreedit(val display: String) : Effect()
+            data class UpdatePreedit(
+                val display: String,
+            ) : Effect()
 
             object ClearPreeditWithoutCommit : Effect()
 
-            data class CommitTextReplacingPreedit(val text: String) : Effect()
+            data class CommitTextReplacingPreedit(
+                val text: String,
+            ) : Effect()
 
             object DeleteBackwardFromDocument : Effect()
 
@@ -507,7 +545,10 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.Start.newBuilder().setText(text).build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Start
+            .newBuilder()
+            .setText(text)
+            .build()
         return composingDispatch(
             methodSetter = { it.start = payload },
             op = "composingStart",
@@ -524,7 +565,10 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.Append.newBuilder().setChar(ch).build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Append
+            .newBuilder()
+            .setChar(ch)
+            .build()
         return composingDispatch(
             methodSetter = { it.append = payload },
             op = "composingAppend",
@@ -540,7 +584,9 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.appendHyphen = payload },
             op = "composingAppendHyphen",
@@ -557,8 +603,10 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.newBuilder()
-            .setReplacement(replacement).build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast
+            .newBuilder()
+            .setReplacement(replacement)
+            .build()
         return composingDispatch(
             methodSetter = { it.replaceLast = payload },
             op = "composingReplaceLast",
@@ -574,7 +622,9 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.deleteBackward = payload },
             op = "composingDeleteBackward",
@@ -590,7 +640,9 @@ object RustEngineBridge {
         toggles: ToneTogglesCarrier,
         generation: Long,
     ): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.commitDerived = payload },
             op = "composingCommitDerived",
@@ -602,7 +654,9 @@ object RustEngineBridge {
     // 中文: 提交 raw(原始 ASCII)字串到文件 — 例如 commit "ho2" 而非 "hó"。
     @JvmStatic
     fun composingCommitRaw(generation: Long): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.commitRaw = payload },
             op = "composingCommitRaw",
@@ -613,9 +667,14 @@ object RustEngineBridge {
 
     // 中文: 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
     @JvmStatic
-    fun composingSelectSuggestion(text: String, generation: Long): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder()
-            .setText(text).build()
+    fun composingSelectSuggestion(
+        text: String,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion
+            .newBuilder()
+            .setText(text)
+            .build()
         return composingDispatch(
             methodSetter = { it.selectSuggestion = payload },
             op = "composingSelectSuggestion",
@@ -633,8 +692,10 @@ object RustEngineBridge {
         generation: Long,
     ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto
-            .CommitPreeditThenInsertExternal.newBuilder()
-            .setText(text).build()
+            .CommitPreeditThenInsertExternal
+            .newBuilder()
+            .setText(text)
+            .build()
         return composingDispatch(
             methodSetter = { it.commitPreeditThenInsertExternal = payload },
             op = "composingCommitPreeditThenInsertExternal",
@@ -646,7 +707,9 @@ object RustEngineBridge {
     // 中文: 清空 composing buffer 不 commit — 用於切 input mode、切焦點欄位、退出 composing 等狀況。
     @JvmStatic
     fun composingReset(generation: Long): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.Reset.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Reset
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.reset = payload },
             op = "composingReset",
@@ -657,10 +720,15 @@ object RustEngineBridge {
 
     // 中文: UI 端通知當前選中候選 index — 給 NextWord/Booster 取 contextword 用,不 commit。
     @JvmStatic
-    fun composingSetSelectedCandidateIndex(index: Int, generation: Long): ComposingTransition {
+    fun composingSetSelectedCandidateIndex(
+        index: Int,
+        generation: Long,
+    ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto
-            .SetSelectedCandidateIndex.newBuilder()
-            .setIndex(index).build()
+            .SetSelectedCandidateIndex
+            .newBuilder()
+            .setIndex(index)
+            .build()
         return composingDispatch(
             methodSetter = { it.setSelectedCandidateIndex = payload },
             op = "composingSetSelectedCandidateIndex",
@@ -672,7 +740,9 @@ object RustEngineBridge {
     // 中文: 純讀 — 取當前 composing 狀態快照,不變更 Engine。1-char delete 路徑用此查 buffer 長度。
     @JvmStatic
     fun composingQueryState(generation: Long): ComposingTransition {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.QueryState.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.QueryState
+            .newBuilder()
+            .build()
         return composingDispatch(
             methodSetter = { it.queryState = payload },
             op = "composingQueryState",
@@ -687,9 +757,11 @@ object RustEngineBridge {
         generation: Long,
         config: AppConfig?,
     ): ComposingTransition {
-        val composingBuilder = com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.newBuilder()
+        val composingBuilder = com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
+            .newBuilder()
         methodSetter(composingBuilder)
-        val requestBuilder = Request.newBuilder()
+        val requestBuilder = Request
+            .newBuilder()
             .setId(nextId.incrementAndGet())
             .setGeneration(generation)
             .setComposing(composingBuilder.build())
@@ -787,13 +859,19 @@ object RustEngineBridge {
         val lastSelectedWord: String?,
     ) {
         sealed class Effect {
-            data class RescheduleContextTimeout(val afterMs: Long) : Effect()
+            data class RescheduleContextTimeout(
+                val afterMs: Long,
+            ) : Effect()
 
             object CancelContextTimeout : Effect()
 
-            data class RecordAssociation(val pair: NextWordAssociationPair) : Effect()
+            data class RecordAssociation(
+                val pair: NextWordAssociationPair,
+            ) : Effect()
 
-            data class RecordCompoundAssociations(val pairs: List<NextWordAssociationPair>) : Effect()
+            data class RecordCompoundAssociations(
+                val pairs: List<NextWordAssociationPair>,
+            ) : Effect()
 
             /**
              * `nowMs` is reused by the platform predict() call so the
@@ -808,7 +886,9 @@ object RustEngineBridge {
                 val nowMs: Long,
             ) : Effect()
 
-            data class ClearPredictionsUI(val generation: Long) : Effect()
+            data class ClearPredictionsUI(
+                val generation: Long,
+            ) : Effect()
         }
 
         companion object {
@@ -895,7 +975,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected
+            .newBuilder()
             .setText(text)
             .setRoman(roman)
             .setRequireRomanMode(requireRomanMode)
@@ -920,7 +1001,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace
+            .newBuilder()
             .setLastChar(lastChar)
             .setInput(decisionInput(nowMs))
             .build()
@@ -941,7 +1023,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired
+            .newBuilder()
             .setInput(decisionInput(nowMs))
             .build()
         return nextwordDecideDispatch(
@@ -961,7 +1044,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing
+            .newBuilder()
             .setInput(decisionInput(nowMs))
             .build()
         return nextwordDecideDispatch(
@@ -981,7 +1065,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.ResetFull.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ResetFull
+            .newBuilder()
             .setInput(decisionInput(nowMs))
             .build()
         return nextwordDecideDispatch(
@@ -999,8 +1084,9 @@ object RustEngineBridge {
      * `nextwordClearForNewComposing` / sentence-end / context timeout /
      * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
      * No effects, no `current_generation` bump.
+     *
+     * 中文: 平台 → engine 同步 NextWord UI 是否顯示中;讓 engine 後續 clear 路徑正確 gate ClearPredictionsUI Effect。
      */
-    // 中文: 平台 → engine 同步 NextWord UI 是否顯示中;讓 engine 後續 clear 路徑正確 gate ClearPredictionsUI Effect。
     @JvmStatic
     fun nextwordSetIsShowing(
         isShowing: Boolean,
@@ -1009,7 +1095,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing
+            .newBuilder()
             .setIsShowing(isShowing)
             .build()
         return nextwordDecideDispatch(
@@ -1025,8 +1112,9 @@ object RustEngineBridge {
      * "compound-only / no timer reschedule / no generation bump"
      * semantics of the legacy `NextWordHandler.updateLastSelectedWord`.
      * The iOS bridge intentionally omits this intent.
+     *
+     * 中文: Android 限定意圖(Space 路徑)— 只更新 lastSelectedWord、不重排 timer、不 bump generation;iOS 故意不做此 op。
      */
-    // 中文: Android 限定意圖(Space 路徑)— 只更新 lastSelectedWord、不重排 timer、不 bump generation;iOS 故意不做此 op。
     @JvmStatic
     fun nextwordUpdateLastSelectedWord(
         text: String,
@@ -1037,7 +1125,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordDecideResult {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord
+            .newBuilder()
             .setText(text)
             .setRoman(roman)
             .setInput(decisionInput(nowMs))
@@ -1065,13 +1154,15 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordFilterResult {
-        val builder = com.siansiansu.taigikeyboard.engine.proto.FilterPredictions.newBuilder()
+        val builder = com.siansiansu.taigikeyboard.engine.proto.FilterPredictions
+            .newBuilder()
             .setQueryGeneration(queryGeneration)
             .setNowMs(nowMs)
             .setLimit(limit)
         for (row in raw) {
             builder.addRaw(
-                com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction.newBuilder()
+                com.siansiansu.taigikeyboard.engine.proto.RawNextWordPrediction
+                    .newBuilder()
                     .setHanzi(row.hanzi)
                     .setTl(row.tl)
                     .setCount(row.count)
@@ -1081,8 +1172,7 @@ object RustEngineBridge {
                             NextWordRawRow.Source.DICT -> com.siansiansu.taigikeyboard.engine.proto.Source.SOURCE_DICT
                             NextWordRawRow.Source.USER -> com.siansiansu.taigikeyboard.engine.proto.Source.SOURCE_USER
                         },
-                    )
-                    .build(),
+                    ).build(),
             )
         }
         val resp = nextwordDispatch(
@@ -1118,7 +1208,8 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): List<String> {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.BoostCandidates.newBuilder()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.BoostCandidates
+            .newBuilder()
             .addAllWords(words)
             .addAllPredictedFirstChars(predictedFirstChars)
             .build()
@@ -1143,7 +1234,9 @@ object RustEngineBridge {
         associationRecordingEnabled: Boolean,
         generation: Long,
     ): NextWordStateSnapshot {
-        val payload = com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState.newBuilder().build()
+        val payload = com.siansiansu.taigikeyboard.engine.proto.NextWordQueryState
+            .newBuilder()
+            .build()
         val resp = nextwordDispatch(
             methodSetter = { it.queryState = payload },
             op = "nextwordQueryState",
@@ -1165,7 +1258,8 @@ object RustEngineBridge {
     // -- Private helpers --
 
     private fun decisionInput(nowMs: Long): com.siansiansu.taigikeyboard.engine.proto.DecisionInput =
-        com.siansiansu.taigikeyboard.engine.proto.DecisionInput.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.DecisionInput
+            .newBuilder()
             .setNowMs(nowMs)
             .build()
 
@@ -1174,15 +1268,15 @@ object RustEngineBridge {
         translateSwapped: Boolean,
         associationRecordingEnabled: Boolean,
     ): AppConfig =
-        AppConfig.newBuilder()
+        AppConfig
+            .newBuilder()
             .setInputMode(
                 when (mode) {
                     InputMode.POJ -> "poj"
                     InputMode.TL -> "tl"
                     InputMode.ENGLISH -> "english"
                 },
-            )
-            .setOoDoubletapEnabled(false)
+            ).setOoDoubletapEnabled(false)
             .setNnDoubletapEnabled(false)
             .setIsTranslateSwapped(translateSwapped)
             .setIsAssociationRecordingEnabled(associationRecordingEnabled)
@@ -1195,9 +1289,11 @@ object RustEngineBridge {
         generation: Long,
         config: AppConfig,
     ): com.siansiansu.taigikeyboard.engine.proto.NextWordResponse? {
-        val nextwordBuilder = com.siansiansu.taigikeyboard.engine.proto.NextWordRequest.newBuilder()
+        val nextwordBuilder = com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
+            .newBuilder()
         methodSetter(nextwordBuilder)
-        val request = Request.newBuilder()
+        val request = Request
+            .newBuilder()
             .setId(nextId.incrementAndGet())
             .setGeneration(generation)
             .setConfigSnapshot(config)
@@ -1284,12 +1380,13 @@ object RustEngineBridge {
 
     private fun synthAssociationPair(
         proto: com.siansiansu.taigikeyboard.engine.proto.AssociationPair,
-    ): NextWordAssociationPair = NextWordAssociationPair(
-        prev = proto.prev,
-        prevTl = proto.prevTl,
-        next = proto.next,
-        nextTl = proto.nextTl,
-    )
+    ): NextWordAssociationPair =
+        NextWordAssociationPair(
+            prev = proto.prev,
+            prevTl = proto.prevTl,
+            next = proto.next,
+            nextTl = proto.nextTl,
+        )
 
     // endregion
     // region Diagnostics (Codex v2 §8 / v3 §7 / v4 §5)
@@ -1306,8 +1403,9 @@ object RustEngineBridge {
      * + test inspection. Counter increments on every fallback path
      * (encode error, dispatch returned non-OK, missing result variant).
      * Recent entries capped at 32 to bound memory. NEVER throws.
+     *
+     * 中文: 取目前累計的 FFI 失敗統計(總次數 + 最近 32 筆 entry);供 debug menu 與測試檢視。永不丟例外。
      */
-    // 中文: 取目前累計的 FFI 失敗統計(總次數 + 最近 32 筆 entry);供 debug menu 與測試檢視。永不丟例外。
     @JvmStatic
     fun diagnostics(): DiagnosticsSnapshot {
         synchronized(diagnosticsLock) {
@@ -1384,7 +1482,11 @@ object RustEngineBridge {
      * Ljava/lang/String;)V` — see `engine/android-jni/src/lib.rs`.
      */
     @JvmStatic
-    fun dispatchLog(level: Int, tag: String, msg: String) {
+    fun dispatchLog(
+        level: Int,
+        tag: String,
+        msg: String,
+    ) {
         val backend = installedBackend
         when (level) {
             LEVEL_ERROR -> backend.e(tag, msg)
@@ -1402,7 +1504,11 @@ object RustEngineBridge {
     private val failureCounter = AtomicInteger(0)
     private val recentErrors = ArrayDeque<DiagnosticsEntry>(RECENT_ERRORS_CAP)
 
-    private fun recordFailure(op: String, message: String, code: Int = -1) {
+    private fun recordFailure(
+        op: String,
+        message: String,
+        code: Int = -1,
+    ) {
         synchronized(diagnosticsLock) {
             failureCounter.incrementAndGet()
             val entry = DiagnosticsEntry(
@@ -1424,16 +1530,19 @@ object RustEngineBridge {
         }
     }
 
-    private fun appConfig(mode: NormalizeMode, toggles: ToneTogglesCarrier): AppConfig =
-        AppConfig.newBuilder()
+    private fun appConfig(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+    ): AppConfig =
+        AppConfig
+            .newBuilder()
             .setInputMode(
                 when (mode) {
                     NormalizeMode.POJ -> "poj"
                     NormalizeMode.TL -> "tl"
                     NormalizeMode.ENGLISH -> "english"
                 },
-            )
-            .setOoDoubletapEnabled(toggles.isDoubleTapOoEnabled)
+            ).setOoDoubletapEnabled(toggles.isDoubleTapOoEnabled)
             .setNnDoubletapEnabled(toggles.isDoubleTapNnEnabled)
             .build()
 
@@ -1444,7 +1553,8 @@ object RustEngineBridge {
     ): PhoneticsResponse? {
         val phoneticsBuilder = PhoneticsRequest.newBuilder()
         methodSetter(phoneticsBuilder)
-        val requestBuilder = Request.newBuilder()
+        val requestBuilder = Request
+            .newBuilder()
             .setId(nextId.incrementAndGet())
             .setPhonetics(phoneticsBuilder.build())
         if (config != null) {
@@ -1472,7 +1582,8 @@ object RustEngineBridge {
     ): LexiconResponse? {
         val lexiconBuilder = LexiconRequest.newBuilder()
         methodSetter(lexiconBuilder)
-        val request = Request.newBuilder()
+        val request = Request
+            .newBuilder()
             .setId(nextId.incrementAndGet())
             .setLexicon(lexiconBuilder.build())
             .build()
@@ -1531,13 +1642,15 @@ object RustEngineBridge {
     // builds via the diagnostics() / resetDiagnosticsForTesting() seams.
     private val DEBUG: Boolean = isDebugBuild()
 
-    private fun isDebugBuild(): Boolean = try {
-        Class.forName("com.siansiansu.taigikeyboard.BuildConfig")
-            .getField("DEBUG")
-            .getBoolean(null)
-    } catch (_: Throwable) {
-        false
-    }
+    private fun isDebugBuild(): Boolean =
+        try {
+            Class
+                .forName("com.siansiansu.taigikeyboard.BuildConfig")
+                .getField("DEBUG")
+                .getBoolean(null)
+        } catch (_: Throwable) {
+            false
+        }
 
     // endregion
 }
@@ -1560,10 +1673,16 @@ data class ToneTogglesCarrier(
 )
 
 /** Result of `Method::StripTone`. */
-data class StripToneOutcome(val bare: String, val tone: String)
+data class StripToneOutcome(
+    val bare: String,
+    val tone: String,
+)
 
 /** Result of `Method::TpsInputAdjust`. */
-data class TpsAdjustOutcome(val adjusted: String, val replaceLast: String?)
+data class TpsAdjustOutcome(
+    val adjusted: String,
+    val replaceLast: String?,
+)
 
 /** Init-bulk-pull cache for the callout tone variation tables. */
 data class ToneVariationsCache(

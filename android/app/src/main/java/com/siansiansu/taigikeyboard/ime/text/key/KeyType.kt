@@ -16,15 +16,11 @@ enum class KeyType {
 
     companion object {
         @SuppressLint("DefaultLocale")
-        fun fromString(string: String): KeyType {
-            return valueOf(string.uppercase())
-        }
+        fun fromString(string: String): KeyType = valueOf(string.uppercase())
     }
 }
 
 class KeyTypeAdapter {
     @FromJson
-    fun fromJson(raw: String): KeyType {
-        return KeyType.fromString(raw)
-    }
+    fun fromJson(raw: String): KeyType = KeyType.fromString(raw)
 }

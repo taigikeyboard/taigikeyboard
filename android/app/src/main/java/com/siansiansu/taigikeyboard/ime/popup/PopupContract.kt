@@ -54,11 +54,15 @@ interface PopupHost {
     val isShowingExtendedPopup: Boolean
 
     fun show(anchor: KeyAnchor)
+
     fun extend(anchor: KeyAnchor)
+
     fun hide()
+
     fun dismissAllPopups()
 
     fun propagateMotionEvent(event: MotionEvent): Boolean
+
     fun activeKeyData(): KeyData?
 }
 
@@ -66,10 +70,16 @@ interface PopupHost {
 object NoOpPopupHost : PopupHost {
     override val isShowingPopup: Boolean = false
     override val isShowingExtendedPopup: Boolean = false
+
     override fun show(anchor: KeyAnchor) = Unit
+
     override fun extend(anchor: KeyAnchor) = Unit
+
     override fun hide() = Unit
+
     override fun dismissAllPopups() = Unit
+
     override fun propagateMotionEvent(event: MotionEvent): Boolean = false
+
     override fun activeKeyData(): KeyData? = null
 }

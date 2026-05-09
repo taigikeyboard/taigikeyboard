@@ -1,0 +1,44 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+
+# ktlint rule overrides — picked up by Spotless via ktlint engine.
+# Disabled rules below are stylistic-only and cause large diffs in the
+# existing codebase without functional benefit. Keep this list minimal.
+
+# Forces `val x = if(...) {} else {}` onto multiple lines:
+#     val x =
+#         if (...) {
+ktlint_standard_multiline-expression-wrapping = disabled
+
+# Compose @Composable functions must start with uppercase by Jetpack
+# Compose convention; ktlint's default rule conflicts with the framework.
+ktlint_standard_function-naming = disabled
+
+# Compose `LocalXxx` CompositionLocal vals + TextProvider top-level vals
+# legitimately start with uppercase. ktlint's screaming-snake-case rule
+# would force renames that break Compose's static `Local*` lookup pattern.
+ktlint_standard_property-naming = disabled
+
+# Wildcard imports are used in a handful of files (Subtype, layouts,
+# emoji palette) where listing every symbol would bloat the import block.
+# Keeping consistency with existing style.
+ktlint_standard_no-wildcard-imports = disabled
+
+# Material Icons community pattern — `Icons.Filled.X` extension property
+# backed by a top-level `private var _x: ImageVector? = null`. ktlint's
+# matching-property heuristic doesn't see through Compose extensions.
+ktlint_standard_backing-property-naming = disabled
+
+# CJK i18n descriptions and external URLs routinely cross 120 visual
+# columns. Code-quality value of this rule is low for a keyboard project
+# where the bulk of "long" lines are localized strings, not nested logic.
+max_line_length = off

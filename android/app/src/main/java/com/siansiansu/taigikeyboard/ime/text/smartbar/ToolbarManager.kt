@@ -98,7 +98,9 @@ class ToolbarManager(
         // Globe button: open system IME picker
         smartbarView.findViewById<View>(R.id.toolbar_globe_button)?.setOnClickListener {
             val context = smartbarView.context
-            val imm = context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            val imm = context.getSystemService(
+                android.content.Context.INPUT_METHOD_SERVICE,
+            ) as android.view.inputmethod.InputMethodManager
             imm.showInputMethodPicker()
         }
 

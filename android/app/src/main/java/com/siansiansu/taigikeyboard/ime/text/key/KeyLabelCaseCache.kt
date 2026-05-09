@@ -37,10 +37,10 @@ internal object KeyLabelCaseCache {
         val capsLock: Boolean,
     )
 
+    // LinkedHashMap(initialCapacity, loadFactor, accessOrder) — accessOrder=true gives LRU semantics.
     private val cache: LinkedHashMap<Key, String> =
-        object : LinkedHashMap<Key, String>(MAX_ENTRIES, 0.75f, /* accessOrder = */ true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, String>?): Boolean =
-                size > MAX_ENTRIES
+        object : LinkedHashMap<Key, String>(MAX_ENTRIES, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, String>?): Boolean = size > MAX_ENTRIES
         }
 
     /**

@@ -14,6 +14,5 @@ import com.siansiansu.taigikeyboard.ime.dictionary.InputType
  * `INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE`.
  */
 object AutocompleteInputClassifier {
-    fun determineInputType(text: String): InputType =
-        LexiconBridge.classifyInput(text).inputType
+    fun determineInputType(text: String): InputType = LexiconBridge.classifyInput(text).inputType
 }

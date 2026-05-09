@@ -9,7 +9,9 @@ import androidx.compose.runtime.Stable
  * @property emojis 此集合中的所有 emoji（第一個為基礎 emoji，其餘為變體）
  */
 @Stable
-data class EmojiSet(val emojis: List<EmojiKeyData>) {
+data class EmojiSet(
+    val emojis: List<EmojiKeyData>,
+) {
     companion object {
         val Unspecified = EmojiSet(listOf(EmojiKeyData(emptyList(), "", "", emptyList())))
     }
@@ -26,7 +28,8 @@ data class EmojiSet(val emojis: List<EmojiKeyData>) {
 
     // 快取膚色到 emoji 的映射
     private val skinToneMap: Map<Int, EmojiKeyData> by lazy {
-        emojis.asSequence()
+        emojis
+            .asSequence()
             .flatMap { emoji -> emoji.codePoints.map { it to emoji } }
             .toMap()
     }

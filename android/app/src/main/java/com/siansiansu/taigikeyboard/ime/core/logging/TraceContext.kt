@@ -13,8 +13,7 @@ object TraceId {
 
     private val seq = AtomicLong(0L)
 
-    fun next(): String =
-        if (BuildConfig.DEBUG) "${System.currentTimeMillis()}-${seq.incrementAndGet()}" else untraced
+    fun next(): String = if (BuildConfig.DEBUG) "${System.currentTimeMillis()}-${seq.incrementAndGet()}" else untraced
 }
 
 object TraceContext {

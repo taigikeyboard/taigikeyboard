@@ -184,10 +184,16 @@ class TextInputManager(
         publishLayout(mode, data)
     }
 
-    private fun publishLayout(mode: KeyboardMode, data: KeyboardLayoutData) {
+    private fun publishLayout(
+        mode: KeyboardMode,
+        data: KeyboardLayoutData,
+    ) {
         _keyboardUi.update { current ->
-            if (current.layouts[mode] == data) current
-            else current.copy(layouts = current.layouts + (mode to data))
+            if (current.layouts[mode] == data) {
+                current
+            } else {
+                current.copy(layouts = current.layouts + (mode to data))
+            }
         }
     }
 
@@ -384,8 +390,11 @@ class TextInputManager(
         capsStateManager.updateCapsState()
         resetComposingText()
         _keyboardUi.update { current ->
-            if (current.keyVariation == keyVariation) current
-            else current.copy(keyVariation = keyVariation)
+            if (current.keyVariation == keyVariation) {
+                current
+            } else {
+                current.copy(keyVariation = keyVariation)
+            }
         }
         setActiveKeyboardMode(keyboardMode)
         // imeOptions / confirm-key label / composing flag may all flip on a
@@ -534,7 +543,8 @@ class TextInputManager(
 
         launch {
             val isTranslateSwapped = smartbarManager.getCachedIsTranslateSwapped()
-            val modes = _keyboardUi.value.layouts.keys.toList()
+            val modes = _keyboardUi.value.layouts.keys
+                .toList()
             for (mode in modes) {
                 if (mode != activeKeyboardMode) {
                     val computed = withContext(Dispatchers.IO) {
@@ -1014,7 +1024,12 @@ class TextInputManager(
                 }
                 if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
                 candidateCoordinator.scheduleDisplayDerivation()
-                if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms")
+                if (BuildConfig.DEBUG) {
+                    Log.d(
+                        "PERF",
+                        "[1] handleTaigiInput composing: ${System.currentTimeMillis() - inputStart}ms",
+                    )
+                }
                 candidateCoordinator.updateTaigiCandidatesDebounced()
             } else {
                 if (char == "-" && smartbarManager.isShowingNextWordCandidates()) {
@@ -1040,7 +1055,12 @@ class TextInputManager(
             manager.appendCharacter(char, ic)
             if (taigikeyboard.prefs.isToolbarAutoCollapse) smartbarManager.collapseToolbarIfOpen()
             candidateCoordinator.scheduleDisplayDerivation()
-            if (BuildConfig.DEBUG) Log.d("PERF", "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms")
+            if (BuildConfig.DEBUG) {
+                Log.d(
+                    "PERF",
+                    "[1] handleTaigiInput composing digit: ${System.currentTimeMillis() - inputStart}ms",
+                )
+            }
             candidateCoordinator.updateTaigiCandidatesDebounced()
         } else {
             // 非組字字元（標點、符號、箭頭等）→ 確認組字後直接輸出
@@ -1066,8 +1086,11 @@ class TextInputManager(
         // TPS tone marks ˋ ˊ ˇ ˆ (Lm).
         // Three TPS tone marks are Sk (Symbol, modifier), not caught by isLetter:
         //   ˪ (U+02EA, tone 3), ˫ (U+02EB, tone 7), ˙ (U+02D9, tone 8)
-        return first.isLetter() || first == '-' ||
-            first == '˪' || first == '˫' || first == '˙'
+        return first.isLetter() ||
+            first == '-' ||
+            first == '˪' ||
+            first == '˫' ||
+            first == '˙'
     }
 
     // --- Appearance + key-event dispatch helpers --------------------------------------

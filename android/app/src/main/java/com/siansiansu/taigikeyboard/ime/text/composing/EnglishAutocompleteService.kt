@@ -167,7 +167,12 @@ class EnglishAutocompleteService(
         // 嘗試使用系統 SpellChecker
         if (BuildConfig.DEBUG) Log.d("ENSPELL", "[GET] Calling getSpellCheckerSuggestions()...")
         val spellSuggestions = getSpellCheckerSuggestions(currentWord)
-        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[GET] getSpellCheckerSuggestions() returned ${spellSuggestions.size} suggestions")
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                "ENSPELL",
+                "[GET] getSpellCheckerSuggestions() returned ${spellSuggestions.size} suggestions",
+            )
+        }
 
         return if (spellSuggestions.isNotEmpty()) {
             spellSuggestions.map { EnglishSuggestion(text = it) }
@@ -201,14 +206,24 @@ class EnglishAutocompleteService(
                 // 2秒超時
                 suspendCoroutine { continuation ->
                     pendingSuggestions = { suggestions ->
-                        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-CALLBACK] Received ${suggestions.size} suggestions")
+                        if (BuildConfig.DEBUG) {
+                            Log.d(
+                                "ENSPELL",
+                                "[SPELL-CALLBACK] Received ${suggestions.size} suggestions",
+                            )
+                        }
                         continuation.resume(suggestions)
                     }
 
                     try {
                         // 使用 getSentenceSuggestions 檢查單一詞彙
                         val textInfo = TextInfo(word)
-                        if (BuildConfig.DEBUG) Log.d("ENSPELL", "[SPELL-GET] Calling session.getSentenceSuggestions()...")
+                        if (BuildConfig.DEBUG) {
+                            Log.d(
+                                "ENSPELL",
+                                "[SPELL-GET] Calling session.getSentenceSuggestions()...",
+                            )
+                        }
                         session.getSentenceSuggestions(arrayOf(textInfo), MAX_SUGGESTIONS)
 
                         if (BuildConfig.DEBUG) {

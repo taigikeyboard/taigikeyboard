@@ -21,21 +21,15 @@ enum class LayoutType {
     ;
 
     @SuppressLint("DefaultLocale")
-    override fun toString(): String {
-        return super.toString().replace("_", "/").lowercase()
-    }
+    override fun toString(): String = super.toString().replace("_", "/").lowercase()
 
     companion object {
         @SuppressLint("DefaultLocale")
-        fun fromString(string: String): LayoutType {
-            return valueOf(string.replace("/", "_").uppercase())
-        }
+        fun fromString(string: String): LayoutType = valueOf(string.replace("/", "_").uppercase())
     }
 }
 
 class LayoutTypeAdapter {
     @FromJson
-    fun fromJson(raw: String): LayoutType {
-        return LayoutType.fromString(raw)
-    }
+    fun fromJson(raw: String): LayoutType = LayoutType.fromString(raw)
 }

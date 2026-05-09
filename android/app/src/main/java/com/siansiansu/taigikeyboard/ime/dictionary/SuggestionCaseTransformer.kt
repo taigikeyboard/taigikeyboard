@@ -24,9 +24,10 @@ object SuggestionCaseTransformer {
         caps: Boolean,
         capsLock: Boolean,
         inputMode: InputMode,
-    ): List<TaigiWord> = suggestions.map { word ->
-        transformWord(word, composingText, caps, capsLock, inputMode)
-    }
+    ): List<TaigiWord> =
+        suggestions.map { word ->
+            transformWord(word, composingText, caps, capsLock, inputMode)
+        }
 
     private fun transformWord(
         word: TaigiWord,

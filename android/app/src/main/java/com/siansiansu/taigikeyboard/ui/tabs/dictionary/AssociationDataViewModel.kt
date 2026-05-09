@@ -58,7 +58,8 @@ class AssociationDataViewModel(
             _allData.value =
                 _allData.value.filter {
                     !(
-                        it.prevWord == entry.prevWord && it.prevTl == entry.prevTl &&
+                        it.prevWord == entry.prevWord &&
+                            it.prevTl == entry.prevTl &&
                             it.nextWord == entry.nextWord &&
                             it.nextTl == entry.nextTl
                     )
@@ -83,7 +84,9 @@ class AssociationDataViewModel(
                             entry.prevWord,
                         )},${DictionaryCsvCodec.escape(
                             entry.prevTl,
-                        )},${DictionaryCsvCodec.escape(entry.nextWord)},${DictionaryCsvCodec.escape(entry.nextTl)},${entry.count}\n",
+                        )},${DictionaryCsvCodec.escape(
+                            entry.nextWord,
+                        )},${DictionaryCsvCodec.escape(entry.nextTl)},${entry.count}\n",
                     )
                 }
             }

@@ -100,11 +100,12 @@ object SymbolData {
     )
 
     /** Returns rows for the given category */
-    fun rows(category: SymbolCategory): List<List<String>> = when (category) {
-        SymbolCategory.FULL_WIDTH -> fullWidthRows
-        SymbolCategory.HALF_WIDTH -> halfWidthRows
-        SymbolCategory.HIRAGANA -> hiraganaRows
-        SymbolCategory.KATAKANA -> katakanaRows
-        SymbolCategory.KAOMOJI -> kaomojiRows
-    }
+    fun rows(category: SymbolCategory): List<List<String>> =
+        when (category) {
+            SymbolCategory.FULL_WIDTH -> fullWidthRows
+            SymbolCategory.HALF_WIDTH -> halfWidthRows
+            SymbolCategory.HIRAGANA -> hiraganaRows
+            SymbolCategory.KATAKANA -> katakanaRows
+            SymbolCategory.KAOMOJI -> kaomojiRows
+        }
 }

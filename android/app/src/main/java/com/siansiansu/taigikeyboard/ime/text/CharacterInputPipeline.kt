@@ -19,9 +19,15 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
  */
 object CharacterInputPipeline {
     /** Result of TPS key-level adjustment. */
-    data class Adjustment(val char: String, val replaceLast: String?)
+    data class Adjustment(
+        val char: String,
+        val replaceLast: String?,
+    )
 
-    fun adjust(char: String, rawInput: String): Adjustment {
+    fun adjust(
+        char: String,
+        rawInput: String,
+    ): Adjustment {
         val outcome = RustEngineBridge.tpsInputAdjust(char, rawInput)
         return Adjustment(outcome.adjusted, outcome.replaceLast)
     }

@@ -13,7 +13,6 @@ import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -82,8 +81,7 @@ class ComposingManager(
 
     fun getRawInput(): String? = if (cachedIsComposing) cachedRawInput else null
 
-    fun getComposingText(): String? =
-        if (cachedIsComposing) cachedDisplayText.ifEmpty { cachedRawInput } else null
+    fun getComposingText(): String? = if (cachedIsComposing) cachedDisplayText.ifEmpty { cachedRawInput } else null
 
     /**
      * Bump on real input-context change. Engine drops state silently on the
@@ -108,7 +106,10 @@ class ComposingManager(
 
     // region Intent dispatch API
 
-    fun startComposing(char: String, ic: InputConnection) {
+    fun startComposing(
+        char: String,
+        ic: InputConnection,
+    ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
         val mode = resolveMode(settings.inputMode)
@@ -130,7 +131,10 @@ class ComposingManager(
         )
     }
 
-    fun appendCharacter(char: String, ic: InputConnection) {
+    fun appendCharacter(
+        char: String,
+        ic: InputConnection,
+    ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=appendCharacter char='$char'" }
         val settings = settingsProvider.current
         applyTransition(
@@ -157,7 +161,10 @@ class ComposingManager(
         )
     }
 
-    fun replaceLastCharacter(replacement: String, ic: InputConnection) {
+    fun replaceLastCharacter(
+        replacement: String,
+        ic: InputConnection,
+    ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=replaceLastCharacter replacement='$replacement'" }
         val settings = settingsProvider.current
         applyTransition(
@@ -225,7 +232,10 @@ class ComposingManager(
         )
     }
 
-    fun selectSuggestion(suggestion: String, ic: InputConnection) {
+    fun selectSuggestion(
+        suggestion: String,
+        ic: InputConnection,
+    ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=selectSuggestion len=${suggestion.length}" }
         applyAsSelfCommit(
             RustEngineBridge.composingSelectSuggestion(suggestion, currentGeneration),
@@ -233,7 +243,10 @@ class ComposingManager(
         )
     }
 
-    fun commitPreeditThenInsertExternal(text: String, ic: InputConnection) {
+    fun commitPreeditThenInsertExternal(
+        text: String,
+        ic: InputConnection,
+    ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitPreeditThenInsertExternal len=${text.length}" }
         val settings = settingsProvider.current
         applyAsSelfCommit(

@@ -83,14 +83,13 @@ class CapsStateManager(
         return parseCapsModeFromFlags(capsFlags)
     }
 
-    private fun parseCapsModeFromFlags(flags: Int): CapsMode {
-        return when {
+    private fun parseCapsModeFromFlags(flags: Int): CapsMode =
+        when {
             flags and InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS > 0 -> CapsMode.ALL
             flags and InputType.TYPE_TEXT_FLAG_CAP_SENTENCES > 0 -> CapsMode.SENTENCES
             flags and InputType.TYPE_TEXT_FLAG_CAP_WORDS > 0 -> CapsMode.WORDS
             else -> CapsMode.NONE
         }
-    }
 
     enum class CapsMode {
         ALL,

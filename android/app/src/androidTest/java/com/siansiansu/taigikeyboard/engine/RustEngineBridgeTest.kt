@@ -225,19 +225,33 @@ private class RecordingLoggerBackend : LoggerBackend {
         lines.clear()
     }
 
-    override fun d(tag: String, msg: String) {
+    override fun d(
+        tag: String,
+        msg: String,
+    ) {
         lines += "[D] $tag: $msg"
     }
 
-    override fun i(tag: String, msg: String) {
+    override fun i(
+        tag: String,
+        msg: String,
+    ) {
         lines += "[I] $tag: $msg"
     }
 
-    override fun w(tag: String, msg: String, t: Throwable?) {
+    override fun w(
+        tag: String,
+        msg: String,
+        t: Throwable?,
+    ) {
         lines += "[W] $tag: $msg"
     }
 
-    override fun e(tag: String, msg: String, t: Throwable?) {
+    override fun e(
+        tag: String,
+        msg: String,
+        t: Throwable?,
+    ) {
         lines += "[E] $tag: $msg"
     }
 }

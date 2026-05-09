@@ -198,7 +198,8 @@ class NextWordService(
             // hasn't completed (or failed), skip dict rows and let user
             // associations still surface.
             val lexiconReady = com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-                .shared(appContext).awaitLexiconReady()
+                .shared(appContext)
+                .awaitLexiconReady()
             if (lexiconReady) {
                 try {
                     logger.debug(TAG) { "[PREDICT] Dict query: prev_word='$lastChar'" }
@@ -211,9 +212,11 @@ class NextWordService(
                     // exact mask) — pre-v3.5.8 the platform branched on
                     // `allAssociationSourcesEnabled`.
                     val toggles = com.siansiansu.taigikeyboard.engine.LexiconBridge
-                        .DictionaryToggles.from(settings)
+                        .DictionaryToggles
+                        .from(settings)
                     val bitmask = com.siansiansu.taigikeyboard.engine.LexiconBridge
-                        .dictionaryFilters(toggles).assocLookupBitmask
+                        .dictionaryFilters(toggles)
+                        .assocLookupBitmask
                     val entries = com.siansiansu.taigikeyboard.engine.LexiconBridge.assocLookup(
                         previousWord = lastChar,
                         limit = (limit * 2).toUInt(),
@@ -507,7 +510,10 @@ class NextWordService(
                 val log = cursor.getInt(1)
                 val checkpointed = cursor.getInt(2)
                 if (busy != 0 || log != checkpointed) {
-                    logger.w(TAG, "[MIGRATE] WAL checkpoint incomplete: busy=$busy, log=$log, checkpointed=$checkpointed")
+                    logger.w(
+                        TAG,
+                        "[MIGRATE] WAL checkpoint incomplete: busy=$busy, log=$log, checkpointed=$checkpointed",
+                    )
                 }
             }
         }
@@ -664,7 +670,10 @@ class NextWordService(
 
                 db.execSQL(deleteSql, arrayOf(deleteCount.toString()))
 
-                logger.i(TAG, "[PRUNE] Deleted $deleteCount associations (was $currentCount, target <= $MAX_USER_ASSOCIATIONS)")
+                logger.i(
+                    TAG,
+                    "[PRUNE] Deleted $deleteCount associations (was $currentCount, target <= $MAX_USER_ASSOCIATIONS)",
+                )
             } catch (e: Exception) {
                 logger.e(TAG, "[PRUNE] Failed to prune associations", e)
             }

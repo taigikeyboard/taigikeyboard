@@ -11,12 +11,12 @@ import androidx.core.view.children
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
@@ -255,7 +255,10 @@ class SmartbarManager(
         pushCandidateState(_candidateStripState.value.mode)
     }
 
-    fun onTaigiCandidateClicked(word: TaigiWord, index: Int) {
+    fun onTaigiCandidateClicked(
+        word: TaigiWord,
+        index: Int,
+    ) {
         candidateClickHandler.handleCandidateClick(word, index)
     }
 

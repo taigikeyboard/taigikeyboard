@@ -18,9 +18,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.Dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.popup.PopupHost
@@ -142,10 +141,11 @@ private fun KeyboardSurface(
  * pins `INVARIANT_keyboard_navbar_inset_padding_factor`.
  */
 @Composable
-private fun computeBottomInsetPadding(): Dp = with(LocalDensity.current) {
-    val navBars = WindowInsets.navigationBars.getBottom(this)
-    val mandatory = WindowInsets.mandatorySystemGestures.getBottom(this)
-    val gestures = WindowInsets.systemGestures.getBottom(this)
-    val maxPx = maxOf(navBars, mandatory, gestures)
-    (maxPx * 0.9f).toDp()
-}
+private fun computeBottomInsetPadding(): Dp =
+    with(LocalDensity.current) {
+        val navBars = WindowInsets.navigationBars.getBottom(this)
+        val mandatory = WindowInsets.mandatorySystemGestures.getBottom(this)
+        val gestures = WindowInsets.systemGestures.getBottom(this)
+        val maxPx = maxOf(navBars, mandatory, gestures)
+        (maxPx * 0.9f).toDp()
+    }

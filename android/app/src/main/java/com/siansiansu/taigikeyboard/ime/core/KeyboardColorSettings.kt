@@ -3,7 +3,6 @@
 
 package com.siansiansu.taigikeyboard.ime.core
 
-import android.graphics.Color
 import org.json.JSONObject
 
 /**
@@ -51,8 +50,6 @@ data class KeyboardColorSettings(
             }
         }
 
-        private fun JSONObject.optIntOrNull(key: String): Int? {
-            return if (has(key)) getInt(key) else null
-        }
+        private fun JSONObject.optIntOrNull(key: String): Int? = if (has(key)) getInt(key) else null
     }
 }
