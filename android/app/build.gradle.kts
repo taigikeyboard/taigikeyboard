@@ -22,13 +22,13 @@ android {
         applicationId = "com.siansiansu.taigikeyboard"
         minSdk = 28
         targetSdk = 35
-        // versionCode scheme: MAJOR*1_000_000 + MINOR*10_000 + PATCH*100
-        // + BUILD. Forced to this 7-digit form because an earlier upload
-        // consumed `3_050_702` on Play Console — the 357xxx scheme would
-        // be < that floor and Play rejects monotonic regressions
-        // ("existing users cannot upgrade"). v3.5.7 build #3 = 3_050_703;
-        // v3.5.8 starts at 3_050_800.
-        versionCode = 3_050_704
+        // versionCode = Unix epoch minutes — auto-monotonic, never collides
+        // across test uploads (only collision risk = same-minute rebuild,
+        // not realistic since one release AAB build takes >1 min).
+        // Today ≈ 29_637_600, well above the previous Play floor
+        // (3_050_704) and well under Play's 2_100_000_000 hard cap
+        // (~5970 years headroom). versionName stays SemVer, managed manually.
+        versionCode = (System.currentTimeMillis() / 60_000L).toInt()
         versionName = "3.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
