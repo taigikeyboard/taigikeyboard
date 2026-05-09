@@ -7,13 +7,23 @@
 輸出：output/dictionary.fst
 
 Key 格式（前綴式）：
-- tl:<tl_num>：TL 數字聲調（如 tl:hoo2-se3）
-- tl:<tl_notone>：TL 去調（如 tl:hoo-se）
-- poj:<poj_num>：POJ 數字聲調（如 poj:ho2-se3）
-- poj:<poj_notone>：POJ 去調（如 poj:ho-se）
+- tl:<tl_num>：TL 數字聲調（如 tl:hoo2se3，數字當 syllable separator）
+- tl:<tl_notone>：TL 去調 fused（如 tl:hoose，連 hyphen 也已脫掉）
+- poj:<poj_num>：POJ 數字聲調（如 poj:ho2se3）
+- poj:<poj_notone>：POJ 去調 fused（如 poj:hoose）
 - tl:<tl_abbrev>：TL 縮寫（如 tl:hs）
 - poj:<poj_abbrev>：POJ 縮寫（如 poj:hs）
 - hanzi:<hanzi>：漢字前綴搜尋（如 hanzi:好無）
+
+Fused-toneless invariant — `tl_notone` / `poj_notone` are produced
+upstream by `dictionary/common/notone.py::remove_tone()` which strips
+BOTH digits and hyphens from `tl_num` / `poj_num`. As a result the FST
+already contains a fused toneless key for every multi-syllable entry,
+so toneless Roman input like `tsua` retrieves both single-syllable
+(`紙`) and multi-syllable (`珠仔`) candidates without any builder-side
+derivation rule. v3.5.8 Phase 1b verified this on 2026-05-10 and was
+marked N/A — see `docs/roadmap.md` §Phase 1b. Engine-side contract is
+pinned by `engine/lexicon/tests/fused_toneless_key.rs`.
 
 Wire format (per docs/engine/lexicon-slice-plan.md §2.2):
     key_bytes (UTF-8) || 0xFF || rowid_le_4
@@ -72,7 +82,16 @@ def resolve_builder_bin() -> Path:
 
 
 def _tl_num_syllable_count(tl_num: str) -> int:
-    """Count syllables in tl_num (always hyphen-separated, no spaces)."""
+    """Count syllables in tl_num via hyphen-count + 1.
+
+    Note: in current production data `tl_num` is always digit-separated
+    (e.g. `hoo2se3`, `tsu1a2`) — the upstream `numtone` stage has already
+    folded hyphens into tone digits — so this helper effectively returns
+    1 for every record, and the `<= MAX_SYLLABLES_TL_NUM` gate at the
+    call site is a redundant safety net behind the harder upstream filter
+    in `dictionary_records.py::load_dictionary_records` (`syllable_count
+    > MAX_SYLLABLES` rows are dropped before they ever reach here).
+    """
     return tl_num.count("-") + 1
 
 

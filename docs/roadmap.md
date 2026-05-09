@@ -3,7 +3,7 @@
 > **Type**: Planning
 > **Keywords**: `roadmap`, `planning`, `v3.5.8`, `continuous-input`, `連續輸入`
 > **Status**: Active
-> **Last updated**: 2026-05-10 (Phase 1 merged; next = Phase 1b)
+> **Last updated**: 2026-05-10 (Phase 1 merged; Phase 1b marked N/A after pre-impl audit; next = Phase 2)
 
 ---
 
@@ -43,7 +43,7 @@ Phase IV-B 已關閉,跨平台演算法皆位於 `engine/`。連續輸入的所�
 
 #### Case A — `tsua` (同 toneless key 下不同 syllable_count)
 
-*前提*:Phase 1b 已完成 (否則 `珠仔` 在 toneless key `tsua` 下根本不會出現)。
+*前提*:fused toneless key 已存在 — 由上游 `notone` CSV stage 提供 (Phase 1b N/A,詳見下方 §Phase 1b)。
 
 ```
 input = "tsua"
@@ -51,7 +51,7 @@ syllabifier::valid_span_endings("tsua", pos=0)  → {3, 4}
 lexicon 查兩次:
   span [0,3) toneless="tsu"  → 珠(syll=1), 子(syll=1), ...
   span [0,4) toneless="tsua" → 紙(syll=1), 珠仔(syll=2), ...
-                              ↑↑↑ 珠仔 來自 Phase 1b 補發的 fused key
+                              ↑↑↑ 珠仔 命中 `tl_notone=tsua` (上游 notone stage 已 fused)
 候選列表 (按 score 排序):
   [紙(0,4,syll=1), 珠仔(0,4,syll=2), 珠(0,3,syll=1), 子(0,3,syll=1), ...]
 
@@ -159,25 +159,27 @@ tone-mark `ˊ` 是 unambiguous terminator → endings 直接由 mark 位置決�
 
 ---
 
-### Phase 1b — (Critical) FST 多音節 toneless 變體 key
+### Phase 1b — (N/A) FST 多音節 fused toneless 變體 key — 已由上游 notone stage 提供
 
-**為什麼必要**:今日 FST builder 對多音節 entry 的 toneless key 仍保留 syllable separator (T1 數字或 hyphen)。
-- 單音節 `紙 tsuá` → toneless key = `tsua` (✓ 與 input `tsua` 對齊)
-- 多音節 `珠仔 tsu-á` → toneless key = `tsu1a` 或 `tsu-a` (✗ input `tsua` 不命中,使用者必須打 `tsu1a2` 才命中)
+**Status**:**N/A** — 原計畫 (2026-05-10 plan-mode approved) 假設「FST 對多音節 entry 的 toneless key 仍保留 syllable separator」,Phase 1 merge 後 pre-impl audit 證實這個前提錯誤,實作不需要。為避免後續 phase 重編號,本節保留為占位並記錄 audit 結論。
 
-**沒有這個 Phase,Phases 3-5 的連續輸入功能對多音節 entry 全部失效**。
+**Audit 結論 (2026-05-10)**:
 
-**修法** (借 librime spelling-algebra 概念):FST build 時,對每個多音節 entry 額外發射 1 條 toneless 串接變體 key,撕掉 hyphens / T1 separator,指向同一個 rowid。
+- `dictionary/common/notone.py::remove_tone()` 用 `re.sub(r"[\d\-]", "", text)` —— 同時脫掉 digits 與 hyphens
+- `dictionary/common/stages/notone.py:14` 把這個 transform 套到 `tl_num` / `poj_num`,產出 fused `tl_notone` / `poj_notone`
+- `dictionary/build/create_fst.py::collect_pairs()` 直接把 fused `tl_notone` / `poj_notone` 欄位 emit 進 FST
+- 結果:**多音節 entry 在 FST 上早就有 fused toneless key** (例:珠仔 rowid=146421 的 `tl_notone=tsua` → FST `tl:tsua` 已含此 rowid)
+- 輸入端 `engine/phonetics/src/normalization.rs::normalize_input("tsua")` 因 `has_tone_marks=false` 不加 default tone,直接回 `"tsua"`,與 FST key 對齊
+- 因此 Phase 3/5 §走查範例 Case A (toneless input `tsua` 同時取得 紙 + 珠仔) 在現行 pipeline 下成立,**不需 builder 改動**
 
-**Files**:
-- `dictionary/build/create_fst.py` 或對應 Rust builder — 加 derivation rule:對 multi-syllable entry 同時 emit `(toneless_with_separator, rowid)` 與 `(fused_toneless, rowid)`
-- `engine/lexicon/src/key_normalizer.rs:18+` — 確認 input-side `normalize_input` 與 fused 形式對齊
+**範圍**:本 N/A 結論限縮於 **Roman toneless lookup 的 separator-stripping** 部分。下列獨立議題 **不**因此被涵蓋,如有需求另開 phase:
 
-**Tests**:
-- `engine/lexicon/tests/fused_toneless_key.rs` — 對 `tsu-á 珠仔` rowid 驗證 `tsua` 與 `tsu1a` 兩 key 都命中
-- 邊界:純 hanji entry、單音節 entry (不應 emit 重複 key)
+- `tl_notone` 仍可保留 `ⁿ` / `o͘`,而引擎輸入 normalize 會折成 ASCII `nn` / `oo` → 形成 key 對不上的子集 (例:存在 `tl:tsiuⁿthuan` 但無 `tl:tsiunnthuan`)
+- TPS bopomofo explicit-tone 輸入 (例:`ㄗㄨㄚˋ → tsua2`) 屬 tone-disambiguation,非 separator stripping
 
-**規模**:S-M (~150 LOC builder + ~50 LOC tests)
+**鎖定**:`engine/lexicon/tests/fused_toneless_key.rs` (本 PR 新增) — 用 synthetic FST + 雙 rowid 驗證 fused toneless key 同時 surface 單音節 + 多音節 entry。`dictionary/common/notone.py` + `dictionary/build/create_fst.py` 加 cross-reference docstring/comment 以防上游 regex 無聲改動。
+
+**規模**:本 N/A PR ~50 LOC test + docstring/註解 + roadmap/memory 修正,無 builder 變動。
 
 ---
 
@@ -198,7 +200,7 @@ tone-mark `ˊ` 是 unambiguous terminator → endings 直接由 mark 位置決�
 
 ### Phase 3 — 純函數 syllabifier (TL + TPS)
 
-**重要**:syllabifier **不**回傳「single best segmentation」。必須回傳「從 pos 出發所有合法的 syllable-prefix 切點」,讓下游 lexicon 對每個切點做獨立查詢——這是支援 `tsua` 同時命中 `紙(span=4, syll=1)` + `珠仔(span=4, syll=2)` + `珠(span=3, syll=1)` 的關鍵 (前提 Phase 1b 已 ship 補上 fused toneless key)。pure longest-match (khiin 做法) 只會給 span 4 不會給 span 3,於是漏掉「珠」的短切候選;global lattice (librime 做法) 過度設計。我們選**多 span endings + span-local 查詢**的中庸路線。
+**重要**:syllabifier **不**回傳「single best segmentation」。必須回傳「從 pos 出發所有合法的 syllable-prefix 切點」,讓下游 lexicon 對每個切點做獨立查詢——這是支援 `tsua` 同時命中 `紙(span=4, syll=1)` + `珠仔(span=4, syll=2)` + `珠(span=3, syll=1)` 的關鍵 (fused toneless key 已由上游 notone stage 提供 — 詳見 §Phase 1b)。pure longest-match (khiin 做法) 只會給 span 4 不會給 span 3,於是漏掉「珠」的短切候選;global lattice (librime 做法) 過度設計。我們選**多 span endings + span-local 查詢**的中庸路線。
 
 **Files**:
 - `engine/composing/src/syllabifier/mod.rs` (新)
@@ -408,14 +410,14 @@ form: u8  // numeric / notone / abbrev / hanzi
 | Commit + truncate + re-segment | khiin-rs `focus_candidate` (`buffer_mgr.rs:1096-1129`) | Phase 4 transition.rs |
 | Visible composing strip | MOE Tailo `composingTextString` UI affordance | Phase 7/8 ComposingTextStrip |
 | T4 entering coda 由 final consonant 推斷 | khiin-rs `converter.rs:351-363` | Phase 2 inventory 預收 -ptkh 結尾即可 |
-| Rule-based fused toneless | librime `algebra.cc:107-140` derive rules | Phase 1b 借單一 derive rule |
+| Rule-based fused toneless | librime `algebra.cc:107-140` derive rules | (N/A — 本 repo 由上游 notone stage 預先 fuse `tl_notone` / `poj_notone`,FST 直接繼承) |
 | Tone marks 為 unambiguous terminator | TPS 設計本身 | Phase 3 tps.rs O(n) scan |
 | frequency-derived cost + length / syllable bias 排序 | khiin-rs `khiin/src/data/segmenter.rs` (cost = ln(1/p) / word_len_bias × syllable_bias 區塊) | Phase 5 `ContinuousScore` 簡化版 (`freq × (1.0 + 0.1 × (syll-1))`) |
 | Generation counter for stale async | librime + nextword 既有 | 沿用 |
 
 **刻意不採用** (YAGNI):
 - librime full SyllableGraph + Translator pipeline → 過度工程
-- librime Spelling Algebra full pipeline → Phase 1b 只取單一 fused-toneless rule
+- librime Spelling Algebra full pipeline → 不需要;fused toneless 已由上游 notone stage 提供 (§Phase 1b N/A)
 - librime SchemaYAML 動態載入 → 三模式硬編碼
 - khiin-rs Continuous/Classic/Manual 三 InputMode → 直接做 Continuous,不暴露切換
 - MOE NailCandidate 雙向 commit/decommit → forward-only
@@ -430,7 +432,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 |---|---|---|---|---|
 | 0 — roadmap rewrite | ~300 docs | 1, 1b, ... | (admin) | **Merged in PR #248** |
 | 1 — dict.bin v2 + syllable_count | ~150 + tests | 5 | No | **Merged in PR #249** |
-| **1b — FST fused toneless key** | ~200 + tests | **3, 5, 7, 8** | **No (但 user-visible 硬前置)** | Pending |
+| **1b — FST fused toneless key** | (admin-tier ~50 LOC) | — (premise 失效,不再 block 後續) | No | **N/A — invariant met by upstream notone stage; locked by `engine/lexicon/tests/fused_toneless_key.rs`** |
 | 2 — syllable inventory FST | ~300 + tests | 3 | No | Pending |
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | Pending |
 | 4 — `Phase::Continuous` + nextword 邊界 | ~550 + tests | 6 | No | Pending |
@@ -442,11 +444,11 @@ form: u8  // numeric / notone / abbrev / hanzi
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = Phase 1b (FST fused toneless key)。Phase 0 merged in PR #248,Phase 1 merged in PR #249。
+**Active PR pointer**:next round = Phase 2 (TL syllable inventory FST)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b 在本 PR 確認為 N/A 並鎖定 invariant test。
 
-**總計**:11 個 PR,加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
+**總計**:11 個 PR (其中 1b 已降級為 admin-tier N/A PR),加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
 
-**v3.5.8 release tag** = Phase 1-9 全部完成後 cut。**不**做中途 partial release (per `feedback_no_slice_toggles.md`,no fallback toggle;Continuous 是 direct swap)。Phases 1、1b、2 純 storage prep 可在 Phase 3 開工前先合進 main——不影響使用者行為。
+**v3.5.8 release tag** = Phase 1-9 全部完成後 cut。**不**做中途 partial release (per `feedback_no_slice_toggles.md`,no fallback toggle;Continuous 是 direct swap)。Phases 1、2 storage prep 可在 Phase 3 開工前先合進 main——不影響使用者行為 (Phase 1b 已 N/A)。
 
 ---
 
@@ -479,7 +481,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 
 ### Borrow librime spelling-algebra (full pipeline)
 **Source**: 2026-05-05 librime architecture comparison
-**Status**: Phase 1b 已抽用單一 derive rule (fused toneless key);完整 pipeline (declarative `spelling_rules.toml` + Rust rule engine + FST trailer `derivation_type_u8` / `form_u8` 兩位元組 + ranking credibility multiplier) 留作後續候選。詳見 git 歷史 `docs/roadmap.md` 在 commit `52e15d83` 之前的 Item 2 內容。
+**Status**: §Phase 1b 確認 N/A — fused toneless key 早就由上游 `dictionary/common/notone.py::remove_tone()` 在 CSV 階段提供。完整 librime pipeline (declarative `spelling_rules.toml` + Rust rule engine + FST trailer `derivation_type_u8` / `form_u8` 兩位元組 + ranking credibility multiplier) 留作後續候選。詳見 git 歷史 `docs/roadmap.md` 在 commit `52e15d83` 之前的 Item 2 內容。
 
 ### Continuous-input nextword bigram 整合
 連續輸入中段排序加 nextword bigram boost (給 buffer-driven candidate × 1.3 if 同時在 nextword top-K)。本 phase 已預埋 state sync,可無痛上。
