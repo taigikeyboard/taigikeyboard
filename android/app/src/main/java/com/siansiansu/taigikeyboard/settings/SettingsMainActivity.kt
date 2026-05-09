@@ -113,11 +113,11 @@ class SettingsMainActivity : AppCompatActivity() {
                                 onCopyright = {
                                     startActivity(Intent(this, CopyrightActivity::class.java))
                                 },
-                                onFeedback = {
+                                onAboutDeveloper = {
                                     openDetailActivity(
-                                        ContentType.KEY_CONTACT_US,
-                                        ContentType.FEEDBACK,
-                                        arrayOf(ContentType.KEY_FEEDBACK_EMAIL),
+                                        ContentType.KEY_ABOUT_DEVELOPER,
+                                        ContentType.ABOUT_DEVELOPER,
+                                        emptyArray(),
                                     )
                                 },
                                 onVersionHistory = {

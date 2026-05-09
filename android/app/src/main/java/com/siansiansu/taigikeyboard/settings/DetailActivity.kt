@@ -15,7 +15,7 @@ import com.siansiansu.taigikeyboard.ui.tabs.home.DetailScreen
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
-// Generic detail page for feature explanations, FAQ, feedback, and version history
+// Generic detail page for feature explanations, FAQ, about-developer, and version history
 class DetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,13 +43,13 @@ class DetailActivity : ComponentActivity() {
                                 startActivity(Intent(this, SetupGuideActivity::class.java))
                             }
 
-                            ACTION_FEEDBACK -> {
+                            ACTION_ABOUT_DEVELOPER -> {
                                 startActivity(
                                     createIntent(
                                         this,
-                                        titleKey = ContentType.KEY_CONTACT_US,
-                                        contentType = ContentType.FEEDBACK,
-                                        contentKeys = arrayOf(ContentType.KEY_FEEDBACK_DESCRIPTION, ContentType.KEY_FEEDBACK_EMAIL),
+                                        titleKey = ContentType.KEY_ABOUT_DEVELOPER,
+                                        contentType = ContentType.ABOUT_DEVELOPER,
+                                        contentKeys = emptyArray(),
                                     ),
                                 )
                             }
@@ -72,7 +72,7 @@ class DetailActivity : ComponentActivity() {
         const val EXTRA_CONTENT_KEYS = "extra_content_keys"
 
         private const val ACTION_SETUP_GUIDE = "setup_guide"
-        private const val ACTION_FEEDBACK = "feedback"
+        private const val ACTION_ABOUT_DEVELOPER = "about_developer"
 
         fun createIntent(
             context: Context,

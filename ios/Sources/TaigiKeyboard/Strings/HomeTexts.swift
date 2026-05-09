@@ -1,11 +1,11 @@
 // 中文: HomeTab(頭頁)所有 UI 文字常數。包含啟用導引、功能說明、版本歷史、
-// 中文: 寄付支持、版權聲明等。對應 Android `HomeTexts.kt`。
+// 中文: 關於開發者、版權聲明等。對應 Android `HomeTexts.kt`。
 // 中文: Feature / FAQ 內容已外移到 content/tab1-features.json + tab1-faq.json,
 // 中文: 由 FeatureContentLoader 動態載入。
 
 // MARK: - HomeTab 頭頁文字
 
-// 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、問題回報、版權聲明
+// 包含：頭頁、啟用方法、新功能、已知問題、預計功能、FAQ、版本紀錄、關於開發者、版權聲明
 // 對應 Android HomeTexts.kt
 
 // 中文: 頭頁文字 namespace。MARK 子區塊與頁面 Section 對應。
@@ -46,14 +46,13 @@ enum HomeTexts {
 
     static let userGuide = "網站紹介"
     static let rateUs = "為阮評分"
-    static let contactUs = "寄付支持"
+    static let aboutDeveloper = "關於開發者"
     static let privacyPolicy = "隱私權政策"
 
-    // MARK: - 寄付
+    // MARK: - 關於開發者
 
-    static let emailContact = "台語齒盤是我 1 个人用上班以外時間開發佮維護，開發者帳號、開發家私、網站費用攏是用家己薪水支付。若你感覺這个齒盤對你有幫助，歡迎贊助支持，予台語齒盤會當繼續運作落去，咱做伙為著台語拍拚。"
     static let freePromise = "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
-    static let supportUs = "贊助台語齒盤"
+    static let officialWebsite = "官方網站"
 
     // MARK: - 版本資訊
 

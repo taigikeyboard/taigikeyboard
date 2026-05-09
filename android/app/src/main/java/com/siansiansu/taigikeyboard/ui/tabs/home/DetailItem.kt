@@ -8,7 +8,7 @@ import com.siansiansu.taigikeyboard.content.ParagraphAttachment
 import com.siansiansu.taigikeyboard.localization.HomeTexts
 import com.siansiansu.taigikeyboard.ui.components.resolveDrawableResId
 
-// Detail screen data model and content builders for feature/FAQ/feedback/version pages
+// Detail screen data model and content builders for feature/FAQ/about-developer/version pages
 sealed interface DetailItem {
     data class Paragraph(
         val text: String,
@@ -47,7 +47,7 @@ internal fun buildDetailItems(
     contentKeys: Array<String>,
 ): List<DetailItem> =
     when (contentType) {
-        ContentType.FEEDBACK -> buildFeedbackItems()
+        ContentType.ABOUT_DEVELOPER -> buildAboutDeveloperItems()
         ContentType.VERSION -> buildVersionItems()
         else -> buildGenericItems(contentKeys)
     }
@@ -109,21 +109,19 @@ internal fun buildContentItems(
 
 internal fun getTextByKey(key: String): String? =
     when (key) {
-        ContentType.KEY_CONTACT_US -> HomeTexts.contactUs
-        ContentType.KEY_FEEDBACK_EMAIL -> HomeTexts.emailContact
+        ContentType.KEY_ABOUT_DEVELOPER -> HomeTexts.aboutDeveloper
         ContentType.KEY_VERSION_HISTORY -> HomeTexts.versionHistory
         else -> null
     }
 
-private fun buildFeedbackItems(): List<DetailItem> =
+private fun buildAboutDeveloperItems(): List<DetailItem> =
     listOf(
-        DetailItem.Paragraph(HomeTexts.emailContact),
-        DetailItem.ExternalLink(
-            HomeTexts.supportUs,
-            R.drawable.ic_open_in_new,
-            "https://p.ecpay.com.tw/AA663DE",
-        ),
         DetailItem.Paragraph(HomeTexts.freePromise),
+        DetailItem.ExternalLink(
+            HomeTexts.officialWebsite,
+            R.drawable.ic_open_in_new,
+            "https://www.taigikeyboard.tw/",
+        ),
     )
 
 private fun buildVersionItems(): List<DetailItem> =

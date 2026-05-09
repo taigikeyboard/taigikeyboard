@@ -55,12 +55,12 @@
           "attachment": {
             "type": "navigation",
             "text": {
-              "hanji": "揤遮去看「問題回報」"
+              "hanji": "揤遮看「關於開發者」"
             },
-            "destination": "feedback",
+            "destination": "about_developer",
             "icon": {
-              "ios": "envelope",
-              "android": "ic_email"
+              "ios": "info.circle",
+              "android": "ic_info"
             }
           }
         }

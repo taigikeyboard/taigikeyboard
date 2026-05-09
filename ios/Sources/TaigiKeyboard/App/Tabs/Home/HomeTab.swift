@@ -91,9 +91,9 @@ struct HomeTab: View {
                     }
 
                     NavigationLink {
-                        FeedbackDetailView()
+                        AboutDeveloperView()
                     } label: {
-                        Label(HomeTexts.contactUs, systemImage: "heart")
+                        Label(HomeTexts.aboutDeveloper, systemImage: "info.circle")
                     }
 
                     NavigationLink {

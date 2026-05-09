@@ -28,7 +28,7 @@ android {
         // be < that floor and Play rejects monotonic regressions
         // ("existing users cannot upgrade"). v3.5.7 build #3 = 3_050_703;
         // v3.5.8 starts at 3_050_800.
-        versionCode = 3_050_703
+        versionCode = 3_050_704
         versionName = "3.5.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

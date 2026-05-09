@@ -52,7 +52,7 @@ fun HomeScreen(
     onFeatureClick: (titleKey: String, contentType: String, contentKeys: Array<String>) -> Unit,
     onUrlClick: (String) -> Unit,
     onCopyright: () -> Unit,
-    onFeedback: () -> Unit,
+    onAboutDeveloper: () -> Unit,
     onVersionHistory: () -> Unit,
     onFaqClick: (titleKey: String, contentKeys: Array<String>) -> Unit,
 ) {
@@ -168,10 +168,10 @@ fun HomeScreen(
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(
-                    icon = painterResource(R.drawable.ic_heart),
-                    label = HomeTexts.contactUs,
+                    icon = painterResource(R.drawable.ic_info),
+                    label = HomeTexts.aboutDeveloper,
                     trailingIcon = chevronRight,
-                    onClick = onFeedback,
+                    onClick = onAboutDeveloper,
                 )
                 SettingsDivider(Modifier.padding(horizontal = 16.dp))
                 NavigationRow(

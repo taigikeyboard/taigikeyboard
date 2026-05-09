@@ -75,8 +75,8 @@ struct FAQDetailView: View {
         switch destination {
         case "setup_guide":
             SetupGuideView(viewModel: viewModel)
-        case "feedback":
-            FeedbackDetailView()
+        case "about_developer":
+            AboutDeveloperView()
         default:
             EmptyView()
         }

@@ -2,7 +2,7 @@ package com.siansiansu.taigikeyboard.localization
 
 /**
  * 頭頁文字
- * 包含：頭頁、啟用方法、新功能、FAQ、版本紀錄、問題回報、版權聲明
+ * 包含：頭頁、啟用方法、新功能、FAQ、版本紀錄、關於開發者、版權聲明
  * 對應 iOS HomeTexts.swift
  */
 object HomeTexts {
@@ -46,16 +46,14 @@ object HomeTexts {
 
     const val userGuide = "網站紹介"
     const val rateUs = "為阮評分"
-    const val contactUs = "寄付支持"
+    const val aboutDeveloper = "關於開發者"
     const val privacyPolicy = "隱私權政策"
 
-    // MARK: - 寄付
+    // MARK: - 關於開發者
 
-    const val emailContact =
-        "台語齒盤是我 1 个人用上班以外時間開發佮維護，開發者帳號、開發家私、網站費用攏是用家己薪水支付。若你感覺這个齒盤對你有幫助，歡迎贊助支持，予台語齒盤會當繼續運作落去，咱做伙為著台語拍拚。"
     const val freePromise =
         "台語齒盤保證永遠免費，嘛袂做付費功能。台語是咱 ê 母語，無應該因為錢 ê 問題用袂著好家私。我向望逐家想欲學台語、寫台語 ê 人攏會當無負擔來使用，這是我做這个齒盤上重要 ê 心願。"
-    const val supportUs = "贊助台語齒盤"
+    const val officialWebsite = "官方網站"
 
     // MARK: - 版本資訊
 
