@@ -1,28 +1,36 @@
 //! Android JNI entry point. Thin wrapper around `dispatch::process_request`
 //! plus a logger callback that bounces back into the JVM via a cached
-//! `JavaVM` + `GlobalRef` to the `RustEngineBridge` class.
+//! `JavaVM` + `Global<JClass<'static>>` reference to the `RustEngineBridge`
+//! class.
 //!
-//! Per `docs/engine/ffi-safety.md` §2, every exported `extern "system"` body is
-//! wrapped in `catch_unwind`. Per plan v3 §B3 + plan v4 §R3-H2 the JNI body
-//! length-checks the `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an
-//! oversized payload is rejected without the matching allocation.
+//! Per `docs/engine/ffi-safety.md` §2, every exported `extern "system"` body
+//! is run inside [`EnvUnowned::with_env`], which wraps the closure in
+//! [`std::panic::catch_unwind`] so panics never unwind across the JNI
+//! boundary. Per plan v3 §B3 + plan v4 §R3-H2 the JNI body length-checks the
+//! `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an oversized payload
+//! is rejected without the matching allocation.
 
 // 中文: Android JNI 入口,包覆 dispatch 並把 log 回呼透過快取的 JavaVM 反彈回 JVM。
-// 中文: 所有 extern "system" 導出函式皆以 catch_unwind 包覆,並先做長度檢查再複製 jbyteArray。
+// 中文: 所有 extern "system" 導出函式皆以 EnvUnowned::with_env 包覆,先做長度檢查再複製 jbyteArray。
 
 use dispatch::MAX_REQUEST_BYTES;
-use jni::objects::{GlobalRef, JByteArray, JClass, JObject, JStaticMethodID, JValue};
-use jni::signature::{Primitive, ReturnType};
+use jni::objects::{Global, JByteArray, JClass, JObject, JStaticMethodID, JValue};
+use jni::signature::{MethodSignature, Primitive, ReturnType};
+use jni::strings::JNIStr;
 use jni::sys::{jbyteArray, jint};
-use jni::{JNIEnv, JavaVM};
+use jni::{jni_sig, jni_str, Env, EnvUnowned, JavaVM, Outcome};
 use prost::Message;
 use protos::engine::{ErrorCode, Response};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Once, OnceLock};
 
-const BRIDGE_CLASS: &str = "com/siansiansu/taigikeyboard/engine/RustEngineBridge";
-const DISPATCH_METHOD: &str = "dispatchLog";
-const DISPATCH_SIG: &str = "(ILjava/lang/String;Ljava/lang/String;)V";
+// jni 0.22 requires `AsRef<JNIStr>` and `AsRef<MethodSignature>` for class /
+// method / signature arguments. The `jni_str!` and `jni_sig!` macros perform
+// MUTF-8 / signature validation at compile time.
+// 中文: jni 0.22 起,類別/方法名/簽名須走編譯期驗證的 jni_str!/jni_sig! 巨集。
+const BRIDGE_CLASS: &JNIStr = jni_str!("com/siansiansu/taigikeyboard/engine/RustEngineBridge");
+const DISPATCH_METHOD: &JNIStr = jni_str!("dispatchLog");
+const DISPATCH_SIG: MethodSignature = jni_sig!("(ILjava/lang/String;Ljava/lang/String;)V");
 
 // MARK: - JNI exports
 
@@ -33,81 +41,85 @@ const DISPATCH_SIG: &str = "(ILjava/lang/String;Ljava/lang/String;)V";
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_processRequestBytes<
     'local,
 >(
-    env: JNIEnv<'local>,
+    mut unowned: EnvUnowned<'local>,
     _class: JClass<'local>,
     bytes: JByteArray<'local>,
 ) -> jbyteArray {
-    let result = catch_unwind(AssertUnwindSafe(|| -> Vec<u8> {
-        // Pre-copy length check per plan v4 R3-H2 — avoids allocating a large
-        // Vec<u8> for input we are about to reject.
-        let len = match env.get_array_length(&bytes) {
-            Ok(l) => l as usize,
-            Err(_) => return encode_error(0, ErrorCode::FailParse, 0),
-        };
-        if len > MAX_REQUEST_BYTES {
-            // JUSTIFICATION: mapped to FAIL_INVARIANT (not FAIL_PARSE) — bytes
-            // may be wire-valid; the engine invariant violated is "request
-            // size ≤ MAX_REQUEST_BYTES". Adding FAIL_SIZE would renumber proto
-            // reserved fields.
-            return encode_error(0, ErrorCode::FailInvariant, 0);
+    let outcome = unowned
+        .with_env(|env| -> jni::errors::Result<jbyteArray> {
+            // Pre-copy length check per plan v4 R3-H2 — avoids allocating a
+            // large Vec<u8> for input we are about to reject. A failed
+            // length probe is mapped to FAIL_PARSE rather than propagated
+            // because the caller-visible contract is "return an encoded
+            // Response, never throw".
+            let len = match bytes.len(env) {
+                Ok(l) => l,
+                Err(_) => return encode_error_to_jarray(env, ErrorCode::FailParse),
+            };
+            if len > MAX_REQUEST_BYTES {
+                // JUSTIFICATION: mapped to FAIL_INVARIANT (not FAIL_PARSE) —
+                // bytes may be wire-valid; the engine invariant violated is
+                // "request size ≤ MAX_REQUEST_BYTES". Adding FAIL_SIZE would
+                // renumber proto reserved fields.
+                return encode_error_to_jarray(env, ErrorCode::FailInvariant);
+            }
+            let bytes_vec = match env.convert_byte_array(&bytes) {
+                Ok(v) => v,
+                Err(_) => return encode_error_to_jarray(env, ErrorCode::FailParse),
+            };
+            let response_bytes = dispatch::process_request(&bytes_vec);
+            Ok(env.byte_array_from_slice(&response_bytes)?.into_raw())
+        })
+        .into_outcome();
+
+    match outcome {
+        Outcome::Ok(arr) => arr,
+        // Both Err (an unrecovered JNI failure such as byte_array_from_slice
+        // running out of memory) and Panic flow back through one fresh
+        // attachment to preserve the pre-0.22 contract: the Kotlin side always
+        // sees a Response-encoded byte array, even on internal failure.
+        Outcome::Err(_) | Outcome::Panic(_) => {
+            encode_error_via_fresh_attach(&mut unowned, ErrorCode::FailInternal)
         }
-        let bytes_vec = match env.convert_byte_array(&bytes) {
-            Ok(v) => v,
-            Err(_) => return encode_error(0, ErrorCode::FailParse, 0),
-        };
-        dispatch::process_request(&bytes_vec)
-    }));
-    let response_bytes = result.unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0));
-    match env.byte_array_from_slice(&response_bytes) {
-        Ok(arr) => arr.into_raw(),
-        Err(_) => JObject::null().into_raw() as jbyteArray,
     }
 }
 
-/// `external fun registerLogger(): Unit`. Caches `JavaVM` + a `GlobalRef` to
-/// the bridge class + the `dispatchLog` static method ID, then installs the
-/// Rust `log` adapter.
-// 中文: 快取 JavaVM、橋接類別 GlobalRef 與 dispatchLog 方法 ID,並安裝 Rust log adapter。
+/// `external fun registerLogger(): Unit`. Caches `JavaVM` + a
+/// `Global<JClass<'static>>` to the bridge class + the `dispatchLog` static
+/// method ID, then installs the Rust `log` adapter.
+// 中文: 快取 JavaVM、橋接類別 Global<JClass<'static>> 與 dispatchLog 方法 ID,並安裝 Rust log adapter。
 #[no_mangle]
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_registerLogger<
     'local,
 >(
-    mut env: JNIEnv<'local>,
+    mut unowned: EnvUnowned<'local>,
     _class: JClass<'local>,
 ) {
-    let _ = catch_unwind(AssertUnwindSafe(|| {
-        let vm = match env.get_java_vm() {
-            Ok(v) => v,
-            Err(_) => return,
-        };
-        let class = match env.find_class(BRIDGE_CLASS) {
-            Ok(c) => c,
-            Err(_) => return,
-        };
-        let class_global = match env.new_global_ref(&class) {
-            Ok(g) => g,
-            Err(_) => return,
-        };
-        let method_id = match env.get_static_method_id(&class, DISPATCH_METHOD, DISPATCH_SIG) {
-            Ok(id) => id,
-            Err(_) => return,
-        };
-        // Invariant: cache only `JavaVM` + `GlobalRef`. `JNIEnv` is
-        // per-thread and would dangle if read from another thread.
-        let _ = LOGGER_DISPATCH.set(LoggerDispatch {
-            vm,
-            class_global,
-            method_id_bits: jmethod_id_to_bits(method_id),
-        });
-        SET_LOGGER.call_once(|| {
-            let _ = log::set_logger(&PLATFORM_LOGGER);
-            // Default to Warn — see the matching note in
-            // `engine/swift-ffi/src/lib.rs::install_logger_sink` for
-            // rationale. Kotlin bridges call `setLogLevel(4)` in
-            // BuildConfig.DEBUG to opt into `Debug`.
-            log::set_max_level(log::LevelFilter::Warn);
-        });
-    }));
+    let _ = unowned
+        .with_env(|env| -> jni::errors::Result<()> {
+            let vm = env.get_java_vm()?;
+            let class = env.find_class(BRIDGE_CLASS)?;
+            let class_global: Global<JClass<'static>> = env.new_global_ref(&class)?;
+            let method_id = env.get_static_method_id(&class, DISPATCH_METHOD, DISPATCH_SIG)?;
+            // Invariant: cache only `JavaVM` + `Global<JClass<'static>>` +
+            // method ID. `Env` is per-thread and would dangle if read from
+            // another thread.
+            let _ = LOGGER_DISPATCH.set(LoggerDispatch {
+                vm,
+                class_global,
+                method_id,
+            });
+            SET_LOGGER.call_once(|| {
+                let _ = log::set_logger(&PLATFORM_LOGGER);
+                // Default to Warn — see the matching note in
+                // `engine/swift-ffi/src/lib.rs::install_logger_sink` for
+                // rationale. Kotlin bridges call `setLogLevel(4)` in
+                // BuildConfig.DEBUG to opt into `Debug`.
+                log::set_max_level(log::LevelFilter::Warn);
+            });
+            Ok(())
+        })
+        .into_outcome();
 }
 
 /// JNI mirror of swift-ffi `set_log_level`. Adjusts Rust `log::max_level`
@@ -121,22 +133,25 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_setLogLevel<
     'local,
 >(
-    _env: JNIEnv<'local>,
+    mut unowned: EnvUnowned<'local>,
     _class: JClass<'local>,
     level: jni::sys::jint,
 ) {
-    let _ = catch_unwind(AssertUnwindSafe(|| {
-        let filter = match level {
-            1 => log::LevelFilter::Error,
-            2 => log::LevelFilter::Warn,
-            3 => log::LevelFilter::Info,
-            4 => log::LevelFilter::Debug,
-            5 => log::LevelFilter::Trace,
-            _ => log::LevelFilter::Off,
-        };
-        log::set_max_level(filter);
-        log::info!("rust log level set to {filter:?}");
-    }));
+    let _ = unowned
+        .with_env(|_env| -> jni::errors::Result<()> {
+            let filter = match level {
+                1 => log::LevelFilter::Error,
+                2 => log::LevelFilter::Warn,
+                3 => log::LevelFilter::Info,
+                4 => log::LevelFilter::Debug,
+                5 => log::LevelFilter::Trace,
+                _ => log::LevelFilter::Off,
+            };
+            log::set_max_level(filter);
+            log::info!("rust log level set to {filter:?}");
+            Ok(())
+        })
+        .into_outcome();
 }
 
 /// T1 panic injector. Available only when the `panic-injector` feature is
@@ -148,16 +163,19 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_panicForTest<
     'local,
 >(
-    env: JNIEnv<'local>,
+    mut unowned: EnvUnowned<'local>,
     _class: JClass<'local>,
 ) -> jbyteArray {
-    let result = catch_unwind(AssertUnwindSafe(|| -> Vec<u8> {
-        panic!("intentional T1 panic at android-jni boundary");
-    }));
-    let response_bytes = result.unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0));
-    match env.byte_array_from_slice(&response_bytes) {
-        Ok(arr) => arr.into_raw(),
-        Err(_) => JObject::null().into_raw() as jbyteArray,
+    let outcome = unowned
+        .with_env(|_env| -> jni::errors::Result<jbyteArray> {
+            panic!("intentional T1 panic at android-jni boundary");
+        })
+        .into_outcome();
+    match outcome {
+        Outcome::Ok(arr) => arr,
+        Outcome::Err(_) | Outcome::Panic(_) => {
+            encode_error_via_fresh_attach(&mut unowned, ErrorCode::FailInternal)
+        }
     }
 }
 
@@ -165,19 +183,16 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
 
 struct LoggerDispatch {
     vm: JavaVM,
-    class_global: GlobalRef,
-    /// `JStaticMethodID` borrows lifetime from the `JNIEnv` it was looked up
-    /// on, so we round-trip through the raw `jmethodID` pointer bits and
-    /// reconstruct on use. The class is kept alive by `class_global`.
-    // 中文: 把 jmethodID 指標轉成位元保存,使用時再還原;class_global 保證類別不會被卸載。
-    method_id_bits: usize,
+    /// Global reference to the bridge class. Keeps the class alive so the
+    /// cached `method_id` stays valid for the lifetime of the loaded library.
+    // 中文: 橋接類別的全域引用,保證類別不會被卸載,讓快取的 method_id 始終有效。
+    class_global: Global<JClass<'static>>,
+    /// `JStaticMethodID` is `Copy + Send + Sync` (lifetime-free) since
+    /// jni 0.22, so it can be stored directly without the prior `usize`
+    /// round-trip.
+    // 中文: jni 0.22 起 JStaticMethodID 已是無生命週期的 Copy/Send/Sync 型別,可直接存放。
+    method_id: JStaticMethodID,
 }
-
-// SAFETY: `JavaVM` and `GlobalRef` are documented as thread-safe by the `jni`
-// crate. The raw `jmethodID` is process-wide stable for the lifetime of the
-// loaded class, which `class_global` keeps alive.
-unsafe impl Send for LoggerDispatch {}
-unsafe impl Sync for LoggerDispatch {}
 
 static LOGGER_DISPATCH: OnceLock<LoggerDispatch> = OnceLock::new();
 static SET_LOGGER: Once = Once::new();
@@ -194,39 +209,45 @@ impl log::Log for PlatformLogger {
         let Some(dispatch) = LOGGER_DISPATCH.get() else {
             return;
         };
-        // Per Codex round-2 H1: attach the current thread on every callback;
-        // never cache the JNIEnv. AttachGuard auto-detaches on drop.
-        let Ok(mut env) = dispatch.vm.attach_current_thread() else {
-            return;
-        };
-        let level = level_to_jint(record.level());
-        let Ok(tag) = env.new_string(record.target()) else {
-            return;
-        };
-        let Ok(msg) = env.new_string(format!("{}", record.args())) else {
-            return;
-        };
-        // SAFETY: `dispatch.method_id_bits` was produced from a `JMethodID`
-        // obtained at registration time, on a class kept alive by
-        // `class_global`. The signature `(ILjava/lang/String;Ljava/lang/String;)V`
-        // matches the `tag` + `msg` arguments below.
-        let method_id = unsafe { bits_to_jmethod_id(dispatch.method_id_bits) };
-        let _ = unsafe {
-            env.call_static_method_unchecked(
-                &dispatch.class_global,
-                method_id,
-                ReturnType::Primitive(Primitive::Void),
-                &[
-                    JValue::from(level).as_jni(),
-                    JValue::from(&tag).as_jni(),
-                    JValue::from(&msg).as_jni(),
-                ],
-            )
-        };
-        // Clear any pending Java exception so the JVM is not poisoned.
-        if let Ok(true) = env.exception_check() {
-            let _ = env.exception_clear();
-        }
+        // `JavaVM::attach_current_thread` does NOT wrap the closure in
+        // catch_unwind in jni 0.22 — a panic there would unwind across the
+        // JVM boundary and abort the process. Wrap explicitly so the logger
+        // can never crash the host application.
+        // 中文: jni 0.22 的 attach_current_thread 不會 catch panic,自行包 catch_unwind 防止 abort。
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            // Per Codex round-2 H1: attach the current thread on every
+            // callback; never cache the Env. The closure receives a fresh
+            // `&mut Env` whose lifetime ends with the attach scope.
+            let _ = dispatch
+                .vm
+                .attach_current_thread(|env| -> jni::errors::Result<()> {
+                    let level = level_to_jint(record.level());
+                    let tag = env.new_string(record.target())?;
+                    let msg = env.new_string(format!("{}", record.args()))?;
+                    // SAFETY: `dispatch.method_id` was looked up at registration
+                    // time on a class kept alive by `class_global`. The signature
+                    // `(ILjava/lang/String;Ljava/lang/String;)V` matches the
+                    // `level` + `tag` + `msg` arguments below.
+                    let _ = unsafe {
+                        env.call_static_method_unchecked(
+                            &dispatch.class_global,
+                            dispatch.method_id,
+                            ReturnType::Primitive(Primitive::Void),
+                            &[
+                                JValue::from(level).as_jni(),
+                                JValue::from(&tag).as_jni(),
+                                JValue::from(&msg).as_jni(),
+                            ],
+                        )
+                    };
+                    // Clear any pending Java exception so the JVM is not
+                    // poisoned for the next caller.
+                    if env.exception_check() {
+                        env.exception_clear();
+                    }
+                    Ok(())
+                });
+        }));
     }
 
     fn flush(&self) {}
@@ -242,15 +263,7 @@ fn level_to_jint(level: log::Level) -> jint {
     }
 }
 
-fn jmethod_id_to_bits(id: JStaticMethodID) -> usize {
-    id.into_raw() as usize
-}
-
-/// SAFETY contract is documented at the call-site in `PlatformLogger::log`.
-// 中文: 把先前保存的位元還原為 jmethodID;呼叫端提供安全性保證。
-unsafe fn bits_to_jmethod_id(bits: usize) -> JStaticMethodID {
-    JStaticMethodID::from_raw(bits as *mut _)
-}
+// MARK: - Error encoding helpers
 
 fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
     let response = Response {
@@ -266,4 +279,26 @@ fn encode_error(id: u32, code: ErrorCode, generation: u64) -> Vec<u8> {
         .encode(&mut buf)
         .expect("prost encode into Vec<u8> never fails");
     buf
+}
+
+/// Encode `code` as a `Response`, allocate a `JByteArray`, and return the raw
+/// `jbyteArray`. Used inside `with_env` closures.
+// 中文: 在 with_env closure 內把 ErrorCode 編碼為 jbyteArray。
+fn encode_error_to_jarray(env: &mut Env<'_>, code: ErrorCode) -> jni::errors::Result<jbyteArray> {
+    let buf = encode_error(0, code, 0);
+    Ok(env.byte_array_from_slice(&buf)?.into_raw())
+}
+
+/// Fallback path for `Outcome::Err` and `Outcome::Panic` on the JNI methods
+/// that return `jbyteArray`: open a fresh `with_env` scope and re-encode the
+/// error. If even that fails (OOM, JVM in a bad state), return `null`.
+// 中文: Outcome::Err/Panic 的回退路徑,重新 attach 一次重編 FailInternal;若再失敗回 null。
+fn encode_error_via_fresh_attach(unowned: &mut EnvUnowned<'_>, code: ErrorCode) -> jbyteArray {
+    let outcome = unowned
+        .with_env(|env| -> jni::errors::Result<jbyteArray> { encode_error_to_jarray(env, code) })
+        .into_outcome();
+    match outcome {
+        Outcome::Ok(arr) => arr,
+        Outcome::Err(_) | Outcome::Panic(_) => JObject::null().into_raw() as jbyteArray,
+    }
 }
