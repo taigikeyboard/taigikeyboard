@@ -432,7 +432,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 |---|---|---|---|---|
 | 0 — roadmap rewrite | ~300 docs | 1, 1b, ... | (admin) | **Merged in PR #248** |
 | 1 — dict.bin v2 + syllable_count | ~150 + tests | 5 | No | **Merged in PR #249** |
-| **1b — FST fused toneless key** | (admin-tier ~50 LOC) | — (premise 失效,不再 block 後續) | No | **N/A — invariant met by upstream notone stage; locked by `engine/lexicon/tests/fused_toneless_key.rs`** |
+| **1b — FST fused toneless key** | (admin-tier ~50 LOC) | — (premise 失效,不再 block 後續) | No | **N/A — Merged in PR #250** (squash `2c826b96`); invariant locked by `engine/lexicon/tests/fused_toneless_key.rs`,upstream contract on `notone.py::remove_tone` |
 | 2 — syllable inventory FST | ~300 + tests | 3 | No | Pending |
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | Pending |
 | 4 — `Phase::Continuous` + nextword 邊界 | ~550 + tests | 6 | No | Pending |
@@ -444,7 +444,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = Phase 2 (TL syllable inventory FST)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b 在本 PR 確認為 N/A 並鎖定 invariant test。
+**Active PR pointer**:next round = Phase 2 (TL syllable inventory FST)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`)。
 
 **總計**:11 個 PR (其中 1b 已降級為 admin-tier N/A PR),加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
 
