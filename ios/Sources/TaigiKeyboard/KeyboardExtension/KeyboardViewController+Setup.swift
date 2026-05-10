@@ -166,6 +166,17 @@ extension KeyboardViewController {
         if lastInputMode != currentInputMode {
             let previousMode = lastInputMode?.rawValue ?? "nil"
             setupLogger.debug("[SETTINGS] InputMode changed: \(previousMode) -> \(currentInputMode.rawValue)")
+            // v3.5.8 Phase 7B (Codex Fork F) — clear stale Continuous-input
+            // state before swapping the AutocompleteService. POJ↔TL↔TPS uses
+            // distinct Phase::Continuous { raw } byte conventions, so leftover
+            // pending bytes would mis-align consumed-span offsets returned by
+            // the new mode's FetchAtPos calls. `bumpGeneration` then causes
+            // any in-flight engine call to be silently dropped at the FFI
+            // boundary (`engine/composing/src/handle.rs:61-65`).
+            // 中文: 切換輸入模式前先清連續輸入狀態 + bump generation,避免跨模式 byte
+            // 中文: 偏移污染與 in-flight 請求滲入新模式。
+            actionHandler?.composingManager.resetContinuous()
+            actionHandler?.composingManager.bumpGeneration()
             lastInputMode = currentInputMode
             setupAutocompleteServiceForCurrentMode()
             needsAutocompleteReset = true

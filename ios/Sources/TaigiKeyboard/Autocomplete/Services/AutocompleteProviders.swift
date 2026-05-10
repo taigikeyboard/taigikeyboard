@@ -15,6 +15,17 @@ protocol ComposingStateProvider: AnyObject {
     var composingText: String { get }
 }
 
+/// Synchronous Continuous-input candidate fetch surface (v3.5.8 Phase 7B).
+/// Kept distinct from `ComposingStateProvider` because it carries
+/// `RustEngineBridge.ContinuousCandidate` and is therefore not Foundation-only.
+/// ComposingManager conforms; the implementation calls
+/// `RustEngineBridge.composingFetchAtPos` synchronously on the calling thread,
+/// guaranteeing the fetch shares the caller's generation snapshot.
+// 中文: 連續輸入候選詞同步擷取介面。實作端同步呼叫 FFI 確保 generation 一致。
+protocol ContinuousCandidateFetcher: AnyObject {
+    func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate]
+}
+
 /// Provides selection context for autocomplete without coupling to NextWordController.
 // 中文: 提供 last selected word 與 envelope generation,讓 autocomplete 做 NextWord boost。
 protocol SelectionContextProvider: AnyObject {

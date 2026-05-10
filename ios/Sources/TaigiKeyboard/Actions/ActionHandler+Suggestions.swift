@@ -18,6 +18,83 @@ extension ActionHandler {
             return
         }
 
+        // v3.5.8 Phase 7B — Continuous-input commit branch (Codex Fork C modify).
+        // Metadata round-trip via decimal strings + sidechannel displayText:
+        // `additionalInfo["consumedBytes"]` / `["syllableCount"]` /
+        // `["displayText"]` were emitted by
+        // `AutocompleteService.buildContinuousSuggestions`. On any decode
+        // failure (missing required key / non-UInt32 value) DROP the tap
+        // silently — Codex flagged that falling back to `selectSuggestion(text:)`
+        // would commit only `displayText` and lose `consumedBytes`, corrupting
+        // the engine's `Phase::Continuous { raw }` byte alignment or
+        // prematurely exiting via the wrong path. Frequency recording /
+        // NextWord handshake happen via the engine-emitted effects on the
+        // mid/final commit (`engine/composing/src/transition.rs:649-674`).
+        // The `displayText` sidechannel is required because TPS layout's
+        // `CandidateCellHelper.suggestionToHandle` rewrites `suggestion.text`
+        // via `tlNumericToTPS` when subtitle is nil; using the rewritten
+        // text for `commitContinuous(displayText:)` would mis-match the
+        // engine's fetched span metadata and no-op the commit
+        // (Codex PR #257 r3214912627). Sidechannel value is `??`-fallback
+        // tolerant for older test fixtures / alternate construction paths.
+        if suggestion.additionalInfo["isContinuous"] == "true" {
+            guard let consumedBytesStr = suggestion.additionalInfo["consumedBytes"],
+                  let syllableCountStr = suggestion.additionalInfo["syllableCount"],
+                  let consumedBytes = UInt32(consumedBytesStr),
+                  let syllableCount = UInt32(syllableCountStr)
+            else {
+                logger.debug(
+                    "[SELECT] continuous metadata decode failed; dropping tap. "
+                        + "additionalInfo=\(suggestion.additionalInfo.description)",
+                )
+                return
+            }
+            // Engine-supplied display text (untouched by view-layer rewrites).
+            // Falls back to `suggestion.text` when the sidechannel is missing
+            // — non-fatal so legacy fixtures and tests don't break, but the
+            // producer (`buildContinuousSuggestions`) always populates it.
+            let displayText = suggestion.additionalInfo["displayText"] ?? suggestion.text
+            // Effect-backed commit signal (Codex PR #257 r3214932308):
+            // `commitContinuous` returns `(didCommit, didFinalCommit)` derived
+            // from `transition.effects` containing `.commitTextReplacingPreedit`.
+            // This closes the generation-mismatch race left open by earlier
+            // wasComposing/isComposing gating: when `engine/composing/src/handle.rs:61-65`
+            // silently resets the engine to Idle before dispatch, the resulting
+            // CommitContinuous noop emits zero effects, so both flags stay
+            // false and neither frequency recording nor auto-space fires for
+            // text that was never written.
+            // 中文: 用 transition.effects 是否含 commitTextReplacingPreedit 取代
+            // 中文: wasComposing→!nowComposing 推導,徹底關掉 generation mismatch silent
+            // 中文: reset 造成的假 commit。Invariant: didFinalCommit => didCommit。
+            let (didCommit, didFinalCommit) = composingManager.commitContinuous(
+                displayText: displayText,
+                consumedBytes: consumedBytes,
+                syllableCount: syllableCount,
+            )
+            // Per-segment frequency learning mirrors the lexicon path: every
+            // successful commit records, mid OR final. Engine effects don't
+            // call into `UserFrequencyService`; ranking learning lives at the
+            // platform boundary. Sidechannel `displayText` (not view-rewritten
+            // suggestion.text) ensures frequency tracks what the engine
+            // committed, not the TPS surface form (PR #257 r3214912627).
+            // 中文: 每次成功 commit(mid 或 final)都記頻次;頻次用 sidechannel displayText。
+            if didCommit, settings.isFrequencyRecordingEnabled {
+                CompositionRoot.userFrequencyService.recordUsage(for: displayText)
+            }
+            // Auto-space only on FINAL commit (entire buffer consumed; engine
+            // exits Continuous → Idle). Mid-commits keep composing more
+            // syllables and must NOT insert a space.
+            // 中文: 只有 final-commit 才補空白(整個 buffer 被消化、engine 退到 Idle)。
+            if didFinalCommit, settings.isAutoSpaceEnabled {
+                let isTPSLayout = settings.keyboardLayoutType == .tps
+                let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
+                if !effectiveSwapped || settings.isOutputBothScripts {
+                    keyboardContext.textDocumentProxy.insertText(" ")
+                }
+            }
+            return
+        }
+
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {

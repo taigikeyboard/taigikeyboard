@@ -53,6 +53,14 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
 
+    /// Continuous-input candidate fetcher (decoupled from ComposingManager).
+    /// Distinct from `composingState` because the fetch surface is not
+    /// Foundation-only (`RustEngineBridge.ContinuousCandidate`); same backing
+    /// instance in practice (ComposingManager conforms to both protocols).
+    /// v3.5.8 Phase 7B.
+    // 中文: 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
+    private weak var continuousFetcher: (any ContinuousCandidateFetcher)?
+
     /// Selection context provider (decoupled from ActionHandler)
     private weak var selectionContext: (any SelectionContextProvider)?
 
@@ -75,6 +83,12 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     // 中文: 注入組字狀態 provider(通常是 ComposingManager)。
     func setComposingManager(_ provider: any ComposingStateProvider) {
         composingState = provider
+        // v3.5.8 Phase 7B — same instance also supplies the Continuous fetch
+        // surface. Conditional cast keeps this protocol-driven for testability:
+        // a `ComposingStateProvider` that does NOT also conform to
+        // `ContinuousCandidateFetcher` simply skips the Continuous branch and
+        // the lexicon path handles all candidates.
+        continuousFetcher = provider as? any ContinuousCandidateFetcher
     }
 
     // 中文: 注入選詞上下文 provider(通常是 NextWordController)。
@@ -101,6 +115,27 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
         let capturedRawInput = composing.rawInput
         logger.debug("[AUTOCOMPLETE] rawInput='\(composing.rawInput)' display='\(composing.displayText)'")
+
+        // v3.5.8 Phase 7B — Continuous-input branch (Codex Fork B1+G1+Risk 2).
+        // Synchronous fetch: ComposingManager.fetchContinuousCandidates() calls
+        // RustEngineBridge.composingFetchAtPos on the calling thread, so the
+        // generation snapshot is consistent with the captured `rawInput`.
+        // Empty result (not in Continuous, no inventory, no FST hits) =>
+        // graceful fall-through to the existing lexicon path so single-syllable
+        // / hyphenated / POJ-tone-mark inputs still get classic candidates.
+        // Continuous branch builds its own suggestions array (does NOT share
+        // `buildSuggestions(from:composingText:)`) to avoid double-inserting
+        // the position-0 composing-text cell (Codex Risk 2).
+        if let fetcher = continuousFetcher {
+            let candidates = fetcher.fetchContinuousCandidates()
+            if !candidates.isEmpty {
+                let suggestions = buildContinuousSuggestions(
+                    from: candidates,
+                    composingText: composing.displayText,
+                )
+                return Autocomplete.Result(inputText: text, suggestions: suggestions)
+            }
+        }
 
         do {
             let classification = AutocompleteInputClassifier.classify(rawInput: composing.rawInput)
@@ -214,6 +249,44 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         composingText: String,
     ) -> [Autocomplete.Suggestion] {
         var suggestions = convertToSuggestions(words)
+        suggestions.insert(createComposingTextSuggestion(composingText), at: 0)
+        return suggestions
+    }
+
+    /// v3.5.8 Phase 7B — Continuous candidate suggestions.
+    /// `additionalInfo` carries `consumedSpanEnd` + `syllableCount` (decimal
+    /// strings) plus `displayText` (engine-supplied raw value) so
+    /// `ActionHandler.handleSuggestionSelection` can route the tap to
+    /// `composingManager.commitContinuous(...)` with the engine-supplied byte
+    /// offsets AND the unmodified display text. The `displayText` sidechannel
+    /// is required because TPS layout's `CandidateCellHelper.suggestionToHandle`
+    /// rewrites `suggestion.text` via `tlNumericToTPS` when the subtitle is
+    /// nil/empty — without the sidechannel, `ActionHandler` would call
+    /// `commitContinuous(displayText:)` with the rewritten text, which won't
+    /// match the engine's fetched span metadata and would no-op the commit
+    /// (Codex PR #257 r3214912627). NextWord uses the same `displayText` key
+    /// convention (`ActionHandler+Suggestions.swift:32`).
+    /// Position-0 retains the pending composing-text cell so the user can
+    /// always commit raw / select pending; the Continuous candidates follow.
+    // 中文: 連續輸入候選詞 → KK Suggestion 轉換。displayText 用 additionalInfo
+    // 中文: sidechannel 帶,避開 TPS layout 在 view 端 tlNumericToTPS 改寫 text 的污染。
+    private func buildContinuousSuggestions(
+        from candidates: [RustEngineBridge.ContinuousCandidate],
+        composingText: String,
+    ) -> [Autocomplete.Suggestion] {
+        var suggestions: [Autocomplete.Suggestion] = candidates.map { c in
+            Autocomplete.Suggestion(
+                text: c.displayText,
+                title: c.displayText,
+                subtitle: nil,
+                additionalInfo: [
+                    "isContinuous": "true",
+                    "consumedBytes": String(c.consumedSpanEnd),
+                    "syllableCount": String(c.syllableCount),
+                    "displayText": c.displayText,
+                ],
+            )
+        }
         suggestions.insert(createComposingTextSuggestion(composingText), at: 0)
         return suggestions
     }

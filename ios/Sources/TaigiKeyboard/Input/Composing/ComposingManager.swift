@@ -34,7 +34,7 @@ protocol ComposingContextSink: AnyObject {
 // 中文:   2) 依 proto 順序派送 Effect 給 ComposingDelegate;
 // 中文:   3) 結束後通知 ComposingContextSink。
 // 中文: currentGeneration 每次 input-context 切換 +1,引擎會丟掉舊 generation 的 stale 請求。
-public class ComposingManager: ObservableObject, ComposingStateProvider {
+public class ComposingManager: ObservableObject, ComposingStateProvider, ContinuousCandidateFetcher {
     // MARK: - Published Mirror
 
     @Published public private(set) var isComposing: Bool = false
@@ -95,6 +95,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             toggles: settings.toneToggles,
             generation: currentGeneration,
         ))
+        promoteToContinuousIfEligible(settings: settings)
     }
 
     // 中文: 把單一字元追加到 raw input。
@@ -107,6 +108,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             toggles: settings.toneToggles,
             generation: currentGeneration,
         ))
+        promoteToContinuousIfEligible(settings: settings)
     }
 
     // 中文: 追加連字號 — POJ / TL 的音節分隔符。
@@ -118,6 +120,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             toggles: settings.toneToggles,
             generation: currentGeneration,
         ))
+        promoteToContinuousIfEligible(settings: settings)
     }
 
     /// TPS auto-correct — preserves `selectedCandidateIndex`.
@@ -131,6 +134,138 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
             toggles: settings.toneToggles,
             generation: currentGeneration,
         ))
+        promoteToContinuousIfEligible(settings: settings)
+    }
+
+    // MARK: - v3.5.8 Phase 7B — Continuous-input adapters
+
+    /// Synchronous Continuous-mode promotion fired immediately after each
+    /// raw-input mutation (`startComposing` / `appendCharacter` / `appendHyphen`
+    /// / `replaceLastCharacter`). Per Codex 2026-05-10 ANALYSIS-ONLY consult
+    /// (Fork A modify): MUST run on the same thread frame as the triggering
+    /// intent so the `EnterContinuous` request shares the caller's
+    /// `currentGeneration` snapshot — the engine resets to Idle on any
+    /// generation mismatch (`engine/composing/src/handle.rs:61-65`), so a
+    /// delayed/async call could silently wipe newer composing state.
+    /// Engine no-ops the request when `Phase::Composing { raw }` is empty or
+    /// when already in `Phase::Continuous` (`engine/composing/src/transition.rs:496-502`),
+    /// so unconditional issuance is safe and avoids platform-side eligibility
+    /// heuristics.
+    // 中文: 同步 Continuous 推進。同一執行緒 frame 內 fire,共享 caller generation
+    // 中文: 快照,避免 stale 引擎重置抹掉新狀態。引擎在空 raw / 已是 Continuous 時 no-op,
+    // 中文: 所以可無條件呼叫,不需要平台端啟發式判斷。
+    private func promoteToContinuousIfEligible(settings: EngineSettings) {
+        let transition = RustEngineBridge.composingEnterContinuous(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration,
+        )
+        // EnterContinuous emits zero effects (transition.rs:514). The mirror
+        // refresh keeps `composingText` in sync with the engine's preedit
+        // even though no platform side-effects fire.
+        apply(transition)
+    }
+
+    /// Synchronous span-local candidate query. Read-only; engine returns the
+    /// current `Phase::Continuous { raw }` candidate set in score-desc order.
+    /// Returns `[]` when not in Continuous phase, when no syllable inventory
+    /// is installed, or when the FST returns no hits — the caller cannot
+    /// distinguish these cases (Codex Risk 4: graceful degrade is OK because
+    /// the lexicon path then handles the same input via its own search).
+    // 中文: 同步擷取 Continuous 候選詞。只讀,non-Continuous / 無 inventory / 無命中
+    // 中文: 都回傳空 []。呼叫端無需區分,fall-through 到既有 lexicon path 即可。
+    public func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] {
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.composingFetchAtPos(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration,
+        )
+        // FetchAtPos.effects MUST be empty (read-only RPC, dispatch.rs:103-160).
+        // apply() still runs to refresh the @Published mirror with the engine's
+        // returned snapshot.
+        apply(result.transition)
+        return result.candidates ?? []
+    }
+
+    /// Commit one Continuous candidate. `displayText` / `consumedBytes` /
+    /// `syllableCount` MUST come verbatim from a `ContinuousCandidate`
+    /// returned by an immediately preceding `fetchContinuousCandidates()`
+    /// call — the engine collapses to noop on UTF-8/syllable boundary
+    /// violations, so caller-side validation is unnecessary
+    /// (`engine/composing/src/transition.rs:613-679`).
+    ///
+    /// Returns an effect-backed signal so callers can gate side effects
+    /// (frequency recording, auto-space) on actual commit success rather
+    /// than coarse `isComposing` mirror state. Codex PR #257 r3214932308:
+    /// generation mismatch can silently reset the engine to Idle in
+    /// `engine/composing/src/handle.rs:61-65` BEFORE the intent runs, in
+    /// which case `Intent::CommitContinuous` becomes a phase-mismatch noop
+    /// — the post-call mirror flips to `isComposing=false` (engine is
+    /// Idle) but no `CommitTextReplacingPreedit` effect is emitted.
+    /// Without an effect-backed gate, callers would record frequency for
+    /// uncommitted text and append a stray space.
+    ///
+    /// - Returns:
+    ///   - `didCommit`: `true` iff the engine actually wrote text to the
+    ///     document (`transition.effects` contains `.commitTextReplacingPreedit`).
+    ///     Mid-commits and final-commits both emit this effect; noops do not.
+    ///   - `didFinalCommit`: `didCommit && transition` exited Continuous.
+    ///     Implies `didCommit` — invariant `didFinalCommit => didCommit`.
+    ///
+    /// Mid-commit emits `[CommitTextReplacingPreedit, UpdatePreedit,
+    /// NextWordUpdateLastSelectedWord, PerformAutocomplete]`; final-commit
+    /// (`consumedBytes >= pending.utf8.count`) emits `[CommitTextReplacingPreedit,
+    /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
+    /// and exits Continuous.
+    // 中文: 送出一個 Continuous 候選詞段;回傳 effect-backed (didCommit, didFinalCommit) 旗標,
+    // 中文: 讓 caller 用真實 commit signal 過濾 frequency / auto-space side-effects,
+    // 中文: 而不是 isComposing mirror — 後者在 generation 不對齊 silent reset 時會誤報。
+    public func commitContinuous(
+        displayText: String,
+        consumedBytes: UInt32,
+        syllableCount: UInt32,
+    ) -> (didCommit: Bool, didFinalCommit: Bool) {
+        logger.debug(
+            "[COMPOSE] fn=commitContinuous displayLen=\(displayText.count) "
+                + "consumedBytes=\(consumedBytes) syllCount=\(syllableCount)",
+        )
+        let settings = settingsProvider.current
+        let transition = RustEngineBridge.composingCommitContinuous(
+            displayText: displayText,
+            consumedBytes: consumedBytes,
+            syllableCount: syllableCount,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration,
+        )
+        // Inspect transition BEFORE dispatching effects so we can return an
+        // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
+        // for the same reason — semantics identical to the helper.
+        let didCommit = transition.effects.contains { effect in
+            if case .commitTextReplacingPreedit = effect { return true }
+            return false
+        }
+        let didFinalCommit = didCommit && !transition.isComposing
+        selfCommitInProgress = true
+        defer { selfCommitInProgress = false }
+        apply(transition)
+        return (didCommit: didCommit, didFinalCommit: didFinalCommit)
+    }
+
+    /// Abort Continuous-input. Drops `Phase::Continuous`'s pending + committed
+    /// list, exits to Idle, emits the standard abort effect trio
+    /// (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+    /// `NextWordClearForNewComposing`). Committed segments stay in the
+    /// document — earlier `CommitTextReplacingPreedit` effects already wrote
+    /// them.
+    /// Used by `KeyboardViewController+Setup.syncSettings` on input-mode swap
+    /// (TL ↔ POJ ↔ TPS) so stale Continuous state can't leak across modes.
+    // 中文: 中止 Continuous;committed segments 不回退(已在 document)。Settings inputMode
+    // 中文: 切換時呼叫,確保跨模式無殘留狀態。
+    public func resetContinuous() {
+        logger.debug("[COMPOSE] fn=resetContinuous")
+        applyAsSelfCommit(RustEngineBridge.composingResetContinuous(generation: currentGeneration))
     }
 
     // 中文: 退格 — 刪掉 raw input 最後一個字元。
@@ -147,18 +282,46 @@ public class ComposingManager: ObservableObject, ComposingStateProvider {
     // 中文: 把目前 derived 顯示文字送出(commit derived) — 結束組字。
     public func commitComposition() {
         logger.debug("[COMPOSE] fn=commitComposition")
-        let settings = settingsProvider.current
-        applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
-            mode: settings.inputMode,
-            toggles: settings.toneToggles,
-            generation: currentGeneration,
-        ))
+        // v3.5.8 Phase 7B (Codex post-impl P1, 2026-05-10):
+        // `Intent::CommitDerived` is a no-op in `Phase::Continuous`
+        // (`engine/composing/tests/continuous_phase.rs:656`). Phase 7B
+        // auto-promotes every active composition into Continuous, so the
+        // straight CommitDerived would silently drop the user's commit. Reroute
+        // through `SelectSuggestion(text: composingText)` — engine handles all
+        // three phases (Idle / Composing / Continuous) by committing the text
+        // and exiting to Idle. Empty preedit → fall through to the canonical
+        // CommitDerived which is correctly a no-op on Idle.
+        // 中文: Continuous 下 CommitDerived 引擎 noop;改走 SelectSuggestion 統一三 phase。
+        let derived = composingText
+        guard !derived.isEmpty else {
+            let settings = settingsProvider.current
+            applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
+                mode: settings.inputMode,
+                toggles: settings.toneToggles,
+                generation: currentGeneration,
+            ))
+            return
+        }
+        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(derived, generation: currentGeneration))
     }
 
     // 中文: 把 raw input 直接送出(不經 derived 轉換),結束組字。
     public func commitRawInput() {
         logger.debug("[COMPOSE] fn=commitRawInput")
-        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(generation: currentGeneration))
+        // v3.5.8 Phase 7B (Codex post-impl P1, 2026-05-10):
+        // `Intent::CommitRaw` is also a no-op in `Phase::Continuous`
+        // (`engine/composing/tests/continuous_phase.rs:662`). Same fix shape
+        // as `commitComposition`: route through SelectSuggestion with the raw
+        // string so the user's "Enter at index 0 commits literal raw" gesture
+        // works in all phases. Empty rawInput → fall through to canonical
+        // CommitRaw (no-op on Idle).
+        // 中文: 同 commitComposition fix;raw 字串走 SelectSuggestion 統一三 phase。
+        let raw = rawInput
+        guard !raw.isEmpty else {
+            applyAsSelfCommit(RustEngineBridge.composingCommitRaw(generation: currentGeneration))
+            return
+        }
+        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(raw, generation: currentGeneration))
     }
 
     // 中文: 使用者點選候選詞時呼叫,送出 text 並結束組字。

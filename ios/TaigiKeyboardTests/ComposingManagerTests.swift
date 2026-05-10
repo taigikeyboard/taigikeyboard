@@ -174,10 +174,16 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous,
+        // and `commitComposition` was rerouted through SelectSuggestion to
+        // commit cleanly across all phases. SelectSuggestion under Continuous
+        // emits the abort trio + the commit + NextWordClearForNewComposing
+        // (engine/composing/tests/continuous_phase.rs::select_suggestion_under_continuous_commits_text_and_exits).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived),
             .resetAutocomplete,
             .resetAutocompleteContext,
+            .nextWordClearForNewComposing,
         ])
     }
 
@@ -194,10 +200,14 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
+        // v3.5.8 Phase 7B: same Continuous-aware reroute as commitComposition.
+        // SelectSuggestion under Continuous emits 4 effects (3-effect Composing
+        // path + NextWordClearForNewComposing for the Continuous abort).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit("Hello"),
             .resetAutocomplete,
             .resetAutocompleteContext,
+            .nextWordClearForNewComposing,
         ])
     }
 
