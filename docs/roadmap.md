@@ -489,7 +489,7 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 | 2 — syllable inventory FST | ~300 + tests | 3 | No | **Merged in PR #251** (squash `f4c2e52f`) |
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | **Merged in PR #252** (squash `2f7feac1`) |
 | 4 — `Phase::Continuous` + nextword 邊界 | ~700 + tests | 6 | No | **Merged in PR #253** (squash `a69bfc75`) |
-| 5 — span-local candidate fetch | ~400 + tests | 6 | No | **In progress (PR #254)** |
+| 5 — span-local candidate fetch | ~400 + tests | 6 | No | **Merged in PR #254** (squash `cf813af4`) |
 | 6 — proto + dispatch RPCs | ~400 + bindings | 7, 8 | No | Pending |
 | 7 — iOS UI 整合 | ~500 Swift + tests | — | **Yes** | Pending |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | Pending |
@@ -497,7 +497,7 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = Phase 5 (span-local candidate fetch — lexicon + ranking)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`)。
+**Active PR pointer**:next round = Phase 6 (proto + dispatch RPCs)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`)。
 
 **總計**:11 個 PR (其中 1b 已降級為 admin-tier N/A PR),加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
 
