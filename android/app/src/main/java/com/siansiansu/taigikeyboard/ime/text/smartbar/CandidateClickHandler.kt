@@ -38,6 +38,12 @@ class CandidateClickHandler(
         hanzi: String?,
         rawInput: String,
     ) -> Unit,
+    /**
+     * Schedule a Taigi candidate recompute. Called only after a Continuous
+     * mid-commit where the engine's `PerformAutocomplete` effect alone is
+     * not enough to refresh the strip with the post-commit pending span.
+     */
+    private val onRequestCandidateRefresh: () -> Unit = {},
 ) {
     /**
      * Handle candidate click from RecyclerView.
@@ -64,6 +70,16 @@ class CandidateClickHandler(
 
             val composingManager = getComposingManager()
             val capturedRawInput = composingManager?.getRawInput() ?: ""
+
+            // Continuous-input branch routes BEFORE the sentinel-id branches.
+            // The engine emits NextWordWordSelected on final commits which the
+            // ComposingManager NextWordEffectRouter routes — onNextWordPrediction
+            // is intentionally NOT called from the continuous branch to avoid
+            // double-firing predictions.
+            if (selectedWord.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true" && composingManager != null) {
+                handleContinuousCandidateClick(selectedWord, ic, composingManager)
+                return@withTrace
+            }
 
             val isEnglishSuggestion = selectedWord.id <= -100
             val isNextWordPrediction = selectedWord.id < 0 && !isEnglishSuggestion
@@ -143,12 +159,7 @@ class CandidateClickHandler(
                 composingManager?.selectSuggestion(textToCommit, ic)
             }
 
-            // Auto-space (disabled for TPS via effectiveSwapped)
-            if (prefs.isAutoSpaceEnabled && (!effectiveSwapped || cachedOutputBothScripts)) {
-                if (!textToCommit.endsWith("-")) {
-                    ic.commitText(" ", 1)
-                }
-            }
+            appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
 
             // Record usage frequency
             if (prefs.frequencyRecordingEnabled) {
@@ -208,6 +219,16 @@ class CandidateClickHandler(
         val ic = taigikeyboard.currentInputConnection ?: return
         val composingManager = getComposingManager()
 
+        // Continuous-input branch routes BEFORE the sentinel-id branches.
+        // Overlay taps on Continuous candidates must go through commitContinuous
+        // with the consumedBytes / syllableCount sidechannel; the default
+        // selectSuggestion path would commit displayText only and mis-align
+        // the engine pending buffer.
+        if (word.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true" && composingManager != null) {
+            handleContinuousCandidateClick(word, ic, composingManager)
+            return
+        }
+
         val isNextWordPred = word.id < 0
         val cachedIsTranslateSwapped = getIsTranslateSwapped()
         val cachedOutputBothScripts = getOutputBothScripts()
@@ -251,12 +272,7 @@ class CandidateClickHandler(
             composingManager?.selectSuggestion(textToCommit, ic)
         }
 
-        // Auto-space (disabled for TPS via effectiveSwapped)
-        if (prefs.isAutoSpaceEnabled && (!effectiveSwapped || cachedOutputBothScripts)) {
-            if (!textToCommit.endsWith("-")) {
-                ic.commitText(" ", 1)
-            }
-        }
+        appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
 
         // Record usage frequency
         if (prefs.frequencyRecordingEnabled) {
@@ -277,6 +293,102 @@ class CandidateClickHandler(
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "[OVERLAY] Selected suggestion: ${word.displayText} at index $index")
         }
+    }
+
+    /**
+     * Continuous-input candidate tap. Decodes the [TaigiWord.additionalInfo]
+     * sidechannel, dispatches `commitContinuous`, and gates per-segment
+     * frequency learning + final-commit auto-space on the effect-backed
+     * [RustEngineBridge.CommitContinuousResult]. Stale taps where the engine
+     * has already left Continuous collapse to `(false, false)` so neither
+     * side-effect fires.
+     */
+    private fun handleContinuousCandidateClick(
+        selectedWord: TaigiWord,
+        ic: android.view.inputmethod.InputConnection,
+        composingManager: com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager,
+    ) {
+        val info = selectedWord.additionalInfo
+        val displayText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT] ?: selectedWord.roman
+        val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull()
+        val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull()
+        if (consumedBytes == null || syllableCount == null) {
+            // Decode failure: NEVER fall back to selectSuggestion(text) — would
+            // commit displayText only, lose consumedBytes, mis-align engine
+            // pending bytes. Drop the gesture instead.
+            if (BuildConfig.DEBUG) {
+                Log.w(
+                    TAG,
+                    "[CONTINUOUS] decode failed displayText='$displayText' consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
+                )
+            }
+            return
+        }
+
+        val result = composingManager.commitContinuous(
+            displayText = displayText,
+            consumedBytes = consumedBytes,
+            syllableCount = syllableCount,
+            ic = ic,
+        )
+
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}",
+            )
+        }
+
+        // Per-segment frequency on every successful commit (mid OR final).
+        // Stale taps (didCommit=false) skip — engine had silently reset to Idle
+        // so we'd be polluting UserFrequencyService with non-events.
+        if (result.didCommit && prefs.frequencyRecordingEnabled) {
+            scope.launch {
+                userFreq.recordUsage(displayText)
+            }
+        }
+
+        // Mid-commit: engine stays in Continuous with a fresh pending span,
+        // but `PerformAutocomplete` is a delegate no-op so the strip would
+        // keep stale `consumedBytes` metadata until the next keypress. Trigger
+        // the standard debounced refresh. Final-commit deliberately skipped:
+        // it emits NextWordWordSelected which drives async NextWord predict;
+        // a debounced Taigi refresh would later see `rawInput=null` and call
+        // `clearCandidates()`, racing with / wiping the fresh predictions.
+        if (result.didCommit && !result.didFinalCommit) {
+            onRequestCandidateRefresh()
+        }
+
+        // Auto-space only on final-commit (engine returned to Idle this call).
+        // Mid-commits leave the buffer non-empty so a stray space would split
+        // the word mid-syllable.
+        if (result.didFinalCommit) {
+            val cachedIsTranslateSwapped = getIsTranslateSwapped()
+            val cachedOutputBothScripts = getOutputBothScripts()
+            val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+            val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
+            appendAutoSpaceIfApplicable(ic, displayText, effectiveSwapped, cachedOutputBothScripts)
+        }
+    }
+
+    /**
+     * Insert a single trailing space when auto-space is enabled, the layout is
+     * not effectively swapped (or both scripts are being output), and the
+     * committed text doesn't already end in a hyphen continuation. Shared
+     * by [handleCandidateClick], [handleOverlaySuggestionSelected], and
+     * [handleContinuousCandidateClick] so the four-clause predicate stays
+     * single-sourced.
+     */
+    private fun appendAutoSpaceIfApplicable(
+        ic: android.view.inputmethod.InputConnection,
+        committedText: String,
+        effectiveSwapped: Boolean,
+        outputBothScripts: Boolean,
+    ) {
+        if (!prefs.isAutoSpaceEnabled) return
+        if (effectiveSwapped && !outputBothScripts) return
+        if (committedText.endsWith("-")) return
+        ic.commitText(" ", 1)
     }
 
     companion object {

@@ -24,10 +24,45 @@ data class TaigiWord(
     val hanzi: String?,
     val lengthScore: Int?,
     val sourceBitmask: Int? = null,
+    /**
+     * Per-cell metadata sidechannel — mirror of iOS
+     * `Autocomplete.Suggestion.additionalInfo: [String: String]`. Kept as a
+     * separate map (not extra fields) so feature flags can grow the contract
+     * without touching this DTO again. See [MetadataKeys] for the key dictionary.
+     */
+    val additionalInfo: Map<String, String> = emptyMap(),
 ) {
     /**
      * Display text prioritizes hanzi over roman
      */
     val displayText: String
         get() = if (!hanzi.isNullOrEmpty()) hanzi else roman
+
+    /**
+     * Reserved [additionalInfo] key strings shared between producers
+     * ([com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService])
+     * and consumers ([com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler],
+     * [com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarCandidateStrip]).
+     * Adding a new feature → add a const here, do not sprinkle string literals.
+     */
+    object MetadataKeys {
+        /** `"true"` on the slot-0 composing-text cell. Drives dashed-border affordance. */
+        const val IS_COMPOSING_TEXT = "isComposingText"
+
+        /** `"true"` on Continuous-mode candidate cells (slots 1..n). Routes tap to commitContinuous. */
+        const val IS_CONTINUOUS = "isContinuous"
+
+        /** Decimal-string `consumedSpanEnd` (UInt32) — passed verbatim to `commitContinuous`. */
+        const val CONSUMED_BYTES = "consumedBytes"
+
+        /** Decimal-string `syllableCount` (UInt32) — passed verbatim to `commitContinuous`. */
+        const val SYLLABLE_COUNT = "syllableCount"
+
+        /**
+         * Engine-supplied raw display text. Read verbatim by the tap path —
+         * protects `commitContinuous` alignment from any platform view-
+         * rewrite of `roman` (e.g. TPS layout transforms).
+         */
+        const val DISPLAY_TEXT = "displayText"
+    }
 }

@@ -194,6 +194,38 @@ class NextWordHandler(
     }
 
     /**
+     * Sibling of [handleNextWordPrediction] that forwards the engine's
+     * `Phase::Continuous` final-commit `NextWordWordSelected` Effect with the
+     * engine-supplied `triggerPrediction` flag preserved verbatim.
+     * [handleNextWordPrediction] hardcodes `triggerPrediction = true` because
+     * every platform-side candidate tap predicts; the engine effect path
+     * must not silently ignore a future `false` from the engine.
+     *
+     * Skips the sentence-end-punctuation reset branch — `committedText` from
+     * the engine effect is the word itself (no punctuation), so it never fires.
+     */
+    fun handleEngineWordSelected(
+        text: String,
+        roman: String,
+        triggerPrediction: Boolean,
+    ) {
+        val settings = settingsProvider.current
+        applyDecideResult(
+            RustEngineBridge.nextwordWordSelected(
+                text = text,
+                roman = roman,
+                requireRomanMode = false,
+                triggerPrediction = triggerPrediction,
+                nowMs = System.currentTimeMillis(),
+                mode = settings.inputMode.toEngineInputMode(),
+                translateSwapped = settings.isTranslateSwapped,
+                associationRecordingEnabled = settings.isAssociationRecordingEnabled,
+                generation = envelopeGen,
+            ),
+        )
+    }
+
+    /**
      * Update `lastSelectedWord` without triggering a prediction query —
      * invoked when Space confirms composing text. Routes through the
      * Android-only [RustEngineBridge.nextwordUpdateLastSelectedWord] intent

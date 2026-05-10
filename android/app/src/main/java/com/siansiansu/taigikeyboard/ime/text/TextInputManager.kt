@@ -150,6 +150,18 @@ class TextInputManager(
 
     fun getComposingManager(): ComposingManager? = synchronized(composingLock) { composingManager }
 
+    /**
+     * Trigger the standard debounced Taigi candidate recompute pipeline.
+     * Used by [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
+     * after a Continuous mid-commit, where the engine emits
+     * `PerformAutocomplete` but `DefaultComposingDelegate` treats it as a
+     * no-op — the candidate flow has historically been driven from the
+     * keystroke pipeline, not from effect dispatch.
+     */
+    fun requestTaigiCandidateRefresh() {
+        candidateCoordinator.updateTaigiCandidatesDebounced()
+    }
+
     companion object {
         private const val TAG = "TextInputManager"
         private val DOUBLE_SPACE_PERIOD_REGEX = """[.!?‽\s][\s]""".toRegex()
@@ -380,6 +392,10 @@ class TextInputManager(
                 if (isComposingEnabled && keyboardMode == KeyboardMode.CHARACTERS) {
                     ComposingManager(
                         settingsProvider = taigikeyboard.prefs,
+                        // Route NextWord-shaped composing effects (Continuous
+                        // mid/final commits, abort) into the SmartbarManager-
+                        // owned NextWordHandler.
+                        nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
                         logger = taigikeyboard.compositionRoot.logger,
                     )
                 } else {
@@ -492,6 +508,18 @@ class TextInputManager(
         // ComposingManager reads inputMode + toneToggles per dispatch
         // via EngineSettingsProvider.current (live read) — no direct
         // field mutation needed.
+
+        // Drop any in-flight Continuous state BEFORE the layout reload kicks
+        // off the autocomplete-service rebuild. TL/POJ/TPS each use distinct
+        // `Phase::Continuous { raw }` byte conventions; leftover pending bytes
+        // would mis-align consumed-span offsets when the next FetchAtPos lands
+        // in the new mode. `bumpGeneration` then forces the engine to silently
+        // drop residual state at the FFI boundary on the next request.
+        val ic = taigikeyboard.currentInputConnection
+        if (ic != null) {
+            getComposingManager()?.resetContinuous(ic)
+        }
+        getComposingManager()?.bumpGeneration()
 
         layoutReloadJob?.cancel()
         layoutReloadJob =

@@ -30,7 +30,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -43,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
@@ -179,8 +184,10 @@ private fun CandidateCell(
     val innerVerticalPadding = with(density) { (paddingPx / 3).toDp() }
     val composingVerticalInset = with(density) { (paddingPx / 2).toDp() }
 
-    val isNextWord = word.id < 0
-    val showComposing = index == 0 && !isNextWord
+    // `isComposingText` metadata is the single source of truth for slot-0 cell
+    // affordance (rounded background, dashed border, padding inset). Set by
+    // both the lexicon path and the Continuous path in TaigiAutocompleteService.
+    val showComposing = word.additionalInfo[MetadataKeys.IS_COMPOSING_TEXT] == "true"
     val cornerRadius = if (showComposing) 16.dp else 8.dp
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -257,7 +264,11 @@ private fun CandidateCell(
                     .matchParentSize()
                     .let { mod -> if (showComposing) mod.padding(vertical = composingVerticalInset) else mod }
                     .clip(RoundedCornerShape(cornerRadius))
-                    .background(backgroundColor),
+                    .background(backgroundColor)
+                    .then(
+                        if (showComposing) Modifier.composingDashedBorder(subtitleColor, cornerRadius)
+                        else Modifier,
+                    ),
         )
         Column(
             modifier =
@@ -352,6 +363,34 @@ private fun EnglishDivider(color: Color) {
                 .height(24.dp)
                 .background(color),
     )
+}
+
+/**
+ * Dashed border affordance for the slot-0 composing-text cell. Color tinted
+ * from the cell's subtitle color (matches iOS `CandidateButtonView`'s
+ * `Color.secondary.opacity(0.4)` semantic). All draw constants are
+ * `remember`-cached so the per-frame `drawBehind` lambda allocates nothing.
+ */
+@Composable
+private fun Modifier.composingDashedBorder(
+    color: Color,
+    cornerRadius: androidx.compose.ui.unit.Dp,
+): Modifier {
+    val density = LocalDensity.current
+    val borderColor = remember(color) { color.copy(alpha = 0.4f) }
+    val cornerPx = remember(density, cornerRadius) { with(density) { cornerRadius.toPx() } }
+    val strokeStyle = remember(density) {
+        with(density) {
+            Stroke(
+                width = 1.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx()), 0f),
+            )
+        }
+    }
+    val cornerRadii = remember(cornerPx) { CornerRadius(cornerPx, cornerPx) }
+    return this.drawBehind {
+        drawRoundRect(color = borderColor, cornerRadius = cornerRadii, style = strokeStyle)
+    }
 }
 
 private fun computeCandidateFontSizes(

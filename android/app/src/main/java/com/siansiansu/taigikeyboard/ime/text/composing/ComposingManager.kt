@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicLong
 class ComposingManager(
     private val settingsProvider: EngineSettingsProvider,
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
+    private val nextWordRouter: NextWordEffectRouter = NoopNextWordEffectRouter,
     private val logger: LoggerBackend = NullLoggerBackend,
 ) {
     @Volatile
@@ -113,10 +114,17 @@ class ComposingManager(
         logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
         val mode = resolveMode(settings.inputMode)
+        // Snapshot generation BEFORE the dispatch so the tail-call promote
+        // shares the same value. `applyTransition` may synchronously re-enter
+        // via `onUpdateSelection` → `bumpGeneration` on hosts that fire
+        // selection callbacks inside `commitText` / `setComposingText`;
+        // re-reading `currentGeneration` would let EnterContinuous silently
+        // reset newer composing state.
+        val generation = currentGeneration
         if (cachedIsComposing) {
             // Mid-composition restart: clear-without-commit before starting fresh.
             applyAsSelfCommit(
-                RustEngineBridge.composingReset(currentGeneration),
+                RustEngineBridge.composingReset(generation),
                 ic,
             )
         }
@@ -125,10 +133,11 @@ class ComposingManager(
                 char,
                 mode,
                 carrier(settings.toneToggles),
-                currentGeneration,
+                generation,
             ),
             ic,
         )
+        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun appendCharacter(
@@ -137,28 +146,32 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=appendCharacter char='$char'" }
         val settings = settingsProvider.current
+        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingAppend(
                 char,
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
-                currentGeneration,
+                generation,
             ),
             ic,
         )
+        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun appendHyphen(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=appendHyphen" }
         val settings = settingsProvider.current
+        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingAppendHyphen(
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
-                currentGeneration,
+                generation,
             ),
             ic,
         )
+        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun replaceLastCharacter(
@@ -167,15 +180,17 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=replaceLastCharacter replacement='$replacement'" }
         val settings = settingsProvider.current
+        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingReplaceLast(
                 replacement,
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
-                currentGeneration,
+                generation,
             ),
             ic,
         )
+        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     /**
@@ -213,21 +228,46 @@ class ComposingManager(
     fun commitComposition(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitComposition" }
         if (!cachedIsComposing) return
-        val settings = settingsProvider.current
+        // `Intent::CommitDerived` is a no-op in `Phase::Continuous`
+        // (engine/composing/tests/continuous_phase.rs:656), and the auto-
+        // promote tail puts every active composition into Continuous. Route
+        // through SelectSuggestion which commits across all three phases.
+        // Empty preedit → canonical CommitDerived (no-op on Idle).
+        val derived = getComposingText().orEmpty()
+        if (derived.isEmpty()) {
+            val settings = settingsProvider.current
+            applyAsSelfCommit(
+                RustEngineBridge.composingCommitDerived(
+                    resolveMode(settings.inputMode),
+                    carrier(settings.toneToggles),
+                    currentGeneration,
+                ),
+                ic,
+            )
+            return
+        }
         applyAsSelfCommit(
-            RustEngineBridge.composingCommitDerived(
-                resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
-                currentGeneration,
-            ),
+            RustEngineBridge.composingSelectSuggestion(derived, currentGeneration),
             ic,
         )
     }
 
     fun commitRawInput(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitRawInput" }
+        // Same Continuous-no-op fix shape as `commitComposition`:
+        // `Intent::CommitRaw` is a no-op in Continuous, so route through
+        // SelectSuggestion with the raw string. Empty rawInput → canonical
+        // CommitRaw (no-op on Idle).
+        val raw = getRawInput().orEmpty()
+        if (raw.isEmpty()) {
+            applyAsSelfCommit(
+                RustEngineBridge.composingCommitRaw(currentGeneration),
+                ic,
+            )
+            return
+        }
         applyAsSelfCommit(
-            RustEngineBridge.composingCommitRaw(currentGeneration),
+            RustEngineBridge.composingSelectSuggestion(raw, currentGeneration),
             ic,
         )
     }
@@ -267,6 +307,142 @@ class ComposingManager(
             ic,
         )
     }
+
+    // region Continuous-input platform integration (v3.5.8)
+
+    /**
+     * Synchronous tail-call promote into `Phase::Continuous` after every raw-
+     * input mutation. Caller (Start / Append / AppendHyphen / ReplaceLast)
+     * passes the same `generation` snapshot it captured before its own
+     * dispatch — re-reading [currentGeneration] here is unsafe because
+     * synchronous `onUpdateSelection` callbacks during the preceding
+     * `applyTransition` can bump it.
+     *
+     * Engine no-ops on empty buffer / already-Continuous; the local
+     * `cachedRawInput.isEmpty()` short-circuit saves the FFI roundtrip in
+     * the empty-buffer case (cache is set by the immediately preceding
+     * same-thread `applyTransition` so it is fresh).
+     */
+    private fun promoteToContinuousIfEligible(
+        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
+        ic: InputConnection,
+        generation: Long,
+    ) {
+        if (cachedRawInput.isEmpty()) return
+        val transition = RustEngineBridge.composingEnterContinuous(
+            resolveMode(settings.inputMode),
+            carrier(settings.toneToggles),
+            generation,
+        )
+        // EnterContinuous emits zero effects; applyTransition still runs to
+        // refresh the local mirror with the engine snapshot.
+        applyTransition(transition, ic)
+    }
+
+    /**
+     * Synchronous span-local candidate query. Read-only; engine returns the
+     * current `Phase::Continuous { raw }` candidate set in score-desc order.
+     * Returns `emptyList()` when not in Continuous phase, when no syllable
+     * inventory is installed, or when the FST returns no hits — the caller
+     * cannot distinguish these cases. Graceful degrade is OK because the
+     * lexicon path handles the same input via its own search.
+     *
+     * Caller invariant: IME main thread, exactly like the rest of the
+     * dispatch API. The autocomplete service must hop back to the main
+     * dispatcher before invoking this method (the whole `applyTransition`
+     * → `setComposingText` chain is not safe off-thread).
+     */
+    fun fetchContinuousCandidates(ic: InputConnection): List<RustEngineBridge.ContinuousCandidate> {
+        val settings = settingsProvider.current
+        val result = RustEngineBridge.composingFetchAtPos(
+            resolveMode(settings.inputMode),
+            carrier(settings.toneToggles),
+            currentGeneration,
+        )
+        // FetchAtPos.effects MUST be empty (read-only RPC, dispatch.rs:103-160).
+        // applyTransition still runs to refresh the local mirror with the
+        // engine's returned snapshot.
+        applyTransition(result.transition, ic)
+        return result.candidates ?: emptyList()
+    }
+
+    /**
+     * Commit one Continuous candidate. `displayText` / `consumedBytes` /
+     * `syllableCount` MUST come verbatim from a [RustEngineBridge.ContinuousCandidate]
+     * returned by an immediately preceding [fetchContinuousCandidates] call.
+     *
+     * Returns an effect-backed [RustEngineBridge.CommitContinuousResult] so
+     * callers can gate side-effects (frequency recording, auto-space) on
+     * actual commit success rather than coarse `cachedIsComposing` mirror
+     * state. Generation mismatch silently resets the engine to Idle in
+     * `engine/composing/src/handle.rs:61-65` BEFORE the intent runs, in
+     * which case `Intent::CommitContinuous` becomes a phase-mismatch noop —
+     * the post-call mirror flips to `cachedIsComposing=false` (engine is
+     * Idle) but no `CommitTextReplacingPreedit` Effect is emitted. Without
+     * the effect-backed gate, callers would record frequency for uncommitted
+     * text and append a stray space.
+     *
+     * Mid-commit emits `[CommitTextReplacingPreedit, UpdatePreedit,
+     * NextWordUpdateLastSelectedWord, PerformAutocomplete]`; final-commit
+     * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit,
+     * ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
+     * and exits Continuous.
+     */
+    fun commitContinuous(
+        displayText: String,
+        consumedBytes: Int,
+        syllableCount: Int,
+        ic: InputConnection,
+    ): RustEngineBridge.CommitContinuousResult {
+        logger.tdebug(TAG) {
+            "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
+        }
+        val settings = settingsProvider.current
+        val transition = RustEngineBridge.composingCommitContinuous(
+            displayText = displayText,
+            consumedBytes = consumedBytes,
+            syllableCount = syllableCount,
+            mode = resolveMode(settings.inputMode),
+            toggles = carrier(settings.toneToggles),
+            generation = currentGeneration,
+        )
+        // Inspect transition BEFORE dispatching effects so we return an
+        // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
+        // for the same reason — semantics identical to the helper.
+        val didCommit = transition.effects.any { effect ->
+            effect is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit
+        }
+        val didFinalCommit = didCommit && !transition.isComposing
+        selfCommitInProgress = true
+        try {
+            applyTransition(transition, ic)
+        } finally {
+            selfCommitInProgress = false
+        }
+        return RustEngineBridge.CommitContinuousResult(
+            didCommit = didCommit,
+            didFinalCommit = didFinalCommit,
+        )
+    }
+
+    /**
+     * Abort Continuous-input. Drops `Phase::Continuous`'s pending + committed
+     * list, exits to Idle, emits the standard abort effect trio
+     * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+     * `NextWordClearForNewComposing`). Committed segments stay in the
+     * document — earlier `CommitTextReplacingPreedit` effects already wrote
+     * them. Used by `TextInputManager.onInputModeChanged` so stale Continuous
+     * state can't leak across TL ↔ POJ ↔ TPS swaps.
+     */
+    fun resetContinuous(ic: InputConnection) {
+        logger.tdebug(TAG) { "[COMPOSE] fn=resetContinuous" }
+        applyAsSelfCommit(
+            RustEngineBridge.composingResetContinuous(currentGeneration),
+            ic,
+        )
+    }
+
+    // endregion
 
     /**
      * Sync internal cache after the host editor reports no composing region
@@ -312,39 +488,26 @@ class ComposingManager(
         cachedSelectedCandidateIndex = transition.selectedCandidateIndex
         for (effect in transition.effects) {
             logger.tdebug("ComposingDelegate") {
-                val kind =
-                    when (effect) {
-                        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> {
-                            "UpdatePreedit len=${effect.display.length}"
-                        }
-
-                        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
-                            "ClearPreeditWithoutCommit"
-                        }
-
-                        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> {
-                            "CommitTextReplacingPreedit len=${effect.text.length}"
-                        }
-
-                        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> {
-                            "DeleteBackwardFromDocument"
-                        }
-
-                        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete -> {
-                            "ResetAutocomplete"
-                        }
-
-                        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete -> {
-                            "PerformAutocomplete"
-                        }
-
-                        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext -> {
-                            "ResetAutocompleteContext"
-                        }
-                    }
-                "[COMMIT] fn=applyTransition effect=$kind"
+                "[COMMIT] fn=applyTransition effect=${effect.describeKind()}"
             }
-            delegate.execute(effect, ic)
+            when (effect) {
+                is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord,
+                is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected,
+                RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing,
+                -> {
+                    // NextWord-shaped composing effects flow through a sibling
+                    // router, not the InputConnection-bound delegate. Engine
+                    // emits these only on Continuous mid/final commits + resets;
+                    // the platform NextWord callback path on SelectSuggestion
+                    // (CandidateClickHandler.onNextWordPrediction) and this
+                    // engine effect path do not double-fire.
+                    nextWordRouter.route(effect)
+                }
+
+                else -> {
+                    delegate.execute(effect, ic)
+                }
+            }
         }
     }
 
@@ -361,6 +524,26 @@ class ComposingManager(
             isDoubleTapNnEnabled = toggles.isDoubleTapNNEnabled,
         )
 }
+
+/**
+ * One-line debug name for a [RustEngineBridge.ComposingTransition.Effect].
+ * Centralises the per-variant pretty-printer used by [ComposingManager.applyTransition]
+ * and [DefaultComposingDelegate]; keeping it here means new variants only need
+ * one update site for log readability.
+ */
+private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
+    when (this) {
+        is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> "UpdatePreedit len=${display.length}"
+        RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> "ClearPreeditWithoutCommit"
+        is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> "CommitTextReplacingPreedit len=${text.length}"
+        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> "DeleteBackwardFromDocument"
+        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete -> "ResetAutocomplete"
+        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete -> "PerformAutocomplete"
+        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext -> "ResetAutocompleteContext"
+        is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> "NextWordUpdateLastSelectedWord"
+        is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
+        RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"
+    }
 
 /**
  * Policy helper: does an `onUpdateSelection` payload indicate the host

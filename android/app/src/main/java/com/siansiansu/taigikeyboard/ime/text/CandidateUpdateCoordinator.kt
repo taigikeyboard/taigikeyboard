@@ -165,6 +165,27 @@ class CandidateUpdateCoordinator(
                             lexicon = root.lexicon,
                             nextWord = root.nextWord,
                             logger = root.logger,
+                            // Continuous-input fetcher hops back to the IME
+                            // main thread before invoking
+                            // `fetchContinuousCandidates`; the underlying
+                            // `applyTransition` writes to InputConnection so
+                            // the off-main coroutine context the autocomplete
+                            // job runs in is unsafe. BOTH the manager and IC
+                            // are re-resolved INSIDE the Main block so a
+                            // detach/editor swap between the dispatch hop and
+                            // the fetch returns null and collapses to the
+                            // empty fallback.
+                            continuousFetcher = {
+                                withContext(Dispatchers.Main) {
+                                    val mgr = getComposingManager()
+                                    val ic = taigikeyboard.currentInputConnection
+                                    if (mgr != null && ic != null) {
+                                        mgr.fetchContinuousCandidates(ic)
+                                    } else {
+                                        emptyList()
+                                    }
+                                }
+                            },
                         )
                 }
                 taigiAutocompleteService!!

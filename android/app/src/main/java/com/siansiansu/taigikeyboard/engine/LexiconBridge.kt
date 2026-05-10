@@ -151,11 +151,21 @@ object LexiconBridge {
      * 中文: 安裝/重灌 lexicon 引擎(冪等)— 驗 trie/dictionary/association 三檔路徑後 mmap;
      *       失敗回 null,診斷打到 RustEngineBridge.diagnostics()。
      */
+    /**
+     * @param syllableInventoryPath Absolute path to v3.5.8 Phase 2
+     *   `syllables.fst` (TL syllable inventory FST). Empty string =
+     *   skip-install; engine leaves `EngineState.syllable_inventory = None`
+     *   and `composingFetchAtPos` returns empty candidates (graceful
+     *   degrade). Required parameter to keep callers honest — silently
+     *   omitting the file would make the v3.5.8 continuous-input feature
+     *   appear "implemented" while returning zero candidates.
+     */
     fun install(
         triePath: String,
         dictionaryBinPath: String,
         associationBinPath: String,
         dictionaryVersion: UInt,
+        syllableInventoryPath: String,
     ): InstallStats? {
         val payload = InstallRequest
             .newBuilder()
@@ -163,6 +173,7 @@ object LexiconBridge {
             .setDictionaryBinPath(dictionaryBinPath)
             .setAssociationBinPath(associationBinPath)
             .setDictionaryVersion(dictionaryVersion.toInt())
+            .setSyllableInventoryPath(syllableInventoryPath)
             .build()
         val resp = dispatch(LexiconRequest.newBuilder().setInstall(payload).build()) ?: return null
         if (!resp.hasInstallResult()) {

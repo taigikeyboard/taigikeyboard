@@ -146,6 +146,7 @@ class SmartbarManager(
             onNextWordPrediction = { displayText, committedText, roman, hanzi, rawInput ->
                 handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
             },
+            onRequestCandidateRefresh = { taigikeyboard.textInputManager.requestTaigiCandidateRefresh() },
         )
 
     // --- Public delegation API (preserves original interface) ---
@@ -169,6 +170,72 @@ class SmartbarManager(
     fun updateLastSelectedWord(word: String) = nextWordHandler.updateLastSelectedWord(word)
 
     fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordHandler.handleBackspaceForNextWord(textBeforeCursor)
+
+    /**
+     * Dispatch a NextWord-shaped composing-engine Effect
+     * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /
+     * `NextWordClearForNewComposing`) to the underlying [NextWordHandler].
+     * Wired into [com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager]
+     * via the [com.siansiansu.taigikeyboard.ime.text.composing.NextWordEffectRouter]
+     * constructor parameter.
+     *
+     * Unrelated to [handleNextWordPrediction] which is the platform candidate-
+     * tap path for `Phase::Composing` (engine does NOT emit
+     * `NextWordWordSelected` there, so the two paths do not double-fire).
+     */
+    fun dispatchComposingNextWordEffect(effect: com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect) {
+        when (effect) {
+            is com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> {
+                nextWordHandler.updateLastSelectedWord(
+                    word = effect.text,
+                    roman = effect.roman.ifEmpty { effect.text },
+                )
+            }
+
+            is com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> {
+                // Final-commit dispatch. Forward `triggerPrediction` exactly —
+                // engine's `transition.rs:644-653` emits `true` today but the
+                // bridge contract is "verbatim" so a future false must not be
+                // silently overridden.
+                nextWordHandler.handleEngineWordSelected(
+                    text = effect.text,
+                    roman = effect.roman.ifEmpty { effect.text },
+                    triggerPrediction = effect.triggerPrediction,
+                )
+            }
+
+            com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> {
+                // The composing crate has no nextword dep so it cannot
+                // dispatch ClearForNewComposing to the NextWord engine
+                // directly — this effect is its request to the platform.
+                // Engine-side cleanup is therefore UNCONDITIONAL.
+                //
+                // The visible-strip clear is conditional: Continuous
+                // backspace-pop emits this alongside UpdatePreedit /
+                // PerformAutocomplete (engine/composing/tests/continuous_phase.rs)
+                // while Taigi composing candidates are still active; an
+                // unconditional candidate wipe would cause visible flicker.
+                if (nextWordHandler.isShowingNextWordCandidates()) {
+                    clearCandidates()
+                } else {
+                    nextWordHandler.clearNextWordState()
+                }
+            }
+
+            else -> {
+                // Router contract: ComposingManager.applyTransition only
+                // forwards the three NextWord-shaped Effects. Reaching this
+                // branch means a routing-layer bug. Loud in debug, logged in
+                // release — never silently masked.
+                val msg = "NextWordEffectRouter received non-NextWord effect: $effect"
+                if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
+                    throw IllegalStateException(msg)
+                } else {
+                    android.util.Log.e("SmartbarManager", msg)
+                }
+            }
+        }
+    }
 
     fun getLastSelectedWord(): String? = nextWordHandler.getLastSelectedWord()
 

@@ -61,9 +61,10 @@ class TaigiKeyboardApplication : Application() {
 
     /**
      * Copy bundled `dictionary.fst`, `dictionary.bin`, `association.bin`
-     * from `assets/` to `filesDir/` (mmap requires a real file handle —
-     * APK-internal asset entries are not directly mmap-able), then call
-     * `LexiconBridge.install(...)` once with absolute paths.
+     * and (v3.5.8 Phase 2) `syllables.fst` from `assets/` to `filesDir/`
+     * (mmap requires a real file handle — APK-internal asset entries are
+     * not directly mmap-able), then call `LexiconBridge.install(...)` once
+     * with absolute paths.
      *
      * Reinstall on app version bump: re-copies the assets and triggers
      * an atomic-on-success swap inside the engine (D-9 in the audit).
@@ -82,6 +83,7 @@ class TaigiKeyboardApplication : Application() {
             "dictionary.fst",
             DictionaryConstants.DICT_BIN_NAME,
             DictionaryConstants.ASSOC_BIN_NAME,
+            "syllables.fst",
         )
         for (fileName in filesToCopy) {
             val destFile = File(filesDir, fileName)
@@ -108,6 +110,7 @@ class TaigiKeyboardApplication : Application() {
             dictionaryBinPath = File(filesDir, DictionaryConstants.DICT_BIN_NAME).absolutePath,
             associationBinPath = File(filesDir, DictionaryConstants.ASSOC_BIN_NAME).absolutePath,
             dictionaryVersion = currentVersion.toUInt(),
+            syllableInventoryPath = File(filesDir, "syllables.fst").absolutePath,
         )
         if (stats != null) {
             compositionRoot.logger.i(

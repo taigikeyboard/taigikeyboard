@@ -524,6 +524,38 @@ object RustEngineBridge {
             object PerformAutocomplete : Effect()
 
             object ResetAutocompleteContext : Effect()
+
+            /**
+             * v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
+             * `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
+             * Platform delegate forwards to `NextWordHandler.updateLastSelectedWord`
+             * which injects `nowMs` + envelope generation.
+             */
+            data class NextWordUpdateLastSelectedWord(
+                val text: String,
+                val roman: String,
+            ) : Effect()
+
+            /**
+             * v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
+             * `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
+             * trigger_prediction, now_ms)`. Forward `triggerPrediction` exactly —
+             * hardcoding either value breaks the Phase 4 commit contract.
+             */
+            data class NextWordWordSelected(
+                val text: String,
+                val roman: String,
+                val triggerPrediction: Boolean,
+            ) : Effect()
+
+            /**
+             * v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
+             * `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
+             * forwards to `NextWordHandler.onClearCandidates()` (Android equivalent
+             * of iOS `NextWordController.clearDisplay()`); NOT the structurally
+             * distinct `ResetFull` intent.
+             */
+            object NextWordClearForNewComposing : Effect()
         }
 
         companion object {
@@ -534,6 +566,77 @@ object RustEngineBridge {
                 selectedCandidateIndex = -1,
                 isComposing = false,
             )
+        }
+    }
+
+    /**
+     * Single span-local continuous-input candidate. Wire mirror of
+     * `protos::engine::CandidateMessage` (Phase 6).
+     *
+     * `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
+     * **original raw user input** stored in `Phase::Continuous { raw }` —
+     * TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
+     * slices `pending[start..end]` on commit. `form` is currently always 1
+     * (FORM_NOTONE).
+     */
+    // 中文: 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
+    // 中文: 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1。
+    data class ContinuousCandidate(
+        val consumedSpanStart: Int,
+        val consumedSpanEnd: Int,
+        val syllableCount: Int,
+        val displayText: String,
+        val score: Float,
+        val form: Int,
+    )
+
+    /**
+     * Read-query result for `composingFetchAtPos`. Tri-state `candidates`
+     * preserves the proto's three semantic outcomes:
+     * - `null` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
+     *   was not active (proto `continuous` field absent).
+     * - `emptyList()` → continuous phase active but no candidates (no syllable
+     *   inventory installed, no FST hits, or `position != 0`).
+     * - non-empty → candidates returned in score-desc order.
+     *
+     * `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
+     * / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
+     */
+    // 中文: composingFetchAtPos 的查詢結果。candidates 三態保留 proto 語意:
+    // 中文:   null = 不在 Continuous phase;emptyList = 在但無候選;non-empty = 有候選。
+    // 中文: transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
+    data class ContinuousFetchResult(
+        val transition: ComposingTransition,
+        val candidates: List<ContinuousCandidate>?,
+    ) {
+        companion object {
+            val NOOP = ContinuousFetchResult(
+                transition = ComposingTransition.NOOP,
+                candidates = null,
+            )
+        }
+    }
+
+    /**
+     * Multi-return for [ComposingManager.commitContinuous]. iOS uses a labeled
+     * tuple `(didCommit: Bool, didFinalCommit: Bool)`; Kotlin's `Pair` loses the
+     * label semantics so we surface a named data class instead.
+     *
+     * - `didCommit` = engine emitted at least one `CommitTextReplacingPreedit` Effect
+     *   (real commit happened, mid OR final).
+     * - `didFinalCommit` = `didCommit && !transition.isComposing` (engine returned
+     *   to Idle this call, i.e. the last consumed-span emptied the buffer).
+     *
+     * Invariant: `didFinalCommit` implies `didCommit`. Stale-tap / generation-mismatch
+     * → `(false, false)`. Used by [com.siansiansu.taigikeyboard.ime.text.smartbar
+     * .CandidateClickHandler] to gate per-segment frequency learning + auto-space.
+     */
+    data class CommitContinuousResult(
+        val didCommit: Boolean,
+        val didFinalCommit: Boolean,
+    ) {
+        companion object {
+            val NOOP = CommitContinuousResult(didCommit = false, didFinalCommit = false)
         }
     }
 
@@ -751,12 +854,133 @@ object RustEngineBridge {
         )
     }
 
-    private inline fun composingDispatch(
+    // region Continuous-input (4 ops) — v3.5.8
+
+    /**
+     * `Phase::Composing { raw }` → `Phase::Continuous { raw, committed: [] }`.
+     * Phase 6 contract: no payload — buffer is whatever earlier `Start` /
+     * `Append` populated. Engine no-ops on Idle / already-Continuous / empty
+     * `Composing.raw`. AppConfig is required because the snapshot's preedit
+     * display goes through `derived_display(raw, config)`.
+     */
+    // 中文: 把 Composing 轉到 Continuous。Phase 6 規約 — 無 payload,raw 來自先前的
+    // 中文: Start / Append。空 raw / 非 Composing 一律 noop。
+    @JvmStatic
+    fun composingEnterContinuous(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.EnterContinuous
+            .newBuilder()
+            .build()
+        return composingDispatch(
+            methodSetter = { it.enterContinuous = payload },
+            op = "composingEnterContinuous",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    /**
+     * Read-only candidate query for the current `Phase::Continuous { raw }`.
+     * `position` is reserved as `0` in v3.5.8 (Phase 6 dispatch validates).
+     * Caller MUST share the active composing-session generation — FetchAtPos
+     * is read-only and bumping generation would reset engine state before
+     * the fetch (`engine/composing/src/dispatch.rs:103-160`).
+     */
+    // 中文: 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
+    // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
+    @JvmStatic
+    fun composingFetchAtPos(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ContinuousFetchResult {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
+            .newBuilder()
+            .setPosition(0)
+            .build()
+        return composingFetchDispatch(
+            methodSetter = { it.fetchAtPos = payload },
+            op = "composingFetchAtPos",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    /**
+     * Commit a candidate segment in `Phase::Continuous`. `displayText` /
+     * `consumedBytes` / `syllableCount` MUST come from a [ContinuousCandidate]
+     * returned by an immediately preceding [composingFetchAtPos] call —
+     * sending mismatched values mis-aligns the committed segment.
+     * `consumedBytes >= pending.utf8.size` triggers a final commit (exit
+     * to Idle). Programmer-error inputs collapse to noop on the engine side.
+     */
+    // 中文: 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
+    // 中文: 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
+    @JvmStatic
+    fun composingCommitContinuous(
+        displayText: String,
+        consumedBytes: Int,
+        syllableCount: Int,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
+            .newBuilder()
+            .setDisplayText(displayText)
+            .setConsumedBytes(consumedBytes)
+            .setSyllableCount(syllableCount)
+            .build()
+        return composingDispatch(
+            methodSetter = { it.commitContinuous = payload },
+            op = "composingCommitContinuous",
+            generation = generation,
+            config = appConfig(mode, toggles),
+        )
+    }
+
+    /**
+     * Abort continuous-input. Drops `Phase::Continuous` committed list +
+     * pending raw, exits to Idle, emits the standard abort effect trio
+     * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+     * `NextWordClearForNewComposing`). Committed segments stay in the
+     * document — earlier `CommitTextReplacingPreedit` effects already wrote
+     * them.
+     */
+    // 中文: 連續輸入中止。pending 與 committed 一起丟,Phase 退回 Idle,發 abort 三 effects。
+    @JvmStatic
+    fun composingResetContinuous(generation: Long): ComposingTransition {
+        val payload = com.siansiansu.taigikeyboard.engine.proto.ResetContinuous
+            .newBuilder()
+            .build()
+        return composingDispatch(
+            methodSetter = { it.resetContinuous = payload },
+            op = "composingResetContinuous",
+            generation = generation,
+            config = null,
+        )
+    }
+
+    // endregion
+
+    /**
+     * Encode → FFI roundtrip → decode for the composing slice. Returns the
+     * raw `ComposingResponse` proto so callers that need access to the
+     * `continuous` carrier (FetchAtPos) can reach it without a second
+     * dispatch. Generation is passed through verbatim — composing-slice
+     * generation bumping is owned by `ComposingManager.bumpGeneration()`,
+     * not this layer.
+     */
+    // 中文: composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
+    private inline fun composingProtoRoundtrip(
         methodSetter: (com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.Builder) -> Unit,
         op: String,
         generation: Long,
         config: AppConfig?,
-    ): ComposingTransition {
+    ): com.siansiansu.taigikeyboard.engine.proto.ComposingResponse? {
         val composingBuilder = com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
             .newBuilder()
         methodSetter(composingBuilder)
@@ -775,26 +999,80 @@ object RustEngineBridge {
         val response = sendRawBytes(request.toByteArray())
         if (response == null) {
             recordFailure(op, "response decode failed")
-            return ComposingTransition.NOOP
+            return null
         }
         if (response.error != ErrorCode.OK) {
             recordFailure(op, "engine returned ${response.error}", response.error.number)
-            return ComposingTransition.NOOP
+            return null
         }
         if (!response.hasComposing()) {
             recordFailure(op, "missing composing payload")
-            return ComposingTransition.NOOP
+            return null
         }
-        val transition = synthComposing(response.composing)
+        return response.composing
+    }
+
+    private inline fun composingDispatch(
+        methodSetter: (com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.Builder) -> Unit,
+        op: String,
+        generation: Long,
+        config: AppConfig?,
+    ): ComposingTransition {
+        val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
+            ?: return ComposingTransition.NOOP
+        val transition = synthComposing(payload)
         installedBackend.tdebug("RustEngineBridge") {
-            "[FFI<-] fn=composingDispatch op=$op id=${request.id} effects=${transition.effects.size} composing=${transition.isComposing}"
+            "[FFI<-] fn=composingDispatch op=$op effects=${transition.effects.size} composing=${transition.isComposing}"
         }
         return transition
+    }
+
+    /**
+     * Phase 6 FetchAtPos dispatcher. Synthesizes both the standard
+     * [ComposingTransition] (for engine snapshot mirroring) and the
+     * [ContinuousFetchResult.candidates] tri-state read off
+     * `ComposingResponse.continuous`.
+     */
+    // 中文: Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
+    // 中文: ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
+    private inline fun composingFetchDispatch(
+        methodSetter: (com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.Builder) -> Unit,
+        op: String,
+        generation: Long,
+        config: AppConfig?,
+    ): ContinuousFetchResult {
+        val payload = composingProtoRoundtrip(methodSetter, op, generation, config)
+            ?: return ContinuousFetchResult.NOOP
+        val transition = synthComposing(payload)
+        val candidates: List<ContinuousCandidate>? = if (payload.hasContinuous()) {
+            payload.continuous.candidatesList.map { msg ->
+                ContinuousCandidate(
+                    consumedSpanStart = msg.consumedSpanStart,
+                    consumedSpanEnd = msg.consumedSpanEnd,
+                    syllableCount = msg.syllableCount,
+                    displayText = msg.displayText,
+                    score = msg.score,
+                    form = msg.form,
+                )
+            }
+        } else {
+            null
+        }
+        installedBackend.tdebug("RustEngineBridge") {
+            val count = candidates?.size ?: -1
+            "[FFI<-] fn=composingFetchDispatch op=$op effects=${transition.effects.size} candidates=$count"
+        }
+        return ContinuousFetchResult(transition = transition, candidates = candidates)
     }
 
     private fun synthComposing(
         proto: com.siansiansu.taigikeyboard.engine.proto.ComposingResponse,
     ): ComposingTransition {
+        // Effect contract is exhaustive — every emitted Effect.kind maps to a
+        // Kotlin case. The InputConnection-bound effects route through
+        // DefaultComposingDelegate; the 3 NextWord-shaped effects route
+        // through SmartbarManager.dispatchComposingNextWordEffect via the
+        // NextWordEffectRouter sibling on ComposingManager.
         val effects: List<ComposingTransition.Effect> = proto.effectList.mapNotNull { eff ->
             when {
                 eff.hasUpdatePreedit() -> {
@@ -825,15 +1103,23 @@ object RustEngineBridge {
                     ComposingTransition.Effect.ResetAutocompleteContext
                 }
 
-                eff.hasNextWordUpdateLastSelectedWord() ||
-                    eff.hasNextWordWordSelected() ||
-                    eff.hasNextWordClearForNewComposing() -> {
-                    // TODO(Phase 7/8): dispatch as NextWordRequest with platform-injected now_ms.
-                    // Phase 4 (PR #253) ships only the engine-side state machine; the
-                    // continuous-input candidate strip + nextword wiring lands when the
-                    // platform UI does. Recognized explicitly here (rather than falling
-                    // through `else`) so Phase 7/8 can grep this TODO when wiring up.
-                    null
+                eff.hasNextWordUpdateLastSelectedWord() -> {
+                    ComposingTransition.Effect.NextWordUpdateLastSelectedWord(
+                        text = eff.nextWordUpdateLastSelectedWord.text,
+                        roman = eff.nextWordUpdateLastSelectedWord.roman,
+                    )
+                }
+
+                eff.hasNextWordWordSelected() -> {
+                    ComposingTransition.Effect.NextWordWordSelected(
+                        text = eff.nextWordWordSelected.text,
+                        roman = eff.nextWordWordSelected.roman,
+                        triggerPrediction = eff.nextWordWordSelected.triggerPrediction,
+                    )
+                }
+
+                eff.hasNextWordClearForNewComposing() -> {
+                    ComposingTransition.Effect.NextWordClearForNewComposing
                 }
 
                 else -> {
