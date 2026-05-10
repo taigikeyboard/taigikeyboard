@@ -96,6 +96,14 @@ message InstallRequest {
   string dictionary_bin_path   = 2;  // absolute path to dictionary.bin (TKDB)
   string association_bin_path  = 3;  // absolute path to association.bin (TKWA, bundled)
   uint32 dictionary_version    = 4;  // platform-supplied stamp (Android: dictionary_app_version.txt; iOS: bundle build number)
+
+  // v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+  // inventory). Optional on the wire: empty string skips loading and
+  // `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+  // bundles populate this; Phase 6 only wires the field through so the
+  // composing dispatch can call `tl::valid_span_endings` against the
+  // installed inventory once the platform pipeline is ready.
+  string syllable_inventory_path = 5;
 }
 
 // `SearchRequest` is the IME autocomplete entry point. `input` is the

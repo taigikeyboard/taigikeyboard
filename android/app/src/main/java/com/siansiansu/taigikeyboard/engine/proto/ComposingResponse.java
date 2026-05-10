@@ -778,6 +778,102 @@ public  final class ComposingResponse extends
     isComposing_ = false;
   }
 
+  public static final int CONTINUOUS_FIELD_NUMBER = 5;
+  private com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse continuous_;
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   */
+  @java.lang.Override
+  public boolean hasContinuous() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse getContinuous() {
+    return continuous_ == null ? com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse.getDefaultInstance() : continuous_;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   */
+  private void setContinuous(com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse value) {
+    value.getClass();
+  continuous_ = value;
+    bitField0_ |= 0x00000002;
+    }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   */
+  @java.lang.SuppressWarnings({"ReferenceEquality"})
+  private void mergeContinuous(com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse value) {
+    value.getClass();
+  if (continuous_ != null &&
+        continuous_ != com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse.getDefaultInstance()) {
+      continuous_ =
+        com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse.newBuilder(continuous_).mergeFrom(value).buildPartial();
+    } else {
+      continuous_ = value;
+    }
+    bitField0_ |= 0x00000002;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   */
+  private void clearContinuous() {  continuous_ = null;
+    bitField0_ = (bitField0_ & ~0x00000002);
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.ComposingResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1152,6 +1248,113 @@ public  final class ComposingResponse extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    @java.lang.Override
+    public boolean hasContinuous() {
+      return instance.hasContinuous();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse getContinuous() {
+      return instance.getContinuous();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    public Builder setContinuous(com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse value) {
+      copyOnWrite();
+      instance.setContinuous(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    public Builder setContinuous(
+        com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse.Builder builderForValue) {
+      copyOnWrite();
+      instance.setContinuous(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    public Builder mergeContinuous(com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse value) {
+      copyOnWrite();
+      instance.mergeContinuous(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+     * `FetchAtPos` (other continuous methods leave it absent: state-changing
+     * ops emit Effects, and the platform follows up with `FetchAtPos` to
+     * refresh the candidate strip — keeps each RPC single-purpose). Optional
+     * at the wire level: existing 12 methods leave it absent (proto3 zero-
+     * default safe). Pending-display text is NOT duplicated here — it is
+     * already in `preedit.display_text` for `Phase::Continuous`.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+     */
+    public Builder clearContinuous() {  copyOnWrite();
+      instance.clearContinuous();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingResponse)
   }
   @java.lang.Override
@@ -1174,10 +1377,11 @@ public  final class ComposingResponse extends
             com.siansiansu.taigikeyboard.engine.proto.Effect.class,
             "selectedCandidateIndex_",
             "isComposing_",
+            "continuous_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
-              "\u001b\u0003\u0004\u0004\u0007";
+              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
+              "\u001b\u0003\u0004\u0004\u0007\u0005\u1009\u0001";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

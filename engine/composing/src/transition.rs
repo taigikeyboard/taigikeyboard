@@ -83,6 +83,13 @@ pub(crate) fn apply(
         }
         Intent::QueryState => snapshot(state, config),
         Intent::EnterContinuous => enter_continuous(state, config),
+        // FetchAtPos is a read-only query that needs lexicon state; the
+        // dispatcher short-circuits before reaching `apply`. Reaching
+        // here means a caller bypassed dispatch (test path or future
+        // refactor) — return a snapshot rather than panic so the
+        // invariant "transition is total" holds (Codex post-impl
+        // continuous_phase findings #2/#3 pattern).
+        Intent::FetchAtPos { .. } => snapshot(state, config),
         Intent::CommitContinuous {
             display_text,
             consumed_bytes,
@@ -116,6 +123,7 @@ fn step_response(raw: String, display: String, selected_index: i32) -> Composing
         effect: vec![update_preedit(display), perform_autocomplete()],
         selected_candidate_index: selected_index,
         is_composing: true,
+        continuous: None,
     }
 }
 
@@ -305,6 +313,7 @@ fn delete_backward_continuous(
         effect: effects,
         selected_candidate_index: 0,
         is_composing: true,
+        continuous: None,
     }
 }
 
@@ -432,6 +441,7 @@ fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
         effect: Vec::new(),
         selected_candidate_index: state.selected_candidate_index,
         is_composing,
+        continuous: None,
     }
 }
 
@@ -443,6 +453,7 @@ fn exit_to_idle(state: &mut EngineState, effects: Vec<Effect>) -> ComposingRespo
         effect: effects,
         selected_candidate_index: -1,
         is_composing: false,
+        continuous: None,
     }
 }
 
@@ -469,6 +480,7 @@ fn continuous_step_response(
         effect: vec![update_preedit(pending_display), perform_autocomplete()],
         selected_candidate_index: selected_index,
         is_composing: true,
+        continuous: None,
     }
 }
 
@@ -502,6 +514,7 @@ fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
         effect: Vec::new(),
         selected_candidate_index: state.selected_candidate_index,
         is_composing: true,
+        continuous: None,
     }
 }
 
@@ -661,6 +674,7 @@ fn commit_continuous(
         ],
         selected_candidate_index: 0,
         is_composing: true,
+        continuous: None,
     }
 }
 

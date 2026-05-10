@@ -157,5 +157,57 @@ public interface ComposingRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.QueryState getQueryState();
 
+  /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
+   * @return Whether the enterContinuous field is set.
+   */
+  boolean hasEnterContinuous();
+  /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
+   * @return The enterContinuous.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.EnterContinuous getEnterContinuous();
+
+  /**
+   * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
+   * @return Whether the fetchAtPos field is set.
+   */
+  boolean hasFetchAtPos();
+  /**
+   * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
+   * @return The fetchAtPos.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.FetchAtPos getFetchAtPos();
+
+  /**
+   * <code>.taigi.engine.CommitContinuous commit_continuous = 32;</code>
+   * @return Whether the commitContinuous field is set.
+   */
+  boolean hasCommitContinuous();
+  /**
+   * <code>.taigi.engine.CommitContinuous commit_continuous = 32;</code>
+   * @return The commitContinuous.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitContinuous getCommitContinuous();
+
+  /**
+   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
+   * @return Whether the resetContinuous field is set.
+   */
+  boolean hasResetContinuous();
+  /**
+   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
+   * @return The resetContinuous.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ResetContinuous getResetContinuous();
+
   public com.siansiansu.taigikeyboard.engine.proto.ComposingRequest.MethodCase getMethodCase();
 }

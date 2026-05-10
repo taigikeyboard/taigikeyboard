@@ -54,12 +54,13 @@
 //!
 //! # Phase 6 boundary
 //!
-//! This module is the pure-Rust testable surface; the proto request /
-//! response carriers (`FetchAtPosResp` etc.), the `EngineHandle` /
-//! `dispatch` wiring, AND the TPS → TL key mapping all land in Phase 6
-//! (`docs/roadmap.md:347-360`). Phase 5 deliberately does NOT add an
-//! `Intent::FetchAtPos` shim (Codex pre-impl review 2026-05-10 Fork 1
-//! ACCEPT).
+//! Phase 6 added the proto request / response carriers
+//! (`ContinuousResponse` / `CandidateMessage` in `composing.proto`) and
+//! the dispatch wiring (`composing/src/dispatch.rs::handle_fetch_at_pos`),
+//! plus the TPS → TL key mapping that runs at the dispatch boundary
+//! before calling [`fetch_candidates_for_keys`]. The earlier
+//! `fetch_candidates_for_endings` entry remains the TL/POJ path
+//! (canonical TL ASCII inputs only).
 
 // 中文: v3.5.8 連續輸入 Phase 5 — 多 span 候選查詢入口。
 // 中文: 對 endings 中的每個 end 以 input[pos..end] 為 toneless TL key 查 FST,
@@ -105,9 +106,16 @@ pub struct RawCandidate {
 }
 
 /// Fetch every dictionary candidate whose toneless TL key matches
-/// `input[pos..end]` for some `end` in `endings`. See module docs for
-/// the full contract.
-// 中文: 連續輸入 Phase 5 主入口 — 對 endings 每個 end 查 toneless TL FST,合併打分排序後回傳。
+/// `input[pos..end]` for some `end` in `endings`. TL/POJ entry for
+/// span-local lookup; see module docs for the full contract.
+///
+/// Internally a thin wrapper around [`fetch_candidates_for_keys`]: it
+/// maps each `end` to a `(consumed_span, "tl:<lowered>")` pair. TPS
+/// callers must NOT use this entry — they go through the Phase-6
+/// dispatcher path that builds keys via `phonetics::tps_to_tl` and
+/// calls [`fetch_candidates_for_keys`] directly.
+// 中文: TL/POJ 連續輸入入口 — 把 endings 轉成 (consumed_span, "tl:<lowered>") pairs 後委派給 fetch_candidates_for_keys。
+// 中文: TPS 路徑請走 Phase 6 dispatcher,先用 phonetics::tps_to_tl 轉出 toneless TL key 再呼叫 fetch_candidates_for_keys。
 pub fn fetch_candidates_for_endings(
     input: &str,
     pos: usize,
@@ -121,36 +129,98 @@ pub fn fetch_candidates_for_endings(
         return Vec::new();
     }
 
-    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
     let lower = input.to_ascii_lowercase();
-    let mut out: Vec<RawCandidate> = Vec::new();
-
+    let mut keys: Vec<(ConsumedSpan, String)> = Vec::with_capacity(endings.len());
     for &end in endings {
         if end <= pos || end > lower.len() || !lower.is_char_boundary(end) {
             continue;
         }
-        // The toneless TL key is `tl:` + the lowered span. Phase 1b
-        // guarantees fused-toneless storage (e.g. `珠仔` → `tl:tsua`,
-        // not `tl:tsu-a`), so an exact match here suffices — prefix
-        // expansion would over-collect (e.g. `tl:tsuah`).
-        let key = format!("tl:{}", &lower[pos..end]);
-        let span = (pos as u32, end as u32);
-        for rowid in prefix_index.lookup_exact(&key) {
+        // The toneless TL key is `tl:` + the lowered span with every
+        // ASCII digit dropped — the digit half of the upstream
+        // `notone.py::remove_tone` regex `[\d\-]`
+        // (`dictionary/common/notone.py`). Phase 1b guarantees
+        // fused-toneless storage (e.g. `珠仔 → tl:tsua`,
+        // `台北 → tl:taipak`), and the syllabifier hands us endings
+        // for both numeric (`tai1bak4`) and toneless (`taibak`) input
+        // forms; stripping here lets numeric-tone input still hit the
+        // fused toneless FST key. The hyphen half of the regex is NOT
+        // applied at this layer because the syllabifier itself walks
+        // contiguous syllable bytes via `inv.contains(...)` and the
+        // inventory has no hyphenated entries — hyphen-input handling
+        // is deferred to Phase 9 (per Phase 6 dispatch limitations
+        // note in `engine/composing/src/dispatch.rs::build_keys_tl`).
+        // Python `\d` is Unicode-decimal but TL canonical input only
+        // uses ASCII `0..=9`, so `is_ascii_digit()` is sound under the
+        // module input contract above.
+        let segment = &lower[pos..end];
+        let toneless: String = segment.chars().filter(|c| !c.is_ascii_digit()).collect();
+        if toneless.is_empty() {
+            continue;
+        }
+        keys.push(((pos as u32, end as u32), format!("tl:{toneless}")));
+    }
+
+    fetch_candidates_for_keys(
+        &keys,
+        enabled_sources_bitmask,
+        user_freq_boost,
+        prefix_index,
+        dict,
+    )
+}
+
+/// Span aliases for [`fetch_candidates_for_keys`]: `(start_byte, end_byte)`
+/// in the user-facing input buffer (TL ASCII or TPS Bopomofo bytes,
+/// depending on caller). The engine only stores these verbatim in the
+/// returned `RawCandidate.consumed_span`; FST lookup uses the paired key.
+// 中文: ConsumedSpan = 使用者輸入緩衝中的 byte 區間 (TL/POJ 為 ASCII;TPS 為 Bopomofo bytes)。
+pub type ConsumedSpan = (u32, u32);
+
+/// Mode-agnostic span-local fetch entry. Each input pair is
+/// `(consumed_span, fst_key)`: `consumed_span` is the user-facing
+/// byte range that committing this candidate will eat, and `fst_key`
+/// is the already-prefixed FST lookup key (e.g. `"tl:tsua"`). The
+/// caller (Phase 6 dispatcher) is responsible for building keys from
+/// the user input — TL/POJ path goes through
+/// [`fetch_candidates_for_endings`]; TPS path uses
+/// `phonetics::tps_to_tl` per syllable, strips the trailing tone
+/// digit, and prepends `"tl:"`.
+///
+/// Same scoring + ordering contract as
+/// [`fetch_candidates_for_endings`] (NaN-safe descending by score,
+/// stable on ties).
+// 中文: Phase 6 新增 — 模式無關的 span-local 候選查詢;接受 (consumed_span, "tl:<key>") pair list,讓 dispatch 端集中處理 TL vs TPS key 構造。
+pub fn fetch_candidates_for_keys(
+    keys: &[(ConsumedSpan, String)],
+    enabled_sources_bitmask: u32,
+    user_freq_boost: f32,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+) -> Vec<RawCandidate> {
+    if keys.is_empty() {
+        return Vec::new();
+    }
+
+    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
+    let mut out: Vec<RawCandidate> = Vec::new();
+
+    for (span, key) in keys {
+        for rowid in prefix_index.lookup_exact(key) {
             let Some(record) = dict.record(rowid) else {
                 continue;
             };
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
                 continue;
             }
-            out.push(record_to_candidate(record, span, user_freq_boost));
+            out.push(record_to_candidate(record, *span, user_freq_boost));
         }
     }
 
     // Stable sort by score desc; ties fall back to insertion order
-    // (which is deterministic: `endings` ascending × `lookup_exact`
-    // FST byte-sort). NaN scores (only reachable if the caller violates
-    // the `user_freq_boost` finite contract) are coerced to `f32::MIN`
-    // so the descending-order invariant holds even under contract abuse.
+    // (which is deterministic: caller-provided keys order ×
+    // `lookup_exact` FST byte-sort). NaN scores (only reachable if
+    // the caller violates the `user_freq_boost` finite contract) are
+    // coerced to `f32::MIN` so the descending-order invariant holds.
     out.sort_by(|a, b| {
         let bs = if b.score.is_nan() { f32::MIN } else { b.score };
         let as_ = if a.score.is_nan() { f32::MIN } else { a.score };
@@ -161,7 +231,7 @@ pub fn fetch_candidates_for_endings(
 
 fn record_to_candidate(
     record: DictionaryRecord,
-    consumed_span: (u32, u32),
+    consumed_span: ConsumedSpan,
     user_freq_boost: f32,
 ) -> RawCandidate {
     let DictionaryRecord {

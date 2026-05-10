@@ -400,6 +400,98 @@ fn nan_boost_does_not_break_descending_order() {
 }
 
 #[test]
+fn numeric_tone_input_strips_to_fused_toneless_key() {
+    // Codex bot PR #255 P1 finding 3214572227: numeric-tone TL/POJ
+    // input must reach the fused-toneless FST key. `tsua7` (single
+    // tone-7 syllable) was missing `紙(tsua)` because the lookup key
+    // was being built as `tl:tsua7` instead of `tl:tsua`.
+    let (prefix_index, dict) = build_fixture(
+        "numeric-single",
+        &[Row {
+            toneless_key: "tsua",
+            hanzi: "紙",
+            tl: "tsuá",
+            syll: 1,
+            freq: 100,
+        }],
+    );
+    let out = fetch_candidates_for_endings(
+        "tsua7",
+        0,
+        &[5], // syllabifier emits one ending at end-of-input.
+        u32::MAX,
+        1.0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(out.len(), 1, "numeric-tone input must surface entry");
+    assert_eq!(out[0].display_text, "紙");
+    assert_eq!(out[0].consumed_span, (0, 5)); // span stays in raw bytes (incl. tone digit)
+    assert_eq!(out[0].syllable_count, 1);
+}
+
+#[test]
+fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
+    // Multi-syllable numeric input: `tai1bak4` must reach `tl:taibak`
+    // (Phase 1b fused toneless), not `tl:tai1bak4`.
+    let (prefix_index, dict) = build_fixture(
+        "numeric-multi",
+        &[Row {
+            toneless_key: "taibak",
+            hanzi: "代墨",
+            tl: "tâi-ba̍k",
+            syll: 2,
+            freq: 50,
+        }],
+    );
+    let out =
+        fetch_candidates_for_endings("tai1bak4", 0, &[4, 8], u32::MAX, 1.0, &prefix_index, &dict);
+    let multi = out
+        .iter()
+        .find(|c| c.display_text == "代墨" && c.consumed_span == (0, 8))
+        .unwrap_or_else(|| panic!("expected 代墨(span=0..8); got {out:#?}"));
+    assert_eq!(multi.syllable_count, 2);
+}
+
+#[test]
+fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
+    // Phase-6 Codex PR review (post-impl HIGH finding): the lexicon
+    // toneless-key strip rule is intentionally `\d`-only, not `[\d\-]`.
+    // The syllabifier can't walk past `-` (the inventory has no
+    // hyphenated entries), so hyphen-input handling is deferred to
+    // Phase 9. This test pins the contract: feeding a hyphenated
+    // segment into `fetch_candidates_for_endings` produces
+    // `tl:tai-bak` (not `tl:taibak`), so a fixture that only stores
+    // `tl:taibak` returns NO candidates. If anyone re-adds the hyphen
+    // half of the strip, this test fails.
+    let (prefix_index, dict) = build_fixture(
+        "hyphen-no-strip",
+        &[Row {
+            toneless_key: "taibak",
+            hanzi: "代墨",
+            tl: "tâi-ba̍k",
+            syll: 2,
+            freq: 50,
+        }],
+    );
+    let out = fetch_candidates_for_endings(
+        "tai-bak",
+        0,
+        &[7], // hypothetical full-span ending (real syllabifier never emits this)
+        u32::MAX,
+        1.0,
+        &prefix_index,
+        &dict,
+    );
+    assert!(
+        out.is_empty(),
+        "hyphen MUST NOT be stripped at the lexicon strip layer; \
+         got {out:#?} (likely a regression in `fetch_candidates_for_endings` \
+         strip rule)",
+    );
+}
+
+#[test]
 fn user_freq_boost_amplifies_score_multiplicatively() {
     // boost=2.0 must double the score relative to boost=1.0 (which is
     // the noop baseline). Cross-checks the wiring between

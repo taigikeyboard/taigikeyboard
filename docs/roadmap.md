@@ -354,32 +354,54 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 
 ### Phase 6 — Proto + dispatch RPC
 
-**Files**:
-- `engine/protos/proto/composing.proto:97` — `ComposingResponse` 加新 oneof:
-  - `EnterContinuousResp` / `FetchAtPosResp` / `CommitContinuousResp` / `ResetContinuousResp`
-  - 每 response 帶:`committed_display`、`pending_display`、`selected_span`、`candidates: repeated CandidateMessage` (含 `consumed_span` + `syllable_count`)
-- 對應 `ComposingRequest` 加 oneof:`EnterContinuous { raw, mode }` / `FetchAtPos { position }` / `CommitContinuous { position, candidate_id }` / `ResetContinuous {}`
-- `engine/scripts/gen-platform-protos.sh` — 必須一併更新 (per `feedback_proto_gen_script.md`)。.proto 改動後 iOS .pb.swift + Android .java bindings 也要 regenerate 並 commit
-- `engine/protos/build.rs` — 同上更新
-- `engine/composing/src/dispatch.rs` — 路由
+> **Design vs. original spec(2026-05-10 pre-impl Codex co-decide,record at branch `v358-phase6-proto-dispatch`)**:
+> 1. **`ComposingResponse` 不改 oneof**:本來計畫把 body 改成 4-variant oneof (`EnterContinuousResp` / `FetchAtPosResp` / ...);實際採 Codex Fork A3 — 在現有 flat `ComposingResponse` 多加一個 `optional ContinuousResponse continuous = 5;`。其他 12 個 method 全部 backward-compatible (proto3 zero-default safe)。
+> 2. **`EnterContinuous {}` 無 payload**:原計畫 `EnterContinuous { raw, mode }`;實作對齊 Phase 4 嚴格前置條件 (transition.rs:484-490 — 只有 `Phase::Composing { raw }` 非空才轉),平台須先 `Start`/`Append` 再 `EnterContinuous`。`mode` 已在 `Request.config_snapshot.input_mode`,redundant。
+> 3. **`CommitContinuous { display_text, consumed_bytes, syllable_count }`**:stateless,直接搬 Phase 4 Intent 形狀,不引入 server-side `last_candidates` 快取。平台契約:commit 時三個欄位必須複製對應的 `CandidateMessage.consumed_span_end` / `display_text` / `syllable_count`。
+> 4. **`FetchAtPos { position }` 唯一響應 `ContinuousResponse`**:其他三個連續輸入 method (`EnterContinuous` / `CommitContinuous` / `ResetContinuous`) leave `continuous = None`(state-changing 走 Effect,平台後續 issue `FetchAtPos` 拿候選)。
+> 5. **`ContinuousResponse` 只帶 `repeated CandidateMessage candidates`**:`pending_display` 不重複 (已在 `ComposingResponse.preedit.display_text`);`committed_display` 不重複 (committed segments 早已透過 Phase 4 mid-commit Effects 寫進文件,MOE-style UX 規格 `transition.rs:8-13`)。
+> 6. **TPS → TL key mapping at dispatch boundary**:Phase 5 module 限制 `lexicon::fetch_candidates_for_endings` 只接受 canonical TL ASCII,Phase 6 在 `composing/src/dispatch.rs::build_keys_tps` 做 per-syllable `phonetics::tps_to_tl` + 累加 fused toneless key,對應 Phase 1b 的 fused FST 儲存。lexicon 加新 mode-agnostic 入口 `fetch_candidates_for_keys`,既有 `fetch_candidates_for_endings` 改為 thin wrapper。
+> 7. **`syllable_inventory` 接入 lexicon Install**:`InstallRequest` 加 `string syllable_inventory_path = 5;`(optional,空字串視為未提供);`EngineState.syllable_inventory: Option<SyllableInventory>` Phase 7 / 8 平台 bundle 後填入。Phase 6 沒平台路徑時 `FetchAtPos` 回傳空 candidates(graceful degrade)。
 
-**Cross-platform parity 設計**:UI **不**重新計算 committed/pending 顯示文字——這些字串由 engine 在 response 中直接給出,iOS/Android 只 render。
+**Files (確定 touch)**:
+- `engine/protos/proto/composing.proto` — 4 個新 request message (`EnterContinuous` / `FetchAtPos` / `CommitContinuous` / `ResetContinuous`)、`ContinuousResponse` + `CandidateMessage`、`ComposingResponse.continuous` optional 欄位、`ComposingRequest.method` 30s 家族 4 個 variant (tags 30-33)
+- `engine/protos/proto/lexicon.proto` — `InstallRequest.syllable_inventory_path` 第五欄位
+- `ios/Sources/TaigiKeyboard/Engine/Generated/composing.pb.swift` + `lexicon.pb.swift` — regen
+- `android/.../engine/proto/{Composing,Lexicon,...}.java` — regen + 12 個新 message class
+- `engine/composing/src/api.rs` — `Intent::FetchAtPos { position: u32 }` 加進既有 enum
+- `engine/composing/src/dispatch.rs` — 4 個新 method decode + `Intent::FetchAtPos` 在 dispatch 層 short-circuit (lexicon state 跨 crate 取得;TL / TPS 各自 key 構造);新增單元測試
+- `engine/composing/src/transition.rs` — `Intent::FetchAtPos` defensive snapshot arm (production 走 dispatch);7 個既有 `ComposingResponse` constructor 補 `continuous: None`
+- `engine/composing/tests/dispatch_continuous.rs` — decode + degraded-path 整合測試
+- `engine/lexicon/src/paths.rs` — `LexiconPaths.syllables_fst: Option<PathBuf>` + 5-arg `validated()`
+- `engine/lexicon/src/handle.rs` — `EngineState.syllable_inventory: Option<SyllableInventory>`
+- `engine/lexicon/src/api.rs::install` — 路由新欄位
+- `engine/lexicon/src/continuous.rs` — 新 `pub fn fetch_candidates_for_keys(keys, ...)` mode-agnostic 入口;既有 `fetch_candidates_for_endings` 改為 thin TL/POJ wrapper
+- `engine/scripts/gen-platform-protos.sh` + `engine/protos/build.rs` — 不需手改 (只改 .proto 與已涵蓋的 generator script 不變)
 
-**規模**:M (~400 LOC proto + bindings + dispatch + tests)
+**Phase 6 限制 (deferred to Phase 9 dogfood)**:
+- TL/POJ 帶調符 (`pe̍h` / `chóa`) 的 continuous-input 不支援:per-syllable POJ→TL canonicalization 還沒整進 dispatch,`build_keys_tl` 只做 `to_ascii_lowercase`。POJ 使用者請用數字調 (`peh4`)
+- TPS tone-1 (無調號) 隱式邊界不支援:`tps::valid_span_endings` 只看 tone-mark / 入聲韻尾,tone-1 syllables 不切。Phase 9 dogfood 後再決定要不要實作 next-initial-seen rule
+- `enabled_sources_bitmask` / `user_freq_boost` 在 dispatch 端硬編 `u32::MAX` / `1.0`:Phase 7 / 8 平台 UI 整合決定要從 `FetchAtPos` 加欄位還是 `AppConfig` 帶下來
+
+**Cross-platform parity 設計**:UI **不**重新計算 candidate `consumed_span` / `display_text`——engine 在 `ContinuousResponse.candidates` 直接給出,iOS/Android 只 render。
+
+**規模**:M (~600 LOC handcoded — proto + dispatch + transition + lexicon paths/handle/continuous + tests),加 generated bindings (per roadmap.md:502 不計 review size)
 
 ---
 
 ### Phase 7 — iOS UI 整合
 
 **Files**:
-- `ios/Sources/Composition/CompositionRoot.swift` — 新增 Continuous mode 偵測:當 raw input 長度 ≥ 閾值 (估 ~3 chars) 且包含合法音節邊界時,呼叫 `EnterContinuous`
-- `ios/Sources/Autocomplete/...` (KeyboardKit AutocompleteProvider 子類) — render candidate strip;tap → `CommitContinuous(position, candidate_id)`,刷新候選
-- 新增 ComposingTextStrip 元件 (在 keyboard 上方一行) — 顯示 `committed_display + pending_display` (per MOE app UX 規範)
-- Backspace handler:Continuous mode 改呼 `BackspaceContinuous`
+- `ios/Sources/Composition/CompositionRoot.swift` — 新增 Continuous mode 偵測:當 raw input 長度 ≥ 閾值 (估 ~3 chars) 且包含合法音節邊界時,先 `Append` / `Start` 把 buffer 餵滿,再呼 `EnterContinuous {}` (Phase 6 contract:no payload — `Phase::Composing { raw }` 必須非空才能轉 Continuous,見 `engine/composing/src/transition.rs:484-490`)
+- `ios/Sources/Autocomplete/...` (KeyboardKit AutocompleteProvider 子類) — render candidate strip from `ContinuousResponse.candidates`;每次 candidate 列重整都要先發 `FetchAtPos { position: 0 }` 拿候選 (`continuous` 欄位只在 FetchAtPos 才有);tap candidate → 帶 `display_text` / `consumed_bytes = candidate.consumed_span_end` / `syllable_count = candidate.syllable_count` 發 `CommitContinuous`,然後再 issue 一次 `FetchAtPos` 刷新剩餘候選
+- 新增 ComposingTextStrip 元件 (在 keyboard 上方一行) — `pending_display` 從 `ComposingResponse.preedit.display_text` 取;committed segments 已透過 mid-commit `CommitTextReplacingPreedit` Effect 寫進文件,UI strip 不重複渲染
+- Backspace handler:Continuous mode 沿用既有 `Intent::DeleteBackward`,Phase 4 已實作 Continuous 折回 (`engine/composing/src/transition.rs:209-309`)
+- `ContinuousResponse.candidates[i].form` 目前固定為 1 (FORM_NOTONE);Phase 7 UI 不需要分支,直接 render `display_text`
 
 **iOS-specific gotchas**:
-- KeyboardKit setMarkedText / commitText 對應:committed segments 用 `commitText`,pending 用 `setMarkedText`
-- Settings 切換 (TL/POJ/TPS) mid-composition → `ResetContinuous`
+- KeyboardKit setMarkedText / commitText 對應:committed segments 走 `commitText` (透過 Phase 4 mid-commit Effect),pending 走 `setMarkedText` (透過 `UpdatePreedit` Effect)
+- Settings 切換 (TL/POJ/TPS) mid-composition → `ResetContinuous {}`
+- Stale tap rejection:每個 request 帶 generation,Phase 6 dispatch 的 generation 同步沿用既有 `EngineHandle::handle` 設計
 
 **規模**:M-L (~500 LOC Swift + tests)
 
@@ -388,15 +410,17 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 ### Phase 8 — Android UI 整合
 
 **Files**:
-- `android/.../ime/core/TaigiKeyboard.kt` — 同 iOS,偵測 + 路由到 `EnterContinuous`
-- `android/.../ime/text/smartbar/SmartbarManager.kt` — render candidate strip + tap handler
-- `android/.../ime/core/InputView.kt` — 加 ComposingTextStrip composable
+- `android/.../ime/core/TaigiKeyboard.kt` — 同 iOS,偵測 + 先 `Append` / `Start` 餵滿 buffer 再 `EnterContinuous {}` (no payload)
+- `android/.../ime/text/smartbar/SmartbarManager.kt` — render candidate strip from `ContinuousResponse.candidates`;每次刷候選 issue `FetchAtPos { position: 0 }`;tap candidate → 帶 `display_text` / `consumed_bytes = candidate.consumed_span_end` / `syllable_count = candidate.syllable_count` 發 `CommitContinuous`,然後再 issue 一次 `FetchAtPos`
+- `android/.../ime/core/InputView.kt` — 加 ComposingTextStrip composable;`pending_display` 從 `ComposingResponse.preedit.display_text` 取
+- Backspace handler:沿用既有 `Intent::DeleteBackward` (Phase 4 已蓋 Continuous 折回邏輯)
 
 **Android-specific gotchas**:
-- `setComposingText` for pending、`commitText` for committed
-- 旋轉 / focus loss → `onFinishInput` / `onStartInput` → `ResetContinuous`
+- `setComposingText` for pending、`commitText` for committed (committed segments 已透過 Phase 4 mid-commit Effect)
+- 旋轉 / focus loss → `onFinishInput` / `onStartInput` → `ResetContinuous {}`
 - IME mode swap → 同上 reset
 - `setComposingText("")` 應在 commit 後立即清空 marked text 區
+- **Mode 偵測**:平台 `RustEngineBridge.appConfig` 目前把 TPS 映到 `"tl"` (`android/.../RustEngineBridge.kt:1544-1558`),Phase 6 dispatch 因此用 `phonetics::contains_tps(raw)` 判斷而非 config string;Phase 8 不需要改 appConfig 行為
 
 **規模**:M-L (~500 LOC Kotlin + tests)
 
@@ -490,7 +514,7 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | **Merged in PR #252** (squash `2f7feac1`) |
 | 4 — `Phase::Continuous` + nextword 邊界 | ~700 + tests | 6 | No | **Merged in PR #253** (squash `a69bfc75`) |
 | 5 — span-local candidate fetch | ~400 + tests | 6 | No | **Merged in PR #254** (squash `cf813af4`) |
-| 6 — proto + dispatch RPCs | ~400 + bindings | 7, 8 | No | Pending |
+| 6 — proto + dispatch RPCs | ~400 + bindings | 7, 8 | No | **In progress** (branch `v358-phase6-proto-dispatch`) |
 | 7 — iOS UI 整合 | ~500 Swift + tests | — | **Yes** | Pending |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | Pending |
 | 9 — dogfood + corner-case fixes | ~150 + dogfood | — | (polish) | Pending |

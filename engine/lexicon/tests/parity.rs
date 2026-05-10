@@ -242,6 +242,7 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
         assoc_path.to_str().unwrap(),
+        "",
         1,
     )
     .expect("paths validated");
@@ -292,14 +293,14 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
 
 #[test]
 fn invariant_lex_install_path_validation_rejects_nul() {
-    let err = LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", 1)
+    let err = LexiconPaths::validated("/foo\0bar", "/dict.bin", "/assoc.bin", "", 1)
         .expect_err("nul rejected");
     assert!(matches!(err, LexiconError::InvalidPath(_)), "{err:?}");
 }
 
 #[test]
 fn invariant_lex_install_path_validation_rejects_relative() {
-    let err = LexiconPaths::validated("relative.fst", "/dict.bin", "/assoc.bin", 1)
+    let err = LexiconPaths::validated("relative.fst", "/dict.bin", "/assoc.bin", "", 1)
         .expect_err("relative rejected");
     assert!(matches!(err, LexiconError::PathNotAbsolute(_)), "{err:?}");
 }
@@ -319,6 +320,7 @@ fn invariant_lex_install_search_serialization_no_panic() {
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
         assoc_path.to_str().unwrap(),
+        "",
         1,
     )
     .expect("paths validated");

@@ -21,11 +21,15 @@ use crate::dictionary_reader::DictionaryReader;
 use crate::error::LexiconError;
 use crate::paths::LexiconPaths;
 use crate::prefix_index::PrefixIndex;
+use crate::syllable_inventory::SyllableInventory;
 
-/// Active lexicon state. All fields are populated on a successful install;
-/// `with_state` callers verify they are present (defensive — not expected
-/// to fail post-install).
+/// Active lexicon state. The mandatory readers (`prefix_index`,
+/// `dictionary`, `association`) are populated on every successful install;
+/// `syllable_inventory` is opt-in (Phase 6 adds the wiring; the platform
+/// only supplies the path once Phase 7 / 8 bundles `syllables.fst`).
+/// `with_state` callers verify presence defensively.
 // 中文: 安裝成功後的引擎狀態快照;install 失敗時整個 EngineState 不會替換。
+// 中文: syllable_inventory 是 Phase 6 新增的選擇性欄位,平台未提供路徑時為 None。
 pub struct EngineState {
     // 中文: 平台告知的字典版本號 (用於與 association.bin / dictionary.bin 對齊驗證)。
     pub dictionary_version: u32,
@@ -35,6 +39,12 @@ pub struct EngineState {
     pub dictionary: Option<DictionaryReader>,
     // 中文: TKWA bigram 讀取器 (前一詞 → 後續候選詞)。
     pub association: Option<AssociationReader>,
+    /// v3.5.8 Phase 6 — TL syllable inventory backed by `syllables.fst`.
+    /// `None` when the platform did not pass a path; the composing
+    /// continuous-input dispatcher returns an empty candidate list in
+    /// that case.
+    // 中文: Phase 6 新增 — TL 音節合法集合;平台未提供路徑時為 None。
+    pub syllable_inventory: Option<SyllableInventory>,
 }
 
 // 中文: 引擎控制句柄 — 純 zero-sized type,所有 API 為靜態方法。
@@ -60,6 +70,11 @@ impl EngineHandle {
         let prefix_index = PrefixIndex::open(&paths.fst)?;
         let dictionary = DictionaryReader::open(&paths.dictionary_bin)?;
         let association = AssociationReader::open(&paths.association_bin)?;
+        let syllable_inventory = paths
+            .syllables_fst
+            .as_deref()
+            .map(SyllableInventory::open)
+            .transpose()?;
 
         let stats = InstallStats {
             dictionary_record_count: dictionary.record_count() as u64,
@@ -71,6 +86,7 @@ impl EngineHandle {
             prefix_index: Some(prefix_index),
             dictionary: Some(dictionary),
             association: Some(association),
+            syllable_inventory,
         };
 
         let mut guard = STATE

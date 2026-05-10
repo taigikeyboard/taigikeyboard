@@ -31,6 +31,7 @@ public  final class InstallRequest extends
     triePath_ = "";
     dictionaryBinPath_ = "";
     associationBinPath_ = "";
+    syllableInventoryPath_ = "";
   }
   public static final int TRIE_PATH_FIELD_NUMBER = 1;
   private java.lang.String triePath_;
@@ -269,6 +270,98 @@ public  final class InstallRequest extends
   private void clearDictionaryVersion() {
 
     dictionaryVersion_ = 0;
+  }
+
+  public static final int SYLLABLE_INVENTORY_PATH_FIELD_NUMBER = 5;
+  private java.lang.String syllableInventoryPath_;
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @return The syllableInventoryPath.
+   */
+  @java.lang.Override
+  public java.lang.String getSyllableInventoryPath() {
+    return syllableInventoryPath_;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @return The bytes for syllableInventoryPath.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSyllableInventoryPathBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(syllableInventoryPath_);
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @param value The syllableInventoryPath to set.
+   */
+  private void setSyllableInventoryPath(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    syllableInventoryPath_ = value;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   */
+  private void clearSyllableInventoryPath() {
+
+    syllableInventoryPath_ = getDefaultInstance().getSyllableInventoryPath();
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @param value The bytes for syllableInventoryPath to set.
+   */
+  private void setSyllableInventoryPathBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    syllableInventoryPath_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.InstallRequest parseFrom(
@@ -629,6 +722,100 @@ public  final class InstallRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+     * inventory). Optional on the wire: empty string skips loading and
+     * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+     * bundles populate this; Phase 6 only wires the field through so the
+     * composing dispatch can call `tl::valid_span_endings` against the
+     * installed inventory once the platform pipeline is ready.
+     * </pre>
+     *
+     * <code>string syllable_inventory_path = 5;</code>
+     * @return The syllableInventoryPath.
+     */
+    @java.lang.Override
+    public java.lang.String getSyllableInventoryPath() {
+      return instance.getSyllableInventoryPath();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+     * inventory). Optional on the wire: empty string skips loading and
+     * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+     * bundles populate this; Phase 6 only wires the field through so the
+     * composing dispatch can call `tl::valid_span_endings` against the
+     * installed inventory once the platform pipeline is ready.
+     * </pre>
+     *
+     * <code>string syllable_inventory_path = 5;</code>
+     * @return The bytes for syllableInventoryPath.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getSyllableInventoryPathBytes() {
+      return instance.getSyllableInventoryPathBytes();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+     * inventory). Optional on the wire: empty string skips loading and
+     * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+     * bundles populate this; Phase 6 only wires the field through so the
+     * composing dispatch can call `tl::valid_span_endings` against the
+     * installed inventory once the platform pipeline is ready.
+     * </pre>
+     *
+     * <code>string syllable_inventory_path = 5;</code>
+     * @param value The syllableInventoryPath to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSyllableInventoryPath(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setSyllableInventoryPath(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+     * inventory). Optional on the wire: empty string skips loading and
+     * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+     * bundles populate this; Phase 6 only wires the field through so the
+     * composing dispatch can call `tl::valid_span_endings` against the
+     * installed inventory once the platform pipeline is ready.
+     * </pre>
+     *
+     * <code>string syllable_inventory_path = 5;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSyllableInventoryPath() {
+      copyOnWrite();
+      instance.clearSyllableInventoryPath();
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+     * inventory). Optional on the wire: empty string skips loading and
+     * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+     * bundles populate this; Phase 6 only wires the field through so the
+     * composing dispatch can call `tl::valid_span_endings` against the
+     * installed inventory once the platform pipeline is ready.
+     * </pre>
+     *
+     * <code>string syllable_inventory_path = 5;</code>
+     * @param value The bytes for syllableInventoryPath to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSyllableInventoryPathBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setSyllableInventoryPathBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.InstallRequest)
   }
   @java.lang.Override
@@ -649,10 +836,11 @@ public  final class InstallRequest extends
             "dictionaryBinPath_",
             "associationBinPath_",
             "dictionaryVersion_",
+            "syllableInventoryPath_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u000b";
+              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0208\u0004\u000b\u0005\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

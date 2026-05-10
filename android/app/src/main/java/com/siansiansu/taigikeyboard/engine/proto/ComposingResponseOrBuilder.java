@@ -65,4 +65,35 @@ public interface ComposingResponseOrBuilder extends
    * @return The isComposing.
    */
   boolean getIsComposing();
+
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   * @return Whether the continuous field is set.
+   */
+  boolean hasContinuous();
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+   * `FetchAtPos` (other continuous methods leave it absent: state-changing
+   * ops emit Effects, and the platform follows up with `FetchAtPos` to
+   * refresh the candidate strip — keeps each RPC single-purpose). Optional
+   * at the wire level: existing 12 methods leave it absent (proto3 zero-
+   * default safe). Pending-display text is NOT duplicated here — it is
+   * already in `preedit.display_text` for `Phase::Continuous`.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.ContinuousResponse continuous = 5;</code>
+   * @return The continuous.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse getContinuous();
 }

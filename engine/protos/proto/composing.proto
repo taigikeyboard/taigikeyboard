@@ -22,8 +22,8 @@ option java_multiple_files = true;
 
 message ComposingRequest {
   // Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  // read) in 20s. Spacing leaves room for future families without renumbering
-  // existing variants.
+  // read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
+  // future families without renumbering existing variants.
   oneof method {
     // --- Text-input mutators (10s) ---
     Start                           start                                = 10;
@@ -40,6 +40,12 @@ message ComposingRequest {
     // --- UI-driven ops (20s) ---
     SetSelectedCandidateIndex       set_selected_candidate_index         = 20;
     QueryState                      query_state                          = 21;
+
+    // --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+    EnterContinuous                 enter_continuous                     = 30;
+    FetchAtPos                      fetch_at_pos                         = 31;
+    CommitContinuous                commit_continuous                    = 32;
+    ResetContinuous                 reset_continuous                     = 33;
   }
 }
 
@@ -94,6 +100,51 @@ message SetSelectedCandidateIndex { int32 index = 1; }
 // is_composing + selected_candidate_index. Emits no effects.
 message QueryState {}
 
+// v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
+// { raw, committed: [] }`. No payload: the buffer is already populated by
+// prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
+// when the existing `Composing.raw` is empty (matches Phase-4 strict
+// precondition pinned at `engine/composing/src/transition.rs:484-490`).
+// Mode comes from `Request.config_snapshot.input_mode`.
+message EnterContinuous {}
+
+// v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
+// `Phase::Continuous { raw }` starting at byte offset `position` (always
+// `0` in v3.5.8; field reserved for future partial-fetch capability and
+// validated to `0` today). The engine pulls candidates via
+// `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
+// dispatcher path that converts each Bopomofo span to a `tl:<toneless>`
+// FST key before lexicon lookup. Emits no effects.
+message FetchAtPos { uint32 position = 1; }
+
+// v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
+// payload mirrors `Intent::CommitContinuous` (engine-side state machine
+// from Phase 4): the engine takes `pending[..consumed_bytes]` as the
+// committed segment's raw text and keeps the remainder as the new pending
+// tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
+// to Idle). Programmer-error inputs (out-of-range / non-char-boundary
+// `consumed_bytes`, empty `display_text`) collapse to noop.
+//
+// **Platform contract**: when committing the user's tap on a candidate
+// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
+// `CandidateMessage.consumed_span_end` and `syllable_count` MUST equal
+// the chosen `CandidateMessage.syllable_count`. Sending different
+// values will mis-align the committed segment with the candidate the
+// user saw.
+message CommitContinuous {
+  string display_text   = 1;
+  uint32 consumed_bytes = 2;
+  uint32 syllable_count = 3;
+}
+
+// v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
+// committed list and pending raw, exits to Idle, and emits the standard
+// abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+// `NextWordClearForNewComposing`). Committed segments stay in the
+// document (already inserted via earlier `CommitTextReplacingPreedit`
+// effects).
+message ResetContinuous {}
+
 message ComposingResponse {
   message Preedit {
     string raw_input    = 1;  // numeric tone, ASCII (search key)
@@ -104,6 +155,47 @@ message ComposingResponse {
   repeated Effect effect         = 2;  // ordered side effects; prost preserves order
   int32 selected_candidate_index = 3;  // -1 idle, 0 fresh, preserved on ReplaceLast
   bool is_composing              = 4;  // mirrors `state.isComposing`
+
+  // v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+  // `FetchAtPos` (other continuous methods leave it absent: state-changing
+  // ops emit Effects, and the platform follows up with `FetchAtPos` to
+  // refresh the candidate strip — keeps each RPC single-purpose). Optional
+  // at the wire level: existing 12 methods leave it absent (proto3 zero-
+  // default safe). Pending-display text is NOT duplicated here — it is
+  // already in `preedit.display_text` for `Phase::Continuous`.
+  optional ContinuousResponse continuous = 5;
+}
+
+// v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
+// span-local candidates that `lexicon::fetch_candidates_for_endings`
+// produced for the current `Phase::Continuous { raw }`.
+message ContinuousResponse {
+  repeated CandidateMessage candidates = 1;
+}
+
+// v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
+// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+//
+// `consumed_span` is encoded as two scalar fields rather than a nested
+// message to keep wire overhead low (each candidate is 6 scalars total).
+// `consumed_span_start` / `consumed_span_end` are byte offsets in the
+// **original raw user input** stored in `Phase::Continuous { raw }` —
+// not in any canonical TL transform. TL / POJ users → ASCII bytes;
+// TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
+// to canonical TL FST keys for lookup but emits the span back in the
+// user-facing TPS byte space). Platform UI slices `pending[start..end]`
+// off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+//
+// `form` is currently always `1` (FORM_NOTONE; see
+// `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
+// numeric (2) / abbrev (3) when proto-side carriers exist.
+message CandidateMessage {
+  uint32 consumed_span_start = 1;
+  uint32 consumed_span_end   = 2;
+  uint32 syllable_count      = 3;
+  string display_text        = 4;
+  float  score               = 5;
+  uint32 form                = 6;
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects

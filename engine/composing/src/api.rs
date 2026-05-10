@@ -113,6 +113,18 @@ pub enum Intent {
     QueryState,
     // 中文: 從 Composing 進入 Continuous (連續輸入) 模式;committed 起始為空。
     EnterContinuous,
+    /// v3.5.8 Phase 6 — pure read of span-local continuous-input
+    /// candidates for the current `Phase::Continuous { raw }` starting
+    /// at `position` (always `0` in v3.5.8; non-zero short-circuits
+    /// to an empty candidate list). Resolved by `dispatch::handle`
+    /// outside the `transition::apply` pure path because the fetch
+    /// needs lexicon state — see `dispatch::handle_fetch_at_pos`.
+    /// `transition.rs` only sees this variant via a defensive snapshot
+    /// arm; production callers always go through dispatch.
+    // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
+    FetchAtPos {
+        position: u32,
+    },
     /// Commit a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the committed segment's raw text and
     /// keeps `pending[consumed_bytes..]` as the new pending tail. When

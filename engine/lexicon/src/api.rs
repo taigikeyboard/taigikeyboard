@@ -21,12 +21,13 @@ use crate::search::{
     self, LexiconAssocOut, LexiconRowOut, SearchInputMode, SearchInputType, SearchParams,
 };
 
-// 中文: 安裝 (或重裝) 詞庫狀態 — 驗證路徑、開啟 FST/TKDB/TKWA,並原子性置換到 EngineHandle。
+// 中文: 安裝 (或重裝) 詞庫狀態 — 驗證路徑、開啟 FST/TKDB/TKWA (+選擇性 syllables.fst),並原子性置換到 EngineHandle。
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
     let paths = LexiconPaths::validated(
         &req.trie_path,
         &req.dictionary_bin_path,
         &req.association_bin_path,
+        &req.syllable_inventory_path,
         req.dictionary_version,
     )?;
     let stats = EngineHandle::install(paths)?;

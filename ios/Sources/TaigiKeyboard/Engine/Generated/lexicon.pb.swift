@@ -398,6 +398,14 @@ public struct Taigi_Engine_InstallRequest: Sendable {
   /// platform-supplied stamp (Android: dictionary_app_version.txt; iOS: bundle build number)
   public var dictionaryVersion: UInt32 = 0
 
+  /// v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+  /// inventory). Optional on the wire: empty string skips loading and
+  /// `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+  /// bundles populate this; Phase 6 only wires the field through so the
+  /// composing dispatch can call `tl::valid_span_endings` against the
+  /// installed inventory once the platform pipeline is ready.
+  public var syllableInventoryPath: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1280,7 +1288,7 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
 
 extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".InstallRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}trie_path\0\u{3}dictionary_bin_path\0\u{3}association_bin_path\0\u{3}dictionary_version\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}trie_path\0\u{3}dictionary_bin_path\0\u{3}association_bin_path\0\u{3}dictionary_version\0\u{3}syllable_inventory_path\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1292,6 +1300,7 @@ extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
       case 2: try { try decoder.decodeSingularStringField(value: &self.dictionaryBinPath) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.associationBinPath) }()
       case 4: try { try decoder.decodeSingularUInt32Field(value: &self.dictionaryVersion) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.syllableInventoryPath) }()
       default: break
       }
     }
@@ -1310,6 +1319,9 @@ extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if self.dictionaryVersion != 0 {
       try visitor.visitSingularUInt32Field(value: self.dictionaryVersion, fieldNumber: 4)
     }
+    if !self.syllableInventoryPath.isEmpty {
+      try visitor.visitSingularStringField(value: self.syllableInventoryPath, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1318,6 +1330,7 @@ extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if lhs.dictionaryBinPath != rhs.dictionaryBinPath {return false}
     if lhs.associationBinPath != rhs.associationBinPath {return false}
     if lhs.dictionaryVersion != rhs.dictionaryVersion {return false}
+    if lhs.syllableInventoryPath != rhs.syllableInventoryPath {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

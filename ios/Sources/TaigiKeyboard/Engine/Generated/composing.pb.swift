@@ -26,8 +26,8 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
   // methods supported on all messages.
 
   /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  /// read) in 20s. Spacing leaves room for future families without renumbering
-  /// existing variants.
+  /// read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
+  /// future families without renumbering existing variants.
   public var method: Taigi_Engine_ComposingRequest.OneOf_Method? = nil
 
   /// --- Text-input mutators (10s) ---
@@ -128,11 +128,44 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .queryState(newValue)}
   }
 
+  /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+  public var enterContinuous: Taigi_Engine_EnterContinuous {
+    get {
+      if case .enterContinuous(let v)? = method {return v}
+      return Taigi_Engine_EnterContinuous()
+    }
+    set {method = .enterContinuous(newValue)}
+  }
+
+  public var fetchAtPos: Taigi_Engine_FetchAtPos {
+    get {
+      if case .fetchAtPos(let v)? = method {return v}
+      return Taigi_Engine_FetchAtPos()
+    }
+    set {method = .fetchAtPos(newValue)}
+  }
+
+  public var commitContinuous: Taigi_Engine_CommitContinuous {
+    get {
+      if case .commitContinuous(let v)? = method {return v}
+      return Taigi_Engine_CommitContinuous()
+    }
+    set {method = .commitContinuous(newValue)}
+  }
+
+  public var resetContinuous: Taigi_Engine_ResetContinuous {
+    get {
+      if case .resetContinuous(let v)? = method {return v}
+      return Taigi_Engine_ResetContinuous()
+    }
+    set {method = .resetContinuous(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
-  /// read) in 20s. Spacing leaves room for future families without renumbering
-  /// existing variants.
+  /// read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
+  /// future families without renumbering existing variants.
   public enum OneOf_Method: Equatable, Sendable {
     /// --- Text-input mutators (10s) ---
     case start(Taigi_Engine_Start)
@@ -148,6 +181,11 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
     /// --- UI-driven ops (20s) ---
     case setSelectedCandidateIndex(Taigi_Engine_SetSelectedCandidateIndex)
     case queryState(Taigi_Engine_QueryState)
+    /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+    case enterContinuous(Taigi_Engine_EnterContinuous)
+    case fetchAtPos(Taigi_Engine_FetchAtPos)
+    case commitContinuous(Taigi_Engine_CommitContinuous)
+    case resetContinuous(Taigi_Engine_ResetContinuous)
 
   }
 
@@ -313,6 +351,87 @@ public struct Taigi_Engine_QueryState: Sendable {
   public init() {}
 }
 
+/// v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
+/// { raw, committed: [] }`. No payload: the buffer is already populated by
+/// prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
+/// when the existing `Composing.raw` is empty (matches Phase-4 strict
+/// precondition pinned at `engine/composing/src/transition.rs:484-490`).
+/// Mode comes from `Request.config_snapshot.input_mode`.
+public struct Taigi_Engine_EnterContinuous: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
+/// `Phase::Continuous { raw }` starting at byte offset `position` (always
+/// `0` in v3.5.8; field reserved for future partial-fetch capability and
+/// validated to `0` today). The engine pulls candidates via
+/// `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
+/// dispatcher path that converts each Bopomofo span to a `tl:<toneless>`
+/// FST key before lexicon lookup. Emits no effects.
+public struct Taigi_Engine_FetchAtPos: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var position: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
+/// payload mirrors `Intent::CommitContinuous` (engine-side state machine
+/// from Phase 4): the engine takes `pending[..consumed_bytes]` as the
+/// committed segment's raw text and keeps the remainder as the new pending
+/// tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
+/// to Idle). Programmer-error inputs (out-of-range / non-char-boundary
+/// `consumed_bytes`, empty `display_text`) collapse to noop.
+///
+/// **Platform contract**: when committing the user's tap on a candidate
+/// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
+/// `CandidateMessage.consumed_span_end` and `syllable_count` MUST equal
+/// the chosen `CandidateMessage.syllable_count`. Sending different
+/// values will mis-align the committed segment with the candidate the
+/// user saw.
+public struct Taigi_Engine_CommitContinuous: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var displayText: String = String()
+
+  public var consumedBytes: UInt32 = 0
+
+  public var syllableCount: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
+/// committed list and pending raw, exits to Idle, and emits the standard
+/// abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+/// `NextWordClearForNewComposing`). Committed segments stay in the
+/// document (already inserted via earlier `CommitTextReplacingPreedit`
+/// effects).
+public struct Taigi_Engine_ResetContinuous: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public struct Taigi_Engine_ComposingResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -336,6 +455,22 @@ public struct Taigi_Engine_ComposingResponse: Sendable {
   /// mirrors `state.isComposing`
   public var isComposing: Bool = false
 
+  /// v3.5.8 Phase 6 — continuous-input candidate carrier. Populated only by
+  /// `FetchAtPos` (other continuous methods leave it absent: state-changing
+  /// ops emit Effects, and the platform follows up with `FetchAtPos` to
+  /// refresh the candidate strip — keeps each RPC single-purpose). Optional
+  /// at the wire level: existing 12 methods leave it absent (proto3 zero-
+  /// default safe). Pending-display text is NOT duplicated here — it is
+  /// already in `preedit.display_text` for `Phase::Continuous`.
+  public var continuous: Taigi_Engine_ContinuousResponse {
+    get {_continuous ?? Taigi_Engine_ContinuousResponse()}
+    set {_continuous = newValue}
+  }
+  /// Returns true if `continuous` has been explicitly set.
+  public var hasContinuous: Bool {self._continuous != nil}
+  /// Clears the value of `continuous`. Subsequent reads from it will return its default value.
+  public mutating func clearContinuous() {self._continuous = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public struct Preedit: Sendable {
@@ -357,6 +492,60 @@ public struct Taigi_Engine_ComposingResponse: Sendable {
   public init() {}
 
   fileprivate var _preedit: Taigi_Engine_ComposingResponse.Preedit? = nil
+  fileprivate var _continuous: Taigi_Engine_ContinuousResponse? = nil
+}
+
+/// v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
+/// span-local candidates that `lexicon::fetch_candidates_for_endings`
+/// produced for the current `Phase::Continuous { raw }`.
+public struct Taigi_Engine_ContinuousResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var candidates: [Taigi_Engine_CandidateMessage] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
+/// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+///
+/// `consumed_span` is encoded as two scalar fields rather than a nested
+/// message to keep wire overhead low (each candidate is 6 scalars total).
+/// `consumed_span_start` / `consumed_span_end` are byte offsets in the
+/// **original raw user input** stored in `Phase::Continuous { raw }` —
+/// not in any canonical TL transform. TL / POJ users → ASCII bytes;
+/// TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
+/// to canonical TL FST keys for lookup but emits the span back in the
+/// user-facing TPS byte space). Platform UI slices `pending[start..end]`
+/// off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+///
+/// `form` is currently always `1` (FORM_NOTONE; see
+/// `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
+/// numeric (2) / abbrev (3) when proto-side carriers exist.
+public struct Taigi_Engine_CandidateMessage: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var consumedSpanStart: UInt32 = 0
+
+  public var consumedSpanEnd: UInt32 = 0
+
+  public var syllableCount: UInt32 = 0
+
+  public var displayText: String = String()
+
+  public var score: Float = 0
+
+  public var form: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 /// Platform-neutral effects. The wrapper maps document-mutation effects
@@ -613,7 +802,7 @@ fileprivate let _protobuf_package = "taigi.engine"
 
 extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -777,6 +966,58 @@ extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._M
           self.method = .queryState(v)
         }
       }()
+      case 30: try {
+        var v: Taigi_Engine_EnterContinuous?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .enterContinuous(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .enterContinuous(v)
+        }
+      }()
+      case 31: try {
+        var v: Taigi_Engine_FetchAtPos?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .fetchAtPos(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .fetchAtPos(v)
+        }
+      }()
+      case 32: try {
+        var v: Taigi_Engine_CommitContinuous?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .commitContinuous(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .commitContinuous(v)
+        }
+      }()
+      case 33: try {
+        var v: Taigi_Engine_ResetContinuous?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .resetContinuous(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .resetContinuous(v)
+        }
+      }()
       default: break
       }
     }
@@ -835,6 +1076,22 @@ extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._M
     case .queryState?: try {
       guard case .queryState(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 21)
+    }()
+    case .enterContinuous?: try {
+      guard case .enterContinuous(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 30)
+    }()
+    case .fetchAtPos?: try {
+      guard case .fetchAtPos(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 31)
+    }()
+    case .commitContinuous?: try {
+      guard case .commitContinuous(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 32)
+    }()
+    case .resetContinuous?: try {
+      guard case .resetContinuous(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 33)
     }()
     case nil: break
     }
@@ -1142,9 +1399,117 @@ extension Taigi_Engine_QueryState: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
+extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EnterContinuous"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_EnterContinuous, rhs: Taigi_Engine_EnterContinuous) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.position) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.position != 0 {
+      try visitor.visitSingularUInt32Field(value: self.position, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_FetchAtPos, rhs: Taigi_Engine_FetchAtPos) -> Bool {
+    if lhs.position != rhs.position {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CommitContinuous"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.consumedBytes) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.displayText.isEmpty {
+      try visitor.visitSingularStringField(value: self.displayText, fieldNumber: 1)
+    }
+    if self.consumedBytes != 0 {
+      try visitor.visitSingularUInt32Field(value: self.consumedBytes, fieldNumber: 2)
+    }
+    if self.syllableCount != 0 {
+      try visitor.visitSingularUInt32Field(value: self.syllableCount, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CommitContinuous, rhs: Taigi_Engine_CommitContinuous) -> Bool {
+    if lhs.displayText != rhs.displayText {return false}
+    if lhs.consumedBytes != rhs.consumedBytes {return false}
+    if lhs.syllableCount != rhs.syllableCount {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_ResetContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ResetContinuous"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ResetContinuous, rhs: Taigi_Engine_ResetContinuous) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{3}selected_candidate_index\0\u{3}is_composing\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{3}selected_candidate_index\0\u{3}is_composing\0\u{1}continuous\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1156,6 +1521,7 @@ extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.effect) }()
       case 3: try { try decoder.decodeSingularInt32Field(value: &self.selectedCandidateIndex) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.isComposing) }()
+      case 5: try { try decoder.decodeSingularMessageField(value: &self._continuous) }()
       default: break
       }
     }
@@ -1178,6 +1544,9 @@ extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._
     if self.isComposing != false {
       try visitor.visitSingularBoolField(value: self.isComposing, fieldNumber: 4)
     }
+    try { if let v = self._continuous {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1186,6 +1555,7 @@ extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._
     if lhs.effect != rhs.effect {return false}
     if lhs.selectedCandidateIndex != rhs.selectedCandidateIndex {return false}
     if lhs.isComposing != rhs.isComposing {return false}
+    if lhs._continuous != rhs._continuous {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1221,6 +1591,91 @@ extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftPr
   public static func ==(lhs: Taigi_Engine_ComposingResponse.Preedit, rhs: Taigi_Engine_ComposingResponse.Preedit) -> Bool {
     if lhs.rawInput != rhs.rawInput {return false}
     if lhs.displayText != rhs.displayText {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ContinuousResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}candidates\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.candidates) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.candidates.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.candidates, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_ContinuousResponse, rhs: Taigi_Engine_ContinuousResponse) -> Bool {
+    if lhs.candidates != rhs.candidates {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt32Field(value: &self.consumedSpanStart) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.consumedSpanEnd) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
+      case 5: try { try decoder.decodeSingularFloatField(value: &self.score) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.form) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.consumedSpanStart != 0 {
+      try visitor.visitSingularUInt32Field(value: self.consumedSpanStart, fieldNumber: 1)
+    }
+    if self.consumedSpanEnd != 0 {
+      try visitor.visitSingularUInt32Field(value: self.consumedSpanEnd, fieldNumber: 2)
+    }
+    if self.syllableCount != 0 {
+      try visitor.visitSingularUInt32Field(value: self.syllableCount, fieldNumber: 3)
+    }
+    if !self.displayText.isEmpty {
+      try visitor.visitSingularStringField(value: self.displayText, fieldNumber: 4)
+    }
+    if self.score.bitPattern != 0 {
+      try visitor.visitSingularFloatField(value: self.score, fieldNumber: 5)
+    }
+    if self.form != 0 {
+      try visitor.visitSingularUInt32Field(value: self.form, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CandidateMessage, rhs: Taigi_Engine_CandidateMessage) -> Bool {
+    if lhs.consumedSpanStart != rhs.consumedSpanStart {return false}
+    if lhs.consumedSpanEnd != rhs.consumedSpanEnd {return false}
+    if lhs.syllableCount != rhs.syllableCount {return false}
+    if lhs.displayText != rhs.displayText {return false}
+    if lhs.score != rhs.score {return false}
+    if lhs.form != rhs.form {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

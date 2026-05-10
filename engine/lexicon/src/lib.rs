@@ -33,7 +33,10 @@ const _: fn() = || {
     assert_send::<handle::EngineHandle>();
 };
 
-pub use continuous::{fetch_candidates_for_endings, RawCandidate, FORM_NOTONE};
+pub use continuous::{
+    fetch_candidates_for_endings, fetch_candidates_for_keys, ConsumedSpan, RawCandidate,
+    FORM_NOTONE,
+};
 pub use error::LexiconError;
 pub use handle::EngineHandle;
 pub use paths::LexiconPaths;

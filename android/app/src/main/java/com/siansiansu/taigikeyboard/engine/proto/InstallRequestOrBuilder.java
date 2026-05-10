@@ -78,4 +78,34 @@ public interface InstallRequestOrBuilder extends
    * @return The dictionaryVersion.
    */
   int getDictionaryVersion();
+
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @return The syllableInventoryPath.
+   */
+  java.lang.String getSyllableInventoryPath();
+  /**
+   * <pre>
+   * v3.5.8 Phase 6 — absolute path to `syllables.fst` (Phase-2 TL syllable
+   * inventory). Optional on the wire: empty string skips loading and
+   * `EngineState.syllable_inventory` stays `None`. Phase 7 / 8 platform
+   * bundles populate this; Phase 6 only wires the field through so the
+   * composing dispatch can call `tl::valid_span_endings` against the
+   * installed inventory once the platform pipeline is ready.
+   * </pre>
+   *
+   * <code>string syllable_inventory_path = 5;</code>
+   * @return The bytes for syllableInventoryPath.
+   */
+  com.google.protobuf.ByteString
+      getSyllableInventoryPathBytes();
 }
