@@ -22,8 +22,9 @@ import Foundation
 /// - `rePredictAfterBackspace(lastChar:)`
 /// - `resetAndClearUI()`
 /// - `clearDisplay()`
+/// - `updateLastSelectedWord(text:roman:)` (v3.5.8 Phase 4 mid-commit handshake)
 /// - `isShowing`, `lastSelectedWord` (read-only)
-// 中文: 對外 API 與 Rust 化前完全相同,讓 ActionHandler / KeyboardViewController 不必改動。
+// 中文: 對外 API 與 Rust 化前完全相同(Phase 4 加 updateLastSelectedWord 給連續輸入 mid-commit 用)。
 final class NextWordController: SelectionContextProvider {
     let logger = DebugLogger(category: "NextWord")
 
@@ -153,6 +154,34 @@ final class NextWordController: SelectionContextProvider {
     func clearDisplay() {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordClearForNewComposing(
+            nowMs: Self.currentTimestampMs,
+            mode: settings.inputMode,
+            translateSwapped: settings.isTranslateSwapped,
+            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
+            generation: envelopeGen,
+        )
+        applyDecideResult(result)
+    }
+
+    /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Emitted by
+    /// the composing engine via `Effect.nextWordUpdateLastSelectedWord`
+    /// when a `Phase::Continuous` mid-commit lands a segment. Updates
+    /// `state.last_selected_word` + `last_selection_time_ms` without
+    /// bumping `current_generation`, no timer effects.
+    ///
+    /// Distinct from `process(...)`: a mid-commit segment is not a
+    /// "user selected this word" event — `WordSelected` would record a
+    /// `prev → this` association and (optionally) trigger prediction;
+    /// `UpdateLastSelectedWord` only updates the context for the *next*
+    /// mid-commit's compound association.
+    // 中文: Phase 4 連續輸入 mid-commit handshake。只更新 last_selected_word /
+    // 中文: time,不 bump generation、不發 timer effects;與 process(...) 語意不同 —
+    // 中文: 後者會記錄 prev→this 關聯並可觸發預測,本方法只更新上下文。
+    func updateLastSelectedWord(text: String, roman: String) {
+        let settings = settingsProvider.current
+        let result = RustEngineBridge.nextwordUpdateLastSelectedWord(
+            text: text,
+            roman: roman,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,

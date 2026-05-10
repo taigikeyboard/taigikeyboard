@@ -69,12 +69,17 @@ struct TaigiKeyboardApp: App {
         else {
             return
         }
+        // syllables.fst is a v3.5.8 Phase 6 addition; absence is a graceful
+        // skip (FetchAtPos returns empty candidates). Main app process does
+        // not run continuous-input today, so empty path is acceptable here.
+        let syllablesPath = bundle.url(forResource: "syllables", withExtension: "fst")?.path ?? ""
         let stamp = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String).flatMap(UInt32.init) ?? 1
         _ = RustEngineBridge.lexiconInstall(
             triePath: fstURL.path,
             dictionaryBinPath: dictBinURL.path,
             associationBinPath: assocBinURL.path,
             dictionaryVersion: stamp,
+            syllableInventoryPath: syllablesPath,
         )
     }
 

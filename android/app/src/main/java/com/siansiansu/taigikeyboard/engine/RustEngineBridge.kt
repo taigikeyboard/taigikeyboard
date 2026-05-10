@@ -971,7 +971,11 @@ object RustEngineBridge {
         val currentGeneration: Long,
     )
 
-    // -- Decide intents (6 — UpdateLastSelectedWord is Android-only) --
+    // -- Decide intents (6) --
+    // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
+    // Phase 4 brought iOS into the call site through a continuous-input
+    // mid-commit handshake. iOS bridge wraps it in
+    // RustEngineBridge+NextWord.swift::nextwordUpdateLastSelectedWord.
 
     // 中文: 使用者選定一個候選詞 — 觸發 association 紀錄、context 計時、可選的下個詞預測查詢。
     @JvmStatic

@@ -415,7 +415,7 @@ public enum RustEngineBridge {
         )
     }
 
-    // MARK: Composing slice (12 ops) — v3.5.4
+    // MARK: Composing slice (12 ops + 4 continuous v3.5.8 Phase 6)
 
     /// Bridge-synthesized companion to the proto `ComposingResponse`.
     /// Consumed by `ComposingManager` and its delegate.
@@ -430,6 +430,22 @@ public enum RustEngineBridge {
             case resetAutocomplete
             case performAutocomplete
             case resetAutocompleteContext
+            /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
+            /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
+            /// Platform delegate forwards to `NextWordController.updateLastSelectedWord`
+            /// which injects `nowMs` + envelope generation.
+            case nextWordUpdateLastSelectedWord(text: String, roman: String)
+            /// v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
+            /// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
+            /// trigger_prediction, now_ms)`. Forward `triggerPrediction` exactly —
+            /// hardcoding either value breaks the Phase 4 commit contract.
+            case nextWordWordSelected(text: String, roman: String, triggerPrediction: Bool)
+            /// v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
+            /// `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
+            /// forwards to `NextWordController.clearDisplay()` (NOT
+            /// `resetAndClearUI()` — that sends the structurally distinct
+            /// `ResetFull` intent).
+            case nextWordClearForNewComposing
         }
 
         public let rawInput: String
@@ -444,6 +460,64 @@ public enum RustEngineBridge {
             effects: [],
             selectedCandidateIndex: -1,
             isComposing: false,
+        )
+    }
+
+    /// Single span-local continuous-input candidate. Wire mirror of
+    /// `protos::engine::CandidateMessage` (Phase 6).
+    ///
+    /// `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
+    /// **original raw user input** stored in `Phase::Continuous { raw }` —
+    /// TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
+    /// slices `pending[start..<end]` on commit. `form` is currently always 1
+    /// (FORM_NOTONE).
+    // 中文: 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
+    // 中文: 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1。
+    public struct ContinuousCandidate: Equatable {
+        public let consumedSpanStart: UInt32
+        public let consumedSpanEnd: UInt32
+        public let syllableCount: UInt32
+        public let displayText: String
+        public let score: Float
+        public let form: UInt32
+
+        public init(
+            consumedSpanStart: UInt32,
+            consumedSpanEnd: UInt32,
+            syllableCount: UInt32,
+            displayText: String,
+            score: Float,
+            form: UInt32,
+        ) {
+            self.consumedSpanStart = consumedSpanStart
+            self.consumedSpanEnd = consumedSpanEnd
+            self.syllableCount = syllableCount
+            self.displayText = displayText
+            self.score = score
+            self.form = form
+        }
+    }
+
+    /// Read-query result for `composingFetchAtPos`. Tri-state `candidates`
+    /// preserves the proto's three semantic outcomes:
+    /// - `nil` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
+    ///   was not active (proto `continuous` field absent).
+    /// - `[]` → continuous phase active but no candidates (no syllable
+    ///   inventory installed, no FST hits, or `position != 0`).
+    /// - non-empty → candidates returned in score-desc order.
+    ///
+    /// `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
+    /// / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
+    // 中文: composingFetchAtPos 的查詢結果。candidates 三態保留 proto 語意:
+    // 中文:   nil = 不在 Continuous phase;[] = 在但無候選;non-empty = 有候選。
+    // 中文: transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
+    public struct ContinuousFetchResult: Equatable {
+        public let transition: ComposingTransition
+        public let candidates: [ContinuousCandidate]?
+
+        public static let noop = ContinuousFetchResult(
+            transition: .noop,
+            candidates: nil,
         )
     }
 
@@ -600,6 +674,94 @@ public enum RustEngineBridge {
         composingDispatch(
             method: .queryState(Taigi_Engine_QueryState()),
             op: "composingQueryState",
+            generation: generation,
+            config: nil,
+        )
+    }
+
+    // MARK: Continuous-input (4 ops) — v3.5.8 Phase 6
+
+    /// `Phase::Composing { raw }` → `Phase::Continuous { raw, committed: [] }`.
+    /// Phase 6 contract: no payload — buffer is whatever earlier `Start` /
+    /// `Append` populated. Engine no-ops on Idle / already-Continuous / empty
+    /// `Composing.raw`. AppConfig is required because the snapshot's preedit
+    /// display goes through `derived_display(raw, config)`.
+    // 中文: 把 Composing 轉到 Continuous。Phase 6 規約 — 無 payload,raw 來自先前的
+    // 中文: Start / Append。空 raw / 非 Composing 一律 noop。
+    public static func composingEnterContinuous(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64,
+    ) -> ComposingTransition {
+        composingDispatch(
+            method: .enterContinuous(Taigi_Engine_EnterContinuous()),
+            op: "composingEnterContinuous",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles),
+        )
+    }
+
+    /// Read-only candidate query for the current `Phase::Continuous { raw }`.
+    /// `position` is reserved as `0` in v3.5.8 (Phase 6 dispatch validates).
+    /// Caller MUST share the active composing-session generation — FetchAtPos
+    /// is read-only and bumping generation would reset engine state before
+    /// the fetch (`engine/composing/src/dispatch.rs:103-160`).
+    // 中文: 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
+    // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
+    public static func composingFetchAtPos(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64,
+    ) -> ContinuousFetchResult {
+        var payload = Taigi_Engine_FetchAtPos()
+        payload.position = 0
+        return composingFetchDispatch(
+            method: .fetchAtPos(payload),
+            op: "composingFetchAtPos",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles),
+        )
+    }
+
+    /// Commit a candidate segment in `Phase::Continuous`. `displayText` /
+    /// `consumedBytes` / `syllableCount` MUST come from a `ContinuousCandidate`
+    /// returned by an immediately preceding `composingFetchAtPos` call —
+    /// sending mismatched values mis-aligns the committed segment.
+    /// `consumedBytes >= pending.utf8.count` triggers a final commit (exit
+    /// to Idle). Programmer-error inputs collapse to noop on the engine side.
+    // 中文: 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
+    // 中文: 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
+    public static func composingCommitContinuous(
+        displayText: String,
+        consumedBytes: UInt32,
+        syllableCount: UInt32,
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64,
+    ) -> ComposingTransition {
+        var payload = Taigi_Engine_CommitContinuous()
+        payload.displayText = displayText
+        payload.consumedBytes = consumedBytes
+        payload.syllableCount = syllableCount
+        return composingDispatch(
+            method: .commitContinuous(payload),
+            op: "composingCommitContinuous",
+            generation: generation,
+            config: appConfig(mode: mode, toggles: toggles),
+        )
+    }
+
+    /// Abort continuous-input. Drops `Phase::Continuous` committed list +
+    /// pending raw, exits to Idle, emits the standard abort effect trio
+    /// (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+    /// `NextWordClearForNewComposing`). Committed segments stay in the
+    /// document — earlier `CommitTextReplacingPreedit` effects already wrote
+    /// them.
+    // 中文: 連續輸入中止。pending 與 committed 一起丟,Phase 退回 Idle,發 abort 三 effects。
+    public static func composingResetContinuous(generation: UInt64) -> ComposingTransition {
+        composingDispatch(
+            method: .resetContinuous(Taigi_Engine_ResetContinuous()),
+            op: "composingResetContinuous",
             generation: generation,
             config: nil,
         )
@@ -855,12 +1017,19 @@ public enum RustEngineBridge {
         return payload
     }
 
-    private static func composingDispatch(
+    /// Encode → FFI roundtrip → decode for the composing slice. Returns the
+    /// raw `ComposingResponse` proto so callers that need access to the
+    /// `continuous` carrier (FetchAtPos) can reach it without a second
+    /// dispatch. Generation is passed through verbatim — composing-slice
+    /// generation bumping is owned by `ComposingManager.bumpGeneration()`,
+    /// not this layer.
+    // 中文: composing slice 的 FFI roundtrip,回傳原始 proto 供需要 continuous 載體的 caller(FetchAtPos)使用。
+    private static func composingProtoRoundtrip(
         method: Taigi_Engine_ComposingRequest.OneOf_Method,
         op: String,
         generation: UInt64,
         config: Taigi_Engine_AppConfig?,
-    ) -> ComposingTransition {
+    ) -> Taigi_Engine_ComposingResponse? {
         let logger = LoggerFactory.make(category: "RustEngineBridge")
         var composing = Taigi_Engine_ComposingRequest()
         composing.method = method
@@ -876,7 +1045,7 @@ public enum RustEngineBridge {
             bytes = try Array(request.serializedData())
         } catch {
             recordFailure(op: op, message: "encode failed: \(error)")
-            return .noop
+            return nil
         }
 
         logger.debug("[FFI->] fn=composingDispatch op=\(op) id=\(request.id) generation=\(generation)")
@@ -887,22 +1056,82 @@ public enum RustEngineBridge {
             serializedBytes: Data(responseBytes),
         ) else {
             recordFailure(op: op, message: "response decode failed")
-            return .noop
+            return nil
         }
         guard response.error == .ok else {
             recordFailure(op: op, message: "engine returned \(response.error)", code: Int32(response.error.rawValue))
-            return .noop
+            return nil
         }
         guard case let .composing(payload) = response.payload else {
             recordFailure(op: op, message: "missing composing payload")
+            return nil
+        }
+        return payload
+    }
+
+    private static func composingDispatch(
+        method: Taigi_Engine_ComposingRequest.OneOf_Method,
+        op: String,
+        generation: UInt64,
+        config: Taigi_Engine_AppConfig?,
+    ) -> ComposingTransition {
+        guard let payload = composingProtoRoundtrip(
+            method: method,
+            op: op,
+            generation: generation,
+            config: config,
+        ) else {
             return .noop
         }
         let transition = synthComposing(payload)
-        logger.debug("[FFI<-] fn=composingDispatch op=\(op) id=\(request.id) effects=\(transition.effects.count) composing=\(transition.isComposing)")
+        let logger = LoggerFactory.make(category: "RustEngineBridge")
+        logger.debug("[FFI<-] fn=composingDispatch op=\(op) effects=\(transition.effects.count) composing=\(transition.isComposing)")
         return transition
     }
 
+    /// Phase 6 FetchAtPos dispatcher. Synthesizes both the standard
+    /// `ComposingTransition` (for engine snapshot mirroring) and the
+    /// `ContinuousFetchResult.candidates` tri-state read off
+    /// `ComposingResponse.continuous`.
+    // 中文: Phase 6 FetchAtPos 專用分派 — 同時產生 ComposingTransition 與
+    // 中文: ContinuousFetchResult.candidates(從 proto.continuous 三態解碼)。
+    private static func composingFetchDispatch(
+        method: Taigi_Engine_ComposingRequest.OneOf_Method,
+        op: String,
+        generation: UInt64,
+        config: Taigi_Engine_AppConfig?,
+    ) -> ContinuousFetchResult {
+        guard let payload = composingProtoRoundtrip(
+            method: method,
+            op: op,
+            generation: generation,
+            config: config,
+        ) else {
+            return .noop
+        }
+        let transition = synthComposing(payload)
+        let candidates: [ContinuousCandidate]? = payload.hasContinuous
+            ? payload.continuous.candidates.map { msg in
+                ContinuousCandidate(
+                    consumedSpanStart: msg.consumedSpanStart,
+                    consumedSpanEnd: msg.consumedSpanEnd,
+                    syllableCount: msg.syllableCount,
+                    displayText: msg.displayText,
+                    score: msg.score,
+                    form: msg.form,
+                )
+            }
+            : nil
+        let logger = LoggerFactory.make(category: "RustEngineBridge")
+        let candidateCount = candidates?.count ?? -1
+        logger.debug("[FFI<-] fn=composingFetchDispatch op=\(op) effects=\(transition.effects.count) candidates=\(candidateCount)")
+        return ContinuousFetchResult(transition: transition, candidates: candidates)
+    }
+
     private static func synthComposing(_ proto: Taigi_Engine_ComposingResponse) -> ComposingTransition {
+        // Phase 6 effect contract is exhaustive — every emitted Effect.kind
+        // maps to a Swift case. The platform delegate
+        // (`KeyboardViewController+TextInput`) decides how to dispatch each.
         let effects: [ComposingTransition.Effect] = proto.effect.compactMap { eff -> ComposingTransition.Effect? in
             guard let kind = eff.kind else { return nil }
             switch kind {
@@ -913,15 +1142,16 @@ public enum RustEngineBridge {
             case .resetAutocomplete: return .resetAutocomplete
             case .performAutocomplete: return .performAutocomplete
             case .resetAutocompleteContext: return .resetAutocompleteContext
-            case .nextWordUpdateLastSelectedWord,
-                 .nextWordWordSelected,
-                 .nextWordClearForNewComposing:
-                // TODO(Phase 7/8): dispatch as NextWordRequest with platform-injected now_ms.
-                // Phase 4 (PR #253) ships only the engine-side state machine; the
-                // continuous-input candidate strip + nextword wiring lands when the
-                // platform UI does. Emitted here intentionally so the engine's effect
-                // contract stays exhaustive on the Swift side.
-                return nil
+            case let .nextWordUpdateLastSelectedWord(m):
+                return .nextWordUpdateLastSelectedWord(text: m.text, roman: m.roman)
+            case let .nextWordWordSelected(m):
+                return .nextWordWordSelected(
+                    text: m.text,
+                    roman: m.roman,
+                    triggerPrediction: m.triggerPrediction,
+                )
+            case .nextWordClearForNewComposing:
+                return .nextWordClearForNewComposing
             }
         }
         return ComposingTransition(

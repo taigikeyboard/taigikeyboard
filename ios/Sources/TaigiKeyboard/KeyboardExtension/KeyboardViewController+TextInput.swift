@@ -29,6 +29,12 @@ extension KeyboardViewController {
                 "performAutocomplete"
             case .resetAutocompleteContext:
                 "resetAutocompleteContext"
+            case let .nextWordUpdateLastSelectedWord(text, roman):
+                "nextWordUpdateLastSelectedWord text.len=\(text.count) roman.len=\(roman.count)"
+            case let .nextWordWordSelected(text, roman, triggerPrediction):
+                "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction)"
+            case .nextWordClearForNewComposing:
+                "nextWordClearForNewComposing"
             }
             return "[COMMIT] fn=execute effect=\(kind)"
         }())
@@ -51,6 +57,24 @@ extension KeyboardViewController {
             performAutocomplete()
         case .resetAutocompleteContext:
             state.autocompleteContext.reset()
+        case let .nextWordUpdateLastSelectedWord(text, roman):
+            // v3.5.8 Phase 4 mid-commit handshake. Updates state.last_selected_word
+            // without bumping generation; controller injects nowMs / settings.
+            actionHandler?.nextWordController.updateLastSelectedWord(text: text, roman: roman)
+        case let .nextWordWordSelected(text, roman, triggerPrediction):
+            // Final-commit handshake. Forward triggerPrediction verbatim —
+            // the engine already decided whether prediction should fire.
+            actionHandler?.nextWordController.process(
+                text: text,
+                roman: roman,
+                requireRomanMode: false,
+                triggerPrediction: triggerPrediction,
+            )
+        case .nextWordClearForNewComposing:
+            // ClearForNewComposing ≠ ResetFull — clearDisplay() sends the
+            // matching `nextwordClearForNewComposing` intent. Do NOT route
+            // to `resetAndClearUI()` (that maps to `nextwordResetFull`).
+            actionHandler?.nextWordController.clearDisplay()
         }
     }
 

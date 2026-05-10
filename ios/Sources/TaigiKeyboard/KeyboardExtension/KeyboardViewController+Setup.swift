@@ -39,16 +39,29 @@ extension KeyboardViewController {
             setupLogger.warning("[LEXICON] missing bundle resource(s); engine not installed")
             return
         }
+        // v3.5.8 Phase 6 — syllables.fst powers continuous-input candidate
+        // fetch. Missing → empty path → engine skips inventory load →
+        // FetchAtPos returns empty candidates (graceful degrade). Logged
+        // explicitly so dogfood notices a missing pbxproj file ref early.
+        let syllablesURL = bundle.url(forResource: "syllables", withExtension: "fst")
+        if syllablesURL == nil {
+            setupLogger.warning(
+                "[LEXICON] syllables.fst not found in bundle; "
+                    + "continuous-input candidate fetch will return empty",
+            )
+        }
         let stamp = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String).flatMap(UInt32.init) ?? 1
         if let stats = RustEngineBridge.lexiconInstall(
             triePath: fstURL.path,
             dictionaryBinPath: dictBinURL.path,
             associationBinPath: assocBinURL.path,
             dictionaryVersion: stamp,
+            syllableInventoryPath: syllablesURL?.path ?? "",
         ) {
             setupLogger.info(
                 "[LEXICON] installed: dict=\(stats.dictionaryRecordCount) "
-                    + "fst_entries=\(stats.prefixIndexEntryCount) version=\(stamp)",
+                    + "fst_entries=\(stats.prefixIndexEntryCount) version=\(stamp) "
+                    + "syllables=\(syllablesURL == nil ? "absent" : "present")",
             )
         } else {
             setupLogger.warning("[LEXICON] install returned nil; engine not installed")

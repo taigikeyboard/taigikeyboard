@@ -1,6 +1,5 @@
-// 中文: RustEngineBridge 的 NextWord 切片擴充(v3.5.5)。
-// 中文: 含 5 個 decide intent + filter / boost / queryState + setIsShowing。
-// 中文: iOS 不會呼叫 updateLastSelectedWord — 那是 Android Space 路徑專屬。
+// 中文: RustEngineBridge 的 NextWord 切片擴充(v3.5.5,v3.5.8 Phase 7A 補 updateLastSelectedWord)。
+// 中文: 含 6 個 decide intent + filter / boost / queryState + setIsShowing。
 
 import Foundation
 import SwiftProtobuf
@@ -11,10 +10,14 @@ import SwiftProtobuf
 /// established in v3.5.4 for the composing slice — proto roundtrip
 /// helpers + Swift-friendly synthesized value types.
 ///
-/// iOS does NOT call `nextwordUpdateLastSelectedWord` (Android-only
-/// Space-path per `nextword-engine-boundary.md` §13 + `nextword-slice-audit.md`
-/// §5 #5). The bridge surface intentionally omits it.
+/// `nextwordUpdateLastSelectedWord` was an Android-only Space-path intent
+/// pre-v3.5.8 (per `nextword-engine-boundary.md` §13 + `nextword-slice-audit.md`
+/// §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit handshake
+/// that emits the matching `Effect.nextWordUpdateLastSelectedWord` from the
+/// composing engine; iOS now needs the wrapper to forward the effect through
+/// `NextWordController.updateLastSelectedWord`.
 // 中文: NextWord 切片的 bridge 擴充入口。
+// 中文: v3.5.8 Phase 4 後 iOS 也需要 updateLastSelectedWord(連續輸入 mid-commit handshake)。
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
@@ -116,7 +119,35 @@ public extension RustEngineBridge {
         public let currentGeneration: UInt64
     }
 
-    // MARK: - Decide intents (5 — UpdateLastSelectedWord is Android-only)
+    // MARK: - Decide intents (6)
+
+    /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Updates
+    /// `state.last_selected_word` + `last_selection_time_ms` without
+    /// bumping `current_generation`, no timer effects, emits compound-only
+    /// `RecordCompoundAssociations` effect. Pre-v3.5.8 this was Android-only;
+    /// the Phase 4 effect-based handshake brought iOS into the call site.
+    // 中文: 連續輸入 mid-commit 用 — 只更新 last_selected_word/time,不 bump generation,
+    // 中文: 不發 timer effects,只發 RecordCompoundAssociations。Phase 4 後 iOS 也走這條路徑。
+    static func nextwordUpdateLastSelectedWord(
+        text: String,
+        roman: String,
+        nowMs: Int64,
+        mode: InputMode,
+        translateSwapped: Bool,
+        associationRecordingEnabled: Bool,
+        generation: UInt64,
+    ) -> NextWordDecideResult {
+        var payload = Taigi_Engine_UpdateLastSelectedWord()
+        payload.text = text
+        payload.roman = roman
+        payload.input = decisionInput(nowMs: nowMs)
+        return decideDispatch(
+            method: .updateLastSelectedWord(payload),
+            op: "nextwordUpdateLastSelectedWord",
+            generation: generation,
+            config: nextwordConfig(mode: mode, translateSwapped: translateSwapped, associationRecordingEnabled: associationRecordingEnabled),
+        )
+    }
 
     static func nextwordWordSelected(
         text: String,

@@ -7,8 +7,13 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Android-only Space-path intent (audit §5 #5). Mutates state without
- * timer effects or generation bump; emits compound-only effect.
+ * Mid-commit handshake intent. Pre-v3.5.8 this was Android-only (Space-path
+ * per audit §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit
+ * handshake on iOS too — when `Phase::Continuous` lands a partial commit the
+ * composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
+ * platform forwards it through this intent. Mutates `state.last_selected_word`
+ * + `last_selection_time_ms` without bumping `current_generation`; no timer
+ * effects; emits compound-only `RecordCompoundAssociations` effect.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}
@@ -248,8 +253,13 @@ public  final class UpdateLastSelectedWord extends
 
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). Mutates state without
-   * timer effects or generation bump; emits compound-only effect.
+   * Mid-commit handshake intent. Pre-v3.5.8 this was Android-only (Space-path
+   * per audit §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit
+   * handshake on iOS too — when `Phase::Continuous` lands a partial commit the
+   * composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
+   * platform forwards it through this intent. Mutates `state.last_selected_word`
+   * + `last_selection_time_ms` without bumping `current_generation`; no timer
+   * effects; emits compound-only `RecordCompoundAssociations` effect.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}

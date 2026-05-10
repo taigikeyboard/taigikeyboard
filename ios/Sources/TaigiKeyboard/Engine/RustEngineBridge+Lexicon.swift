@@ -111,19 +111,28 @@ public extension RustEngineBridge {
     /// once at keyboard extension launch with absolute Bundle paths;
     /// idempotent — calling again with the same paths is a no-op
     /// observation-wise (engine swaps state atomically on success).
+    ///
+    /// v3.5.8 Phase 6 added `syllableInventoryPath` (TL syllable inventory
+    /// FST). Required parameter — empty string means "skip inventory" and
+    /// `FetchAtPos` then graceful-degrades to empty candidates. Pass an
+    /// absolute Bundle path to enable continuous-input candidate fetch.
     // 中文: 安裝或原子重灌 lexicon engine 狀態。鍵盤啟動時呼叫一次,冪等。
+    // 中文: syllableInventoryPath 必填 — 空字串 = 不載入 syllable inventory,FetchAtPos
+    // 中文: 會 graceful-degrade 為空候選;傳絕對路徑才能啟用連續輸入候選查詢。
     @discardableResult
     static func lexiconInstall(
         triePath: String,
         dictionaryBinPath: String,
         associationBinPath: String,
         dictionaryVersion: UInt32,
+        syllableInventoryPath: String,
     ) -> LexiconInstallStats? {
         var payload = Taigi_Engine_InstallRequest()
         payload.triePath = triePath
         payload.dictionaryBinPath = dictionaryBinPath
         payload.associationBinPath = associationBinPath
         payload.dictionaryVersion = dictionaryVersion
+        payload.syllableInventoryPath = syllableInventoryPath
         guard let resp = lexiconDispatch(method: .install(payload), op: "lexiconInstall") else {
             return nil
         }

@@ -352,8 +352,13 @@ public struct Taigi_Engine_ResetFull: Sendable {
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
 }
 
-/// Android-only Space-path intent (audit §5 #5). Mutates state without
-/// timer effects or generation bump; emits compound-only effect.
+/// Mid-commit handshake intent. Pre-v3.5.8 this was Android-only (Space-path
+/// per audit §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit
+/// handshake on iOS too — when `Phase::Continuous` lands a partial commit the
+/// composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
+/// platform forwards it through this intent. Mutates `state.last_selected_word`
+/// + `last_selection_time_ms` without bumping `current_generation`; no timer
+/// effects; emits compound-only `RecordCompoundAssociations` effect.
 public struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
