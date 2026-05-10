@@ -25,6 +25,7 @@ pub mod key_normalizer;
 pub mod paths;
 pub mod prefix_index;
 pub mod search;
+pub mod syllable_inventory;
 
 const _: fn() = || {
     fn assert_send<T: Send>() {}
@@ -34,3 +35,4 @@ const _: fn() = || {
 pub use error::LexiconError;
 pub use handle::EngineHandle;
 pub use paths::LexiconPaths;
+pub use syllable_inventory::SyllableInventory;

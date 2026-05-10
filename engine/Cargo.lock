@@ -160,6 +160,7 @@ name = "fst-builder"
 version = "0.1.0"
 dependencies = [
  "fst",
+ "phonetics",
 ]
 
 [[package]]

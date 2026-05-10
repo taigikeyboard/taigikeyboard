@@ -29,6 +29,6 @@ mod tps_adjust;
 pub use api::{contains_tps, to_tone_marks, to_tone_number, InputMode, PhoneticsError, System};
 pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;
-pub use syllable::{normalize_to_tl, strip_tone_mark};
+pub use syllable::{canonicalize_syllable, is_valid_syllable, normalize_to_tl, strip_tone_mark};
 pub use tl::to_tl;
 pub use tps::from_zhuyin as tps_to_tl;

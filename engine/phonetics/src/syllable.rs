@@ -95,6 +95,39 @@ pub(crate) fn split_initial_final(text: &str) -> Option<(String, String)> {
     None
 }
 
+/// Canonicalize one TL- or POJ-shaped syllable token into its TL form,
+/// returning `(canonical_toneless, tone_digit)` on phonotactic success.
+///
+/// Pipeline: `strip_tone_mark` (extract tone, fold NFD → NFC bare),
+/// `to_lowercase`, `normalize_to_tl` (POJ→TL spelling + `ⁿ` → `nn` + `o͘`
+/// → `oo`), then `split_initial_final` for membership in the
+/// `TL_INITIALS` × `TL_FINALS` table at `tables.rs:11-36`. The tone
+/// string is whatever `strip_tone_mark` returned ("1".."9" or empty
+/// when the caller supplied a toneless token).
+///
+/// Used by `engine/build-helpers/fst-builder` `build-syllables` to emit
+/// canonical numeric + toneless keys for the v3.5.8 Phase 2 syllable
+/// inventory FST. Mainstream IMEs (khiin-rs `engine/src/data/`) use a
+/// PHF table for the same job; we lean on the existing TL initial/final
+/// tables to avoid table duplication.
+// 中文: 把單一音節 token 正規化為 TL 形式,回傳 (去聲調 canonical, 聲調數字)。
+// 中文: 失敗 = phonotactic 不合法 (聲母或韻母不在 TL 表)。供 Phase 2 syllables.fst 建置使用。
+pub fn canonicalize_syllable(token: &str) -> Option<(String, String)> {
+    let (bare, tone) = strip_tone_mark(token);
+    let canonical = normalize_to_tl(&bare.to_lowercase());
+    split_initial_final(&canonical)?;
+    Some((canonical, tone))
+}
+
+/// Phonotactic validity test for a single TL/POJ-shaped syllable token.
+/// Equivalent to `canonicalize_syllable(token).is_some()`. Empty input,
+/// initial-without-final (`tsh`), and unknown letters (`xyz`, `tj`) all
+/// return false.
+// 中文: 判斷音節 token 是否 phonotactically 合法 (POJ 形式會先正規化成 TL)。
+pub fn is_valid_syllable(token: &str) -> bool {
+    canonicalize_syllable(token).is_some()
+}
+
 /// Parse a syllable into `(initial, final, tone)`. Returns `None` when the
 /// syllable cannot be split. Inferred tones: `4` for stop finals, `1` otherwise.
 ///
@@ -219,5 +252,109 @@ mod tests {
     #[test]
     fn parse_syllable_invalid_returns_none() {
         assert!(parse_syllable("xyz").is_none());
+    }
+
+    // MARK: - canonicalize_syllable / is_valid_syllable.
+    // SOURCE: dictionary.csv tl_num samples — exercises the POJ→TL
+    // normalization path because real CSV rows still carry POJ-shaped
+    // fragments like `chiau2`, `choa7`, `eng1`, plus non-ASCII forms
+    // `peⁿ5`, `so͘3`. Pinned by v3.5.8 Phase 2 (syllables.fst builder).
+
+    #[test]
+    fn canonicalize_syllable_poj_shaped_inputs() {
+        let cases = [
+            ("chiau2", "tsiau", "2"),
+            ("chha1", "tsha", "1"),
+            ("choa7", "tsua", "7"),
+            ("eng1", "ing", "1"),
+            ("pek4", "pik", "4"),
+            ("koe1", "kue", "1"),
+            ("peng5", "ping", "5"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_syllable_non_ascii_inputs() {
+        // `ⁿ` (U+207F) → `nn`, `o͘` (o + U+0358) → `oo` per normalize_to_tl.
+        let cases = [
+            ("peⁿ5", "penn", "5"),
+            ("so͘3", "soo", "3"),
+            ("tsiuⁿ7", "tsiunn", "7"),
+            ("pho͘5", "phoo", "5"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_syllable_pure_tl_inputs() {
+        let cases = [
+            ("tai5", "tai", "5"),
+            ("bak4", "bak", "4"),
+            ("khih4", "khih", "4"),
+            ("m7", "m", "7"),
+            ("ng5", "ng", "5"),
+            ("oo7", "oo", "7"),
+            ("uainn3", "uainn", "3"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_syllable_toneless_inputs() {
+        // No tone supplied — bare canonical returned with empty tone string.
+        let cases = [
+            ("tai", "tai"),
+            ("bak", "bak"),
+            ("m", "m"),
+            ("ng", "ng"),
+            ("oo", "oo"),
+            ("choa", "tsua"),
+        ];
+        for (input, expected_canonical) in cases {
+            let (canonical, tone) = canonicalize_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, "", "expected empty tone for toneless {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_syllable_invalid_returns_none() {
+        // Initial-without-final, unknown letters, malformed dual-marked
+        // (combining mark + trailing digit) all reject.
+        let cases = ["", "tsh", "kh", "xyz", "tj", "qq", "bx", "tn̄g6", "123"];
+        for input in cases {
+            assert!(
+                canonicalize_syllable(input).is_none(),
+                "canonicalize_syllable({input:?}) should be None"
+            );
+        }
+    }
+
+    #[test]
+    fn is_valid_syllable_matches_canonicalize() {
+        for input in ["tai5", "choa7", "peⁿ5", "ng", ""] {
+            assert_eq!(
+                is_valid_syllable(input),
+                canonicalize_syllable(input).is_some(),
+                "is_valid_syllable / canonicalize_syllable disagree on {input:?}",
+            );
+        }
     }
 }

@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 fst = { workspace = true }
+phonetics = { workspace = true }
 
 [lints.rust]
 unsafe_code = "forbid"
