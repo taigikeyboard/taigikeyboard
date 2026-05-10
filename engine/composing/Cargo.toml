@@ -12,9 +12,11 @@ workspace = true
 [dependencies]
 protos = { workspace = true }
 phonetics = { workspace = true }
+lexicon = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 once_cell = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+fst = { workspace = true }

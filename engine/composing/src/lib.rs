@@ -15,6 +15,7 @@
 pub mod api;
 pub mod dispatch;
 pub mod handle;
+pub mod syllabifier;
 
 mod derived;
 mod transition;

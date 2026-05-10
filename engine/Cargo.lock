@@ -81,6 +81,8 @@ dependencies = [
 name = "composing"
 version = "0.1.0"
 dependencies = [
+ "fst",
+ "lexicon",
  "log",
  "once_cell",
  "phonetics",
