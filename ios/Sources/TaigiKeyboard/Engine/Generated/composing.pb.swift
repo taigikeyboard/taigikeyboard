@@ -366,6 +366,14 @@ public struct Taigi_Engine_ComposingResponse: Sendable {
 /// `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
 /// `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
 /// autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+///
+/// `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
+/// The platform FFI shim translates each to a `NextWordRequest` and dispatches
+/// via `nextword::EngineHandle::instance().handle(req, config, generation)`,
+/// injecting the current `now_ms` clock at dispatch time (composing engine has
+/// no clock and emits effects without timestamps). This preserves the
+/// `composing/handle.rs:54-58` lock-order rule — composing's `Mutex<Engine>`
+/// is released before the platform makes the nextword call.
 public struct Taigi_Engine_Effect: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -429,6 +437,30 @@ public struct Taigi_Engine_Effect: Sendable {
     set {kind = .resetAutocompleteContext(newValue)}
   }
 
+  public var nextWordUpdateLastSelectedWord: Taigi_Engine_NextWordUpdateLastSelectedWord {
+    get {
+      if case .nextWordUpdateLastSelectedWord(let v)? = kind {return v}
+      return Taigi_Engine_NextWordUpdateLastSelectedWord()
+    }
+    set {kind = .nextWordUpdateLastSelectedWord(newValue)}
+  }
+
+  public var nextWordWordSelected: Taigi_Engine_NextWordWordSelected {
+    get {
+      if case .nextWordWordSelected(let v)? = kind {return v}
+      return Taigi_Engine_NextWordWordSelected()
+    }
+    set {kind = .nextWordWordSelected(newValue)}
+  }
+
+  public var nextWordClearForNewComposing: Taigi_Engine_NextWordClearForNewComposing {
+    get {
+      if case .nextWordClearForNewComposing(let v)? = kind {return v}
+      return Taigi_Engine_NextWordClearForNewComposing()
+    }
+    set {kind = .nextWordClearForNewComposing(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public enum OneOf_Kind: Equatable, Sendable {
@@ -439,6 +471,9 @@ public struct Taigi_Engine_Effect: Sendable {
     case resetAutocomplete(Taigi_Engine_ResetAutocomplete)
     case performAutocomplete(Taigi_Engine_PerformAutocomplete)
     case resetAutocompleteContext(Taigi_Engine_ResetAutocompleteContext)
+    case nextWordUpdateLastSelectedWord(Taigi_Engine_NextWordUpdateLastSelectedWord)
+    case nextWordWordSelected(Taigi_Engine_NextWordWordSelected)
+    case nextWordClearForNewComposing(Taigi_Engine_NextWordClearForNewComposing)
 
   }
 
@@ -510,6 +545,59 @@ public struct Taigi_Engine_PerformAutocomplete: Sendable {
 }
 
 public struct Taigi_Engine_ResetAutocompleteContext: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Mid-commit handshake during continuous-input. Maps to
+/// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
+/// platform side. `text` is the committed segment's display (e.g., "紙"),
+/// `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
+/// `Phase::Continuous` mid-commit branches.
+public struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var text: String = String()
+
+  public var roman: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Final-commit handshake during continuous-input. Maps to
+/// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
+/// trigger_prediction, now_ms)`. Emitted when `Phase::Continuous` exits to
+/// Idle through commit (pending consumed in full).
+public struct Taigi_Engine_NextWordWordSelected: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var text: String = String()
+
+  public var roman: String = String()
+
+  public var triggerPrediction: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+/// Continuous-input abort. Maps to
+/// `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
+/// `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
+/// `Phase::Continuous` without committing.
+public struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1140,7 +1228,7 @@ extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftPr
 
 extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Effect"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{3}delete_backward_from_document\0\u{3}reset_autocomplete\0\u{3}perform_autocomplete\0\u{3}reset_autocomplete_context\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{3}delete_backward_from_document\0\u{3}reset_autocomplete\0\u{3}perform_autocomplete\0\u{3}reset_autocomplete_context\0\u{3}next_word_update_last_selected_word\0\u{3}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1239,6 +1327,45 @@ extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
           self.kind = .resetAutocompleteContext(v)
         }
       }()
+      case 8: try {
+        var v: Taigi_Engine_NextWordUpdateLastSelectedWord?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .nextWordUpdateLastSelectedWord(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .nextWordUpdateLastSelectedWord(v)
+        }
+      }()
+      case 9: try {
+        var v: Taigi_Engine_NextWordWordSelected?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .nextWordWordSelected(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .nextWordWordSelected(v)
+        }
+      }()
+      case 10: try {
+        var v: Taigi_Engine_NextWordClearForNewComposing?
+        var hadOneofValue = false
+        if let current = self.kind {
+          hadOneofValue = true
+          if case .nextWordClearForNewComposing(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.kind = .nextWordClearForNewComposing(v)
+        }
+      }()
       default: break
       }
     }
@@ -1277,6 +1404,18 @@ extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
     case .resetAutocompleteContext?: try {
       guard case .resetAutocompleteContext(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .nextWordUpdateLastSelectedWord?: try {
+      guard case .nextWordUpdateLastSelectedWord(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .nextWordWordSelected?: try {
+      guard case .nextWordWordSelected(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
+    case .nextWordClearForNewComposing?: try {
+      guard case .nextWordClearForNewComposing(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     }()
     case nil: break
     }
@@ -1440,6 +1579,100 @@ extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Message, SwiftPro
   }
 
   public static func ==(lhs: Taigi_Engine_ResetAutocompleteContext, rhs: Taigi_Engine_ResetAutocompleteContext) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NextWordUpdateLastSelectedWord"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_NextWordUpdateLastSelectedWord, rhs: Taigi_Engine_NextWordUpdateLastSelectedWord) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NextWordWordSelected"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}trigger_prediction\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.triggerPrediction) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    if self.triggerPrediction != false {
+      try visitor.visitSingularBoolField(value: self.triggerPrediction, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_NextWordWordSelected, rhs: Taigi_Engine_NextWordWordSelected) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs.triggerPrediction != rhs.triggerPrediction {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_NextWordClearForNewComposing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".NextWordClearForNewComposing"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_NextWordClearForNewComposing, rhs: Taigi_Engine_NextWordClearForNewComposing) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

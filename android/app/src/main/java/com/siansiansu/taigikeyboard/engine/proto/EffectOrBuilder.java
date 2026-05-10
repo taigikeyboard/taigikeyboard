@@ -86,5 +86,38 @@ public interface EffectOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext getResetAutocompleteContext();
 
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   * @return Whether the nextWordUpdateLastSelectedWord field is set.
+   */
+  boolean hasNextWordUpdateLastSelectedWord();
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   * @return The nextWordUpdateLastSelectedWord.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord();
+
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   * @return Whether the nextWordWordSelected field is set.
+   */
+  boolean hasNextWordWordSelected();
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   * @return The nextWordWordSelected.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected getNextWordWordSelected();
+
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   * @return Whether the nextWordClearForNewComposing field is set.
+   */
+  boolean hasNextWordClearForNewComposing();
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   * @return The nextWordClearForNewComposing.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing getNextWordClearForNewComposing();
+
   public com.siansiansu.taigikeyboard.engine.proto.Effect.KindCase getKindCase();
 }

@@ -40,6 +40,9 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::ResetAutocomplete(_) => "resetAutocomplete",
             EffectKind::PerformAutocomplete(_) => "performAutocomplete",
             EffectKind::ResetAutocompleteContext(_) => "resetAutocompleteContext",
+            EffectKind::NextWordUpdateLastSelectedWord(_) => "nextWordUpdateLastSelectedWord",
+            EffectKind::NextWordWordSelected(_) => "nextWordWordSelected",
+            EffectKind::NextWordClearForNewComposing(_) => "nextWordClearForNewComposing",
         })
         .collect()
 }

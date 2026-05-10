@@ -113,15 +113,26 @@ message ComposingResponse {
 // `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
 // `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
 // autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+//
+// `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
+// The platform FFI shim translates each to a `NextWordRequest` and dispatches
+// via `nextword::EngineHandle::instance().handle(req, config, generation)`,
+// injecting the current `now_ms` clock at dispatch time (composing engine has
+// no clock and emits effects without timestamps). This preserves the
+// `composing/handle.rs:54-58` lock-order rule — composing's `Mutex<Engine>`
+// is released before the platform makes the nextword call.
 message Effect {
   oneof kind {
-    UpdatePreedit              update_preedit                = 1;
-    ClearPreeditWithoutCommit  clear_preedit_without_commit  = 2;
-    CommitTextReplacingPreedit commit_text_replacing_preedit = 3;
-    DeleteBackwardFromDocument delete_backward_from_document = 4;
-    ResetAutocomplete          reset_autocomplete            = 5;
-    PerformAutocomplete        perform_autocomplete          = 6;
-    ResetAutocompleteContext   reset_autocomplete_context    = 7;
+    UpdatePreedit                  update_preedit                       = 1;
+    ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
+    CommitTextReplacingPreedit     commit_text_replacing_preedit        = 3;
+    DeleteBackwardFromDocument     delete_backward_from_document        = 4;
+    ResetAutocomplete              reset_autocomplete                   = 5;
+    PerformAutocomplete            perform_autocomplete                 = 6;
+    ResetAutocompleteContext       reset_autocomplete_context           = 7;
+    NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
+    NextWordWordSelected           next_word_word_selected              = 9;
+    NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
   }
 }
 
@@ -132,3 +143,22 @@ message DeleteBackwardFromDocument {}
 message ResetAutocomplete          {}
 message PerformAutocomplete        {}
 message ResetAutocompleteContext   {}
+
+// Mid-commit handshake during continuous-input. Maps to
+// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
+// platform side. `text` is the committed segment's display (e.g., "紙"),
+// `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
+// `Phase::Continuous` mid-commit branches.
+message NextWordUpdateLastSelectedWord { string text = 1; string roman = 2; }
+
+// Final-commit handshake during continuous-input. Maps to
+// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
+// trigger_prediction, now_ms)`. Emitted when `Phase::Continuous` exits to
+// Idle through commit (pending consumed in full).
+message NextWordWordSelected { string text = 1; string roman = 2; bool trigger_prediction = 3; }
+
+// Continuous-input abort. Maps to
+// `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
+// `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
+// `Phase::Continuous` without committing.
+message NextWordClearForNewComposing {}

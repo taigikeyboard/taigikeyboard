@@ -11,14 +11,42 @@ use thiserror::Error;
 
 /// Composition phase. `Idle` means no preedit; `Composing { raw }` carries
 /// the numeric-tone ASCII raw input that the platform-side state used to
-/// shadow.
-// 中文: 組字階段。Idle 表示無預編輯;Composing { raw } 攜帶數字調 ASCII 原始輸入。
+/// shadow; `Continuous { raw, committed }` is the v3.5.8 multi-segment
+/// state where part of the buffer has already been committed (via mid-commit
+/// candidate selection) and `raw` holds the still-pending tail.
+// 中文: 組字階段。Idle 表示無預編輯;Composing 攜帶單段數字調 raw;
+// 中文: Continuous 是 v3.5.8 連續輸入的多段狀態 (committed 已上屏的段落 + raw 尚未確定的尾段)。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
     // 中文: 閒置狀態,無預編輯內容。
     Idle,
     // 中文: 組字中,raw 為使用者尚未上屏的數字調原始輸入。
-    Composing { raw: String },
+    Composing {
+        raw: String,
+    },
+    // 中文: 連續輸入中,committed 為已選定 segments,raw 為 pending 尾段。
+    Continuous {
+        raw: String,
+        committed: Vec<CommittedSegment>,
+    },
+}
+
+/// One committed segment inside `Phase::Continuous`. `raw_span` records the
+/// byte offsets in the original raw input the user typed (start = end of the
+/// previous segment, end = start + raw_text.len()). `syllable_count` lets
+/// span-local fetch in Phase 5 distinguish e.g. `tsua` → 紙(1) vs 珠仔(2).
+// 中文: Continuous 階段已上屏的單一 segment;raw_span 是原始 raw 輸入中的 byte 區間,
+// 中文: syllable_count 給 Phase 5 區分同 toneless key 不同音節數的候選。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CommittedSegment {
+    // 中文: 上屏顯示文字 (e.g., "紙")。
+    pub display_text: String,
+    // 中文: 對應消耗的原始輸入 (e.g., "tsua")。
+    pub raw_text: String,
+    // 中文: 在原 raw 輸入中的 byte 偏移 (start, end);用於 Phase 5 span-local 查詢。
+    pub raw_span: (usize, usize),
+    // 中文: 此 segment 包含的音節數,1 為單音節、2+ 為複合詞。
+    pub syllable_count: u8,
 }
 
 /// Engine state — the platform no longer shadows this.
@@ -48,13 +76,19 @@ impl Default for EngineState {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     // 中文: 以指定文字開始組字。
-    Start { text: String },
+    Start {
+        text: String,
+    },
     // 中文: 在組字區尾端附加一個字元。
-    Append { ch: String },
+    Append {
+        ch: String,
+    },
     // 中文: 附加連字號 "-",內部轉為 Append 處理。
     AppendHyphen,
     // 中文: 把組字區最後一個字元換成 replacement (TPS 自動修正用)。
-    ReplaceLast { replacement: String },
+    ReplaceLast {
+        replacement: String,
+    },
     // 中文: 退格刪除組字區尾端字元。
     DeleteBackward,
     // 中文: 上屏目前組字區的衍生顯示形 (加調號/正規化後)。
@@ -62,15 +96,38 @@ pub enum Intent {
     // 中文: 直接上屏原始 raw 輸入,不做衍生轉換。
     CommitRaw,
     // 中文: 採用候選/聯想詞 text 上屏。
-    SelectSuggestion { text: String },
+    SelectSuggestion {
+        text: String,
+    },
     // 中文: 先上屏目前組字區衍生形,再插入外部字串 text。
-    CommitPreeditThenInsertExternal { text: String },
+    CommitPreeditThenInsertExternal {
+        text: String,
+    },
     // 中文: 使用者主動重設,清空預編輯並重置候選。
     Reset,
     // 中文: 直接設定選取的候選詞索引。
-    SetSelectedCandidateIndex { index: i32 },
+    SetSelectedCandidateIndex {
+        index: i32,
+    },
     // 中文: 純讀取目前狀態,不變更狀態也不發出 Effect。
     QueryState,
+    // 中文: 從 Composing 進入 Continuous (連續輸入) 模式;committed 起始為空。
+    EnterContinuous,
+    /// Commit a candidate segment in `Phase::Continuous`. The engine takes
+    /// `pending[..consumed_bytes]` as the committed segment's raw text and
+    /// keeps `pending[consumed_bytes..]` as the new pending tail. When
+    /// `consumed_bytes >= pending.len()`, this becomes a final commit and
+    /// exits to Idle. Caller (Phase 6+ proto layer) is responsible for
+    /// `consumed_bytes` aligning with both UTF-8 char boundaries and TL
+    /// syllable boundaries returned by the syllabifier.
+    // 中文: 連續輸入下挑選候選 segment;consumed_bytes >= pending.len() 為 final commit。
+    CommitContinuous {
+        display_text: String,
+        consumed_bytes: usize,
+        syllable_count: u8,
+    },
+    // 中文: 中途 abort 連續輸入,清空 committed + pending,退回 Idle。
+    ResetContinuous,
 }
 
 // 中文: 組字流程的錯誤型別,目前僅有 method 欄位缺漏一種。
@@ -109,6 +166,21 @@ impl Engine {
     // 中文: 套用 intent、更新狀態並回傳組字回應 (預編輯/Effect 序列/索引)。
     pub fn apply(&mut self, intent: Intent, config: &AppConfig) -> ComposingResponse {
         crate::transition::apply(&mut self.state, intent, config)
+    }
+
+    /// Pure-Rust observability of the engine's `EngineState`. Returns a
+    /// clone so callers cannot mutate internal state. Phase 4 adds this so
+    /// `tests/continuous_phase.rs` can assert `Phase::Continuous`'s
+    /// `committed` / `raw` fields without a corresponding proto carrier
+    /// (the proto-side response shape lands in Phase 6). `#[doc(hidden)]`
+    /// because this is a Phase-4-internal escape hatch — production
+    /// callers should reach state through `apply` / `snapshot`'s
+    /// `ComposingResponse` carrier (Codex post-impl note 1).
+    // 中文: 回傳 EngineState 副本,讓測試可直接檢查 Phase::Continuous 內部結構。
+    // 中文: doc-hidden — 這是 Phase 4 暫時 escape hatch,Phase 6 加 proto 欄位後可移除。
+    #[doc(hidden)]
+    pub fn snapshot_state(&self) -> EngineState {
+        self.state.clone()
     }
 
     /// Idempotent reset. Called from the generation-mismatch path inside

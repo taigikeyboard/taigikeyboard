@@ -913,6 +913,15 @@ public enum RustEngineBridge {
             case .resetAutocomplete: return .resetAutocomplete
             case .performAutocomplete: return .performAutocomplete
             case .resetAutocompleteContext: return .resetAutocompleteContext
+            case .nextWordUpdateLastSelectedWord,
+                 .nextWordWordSelected,
+                 .nextWordClearForNewComposing:
+                // TODO(Phase 7/8): dispatch as NextWordRequest with platform-injected now_ms.
+                // Phase 4 (PR #253) ships only the engine-side state machine; the
+                // continuous-input candidate strip + nextword wiring lands when the
+                // platform UI does. Emitted here intentionally so the engine's effect
+                // contract stays exhaustive on the Swift side.
+                return nil
             }
         }
         return ComposingTransition(

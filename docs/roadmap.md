@@ -236,29 +236,74 @@ tone-mark `ˊ` 是 unambiguous terminator → endings 直接由 mark 位置決�
 
 ### Phase 4 — `Phase::Continuous` 加入 composing engine + nextword 邊界協調
 
-**Files**:
-- `engine/composing/src/api.rs:17` — 擴充 `Phase` enum:
-  ```rust
-  Phase::Continuous { raw: String, committed: Vec<CommittedSegment> }
-  CommittedSegment { display_text, raw_span: (usize, usize), raw_text, syllable_count: u8 }
-  ```
-- `engine/composing/src/transition.rs` — 新增 `Intent::EnterContinuous` / `CommitAtPos` / `ResetContinuous` / `BackspaceContinuous` 處理:
-  - **Commit**:取得 candidate `consumed_span`,將 `raw[start..end]` 包成 `CommittedSegment` 推入 committed,`pending = raw[end..]`,重新呼叫 syllabifier 切 pending
-  - **Backspace**:committed 非空 → pop 最後一個 segment,`raw = popped.raw_text + raw`,重新切;否則退出 Continuous mode
-- `engine/composing/src/handle.rs` — 確保 `Phase::Continuous` 通過 Send / Sync 編譯期斷言
+> **設計 vs. 原計畫(2026-05-10 pre-impl Codex co-decide,記在這以避免 review churn)**:
+> 1. **Nextword 同步走 Effect-based handshake,不從 composing 直呼 `nextword::EngineHandle::instance().handle()`**——保留 `composing/handle.rs:54-58` 的 lock-order 紀律,composing 不知 nextword 存在,proto 不在 transition 內構造。`composing/Cargo.toml` 不加 nextword dep。
+> 2. **Backspace 折回既有 `Intent::DeleteBackward`,不新開 `BackspaceContinuous` Intent**——避免一個使用者動作有兩條 Intent 路徑。
+> 3. **Intent 命名對齊 Phase 6 proto**:`CommitContinuous`(不是 `CommitAtPos`)。
+> 4. **Phase::Continuous 下既有 12 個 Intent 全部明寫行為**(完整實作 7 個、保守 snapshot no-op 5 個);不留 fall-through、不 `unimplemented!()`。Phase 7 平台整合若不接受某 no-op 行為,改名相應 test 即可。
+
+**Proto** (`engine/protos/proto/composing.proto:117`) — `Effect.kind` oneof 加三個 nextword-sync variant (tags 8/9/10):
+- `NextWordUpdateLastSelectedWord { text, roman }` — 中段 commit 後平台展開為 `NextWordRequest { method: UpdateLastSelectedWord }`
+- `NextWordWordSelected { text, roman, trigger_prediction }` — final commit (pending 空) 後平台展開為 `WordSelected`
+- `NextWordClearForNewComposing {}` — `ResetContinuous` / `Reset` 在 Continuous phase 觸發,平台展開為 `ClearForNewComposing`
+
+`now_ms` clock 由平台 FFI shim 注入(沿用既有 nextword 呼叫慣例),不在 Effect payload。iOS `.pb.swift` + Android `.java` bindings 一併 regen 並 commit(per `feedback_proto_gen_script.md`)。`engine/scripts/gen-platform-protos.sh` 不需改動(只改 .proto)。
+
+**Rust** (`engine/composing/src/api.rs:17`) — 擴充 `Phase` enum + 加新 struct:
+```rust
+pub enum Phase {
+    Idle,
+    Composing { raw: String },
+    Continuous {
+        raw: String,                       // un-committed pending tail
+        committed: Vec<CommittedSegment>,  // ordered committed segments
+    },
+}
+
+pub struct CommittedSegment {
+    pub display_text: String,    // e.g., "紙"
+    pub raw_text: String,        // e.g., "tsua"
+    pub raw_span: (usize, usize),// byte offsets in original raw input
+    pub syllable_count: u8,
+}
+```
+
+**3 個新 Intent** (`engine/composing/src/api.rs` Intent enum):
+- `EnterContinuous` — 從非空 `Composing { raw }` 轉到 `Continuous { raw, committed: [] }`,emit 0 effects (preedit 內容不變);Idle/Continuous/empty-Composing 下 snapshot no-op
+- `CommitContinuous { display_text: String, consumed_bytes: usize, syllable_count: u8 }` — 取 `pending[..consumed_bytes]` 包成 segment 推入 committed,`pending = pending[consumed_bytes..]`:
+  - **mid-commit** (pending 還有剩):留在 Continuous,emit `[CommitTextReplacingPreedit(segment), UpdatePreedit(new_pending), NextWordUpdateLastSelectedWord, PerformAutocomplete]`
+  - **final-commit** (`consumed_bytes == pending.len()`,新 pending 為空):退出到 Idle,emit `[CommitTextReplacingPreedit(segment), ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
+  - 邊界錯誤 (out-of-range / 0 / non-char-boundary / empty display) → snapshot no-op,不 panic
+- `ResetContinuous` — 退出到 Idle,emit `[ClearPreeditWithoutCommit, ResetAutocomplete, NextWordClearForNewComposing]`
+
+**12 個既有 Intent 在 `Phase::Continuous` 下的行為**:
+- **完整實作**:
+  - `Reset` 等同 `ResetContinuous`
+  - `Append { ch }` / `AppendHyphen`:append 到 pending 尾,emit `[UpdatePreedit, PerformAutocomplete]`;committed 不動
+  - `ReplaceLast`:operate on pending 尾;若收斂為 empty pending + empty committed → exit to Idle (Codex post-impl finding #2)
+  - `DeleteBackward` 折回 backspace:
+    - pending 非空 → drop last char of pending;空-空 → exit Idle 並 emit document-side backspace
+    - pending 空 & committed 非空 → pop 最後 segment,emit `[DeleteBackwardFromDocument × N, NextWordCorrection, UpdatePreedit, PerformAutocomplete]`(N = popped display 字元數;若還有 committed 殘留則 NextWordCorrection = `NextWordUpdateLastSelectedWord(prev_segment)`,否則 = `NextWordClearForNewComposing` — Codex post-impl finding #1)
+  - `SetSelectedCandidateIndex` / `QueryState`:snapshot
+- **Reset-then-apply** (Codex post-impl finding #3,避免靜默丟字):
+  - `Start { text }`:drop continuous + enter_composing(text)
+  - `SelectSuggestion { text }`:exit Idle + commit text 直接上屏 (text 空時降為 ResetContinuous)
+  - `CommitPreeditThenInsertExternal { text }`:exit Idle + commit (pending derived ++ text) (text 空時 noop)
+- **Snapshot no-op** (沒帶 text、語意確定無資料遺失):`CommitDerived` / `CommitRaw` — Continuous mode 已透過 mid-commit 自動 commit,這兩個 Intent 在 Continuous 沒有對應動作
+
+**Test observability** (`engine/composing/src/api.rs` Engine):新增 `pub fn snapshot_state(&self) -> EngineState` 讓 `tests/continuous_phase.rs` 可 inspect `Phase::Continuous` 內的 committed/pending(`ComposingResponse` 的 committed/pending 欄位延到 Phase 6 才加)。
+
+**Tests** (`engine/composing/tests/continuous_phase.rs`):effect 順序 pin 死位置 (不是 membership)。涵蓋 enter / mid-commit / final commit / DeleteBackward 折回 / Reset / 12 Intent matrix。
+
+**Files (確定 touch)**:
+- `engine/protos/proto/composing.proto` (3 個新 Effect variants + 3 個新 message)
+- `ios/Sources/TaigiKeyboard/Engine/Generated/Composing.pb.swift` (regen)
+- `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/*.java` (regen)
+- `engine/composing/src/api.rs` (Phase / Intent / CommittedSegment / snapshot_state)
+- `engine/composing/src/transition.rs` (3 新 Intent + 12 既有 Intent 的 Continuous-phase 分支 + 3 個新 Effect constructor)
 - `engine/composing/tests/continuous_phase.rs` (新)
 
-**Generation / revision**:沿用既有 `request.generation` 模型,**不**新增 snapshot_id。
-
-**Nextword 邊界協調** (本 phase 必做):
-- 中段 commit:composing 構造 `NextWordRequest { method: UpdateLastSelectedWord(...) }` proto,經 `nextword::EngineHandle::instance().handle(&req, config, generation)` 公開 API 進入 (既有 intent)
-- Final commit (buffer 空):構造 `NextWordRequest { method: WordSelected(...) }` (整段 hanji + 整段 roman, trigger_prediction=true)
-- Continuous abort:構造 `NextWordRequest { method: ClearForNewComposing(...) }`
-- **重要**:`nextword::api::Intent` enum 是 `pub(crate)` (`api.rs:42`),composing **不能**直接 reference;一律走 proto + `EngineHandle` 公開 API
-- nextword crate 程式**完全不變**;composing 的 Cargo.toml 加 `nextword = { workspace = true }` dependency
-- Test 必須驗證中段 commit 後 `nextword.snapshot().current_generation` 不變 (因 UpdateLastSelectedWord 不 bump generation)
-
-**規模**:M-L (~550 LOC + tests)
+**規模**:~600 LOC handcoded(Rust + tests)+ generated bindings(per roadmap.md:449 不計 review size)
 
 ---
 

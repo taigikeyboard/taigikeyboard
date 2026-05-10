@@ -825,6 +825,17 @@ object RustEngineBridge {
                     ComposingTransition.Effect.ResetAutocompleteContext
                 }
 
+                eff.hasNextWordUpdateLastSelectedWord() ||
+                    eff.hasNextWordWordSelected() ||
+                    eff.hasNextWordClearForNewComposing() -> {
+                    // TODO(Phase 7/8): dispatch as NextWordRequest with platform-injected now_ms.
+                    // Phase 4 (PR #253) ships only the engine-side state machine; the
+                    // continuous-input candidate strip + nextword wiring lands when the
+                    // platform UI does. Recognized explicitly here (rather than falling
+                    // through `else`) so Phase 7/8 can grep this TODO when wiring up.
+                    null
+                }
+
                 else -> {
                     null
                 }

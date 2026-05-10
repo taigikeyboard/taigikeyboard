@@ -14,6 +14,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
  * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
  * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+ *
+ * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
+ * The platform FFI shim translates each to a `NextWordRequest` and dispatches
+ * via `nextword::EngineHandle::instance().handle(req, config, generation)`,
+ * injecting the current `now_ms` clock at dispatch time (composing engine has
+ * no clock and emits effects without timestamps). This preserves the
+ * `composing/handle.rs:54-58` lock-order rule — composing's `Mutex&lt;Engine&gt;`
+ * is released before the platform makes the nextword call.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.Effect}
@@ -35,6 +43,9 @@ public  final class Effect extends
     RESET_AUTOCOMPLETE(5),
     PERFORM_AUTOCOMPLETE(6),
     RESET_AUTOCOMPLETE_CONTEXT(7),
+    NEXT_WORD_UPDATE_LAST_SELECTED_WORD(8),
+    NEXT_WORD_WORD_SELECTED(9),
+    NEXT_WORD_CLEAR_FOR_NEW_COMPOSING(10),
     KIND_NOT_SET(0);
     private final int value;
     private KindCase(int value) {
@@ -57,6 +68,9 @@ public  final class Effect extends
         case 5: return RESET_AUTOCOMPLETE;
         case 6: return PERFORM_AUTOCOMPLETE;
         case 7: return RESET_AUTOCOMPLETE_CONTEXT;
+        case 8: return NEXT_WORD_UPDATE_LAST_SELECTED_WORD;
+        case 9: return NEXT_WORD_WORD_SELECTED;
+        case 10: return NEXT_WORD_CLEAR_FOR_NEW_COMPOSING;
         case 0: return KIND_NOT_SET;
         default: return null;
       }
@@ -428,6 +442,156 @@ public  final class Effect extends
     }
   }
 
+  public static final int NEXT_WORD_UPDATE_LAST_SELECTED_WORD_FIELD_NUMBER = 8;
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextWordUpdateLastSelectedWord() {
+    return kindCase_ == 8;
+  }
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord() {
+    if (kindCase_ == 8) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord) kind_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   */
+  private void setNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
+    value.getClass();
+  kind_ = value;
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   */
+  private void mergeNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
+    value.getClass();
+  if (kindCase_ == 8 &&
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 8;
+  }
+  /**
+   * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+   */
+  private void clearNextWordUpdateLastSelectedWord() {
+    if (kindCase_ == 8) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int NEXT_WORD_WORD_SELECTED_FIELD_NUMBER = 9;
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextWordWordSelected() {
+    return kindCase_ == 9;
+  }
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected getNextWordWordSelected() {
+    if (kindCase_ == 9) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected) kind_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   */
+  private void setNextWordWordSelected(com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected value) {
+    value.getClass();
+  kind_ = value;
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   */
+  private void mergeNextWordWordSelected(com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected value) {
+    value.getClass();
+  if (kindCase_ == 9 &&
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 9;
+  }
+  /**
+   * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+   */
+  private void clearNextWordWordSelected() {
+    if (kindCase_ == 9) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
+  public static final int NEXT_WORD_CLEAR_FOR_NEW_COMPOSING_FIELD_NUMBER = 10;
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   */
+  @java.lang.Override
+  public boolean hasNextWordClearForNewComposing() {
+    return kindCase_ == 10;
+  }
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing getNextWordClearForNewComposing() {
+    if (kindCase_ == 10) {
+       return (com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing) kind_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   */
+  private void setNextWordClearForNewComposing(com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing value) {
+    value.getClass();
+  kind_ = value;
+    kindCase_ = 10;
+  }
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   */
+  private void mergeNextWordClearForNewComposing(com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing value) {
+    value.getClass();
+  if (kindCase_ == 10 &&
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing) kind_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      kind_ = value;
+    }
+    kindCase_ = 10;
+  }
+  /**
+   * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+   */
+  private void clearNextWordClearForNewComposing() {
+    if (kindCase_ == 10) {
+      kindCase_ = 0;
+      kind_ = null;
+    }
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.Effect parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -520,6 +684,14 @@ public  final class Effect extends
    * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
    * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
    * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
+   *
+   * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
+   * The platform FFI shim translates each to a `NextWordRequest` and dispatches
+   * via `nextword::EngineHandle::instance().handle(req, config, generation)`,
+   * injecting the current `now_ms` clock at dispatch time (composing engine has
+   * no clock and emits effects without timestamps). This preserves the
+   * `composing/handle.rs:54-58` lock-order rule — composing's `Mutex&lt;Engine&gt;`
+   * is released before the platform makes the nextword call.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.Effect}
@@ -883,6 +1055,150 @@ public  final class Effect extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextWordUpdateLastSelectedWord() {
+      return instance.hasNextWordUpdateLastSelectedWord();
+    }
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord getNextWordUpdateLastSelectedWord() {
+      return instance.getNextWordUpdateLastSelectedWord();
+    }
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    public Builder setNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
+      copyOnWrite();
+      instance.setNextWordUpdateLastSelectedWord(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    public Builder setNextWordUpdateLastSelectedWord(
+        com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextWordUpdateLastSelectedWord(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    public Builder mergeNextWordUpdateLastSelectedWord(com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord value) {
+      copyOnWrite();
+      instance.mergeNextWordUpdateLastSelectedWord(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>
+     */
+    public Builder clearNextWordUpdateLastSelectedWord() {
+      copyOnWrite();
+      instance.clearNextWordUpdateLastSelectedWord();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextWordWordSelected() {
+      return instance.hasNextWordWordSelected();
+    }
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected getNextWordWordSelected() {
+      return instance.getNextWordWordSelected();
+    }
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    public Builder setNextWordWordSelected(com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected value) {
+      copyOnWrite();
+      instance.setNextWordWordSelected(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    public Builder setNextWordWordSelected(
+        com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextWordWordSelected(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    public Builder mergeNextWordWordSelected(com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected value) {
+      copyOnWrite();
+      instance.mergeNextWordWordSelected(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordWordSelected next_word_word_selected = 9;</code>
+     */
+    public Builder clearNextWordWordSelected() {
+      copyOnWrite();
+      instance.clearNextWordWordSelected();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    @java.lang.Override
+    public boolean hasNextWordClearForNewComposing() {
+      return instance.hasNextWordClearForNewComposing();
+    }
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing getNextWordClearForNewComposing() {
+      return instance.getNextWordClearForNewComposing();
+    }
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    public Builder setNextWordClearForNewComposing(com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing value) {
+      copyOnWrite();
+      instance.setNextWordClearForNewComposing(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    public Builder setNextWordClearForNewComposing(
+        com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.Builder builderForValue) {
+      copyOnWrite();
+      instance.setNextWordClearForNewComposing(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    public Builder mergeNextWordClearForNewComposing(com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing value) {
+      copyOnWrite();
+      instance.mergeNextWordClearForNewComposing(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.NextWordClearForNewComposing next_word_clear_for_new_composing = 10;</code>
+     */
+    public Builder clearNextWordClearForNewComposing() {
+      copyOnWrite();
+      instance.clearNextWordClearForNewComposing();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.Effect)
   }
   @java.lang.Override
@@ -908,10 +1224,14 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.class,
             com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.class,
+            com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.class,
+            com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.class,
+            com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
           };
           java.lang.String info =
-              "\u0000\u0007\u0001\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001<\u0000\u0002<" +
-              "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000";
+              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
+              "\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
