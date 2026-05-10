@@ -16,6 +16,7 @@
 pub mod api;
 pub mod association_reader;
 pub mod classification;
+pub mod continuous;
 mod dictionary_filters;
 pub mod dictionary_reader;
 pub mod dispatch;
@@ -32,6 +33,7 @@ const _: fn() = || {
     assert_send::<handle::EngineHandle>();
 };
 
+pub use continuous::{fetch_candidates_for_endings, RawCandidate, FORM_NOTONE};
 pub use error::LexiconError;
 pub use handle::EngineHandle;
 pub use paths::LexiconPaths;

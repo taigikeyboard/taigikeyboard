@@ -311,6 +311,7 @@ dependencies = [
  "phonetics",
  "prost",
  "protos",
+ "ranking",
  "thiserror",
 ]
 

@@ -202,7 +202,7 @@ fn collect_filtered_sorted(
     enabled_sources_bitmask: u32,
     limit: u32,
 ) -> Vec<LexiconRowOut> {
-    let filter = build_filter(enabled_sources_bitmask);
+    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
     let mut staged: Vec<(u32, DictionaryRecord)> = Vec::with_capacity(rowids.len());
     for rowid in rowids {
         if let Some(record) = dict.record(rowid) {
@@ -260,17 +260,5 @@ fn record_to_row(rowid: u32, record: DictionaryRecord) -> LexiconRowOut {
         hanji: record.hanzi,
         length_score: Some(record.frequency as i32),
         source_bitmask: Some(record.bitmask as u32),
-    }
-}
-
-fn build_filter(enabled_sources_bitmask: u32) -> Filter {
-    Filter {
-        // Variant + khiin gates ride bits 12 + 9 of the same mask. The
-        // platform encodes them into the same bitmask field per audit §4
-        // INVARIANT_LEX_FILTER_BITMASK.
-        variant: (enabled_sources_bitmask & (1 << 12)) != 0,
-        khiin: (enabled_sources_bitmask & (1 << 9)) != 0,
-        all_enabled: enabled_sources_bitmask == u32::MAX,
-        enabled_mask: (enabled_sources_bitmask & 0x0FFF) as u16,
     }
 }

@@ -83,6 +83,26 @@ pub struct Filter {
     pub enabled_mask: u16,
 }
 
+impl Filter {
+    /// Decode a single 32-bit `enabled_sources_bitmask` (the wire format
+    /// both platforms send) into the 3-axis filter. Variant + khiin gates
+    /// ride bits 12 + 9 of the same mask; bits 0..=11 carry per-source
+    /// enables. `u32::MAX` is the "all sources enabled" sentinel that
+    /// short-circuits the per-source mask check inside
+    /// [`DictionaryReader::passes_filter`].
+    /// Pinned by `INVARIANT_LEX_FILTER_BITMASK` (audit §4); the layout
+    /// must stay byte-identical to the platform encoder.
+    // 中文: 把平台送過來的 32-bit enabled_sources_bitmask 解成 3 軸 Filter;bit 12 / 9 是 variant / khiin gate。
+    pub fn from_enabled_bitmask(enabled_sources_bitmask: u32) -> Self {
+        Self {
+            variant: (enabled_sources_bitmask & (1 << 12)) != 0,
+            khiin: (enabled_sources_bitmask & (1 << 9)) != 0,
+            all_enabled: enabled_sources_bitmask == u32::MAX,
+            enabled_mask: (enabled_sources_bitmask & 0x0FFF) as u16,
+        }
+    }
+}
+
 impl DictionaryReader {
     // 中文: 開啟並驗證 dictionary.bin — 檢查 magic、版本與 offset 表大小。
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {

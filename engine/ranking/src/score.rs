@@ -146,6 +146,40 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
         + breakdown.base_freq_score
 }
 
+/// v3.5.8 連續輸入 (Continuous Input) Phase 5 score formula:
+///
+/// `score = freq × (1.0 + 0.1 × max(0, syllable_count − 1)) × user_freq_boost`
+///
+/// Pure-multiplicative `f32`, no bigram, no recency / exact / closeness /
+/// tier components — those live in the additive [`calculate_score`]
+/// pipeline and apply only to the legacy single-segment IME path. The
+/// Continuous slice ranks span-local candidates emitted by
+/// `lexicon::continuous::fetch_candidates_for_endings`, where the
+/// per-syllable bias rewards multi-syllable words like `珠仔(syll=2)`
+/// over `紙/珠(syll=1)` when the user's input spans a multi-syllable
+/// reach.
+///
+/// `user_freq_boost` is caller-supplied so this fn stays stateless;
+/// callers compose it from their own user-frequency store
+/// (`user_frequency.db` on the platform side, see
+/// `feedback_user_data_sqlite_stays_native`). `1.0` = no boost. Caller
+/// MUST pass a finite, non-negative `f32` — this fn does no clamping
+/// (it is a pure pricing formula). The downstream sort comparator in
+/// `lexicon::continuous::fetch_candidates_for_endings` defends against
+/// `NaN` leakage by coercing it to `f32::MIN`, but negative or `+∞`
+/// boosts will produce semantically nonsensical rankings.
+///
+/// Cited mainstream IME parallel: khiin-rs `khiin/src/data/segmenter.rs`
+/// uses `cost = ln(1/p) / word_len_bias × syllable_bias`. We pick a
+/// simpler multiplicative form per `docs/roadmap.md:460`.
+// 中文: v3.5.8 連續輸入 Phase 5 排序公式:freq × (1 + 0.1×(syll−1)) × user_freq_boost。
+// 中文: 純 f32 倍乘式,不接 bigram / recency / closeness;與既有 calculate_score 不重疊。
+// 中文: user_freq_boost 由呼叫端注入 (傳 1.0 即無 boost),保持本函式無狀態。
+pub fn calculate_continuous_score(freq: u32, syllable_count: u8, user_freq_boost: f32) -> f32 {
+    let syll_bias = 1.0 + 0.1 * f32::from(syllable_count.saturating_sub(1));
+    freq as f32 * syll_bias * user_freq_boost
+}
+
 /// Strip roman to a comparison base form: drop hyphens, drop ASCII space,
 /// preprocess Taigi-specific Unicode (POJ nasal markers + `o͘`), drop
 /// combining marks (Unicode `Mn`), drop decimal digits (Unicode `Nd`),
@@ -465,5 +499,57 @@ mod tests {
         let s = calculate_score(&w, "aa", FrequencyData::default(), 0);
         // ratio = 2/4 → 0.5 → 250
         assert_eq!(s.closeness_bonus, 250);
+    }
+
+    // -----------------------------------------------------------------------
+    // v3.5.8 Phase 5 — calculate_continuous_score
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn continuous_score_single_syllable_baseline() {
+        // syll=1 → bias = 1.0; user_freq_boost = 1.0 → score == freq.
+        assert_eq!(calculate_continuous_score(100, 1, 1.0), 100.0);
+        assert_eq!(calculate_continuous_score(0, 1, 1.0), 0.0);
+    }
+
+    #[test]
+    fn continuous_score_syllable_bias_increments_by_ten_percent() {
+        // freq = 100, boost = 1.0:
+        //   syll=1 → 100.0
+        //   syll=2 → 110.0
+        //   syll=3 → 120.0
+        //   syll=4 → 130.0
+        assert_eq!(calculate_continuous_score(100, 1, 1.0), 100.0);
+        assert_eq!(calculate_continuous_score(100, 2, 1.0), 110.0);
+        assert!((calculate_continuous_score(100, 3, 1.0) - 120.0).abs() < 1e-4);
+        assert_eq!(calculate_continuous_score(100, 4, 1.0), 130.0);
+    }
+
+    #[test]
+    fn continuous_score_user_freq_boost_is_multiplicative() {
+        // boost = 2.0 doubles the result regardless of syllable count.
+        assert_eq!(calculate_continuous_score(100, 1, 2.0), 200.0);
+        assert_eq!(calculate_continuous_score(100, 2, 2.0), 220.0);
+        // boost = 0.0 zeroes everything (cold-start sentinel for tests).
+        assert_eq!(calculate_continuous_score(100, 2, 0.0), 0.0);
+    }
+
+    #[test]
+    fn continuous_score_syll_zero_does_not_underflow() {
+        // syllable_count = 0 must clamp to bias = 1.0 (saturating_sub(1)).
+        // Defensive: builder caps at 1..=4 (`MAX_SYLLABLES`), but the FFI
+        // contract is u8 so a zero could leak in; should not panic / wrap.
+        assert_eq!(calculate_continuous_score(50, 0, 1.0), 50.0);
+    }
+
+    #[test]
+    fn continuous_score_multi_syllable_outranks_single_when_freq_equal() {
+        // The whole point of the syll bias: 珠仔(syll=2) outranks 紙(syll=1)
+        // at equal dictionary frequency, so multi-syll candidates surface.
+        let single = calculate_continuous_score(100, 1, 1.0);
+        let pair = calculate_continuous_score(100, 2, 1.0);
+        let quad = calculate_continuous_score(100, 4, 1.0);
+        assert!(pair > single);
+        assert!(quad > pair);
     }
 }

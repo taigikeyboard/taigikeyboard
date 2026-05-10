@@ -312,19 +312,23 @@ pub struct CommittedSegment {
 **演算法**:對 `valid_span_endings(input, pos)` 的每個 end,以 `input[pos..end]` 作為 toneless key 查 FST。同 toneless key 下不同 syllable_count 的 entry 都會回 (由 dict.bin syllable_count 區分),所以 `tsua` 在 span [0,4) 同時拿到 `紙(syll=1)` 和 `珠仔(syll=2)`;span [0,3) 拿到 `珠(syll=1)`。最後合併排序。
 
 **Files**:
-- `engine/lexicon/src/api.rs` — 新增:
+- `engine/lexicon/src/continuous.rs` (新模組) — 新增 `pub struct RawCandidate { consumed_span, syllable_count, display_text, score, form }` + 公開入口:
   ```rust
   pub fn fetch_candidates_for_endings(
       input: &str,
       pos: usize,
       endings: &[usize],
-      mode: KeyMode,
-      filter: Filter,
+      enabled_sources_bitmask: u32,
+      user_freq_boost: f32,
+      prefix_index: &PrefixIndex,
+      dict: &DictionaryReader,
   ) -> Vec<RawCandidate>
   ```
-- `engine/lexicon/src/search.rs:124+` — 新增 `lookup_at_span` 變體
-- `engine/composing/src/dispatch.rs` — `EnterContinuous` / `FetchAtPos` 路徑串接
-- `engine/ranking/src/score.rs` — 新增 `ContinuousScore`:`score = freq × (1.0 + 0.1 × (syll-1)) × user_freq_boost`,無 bigram
+  Codex pre-impl review (2026-05-10) confirmed:**(a) drop `mode: KeyMode` 參數**(syllabifier 已保證輸入是 canonical TL ASCII;TL/TPS 都走 `tl:` 前綴,POJ 此 phase 不需要,YAGNI per `feedback_no_future_planning.md`);**(b) `RawCandidate` 與實作放新模組 `continuous.rs`,不塞進 `api.rs`**(`api.rs` 是 proto-shaped bridge,實作層獨立模組更 cohesive);**(c) `lookup_at_span` 內聯在 `continuous.rs`**,不污染 `search.rs` 的既有 IndexSet+exact+prefix 流程。
+- `engine/lexicon/src/lib.rs` — `pub mod continuous;` + `pub use continuous::{fetch_candidates_for_endings, RawCandidate, FORM_NOTONE};`
+- `engine/lexicon/Cargo.toml` — 新增 `ranking = { workspace = true }` (lexicon → ranking 單向 dep,無 cycle:ranking 不 dep lexicon)
+- `engine/ranking/src/score.rs` — 新增 `pub fn calculate_continuous_score(freq: u32, syllable_count: u8, user_freq_boost: f32) -> f32`,公式 = `freq × (1.0 + 0.1 × max(0, syll-1)) × user_freq_boost`,無 bigram。`ranking/src/lib.rs` 加 re-export。`calculate_score` (6-component additive `ScoreBreakdown`) 不動 — 連續輸入用獨立公式,不重用既有 ranking 公式 (Codex Fork 4 ACCEPT)。
+- ~~`engine/composing/src/dispatch.rs`~~ — **不在 Phase 5**:`EnterContinuous` / `FetchAtPos` 的 proto request/response 載體在 Phase 6 才存在;Phase 5 預先加 `Intent::FetchAtPos` 跟 escape hatch 會多一層 throw-away API,Phase 6 又要拆。dispatch wiring 整段移到 Phase 6 (Codex Fork 1 ACCEPT)。
 
 **Each Candidate carries**:
 ```
@@ -332,13 +336,17 @@ consumed_span: (start: u32, end: u32)
 syllable_count: u8
 display_text: String
 score: f32
-form: u8  // numeric / notone / abbrev / hanzi
+form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) reserved for Phase 6+
 ```
+
+`form = 1` hard-code 因 span-local lookup 永遠走 `tl:<toneless>` 前綴 (見 §Phase 1b),`DictionaryRecord` 沒有 form 欄位 (`engine/lexicon/src/dictionary_reader.rs:38-51`)。Phase 6 proto 落地時若需 multi-form,再從 prefix-index key 前綴推導 (Codex Fork 5 ACCEPT)。
 
 **Tests**:`engine/lexicon/tests/span_local_fetch.rs`
 - `tsua` → 候選列必含 {(紙, span=(0,4), syll=1), (珠仔, span=(0,4), syll=2), (珠, span=(0,3), syll=1)}
 - `taigikhipuann` → 必含 {(台, syll=1), (台語, syll=2), (台語齒盤, syll=4)} (視 dict 是否有 4-syll 詞而定)
 - `taixyz` → 只回單音節候選 (因 endings={3})
+- 排序:同 span 內以 `score` desc 排序;跨 span 結果合併後一起 desc 排序 (test fixture 用 frequency 控制預期順序)
+- Hermetic fixture builders 沿用 `tests/common/mod.rs::build_tkdb_v2` (Phase 1 引入) + 內聯 fst::SetBuilder pattern (見 `tests/syllables_fst.rs:186-207`)
 
 **規模**:M (~400 LOC + tests)
 
@@ -481,7 +489,7 @@ form: u8  // numeric / notone / abbrev / hanzi
 | 2 — syllable inventory FST | ~300 + tests | 3 | No | **Merged in PR #251** (squash `f4c2e52f`) |
 | 3 — syllabifier (TL + TPS) | ~450 + tests | 4, 5 | No | **Merged in PR #252** (squash `2f7feac1`) |
 | 4 — `Phase::Continuous` + nextword 邊界 | ~700 + tests | 6 | No | **Merged in PR #253** (squash `a69bfc75`) |
-| 5 — span-local candidate fetch | ~400 + tests | 6 | No | Pending |
+| 5 — span-local candidate fetch | ~400 + tests | 6 | No | **In progress (PR #254)** |
 | 6 — proto + dispatch RPCs | ~400 + bindings | 7, 8 | No | Pending |
 | 7 — iOS UI 整合 | ~500 Swift + tests | — | **Yes** | Pending |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | Pending |

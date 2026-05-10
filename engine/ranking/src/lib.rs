@@ -28,3 +28,4 @@ mod score;
 mod sort;
 
 pub use process::process_candidates;
+pub use score::calculate_continuous_score;
