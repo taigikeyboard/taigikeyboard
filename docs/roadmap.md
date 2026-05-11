@@ -453,7 +453,7 @@ PR 順序 = `9.1 → 9.2 → 9.3a → 9.3b → 9.3c → 9.4a → 9.4b → 9.5 �
 | **9.2** mode carrier | `mode: HANT/TAILO/MIXED` 加進 `CandidateMessage`(`composing.proto:192`);Rust derive(hanzi 有無 + non-ASCII roman);iOS/Android binding regen;**不**進 rank tie-break(R2 Q3.a) | 200–300 Rust + bindings | `engine/protos/proto/composing.proto`、`engine/lexicon/src/continuous.rs` | R2 Q3.a |
 | **9.3a** user-freq Rust + proto | 加 `FrequencyEntry[]`(複用 `lexicon.proto:333-340`)進 `FetchAtPos` request;`fetch_via_lexicon` 拿掉 `1.0` 寫死(`dispatch.rs:312-323`);adjusted_score 公式套 cap | 150–250 Rust | `engine/composing/src/dispatch.rs`、`engine/lexicon/src/continuous.rs`、`engine/ranking/src/score.rs` | R2 Q4.b / R3 Q11 |
 | **9.3b** user-freq iOS plumb | 在 `FetchAtPos` 前 batch query `user_frequency.db` `WHERE word IN (...)` → 塞 `FrequencyEntry[]` 到 request | 200–350 Swift | iOS Autocomplete + Lexicon DB layer | R2 Q7.c |
-| **9.3c** user-freq Android plumb | mirror 9.3b 在 Android `CandidateUpdateCoordinator` / Service layer | 200–350 Kotlin | Android Smartbar + Lexicon DB layer | mirror Phase 8 |
+| **9.3c** user-freq Android plumb | mirror 9.3b 在 Android `CandidateUpdateCoordinator` / Service layer;同步補 `ContinuousFetchResult.isBridgeFailure` flag(iOS PR #265 r3216857164 加上)區分 FFI 失敗 vs engine reset,否則 phase-2 FFI 失敗會清掉 mirror | 200–350 Kotlin | Android Smartbar + Lexicon DB layer | mirror Phase 8 |
 | **9.4a** TPS tone-1 | `syllabifier/tps.rs:65-93` 加 next-initial-seen rule(tone-1 隱式邊界) | 50–100 Rust | `engine/composing/src/syllabifier/tps.rs` | R2 Q5.b |
 | **9.4b** Hyphen offset map | `build_keys_tl`(`dispatch.rs:181-207`)維護 shadow hyphenless buffer + `(shadow→raw)` offset map;`CandidateMessage.consumed_span_*` 保 raw byte offsets | 200–350 Rust | `engine/composing/src/dispatch.rs` | R2 Q5.b |
 | **9.5** Data variant | 補「台灣台語」變體於 `dictionary/output/dictionary.csv:140250` 鄰近行;**僅** minimum,不做大規模 audit | ~50 data | `dictionary/output/dictionary.csv` 或上游 source | R2 Q6.a |
@@ -627,7 +627,7 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 | 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **Merged in PR #262 (squash `86dd6253`)** |
 | 9.2 — `mode: HANT/TAILO/MIXED` carrier(無 UI chip)| ~200-300 Rust + bindings | 9.3 | No(metadata-only)| **Merged in PR #263 (squash `f5f2a3b2`)** |
 | 9.3a — user-freq Rust + proto(`FrequencyEntry[]` in FetchAtPos)| ~150-250 Rust | 9.3b, 9.3c | No(Rust 內部)| **Merged in PR #264 (squash `60601681`)** |
-| 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **Pending** |
+| 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **In progress (PR #265)** |
 | 9.3c — user-freq Android plumb(batch SQLite query)| ~200-350 Kotlin | — | **Yes**(boost 生效)| **Pending** |
 | 9.4a — TPS tone-1 next-initial-seen rule | ~50-100 Rust | 9.4b | **Yes**(coverage)| **Pending** |
 | 9.4b — Hyphen offset map(shadow buffer)| ~200-350 Rust | — | **Yes**(coverage)| **Pending** |

@@ -109,7 +109,36 @@ extension KeyboardViewController {
         // 4. Connect Taigi AutocompleteService with handler (requires handler already created)
         wireTaigiAutocompleteProviders(from: services.autocompleteService, to: handler)
 
-        // 5. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
+        // 5. v3.5.8 Phase 9.3b — best-effort warmup of `user_frequency.db`
+        //    so the Continuous-input fetch path can apply persisted boost
+        //    as early as possible (not guaranteed for the very first
+        //    composition — the Task races against the first keystroke).
+        //    `AutocompleteService.autocomplete` early-returns on non-empty
+        //    Continuous candidates and skips the lexicon path's lazy
+        //    `ensureInitialized` call, so without this warmup a fresh
+        //    session would ignore `user_frequency.db` indefinitely until
+        //    the user committed something. Fire-and-forget —
+        //    `fetchContinuousCandidates` keeps its `isConnected()`
+        //    cold-start guard for the race window before this Task lands.
+        //    Mirrors `LexiconService.initializeCustomDictionary` (incl.
+        //    the warning log on failure for observability — Codex PR #265
+        //    r3216760651 post-impl R5).
+        // 中文: 連續輸入路徑會早 return 略過 lexicon 那條 lazy init,
+        // 中文: 因此於 setupCoreServices 觸發 user_frequency.db 提前打開 +
+        // 中文: 建 schema,best-effort 讓使用者頻率 boost 儘早可用(首次組字仍可能 race)。
+        let userFrequencyService = CompositionRoot.userFrequencyService
+        Task {
+            do {
+                try await userFrequencyService.ensureInitialized()
+                setupLogger.info("[INIT] User frequency DB warmed")
+            } catch {
+                setupLogger.warning(
+                    "[INIT] User frequency DB warmup failed: \(error.localizedDescription)",
+                )
+            }
+        }
+
+        // 6. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         lastInputMode = keyboardSettings.inputMode
         lastKeyboardLayoutType = keyboardSettings.keyboardLayoutType
     }

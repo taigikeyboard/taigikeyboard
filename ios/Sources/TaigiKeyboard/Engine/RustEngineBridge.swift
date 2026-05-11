@@ -538,8 +538,8 @@ public enum RustEngineBridge {
         }
     }
 
-    /// Read-query result for `composingFetchAtPos`. Tri-state `candidates`
-    /// preserves the proto's three semantic outcomes:
+    /// Read-query result for `composingFetchAtPos`. The `candidates` tri-state
+    /// is only authoritative when `isBridgeFailure == false`:
     /// - `nil` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
     ///   was not active (proto `continuous` field absent).
     /// - `[]` → continuous phase active but no candidates (no syllable
@@ -548,16 +548,31 @@ public enum RustEngineBridge {
     ///
     /// `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
     /// / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
-    // 中文: composingFetchAtPos 的查詢結果。candidates 三態保留 proto 語意:
+    ///
+    /// `isBridgeFailure` distinguishes "the engine returned Idle" (legit
+    /// generation-mismatch reset; `transition` reflects the new Idle state,
+    /// caller should `apply()` it) from "the FFI roundtrip itself failed"
+    /// (encode / decode / non-OK engine response; `transition == .noop`
+    /// is synthesized and `apply()`-ing it would clobber the mirror with
+    /// false state). Set `true` only on the `composingFetchDispatch` early-
+    /// return path via `ContinuousFetchResult.noop`; every successful
+    /// dispatch sets `false`. Phase 9.3b plumb relies on this to fall back
+    /// to phase-1 candidates on a transient phase-2 FFI failure rather
+    /// than dropping suggestions and resetting state. Codex PR #265
+    /// r3216857164.
+    // 中文: composingFetchAtPos 的查詢結果。candidates 三態只在 isBridgeFailure == false 時有意義。
     // 中文:   nil = 不在 Continuous phase;[] = 在但無候選;non-empty = 有候選。
     // 中文: transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
+    // 中文: isBridgeFailure 區分「引擎回 Idle」與「FFI 失敗」— 後者套用 transition 會清掉鏡射狀態。
     public struct ContinuousFetchResult: Equatable {
         public let transition: ComposingTransition
         public let candidates: [ContinuousCandidate]?
+        public let isBridgeFailure: Bool
 
         public static let noop = ContinuousFetchResult(
             transition: .noop,
             candidates: nil,
+            isBridgeFailure: true,
         )
     }
 
@@ -746,15 +761,30 @@ public enum RustEngineBridge {
     /// Caller MUST share the active composing-session generation — FetchAtPos
     /// is read-only and bumping generation would reset engine state before
     /// the fetch (`engine/composing/src/dispatch.rs:103-160`).
+    ///
+    /// `frequencyEntries` + `nowMs` are the v3.5.8 Phase 9.3a/9.3b plumb for
+    /// `user_freq_boost` + `SortKey.recency_rank`. Caller pre-filters entries
+    /// to candidate-relevant `displayTextKey`s (`hanji ?? roman`) — see
+    /// `engine/protos/proto/composing.proto:144-148`. Defaults `[]` + `0`
+    /// reproduce the PR-9.2 neutral-boost behaviour (`user_freq_boost = 1.0`,
+    /// `recency_rank = 1` everywhere); the platform plumb is responsible for
+    /// populating real values via a two-phase fetch (`ComposingManager
+    /// .fetchContinuousCandidates`).
     // 中文: 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
     // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
+    // 中文: frequencyEntries + nowMs 為 Phase 9.3a/9.3b 的 user_freq_boost / recency_rank 來源,
+    // 中文: 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
     public static func composingFetchAtPos(
         mode: InputMode,
         toggles: ToneToggles,
         generation: UInt64,
+        frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
+        nowMs: Int64 = 0,
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.position = 0
+        payload.frequencyEntries = frequencyEntries
+        payload.nowMs = nowMs
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",
@@ -1166,7 +1196,11 @@ public enum RustEngineBridge {
         let logger = LoggerFactory.make(category: "RustEngineBridge")
         let candidateCount = candidates?.count ?? -1
         logger.debug("[FFI<-] fn=composingFetchDispatch op=\(op) effects=\(transition.effects.count) candidates=\(candidateCount)")
-        return ContinuousFetchResult(transition: transition, candidates: candidates)
+        return ContinuousFetchResult(
+            transition: transition,
+            candidates: candidates,
+            isBridgeFailure: false,
+        )
     }
 
     private static func synthComposing(_ proto: Taigi_Engine_ComposingResponse) -> ComposingTransition {

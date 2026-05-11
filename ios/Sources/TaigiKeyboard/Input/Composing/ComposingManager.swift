@@ -3,6 +3,7 @@
 
 import Combine
 import Foundation
+import SwiftProtobuf
 
 /// Minimal write-only view of the composing-context state that the keyboard
 /// extension needs updated when composing starts/stops. KeyboardKit's
@@ -63,12 +64,17 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     weak var delegate: (any ComposingDelegate)?
 
     private let settingsProvider: EngineSettingsProvider
+    private let userFrequencyService: UserFrequencyService
     private let logger = DebugLogger(category: "ComposingManager")
 
     // MARK: - Init
 
-    init(settingsProvider: EngineSettingsProvider = SharedSettings.shared) {
+    init(
+        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
+        userFrequencyService: UserFrequencyService = CompositionRoot.userFrequencyService,
+    ) {
         self.settingsProvider = settingsProvider
+        self.userFrequencyService = userFrequencyService
     }
 
     func setContextSink(_ sink: ComposingContextSink) {
@@ -172,20 +178,151 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// is installed, or when the FST returns no hits — the caller cannot
     /// distinguish these cases (Codex Risk 4: graceful degrade is OK because
     /// the lexicon path then handles the same input via its own search).
+    ///
+    /// v3.5.8 Phase 9.3b — two-phase fetch closes Gap B (`docs/engine/
+    /// continuous-input-ranking.md` §3.2) by feeding the engine's
+    /// `user_freq_boost` + `SortKey.recency_rank` axes:
+    /// 1. Neutral fetch (empty `frequencyEntries`, `nowMs = 0`) discovers
+    ///    candidate `displayText` keys — iOS cannot know them up-front.
+    /// 2. Batch query `user_frequency.db WHERE word IN (...)` for those keys.
+    /// 3. Populated fetch on the same `currentGeneration` snapshot re-ranks
+    ///    the candidate set with `user_freq_boost(count)` saturated at
+    ///    `MAX_BOOST = 5.0` per `engine/ranking/src/score.rs`.
+    ///
+    /// `currentGeneration` is captured once so a `bumpGeneration()` between
+    /// the two FFI calls cannot corrupt the populated fetch — engine resets
+    /// to Idle on generation mismatch (`engine/composing/src/handle.rs:61-66`)
+    /// and we surface that as the documented "no candidates this frame"
+    /// degrade rather than an inconsistent boost. The phase-2 `transition`
+    /// already reflects the Idle reset; returning the phase-1 list would
+    /// render stale candidates against the new context, so we return `[]`
+    /// instead. Codex pre/post-impl Q5/R2.
+    ///
+    /// Bridge-failure handling distinguishes "engine returned Idle" (legit
+    /// reset; apply Idle transition + return `[]`) from "FFI roundtrip
+    /// failed" (transient encode/decode/non-OK; engine state unchanged —
+    /// apply phase-1 transition + return phase-1 candidates). Without the
+    /// `isBridgeFailure` flag both scenarios collapse to a `.noop`
+    /// transition + `nil` candidates, and applying `.noop` clobbers the
+    /// mirror with false Idle state. Phase-1 FFI failure short-circuits
+    /// the whole frame; phase-2 FFI failure degrades to neutral-ranked
+    /// phase-1 results. Codex PR #265 r3216857164.
+    ///
+    /// Cold-start: when `user_frequency.db` has not yet been opened (covers
+    /// the brief window between `setupCoreServices` firing its best-effort
+    /// `ensureInitialized` Task and that Task completing — the very first
+    /// composition may legitimately fall here), skip phase 2 and return
+    /// the neutral list. Matches
+    /// `CustomDictionaryRepository.searchSync`'s eager-empty pattern; the
+    /// lexicon non-Continuous path uses an explicit `mergeOrderOnly`
+    /// cold-start branch. Codex pre-impl Q6.
+    ///
+    /// `isConnected()` only proves the SQLite connection is open — schema
+    /// creation may still be in flight inside `ensureInitialized`. If a
+    /// fetch slips through that race, `frequencyDataBatch` returns `[:]`
+    /// when the `SELECT` fails to prepare against an absent table; the
+    /// engine then sees empty `frequencyEntries` and applies neutral boost
+    /// everywhere — same observable outcome as the cold-start branch but
+    /// via one extra phase-2 fetch. Documented degrade, not a bug.
+    /// Codex PR #265 r3216760651 (P6).
     // 中文: 同步擷取 Continuous 候選詞。只讀,non-Continuous / 無 inventory / 無命中
     // 中文: 都回傳空 []。呼叫端無需區分,fall-through 到既有 lexicon path 即可。
+    // 中文: Phase 9.3b two-phase fetch — 中性查 → SQLite 查 freq → 帶 freq 重查 + 重排。
+    // 中文: generation 一次取樣,中途 bump 會讓 phase 2 回空,等同無 candidate 這 frame。
     public func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] {
         let settings = settingsProvider.current
-        let result = RustEngineBridge.composingFetchAtPos(
+        let generation = currentGeneration
+
+        // Phase 1: neutral fetch to learn candidate displayText keys.
+        let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
-            generation: currentGeneration,
+            generation: generation,
         )
-        // FetchAtPos.effects MUST be empty (read-only RPC, dispatch.rs:103-160).
-        // apply() still runs to refresh the @Published mirror with the engine's
-        // returned snapshot.
-        apply(result.transition)
-        return result.candidates ?? []
+        // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
+        // would clobber the mirror with false Idle state. Surface as "no
+        // candidates this frame"; the mirror keeps reflecting the most
+        // recent successful transition (typically the keystroke's
+        // append/promote that brought us into Continuous), so the next
+        // keystroke's fetch finds the right engine state. Codex PR #265
+        // r3216857164 pre-impl S5 + post-impl T2.
+        if neutral.isBridgeFailure {
+            return []
+        }
+        guard let neutralCandidates = neutral.candidates, !neutralCandidates.isEmpty else {
+            apply(neutral.transition)
+            return neutral.candidates ?? []
+        }
+
+        // Cold-start: user_frequency.db not yet open. Skip phase 2 — engine
+        // already produced neutral-boost ranking on the phase-1 response.
+        guard userFrequencyService.isConnected() else {
+            apply(neutral.transition)
+            return neutralCandidates
+        }
+
+        // Phase 2: populated fetch with the user-frequency snapshot.
+        let entries = Self.buildFrequencyEntries(
+            for: neutralCandidates,
+            via: userFrequencyService,
+        )
+        let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
+        let boosted = RustEngineBridge.composingFetchAtPos(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: generation,
+            frequencyEntries: entries,
+            nowMs: nowMs,
+        )
+        // Phase-2 FFI failure: engine state did NOT change since phase-1
+        // (the request never reached the engine). Apply phase-1's transition
+        // (the real engine snapshot from the moment phase-1 succeeded) and
+        // return phase-1 candidates — degrade to neutral-ranked instead of
+        // dropping the frame. Codex PR #265 r3216857164.
+        if boosted.isBridgeFailure {
+            apply(neutral.transition)
+            return neutralCandidates
+        }
+        apply(boosted.transition)
+        // Engine determinism: same `Phase::Continuous { raw }` returns the
+        // same candidate set. A `nil` phase-2 carrier with `isBridgeFailure
+        // == false` means a `bumpGeneration` raced in between and engine
+        // reset to Idle BEFORE this fetch — the applied transition already
+        // mirrors that Idle state, so returning phase-1 candidates would
+        // render stale suggestions against the new context. Surface as
+        // "no candidates this frame" instead. Codex pre/post-impl Q5/R2.
+        return boosted.candidates ?? []
+    }
+
+    /// Marshal the per-candidate `user_frequency.db` snapshot into the proto
+    /// `FrequencyEntry[]` shape required by `FetchAtPos`. Dedupes by
+    /// `displayText` (engine's `display_text_key` = `hanji ?? roman`) so a
+    /// candidate list with the same hanji twice (different roman) issues
+    /// only one SQL placeholder; the engine's `build_frequency_map` is
+    /// last-write-wins on duplicates either way (`engine/ranking/src/
+    /// score.rs::build_frequency_map`). Only entries present in the DB are
+    /// marshalled — missing rows mean "no user usage yet" and the engine
+    /// applies `user_freq_boost(0) = 1.0` neutral. Codex pre-impl Q4 / Q8.
+    // 中文: 把候選詞的 user_frequency.db 快照打包成 proto FrequencyEntry。
+    // 中文: 以 displayText 去重壓 SQL placeholder;DB 沒有的 row 不送 → 引擎自動 neutral。
+    private static func buildFrequencyEntries(
+        for candidates: [RustEngineBridge.ContinuousCandidate],
+        via service: UserFrequencyService,
+    ) -> [Taigi_Engine_FrequencyEntry] {
+        var seen = Set<String>()
+        var uniqueKeys: [String] = []
+        uniqueKeys.reserveCapacity(candidates.count)
+        for candidate in candidates where seen.insert(candidate.displayText).inserted {
+            uniqueKeys.append(candidate.displayText)
+        }
+        let snapshot = service.frequencyDataBatch(for: uniqueKeys)
+        return snapshot.map { word, data in
+            var entry = Taigi_Engine_FrequencyEntry()
+            entry.displayTextKey = word
+            entry.count = UInt32(max(0, data.count))
+            entry.lastUsedMs = data.lastUsedMillis
+            return entry
+        }
     }
 
     /// Commit one Continuous candidate. `displayText` / `consumedBytes` /
