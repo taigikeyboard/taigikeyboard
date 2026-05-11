@@ -69,6 +69,57 @@ const SOURCE_TIERS: &[(u32, i32)] = &[
     (6, 11), // kungge
 ];
 
+// ---------------------------------------------------------------------------
+// v3.5.8 Phase 9.1 — Continuous-input source rank table.
+//
+// Lower rank = higher priority in the lexicographic continuous sort_key
+// (per docs/roadmap.md § Phase 9 sort_key formula). Distinct from
+// legacy `SOURCE_TIERS` above, which encodes additive multiplier
+// numerators for the non-continuous `calculate_score` path.
+//
+// Custom-dictionary entries (PR-9.6) take rank 0 via the `is_custom`
+// flag; bitmask-derived ranks start at 1 and mirror the entry order
+// of legacy `SOURCE_TIERS`. Drift between this table and
+// `dictionary/common/source_bits.py` bit positions is a
+// cross-platform invariant violation.
+// ---------------------------------------------------------------------------
+
+// 中文: Phase 9.1 連續輸入排序使用的來源 rank 表;rank 越小越優先,custom=0 由 is_custom 旗標進入。
+const CONTINUOUS_SOURCE_BITS: &[(u16, u8)] = &[
+    (1 << 0, 1), // kautian
+    (1 << 1, 2), // taigitv
+    (1 << 7, 3), // stti
+    (1 << 6, 4), // kungge
+];
+
+/// Source rank returned when `bitmask` has no known source bit set.
+/// Higher than any explicit-source rank so unknown-source entries
+/// sort last on the source dimension.
+// 中文: 未命中任何已知來源 bit 時使用的 fallback rank。
+pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
+
+/// First-match-wins source rank for the Continuous-input sort_key.
+/// Returns `0` when `is_custom`, else looks up the first matching
+/// bit in `CONTINUOUS_SOURCE_BITS`, else
+/// [`CONTINUOUS_DEFAULT_SOURCE_RANK`].
+///
+/// Cross-platform invariant: this fn is the single source of truth
+/// for Continuous-input source ordering. Platform-side ranking code
+/// MUST NOT redefine the table; per
+/// `rules/cross-platform-alignment.md` §3a.
+// 中文: 連續輸入排序的來源 rank;custom=0,字典 bit 依表內順序 1..=4,未知=5。
+pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
+    if is_custom {
+        return 0;
+    }
+    for (bit, rank) in CONTINUOUS_SOURCE_BITS {
+        if bitmask & bit != 0 {
+            return *rank;
+        }
+    }
+    CONTINUOUS_DEFAULT_SOURCE_RANK
+}
+
 /// Per-candidate user-frequency snapshot. Caller-supplied so engine stays
 /// stateless. `last_used_ms == 0` means "never used"; the recency bonus
 /// gate guards against a stray bonus for never-seen entries.
@@ -551,5 +602,47 @@ mod tests {
         let quad = calculate_continuous_score(100, 4, 1.0);
         assert!(pair > single);
         assert!(quad > pair);
+    }
+
+    // -----------------------------------------------------------------------
+    // v3.5.8 Phase 9.1 — source_tier_rank
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn source_tier_rank_is_custom_short_circuits() {
+        // `is_custom=true` overrides any bitmask content with rank 0.
+        assert_eq!(source_tier_rank(0, true), 0);
+        assert_eq!(source_tier_rank(KAUTIAN_BIT as u16, true), 0);
+        assert_eq!(source_tier_rank(u16::MAX, true), 0);
+    }
+
+    #[test]
+    fn source_tier_rank_first_match_wins_in_table_order() {
+        // Table order: kautian(1) → taigitv(2) → stti(3) → kungge(4).
+        // Overlapping bits should resolve to the lowest rank present.
+        assert_eq!(source_tier_rank(KAUTIAN_BIT as u16, false), 1);
+        assert_eq!(source_tier_rank(TAIGITV_BIT as u16, false), 2);
+        assert_eq!(source_tier_rank(STTI_BIT as u16, false), 3);
+        assert_eq!(source_tier_rank(KUNGGE_BIT as u16, false), 4);
+        // Kautian + kungge → kautian (entry-order first match).
+        assert_eq!(
+            source_tier_rank((KAUTIAN_BIT | KUNGGE_BIT) as u16, false),
+            1
+        );
+    }
+
+    #[test]
+    fn source_tier_rank_falls_back_to_default_when_no_known_bit() {
+        // Bits the table does not enumerate (e.g., itaigi=2, dev=10,
+        // khiin=9, variant=12) all fall through to the default rank.
+        assert_eq!(
+            source_tier_rank(ITAIGI_BIT as u16, false),
+            CONTINUOUS_DEFAULT_SOURCE_RANK
+        );
+        assert_eq!(source_tier_rank(0, false), CONTINUOUS_DEFAULT_SOURCE_RANK);
+        assert_eq!(
+            source_tier_rank(1 << 10, false),
+            CONTINUOUS_DEFAULT_SOURCE_RANK
+        );
     }
 }

@@ -624,7 +624,7 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 | 7A — iOS bridge wiring (engine-facing) | ~250 Swift + tests | 7B | No | **Merged in PR #256** (squash `8c431af6`) |
 | 7B — iOS UI integration (user-visible) | ~250 Swift + tests | — | **Yes** | **Merged in PR #257** (squash `65c2120c`) |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | **Merged in PR #258** (squash `9fed869b`) |
-| 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **Pending** |
+| 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **In progress (PR #262)** |
 | 9.2 — `mode: HANT/TAILO/MIXED` carrier(無 UI chip)| ~200-300 Rust + bindings | 9.3 | No(metadata-only)| **Pending** |
 | 9.3a — user-freq Rust + proto(`FrequencyEntry[]` in FetchAtPos)| ~150-250 Rust | 9.3b, 9.3c | No(Rust 內部)| **Pending** |
 | 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **Pending** |

@@ -38,9 +38,16 @@ mod common;
 use common::{build_tkdb_v2, write_temp};
 
 /// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
-/// `bitmask` is fixed to `1 << 11` (kautian-equivalent) so all rows pass
-/// the default-enabled filter. Rowid is implied by insertion order
-/// (1-based for dict.bin, mirrored as 1-based in the FST).
+/// `bitmask` is fixed to `1 << 11` (the `lkk` source per
+/// `dictionary/common/source_bits.py:35`); the per-source mask check
+/// is short-circuited at `u32::MAX` filter input below, so any set
+/// bit suffices to pass the default-enabled filter. Picking `lkk`
+/// keeps the fixture outside of the Phase 9.1 `CONTINUOUS_SOURCE_BITS`
+/// rank table so the resulting candidates always land at the
+/// default source rank (5) and do not perturb tie-break ordering
+/// tests that exercise other dimensions.
+/// Rowid is implied by insertion order (1-based for dict.bin,
+/// mirrored as 1-based in the FST).
 struct Row<'a> {
     toneless_key: &'a str,
     hanzi: &'a str,
@@ -177,20 +184,35 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert_eq!(zhuah.form, FORM_NOTONE);
     assert_eq!(zhu.form, FORM_NOTONE);
 
-    // Score sanity:
-    //   紙   = 100 × 1.0 × 1.0 = 100.0
-    //   珠仔 = 80  × 1.1 × 1.0 = 88.0
-    //   珠   = 90  × 1.0 × 1.0 = 90.0
-    // → desc order should be 紙(100) > 珠(90) > 珠仔(88).
+    // Score sanity (`freq × syll_bias × user_freq_boost`, Phase 5 formula):
+    //   紙   = 100 × 1.0 × 1.0 = 100.0  span=(0,4) → Tier 0 (full buffer "tsua")
+    //   珠仔 = 80  × 1.1 × 1.0 =  88.0  span=(0,4) → Tier 0
+    //   珠   = 90  × 1.0 × 1.0 =  90.0  span=(0,3) → Tier 1
     assert!((zhi.score - 100.0).abs() < 1e-4);
     assert!((zhuah.score - 88.0).abs() < 1e-4);
     assert!((zhu.score - 90.0).abs() < 1e-4);
 
-    // Result list must be sorted by score desc.
-    let scores: Vec<f32> = out.iter().map(|c| c.score).collect();
-    let mut sorted = scores.clone();
-    sorted.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-    assert_eq!(scores, sorted, "candidates must be desc by score");
+    // v3.5.8 Phase 9.1 SortKey expected order (per
+    // `docs/roadmap.md` § Phase 9 sort_key formula):
+    //   (tier, -coverage_bytes, recency_rank, -adjusted_score, …)
+    //
+    // - Tier 0 (full-buffer): 紙 + 珠仔, sorted by score desc → 紙 then 珠仔.
+    // - Tier 1: 珠.
+    // → expected display order: 紙(100, t=0) → 珠仔(88, t=0) → 珠(90, t=1).
+    //
+    // The deliberate behavior change vs Phase 5's pure-score-desc sort is
+    // that Tier 0's 珠仔 (lower score) still surfaces ahead of Tier 1's 珠
+    // (higher score), because Continuous prefers full-buffer coverage to
+    // raw frequency when a multi-syllable phrase exactly matches the
+    // pending buffer. See Codex R2 Q2.c rationale logged in
+    // `/tmp/codex-v358-phase9-plan-r2-out.txt`.
+    let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert_eq!(
+        display_order,
+        vec!["紙", "珠仔", "珠"],
+        "Phase 9.1 SortKey: Tier 0 (full buffer) precedes Tier 1; \
+         within Tier 0 sort by score desc"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -511,4 +533,256 @@ fn user_freq_boost_amplifies_score_multiplicatively() {
     let boosted = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 2.0, &prefix_index, &dict);
     assert!((baseline[0].score - 100.0).abs() < 1e-4);
     assert!((boosted[0].score - 200.0).abs() < 1e-4);
+}
+
+// ---------------------------------------------------------------------------
+// v3.5.8 Phase 9.1 — Regression matrix (`taiuantaigi` / `e` / `taixyz`)
+// pinned by `docs/roadmap.md` § Phase 9 「回歸守護矩陣」.
+//
+// These cases use synthetic dict fixtures that mirror the frequency
+// disparity that drove the Phase 9 pivot (`docs/engine/continuous-input-
+// ranking.md` §3.1): single-char freq orders of magnitude above
+// multi-syllable phrases. The SortKey must surface the full-buffer
+// phrase in slot #1 regardless of that disparity.
+// ---------------------------------------------------------------------------
+
+// 中文: Phase 9.1 回歸守護矩陣 — hermetic 重現 `taiuantaigi` 排序失敗場景,鎖死 Tier 1 政策。
+
+#[test]
+fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
+    // Reproduces the headline Phase 9 acceptance case:
+    //   raw      = "taiuantaigi"  (len=11)
+    //   syllabifier endings        → {3, 6, 9, 11}
+    //   tl:tai          (3 chars)  → 「台」 freq=31281, syll=1
+    //   tl:taiuan       (6 chars)  → 「台灣」 freq=1379, syll=2
+    //   tl:taiuantaigi (11 chars)  → 「臺灣台語」 freq=12, syll=4
+    //
+    // Pre-Phase-9 (pure score desc): 「台」 (score=31281) outranks
+    // 「臺灣台語」 (score=12×1.3=15.6) by ~2000x → user sees 「台」 at slot #1.
+    // Phase 9.1 SortKey: 「臺灣台語」 is Tier 0 (consumed_span_end == raw_len),
+    // 「台灣」 and 「台」 are Tier 1 → 「臺灣台語」 surfaces at #1.
+    let (prefix_index, dict) = build_fixture(
+        "taiuantaigi",
+        &[
+            Row {
+                toneless_key: "tai",
+                hanzi: "台",
+                tl: "tâi",
+                syll: 1,
+                freq: 31281,
+            },
+            Row {
+                toneless_key: "taiuan",
+                hanzi: "台灣",
+                tl: "tâi-uân",
+                syll: 2,
+                freq: 1379,
+            },
+            Row {
+                toneless_key: "taiuantaigi",
+                hanzi: "臺灣台語",
+                tl: "tâi-uân-tâi-gí",
+                syll: 4,
+                freq: 12,
+            },
+        ],
+    );
+
+    let out = fetch_candidates_for_endings(
+        "taiuantaigi",
+        0,
+        &[3, 6, 11], // syllabifier endings
+        u32::MAX,
+        1.0,
+        &prefix_index,
+        &dict,
+    );
+
+    let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert_eq!(
+        display_order,
+        vec!["臺灣台語", "台灣", "台"],
+        "Tier 1 (full-buffer) 「臺灣台語」 must outrank Tier 2 partials \
+         even though its score (15.6) is ~2000x lower than 「台」 (31281)"
+    );
+}
+
+#[test]
+fn single_char_input_e_still_surfaces_de_at_slot_1() {
+    // Regression guard for the inverse case: a single-char input must
+    // not be hurt by Phase 9.1 tiering — the full buffer IS the
+    // single char, so 「的」 lands in Tier 1 naturally.
+    //
+    //   raw     = "e"  (len=1)
+    //   tl:e    → 「的」 freq=184693, syll=1, span=(0,1) → Tier 0
+    //   tl:e    → 「鞋」 freq=500,    syll=1, span=(0,1) → Tier 0 (same)
+    // Within Tier 0 + same coverage, score desc decides → 「的」 at #1.
+    let (prefix_index, dict) = build_fixture(
+        "e",
+        &[
+            Row {
+                toneless_key: "e",
+                hanzi: "的",
+                tl: "ê",
+                syll: 1,
+                freq: 184693,
+            },
+            Row {
+                toneless_key: "e",
+                hanzi: "鞋",
+                tl: "ê",
+                syll: 1,
+                freq: 500,
+            },
+        ],
+    );
+
+    let out = fetch_candidates_for_endings("e", 0, &[1], u32::MAX, 1.0, &prefix_index, &dict);
+
+    assert_eq!(out.len(), 2);
+    assert_eq!(
+        out[0].display_text, "的",
+        "high-freq Tier 0 hanzi at slot 1"
+    );
+    assert_eq!(out[0].consumed_span, (0, 1));
+    assert_eq!(
+        out[1].display_text, "鞋",
+        "low-freq Tier 0 hanzi at slot 2 (within-tier score desc)"
+    );
+}
+
+#[test]
+fn taixyz_invalid_tail_yields_empty_tier1_top() {
+    // `xyz` cannot syllabify; syllabifier returns ending only at 3
+    // (`tai`). `raw_len = 6` so no candidate has `consumed_span_end ==
+    // raw_len = 6` → Tier 0 is empty, all candidates are Tier 1, sorted
+    // by their normal score within Tier 1.
+    //
+    // This guards against the failure mode in Codex Q-E (R1): a Q1.b/c
+    // (longest-reachable) Tier definition would have lifted 「台」 into
+    // Tier 0 here, which the spec explicitly rejects.
+    let (prefix_index, dict) = build_fixture(
+        "taixyz-tier-rule",
+        &[
+            Row {
+                toneless_key: "tai",
+                hanzi: "台",
+                tl: "tâi",
+                syll: 1,
+                freq: 31281,
+            },
+            Row {
+                toneless_key: "tai",
+                hanzi: "代",
+                tl: "tāi",
+                syll: 1,
+                freq: 14215,
+            },
+        ],
+    );
+
+    let out = fetch_candidates_for_endings("taixyz", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+
+    assert!(!out.is_empty(), "Tier 1 partials must still surface");
+    for cand in &out {
+        assert_eq!(
+            cand.consumed_span,
+            (0, 3),
+            "no candidate should claim more than the syllabifiable prefix"
+        );
+        assert_ne!(
+            cand.consumed_span.1, 6,
+            "Tier 0 must remain empty when no candidate covers raw_len"
+        );
+    }
+    assert_eq!(
+        out[0].display_text, "台",
+        "within Tier 1, 「台」 (freq=31281) outranks 「代」 (freq=14215)"
+    );
+}
+
+#[test]
+fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
+    // Three candidates under the SAME toneless key "tai" with identical
+    // SortKey dimensions 0-5 (tier, coverage, recency_rank, adjusted_
+    // score, raw freq, source_rank). Only `stable_idx` differentiates.
+    // The sort MUST keep them in pre-sort fetch order — which is FST
+    // byte-sort over the encoded `tl:tai\xFF<rowid_le_u32>` suffix
+    // (the `lookup_exact` enumeration order). For this fixture the
+    // rowids 1/2/3 happen to coincide with builder-insertion order
+    // because little-endian 1/2/3 differ only in the lowest byte and
+    // therefore sort numerically.
+    //
+    // Pins Codex PR #262 r3216153007: earlier revisions stamped
+    // `stable_idx` by incrementing a counter inside
+    // `sort_by_cached_key`'s closure, which silently relied on
+    // stdlib's call-order (non-contractual). The replacement uses
+    // `enumerate()` over the pre-sort `Vec` so `stable_idx` reflects
+    // position before any sorting machinery runs. This test guards
+    // against future regressions of that pattern regardless of stdlib
+    // internals.
+    let (prefix_index, dict) = build_fixture(
+        "stable-idx-insertion-order",
+        &[
+            Row {
+                toneless_key: "tai",
+                hanzi: "一",
+                tl: "tai-a",
+                syll: 1,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "tai",
+                hanzi: "二",
+                tl: "tai-b",
+                syll: 1,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "tai",
+                hanzi: "三",
+                tl: "tai-c",
+                syll: 1,
+                freq: 100,
+            },
+        ],
+    );
+
+    let out = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+
+    assert_eq!(out.len(), 3);
+    let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert_eq!(
+        display_order,
+        vec!["一", "二", "三"],
+        "stable_idx must preserve insertion order when higher SortKey \
+         dimensions are tied; got {display_order:?}. Regression for \
+         Codex PR #262 r3216153007."
+    );
+}
+
+#[test]
+fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
+    // Phase 9.1 plumbs `DictionaryRecord.bitmask` through to
+    // `RawCandidate.bitmask` so `SortKey` can derive source_tier_rank
+    // at sort time without re-reading the dictionary. Verify the byte
+    // identity (caller fixture sets bit 11 — see `build_fixture`).
+    let (prefix_index, dict) = build_fixture(
+        "bitmask-plumb",
+        &[Row {
+            toneless_key: "tai",
+            hanzi: "台",
+            tl: "tâi",
+            syll: 1,
+            freq: 100,
+        }],
+    );
+    let out = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    assert_eq!(out.len(), 1);
+    assert_eq!(
+        out[0].bitmask,
+        1u16 << 11,
+        "bitmask must round-trip from DictionaryRecord to RawCandidate"
+    );
+    assert_eq!(out[0].frequency, 100, "raw freq must round-trip too");
 }

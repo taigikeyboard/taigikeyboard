@@ -137,7 +137,7 @@ fn handle_fetch_at_pos(engine: &Engine, position: u32, config: &AppConfig) -> Co
     if keys.is_empty() {
         return with_continuous(snapshot, ContinuousResponse::default());
     }
-    let candidates = fetch_via_lexicon(&keys);
+    let candidates = fetch_via_lexicon(&keys, raw.len() as u32);
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -299,17 +299,23 @@ fn strip_trailing_tone_digit(s: &str) -> &str {
 /// Acquire lexicon state and run the span-local fetch. Empty result on
 /// any state-availability failure (mirrors `build_keys_tl` policy).
 ///
+/// `raw_len` is the byte length of the original pending buffer
+/// (`Phase::Continuous { raw }.len()`). It is the predicate input
+/// for the Phase 9.1 Tier 1 rule (`consumed_span_end == raw_len`)
+/// inside `fetch_candidates_for_keys`. Same byte space as the
+/// caller-built keys' `consumed_span` (TL ASCII or TPS Bopomofo
+/// bytes, depending on input mode).
+///
 /// **Filter / boost defaults** (deferred per `feedback_no_future_planning.md`):
 /// `enabled_sources_bitmask = u32::MAX` (all sources on) and
-/// `user_freq_boost = 1.0` (no boost). Phase 6 proto omits the carriers
-/// for these knobs intentionally — Phase 7 / 8 platform UI integration
-/// will plumb dictionary toggles + per-candidate `user_frequency.db`
-/// boost through either an extension to `FetchAtPos` or via `AppConfig`,
-/// driven by dogfood feedback. Continuous-mode candidates currently
-/// surface every dictionary source.
+/// `user_freq_boost = 1.0` (no boost). PR-9.3a will plumb per-candidate
+/// `FrequencyEntry` snapshots from `user_frequency.db` and drop the
+/// hardcoded `1.0`. Until then Continuous-mode candidates surface every
+/// dictionary source with neutral boost.
 // 中文: 取出 lexicon 內的 prefix_index + dictionary,呼 fetch_candidates_for_keys;狀態不可用時回傳空。
-// 中文: bitmask/boost 預設為 all-on / 1.0,Phase 7/8 dogfood 後再決定如何 plumb 平台設定。
-fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)]) -> Vec<RawCandidate> {
+// 中文: raw_len = pending buffer 長度,用於 Phase 9.1 Tier 1 判定 (consumed_span_end == raw_len)。
+// 中文: bitmask/boost 預設為 all-on / 1.0;PR-9.3a 才解除 boost 寫死。
+fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)], raw_len: u32) -> Vec<RawCandidate> {
     LexiconHandle::with_state(|state| {
         let Some(prefix) = state.prefix_index.as_ref() else {
             return Ok(Vec::new());
@@ -317,7 +323,14 @@ fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)]) -> Vec<RawCandidate> {
         let Some(dict) = state.dictionary.as_ref() else {
             return Ok(Vec::new());
         };
-        Ok(fetch_candidates_for_keys(keys, u32::MAX, 1.0, prefix, dict))
+        Ok(fetch_candidates_for_keys(
+            keys,
+            raw_len,
+            u32::MAX,
+            1.0,
+            prefix,
+            dict,
+        ))
     })
     .unwrap_or_default()
 }
