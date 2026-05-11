@@ -624,7 +624,7 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 | 7A — iOS bridge wiring (engine-facing) | ~250 Swift + tests | 7B | No | **Merged in PR #256** (squash `8c431af6`) |
 | 7B — iOS UI integration (user-visible) | ~250 Swift + tests | — | **Yes** | **Merged in PR #257** (squash `65c2120c`) |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | **Merged in PR #258** (squash `9fed869b`) |
-| 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **In progress (PR #262)** |
+| 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **Merged in PR #262 (squash `86dd6253`)** |
 | 9.2 — `mode: HANT/TAILO/MIXED` carrier(無 UI chip)| ~200-300 Rust + bindings | 9.3 | No(metadata-only)| **Pending** |
 | 9.3a — user-freq Rust + proto(`FrequencyEntry[]` in FetchAtPos)| ~150-250 Rust | 9.3b, 9.3c | No(Rust 內部)| **Pending** |
 | 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **Pending** |
@@ -636,7 +636,7 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = **Phase 9.1 — Ranking core**(branch suggestion: `v358-phase9.1-ranking-core`)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`)。
+**Active PR pointer**:next round = **Phase 9.2 — `mode: HANT/TAILO/MIXED` carrier**(branch suggestion: `v358-phase9.2-mode-carrier`)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`),Phase 9.1 merged in PR #262 (squash `86dd6253`)。
 
 **總計**(含 Phase 9 finalized):20 個 PR(原 11 個 Phase 0-8 已 merge,加 Phase 9.1-9.6 共 9 個 sub-PR),加總約 6000-6500 LOC + tests。多數 hand-reviewed code PR 落在 200-450 LOC;Phase 6 + 9.2 的 generated bindings 不計入 review size。
 
