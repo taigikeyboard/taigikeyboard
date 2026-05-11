@@ -397,6 +397,11 @@ class TextInputManager(
                         // owned NextWordHandler.
                         nextWordRouter = { effect -> smartbarManager.dispatchComposingNextWordEffect(effect) },
                         logger = taigikeyboard.compositionRoot.logger,
+                        // User-frequency snapshot source for the
+                        // Continuous-input two-phase fetch. Mirrors iOS
+                        // `ComposingManager(userFrequencyService:
+                        // CompositionRoot.userFrequencyService)`.
+                        userFrequencyService = taigikeyboard.compositionRoot.userFreq,
                     )
                 } else {
                     null

@@ -9,6 +9,7 @@ import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
+import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
@@ -43,6 +44,16 @@ class ComposingManager(
     private val delegate: ComposingDelegate = DefaultComposingDelegate,
     private val nextWordRouter: NextWordEffectRouter = NoopNextWordEffectRouter,
     private val logger: LoggerBackend = NullLoggerBackend,
+    /**
+     * User-frequency snapshot source for the Continuous-input two-phase
+     * fetch. `null` keeps unit-test + Preview construction compiling
+     * unchanged (the orchestrator falls through to the neutral phase-1
+     * list, exactly mirroring the cold-start branch). The runtime call
+     * site (`TextInputManager` keyboard-mode swap) always passes
+     * `CompositionRoot.userFreq`. Mirrors iOS `ComposingManager.swift`
+     * `userFrequencyService` default-arg shape.
+     */
+    private val userFrequencyService: UserFrequencyService? = null,
 ) {
     @Volatile
     private var cachedRawInput: String = ""
@@ -340,30 +351,166 @@ class ComposingManager(
     }
 
     /**
-     * Synchronous span-local candidate query. Read-only; engine returns the
-     * current `Phase::Continuous { raw }` candidate set in score-desc order.
+     * Span-local candidate query for the current `Phase::Continuous { raw }`.
+     * Read-only; engine returns the candidate set in score-desc order.
      * Returns `emptyList()` when not in Continuous phase, when no syllable
      * inventory is installed, or when the FST returns no hits — the caller
      * cannot distinguish these cases. Graceful degrade is OK because the
      * lexicon path handles the same input via its own search.
      *
-     * Caller invariant: IME main thread, exactly like the rest of the
-     * dispatch API. The autocomplete service must hop back to the main
-     * dispatcher before invoking this method (the whole `applyTransition`
-     * → `setComposingText` chain is not safe off-thread).
+     * Two-phase fetch closes Gap B (`docs/engine/
+     * continuous-input-ranking.md` §3.2) by feeding the engine's
+     * `user_freq_boost` + `SortKey.recency_rank` axes:
+     * 1. Neutral fetch (empty `frequency_entries`, `now_ms = 0`) discovers
+     *    candidate `displayText` keys — Android cannot know them up-front.
+     * 2. Batch query `user_frequency.db WHERE word IN (...)` for those keys.
+     * 3. Populated fetch on the same `currentGeneration` snapshot re-ranks
+     *    the candidate set with `user_freq_boost(count)` saturated at
+     *    `MAX_BOOST = 5.0` per `engine/ranking/src/score.rs`.
+     *
+     * `currentGeneration` is captured once so a `bumpGeneration()` between
+     * the two FFI calls cannot corrupt the populated fetch — engine resets
+     * to Idle on generation mismatch (`engine/composing/src/handle.rs:61-66`)
+     * and we surface that as the documented "no candidates this frame"
+     * degrade rather than an inconsistent boost. The phase-2 `transition`
+     * already reflects the Idle reset; returning the phase-1 list would
+     * render stale candidates against the new context, so we return `[]`
+     * instead. Mirrors iOS PR #265 Codex Q5 / R2.
+     *
+     * Bridge-failure handling distinguishes "engine returned Idle" (legit
+     * reset; apply Idle transition + return `[]`) from "FFI roundtrip
+     * failed" (transient encode/decode/non-OK; engine state unchanged —
+     * apply phase-1 transition + return phase-1 candidates). Without the
+     * `isBridgeFailure` flag both scenarios collapse to a `NOOP` transition
+     * + `null` candidates, and applying `NOOP` clobbers the mirror with
+     * false Idle state. Phase-1 FFI failure short-circuits the whole
+     * frame; phase-2 FFI failure degrades to neutral-ranked phase-1
+     * results. Mirrors iOS PR #265 r3216857164.
+     *
+     * Cold-start: when `user_frequency.db` has not yet been opened (the
+     * race window between `TaigiKeyboardApplication.onCreate`'s best-effort
+     * `ensureInitialized` launch and that Task completing), skip phase 2
+     * and return the neutral list — engine produced neutral-boost ranking
+     * on the phase-1 response. Also covers
+     * `userFrequencyService == null` (tests / Preview construction).
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors
+     * `ios/Sources/TaigiKeyboard/Input/Composing/ComposingManager.swift:232`.
+     * Drift causes silent divergence in the ranking the user sees after
+     * their first selection of a phrase.
+     *
+     * Android divergence (intentional, per `rules/cross-platform-alignment.md`
+     * §3): iOS is sync because Swift `frequencyDataBatch` is sync; Android
+     * is `suspend` because Kotlin `frequencyDataBatch` owns `Dispatchers.IO`
+     * internally (`UserFrequencyService.kt:225`). Same observable behaviour,
+     * different threading model.
+     *
+     * Caller invariant: enters on the IME main thread (the autocomplete
+     * service wraps the call in `withContext(Dispatchers.Main)`); the
+     * SQLite hop happens inside `UserFrequencyService.frequencyDataBatch`'s
+     * own `withContext(Dispatchers.IO)`, after which the suspension resumes
+     * back on Main for the second `applyTransition` — `InputConnection`
+     * writes are Main-only.
      */
-    fun fetchContinuousCandidates(ic: InputConnection): List<RustEngineBridge.ContinuousCandidate> {
+    // 中文: 連續輸入候選查詢 — suspend two-phase fetch:
+    // 中文: 中性查 → SQLite 查 user-freq → 帶 freq 重查 + 重排。
+    // 中文: generation 一次取樣,中途 bump 會讓 phase 2 回空,等同無 candidate 這 frame。
+    // 中文: isBridgeFailure 分辨「引擎回 Idle」與「FFI 失敗」— 後者不可套 transition。
+    suspend fun fetchContinuousCandidates(ic: InputConnection): List<RustEngineBridge.ContinuousCandidate> {
         val settings = settingsProvider.current
-        val result = RustEngineBridge.composingFetchAtPos(
-            resolveMode(settings.inputMode),
-            carrier(settings.toneToggles),
-            currentGeneration,
+        val mode = resolveMode(settings.inputMode)
+        val toggles = carrier(settings.toneToggles)
+        val generation = currentGeneration
+
+        // Phase 1: neutral fetch to learn candidate displayText keys.
+        val neutral = RustEngineBridge.composingFetchAtPos(
+            mode = mode,
+            toggles = toggles,
+            generation = generation,
         )
-        // FetchAtPos.effects MUST be empty (read-only RPC, dispatch.rs:103-160).
-        // applyTransition still runs to refresh the local mirror with the
-        // engine's returned snapshot.
-        applyTransition(result.transition, ic)
-        return result.candidates ?: emptyList()
+        // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
+        // would clobber the mirror with false Idle state. Surface as "no
+        // candidates this frame"; the mirror keeps reflecting the most
+        // recent successful transition (typically the keystroke's
+        // append/promote that brought us into Continuous), so the next
+        // keystroke's fetch finds the right engine state. Mirrors iOS
+        // PR #265 r3216857164 pre-impl S5 + post-impl T2.
+        if (neutral.isBridgeFailure) {
+            return emptyList()
+        }
+        val neutralCandidates = neutral.candidates
+        if (neutralCandidates.isNullOrEmpty()) {
+            applyTransition(neutral.transition, ic)
+            return emptyList()
+        }
+
+        // Cold-start (or no service injected): user_frequency.db not yet
+        // open. Skip phase 2 — engine already produced neutral-boost
+        // ranking on the phase-1 response.
+        val userFreq = userFrequencyService
+        if (userFreq == null || !userFreq.isConnected()) {
+            applyTransition(neutral.transition, ic)
+            return neutralCandidates
+        }
+
+        // Phase 2: populated fetch with the user-frequency snapshot.
+        // `buildFrequencyEntries` runs the SQL inside the service's own
+        // `Dispatchers.IO` block, then resumes back on the caller's Main
+        // context before the second FFI call.
+        val entries = buildFrequencyEntries(neutralCandidates, userFreq)
+        val nowMs = System.currentTimeMillis()
+        val boosted = RustEngineBridge.composingFetchAtPos(
+            mode = mode,
+            toggles = toggles,
+            generation = generation,
+            frequencyEntries = entries,
+            nowMs = nowMs,
+        )
+        // Phase-2 FFI failure: engine state did NOT change since phase-1
+        // (the request never reached the engine). Apply phase-1's transition
+        // (the real engine snapshot from the moment phase-1 succeeded) and
+        // return phase-1 candidates — degrade to neutral-ranked instead of
+        // dropping the frame. Mirrors iOS PR #265 r3216857164.
+        if (boosted.isBridgeFailure) {
+            applyTransition(neutral.transition, ic)
+            return neutralCandidates
+        }
+        applyTransition(boosted.transition, ic)
+        // Engine determinism: same `Phase::Continuous { raw }` returns the
+        // same candidate set. A `null` phase-2 carrier with `isBridgeFailure
+        // == false` means a `bumpGeneration` raced in between and engine
+        // reset to Idle BEFORE this fetch — the applied transition already
+        // mirrors that Idle state, so returning phase-1 candidates would
+        // render stale suggestions against the new context. Surface as
+        // "no candidates this frame" instead. Mirrors iOS PR #265 Codex
+        // pre/post-impl Q5/R2.
+        return boosted.candidates ?: emptyList()
+    }
+
+    /**
+     * Marshal the per-candidate `user_frequency.db` snapshot into the proto
+     * `FrequencyEntry` list required by `FetchAtPos`. Dedupes by
+     * `displayText` (engine's `display_text_key` = `hanji ?? roman`) so a
+     * candidate list with the same hanji twice (different roman) issues
+     * only one SQL placeholder; the engine's `build_frequency_map` is
+     * last-write-wins on duplicates either way (`engine/ranking/src/
+     * score.rs::build_frequency_map`). Only entries present in the DB are
+     * marshalled — missing rows mean "no user usage yet" and the engine
+     * applies `user_freq_boost(0) = 1.0` neutral. Mirrors iOS
+     * `ComposingManager.swift:308 buildFrequencyEntries`. Proto marshaling
+     * delegates to `RustEngineBridge.frequencyDataToProtoEntries` so the
+     * legacy `processCandidates` site and this Continuous-fetch site share
+     * a single `count` clamp + field-naming source of truth.
+     */
+    // 中文: 候選詞 user_frequency.db 快照 → proto FrequencyEntry。
+    // 中文: 以 displayText distinct 壓 SQL placeholder;DB 沒有的 row 不送 → 引擎自動 neutral。
+    private suspend fun buildFrequencyEntries(
+        candidates: List<RustEngineBridge.ContinuousCandidate>,
+        userFreq: UserFrequencyService,
+    ): List<FrequencyEntry> {
+        val uniqueKeys = candidates.map { it.displayText }.distinct()
+        val snapshot = userFreq.frequencyDataBatch(uniqueKeys)
+        return RustEngineBridge.frequencyDataToProtoEntries(snapshot)
     }
 
     /**

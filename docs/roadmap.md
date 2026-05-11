@@ -628,13 +628,13 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 | 9.2 — `mode: HANT/TAILO/MIXED` carrier(無 UI chip)| ~200-300 Rust + bindings | 9.3 | No(metadata-only)| **Merged in PR #263 (squash `f5f2a3b2`)** |
 | 9.3a — user-freq Rust + proto(`FrequencyEntry[]` in FetchAtPos)| ~150-250 Rust | 9.3b, 9.3c | No(Rust 內部)| **Merged in PR #264 (squash `60601681`)** |
 | 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **Merged in PR #265 (squash `a5d2fcdd`)** |
-| 9.3c — user-freq Android plumb(batch SQLite query)| ~200-350 Kotlin | — | **Yes**(boost 生效)| **Pending** |
+| 9.3c — user-freq Android plumb(batch SQLite query)| ~200-350 Kotlin | — | **Yes**(boost 生效)| **In progress (PR-9.3c branch)** |
 | 9.4a — TPS tone-1 next-initial-seen rule | ~50-100 Rust | 9.4b | **Yes**(coverage)| **Pending** |
 | 9.4b — Hyphen offset map(shadow buffer)| ~200-350 Rust | — | **Yes**(coverage)| **Pending** |
 | 9.5 — 詞典補「台灣台語」變體 | ~50 data | — | **Yes**(acceptance)| **Pending** |
 | 9.6 — custom_dict 接入 Continuous fetch(平台側查詢 + custom source rank)| ~200-300 跨平台 | — | **Yes** | **Pending** |
 
-**Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
+**Status legend**:Pending / In progress (PR-<n.m> branch) / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
 **Active PR pointer**:next round = **Phase 9.3c — Android user-freq plumb** (branch suggestion: `v358-phase9.3c-user-freq-android`)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`),Phase 9.1 merged in PR #262 (squash `86dd6253`),Phase 9.2 merged in PR #263 (squash `f5f2a3b2`),Phase 9.3a merged in PR #264 (squash `60601681`),Phase 9.3b merged in PR #265 (squash `a5d2fcdd`)。
 

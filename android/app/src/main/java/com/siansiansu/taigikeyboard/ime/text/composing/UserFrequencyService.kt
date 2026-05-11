@@ -83,30 +83,72 @@ class UserFrequencyService(
     // Properties
     // ------------------------------------------------------------------ //
 
+    @Volatile
     private var dbHelper: DatabaseHelper? = null
     private val initMutex = Mutex()
-    private var isInitialized = false
     private val recordCounter = AtomicInteger(0)
 
     // ------------------------------------------------------------------ //
     // Init
     // ------------------------------------------------------------------ //
 
-    /** Lazy database initialization. Called internally by every DB-touching entry point. */
-    private suspend fun initialize() {
-        if (isInitialized) return
+    /**
+     * Open the underlying SQLite connection and create the schema if absent.
+     *
+     * Promoted to public so the IME Application can warm the DB at boot
+     * (mirrors iOS `setupCoreServices`'s fire-and-forget
+     * `userFrequencyService.ensureInitialized()` call). Without this
+     * warmup, the Continuous-input fetch path early-returns on non-empty
+     * candidates and bypasses `LexiconService.search`'s lazy
+     * `ensureInitialized` call — so `user_frequency.db` would stay closed
+     * until the user committed something, and persisted boost would be
+     * ignored for the entire first burst of compositions.
+     *
+     * Construction of `DatabaseHelper` is cheap (no DB I/O); the actual
+     * `onCreate` schema run is deferred until first `readableDatabase`
+     * access, so this method explicitly touches `readableDatabase` to force
+     * the schema creation. Idempotent — re-entry returns immediately once
+     * the connection is open.
+     *
+     * Failures propagate; the warmup site in `TaigiKeyboardApplication`
+     * catches + logs them so a transient DB I/O error never aborts the IME
+     * boot path.
+     */
+    // 中文: 強制打開 SQLite 連線並執行 schema 建立 — 公開後,IME Application onCreate 可提前 warm-up,
+    // 中文: 鏡射 iOS setupCoreServices 的 fire-and-forget pattern。
+    // 中文: 純 DatabaseHelper() 是 cheap 的,實際 DDL 必須觸發 readableDatabase 才會跑,所以這裡主動讀一次。
+    suspend fun ensureInitialized() {
+        if (dbHelper != null) return
 
         initMutex.withLock {
-            if (isInitialized) return
+            if (dbHelper != null) return
 
-            dbHelper = DatabaseHelper(appContext, logger)
-            isInitialized = true
+            withContext(Dispatchers.IO) {
+                val helper = DatabaseHelper(appContext, logger)
+                // Force `SQLiteOpenHelper.onCreate` to run on this thread
+                // before we publish the reference — any reader that sees
+                // `dbHelper != null` is guaranteed an open + schema'd
+                // connection via the `@Volatile` happens-before edge.
+                helper.readableDatabase
+                dbHelper = helper
 
-            if (BuildConfig.DEBUG) {
-                logDatabaseInfo()
+                if (BuildConfig.DEBUG) {
+                    logDatabaseInfo()
+                }
             }
         }
     }
+
+    /**
+     * Synchronous probe — has [ensureInitialized] (or any DB-touching entry
+     * point) completed at least once in this process? Cheap (`@Volatile`
+     * read), no I/O, no locks. The Continuous-input fetch path uses this
+     * as a cold-start gate to skip the user-frequency phase-2 query before
+     * any DB connection is open. Mirrors iOS
+     * `UserFrequencyService.isConnected()`.
+     */
+    // 中文: 同步探測 DB 是否已打開過(cold-start gate)。@Volatile 單讀,免鎖無 I/O。
+    fun isConnected(): Boolean = dbHelper != null
 
     private fun logDatabaseInfo() {
         try {
@@ -154,7 +196,7 @@ class UserFrequencyService(
     suspend fun recordUsage(word: String) =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.writableDatabase ?: return@withContext
 
                 val sql =
@@ -193,7 +235,7 @@ class UserFrequencyService(
     suspend fun frequencyData(word: String): FrequencyData =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.readableDatabase ?: return@withContext FrequencyData.EMPTY
 
                 val cursor =
@@ -227,7 +269,7 @@ class UserFrequencyService(
             if (words.isEmpty()) return@withContext emptyMap()
 
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyMap()
 
                 val result = mutableMapOf<String, FrequencyData>()
@@ -263,7 +305,7 @@ class UserFrequencyService(
     suspend fun topWords(limit: Int = 100): List<Pair<String, Int>> =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
 
                 val cursor =
@@ -288,7 +330,7 @@ class UserFrequencyService(
     suspend fun getAllFrequencies(): List<Pair<String, Int>> =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
 
                 val cursor =
@@ -340,7 +382,7 @@ class UserFrequencyService(
     suspend fun batchImportMerge(entries: List<Pair<String, Int>>): Int =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.writableDatabase ?: return@withContext 0
 
                 val sql =
@@ -375,7 +417,7 @@ class UserFrequencyService(
     /** Delete a single word from frequency data. */
     suspend fun deleteWord(word: String) =
         withContext(Dispatchers.IO) {
-            initialize()
+            ensureInitialized()
             val db = dbHelper?.writableDatabase ?: return@withContext
             db.delete(Table.NAME, "${Table.WORD} = ?", arrayOf(word))
         }
@@ -384,7 +426,7 @@ class UserFrequencyService(
     suspend fun clearAllFrequencies() =
         withContext(Dispatchers.IO) {
             try {
-                initialize()
+                ensureInitialized()
                 val db = dbHelper?.writableDatabase ?: return@withContext
 
                 db.execSQL("DELETE FROM ${Table.NAME}")
@@ -401,7 +443,6 @@ class UserFrequencyService(
             try {
                 dbHelper?.close()
                 dbHelper = null
-                isInitialized = false
 
                 val dbFile = appContext.getDatabasePath(DATABASE_NAME)
                 if (dbFile.exists()) {

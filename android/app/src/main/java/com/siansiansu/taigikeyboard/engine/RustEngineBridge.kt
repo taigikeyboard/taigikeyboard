@@ -410,16 +410,7 @@ object RustEngineBridge {
         for (word in raw) {
             payloadBuilder.addRaw(taigiWordToProto(word))
         }
-        for ((key, value) in frequencyData) {
-            payloadBuilder.addFreq(
-                FrequencyEntry
-                    .newBuilder()
-                    .setDisplayTextKey(key)
-                    .setCount(maxOf(0, value.count))
-                    .setLastUsedMs(value.lastUsedMillis)
-                    .build(),
-            )
-        }
+        payloadBuilder.addAllFreq(frequencyDataToProtoEntries(frequencyData))
         val resp = lexiconDispatch(
             methodSetter = { it.processCandidates = payloadBuilder.build() },
             op = "processCandidates",
@@ -461,6 +452,25 @@ object RustEngineBridge {
         raw: List<TaigiWord>,
         @Suppress("UNUSED_PARAMETER") tpsDedupEnabled: Boolean,
     ): List<TaigiWord> = raw
+
+    /**
+     * Marshal a `Map<String, FrequencyData>` snapshot into the proto
+     * `FrequencyEntry` wire shape consumed by `ProcessCandidatesRequest`
+     * (legacy lexicon ranking) and `FetchAtPos` (Continuous-input fetch,
+     * v3.5.8 Phase 9.3a/9.3c). Centralises the `count` clamp + field
+     * naming so the two callers cannot drift. Mirrors iOS implicit
+     * convention — Swift inlines the same shape but at one call site.
+     */
+    internal fun frequencyDataToProtoEntries(
+        data: Map<String, FrequencyData>,
+    ): List<FrequencyEntry> = data.map { (word, snapshot) ->
+        FrequencyEntry
+            .newBuilder()
+            .setDisplayTextKey(word)
+            .setCount(maxOf(0, snapshot.count))
+            .setLastUsedMs(snapshot.lastUsedMillis)
+            .build()
+    }
 
     private fun taigiWordToProto(word: TaigiWord): ProtoTaigiWord {
         val builder = ProtoTaigiWord
@@ -633,8 +643,8 @@ object RustEngineBridge {
     )
 
     /**
-     * Read-query result for `composingFetchAtPos`. Tri-state `candidates`
-     * preserves the proto's three semantic outcomes:
+     * Read-query result for `composingFetchAtPos`. The `candidates` tri-state
+     * is only authoritative when `isBridgeFailure == false`:
      * - `null` → engine reached `handle_fetch_at_pos` but `Phase::Continuous`
      *   was not active (proto `continuous` field absent).
      * - `emptyList()` → continuous phase active but no candidates (no syllable
@@ -643,18 +653,33 @@ object RustEngineBridge {
      *
      * `transition` carries the engine snapshot (preedit / `selectedCandidateIndex`
      * / `isComposing`); FetchAtPos is read-only so its `effects` is empty.
+     *
+     * `isBridgeFailure` distinguishes "the engine returned Idle" (legit
+     * generation-mismatch reset; `transition` reflects the new Idle state,
+     * caller should `applyTransition` it) from "the FFI roundtrip itself
+     * failed" (encode / decode / non-OK engine response; `transition ==
+     * NOOP` is synthesized and applying it would clobber the cache mirror
+     * with false state). Set `true` only on the `composingFetchDispatch`
+     * early-return path via `ContinuousFetchResult.NOOP`; every successful
+     * dispatch sets `false`. Phase 9.3c plumb relies on this to fall back
+     * to phase-1 candidates on a transient phase-2 FFI failure rather than
+     * dropping suggestions and resetting state. Mirrors iOS PR #265
+     * r3216857164 — `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift`.
      */
-    // 中文: composingFetchAtPos 的查詢結果。candidates 三態保留 proto 語意:
+    // 中文: composingFetchAtPos 的查詢結果。candidates 三態只在 isBridgeFailure == false 時有意義。
     // 中文:   null = 不在 Continuous phase;emptyList = 在但無候選;non-empty = 有候選。
     // 中文: transition 帶 engine 狀態(FetchAtPos 只讀,effects 必為空)。
+    // 中文: isBridgeFailure 區分「引擎回 Idle」與「FFI 失敗」— 後者套用 transition 會清掉鏡射狀態。
     data class ContinuousFetchResult(
         val transition: ComposingTransition,
         val candidates: List<ContinuousCandidate>?,
+        val isBridgeFailure: Boolean,
     ) {
         companion object {
             val NOOP = ContinuousFetchResult(
                 transition = ComposingTransition.NOOP,
                 candidates = null,
+                isBridgeFailure = true,
             )
         }
     }
@@ -930,18 +955,34 @@ object RustEngineBridge {
      * Caller MUST share the active composing-session generation — FetchAtPos
      * is read-only and bumping generation would reset engine state before
      * the fetch (`engine/composing/src/dispatch.rs:103-160`).
+     *
+     * `frequencyEntries` + `nowMs` are the v3.5.8 Phase 9.3a/9.3c plumb for
+     * `user_freq_boost` + `SortKey.recency_rank`. Caller pre-filters entries
+     * to candidate-relevant `displayTextKey`s (`hanji ?? roman`) — see
+     * `engine/protos/proto/composing.proto:144-148`. Defaults `emptyList()`
+     * + `0L` reproduce the PR-9.2 neutral-boost behaviour (`user_freq_boost
+     * = 1.0`, `recency_rank = 1` everywhere); the platform plumb is
+     * responsible for populating real values via a two-phase fetch
+     * (`ComposingManager.fetchContinuousCandidates`). Mirrors iOS
+     * `RustEngineBridge.composingFetchAtPos` PR-9.3b.
      */
     // 中文: 連續輸入候選查詢。position 固定為 0(Phase 6 dispatch 驗證)。
     // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
+    // 中文: frequencyEntries + nowMs 為 Phase 9.3a/9.3c 的 user_freq_boost / recency_rank 來源,
+    // 中文: 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
     @JvmStatic
     fun composingFetchAtPos(
         mode: NormalizeMode,
         toggles: ToneTogglesCarrier,
         generation: Long,
+        frequencyEntries: List<FrequencyEntry> = emptyList(),
+        nowMs: Long = 0L,
     ): ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
             .setPosition(0)
+            .addAllFrequencyEntries(frequencyEntries)
+            .setNowMs(nowMs)
             .build()
         return composingFetchDispatch(
             methodSetter = { it.fetchAtPos = payload },
@@ -1105,7 +1146,11 @@ object RustEngineBridge {
             val count = candidates?.size ?: -1
             "[FFI<-] fn=composingFetchDispatch op=$op effects=${transition.effects.size} candidates=$count"
         }
-        return ContinuousFetchResult(transition = transition, candidates = candidates)
+        return ContinuousFetchResult(
+            transition = transition,
+            candidates = candidates,
+            isBridgeFailure = false,
+        )
     }
 
     private fun synthComposing(

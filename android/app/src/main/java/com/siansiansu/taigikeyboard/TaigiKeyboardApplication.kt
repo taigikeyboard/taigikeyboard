@@ -57,6 +57,25 @@ class TaigiKeyboardApplication : Application() {
         applicationScope.launch {
             installLexiconEngine()
         }
+        // Best-effort warmup of `user_frequency.db` so the Continuous-input
+        // fetch path can apply persisted boost as early as possible. The
+        // Continuous fetch early-returns on non-empty candidates and skips
+        // `LexiconService.search`'s lazy `ensureInitialized` call, so
+        // without this warmup a fresh session would ignore
+        // `user_frequency.db` indefinitely until the user committed
+        // something. Fire-and-forget — `ComposingManager
+        // .fetchContinuousCandidates` keeps an `isConnected()` cold-start
+        // guard for the race window before this Task lands. Mirrors iOS
+        // `setupCoreServices`'s `ensureInitialized` Task.
+        applicationScope.launch {
+            val tag = "UserFreqWarmup"
+            try {
+                compositionRoot.userFreq.ensureInitialized()
+                compositionRoot.logger.i(tag, "[INIT] User frequency DB warmed")
+            } catch (e: Exception) {
+                compositionRoot.logger.w(tag, "[INIT] User frequency DB warmup failed", e)
+            }
+        }
     }
 
     /**
