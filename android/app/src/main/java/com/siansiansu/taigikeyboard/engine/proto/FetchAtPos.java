@@ -14,6 +14,23 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
  * dispatcher path that converts each Bopomofo span to a `tl:&lt;toneless&gt;`
  * FST key before lexicon lookup. Emits no effects.
+ *
+ * v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
+ * per-candidate `user_frequency.db` snapshot (count + last_used_ms,
+ * keyed by `display_text_key` = `hanji ?? roman`). The engine builds
+ * a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
+ * per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
+ * `SortKey.recency_rank` axis from `now_ms − last_used_ms`. Empty
+ * list = neutral 1.0 boost + rank 1 everywhere; backward-compatible
+ * with PR-9.2 platform builds that have not yet wired the snapshot
+ * (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+ *
+ * `now_ms` is the platform's epoch-ms wall clock at fetch time
+ * (iOS `Date().timeIntervalSince1970 * 1000`, Android
+ * `System.currentTimeMillis()`). The engine guards against
+ * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
+ * (clock skew) by falling through to `recency_rank = 1` for every
+ * candidate — see `engine/ranking/src/score.rs::recency_rank`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -24,6 +41,7 @@ public  final class FetchAtPos extends
     // @@protoc_insertion_point(message_implements:taigi.engine.FetchAtPos)
     FetchAtPosOrBuilder {
   private FetchAtPos() {
+    frequencyEntries_ = emptyProtobufList();
   }
   public static final int POSITION_FIELD_NUMBER = 1;
   private int position_;
@@ -49,6 +67,126 @@ public  final class FetchAtPos extends
   private void clearPosition() {
 
     position_ = 0;
+  }
+
+  public static final int FREQUENCY_ENTRIES_FIELD_NUMBER = 2;
+  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> frequencyEntries_;
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> getFrequencyEntriesList() {
+    return frequencyEntries_;
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder>
+      getFrequencyEntriesOrBuilderList() {
+    return frequencyEntries_;
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  @java.lang.Override
+  public int getFrequencyEntriesCount() {
+    return frequencyEntries_.size();
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index) {
+    return frequencyEntries_.get(index);
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntryOrBuilder getFrequencyEntriesOrBuilder(
+      int index) {
+    return frequencyEntries_.get(index);
+  }
+  private void ensureFrequencyEntriesIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> tmp = frequencyEntries_;
+    if (!tmp.isModifiable()) {
+      frequencyEntries_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void setFrequencyEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+    value.getClass();
+  ensureFrequencyEntriesIsMutable();
+    frequencyEntries_.set(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void addFrequencyEntries(com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+    value.getClass();
+  ensureFrequencyEntriesIsMutable();
+    frequencyEntries_.add(value);
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void addFrequencyEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+    value.getClass();
+  ensureFrequencyEntriesIsMutable();
+    frequencyEntries_.add(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void addAllFrequencyEntries(
+      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> values) {
+    ensureFrequencyEntriesIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, frequencyEntries_);
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void clearFrequencyEntries() {
+    frequencyEntries_ = emptyProtobufList();
+  }
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  private void removeFrequencyEntries(int index) {
+    ensureFrequencyEntriesIsMutable();
+    frequencyEntries_.remove(index);
+  }
+
+  public static final int NOW_MS_FIELD_NUMBER = 3;
+  private long nowMs_;
+  /**
+   * <code>int64 now_ms = 3;</code>
+   * @return The nowMs.
+   */
+  @java.lang.Override
+  public long getNowMs() {
+    return nowMs_;
+  }
+  /**
+   * <code>int64 now_ms = 3;</code>
+   * @param value The nowMs to set.
+   */
+  private void setNowMs(long value) {
+
+    nowMs_ = value;
+  }
+  /**
+   * <code>int64 now_ms = 3;</code>
+   */
+  private void clearNowMs() {
+
+    nowMs_ = 0L;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
@@ -143,6 +281,23 @@ public  final class FetchAtPos extends
    * `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
    * dispatcher path that converts each Bopomofo span to a `tl:&lt;toneless&gt;`
    * FST key before lexicon lookup. Emits no effects.
+   *
+   * v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
+   * per-candidate `user_frequency.db` snapshot (count + last_used_ms,
+   * keyed by `display_text_key` = `hanji ?? roman`). The engine builds
+   * a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
+   * per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
+   * `SortKey.recency_rank` axis from `now_ms − last_used_ms`. Empty
+   * list = neutral 1.0 boost + rank 1 everywhere; backward-compatible
+   * with PR-9.2 platform builds that have not yet wired the snapshot
+   * (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+   *
+   * `now_ms` is the platform's epoch-ms wall clock at fetch time
+   * (iOS `Date().timeIntervalSince1970 * 1000`, Android
+   * `System.currentTimeMillis()`). The engine guards against
+   * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
+   * (clock skew) by falling through to `recency_rank = 1` for every
+   * candidate — see `engine/ranking/src/score.rs::recency_rank`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -186,6 +341,136 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    @java.lang.Override
+    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> getFrequencyEntriesList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getFrequencyEntriesList());
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    @java.lang.Override
+    public int getFrequencyEntriesCount() {
+      return instance.getFrequencyEntriesCount();
+    }/**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index) {
+      return instance.getFrequencyEntries(index);
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder setFrequencyEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+      copyOnWrite();
+      instance.setFrequencyEntries(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder setFrequencyEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.setFrequencyEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder addFrequencyEntries(com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+      copyOnWrite();
+      instance.addFrequencyEntries(value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder addFrequencyEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry value) {
+      copyOnWrite();
+      instance.addFrequencyEntries(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder addFrequencyEntries(
+        com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addFrequencyEntries(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder addFrequencyEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addFrequencyEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder addAllFrequencyEntries(
+        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry> values) {
+      copyOnWrite();
+      instance.addAllFrequencyEntries(values);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder clearFrequencyEntries() {
+      copyOnWrite();
+      instance.clearFrequencyEntries();
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+     */
+    public Builder removeFrequencyEntries(int index) {
+      copyOnWrite();
+      instance.removeFrequencyEntries(index);
+      return this;
+    }
+
+    /**
+     * <code>int64 now_ms = 3;</code>
+     * @return The nowMs.
+     */
+    @java.lang.Override
+    public long getNowMs() {
+      return instance.getNowMs();
+    }
+    /**
+     * <code>int64 now_ms = 3;</code>
+     * @param value The nowMs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setNowMs(long value) {
+      copyOnWrite();
+      instance.setNowMs(value);
+      return this;
+    }
+    /**
+     * <code>int64 now_ms = 3;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearNowMs() {
+      copyOnWrite();
+      instance.clearNowMs();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -203,9 +488,13 @@ public  final class FetchAtPos extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "position_",
+            "frequencyEntries_",
+            com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.class,
+            "nowMs_",
           };
           java.lang.String info =
-              "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u000b";
+              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u000b\u0002\u001b" +
+              "\u0003\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

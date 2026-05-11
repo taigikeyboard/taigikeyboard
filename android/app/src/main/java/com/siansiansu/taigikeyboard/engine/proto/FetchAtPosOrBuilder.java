@@ -14,4 +14,24 @@ public interface FetchAtPosOrBuilder extends
    * @return The position.
    */
   int getPosition();
+
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry>
+      getFrequencyEntriesList();
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry getFrequencyEntries(int index);
+  /**
+   * <code>repeated .taigi.engine.FrequencyEntry frequency_entries = 2;</code>
+   */
+  int getFrequencyEntriesCount();
+
+  /**
+   * <code>int64 now_ms = 3;</code>
+   * @return The nowMs.
+   */
+  long getNowMs();
 }

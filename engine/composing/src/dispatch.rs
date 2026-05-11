@@ -25,8 +25,9 @@ use lexicon::{
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, ComposingRequest, ComposingResponse,
-    ContinuousResponse,
+    ContinuousResponse, FrequencyEntry,
 };
+use ranking::{build_frequency_map, FrequencyMap};
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/roadmap.md:231` and
@@ -64,6 +65,8 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
         Method::EnterContinuous(_) => Intent::EnterContinuous,
         Method::FetchAtPos(m) => Intent::FetchAtPos {
             position: m.position,
+            frequency_entries: m.frequency_entries,
+            now_ms: m.now_ms,
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -91,7 +94,17 @@ pub fn handle(
     let intent = decode_intent(req)?;
     match intent {
         Intent::QueryState => Ok(engine.snapshot(config)),
-        Intent::FetchAtPos { position } => Ok(handle_fetch_at_pos(engine, position, config)),
+        Intent::FetchAtPos {
+            position,
+            frequency_entries,
+            now_ms,
+        } => Ok(handle_fetch_at_pos(
+            engine,
+            position,
+            &frequency_entries,
+            now_ms,
+            config,
+        )),
         intent => Ok(engine.apply(intent, config)),
     }
 }
@@ -110,7 +123,14 @@ pub fn handle(
 /// engine treats it as an empty result today (matches the
 /// `FetchAtPos.position` proto comment).
 // 中文: Phase 6 — 連續輸入候選讀取入口;短路處理,不經過 transition.rs。
-fn handle_fetch_at_pos(engine: &Engine, position: u32, config: &AppConfig) -> ComposingResponse {
+// 中文: Phase 9.3a — 帶平台 FrequencyEntry[] + now_ms;dispatch 端建立 FrequencyMap 後送進 lexicon。
+fn handle_fetch_at_pos(
+    engine: &Engine,
+    position: u32,
+    frequency_entries: &[FrequencyEntry],
+    now_ms: i64,
+    config: &AppConfig,
+) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
     let state = engine.snapshot_state();
     let Phase::Continuous { raw, .. } = &state.phase else {
@@ -137,7 +157,14 @@ fn handle_fetch_at_pos(engine: &Engine, position: u32, config: &AppConfig) -> Co
     if keys.is_empty() {
         return with_continuous(snapshot, ContinuousResponse::default());
     }
-    let candidates = fetch_via_lexicon(&keys, raw.len() as u32);
+    // Phase 9.3a: hoist proto-shaped `FrequencyEntry[]` into the
+    // domain-typed `FrequencyMap` once per fetch; `lexicon` consumes
+    // `&FrequencyMap` and stays proto-agnostic. Empty list → empty
+    // map → `user_freq_boost(0) = 1.0` for every candidate (backward
+    // -compatible with PR-9.2 platform builds that have not wired
+    // user-frequency plumbing yet).
+    let freq_map = build_frequency_map(frequency_entries);
+    let candidates = fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms);
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -306,16 +333,26 @@ fn strip_trailing_tone_digit(s: &str) -> &str {
 /// caller-built keys' `consumed_span` (TL ASCII or TPS Bopomofo
 /// bytes, depending on input mode).
 ///
-/// **Filter / boost defaults** (deferred per `feedback_no_future_planning.md`):
-/// `enabled_sources_bitmask = u32::MAX` (all sources on) and
-/// `user_freq_boost = 1.0` (no boost). PR-9.3a will plumb per-candidate
-/// `FrequencyEntry` snapshots from `user_frequency.db` and drop the
-/// hardcoded `1.0`. Until then Continuous-mode candidates surface every
-/// dictionary source with neutral boost.
+/// **Filter default** (deferred per `feedback_no_future_planning.md`):
+/// `enabled_sources_bitmask = u32::MAX` (all sources on). PR-9.6 will
+/// plumb the platform dictionary toggles through `FetchAtPos`.
+///
+/// **User-frequency plumb** (Phase 9.3a): `freq_map` + `now_ms` are
+/// caller-built from `FetchAtPos.frequency_entries` and
+/// `FetchAtPos.now_ms` (see `handle_fetch_at_pos`). Empty map +
+/// `now_ms = 0` reproduces the cold-start neutral-boost behavior
+/// (`user_freq_boost(0) = 1.0`, `recency_rank = 1` everywhere) so
+/// PR-9.2 platform builds keep working until PR-9.3b/c plumb the
+/// platform SQLite query.
 // 中文: 取出 lexicon 內的 prefix_index + dictionary,呼 fetch_candidates_for_keys;狀態不可用時回傳空。
 // 中文: raw_len = pending buffer 長度,用於 Phase 9.1 Tier 1 判定 (consumed_span_end == raw_len)。
-// 中文: bitmask/boost 預設為 all-on / 1.0;PR-9.3a 才解除 boost 寫死。
-fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)], raw_len: u32) -> Vec<RawCandidate> {
+// 中文: Phase 9.3a — freq_map + now_ms 由呼叫端從 FrequencyEntry[] 建好;空 map = 中性 boost。
+fn fetch_via_lexicon(
+    keys: &[(ConsumedSpan, String)],
+    raw_len: u32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+) -> Vec<RawCandidate> {
     LexiconHandle::with_state(|state| {
         let Some(prefix) = state.prefix_index.as_ref() else {
             return Ok(Vec::new());
@@ -327,7 +364,8 @@ fn fetch_via_lexicon(keys: &[(ConsumedSpan, String)], raw_len: u32) -> Vec<RawCa
             keys,
             raw_len,
             u32::MAX,
-            1.0,
+            freq_map,
+            now_ms,
             prefix,
             dict,
         ))

@@ -72,7 +72,9 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
 use crate::prefix_index::PrefixIndex;
-use ranking::{calculate_continuous_score, source_tier_rank};
+use ranking::{
+    calculate_continuous_score, recency_rank, source_tier_rank, user_freq_boost, FrequencyMap,
+};
 
 /// `RawCandidate.form` discriminator. Phase 5 only emits notone candidates
 /// because span-local lookup is always over `tl:<toneless>` keys
@@ -190,6 +192,18 @@ pub struct RawCandidate {
     /// Metadata-only in Phase 9.2 — not consulted by [`SortKey`].
     // 中文: 候選類型軸 (Phase 9.2);由 derive_mode 從 hanzi 推導;不入 SortKey。
     pub mode: CandidateMode,
+    /// v3.5.8 Phase 9.3a — `0` when this candidate's matching
+    /// `FrequencyEntry` was selected strictly inside the
+    /// `RECENCY_WINDOW_MS` window; `1` otherwise (stale, never used,
+    /// or clock-skew). Computed once by [`record_to_candidate`] from
+    /// the caller-built `FrequencyMap` + `now_ms`, and read verbatim
+    /// by [`SortKey::new`]. Internal: NOT emitted on
+    /// `CandidateMessage` today — platform UI does not yet render a
+    /// "recently used" affordance, so adding a wire field is
+    /// premature (PR-9.3c may revisit).
+    // 中文: Phase 9.3a — 候選的最近使用 rank;由 record_to_candidate 從 FrequencyMap + now_ms 算好,SortKey 直接讀。
+    // 中文: 目前不上 wire (CandidateMessage 沒帶);UI 沒「最近使用」標記需求,PR-9.3c 視情況補。
+    pub recency_rank: u8,
 }
 
 /// Fetch every dictionary candidate whose toneless TL key matches
@@ -201,14 +215,30 @@ pub struct RawCandidate {
 /// callers must NOT use this entry — they go through the Phase-6
 /// dispatcher path that builds keys via `phonetics::tps_to_tl` and
 /// calls [`fetch_candidates_for_keys`] directly.
+///
+/// **v3.5.8 Phase 9.3a**: `freq_map` carries the per-display-text user
+/// selection snapshot keyed by `RawCandidate::display_text`
+/// (= `hanji ?? tl`); `now_ms` is the platform's epoch-ms wall
+/// clock. Pass `&FrequencyMap::new()` + `now_ms = 0` for cold-start
+/// neutral behaviour (boost = 1.0, recency_rank = 1 everywhere) —
+/// `recency_rank()`'s guards (`now_ms <= 0`, `last_used_ms <= 0`,
+/// clock skew) make this a safe default.
 // 中文: TL/POJ 連續輸入入口 — 把 endings 轉成 (consumed_span, "tl:<lowered>") pairs 後委派給 fetch_candidates_for_keys。
 // 中文: TPS 路徑請走 Phase 6 dispatcher,先用 phonetics::tps_to_tl 轉出 toneless TL key 再呼叫 fetch_candidates_for_keys。
+// 中文: Phase 9.3a — 接受 FrequencyMap + now_ms;空 map + now_ms=0 = cold-start neutral。
+// Argument count (8) exceeds clippy::too_many_arguments threshold (7);
+// each argument is a distinct concern (input + pos + endings + filter +
+// freq + clock + two readers) and bundling them would just shift
+// boilerplate to every call site (dispatch.rs + 5 test files). Allow
+// the lint and revisit if a builder pattern lands in PR-9.5+.
+#[allow(clippy::too_many_arguments)]
 pub fn fetch_candidates_for_endings(
     input: &str,
     pos: usize,
     endings: &[usize],
     enabled_sources_bitmask: u32,
-    user_freq_boost: f32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> Vec<RawCandidate> {
@@ -255,7 +285,8 @@ pub fn fetch_candidates_for_endings(
         &keys,
         input.len() as u32,
         enabled_sources_bitmask,
-        user_freq_boost,
+        freq_map,
+        now_ms,
         prefix_index,
         dict,
     )
@@ -290,18 +321,31 @@ pub type ConsumedSpan = (u32, u32);
 ///  -freq, source_tier_rank, stable_idx)
 /// ```
 ///
-/// PR-9.1 carries sentinel `recency_rank = 1` (no FrequencyEntry
-/// plumbing yet — that lands in PR-9.3a per `docs/roadmap.md` Phase 9
-/// row 9.3a). NaN scores (only reachable if the caller violates the
-/// `user_freq_boost` finite contract) are coerced to `f32::MIN` at
-/// `SortKey` construction so the descending-order invariant holds.
+/// # v3.5.8 Phase 9.3a — user-frequency plumb
+///
+/// `freq_map` is the per-`display_text` selection snapshot built once
+/// per fetch by `composing/src/dispatch.rs::handle_fetch_at_pos` from
+/// `FetchAtPos.frequency_entries`. `now_ms` is the platform's
+/// epoch-ms wall clock at fetch time. [`record_to_candidate`] looks
+/// up each candidate by `display_text`, computes
+/// [`ranking::user_freq_boost`] (saturated at
+/// [`ranking::MAX_BOOST`]), and derives
+/// [`SortKey.recency_rank`](SortKey) via [`ranking::recency_rank`]
+/// (which guards against `now_ms <= 0`, `last_used_ms <= 0`, and
+/// clock skew). NaN scores (only reachable if the boost helper
+/// produces a non-finite value — which it cannot under the
+/// public contract) are coerced to `f32::MIN` at `SortKey`
+/// construction so the descending-order invariant holds.
 // 中文: Phase 6 新增 — 模式無關的 span-local 候選查詢;接受 (consumed_span, "tl:<key>") pair list,讓 dispatch 端集中處理 TL vs TPS key 構造。
 // 中文: Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 七維 lexicographic。
+// 中文: Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
+#[allow(clippy::too_many_arguments)]
 pub fn fetch_candidates_for_keys(
     keys: &[(ConsumedSpan, String)],
     raw_len: u32,
     enabled_sources_bitmask: u32,
-    user_freq_boost: f32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> Vec<RawCandidate> {
@@ -320,7 +364,7 @@ pub fn fetch_candidates_for_keys(
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
                 continue;
             }
-            out.push(record_to_candidate(record, *span, user_freq_boost));
+            out.push(record_to_candidate(record, *span, freq_map, now_ms));
         }
     }
 
@@ -346,7 +390,8 @@ pub fn fetch_candidates_for_keys(
 fn record_to_candidate(
     record: DictionaryRecord,
     consumed_span: ConsumedSpan,
-    user_freq_boost: f32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
 ) -> RawCandidate {
     let DictionaryRecord {
         bitmask,
@@ -357,7 +402,20 @@ fn record_to_candidate(
     } = record;
     let mode = derive_mode(hanzi.as_deref());
     let display_text = hanzi.unwrap_or(tl);
-    let score = calculate_continuous_score(frequency, syllable_count, user_freq_boost);
+    // Phase 9.3a: look up the candidate's user-frequency snapshot by
+    // `display_text` (the same key the platform writes to
+    // `user_frequency.db` on commit). Absent entries fall through to
+    // `FrequencyData::default()` (count = 0, last_used_ms = 0) →
+    // `user_freq_boost(0) = 1.0` and `recency_rank(_, 0) = 1`, which
+    // reproduces the cold-start neutral behaviour.
+    let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
+    // `FrequencyData.count` is `i32` (legacy `calculate_score` cap
+    // domain). Saturate the negative side to 0; the wire builder
+    // already saturates the positive side at `i32::MAX`.
+    let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
+    let boost = user_freq_boost(count_u32);
+    let score = calculate_continuous_score(frequency, syllable_count, boost);
+    let recency = recency_rank(now_ms, freq_data.last_used_ms);
     RawCandidate {
         consumed_span,
         syllable_count,
@@ -367,6 +425,7 @@ fn record_to_candidate(
         frequency,
         bitmask,
         mode,
+        recency_rank: recency,
     }
 }
 
@@ -393,10 +452,12 @@ struct SortKey {
     /// Descending: longer coverage wins within tier.
     // 中文: coverage 長度 desc,同 tier 內長覆蓋優先。
     neg_coverage: Reverse<u32>,
-    /// `0` = recent (last_used_ms within `RECENCY_WINDOW_MS`), `1` =
-    /// stale/never-used. PR-9.1 always sets `1`; PR-9.3a will compute
-    /// from `FrequencyEntry.last_used_ms`.
-    // 中文: recency_rank — 0 = recent (PR-9.3a 才填入), PR-9.1 一律 1。
+    /// `0` = recent (`last_used_ms` within
+    /// `ranking::RECENCY_WINDOW_MS`), `1` = stale, never used, or
+    /// clock-skew. Populated by `record_to_candidate` from the
+    /// caller-built `FrequencyMap` + `now_ms` (Phase 9.3a). PR-9.1
+    /// carried a sentinel `1`; that contract is now lifted.
+    // 中文: recency_rank — Phase 9.3a 從 FrequencyMap + now_ms 真正計算;0 = recent,1 = stale/never/clock-skew。
     recency_rank: u8,
     /// Descending: higher `freq × syll_bias × boost` wins.
     // 中文: adjusted_score desc;NaN coerce 成 f32::MIN 於 NonNanF32 內。
@@ -420,11 +481,6 @@ impl SortKey {
         let (start, end) = candidate.consumed_span;
         let coverage_bytes = end.saturating_sub(start);
         let tier: u8 = if end == raw_len { 0 } else { 1 };
-        // TODO(Phase 9.3a): replace sentinel with derived value from
-        // `FrequencyEntry { last_used_ms }` once user-freq plumbing
-        // lands. Pinned by `recency_rank_field_is_sentinel_one_in_pr_9_1`
-        // test — flip both call sites together.
-        let recency_rank: u8 = 1;
         // PR-9.1 always sees dict.bin records (is_custom=false). PR-9.6
         // will introduce platform-side custom dict merge; that merge
         // point is responsible for tagging the custom rank, not this fn.
@@ -432,7 +488,7 @@ impl SortKey {
         Self {
             tier,
             neg_coverage: Reverse(coverage_bytes),
-            recency_rank,
+            recency_rank: candidate.recency_rank,
             neg_score: Reverse(NonNanF32::new(candidate.score)),
             neg_freq: Reverse(candidate.frequency),
             source_rank,
@@ -490,13 +546,25 @@ mod sort_key_tests {
     /// Convenience builder so each test only specifies the dimensions
     /// it exercises. Fields not exercised default to neutral values:
     /// `frequency = 0`, `bitmask = 0` (→ source rank = default = 5),
-    /// `score = 0.0`, `syllable_count = 1`.
+    /// `score = 0.0`, `syllable_count = 1`, `recency_rank = 1` (stale
+    /// = the cold-start default in PR-9.3a).
     fn cand(
         span_start: u32,
         span_end: u32,
         score: f32,
         frequency: u32,
         bitmask: u16,
+    ) -> RawCandidate {
+        cand_with_recency(span_start, span_end, score, frequency, bitmask, 1)
+    }
+
+    fn cand_with_recency(
+        span_start: u32,
+        span_end: u32,
+        score: f32,
+        frequency: u32,
+        bitmask: u16,
+        recency_rank: u8,
     ) -> RawCandidate {
         RawCandidate {
             consumed_span: (span_start, span_end),
@@ -507,6 +575,7 @@ mod sort_key_tests {
             frequency,
             bitmask,
             mode: CandidateMode::Hant,
+            recency_rank,
         }
     }
 
@@ -585,13 +654,33 @@ mod sort_key_tests {
     }
 
     #[test]
-    fn recency_rank_field_is_sentinel_one_in_pr_9_1() {
-        // PR-9.1 contract: no FrequencyEntry plumbing yet, so every
-        // SortKey carries `recency_rank = 1`. PR-9.3a will change this
-        // and the assertion should be tightened then.
+    fn sort_key_reads_recency_rank_from_candidate() {
+        // Phase 9.3a contract: `SortKey::new` reads `candidate
+        // .recency_rank` verbatim — no sentinel, no recomputation.
+        // The default `cand()` builder seeds rank = 1 (stale), and
+        // `cand_with_recency` lets a test explicitly seed rank = 0.
         let raw_len: u32 = 3;
-        let key = SortKey::new(&cand(0, 3, 1.0, 1, 0), raw_len, 0);
-        assert_eq!(key.recency_rank, 1);
+        let stale = SortKey::new(&cand(0, 3, 1.0, 1, 0), raw_len, 0);
+        assert_eq!(stale.recency_rank, 1);
+        let recent = SortKey::new(&cand_with_recency(0, 3, 1.0, 1, 0, 0), raw_len, 1);
+        assert_eq!(recent.recency_rank, 0);
+    }
+
+    #[test]
+    fn recency_rank_zero_beats_one_when_tier_coverage_equal() {
+        // Phase 9.3a headline behaviour: within the same (tier,
+        // -coverage) bucket, a recently-used candidate must precede a
+        // stale one even if scores otherwise tie. This is the only
+        // dimension between -coverage and -score in the lexicographic
+        // key, so it triggers reliably with equal score / freq /
+        // bitmask.
+        let raw_len: u32 = 3;
+        let recent = cand_with_recency(0, 3, 100.0, 100, 0, 0);
+        let stale = cand_with_recency(0, 3, 100.0, 100, 0, 1);
+        assert!(
+            SortKey::new(&recent, raw_len, 0) < SortKey::new(&stale, raw_len, 1),
+            "recency_rank=0 (recent) must precede recency_rank=1 (stale)"
+        );
     }
 
     #[test]

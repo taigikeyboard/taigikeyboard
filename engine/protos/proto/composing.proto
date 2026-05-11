@@ -2,6 +2,15 @@ syntax = "proto3";
 
 package taigi.engine;
 
+// v3.5.8 Phase 9.3a — Continuous-input ranking gained access to the
+// per-candidate `user_frequency.db` snapshot; the request payload reuses
+// the canonical `taigi.engine.FrequencyEntry` defined in `lexicon.proto`
+// (already used by `ProcessCandidatesRequest.freq`) instead of declaring
+// a second wire-incompatible cousin. This is the only cross-file import
+// inside composing.proto; lexicon.proto does NOT import composing.proto,
+// so the dependency edge is one-way and cycle-free.
+import "lexicon.proto";
+
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
@@ -115,7 +124,28 @@ message EnterContinuous {}
 // `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
 // dispatcher path that converts each Bopomofo span to a `tl:<toneless>`
 // FST key before lexicon lookup. Emits no effects.
-message FetchAtPos { uint32 position = 1; }
+//
+// v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
+// per-candidate `user_frequency.db` snapshot (count + last_used_ms,
+// keyed by `display_text_key` = `hanji ?? roman`). The engine builds
+// a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
+// per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
+// `SortKey.recency_rank` axis from `now_ms − last_used_ms`. Empty
+// list = neutral 1.0 boost + rank 1 everywhere; backward-compatible
+// with PR-9.2 platform builds that have not yet wired the snapshot
+// (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+//
+// `now_ms` is the platform's epoch-ms wall clock at fetch time
+// (iOS `Date().timeIntervalSince1970 * 1000`, Android
+// `System.currentTimeMillis()`). The engine guards against
+// `now_ms <= 0`, `last_used_ms <= 0`, and `now_ms < last_used_ms`
+// (clock skew) by falling through to `recency_rank = 1` for every
+// candidate — see `engine/ranking/src/score.rs::recency_rank`.
+message FetchAtPos {
+  uint32 position                          = 1;
+  repeated FrequencyEntry frequency_entries = 2;
+  int64 now_ms                             = 3;
+}
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
 // payload mirrors `Intent::CommitContinuous` (engine-side state machine

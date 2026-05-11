@@ -429,12 +429,33 @@ public struct Taigi_Engine_EnterContinuous: Sendable {
 /// `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
 /// dispatcher path that converts each Bopomofo span to a `tl:<toneless>`
 /// FST key before lexicon lookup. Emits no effects.
+///
+/// v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
+/// per-candidate `user_frequency.db` snapshot (count + last_used_ms,
+/// keyed by `display_text_key` = `hanji ?? roman`). The engine builds
+/// a `FrequencyMap` once per fetch, computes `user_freq_boost(count)`
+/// per candidate (saturated at `MAX_BOOST = 5.0`), and derives the
+/// `SortKey.recency_rank` axis from `now_ms − last_used_ms`. Empty
+/// list = neutral 1.0 boost + rank 1 everywhere; backward-compatible
+/// with PR-9.2 platform builds that have not yet wired the snapshot
+/// (PR-9.3b plumbs iOS, PR-9.3c plumbs Android).
+///
+/// `now_ms` is the platform's epoch-ms wall clock at fetch time
+/// (iOS `Date().timeIntervalSince1970 * 1000`, Android
+/// `System.currentTimeMillis()`). The engine guards against
+/// `now_ms <= 0`, `last_used_ms <= 0`, and `now_ms < last_used_ms`
+/// (clock skew) by falling through to `recency_rank = 1` for every
+/// candidate — see `engine/ranking/src/score.rs::recency_rank`.
 public struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   public var position: UInt32 = 0
+
+  public var frequencyEntries: [Taigi_Engine_FrequencyEntry] = []
+
+  public var nowMs: Int64 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1484,7 +1505,7 @@ extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1493,6 +1514,8 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularUInt32Field(value: &self.position) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.frequencyEntries) }()
+      case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
       default: break
       }
     }
@@ -1502,11 +1525,19 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
     if self.position != 0 {
       try visitor.visitSingularUInt32Field(value: self.position, fieldNumber: 1)
     }
+    if !self.frequencyEntries.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.frequencyEntries, fieldNumber: 2)
+    }
+    if self.nowMs != 0 {
+      try visitor.visitSingularInt64Field(value: self.nowMs, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_FetchAtPos, rhs: Taigi_Engine_FetchAtPos) -> Bool {
     if lhs.position != rhs.position {return false}
+    if lhs.frequencyEntries != rhs.frequencyEntries {return false}
+    if lhs.nowMs != rhs.nowMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

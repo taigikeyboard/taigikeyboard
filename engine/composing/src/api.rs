@@ -121,9 +121,22 @@ pub enum Intent {
     /// needs lexicon state — see `dispatch::handle_fetch_at_pos`.
     /// `transition.rs` only sees this variant via a defensive snapshot
     /// arm; production callers always go through dispatch.
+    ///
+    /// v3.5.8 Phase 9.3a — carries the per-candidate
+    /// `user_frequency.db` snapshot (`frequency_entries`, keyed by
+    /// `display_text_key = hanji ?? roman`) and the platform wall
+    /// clock (`now_ms`, epoch-ms). Both fields are decoded verbatim
+    /// from `FetchAtPos { frequency_entries, now_ms }` and threaded
+    /// straight to `handle_fetch_at_pos`. Empty list + `now_ms = 0`
+    /// is the backward-compatible "no user-freq plumbing yet" mode
+    /// that reproduces PR-9.2 behavior (neutral 1.0 boost, rank 1
+    /// everywhere).
     // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
+    // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
     FetchAtPos {
         position: u32,
+        frequency_entries: Vec<protos::engine::FrequencyEntry>,
+        now_ms: i64,
     },
     /// Commit a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the committed segment's raw text and

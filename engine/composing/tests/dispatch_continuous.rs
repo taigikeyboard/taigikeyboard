@@ -64,7 +64,11 @@ fn decode_enter_continuous() {
 fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
     let mut engine = Engine::new();
     let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos { position: 0 })),
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 0,
+            frequency_entries: vec![],
+            now_ms: 0,
+        })),
         &mut engine,
         &config(),
     )
@@ -100,7 +104,11 @@ fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
     ));
 
     let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos { position: 1 })),
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 1,
+            frequency_entries: vec![],
+            now_ms: 0,
+        })),
         &mut engine,
         &config(),
     )
@@ -134,7 +142,11 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
     .unwrap();
 
     let resp = dispatch::handle(
-        &req(Method::FetchAtPos(FetchAtPos { position: 0 })),
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 0,
+            frequency_entries: vec![],
+            now_ms: 0,
+        })),
         &mut engine,
         &config(),
     )
@@ -271,7 +283,11 @@ fn fetch_at_pos_decodes_to_position_field() {
     // `decode_fetch_at_pos_position_nonzero_returns_empty_carrier`;
     // here we just lock the typed-Intent shape so a future field
     // rename keeps the test surface in sync.
-    let _ = Intent::FetchAtPos { position: 7 };
+    let _ = Intent::FetchAtPos {
+        position: 7,
+        frequency_entries: vec![],
+        now_ms: 0,
+    };
 }
 
 // ---- Optional-presence contract for `ContinuousResponse` -----------------
@@ -390,4 +406,67 @@ fn empty_start_then_enter_continuous_stays_idle() {
         "EnterContinuous from empty raw must NOT enter Phase::Continuous"
     );
     assert!(resp.continuous.is_none());
+}
+
+// ---- v3.5.8 Phase 9.3a — FetchAtPos plumbs user-frequency snapshot ------
+// Decode-only smoke test: confirm a `FetchAtPos` request carrying a
+// non-empty `frequency_entries` + non-zero `now_ms` round-trips through
+// `decode_intent` → `Intent::FetchAtPos` without panicking and that the
+// lexicon-unavailable degraded path still returns an empty carrier
+// (state-availability fallback, not a decode failure). The full
+// boost-amplifies-score behaviour is pinned hermetically in
+// `engine/lexicon/tests/user_freq_plumb.rs`; this test only locks the
+// composing-side decode wiring.
+
+#[test]
+fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
+    let mut engine = Engine::new();
+    dispatch::handle(
+        &req(Method::Start(protos::engine::Start {
+            text: "tsua".into(),
+        })),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+    dispatch::handle(
+        &req(Method::EnterContinuous(EnterContinuous {})),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+
+    let resp = dispatch::handle(
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 0,
+            frequency_entries: vec![
+                protos::engine::FrequencyEntry {
+                    display_text_key: "珠仔".into(),
+                    count: 3,
+                    last_used_ms: 1_700_000_000_000,
+                },
+                // Duplicate key exercises the `last-write-wins` policy
+                // documented at `ranking::build_frequency_map`.
+                protos::engine::FrequencyEntry {
+                    display_text_key: "珠仔".into(),
+                    count: 7,
+                    last_used_ms: 1_700_000_001_000,
+                },
+            ],
+            now_ms: 1_700_000_002_000,
+        })),
+        &mut engine,
+        &config(),
+    )
+    .expect("dispatch ok");
+
+    // Lexicon is not installed in this bare test process, so the
+    // candidate carrier is still empty — but the carrier MUST be
+    // present (proving the dispatcher reached `handle_fetch_at_pos`)
+    // and the decode must not have panicked on the populated payload.
+    let cont = resp.continuous.expect("continuous carrier present");
+    assert!(
+        cont.candidates.is_empty(),
+        "lexicon not installed → empty candidates, but decode succeeded"
+    );
 }

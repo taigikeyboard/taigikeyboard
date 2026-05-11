@@ -33,6 +33,7 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{fetch_candidates_for_endings, CandidateMode, RawCandidate, FORM_NOTONE};
+use ranking::FrequencyMap;
 
 mod common;
 use common::{build_tkdb_v2, write_temp};
@@ -163,9 +164,10 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     let out = fetch_candidates_for_endings(
         "tsua",
         0,
-        &[3, 4],  // syllabifier emits span=3 (`tsu`) and span=4 (`tsua`).
-        u32::MAX, // all sources enabled
-        1.0,      // no user-freq boost
+        &[3, 4],              // syllabifier emits span=3 (`tsu`) and span=4 (`tsua`).
+        u32::MAX,             // all sources enabled
+        &FrequencyMap::new(), // empty user-freq snapshot
+        0,                    // now_ms = 0 → recency_rank = 1 everywhere (cold-start)
         &prefix_index,
         &dict,
     );
@@ -266,7 +268,8 @@ fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
         0,
         &[3, 5, 13],
         u32::MAX,
-        1.0,
+        &FrequencyMap::new(),
+        0,
         &prefix_index,
         &dict,
     );
@@ -317,7 +320,16 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
         ],
     );
 
-    let out = fetch_candidates_for_endings("taixyz", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "taixyz",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
 
     assert!(!out.is_empty(), "expected at least the 台 candidate");
     for c in &out {
@@ -351,7 +363,16 @@ fn empty_endings_yields_empty() {
             freq: 1,
         }],
     );
-    let out = fetch_candidates_for_endings("tai", 0, &[], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert!(out.is_empty(), "no endings → no candidates");
 }
 
@@ -370,7 +391,16 @@ fn pos_at_or_past_input_end_yields_empty() {
     // `pos == input.len()` is the natural "fully-consumed" state — no
     // span can extend past the input, so the function returns empty
     // without panicking.
-    let out = fetch_candidates_for_endings("tai", 3, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai",
+        3,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert!(out.is_empty());
 }
 
@@ -388,45 +418,28 @@ fn out_of_range_endings_silently_skipped() {
             freq: 50,
         }],
     );
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3, 99, 100], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3, 99, 100],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert_eq!(out.len(), 1, "only ending=3 valid: {out:#?}");
     assert_eq!(out[0].display_text, "台");
 }
 
-#[test]
-fn nan_boost_does_not_break_descending_order() {
-    // Contract violation: caller passes NaN. The sort comparator must
-    // coerce NaN to f32::MIN so the descending-score invariant holds
-    // (see continuous.rs sort_by). Result is implementation-defined
-    // (NaN-scored candidates sink to the end) but never panics or
-    // returns unsorted output.
-    let (prefix_index, dict) = build_fixture(
-        "nan-defense",
-        &[
-            Row {
-                toneless_key: "tai",
-                hanzi: "台",
-                tl: "tâi",
-                syll: 1,
-                freq: 100,
-            },
-            Row {
-                toneless_key: "tai",
-                hanzi: "颱",
-                tl: "thai",
-                syll: 1,
-                freq: 50,
-            },
-        ],
-    );
-    let out =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, f32::NAN, &prefix_index, &dict);
-    // No panic; some deterministic ordering exists. We don't assert on
-    // values because NaN multiplies poison everything; we just assert
-    // the function returns and the sort completes.
-    assert_eq!(out.len(), 2, "both rows still surface");
-}
+// Phase 9.3a note: the pre-9.3a `nan_boost_does_not_break_descending_order`
+// test injected `f32::NAN` directly through the `user_freq_boost: f32`
+// parameter. That parameter is gone — `fetch_candidates_for_*` now
+// builds the boost internally via `ranking::user_freq_boost(count)`,
+// which always returns a finite value in `[1.0, MAX_BOOST]`. The
+// `NonNanF32` defense inside `SortKey` is still pinned by
+// `nan_score_is_coerced_to_minimum_not_panic` in `continuous.rs
+// sort_key_tests`.
 
 #[test]
 fn numeric_tone_input_strips_to_fused_toneless_key() {
@@ -449,7 +462,8 @@ fn numeric_tone_input_strips_to_fused_toneless_key() {
         0,
         &[5], // syllabifier emits one ending at end-of-input.
         u32::MAX,
-        1.0,
+        &FrequencyMap::new(),
+        0,
         &prefix_index,
         &dict,
     );
@@ -473,8 +487,16 @@ fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
             freq: 50,
         }],
     );
-    let out =
-        fetch_candidates_for_endings("tai1bak4", 0, &[4, 8], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai1bak4",
+        0,
+        &[4, 8],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     let multi = out
         .iter()
         .find(|c| c.display_text == "代墨" && c.consumed_span == (0, 8))
@@ -508,7 +530,8 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
         0,
         &[7], // hypothetical full-span ending (real syllabifier never emits this)
         u32::MAX,
-        1.0,
+        &FrequencyMap::new(),
+        0,
         &prefix_index,
         &dict,
     );
@@ -520,27 +543,11 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
     );
 }
 
-#[test]
-fn user_freq_boost_amplifies_score_multiplicatively() {
-    // boost=2.0 must double the score relative to boost=1.0 (which is
-    // the noop baseline). Cross-checks the wiring between
-    // fetch_candidates_for_endings and ranking::calculate_continuous_score.
-    let (prefix_index, dict) = build_fixture(
-        "boost",
-        &[Row {
-            toneless_key: "tai",
-            hanzi: "台",
-            tl: "tâi",
-            syll: 1,
-            freq: 100,
-        }],
-    );
-    let baseline =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
-    let boosted = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 2.0, &prefix_index, &dict);
-    assert!((baseline[0].score - 100.0).abs() < 1e-4);
-    assert!((boosted[0].score - 200.0).abs() < 1e-4);
-}
+// Phase 9.3a: the pre-9.3a `user_freq_boost_amplifies_score_multiplicatively`
+// test fed a raw `f32` boost through the public API. That signature is
+// retired — boost is now derived from `FrequencyMap` entries. The
+// new contract is covered end-to-end in
+// `engine/lexicon/tests/user_freq_plumb.rs`.
 
 // ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — Regression matrix (`taiuantaigi` / `e` / `taixyz`)
@@ -600,7 +607,8 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
         0,
         &[3, 6, 11], // syllabifier endings
         u32::MAX,
-        1.0,
+        &FrequencyMap::new(),
+        0,
         &prefix_index,
         &dict,
     );
@@ -644,7 +652,16 @@ fn single_char_input_e_still_surfaces_de_at_slot_1() {
         ],
     );
 
-    let out = fetch_candidates_for_endings("e", 0, &[1], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "e",
+        0,
+        &[1],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
 
     assert_eq!(out.len(), 2);
     assert_eq!(
@@ -688,7 +705,16 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
         ],
     );
 
-    let out = fetch_candidates_for_endings("taixyz", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "taixyz",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
 
     assert!(!out.is_empty(), "Tier 1 partials must still surface");
     for cand in &out {
@@ -755,7 +781,16 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
         ],
     );
 
-    let out = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
 
     assert_eq!(out.len(), 3);
     let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
@@ -784,7 +819,16 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
             freq: 100,
         }],
     );
-    let out = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert_eq!(out.len(), 1);
     assert_eq!(
         out[0].bitmask,
@@ -837,12 +881,30 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         ],
     );
 
-    let hant = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    let hant = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert_eq!(hant.len(), 1);
     assert_eq!(hant[0].mode, CandidateMode::Hant);
     assert_eq!(hant[0].display_text, "台");
 
-    let tailo = fetch_candidates_for_endings("li", 0, &[2], u32::MAX, 1.0, &prefix_index, &dict);
+    let tailo = fetch_candidates_for_endings(
+        "li",
+        0,
+        &[2],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert_eq!(tailo.len(), 1);
     assert_eq!(
         tailo[0].mode,
@@ -851,7 +913,16 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     );
     assert_eq!(tailo[0].display_text, "lí");
 
-    let mixed = fetch_candidates_for_endings("iausi", 0, &[5], u32::MAX, 1.0, &prefix_index, &dict);
+    let mixed = fetch_candidates_for_endings(
+        "iausi",
+        0,
+        &[5],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
     assert_eq!(mixed.len(), 1);
     assert_eq!(
         mixed[0].mode,

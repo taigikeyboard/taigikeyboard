@@ -11,18 +11,9 @@
 
 // 中文: 穩定排序模組,依候選詞總分由高到低排;同分時保留輸入順序,行為與 iOS/Android 平台一致。
 
-use std::collections::HashMap;
-
 use protos::engine::{ScoreBreakdown, TaigiWord};
 
-use crate::score::{self, FrequencyData};
-
-/// Caller-supplied frequency lookup keyed by `TaigiWord.displayText`
-/// (= `hanji` if non-empty else `roman`). Engine builds this once per
-/// request from the proto's `FrequencyEntry` list and reuses it across
-/// the whole batch.
-// 中文: 使用者頻率查詢表,key 為候選詞顯示文字(漢字優先,否則用羅馬字)。
-pub(crate) type FrequencyMap = HashMap<String, FrequencyData>;
+use crate::score::{self, FrequencyMap};
 
 /// Score every input word, sort descending by total, return both the
 /// sorted words and their score breakdowns (parallel arrays).
@@ -126,6 +117,7 @@ pub(crate) fn display_text_key(word: &TaigiWord) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::score::FrequencyData;
 
     fn word(id: i64, roman: &str, hanji: Option<&str>, length_score: Option<i32>) -> TaigiWord {
         TaigiWord {

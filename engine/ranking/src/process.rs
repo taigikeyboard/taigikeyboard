@@ -19,15 +19,11 @@
 
 // 中文: process_candidates 的整體流程協調者:去重 → 評分排序 → (TPS 模式)顯示去重 → 回傳結果。
 
-use std::collections::HashMap;
-
-use protos::engine::{
-    FrequencyEntry, ProcessCandidatesRequest, ProcessCandidatesResponse, ScoreBreakdown,
-};
+use protos::engine::{ProcessCandidatesRequest, ProcessCandidatesResponse, ScoreBreakdown};
 
 use crate::dedup;
-use crate::score::FrequencyData;
-use crate::sort::{self, FrequencyMap};
+use crate::score::build_frequency_map;
+use crate::sort;
 
 /// Run the merged-candidate ranking pipeline against `req` and return the
 /// proto response. Stateless and panic-free for well-formed input.
@@ -86,25 +82,6 @@ fn process_merge_order(req: ProcessCandidatesRequest) -> ProcessCandidatesRespon
     }
 }
 
-/// Build the per-display-text frequency lookup. The proto's
-/// `FrequencyEntry.display_text_key` matches `TaigiWord.displayText`
-/// (`hanji` if non-empty else `roman`); that pairing lives at the
-/// platform → engine boundary.
-// 中文: 從 proto 的 FrequencyEntry 陣列建立查詢用 HashMap,key 為候選詞顯示文字。
-fn build_frequency_map(entries: &[FrequencyEntry]) -> FrequencyMap {
-    let mut map = HashMap::with_capacity(entries.len());
-    for entry in entries {
-        map.insert(
-            entry.display_text_key.clone(),
-            FrequencyData {
-                count: entry.count as i32,
-                last_used_ms: entry.last_used_ms,
-            },
-        );
-    }
-    map
-}
-
 /// Apply display-dedup to the sorted word list, keeping any parallel
 /// breakdown vector aligned.
 ///
@@ -150,6 +127,7 @@ fn post_sort_display_dedup(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use protos::engine::FrequencyEntry;
     use protos::engine::TaigiWord;
 
     fn word(id: i64, roman: &str, hanji: Option<&str>, length_score: Option<i32>) -> TaigiWord {

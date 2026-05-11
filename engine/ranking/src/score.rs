@@ -41,8 +41,21 @@ use phonetics::taigi_unicode_base_form;
 const USER_FREQ_CAP: i32 = 100;
 // 中文: 使用者頻率每次的加權倍率。
 const USER_FREQ_WEIGHT: i32 = 100;
-// 中文: 最近使用判定視窗(1 小時內);超過則不給最近使用加分。
-const RECENCY_WINDOW_MS: i64 = 60 * 60 * 1000;
+/// Recency window for both the legacy additive [`calculate_score`] and
+/// the Phase 9.1 lexicographic [`recency_rank`]. An entry is "recent"
+/// when `0 <= (now_ms − last_used_ms) < RECENCY_WINDOW_MS`. One hour
+/// in epoch-ms.
+///
+/// **Path divergence (intentional)**: [`recency_rank`] (Phase 9.3a)
+/// additionally rejects `now_ms <= 0`, `last_used_ms <= 0`, and
+/// clock-skew (`now_ms < last_used_ms`) as stale; [`calculate_score`]
+/// (legacy path) keeps its pre-9.3a behaviour and only filters on
+/// `last_used_ms > 0`. Tightening the legacy guards would change
+/// scoring for the non-Continuous path and is out of scope for this
+/// slice (`feedback_round_hygiene.md`).
+// 中文: 最近使用判定視窗(1 小時內);Phase 9.1 SortKey 與 legacy 加總公式共用同一閾值。
+// 中文: legacy calculate_score 不採用 9.3a 的 clock-invalid guard,以維持 pre-9.3a 行為。
+pub const RECENCY_WINDOW_MS: i64 = 60 * 60 * 1000;
 // 中文: 最近使用加分。
 const RECENCY_BONUS: i32 = 200;
 // 中文: 完全相符加分。
@@ -98,6 +111,25 @@ const CONTINUOUS_SOURCE_BITS: &[(u16, u8)] = &[
 // 中文: 未命中任何已知來源 bit 時使用的 fallback rank。
 pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 
+/// Per-selection boost increment for the Continuous-input
+/// `user_freq_boost`. Mirrors the additive `0.1` previously hard-coded
+/// in [`calculate_continuous_score`]; pinning it as a public constant
+/// is the cross-platform invariant axis for PR-9.3a + PR-9.3b/c
+/// (`docs/roadmap.md` § Phase 9 跨平台常數表). Platforms MUST NOT
+/// redefine — single source of truth per
+/// `rules/cross-platform-alignment.md` §3a.
+// 中文: Phase 9.3a — 每次使用者選用,boost 增量 0.1;跨平台不可重定義。
+pub const BOOST_ALPHA: f32 = 0.1;
+
+/// Saturation ceiling for the Continuous-input `user_freq_boost`.
+/// Counts above `(MAX_BOOST − 1) / BOOST_ALPHA = 40` produce the same
+/// boost (`5.0`); guards against a single hot entry dominating the
+/// candidate list after dozens of selections (stale-dominance defense
+/// from `docs/engine/continuous-input-ranking.md` §3.2 Gap B). Same
+/// cross-platform invariant policy as [`BOOST_ALPHA`].
+// 中文: Phase 9.3a — boost 飽和上限 5×,40 次以上選擇後不再放大,防 stale dominance。
+pub const MAX_BOOST: f32 = 5.0;
+
 /// First-match-wins source rank for the Continuous-input sort_key.
 /// Returns `0` when `is_custom`, else looks up the first matching
 /// bit in `CONTINUOUS_SOURCE_BITS`, else
@@ -125,11 +157,117 @@ pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
 /// gate guards against a stray bonus for never-seen entries.
 // 中文: 單一候選詞的使用者頻率資料,last_used_ms == 0 代表沒用過。
 #[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct FrequencyData {
+pub struct FrequencyData {
+    /// Cumulative selection count. Capped at [`USER_FREQ_CAP`] by the
+    /// legacy additive `calculate_score`; Continuous boost uses
+    /// [`user_freq_boost`] which has its own saturation via
+    /// [`MAX_BOOST`].
     // 中文: 累計被選用次數。
-    pub(crate) count: i32,
+    pub count: i32,
+    /// Last selection in epoch-ms. `0` means never used; the recency
+    /// helpers treat this and any non-positive value as "never".
     // 中文: 上次使用的 epoch 毫秒,0 代表從未使用。
-    pub(crate) last_used_ms: i64,
+    pub last_used_ms: i64,
+}
+
+/// Per-candidate user-frequency map keyed by `TaigiWord.displayText`
+/// (= `hanji` if non-empty else `roman`) — same key as the
+/// Continuous-input [`RawCandidate::display_text`] in
+/// `lexicon::continuous`. Engine builds this once per request from the
+/// proto's `FrequencyEntry` list and reuses it across the whole batch.
+///
+/// **Duplicate-key policy**: last-write-wins via
+/// [`HashMap::insert`]. Platform-side `user_frequency.db` queries
+/// SHOULD pre-dedupe by `display_text_key` before sending the
+/// `FrequencyEntry[]` snapshot; for legacy callers, duplicates are
+/// silently coalesced.
+// 中文: 使用者頻率查詢表,key = 候選顯示文字(漢字優先,否則用羅馬字)。
+// 中文: 同 key 的多筆 entry 以最後一筆為準(insert 覆寫);平台側建議先 dedupe。
+pub type FrequencyMap = std::collections::HashMap<String, FrequencyData>;
+
+/// v3.5.8 Phase 9.3a — Continuous-input `user_freq_boost(count)`:
+///
+/// `boost = min(1.0 + count × BOOST_ALPHA, MAX_BOOST)`
+///
+/// Caller-side helper paired with [`calculate_continuous_score`]. The
+/// saturation guards against a single hot entry dominating the
+/// candidate list after dozens of selections (stale-dominance defense
+/// from `docs/engine/continuous-input-ranking.md` §3.2 Gap B). Pure
+/// fn — no state, no clock; the saturation constants live as public
+/// cross-platform invariants ([`BOOST_ALPHA`] / [`MAX_BOOST`]).
+///
+/// `count = 0` (entry absent or never selected) → boost = `1.0` (no
+/// amplification). Saturates at `count >= (MAX_BOOST − 1) / BOOST_ALPHA = 40`.
+// 中文: Phase 9.3a — Continuous boost 飽和公式;count=0 → 1.0,>=40 → 5.0。
+pub fn user_freq_boost(count: u32) -> f32 {
+    let raw = 1.0 + count as f32 * BOOST_ALPHA;
+    raw.min(MAX_BOOST)
+}
+
+/// v3.5.8 Phase 9.3a — Continuous-input `SortKey.recency_rank` helper.
+/// Returns `0` ("recent") when the entry was selected strictly inside
+/// the [`RECENCY_WINDOW_MS`] window, else `1` ("stale or never").
+///
+/// The recency gate is **defensive against three classes of bad clock
+/// input**:
+/// - `now_ms <= 0` — platform shim did not inject a wall clock (e.g.
+///   on engine startup before the first `FetchAtPos` round). All
+///   entries fall through to `1` so cold-start does not falsely
+///   promote stale entries.
+/// - `last_used_ms <= 0` — entry has never been selected; the legacy
+///   `calculate_score` uses the same `last_used_ms > 0` guard.
+/// - `now_ms < last_used_ms` — clock skew (platform clock moved
+///   backwards). Treat as stale rather than recent to avoid
+///   non-monotonic ranking.
+///
+/// Otherwise: `0` when `now_ms − last_used_ms < RECENCY_WINDOW_MS`,
+/// else `1`. The strict-less-than boundary matches the inclusive
+/// `< RECENCY_WINDOW_MS` policy in `calculate_score` (the boundary
+/// is shared so the two scoring paths see the "recent / stale" axis
+/// identically).
+// 中文: Phase 9.3a — SortKey recency 計算;不合理 now_ms/last_used_ms 一律視為 stale (rank=1)。
+pub fn recency_rank(now_ms: i64, last_used_ms: i64) -> u8 {
+    if now_ms <= 0 || last_used_ms <= 0 || now_ms < last_used_ms {
+        return 1;
+    }
+    if (now_ms - last_used_ms) < RECENCY_WINDOW_MS {
+        0
+    } else {
+        1
+    }
+}
+
+/// Build a [`FrequencyMap`] from the proto-wire `FrequencyEntry[]`.
+/// Single source of truth for both the legacy
+/// [`process::process_candidates`] path and the Continuous-input
+/// dispatcher in `composing/src/dispatch.rs::handle_fetch_at_pos`.
+///
+/// `entry.count: u32` is the wire type; the in-memory [`FrequencyData`]
+/// keeps `count: i32` for compatibility with the legacy
+/// [`calculate_score`] additive formula (which caps at [`USER_FREQ_CAP`]).
+/// `u32::MAX > i32::MAX` so we saturate on conversion to prevent wrap.
+///
+/// **Continuous path note**: the boost helper [`user_freq_boost`] takes
+/// `u32`, so callers re-widen `FrequencyData.count` back via
+/// `u32::try_from(..).unwrap_or(0)` before applying the boost — the
+/// `u32 → i32` saturation is a no-op for any realistic platform count
+/// (selections are bounded by user actions), and the boost itself
+/// saturates at [`MAX_BOOST`] regardless of the converted count's
+/// magnitude. See `engine/lexicon/src/continuous.rs::record_to_candidate`.
+// 中文: 從 proto FrequencyEntry[] 建查詢表;count u32 → i32 用 saturate 防 wrap。
+// 中文: Continuous boost 路徑會再 i32 → u32 (saturate to 0) 回轉,實務 count 永遠 < i32::MAX,飽和不會發生。
+pub fn build_frequency_map(entries: &[protos::engine::FrequencyEntry]) -> FrequencyMap {
+    let mut map = FrequencyMap::with_capacity(entries.len());
+    for entry in entries {
+        map.insert(
+            entry.display_text_key.clone(),
+            FrequencyData {
+                count: i32::try_from(entry.count).unwrap_or(i32::MAX),
+                last_used_ms: entry.last_used_ms,
+            },
+        );
+    }
+    map
 }
 
 /// Compute the score breakdown for a single candidate.
@@ -227,7 +365,7 @@ pub(crate) fn total(breakdown: &ScoreBreakdown) -> i32 {
 // 中文: 純 f32 倍乘式,不接 bigram / recency / closeness;與既有 calculate_score 不重疊。
 // 中文: user_freq_boost 由呼叫端注入 (傳 1.0 即無 boost),保持本函式無狀態。
 pub fn calculate_continuous_score(freq: u32, syllable_count: u8, user_freq_boost: f32) -> f32 {
-    let syll_bias = 1.0 + 0.1 * f32::from(syllable_count.saturating_sub(1));
+    let syll_bias = 1.0 + BOOST_ALPHA * f32::from(syllable_count.saturating_sub(1));
     freq as f32 * syll_bias * user_freq_boost
 }
 
@@ -629,6 +767,126 @@ mod tests {
             source_tier_rank((KAUTIAN_BIT | KUNGGE_BIT) as u16, false),
             1
         );
+    }
+
+    // -----------------------------------------------------------------------
+    // v3.5.8 Phase 9.3a — user_freq_boost + recency_rank
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn user_freq_boost_count_zero_returns_one() {
+        // No selections → no amplification.
+        assert!((user_freq_boost(0) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn user_freq_boost_increments_by_alpha_per_count() {
+        // Linear region: boost = 1.0 + count × 0.1.
+        assert!((user_freq_boost(1) - 1.1).abs() < 1e-6);
+        assert!((user_freq_boost(10) - 2.0).abs() < 1e-6);
+        assert!((user_freq_boost(20) - 3.0).abs() < 1e-6);
+        // Boundary just below saturation.
+        assert!((user_freq_boost(39) - 4.9).abs() < 1e-5);
+    }
+
+    #[test]
+    fn user_freq_boost_saturates_at_max_boost() {
+        // Saturation: 40 selections → 5.0, anything above stays at 5.0.
+        assert!((user_freq_boost(40) - MAX_BOOST).abs() < 1e-6);
+        assert!((user_freq_boost(50) - MAX_BOOST).abs() < 1e-6);
+        assert!((user_freq_boost(100) - MAX_BOOST).abs() < 1e-6);
+        assert!((user_freq_boost(1_000_000) - MAX_BOOST).abs() < 1e-6);
+        // Stale-dominance defense: even u32::MAX cannot exceed MAX_BOOST.
+        assert!((user_freq_boost(u32::MAX) - MAX_BOOST).abs() < 1e-6);
+    }
+
+    #[test]
+    fn recency_rank_zero_when_inside_window() {
+        // Strict less-than boundary; `now_ms - last_used_ms == window - 1`
+        // is still recent, `== window` flips to stale.
+        let last = 1_000_000_000_i64;
+        assert_eq!(recency_rank(last + RECENCY_WINDOW_MS - 1, last), 0);
+        assert_eq!(recency_rank(last + 1, last), 0);
+    }
+
+    #[test]
+    fn recency_rank_one_at_or_outside_window() {
+        let last = 1_000_000_000_i64;
+        // Inclusive boundary at the window edge counts as stale.
+        assert_eq!(recency_rank(last + RECENCY_WINDOW_MS, last), 1);
+        // Anything older is also stale.
+        assert_eq!(recency_rank(last + 2 * RECENCY_WINDOW_MS, last), 1);
+    }
+
+    #[test]
+    fn recency_rank_one_when_now_ms_is_non_positive() {
+        // Phase 9.3a Codex risk #1: `now_ms = 0` from a platform that
+        // has not injected the wall clock must NOT falsely promote
+        // stale entries to recent. All entries fall through to rank 1.
+        let last = 1_000_000_000_i64;
+        assert_eq!(recency_rank(0, last), 1);
+        assert_eq!(recency_rank(-1, last), 1);
+        assert_eq!(recency_rank(i64::MIN, last), 1);
+    }
+
+    #[test]
+    fn recency_rank_one_when_last_used_ms_is_non_positive() {
+        // `last_used_ms = 0` = never selected. Even with a valid
+        // wall-clock `now_ms`, an unused entry stays stale.
+        let now = 1_000_000_000_i64;
+        assert_eq!(recency_rank(now, 0), 1);
+        assert_eq!(recency_rank(now, -1), 1);
+    }
+
+    #[test]
+    fn recency_rank_one_under_clock_skew() {
+        // Clock skew defense: a platform clock that moved backwards
+        // (so `now_ms < last_used_ms`) must still produce rank 1, not
+        // wrap a negative delta into the comparison.
+        let last = 1_000_000_000_i64;
+        let now = last - 5_000; // 5s earlier than the recorded selection.
+        assert_eq!(recency_rank(now, last), 1);
+        // Far backwards skew also handled.
+        assert_eq!(recency_rank(0_i64.wrapping_sub(1), last), 1);
+    }
+
+    #[test]
+    fn build_frequency_map_dedupes_duplicate_keys_last_write_wins() {
+        // Codex pre-impl risk: platform-side `user_frequency.db`
+        // sometimes ships duplicate `display_text_key` rows. The map
+        // must coalesce silently (later entry wins).
+        let entries = vec![
+            protos::engine::FrequencyEntry {
+                display_text_key: "台".to_owned(),
+                count: 1,
+                last_used_ms: 100,
+            },
+            protos::engine::FrequencyEntry {
+                display_text_key: "台".to_owned(),
+                count: 7,
+                last_used_ms: 700,
+            },
+        ];
+        let map = build_frequency_map(&entries);
+        assert_eq!(map.len(), 1);
+        let data = map.get("台").expect("台 present");
+        assert_eq!(data.count, 7);
+        assert_eq!(data.last_used_ms, 700);
+    }
+
+    #[test]
+    fn build_frequency_map_saturates_count_beyond_i32_max() {
+        // Wire `count: u32` is wider than the in-memory `count: i32`.
+        // Saturate at conversion to avoid sign-flip wraparound on the
+        // legacy additive formula path. The Continuous boost path is
+        // unaffected (it consumes u32 directly).
+        let entries = vec![protos::engine::FrequencyEntry {
+            display_text_key: "x".to_owned(),
+            count: u32::MAX,
+            last_used_ms: 1,
+        }];
+        let map = build_frequency_map(&entries);
+        assert_eq!(map.get("x").unwrap().count, i32::MAX);
     }
 
     #[test]

@@ -28,4 +28,8 @@ mod score;
 mod sort;
 
 pub use process::process_candidates;
-pub use score::{calculate_continuous_score, source_tier_rank, CONTINUOUS_DEFAULT_SOURCE_RANK};
+pub use score::{
+    build_frequency_map, calculate_continuous_score, recency_rank, source_tier_rank,
+    user_freq_boost, FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK,
+    MAX_BOOST, RECENCY_WINDOW_MS,
+};
