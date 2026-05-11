@@ -34,8 +34,8 @@ const _: fn() = || {
 };
 
 pub use continuous::{
-    fetch_candidates_for_endings, fetch_candidates_for_keys, ConsumedSpan, RawCandidate,
-    FORM_NOTONE,
+    fetch_candidates_for_endings, fetch_candidates_for_keys, CandidateMode, ConsumedSpan,
+    RawCandidate, FORM_NOTONE,
 };
 pub use error::LexiconError;
 pub use handle::EngineHandle;

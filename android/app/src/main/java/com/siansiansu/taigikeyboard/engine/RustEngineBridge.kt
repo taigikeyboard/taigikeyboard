@@ -570,17 +570,58 @@ object RustEngineBridge {
     }
 
     /**
+     * MOE-aligned candidate-type discriminator. Wire mirror of
+     * `protos::engine::CandidateMode` (Phase 9.2). Engine derives in Rust
+     * from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+     * detection (`engine/lexicon/src/continuous.rs::derive_mode`); the
+     * platform reads but never recomputes (no display-text sniffing —
+     * that would parallel-implement the derive and violate
+     * `rules/cross-platform-alignment.md`).
+     *
+     * Metadata-only in v3.5.8 — does NOT enter the engine's `SortKey`
+     * tie-break (per `docs/roadmap.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`
+     * is the proto3 default and means "unknown carrier — old engine or
+     * dropped field"; never emitted by the current Rust engine.
+     * Platforms must treat `UNSPECIFIED` as "ignore mode" rather than
+     * falling back to any local classification.
+     */
+    // 中文: Phase 9.2 候選類型軸;Rust 端 derive_mode 推導,平台僅讀不算(禁 display_text sniff)。
+    // 中文:   metadata-only,不入 SortKey。UNSPECIFIED = wire 上 mode 缺漏 → 視為「無 mode 資訊」。
+    enum class CandidateMode {
+        UNSPECIFIED,
+        HANT,
+        TAILO,
+        MIXED;
+
+        companion object {
+            /**
+             * Decode the wire integer (`CandidateMessage.getModeValue()`)
+             * produced by protobuf-javalite. Unrecognized values
+             * (forward-compat from a newer engine) collapse to `UNSPECIFIED`
+             * so the platform never crashes on a binding mismatch.
+             */
+            // 中文: 由 proto wire 整數解碼;未知值 fall back UNSPECIFIED,避免 binding mismatch crash。
+            fun decode(wire: Int): CandidateMode = when (wire) {
+                1 -> HANT
+                2 -> TAILO
+                3 -> MIXED
+                else -> UNSPECIFIED
+            }
+        }
+    }
+
+    /**
      * Single span-local continuous-input candidate. Wire mirror of
-     * `protos::engine::CandidateMessage` (Phase 6).
+     * `protos::engine::CandidateMessage` (Phase 6 + 9.2 `mode`).
      *
      * `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
      * **original raw user input** stored in `Phase::Continuous { raw }` —
      * TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
      * slices `pending[start..end]` on commit. `form` is currently always 1
-     * (FORM_NOTONE).
+     * (FORM_NOTONE). `mode` is the Phase 9.2 carrier; metadata-only.
      */
     // 中文: 連續輸入候選詞,對應 proto CandidateMessage。consumed span 是 raw
-    // 中文: 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1。
+    // 中文: 緩衝區的 byte offset(TL/POJ = ASCII;TPS = Bopomofo)。form 目前固定 1;mode 為 Phase 9.2 metadata-only。
     data class ContinuousCandidate(
         val consumedSpanStart: Int,
         val consumedSpanEnd: Int,
@@ -588,6 +629,7 @@ object RustEngineBridge {
         val displayText: String,
         val score: Float,
         val form: Int,
+        val mode: CandidateMode,
     )
 
     /**
@@ -1053,6 +1095,7 @@ object RustEngineBridge {
                     displayText = msg.displayText,
                     score = msg.score,
                     form = msg.form,
+                    mode = CandidateMode.decode(msg.modeValue),
                 )
             }
         } else {

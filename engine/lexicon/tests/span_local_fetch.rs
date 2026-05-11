@@ -32,7 +32,7 @@ use std::path::PathBuf;
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::{fetch_candidates_for_endings, RawCandidate, FORM_NOTONE};
+use lexicon::{fetch_candidates_for_endings, CandidateMode, RawCandidate, FORM_NOTONE};
 
 mod common;
 use common::{build_tkdb_v2, write_temp};
@@ -183,6 +183,13 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert_eq!(zhi.form, FORM_NOTONE);
     assert_eq!(zhuah.form, FORM_NOTONE);
     assert_eq!(zhu.form, FORM_NOTONE);
+
+    // v3.5.8 Phase 9.2: pure-CJK hanji entries derive to CandidateMode::Hant
+    // end-to-end through `record_to_candidate`. Pins integration plumbing
+    // (per Codex post-impl finding #5, P3, 2026-05-11).
+    assert_eq!(zhi.mode, CandidateMode::Hant, "紙 must derive HANT");
+    assert_eq!(zhuah.mode, CandidateMode::Hant, "珠仔 must derive HANT");
+    assert_eq!(zhu.mode, CandidateMode::Hant, "珠 must derive HANT");
 
     // Score sanity (`freq × syll_bias × user_freq_boost`, Phase 5 formula):
     //   紙   = 100 × 1.0 × 1.0 = 100.0  span=(0,4) → Tier 0 (full buffer "tsua")
@@ -785,4 +792,71 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
         "bitmask must round-trip from DictionaryRecord to RawCandidate"
     );
     assert_eq!(out[0].frequency, 100, "raw freq must round-trip too");
+}
+
+// ---------------------------------------------------------------------------
+// v3.5.8 Phase 9.2 — `CandidateMode` derive plumbing through fetch
+// ---------------------------------------------------------------------------
+
+#[test]
+fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
+    // Integration regression for Codex post-impl finding #5 (P3, 2026-
+    // 05-11): the in-crate `derive_mode` unit tests pin classification,
+    // but they do not exercise the `DictionaryReader` → `RawCandidate`
+    // plumbing. This test wires three fixture rows that hit all three
+    // production-emittable `CandidateMode` arms and asserts the byte
+    // identity through `record_to_candidate`.
+    //
+    // Empty `hanzi` ("") drives the v2 dict.bin header's `hanzi_len = 0`,
+    // which `DictionaryReader::record` decodes as `hanzi: None` → TAILO.
+    // 中文: Phase 9.2 mode 端對端契約;HANT / TAILO (hanzi=None via len=0) / MIXED 三種來源全跑過 record_to_candidate。
+    let (prefix_index, dict) = build_fixture(
+        "mode-plumb",
+        &[
+            Row {
+                toneless_key: "tai",
+                hanzi: "台",
+                tl: "tâi",
+                syll: 1,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "li",
+                hanzi: "",
+                tl: "lí",
+                syll: 1,
+                freq: 50,
+            },
+            Row {
+                toneless_key: "iausi",
+                hanzi: "iáu是",
+                tl: "iáu-sī",
+                syll: 2,
+                freq: 30,
+            },
+        ],
+    );
+
+    let hant = fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, 1.0, &prefix_index, &dict);
+    assert_eq!(hant.len(), 1);
+    assert_eq!(hant[0].mode, CandidateMode::Hant);
+    assert_eq!(hant[0].display_text, "台");
+
+    let tailo = fetch_candidates_for_endings("li", 0, &[2], u32::MAX, 1.0, &prefix_index, &dict);
+    assert_eq!(tailo.len(), 1);
+    assert_eq!(
+        tailo[0].mode,
+        CandidateMode::Tailo,
+        "empty hanzi (None) must derive TAILO; display_text falls back to TL"
+    );
+    assert_eq!(tailo[0].display_text, "lí");
+
+    let mixed = fetch_candidates_for_endings("iausi", 0, &[5], u32::MAX, 1.0, &prefix_index, &dict);
+    assert_eq!(mixed.len(), 1);
+    assert_eq!(
+        mixed[0].mode,
+        CandidateMode::Mixed,
+        "hanzi containing Latin letter (NFKD-normalized) must derive MIXED"
+    );
+    assert_eq!(mixed[0].display_text, "iáu是");
 }

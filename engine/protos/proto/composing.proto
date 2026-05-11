@@ -173,29 +173,53 @@ message ContinuousResponse {
   repeated CandidateMessage candidates = 1;
 }
 
+// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
+// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
+// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+// detection; see `engine/lexicon/src/continuous.rs::derive_mode`.
+//
+// Metadata-only: this field does NOT enter the `SortKey` tie-break
+// in v3.5.8 (per `docs/roadmap.md` § Phase 9 R2 Q3.a — "reserve rank
+// use until real collisions are measured"). It is orthogonal to the
+// existing `form` axis (toneless / numeric / hanji / abbrev).
+//
+// `UNSPECIFIED = 0` is the proto3 default and never emitted by Rust;
+// platforms must treat `UNSPECIFIED` as "unknown carrier — fall back
+// to display-text sniff" rather than as HANT.
+enum CandidateMode {
+  CANDIDATE_MODE_UNSPECIFIED = 0;
+  CANDIDATE_MODE_HANT        = 1;
+  CANDIDATE_MODE_TAILO       = 2;
+  CANDIDATE_MODE_MIXED       = 3;
+}
+
 // v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
-// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-124`).
 //
 // `consumed_span` is encoded as two scalar fields rather than a nested
-// message to keep wire overhead low (each candidate is 6 scalars total).
-// `consumed_span_start` / `consumed_span_end` are byte offsets in the
-// **original raw user input** stored in `Phase::Continuous { raw }` —
-// not in any canonical TL transform. TL / POJ users → ASCII bytes;
-// TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
-// to canonical TL FST keys for lookup but emits the span back in the
-// user-facing TPS byte space). Platform UI slices `pending[start..end]`
-// off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+// message to keep wire overhead low. `consumed_span_start` /
+// `consumed_span_end` are byte offsets in the **original raw user
+// input** stored in `Phase::Continuous { raw }` — not in any canonical
+// TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
+// bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
+// keys for lookup but emits the span back in the user-facing TPS byte
+// space). Platform UI slices `pending[start..end]` off
+// `Phase::Continuous { raw }` (or its preedit mirror) on commit.
 //
 // `form` is currently always `1` (FORM_NOTONE; see
 // `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
 // numeric (2) / abbrev (3) when proto-side carriers exist.
+//
+// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+// see `CandidateMode` above.
 message CandidateMessage {
-  uint32 consumed_span_start = 1;
-  uint32 consumed_span_end   = 2;
-  uint32 syllable_count      = 3;
-  string display_text        = 4;
-  float  score               = 5;
-  uint32 form                = 6;
+  uint32         consumed_span_start = 1;
+  uint32         consumed_span_end   = 2;
+  uint32         syllable_count      = 3;
+  string         display_text        = 4;
+  float          score               = 5;
+  uint32         form                = 6;
+  CandidateMode  mode                = 7;
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects

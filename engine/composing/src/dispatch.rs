@@ -343,6 +343,7 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         display_text: c.display_text,
         score: c.score,
         form: c.form as u32,
+        mode: c.mode.to_proto_i32(),
     }
 }
 

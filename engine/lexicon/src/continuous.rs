@@ -68,6 +68,8 @@
 
 use std::cmp::Reverse;
 
+use unicode_normalization::UnicodeNormalization;
+
 use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
 use crate::prefix_index::PrefixIndex;
 use ranking::{calculate_continuous_score, source_tier_rank};
@@ -79,6 +81,68 @@ use ranking::{calculate_continuous_score, source_tier_rank};
 /// review 2026-05-10 Fork 5 ACCEPT).
 // 中文: Phase 5 唯一支援的 form 標籤 (notone);其他 form 留給 Phase 6+。
 pub const FORM_NOTONE: u8 = 1;
+
+/// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
+/// on every [`RawCandidate`] and wire-encoded onto
+/// `protos::taigi::engine::CandidateMessage.mode` (Phase 9.2). Derived
+/// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+/// detection by [`derive_mode`]; never emitted as
+/// [`CandidateMode::Unspecified`] from Rust.
+///
+/// **Metadata-only in v3.5.8 Phase 9.2** — does NOT enter the seven-
+/// dimension [`SortKey`] tie-break (per `docs/roadmap.md` § Phase 9 R2
+/// Q3.a "reserve rank use until real collisions are measured"). The
+/// existing `form` axis remains orthogonal (toneless / numeric / hanji
+/// / abbrev) and unaffected.
+// 中文: Phase 9.2 候選類型軸 — HANT 純漢字 / TAILO 純羅馬字 / MIXED 漢羅混排;
+// 中文:   由 derive_mode 用 NFKD 規範化後判斷 Latin 字母命中;不入 SortKey。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum CandidateMode {
+    /// Proto3 default — Rust never emits this; platforms reading the
+    /// wire treat it as "unknown carrier, ignore" rather than HANT.
+    // 中文: proto3 預設值;Rust 永不主動發送,讀端視作 unknown carrier。
+    Unspecified = 0,
+    /// Hanji-only display (no Latin letters after NFKD normalization).
+    // 中文: 純漢字顯示(NFKD 規範後無 Latin 字母)。
+    Hant = 1,
+    /// Roman/romanization-only display — `DictionaryRecord.hanzi` was
+    /// `None`, so `display_text` fell back to the TL field.
+    // 中文: 純羅馬字(`DictionaryRecord.hanzi == None`,display 退到 TL)。
+    Tailo = 2,
+    /// Hanji display containing at least one Latin letter after NFKD
+    /// (e.g. `iáu未`, `ê早`, `屎î`, hypothetical fullwidth `Ａ字`).
+    // 中文: 漢字內含 Latin 字母(NFKD 規範後判斷;含 NFC composed `ê`、全角等)。
+    Mixed = 3,
+}
+
+impl CandidateMode {
+    /// Wire-format integer matching `protos::CandidateMode`'s prost
+    /// representation. Kept as a method so a future reshuffle of the
+    /// proto enum values would fail this cast at compile time via the
+    /// `as u32` discriminant.
+    // 中文: 對齊 proto CandidateMode 的 wire 整數;reshuffle 會編譯期 break。
+    pub const fn to_proto_i32(self) -> i32 {
+        self as i32
+    }
+}
+
+/// Derive the [`CandidateMode`] for a dictionary record. `hanzi.is_none()`
+/// is the only TAILO path; otherwise the hanzi string is NFKD-normalized
+/// (folding `ê` → `e` + combining circumflex and `Ａ` → `A`) and any
+/// resulting ASCII alphabetic codepoint flips the candidate to MIXED.
+/// Digits / punctuation / kana / private-use glyphs alone do NOT flip
+/// MIXED — the intent is "Roman letters inside the hanji display",
+/// matching MOE `VT_MIXED` for entries like `台BAR`.
+// 中文: Phase 9.2 mode 推導 — hanzi=None → TAILO;NFKD 規範後若含 ASCII 字母 → MIXED;否則 HANT。
+// 中文:   數字 / 標點 / 假名 / PUA 不算 MIXED — MIXED 限定「漢字顯示內含羅馬字母」。
+fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
+    match hanzi {
+        None => CandidateMode::Tailo,
+        Some(text) if text.nfkd().any(|c| c.is_ascii_alphabetic()) => CandidateMode::Mixed,
+        Some(_) => CandidateMode::Hant,
+    }
+}
 
 /// One span-local candidate. Mirrors the 5-field shape pinned by
 /// `docs/roadmap.md:329-336`.
@@ -121,6 +185,11 @@ pub struct RawCandidate {
     /// function of the returned `RawCandidate` vector.
     // 中文: 字典 source bitmask;sort_key 依此呼 ranking::source_tier_rank 取得排序 rank。
     pub bitmask: u16,
+    /// MOE-aligned candidate-type discriminator (HANT / TAILO / MIXED).
+    /// Derived by [`derive_mode`] from `DictionaryRecord.hanzi`.
+    /// Metadata-only in Phase 9.2 — not consulted by [`SortKey`].
+    // 中文: 候選類型軸 (Phase 9.2);由 derive_mode 從 hanzi 推導;不入 SortKey。
+    pub mode: CandidateMode,
 }
 
 /// Fetch every dictionary candidate whose toneless TL key matches
@@ -286,6 +355,7 @@ fn record_to_candidate(
         hanzi,
         tl,
     } = record;
+    let mode = derive_mode(hanzi.as_deref());
     let display_text = hanzi.unwrap_or(tl);
     let score = calculate_continuous_score(frequency, syllable_count, user_freq_boost);
     RawCandidate {
@@ -296,6 +366,7 @@ fn record_to_candidate(
         form: FORM_NOTONE,
         frequency,
         bitmask,
+        mode,
     }
 }
 
@@ -435,6 +506,7 @@ mod sort_key_tests {
             form: FORM_NOTONE,
             frequency,
             bitmask,
+            mode: CandidateMode::Hant,
         }
     }
 
@@ -532,5 +604,129 @@ mod sort_key_tests {
         assert_eq!(key.neg_coverage, Reverse(0));
         // Tier 1 because end (2) != raw_len (4).
         assert_eq!(key.tier, 1);
+    }
+}
+
+#[cfg(test)]
+mod mode_derive_tests {
+    //! Hermetic unit tests for the v3.5.8 Phase 9.2 `CandidateMode`
+    //! derive (`derive_mode`). Covers the four classification axes
+    //! Codex co-decided 2026-05-11:
+    //!
+    //! 1. `hanzi.is_none()` → TAILO
+    //! 2. Plain-ASCII Latin in hanzi → MIXED
+    //! 3. NFC-composed Latin (e.g. `ê`) in hanzi → MIXED via NFKD
+    //! 4. Fullwidth Latin (e.g. `Ａ`) in hanzi → MIXED via NFKD
+    //! 5. Pure CJK → HANT
+    //! 6. Digits / punctuation alone do NOT flip MIXED
+    //
+    // 中文: Phase 9.2 CandidateMode derive hermetic 測試;NFKD 規範後 ASCII 字母命中即 MIXED。
+    use super::*;
+
+    #[test]
+    fn no_hanzi_means_tailo() {
+        // Roman-only entries (`hanzi = None`, `display_text` falls back
+        // to the TL field).
+        assert_eq!(derive_mode(None), CandidateMode::Tailo);
+    }
+
+    #[test]
+    fn pure_cjk_is_hant() {
+        // Canonical hanji-only display.
+        assert_eq!(derive_mode(Some("臺灣台語")), CandidateMode::Hant);
+        assert_eq!(derive_mode(Some("珠仔")), CandidateMode::Hant);
+        assert_eq!(derive_mode(Some("台")), CandidateMode::Hant);
+    }
+
+    #[test]
+    fn plain_ascii_latin_in_hanzi_is_mixed() {
+        // Real dictionary entries: `hip相`, `iah是`, `ing暗`. The first
+        // Latin codepoint is plain ASCII so it would flip MIXED even
+        // without NFKD; this test pins the easy path.
+        assert_eq!(derive_mode(Some("hip相")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("iah是")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("ing暗")), CandidateMode::Mixed);
+        // Hypothetical "台BAR" — Codex Q-F3 example.
+        assert_eq!(derive_mode(Some("台BAR")), CandidateMode::Mixed);
+    }
+
+    #[test]
+    fn composed_latin_in_hanzi_is_mixed_via_nfkd() {
+        // Real entries `ê早` (line 22953 of dictionary.csv), `ē得`
+        // (22960), `屎î` (42037). The Latin codepoint is NFC-composed
+        // (e.g. `ê` = U+00EA, NOT `e` + combining circumflex), so
+        // `is_ascii_alphabetic` on the original chars would miss it.
+        // NFKD decomposes to base ASCII `e` / `i` + combining mark.
+        assert_eq!(derive_mode(Some("ê早")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("ē得")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("屎î")), CandidateMode::Mixed);
+    }
+
+    #[test]
+    fn fullwidth_latin_in_hanzi_is_mixed_via_nfkd() {
+        // Theoretical: U+FF21..U+FF3A fullwidth Latin folds to ASCII
+        // under NFKD (NOT NFD). Pins the "K/D normalization, not just
+        // D" choice from Codex F3-c.
+        assert_eq!(derive_mode(Some("Ａ字")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("字Ｚ")), CandidateMode::Mixed);
+    }
+
+    #[test]
+    fn digits_or_punctuation_alone_stay_hant() {
+        // F3-d: `123` is HANT (no Latin LETTERS). `3Q` is MIXED via the
+        // `Q`. Punctuation likewise does not flip MIXED.
+        assert_eq!(derive_mode(Some("123")), CandidateMode::Hant);
+        assert_eq!(derive_mode(Some("3Q")), CandidateMode::Mixed);
+        assert_eq!(derive_mode(Some("。、")), CandidateMode::Hant);
+    }
+
+    #[test]
+    fn empty_hanzi_string_stays_hant() {
+        // Defensive: `hanzi = Some("")` (shouldn't happen but the
+        // contract is "any Some without Latin letters = HANT", and an
+        // empty NFKD iterator finds no ASCII alphabetic codepoint).
+        assert_eq!(derive_mode(Some("")), CandidateMode::Hant);
+    }
+
+    #[test]
+    fn proto_wire_value_matches_enum_discriminant() {
+        // The proto enum (`CandidateMode` in composing.proto) uses
+        // exactly UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3. The cast
+        // here pins the wire integers so a future reshuffle of the
+        // Rust `repr(u8)` discriminants would fail this test.
+        assert_eq!(CandidateMode::Unspecified.to_proto_i32(), 0);
+        assert_eq!(CandidateMode::Hant.to_proto_i32(), 1);
+        assert_eq!(CandidateMode::Tailo.to_proto_i32(), 2);
+        assert_eq!(CandidateMode::Mixed.to_proto_i32(), 3);
+    }
+
+    #[test]
+    fn local_enum_matches_prost_generated_proto_enum() {
+        // Cross-pin: the local `CandidateMode` (in this crate) must agree
+        // byte-for-byte with `protos::engine::CandidateMode` (prost-
+        // generated from `engine/protos/proto/composing.proto`). If the
+        // proto definition is reshuffled the cast in
+        // `raw_to_proto_candidate` (which feeds prost via `i32`) would
+        // silently misroute; this test fails first.
+        //
+        // Per Codex post-impl finding #2 (P3, 2026-05-11).
+        // 中文: 本 crate 與 prost 產生的 proto enum 對齊;reshuffle 會在這裡先 fail。
+        use protos::engine::CandidateMode as ProtoCandidateMode;
+        assert_eq!(
+            CandidateMode::Unspecified.to_proto_i32(),
+            ProtoCandidateMode::Unspecified as i32
+        );
+        assert_eq!(
+            CandidateMode::Hant.to_proto_i32(),
+            ProtoCandidateMode::Hant as i32
+        );
+        assert_eq!(
+            CandidateMode::Tailo.to_proto_i32(),
+            ProtoCandidateMode::Tailo as i32
+        );
+        assert_eq!(
+            CandidateMode::Mixed.to_proto_i32(),
+            ProtoCandidateMode::Mixed as i32
+        );
     }
 }

@@ -50,4 +50,15 @@ public interface CandidateMessageOrBuilder extends
    * @return The form.
    */
   int getForm();
+
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @return The enum numeric value on the wire for mode.
+   */
+  int getModeValue();
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @return The mode.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode();
 }

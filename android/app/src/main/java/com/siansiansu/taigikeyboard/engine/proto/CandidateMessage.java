@@ -8,21 +8,24 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
- * `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+ * `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-124`).
  *
  * `consumed_span` is encoded as two scalar fields rather than a nested
- * message to keep wire overhead low (each candidate is 6 scalars total).
- * `consumed_span_start` / `consumed_span_end` are byte offsets in the
- * **original raw user input** stored in `Phase::Continuous { raw }` —
- * not in any canonical TL transform. TL / POJ users → ASCII bytes;
- * TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
- * to canonical TL FST keys for lookup but emits the span back in the
- * user-facing TPS byte space). Platform UI slices `pending[start..end]`
- * off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+ * message to keep wire overhead low. `consumed_span_start` /
+ * `consumed_span_end` are byte offsets in the **original raw user
+ * input** stored in `Phase::Continuous { raw }` — not in any canonical
+ * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
+ * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
+ * keys for lookup but emits the span back in the user-facing TPS byte
+ * space). Platform UI slices `pending[start..end]` off
+ * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
  *
  * `form` is currently always `1` (FORM_NOTONE; see
  * `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
  * numeric (2) / abbrev (3) when proto-side carriers exist.
+ *
+ * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+ * see `CandidateMode` above.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CandidateMessage}
@@ -212,6 +215,48 @@ public  final class CandidateMessage extends
     form_ = 0;
   }
 
+  public static final int MODE_FIELD_NUMBER = 7;
+  private int mode_;
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @return The enum numeric value on the wire for mode.
+   */
+  @java.lang.Override
+  public int getModeValue() {
+    return mode_;
+  }
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @return The mode.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode() {
+    com.siansiansu.taigikeyboard.engine.proto.CandidateMode result = com.siansiansu.taigikeyboard.engine.proto.CandidateMode.forNumber(mode_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CandidateMode.UNRECOGNIZED : result;
+  }
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @param value The enum numeric value on the wire for mode to set.
+   */
+  private void setModeValue(int value) {
+      mode_ = value;
+  }
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * @param value The mode to set.
+   */
+  private void setMode(com.siansiansu.taigikeyboard.engine.proto.CandidateMode value) {
+    mode_ = value.getNumber();
+
+  }
+  /**
+   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   */
+  private void clearMode() {
+
+    mode_ = 0;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.CandidateMessage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -298,21 +343,24 @@ public  final class CandidateMessage extends
   /**
    * <pre>
    * v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
-   * `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+   * `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-124`).
    *
    * `consumed_span` is encoded as two scalar fields rather than a nested
-   * message to keep wire overhead low (each candidate is 6 scalars total).
-   * `consumed_span_start` / `consumed_span_end` are byte offsets in the
-   * **original raw user input** stored in `Phase::Continuous { raw }` —
-   * not in any canonical TL transform. TL / POJ users → ASCII bytes;
-   * TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
-   * to canonical TL FST keys for lookup but emits the span back in the
-   * user-facing TPS byte space). Platform UI slices `pending[start..end]`
-   * off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+   * message to keep wire overhead low. `consumed_span_start` /
+   * `consumed_span_end` are byte offsets in the **original raw user
+   * input** stored in `Phase::Continuous { raw }` — not in any canonical
+   * TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
+   * bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
+   * keys for lookup but emits the span back in the user-facing TPS byte
+   * space). Platform UI slices `pending[start..end]` off
+   * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
    *
    * `form` is currently always `1` (FORM_NOTONE; see
    * `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
    * numeric (2) / abbrev (3) when proto-side carriers exist.
+   *
+   * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+   * see `CandidateMode` above.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CandidateMessage}
@@ -517,6 +565,52 @@ public  final class CandidateMessage extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * @return The enum numeric value on the wire for mode.
+     */
+    @java.lang.Override
+    public int getModeValue() {
+      return instance.getModeValue();
+    }
+    /**
+     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * @param value The mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setModeValue(int value) {
+      copyOnWrite();
+      instance.setModeValue(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * @return The mode.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode() {
+      return instance.getMode();
+    }
+    /**
+     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * @param value The enum numeric value on the wire for mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMode(com.siansiansu.taigikeyboard.engine.proto.CandidateMode value) {
+      copyOnWrite();
+      instance.setMode(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMode() {
+      copyOnWrite();
+      instance.clearMode();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CandidateMessage)
   }
   @java.lang.Override
@@ -539,10 +633,11 @@ public  final class CandidateMessage extends
             "displayText_",
             "score_",
             "form_",
+            "mode_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u000b\u0002\u000b" +
-              "\u0003\u000b\u0004\u0208\u0005\u0001\u0006\u000b";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u000b\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

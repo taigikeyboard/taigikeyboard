@@ -35,6 +35,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tsua",
                 score = 1.0f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates, "tsua")
@@ -57,6 +58,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tsua",
                 score = 1.0f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             ),
             RustEngineBridge.ContinuousCandidate(
                 consumedSpanStart = 0,
@@ -65,6 +67,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "珠仔",
                 score = 0.5f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates, "tsua")
@@ -97,6 +100,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "uan",
                 score = 1.0f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates, "taiuan")
@@ -116,6 +120,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tâi-uân",
                 score = 1.0f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates, "taiuan")
@@ -141,6 +146,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "c$i",
                 score = 1.0f,
                 form = 1,
+                mode = RustEngineBridge.CandidateMode.HANT,
             )
         }
         val result = buildContinuousSuggestionsForCandidates(candidates, "raw")
@@ -159,5 +165,27 @@ class ContinuousSuggestionsContractTest {
         assertEquals(1, result.size)
         assertEquals(0, result[0].id)
         assertNotNull(result[0].additionalInfo[MetadataKeys.IS_COMPOSING_TEXT])
+    }
+
+    // --- v3.5.8 Phase 9.2 — CandidateMode wire decode ---
+
+    @Test
+    fun `CandidateMode decode maps all four wire values`() {
+        // Pins UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3 from
+        // `engine/protos/proto/composing.proto::CandidateMode`. Mirrors
+        // iOS RustEngineBridgeContinuousTests.testCandidateModeDecode_AllWireValues.
+        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(0))
+        assertEquals(RustEngineBridge.CandidateMode.HANT, RustEngineBridge.CandidateMode.decode(1))
+        assertEquals(RustEngineBridge.CandidateMode.TAILO, RustEngineBridge.CandidateMode.decode(2))
+        assertEquals(RustEngineBridge.CandidateMode.MIXED, RustEngineBridge.CandidateMode.decode(3))
+    }
+
+    @Test
+    fun `CandidateMode decode falls back to UNSPECIFIED for unknown wire values`() {
+        // Forward-compat: a wire value the platform binding doesn't recognize
+        // (e.g. a newer engine added a fourth variant) must collapse to
+        // UNSPECIFIED rather than crash or randomly map. Mirrors iOS Codex F8.
+        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(99))
+        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(-1))
     }
 }

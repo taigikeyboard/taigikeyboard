@@ -245,4 +245,26 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             "selectedCandidateIndex must not change",
         )
     }
+
+    // MARK: - Phase 9.2 mode carrier
+
+    /// Decode mapping from `Taigi_Engine_CandidateMode` (wire integer) to
+    /// the Swift `RustEngineBridge.CandidateMode` enum. Pins the four
+    /// wire values (UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3) so a future
+    /// proto reshuffle would fail this test before reaching the UI layer.
+    func testCandidateModeDecode_AllWireValues() {
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(0), .unspecified)
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(1), .hant)
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(2), .tailo)
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(3), .mixed)
+    }
+
+    /// Forward-compat: a wire value the platform binding doesn't recognize
+    /// (e.g. a newer engine added a fourth variant) must collapse to
+    /// `.unspecified` rather than crash or randomly map. Pins F8 of the
+    /// Codex pre-impl decision matrix.
+    func testCandidateModeDecode_UnknownWireValueFallsBackToUnspecified() {
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(99), .unspecified)
+        XCTAssertEqual(RustEngineBridge.CandidateMode.decode(-1), .unspecified)
+    }
 }

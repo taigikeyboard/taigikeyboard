@@ -20,6 +20,61 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+/// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
+/// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
+/// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+/// detection; see `engine/lexicon/src/continuous.rs::derive_mode`.
+///
+/// Metadata-only: this field does NOT enter the `SortKey` tie-break
+/// in v3.5.8 (per `docs/roadmap.md` § Phase 9 R2 Q3.a — "reserve rank
+/// use until real collisions are measured"). It is orthogonal to the
+/// existing `form` axis (toneless / numeric / hanji / abbrev).
+///
+/// `UNSPECIFIED = 0` is the proto3 default and never emitted by Rust;
+/// platforms must treat `UNSPECIFIED` as "unknown carrier — fall back
+/// to display-text sniff" rather than as HANT.
+public enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
+  case unspecified // = 0
+  case hant // = 1
+  case tailo // = 2
+  case mixed // = 3
+  case UNRECOGNIZED(Int)
+
+  public init() {
+    self = .unspecified
+  }
+
+  public init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .hant
+    case 2: self = .tailo
+    case 3: self = .mixed
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  public var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .hant: return 1
+    case .tailo: return 2
+    case .mixed: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  public static let allCases: [Taigi_Engine_CandidateMode] = [
+    .unspecified,
+    .hant,
+    .tailo,
+    .mixed,
+  ]
+
+}
+
 public struct Taigi_Engine_ComposingRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -511,21 +566,24 @@ public struct Taigi_Engine_ContinuousResponse: Sendable {
 }
 
 /// v3.5.8 Phase 6 — single span-local continuous candidate. Wire mirror of
-/// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-105`).
+/// `lexicon::RawCandidate` (`engine/lexicon/src/continuous.rs:84-124`).
 ///
 /// `consumed_span` is encoded as two scalar fields rather than a nested
-/// message to keep wire overhead low (each candidate is 6 scalars total).
-/// `consumed_span_start` / `consumed_span_end` are byte offsets in the
-/// **original raw user input** stored in `Phase::Continuous { raw }` —
-/// not in any canonical TL transform. TL / POJ users → ASCII bytes;
-/// TPS users → Bopomofo bytes (Phase 6 dispatcher converts TPS spans
-/// to canonical TL FST keys for lookup but emits the span back in the
-/// user-facing TPS byte space). Platform UI slices `pending[start..end]`
-/// off `Phase::Continuous { raw }` (or its preedit mirror) on commit.
+/// message to keep wire overhead low. `consumed_span_start` /
+/// `consumed_span_end` are byte offsets in the **original raw user
+/// input** stored in `Phase::Continuous { raw }` — not in any canonical
+/// TL transform. TL / POJ users → ASCII bytes; TPS users → Bopomofo
+/// bytes (Phase 6 dispatcher converts TPS spans to canonical TL FST
+/// keys for lookup but emits the span back in the user-facing TPS byte
+/// space). Platform UI slices `pending[start..end]` off
+/// `Phase::Continuous { raw }` (or its preedit mirror) on commit.
 ///
 /// `form` is currently always `1` (FORM_NOTONE; see
 /// `engine/lexicon/src/continuous.rs:78`); reserved for hanzi (0) /
 /// numeric (2) / abbrev (3) when proto-side carriers exist.
+///
+/// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+/// see `CandidateMode` above.
 public struct Taigi_Engine_CandidateMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -542,6 +600,8 @@ public struct Taigi_Engine_CandidateMessage: Sendable {
   public var score: Float = 0
 
   public var form: UInt32 = 0
+
+  public var mode: Taigi_Engine_CandidateMode = .unspecified
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -799,6 +859,10 @@ public struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "taigi.engine"
+
+extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_MODE_UNSPECIFIED\0\u{1}CANDIDATE_MODE_HANT\0\u{1}CANDIDATE_MODE_TAILO\0\u{1}CANDIDATE_MODE_MIXED\0")
+}
 
 extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
@@ -1628,7 +1692,7 @@ extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1642,6 +1706,7 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
       case 4: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       case 5: try { try decoder.decodeSingularFloatField(value: &self.score) }()
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self.form) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
       default: break
       }
     }
@@ -1666,6 +1731,9 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
     if self.form != 0 {
       try visitor.visitSingularUInt32Field(value: self.form, fieldNumber: 6)
     }
+    if self.mode != .unspecified {
+      try visitor.visitSingularEnumField(value: self.mode, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1676,6 +1744,7 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
     if lhs.displayText != rhs.displayText {return false}
     if lhs.score != rhs.score {return false}
     if lhs.form != rhs.form {return false}
+    if lhs.mode != rhs.mode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

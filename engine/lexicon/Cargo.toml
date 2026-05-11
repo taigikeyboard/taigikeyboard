@@ -17,6 +17,7 @@ mmap-host = { workspace = true }
 phonetics = { workspace = true }
 protos = { workspace = true }
 ranking = { workspace = true }
+unicode-normalization = { workspace = true }
 
 [lints.rust]
 unsafe_code = "forbid"
