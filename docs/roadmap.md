@@ -426,9 +426,119 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 
 ---
 
-### Phase 9 — Corner-case dogfood + cleanup
+### Phase 9 — Continuous-input ranking 修復 + 主流 IME 對齊 (FINALIZED 2026-05-11)
 
-**Test 矩陣**:
+**Spec source-of-truth**:[`docs/engine/continuous-input-ranking.md`](engine/continuous-input-ranking.md)
+
+**Plan finalization**:Codex 三輪 ANALYSIS-ONLY consult ── R1 framing(6 軸)、R2 design forks(Q1-Q8)、R3 final fork-clearing(Q9 custom_dict + Q10 nextword verify + Q11 sort_key)。Transcripts `/tmp/codex-v358-phase9-plan-r{1,2,3}-out.txt`。每 PR 仍要 Codex sandwich(pre + post)+ `/codex-pr-review`。
+
+**目標(spec §7)**:
+- **G1** Phrase-priority ranking ── 全 buffer exact match 入 Tier 1
+- **G2** User-freq feedback loop closes ── `user_frequency.db` 接入 Continuous fetch,boost cap 5×
+- **G3** Engine = ranking authority(已達成,preserve)
+- **G4** Multi-vocab axis baseline ── `mode: HANT/TAILO/MIXED` carrier-only,**不**進 rank tie-break
+- **G5** Caret + nail dual cursor ── **defer**,僅 docs 內把 `consumed_bytes` 稱作 "nail advance bytes"(R2 Q5,無 API surface)
+
+**Non-goals**(R1/R2/R3 explicit reject):full Viterbi、Rime SchemaYAML、Google cloud-LM、MOE CompositioMode 雙軸、`words` 欄位(dict.bin v3 schema bump)、`vocabulary` 屬性 chip UI、`weight: f64` widening、6A 詞典 build-time freq ×100 hack、6B corpus-derived freq、no-op `MoveCaret` 占位 API
+
+---
+
+#### PR 拆分(9 PR,總 ~1350–2050 LOC)
+
+PR 順序 = `9.1 → 9.2 → 9.3a → 9.3b → 9.3c → 9.4a → 9.4b → 9.5 → 9.6`(R2 Q7.c + R3 Q9 加 9.6)。
+
+| PR | 範圍 | LOC | 主檔案 | Codex cite |
+|---|---|---|---|---|
+| **9.1** Ranking core | Tier 1 = `consumed_span_end == raw.len()`(R2 Q1.a);lexicographic sort_key 套用;`record_to_candidate`(`continuous.rs:237-245`)補通 `DictionaryRecord.bitmask`(R3 Q11.a 指出目前 discard) | 300–450 Rust | `engine/lexicon/src/continuous.rs`、`engine/ranking/src/score.rs` | R2 Q1.a / Q2.c / R3 Q11 |
+| **9.2** mode carrier | `mode: HANT/TAILO/MIXED` 加進 `CandidateMessage`(`composing.proto:192`);Rust derive(hanzi 有無 + non-ASCII roman);iOS/Android binding regen;**不**進 rank tie-break(R2 Q3.a) | 200–300 Rust + bindings | `engine/protos/proto/composing.proto`、`engine/lexicon/src/continuous.rs` | R2 Q3.a |
+| **9.3a** user-freq Rust + proto | 加 `FrequencyEntry[]`(複用 `lexicon.proto:333-340`)進 `FetchAtPos` request;`fetch_via_lexicon` 拿掉 `1.0` 寫死(`dispatch.rs:312-323`);adjusted_score 公式套 cap | 150–250 Rust | `engine/composing/src/dispatch.rs`、`engine/lexicon/src/continuous.rs`、`engine/ranking/src/score.rs` | R2 Q4.b / R3 Q11 |
+| **9.3b** user-freq iOS plumb | 在 `FetchAtPos` 前 batch query `user_frequency.db` `WHERE word IN (...)` → 塞 `FrequencyEntry[]` 到 request | 200–350 Swift | iOS Autocomplete + Lexicon DB layer | R2 Q7.c |
+| **9.3c** user-freq Android plumb | mirror 9.3b 在 Android `CandidateUpdateCoordinator` / Service layer | 200–350 Kotlin | Android Smartbar + Lexicon DB layer | mirror Phase 8 |
+| **9.4a** TPS tone-1 | `syllabifier/tps.rs:65-93` 加 next-initial-seen rule(tone-1 隱式邊界) | 50–100 Rust | `engine/composing/src/syllabifier/tps.rs` | R2 Q5.b |
+| **9.4b** Hyphen offset map | `build_keys_tl`(`dispatch.rs:181-207`)維護 shadow hyphenless buffer + `(shadow→raw)` offset map;`CandidateMessage.consumed_span_*` 保 raw byte offsets | 200–350 Rust | `engine/composing/src/dispatch.rs` | R2 Q5.b |
+| **9.5** Data variant | 補「台灣台語」變體於 `dictionary/output/dictionary.csv:140250` 鄰近行;**僅** minimum,不做大規模 audit | ~50 data | `dictionary/output/dictionary.csv` 或上游 source | R2 Q6.a |
+| **9.6** Custom dict in Continuous | 連續輸入 fetch 加平台側 custom_dict 查詢(custom_dictionary.db 維持 native);custom 來源 rank 高於 kautian(`custom=0, kautian=1, ...`);**無**強制 Tier 1 promotion(仍要 `consumed_span_end == raw.len()`);canonical key 用既有 `notone` 衍生欄 | 200–300 跨平台 | iOS/Android Autocomplete + Rust merge point | R3 Q9.A |
+
+依賴鏈:9.1 lock rank-key API → 9.2 proto carrier 趁 metadata-only → 9.3a-c 跨平台同 release tag → 9.4a/b coverage 變更放後 → 9.5 data 最後(golden expectations 才不反覆改)→ 9.6 confirm custom 行為穩定後再 plumb。
+
+---
+
+#### Sort_key 公式(PR-9.1 source-of-truth)
+
+```text
+For each RawCandidate produced by fetch_candidates_for_keys:
+
+  tier            = if consumed_span_end == raw.len() { 0 } else { 1 }
+  coverage_bytes  = consumed_span_end - consumed_span_start
+  syll_bias       = 1.0 + 0.1 × max(0, syllable_count − 1)         // 沿用 Phase 5
+  user_freq_boost = min(1.0 + count × BOOST_ALPHA, MAX_BOOST)       // R2 Q4.b
+                    // count = FrequencyEntry.count, 缺 entry 時 boost = 1.0
+  adjusted_score  = freq × syll_bias × user_freq_boost              // R3 Q11.c multiplicative
+
+  recency_rank    = if last_used_ms != 0 && now_ms − last_used_ms < RECENCY_WINDOW_MS { 0 } else { 1 }
+  source_tier     = source_rank_for(bitmask, is_custom)
+                    // custom=0, kautian=1, taigitv=2, stti=3, kungge=4, default=5
+
+  sort_key = (
+      tier,             // asc:  Tier 0 全 buffer 優先
+      -coverage_bytes,  // desc: 同 tier 內,長 match 先
+      recency_rank,     // asc:  同 (tier, coverage) 內,recent 先
+      -adjusted_score,  // desc: freq × syll × boost
+      -freq,            // desc: 原 freq 二次 tie-break
+      source_tier,      // asc:  custom > kautian > taigitv > ... > default
+      stable_idx,       // 插入順序,FST byte-sort deterministic
+  )
+
+Sort ascending by sort_key; first element = slot #1.
+```
+
+#### 跨平台 invariant 常數(Rust pinned,平台不可 override)
+
+| 常數 | 值 | 來源 |
+|---|---|---|
+| `MAX_BOOST` | `5.0` | R2 Q4.b + Codex Q-E stale dominance warning |
+| `BOOST_ALPHA` | `0.1` | R2 Q4.b(50 次後 boost 飽和) |
+| `RECENCY_WINDOW_MS` | `3_600_000`(1h) | R3 Q11.b,reuse legacy `engine/ranking/src/score.rs:45` |
+| `MAX_SYLLABLES` | `8` | 沿用 Phase 6 `engine/composing/src/dispatch.rs:35` |
+| `SOURCE_TIERS` | `custom=0, kautian=1, taigitv=2, stti=3, kungge=4, default=5` | R3 Q11.a(新增 custom 在頂)+ legacy `score.rs:65-70` 既有四 tier 順序 |
+
+依 `rules/cross-platform-alignment.md` §3a:`score.rs` 為單一 source of truth,iOS/Android **不**可重定義。
+
+---
+
+#### 三個 user-data DB 在 Phase 9 的角色(R3 Q10)
+
+| DB | 角色 | Phase 9 動嗎? |
+|---|---|---|
+| `user_frequency.db` | 詞 → (count, last_used_ms);ranking boost 用 | **動** 9.3b/9.3c 平台 batch query;schema 不動 |
+| `user_association.db` | (前詞 → 後詞 → count);nextword 用 | **不動**(Phase 4 handshake 已對齊;R3 Q10.a) |
+| `custom_dictionary.db` | 使用者主動管理的私人詞典 | **動** 9.6 接入平台側 Continuous fetch 查詢;schema 不動 |
+
+「連續打字記憶 = nextword 記憶」 status(R3 Q10):
+- **語意層面 Phase 4 已對齊**:`transition.rs:644-673` mid + final commit 都發 `NextWord*` Effect;iOS `KeyboardViewController+TextInput.swift:60-72`、Android `SmartbarManager.kt:188-204` 路由
+- **mid ≠ final 語意差**:mid-commit `UpdateLastSelectedWord` 更新 `last_selected_word`、寫 compound association,但**不**記 `prev→this`、不 bump generation、不觸發 prediction(`engine/nextword/src/decide.rs:253-289`);只有 final-commit 才完整(`decide.rs:130-179`)── 這是設計如此(中段 commit 時下一詞尚未打完,prev→this 不該記)
+- **三 DB 不合併**(per `feedback_user_data_sqlite_stays_native.md` + `docs/architecture/data-artifacts-portability.md:16-20`)
+- **Phase 9 無**對 nextword 內部修改
+
+---
+
+#### 回歸守護矩陣(每 PR 跑,9.1 為 acceptance 主)
+
+| Input | 預期 #1 候選 | Tier | 守護原因 |
+|---|---|---|---|
+| `taiuantaigi` | 臺灣台語 / 台灣台語(9.5 後)| 0 | 主 acceptance |
+| `e` | 的 | 0(full-buffer = 1 byte) | 短輸入不被誤埋 |
+| `tsua` | 珠仔(syll=2, cov=4)| 0 | 多 syll 同 coverage 優先 |
+| `taixyz` | Tier 0 空;Tier 1 「台」 | (空 0, 全 1) | 部分無效尾不誤升 Tier 0 |
+| `tai5` | 「台」(numeric tone)| 0 | `is_false_toneless_boundary` 防誤切 |
+| `gautsa`(custom)| 𠢕早(9.6 後)| 0 | custom 跨模式可達 |
+| 重複選 5 次 X 後 X | X 排前 | (前)| user_freq boost 內生效 |
+| 重複選 50+ 次 X | X 排前但不 dominate phrase | (前)| boost cap 5× 防 stale dominance |
+
+---
+
+#### 既有 dogfood 矩陣(release-prep,9.6 merge 後跑)
+
 1. Tone 1/4 邊界:`taibak` / `bakkiann` / `khihthau` / `taigikhipuann`
 2. TPS 全部音節:`ㄉㄞˊㄨㄢˊㄉㄞˊㆣㄧˋㄌㄛˊㄇㄚˋㆢㄧ˫` → 「臺灣台語羅馬字」
 3. Mid-composition mode switch (TL ↔ POJ ↔ TPS) → reset 一致
@@ -438,13 +548,9 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 7. Uppercase / hyphen / apostrophe:`Tai-gi`、`pe̍h-ōe-jī`、`a'au`
 8. Paste / emoji during composition → `ResetContinuous` 後 commit
 9. Punctuation / space / Enter → commit boundary
-10. Hardware keyboard arrow keys → reset (本輪不支援 mid-buffer 編輯)
+10. Hardware keyboard arrow keys → reset(本輪不支援 mid-buffer 編輯;G5 已 defer)
 
-**Round-A/B/C dogfood**:在 iPhone + Android 實機跑 S1 / S2 / S3 (per `feedback_perf_gate.md`)。
-
-**Codex sandwich**:每個 phase PR 都要 pre-impl + post-impl Codex review (per `feedback_codex_review_sandwich.md`)、merge 前跑 `/codex-pr-review` (per `feedback_pr_bot_catches_codex_misses.md`)。
-
-**規模**:S (~100 LOC + dogfood notes)
+Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 條矩陣 + 回歸守護矩陣全綠 → cut v3.5.8。
 
 ---
 
@@ -518,13 +624,21 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 | 7A — iOS bridge wiring (engine-facing) | ~250 Swift + tests | 7B | No | **Merged in PR #256** (squash `8c431af6`) |
 | 7B — iOS UI integration (user-visible) | ~250 Swift + tests | — | **Yes** | **Merged in PR #257** (squash `65c2120c`) |
 | 8 — Android UI 整合 | ~500 Kotlin + tests | — | **Yes** | **Merged in PR #258** (squash `9fed869b`) |
-| 9 — dogfood + corner-case fixes | ~150 + dogfood | — | (polish) | Pending |
+| 9.1 — Ranking core(tier + sort_key + bitmask plumb) | ~300-450 Rust | 9.2-9.6 | **Yes**(排序變)| **Pending** |
+| 9.2 — `mode: HANT/TAILO/MIXED` carrier(無 UI chip)| ~200-300 Rust + bindings | 9.3 | No(metadata-only)| **Pending** |
+| 9.3a — user-freq Rust + proto(`FrequencyEntry[]` in FetchAtPos)| ~150-250 Rust | 9.3b, 9.3c | No(Rust 內部)| **Pending** |
+| 9.3b — user-freq iOS plumb(batch SQLite query)| ~200-350 Swift | — | **Yes**(boost 生效)| **Pending** |
+| 9.3c — user-freq Android plumb(batch SQLite query)| ~200-350 Kotlin | — | **Yes**(boost 生效)| **Pending** |
+| 9.4a — TPS tone-1 next-initial-seen rule | ~50-100 Rust | 9.4b | **Yes**(coverage)| **Pending** |
+| 9.4b — Hyphen offset map(shadow buffer)| ~200-350 Rust | — | **Yes**(coverage)| **Pending** |
+| 9.5 — 詞典補「台灣台語」變體 | ~50 data | — | **Yes**(acceptance)| **Pending** |
+| 9.6 — custom_dict 接入 Continuous fetch(平台側查詢 + custom source rank)| ~200-300 跨平台 | — | **Yes** | **Pending** |
 
 **Status legend**:Pending / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
-**Active PR pointer**:next round = **Phase 9 (dogfood + corner-case fixes)**。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`)。
+**Active PR pointer**:next round = **Phase 9.1 — Ranking core**(branch suggestion: `v358-phase9.1-ranking-core`)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`)。
 
-**總計**:12 個 PR (其中 1b 已降級為 admin-tier N/A PR;Phase 7 在 pre-impl Codex consult 後拆成 7A + 7B 兩 PR),加總約 4500 LOC + tests。多數 hand-reviewed code PR 落在 200-550 LOC (Phase 4 ~550 是上限);Phase 6 的 generated bindings (proto → .pb.swift / .java) 不計入 review size。
+**總計**(含 Phase 9 finalized):20 個 PR(原 11 個 Phase 0-8 已 merge,加 Phase 9.1-9.6 共 9 個 sub-PR),加總約 6000-6500 LOC + tests。多數 hand-reviewed code PR 落在 200-450 LOC;Phase 6 + 9.2 的 generated bindings 不計入 review size。
 
 **v3.5.8 release tag** = Phase 1-9 全部完成後 cut。**不**做中途 partial release (per `feedback_no_slice_toggles.md`,no fallback toggle;Continuous 是 direct swap)。Phases 1、2 storage prep 可在 Phase 3 開工前先合進 main——不影響使用者行為 (Phase 1b 已 N/A)。
 
