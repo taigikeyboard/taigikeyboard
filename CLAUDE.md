@@ -48,6 +48,7 @@ taigikeyboard/
 13. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
 14. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
 15. **Rust Best Practices** — Before authoring Phase II.5 docs (`docs/engine/ffi-safety.md`, `docs/engine/rust-core-proto.md`), the Phase III D9 FFI POC, or any Phase IV-A+ Rust code, **must** read `rules/rust-best-practices.md` — workspace layout, FFI safety discipline, `thiserror`/`prost`/`fst`/`jni`/`swift-bridge` crate choices, opaque handle pattern, MSRV policy, non-goals
+16. **Mainstream IME comparison** — Before writing a `最佳實踐對齊` / `Best practices alignment` section, citing "Project X already does Y" about any mainstream IME, or designing an engine slice that touches segmentation / lattice / candidate ranking / user-freq / syllabifier / predictive / next-word / continuous input, **must** start from `docs/references/mainstream-ime-comparison.md` — read its TL;DR matrix + topic index first to pick which repos to cite, then drill into the per-repo cards or linked deep-dives (`azookey-reference.md`, `khiin-reference.md`, `rime-reference.md`, `moe-taigi-reference.md`) only for the dimensions you need. Do not re-explore `references/` from scratch
 
 ## Build & Test
 
@@ -70,7 +71,8 @@ taigikeyboard/
 ## Key References
 
 - `docs/README.md` — Full documentation index (engine, UI, keywords, references)
-- `references/` — Cloned external repos (azooKey, KeyboardKit-Documentation) — search here first
+- `docs/references/mainstream-ime-comparison.md` — **One-stop index** of every IME repo under `references/` + topic→repo map (segmentation / ranking / user-freq / syllabifier / predictive / UI / schema). **Read this before** writing a 最佳實踐對齊 section or asserting "Project X already does Y" — saves re-exploring `references/` from scratch
+- `references/` — Cloned external repos (azooKey, librime, khiin-rs, McBopomofo, florisboard, moe_taigi_apk, aiongtaigi-sushi, rime-moetaigi, KeyboardKit-Documentation, …) — start from the comparison doc above, not directly here
 - `knowledge/taigi-phonetics-reference.md` — TL/POJ/TPS cross-reference
 - iOS: New files require manual Xcode target addition by user
 - Android: Follow [Creating Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) guidelines

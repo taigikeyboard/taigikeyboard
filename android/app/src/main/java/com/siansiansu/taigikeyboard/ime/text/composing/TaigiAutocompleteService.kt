@@ -198,9 +198,10 @@ class TaigiAutocompleteService(
 
 /**
  * Slot-0 cell that displays the user's current composing buffer. The
- * [TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] flag is consumed by
- * [com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarCandidateStrip]
- * to render the dashed-border affordance.
+ * [TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] flag routes tap-to-commit-raw
+ * via [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler].
+ * Per `docs/engine/continuous-input-ranking.md` §10, slot 0 has no visual
+ * distinction from slots 1..n — the metadata is click-routing only.
  *
  * Top-level so both the lexicon path ([TaigiAutocompleteService.autocomplete])
  * and the continuous path ([buildContinuousSuggestionsForCandidates]) share

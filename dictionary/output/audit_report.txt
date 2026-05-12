@@ -1,16 +1,16 @@
 Taigi Keyboard Dictionary Audit Report
-Generated: 2026-05-10 02:43:14
+Generated: 2026-05-11 23:30:06
 Input: /Users/alexsu/Workspace/taigikeyboard/dictionary/output/dictionary.csv
-Total entries: 159033
+Total entries: 159034
 
 ============================================================
 1. Overview
 ============================================================
-  With hanzi:        159032
+  With hanzi:        159033
   Without hanzi:          1  (pure romanization)
   Space in tl:          998  (word boundary)
   Variants:           11166
-  No source:           8387  (Khiin supplement etc.)
+  No source:           8388  (Khiin supplement etc.)
 
 ============================================================
 2. Entries Without Hanzi
@@ -37,7 +37,7 @@ Total entries: 159033
 ============================================================
 4. Entries Without Source
 ============================================================
-  Count: 8387
+  Count: 8388
   CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/03_no_source.csv
 
 ============================================================
@@ -59,7 +59,7 @@ Total entries: 159033
 
            = 0:    1422 (  0.9%) 
           1-10:   14245 (  9.0%) ████
-        11-100:  138486 ( 87.1%) ███████████████████████████████████████████
+        11-100:  138487 ( 87.1%) ███████████████████████████████████████████
         101-1K:    3270 (  2.1%) █
         1K-10K:    1429 (  0.9%) 
       10K-100K:     179 (  0.1%) 
@@ -71,7 +71,7 @@ Total entries: 159033
     1 syl:   25295 ( 15.9%) ███████
     2 syl:   83245 ( 52.3%) ██████████████████████████
     3 syl:   39465 ( 24.8%) ████████████
-    4 syl:   11027 (  6.9%) ███
+    4 syl:   11028 (  6.9%) ███
     5 syl:       1 (  0.0%) 
 
 ============================================================
@@ -105,8 +105,8 @@ Total entries: 159033
 ============================================================
 10. Homophones (same tl, multiple hanzi)
 ============================================================
-  TL with multiple hanzi: 14562
-  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/07_homophones.csv (52355 rows)
+  TL with multiple hanzi: 14563
+  CSV:   /Users/alexsu/Workspace/taigikeyboard/dictionary/output/audit/07_homophones.csv (52357 rows)
 
   Top 20:
     hông (110): 癀, 防, 黃, 皇, 乎人, 帆, 杭, 洪
@@ -147,7 +147,7 @@ Total entries: 159033
     khpoo         4198    3754     4198        0       37
 
   Source overlap (entries in N sources):
-    0 sources: 8387
+    0 sources: 8388
     1 sources: 114145
     2 sources: 24342
     3 sources: 10430

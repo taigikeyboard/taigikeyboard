@@ -381,7 +381,248 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 
 ---
 
-## 10. Cross-references
+## 10. Commit Behavior & Display Split
+
+> **Status**: Open — design spec, awaiting Codex co-confirm (quota recovery). Recorded 2026-05-13.
+> **Scope**: v3.5.8 Phase 9 sub-slice (tentative `PR-9.X commit-display-split`). UI / IME layer; engine proto change is **possible but separate** (see §10.6).
+> **Replaces / supersedes**: dogfood backlog items in `memory/project_v358_dogfood_findings.md` (position-0 dashed border + lexicon-vs-continuous subtitle conflict).
+
+### 10.1 Motivation
+
+§1–§9 address **which candidates appear and in what order**. They do not specify **what the user sees being typed** versus **what gets committed** when the user presses Enter or taps a candidate. Two dogfood findings (2026-05-11) converged on the same root cause — an unspecified split between the composing buffer and candidate slot 0:
+
+1. The position-0 candidate cell carries a dashed border that visually conflates it with the composing buffer.
+2. The lexicon path and the continuous path each build candidates independently; the lexicon path emits `subtitle=nil`, producing inconsistent slot-0 rendering when both paths fire.
+
+This section establishes a single normative contract for **display split + commit dispatch** in Continuous mode.
+
+### 10.1.1 Mainstream IME source — MOE Tâi-gí
+
+The display-vs-commit split prescribed in §10.2–§10.4 is **the behavior of MOE Tâi-gí**, the de-facto reference Taigi IME on Android. User-observed dogfood (primary maintainer, 2026-05-13):
+
+- MOE's inline pre-edit (`InputConnection.setComposingText`) shows the user's raw input verbatim — syllable by syllable, no word-boundary inference.
+- MOE's candidate strip slot 0 shows the **segmented** version when segmentation is available.
+- Pressing **Enter** in MOE commits the raw composing buffer (what is shown inline), **not** the candidate.
+
+Decompiled-code corroboration (`references/moe_taigi_apk/`):
+
+| MOE artifact | What it shows | Maps to our §10 |
+|---|---|---|
+| `KeySectionsModel { composedCharacters; composingCharacters }` ([`decompiled/sources/.../KeySectionsModel.java`](../../references/moe_taigi_apk/decompiled/sources/android/moe/taiwanese/taigi/data/local/model/KeySectionsModel.java), via `docs/references/moe-taigi-reference.md:118-123`) | Two-field model: `composedCharacters` = already-nailed text; `composingCharacters` = pending raw input (e.g., `aitaigi` before any candidate selected) | Composing-buffer surface = `rawInput` (I1) |
+| `CandidateModel.spanUnits` ([`docs/references/moe-taigi-reference.md:135-150`](../references/moe-taigi-reference.md)) | Each candidate ties to a specific input segmentation (`tai+gi` → spanUnits=2 → `台語`; `tai` → spanUnits=1 → `台`) | Per-candidate segmentation; the slot-0 candidate is the highest-`spanUnits` match — our §10.2 "segmented version" |
+| `Tailo.InsertKey` per-keystroke ([`TailoJNI.java`](../../references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java)) | Each keystroke flows into composing, not into a committed surface, until `NailCandidate` fires | Mirrors I3 — input mutation re-runs syllabifier + segmenter without committing |
+
+The Enter-key handler in MOE is behind obfuscated UI code paths and was not isolated in our existing decompile pass. The maintainer's direct observation is the authoritative source for the Enter-commits-raw contract (§10.3); isolating the decompiled trace is a future research item, not a blocker for this spec.
+
+**Codex co-review clarification δ (2026-05-13)**: The decompile evidence (`KeySectionsModel` + `spanUnits` + `TailoJNI` candidate-nailing surface) **corroborates** display-state separation in MOE's design, but it does **not by itself prove** the Enter→raw commit behavior. The §10.3 Enter contract relies on maintainer black-box observation. Stronger proof methods (recorded as future research, not v3.5.8 blockers):
+
+- Isolate the decompiled call path from the keyboard Enter / IME `EditorAction` handler showing it commits `KeySectionsModel.composingCharacters` without calling `NailCandidate`.
+- Black-box logcat / accessibility / `InputConnection` trace showing Enter's committed payload equals composing text while Tap-0 commits a candidate.
+
+**Why aligning with MOE here is the right call:**
+
+- **Convention familiarity** for Taiwanese users — MOE is the baseline IME many users already know (per `docs/references/mainstream-ime-comparison.md` line 98 "Reference for what Taiwanese users see as default").
+- **Decouples "what I typed" from "what the engine guessed"** — preserves user agency under uncertain segmentation; satisfies `rules/cross-platform-alignment.md` invariant that platform reflects engine without semantic re-interpretation (G3 in §7).
+- **Maps cleanly onto existing engine surface** — `rawInput` is just the syllabifier output; candidate[0] is just the ranker top output. No new engine APIs, no proto schema break.
+- Honors `rules/CLAUDE.md` rule 16 (mainstream-IME comparison-driven design) — the `KeySectionsModel` field split is the kind of "Project X already does Y" cite required before adding a normative UI rule.
+
+### 10.1.2 Supersedes — slot-0 model unification (Codex co-review clarification α, 2026-05-13)
+
+Prior to §10, [`continuous-candidate-display.md`](continuous-candidate-display.md) modeled slot 0 as a **dedicated composing-text cell** with `isComposingText="true"` metadata — visually distinct (dashed border, rounded background, vertical inset) and **separate from ranker-produced candidates**. Specifically:
+
+- `continuous-candidate-display.md` §4.6 "Slot-0 stays single-line. Pending preedit has no hanji. **This is intentional**."
+- `continuous-candidate-display.md` §15.4 "`buildContinuousSuggestions` already always insert slot-0 composing-text cell — so the 'no candidates' UX is automatically preserved (strip shows slot-0 only)."
+
+**§10 supersedes both for Continuous mode**: slot 0 is the **engine ranker's top candidate rendered with segmentation** (§10.2). There is no separate composing-text cell in the strip; the only composing-text surface is the inline host-app pre-edit (`markedText` / `setComposingText`) carrying `rawInput`.
+
+| Aspect | Pre-§10 legacy model | §10 (current spec for Continuous mode) |
+|---|---|---|
+| Slot 0 content | Composing-text cell (raw, no hanji) | Engine ranker top candidate (segmented; may have hanji) |
+| Slot 0 visual | Dashed border + rounded bg + vertical inset | Identical to slots 1..n (no visual distinction — maintainer call 2026-05-13) |
+| Tap slot 0 | Commit raw | Commit `candidate[0].display_text` (segmented; see §10.3 + clarification γ) |
+| `isComposingText` metadata | Drives visual affordance + click routing | Click-routing only (visual gone in commit `224a8aa3`) |
+
+**Non-Continuous mode** (legacy lexicon path) retains the pre-§10 slot-0 model. §10.5 Mode Gating is the boundary. `continuous-candidate-display.md` §4.6 / §15.4 wording therefore remains accurate **for non-Continuous mode only** — both will carry inline "superseded by §10 in Continuous mode" notes after Item 1 (this section) ships.
+
+Implementation status: visual unification shipped in `224a8aa3` (slot-0 dashed border + Android inset/bg/corner removed). Click-routing semantics + segmented content of slot 0 land in PR-9.X commit-display-split (fix-plan items 2–6).
+
+### 10.2 Display Contract
+
+| Element | Content | Source |
+|---|---|---|
+| **Composing buffer** (inline pre-edit in the host app — iOS `markedText` / Android `InputConnection.setComposingText`) | **`rawInput`** — derived display of the pending raw tail: hyphen-delimited chunks are NFC-normalized and tone-marked where convertible; unhyphenated input is passed through verbatim. **No** inter-word spaces. **No** engine syllabification. | [`Phase::raw_input`](../../engine/composing/src/api.rs) → [`derived::derived_display`](../../engine/composing/src/derived.rs) (Item 2, 2026-05-13) |
+| **Candidate strip, index 0** | **Segmented version** — segmenter + ranker top candidate over the same raw input bytes, with word boundaries inserted by the segmenter (**roman line gets word-boundary spaces; hanji line rendered as-is** — see segmented-rendering rule below). Independent of the inline-preedit `rawInput` contract above; produced from dictionary records, not from the `Phase::raw_input` derived string. | Segmenter + ranker top candidate |
+| **Candidate strip, index N ≥ 1** | As defined by §1–§7 (existing ranker output). | Existing path; unchanged |
+
+**Precise `rawInput` definition** (option (c) of the three considered, amended 2026-05-13 to match actual engine behavior):
+
+- Source: [`Phase::raw_input(&self, &AppConfig)`](../../engine/composing/src/api.rs) — delegates to [`derived::derived_display`](../../engine/composing/src/derived.rs) which runs the same POJ doubletap → tone-mark → nasal-case chain that builds `Preedit.display_text` today.
+- Transformations applied: tone-marker rendering, NFC normalization, POJ doubletap pre-processing, nasal-marker case adjustment.
+- Transformations **NOT** applied: word-boundary inference (no spaces), candidate matching, ranking, **engine-driven syllable segmentation** (user-typed `-` is the only syllable boundary signal).
+
+Rationale for (c) over (a) raw keystrokes / (b) syllabified-without-normalization: keystrokes (`goa2 ai3 li2`) are not human-readable in the host app; normalization is the minimum to make the composing buffer faithfully echo "what the user typed in displayable form" without inferring word groupings.
+
+**Engine-driven auto-hyphenation is out of scope for v3.5.8** (Codex pre-impl consult 2026-05-13, Item 2). `Intent::AppendHyphen` (api.rs) is evidence the keyboard treats `-` as a user-typed character; `phonetics::api::to_tone_marks` splits on `-` but does not insert hyphens. If a user types `goa2ai3li2` with no hyphens, `rawInput` returns `goa2ai3li2` verbatim — no tone marks, no auto-segmentation. Adding syllabifier-driven hyphen insertion would be a follow-up enhancement (likely paired with §10.2 segmented dual-line rendering in Item 6) rather than part of the Item 2 contract.
+
+**Scope of the `rawInput` rule** (Codex post-impl review 2026-05-13): the contract above governs **only the inline composing buffer** in the host app. Candidate strip rendering (slots 0..N) draws from dictionary records via the segmenter and ranker; the roman/hanji pair on a candidate cell is unaffected by whether the user typed hyphens in their raw input. See [`continuous-candidate-display.md`](continuous-candidate-display.md) §4 (dual-line carrier) and §15 (fallback retire) for the candidate-rendering path.
+
+**Segmented version rendering rule (Codex co-review clarification γ, 2026-05-13)**
+
+When `candidate[0]` is dual-line (HANT / MIXED — proto carries both `roman` and `hanji` per §4 of [`continuous-candidate-display.md`](continuous-candidate-display.md)):
+
+| Line | Content | Word-boundary spaces? |
+|---|---|---|
+| Roman line (`CandidateMessage.roman`) | Segmented romanization | **YES** — visible spaces between word groups, e.g., `goa ai-li` |
+| Hanji line (`CandidateMessage.hanji`) | Hanzi vocabulary tokens, **rendered as-is** | **NO** — e.g., `我愛你`, not `我 愛你` |
+
+Rationale: Roman/Latin script tokenization conventionally uses spaces; hanji as a logographic script does not. Inserting visible spaces in the hanji line breaks convention and risks character-rendering oddities. Word segmentation is implicit in the hanji line through the candidate's `consumed_span` and `spanUnits` metadata, not visual whitespace.
+
+When `candidate[0]` is single-line (TAILO — roman only, no hanji): roman line shows segmented romanization with word spaces; no hanji line exists.
+
+### 10.3 Commit Contract
+
+Three commit paths, three contracts (refined per Codex clarifications β + γ, 2026-05-13):
+
+| Trigger | Commits to host app |
+|---|---|
+| **Enter** | The **`rawInput` value currently displayed in the composing buffer** — i.e., the derived display of the pending raw tail (`Phase::raw_input` output: hyphen-delimited chunks normalized and tone-marked where convertible, no engine syllabification, no word spaces). After mid-commit has nailed earlier segments, only the remaining pending tail is committed; already-nailed text is unaffected. |
+| **Tap candidate index 0** | `candidate[0].display_text` — the canonical commit string (`hanji.unwrap_or(roman)` per §4 of [`continuous-candidate-display.md`](continuous-candidate-display.md)). **Not** the roman-with-spaces visual form rendered in §10.2. |
+| **Tap candidate index N (N ≥ 1)** | `candidate[N].display_text` — existing ranker contract, unchanged. |
+
+**Clarification β — `rawInput` is pending-tail display form, not literal keystrokes**
+
+After segments are nailed via `commit_continuous`, the engine's `Phase::Continuous { raw, committed }` tracks `raw` as the **pending tail** (bytes after the last nailed commit). `rawInput` in §10.2 refers to *this current pending tail* rendered through `Phase::raw_input` (NFC + tone-mark conversion across user-typed `-` boundaries; no engine syllabification) — **not** the original full keystroke history.
+
+Pressing Enter at that moment commits only the pending tail, mirroring what the user sees inline. The existing platform `CommitRaw` path (which routes through `SelectSuggestion(raw)` and commits literal keystrokes) is a **real implementation gap** vs. §10; the gap is tracked as Item 3 in the v3.5.8 Phase 9 fix plan (Codex co-review 2026-05-13).
+
+**Clarification γ — Tap-0 commits `display_text`, not the segmented visual form**
+
+The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. The committed string is `display_text` (= `hanji.unwrap_or(roman)`), identical to what the lexicon path commits. This preserves:
+
+- Frequency-recording keys (per [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt))
+- Canonical word boundary of dictionary vocabulary tokens
+- Wire-level identity between Continuous-path and lexicon-path commits
+
+Design intent:
+
+- Enter preserves "what you see is what you typed" — on partial commits, commits only the pending tail (clarification β).
+- Tap-0 = explicit user choice to accept the smart segmentation; commits the canonical dictionary string, **not** a UI-visual rewrite (clarification γ).
+- Tap-N (N ≥ 1) = existing lexicon-path semantics; unchanged.
+
+**Commit side effects (Codex B1 item 4, 2026-05-13)** — frequency recording (`user_frequency.db`) and NextWord triggering are **payload-orthogonal**. This section pins which string each path commits; whether each path also fires `user_frequency.db` write and `NextWordWordSelected` is decided in fix-plan item 3 (Enter implementation). Default proposal: Enter and Tap-0 both record frequency on `display_text` and trigger NextWord — same contract as a regular candidate commit today. Tap-N already does this. Final wording lands in §10.3 when fix-plan item 3 is implemented.
+
+### 10.4 Data-Flow Invariant
+
+```
+keystrokes
+  → syllabifier (Rust)
+    → rawInput  ───────────────────────► composing buffer (display)
+                                         ▲ Enter commits this
+      → segmenter + ranker (Rust)
+        → candidates[]
+            [0]  ──────────────────────► strip slot 0 (display) — Tap-0 commits this
+            [N≥1] ─────────────────────► strip slot N (display) — Tap-N commits this
+```
+
+Invariants (all five edge cases in §10.7 fall out from these — no per-case branching required):
+
+| ID | Invariant |
+|---|---|
+| **I1** | Composing-buffer content = `rawInput`, where `rawInput` = **derived display of `Phase::Continuous.raw`** via `Phase::raw_input` (NFC + tone-mark conversion across user-typed `-` boundaries; unhyphenated input passes through verbatim; no engine syllabification). `Phase::Continuous.raw` is the bytes after the last nailed commit, **not** the original full keystroke history. Backspace, keystroke append, and mid-commit all mutate `Phase::Continuous.raw`; I1 re-establishes from the new tail. |
+| **I2** | `candidate[0]` display content = ranker top output rendered with segmentation. |
+| **I3** | Any mutation of input (insert / backspace) re-runs syllabifier → segmenter → ranker; I1 and I2 re-establish automatically. |
+| **I4** | Platform performs no re-ranking, no display rewriting, no exact-match injection — preserves G3 (§7.1). |
+
+### 10.5 Mode Gating
+
+| Mode | Display split active? | Slot-0 = composing? |
+|---|---|---|
+| Continuous input (Phase 9 path, `fetch_via_continuous`) | **YES** | No — slot 0 differs from composing whenever ≥ 2 syllables |
+| Non-Continuous lexicon (legacy `fetch_via_lexicon`) | **NO** | Yes — current behavior preserved |
+
+The split is bound to the engine-side dispatch branch in [`engine/composing/src/dispatch.rs`](../../engine/composing/src/dispatch.rs) — there is no separate platform-side toggle.
+
+### 10.6 Cross-Platform Touch Points
+
+| Layer | iOS | Android |
+|---|---|---|
+| Composing-buffer write | `KeyboardInputViewController` → `markedText` | `InputConnection.setComposingText` |
+| Slot-0 render | `CandidateButtonView.swift` — **remove dashed border** | `CandidatesView` / `CandidateButtonView.kt` — **remove `composingDashedBorder`** |
+| Enter commit dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` (or IME keyboard view) |
+| Tap-0 / Tap-N dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
+
+`rules/cross-platform-alignment.md` §3a applies: I1–I4 must hold identically on both platforms. Any divergence requires an explicit note per `rules/cross-platform-alignment.md`.
+
+**Engine-side coupling — separate decision**: the `subtitle=nil` symptom in the dogfood finding is a `CandidateMessage` proto / builder issue (continuous path does not currently emit roman + hanji as distinct fields). Fixing it cleanly may want a proto enhancement (cf. §9 Q6 `mode` field). That fix is **related but out of scope for this section's normative rule** — §10.2/10.3/10.4 hold regardless of whether the proto carries one field or two. The proto question is pending Codex consult.
+
+### 10.7 Edge Cases (fall out from §10.4 invariants)
+
+| Case | Behavior | Why |
+|---|---|---|
+| Single syllable | composing == `candidate[0]` | Segmenter inserts zero word boundaries → identity |
+| Continuous disabled | Split inactive | §10.5 mode gating |
+| Backspace mid-composition | `rawInput` shrinks; `candidate[0]` recomputes | I3 |
+| Empty buffer | No composing display, no candidates | Pre-Phase-9 behavior; unchanged |
+| Syllabifier partial-parse failure | `rawInput` shows partial parse + raw tail; candidates may be empty | Existing syllabifier error path; this section does not modify it |
+| **Partial prefix below first syllable ending** (e.g., `raw = "gu"`, no completed syllable) | Composing buffer shows `gu` literally. Slot 0 is **not** the "segmented version" rule:<br/>• **Pre-§15.3.D state** (current code, before fix-plan item 10): strip is empty.<br/>• **Post-§15.3.D state** (after fix-plan item 10 lands): strip shows engine-prefix candidates per `continuous-candidate-display.md` §15.3.D, ranked below full-syllable candidates via `coverage_kind` (§15.5).<br/>In both states, Enter commits literal `gu`. | Segmenter has no word boundaries to insert when `raw` is sub-syllable; the "candidate[0] = segmented version" rule is **undefined** below first valid syllable ending. Codex co-review clarification (B3, 2026-05-13). |
+| **Enter after segments already nailed** | Commits **only the remaining pending tail** (current `Phase::Continuous.raw`), not the full original input. Already-nailed text is untouched. | Clarification β: `rawInput` is pending-tail form, not literal full keystrokes. |
+| **Hanji accidentally in composing buffer** | Composing shows the hanji literals; engine returns no candidates (per §15.3.E of `continuous-candidate-display.md`); Enter commits the hanji literals. | Engine hanzi guard short-circuits to empty `ContinuousResponse`; composing surface is unaffected. Fix-plan item 11. |
+
+### 10.8 Regression Test Hooks
+
+Minimum coverage to declare §10 closed (Phase 9 acceptance criterion):
+
+1. **Single syllable** — type `goa` → assert composing == `candidate[0].display_text`.
+2. **Three-syllable two-word** — type a phrase whose segmenter splits into 2 words → assert composing shows `a-b-c` (no spaces), `candidate[0]` roman line shows `a b-c` or `a-b c` per segmenter, hanji line shows the hanzi **without** added spaces.
+3. **Tone-marker spanning syllables** — verify NFC + tone rendering apply to composing without affecting segmentation.
+4. **Enter vs Tap-0 divergence** — same input, two commit paths produce distinct committed text per §10.3. Enter commits the syllabified pending tail; Tap-0 commits `display_text` (= `hanji.unwrap_or(roman)`).
+5. **Backspace re-segment** — type 3 syllables, backspace once → `candidate[0]` recomputes; no stale segmentation surfaces.
+6. **Continuous-off fallback** — toggle off → composing == `candidate[0]` (legacy lexicon-path display).
+7. **Partial prefix below syllable ending** — type `gu` → composing shows `gu`; slot 0 either empty or shows prefix candidates per §15.3.D; Enter commits `gu` literally (clarification β + B3).
+8. **Enter after partial commit** — type 3 syllables, nail first segment, type 2 more, Enter → commits only the 2-syllable pending tail; first segment unaffected (clarification β).
+9. **Tap-0 commits `display_text`, not visual** — assert the committed string equals `display_text`, NOT the roman-with-spaces visual form (clarification γ).
+10. **Hanji line no added spaces** — for a HANT/MIXED multi-word `candidate[0]`, assert roman line contains word-boundary spaces while hanji line contains exactly the dictionary hanzi string (no added whitespace) (clarification γ).
+
+Cross-platform: every case must pass identically on iOS and Android per `rules/cross-platform-alignment.md`.
+
+### 10.9 Relationship to §1–§9
+
+| § | Connection |
+|---|---|
+| §1–§3 (ranking gap) | Orthogonal. Ranking determines candidate **order**; §10 determines **display and commit**. Both ship in Phase 9. |
+| §4 (Codex co-confirm) | Separate co-confirm pass required for §10 after quota recovery. |
+| §5 (mainstream IME) | The §10.2–§10.4 behavior is **the observed MOE Tâi-gí pattern** — see §10.1.1 for evidence (`KeySectionsModel { composedCharacters, composingCharacters }` split + `CandidateModel.spanUnits` per-candidate segmentation + maintainer-observed Enter→raw commit). MOE is the primary Taigi reference per `docs/references/mainstream-ime-comparison.md` line 98; aligning here closes a parity gap with the de-facto baseline. |
+| §6 (architectural classification) | §10 adds no new Gap; it is a normative UI/IME contract. |
+| §7 (long-term goals) | Reinforces G3 (engine is ranking authority). Compatible with G1/G2/G4 trajectory. |
+| §8 (v3.5.8 decision) | §10 is part of the expanded Phase 9 scope per the 2026-05-11 revision. |
+| §9 (open questions) | Adds implicit Q8: should §10's display split extend to non-Continuous mode if Continuous becomes default in a future release? Currently NO per §10.5; revisit when default flips. |
+
+### 10.10 Codex Co-Review Log (2026-05-13)
+
+Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](continuous-candidate-display.md) (transcript: `/tmp/v358-codex-review-out.txt`). Outputs synthesized into §10 inline:
+
+| Codex finding | Landed in |
+|---|---|
+| A1: §10.2/10.3/10.4 directionally consistent; no-candidate boundary unpinned | §10.7 partial-prefix row + hanji-in-buffer row |
+| A2/B2: §10 vs §4.6/§15.4 cross-spec contradiction on slot-0 model | §10.1.2 Supersedes notice + reciprocal notes in `continuous-candidate-display.md` |
+| A3: segmentation target ambiguous between `display_text` / roman / hanji | §10.2 segmented-rendering rule + §10.3 clarification γ |
+| A4 + B3: Enter-after-nail / partial-prefix semantics | §10.3 clarification β + §10.7 new rows |
+| C1: MOE Enter evidence weaker than spec claims | §10.1.1 clarification δ |
+| D fix plan (14 items, ordered) | Items 14 + 1 + 2 shipped (commits `224a8aa3`, `3a306b2d`, this commit). Items 3-13 tracked in the v3.5.8 Phase 9 fix plan. |
+
+**4 clarifications recorded inline**:
+- **α (slot-0 supersedes)** → §10.1.2
+- **β (`rawInput` = pending-tail display form, not literal keystrokes)** → §10.3 + §10.4 I1 + §10.7
+- **γ (segmentation render: roman gets spaces, hanji does not; Tap-0 commits `display_text` not visual)** → §10.2 + §10.3
+- **δ (MOE Enter evidence corroborates, does not prove; stronger methods listed)** → §10.1.1
+
+Fix-plan ordering: item 14 (visual unification) shipped 2026-05-13. Item 1 (doc reconcile) + Item 2 (`Phase::raw_input` accessor + invariant tests + §10.2 amendment for actual engine behavior) shipped on branch `v358-continuous-display-spec`. Remaining items 3-13 follow the dependency graph in the Codex transcript; next up = Item 3 (Enter-raw commit rewrite, depends on Item 2).
+
+Durable re-grounding of the fix plan in a future session: re-run the Codex consult (`/tmp/v358-spec-review.txt` prompt) against the latest spec. Plan does not need to live in a separate doc — the spec itself now carries enough structure for an implementer to plan from.
+
+---
+
+## 11. Cross-references
 
 | Reference | Section / Key |
 |---|---|

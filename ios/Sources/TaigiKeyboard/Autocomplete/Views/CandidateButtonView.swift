@@ -48,18 +48,6 @@ struct CandidateButtonView: View {
         style.itemStyle.cornerRadius ?? 8
     }
 
-    /// True when this cell represents the engine's pending composing text
-    /// (`createComposingTextSuggestion` injects `isComposingText="true"`).
-    /// In v3.5.8 Continuous-input mode, this is the unconverted tail of
-    /// `Phase::Continuous { raw }`; in single-segment mode it's the whole
-    /// raw input. Either way the user can tap to commit raw / pending —
-    /// the dashed border makes that affordance visible alongside the
-    /// engine's marked-text preedit (Codex Fork E3, 2026-05-10).
-    // 中文: 標示「未 commit 的 pending 字串」單元格,用淡色虛框點出 user 可隨時 commit。
-    private var isPendingPreedit: Bool {
-        suggestion.additionalInfo["isComposingText"] == "true"
-    }
-
     var body: some View {
         Button(action: {
             onTap(CandidateCellHelper.suggestionToHandle(
@@ -91,17 +79,6 @@ struct CandidateButtonView: View {
                 .fill(backgroundColor)
                 .padding(.horizontal, -2)
                 .padding(.vertical, -4),
-        )
-        .overlay(
-            isPendingPreedit
-                ? RoundedRectangle(cornerRadius: cornerRadius)
-                    .strokeBorder(
-                        Color.secondary.opacity(0.4),
-                        style: StrokeStyle(lineWidth: 1, dash: [3, 2]),
-                    )
-                    .padding(.horizontal, -2)
-                    .padding(.vertical, -4)
-                : nil,
         )
         .offset(y: 5) // 讓整個候選詞項目背景往下移動，與候選列下沿對齊
         .scaleEffect(isPressed ? 0.95 : 1.0)

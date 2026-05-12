@@ -31,6 +31,36 @@ pub enum Phase {
     },
 }
 
+impl Phase {
+    /// `rawInput` per `docs/engine/continuous-input-ranking.md` §10.2 / §10.3
+    /// clarification β — the pending-tail display form rendered through the
+    /// derived-display chain (POJ doubletap → tone marks → nasal-case adjust;
+    /// TPS pass-through). For `Phase::Continuous` this is strictly the pending
+    /// tail (`raw` field), not the original keystroke history; for
+    /// `Phase::Composing` it is the single-segment raw; for `Phase::Idle` it
+    /// is the empty string.
+    ///
+    /// Item 3 (Enter-raw commit in Continuous) commits exactly this string,
+    /// closing the gap clarification β names where the current `Intent::CommitRaw`
+    /// emits literal keystrokes instead. Item 2 ships only the accessor +
+    /// invariant tests; the commit-side rewrite ships in Item 3.
+    ///
+    /// User-typed hyphens are preserved as conversion boundaries (the
+    /// derived-display chain splits on `-` for tone-mark application); the
+    /// engine does NOT validate whether each chunk is a real syllable, and
+    /// does NOT auto-insert hyphens. See §10.2 amendment 2026-05-13.
+    // 中文: §10.2 rawInput — Phase 對應的 pending-tail 顯示字串 (TPS 原樣 / POJ-TL 走 derived chain)。
+    // 中文: Continuous 只回 pending 尾,Idle 回空字串。Item 3 Enter commit 將提交此字串。
+    pub fn raw_input(&self, config: &AppConfig) -> String {
+        match self {
+            Phase::Idle => String::new(),
+            Phase::Composing { raw } | Phase::Continuous { raw, .. } => {
+                crate::derived::derived_display(raw, config)
+            }
+        }
+    }
+}
+
 /// One committed segment inside `Phase::Continuous`. `raw_span` records the
 /// byte offsets in the original raw input the user typed (start = end of the
 /// previous segment, end = start + raw_text.len()). `syllable_count` lets

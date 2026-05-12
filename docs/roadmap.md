@@ -443,9 +443,9 @@ form: u8  // 1 = notone (Phase 5 唯一支援);0/2/3 (hanzi/numeric/abbrev) rese
 
 ---
 
-#### PR 拆分(9 PR,總 ~1350–2050 LOC)
+#### PR 拆分(8 PR coding,總 ~1300–2000 LOC;9.5 已 user 自行處理)
 
-PR 順序 = `9.1 → 9.2 → 9.3a → 9.3b → 9.3c → 9.4a → 9.4b → 9.5 → 9.6`(R2 Q7.c + R3 Q9 加 9.6)。
+PR 順序 = `9.1 → 9.2 → 9.3a → 9.3b → 9.3c → 9.4a → 9.4b → 9.6`(R2 Q7.c + R3 Q9 加 9.6;原 9.5 由 user 自行處理,不開 sub-PR)。
 
 | PR | 範圍 | LOC | 主檔案 | Codex cite |
 |---|---|---|---|---|
@@ -456,10 +456,9 @@ PR 順序 = `9.1 → 9.2 → 9.3a → 9.3b → 9.3c → 9.4a → 9.4b → 9.5 �
 | **9.3c** user-freq Android plumb | mirror 9.3b 在 Android `CandidateUpdateCoordinator` / Service layer;同步補 `ContinuousFetchResult.isBridgeFailure` flag(iOS PR #265 r3216857164 加上)區分 FFI 失敗 vs engine reset,否則 phase-2 FFI 失敗會清掉 mirror | 200–350 Kotlin | Android Smartbar + Lexicon DB layer | mirror Phase 8 |
 | **9.4a** TPS tone-1 | `syllabifier/tps.rs:65-93` 加 next-initial-seen rule(tone-1 隱式邊界) | 50–100 Rust | `engine/composing/src/syllabifier/tps.rs` | R2 Q5.b |
 | **9.4b** Hyphen offset map | `build_keys_tl`(`dispatch.rs:181-207`)維護 shadow hyphenless buffer + `(shadow→raw)` offset map;`CandidateMessage.consumed_span_*` 保 raw byte offsets | 200–350 Rust | `engine/composing/src/dispatch.rs` | R2 Q5.b |
-| **9.5** Data variant | 補「台灣台語」變體於 `dictionary/output/dictionary.csv:140250` 鄰近行;**僅** minimum,不做大規模 audit | ~50 data | `dictionary/output/dictionary.csv` 或上游 source | R2 Q6.a |
 | **9.6** Custom dict in Continuous | 連續輸入 fetch 加平台側 custom_dict 查詢(custom_dictionary.db 維持 native);custom 來源 rank 高於 kautian(`custom=0, kautian=1, ...`);**無**強制 Tier 1 promotion(仍要 `consumed_span_end == raw.len()`);canonical key 用既有 `notone` 衍生欄 | 200–300 跨平台 | iOS/Android Autocomplete + Rust merge point | R3 Q9.A |
 
-依賴鏈:9.1 lock rank-key API → 9.2 proto carrier 趁 metadata-only → 9.3a-c 跨平台同 release tag → 9.4a/b coverage 變更放後 → 9.5 data 最後(golden expectations 才不反覆改)→ 9.6 confirm custom 行為穩定後再 plumb。
+依賴鏈:9.1 lock rank-key API → 9.2 proto carrier 趁 metadata-only → 9.3a-c 跨平台同 release tag → 9.4a/b coverage 變更放後 → 9.6 confirm custom 行為穩定後再 plumb。
 
 ---
 
@@ -526,7 +525,7 @@ Sort ascending by sort_key; first element = slot #1.
 
 | Input | 預期 #1 候選 | Tier | 守護原因 |
 |---|---|---|---|
-| `taiuantaigi` | 臺灣台語 / 台灣台語(9.5 後)| 0 | 主 acceptance |
+| `taiuantaigi` | 臺灣台語 | 0 | 主 acceptance |
 | `e` | 的 | 0(full-buffer = 1 byte) | 短輸入不被誤埋 |
 | `tsua` | 珠仔(syll=2, cov=4)| 0 | 多 syll 同 coverage 優先 |
 | `taixyz` | Tier 0 空;Tier 1 「台」 | (空 0, 全 1) | 部分無效尾不誤升 Tier 0 |
@@ -631,14 +630,14 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 | 9.3c — user-freq Android plumb(batch SQLite query)| ~200-350 Kotlin | — | **Yes**(boost 生效)| **Merged in PR #266 (squash `0c0aa2ec`)** |
 | 9.4a — TPS tone-1 next-initial-seen rule | ~50-100 Rust | 9.4b | **Yes**(coverage)| **Pending** |
 | 9.4b — Hyphen offset map(shadow buffer)| ~200-350 Rust | — | **Yes**(coverage)| **Pending** |
-| 9.5 — 詞典補「台灣台語」變體 | ~50 data | — | **Yes**(acceptance)| **Pending** |
+| 9.5 — 詞典補變體 | — | — | — | **DONE 2026-05-11**(user 自行處理,不開 sub-PR) |
 | 9.6 — custom_dict 接入 Continuous fetch(平台側查詢 + custom source rank)| ~200-300 跨平台 | — | **Yes** | **Pending** |
 
 **Status legend**:Pending / In progress (PR-<n.m> branch) / In progress (PR #N) / Merged in PR #N / Blocked (reason)
 
 **Active PR pointer**:next round = **Phase 9.4a — TPS tone-1 next-initial-seen rule** (branch suggestion: `v358-phase9.4a-tps-tone1`)。Phase 0 merged in PR #248,Phase 1 merged in PR #249,Phase 1b N/A merged in PR #250 (squash `2c826b96`),Phase 2 merged in PR #251 (squash `f4c2e52f`),Phase 3 merged in PR #252 (squash `2f7feac1`),Phase 4 merged in PR #253 (squash `a69bfc75`),Phase 5 merged in PR #254 (squash `cf813af4`),Phase 6 merged in PR #255 (squash `c6f2ca42`),Phase 7A merged in PR #256 (squash `8c431af6`),Phase 7B merged in PR #257 (squash `65c2120c`),Phase 8 merged in PR #258 (squash `9fed869b`),Phase 9.1 merged in PR #262 (squash `86dd6253`),Phase 9.2 merged in PR #263 (squash `f5f2a3b2`),Phase 9.3a merged in PR #264 (squash `60601681`),Phase 9.3b merged in PR #265 (squash `a5d2fcdd`),Phase 9.3c merged in PR #266 (squash `0c0aa2ec`)。
 
-**總計**(含 Phase 9 finalized):20 個 PR(原 11 個 Phase 0-8 已 merge,加 Phase 9.1-9.6 共 9 個 sub-PR),加總約 6000-6500 LOC + tests。多數 hand-reviewed code PR 落在 200-450 LOC;Phase 6 + 9.2 的 generated bindings 不計入 review size。
+**總計**(含 Phase 9 finalized):19 個 PR(原 11 個 Phase 0-8 已 merge,加 Phase 9.1/9.2/9.3a/9.3b/9.3c/9.4a/9.4b/9.6 共 8 個 sub-PR;9.5 user 自行處理,不開 sub-PR),加總約 5950-6450 LOC + tests。多數 hand-reviewed code PR 落在 200-450 LOC;Phase 6 + 9.2 的 generated bindings 不計入 review size。**註**:dogfood backlog(`docs/engine/continuous-candidate-display.md`)若獲 Codex consult 確認,還會新增 9.4c/9.4d/9.4e/9.7 等 sub-PR,屆時這個總計會再上修。
 
 **v3.5.8 release tag** = Phase 1-9 全部完成後 cut。**不**做中途 partial release (per `feedback_no_slice_toggles.md`,no fallback toggle;Continuous 是 direct swap)。Phases 1、2 storage prep 可在 Phase 3 開工前先合進 main——不影響使用者行為 (Phase 1b 已 N/A)。
 

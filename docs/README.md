@@ -24,6 +24,7 @@
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw }`) — Rust `engine/composing` | Active |
 | `engine/continuous-input-ranking.md` | Continuous-input lexicographic SortKey + user_freq_boost + recency_rank spec (v3.5.8 Phase 9 source of truth) | Active |
+| `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — pre-impl, awaiting Codex consult | Open |
 | `engine/autocomplete.md` | Candidate search and suggestion pipeline | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |
 | `engine/sort.md` | Candidate ranking — Rust `engine/ranking` | Active |
