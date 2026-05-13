@@ -48,6 +48,8 @@ final class AutocompleteServiceContinuousTests: XCTestCase {
         displayText: String,
         score: Float = 1.0,
         mode: RustEngineBridge.CandidateMode = .hant,
+        roman: String? = nil,
+        hanji: String? = nil,
     ) -> RustEngineBridge.ContinuousCandidate {
         RustEngineBridge.ContinuousCandidate(
             consumedSpanStart: consumedSpanStart,
@@ -57,6 +59,8 @@ final class AutocompleteServiceContinuousTests: XCTestCase {
             score: score,
             form: 1,
             mode: mode,
+            roman: roman ?? displayText,
+            hanji: hanji,
         )
     }
 

@@ -605,6 +605,20 @@ public struct Taigi_Engine_ContinuousResponse: Sendable {
 ///
 /// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
 /// see `CandidateMode` above.
+///
+/// v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
+/// sidechannels added so platform UI can build dual-line cells
+/// (roman / hanji) the same way the legacy lexicon path does. The
+/// engine continues to authority-stamp commit semantics and
+/// `user_frequency.db` write keys via `display_text`
+/// (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
+/// for commit. `roman` always equals the underlying
+/// `DictionaryRecord.tl`; `hanji` mirrors `DictionaryRecord.hanzi`
+/// (proto3 `optional` distinguishes "TAILO candidate — no hanji
+/// exists" from "wire-frame defect"). See
+/// `docs/engine/continuous-candidate-display.md` §4 for the full
+/// rationale and `docs/engine/continuous-input-ranking.md` §10.11
+/// for the companion ranker dedupe rule.
 public struct Taigi_Engine_CandidateMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -624,9 +638,22 @@ public struct Taigi_Engine_CandidateMessage: Sendable {
 
   public var mode: Taigi_Engine_CandidateMode = .unspecified
 
+  public var roman: String = String()
+
+  public var hanji: String {
+    get {_hanji ?? String()}
+    set {_hanji = newValue}
+  }
+  /// Returns true if `hanji` has been explicitly set.
+  public var hasHanji: Bool {self._hanji != nil}
+  /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
+  public mutating func clearHanji() {self._hanji = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _hanji: String? = nil
 }
 
 /// Platform-neutral effects. The wrapper maps document-mutation effects
@@ -1723,7 +1750,7 @@ extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf.
 
 extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0\u{1}roman\0\u{1}hanji\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1738,12 +1765,18 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
       case 5: try { try decoder.decodeSingularFloatField(value: &self.score) }()
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self.form) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if self.consumedSpanStart != 0 {
       try visitor.visitSingularUInt32Field(value: self.consumedSpanStart, fieldNumber: 1)
     }
@@ -1765,6 +1798,12 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
     if self.mode != .unspecified {
       try visitor.visitSingularEnumField(value: self.mode, fieldNumber: 7)
     }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 8)
+    }
+    try { if let v = self._hanji {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1776,6 +1815,8 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
     if lhs.score != rhs.score {return false}
     if lhs.form != rhs.form {return false}
     if lhs.mode != rhs.mode {return false}
+    if lhs.roman != rhs.roman {return false}
+    if lhs._hanji != rhs._hanji {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

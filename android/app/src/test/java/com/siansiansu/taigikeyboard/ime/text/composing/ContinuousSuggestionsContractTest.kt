@@ -1,8 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.proto.CandidateMessage
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord.MetadataKeys
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,6 +37,38 @@ import org.junit.Test
  */
 class ContinuousSuggestionsContractTest {
 
+    /**
+     * v3.5.8 Phase 9 Item 5 — builds a [RustEngineBridge.ContinuousCandidate]
+     * with default `roman`/`hanji` matching the test fixture's `displayText`.
+     * Production engine emits `roman` = `DictionaryRecord.tl` and `hanji` =
+     * `DictionaryRecord.hanzi`; the legacy tests here pre-date that split and
+     * assert against `displayText` semantics only, so defaulting `roman = displayText`
+     * and `hanji = null` keeps their intent intact while letting new Item 5
+     * tests override either field explicitly.
+     */
+    // 中文: Item 5 — 測試用 helper,roman 預設等於 displayText、hanji 預設 null;新 Item 5 測試可覆寫。
+    private fun cand(
+        consumedSpanStart: Int = 0,
+        consumedSpanEnd: Int,
+        syllableCount: Int = 1,
+        displayText: String,
+        score: Float = 1.0f,
+        form: Int = 1,
+        mode: RustEngineBridge.CandidateMode = RustEngineBridge.CandidateMode.HANT,
+        roman: String? = null,
+        hanji: String? = null,
+    ): RustEngineBridge.ContinuousCandidate = RustEngineBridge.ContinuousCandidate(
+        consumedSpanStart = consumedSpanStart,
+        consumedSpanEnd = consumedSpanEnd,
+        syllableCount = syllableCount,
+        displayText = displayText,
+        score = score,
+        form = form,
+        mode = mode,
+        roman = roman ?: displayText,
+        hanji = hanji,
+    )
+
     @Test
     fun `slot 0 is candidate top with isContinuous flag, no composing cell`() {
         // v3.5.8 Phase 9 Item 4: §10.1.2 supersedes notice — the Continuous
@@ -42,7 +76,7 @@ class ContinuousSuggestionsContractTest {
         // `candidate[0]` IS slot 0, carrying `IS_CONTINUOUS="true"` so the
         // click handler routes it through `handleContinuousCandidateClick`.
         val candidates = listOf(
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 4,
                 syllableCount = 1,
@@ -64,7 +98,7 @@ class ContinuousSuggestionsContractTest {
     @Test
     fun `continuous candidates carry exact metadata key strings`() {
         val candidates = listOf(
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 4,
                 syllableCount = 1,
@@ -73,7 +107,7 @@ class ContinuousSuggestionsContractTest {
                 form = 1,
                 mode = RustEngineBridge.CandidateMode.HANT,
             ),
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 7,
                 syllableCount = 2,
@@ -106,7 +140,7 @@ class ContinuousSuggestionsContractTest {
         // bytes [start, end). The consumer needs `end` to know how many
         // bytes to drop from pending. Mid-commit candidate.
         val candidates = listOf(
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 3,
                 consumedSpanEnd = 7,
                 syllableCount = 1,
@@ -126,7 +160,7 @@ class ContinuousSuggestionsContractTest {
         // roman field, breaking commitContinuous alignment. Sidechannel is
         // the contract.
         val candidates = listOf(
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 6,
                 syllableCount = 2,
@@ -159,7 +193,7 @@ class ContinuousSuggestionsContractTest {
         // authoritative commit-string carrier so Item 6 cannot accidentally
         // route through `roman`.
         val candidates = listOf(
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 6,
                 syllableCount = 2,
@@ -195,7 +229,7 @@ class ContinuousSuggestionsContractTest {
         // shadowed lest the click handler picks the wrong branch on a
         // metadata-decode failure fallthrough.
         val candidates = (0 until 5).map { i ->
-            RustEngineBridge.ContinuousCandidate(
+            cand(
                 consumedSpanStart = 0,
                 consumedSpanEnd = 3,
                 syllableCount = 1,
@@ -246,5 +280,68 @@ class ContinuousSuggestionsContractTest {
         // UNSPECIFIED rather than crash or randomly map. Mirrors iOS Codex F8.
         assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(99))
         assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(-1))
+    }
+
+    // --- v3.5.8 Phase 9 Item 5 — `roman` / `hanji` wire schema ---
+
+    /**
+     * `string roman = 8` is non-optional; protobuf-javalite round-trips
+     * it verbatim. Empty string is the default; explicit assignment of
+     * a non-empty value must survive a serialize/deserialize pair so
+     * the bridge decode path `roman = msg.roman` produces the same
+     * String the engine emitted.
+     */
+    // 中文: Item 5 — roman 為非 optional;protobuf-javalite wire round-trip 必須保留原值。
+    @Test
+    fun `CandidateMessage roman field round-trips through wire`() {
+        val msg = CandidateMessage.newBuilder()
+            .setRoman("tâi-uân")
+            .build()
+        val bytes = msg.toByteArray()
+        val decoded = CandidateMessage.parseFrom(bytes)
+        assertEquals("tâi-uân", decoded.roman)
+    }
+
+    /**
+     * `optional string hanji = 9` distinguishes "field absent on the
+     * wire" (TAILO candidate — `hasHanji() == false`) from "field set
+     * to empty string" (defective producer — `hasHanji() == true`,
+     * `hanji == ""`). The bridge decode rule
+     * `if (msg.hasHanji()) msg.hanji else null` relies on this
+     * presence accessor; if protobuf-javalite ever stopped
+     * distinguishing absence from empty, bridge consumers would
+     * mis-classify TAILO candidates as `hanji = ""` and the dual-line
+     * render rule from `docs/engine/continuous-candidate-display.md`
+     * §5 would break.
+     */
+    // 中文: Item 5 — hanji 為 proto3 optional;wire absent vs Some("") 必須由 hasHanji() 區分。
+    @Test
+    fun `CandidateMessage hanji optional absent vs present-empty`() {
+        // Default-constructed message has hanji absent.
+        val absent = CandidateMessage.newBuilder().build()
+        assertFalse("default-constructed must have hanji absent", absent.hasHanji())
+
+        // Wire round-trip preserves absence.
+        val decodedAbsent = CandidateMessage.parseFrom(absent.toByteArray())
+        assertFalse(
+            "absence survives wire round-trip — TAILO candidates must decode to hanji null",
+            decodedAbsent.hasHanji(),
+        )
+
+        // Explicit empty-string set flips presence to true.
+        val presentEmpty = CandidateMessage.newBuilder().setHanji("").build()
+        assertTrue(
+            "explicit empty-string assignment flips presence — distinguishes 'producer set field' from 'absent'",
+            presentEmpty.hasHanji(),
+        )
+        val decodedPresent = CandidateMessage.parseFrom(presentEmpty.toByteArray())
+        assertTrue(decodedPresent.hasHanji())
+        assertEquals("", decodedPresent.hanji)
+
+        // Non-empty content also wire-round-trips with presence.
+        val presentHant = CandidateMessage.newBuilder().setHanji("臺灣").build()
+        val decodedHant = CandidateMessage.parseFrom(presentHant.toByteArray())
+        assertTrue(decodedHant.hasHanji())
+        assertEquals("臺灣", decodedHant.hanji)
     }
 }

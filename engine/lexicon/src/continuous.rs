@@ -162,9 +162,30 @@ pub struct RawCandidate {
     // 中文: 對應字典條目的音節數 (builder 端上限 4)。
     pub syllable_count: u8,
     /// What the user sees / what gets committed: hanji if available,
-    /// otherwise the stored TL romanization.
+    /// otherwise the stored TL romanization. Engine-authoritative
+    /// commit key + `user_frequency.db` write key on both platforms.
     // 中文: 上屏顯示文字 — 有漢字用漢字,否則回退到 TL 羅馬字。
     pub display_text: String,
+    /// v3.5.8 Phase 9 Item 5 — TL romanization carried alongside
+    /// `display_text` so platform UI can render dual-line cells
+    /// (roman line + hanji line) the same way the legacy lexicon
+    /// path does. Always equals the underlying `DictionaryRecord.tl`;
+    /// NEVER consulted for commit (engine commit goes through
+    /// `display_text`).
+    // 中文: Phase 9 Item 5 — TL 羅馬字顯示用 sidechannel;dual-line 候選列 render 來源。
+    // 中文: 永等於 DictionaryRecord.tl;commit 仍走 display_text,不查 roman。
+    pub roman: String,
+    /// v3.5.8 Phase 9 Item 5 — hanji display carried alongside
+    /// `display_text`. `None` iff `DictionaryRecord.hanzi.is_none()`
+    /// (TAILO candidate); `Some` otherwise. On the wire this maps to
+    /// `optional string hanji` so consumers can distinguish "TAILO
+    /// — no hanji exists" from "wire-frame defect / absent field"
+    /// (per `docs/engine/continuous-candidate-display.md` §4.2). UI
+    /// uses this as the dual-line cell subtitle; engine commit still
+    /// goes through `display_text`.
+    // 中文: Phase 9 Item 5 — 漢字顯示用 sidechannel;TAILO 候選為 None。
+    // 中文: 對應 proto optional;commit 不查此欄,只用於 dual-line 候選列 subtitle。
+    pub hanji: Option<String>,
     /// Result of [`ranking::calculate_continuous_score`].
     // 中文: 連續輸入排序分數 (見 ranking::calculate_continuous_score)。
     pub score: f32,
@@ -368,6 +389,18 @@ pub fn fetch_candidates_for_keys(
         }
     }
 
+    // TODO(Item 12): introduce a `(roman, hanji)` dedupe pass here
+    // when `custom_dictionary.db` merges into the Continuous pipeline.
+    // Today the default `dict.bin` builder already collapses
+    // duplicates via `dictionary/build/merge_csv.py:107`'s
+    // `groupby(["hanzi", "_tl_key"])`, so no realistic input ever
+    // surfaces a duplicate `(roman, hanji)` pair into `out`. Item 12
+    // is the first slice that can emit cross-source duplicates
+    // (custom_dictionary.db lives outside merge_csv.py); the dedupe
+    // rule + winner policy (lowest `source_tier_rank` vs SortKey
+    // winner) is intentionally NOT locked here — Item 12 will pick
+    // it with real custom-dict plumb context.
+
     // Phase 9.1 lexicographic sort. `stable_idx` is stamped from
     // pre-sort element position via `enumerate()` BEFORE any sorting
     // machinery runs, so the index reflects insertion order (caller-
@@ -401,6 +434,14 @@ fn record_to_candidate(
         tl,
     } = record;
     let mode = derive_mode(hanzi.as_deref());
+    // Phase 9 Item 5: keep `roman` = `tl` alongside `display_text`
+    // before `hanzi.unwrap_or(tl)` consumes the TL string. `hanji`
+    // mirrors `DictionaryRecord.hanzi` verbatim so the proto3
+    // `optional` field can preserve the absent-vs-empty distinction.
+    // 中文: Item 5 — 在 hanzi.unwrap_or(tl) 移走 tl 之前 clone 一份到 roman 欄位;
+    // 中文:   hanji 直接照搬 DictionaryRecord.hanzi,讓 proto optional 保留 None vs Some("")。
+    let roman = tl.clone();
+    let hanji = hanzi.clone();
     let display_text = hanzi.unwrap_or(tl);
     // Phase 9.3a: look up the candidate's user-frequency snapshot by
     // `display_text` (the same key the platform writes to
@@ -420,6 +461,8 @@ fn record_to_candidate(
         consumed_span,
         syllable_count,
         display_text,
+        roman,
+        hanji,
         score,
         form: FORM_NOTONE,
         frequency,
@@ -570,6 +613,8 @@ mod sort_key_tests {
             consumed_span: (span_start, span_end),
             syllable_count: 1,
             display_text: String::new(),
+            roman: String::new(),
+            hanji: None,
             score,
             form: FORM_NOTONE,
             frequency,
@@ -817,5 +862,69 @@ mod mode_derive_tests {
             CandidateMode::Mixed.to_proto_i32(),
             ProtoCandidateMode::Mixed as i32
         );
+    }
+}
+
+#[cfg(test)]
+mod record_to_candidate_carrier_tests {
+    //! v3.5.8 Phase 9 Item 5 — `record_to_candidate` populates the
+    //! `roman` + `hanji` sidechannels alongside `display_text` so the
+    //! proto3 wire carries both for dual-line UI render. These tests
+    //! pin the field-population rule across the three `CandidateMode`
+    //! axes (HANT / TAILO / MIXED).
+    // 中文: Item 5 — record_to_candidate 寫 roman + hanji sidechannel 的 hermetic 測試。
+    use super::*;
+
+    fn record(tl: &str, hanzi: Option<&str>) -> DictionaryRecord {
+        DictionaryRecord {
+            bitmask: 0,
+            frequency: 0,
+            syllable_count: 1,
+            hanzi: hanzi.map(str::to_owned),
+            tl: tl.to_owned(),
+        }
+    }
+
+    #[test]
+    fn hant_record_emits_roman_and_some_hanji() {
+        let cand = record_to_candidate(
+            record("tâi-uân", Some("臺灣")),
+            (0, 7),
+            &FrequencyMap::new(),
+            0,
+        );
+        assert_eq!(cand.roman, "tâi-uân");
+        assert_eq!(cand.hanji.as_deref(), Some("臺灣"));
+        assert_eq!(cand.display_text, "臺灣");
+        assert_eq!(cand.mode, CandidateMode::Hant);
+    }
+
+    #[test]
+    fn tailo_record_emits_roman_and_none_hanji() {
+        // `hanzi = None` → TAILO path; `display_text` falls back to TL,
+        // `roman` stays equal to TL, `hanji` is wire-absent
+        // (proto3 `optional` distinguishes None from Some("")).
+        let cand = record_to_candidate(record("tāi", None), (0, 3), &FrequencyMap::new(), 0);
+        assert_eq!(cand.roman, "tāi");
+        assert_eq!(cand.hanji, None);
+        assert_eq!(cand.display_text, "tāi");
+        assert_eq!(cand.mode, CandidateMode::Tailo);
+    }
+
+    #[test]
+    fn mixed_record_emits_roman_and_hanji_with_latin() {
+        // MIXED = hanji string contains Latin letters after NFKD.
+        // `display_text` keeps the MIXED hanji string verbatim;
+        // `roman` still equals the pure TL romanization.
+        let cand = record_to_candidate(
+            record("hip-siòng", Some("hip相")),
+            (0, 9),
+            &FrequencyMap::new(),
+            0,
+        );
+        assert_eq!(cand.roman, "hip-siòng");
+        assert_eq!(cand.hanji.as_deref(), Some("hip相"));
+        assert_eq!(cand.display_text, "hip相");
+        assert_eq!(cand.mode, CandidateMode::Mixed);
     }
 }

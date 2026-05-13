@@ -931,3 +931,86 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     );
     assert_eq!(mixed[0].display_text, "iáu是");
 }
+
+#[test]
+fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
+    // v3.5.8 Phase 9 Item 5 — `roman` + `hanji` integration plumb.
+    // Mirrors the in-crate `record_to_candidate_carrier_tests` hermetic
+    // unit tests but exercises the full `DictionaryReader` → FST
+    // lookup → `record_to_candidate` chain so the contract holds at
+    // the integration boundary too. Empty `hanzi` ("") drives the v2
+    // dict.bin header's `hanzi_len = 0`, which `DictionaryReader::record`
+    // decodes as `hanzi: None` — the only TAILO path.
+    // 中文: Item 5 — 端對端契約;roman 永等於 record.tl,hanji 與 record.hanzi 雙向同步(None ⇔ TAILO)。
+    let (prefix_index, dict) = build_fixture(
+        "item5-carrier",
+        &[
+            Row {
+                toneless_key: "tai",
+                hanzi: "台",
+                tl: "tâi",
+                syll: 1,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "li",
+                hanzi: "",
+                tl: "lí",
+                syll: 1,
+                freq: 50,
+            },
+            Row {
+                toneless_key: "iausi",
+                hanzi: "iáu是",
+                tl: "iáu-sī",
+                syll: 2,
+                freq: 30,
+            },
+        ],
+    );
+
+    let hant = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(hant.len(), 1);
+    assert_eq!(hant[0].roman, "tâi");
+    assert_eq!(hant[0].hanji.as_deref(), Some("台"));
+
+    let tailo = fetch_candidates_for_endings(
+        "li",
+        0,
+        &[2],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(tailo.len(), 1);
+    assert_eq!(tailo[0].roman, "lí");
+    assert_eq!(
+        tailo[0].hanji, None,
+        "empty hanzi (None) must wire as proto3 `optional` absent — NOT Some(empty)"
+    );
+
+    let mixed = fetch_candidates_for_endings(
+        "iausi",
+        0,
+        &[5],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(mixed.len(), 1);
+    assert_eq!(mixed[0].roman, "iáu-sī");
+    assert_eq!(mixed[0].hanji.as_deref(), Some("iáu是"));
+}

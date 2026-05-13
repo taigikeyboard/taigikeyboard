@@ -371,4 +371,64 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             RustEngineBridge.ComposingTransition.noop,
         )
     }
+
+    // MARK: - v3.5.8 Phase 9 Item 5 — `roman` / `hanji` wire schema
+
+    /// `string roman = 8` is non-optional; SwiftProtobuf round-trips it
+    /// verbatim. Empty string is the default; explicit assignment of a
+    /// non-empty value must survive a serialize/deserialize pair so
+    /// the bridge decode path `roman: msg.roman` produces the same
+    /// String the engine emitted.
+    // 中文: Item 5 — roman 為非 optional;Swift wire round-trip 必須保留原值。
+    func testCandidateMessage_RomanField_RoundTripsThroughWire() throws {
+        var msg = Taigi_Engine_CandidateMessage()
+        msg.roman = "tâi-uân"
+        let data = try msg.serializedData()
+        let decoded = try Taigi_Engine_CandidateMessage(serializedData: data)
+        XCTAssertEqual(decoded.roman, "tâi-uân")
+    }
+
+    /// `optional string hanji = 9` distinguishes "field absent on the
+    /// wire" (TAILO candidate — `hasHanji == false`) from "field set
+    /// to empty string" (defective producer — `hasHanji == true`,
+    /// `hanji == ""`). The bridge decode rule `msg.hasHanji ? msg.hanji
+    /// : nil` relies on this presence accessor; if SwiftProtobuf ever
+    /// stopped distinguishing absence from empty (e.g. due to a proto
+    /// regen drift), bridge consumers would mis-classify TAILO
+    /// candidates as `hanji == ""` and the dual-line render rule from
+    /// `docs/engine/continuous-candidate-display.md` §5 would break.
+    // 中文: Item 5 — hanji 為 proto3 optional;wire absent vs Some("") 必須由 hasHanji 區分。
+    func testCandidateMessage_HanjiOptional_AbsentVsPresentEmpty() throws {
+        // Default-constructed message has hanji absent.
+        let absent = Taigi_Engine_CandidateMessage()
+        XCTAssertFalse(absent.hasHanji, "default-constructed must have hanji absent")
+
+        // Wire round-trip preserves absence.
+        let absentData = try absent.serializedData()
+        let decodedAbsent = try Taigi_Engine_CandidateMessage(serializedData: absentData)
+        XCTAssertFalse(
+            decodedAbsent.hasHanji,
+            "absence survives wire round-trip — TAILO candidates must decode to hanji nil",
+        )
+
+        // Explicit empty-string set flips presence to true.
+        var presentEmpty = Taigi_Engine_CandidateMessage()
+        presentEmpty.hanji = ""
+        XCTAssertTrue(
+            presentEmpty.hasHanji,
+            "explicit empty-string assignment flips presence — distinguishes 'producer set field' from 'absent'",
+        )
+        let presentData = try presentEmpty.serializedData()
+        let decodedPresent = try Taigi_Engine_CandidateMessage(serializedData: presentData)
+        XCTAssertTrue(decodedPresent.hasHanji)
+        XCTAssertEqual(decodedPresent.hanji, "")
+
+        // Non-empty content also wire-round-trips with presence.
+        var presentHant = Taigi_Engine_CandidateMessage()
+        presentHant.hanji = "臺灣"
+        let hantData = try presentHant.serializedData()
+        let decodedHant = try Taigi_Engine_CandidateMessage(serializedData: hantData)
+        XCTAssertTrue(decodedHant.hasHanji)
+        XCTAssertEqual(decodedHant.hanji, "臺灣")
+    }
 }

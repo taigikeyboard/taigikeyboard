@@ -61,4 +61,33 @@ public interface CandidateMessageOrBuilder extends
    * @return The mode.
    */
   com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode();
+
+  /**
+   * <code>string roman = 8;</code>
+   * @return The roman.
+   */
+  java.lang.String getRoman();
+  /**
+   * <code>string roman = 8;</code>
+   * @return The bytes for roman.
+   */
+  com.google.protobuf.ByteString
+      getRomanBytes();
+
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return Whether the hanji field is set.
+   */
+  boolean hasHanji();
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return The hanji.
+   */
+  java.lang.String getHanji();
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return The bytes for hanji.
+   */
+  com.google.protobuf.ByteString
+      getHanjiBytes();
 }

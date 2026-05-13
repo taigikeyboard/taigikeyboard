@@ -518,6 +518,19 @@ public enum RustEngineBridge {
         public let score: Float
         public let form: UInt32
         public let mode: CandidateMode
+        /// v3.5.8 Phase 9 Item 5 — TL romanization sidechannel for
+        /// dual-line cell render. Always non-empty for dictionary-
+        /// sourced candidates (mirrors `DictionaryRecord.tl`); UI
+        /// reads `displayText` for commit / `user_frequency.db`
+        /// writes and `roman` only for cell-title display.
+        // 中文: Item 5 — 羅馬字 sidechannel,dual-line 候選列 render 用。
+        public let roman: String
+        /// v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `nil`
+        /// iff the proto3 `optional string hanji` was absent on the
+        /// wire (TAILO candidate). Present-empty is treated as
+        /// present (engine never emits `Some("")` today; defensive).
+        // 中文: Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → nil。
+        public let hanji: String?
 
         public init(
             consumedSpanStart: UInt32,
@@ -527,6 +540,8 @@ public enum RustEngineBridge {
             score: Float,
             form: UInt32,
             mode: CandidateMode,
+            roman: String,
+            hanji: String?,
         ) {
             self.consumedSpanStart = consumedSpanStart
             self.consumedSpanEnd = consumedSpanEnd
@@ -535,6 +550,8 @@ public enum RustEngineBridge {
             self.score = score
             self.form = form
             self.mode = mode
+            self.roman = roman
+            self.hanji = hanji
         }
     }
 
@@ -1194,7 +1211,23 @@ public enum RustEngineBridge {
         let transition = synthComposing(payload)
         let candidates: [ContinuousCandidate]? = payload.hasContinuous
             ? payload.continuous.candidates.map { msg in
-                ContinuousCandidate(
+                // v3.5.8 Phase 9 Item 5 — `hanji` is proto3 `optional`;
+                // SwiftProtobuf exposes presence via `hasHanji`. Map
+                // absent → `nil` (NOT empty string) so the bridge
+                // struct's `hanji: String?` carries the wire-absent
+                // distinction faithfully (TAILO candidate).
+                //
+                // Defensive `roman` fallback per
+                // `docs/engine/continuous-candidate-display.md` §7 +
+                // Codex pre-impl F4 verdict A: if `msg.roman` is
+                // empty (old-Rust-new-platform wire skew, or proto
+                // regen skipped), fall back to `displayText` so
+                // Item 6's dual-line render does not show a blank
+                // title row. Bundled releases never hit this branch.
+                // 中文: Item 5 — hanji 為 proto3 optional;wire absent → Swift nil。
+                // 中文: roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
+                let roman = msg.roman.isEmpty ? msg.displayText : msg.roman
+                return ContinuousCandidate(
                     consumedSpanStart: msg.consumedSpanStart,
                     consumedSpanEnd: msg.consumedSpanEnd,
                     syllableCount: msg.syllableCount,
@@ -1202,6 +1235,8 @@ public enum RustEngineBridge {
                     score: msg.score,
                     form: msg.form,
                     mode: CandidateMode.decode(msg.mode.rawValue),
+                    roman: roman,
+                    hanji: msg.hasHanji ? msg.hanji : nil,
                 )
             }
             : nil

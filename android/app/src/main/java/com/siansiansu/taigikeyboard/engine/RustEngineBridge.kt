@@ -640,6 +640,23 @@ object RustEngineBridge {
         val score: Float,
         val form: Int,
         val mode: CandidateMode,
+        /**
+         * v3.5.8 Phase 9 Item 5 — TL romanization sidechannel for
+         * dual-line cell render. Always non-empty for dictionary-
+         * sourced candidates (mirrors `DictionaryRecord.tl`); UI
+         * reads `displayText` for commit / `user_frequency.db`
+         * writes and `roman` only for cell-title display.
+         */
+        // 中文: Item 5 — 羅馬字 sidechannel,dual-line 候選列 render 用。
+        val roman: String,
+        /**
+         * v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `null`
+         * iff the proto3 `optional string hanji` was absent on the
+         * wire (TAILO candidate). Present-empty is treated as
+         * present (engine never emits `Some("")` today; defensive).
+         */
+        // 中文: Item 5 — 漢字 sidechannel;TAILO 候選 wire 上 absent → Kotlin null。
+        val hanji: String?,
     )
 
     /**
@@ -1136,6 +1153,22 @@ object RustEngineBridge {
         val transition = synthComposing(payload)
         val candidates: List<ContinuousCandidate>? = if (payload.hasContinuous()) {
             payload.continuous.candidatesList.map { msg ->
+                // v3.5.8 Phase 9 Item 5 — `hanji` is proto3 `optional`;
+                // protobuf-javalite exposes presence via `hasHanji()`.
+                // Map absent → `null` (NOT empty string) so the
+                // bridge data class's `hanji: String?` carries the
+                // wire-absent distinction faithfully (TAILO candidate).
+                //
+                // Defensive `roman` fallback per
+                // `docs/engine/continuous-candidate-display.md` §7 +
+                // Codex pre-impl F4 verdict A: if `msg.roman` is
+                // empty (old-Rust-new-platform wire skew, or proto
+                // regen skipped), fall back to `displayText` so
+                // Item 6's dual-line render does not show a blank
+                // title row. Bundled releases never hit this branch.
+                // 中文: Item 5 — hanji 為 proto3 optional;wire absent → Kotlin null。
+                // 中文: roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
+                val roman = if (msg.roman.isEmpty()) msg.displayText else msg.roman
                 ContinuousCandidate(
                     consumedSpanStart = msg.consumedSpanStart,
                     consumedSpanEnd = msg.consumedSpanEnd,
@@ -1144,6 +1177,8 @@ object RustEngineBridge {
                     score = msg.score,
                     form = msg.form,
                     mode = CandidateMode.decode(msg.modeValue),
+                    roman = roman,
+                    hanji = if (msg.hasHanji()) msg.hanji else null,
                 )
             }
         } else {

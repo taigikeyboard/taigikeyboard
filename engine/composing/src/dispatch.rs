@@ -382,6 +382,16 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         score: c.score,
         form: c.form as u32,
         mode: c.mode.to_proto_i32(),
+        // v3.5.8 Phase 9 Item 5 — `roman` is always non-empty for a
+        // dictionary-sourced candidate (mirrors `DictionaryRecord.tl`);
+        // `hanji` is a proto3 `optional string` so prost serializes
+        // `None` as wire-absent (distinguishes TAILO from defective
+        // empty-string emission). See
+        // `docs/engine/continuous-candidate-display.md` §4.2.
+        // 中文: Item 5 — roman 永有值(對應 DictionaryRecord.tl);hanji 為 proto optional,
+        // 中文:   TAILO 候選送 None,wire 上是「absent」而非空字串。
+        roman: c.roman,
+        hanji: c.hanji,
     }
 }
 
@@ -505,5 +515,53 @@ mod tests {
         assert_eq!(clamp_syllable_count(255), 255);
         assert_eq!(clamp_syllable_count(256), 255);
         assert_eq!(clamp_syllable_count(u32::MAX), 255);
+    }
+
+    /// v3.5.8 Phase 9 Item 5 — `raw_to_proto_candidate` must propagate
+    /// `roman` and `hanji` onto the wire. HANT records carry both;
+    /// TAILO records emit `roman` only and leave proto `hanji` as
+    /// `None` (proto3 `optional string` wire-absent, NOT `Some("")`).
+    // 中文: Item 5 — raw_to_proto_candidate 把 roman + hanji 寫到 wire 的 hermetic 測試。
+    // 中文:   HANT 帶兩者;TAILO 的 hanji 為 None,proto 上 wire-absent。
+    #[test]
+    fn raw_to_proto_candidate_propagates_roman_and_some_hanji() {
+        let raw = RawCandidate {
+            consumed_span: (0, 7),
+            syllable_count: 2,
+            display_text: "臺灣".to_owned(),
+            roman: "tâi-uân".to_owned(),
+            hanji: Some("臺灣".to_owned()),
+            score: 1.5,
+            form: 1,
+            frequency: 12,
+            bitmask: 0,
+            mode: lexicon::CandidateMode::Hant,
+            recency_rank: 1,
+        };
+        let proto = raw_to_proto_candidate(raw);
+        assert_eq!(proto.roman, "tâi-uân");
+        assert_eq!(proto.hanji.as_deref(), Some("臺灣"));
+        assert_eq!(proto.display_text, "臺灣");
+    }
+
+    #[test]
+    fn raw_to_proto_candidate_emits_none_hanji_for_tailo() {
+        let raw = RawCandidate {
+            consumed_span: (0, 3),
+            syllable_count: 1,
+            display_text: "tāi".to_owned(),
+            roman: "tāi".to_owned(),
+            hanji: None,
+            score: 0.5,
+            form: 1,
+            frequency: 3,
+            bitmask: 0,
+            mode: lexicon::CandidateMode::Tailo,
+            recency_rank: 1,
+        };
+        let proto = raw_to_proto_candidate(raw);
+        assert_eq!(proto.roman, "tāi");
+        assert!(proto.hanji.is_none());
+        assert_eq!(proto.display_text, "tāi");
     }
 }

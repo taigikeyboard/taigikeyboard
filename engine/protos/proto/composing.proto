@@ -242,6 +242,20 @@ enum CandidateMode {
 //
 // `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
 // see `CandidateMode` above.
+//
+// v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
+// sidechannels added so platform UI can build dual-line cells
+// (roman / hanji) the same way the legacy lexicon path does. The
+// engine continues to authority-stamp commit semantics and
+// `user_frequency.db` write keys via `display_text`
+// (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
+// for commit. `roman` always equals the underlying
+// `DictionaryRecord.tl`; `hanji` mirrors `DictionaryRecord.hanzi`
+// (proto3 `optional` distinguishes "TAILO candidate — no hanji
+// exists" from "wire-frame defect"). See
+// `docs/engine/continuous-candidate-display.md` §4 for the full
+// rationale and `docs/engine/continuous-input-ranking.md` §10.11
+// for the companion ranker dedupe rule.
 message CandidateMessage {
   uint32         consumed_span_start = 1;
   uint32         consumed_span_end   = 2;
@@ -250,6 +264,8 @@ message CandidateMessage {
   float          score               = 5;
   uint32         form                = 6;
   CandidateMode  mode                = 7;
+  string         roman               = 8;
+  optional string hanji              = 9;
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects

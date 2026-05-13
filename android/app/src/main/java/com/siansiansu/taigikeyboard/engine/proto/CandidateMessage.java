@@ -26,6 +26,20 @@ package com.siansiansu.taigikeyboard.engine.proto;
  *
  * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
  * see `CandidateMode` above.
+ *
+ * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
+ * sidechannels added so platform UI can build dual-line cells
+ * (roman / hanji) the same way the legacy lexicon path does. The
+ * engine continues to authority-stamp commit semantics and
+ * `user_frequency.db` write keys via `display_text`
+ * (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
+ * for commit. `roman` always equals the underlying
+ * `DictionaryRecord.tl`; `hanji` mirrors `DictionaryRecord.hanzi`
+ * (proto3 `optional` distinguishes "TAILO candidate — no hanji
+ * exists" from "wire-frame defect"). See
+ * `docs/engine/continuous-candidate-display.md` §4 for the full
+ * rationale and `docs/engine/continuous-input-ranking.md` §10.11
+ * for the companion ranker dedupe rule.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CandidateMessage}
@@ -37,7 +51,10 @@ public  final class CandidateMessage extends
     CandidateMessageOrBuilder {
   private CandidateMessage() {
     displayText_ = "";
+    roman_ = "";
+    hanji_ = "";
   }
+  private int bitField0_;
   public static final int CONSUMED_SPAN_START_FIELD_NUMBER = 1;
   private int consumedSpanStart_;
   /**
@@ -257,6 +274,108 @@ public  final class CandidateMessage extends
     mode_ = 0;
   }
 
+  public static final int ROMAN_FIELD_NUMBER = 8;
+  private java.lang.String roman_;
+  /**
+   * <code>string roman = 8;</code>
+   * @return The roman.
+   */
+  @java.lang.Override
+  public java.lang.String getRoman() {
+    return roman_;
+  }
+  /**
+   * <code>string roman = 8;</code>
+   * @return The bytes for roman.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRomanBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(roman_);
+  }
+  /**
+   * <code>string roman = 8;</code>
+   * @param value The roman to set.
+   */
+  private void setRoman(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    roman_ = value;
+  }
+  /**
+   * <code>string roman = 8;</code>
+   */
+  private void clearRoman() {
+
+    roman_ = getDefaultInstance().getRoman();
+  }
+  /**
+   * <code>string roman = 8;</code>
+   * @param value The bytes for roman to set.
+   */
+  private void setRomanBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    roman_ = value.toStringUtf8();
+
+  }
+
+  public static final int HANJI_FIELD_NUMBER = 9;
+  private java.lang.String hanji_;
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return Whether the hanji field is set.
+   */
+  @java.lang.Override
+  public boolean hasHanji() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return The hanji.
+   */
+  @java.lang.Override
+  public java.lang.String getHanji() {
+    return hanji_;
+  }
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @return The bytes for hanji.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getHanjiBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
+  }
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @param value The hanji to set.
+   */
+  private void setHanji(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+  bitField0_ |= 0x00000001;
+    hanji_ = value;
+  }
+  /**
+   * <code>optional string hanji = 9;</code>
+   */
+  private void clearHanji() {
+    bitField0_ = (bitField0_ & ~0x00000001);
+    hanji_ = getDefaultInstance().getHanji();
+  }
+  /**
+   * <code>optional string hanji = 9;</code>
+   * @param value The bytes for hanji to set.
+   */
+  private void setHanjiBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    hanji_ = value.toStringUtf8();
+    bitField0_ |= 0x00000001;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.CandidateMessage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -361,6 +480,20 @@ public  final class CandidateMessage extends
    *
    * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
    * see `CandidateMode` above.
+   *
+   * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
+   * sidechannels added so platform UI can build dual-line cells
+   * (roman / hanji) the same way the legacy lexicon path does. The
+   * engine continues to authority-stamp commit semantics and
+   * `user_frequency.db` write keys via `display_text`
+   * (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
+   * for commit. `roman` always equals the underlying
+   * `DictionaryRecord.tl`; `hanji` mirrors `DictionaryRecord.hanzi`
+   * (proto3 `optional` distinguishes "TAILO candidate — no hanji
+   * exists" from "wire-frame defect"). See
+   * `docs/engine/continuous-candidate-display.md` §4 for the full
+   * rationale and `docs/engine/continuous-input-ranking.md` §10.11
+   * for the companion ranker dedupe rule.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CandidateMessage}
@@ -611,6 +744,112 @@ public  final class CandidateMessage extends
       return this;
     }
 
+    /**
+     * <code>string roman = 8;</code>
+     * @return The roman.
+     */
+    @java.lang.Override
+    public java.lang.String getRoman() {
+      return instance.getRoman();
+    }
+    /**
+     * <code>string roman = 8;</code>
+     * @return The bytes for roman.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRomanBytes() {
+      return instance.getRomanBytes();
+    }
+    /**
+     * <code>string roman = 8;</code>
+     * @param value The roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoman(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRoman(value);
+      return this;
+    }
+    /**
+     * <code>string roman = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoman() {
+      copyOnWrite();
+      instance.clearRoman();
+      return this;
+    }
+    /**
+     * <code>string roman = 8;</code>
+     * @param value The bytes for roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRomanBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRomanBytes(value);
+      return this;
+    }
+
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @return Whether the hanji field is set.
+     */
+    @java.lang.Override
+    public boolean hasHanji() {
+      return instance.hasHanji();
+    }
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @return The hanji.
+     */
+    @java.lang.Override
+    public java.lang.String getHanji() {
+      return instance.getHanji();
+    }
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @return The bytes for hanji.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getHanjiBytes() {
+      return instance.getHanjiBytes();
+    }
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @param value The hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanji(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setHanji(value);
+      return this;
+    }
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHanji() {
+      copyOnWrite();
+      instance.clearHanji();
+      return this;
+    }
+    /**
+     * <code>optional string hanji = 9;</code>
+     * @param value The bytes for hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanjiBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setHanjiBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CandidateMessage)
   }
   @java.lang.Override
@@ -627,6 +866,7 @@ public  final class CandidateMessage extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "consumedSpanStart_",
             "consumedSpanEnd_",
             "syllableCount_",
@@ -634,10 +874,12 @@ public  final class CandidateMessage extends
             "score_",
             "form_",
             "mode_",
+            "roman_",
+            "hanji_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u000b\u0002\u000b" +
-              "\u0003\u000b\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f";
+              "\u0000\t\u0000\u0001\u0001\t\t\u0000\u0000\u0000\u0001\u000b\u0002\u000b\u0003\u000b" +
+              "\u0004\u0208\u0005\u0001\u0006\u000b\u0007\f\b\u0208\t\u1208\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through
