@@ -1,7 +1,9 @@
 // 中文: 台語 autocomplete 服務:把原始 composing 字串轉成排序後的候選清單。
 // 中文: 實際 lookup 走 LexiconService(Rust lexicon crate),context boost 取自
-// 中文: NextWordService 的 bigram 預測。第 0 位永遠是當前 composing 字串(對齊 iOS)。
-// 中文: 每次 input mode 切換會重建此 service。
+// 中文: NextWordService 的 bigram 預測。
+// 中文: Lexicon path 第 0 位是當前 composing 字串(legacy slot-0 model;對齊 iOS,
+// 中文: 由 §10.5 mode gating 保留)。Continuous path(§10.1.2 supersedes)沒有
+// 中文: composing-text cell,slot 0 = candidate[0]。每次 input mode 切換會重建此 service。
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
@@ -23,13 +25,21 @@ import kotlinx.coroutines.CancellationException
  * Turns a raw composing string into a ranked list of candidates by
  * delegating to [LexiconService]. Applies context boosting — candidates
  * whose first hanzi matches the previous bigram prediction from
- * [NextWordService] float to the top. The 0-th slot is always the current
- * composing text.
+ * [NextWordService] float to the top.
+ *
+ * Slot-0 semantics depend on the active path:
+ * - **Lexicon path** (non-Continuous mode, §10.5 mode gating): slot 0 is
+ *   the legacy composing-text cell — emitted via [createComposingTextCell]
+ *   so tap-0 commits the inline composing buffer.
+ * - **Continuous path** (Phase 9 ranker, §10.1.2 supersedes): slot 0 is
+ *   the engine ranker's `candidate[0]`; there is no composing-text cell.
+ *   The inline pre-edit (`InputConnection.setComposingText`) is the only
+ *   composing-text surface; Enter commits the pending tail via Item 3.
  *
  * Continuous-input branch: if [continuousFetcher] returns non-empty,
  * the lexicon path is skipped and the engine's span-local candidates fill
  * the strip. Empty result (not in Continuous, no syllable inventory, no
- * FST hits) falls through.
+ * FST hits) falls through to the lexicon path.
  *
  * Collaborators are injected via ctor; the service is recreated whenever
  * the input mode flips.
@@ -73,7 +83,7 @@ class TaigiAutocompleteService(
                 if (BuildConfig.DEBUG) {
                     logger.d(TAG, "[CONTINUOUS] returning ${continuousCandidates.size} span-local candidates")
                 }
-                return buildContinuousSuggestionsForCandidates(continuousCandidates, displayText)
+                return buildContinuousSuggestionsForCandidates(continuousCandidates)
             }
 
             val determineStart = System.currentTimeMillis()
@@ -197,15 +207,21 @@ class TaigiAutocompleteService(
 }
 
 /**
- * Slot-0 cell that displays the user's current composing buffer. The
- * [TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] flag routes tap-to-commit-raw
- * via [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler].
- * Per `docs/engine/continuous-input-ranking.md` §10, slot 0 has no visual
- * distinction from slots 1..n — the metadata is click-routing only.
+ * Slot-0 cell that displays the user's current composing buffer.
  *
- * Top-level so both the lexicon path ([TaigiAutocompleteService.autocomplete])
- * and the continuous path ([buildContinuousSuggestionsForCandidates]) share
- * one constructor and the slot-0 contract stays single-sourced.
+ * v3.5.8 Phase 9 Item 4: only the **lexicon path** (non-Continuous mode,
+ * §10.5 mode gating) emits this cell. The Continuous path
+ * ([buildContinuousSuggestionsForCandidates]) no longer inserts a
+ * composing-text cell — `candidate[0]` is the engine ranker top per
+ * §10.1.2 supersedes notice.
+ *
+ * The [TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] flag routes tap-to-commit
+ * via [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
+ * and is also gated by visual styling in
+ * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayAdapter]
+ * (inset background applies only to lexicon-path slot-0). Per
+ * `docs/engine/continuous-input-ranking.md` §10, slot 0 has no dashed-border
+ * affordance — the metadata is click-routing + lexicon-path inset only.
  */
 internal fun createComposingTextCell(composingText: String): TaigiWord =
     TaigiWord(
@@ -220,21 +236,27 @@ internal fun createComposingTextCell(composingText: String): TaigiWord =
  * Wrap a list of engine [RustEngineBridge.ContinuousCandidate] into the
  * platform `[TaigiWord]` shape with metadata sidechannel pre-populated for
  * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
- * tap routing. Slot-0 stays the composing-text cell; Continuous candidates
- * fill slots 1..n.
+ * tap routing.
+ *
+ * v3.5.8 Phase 9 Item 4: per `docs/engine/continuous-input-ranking.md` §10.1.2
+ * (supersedes legacy slot-0 model) + §10.3 commit contract, Continuous mode
+ * has NO composing-text cell at slot 0. `candidate[0]` is the engine ranker
+ * top and tap-0 commits `candidate[0].display_text` via `commitContinuous`
+ * (clarification γ). The inline pre-edit (`setComposingText`) is the only
+ * composing-text surface; Enter commits the pending tail via Item 3.
  *
  * Top-level so the contract is unit-testable without instantiating
  * [LexiconService] / [NextWordService].
  */
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
-    composingText: String,
-): List<TaigiWord> {
-    val cells = candidates.mapIndexed { index, candidate ->
+): List<TaigiWord> =
+    candidates.mapIndexed { index, candidate ->
         TaigiWord(
             // Synthetic id ≥ 1 keeps Continuous candidates outside English
-            // (id ≤ -100) and NextWord (-99..-1) sentinel ranges. Routing
-            // keys off additionalInfo — id is defense-in-depth.
+            // (id ≤ -100) and NextWord (-99..-1) sentinel ranges, and clear
+            // of the lexicon-path slot-0 composing-text cell (id == 0).
+            // Routing keys off additionalInfo — id is defense-in-depth.
             id = index + 1,
             roman = candidate.displayText,
             hanzi = null,
@@ -247,8 +269,3 @@ internal fun buildContinuousSuggestionsForCandidates(
             ),
         )
     }
-    return buildList {
-        add(createComposingTextCell(composingText))
-        addAll(cells)
-    }
-}

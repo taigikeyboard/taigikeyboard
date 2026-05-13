@@ -131,8 +131,17 @@ class CandidateOverlayAdapter(
                 primaryText.typeface = typeface
                 subtitleText.typeface = typeface
 
-                // Composing cell (position 0): no flex + inset background
-                val isComposing = item.originalIndex == 0 && item.word.id >= 0
+                // Composing cell: no flex + inset background.
+                // v3.5.8 Phase 9 Item 4: gate on the IS_COMPOSING_TEXT
+                // sidechannel rather than (originalIndex == 0 && id >= 0).
+                // In Continuous mode (§10.1.2 supersedes), slot 0 is the
+                // engine ranker's `candidate[0]` (id == 1, no
+                // IS_COMPOSING_TEXT marker) and must NOT receive the
+                // legacy composing-cell styling. The lexicon path still
+                // emits an explicit composing-text cell at slot 0
+                // (id == 0, IS_COMPOSING_TEXT == "true") per §10.5 mode
+                // gating; that cell continues to get the inset background.
+                val isComposing = item.word.additionalInfo[TaigiWord.MetadataKeys.IS_COMPOSING_TEXT] == "true"
 
                 // Pixel-based layout: measuredWidth as base, weight=1 for equal flex
                 // Composing cell: weight=0 to prevent stretching beyond content width

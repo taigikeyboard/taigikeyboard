@@ -116,23 +116,21 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         let capturedRawInput = composing.rawInput
         logger.debug("[AUTOCOMPLETE] rawInput='\(composing.rawInput)' display='\(composing.displayText)'")
 
-        // v3.5.8 Phase 7B — Continuous-input branch (Codex Fork B1+G1+Risk 2).
+        // v3.5.8 Phase 9 Item 4 — Continuous-input branch.
         // Synchronous fetch: ComposingManager.fetchContinuousCandidates() calls
         // RustEngineBridge.composingFetchAtPos on the calling thread, so the
         // generation snapshot is consistent with the captured `rawInput`.
         // Empty result (not in Continuous, no inventory, no FST hits) =>
         // graceful fall-through to the existing lexicon path so single-syllable
         // / hyphenated / POJ-tone-mark inputs still get classic candidates.
-        // Continuous branch builds its own suggestions array (does NOT share
-        // `buildSuggestions(from:composingText:)`) to avoid double-inserting
-        // the position-0 composing-text cell (Codex Risk 2).
+        // Continuous strip has NO composing-text cell at slot 0; `candidate[0]`
+        // is the engine ranker top per `docs/engine/continuous-input-ranking.md`
+        // §10.1.2 (supersedes legacy slot-0 model). Inline pre-edit
+        // (`markedText`) is the only composing-text surface in Continuous mode.
         if let fetcher = continuousFetcher {
             let candidates = fetcher.fetchContinuousCandidates()
             if !candidates.isEmpty {
-                let suggestions = buildContinuousSuggestions(
-                    from: candidates,
-                    composingText: composing.displayText,
-                )
+                let suggestions = buildContinuousSuggestions(from: candidates)
                 return Autocomplete.Result(inputText: text, suggestions: suggestions)
             }
         }
@@ -253,28 +251,40 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
         return suggestions
     }
 
-    /// v3.5.8 Phase 7B — Continuous candidate suggestions.
-    /// `additionalInfo` carries `consumedSpanEnd` + `syllableCount` (decimal
+    /// v3.5.8 Phase 9 — Continuous candidate suggestions.
+    ///
+    /// Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
+    /// slot-0 model) + §10.3 commit contract: in Continuous mode the strip has
+    /// NO composing-text cell. `candidate[0]` is the engine ranker top and
+    /// Tap-0 commits `candidate[0].display_text` via `commitContinuous(...)`
+    /// (clarification γ: canonical `display_text`, NOT a roman-with-spaces
+    /// visual form). The inline pre-edit (`markedText`) is the only
+    /// composing-text surface; Enter commits the pending tail via Item 3's
+    /// `Phase::Continuous` `Intent::CommitRaw` arm.
+    ///
+    /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal
     /// strings) plus `displayText` (engine-supplied raw value) so
     /// `ActionHandler.handleSuggestionSelection` can route the tap to
     /// `composingManager.commitContinuous(...)` with the engine-supplied byte
-    /// offsets AND the unmodified display text. The `displayText` sidechannel
-    /// is required because TPS layout's `CandidateCellHelper.suggestionToHandle`
-    /// rewrites `suggestion.text` via `tlNumericToTPS` when the subtitle is
-    /// nil/empty — without the sidechannel, `ActionHandler` would call
-    /// `commitContinuous(displayText:)` with the rewritten text, which won't
-    /// match the engine's fetched span metadata and would no-op the commit
+    /// offsets AND the unmodified display text. All three keys are
+    /// strict-required at the consumer; missing sidechannel drops the tap
+    /// (Item 4 fork F2=A — no `?? suggestion.text` fallback, which would
+    /// commit the visual form once Item 6 ships dual-line rendering).
+    /// The `displayText` sidechannel is required because TPS layout's
+    /// `CandidateCellHelper.suggestionToHandle` rewrites `suggestion.text` via
+    /// `tlNumericToTPS` when the subtitle is nil/empty — without the
+    /// sidechannel, `ActionHandler` would call `commitContinuous(displayText:)`
+    /// with the rewritten text, which would not match the engine's fetched
+    /// span metadata and would no-op the commit
     /// (Codex PR #257 r3214912627). NextWord uses the same `displayText` key
-    /// convention (`ActionHandler+Suggestions.swift:32`).
-    /// Position-0 retains the pending composing-text cell so the user can
-    /// always commit raw / select pending; the Continuous candidates follow.
-    // 中文: 連續輸入候選詞 → KK Suggestion 轉換。displayText 用 additionalInfo
-    // 中文: sidechannel 帶,避開 TPS layout 在 view 端 tlNumericToTPS 改寫 text 的污染。
-    private func buildContinuousSuggestions(
+    /// convention.
+    // 中文: 連續輸入候選詞 → KK Suggestion 轉換。slot-0 是 candidate[0],不再放
+    // 中文: composing-text cell(§10.1.2)。displayText sidechannel 嚴格必須,
+    // 中文: 缺項就 drop tap,避開 Item 6 dual-line 帶來的 γ 陷阱。
+    internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
-        composingText: String,
     ) -> [Autocomplete.Suggestion] {
-        var suggestions: [Autocomplete.Suggestion] = candidates.map { c in
+        candidates.map { c in
             Autocomplete.Suggestion(
                 text: c.displayText,
                 title: c.displayText,
@@ -287,8 +297,6 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                 ],
             )
         }
-        suggestions.insert(createComposingTextSuggestion(composingText), at: 0)
-        return suggestions
     }
 
     // MARK: - Suggestion construction

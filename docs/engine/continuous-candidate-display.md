@@ -16,7 +16,7 @@ The v3.5.8 continuous-input candidate carrier (`CandidateMessage` in `composing.
 Because the two paths are mutually exclusive **within one `autocomplete()` call** but **toggle between calls** (Continuous active vs. fall-through), the user observes:
 
 - **Temporal interleave** across keystrokes — a strip in continuous mode renders single-line; the next keystroke that fails to syllabify falls through to lexicon → dual-line.
-- **Slot-0 vs slots 1..n contrast** within one strip — slot-0 composing-text cell is always single-line (no hanji possible for pending preedit), while slots 1..n alternate based on which path produced them.
+- **Slot-0 vs slots 1..n contrast** within one strip (non-Continuous lexicon path only, per §10.5 Mode Gating) — slot-0 composing-text cell is always single-line (no hanji possible for pending preedit), while slots 1..n alternate based on which path produced them. In Continuous mode (§10.1.2), slot 0 is the engine ranker's top candidate and may itself be dual-line.
 
 Expected behavior: **every dictionary-sourced continuous candidate renders dual-line (roman + hanji)** with the same display contract as the lexicon path. Single-source-of-truth data flow: one proto carrier, one cell shape, one set of UI rules.
 
@@ -162,10 +162,12 @@ Each toggle flips the strip's cell shape, producing the user-observed "交錯" a
 
 ### 3.3 Slot-0 vs slots 1..n
 
-Slot-0 (`isComposingText`) is ALWAYS single-line:
+> **Superseded by [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.1.2 for Continuous mode (Item 4 shipped 2026-05-14)**: the Continuous path no longer emits a composing-text cell at slot 0 — `candidate[0]` is the engine ranker top. The text below remains accurate for the **non-Continuous lexicon path only** (§10.5 Mode Gating).
 
-- iOS `createComposingTextSuggestion` ([`AutocompleteService.swift:297-304`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift)): `subtitle: nil`
-- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt:209-216`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)): `hanzi = null`
+Slot-0 (`isComposingText`, lexicon path only) is ALWAYS single-line:
+
+- iOS `createComposingTextSuggestion` ([`AutocompleteService.swift`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift)): `subtitle: nil`
+- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)): `hanzi = null`
 
 This is **correct** — pending preedit has no hanji yet to display. But when slots 1..n switch to dual-line (lexicon path), slot-0's single-line stands out, amplifying the inconsistency.
 
@@ -269,11 +271,14 @@ public struct ContinuousCandidate: Equatable {
 
 ```swift
 // ios/Sources/TaigiKeyboard/Autocomplete/Services/AutocompleteService.swift
-private func buildContinuousSuggestions(
+// Post-Item 4 baseline: signature has no `composingText:` param and no
+// `createComposingTextSuggestion` insert (slot 0 == candidate[0] per
+// `continuous-input-ranking.md` §10.1.2). The `← was:` markers below show
+// the Item 5/6 additions (proto `roman` / `hanji` fields + dual-line subtitle).
+internal func buildContinuousSuggestions(
     from candidates: [RustEngineBridge.ContinuousCandidate],
-    composingText: String,
 ) -> [Autocomplete.Suggestion] {
-    var suggestions: [Autocomplete.Suggestion] = candidates.map { c in
+    candidates.map { c in
         Autocomplete.Suggestion(
             text: c.roman,                                  // ← was: c.displayText
             title: c.roman,                                 // ← was: c.displayText
@@ -282,12 +287,10 @@ private func buildContinuousSuggestions(
                 "isContinuous": "true",
                 "consumedBytes": String(c.consumedSpanEnd),
                 "syllableCount": String(c.syllableCount),
-                "displayText": c.displayText,               // unchanged — commit / freq sidechannel
+                "displayText": c.displayText,               // unchanged — commit / freq sidechannel (γ)
             ],
         )
     }
-    suggestions.insert(createComposingTextSuggestion(composingText), at: 0)
-    return suggestions
 }
 ```
 
@@ -310,11 +313,14 @@ data class ContinuousCandidate(
 
 ```kotlin
 // android/.../ime/text/composing/TaigiAutocompleteService.kt
+// Post-Item 4 baseline: signature has no `composingText` param and no
+// `createComposingTextCell` insert (slot 0 == candidate[0] per
+// `continuous-input-ranking.md` §10.1.2). The `← was:` markers below show
+// the Item 5/6 additions (proto `roman` / `hanji` fields + dual-line hanzi).
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
-    composingText: String,
-): List<TaigiWord> {
-    val cells = candidates.mapIndexed { index, c ->
+): List<TaigiWord> =
+    candidates.mapIndexed { index, c ->
         TaigiWord(
             id = index + 1,
             roman = c.roman,                                       // ← was: c.displayText
@@ -324,15 +330,10 @@ internal fun buildContinuousSuggestionsForCandidates(
                 TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",
                 TaigiWord.MetadataKeys.CONSUMED_BYTES to c.consumedSpanEnd.toString(),
                 TaigiWord.MetadataKeys.SYLLABLE_COUNT to c.syllableCount.toString(),
-                TaigiWord.MetadataKeys.DISPLAY_TEXT to c.displayText,  // unchanged
+                TaigiWord.MetadataKeys.DISPLAY_TEXT to c.displayText,  // unchanged — commit / freq sidechannel (γ)
             ),
         )
     }
-    return buildList {
-        add(createComposingTextCell(composingText))
-        addAll(cells)
-    }
-}
 ```
 
 ### 4.6 Slot-0 stays single-line
@@ -663,10 +664,7 @@ func autocomplete(_ text: String) async throws -> Autocomplete.Result {
         return Autocomplete.Result(inputText: text, suggestions: [])
     }
     let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
-    let suggestions = buildContinuousSuggestions(
-        from: candidates,
-        composingText: composing.displayText,
-    )
+    let suggestions = buildContinuousSuggestions(from: candidates)
     return Autocomplete.Result(inputText: text, suggestions: suggestions)
 }
 ```
@@ -676,14 +674,11 @@ func autocomplete(_ text: String) async throws -> Autocomplete.Result {
 suspend fun autocomplete(rawInput: String, displayText: String, ...): List<TaigiWord> {
     if (rawInput.isEmpty() || displayText.isEmpty()) return emptyList()
     val candidates = continuousFetcher()
-    return buildContinuousSuggestionsForCandidates(candidates, displayText)
+    return buildContinuousSuggestionsForCandidates(candidates)
 }
 ```
 
-Note that `buildContinuousSuggestions` / `buildContinuousSuggestionsForCandidates` **already always insert** slot-0 composing-text cell — so the "no candidates" UX is automatically preserved (strip shows slot-0 only, identical to current `buildSuggestions` empty-words behavior). Per Q2 clarification.
-
-> **Superseded by [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.1.2 for Continuous mode** (2026-05-13).
-> Under §10, slot 0 in Continuous mode is the engine ranker's top candidate (segmented), **not** an injected composing-text cell. The "always insert slot-0 composing-text cell" behavior above describes the **pre-§10 design**; the actual v3.5.8 Continuous-mode behavior after the fix-plan items 2–6 land will be: composing buffer lives only as inline pre-edit; the candidate strip contains ranker candidates only (with `candidate[0]` being the segmented top). Empty-engine state is then shown as an empty strip rather than a single composing cell — see [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.7 partial-prefix row + new edge cases.
+Empty-engine state: per §15.6 acceptance criteria, the Continuous strip is empty (`buildContinuousSuggestions` returns `[]`); the inline pre-edit retains the composing buffer, and Enter still commits the raw tail via Item 3's `Phase::Continuous` `Intent::CommitRaw` arm. The pre-§10 "always insert slot-0 composing-text cell" affordance was retired in Item 4 (`docs/engine/continuous-input-ranking.md` §10.1.2 supersedes notice).
 
 What gets deleted from each platform:
 
@@ -694,7 +689,7 @@ What gets deleted from each platform:
 | Android | Same set in `TaigiAutocompleteService.kt` mirror | ~150 LOC |
 | Android | `AutocompleteInputClassifier.kt` mirror | ~30 LOC |
 
-Total platform deletion: ~330 LOC + their tests. Net diff per platform (after `buildContinuous*` keeps the slot-0 builder) is approximately **−250 LOC each, +20 LOC tightening tests**.
+Total platform deletion: ~330 LOC + their tests. Net diff per platform is approximately **−250 LOC each, +20 LOC tightening tests** (Continuous `buildContinuous*` no longer emits slot-0 composing cell post-Item 4; lexicon `createComposingText*` retire happens here when §15.3 ships).
 
 `LexiconService` itself stays — it still serves **Tab3 dictionary search** (the separate "search the dictionary by hanzi" feature, not autocomplete). The retire affects only the `autocomplete()` callsite. Per [`docs/engine/autocomplete.md`](autocomplete.md) and the Tab3 hanzi-range parity correction history (PR #202), Tab3 is a fully orthogonal consumer.
 

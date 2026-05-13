@@ -18,27 +18,31 @@ extension ActionHandler {
             return
         }
 
-        // v3.5.8 Phase 7B — Continuous-input commit branch (Codex Fork C modify).
-        // Metadata round-trip via decimal strings + sidechannel displayText:
-        // `additionalInfo["consumedBytes"]` / `["syllableCount"]` /
-        // `["displayText"]` were emitted by
-        // `AutocompleteService.buildContinuousSuggestions`. On any decode
-        // failure (missing required key / non-UInt32 value) DROP the tap
-        // silently — Codex flagged that falling back to `selectSuggestion(text:)`
-        // would commit only `displayText` and lose `consumedBytes`, corrupting
-        // the engine's `Phase::Continuous { raw }` byte alignment or
-        // prematurely exiting via the wrong path. Frequency recording /
-        // NextWord handshake happen via the engine-emitted effects on the
-        // mid/final commit (`engine/composing/src/transition.rs:649-674`).
-        // The `displayText` sidechannel is required because TPS layout's
-        // `CandidateCellHelper.suggestionToHandle` rewrites `suggestion.text`
-        // via `tlNumericToTPS` when subtitle is nil; using the rewritten
-        // text for `commitContinuous(displayText:)` would mis-match the
-        // engine's fetched span metadata and no-op the commit
-        // (Codex PR #257 r3214912627). Sidechannel value is `??`-fallback
-        // tolerant for older test fixtures / alternate construction paths.
+        // v3.5.8 Phase 9 Item 4 — Continuous-input commit branch.
+        // Per `docs/engine/continuous-input-ranking.md` §10.3 (Tap-0/Tap-N
+        // commit contract + clarification γ): both slot-0 and slot-N taps
+        // commit `candidate[N].display_text` — the canonical dictionary
+        // string (`hanji.unwrap_or(roman)`), NOT the roman-with-spaces visual
+        // form that Item 6 will render. The sidechannel `displayText` is the
+        // wire to the canonical form; `suggestion.text` may be view-rewritten
+        // (TPS layout via `CandidateCellHelper.suggestionToHandle`, or Item 6
+        // dual-line segmented roman) and must never be used as the commit
+        // string.
+        //
+        // Strict-required keys (Item 4 fork F2=A): `consumedBytes`,
+        // `syllableCount`, and `displayText` all come from
+        // `AutocompleteService.buildContinuousSuggestions`. Missing or
+        // unparseable → drop the tap silently. Falling back to
+        // `selectSuggestion(text:)` would lose `consumedBytes`, corrupting
+        // the engine's `Phase::Continuous { raw }` byte alignment; falling
+        // back to `suggestion.text` would γ-violate the commit contract.
+        //
+        // Frequency recording / NextWord handshake happen via the engine
+        // effects on the mid/final commit
+        // (`engine/composing/src/transition.rs:649-674`).
         if suggestion.additionalInfo["isContinuous"] == "true" {
-            guard let consumedBytesStr = suggestion.additionalInfo["consumedBytes"],
+            guard let displayText = suggestion.additionalInfo["displayText"],
+                  let consumedBytesStr = suggestion.additionalInfo["consumedBytes"],
                   let syllableCountStr = suggestion.additionalInfo["syllableCount"],
                   let consumedBytes = UInt32(consumedBytesStr),
                   let syllableCount = UInt32(syllableCountStr)
@@ -49,11 +53,6 @@ extension ActionHandler {
                 )
                 return
             }
-            // Engine-supplied display text (untouched by view-layer rewrites).
-            // Falls back to `suggestion.text` when the sidechannel is missing
-            // — non-fatal so legacy fixtures and tests don't break, but the
-            // producer (`buildContinuousSuggestions`) always populates it.
-            let displayText = suggestion.additionalInfo["displayText"] ?? suggestion.text
             // Effect-backed commit signal (Codex PR #257 r3214932308):
             // `commitContinuous` returns `(didCommit, didFinalCommit)` derived
             // from `transition.effects` containing `.commitTextReplacingPreedit`.

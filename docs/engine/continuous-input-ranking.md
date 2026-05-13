@@ -444,7 +444,7 @@ Prior to §10, [`continuous-candidate-display.md`](continuous-candidate-display.
 
 **Non-Continuous mode** (legacy lexicon path) retains the pre-§10 slot-0 model. §10.5 Mode Gating is the boundary. `continuous-candidate-display.md` §4.6 / §15.4 wording therefore remains accurate **for non-Continuous mode only** — both will carry inline "superseded by §10 in Continuous mode" notes after Item 1 (this section) ships.
 
-Implementation status: visual unification shipped in `224a8aa3` (slot-0 dashed border + Android inset/bg/corner removed). Click-routing semantics + segmented content of slot 0 land in PR-9.X commit-display-split (fix-plan items 2–6).
+Implementation status: visual unification shipped in `224a8aa3` (Item 14, slot-0 dashed border + Android inset/bg/corner removed). Click-routing semantics shipped in Item 4 — the Continuous path no longer inserts a composing-text cell at slot 0; `candidate[0]` is the engine ranker top and Tap-0 routes through `commitContinuous(candidate[0].display_text)` (clarification γ). Segmented content of slot 0 (visual dual-line roman/hanji rendering) lands in Items 5+6.
 
 ### 10.2 Display Contract
 
@@ -608,7 +608,7 @@ Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](con
 | A3: segmentation target ambiguous between `display_text` / roman / hanji | §10.2 segmented-rendering rule + §10.3 clarification γ |
 | A4 + B3: Enter-after-nail / partial-prefix semantics | §10.3 clarification β + §10.7 new rows |
 | C1: MOE Enter evidence weaker than spec claims | §10.1.1 clarification δ |
-| D fix plan (14 items, ordered) | Items 14 + 1 + 2 shipped (commits `224a8aa3`, `3a306b2d`, this commit). Items 3-13 tracked in the v3.5.8 Phase 9 fix plan. |
+| D fix plan (14 items, ordered) | Items 14 + 1 + 2 + 3 + 4 shipped (commits `224a8aa3`, `3a306b2d`, `2b65bd78`, `29b5d437`, this commit). Items 5-13 tracked in the v3.5.8 Phase 9 fix plan. |
 
 **4 clarifications recorded inline**:
 - **α (slot-0 supersedes)** → §10.1.2
@@ -616,7 +616,7 @@ Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](con
 - **γ (segmentation render: roman gets spaces, hanji does not; Tap-0 commits `display_text` not visual)** → §10.2 + §10.3
 - **δ (MOE Enter evidence corroborates, does not prove; stronger methods listed)** → §10.1.1
 
-Fix-plan ordering: item 14 (visual unification) shipped 2026-05-13. Item 1 (doc reconcile) + Item 2 (`Phase::raw_input` accessor + invariant tests + §10.2 amendment for actual engine behavior) shipped on branch `v358-continuous-display-spec`. Remaining items 3-13 follow the dependency graph in the Codex transcript; next up = Item 3 (Enter-raw commit rewrite, depends on Item 2).
+Fix-plan ordering: item 14 (visual unification) shipped 2026-05-13. Item 1 (doc reconcile) + Item 2 (`Phase::raw_input` accessor + invariant tests + §10.2 amendment for actual engine behavior) shipped on branch `v358-continuous-display-spec`. Item 3 (`Intent::CommitRaw` in `Phase::Continuous` commits `derived_display(pending)`, mid-commit preserves nailed segments) shipped 2026-05-14. Item 4 (Tap-0/Tap-N commit semantics — slot-0 cell removed from Continuous path, strict-required `displayText` sidechannel) shipped 2026-05-14. Remaining items 5-13 follow the dependency graph in the Codex transcript; next up = Item 5 (`CandidateMessage` `roman` + `hanji` proto fields, unblocks Items 6 + 12).
 
 Durable re-grounding of the fix plan in a future session: re-run the Codex consult (`/tmp/v358-spec-review.txt` prompt) against the latest spec. Plan does not need to live in a separate doc — the spec itself now carries enough structure for an implementer to plan from.
 

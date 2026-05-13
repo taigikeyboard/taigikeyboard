@@ -296,12 +296,28 @@ class CandidateClickHandler(
     }
 
     /**
-     * Continuous-input candidate tap. Decodes the [TaigiWord.additionalInfo]
-     * sidechannel, dispatches `commitContinuous`, and gates per-segment
-     * frequency learning + final-commit auto-space on the effect-backed
+     * Continuous-input candidate tap (slot 0 and slot N, identical contract).
+     *
+     * Per `docs/engine/continuous-input-ranking.md` §10.3 + clarification γ:
+     * commits `candidate[N].display_text` — the canonical dictionary string
+     * (`hanji.unwrap_or(roman)`) — NOT the roman-with-spaces visual form
+     * that Item 6 will render in slot 0. Sidechannel `DISPLAY_TEXT` is the
+     * wire to that canonical form.
+     *
+     * Decodes the [TaigiWord.additionalInfo] sidechannel, dispatches
+     * `commitContinuous`, and gates per-segment frequency learning +
+     * final-commit auto-space on the effect-backed
      * [RustEngineBridge.CommitContinuousResult]. Stale taps where the engine
      * has already left Continuous collapse to `(false, false)` so neither
      * side-effect fires.
+     *
+     * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are all
+     * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
+     * tap. No fallback to [TaigiWord.roman] — once Item 6 ships dual-line
+     * segmented rendering, `roman` may carry the visual form with word
+     * spaces and γ would be violated. No fallback to `selectSuggestion(text)`
+     * either — would lose `consumedBytes` and corrupt `Phase::Continuous { raw }`
+     * byte alignment.
      */
     private fun handleContinuousCandidateClick(
         selectedWord: TaigiWord,
@@ -309,17 +325,14 @@ class CandidateClickHandler(
         composingManager: com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager,
     ) {
         val info = selectedWord.additionalInfo
-        val displayText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT] ?: selectedWord.roman
+        val displayText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT]
         val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull()
         val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull()
-        if (consumedBytes == null || syllableCount == null) {
-            // Decode failure: NEVER fall back to selectSuggestion(text) — would
-            // commit displayText only, lose consumedBytes, mis-align engine
-            // pending bytes. Drop the gesture instead.
+        if (displayText == null || consumedBytes == null || syllableCount == null) {
             if (BuildConfig.DEBUG) {
                 Log.w(
                     TAG,
-                    "[CONTINUOUS] decode failed displayText='$displayText' consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
+                    "[CONTINUOUS] decode failed displayText=${info[TaigiWord.MetadataKeys.DISPLAY_TEXT]} consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
                 )
             }
             return
