@@ -265,20 +265,21 @@ class ComposingManager(
 
     fun commitRawInput(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitRawInput" }
-        // Same Continuous-no-op fix shape as `commitComposition`:
-        // `Intent::CommitRaw` is a no-op in Continuous, so route through
-        // SelectSuggestion with the raw string. Empty rawInput → canonical
-        // CommitRaw (no-op on Idle).
-        val raw = getRawInput().orEmpty()
-        if (raw.isEmpty()) {
-            applyAsSelfCommit(
-                RustEngineBridge.composingCommitRaw(currentGeneration),
-                ic,
-            )
-            return
-        }
+        // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles `Phase::Continuous`
+        // CommitRaw natively now — commits `derived_display(pending, config)`
+        // and fires NextWordWordSelected (matches commit_continuous final-
+        // commit shape). The Phase 7B SelectSuggestion bypass is gone; the
+        // engine owns per-phase routing. See
+        // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
+        // 中文: Phase 9 Item 3 — engine 在 Continuous 下走 derived_display + NextWord;
+        // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎依 phase 決定行為。
+        val settings = settingsProvider.current
         applyAsSelfCommit(
-            RustEngineBridge.composingSelectSuggestion(raw, currentGeneration),
+            RustEngineBridge.composingCommitRaw(
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
             ic,
         )
     }

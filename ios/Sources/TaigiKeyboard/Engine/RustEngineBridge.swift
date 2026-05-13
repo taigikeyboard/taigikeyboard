@@ -663,12 +663,24 @@ public enum RustEngineBridge {
         )
     }
 
-    public static func composingCommitRaw(generation: UInt64) -> ComposingTransition {
+    // v3.5.8 Phase 9 Item 3: `Intent::CommitRaw` under `Phase::Continuous`
+    // commits `derived_display(pending, config)` rather than literal
+    // keystrokes, so the engine needs the live `AppConfig` (input mode +
+    // tone toggles) to render POJ doubletap / nasal-marker / tone marks
+    // correctly. Composing-arm behavior is unchanged; the carrier is
+    // ignored there.
+    // 中文: Phase 9 Item 3 — Continuous 下 CommitRaw 走 derived_display 需 AppConfig;
+    // 中文: Composing 路徑不受影響 (config 在 Composing 分支被忽略)。
+    public static func composingCommitRaw(
+        mode: InputMode,
+        toggles: ToneToggles,
+        generation: UInt64,
+    ) -> ComposingTransition {
         composingDispatch(
             method: .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: nil,
+            config: appConfig(mode: mode, toggles: toggles),
         )
     }
 

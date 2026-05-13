@@ -821,9 +821,16 @@ object RustEngineBridge {
         )
     }
 
-    // 中文: 提交 raw(原始 ASCII)字串到文件 — 例如 commit "ho2" 而非 "hó"。
+    // 中文: 提交 raw 字串。Composing 階段送字面 keystrokes (e.g. commit "ho2"),
+    // 中文: Continuous 階段送 derived_display(pending) (e.g. "hó")。引擎依 phase 自動分派,
+    // 中文: 故 Continuous 端需要 AppConfig (input mode + tone toggles) 才能正確 render derived。
+    // 中文: Phase 9 Item 3 (2026-05-13) 起加入 mode/toggles 參數。
     @JvmStatic
-    fun composingCommitRaw(generation: Long): ComposingTransition {
+    fun composingCommitRaw(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        generation: Long,
+    ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
             .newBuilder()
             .build()
@@ -831,7 +838,7 @@ object RustEngineBridge {
             methodSetter = { it.commitRaw = payload },
             op = "composingCommitRaw",
             generation = generation,
-            config = null,
+            config = appConfig(mode, toggles),
         )
     }
 

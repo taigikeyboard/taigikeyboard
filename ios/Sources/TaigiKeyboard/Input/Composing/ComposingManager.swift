@@ -442,23 +442,25 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(derived, generation: currentGeneration))
     }
 
-    // 中文: 把 raw input 直接送出(不經 derived 轉換),結束組字。
+    // 中文: 把 raw input 直接送出。Composing 階段送字面 keystrokes;Continuous 階段送
+    // 中文: derived_display(pending) (= inline pre-edit 字串),由引擎依 phase 自動分派。
     public func commitRawInput() {
         logger.debug("[COMPOSE] fn=commitRawInput")
-        // v3.5.8 Phase 7B (Codex post-impl P1, 2026-05-10):
-        // `Intent::CommitRaw` is also a no-op in `Phase::Continuous`
-        // (`engine/composing/tests/continuous_phase.rs:662`). Same fix shape
-        // as `commitComposition`: route through SelectSuggestion with the raw
-        // string so the user's "Enter at index 0 commits literal raw" gesture
-        // works in all phases. Empty rawInput → fall through to canonical
-        // CommitRaw (no-op on Idle).
-        // 中文: 同 commitComposition fix;raw 字串走 SelectSuggestion 統一三 phase。
-        let raw = rawInput
-        guard !raw.isEmpty else {
-            applyAsSelfCommit(RustEngineBridge.composingCommitRaw(generation: currentGeneration))
-            return
-        }
-        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(raw, generation: currentGeneration))
+        // v3.5.8 Phase 9 Item 3 (2026-05-13):
+        // `Intent::CommitRaw` now handles `Phase::Continuous` natively in
+        // engine — commits `derived_display(pending, config)` and fires the
+        // same NextWord effect as a final-commit candidate tap (see
+        // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
+        // The Phase 7B SelectSuggestion bypass is no longer needed; the
+        // engine owns the per-phase routing.
+        // 中文: Phase 9 Item 3 — engine 在 Continuous 下走 derived_display + NextWord;
+        // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎決定行為。
+        let settings = settingsProvider.current
+        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration,
+        ))
     }
 
     // 中文: 使用者點選候選詞時呼叫,送出 text 並結束組字。

@@ -622,8 +622,11 @@ fn query_state_under_continuous_returns_pending_only_preedit() {
 // "abort continuous + begin fresh Composing"; `SelectSuggestion` becomes
 // "abort continuous + commit text directly"; `CommitPreeditThenInsertExternal`
 // becomes "abort continuous + commit (pending derived ++ external) atomically".
-// The two text-less Intents (`CommitDerived`, `CommitRaw`) stay snapshot
-// noop — Continuous already auto-commits via mid-commit.
+// `CommitDerived` stays snapshot noop — Continuous already auto-commits via
+// mid-commit. `CommitRaw` was the same noop until v3.5.8 Phase 9 Item 3 made
+// it commit the pending-tail derived display + fire NextWord (see
+// `commit_raw_under_continuous_*` tests below and
+// `docs/engine/continuous-input-ranking.md` §10.3).
 
 #[test]
 fn start_under_continuous_aborts_then_begins_fresh_composing() {
@@ -658,12 +661,133 @@ fn commit_derived_under_continuous_is_noop() {
     assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 }
 
+// Phase 9 Item 3 — Enter-raw commit in Continuous. The four tests below pin
+// the new contract: CommitRaw under Continuous now mirrors commit_continuous's
+// final-commit shape (4 effects, NextWordWordSelected fires) and commits the
+// pending-tail's derived display rather than literal keystrokes. Mid-commit
+// state shrinks `Phase::Continuous.raw` to the pending tail, so Enter only
+// commits that tail; nailed segments stay in the document untouched.
+// 中文: Phase 9 Item 3 — Continuous 下的 CommitRaw 不再 noop,改提交 derived_display(pending) +
+// 中文: 4 個 effect 對齊 commit_continuous final-commit;mid-commit 後只提交 pending 尾。
+
 #[test]
-fn commit_raw_under_continuous_is_noop() {
-    let mut e = engine_in_continuous("tsua");
+fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
+    // Pending = "li2" → derived display = "lí". Enter commits "lí" (display)
+    // with roman = "li2" (raw) and trigger_prediction = true.
+    let mut e = engine_in_continuous("li2");
     let resp = e.apply(Intent::CommitRaw, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
+    assert_kinds(
+        &resp.effect,
+        [
+            "CommitTextReplacingPreedit",
+            "ResetAutocomplete",
+            "ResetAutocompleteContext",
+            "NextWordWordSelected",
+        ],
+    );
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "lí");
+    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.text, "lí");
+    assert_eq!(nw.roman, "li2");
+    assert!(nw.trigger_prediction);
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+#[test]
+fn commit_raw_under_continuous_after_mid_commit_only_commits_pending_tail() {
+    // Setup: enter Continuous on "tsuali2", mid-commit "紙" consuming bytes 0..4
+    // ("tsua"), leaving pending = "li2". Enter then commits "lí" — the pending
+    // tail's derived display — NOT the original keystrokes "tsuali2".
+    let mut e = engine_in_continuous("tsuali2");
+    e.apply(
+        Intent::CommitContinuous {
+            display_text: "紙".to_string(),
+            consumed_bytes: 4,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    let Phase::Continuous { raw, committed } = e.snapshot_state().phase else {
+        panic!("expected Continuous after mid-commit");
+    };
+    assert_eq!(raw, "li2");
+    assert_eq!(committed.len(), 1);
+
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    assert_kinds(
+        &resp.effect,
+        [
+            "CommitTextReplacingPreedit",
+            "ResetAutocomplete",
+            "ResetAutocompleteContext",
+            "NextWordWordSelected",
+        ],
+    );
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    // Only the pending tail "li2" → "lí"; "紙" was already in the document
+    // from the earlier mid-commit and is not re-emitted here.
+    // 中文: 只提交 pending 尾「lí」;先前 mid-commit 的「紙」已在文件中、不重發。
+    assert_eq!(commit.text, "lí");
+    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.roman, "li2");
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+#[test]
+fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
+    // F6.A regression: is_translate_swapped is a candidate-display swap that
+    // does not influence the inline pre-edit / Enter-raw contract. Enter
+    // commits the same derived display whether swap is on or off.
+    // 中文: F6.A 回歸測試 — is_translate_swapped 只影響候選顯示,不影響 Enter-raw commit 字串。
+    let mut config = config_tl();
+    config.is_translate_swapped = true;
+    let mut e = Engine::new();
+    e.apply(
+        Intent::Start {
+            text: "li2".to_string(),
+        },
+        &config,
+    );
+    e.apply(Intent::EnterContinuous, &config);
+    let resp = e.apply(Intent::CommitRaw, &config);
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "lí");
+}
+
+#[test]
+fn commit_raw_under_continuous_tps_passes_through_verbatim() {
+    // TPS pre-edit is rendered as-is (derived_display short-circuits TPS to
+    // the raw bopomofo string). Enter commits the same string.
+    // 中文: TPS 直接以原樣作為 derived display;Enter 提交一致字串。
+    let mut e = Engine::new();
+    e.apply(
+        Intent::Start {
+            text: "ㄍㄨㄚˋ".to_string(),
+        },
+        &config_tl(),
+    );
+    e.apply(Intent::EnterContinuous, &config_tl());
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "ㄍㄨㄚˋ");
+    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.roman, "ㄍㄨㄚˋ");
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
 #[test]

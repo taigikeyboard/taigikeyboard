@@ -63,10 +63,7 @@ pub(crate) fn apply(
             Phase::Continuous { .. } => noop(state, config),
             _ => commit_derived(state, config),
         },
-        Intent::CommitRaw => match &state.phase {
-            Phase::Continuous { .. } => noop(state, config),
-            _ => commit_raw(state, config),
-        },
+        Intent::CommitRaw => commit_raw(state, config),
         Intent::SelectSuggestion { text } => match &state.phase {
             Phase::Continuous { .. } => select_suggestion_under_continuous(state, text, config),
             _ => select_suggestion(state, text, config),
@@ -336,19 +333,75 @@ fn commit_derived(state: &mut EngineState, config: &AppConfig) -> ComposingRespo
 }
 
 fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    let Phase::Composing { raw } = &state.phase else {
-        return noop(state, config);
-    };
+    match &state.phase {
+        Phase::Composing { raw } => commit_raw_composing(state, raw.clone(), config),
+        Phase::Continuous { raw, .. } => commit_raw_continuous(state, raw.clone(), config),
+        Phase::Idle => noop(state, config),
+    }
+}
+
+fn commit_raw_composing(
+    state: &mut EngineState,
+    raw: String,
+    config: &AppConfig,
+) -> ComposingResponse {
     if raw.is_empty() {
         return noop(state, config);
     }
-    let text = raw.clone();
     exit_to_idle(
         state,
         vec![
-            commit_text_replacing_preedit(text),
+            commit_text_replacing_preedit(raw),
             reset_autocomplete(),
             reset_autocomplete_context(),
+        ],
+    )
+}
+
+/// `Intent::CommitRaw` under `Phase::Continuous` — v3.5.8 Phase 9 Item 3.
+/// Commits `derived_display(pending, config)` (= the inline pre-edit string
+/// the user sees in the host app's marked-text region) rather than literal
+/// keystrokes, mirroring `commit_continuous` final-commit's effect shape so
+/// that NextWord prediction fires consistently across "tap final candidate"
+/// and "press Enter to commit pending tail". Mid-commit semantics already
+/// landed in `commit_continuous`: `Phase::Continuous.raw` carries only the
+/// pending tail after earlier mid-commits, so this commits exactly that
+/// tail and leaves nailed segments untouched (they were committed via
+/// earlier `CommitTextReplacingPreedit` effects).
+///
+/// See `docs/engine/continuous-input-ranking.md` §10.3 commit contract +
+/// clarification β (Enter commits pending-tail display form, not literal
+/// keystrokes) and §10.7 "Enter after segments already nailed" row.
+// 中文: Phase 9 Item 3 — Continuous 下 Enter 提交 inline pre-edit 的字串(derived_display(pending)),
+// 中文: 而非字面 keystrokes;mid-commit 後只提交 pending 尾,已上屏的 segments 不動。
+// 中文: Effect 順序對齊 commit_continuous final-commit,確保 NextWord 預測一致觸發。
+fn commit_raw_continuous(
+    state: &mut EngineState,
+    raw: String,
+    config: &AppConfig,
+) -> ComposingResponse {
+    // F4.B defensive guard: `Phase::Continuous { raw: "" }` violates the
+    // "Continuous is non-empty in at least one of pending / committed"
+    // invariant (transition.rs:490-493), so this branch is unreachable
+    // under normal flow. Mirror Composing's commit_raw shape rather than
+    // panic if it somehow happens.
+    // 中文: F4.B 防禦性保護;此狀態違反 Continuous 不變式,不應出現,出現時 noop 不 panic。
+    if raw.is_empty() {
+        return noop(state, config);
+    }
+    let display = derived_display(&raw, config);
+    if display.is_empty() {
+        // Unreachable: derived_display only returns empty for empty raw.
+        // 中文: 不可達;derived_display 只在 raw 為空時回傳空字串。
+        return noop(state, config);
+    }
+    exit_to_idle(
+        state,
+        vec![
+            commit_text_replacing_preedit(display.clone()),
+            reset_autocomplete(),
+            reset_autocomplete_context(),
+            next_word_word_selected(display, raw, true),
         ],
     )
 }

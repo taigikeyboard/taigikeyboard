@@ -200,14 +200,18 @@ final class ComposingManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(manager.selectedCandidateIndex, -1)
-        // v3.5.8 Phase 7B: same Continuous-aware reroute as commitComposition.
-        // SelectSuggestion under Continuous emits 4 effects (3-effect Composing
-        // path + NextWordClearForNewComposing for the Continuous abort).
+        // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles Continuous
+        // CommitRaw natively now — commits `derived_display(pending)` and
+        // fires `NextWordWordSelected` (matches commit_continuous final-
+        // commit shape). For "Hello" derived display passes through
+        // verbatim because it has no convertible tone digits. NextWord
+        // payload carries text=display, roman=raw, triggerPrediction=true
+        // (same shape `commit_continuous` uses on final commit).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit("Hello"),
             .resetAutocomplete,
             .resetAutocompleteContext,
-            .nextWordClearForNewComposing,
+            .nextWordWordSelected(text: "Hello", roman: "Hello", triggerPrediction: true),
         ])
     }
 
