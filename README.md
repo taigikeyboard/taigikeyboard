@@ -2,7 +2,6 @@
 
 A Taiwanese (Tâi-gí / 台語) input method for iOS and Android. Romanization input (POJ, TL, TPS), Hanji (漢字), tone marks, autocomplete, and cross-system Romanization conversion.
 
-[![CI](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/ci.yml)
 [![Security](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/taigikeyboard/taigikeyboard/actions/workflows/security.yml)
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 9+](https://img.shields.io/badge/Android-9%2B-green)

@@ -52,7 +52,7 @@ dict:
 # Umbrella targets fan out to per-platform recipes. Per-platform recipes can
 # also be invoked directly (e.g. `make fmt-rust`) when iterating on one stack.
 #
-#   Rust    rustfmt + clippy (matches CI .github/workflows/ci.yml)
+#   Rust    rustfmt + clippy (canonical local pre-commit gate)
 #   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat
 #           Install:  brew install swiftformat
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle

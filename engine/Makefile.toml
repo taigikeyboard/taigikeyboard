@@ -37,9 +37,10 @@ command = "cargo"
 args = ["deny", "check"]
 
 [tasks.ci]
-# Mirrors the four cargo invocations in `.github/workflows/ci.yml` (rust-engine
-# job). Keep in sync — CI does not install cargo-make, it inlines the commands.
-description = "Local mirror of the CI build job"
+# Canonical four-command pre-commit gate (fmt-check + check + clippy + test).
+# Named `ci` for muscle-memory continuity but runs locally only — this project
+# has no GitHub Actions CI for lint/format/test (only security.yml remains).
+description = "Local pre-commit gate (rustfmt + check + clippy + test)"
 dependencies = ["fmt-check", "check", "clippy", "test"]
 
 # --- D9.2 platform-artifact wrappers ---------------------------------------
