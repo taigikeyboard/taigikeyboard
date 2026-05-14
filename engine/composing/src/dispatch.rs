@@ -29,6 +29,7 @@ use protos::engine::{
     ContinuousResponse, FrequencyEntry,
 };
 use ranking::{build_frequency_map, FrequencyMap};
+use unicode_normalization::UnicodeNormalization;
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
 /// `max_syllables=8` budget called out in `docs/roadmap.md:231` and
@@ -184,21 +185,20 @@ fn handle_fetch_at_pos(
 /// hermetic inventory without touching the global handle.
 ///
 /// **Input contract** (mirrors Phase 5 `fetch_candidates_for_endings`,
-/// `engine/lexicon/src/continuous.rs:24-33`): `raw` MUST be canonical
-/// TL ASCII — toneless (`tsua`) or numeric tone (`tsua7`, `tai1bak4`).
-/// ASCII `-` is now also accepted as a syllable-boundary marker (Phase
-/// 9 Item 8), reflecting POJ/TL convention (`tâi-uân`, `pe̍h-ōe-jī`):
-/// the toneless FST key is built by lowercasing, dropping every ASCII
-/// digit AND every ASCII `-` — both halves of the upstream
-/// `dictionary/common/notone.py::remove_tone` regex `[\d\-]` now align.
-///
-/// **Remaining Phase 6 limitation** (still deferred):
-/// - **POJ-display input** (`pe̍h`, `chóa`, `peⁿ`) NOT supported: the
-///   `to_ascii_lowercase` pass does not strip diacritics; per-syllable
-///   POJ→TL canonicalization is tracked as a separate Phase 9 item.
+/// `engine/lexicon/src/continuous.rs:24-33`): `raw` is either canonical
+/// TL ASCII — toneless (`tsua`) or numeric tone (`tsua7`, `tai1bak4`) —
+/// or POJ-display ASCII / non-ASCII (`pe̍h-ōe-jī`, `chóa`, `so͘`, `peⁿ`,
+/// `tâi5-ban3`). Hyphen `-` is accepted as a syllable-boundary marker
+/// (Phase 9 Item 8), reflecting POJ/TL convention (`tâi-uân`,
+/// `pe̍h-ōe-jī`). The toneless FST key is built by lowercasing,
+/// canonicalizing POJ-display to ASCII TL (Phase 9 Item 9), dropping
+/// every ASCII `-` (Item 8), then dropping every ASCII tone digit —
+/// converging on the upstream `dictionary/common/notone.py::remove_tone`
+/// surface (`[\d\-]` plus the diacritic / `o\u{0358}` / `\u{207f}`
+/// substitutions baked into the dictionary builder).
 // 中文: TL/POJ key 構造 — 經 lexicon SyllableInventory 切音節後,把 lower(shadow[0..end]) 去掉所有 ASCII 數字形成 fused toneless key,加 "tl:" 前綴。
-// 中文: 對應 dictionary/common/notone.py 的 [\d\-] 規則:digit 半邊在 strip_ascii_tone_digits;hyphen 半邊在 build_hyphen_shadow。
-// 中文: 帶連字號 (tai-bak) Phase 9 Item 8 已支援;POJ 帶調符 (pe̍h) 仍留待後續 slice。
+// 中文: 對應 dictionary/common/notone.py 的 [\d\-] 規則 + 顯示層 POJ diacritic / o\u{0358} / \u{207f} 等非 ASCII 寫法:
+// 中文:   digit 半邊在 strip_ascii_tone_digits;hyphen 半邊在 build_hyphen_shadow;POJ-display 半邊在 canonicalize_poj_shadow (Phase 9 Item 9)。
 fn build_keys_tl(raw: &str) -> Vec<(ConsumedSpan, String)> {
     LexiconHandle::with_state(|state| {
         let Some(inv) = state.syllable_inventory.as_ref() else {
@@ -210,29 +210,35 @@ fn build_keys_tl(raw: &str) -> Vec<(ConsumedSpan, String)> {
 }
 
 /// Inventory-injected variant of [`build_keys_tl`]. Runs the v3.5.8
-/// Phase 9 Item 8 hyphen-shadow pipeline:
+/// Phase 9 Items 8 + 9 canonicalize → hyphen-shadow → syllabify
+/// pipeline:
 ///
-/// 1. Lowercase `raw` (byte-level — POJ display diacritics pass through
-///    unchanged, which is harmless because they will not match the FST
-///    inventory anyway).
-/// 2. [`build_hyphen_shadow`] strips ASCII `-`, returning the shadow
-///    plus a shadow-byte → raw-byte offset map.
-/// 3. [`tl_syll::valid_span_endings`] walks the shadow against the
-///    inventory (which has no hyphenated entries — the whole point of
-///    the shadow pass).
-/// 4. For each shadow ending, build the fused toneless `tl:<key>` from
-///    `shadow[..end]` (digit strip) and translate `end` back to raw byte
-///    space via the offset map so `consumed_span_end` lines up with
-///    what platform UI slices on commit (`tai-` leaves the trailing `-`
-///    in the pending buffer; `-tai` consumes the leading `-`).
+/// 1. Lowercase `raw` (ASCII only — non-ASCII codepoints stay untouched
+///    here so the canonicalize stage can detect them).
+/// 2. [`canonicalize_poj_shadow`] (Item 9) folds POJ-display input
+///    (`pe̍h`, `chóa`, `peⁿ`, `so͘`) into ASCII TL spelling, returning
+///    `(canonical, canonical_to_raw_end)`. Pure-ASCII input is passed
+///    through identity, preserving every Item 8 hyphen-shadow contract
+///    pin.
+/// 3. [`build_hyphen_shadow`] (Item 8) strips ASCII `-` from the
+///    canonical buffer and returns `(shadow, shadow_to_canonical_end)`.
+/// 4. The two byte-offset maps compose into a single
+///    `shadow_to_raw_end` so downstream `consumed_span_end` lines up
+///    with what platform UI slices on commit.
+/// 5. [`tl_syll::valid_span_endings`] walks the shadow against the
+///    inventory (which has no hyphenated entries and no POJ-display
+///    keys — both transforms run upstream).
+/// 6. For each shadow ending, build the fused toneless `tl:<key>` from
+///    `shadow[..end]` (digit strip).
 ///
-/// Public (but `#[doc(hidden)]`) so the workspace integration test
-/// `engine/composing/tests/build_keys_tl_hyphen.rs` can drive a
-/// hermetic inventory without installing the global `LexiconHandle`
-/// singleton. Production callers go through [`build_keys_tl`]; the
-/// `doc(hidden)` attribute keeps this symbol off the public docs and
-/// signals that it is a test-injection seam, not a stable API.
-// 中文: build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase → hyphen-shadow → 音節切分 → fused toneless key + raw byte offset」。
+/// Public (but `#[doc(hidden)]`) so the workspace integration tests
+/// `engine/composing/tests/build_keys_tl_*` can drive a hermetic
+/// inventory without installing the global `LexiconHandle` singleton.
+/// Production callers go through [`build_keys_tl`]; the `doc(hidden)`
+/// attribute keeps this symbol off the public docs and signals that it
+/// is a test-injection seam, not a stable API.
+// 中文: build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase → canonicalize_poj_shadow (Item 9) → hyphen-shadow (Item 8) → 音節切分 → fused toneless key + raw byte offset」。
+// 中文: 兩條 offset map (canonical→raw, shadow→canonical) 在此 compose 成單一 shadow→raw,供 consumed_span_end 使用。
 // 中文: 開放 pub 是為了 integration test 可以 inject hermetic inventory;`#[doc(hidden)]` 標示其為 test seam 非穩定 API。
 #[doc(hidden)]
 pub fn build_keys_tl_with_inventory(
@@ -240,7 +246,12 @@ pub fn build_keys_tl_with_inventory(
     inv: &SyllableInventory,
 ) -> Vec<(ConsumedSpan, String)> {
     let lower = raw.to_ascii_lowercase();
-    let (shadow, shadow_to_raw_end) = build_hyphen_shadow(&lower);
+    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower);
+    let (shadow, shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
+    let shadow_to_raw_end: Vec<usize> = shadow_to_canonical_end
+        .iter()
+        .map(|&c| canonical_to_raw_end[c])
+        .collect();
     let endings = tl_syll::valid_span_endings(&shadow, 0, inv, MAX_SYLLABLES);
     if endings.is_empty() {
         return Vec::new();
@@ -316,6 +327,242 @@ fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
 // 中文: 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 半邊由 build_hyphen_shadow 上一層處理 (Phase 9 Item 8)。
 fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
+}
+
+/// Canonicalize POJ-display input (`pe̍h-ōe-jī`, `chóa`, `peⁿ`, `so͘`)
+/// into ASCII TL spelling, paired with a byte-indexed map from canonical
+/// byte offsets back to original `input` byte offsets. v3.5.8 Phase 9
+/// Item 9.
+///
+/// Pure-ASCII inputs are passed through unchanged with an identity
+/// offset map — this is the F3C gate from the pre-impl Codex consult
+/// (2026-05-15) and preserves every Item 8 hyphen-shadow contract pin.
+/// Without this gate, `phonetics::normalize_to_tl`'s ASCII substitutions
+/// (`ou→oo`, `oa→ua`, ...) would mis-rewrite real dictionary entries
+/// like `tó-uī` (`dictionary/output/dictionary.csv:1984`,
+/// `tl_notone=toui`) into `tooi` once the hyphen has collapsed the
+/// two syllables together.
+///
+/// Non-ASCII inputs run the two-phase canonicalize:
+///
+/// Phase 1 — char-level NFD walk over the original input. Each NFD
+/// scalar that is one of the 8 tone-mark combining codepoints in
+/// `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`
+/// (`U+0300, U+0301, U+0302, U+0304, U+0306, U+030B, U+030C, U+030D`) is
+/// dropped, with its UTF-8 byte width absorbed into the preceding base
+/// char's `raw_end` so the offset map stays anchored at the right of
+/// each consumed run. Other NFD scalars pass through unchanged
+/// (including `\u{0358}` and `\u{207f}` / `\u{1d3a}`, which Phase 2
+/// turns into ASCII).
+///
+/// Phase 2 — apply the [`phonetics::normalize_to_tl`] substitution
+/// chain (`engine/phonetics/src/syllable.rs:56-66`) with offset-aware
+/// substring replace. All substitutions other than `o\u{0358}→oo`,
+/// `\u{207f}|\u{1d3a}→nn`, and `oonn→onn` are byte-count-preserving so
+/// the offset map is invariant; the three shrinking rules drain the
+/// dropped trailing byte's map entry.
+///
+/// Output contract (mirrors [`build_hyphen_shadow`]):
+/// - `canonical` is ASCII (after Phase 2 all non-ASCII codepoints have
+///   been replaced with ASCII spellings).
+/// - `canonical_to_raw_end` has length `canonical.len() + 1`. Index `k`
+///   is the original-input byte offset right after the last original
+///   byte that contributed the first `k` canonical bytes.
+///   `canonical_to_raw_end[0] = 0`.
+///
+/// Examples (NFC inputs):
+/// - `"pe\u{030d}h"` (5 bytes) → `"peh"`, map `[0, 1, 4, 5]` — the
+///   dropped `\u{030d}` (2 bytes) is folded into the preceding `e`'s
+///   raw_end.
+/// - `"so\u{0358}"` (4 bytes) → `"soo"`, map `[0, 1, 4, 4]` — the
+///   `o\u{0358}→oo` substitution emits two ASCII bytes for the original
+///   non-ASCII pair, with EVERY new byte anchored at raw_end 4 so a
+///   partial-prefix syllabifier hit (`so` toneless) still consumes the
+///   whole `o\u{0358}` source spelling. Without this fold a `tl:so`
+///   candidate against the live `dictionary.csv` `so` / `soo` sibling
+///   pair would commit leaving `\u{0358}` dangling in the pending
+///   buffer (Codex post-impl P1 2026-05-15).
+/// - `"pe\u{207f}"` (5 bytes) → `"penn"`, map `[0, 1, 2, 5, 5]` — the
+///   `\u{207f}→nn` substitution starts AFTER the `pe`, so the
+///   atomic-fold rule only touches map indices strictly inside the
+///   substitution span (`map[3]` and `map[4]`). The byte BEFORE the
+///   substitution (`map[2] = 2`) is left alone — a syllabifier match
+///   ending exactly at the substitution boundary (e.g. `pe` toneless)
+///   legitimately consumes only `pe` raw bytes and leaves `\u{207f}`
+///   pending; the user's deliberate tap on the shorter candidate
+///   opted into that.
+// 中文: POJ-display 輸入 (含 combining tone marks 或 \u{0358}/\u{207f}) → 純 ASCII 標準 TL 拼寫,
+// 中文:   並建立 canonical byte → raw byte 的對照表。純 ASCII 輸入走 identity 快路徑 (F3C 守則)。
+// 中文: Phase 1 = NFD scan,丟掉 8 個 combining tone mark,讓 base vowel 的 raw_end 吞入丟掉的 mark byte 寬度。
+// 中文: Phase 2 = 套 phonetics::normalize_to_tl 的等價代換鏈;只有三條會縮位元數的規則需要調 map。
+fn canonicalize_poj_shadow(input: &str) -> (String, Vec<usize>) {
+    if input.is_ascii() {
+        let map: Vec<usize> = (0..=input.len()).collect();
+        return (input.to_owned(), map);
+    }
+
+    // Phase 1: NFD walk per original char so we can pair every NFD scalar
+    // with the byte range of the original char it came from.
+    let mut intermediate = String::with_capacity(input.len());
+    let mut map: Vec<usize> = Vec::with_capacity(input.len() + 1);
+    map.push(0);
+    let mut nfd_buf = [0u8; 4];
+
+    for (raw_idx, ch) in input.char_indices() {
+        let raw_end_after = raw_idx + ch.len_utf8();
+        for nfd_ch in ch.nfd() {
+            if is_tone_combining_mark(nfd_ch) {
+                // Drop: absorb the dropped scalar's raw bytes into the
+                // preceding emitted byte's raw_end so platform commit
+                // does not leave a dangling combining mark in the
+                // pending buffer. Guard against a leading standalone
+                // combining mark (map has only the baseline `0` entry,
+                // no emitted byte yet to absorb into): leave the
+                // baseline at `0` per the documented contract; the
+                // next emitted char's `raw_end_after` will already
+                // account for the dropped mark's byte width via its
+                // own `raw_idx + len_utf8()` (Codex post-impl P3
+                // 2026-05-15).
+                if map.len() > 1 {
+                    if let Some(last) = map.last_mut() {
+                        *last = raw_end_after;
+                    }
+                }
+                continue;
+            }
+            let nfd_str = nfd_ch.encode_utf8(&mut nfd_buf);
+            intermediate.push_str(nfd_str);
+            for _ in 0..nfd_ch.len_utf8() {
+                map.push(raw_end_after);
+            }
+        }
+    }
+
+    // Lowercase the ASCII letters that survived the NFD walk so the
+    // Phase 2 substitutions (`ch→ts`, `oa→ua`, ...) actually match.
+    // Non-ASCII bytes left over (`\u{0358}`, `\u{207f}`, `\u{1d3a}`) are
+    // unaffected by `to_ascii_lowercase` and get replaced into ASCII by
+    // Phase 2 below.
+    let intermediate_lower = intermediate.to_ascii_lowercase();
+
+    apply_normalize_to_tl_with_offsets(intermediate_lower, map)
+}
+
+/// True for the 8 combining tone-mark scalars listed in
+/// `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`. Codex
+/// pre-impl flagged that `\u{0358}` (combining dot above right, part of
+/// POJ `o\u{0358}` for `oo`) must NOT be dropped here — it has to
+/// survive Phase 1 so the Phase 2 `o\u{0358}→oo` substitution can fire.
+// 中文: 只認 phonetics tables.rs 的 8 個聲調 combining 符號;`\u{0358}` 留給 Phase 2 處理。
+fn is_tone_combining_mark(c: char) -> bool {
+    matches!(
+        c,
+        '\u{0300}'  // grave (tone 3)
+            | '\u{0301}'  // acute (tone 2)
+            | '\u{0302}'  // circumflex (tone 5)
+            | '\u{0304}'  // macron (tone 7)
+            | '\u{0306}'  // breve (POJ tone 9)
+            | '\u{030b}'  // double acute (TL tone 9)
+            | '\u{030c}'  // caron (tone 6)
+            | '\u{030d}' // vertical line above (tone 8)
+    )
+}
+
+/// Apply `phonetics::normalize_to_tl`'s substitution chain
+/// (`engine/phonetics/src/syllable.rs:56-66`) with offset-map
+/// maintenance. The chain runs the same `find → replace` order as the
+/// authoritative implementation; the only deltas are (a) we own the
+/// resulting offset map, and (b) the three shrinking rules
+/// (`o\u{0358}→oo`, `\u{207f}|\u{1d3a}→nn`, `oonn→onn`) drain the
+/// dropped trailing byte's map entry instead of producing a new
+/// `String`.
+// 中文: 套 phonetics::normalize_to_tl 的代換鏈,同時維護 offset map;
+// 中文: 只有 o\u{0358}→oo / \u{207f}→nn / \u{1d3a}→nn / oonn→onn 四條會縮位元數,要調 map。
+fn apply_normalize_to_tl_with_offsets(s: String, map: Vec<usize>) -> (String, Vec<usize>) {
+    let mut s = s;
+    let mut map = map;
+    // Same order + same patterns as `phonetics::normalize_to_tl`
+    // — keeping the two in lockstep is a hard prerequisite (Codex
+    // pre-impl note 2026-05-15).
+    offset_aware_replace(&mut s, &mut map, "ch", "ts");
+    offset_aware_replace(&mut s, &mut map, "ou", "oo");
+    offset_aware_replace(&mut s, &mut map, "o\u{0358}", "oo");
+    offset_aware_replace(&mut s, &mut map, "\u{207f}", "nn");
+    offset_aware_replace(&mut s, &mut map, "\u{1d3a}", "nn");
+    offset_aware_replace(&mut s, &mut map, "oa", "ua");
+    offset_aware_replace(&mut s, &mut map, "oe", "ue");
+    offset_aware_replace(&mut s, &mut map, "eng", "ing");
+    offset_aware_replace(&mut s, &mut map, "ek", "ik");
+    offset_aware_replace(&mut s, &mut map, "oonn", "onn");
+    (s, map)
+}
+
+/// Walk `s` left-to-right, replacing every occurrence of `find` with
+/// `repl`, and update `map` so each post-replacement byte still points
+/// at the correct original-input `raw_end`. Used by
+/// [`apply_normalize_to_tl_with_offsets`].
+///
+/// Semantics:
+/// - Equal-length replacements (`ch→ts`, `oa→ua`, ...) leave `map`
+///   untouched at every byte position because the replaced bytes
+///   inherit the same `raw_end` slots.
+/// - Shrinking replacements (`o\u{0358}→oo`, `\u{207f}→nn`, `oonn→onn`)
+///   drain `map[pos + repl_len .. pos + find_len]` so the new last
+///   byte of the replacement inherits the original `find`'s trailing
+///   `raw_end` — i.e. the commit consumes everything `find` covered.
+/// - Right-to-left replace order keeps already-computed positions
+///   stable while we mutate `s` / `map`.
+///
+/// Caller must ensure `find` is non-empty and `repl.len() <=
+/// find.len()` (asserted in debug builds — Codex pre-impl scope guard
+/// 2026-05-15: we only need shrinking here; an expanding rule would
+/// require allocating new map entries and is YAGNI).
+fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: &str) {
+    debug_assert!(!find.is_empty(), "offset_aware_replace: empty find pattern");
+    debug_assert!(
+        repl.len() <= find.len(),
+        "offset_aware_replace: expanding replacement {find:?}→{repl:?} not supported"
+    );
+    let find_len = find.len();
+    let repl_len = repl.len();
+    if find_len == 0 || !s.contains(find) {
+        return;
+    }
+    // Collect all match start byte positions left-to-right without
+    // overlap (mirrors `str::replace`).
+    let mut positions: Vec<usize> = Vec::new();
+    let mut start = 0;
+    while let Some(pos) = s[start..].find(find) {
+        let abs = start + pos;
+        positions.push(abs);
+        start = abs + find_len;
+    }
+    for &pos in positions.iter().rev() {
+        s.replace_range(pos..pos + find_len, repl);
+        if find_len != repl_len {
+            // `map[k]` = raw_end AFTER canonical byte k-1, so map has
+            // length canonical.len() + 1. To preserve the load-bearing
+            // contract that no syllabifier match ever leaves an
+            // upstream-substituted source codepoint dangling in the
+            // pending buffer (Codex post-impl P1 2026-05-15, against
+            // `dictionary/output/dictionary.csv` `so` + `soo` siblings):
+            //   1. Drain the trailing `(find_len - repl_len)` interior
+            //      map entries inside the matched range — these are
+            //      the bytes the substitution dropped.
+            //   2. Force every surviving interior entry inside the
+            //      match span (`map[pos + 1 .. pos + repl_len + 1]`)
+            //      to the original `raw_end_of_match`. The replacement
+            //      now represents the FULL match atomically, so any
+            //      partial-prefix syllable candidate that lands at a
+            //      shadow_end inside the substituted span still
+            //      consumes every raw byte of the source spelling.
+            let raw_end_of_match = map[pos + find_len];
+            map.drain(pos + repl_len..pos + find_len);
+            for slot in map.iter_mut().take(pos + repl_len + 1).skip(pos + 1) {
+                *slot = raw_end_of_match;
+            }
+        }
+    }
 }
 
 /// Build TPS FST keys from `Phase::Continuous { raw }`. Each Bopomofo
@@ -662,6 +909,185 @@ mod tests {
         let (shadow, map) = build_hyphen_shadow("tai-bak-");
         assert_eq!(shadow, "taibak");
         assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
+    }
+
+    // ----- v3.5.8 Phase 9 Item 9 — canonicalize_poj_shadow contract pins -----
+
+    #[test]
+    fn canonicalize_poj_shadow_pure_ascii_is_identity_fast_path() {
+        // F3C gate: pure ASCII input MUST pass through unchanged with
+        // an identity offset map. This is the load-bearing guard that
+        // keeps `tó-uī`-class real dictionary entries
+        // (`dictionary/output/dictionary.csv:1984`) from being garbled
+        // by `ou→oo` once they reach this layer.
+        let (out, map) = canonicalize_poj_shadow("tai-bak");
+        assert_eq!(out, "tai-bak");
+        assert_eq!(map, vec![0, 1, 2, 3, 4, 5, 6, 7]);
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_empty_ascii_is_identity() {
+        let (out, map) = canonicalize_poj_shadow("");
+        assert!(out.is_empty());
+        assert_eq!(map, vec![0]);
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_combining_tone_mark_drops_and_absorbs() {
+        // `pe̍h` (NFC): `p` + `e` + `\u{030d}` (2 bytes) + `h`.
+        // canonical = `peh` (3 bytes). The dropped combining tone-8
+        // mark's raw bytes fold into the preceding `e`'s raw_end so
+        // map[2] = 4 (NOT 2 — that would leave the combining mark
+        // dangling in the pending buffer on commit).
+        let (out, map) = canonicalize_poj_shadow("pe\u{030d}h");
+        assert_eq!(out, "peh");
+        assert_eq!(map, vec![0, 1, 4, 5]);
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_o_with_dot_above_right_emits_oo() {
+        // `so\u{0358}` (4 bytes) → Phase 1 keeps `\u{0358}` → Phase 2
+        // `o\u{0358}→oo` (3→2 bytes shrinking). Both new ASCII bytes
+        // of `oo` collapse onto the post-substitution raw_end (4) so
+        // a partial-prefix syllabifier hit at `so` cannot leave the
+        // dot-above-right dangling in the pending buffer — Codex
+        // post-impl P1 (2026-05-15) regression guard against the live
+        // `dictionary.csv` `so` / `soo` sibling pair.
+        let (out, map) = canonicalize_poj_shadow("so\u{0358}");
+        assert_eq!(out, "soo");
+        assert_eq!(
+            map,
+            vec![0, 1, 4, 4],
+            "every shadow byte produced by the `o\\u0358→oo` substitution must \
+             consume the whole source spelling, not just the prefix `o`",
+        );
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_leading_combining_mark_preserves_baseline_zero() {
+        // Codex post-impl P3 (2026-05-15): a leading standalone NFD
+        // combining tone mark must NOT mutate `canonical_to_raw_end[0]`
+        // (the documented baseline = 0). Today no caller emits an
+        // `end == 0` candidate (`tl_syll::valid_span_endings` only
+        // produces `e > pos`), but the contract has to hold so future
+        // callers cannot stumble into the dangling-mark bug class.
+        let (_, map) = canonicalize_poj_shadow("\u{0301}a");
+        assert_eq!(map[0], 0, "baseline map[0] must stay 0, got {map:?}");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_superscript_nasal_marker_emits_nn() {
+        // `pe\u{207f}` (5 bytes) → Phase 1 keeps `\u{207f}` (it is NOT
+        // in the combining tone-mark set per is_tone_combining_mark) →
+        // Phase 2 `\u{207f}→nn` (3→2 bytes shrinking).
+        let (out, map) = canonicalize_poj_shadow("pe\u{207f}");
+        assert_eq!(out, "penn");
+        assert_eq!(map[4], 5, "raw_end after `penn` must be 5, got {map:?}");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_poj_ch_initial_substitutes_to_ts() {
+        // `cho\u{0301}a` (NFC `chóa`, 5 bytes) → Phase 1 drops the
+        // combining acute → `choa` → Phase 2 `ch→ts` then `oa→ua` →
+        // `tsua`. All Phase 2 substitutions here are byte-count
+        // preserving so the offset map stays anchored at the right
+        // raw bytes.
+        let (out, _map) = canonicalize_poj_shadow("ch\u{00f3}a");
+        assert_eq!(out, "tsua");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_precomposed_uppercase_lowercases_via_phase2() {
+        // `\u{00d3}` (`Ó`, precomposed UPPERCASE) → NFD `O\u{0301}` →
+        // drop combining → `O` (uppercase) → Phase 2 lowercase pass
+        // makes it `o`. This pins the ordering: NFD walk must come
+        // BEFORE the lowercase pass, otherwise uppercase precomposed
+        // diacritic chars would survive into Phase 2 substitutions.
+        let (out, _map) = canonicalize_poj_shadow("\u{00d3}a");
+        assert_eq!(out, "ua", "{out:?}");
+    }
+
+    #[test]
+    fn canonicalize_poj_shadow_oonn_shrinks_with_offset_drain() {
+        // Synthetic regression: simulate Phase 1 emitting `oonn`
+        // (e.g. via `o\u{0358}\u{207f}` upstream). Phase 2 `oonn→onn`
+        // is the only 4→3 shrinking rule and must drain exactly one
+        // map entry. Input `o\u{0358}\u{207f}` itself: `o` (1) +
+        // `\u{0358}` (2) + `\u{207f}` (3) = 6 bytes.
+        let (out, map) = canonicalize_poj_shadow("o\u{0358}\u{207f}");
+        assert_eq!(out, "onn", "{out:?}");
+        // After `oonn→onn` collapse, the final byte's raw_end must
+        // equal the full input length (6).
+        assert_eq!(*map.last().unwrap(), 6, "{map:?}");
+    }
+
+    #[test]
+    fn is_tone_combining_mark_covers_all_eight_tones() {
+        // Pins parity with `engine/phonetics/src/tables.rs::COMBINING_TO_TONE_NUM`.
+        // If a new tone mark is added there, this assertion must be
+        // updated in lockstep — the comment list above guards the
+        // mapping.
+        for c in [
+            '\u{0300}', '\u{0301}', '\u{0302}', '\u{0304}', '\u{0306}', '\u{030b}', '\u{030c}',
+            '\u{030d}',
+        ] {
+            assert!(is_tone_combining_mark(c), "{c:?} should be a tone mark");
+        }
+    }
+
+    #[test]
+    fn is_tone_combining_mark_excludes_non_tone_combiners() {
+        // `\u{0358}` (combining dot above right) is in the
+        // U+0300-U+036F combining block but is NOT a tone mark; it has
+        // to survive Phase 1 so Phase 2 `o\u{0358}→oo` can fire.
+        assert!(!is_tone_combining_mark('\u{0358}'));
+        // ASCII letters / digits / hyphens / common Latin diacritics
+        // must obviously not be flagged either.
+        for c in ['a', '0', '-', '\u{00e2}', '\u{014d}'] {
+            assert!(!is_tone_combining_mark(c), "{c:?} must not be a tone mark");
+        }
+    }
+
+    #[test]
+    fn offset_aware_replace_same_length_leaves_map_invariant() {
+        let mut s = String::from("choa");
+        let mut map = vec![0, 1, 2, 3, 4];
+        offset_aware_replace(&mut s, &mut map, "ch", "ts");
+        assert_eq!(s, "tsoa");
+        assert_eq!(map, vec![0, 1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn offset_aware_replace_shrinking_drains_middle_entries() {
+        // Synthetic: `xxoonnyy` shrinks `oonn` (4 bytes) → `onn` (3),
+        // dropping one map entry from inside the matched range. The
+        // entry that survives at the new end position must equal the
+        // original map[pos + find_len] (raw_end of the full match).
+        let mut s = String::from("xxoonnyy");
+        let mut map = vec![0, 10, 20, 30, 40, 50, 60, 70, 80];
+        offset_aware_replace(&mut s, &mut map, "oonn", "onn");
+        assert_eq!(s, "xxonnyy");
+        // Post-replace map length = canonical.len() + 1 = 8.
+        // Slot for "after the entire `onn` collapse" (map index 5)
+        // must equal the original map[6] = 60 (raw_end of the full
+        // `oonn` match).
+        assert_eq!(map.len(), 8);
+        assert_eq!(map[0], 0);
+        assert_eq!(map[2], 20, "byte before `oo` must be unchanged");
+        assert_eq!(
+            map[5], 60,
+            "byte after `onn` must equal raw_end of full match"
+        );
+        assert_eq!(map[6], 70, "tail must shift left by one slot");
+    }
+
+    #[test]
+    fn offset_aware_replace_skips_when_pattern_absent() {
+        let mut s = String::from("xyz");
+        let mut map = vec![0, 1, 2, 3];
+        offset_aware_replace(&mut s, &mut map, "ab", "cd");
+        assert_eq!(s, "xyz");
+        assert_eq!(map, vec![0, 1, 2, 3]);
     }
 
     #[test]

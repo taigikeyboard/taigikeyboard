@@ -90,6 +90,7 @@ dependencies = [
  "protos",
  "ranking",
  "thiserror",
+ "unicode-normalization",
 ]
 
 [[package]]
