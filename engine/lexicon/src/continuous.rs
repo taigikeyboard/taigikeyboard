@@ -282,11 +282,13 @@ pub fn fetch_candidates_for_endings(
         // for both numeric (`tai1bak4`) and toneless (`taibak`) input
         // forms; stripping here lets numeric-tone input still hit the
         // fused toneless FST key. The hyphen half of the regex is NOT
-        // applied at this layer because the syllabifier itself walks
-        // contiguous syllable bytes via `inv.contains(...)` and the
-        // inventory has no hyphenated entries — hyphen-input handling
-        // is deferred to Phase 9 (per Phase 6 dispatch limitations
-        // note in `engine/composing/src/dispatch.rs::build_keys_tl`).
+        // applied at this layer because hyphenated TL input is folded
+        // upstream by `composing::dispatch::build_hyphen_shadow` (Phase
+        // 9 Item 8): callers feed already-hyphenless segments here.
+        // Preserving the no-strip invariant at this layer protects the
+        // separation of concerns — if hyphens ever appear in a segment
+        // reaching this fn it indicates an upstream contract violation
+        // and the FST lookup correctly returns no match.
         // Python `\d` is Unicode-decimal but TL canonical input only
         // uses ASCII `0..=9`, so `is_ascii_digit()` is sound under the
         // module input contract above.

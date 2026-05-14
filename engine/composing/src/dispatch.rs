@@ -21,6 +21,7 @@ use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::syllabifier::{tl as tl_syll, tps as tps_syll};
 use lexicon::{
     fetch_candidates_for_keys, ConsumedSpan, EngineHandle as LexiconHandle, RawCandidate,
+    SyllableInventory,
 };
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
@@ -173,74 +174,146 @@ fn handle_fetch_at_pos(
     )
 }
 
-/// Build TL/POJ FST keys from `Phase::Continuous { raw }`. Uses
-/// `lexicon::EngineHandle::with_state` to acquire the syllable
-/// inventory; if the inventory is unavailable (platform did not
-/// supply `syllables.fst` at install time, or lexicon was never
-/// installed), returns an empty list so `FetchAtPos` degrades to
-/// "no candidates" rather than panicking.
+/// Build TL/POJ FST keys from `Phase::Continuous { raw }`. Thin wrapper
+/// that pulls the `SyllableInventory` out of the lexicon singleton and
+/// delegates to [`build_keys_tl_with_inventory`]; if the inventory is
+/// unavailable (platform did not supply `syllables.fst` at install
+/// time, or lexicon was never installed) it degrades to an empty list
+/// rather than panicking. The pure-function split exists so dispatch
+/// tests can exercise the hyphen-shadow + key-build pipeline against a
+/// hermetic inventory without touching the global handle.
 ///
 /// **Input contract** (mirrors Phase 5 `fetch_candidates_for_endings`,
 /// `engine/lexicon/src/continuous.rs:24-33`): `raw` MUST be canonical
 /// TL ASCII — toneless (`tsua`) or numeric tone (`tsua7`, `tai1bak4`).
-/// The toneless FST key is built by lowercasing and dropping every
-/// ASCII digit, mirroring the digit half of the upstream
-/// `notone.py::remove_tone` regex `[\d\-]`
-/// (`dictionary/common/notone.py`); this is what the Phase 1b fused-
-/// toneless FST keys contain (`engine/lexicon/tests/fused_toneless_key.rs`).
+/// ASCII `-` is now also accepted as a syllable-boundary marker (Phase
+/// 9 Item 8), reflecting POJ/TL convention (`tâi-uân`, `pe̍h-ōe-jī`):
+/// the toneless FST key is built by lowercasing, dropping every ASCII
+/// digit AND every ASCII `-` — both halves of the upstream
+/// `dictionary/common/notone.py::remove_tone` regex `[\d\-]` now align.
 ///
-/// **Phase 6 limitations** (deferred to Phase 9 dogfood per
-/// `feedback_no_future_planning.md`):
-/// - **Hyphen-separated input** (`tai-bak`, `pe̍h-ōe-jī`) NOT supported:
-///   `tl_syll::valid_span_endings` walks contiguous syllable bytes via
-///   `inv.contains(...)` and the inventory has no hyphenated entries
-///   (`engine/composing/src/syllabifier/tl.rs:73-76`), so the
-///   syllabifier returns endings only up to the first hyphen. Stripping
-///   hyphens here would not help. Phase 9 needs either a hyphen-aware
-///   syllabifier or a hyphenless-shadow-with-offset-map dispatch
-///   pre-pass.
+/// **Remaining Phase 6 limitation** (still deferred):
 /// - **POJ-display input** (`pe̍h`, `chóa`, `peⁿ`) NOT supported: the
 ///   `to_ascii_lowercase` pass does not strip diacritics; per-syllable
-///   POJ→TL canonicalization is deferred.
-// 中文: TL/POJ key 構造 — 經 lexicon SyllableInventory 切音節後,把 lower(raw[0..end]) 去掉所有 ASCII 數字形成 fused toneless key,加 "tl:" 前綴。
-// 中文: 對應 dictionary/common/notone.py 的 [\d] 部分 (digit half of [\d\-] regex);FST 端只存 fused toneless,所以 numeric tone 輸入要先 strip。
-// 中文: 帶連字號 (tai-bak) 的輸入 syllabifier 也走不過去,Phase 9 才補;POJ 帶調符同樣留 Phase 9。
+///   POJ→TL canonicalization is tracked as a separate Phase 9 item.
+// 中文: TL/POJ key 構造 — 經 lexicon SyllableInventory 切音節後,把 lower(shadow[0..end]) 去掉所有 ASCII 數字形成 fused toneless key,加 "tl:" 前綴。
+// 中文: 對應 dictionary/common/notone.py 的 [\d\-] 規則:digit 半邊在 strip_ascii_tone_digits;hyphen 半邊在 build_hyphen_shadow。
+// 中文: 帶連字號 (tai-bak) Phase 9 Item 8 已支援;POJ 帶調符 (pe̍h) 仍留待後續 slice。
 fn build_keys_tl(raw: &str) -> Vec<(ConsumedSpan, String)> {
-    let endings = match LexiconHandle::with_state(|state| {
+    LexiconHandle::with_state(|state| {
         let Some(inv) = state.syllable_inventory.as_ref() else {
             return Ok(Vec::new());
         };
-        Ok(tl_syll::valid_span_endings(raw, 0, inv, MAX_SYLLABLES))
-    }) {
-        Ok(endings) => endings,
-        Err(_) => return Vec::new(),
-    };
+        Ok(build_keys_tl_with_inventory(raw, inv))
+    })
+    .unwrap_or_default()
+}
+
+/// Inventory-injected variant of [`build_keys_tl`]. Runs the v3.5.8
+/// Phase 9 Item 8 hyphen-shadow pipeline:
+///
+/// 1. Lowercase `raw` (byte-level — POJ display diacritics pass through
+///    unchanged, which is harmless because they will not match the FST
+///    inventory anyway).
+/// 2. [`build_hyphen_shadow`] strips ASCII `-`, returning the shadow
+///    plus a shadow-byte → raw-byte offset map.
+/// 3. [`tl_syll::valid_span_endings`] walks the shadow against the
+///    inventory (which has no hyphenated entries — the whole point of
+///    the shadow pass).
+/// 4. For each shadow ending, build the fused toneless `tl:<key>` from
+///    `shadow[..end]` (digit strip) and translate `end` back to raw byte
+///    space via the offset map so `consumed_span_end` lines up with
+///    what platform UI slices on commit (`tai-` leaves the trailing `-`
+///    in the pending buffer; `-tai` consumes the leading `-`).
+///
+/// Public (but `#[doc(hidden)]`) so the workspace integration test
+/// `engine/composing/tests/build_keys_tl_hyphen.rs` can drive a
+/// hermetic inventory without installing the global `LexiconHandle`
+/// singleton. Production callers go through [`build_keys_tl`]; the
+/// `doc(hidden)` attribute keeps this symbol off the public docs and
+/// signals that it is a test-injection seam, not a stable API.
+// 中文: build_keys_tl 的可注入測試版 — 直接吃 SyllableInventory,跑「lowercase → hyphen-shadow → 音節切分 → fused toneless key + raw byte offset」。
+// 中文: 開放 pub 是為了 integration test 可以 inject hermetic inventory;`#[doc(hidden)]` 標示其為 test seam 非穩定 API。
+#[doc(hidden)]
+pub fn build_keys_tl_with_inventory(
+    raw: &str,
+    inv: &SyllableInventory,
+) -> Vec<(ConsumedSpan, String)> {
+    let lower = raw.to_ascii_lowercase();
+    let (shadow, shadow_to_raw_end) = build_hyphen_shadow(&lower);
+    let endings = tl_syll::valid_span_endings(&shadow, 0, inv, MAX_SYLLABLES);
     if endings.is_empty() {
         return Vec::new();
     }
-    let lower = raw.to_ascii_lowercase();
     let mut out = Vec::with_capacity(endings.len());
     for end in endings {
-        if end == 0 || end > lower.len() || !lower.is_char_boundary(end) {
+        if end == 0 || end > shadow.len() || !shadow.is_char_boundary(end) {
             continue;
         }
-        let toneless = strip_ascii_tone_digits(&lower[..end]);
+        let toneless = strip_ascii_tone_digits(&shadow[..end]);
         if toneless.is_empty() {
             continue;
         }
-        out.push(((0u32, end as u32), format!("tl:{toneless}")));
+        let raw_end = shadow_to_raw_end[end];
+        out.push(((0u32, raw_end as u32), format!("tl:{toneless}")));
     }
     out
+}
+
+/// Build a hyphenless shadow of `raw` paired with a byte-indexed map
+/// from shadow byte offsets back to raw byte offsets, mirroring the
+/// hyphen half of `dictionary/common/notone.py::remove_tone` regex
+/// `[\d\-]`. The digit half stays at [`strip_ascii_tone_digits`].
+///
+/// Contract:
+/// - `shadow` is `raw` with every ASCII `-` (U+002D) removed; all other
+///   bytes (including non-ASCII bytes from accidental POJ diacritics)
+///   pass through unchanged.
+/// - `shadow_to_raw_end` has length `shadow.len() + 1`; index `k` is the
+///   raw byte offset RIGHT AFTER the last raw char that contributed the
+///   `k`-th shadow byte. `shadow_to_raw_end[0] = 0`.
+/// - Leading hyphens before the first surviving raw char ARE folded
+///   into the consumed prefix: every shadow ending whose raw mapping
+///   passes byte index 0 inherits the preceding hyphens in its
+///   `consumed_span`.
+/// - Trailing hyphens AFTER the last surviving raw char are NOT
+///   folded: a shadow ending at `shadow.len()` maps to the raw byte
+///   AFTER the last non-hyphen char, leaving any trailing hyphen in the
+///   pending raw buffer for platform UI to retain post-commit.
+///
+/// Examples:
+/// - `"tai-bak"` → shadow `"taibak"`, map `[0, 1, 2, 3, 5, 6, 7]`
+/// - `"-tai"`    → shadow `"tai"`,    map `[0, 2, 3, 4]`
+/// - `"tai-"`    → shadow `"tai"`,    map `[0, 1, 2, 3]`
+/// - `"goa--si"` → shadow `"goasi"`,  map `[0, 1, 2, 3, 6, 7]`
+/// - `"---"`     → shadow `""`,       map `[0]`
+// 中文: 把 raw 內所有 ASCII `-` 拿掉成 shadow,並建立 shadow byte → raw byte 的對照表。
+// 中文: leading `-` 算進前綴消耗;trailing `-` 留在 pending buffer 不被吃掉。
+fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
+    let mut shadow = String::with_capacity(raw.len());
+    let mut shadow_to_raw_end: Vec<usize> = Vec::with_capacity(raw.len() + 1);
+    shadow_to_raw_end.push(0);
+    for (raw_idx, ch) in raw.char_indices() {
+        if ch == '-' {
+            continue;
+        }
+        let raw_end_after_ch = raw_idx + ch.len_utf8();
+        for _ in 0..ch.len_utf8() {
+            shadow_to_raw_end.push(raw_end_after_ch);
+        }
+        shadow.push(ch);
+    }
+    (shadow, shadow_to_raw_end)
 }
 
 /// Drop every ASCII digit from `s`. Equivalent to the digit half of
 /// `dictionary/common/notone.py::remove_tone()` regex `[\d\-]` under
 /// the canonical-ASCII TL input contract — Python `\d` matches every
 /// Unicode decimal digit, but TL canonical input only ever uses
-/// ASCII `0..=9`, so `is_ascii_digit()` is sound here. Hyphens are NOT
-/// stripped (the syllabifier already cannot walk past them; see
-/// `build_keys_tl` Phase-6 limitations note).
-// 中文: 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 不剝因為 syllabifier 也走不過去,Phase 9 再一併處理。
+/// ASCII `0..=9`, so `is_ascii_digit()` is sound here. Hyphens are
+/// stripped one layer up by [`build_hyphen_shadow`] (Phase 9 Item 8),
+/// so callers feed this fn a hyphenless shadow slice already.
+// 中文: 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 半邊由 build_hyphen_shadow 上一層處理 (Phase 9 Item 8)。
 fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
 }
@@ -503,9 +576,92 @@ mod tests {
         // '0' is not a tone marker per phonetics::syllable.rs:18-20 but
         // notone.py drops every ASCII digit; mirror that here.
         assert_eq!(strip_ascii_tone_digits("a0b"), "ab");
-        // Hyphen NOT stripped at this layer (syllabifier already can't
-        // walk past it; see `build_keys_tl` Phase-6 limitations note).
+        // Hyphen NOT stripped at this layer — `build_hyphen_shadow`
+        // (Phase 9 Item 8) handles the `[\d\-]` regex's hyphen half
+        // upstream, so by the time a slice reaches this fn it is
+        // already hyphenless. The literal-passthrough assertion stays
+        // as a behavioural pin so a refactor cannot quietly fold the
+        // hyphen strip into both layers.
         assert_eq!(strip_ascii_tone_digits("tai-bak"), "tai-bak");
+    }
+
+    // ----- v3.5.8 Phase 9 Item 8 — hyphen-shadow contract pins -----
+
+    #[test]
+    fn build_hyphen_shadow_no_hyphen_is_identity() {
+        let (shadow, map) = build_hyphen_shadow("taibak");
+        assert_eq!(shadow, "taibak");
+        // No hyphens means every shadow byte maps to its own raw position
+        // — pinning this protects existing hyphenless `consumed_span` values
+        // from any future drift.
+        assert_eq!(map, vec![0, 1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_internal_hyphen_collapses() {
+        let (shadow, map) = build_hyphen_shadow("tai-bak");
+        assert_eq!(shadow, "taibak");
+        // shadow[3] (just past `tai`) maps to raw byte 3 — trailing-`-`
+        // semantics; shadow[4] onward jumps to raw byte 5 because the
+        // hyphen folds into the prefix of the FOLLOWING shadow byte.
+        assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_leading_hyphen_consumes_into_prefix() {
+        let (shadow, map) = build_hyphen_shadow("-tai");
+        assert_eq!(shadow, "tai");
+        // shadow[1] (after `t`) maps to raw byte 2 because the leading
+        // `-` at raw 0 is folded into the first shadow byte's consumed
+        // prefix per the helper contract.
+        assert_eq!(map, vec![0, 2, 3, 4]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_trailing_hyphen_is_not_consumed() {
+        let (shadow, map) = build_hyphen_shadow("tai-");
+        assert_eq!(shadow, "tai");
+        // No entry for the trailing `-` — shadow_to_raw_end[3] = 3,
+        // so any candidate landing at shadow_end=3 reports
+        // consumed_span_end=3 and the platform keeps the trailing `-`
+        // in the pending raw buffer.
+        assert_eq!(map, vec![0, 1, 2, 3]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_double_hyphen_collapses() {
+        // POJ neutral-tone marker `--` (e.g. `goá--ê`) collapses to two
+        // consumed raw bytes between the surviving shadow bytes.
+        let (shadow, map) = build_hyphen_shadow("goa--si");
+        assert_eq!(shadow, "goasi");
+        assert_eq!(map, vec![0, 1, 2, 3, 6, 7]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_all_hyphens_yields_empty_shadow() {
+        let (shadow, map) = build_hyphen_shadow("---");
+        assert!(shadow.is_empty());
+        // Only the baseline `0` entry survives; downstream
+        // `build_keys_tl_with_inventory` short-circuits on empty
+        // endings, so no keys are produced.
+        assert_eq!(map, vec![0]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_empty_input_yields_single_baseline() {
+        let (shadow, map) = build_hyphen_shadow("");
+        assert!(shadow.is_empty());
+        assert_eq!(map, vec![0]);
+    }
+
+    #[test]
+    fn build_hyphen_shadow_trailing_hyphen_after_internal_hyphen_excluded() {
+        // `tai-bak-` — the inner `-` folds into the prefix of `b`, the
+        // outer trailing `-` is dropped. Regression guard for the
+        // off-by-one risk Codex flagged in pre-impl consult.
+        let (shadow, map) = build_hyphen_shadow("tai-bak-");
+        assert_eq!(shadow, "taibak");
+        assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
     }
 
     #[test]

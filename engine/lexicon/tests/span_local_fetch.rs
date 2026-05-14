@@ -508,13 +508,15 @@ fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
 fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
     // Phase-6 Codex PR review (post-impl HIGH finding): the lexicon
     // toneless-key strip rule is intentionally `\d`-only, not `[\d\-]`.
-    // The syllabifier can't walk past `-` (the inventory has no
-    // hyphenated entries), so hyphen-input handling is deferred to
-    // Phase 9. This test pins the contract: feeding a hyphenated
-    // segment into `fetch_candidates_for_endings` produces
-    // `tl:tai-bak` (not `tl:taibak`), so a fixture that only stores
-    // `tl:taibak` returns NO candidates. If anyone re-adds the hyphen
-    // half of the strip, this test fails.
+    // Hyphenated TL input is folded upstream by
+    // `composing::dispatch::build_hyphen_shadow` (Phase 9 Item 8) so
+    // segments arriving here are already hyphenless under the normal
+    // dispatch path. This test pins the lower-layer invariant: if a
+    // hyphenated segment somehow does reach `fetch_candidates_for_endings`
+    // (defensive contract), the strip rule MUST NOT silently fold the
+    // hyphen — it produces `tl:tai-bak` (not `tl:taibak`), and a
+    // fixture that only stores `tl:taibak` returns NO candidates. If
+    // anyone re-adds the hyphen half of the strip here, this test fails.
     let (prefix_index, dict) = build_fixture(
         "hyphen-no-strip",
         &[Row {

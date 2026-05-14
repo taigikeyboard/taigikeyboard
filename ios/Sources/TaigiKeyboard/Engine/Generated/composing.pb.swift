@@ -425,10 +425,14 @@ public struct Taigi_Engine_EnterContinuous: Sendable {
 /// v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
 /// `Phase::Continuous { raw }` starting at byte offset `position` (always
 /// `0` in v3.5.8; field reserved for future partial-fetch capability and
-/// validated to `0` today). The engine pulls candidates via
-/// `lexicon::fetch_candidates_for_endings` (TL/POJ) or the Phase-6 TPS
-/// dispatcher path that converts each Bopomofo span to a `tl:<toneless>`
-/// FST key before lexicon lookup. Emits no effects.
+/// validated to `0` today). The engine routes the raw buffer through
+/// mode-specific key builders in `composing::dispatch` — TL/POJ via
+/// `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
+/// pre-pass so `tâi-uân` etc. produce the same `tl:<toneless>` keys as
+/// `taiuan`), TPS via `build_keys_tps` (Bopomofo span → numeric TL →
+/// strip → fused key) — and then hands the resulting `(consumed_span,
+/// key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
+/// effects.
 ///
 /// v3.5.8 Phase 9.3a — `frequency_entries` carries the platform's
 /// per-candidate `user_frequency.db` snapshot (count + last_used_ms,
