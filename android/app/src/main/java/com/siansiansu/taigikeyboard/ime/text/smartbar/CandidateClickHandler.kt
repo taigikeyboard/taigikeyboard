@@ -300,9 +300,9 @@ class CandidateClickHandler(
      *
      * Per `docs/engine/continuous-input-ranking.md` §10.3 + clarification γ:
      * commits `candidate[N].display_text` — the canonical dictionary string
-     * (`hanji.unwrap_or(roman)`) — NOT the roman-with-spaces visual form
-     * that Item 6 will render in slot 0. Sidechannel `DISPLAY_TEXT` is the
-     * wire to that canonical form.
+     * (`hanji.unwrap_or(roman)`) — NOT the visual roman form that Item 6
+     * renders in the cell title. Sidechannel `DISPLAY_TEXT` is the wire to
+     * that canonical form.
      *
      * Decodes the [TaigiWord.additionalInfo] sidechannel, dispatches
      * `commitContinuous`, and gates per-segment frequency learning +
@@ -313,11 +313,10 @@ class CandidateClickHandler(
      *
      * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are all
      * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
-     * tap. No fallback to [TaigiWord.roman] — once Item 6 ships dual-line
-     * segmented rendering, `roman` may carry the visual form with word
-     * spaces and γ would be violated. No fallback to `selectSuggestion(text)`
-     * either — would lose `consumedBytes` and corrupt `Phase::Continuous { raw }`
-     * byte alignment.
+     * tap. No fallback to [TaigiWord.roman] — after Item 6, `roman` carries
+     * the visual TL form and γ would be violated. No fallback to
+     * `selectSuggestion(text)` either — would lose `consumedBytes` and
+     * corrupt `Phase::Continuous { raw }` byte alignment.
      */
     private fun handleContinuousCandidateClick(
         selectedWord: TaigiWord,

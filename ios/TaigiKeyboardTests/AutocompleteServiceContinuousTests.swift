@@ -130,38 +130,200 @@ final class AutocompleteServiceContinuousTests: XCTestCase {
     }
 
     func testGammaClarification_DisplayTextSidechannelDecouplesFromText() {
-        // v3.5.8 Phase 9 Item 4 — pin §10.3 clarification γ at the producer
-        // boundary. Today the producer initializes both `Suggestion.text`
-        // and `additionalInfo["displayText"]` from `candidate.displayText`,
-        // so they coincide. Once Item 5/6 add proto `roman`/`hanji` fields
-        // and slot-0 renders the segmented visual form, the producer will
-        // diverge `Suggestion.text` (visual form, may carry word spaces)
-        // from `additionalInfo["displayText"]` (canonical commit string).
-        // The consumer (`ActionHandler+Suggestions`) must already be reading
-        // `additionalInfo["displayText"]` exclusively — no `??
-        // suggestion.text` fallback — so γ holds regardless of which field
-        // mutates first. This test pins the sidechannel emission as the
-        // authoritative commit-string carrier so Item 6 cannot accidentally
-        // route through `Suggestion.text`.
+        // v3.5.8 Phase 9 §10.3 clarification γ at the producer boundary.
+        // After Item 6, the producer populates `Suggestion.text` from
+        // `candidate.roman` (TL romanization, visual form) and
+        // `additionalInfo["displayText"]` from `candidate.displayText`
+        // (= hanji ?? roman, canonical commit string). On a HANT
+        // candidate they DIVERGE — text shows the roman, sidechannel
+        // carries the hanji. The consumer
+        // (`ActionHandler+Suggestions.handleSuggestionSelection`) reads
+        // `additionalInfo["displayText"]` exclusively — no
+        // `?? suggestion.text` fallback — so γ holds regardless of
+        // which field mutates. This test pins the sidechannel emission
+        // as the authoritative commit-string carrier.
         let candidates = [
-            makeCandidate(consumedSpanEnd: 6, syllableCount: 2, displayText: "tâi-gí"),
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "臺灣",
+                mode: .hant,
+                roman: "tâi-uân",
+                hanji: "臺灣",
+            ),
         ]
         let result = service.buildContinuousSuggestions(from: candidates)
         XCTAssertEqual(
             result[0].additionalInfo["displayText"],
-            "tâi-gí",
+            "臺灣",
             "displayText sidechannel is the canonical commit string (γ)",
         )
-        // Sanity: the producer's current shape (`text = displayText`)
-        // is exercised — Item 6 will diverge `text` from `displayText` and
-        // this assertion will need updating; the assertion above pins the
-        // contract the consumer relies on (sidechannel, not `text`).
         XCTAssertEqual(
             result[0].text,
-            "tâi-gí",
-            "Item 4 producer still couples Suggestion.text to displayText (Item 6 will diverge)",
+            "tâi-uân",
+            "Item 6: Suggestion.text carries roman (visual form), diverging from sidechannel (γ)",
+        )
+        XCTAssertNotEqual(
+            result[0].text,
+            result[0].additionalInfo["displayText"],
+            "Item 6 divergence — visual text MUST NOT collapse onto canonical commit string",
         )
     }
+
+    // MARK: - v3.5.8 Phase 9 Item 6 — dual-line carrier shape
+
+    /// HANT candidate (`hanji = Some("臺灣")`) renders dual-line:
+    /// `text/title = roman`, `subtitle = hanji`. Tap-0 commits via the
+    /// sidechannel `displayText` = `hanji`.
+    func testItem6_HANTCandidate_DualLine() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "臺灣",
+                mode: .hant,
+                roman: "tâi-uân",
+                hanji: "臺灣",
+            ),
+        ]
+        let result = service.buildContinuousSuggestions(from: candidates)
+        XCTAssertEqual(result[0].text, "tâi-uân", "HANT text = roman")
+        XCTAssertEqual(result[0].title, "tâi-uân", "HANT title = roman")
+        XCTAssertEqual(result[0].subtitle, "臺灣", "HANT subtitle = hanji")
+        XCTAssertEqual(result[0].additionalInfo["displayText"], "臺灣")
+    }
+
+    /// TAILO candidate (`hanji = None`) renders single-line: subtitle
+    /// stays nil; tap commits the engine's displayText sidechannel
+    /// (= roman for TAILO).
+    func testItem6_TAILOCandidate_SingleLine() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 4,
+                syllableCount: 1,
+                displayText: "tāi",
+                mode: .tailo,
+                roman: "tāi",
+                hanji: nil,
+            ),
+        ]
+        let result = service.buildContinuousSuggestions(from: candidates)
+        XCTAssertEqual(result[0].text, "tāi", "TAILO text = roman")
+        XCTAssertEqual(result[0].title, "tāi", "TAILO title = roman")
+        XCTAssertNil(result[0].subtitle, "TAILO subtitle = nil (no hanji)")
+        XCTAssertEqual(result[0].additionalInfo["displayText"], "tāi")
+    }
+
+    /// MIXED candidate (hanji contains Latin letters, per
+    /// `derive_mode` NFKD scan in `engine/lexicon/src/continuous.rs`).
+    /// Renders dual-line the same way HANT does.
+    func testItem6_MIXEDCandidate_DualLine() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 9,
+                syllableCount: 2,
+                displayText: "hip相",
+                mode: .mixed,
+                roman: "hip-siòng",
+                hanji: "hip相",
+            ),
+        ]
+        let result = service.buildContinuousSuggestions(from: candidates)
+        XCTAssertEqual(result[0].text, "hip-siòng", "MIXED text = roman")
+        XCTAssertEqual(result[0].title, "hip-siòng", "MIXED title = roman")
+        XCTAssertEqual(result[0].subtitle, "hip相", "MIXED subtitle = hanji")
+        XCTAssertEqual(result[0].additionalInfo["displayText"], "hip相")
+    }
+
+    /// Defensive: a wire defect where `hanji = Some("")` (engine
+    /// invariant says `None` for TAILO, but a faulty producer might
+    /// emit an empty string) collapses to a nil subtitle so the cell
+    /// renders single-line rather than showing a blank hanji line.
+    /// Mirrors the spec §4.4 `(c.hanji?.isEmpty == false)` guard.
+    func testItem6_HanjiPresentEmpty_CollapsesToNilSubtitle() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 4,
+                syllableCount: 1,
+                displayText: "tāi",
+                mode: .tailo,
+                roman: "tāi",
+                hanji: "",
+            ),
+        ]
+        let result = service.buildContinuousSuggestions(from: candidates)
+        XCTAssertNil(
+            result[0].subtitle,
+            "present-empty hanji must collapse to nil so the cell stays single-line",
+        )
+    }
+
+    // MARK: - v3.5.8 Phase 9 Item 6 — CandidateCellHelper render parity
+
+    /// `isTranslateSwapped = true` on a HANT continuous suggestion
+    /// swaps the visible title/subtitle through
+    /// `CandidateCellHelper.displayTitle / displaySubtitle`. Pins that
+    /// dual-line continuous candidates pick up the same swap rule as
+    /// lexicon-path candidates — neither path requires a Continuous-
+    /// specific code branch in the helper.
+    func testItem6_TranslateSwapped_HantCandidate_ShowsHanjiPrimary() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "臺灣",
+                mode: .hant,
+                roman: "tâi-uân",
+                hanji: "臺灣",
+            ),
+        ]
+        let suggestion = service.buildContinuousSuggestions(from: candidates)[0]
+        let title = CandidateCellHelper.displayTitle(
+            for: suggestion,
+            isTranslateSwapped: true,
+            isTPSLayout: false,
+            orMapsToER: false,
+        )
+        let subtitle = CandidateCellHelper.displaySubtitle(
+            for: suggestion,
+            isTranslateSwapped: true,
+            isTPSLayout: false,
+        )
+        XCTAssertEqual(title, "臺灣", "swap: title = hanji")
+        XCTAssertEqual(subtitle, "tâi-uân", "swap: subtitle = roman")
+    }
+
+    /// TPS-layout × HANT continuous: `displayTitle` returns hanji
+    /// (subtitle is non-empty) and `displaySubtitle` returns nil.
+    /// Pins behavior matches lexicon path under TPS keyboard.
+    func testItem6_TPSLayout_HantCandidate_ShowsHanjiOnly() {
+        let candidates = [
+            makeCandidate(
+                consumedSpanEnd: 7,
+                syllableCount: 2,
+                displayText: "臺灣",
+                mode: .hant,
+                roman: "tâi-uân",
+                hanji: "臺灣",
+            ),
+        ]
+        let suggestion = service.buildContinuousSuggestions(from: candidates)[0]
+        let title = CandidateCellHelper.displayTitle(
+            for: suggestion,
+            isTranslateSwapped: false,
+            isTPSLayout: true,
+            orMapsToER: false,
+        )
+        let subtitle = CandidateCellHelper.displaySubtitle(
+            for: suggestion,
+            isTranslateSwapped: false,
+            isTPSLayout: true,
+        )
+        XCTAssertEqual(title, "臺灣", "TPS: title = hanji (subtitle present)")
+        XCTAssertNil(subtitle, "TPS never shows a subtitle")
+    }
+
+    // MARK: - Misc
 
     func testEmptyCandidateList_EmitsEmptyList() {
         // v3.5.8 Phase 9 Item 4: §10.7 edge case "Empty buffer" / partial

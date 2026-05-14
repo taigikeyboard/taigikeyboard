@@ -245,9 +245,39 @@ internal fun createComposingTextCell(composingText: String): TaigiWord =
  * (clarification γ). The inline pre-edit (`setComposingText`) is the only
  * composing-text surface; Enter commits the pending tail via Item 3.
  *
+ * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (TL romanization)
+ * and `hanzi` carries `candidate.hanji` so [com.siansiansu.taigikeyboard.ime
+ * .text.smartbar.SmartbarCandidateStrip] renders dual-line cells (roman +
+ * hanji) on HANT/MIXED and single-line (roman only) on TAILO — mirrors the
+ * legacy lexicon path's `convertToSuggestions` shape so the strip no longer
+ * interleaves continuous-vs-lexicon cell shapes (the 2026-05-11 dogfood
+ * finding the v3.5.8 ranking work set out to close).
+ *
+ * After Item 6, `TaigiWord.roman` (= TL romanization) diverges from
+ * `additionalInfo[DISPLAY_TEXT]` (= `hanji ?? roman` per `record_to_candidate`)
+ * on HANT/MIXED candidates. Tap-0 routes through
+ * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler] which
+ * commits the sidechannel value (clarification γ — canonical commit string,
+ * NOT visual roman form).
+ *
+ * `hanzi` collapses present-empty `candidate.hanji == ""` to `null` via
+ * `takeIf { it.isNotEmpty() }` so a wire defect (producer emitted
+ * `Some("")` instead of `None` for a TAILO record) renders as single-line
+ * rather than as an empty hanji line. Whitespace-only hanji strings are
+ * passed through unchanged — engine invariant is `hanji =
+ * DictionaryRecord.hanzi` (real CJK text), so `Some("   ")` would already
+ * indicate a deep wire defect; hardening this to `isNotBlank()` is out of
+ * scope until Item 12 custom-dict integration surfaces a user-typed case.
+ * The bridge decode layer already defends the inverse case (empty
+ * `candidate.roman` → falls back to `displayText`), so the builder trusts
+ * both fields as non-empty-when-meaningful.
+ *
  * Top-level so the contract is unit-testable without instantiating
  * [LexiconService] / [NextWordService].
  */
+// 中文: Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列改成 dual-line render
+// 中文: (對齊 lexicon path 的 convertToSuggestions);DISPLAY_TEXT sidechannel
+// 中文: 仍嚴格必須(commit 走它,不走 visual 化的 roman)— Item 4 F2=A 約定。
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
 ): List<TaigiWord> =
@@ -258,8 +288,8 @@ internal fun buildContinuousSuggestionsForCandidates(
             // of the lexicon-path slot-0 composing-text cell (id == 0).
             // Routing keys off additionalInfo — id is defense-in-depth.
             id = index + 1,
-            roman = candidate.displayText,
-            hanzi = null,
+            roman = candidate.roman,
+            hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
             lengthScore = null,
             additionalInfo = mapOf(
                 TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",

@@ -1,9 +1,9 @@
 # Continuous-Input Candidate Display — Spec
 
-> **Type**: Specification (problem + proposed fix, pre-impl for Codex consult)
+> **Type**: Specification (problem + proposed fix, partially shipped)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
 > **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md), [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md)
-> **Status**: Open — awaiting Codex pre-impl consult. Scope = §1-14 display fix **plus** §15 fallback retire. All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals).
+> **Status**: Active — §4 dual-line carrier shipped (Item 5 PR #270 + Item 6 branch `v358-item6-dual-line-render`); §15 fallback retire still pending (Items 7-13 per [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.10). All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals).
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
 

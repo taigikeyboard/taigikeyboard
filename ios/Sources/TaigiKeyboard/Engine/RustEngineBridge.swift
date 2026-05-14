@@ -1221,9 +1221,9 @@ public enum RustEngineBridge {
                 // `docs/engine/continuous-candidate-display.md` §7 +
                 // Codex pre-impl F4 verdict A: if `msg.roman` is
                 // empty (old-Rust-new-platform wire skew, or proto
-                // regen skipped), fall back to `displayText` so
-                // Item 6's dual-line render does not show a blank
-                // title row. Bundled releases never hit this branch.
+                // regen skipped), fall back to `displayText` so the
+                // Item 6 dual-line render does not show a blank title
+                // row. Bundled releases never hit this branch.
                 // 中文: Item 5 — hanji 為 proto3 optional;wire absent → Swift nil。
                 // 中文: roman 防禦性 fallback — wire skew 時 displayText 兜底,避免空 title。
                 let roman = msg.roman.isEmpty ? msg.displayText : msg.roman

@@ -262,33 +262,60 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// composing-text surface; Enter commits the pending tail via Item 3's
     /// `Phase::Continuous` `Intent::CommitRaw` arm.
     ///
+    /// v3.5.8 Phase 9 Item 6 — `text` / `title` carry `c.roman` (TL
+    /// romanization) and `subtitle` carries `c.hanji` so the cell renders
+    /// dual-line (roman + hanji) on HANT/MIXED candidates and single-line
+    /// (roman only) on TAILO. Mirrors the legacy lexicon path's
+    /// `convertToSuggestions` shape (`text = word.roman`, `subtitle =
+    /// word.hanzi`) so the strip no longer interleaves continuous-vs-lexicon
+    /// cell shapes — the 2026-05-11 dogfood finding the v3.5.8 ranking work
+    /// set out to close.
+    ///
     /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal
-    /// strings) plus `displayText` (engine-supplied raw value) so
+    /// strings) plus `displayText` (engine-supplied raw value = `hanji ??
+    /// roman` per `record_to_candidate`) so
     /// `ActionHandler.handleSuggestionSelection` can route the tap to
     /// `composingManager.commitContinuous(...)` with the engine-supplied byte
-    /// offsets AND the unmodified display text. All three keys are
+    /// offsets AND the canonical commit string. After Item 6, `suggestion.text`
+    /// (= roman) diverges from `additionalInfo["displayText"]` (= hanji ??
+    /// roman) on HANT/MIXED candidates — Tap-0 must commit the sidechannel
+    /// value, not the visual roman form (clarification γ). All three keys are
     /// strict-required at the consumer; missing sidechannel drops the tap
     /// (Item 4 fork F2=A — no `?? suggestion.text` fallback, which would
-    /// commit the visual form once Item 6 ships dual-line rendering).
-    /// The `displayText` sidechannel is required because TPS layout's
-    /// `CandidateCellHelper.suggestionToHandle` rewrites `suggestion.text` via
+    /// commit the visual roman form instead of the canonical `display_text`).
+    /// The sidechannel also defends against TPS layout's
+    /// `CandidateCellHelper.suggestionToHandle` rewriting `suggestion.text` via
     /// `tlNumericToTPS` when the subtitle is nil/empty — without the
     /// sidechannel, `ActionHandler` would call `commitContinuous(displayText:)`
     /// with the rewritten text, which would not match the engine's fetched
-    /// span metadata and would no-op the commit
-    /// (Codex PR #257 r3214912627). NextWord uses the same `displayText` key
-    /// convention.
-    // 中文: 連續輸入候選詞 → KK Suggestion 轉換。slot-0 是 candidate[0],不再放
-    // 中文: composing-text cell(§10.1.2)。displayText sidechannel 嚴格必須,
-    // 中文: 缺項就 drop tap,避開 Item 6 dual-line 帶來的 γ 陷阱。
+    /// span metadata and would no-op the commit (Codex PR #257 r3214912627).
+    /// NextWord uses the same `displayText` key convention.
+    ///
+    /// `subtitle` collapses present-empty `c.hanji == ""` to `nil` so a wire
+    /// defect (producer emitted `Some("")` instead of `None` for a TAILO
+    /// record) renders as single-line rather than as an empty hanji line.
+    /// Whitespace-only hanji strings are passed through unchanged — engine
+    /// invariant is `hanji = DictionaryRecord.hanzi` (real CJK text), so
+    /// `Some("   ")` would already indicate a deep wire defect; hardening
+    /// this to `isNotBlank()` is out of scope until Item 12 custom-dict
+    /// integration surfaces a user-typed case. The bridge decode layer
+    /// already defends the inverse case (empty `c.roman` → falls back to
+    /// `displayText`), so the builder trusts both fields as
+    /// non-empty-when-meaningful.
+    // 中文: Item 6 — text/title 用 c.roman、subtitle 用 c.hanji,候選列改成 dual-line
+    // 中文: render(對齊 lexicon path 的 convertToSuggestions);displayText sidechannel
+    // 中文: 仍嚴格必須(commit 走它,不走 visual 化的 roman)— Item 4 F2=A 約定。
+    // 中文: 連續輸入候選列 §10.1.2 不再放 composing-text cell;slot-0 = candidate[0]。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
     ) -> [Autocomplete.Suggestion] {
         candidates.map { c in
-            Autocomplete.Suggestion(
-                text: c.displayText,
-                title: c.displayText,
-                subtitle: nil,
+            let hanji = c.hanji
+            let subtitle = (hanji?.isEmpty == false) ? hanji : nil
+            return Autocomplete.Suggestion(
+                text: c.roman,
+                title: c.roman,
+                subtitle: subtitle,
                 additionalInfo: [
                     "isContinuous": "true",
                     "consumedBytes": String(c.consumedSpanEnd),

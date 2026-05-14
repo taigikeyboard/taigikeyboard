@@ -22,12 +22,12 @@ extension ActionHandler {
         // Per `docs/engine/continuous-input-ranking.md` §10.3 (Tap-0/Tap-N
         // commit contract + clarification γ): both slot-0 and slot-N taps
         // commit `candidate[N].display_text` — the canonical dictionary
-        // string (`hanji.unwrap_or(roman)`), NOT the roman-with-spaces visual
-        // form that Item 6 will render. The sidechannel `displayText` is the
-        // wire to the canonical form; `suggestion.text` may be view-rewritten
-        // (TPS layout via `CandidateCellHelper.suggestionToHandle`, or Item 6
-        // dual-line segmented roman) and must never be used as the commit
-        // string.
+        // string (`hanji.unwrap_or(roman)`), NOT the visual roman form that
+        // Item 6 renders in the cell title. The sidechannel `displayText` is
+        // the wire to the canonical form; `suggestion.text` carries the
+        // post-Item-6 visual roman and may be further view-rewritten (TPS
+        // layout via `CandidateCellHelper.suggestionToHandle`), so it must
+        // never be used as the commit string.
         //
         // Strict-required keys (Item 4 fork F2=A): `consumedBytes`,
         // `syllableCount`, and `displayText` all come from

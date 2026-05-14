@@ -180,43 +180,143 @@ class ContinuousSuggestionsContractTest {
 
     @Test
     fun `gamma clarification — displayText sidechannel decouples from roman`() {
-        // v3.5.8 Phase 9 Item 4 — pin §10.3 clarification γ at the producer
-        // boundary. Today producer initializes both `roman` and `DISPLAY_TEXT`
-        // from `candidate.displayText`, so they coincide. Once Item 5/6 add
-        // proto `roman`/`hanji` fields and slot-0 renders the segmented
-        // visual form, the producer will populate `roman` with the visual
-        // form while `DISPLAY_TEXT` remains the canonical commit string.
-        // The consumer (`CandidateClickHandler.handleContinuousCandidateClick`)
-        // must already be reading `DISPLAY_TEXT` exclusively — no `?:` fallback
-        // to `selectedWord.roman` — so γ holds regardless of which field
-        // mutates first. This test pins the sidechannel emission as the
-        // authoritative commit-string carrier so Item 6 cannot accidentally
-        // route through `roman`.
+        // v3.5.8 Phase 9 §10.3 clarification γ at the producer boundary.
+        // After Item 6, the producer populates `TaigiWord.roman` from
+        // `candidate.roman` (TL romanization, visual form) and
+        // `DISPLAY_TEXT` from `candidate.displayText` (= hanji ?? roman,
+        // canonical commit string). On a HANT candidate they DIVERGE —
+        // `roman` shows the TL romanization, sidechannel carries the
+        // hanji. The consumer
+        // (`CandidateClickHandler.handleContinuousCandidateClick`) reads
+        // `DISPLAY_TEXT` exclusively — no `?:` fallback to
+        // `selectedWord.roman` — so γ holds regardless of which field
+        // mutates. This test pins the sidechannel emission as the
+        // authoritative commit-string carrier.
         val candidates = listOf(
             cand(
                 consumedSpanStart = 0,
-                consumedSpanEnd = 6,
+                consumedSpanEnd = 7,
                 syllableCount = 2,
-                displayText = "tâi-gí",
+                displayText = "臺灣",
                 score = 1.0f,
                 form = 1,
                 mode = RustEngineBridge.CandidateMode.HANT,
+                roman = "tâi-uân",
+                hanji = "臺灣",
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
         assertEquals(
             "DISPLAY_TEXT sidechannel is the canonical commit string (γ)",
-            "tâi-gí",
+            "臺灣",
             result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT],
         )
-        // Sanity: the producer's current shape (`roman = candidate.displayText`)
-        // is exercised — Item 6 will diverge `roman` from `DISPLAY_TEXT` and
-        // this assertion will need updating; the assertion below pins the
-        // contract the consumer relies on (sidechannel, not roman).
         assertEquals(
-            "Item 4 producer still couples roman to displayText (Item 6 will diverge)",
-            "tâi-gí",
+            "Item 6: TaigiWord.roman carries roman (visual form), diverging from sidechannel (γ)",
+            "tâi-uân",
             result[0].roman,
+        )
+        assertNotEquals(
+            "Item 6 divergence — visual roman MUST NOT collapse onto canonical commit string",
+            result[0].roman,
+            result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT],
+        )
+    }
+
+    // --- v3.5.8 Phase 9 Item 6 — dual-line carrier shape ---
+
+    /**
+     * HANT candidate (`hanji = "臺灣"`) renders dual-line: `roman` carries
+     * TL romanization, `hanzi` carries the hanji string. Tap-0 commits
+     * via the sidechannel `DISPLAY_TEXT` = hanji.
+     */
+    @Test
+    fun `Item 6 — HANT candidate emits dual-line carrier`() {
+        val candidates = listOf(
+            cand(
+                consumedSpanEnd = 7,
+                syllableCount = 2,
+                displayText = "臺灣",
+                mode = RustEngineBridge.CandidateMode.HANT,
+                roman = "tâi-uân",
+                hanji = "臺灣",
+            ),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+        assertEquals("HANT roman = TL romanization", "tâi-uân", result[0].roman)
+        assertEquals("HANT hanzi = hanji string", "臺灣", result[0].hanzi)
+        assertEquals("臺灣", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
+    }
+
+    /**
+     * TAILO candidate (`hanji = null`) renders single-line: `hanzi`
+     * stays null; tap commits the engine's `DISPLAY_TEXT` sidechannel
+     * (= roman for TAILO).
+     */
+    @Test
+    fun `Item 6 — TAILO candidate emits single-line carrier`() {
+        val candidates = listOf(
+            cand(
+                consumedSpanEnd = 4,
+                syllableCount = 1,
+                displayText = "tāi",
+                mode = RustEngineBridge.CandidateMode.TAILO,
+                roman = "tāi",
+                hanji = null,
+            ),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+        assertEquals("TAILO roman = TL romanization", "tāi", result[0].roman)
+        assertNull("TAILO hanzi = null (no hanji)", result[0].hanzi)
+        assertEquals("tāi", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
+    }
+
+    /**
+     * MIXED candidate (`hanji` carries Latin letters per `derive_mode`
+     * NFKD scan in `engine/lexicon/src/continuous.rs`). Renders
+     * dual-line the same way HANT does.
+     */
+    @Test
+    fun `Item 6 — MIXED candidate emits dual-line carrier`() {
+        val candidates = listOf(
+            cand(
+                consumedSpanEnd = 9,
+                syllableCount = 2,
+                displayText = "hip相",
+                mode = RustEngineBridge.CandidateMode.MIXED,
+                roman = "hip-siòng",
+                hanji = "hip相",
+            ),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+        assertEquals("MIXED roman = TL romanization", "hip-siòng", result[0].roman)
+        assertEquals("MIXED hanzi = hanji string", "hip相", result[0].hanzi)
+        assertEquals("hip相", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
+    }
+
+    /**
+     * Defensive: a wire defect where `hanji = ""` (engine invariant
+     * says `null` for TAILO, but a faulty producer might emit an empty
+     * string) collapses to `null` so the cell renders single-line
+     * rather than as a hanji line containing only whitespace. Mirrors
+     * the spec §4.5 `c.hanji?.takeIf { it.isNotEmpty() }` guard.
+     */
+    @Test
+    fun `Item 6 — hanji present-empty collapses to null hanzi`() {
+        val candidates = listOf(
+            cand(
+                consumedSpanEnd = 4,
+                syllableCount = 1,
+                displayText = "tāi",
+                mode = RustEngineBridge.CandidateMode.TAILO,
+                roman = "tāi",
+                hanji = "",
+            ),
+        )
+        val result = buildContinuousSuggestionsForCandidates(candidates)
+        assertNull(
+            "present-empty hanji must collapse to null so the cell stays single-line",
+            result[0].hanzi,
         )
     }
 
