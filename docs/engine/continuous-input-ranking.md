@@ -562,8 +562,18 @@ The split is bound to the engine-side dispatch branch in [`engine/composing/src/
 | Tap-0 / Tap-N dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
 | Swap/TPS/both-scripts commit formatting (γ, Bug 1) | `parseRomanAndHanzi` + `formatOutputText` (shared with legacy branch) → `commitContinuous(displayText:canonicalText:)` | legacy `bracketRoman` + when-expr → `commitContinuous(displayText, canonicalText, …)` | 
 | Canonical key wire | `CommitContinuous.canonical_text` (= sidechannel `displayText`) | `CommitContinuous.canonical_text` (= `TaigiWord.MetadataKeys.DISPLAY_TEXT`) |
+| Mid-commit pending-tail re-mark (Bug 3) | **iOS-specific tail-leak compensation** — see divergence note below | No workaround needed (structurally immune) |
 
 `rules/cross-platform-alignment.md` §3a applies: I1–I4 must hold identically on both platforms. Any divergence requires an explicit note per `rules/cross-platform-alignment.md`.
+
+**Divergence — continuous mid-commit pending-tail re-mark (v3.5.8 Phase 9 Bug 3, intentional, platform-specific, keep)**
+
+A continuous mid-commit emits `commit_text_replacing_preedit(segment)` then `update_preedit(pending_tail)`. Observable contract (both platforms): the chosen segment is committed and the pending raw tail remains an inline composing region so the next candidate tap/Enter replaces it. The platforms reach this identical behavior with different code because the host text-region primitives differ:
+
+- **Android** — `commitText(segment, 1)` is atomic and the following `setComposingText(tail, 1)` opens a fresh composing region the host tracks via `candidatesStart/End` (`onUpdateSelection` → `hostReportsNoComposingRegion` → `onExternalComposingRegionCleared`). The region survives until the next commit; no extra code.
+- **iOS** — `insertText(segment)` then `setMarkedText(tail)` in one synchronous turn: the host app deterministically *confirms* the marked `tail` into literal document text during its `textWillChange`→`textDidChange` settle (real-device trace, 2026-05-16). `UITextDocumentProxy` exposes no API to detect or prevent this. The iOS binding therefore arms the re-marked tail when it is set inside a self-driven mid-commit, detects the confirmation in `textDidChange` via a document-suffix match, and deletes the leaked literal characters before the next preedit clear / re-mark (`KeyboardViewController` `armContinuousMidCommitTail` / `detectContinuousMidCommitTailLeak` / `compensateLeakedContinuousMidCommitTail`). The compensation fires *only* when the suffix match confirms the leak, so hosts that keep the region alive are unaffected.
+
+This is a host-API capability gap, not a behavioral invariant difference: I1–I4 hold identically on both platforms. No `behavioral-invariants.md` change. Classified **intentional / keep** per `rules/cross-platform-alignment.md` §3.
 
 **Engine-side coupling — resolved**: the `subtitle=nil` symptom was closed by fix-plan Item 5 (`CandidateMessage` now emits `roman` + optional `hanji` as distinct fields) and Item 6 (dual-line render). v3.5.8 Phase 9 Bug 1 then added `CommitContinuous.canonical_text` so the document string (swap-aware) and the canonical freq/NextWord key are decoupled on the wire. §10.2/10.3/10.4 hold under the two-field shape.
 

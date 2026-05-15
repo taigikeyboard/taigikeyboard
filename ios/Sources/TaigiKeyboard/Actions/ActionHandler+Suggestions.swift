@@ -91,22 +91,11 @@ extension ActionHandler {
                 isTPSLayout: isTPSLayout,
                 effectiveSwapped: effectiveSwapped,
             )
-            logger.debug(
-                "[BUG3] tap-enter continuous docLen=\(docText.count) "
-                    + "canonicalLen=\(displayText.count) "
-                    + "consumedBytes=\(consumedBytes) syll=\(syllableCount) "
-                    + "docBefore=\(bug3Tail(keyboardContext.textDocumentProxy.documentContextBeforeInput))",
-            )
             let (didCommit, didFinalCommit) = composingManager.commitContinuous(
                 displayText: docText,
                 canonicalText: displayText,
                 consumedBytes: consumedBytes,
                 syllableCount: syllableCount,
-            )
-            logger.debug(
-                "[BUG3] tap-after commitContinuous didCommit=\(didCommit) "
-                    + "didFinal=\(didFinalCommit) "
-                    + "docAfter=\(bug3Tail(keyboardContext.textDocumentProxy.documentContextBeforeInput))",
             )
             // Per-segment frequency learning mirrors the lexicon path: every
             // successful commit records, mid OR final. Engine effects don't

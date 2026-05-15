@@ -12,7 +12,6 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
-import com.siansiansu.taigikeyboard.ime.text.composing.bug3Tail
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -381,15 +380,6 @@ class CandidateClickHandler(
                 }
             }
 
-        if (BuildConfig.DEBUG) {
-            Log.d(
-                TAG,
-                "[BUG3] tap-enter continuous docLen=${textToCommit.length} " +
-                    "canonicalLen=${displayText.length} " +
-                    "consumedBytes=$consumedBytes syll=$syllableCount docBefore=${ic.bug3Tail()}",
-            )
-        }
-
         val result = composingManager.commitContinuous(
             displayText = textToCommit,
             canonicalText = displayText,
@@ -402,11 +392,6 @@ class CandidateClickHandler(
             Log.d(
                 TAG,
                 "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}",
-            )
-            Log.d(
-                TAG,
-                "[BUG3] tap-after commitContinuous didCommit=${result.didCommit} " +
-                    "didFinal=${result.didFinalCommit} docAfter=${ic.bug3Tail()}",
             )
         }
 
@@ -427,13 +412,6 @@ class CandidateClickHandler(
         // a debounced Taigi refresh would later see `rawInput=null` and call
         // `clearCandidates()`, racing with / wiping the fresh predictions.
         if (result.didCommit && !result.didFinalCommit) {
-            if (BuildConfig.DEBUG) {
-                // Plain scheduling marker — NO document read (the tap-after log
-                // above already captured docAfter; avoid an extra synchronous
-                // probe next to the timing-sensitive refresh — Codex post-impl
-                // observer-effect must-fix).
-                Log.d(TAG, "[BUG3] mid-commit scheduling onRequestCandidateRefresh")
-            }
             onRequestCandidateRefresh()
         }
 

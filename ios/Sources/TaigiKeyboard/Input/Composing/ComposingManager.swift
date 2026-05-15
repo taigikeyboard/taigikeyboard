@@ -461,15 +461,9 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             return false
         }
         let didFinalCommit = didCommit && !transition.isComposing
-        logger.debug(
-            "[BUG3] commitContinuous effects=[\(transition.effects.map(\.bug3Kind).joined(separator: ","))] "
-                + "isComposingBefore=\(isComposing) willCompose=\(transition.isComposing) "
-                + "didCommit=\(didCommit) didFinal=\(didFinalCommit) selfCommit=\(selfCommitInProgress)",
-        )
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
         apply(transition)
-        logger.debug("[BUG3] commitContinuous AFTER-apply isComposing=\(isComposing)")
         return (didCommit: didCommit, didFinalCommit: didFinalCommit)
     }
 

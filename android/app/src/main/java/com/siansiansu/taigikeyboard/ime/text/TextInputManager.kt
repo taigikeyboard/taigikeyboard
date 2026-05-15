@@ -32,7 +32,6 @@ import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.popup.buildPopupCells
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
-import com.siansiansu.taigikeyboard.ime.text.composing.bug3Tail
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.composing.hostReportsNoComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
@@ -619,29 +618,8 @@ class TextInputManager(
         // fast/slow split in `composing-state-boundary.md` §11.10
         // divergence #3; pinned by
         // `INVARIANT_composing_external_region_clear_discards_state`.
-        if (BuildConfig.DEBUG) {
-            val cm = getComposingManager()
-            // composing text reported length-only (Codex post-impl security
-            // must-fix — `rules/security-rules.md` §Logging bans unbounded
-            // user/composing text even in debug). `doc=` is a natural-callback
-            // bounded tail (host already drove this change → not a perturbing
-            // mid-sequence probe).
-            Log.d(
-                TAG,
-                "[BUG3] onUpdateSelection oldSel=[$oldSelStart,$oldSelEnd] newSel=[$newSelStart,$newSelEnd] " +
-                    "cand=[$candidatesStart,$candidatesEnd] noRegion=${hostReportsNoComposingRegion(candidatesStart, candidatesEnd)} " +
-                    "selfCommit=${cm?.selfCommitInProgress} isComposing=${cm?.isComposing()} " +
-                    "composingBeforeLen=${cm?.getComposingText()?.length} doc=${taigikeyboard.currentInputConnection?.bug3Tail() ?: "ic=null"}",
-            )
-        }
         if (hostReportsNoComposingRegion(candidatesStart, candidatesEnd)) {
             composingManager?.onExternalComposingRegionCleared()
-            if (BuildConfig.DEBUG) {
-                Log.d(
-                    TAG,
-                    "[BUG3] onUpdateSelection AFTER externalRegionCleared composingAfterLen=${getComposingManager()?.getComposingText()?.length}",
-                )
-            }
         }
     }
 

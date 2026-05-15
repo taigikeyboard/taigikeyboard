@@ -104,17 +104,3 @@ import Foundation
         @inline(__always) func error(_: @autoclosure () -> String) {}
     }
 #endif
-
-/// v3.5.8 Phase 9 Bug 3 instrumentation (PR1, instrumentation-only — zero
-/// behavior change; removed in the Bug 3 fix PR). Bounded snapshot of the
-/// document text just before the cursor, used to pinpoint which call
-/// finalizes a stale composing region between a mid-commit and the next
-/// final-commit (`taiuantaigi` → tap 臺灣 → tap 台語 yields the spurious
-/// "臺灣taigi台語"). Only ever evaluated inside `DebugLogger.debug`'s
-/// `@autoclosure` (a no-op in release), and reports at most the last 16
-/// characters so no aggregate user text is logged (`rules/security-rules.md`
-/// §Logging). Mirrors Android `InputConnection.bug3Tail()`.
-func bug3Tail(_ text: String?) -> String {
-    let tail = String((text ?? "").suffix(16))
-    return "len=\(tail.count) tail='\(tail)'"
-}
