@@ -1,12 +1,14 @@
-//! v3.5.8 Phase 3 — TPS syllabifier scanner tests.
+//! v3.5.8 TPS syllabifier scanner tests.
 //!
 //! Verifies that tone-mark spacing modifiers, entering-coda small
 //! letters, and 8th-tone dot variants all produce ascending byte
-//! offsets. Tone-1 (no mark) syllables must yield no ending — Phase 4
-//! handles those via the "next initial seen" rule.
+//! offsets, AND that tone-1 (no mark) syllables yield implicit
+//! boundaries via the "next initial seen" rule (Phase 9 Item 7):
+//! a new initial after a nucleus, and end-of-input with a pending
+//! tone-1 nucleus, both end a syllable.
 
-// 中文: Phase 3 TPS syllabifier 測試 — 確認聲調 mark / 入聲韻尾 / 第 8 聲點都會回報切點。
-// 中文: 第 1 聲沒有 mark,本掃描不偵測;由 Phase 4 在看到下一個聲母時補回邊界。
+// 中文: TPS syllabifier 測試 — 確認聲調 mark / 入聲韻尾 / 第 8 聲點回報切點,
+// 中文: 並驗證第 1 聲 (無 mark) 經 next-initial-seen 規則 (Item 7) 補回隱式邊界。
 
 use composing::syllabifier::tps::valid_span_endings;
 
@@ -60,11 +62,54 @@ fn standalone_combining_dot_terminates() {
 }
 
 #[test]
-fn tone1_without_mark_yields_no_ending() {
-    // ㄉㄚ — pure tone-1, no terminator. Phase 3 returns nothing;
-    // Phase 4 will detect the boundary when the next initial appears.
+fn tone1_without_mark_yields_trailing_ending() {
+    // ㄉㄚ — single tone-1 syllable, no terminator. Item 7: a pending
+    // tone-1 nucleus at end-of-input ends the trailing syllable, so a
+    // lone tone-1 syllable (e.g. ㄍㄧ = 語) can surface candidates.
     let input = "\u{3109}\u{311a}";
-    assert!(valid_span_endings(input, 0).is_empty());
+    assert_eq!(valid_span_endings(input, 0), vec![input.len()]);
+}
+
+#[test]
+fn tone1_chain_next_initial_seen_splits_each_syllable() {
+    // ㄉㄞㆣㄧ — "tâi-gí" (台語) typed with no tone marks. The ㆣ
+    // initial after the ㄞ nucleus ends syllable 1; end-of-input ends
+    // the trailing ㆣㄧ tone-1 syllable. Each Bopomofo char = 3 bytes.
+    let dai = "\u{3109}\u{311e}"; // ㄉㄞ
+    let gi = "\u{31a3}\u{3127}"; // ㆣㄧ
+    let input = format!("{dai}{gi}");
+    assert_eq!(valid_span_endings(&input, 0), vec![dai.len(), input.len()]);
+}
+
+#[test]
+fn tone1_then_tone_marked_yields_both_endings() {
+    // ㄉㄞㆣㄧˊ — tone-1 ㄉㄞ then tone-5 ㆣㄧˊ. Implicit boundary
+    // before ㆣ, explicit terminator at ˊ. No spurious EOI ending
+    // (the terminator clears the pending nucleus).
+    let dai = "\u{3109}\u{311e}";
+    let gi5 = "\u{31a3}\u{3127}\u{02ca}";
+    let input = format!("{dai}{gi5}");
+    assert_eq!(valid_span_endings(&input, 0), vec![dai.len(), input.len()]);
+}
+
+#[test]
+fn tone_marked_then_tone1_yields_both_endings() {
+    // ㄉㄞˊㆣㄧ — tone-5 ㄉㄞˊ then tone-1 ㆣㄧ. Terminator at ˊ
+    // resets the nucleus flag, so the ㆣ initial right after the mark
+    // is NOT a false boundary; the trailing tone-1 ends at EOI.
+    let dai5 = "\u{3109}\u{311e}\u{02ca}";
+    let gi = "\u{31a3}\u{3127}";
+    let input = format!("{dai5}{gi}");
+    assert_eq!(valid_span_endings(&input, 0), vec![dai5.len(), input.len()]);
+}
+
+#[test]
+fn leading_initials_without_nucleus_emit_no_implicit_boundary() {
+    // ㄉㆣㄧ — initial, initial, vowel (no nucleus before the 2nd
+    // initial). Coarse scan emits only the trailing EOI ending; the
+    // malformed prefix is rejected downstream by build_keys_tps.
+    let input = "\u{3109}\u{31a3}\u{3127}";
+    assert_eq!(valid_span_endings(input, 0), vec![input.len()]);
 }
 
 #[test]

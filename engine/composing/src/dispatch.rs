@@ -623,13 +623,16 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 /// can slice the correct number of Bopomofo characters on commit;
 /// only the FST-side key uses the canonical TL form.
 ///
-/// **Phase 6 limitations** (deferred to Phase 9 dogfood per `docs/roadmap.md`):
-/// - Tone-1 (no mark) syllables are NOT detected by `tps::valid_span_endings`
-///   today (`engine/composing/src/syllabifier/tps.rs:6-8`); FetchAtPos
-///   will not surface candidates whose TPS prefix ends on tone-1.
-/// - Malformed fragments where `tps_to_tl` yields output not ending in a
-///   `1..=9` tone digit (e.g. partial Bopomofo) are skipped — the partial
-///   prefix would corrupt the cumulative fused key for downstream endings.
+/// Tone-1 (no mark) syllables ARE detected since v3.5.8 Phase 9 Item 7
+/// (`tps::valid_span_endings` next-initial-seen rule); a tone-1 span
+/// converts to a digitless toneless TL form (`ㄉㄞ` → `tai`) which is
+/// accepted directly as the fused key fragment.
+///
+/// Remaining bounds:
+/// - Malformed fragments where `tps_to_tl` yields a non-ASCII result
+///   (partial / unconvertible Bopomofo emitted as a raw `Part::Other`
+///   symbol) abort the whole build — a partial prefix would corrupt
+///   the cumulative fused key for downstream endings.
 /// - Endings beyond `MAX_SYLLABLES` (= 8) are dropped to mirror the
 ///   `build_keys_tl` BFS depth bound, keeping per-keystroke FST lookup
 ///   and candidate scoring complexity bounded across modes. The TPS
@@ -638,7 +641,7 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 ///   cap into the syllabifier is a follow-up if profiling shows the
 ///   linear scan is hot.
 // 中文: TPS key 構造 — 累加每個 Bopomofo 音節的 toneless TL,於每個 TPS ending 釋出 fused key (對應 build_keys_tl 的 lower[0..end])。
-// 中文: consumed_span 仍以 Bopomofo bytes 為單位;tone-1 / 不合法片段一律 Phase 9 才補。
+// 中文: consumed_span 仍以 Bopomofo bytes 為單位;第 1 聲自 Item 7 起支援 (轉出無數字 toneless 形,直接當 key 片段);不合法 Bopomofo 仍中止整批。
 // 中文: 與 build_keys_tl 對齊,輸出最多取前 MAX_SYLLABLES (8) 個 ending,避免長 preedit 引發無上限 FST 查詢。
 fn build_keys_tps(raw: &str) -> Vec<(ConsumedSpan, String)> {
     let endings = tps_syll::valid_span_endings(raw, 0);
@@ -656,19 +659,14 @@ fn build_keys_tps(raw: &str) -> Vec<(ConsumedSpan, String)> {
         let span_text = &raw[prev_end..end];
         prev_end = end;
         let tl_numeric = tps_to_tl(span_text);
-        // The TL converter ALWAYS appends a tone digit on a well-formed
-        // single-syllable Bopomofo span (`engine/phonetics/src/tps.rs:301`).
-        // If the trailing char is not a 1..=9 digit the fragment is
-        // malformed (partial Bopomofo / unsupported sequence); skipping
-        // it would corrupt the cumulative fused key for subsequent
-        // endings, so we abort the whole TPS key build instead.
-        let last = tl_numeric.as_bytes().last();
-        let well_formed = matches!(last, Some(b) if b.is_ascii_digit() && *b != b'0');
-        if !well_formed {
-            return Vec::new();
-        }
         let toneless = strip_trailing_tone_digit(&tl_numeric).to_ascii_lowercase();
-        if toneless.is_empty() {
+        // Partial / unconvertible Bopomofo makes `tps_to_tl` emit the
+        // raw symbol as a non-ASCII `Part::Other` char; failing this
+        // check aborts the whole build so the cumulative fused key
+        // cannot be corrupted for later endings. Tone-marked and
+        // digitless tone-1 (`ㄉㄞ` → `tai`, Item 7) spans both pass.
+        let well_formed = !toneless.is_empty() && toneless.bytes().all(|b| b.is_ascii_lowercase());
+        if !well_formed {
             return Vec::new();
         }
         fused_toneless.push_str(&toneless);
@@ -920,10 +918,41 @@ mod tests {
     }
 
     #[test]
-    fn build_keys_tps_returns_empty_on_no_terminator() {
-        // Bopomofo without any tone mark / entering coda → no endings.
+    fn build_keys_tps_tone1_no_mark_emits_key() {
+        // Item 7: Bopomofo with no tone mark is a tone-1 syllable. The
+        // syllabifier's next-initial-seen rule ends it at EOI; the
+        // digitless toneless TL form (`ㄉㄧㄠ` → `tiau`) is accepted
+        // directly as the fused key fragment. ㄉ/ㄧ/ㄠ = 3 bytes each.
         let keys = build_keys_tps("ㄉㄧㄠ");
-        assert!(keys.is_empty(), "expected empty keys, got {keys:?}");
+        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
+        assert_eq!(texts, vec!["tl:tiau"], "{texts:?}");
+        assert_eq!(keys[0].0, (0u32, 9u32));
+    }
+
+    #[test]
+    fn build_keys_tps_tone1_chain_emits_cumulative_fused_keys() {
+        // ㄉㄞㆣㄧ — "tâi-gí" (台語) typed with no tone marks. The
+        // syllabifier splits ㄉㄞ | ㆣㄧ via next-initial-seen; each
+        // span converts to a clean toneless TL fragment and the
+        // cumulative fused keys mirror the TL path (`tl:tai`, then
+        // `tl:taigi`). Each Bopomofo char = 3 bytes.
+        let keys = build_keys_tps("\u{3109}\u{311e}\u{31a3}\u{3127}");
+        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
+        assert_eq!(texts, vec!["tl:tai", "tl:taigi"], "{texts:?}");
+        assert_eq!(keys[0].0, (0u32, 6u32));
+        assert_eq!(keys[1].0, (0u32, 12u32));
+    }
+
+    #[test]
+    fn build_keys_tps_mixed_tone1_and_tone_marked() {
+        // ㄉㄞㆣㄧˊ — tone-1 ㄉㄞ then tone-5 ㆣㄧˊ. Mixed boundary
+        // kinds still produce cumulative fused keys; ˊ = U+02CA (2
+        // bytes), so the second span ends at 6 + 3+3+2 = 14.
+        let keys = build_keys_tps("\u{3109}\u{311e}\u{31a3}\u{3127}\u{02ca}");
+        let texts: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
+        assert_eq!(texts, vec!["tl:tai", "tl:taigi"], "{texts:?}");
+        assert_eq!(keys[0].0, (0u32, 6u32));
+        assert_eq!(keys[1].0, (0u32, 14u32));
     }
 
     #[test]

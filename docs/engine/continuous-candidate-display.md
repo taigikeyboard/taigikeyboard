@@ -155,7 +155,7 @@ Android [`TaigiAutocompleteService.kt:71-77`](../../android/app/src/main/java/co
 
 - Syllable inventory unavailable (cold-start race)
 - Input contains hyphens / POJ diacritics not in inventory (deferred to Phase 9.4b shadow buffer)
-- TPS tone-1 untoned syllables (deferred to Phase 9.4a)
+- ~~TPS tone-1 untoned syllables (deferred to Phase 9.4a)~~ **RESOLVED — Phase 9 Item 7 / 9.4a** (`tps::valid_span_endings` next-initial-seen rule + `build_keys_tps` digitless tone-1 accept)
 - Single-character prefix below the first valid ending
 
 Each toggle flips the strip's cell shape, producing the user-observed "交錯" across successive keystrokes.
@@ -645,7 +645,7 @@ Per Q1 clarification 2026-05-11, **the only input modes are TL / POJ / TPS roman
 
 | # | Gap | Current state | Engine work to do |
 |---|---|---|---|
-| **A** | TPS tone-1 untoned (`ㄉㄞ`) | `tps::valid_span_endings` only sees tone-mark / 入聲韻尾 terminators | **Phase 9.4a (already planned)** — `engine/composing/src/syllabifier/tps.rs:65-93` next-initial-seen rule, ~50-100 LOC |
+| **A** | TPS tone-1 untoned (`ㄉㄞ`) | ~~`tps::valid_span_endings` only sees tone-mark / 入聲韻尾 terminators~~ | **DONE — Phase 9 Item 7 / 9.4a**: `tps::valid_span_endings` next-initial-seen + trailing-tone-1 rule; `phonetics::is_tps_initial` / `is_tps_char`; `build_keys_tps` accepts digitless toneless fragment |
 | **B** | POJ-diacritic input (`pe̍h`, `chóa`, `peⁿ`) | `to_ascii_lowercase` in `build_keys_tl` doesn't strip diacritics | **NEW** — wire `phonetics::canonicalize_syllable` (already exists, `engine/phonetics/src/syllable.rs`) into `build_keys_tl` per-syllable pre-pass; ~50 LOC + tests |
 | **C** | Hyphenated TL (`tai-bak`, `pe̍h-ōe-jī`) | `tl_syll::valid_span_endings` BFS via `inv.contains(...)`, no hyphen inventory entries | **Phase 9.4b (already planned)** — `engine/composing/src/dispatch.rs::build_keys_tl` shadow buffer + offset map ~100-150 LOC |
 | **D** | Partial prefix (`t`, `gu`, anything shorter than first valid syllable ending) | Syllabifier returns `{}` → continuous returns empty → fallback to lexicon prefix-match | **NEW** — in `handle_fetch_at_pos`, when `valid_span_endings` is empty AND raw is non-empty, fall through to `prefix_index.lookup_prefix("tl:<lower-stripped>")` and emit results as `RawCandidate { consumed_span: (0, raw.len()), syllable_count: 0, mode: <derived>, ... }` with **a new SortKey tier dimension** so partial candidates rank below full-syllable candidates (§15.5). ~100-150 LOC + ranking adjustment |

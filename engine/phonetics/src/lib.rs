@@ -31,4 +31,4 @@ pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form
 pub use poj::to_poj;
 pub use syllable::{canonicalize_syllable, is_valid_syllable, normalize_to_tl, strip_tone_mark};
 pub use tl::to_tl;
-pub use tps::from_zhuyin as tps_to_tl;
+pub use tps::{from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial};

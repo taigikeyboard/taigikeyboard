@@ -172,6 +172,32 @@ pub(crate) fn is_zhuyin(text: &str) -> bool {
     ZHUYIN_RE.is_match(text)
 }
 
+/// True when `ch` lies in the Bopomofo (U+3100–U+312F) or Bopomofo
+/// Extended (U+31A0–U+31BF) block — the same range `ZHUYIN_RE` scans.
+/// Single-`char` companion to [`is_zhuyin`] for callers that walk a
+/// stream char-by-char (the composing TPS syllabifier) and must not
+/// allocate a `&str` per code point.
+// 中文: 判斷單一字元是否落在注音 / 注音擴充區塊 (與 ZHUYIN_RE 同範圍);供逐字掃描的呼叫端用,免每字配置字串。
+pub fn is_tps_char(ch: char) -> bool {
+    matches!(ch, '\u{3100}'..='\u{312f}' | '\u{31a0}'..='\u{31bf}')
+}
+
+/// True when `ch` is the leading consonant of a TPS initial. Derived
+/// from [`ZHUYIN_INITIALS`] (the first `char` of each Bopomofo value),
+/// so it tracks edits to that table with no parallel const set to keep
+/// in sync. The four `REV_INITIALS` extras (ㄐ ㄑ ㄒ ㆢ) are already the
+/// first chars of the `tsi` / `tshi` / `si` / `ji` two-symbol initials,
+/// so iterating `ZHUYIN_INITIALS` alone covers the full set.
+///
+/// Used by the composing TPS syllabifier's "next initial seen" rule to
+/// infer a tone-1 syllable boundary: an initial appearing after a
+/// nucleus has been consumed starts a new syllable.
+// 中文: 判斷字元是否為 TPS 聲母的首字;由 ZHUYIN_INITIALS 推導 (取每筆注音值首字),無平行常數表需同步維護。
+// 中文: REV_INITIALS 的四個額外項 (ㄐㄑㄒㆢ) 本就是 tsi/tshi/si/ji 兩符聲母的首字,故只走 ZHUYIN_INITIALS 即涵蓋全集。
+pub fn is_tps_initial(ch: char) -> bool {
+    ZHUYIN_INITIALS.iter().any(|(_, tps)| tps.starts_with(ch))
+}
+
 /// Convert a single TL token (with tone digit) to TPS.
 ///
 /// - `encode_safe = true` substitutes `\u{02d9}` for `\u{0307}` so TPS

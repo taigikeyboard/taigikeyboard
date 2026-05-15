@@ -8,10 +8,10 @@
 //!   via `phonetics::canonicalize_syllable`).
 //! - `tps::valid_span_endings` — O(n) scan over Bopomofo Extended tone
 //!   marks + entering-coda small letters + 8th-tone combining/encode-safe
-//!   dots. Tone-mark positions are unambiguous syllable terminators in
-//!   TPS (per `docs/roadmap.md` line 95); tone-1 (no mark) syllables
-//!   yield no ending here — Phase 4 handles implicit boundaries via the
-//!   "next initial seen" rule.
+//!   dots (unambiguous terminators per `docs/roadmap.md` line 95), plus
+//!   implicit tone-1 boundaries via the "next initial seen" rule
+//!   (v3.5.8 Phase 9 Item 7) — the syllabifier itself emits the
+//!   tone-1 endings; no dispatcher post-processing.
 //!
 //! Both functions return `Vec<usize>` of ascending, deduplicated byte
 //! offsets — the contract Phase 5's `lexicon::fetch_candidates_for_endings`
@@ -25,7 +25,7 @@
 //! and a `max_syllables` depth cap fits this slot exactly.
 
 // 中文: v3.5.8 連續輸入 Phase 3 的純函式音節邊界掃描器,提供 TL 與 TPS 兩個入口。
-// 中文: TL 走 BFS+SyllableInventory.contains;TPS 走 O(n) 終止符掃描;結果為遞增去重的 byte 位移。
+// 中文: TL 走 BFS+SyllableInventory.contains;TPS 走 O(n) 終止符 + 隱式第 1 聲掃描;結果為遞增 byte 位移。
 
 pub mod tl;
 pub mod tps;
