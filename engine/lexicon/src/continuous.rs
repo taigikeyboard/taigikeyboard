@@ -84,6 +84,42 @@ use ranking::{
 // 中文: Phase 5 唯一支援的 form 標籤 (notone);其他 form 留給 Phase 6+。
 pub const FORM_NOTONE: u8 = 1;
 
+/// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
+/// full-syllable hits (the pre-Item-10 path: `valid_span_endings`
+/// returned at least one ending and `fetch_candidates_for_keys`
+/// produced the candidate via `prefix_index.lookup_exact`).
+// 中文: Item 10 — 完整音節覆蓋候選 (syllabifier 切出邊界,fetch_candidates_for_keys 走 lookup_exact)。
+pub const COVERAGE_KIND_FULL: u8 = 0;
+
+/// v3.5.8 Phase 9 Item 10 — `RawCandidate.coverage_kind` ordinal for
+/// partial-prefix hits (syllabifier returned no ending, engine fell
+/// through to [`fetch_partial_prefix_candidates`] via
+/// `prefix_index.lookup_prefix`). Ranks strictly below
+/// [`COVERAGE_KIND_FULL`] in [`SortKey`] regardless of any other
+/// dimension; see `docs/engine/continuous-candidate-display.md` §15.5.
+// 中文: Item 10 — 部分前綴覆蓋候選 (syllabifier 切不出邊界,改走 lookup_prefix);
+// 中文:   SortKey 上強制排在 COVERAGE_KIND_FULL 之後,不被任何其他維度反超。
+pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
+
+/// v3.5.8 Phase 9 Item 10 — max partial-prefix rowids hydrated per
+/// `FetchAtPos`. Single-char prefixes (`tl:t`) can match hundreds of
+/// FST entries; hydrating every record before sort is wasted work
+/// when the candidate strip only renders ~10 items. Pre-cap mirrors
+/// the legacy `LexiconService.search` per-request cap, taking the
+/// FST byte-sorted prefix in document order (which roughly aligns
+/// with insertion order in `dictionary/build/create_fst.py`); see
+/// `docs/engine/continuous-candidate-display.md` §15.8 risk row 1.
+///
+/// **Known limitation** (Codex pre-impl R6, 2026-05-15): pre-cap is
+/// not ranking-aware — a globally high-frequency partial-prefix hit
+/// landing after rowid 30 in FST byte order would be dropped. We
+/// accept this as legacy-parity behaviour (the pre-§15 platform
+/// lexicon path has the same property); see Item 13 retire notes
+/// in `docs/engine/continuous-candidate-display.md` §15.4.
+// 中文: Item 10 — partial-prefix lookup_prefix 在 dict.record hydration 前的 rowid 上限,對齊 legacy LexiconService 行為。
+// 中文: 已知侷限 (R6) — 大頻率候選若落在 byte-sort 後 30 名外會被丟,屬 legacy parity 行為。
+pub const PARTIAL_PREFIX_CAP: usize = 30;
+
 /// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
 /// on every [`RawCandidate`] and wire-encoded onto
 /// `protos::taigi::engine::CandidateMessage.mode` (Phase 9.2). Derived
@@ -225,6 +261,22 @@ pub struct RawCandidate {
     // 中文: Phase 9.3a — 候選的最近使用 rank;由 record_to_candidate 從 FrequencyMap + now_ms 算好,SortKey 直接讀。
     // 中文: 目前不上 wire (CandidateMessage 沒帶);UI 沒「最近使用」標記需求,PR-9.3c 視情況補。
     pub recency_rank: u8,
+    /// v3.5.8 Phase 9 Item 10 — coverage kind for the new partial-prefix
+    /// path. [`COVERAGE_KIND_FULL`] for the existing
+    /// `fetch_candidates_for_keys` lookup-exact path;
+    /// [`COVERAGE_KIND_PARTIAL_PREFIX`] for
+    /// [`fetch_partial_prefix_candidates`] hits.
+    ///
+    /// Internal axis only — does NOT enter `CandidateMessage` (same
+    /// pattern as [`recency_rank`]; see
+    /// `docs/engine/continuous-candidate-display.md` §15.5). Consumed
+    /// solely by [`SortKey`] to push every partial-prefix candidate
+    /// strictly below every full-syllable candidate in lexicographic
+    /// order, irrespective of `tier`, score, recency, dict freq, or
+    /// source rank.
+    // 中文: Item 10 — 覆蓋類型旗標;COVERAGE_KIND_FULL=0 走 lookup_exact,COVERAGE_KIND_PARTIAL_PREFIX=1 走 lookup_prefix。
+    // 中文: 不上 wire,僅供 SortKey 排序使用 — partial-prefix 永遠被排在 full-syllable 之後,不論其他維度。
+    pub coverage_kind: u8,
 }
 
 /// Fetch every dictionary candidate whose toneless TL key matches
@@ -387,7 +439,19 @@ pub fn fetch_candidates_for_keys(
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
                 continue;
             }
-            out.push(record_to_candidate(record, *span, freq_map, now_ms));
+            // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
+            // definition `valid_span_endings` produced an ending that
+            // led to this `lookup_exact`. Partial-prefix hits flow
+            // through `fetch_partial_prefix_candidates` instead and
+            // carry `COVERAGE_KIND_PARTIAL_PREFIX`.
+            // 中文: 完整音節路徑固定 COVERAGE_KIND_FULL;partial-prefix 改走另一條入口。
+            out.push(record_to_candidate(
+                record,
+                *span,
+                freq_map,
+                now_ms,
+                COVERAGE_KIND_FULL,
+            ));
         }
     }
 
@@ -422,11 +486,119 @@ pub fn fetch_candidates_for_keys(
     indexed.into_iter().map(|(_, c)| c).collect()
 }
 
+/// v3.5.8 Phase 9 Item 10 — partial-prefix candidate fetch for the
+/// continuous-input path. Called when the syllabifier failed to find a
+/// single valid syllable ending inside `raw` (so
+/// [`fetch_candidates_for_keys`] would return empty) and we want the
+/// candidate strip to surface engine prefix-match hits below any
+/// future full-syllable matches. See
+/// `docs/engine/continuous-candidate-display.md` §15.3.D + §15.5.
+///
+/// Pipeline:
+///
+/// 1. `prefix_index.lookup_prefix(&key.1)` — FST byte-sorted rowid scan.
+/// 2. Pre-cap at [`PARTIAL_PREFIX_CAP`] rowids (mirror legacy
+///    `LexiconService` per-request cap; flood guard for single-char
+///    prefixes like `tl:t`).
+/// 3. Hydrate via `dict.record(rowid)`; drop rows that fail the
+///    `enabled_sources_bitmask` filter (D-12 invariant parity with
+///    [`fetch_candidates_for_keys`]).
+/// 4. Build candidates with `coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX`
+///    and `consumed_span = key.0` (caller pins `(0, raw.len())` per
+///    Q15.4 — partial-prefix candidates always final-commit).
+/// 5. Sort via the same eight-dimension [`SortKey`]; the leading
+///    `coverage_kind` dim is `1` here so the whole batch ranks below
+///    any concurrent full-syllable hits if a caller ever merges them
+///    (this fn produces partial-prefix candidates only).
+///
+/// `raw_len` is the byte length of the original pending buffer
+/// (`Phase::Continuous { raw }.len()`); kept here for the Tier 0/1
+/// (`consumed_span_end == raw_len`) downstream dim even though every
+/// partial-prefix candidate has `consumed_span_end == raw_len` today,
+/// so its `tier` is always 0 within `coverage_kind == 1`. This keeps
+/// the entry signature symmetric with [`fetch_candidates_for_keys`].
+///
+/// `freq_map` + `now_ms` propagate user-frequency boost and recency
+/// rank to partial-prefix hits identically to the full-syllable
+/// path. An empty map + `now_ms = 0` is the cold-start neutral.
+///
+/// **Caller obligation** — `key.1` MUST carry an FST namespace plus
+/// a non-empty body (e.g. `"tl:gu"`). Passing the bare namespace
+/// (`"tl:"`) is permitted by the empty-string guard but is treated
+/// as a legitimate "match every entry under the namespace" query
+/// — it returns the first [`PARTIAL_PREFIX_CAP`] FST entries under
+/// that prefix, which is a footgun when triggered by misuse rather
+/// than design. Production callers go through
+/// `composing/src/dispatch.rs::build_partial_prefix_key_tl`, which
+/// returns `None` when the toneless body would be empty and
+/// therefore never emits `"tl:"` alone.
+// 中文: Item 10 — 部分前綴候選查詢。當 syllabifier 切不出音節邊界時 fall through 到 prefix_index.lookup_prefix。
+// 中文: rowid pre-cap = PARTIAL_PREFIX_CAP (對齊 legacy LexiconService);hydrate 後 record_to_candidate 標 COVERAGE_KIND_PARTIAL_PREFIX。
+// 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;沒有混合 full + partial 的 caller (dispatch 走互斥 branch)。
+// 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu");bare namespace "tl:" 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆,生產路徑由 build_partial_prefix_key_tl 保證不會傳 bare namespace。
+#[allow(clippy::too_many_arguments)]
+pub fn fetch_partial_prefix_candidates(
+    key: &(ConsumedSpan, String),
+    raw_len: u32,
+    enabled_sources_bitmask: u32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+) -> Vec<RawCandidate> {
+    let (span, fst_key) = key;
+    if fst_key.is_empty() {
+        return Vec::new();
+    }
+    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
+    let mut out: Vec<RawCandidate> = Vec::new();
+    // Cap by `take(PARTIAL_PREFIX_CAP)` on the rowid stream so the
+    // dict-hydration step is bounded even for single-char prefixes
+    // (e.g. `tl:t`) that match thousands of FST entries. Mirrors the
+    // legacy `LexiconService` per-request cap (§15.8 flood guard).
+    // Filter rejects still consume budget — the goal is bounding
+    // worst-case work, not maximizing hits past the cap.
+    // 中文: 用 take(PARTIAL_PREFIX_CAP) 把 dict.record hydration 上限套在 rowid 流上,
+    // 中文:   即使 tl:t 這種短前綴對到上千筆 FST entry 也只查前 30 筆;對齊 legacy LexiconService 限制。
+    for rowid in prefix_index
+        .lookup_prefix(fst_key)
+        .into_iter()
+        .take(PARTIAL_PREFIX_CAP)
+    {
+        let Some(record) = dict.record(rowid) else {
+            continue;
+        };
+        if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+            continue;
+        }
+        out.push(record_to_candidate(
+            record,
+            *span,
+            freq_map,
+            now_ms,
+            COVERAGE_KIND_PARTIAL_PREFIX,
+        ));
+    }
+
+    // Same `enumerate()`-pre-sort-stamping pattern as
+    // `fetch_candidates_for_keys` to keep `stable_idx` deterministic
+    // and independent of `slice::sort_by_cached_key` internals (PR-9.1
+    // PR-bot R1 fix `be86f5f7`).
+    let mut indexed: Vec<(SortKey, RawCandidate)> = out
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
+        .collect();
+    indexed.sort_by_key(|(key, _)| *key);
+    indexed.into_iter().map(|(_, c)| c).collect()
+}
+
 fn record_to_candidate(
     record: DictionaryRecord,
     consumed_span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    coverage_kind: u8,
 ) -> RawCandidate {
     let DictionaryRecord {
         bitmask,
@@ -471,6 +643,7 @@ fn record_to_candidate(
         bitmask,
         mode,
         recency_rank: recency,
+        coverage_kind,
     }
 }
 
@@ -485,9 +658,22 @@ fn record_to_candidate(
 // `f32::MIN` at construction.
 // ---------------------------------------------------------------------------
 
-// 中文: Phase 9.1 排序鍵 — 7 維 lexicographic,asc/desc 由 Reverse<T> 控;NaN 在 NonNanF32 內 coerce 成 f32::MIN。
+// 中文: Phase 9.1 / Phase 9 Item 10 排序鍵 — 8 維 lexicographic,asc/desc 由 Reverse<T> 控;NaN 在 NonNanF32 內 coerce 成 f32::MIN。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct SortKey {
+    /// v3.5.8 Phase 9 Item 10 — leading dim. `0` for full-syllable
+    /// (the pre-Item-10 `fetch_candidates_for_keys` path) and `1`
+    /// for partial-prefix ([`fetch_partial_prefix_candidates`]).
+    /// Sits ahead of [`tier`](Self::tier) because partial-prefix
+    /// candidates have `consumed_span_end == raw_len`
+    /// (Q15.4 → `tier = 0`); without this dim a partial-prefix
+    /// tier-0 candidate would outrank a future full-syllable
+    /// tier-1 candidate, violating §15.5 "rank below regardless of
+    /// frequency". See `docs/engine/continuous-candidate-display.md`
+    /// §15.5.
+    // 中文: Item 10 — coverage_kind 必須是最前維;partial-prefix 的 consumed_span_end == raw_len → tier=0,
+    // 中文:   若放在 tier 之後,partial 的 tier-0 會反超 full 的 tier-1,違反 §15.5。
+    coverage_kind: u8,
     /// `0` = Tier 0 (full-buffer coverage), `1` = Tier 1 (partial).
     /// Roadmap and spec both use the "Tier 0 = full buffer" labelling
     /// (`docs/roadmap.md` § Phase 9 / `docs/engine/continuous-input-
@@ -531,6 +717,7 @@ impl SortKey {
         // point is responsible for tagging the custom rank, not this fn.
         let source_rank = source_tier_rank(candidate.bitmask, false);
         Self {
+            coverage_kind: candidate.coverage_kind,
             tier,
             neg_coverage: Reverse(coverage_bytes),
             recency_rank: candidate.recency_rank,
@@ -623,7 +810,26 @@ mod sort_key_tests {
             bitmask,
             mode: CandidateMode::Hant,
             recency_rank,
+            coverage_kind: COVERAGE_KIND_FULL,
         }
+    }
+
+    /// v3.5.8 Phase 9 Item 10 — partial-prefix variant for the new
+    /// `coverage_kind` dim. Defaults to recency_rank=1 (stale) so
+    /// tests can isolate the coverage_kind axis without mixing in
+    /// recency boosts.
+    // 中文: Item 10 — partial-prefix 測試 fixture helper;recency_rank 預設 1 (stale),
+    // 中文:   讓 coverage_kind 維度可以單獨被驗證,不被 recency 0/1 干擾。
+    fn cand_partial(
+        span_start: u32,
+        span_end: u32,
+        score: f32,
+        frequency: u32,
+        bitmask: u16,
+    ) -> RawCandidate {
+        let mut c = cand_with_recency(span_start, span_end, score, frequency, bitmask, 1);
+        c.coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX;
+        c
     }
 
     #[test]
@@ -741,6 +947,52 @@ mod sort_key_tests {
         // Tier 1 because end (2) != raw_len (4).
         assert_eq!(key.tier, 1);
     }
+
+    // ----- v3.5.8 Phase 9 Item 10 — `coverage_kind` SortKey dim -----
+
+    #[test]
+    fn coverage_kind_full_beats_partial_regardless_of_other_dims() {
+        // Item 10 headline invariant: a partial-prefix candidate with
+        // MAX freq + MAX score + recent recency + best source rank
+        // must STILL lose to a full-syllable candidate with min freq,
+        // min score, stale recency, and worst source rank — the
+        // leading `coverage_kind` dim is load-bearing.
+        // Both candidates have `end == raw_len` so their `tier`
+        // dimension is identical (0) — the regression this guards
+        // against is a tier-0 partial beating a tier-1 full when
+        // `coverage_kind` is mis-ordered.
+        let raw_len: u32 = 3;
+        let full_weak = cand_with_recency(0, 3, 0.001, 1, 0, 1);
+        let partial_strong = cand_partial(0, 3, f32::MAX, u32::MAX, KAUTIAN_BIT_U16);
+        // Sanity: the partial helper sets `coverage_kind = 1` while
+        // the full helper leaves it at the default `0`.
+        assert_eq!(full_weak.coverage_kind, COVERAGE_KIND_FULL);
+        assert_eq!(partial_strong.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
+        assert!(
+            SortKey::new(&full_weak, raw_len, 0) < SortKey::new(&partial_strong, raw_len, 1),
+            "Item 10: full-syllable must precede partial-prefix regardless of other dims"
+        );
+    }
+
+    #[test]
+    fn within_partial_prefix_inner_dims_still_apply() {
+        // Inside the `coverage_kind = 1` bucket the existing
+        // `(tier, -coverage, recency, -score, -freq, source, stable_idx)`
+        // policy still drives ordering — verify with two partials
+        // where only `-score` differs.
+        let raw_len: u32 = 4;
+        let high = cand_partial(0, 4, 100.0, 100, 0);
+        let low = cand_partial(0, 4, 1.0, 1, 0);
+        assert!(
+            SortKey::new(&high, raw_len, 0) < SortKey::new(&low, raw_len, 1),
+            "inside coverage_kind=1, higher score still wins"
+        );
+    }
+
+    /// Bitmask helper for the kautian source bit (1 << 0); declared
+    /// here as a local `u16` to keep the test fixture self-contained
+    /// without re-importing from `ranking::score::tests`.
+    const KAUTIAN_BIT_U16: u16 = 1 << 0;
 }
 
 #[cfg(test)]
@@ -894,6 +1146,7 @@ mod record_to_candidate_carrier_tests {
             (0, 7),
             &FrequencyMap::new(),
             0,
+            COVERAGE_KIND_FULL,
         );
         assert_eq!(cand.roman, "tâi-uân");
         assert_eq!(cand.hanji.as_deref(), Some("臺灣"));
@@ -906,7 +1159,13 @@ mod record_to_candidate_carrier_tests {
         // `hanzi = None` → TAILO path; `display_text` falls back to TL,
         // `roman` stays equal to TL, `hanji` is wire-absent
         // (proto3 `optional` distinguishes None from Some("")).
-        let cand = record_to_candidate(record("tāi", None), (0, 3), &FrequencyMap::new(), 0);
+        let cand = record_to_candidate(
+            record("tāi", None),
+            (0, 3),
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+        );
         assert_eq!(cand.roman, "tāi");
         assert_eq!(cand.hanji, None);
         assert_eq!(cand.display_text, "tāi");
@@ -923,6 +1182,7 @@ mod record_to_candidate_carrier_tests {
             (0, 9),
             &FrequencyMap::new(),
             0,
+            COVERAGE_KIND_FULL,
         );
         assert_eq!(cand.roman, "hip-siòng");
         assert_eq!(cand.hanji.as_deref(), Some("hip相"));

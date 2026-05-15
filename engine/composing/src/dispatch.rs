@@ -20,8 +20,8 @@
 use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::syllabifier::{tl as tl_syll, tps as tps_syll};
 use lexicon::{
-    fetch_candidates_for_keys, ConsumedSpan, EngineHandle as LexiconHandle, RawCandidate,
-    SyllableInventory,
+    fetch_candidates_for_keys, fetch_partial_prefix_candidates, ConsumedSpan,
+    EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
 };
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
@@ -151,14 +151,12 @@ fn handle_fetch_at_pos(
     // so config alone would mis-classify a TPS buffer as TL. Bopomofo
     // chars are unambiguous (`contains_tps` mirrors the same
     // detection used in `engine/composing/src/derived.rs:17`).
-    let keys = if contains_tps(raw) {
+    let is_tps = contains_tps(raw);
+    let keys = if is_tps {
         build_keys_tps(raw)
     } else {
         build_keys_tl(raw)
     };
-    if keys.is_empty() {
-        return with_continuous(snapshot, ContinuousResponse::default());
-    }
     // Phase 9.3a: hoist proto-shaped `FrequencyEntry[]` into the
     // domain-typed `FrequencyMap` once per fetch; `lexicon` consumes
     // `&FrequencyMap` and stays proto-agnostic. Empty list → empty
@@ -166,7 +164,26 @@ fn handle_fetch_at_pos(
     // -compatible with PR-9.2 platform builds that have not wired
     // user-frequency plumbing yet).
     let freq_map = build_frequency_map(frequency_entries);
-    let candidates = fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms);
+    let candidates = if keys.is_empty() {
+        // v3.5.8 Phase 9 Item 10 — partial-prefix fallthrough. The
+        // syllabifier produced no valid ending (e.g. `raw = "gu"`,
+        // `"t"`), so the lookup-exact path is dead. Try a TL/POJ
+        // `lookup_prefix` instead so the user still sees engine
+        // candidates while typing toward the first syllable
+        // boundary. Spec: `docs/engine/continuous-candidate-display.md`
+        // §15.3.D + §15.5. TPS partial-prefix is out of scope —
+        // there is no TPS → TL partial-syllable mapping (a leading
+        // Bopomofo initial like `ㄉ` carries no terminator, so
+        // `phonetics::tps_to_tl` cannot produce a valid `tl:` prefix).
+        // 中文: Item 10 — syllabifier 切不出邊界時改走 TL/POJ partial-prefix;TPS 沒對應 partial map,跳過。
+        if is_tps {
+            Vec::new()
+        } else {
+            fetch_via_lexicon_partial(raw, &freq_map, now_ms)
+        }
+    } else {
+        fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms)
+    };
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -693,6 +710,69 @@ fn fetch_via_lexicon(
     .unwrap_or_default()
 }
 
+/// v3.5.8 Phase 9 Item 10 — partial-prefix TL/POJ key builder. Runs
+/// the same `lowercase → canonicalize_poj_shadow → build_hyphen_shadow
+/// → strip_ascii_tone_digits` chain as [`build_keys_tl_with_inventory`]
+/// but **skips the syllabifier** (the partial-prefix path is reached
+/// precisely because `tl_syll::valid_span_endings` returned empty).
+/// Returns `None` when the resulting toneless key is empty (raw was
+/// hyphen-only / digit-only) so the caller can short-circuit without
+/// firing an unbounded `tl:` prefix scan.
+///
+/// `consumed_span` is fixed to `(0, raw.len())` — partial-prefix
+/// candidates always final-commit per Q15.4 (the offset maps from
+/// Items 8 + 9 are intentionally discarded here because there is no
+/// per-syllable mid-commit semantics to preserve).
+// 中文: Item 10 — partial-prefix TL/POJ key 構造,沿用 Item 8/9 的 lowercase + canonicalize + hyphen strip + 數字脫,
+// 中文:   但不走 syllabifier。consumed_span 固定 (0, raw.len()),配合 Q15.4 partial-prefix 一律 final-commit。
+fn build_partial_prefix_key_tl(raw: &str) -> Option<(ConsumedSpan, String)> {
+    if raw.is_empty() {
+        return None;
+    }
+    let lower = raw.to_ascii_lowercase();
+    let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower);
+    let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
+    let toneless = strip_ascii_tone_digits(&shadow);
+    if toneless.is_empty() {
+        return None;
+    }
+    Some(((0u32, raw.len() as u32), format!("tl:{toneless}")))
+}
+
+/// Acquire lexicon state and run the partial-prefix fetch. Empty
+/// result on any state-availability failure (mirrors
+/// [`fetch_via_lexicon`] policy). Returns `Vec::new()` when
+/// [`build_partial_prefix_key_tl`] declines (empty toneless key).
+///
+/// `enabled_sources_bitmask = u32::MAX` matches the full-syllable
+/// path's behaviour; PR-9.6 will plumb the platform dictionary
+/// toggles uniformly to both paths.
+// 中文: Item 10 — partial-prefix 入口的 lexicon glue;同 fetch_via_lexicon 的 state-availability 降級政策。
+fn fetch_via_lexicon_partial(raw: &str, freq_map: &FrequencyMap, now_ms: i64) -> Vec<RawCandidate> {
+    let Some(key) = build_partial_prefix_key_tl(raw) else {
+        return Vec::new();
+    };
+    let raw_len = raw.len() as u32;
+    LexiconHandle::with_state(|state| {
+        let Some(prefix) = state.prefix_index.as_ref() else {
+            return Ok(Vec::new());
+        };
+        let Some(dict) = state.dictionary.as_ref() else {
+            return Ok(Vec::new());
+        };
+        Ok(fetch_partial_prefix_candidates(
+            &key,
+            raw_len,
+            u32::MAX,
+            freq_map,
+            now_ms,
+            prefix,
+            dict,
+        ))
+    })
+    .unwrap_or_default()
+}
+
 fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
     CandidateMessage {
         consumed_span_start: c.consumed_span.0,
@@ -1119,11 +1199,64 @@ mod tests {
             bitmask: 0,
             mode: lexicon::CandidateMode::Hant,
             recency_rank: 1,
+            coverage_kind: lexicon::COVERAGE_KIND_FULL,
         };
         let proto = raw_to_proto_candidate(raw);
         assert_eq!(proto.roman, "tâi-uân");
         assert_eq!(proto.hanji.as_deref(), Some("臺灣"));
         assert_eq!(proto.display_text, "臺灣");
+    }
+
+    // ----- v3.5.8 Phase 9 Item 10 — partial-prefix key derivation -----
+
+    #[test]
+    fn build_partial_prefix_key_tl_passes_ascii_through() {
+        let (span, key) = build_partial_prefix_key_tl("gu").unwrap();
+        // partial-prefix candidates always final-commit (Q15.4) →
+        // consumed_span covers the whole pending tail.
+        assert_eq!(span, (0u32, 2u32));
+        assert_eq!(key, "tl:gu");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tl_strips_tone_digits_and_lowercases() {
+        // The digit half of `notone.py::remove_tone` still applies on
+        // the partial-prefix path so `gu5` and `gu` produce the same
+        // FST prefix key.
+        let (_, key) = build_partial_prefix_key_tl("GU5").unwrap();
+        assert_eq!(key, "tl:gu");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tl_strips_internal_hyphen_via_item8_shadow() {
+        // Item 8's hyphen-shadow chain runs on the partial-prefix path
+        // too — `tai-` collapses to `tai` (trailing `-` stays in the
+        // pending raw buffer per build_hyphen_shadow contract), and
+        // `-tai` collapses to `tai`.
+        let (_, key) = build_partial_prefix_key_tl("tai-").unwrap();
+        assert_eq!(key, "tl:tai");
+        let (_, key) = build_partial_prefix_key_tl("-tai").unwrap();
+        assert_eq!(key, "tl:tai");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tl_canonicalizes_poj_diacritic_via_item9() {
+        // Item 9's canonicalize chain runs on partial-prefix input too
+        // — `pe\u{030d}` (POJ `pe̍h` minus the trailing `h`) folds to
+        // `pe` after the tone-mark drop, giving FST key `tl:pe`.
+        let (_, key) = build_partial_prefix_key_tl("pe\u{030d}").unwrap();
+        assert_eq!(key, "tl:pe");
+    }
+
+    #[test]
+    fn build_partial_prefix_key_tl_returns_none_for_empty_after_strip() {
+        // Hyphen-only or digit-only raw produces an empty toneless
+        // key — return None so the caller skips the FST scan.
+        assert!(build_partial_prefix_key_tl("").is_none());
+        assert!(build_partial_prefix_key_tl("-").is_none());
+        assert!(build_partial_prefix_key_tl("--").is_none());
+        assert!(build_partial_prefix_key_tl("5").is_none());
+        assert!(build_partial_prefix_key_tl("-5-").is_none());
     }
 
     #[test]
@@ -1140,6 +1273,7 @@ mod tests {
             bitmask: 0,
             mode: lexicon::CandidateMode::Tailo,
             recency_rank: 1,
+            coverage_kind: lexicon::COVERAGE_KIND_FULL,
         };
         let proto = raw_to_proto_candidate(raw);
         assert_eq!(proto.roman, "tāi");

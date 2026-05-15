@@ -32,7 +32,11 @@ use std::path::PathBuf;
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::{fetch_candidates_for_endings, CandidateMode, RawCandidate, FORM_NOTONE};
+use lexicon::{
+    fetch_candidates_for_endings, fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan,
+    RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
+    PARTIAL_PREFIX_CAP,
+};
 use ranking::FrequencyMap;
 
 mod common;
@@ -1015,4 +1019,241 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
     assert_eq!(mixed.len(), 1);
     assert_eq!(mixed[0].roman, "iáu-sī");
     assert_eq!(mixed[0].hanji.as_deref(), Some("iáu是"));
+}
+
+// ---------------------------------------------------------------------------
+// v3.5.8 Phase 9 Item 10 — partial-prefix engine path
+// ---------------------------------------------------------------------------
+//
+// Pins `docs/engine/continuous-candidate-display.md` §15.3.D + §15.5
+// behaviour: when the syllabifier returns no valid ending, the engine
+// falls through to `prefix_index.lookup_prefix("tl:<lower-stripped>")`
+// and emits candidates tagged with `coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX`
+// and `consumed_span = (0, raw.len())`.
+
+/// Convenience: build the partial-prefix key tuple the way
+/// `composing/src/dispatch.rs::build_partial_prefix_key_tl` would for
+/// pure-ASCII input. Hermetic tests at this layer cannot import the
+/// composing crate (cyclic test seam), so we mirror the contract
+/// inline; the composing side's unit tests pin the canonicalize +
+/// hyphen-shadow + tone-digit-strip chain separately.
+// 中文: ASCII 限定的 partial-prefix key helper;lexicon 測試不能反 import composing,
+// 中文:   故在這裡 inline 一條同等的最小 pipeline (lower + 去 hyphen + 去 ASCII 數字)。
+fn partial_prefix_key_for(raw: &str) -> (ConsumedSpan, String) {
+    let toneless: String = raw
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|c| *c != '-' && !c.is_ascii_digit())
+        .collect();
+    ((0u32, raw.len() as u32), format!("tl:{toneless}"))
+}
+
+#[test]
+fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
+    // Single-char partial buffer `g` matches every `tl:g*` entry in
+    // the fixture via `prefix_index.lookup_prefix("tl:g")`. The
+    // full-syllable path would have returned empty here (the
+    // syllabifier needs at least one valid syllable boundary), so
+    // this fetch entry is the one the dispatcher reaches.
+    let (prefix_index, dict) = build_fixture(
+        "item10-partial-prefix",
+        &[
+            Row {
+                toneless_key: "gua",
+                hanzi: "我",
+                tl: "guá",
+                syll: 1,
+                freq: 200,
+            },
+            Row {
+                toneless_key: "guan",
+                hanzi: "阮",
+                tl: "guán",
+                syll: 1,
+                freq: 50,
+            },
+            Row {
+                toneless_key: "lin",
+                hanzi: "恁",
+                tl: "lín",
+                syll: 1,
+                freq: 30,
+            },
+        ],
+    );
+
+    let key = partial_prefix_key_for("g");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        1, // raw_len = "g".len()
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+
+    // Two `tl:g*` hits; `tl:lin` excluded by FST prefix range.
+    assert_eq!(out.len(), 2, "expected 2 partial-prefix hits, got {out:#?}");
+    let labels: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
+    assert!(
+        labels.contains(&"我"),
+        "missing 我 (tl:gua); got {labels:?}"
+    );
+    assert!(
+        labels.contains(&"阮"),
+        "missing 阮 (tl:guan); got {labels:?}"
+    );
+
+    // §15.5 invariant: every candidate is tagged partial.
+    for c in &out {
+        assert_eq!(
+            c.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX,
+            "partial-prefix candidate must carry COVERAGE_KIND_PARTIAL_PREFIX, got {c:?}"
+        );
+        // §15.5 + Q15.4: consumed_span covers the whole pending tail.
+        assert_eq!(c.consumed_span, (0, 1));
+    }
+
+    // Within the partial bucket, the existing 8-dim SortKey policy
+    // still applies — higher dict-freq wins on the `-neg_freq` dim
+    // even after coverage_kind tied to 1.
+    assert_eq!(out[0].display_text, "我", "higher-freq partial wins");
+}
+
+#[test]
+fn partial_prefix_returns_empty_when_no_dict_hits() {
+    let (prefix_index, dict) = build_fixture(
+        "item10-no-hits",
+        &[Row {
+            toneless_key: "gua",
+            hanzi: "我",
+            tl: "guá",
+            syll: 1,
+            freq: 200,
+        }],
+    );
+
+    // `tl:zz` matches nothing in the fixture.
+    let key = partial_prefix_key_for("zz");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        2,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert!(
+        out.is_empty(),
+        "no-hit prefix must yield empty, got {out:#?}"
+    );
+}
+
+#[test]
+fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
+    // §15.8 risk row 1 + Codex F6=A — pre-cap before `dict.record`
+    // hydration prevents flood from single-char prefixes. Build a
+    // fixture with `PARTIAL_PREFIX_CAP + 5` `tl:t*` rows so the cap
+    // is exercised. Toneless keys must be unique to land at distinct
+    // rowids; we suffix 2-letter ASCII to keep them inside the fst.
+    let rows: Vec<Row> = (0..(PARTIAL_PREFIX_CAP + 5))
+        .map(|i| {
+            // Generate unique 3-char `t` + 2-letter lowercase suffix
+            // (`taa`, `tab`, …, `tcz`).
+            let hi = (b'a' + (i / 26) as u8) as char;
+            let lo = (b'a' + (i % 26) as u8) as char;
+            Row {
+                toneless_key: Box::leak(format!("t{hi}{lo}").into_boxed_str()),
+                hanzi: Box::leak(format!("漢{i}").into_boxed_str()),
+                tl: Box::leak(format!("t{hi}{lo}").into_boxed_str()),
+                syll: 1,
+                freq: 1,
+            }
+        })
+        .collect();
+    let (prefix_index, dict) = build_fixture("item10-cap", &rows);
+
+    let key = partial_prefix_key_for("t");
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        1,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(
+        out.len(),
+        PARTIAL_PREFIX_CAP,
+        "partial-prefix output must be capped at PARTIAL_PREFIX_CAP, got {}",
+        out.len()
+    );
+}
+
+#[test]
+fn partial_prefix_empty_key_returns_empty() {
+    // Defensive: a literally empty FST key (`String::new()`) must
+    // short-circuit before any FST range scan. Note this does NOT
+    // pin behaviour for a bare namespace string `"tl:"` — that
+    // input is treated as a legitimate "match everything under the
+    // namespace" query (capped at `PARTIAL_PREFIX_CAP`), per the
+    // caller-obligation contract on `fetch_partial_prefix_candidates`.
+    // Production dispatch builds keys via `build_partial_prefix_key_tl`
+    // which returns `None` instead of emitting bare `"tl:"`.
+    let (prefix_index, dict) = build_fixture(
+        "item10-empty-key",
+        &[Row {
+            toneless_key: "x",
+            hanzi: "X",
+            tl: "x",
+            syll: 1,
+            freq: 1,
+        }],
+    );
+    let key: (ConsumedSpan, String) = ((0u32, 0u32), String::new());
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        0,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert!(out.is_empty());
+}
+
+#[test]
+fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
+    // Item 10 invariant R1/R2: the existing `fetch_candidates_for_endings`
+    // path must keep emitting `coverage_kind = COVERAGE_KIND_FULL` for
+    // every candidate. Pin this at the integration boundary so any
+    // future refactor that accidentally widens `record_to_candidate`'s
+    // default fails here first.
+    let (prefix_index, dict) = build_fixture(
+        "item10-full-default",
+        &[Row {
+            toneless_key: "tai",
+            hanzi: "台",
+            tl: "tâi",
+            syll: 1,
+            freq: 100,
+        }],
+    );
+
+    let out = fetch_candidates_for_endings(
+        "tai",
+        0,
+        &[3],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(out.len(), 1);
+    assert_eq!(out[0].coverage_kind, COVERAGE_KIND_FULL);
 }
