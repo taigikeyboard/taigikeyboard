@@ -326,15 +326,55 @@ final class AutocompleteServiceContinuousTests: XCTestCase {
     // MARK: - Misc
 
     func testEmptyCandidateList_EmitsEmptyList() {
-        // v3.5.8 Phase 9 Item 4: §10.7 edge case "Empty buffer" / partial
-        // prefix — strip is empty when engine returns no candidates. Caller
-        // (`AutocompleteService.autocomplete`) already guards
-        // `if !candidates.isEmpty` before invoking this helper and falls
-        // through to the lexicon path when empty, which re-inserts its own
-        // slot-0 composing-text cell per §10.5 mode gating. The helper
-        // contract here is simply: zero candidates → zero suggestions, no
-        // synthetic slot-0 fallback.
+        // v3.5.8 Phase 9 Item 4 / Item 13: §10.7 edge case "Empty buffer" /
+        // partial prefix — the strip is empty when the engine returns no
+        // candidates. After Item 13 the engine is the single candidate
+        // source (no lexicon fallback, no synthetic slot-0 cell). Helper
+        // contract: zero candidates → zero suggestions.
         let result = service.buildContinuousSuggestions(from: [])
         XCTAssertTrue(result.isEmpty, "Empty candidates → empty suggestions")
+    }
+
+    // MARK: - v3.5.8 Phase 9 Item 13 — fallback retire (§15.6)
+
+    /// Minimal stub that supplies both the composing state and the
+    /// Continuous fetch surface, so `autocomplete(_:)` can be exercised
+    /// end-to-end without a real `ComposingManager`.
+    private final class StubComposing: ComposingStateProvider, ContinuousCandidateFetcher {
+        var isComposing = true
+        var rawInput = "gua"
+        var composingText = "gua"
+        var fetchResult: [RustEngineBridge.ContinuousCandidate] = []
+        func fetchContinuousCandidates() -> [RustEngineBridge.ContinuousCandidate] { fetchResult }
+    }
+
+    /// `platform_autocomplete_no_lexicon_branch` (§15.6): after the
+    /// fallback retire, an engine that returns no candidates yields an
+    /// empty strip — there is NO platform lexicon path and NO slot-0
+    /// composing-text cell. Pins that `autocomplete(_:)` is engine-only.
+    func testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult() async throws {
+        let stub = StubComposing()
+        stub.fetchResult = []
+        service.setComposingManager(stub)
+        let result = try await service.autocomplete("gua")
+        XCTAssertTrue(
+            result.suggestions.isEmpty,
+            "empty engine → empty strip (no lexicon fallback, no slot-0 cell)",
+        )
+    }
+
+    /// Positive control: a non-empty engine result flows straight through
+    /// `buildContinuousSuggestions` with no slot-0 cell injected.
+    func testAutocomplete_EngineCandidates_SingleSourcePassthrough() async throws {
+        let stub = StubComposing()
+        stub.fetchResult = [makeCandidate(consumedSpanEnd: 3, displayText: "guá")]
+        service.setComposingManager(stub)
+        let result = try await service.autocomplete("gua")
+        XCTAssertEqual(result.suggestions.count, 1, "engine candidates pass through 1:1")
+        XCTAssertEqual(result.suggestions[0].additionalInfo["isContinuous"], "true")
+        XCTAssertNil(
+            result.suggestions[0].additionalInfo["isComposingText"],
+            "no slot-0 composing-text cell on the single-source path",
+        )
     }
 }

@@ -241,8 +241,10 @@ public enum RustEngineBridge {
     /// Cold-start callers that lack a connected user-frequency DB pass
     /// `mergeOrderOnly: true` so engine dedup runs without scoring +
     /// sorting — the score-sort is deterministic but reorders candidates
-    /// against the legacy iOS "merged-order on cold-start"
-    /// behavior. See `LexiconService.search` for the gating logic.
+    /// against the "merged-order on cold-start" behavior. (The keyboard
+    /// candidate path no longer drives this — the platform lexicon
+    /// fallback that set `mergeOrderOnly: true` on cold-start was retired
+    /// in v3.5.8 Item 13; the engine now owns Continuous ranking.)
     ///
     /// `tpsDedupEnabled` is platform-decided (audit § 3) — pass
     /// `inputMode == .tps` from the call site. The engine never derives
@@ -252,9 +254,9 @@ public enum RustEngineBridge {
     /// in tests; production passes `Int64(Date().timeIntervalSince1970 * 1000)`.
     ///
     /// In `#if DEBUG`, requests + logs the per-candidate `ScoreBreakdown`
-    /// alongside the ranked list so dogfood traces match the legacy
-    /// `CandidateProcessor.logScoreDetails` output. Release builds skip
-    /// the breakdown (zero serialization overhead).
+    /// alongside the ranked list so dogfood traces include per-candidate
+    /// score detail. Release builds skip the breakdown (zero
+    /// serialization overhead).
     // 中文: 候選詞排序管線 — dedup → score → sort → 可選 TPS display-dedup,全在 Rust 端 atomic 執行。
     // 中文: tpsDedupEnabled 由平台決定(看是否為 TPS layout),不從 AppConfig 推導。
     // 中文: nowMs 由 caller 提供,讓 recency 視窗運算在測試中可重現。
@@ -372,10 +374,9 @@ public enum RustEngineBridge {
     /// dispatch fails (encode error, decode error, non-OK engine
     /// response, or missing payload variant), return the input list
     /// unchanged. Simplified in the v3.5.3 follow-up (PR #192) —
-    /// previously this delegated to the Swift
-    /// `CandidateProcessor.removeDuplicates` /
-    /// `removeDisplayDuplicates` helpers as defense-in-depth dedup, but
-    /// that silently masked Rust dispatch bugs. `tpsDedupEnabled` is
+    /// previously this delegated to Swift-side dedup helpers (since
+    /// removed) as defense-in-depth dedup, but that silently masked
+    /// Rust dispatch bugs. `tpsDedupEnabled` is
     /// kept on the signature for caller-shape parity with the Android
     /// mirror (Codex audit § 1 Q3).
     // 中文: FFI 失敗時的 fallback — 直接回傳原始清單。tpsDedupEnabled 參數保留,

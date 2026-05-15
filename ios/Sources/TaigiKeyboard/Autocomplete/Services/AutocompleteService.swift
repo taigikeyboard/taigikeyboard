@@ -1,15 +1,17 @@
-// 中文: Taigi 候選詞 autocomplete service — 串接 input classifier、LexiconService、
-// 中文: NextWord boost、SuggestionCaseTransformer 共四個階段,輸出 KeyboardKit Suggestion 列表。
+// 中文: Taigi 候選詞 autocomplete service — 連續輸入引擎為唯一候選來源。
+// 中文: v3.5.8 Item 13 後不再有 platform lexicon fallback;engine 內部處理所有
+// 中文: 切音節 / 前綴 / 自訂詞 / hanzi guard 邏輯,平台只負責把 engine 候選
+// 中文: 轉成 KeyboardKit Suggestion 列表(單向資料流,對齊 MOE tutgInputLine model)。
 
 import Foundation
 import KeyboardKit
 
 /// 自動完成服務
 ///
-/// 處理台語羅馬字與漢字的候選詞搜尋，支援多種輸入類型。
-///
-/// `autocomplete(_:)` 以 orchestrator 形式串接 4 個命名階段：
-/// `classifyInput` → `searchLexicon` → `applyContextBoost` → `buildSuggestions`。
+/// 處理台語連續輸入候選詞。`autocomplete(_:)` 把 `ComposingManager`
+/// 的 span-local engine 候選轉成 KeyboardKit Suggestion;engine 回空時
+/// 候選列即為空(inline pre-edit 仍保留組字緩衝,Enter 由 Item 3 的
+/// `Phase::Continuous` `Intent::CommitRaw` arm 提交 pending tail)。
 class AutocompleteService: KeyboardKit.AutocompleteService {
     // MARK: - KeyboardKit 協議屬性
 
@@ -46,119 +48,49 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
 
     // MARK: - 核心屬性
 
-    private let lexiconService: LexiconService
-    private let settingsProvider: EngineSettingsProvider
-    private let nextWordService: NextWordService
-
     /// Composing state provider (decoupled from ComposingManager)
     private weak var composingState: (any ComposingStateProvider)?
 
     /// Continuous-input candidate fetcher (decoupled from ComposingManager).
-    /// Distinct from `composingState` because the fetch surface is not
-    /// Foundation-only (`RustEngineBridge.ContinuousCandidate`); same backing
-    /// instance in practice (ComposingManager conforms to both protocols).
-    /// v3.5.8 Phase 7B.
+    /// Distinct protocol from `composingState` because the fetch surface is
+    /// not Foundation-only (`RustEngineBridge.ContinuousCandidate`); same
+    /// backing instance in practice (ComposingManager conforms to both).
     // 中文: 連續輸入 fetcher protocol。實作端與 composingState 是同一個 ComposingManager。
     private weak var continuousFetcher: (any ContinuousCandidateFetcher)?
 
-    /// Selection context provider (decoupled from ActionHandler)
-    private weak var selectionContext: (any SelectionContextProvider)?
-
     let logger = DebugLogger(category: "AutocompleteService")
-
-    // MARK: - Initialization
-
-    init(
-        lexiconService: LexiconService = CompositionRoot.lexiconService,
-        settingsProvider: EngineSettingsProvider = SharedSettings.shared,
-        nextWordService: NextWordService = CompositionRoot.nextWordService,
-    ) {
-        self.lexiconService = lexiconService
-        self.settingsProvider = settingsProvider
-        self.nextWordService = nextWordService
-    }
 
     // MARK: - 公開介面
 
-    // 中文: 注入組字狀態 provider(通常是 ComposingManager)。
+    // 中文: 注入組字狀態 provider(通常是 ComposingManager)。同一實例也供應
+    // 中文: 連續輸入 fetch surface(ComposingManager 同時 conform 兩個 protocol)。
     func setComposingManager(_ provider: any ComposingStateProvider) {
         composingState = provider
-        // v3.5.8 Phase 7B — same instance also supplies the Continuous fetch
-        // surface. Conditional cast keeps this protocol-driven for testability:
-        // a `ComposingStateProvider` that does NOT also conform to
-        // `ContinuousCandidateFetcher` simply skips the Continuous branch and
-        // the lexicon path handles all candidates.
         continuousFetcher = provider as? any ContinuousCandidateFetcher
     }
 
-    // 中文: 注入選詞上下文 provider(通常是 NextWordController)。
-    func setSelectionContextProvider(_ provider: any SelectionContextProvider) {
-        selectionContext = provider
-    }
-
     /// 自動完成核心方法
-    /// 根據輸入文字搜尋台語候選詞
-    /// 第 0 個候選詞永遠是當前的組字文字，第 1 個位置開始才是建議的候選詞
     ///
-    /// Stale-result guard: KeyboardKit's `autocomplete(_:updating:)` spawns an
-    /// untracked `Task` that cannot be cancelled by the subclass. After each
-    /// `await`, re-check the active composing context against the value
-    /// captured at entry; if it changed (buffer cleared by backspace or new
-    /// keystroke arrived), return `isOutdated: true` so KeyboardKit ignores
-    /// this stale result instead of overwriting the cleared context.
-    // 中文: 過期結果防護 — KeyboardKit 內部 spawn 的 Task 無法取消,所以每次 await
-    // 中文: 之後都重檢 rawInput,變動則回 isOutdated: true 讓 KeyboardKit 丟棄結果。
+    /// 連續輸入引擎為唯一候選來源:`ComposingManager.fetchContinuousCandidates()`
+    /// 同步呼叫 `RustEngineBridge.composingFetchAtPos`,generation snapshot 與
+    /// 當前 `rawInput` 一致。engine 回空 ⇒ 候選列為空(per
+    /// `docs/engine/continuous-candidate-display.md` §15.4/§15.6:engine 單一
+    /// 來源,inline pre-edit 才是 composing-text surface,候選列 §10.1.2 起
+    /// 沒有 slot-0 cell)。同步 fetch 無 suspension window,故不需 stale-result
+    /// 防護(KeyboardKit `autocomplete(_:updating:)` 的 untracked Task 只在有
+    /// `await` 時才有過期風險,本路徑已無 await)。
     func autocomplete(_ text: String) async throws -> Autocomplete.Result {
-        guard !text.isEmpty, let composing = activeComposingContext() else {
+        guard !text.isEmpty, activeComposingContext() != nil else {
             return Autocomplete.Result(inputText: text, suggestions: [])
         }
-
-        let capturedRawInput = composing.rawInput
-        logger.debug("[AUTOCOMPLETE] rawInput='\(composing.rawInput)' display='\(composing.displayText)'")
-
-        // v3.5.8 Phase 9 Item 4 — Continuous-input branch.
-        // Synchronous fetch: ComposingManager.fetchContinuousCandidates() calls
-        // RustEngineBridge.composingFetchAtPos on the calling thread, so the
-        // generation snapshot is consistent with the captured `rawInput`.
-        // Empty result (not in Continuous, no inventory, no FST hits) =>
-        // graceful fall-through to the existing lexicon path so single-syllable
-        // / hyphenated / POJ-tone-mark inputs still get classic candidates.
-        // Continuous strip has NO composing-text cell at slot 0; `candidate[0]`
-        // is the engine ranker top per `docs/engine/continuous-input-ranking.md`
-        // §10.1.2 (supersedes legacy slot-0 model). Inline pre-edit
-        // (`markedText`) is the only composing-text surface in Continuous mode.
-        if let fetcher = continuousFetcher {
-            let candidates = fetcher.fetchContinuousCandidates()
-            if !candidates.isEmpty {
-                let suggestions = buildContinuousSuggestions(from: candidates)
-                return Autocomplete.Result(inputText: text, suggestions: suggestions)
-            }
-        }
-
-        do {
-            let classification = AutocompleteInputClassifier.classify(rawInput: composing.rawInput)
-            let words = try await searchLexicon(using: classification, rawInput: composing.rawInput)
-            guard activeComposingContext()?.rawInput == capturedRawInput else {
-                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
-            }
-            let boosted = await applyContextBoost(words: words)
-            guard activeComposingContext()?.rawInput == capturedRawInput else {
-                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
-            }
-            let suggestions = buildSuggestions(from: boosted, composingText: composing.displayText)
-            return Autocomplete.Result(inputText: text, suggestions: suggestions)
-        } catch {
-            logger.error("[AUTOCOMPLETE] failed for text '\(text)': \(error.localizedDescription)")
-            guard activeComposingContext()?.rawInput == capturedRawInput else {
-                return Autocomplete.Result(inputText: text, suggestions: [], isOutdated: true)
-            }
-            return Autocomplete.Result(inputText: text, suggestions: [])
-        }
+        let candidates = continuousFetcher?.fetchContinuousCandidates() ?? []
+        let suggestions = buildContinuousSuggestions(from: candidates)
+        return Autocomplete.Result(inputText: text, suggestions: suggestions)
     }
 
-    // MARK: - Orchestration phases
+    // MARK: - Internal
 
-    /// 當前組字上下文；沒有組字狀態時回傳 nil，呼叫端即不顯示候選詞。
+    /// 是否有作用中的組字緩衝;沒有時回 nil,呼叫端即不顯示候選詞。
     private func activeComposingContext() -> (rawInput: String, displayText: String)? {
         guard let composingState,
               composingState.isComposing,
@@ -167,88 +99,6 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
             return nil
         }
         return (composingState.rawInput, composingState.composingText)
-    }
-
-    /// 使用分類結果向 LexiconService 查詢候選詞。
-    private func searchLexicon(
-        using classification: AutocompleteInputClassifier.Classification,
-        rawInput: String,
-    ) async throws -> [TaigiWord] {
-        try await lexiconService.search(
-            for: classification.searchKey,
-            inputType: classification.inputType,
-            inputMode: settingsProvider.current.inputMode,
-            rawInput: rawInput,
-        )
-    }
-
-    /// 依 `lastSelectedWord` 的 bigram 預測，將符合預測首字的候選詞拉到前面。
-    /// Routes the partition through `RustEngineBridge.nextwordBoostCandidates`
-    /// — the Rust crate owns the canonical first-char partition and the
-    /// platform `[TaigiWord] ↔ [String]` round-trip preserves intra-partition
-    /// order so original `TaigiWord` identity (`id`, `hanzi`, etc.) is
-    /// recovered post-bridge.
-    // 中文: 走 Rust nextwordBoostCandidates 做 context partition,平台只負責 round-trip
-    // 中文: 把 String 結果再對回原本的 TaigiWord,保留 id / hanzi 等欄位。
-    private func applyContextBoost(words: [TaigiWord]) async -> [TaigiWord] {
-        guard let selection = selectionContext,
-              let lastWord = selection.lastSelectedWord, !lastWord.isEmpty
-        else {
-            return words
-        }
-
-        let predictions = await nextWordService.predict(word: lastWord, limit: 30)
-        guard !predictions.isEmpty else { return words }
-
-        let contextSet = Set(predictions.map(\.hanzi))
-        let displayTexts = words.map(\.displayText)
-        let settings = settingsProvider.current
-        let reordered = RustEngineBridge.nextwordBoostCandidates(
-            words: displayTexts,
-            predictedFirstChars: contextSet,
-            mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
-            associationRecordingEnabled: settings.isAssociationRecordingEnabled,
-            generation: selection.nextwordEnvelopeGeneration,
-        )
-        return Self.remapBoostedWords(words, displayOrder: reordered)
-    }
-
-    /// Map the bridge's `[String]` partition reorder back to `[TaigiWord]`,
-    /// preserving original word identity. Walks `displayOrder` and pulls the
-    /// next `TaigiWord` from a per-display-text FIFO. Any size mismatch falls
-    /// back to original order so a bridge failure cannot drop candidates.
-    // 中文: 把 bridge 回傳的 String 順序對回原 TaigiWord 列表 — 走每個 displayText 的 FIFO,
-    // 中文: 數量不符時 fallback 回原順序,避免 bridge 失敗導致掉候選詞。
-    private static func remapBoostedWords(
-        _ original: [TaigiWord],
-        displayOrder: [String],
-    ) -> [TaigiWord] {
-        guard displayOrder.count == original.count else { return original }
-        var queues: [String: [Int]] = [:]
-        queues.reserveCapacity(original.count)
-        for (i, w) in original.enumerated() {
-            queues[w.displayText, default: []].append(i)
-        }
-        var result: [TaigiWord] = []
-        result.reserveCapacity(original.count)
-        for d in displayOrder {
-            guard var ids = queues[d], let head = ids.first else { return original }
-            result.append(original[head])
-            ids.removeFirst()
-            queues[d] = ids
-        }
-        return result
-    }
-
-    /// 組合 position-0 組字文字 + 查詢結果為 KeyboardKit 候選詞列表。
-    private func buildSuggestions(
-        from words: [TaigiWord],
-        composingText: String,
-    ) -> [Autocomplete.Suggestion] {
-        var suggestions = convertToSuggestions(words)
-        suggestions.insert(createComposingTextSuggestion(composingText), at: 0)
-        return suggestions
     }
 
     /// v3.5.8 Phase 9 — Continuous candidate suggestions.
@@ -262,50 +112,36 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// composing-text surface; Enter commits the pending tail via Item 3's
     /// `Phase::Continuous` `Intent::CommitRaw` arm.
     ///
-    /// v3.5.8 Phase 9 Item 6 — `text` / `title` carry `c.roman` (TL
-    /// romanization) and `subtitle` carries `c.hanji` so the cell renders
-    /// dual-line (roman + hanji) on HANT/MIXED candidates and single-line
-    /// (roman only) on TAILO. Mirrors the legacy lexicon path's
-    /// `convertToSuggestions` shape (`text = word.roman`, `subtitle =
-    /// word.hanzi`) so the strip no longer interleaves continuous-vs-lexicon
-    /// cell shapes — the 2026-05-11 dogfood finding the v3.5.8 ranking work
-    /// set out to close.
+    /// Item 6 dual-line render: `text` / `title` carry `c.roman` (TL
+    /// romanization) and `subtitle` carries `c.hanji`, so the cell renders
+    /// dual-line on HANT/MIXED and single-line on TAILO.
     ///
     /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal
     /// strings) plus `displayText` (engine-supplied raw value = `hanji ??
     /// roman` per `record_to_candidate`) so
     /// `ActionHandler.handleSuggestionSelection` can route the tap to
-    /// `composingManager.commitContinuous(...)` with the engine-supplied byte
-    /// offsets AND the canonical commit string. After Item 6, `suggestion.text`
-    /// (= roman) diverges from `additionalInfo["displayText"]` (= hanji ??
-    /// roman) on HANT/MIXED candidates — Tap-0 must commit the sidechannel
-    /// value, not the visual roman form (clarification γ). All three keys are
-    /// strict-required at the consumer; missing sidechannel drops the tap
-    /// (Item 4 fork F2=A — no `?? suggestion.text` fallback, which would
-    /// commit the visual roman form instead of the canonical `display_text`).
-    /// The sidechannel also defends against TPS layout's
-    /// `CandidateCellHelper.suggestionToHandle` rewriting `suggestion.text` via
-    /// `tlNumericToTPS` when the subtitle is nil/empty — without the
-    /// sidechannel, `ActionHandler` would call `commitContinuous(displayText:)`
-    /// with the rewritten text, which would not match the engine's fetched
-    /// span metadata and would no-op the commit (Codex PR #257 r3214912627).
-    /// NextWord uses the same `displayText` key convention.
+    /// `composingManager.commitContinuous(...)` with the engine byte offsets
+    /// AND the canonical commit string. `suggestion.text` (= roman) may
+    /// diverge from `additionalInfo["displayText"]` (= hanji ?? roman) on
+    /// HANT/MIXED — Tap-0 must commit the sidechannel value, not the visual
+    /// roman form (clarification γ). All three keys are strict-required at
+    /// the consumer; a missing sidechannel drops the tap (Item 4 fork F2=A —
+    /// no `?? suggestion.text` fallback that would commit the visual roman
+    /// form). The sidechannel also defends against TPS layout's
+    /// `CandidateCellHelper.suggestionToHandle` rewriting `suggestion.text`
+    /// via `tlNumericToTPS` when the subtitle is nil/empty (Codex PR #257
+    /// r3214912627). NextWord uses the same `displayText` key convention.
     ///
     /// `subtitle` collapses present-empty `c.hanji == ""` to `nil` so a wire
     /// defect (producer emitted `Some("")` instead of `None` for a TAILO
-    /// record) renders as single-line rather than as an empty hanji line.
-    /// Whitespace-only hanji strings are passed through unchanged — engine
-    /// invariant is `hanji = DictionaryRecord.hanzi` (real CJK text), so
-    /// `Some("   ")` would already indicate a deep wire defect; hardening
-    /// this to `isNotBlank()` is out of scope until Item 12 custom-dict
-    /// integration surfaces a user-typed case. The bridge decode layer
-    /// already defends the inverse case (empty `c.roman` → falls back to
+    /// record) renders single-line rather than as an empty hanji line.
+    /// Whitespace-only hanji is passed through unchanged — engine invariant
+    /// is `hanji = DictionaryRecord.hanzi` (real CJK text). The bridge decode
+    /// layer defends the inverse case (empty `c.roman` → falls back to
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.
-    // 中文: Item 6 — text/title 用 c.roman、subtitle 用 c.hanji,候選列改成 dual-line
-    // 中文: render(對齊 lexicon path 的 convertToSuggestions);displayText sidechannel
-    // 中文: 仍嚴格必須(commit 走它,不走 visual 化的 roman)— Item 4 F2=A 約定。
-    // 中文: 連續輸入候選列 §10.1.2 不再放 composing-text cell;slot-0 = candidate[0]。
+    // 中文: text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
+    // 中文: displayText sidechannel 嚴格必須(commit 走它,不走 visual 化的 roman)。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
     ) -> [Autocomplete.Suggestion] {
@@ -322,36 +158,6 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
                     "syllableCount": String(c.syllableCount),
                     "displayText": c.displayText,
                 ],
-            )
-        }
-    }
-
-    // MARK: - Suggestion construction
-
-    /// 建立 position-0 的組字文字候選詞，顯示使用者目前正在輸入的內容。
-    private func createComposingTextSuggestion(_ composingText: String) -> Autocomplete.Suggestion {
-        Autocomplete.Suggestion(
-            text: composingText,
-            title: composingText,
-            subtitle: nil,
-            additionalInfo: ["isComposingText": "true"],
-        )
-    }
-
-    /// 把詞典回傳的 TaigiWord 轉為 KeyboardKit 候選詞。
-    ///
-    /// 不做大小寫轉換，保持詞典原始格式（小寫）；大小寫由 `SuggestionCaseTransformer` 在 View 層處理。
-    private func convertToSuggestions(_ words: [TaigiWord]) -> [Autocomplete.Suggestion] {
-        words.compactMap { word -> Autocomplete.Suggestion? in
-            let romanText = word.roman
-            guard !romanText.isEmpty else { return nil }
-
-            let hanziText = word.hanzi ?? ""
-            return Autocomplete.Suggestion(
-                text: romanText,
-                title: romanText,
-                subtitle: hanziText.isEmpty ? nil : hanziText,
-                additionalInfo: ["displayText": word.displayText],
             )
         }
     }

@@ -158,8 +158,8 @@ Authoritative ownership map (Rust crate vs platform glue) — see `engine/migrat
 |------|-------------|------------|--------------------------------|
 | `Phonetics` | POJ/TL/TPS conversion, normalize, case-transform | `engine/phonetics` | `RustEngineBridge.swift` / `RustEngineBridge.kt` |
 | `Composing` | Composing state machine (Phase × Intent → Effect) | `engine/composing` | `ComposingManager.swift` / `ComposingManager.kt` (effect interpreter) |
-| `Autocomplete` | Candidate search + suggestion pipeline | `engine/lexicon` (search) + `engine/ranking` | `AutocompleteInputClassifier.swift` / `TaigiAutocompleteService.kt` |
-| `Lexicon` | fst prefix index + dictionary/association mmap readers | `engine/lexicon` + `engine/mmap-host` | `LexiconService.swift` / `LexiconService.kt` (lifecycle + asset paths) |
+| `Autocomplete` | Continuous-engine candidate pipeline (single source after v3.5.8 Item 13) | `engine/composing` (Continuous dispatch) + `engine/lexicon` + `engine/ranking` | `AutocompleteService.swift` / `TaigiAutocompleteService.kt` |
+| `Lexicon` | fst prefix index + dictionary/association mmap readers | `engine/lexicon` + `engine/mmap-host` | iOS Tab3 `DictionarySearchService.swift`; Android `LexiconService.kt` (Tab3 + asset lifecycle) |
 | `Ranking` | Candidate dedup / score / sort | `engine/ranking` | `RustEngineBridge.processCandidates*` |
 | `Tone` | Tone-mark conversion + restoration + nasal-marker | `engine/phonetics` | `RustEngineBridge.normalizeTone` / `restoreTone` |
 | `CaseTransform` | Per-char + per-string case mapping (POJ/TL aware) | `engine/phonetics::case_transform` | `RustEngineBridge+CaseTransform.swift` / `CaseTransformBridge.kt` |

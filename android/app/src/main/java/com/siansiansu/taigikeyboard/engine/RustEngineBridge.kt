@@ -441,10 +441,9 @@ object RustEngineBridge {
      * or missing payload variant), return the input list unchanged.
      *
      * Simplified in the v3.5.3 follow-up (PR #192): previously this
-     * delegated to the Kotlin `CandidateProcessor.removeDuplicates` /
-     * `removeDisplayDuplicates`
-     * helpers as a defense-in-depth dedup. That silently masked Rust
-     * dispatch bugs by producing a near-correct candidate list. The
+     * delegated to Kotlin-side dedup helpers (since removed) as a
+     * defense-in-depth dedup. That silently masked Rust dispatch bugs
+     * by producing a near-correct candidate list. The
      * `tpsDedupEnabled` parameter no longer changes behaviour here —
      * kept on the signature for caller-shape parity with the iOS
      * mirror (Codex audit § 1 Q3).

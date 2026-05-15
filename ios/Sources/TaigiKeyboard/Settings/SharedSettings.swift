@@ -481,8 +481,9 @@ final class SharedSettings {
 /// so this conformance bridges the two behind one protocol.
 extension SharedSettings: EngineSettings {
     /// Mirrors KeyboardKit's `isAutocapitalizationEnabled` setting so
-    /// engine-layer code (e.g. `CandidateProcessor.capitalize`) can read
-    /// it through `EngineSettings` without importing KeyboardKit.
+    /// engine-layer code (e.g. candidate capitalization via
+    /// `RustEngineBridge.capitalizeCandidate`) can read it through
+    /// `EngineSettings` without importing KeyboardKit.
     // 中文: 鏡射 KeyboardKit 自有的 isAutocapitalizationEnabled 設定 — 引擎層因不能 import KeyboardKit,
     // 中文: 透過這個 conformance 從 EngineSettings 取得自動大寫狀態。
     var isAutoCap: Bool {

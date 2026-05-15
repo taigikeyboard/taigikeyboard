@@ -98,11 +98,10 @@ class UserFrequencyService(
      * Promoted to public so the IME Application can warm the DB at boot
      * (mirrors iOS `setupCoreServices`'s fire-and-forget
      * `userFrequencyService.ensureInitialized()` call). Without this
-     * warmup, the Continuous-input fetch path early-returns on non-empty
-     * candidates and bypasses `LexiconService.search`'s lazy
-     * `ensureInitialized` call — so `user_frequency.db` would stay closed
-     * until the user committed something, and persisted boost would be
-     * ignored for the entire first burst of compositions.
+     * warmup, the Continuous-input fetch path never lazy-inits the freq
+     * DB itself — so `user_frequency.db` would stay closed until the
+     * user committed something, and persisted boost would be ignored
+     * for the entire first burst of compositions.
      *
      * Construction of `DatabaseHelper` is cheap (no DB I/O); the actual
      * `onCreate` schema run is deferred until first `readableDatabase`

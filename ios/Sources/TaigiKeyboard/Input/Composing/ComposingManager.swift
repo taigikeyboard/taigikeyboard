@@ -66,12 +66,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     private let settingsProvider: EngineSettingsProvider
     private let userFrequencyService: UserFrequencyService
     // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` access for the
-    // Continuous fetch. Same repository the legacy lexicon path uses
-    // (`LexiconService.lookupCustomDictionary`); `searchSync` is the
-    // eager-empty synchronous path (returns `[]` until the DB is
-    // open) so the existing synchronous `fetchContinuousCandidates`
-    // contract is unchanged. DB stays native (`feedback_user_data_
-    // sqlite_stays_native`).
+    // Continuous fetch (the sole custom-dict reader on the keyboard
+    // candidate path after Item 13 retired the platform lexicon
+    // fallback). `searchSync` is the eager-empty synchronous path
+    // (returns `[]` until the DB is open) so the existing synchronous
+    // `fetchContinuousCandidates` contract is unchanged. DB stays
+    // native (`feedback_user_data_sqlite_stays_native`).
     // 中文: Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 repository;
     // 中文: searchSync 為 eager-empty 同步查詢,DB 未開回 [],不破既有同步 fetch 契約。
     private let customDictionaryRepository: CustomDictionaryRepository
@@ -226,9 +226,8 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// `ensureInitialized` Task and that Task completing — the very first
     /// composition may legitimately fall here), skip phase 2 and return
     /// the neutral list. Matches
-    /// `CustomDictionaryRepository.searchSync`'s eager-empty pattern; the
-    /// lexicon non-Continuous path uses an explicit `mergeOrderOnly`
-    /// cold-start branch. Codex pre-impl Q6.
+    /// `CustomDictionaryRepository.searchSync`'s eager-empty pattern.
+    /// Codex pre-impl Q6.
     ///
     /// `isConnected()` only proves the SQLite connection is open — schema
     /// creation may still be in flight inside `ensureInitialized`. If a
@@ -355,15 +354,14 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// merge + `(roman, hanji)` dedupe + ranking (spec G3 — platform
     /// never re-ranks); this method only fetches + marshals.
     ///
-    /// Reuses the SAME derivation + query path the legacy lexicon path
-    /// uses (`LexiconService.lookupCustomDictionary` →
-    /// `CustomDictionaryDerivation.searchPrefix` →
-    /// `CustomDictionaryRepository.searchSync`, parameterized SQL).
-    /// **Marshals the RAW stored `(roman, hanzi)` columns** — NOT the
-    /// `CandidateProcessor.capitalize`-massaged form the legacy path
-    /// builds — so the engine's `(roman, hanji)` dedupe key collides
-    /// correctly against `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`
-    /// (Codex pre-impl 2026-05-15). An empty stored hanzi maps to
+    /// Query path: `CustomDictionaryDerivation.searchPrefix` →
+    /// `CustomDictionaryRepository.searchSync` (parameterized SQL).
+    /// **Marshals the RAW stored `(roman, hanzi)` columns** — NOT a
+    /// capitalization-massaged form — so the engine's
+    /// `(roman, hanji)` dedupe key collides correctly against
+    /// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
+    /// 2026-05-15); capitalization is the engine's concern. An empty
+    /// stored hanzi maps to
     /// proto-absent `hanji` (romanization-only entry → engine derives
     /// `CandidateMode::Tailo`), mirroring `record_to_candidate`.
     ///

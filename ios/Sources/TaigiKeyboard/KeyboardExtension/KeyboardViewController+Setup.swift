@@ -113,16 +113,13 @@ extension KeyboardViewController {
         //    so the Continuous-input fetch path can apply persisted boost
         //    as early as possible (not guaranteed for the very first
         //    composition — the Task races against the first keystroke).
-        //    `AutocompleteService.autocomplete` early-returns on non-empty
-        //    Continuous candidates and skips the lexicon path's lazy
-        //    `ensureInitialized` call, so without this warmup a fresh
-        //    session would ignore `user_frequency.db` indefinitely until
-        //    the user committed something. Fire-and-forget —
-        //    `fetchContinuousCandidates` keeps its `isConnected()`
-        //    cold-start guard for the race window before this Task lands.
-        //    Mirrors `LexiconService.initializeCustomDictionary` (incl.
-        //    the warning log on failure for observability — Codex PR #265
-        //    r3216760651 post-impl R5).
+        //    The Continuous fetch path never lazy-inits the freq DB itself,
+        //    so without this warmup a fresh session would ignore
+        //    `user_frequency.db` indefinitely until the user committed
+        //    something. Fire-and-forget — `fetchContinuousCandidates` keeps
+        //    its `isConnected()` cold-start guard for the race window before
+        //    this Task lands. Warning log on failure is intentional for
+        //    observability (Codex PR #265 r3216760651 post-impl R5).
         // 中文: 連續輸入路徑會早 return 略過 lexicon 那條 lazy init,
         // 中文: 因此於 setupCoreServices 觸發 user_frequency.db 提前打開 +
         // 中文: 建 schema,best-effort 讓使用者頻率 boost 儘早可用(首次組字仍可能 race)。
@@ -166,7 +163,7 @@ extension KeyboardViewController {
         // syncs handler.autocompleteService — no manual sync needed.
     }
 
-    /// 將 Taigi 專用的 composing / selection provider 接上 AutocompleteService。
+    /// 將 Taigi 專用的 composing provider 接上 AutocompleteService。
     ///
     /// 兩個呼叫路徑共用：
     /// - `setupCoreServices()` 建立 handler 後初始連線
@@ -179,7 +176,6 @@ extension KeyboardViewController {
     ) {
         guard let taigiService = service as? AutocompleteService else { return }
         taigiService.setComposingManager(handler.composingManager)
-        taigiService.setSelectionContextProvider(handler.nextWordController)
     }
 
     /// Re-read settings from App Group UserDefaults.

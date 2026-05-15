@@ -62,9 +62,9 @@ class NextWordHandler(
     fun isShowingNextWordCandidates(): Boolean = cachedIsShowing
 
     /**
-     * Envelope generation owned by this executor; exposed so other shared
-     * collaborators (e.g. `TaigiAutocompleteService.applyContextBoost`) can
-     * pass the same value to bridge calls and avoid spurious state resets.
+     * Envelope generation owned by this executor. Accessor retained for
+     * NextWord bridge-state sharing; its prior consumer (the platform
+     * autocomplete context-boost path) was retired in v3.5.8 Item 13.
      */
     fun nextwordEnvelopeGeneration(): Long = envelopeGen
 

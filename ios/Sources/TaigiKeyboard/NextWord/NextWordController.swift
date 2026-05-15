@@ -66,8 +66,11 @@ final class NextWordController: SelectionContextProvider {
     // 中文: 時會先重置狀態再處理請求,參考 ComposingManager.bumpGeneration 規範。
     private var envelopeGen: UInt64 = 1
 
-    /// Exposed via `SelectionContextProvider` for autocomplete context boost.
-    // 中文: 透過 SelectionContextProvider 暴露給 autocomplete 做 context boost。
+    /// `SelectionContextProvider` conformance. The autocomplete context-boost
+    /// consumer was retired in v3.5.8 Item 13; the property still mirrors the
+    /// engine's last-selected word for the NextWord pipeline.
+    // 中文: SelectionContextProvider 屬性;autocomplete context-boost consumer 已於
+    // 中文: Item 13 退役,此值仍鏡射引擎 last-selected word 供 NextWord 用。
     var lastSelectedWord: String? {
         cachedLastSelectedWord
     }
@@ -78,9 +81,11 @@ final class NextWordController: SelectionContextProvider {
         cachedIsShowing
     }
 
-    /// Conform to the protocol so `AutocompleteService.nextwordBoostCandidates`
-    /// shares the same envelope generation, avoiding spurious state resets.
-    // 中文: 讓 AutocompleteService 共用同一個 generation,避免誤觸引擎側 reset。
+    /// `SelectionContextProvider` conformance. Its autocomplete consumer was
+    /// retired in v3.5.8 Item 13; `envelopeGen` is still owned and used by
+    /// the NextWord pipeline itself.
+    // 中文: SelectionContextProvider 屬性;autocomplete consumer 已 Item 13 退役,
+    // 中文: envelopeGen 仍由 NextWord pipeline 自身擁有與使用。
     var nextwordEnvelopeGeneration: UInt64 {
         envelopeGen
     }

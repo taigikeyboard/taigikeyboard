@@ -37,7 +37,7 @@ class CompositionRoot private constructor(
     val customDict: CustomDictionaryService = CustomDictionaryService(appContext, logger)
     val userFreq: UserFrequencyService = UserFrequencyService(appContext, logger)
     val nextWord: NextWordService = NextWordService(appContext, logger)
-    val lexicon: LexiconService = LexiconService(appContext, logger, customDict, userFreq)
+    val lexicon: LexiconService = LexiconService(appContext, logger)
     val backup: BackupService = BackupService(logger, customDict, userFreq, nextWord)
 
     /**
@@ -58,9 +58,9 @@ class CompositionRoot private constructor(
      *
      * `CancellationException` is re-thrown unchanged — swallowing it
      * would break structured concurrency, leaving canceled lifecycle
-     * scopes (IME service, ViewModel) running `LexiconService.search*`
-     * / `NextWordService.predict` to completion with empty-result
-     * fallback instead of honoring the cancel (Codex r3173789380).
+     * scopes (IME service, ViewModel) running lexicon / NextWord query
+     * paths to completion with empty-result fallback instead of
+     * honoring the cancel (Codex r3173789380).
      */
     suspend fun awaitLexiconReady(): Boolean =
         try {

@@ -33,12 +33,6 @@ enum CompositionRoot {
 
     // MARK: - Composite services
 
-    static let lexiconService: LexiconService = .init(
-        userFrequencyService: userFrequencyService,
-        customDictionaryRepository: customDictionaryRepository,
-        settingsProvider: SharedSettings.shared,
-    )
-
     static let backupService: BackupService = .init(
         customDictionaryService: customDictionaryService,
         userFrequencyRepository: userFrequencyRepository,

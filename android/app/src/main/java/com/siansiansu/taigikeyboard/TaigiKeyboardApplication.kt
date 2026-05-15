@@ -59,8 +59,7 @@ class TaigiKeyboardApplication : Application() {
         }
         // Best-effort warmup of `user_frequency.db` so the Continuous-input
         // fetch path can apply persisted boost as early as possible. The
-        // Continuous fetch early-returns on non-empty candidates and skips
-        // `LexiconService.search`'s lazy `ensureInitialized` call, so
+        // Continuous fetch path never lazy-inits the freq DB itself, so
         // without this warmup a fresh session would ignore
         // `user_frequency.db` indefinitely until the user committed
         // something. Fire-and-forget — `ComposingManager

@@ -403,23 +403,23 @@ The Unicode bucket is partial coverage of the existing umbrella label and need n
 
 ## 14. Lexicon — hanzi-input search guard (D-8 parity correction)
 
-**Added**: 2026-05-01 (v3.5.6 lexicon read-path slice). Auto-mode joint Claude + Codex sign-off Option A + 2 mods (91% confidence). Implementation in Rust `engine/lexicon::api::search` — hanzi `InputType` short-circuit returns empty before consulting `EngineHandle.with_state`.
+**Added**: 2026-05-01 (v3.5.6 lexicon read-path slice). **Re-pointed engine-ward 2026-05-15 (v3.5.8 Item 13)**: the platform-side `LexiconService.search` autocomplete entry — and with it the platform D-8 guard + its iOS/Android parity tests — were retired when the platform lexicon fallback was removed (`continuous-candidate-display.md` §15.4). The keyboard candidate path is now the engine-only Continuous dispatch; the hanzi guard lives entirely in Rust.
 
-**Behavior**: when `LexiconService.search` is called with `inputType == .hanzi` (iOS) / `InputType.Hanzi` (Android), the function returns an empty result list `[]` WITHOUT consulting the custom-dictionary, system-dictionary, or association binaries.
+**Behavior**: a hanzi (CJK) composing buffer never produces keyboard candidates. Two engine guards enforce this:
 
-**Rationale**: pre-v3.5.6, iOS hit `lookupCustomDictionary` BEFORE the engine hanzi guard, so a custom-dict entry whose key matched the hanzi composing buffer would surface as a suggestion. Android short-circuited at the top of `search()`, returning `[]` immediately. v3.5.6 normalizes both platforms to Android's behavior (per `rules/cross-platform-alignment.md` §1b parity correction).
+1. **Continuous dispatch** (Item 11) — `engine/composing/src/dispatch.rs::handle_fetch_at_pos` checks `is_hanzi(raw)` at the top of dispatch and returns an empty `ContinuousResponse` (carrier present, candidates empty). `is_hanzi` is `.any()`, so a single stray CJK char anywhere fails closed.
+2. **Lexicon search API** — `engine/lexicon::api::search` short-circuits `SearchInputType::Hanzi` to `[]` before consulting any reader (retained engine API surface; the keyboard path no longer calls it after Item 13).
 
-**User-visible regression on iOS**: hanzi composing input no longer surfaces custom-dict matches. Affected scenario is edge-case (paste / long-press hanzi into composing buffer); normal IME romanization typing flow never triggers this branch. Tab3 dictionary search (which also accepts hanzi) is **unaffected** — it goes through `DictionarySearchService.search` → bridge `lexiconSearchByHanzi`, NOT through `LexiconService.search` / `InputType`.
+**Rationale**: pre-Item-13 the platform `LexiconService.search` hit `lookupCustomDictionary` before the engine guard on iOS, so a custom-dict entry matching the hanzi buffer could leak as a suggestion. That entire platform autocomplete path is now deleted — the custom-dict-on-hanzi layering surface no longer exists outside Rust, so the guard is purely an engine concern.
 
-**Tests** (`INVARIANT_LEX_HANZI_GUARD`):
+**Tab3 unaffected**: Tab3 dictionary search accepts hanzi by design and is a fully separate consumer (iOS `DictionarySearchService` → bridge `lexiconSearchByHanzi`; Android `LexiconService.searchByHanzi` / `searchWithSources`). It never went through the retired autocomplete `search()` entry and carries no D-8 guard.
 
-1. **Rust engine unit** — `engine/lexicon/tests/parity.rs::invariant_lex_hanzi_guard_short_circuits` asserts `search()` returns `[]` for `SearchInputType::Hanzi` regardless of bridge state.
-2. **iOS** — `ios/TaigiKeyboardTests/LexiconServiceHanziGuardTests.swift` seeds a `CustomDictionaryEntry` whose key matches hanzi input, invokes `LexiconService.search(input: "我", inputType: .hanzi, ...)`, asserts `[]`. Pure XCTest unit test (no Rust runtime; bridge mocked via injection seam).
-3. **Android** — `android/app/src/test/java/.../LexiconServiceHanziGuardTest.kt` mirrors iOS; pure JVM with fake bridge per `feedback_path_g_delete_mirrors.md` (NOT `androidTest` — JVM-loadable Rust artifact ban).
+**Tests** (`INVARIANT_LEX_HANZI_GUARD`) — Rust engine only after Item 13:
 
-The platform-layer tests are required (NOT only the Rust unit) because D-8's regression surface — custom-dict-on-hanzi — only exists outside the Rust engine. The custom-dict SQLite path is platform-side; only a service-layer test catches the iOS-specific layering side-effect that previously surfaced custom-dict entries on hanzi input.
+1. `engine/lexicon/tests/parity.rs::invariant_lex_hanzi_guard_short_circuits` — asserts `search()` returns `[]` for `SearchInputType::Hanzi` regardless of bridge state.
+2. `engine/composing/tests/dispatch_continuous.rs::decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier` + `decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier` (Item 11) — pin the Continuous-dispatch guard incl. mixed-buffer (`"a好b"`) fail-closed.
 
-**Implementation status (2026-05-01)**: in v3.5.6 main commits, the engine-layer guard (Rust `search()` short-circuit) is wired and tested (`engine/lexicon/tests/parity.rs`). The platform-layer guards (iOS `LexiconService.search` early `[]` return on `inputType == .hanzi`, Android equivalent) and their parity tests land in the v3.5.6 commit 10/11 follow-up pass that does the full service-layer rewire. Until then, iOS continues to call `lookupCustomDictionary` first; the user-visible regression scope (paste-hanzi-into-composing-buffer + matching custom-dict entry) is dormant pending the rewire.
+The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`, Android `LexiconServiceHanziGuardTest.kt`) were deleted in Item 13 per `feedback_path_g_delete_mirrors.md`: the platform regression surface they guarded (custom-dict-before-guard) was removed with the platform lexicon path; algorithm correctness lives in the Rust engine tests above.
 
 ---
 

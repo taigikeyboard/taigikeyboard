@@ -9,7 +9,6 @@ import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
@@ -37,11 +36,12 @@ class CandidateUpdateCoordinator(
     private var englishCandidateUpdateJob: Job? = null
     private var displayDerivationJob: Job? = null
 
-    // Cached TaigiAutocompleteService — reused across keystrokes, recreated only when inputMode changes
-    // Protected by serviceLock for thread-safe access
+    // Cached TaigiAutocompleteService — created once and reused across
+    // keystrokes. Mode-agnostic after v3.5.8 Item 13 (the engine owns
+    // input-mode handling), so no recreate-on-mode-change is needed.
+    // Protected by serviceLock for thread-safe access.
     private val serviceLock = Any()
     private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService? = null
-    private var cachedInputMode: InputMode? = null
 
     // English autocomplete service
     private var englishAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService? = null
@@ -143,60 +143,36 @@ class CandidateUpdateCoordinator(
             Log.d(TAG, "[CANDIDATES] rawInput='$rawInput', displayText='$displayText'")
         }
 
-        // Reuse TaigiAutocompleteService — only recreate when inputMode changes
-        val inputMode =
-            taigikeyboard.prefs.inputMode.let {
-                when (it) {
-                    "poj" -> InputMode.POJ
-                    "tl", "tps" -> InputMode.TL
-                    else -> InputMode.POJ
-                }
-            }
-
         val service =
             synchronized(serviceLock) {
-                if (taigiAutocompleteService == null || cachedInputMode != inputMode) {
-                    cachedInputMode = inputMode
-                    val root = taigikeyboard.compositionRoot
-                    taigiAutocompleteService =
-                        com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
-                            inputMode = inputMode,
-                            settings = taigikeyboard.prefs,
-                            lexicon = root.lexicon,
-                            nextWord = root.nextWord,
-                            logger = root.logger,
-                            // Continuous-input fetcher hops back to the IME
-                            // main thread before invoking
-                            // `fetchContinuousCandidates`; the underlying
-                            // `applyTransition` writes to InputConnection so
-                            // the off-main coroutine context the autocomplete
-                            // job runs in is unsafe. BOTH the manager and IC
-                            // are re-resolved INSIDE the Main block so a
-                            // detach/editor swap between the dispatch hop and
-                            // the fetch returns null and collapses to the
-                            // empty fallback.
-                            continuousFetcher = {
-                                withContext(Dispatchers.Main) {
-                                    val mgr = getComposingManager()
-                                    val ic = taigikeyboard.currentInputConnection
-                                    if (mgr != null && ic != null) {
-                                        mgr.fetchContinuousCandidates(ic)
-                                    } else {
-                                        emptyList()
-                                    }
-                                }
-                            },
-                        )
-                }
-                taigiAutocompleteService!!
+                taigiAutocompleteService ?: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService(
+                    logger = taigikeyboard.compositionRoot.logger,
+                    // Continuous-input fetcher hops back to the IME main
+                    // thread before invoking `fetchContinuousCandidates`;
+                    // the underlying `applyTransition` writes to
+                    // InputConnection so the off-main coroutine context the
+                    // autocomplete job runs in is unsafe. BOTH the manager
+                    // and IC are re-resolved INSIDE the Main block so a
+                    // detach/editor swap between the dispatch hop and the
+                    // fetch returns null and collapses to empty.
+                    continuousFetcher = {
+                        withContext(Dispatchers.Main) {
+                            val mgr = getComposingManager()
+                            val ic = taigikeyboard.currentInputConnection
+                            if (mgr != null && ic != null) {
+                                mgr.fetchContinuousCandidates(ic)
+                            } else {
+                                emptyList()
+                            }
+                        }
+                    },
+                ).also { taigiAutocompleteService = it }
             }
 
         val searchStart = System.currentTimeMillis()
         val suggestions = service.autocomplete(
             rawInput = rawInput,
             displayText = displayText,
-            lastSelectedWord = smartbarManager.getLastSelectedWord(),
-            nextwordEnvelopeGeneration = smartbarManager.getNextwordEnvelopeGeneration(),
         )
         if (BuildConfig.DEBUG) {
             Log.d(
@@ -326,7 +302,6 @@ class CandidateUpdateCoordinator(
         englishAutocompleteService = null
         synchronized(serviceLock) {
             taigiAutocompleteService = null
-            cachedInputMode = null
         }
     }
 

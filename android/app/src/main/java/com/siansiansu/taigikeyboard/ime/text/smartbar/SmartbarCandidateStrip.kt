@@ -89,8 +89,8 @@ fun TaigiCandidateStrip(
                 .then(backgroundModifier),
         contentPadding = PaddingValues(end = 48.dp),
     ) {
-        // No explicit `key` lambda: candidate ids are not unique (custom-dictionary
-        // hits collide on `TaigiWord(id = -2, …)` per LexiconService.kt:129) and
+        // No explicit `key` lambda: candidate ids are not unique (e.g.
+        // custom-dictionary markers collide on `TaigiWord(id = -2, …)`) and
         // every state push fully replaces the list anyway, so position-based
         // identity is correct here.
         itemsIndexed(items) { index, word ->

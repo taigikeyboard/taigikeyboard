@@ -3,7 +3,7 @@
 > **Type**: Specification (problem + proposed fix, partially shipped)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
 > **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [autocomplete.md](autocomplete.md), [binary-format.md](binary-format.md), [`rules/cross-platform-alignment.md`](../../rules/cross-platform-alignment.md)
-> **Status**: Active — §4 dual-line carrier shipped (Item 5 PR #270 + Item 6 branch `v358-item6-dual-line-render`); §15 fallback retire still pending (Items 7-13 per [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.10). All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals).
+> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 per `feedback_v358_full_scope.md` (satisfaction-gated; no `v3.5.9+` deferrals). Item 13 = v3.5.8 feature-complete.
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
 
@@ -639,23 +639,23 @@ Three reinforcing reasons:
 
 ### 15.2 Scope clarification — what stays platform-side
 
-Per Q1 clarification 2026-05-11, **the only input modes are TL / POJ / TPS romanization** + composing-text slot-0. There is **no hanzi input mode**. The lexicon path's `Hanzi` classification ([`engine/lexicon/src/classification.rs:69`](../../engine/lexicon/src/classification.rs)) is a **defensive D-8 guard** — short-circuits `lexicon::search` to `[]` when the composing buffer accidentally contains CJK characters ([`LexiconService.kt:72`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/LexiconService.kt) / [`LexiconService.swift:83`](../../ios/Sources/TaigiKeyboard/Lexicon/Services/LexiconService.swift)). This guard **moves into the engine** (§15.3.E) rather than being lost.
+Per Q1 clarification 2026-05-11, **the only input modes are TL / POJ / TPS romanization** + composing-text slot-0. There is **no hanzi input mode**. A hanzi (CJK) composing buffer must never produce keyboard candidates — historically a **defensive D-8 guard** in the platform `LexiconService.search`. **DONE (Item 11 + Item 13)**: the guard now lives entirely in the engine (`handle_fetch_at_pos` `is_hanzi(raw)` → empty carrier, §15.3.E); the platform `LexiconService.search` D-8 guard + its parity tests were deleted with the lexicon-fallback retire (§15.4). See `docs/architecture/behavioral-invariants.md` §14 (re-pointed engine-ward).
 
 ### 15.3 Engine coverage gaps to close
 
 | # | Gap | Current state | Engine work to do |
 |---|---|---|---|
 | **A** | TPS tone-1 untoned (`ㄉㄞ`) | ~~`tps::valid_span_endings` only sees tone-mark / 入聲韻尾 terminators~~ | **DONE — Phase 9 Item 7 / 9.4a**: `tps::valid_span_endings` next-initial-seen + trailing-tone-1 rule; `phonetics::is_tps_initial` / `is_tps_char`; `build_keys_tps` accepts digitless toneless fragment |
-| **B** | POJ-diacritic input (`pe̍h`, `chóa`, `peⁿ`) | `to_ascii_lowercase` in `build_keys_tl` doesn't strip diacritics | **NEW** — wire `phonetics::canonicalize_syllable` (already exists, `engine/phonetics/src/syllable.rs`) into `build_keys_tl` per-syllable pre-pass; ~50 LOC + tests |
-| **C** | Hyphenated TL (`tai-bak`, `pe̍h-ōe-jī`) | `tl_syll::valid_span_endings` BFS via `inv.contains(...)`, no hyphen inventory entries | **Phase 9.4b (already planned)** — `engine/composing/src/dispatch.rs::build_keys_tl` shadow buffer + offset map ~100-150 LOC |
-| **D** | Partial prefix (`t`, `gu`, anything shorter than first valid syllable ending) | Syllabifier returns `{}` → continuous returns empty → fallback to lexicon prefix-match | **NEW** — in `handle_fetch_at_pos`, when `valid_span_endings` is empty AND raw is non-empty, fall through to `prefix_index.lookup_prefix("tl:<lower-stripped>")` and emit results as `RawCandidate { consumed_span: (0, raw.len()), syllable_count: 0, mode: <derived>, ... }` with **a new SortKey tier dimension** so partial candidates rank below full-syllable candidates (§15.5). ~100-150 LOC + ranking adjustment |
-| **E** | Hanzi accidentally in composing buffer | Platform D-8 guard in `LexiconService` returns `[]` | **NEW (port)** — `handle_fetch_at_pos` checks `is_hanzi(raw)` at top of dispatch and returns empty `ContinuousResponse` (carrier present, candidates empty). ~5 LOC + 1 regression test. Once platform retires `LexiconService.search` for autocomplete (§15.4), the platform-side guard goes away with it. |
+| **B** | POJ-diacritic input (`pe̍h`, `chóa`, `peⁿ`) | ~~`to_ascii_lowercase` in `build_keys_tl` doesn't strip diacritics~~ | **DONE — Item 9**: `dispatch.rs::canonicalize_poj_shadow` per-syllable canonicalize + offset map composed with the Item 8 hyphen shadow |
+| **C** | Hyphenated TL (`tai-bak`, `pe̍h-ōe-jī`) | ~~`tl_syll::valid_span_endings` BFS, no hyphen inventory entries~~ | **DONE — Item 8**: `dispatch.rs::build_hyphen_shadow` shadow buffer + byte-offset map |
+| **D** | Partial prefix (`t`, `gu`, anything shorter than first valid syllable ending) | ~~Syllabifier returns `{}` → continuous empty → fallback to lexicon prefix-match~~ | **DONE — Item 10**: `handle_fetch_at_pos` falls through to `fetch_partial_prefix_candidates` (`prefix_index.lookup_prefix`) with the `coverage_kind` SortKey dim (§15.5) ranking partial below full-syllable |
+| **E** | Hanzi accidentally in composing buffer | ~~Platform D-8 guard in `LexiconService` returns `[]`~~ | **DONE — Item 11 + Item 13**: `handle_fetch_at_pos` checks `is_hanzi(raw)` at top of dispatch → empty `ContinuousResponse`; the platform `LexiconService.search` D-8 guard was deleted with the §15.4 retire |
 
-Combined "engine completeness" delta: ~310-460 LOC Rust + tests, on top of the original 9.4a/9.4b/9.5/9.6 scope.
+All engine coverage gaps closed by Items 7–12; **Item 13 (capstone) then retired the platform lexicon fallback** so the engine is the single candidate source.
 
-### 15.4 Platform simplification
+### 15.4 Platform simplification — DONE (Item 13)
 
-After §15.3 lands, both platforms collapse to a single path:
+After §15.3 landed, both platforms collapsed to a single path:
 
 ```swift
 // iOS — AutocompleteService.swift autocomplete(_:)
@@ -680,18 +680,22 @@ suspend fun autocomplete(rawInput: String, displayText: String, ...): List<Taigi
 
 Empty-engine state: per §15.6 acceptance criteria, the Continuous strip is empty (`buildContinuousSuggestions` returns `[]`); the inline pre-edit retains the composing buffer, and Enter still commits the raw tail via Item 3's `Phase::Continuous` `Intent::CommitRaw` arm. The pre-§10 "always insert slot-0 composing-text cell" affordance was retired in Item 4 (`docs/engine/continuous-input-ranking.md` §10.1.2 supersedes notice).
 
-What gets deleted from each platform:
+What was deleted — **asymmetric** because iOS Tab3 was already decoupled to a separate `DictionarySearchService` while Android Tab3 shares the `LexiconService` class:
 
-| Platform | Delete | LOC saved |
+| Platform | Deleted | Notes |
 |---|---|---|
-| iOS | `searchLexicon` / `applyContextBoost` / `remapBoostedWords` / `convertToSuggestions` / `buildSuggestions` / `createComposingTextSuggestion` (move to top-level used only by Continuous path) | ~120 LOC + tests |
-| iOS | `AutocompleteInputClassifier` (Swift shell — Rust already owns the algorithm; only the per-keystroke ladder thinning needed) | ~30 LOC |
-| Android | Same set in `TaigiAutocompleteService.kt` mirror | ~150 LOC |
-| Android | `AutocompleteInputClassifier.kt` mirror | ~30 LOC |
+| iOS | **Whole** `LexiconService.swift` (~273 LOC) + `CompositionRoot.lexiconService` | iOS `LexiconService` was 100% autocomplete-owned (verified: sole consumer was `AutocompleteService`). iOS Tab3 uses `DictionarySearchService` → bridge `lexiconSearchByHanzi/WithSources`, NOT `LexiconService`. |
+| iOS | `AutocompleteInputClassifier.swift` (~22 LOC); `AutocompleteService` lexicon path (`searchLexicon` / `applyContextBoost` / `remapBoostedWords` / `convertToSuggestions` / `buildSuggestions` / `createComposingTextSuggestion`) + ctor/provider slim (`lexiconService` / `nextWordService` / `settingsProvider` / `selectionContext` / `setSelectionContextProvider`) | `autocomplete(_:)` collapsed to engine-only; no `await` remains so the stale-result guard was dropped. |
+| iOS | `LexiconServiceHanziGuardTests.swift` (~57 LOC) | D-8 guard now engine-owned (Item 11) — see `behavioral-invariants.md` §14. |
+| Android | `LexiconService.kt` `search()` + `lookupCustomDictionary` / `querySystemDictionaries` / `processCandidates` + ctor slim (`customDict` / `userFreq`) | **Class kept** — Tab3 (`DictionarySearchViewModel`) uses `searchWithSources` / `searchByHanzi` on the same class, so only the autocomplete-only method surface was removed. |
+| Android | `AutocompleteInputClassifier.kt` (~18 LOC); `TaigiAutocompleteService.kt` lexicon path (`applyContextBoost` / `remapBoostedWords` / `createComposingTextCell`) + ctor slim (mode-agnostic; `lexicon` / `nextWord` / `settings` dropped); `CandidateUpdateCoordinator` mode-cache + dead-arg cleanup | — |
+| Android | `LexiconServiceHanziGuardTest.kt` (~28 LOC) | Same engine-owned guard rationale. |
 
-Total platform deletion: ~330 LOC + their tests. Net diff per platform is approximately **−250 LOC each, +20 LOC tightening tests** (Continuous `buildContinuous*` no longer emits slot-0 composing cell post-Item 4; lexicon `createComposingText*` retire happens here when §15.3 ships).
+iOS = whole-file deletion; Android = method-level deletion within a kept class. Same intended behavior (engine single source); different impl surface. (Earlier drafts of this section estimated ~120 LOC iOS + "LexiconService stays for Tab3" — that was Android-centric and **wrong for iOS**, corrected here from grounded code.)
 
-`LexiconService` itself stays — it still serves **Tab3 dictionary search** (the separate "search the dictionary by hanzi" feature, not autocomplete). The retire affects only the `autocomplete()` callsite. Per [`docs/engine/autocomplete.md`](autocomplete.md) and the Tab3 hanzi-range parity correction history (PR #202), Tab3 is a fully orthogonal consumer.
+Empty-engine state: per §15.6, the strip is empty; the inline pre-edit retains the composing buffer and Enter commits the raw tail via Item 3's `Phase::Continuous` `Intent::CommitRaw` arm.
+
+`LexiconService` as a class **survives only on Android** (Tab3 `searchWithSources` / `searchByHanzi`). On iOS the class is gone entirely; Tab3 is served by the orthogonal `DictionarySearchService`. iOS file deletions require a manual Xcode project (`pbxproj`) update by the maintainer (`feedback_xcode_manual` / `feedback_pbxproj_sync_gap`).
 
 ### 15.5 Ranking adjustment for partial-prefix candidates
 
@@ -725,7 +729,7 @@ struct SortKey {
 
 (8 dimensions, was 7 in PR-9.1.)
 
-### 15.6 Test matrix for fallback retire
+### 15.6 Test matrix for fallback retire — DONE
 
 | Test class | Location | What it pins |
 |---|---|---|
@@ -733,11 +737,13 @@ struct SortKey {
 | `poj_diacritic_canonicalize` | same | `Phase::Continuous` + `raw = "pe̍h"` → canonicalized to `pek` → `tl:pek` key → expected hits |
 | `hanzi_guard_in_engine` | `engine/composing/src/dispatch.rs` (mod test) | `raw = "我好"` (CJK chars) → `FetchAtPos` returns empty `ContinuousResponse` (carrier present, candidates empty) |
 | `sort_key_partial_below_full` | `engine/lexicon/src/continuous.rs` (mod sort_key_tests) | Construct two `RawCandidate` — one with `coverage_kind = 0` lowest freq, one with `coverage_kind = 1` highest freq — assert full-syllable wins |
-| `platform_autocomplete_no_lexicon_branch` | iOS `AutocompleteServiceTests` / Android `TaigiAutocompleteServiceTest` | After retire, mock `continuousFetcher` returning empty → result is **empty `[]`** (no slot-0 composing cell injected), no lexicon path invocation. Per `continuous-input-ranking.md` §10.1.2 + §10.7: composing surface is inline pre-edit only; empty engine → empty strip. (Updates prior `[slot-0 composingText]` expectation.) |
+| `platform_autocomplete_no_lexicon_branch` | iOS `AutocompleteServiceContinuousTests.swift::testAutocomplete_EmptyEngine_NoLexiconBranch_EmptyResult` / Android `TaigiAutocompleteServiceTest.kt` | Mock `continuousFetcher` returning empty → `autocomplete` result is **empty `[]`** (no slot-0 composing cell, no lexicon path — the path no longer exists). Plus a positive control: non-empty engine result passes through 1:1 with `isContinuous` set and no `isComposingText`. |
 
-### 15.7 Open Questions for Codex Pre-Impl Consult
+### 15.7 Open Questions for Codex Pre-Impl Consult — RESOLVED
 
-Adds to §9. To resolve before any §15-related code is written:
+> **Resolved across Items 7–13** (each ran its own Codex pre-impl sandwich). Q15.1–Q15.5 settled in Items 10–11 (`coverage_kind` = internal `u8`; partial-prefix pass-through `syllable_count`; `tl:`-namespaced key; partial-prefix always final-commit; `MIN_PREFIX_LEN = 1`). **Q15.6 (Tab3 untouched)**: confirmed in Item 13 from grounded code — iOS Tab3 = `DictionarySearchService` (never used `LexiconService`); Android Tab3 = `LexiconService.searchWithSources`/`searchByHanzi` (kept; only the autocomplete `search()` surface was deleted). Q15.7 sub-PR plan superseded by the Item 7–13 numbering. Original text retained below for provenance.
+
+Adds to §9 (historical — resolved as above):
 
 **Q15.1 — `coverage_kind` enum or u8?**
 
@@ -802,12 +808,14 @@ Codex confirms ordering / dependencies. Suggest dependency:
 
 ### 15.8 Risk register
 
+> **Status (Item 13 shipped)**: partial-prefix flood + `coverage_kind` ranking risks closed by Items 10/11 engine tests. The **dogfood regression risk is the live capstone-acceptance gate** — Codex pre-impl F8 found no unimplemented input form (Items 7–12 cover TPS tone-1 / hyphen / POJ diacritic / partial-prefix / hanzi guard / custom dict); confirm on-device with the row-3 input matrix.
+
 | Risk | Mitigation |
 |---|---|
 | Partial-prefix hits flood candidate strip (e.g., `t` matches 500+ entries) | `prefix_index.lookup_prefix` already has internal capacity; cap at `MAX_CANDIDATES = 30` in engine (mirror lexicon path) |
 | Ranking surprises after `coverage_kind` insertion (full-syllable should still dominate when both present) | `partial_prefix_engine_path` test + `sort_key_partial_below_full` test pin invariant |
 | Dogfood regression on input that worked via fallback but breaks under engine | Test matrix §15.6 + acceptance: type every input form (`t`, `gu`, `gua`, `gua2`, `guá`, `ㄍㄨㄚˋ`, `tai-bak`, `pe̍h`) and verify candidate strip non-empty after engine retire |
-| Tab3 broken by accident during retire | `LexiconService.search` Tab3 entry remains; retire only `autocomplete()` callsite; pin via `platform_autocomplete_no_lexicon_branch` test |
+| Tab3 broken by accident during retire | Tab3 is a separate consumer on both platforms (iOS `DictionarySearchService`; Android `LexiconService.searchWithSources`/`searchByHanzi`, kept). Only the autocomplete `search()` surface was deleted; pinned by `platform_autocomplete_no_lexicon_branch`. |
 | Codex consult overhead (8 sub-PRs × pre+post sandwich) | per `feedback_codex_review_sandwich.md` — each sub-PR small enough that sandwich is ~30min round-trip; total ~8-10 hours Codex consult time across all 8 PRs, spread over v3.5.8 dogfood window |
 
 ### 15.9 Out-of-scope confirmation (under §15)

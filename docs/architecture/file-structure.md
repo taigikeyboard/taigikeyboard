@@ -67,8 +67,8 @@ Pure state machine lives in `engine/composing` (Rust). Platform side holds the e
 
 | Function | iOS | Android |
 |----------|-----|---------|
-| Input classifier | `AutocompleteInputClassifier.swift` (calls Rust) | `AutocompleteInputClassifier.kt` (calls Rust) |
-| Taigi autocomplete | `AutocompleteService.swift` | `TaigiAutocompleteService.kt` |
+| Input classifier | (Rust `engine/lexicon::classify_input`; platform shells deleted v3.5.8 Item 13) | (Rust; shell deleted) |
+| Taigi autocomplete | `AutocompleteService.swift` (engine-only) | `TaigiAutocompleteService.kt` (engine-only) |
 | English autocomplete | `EnglishAutocompleteService.swift` | `EnglishAutocompleteService.kt` |
 | Candidate View | `CandidateView.swift` | `SmartbarView.kt` |
 | Candidate Adapter | - | `CandidateAdapter.kt` |
@@ -87,8 +87,8 @@ fst prefix index + dictionary.bin / association.bin readers all live in Rust `en
 | Function | iOS | Android |
 |----------|-----|---------|
 | Engine search / classify / assoc | (Rust `engine/lexicon`) | (Rust `engine/lexicon`) |
-| Lifecycle service | `Lexicon/Services/LexiconService.swift` | `ime/dictionary/LexiconService.kt` |
-| Search service | `Lexicon/Services/DictionarySearchService.swift` | (in `LexiconService.kt`) |
+| Lifecycle service | (iOS `LexiconService.swift` deleted v3.5.8 Item 13; install via `KeyboardViewController+Setup`) | `ime/dictionary/LexiconService.kt` (Tab3 + asset lifecycle) |
+| Search service (Tab3) | `Lexicon/Services/DictionarySearchService.swift` | (Tab3 methods in `LexiconService.kt`) |
 | Word model | `Lexicon/Models/TaigiWord.swift` | `ime/dictionary/TaigiWord.kt` |
 | Enabled dictionaries | `Lexicon/Models/EnabledDictionaries.swift` | `ime/dictionary/EnabledDictionaries.kt` |
 | Custom dictionary service | `Lexicon/Services/CustomDictionaryService.swift` | `ime/dictionary/CustomDictionaryService.kt` |

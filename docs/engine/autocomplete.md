@@ -2,7 +2,18 @@
 
 > **Type**: Feature
 > **Keywords**: `Autocomplete`, `Suggestion`, `Candidate`, `classifyInput`
-> **Related**: composing.md, sort.md, binary-format.md
+> **Related**: composing.md, sort.md, binary-format.md, [continuous-candidate-display.md](continuous-candidate-display.md), [continuous-input-ranking.md](continuous-input-ranking.md)
+
+> **⚠️ SUPERSEDED (v3.5.8 Item 13)**: this document describes the legacy
+> platform lexicon-backed autocomplete (`classifyInput → lexicon::search →
+> processCandidates`, slot-0 composing cell). That platform path was
+> **retired** in v3.5.8 Item 13 — the Continuous-input engine is now the
+> single candidate source (no platform lexicon fallback, no slot-0 cell).
+> The authoritative live flow is [`continuous-candidate-display.md`](continuous-candidate-display.md)
+> §15 + [`continuous-input-ranking.md`](continuous-input-ranking.md) §10.
+> The engine RPCs below (`classify_input`, `lexicon::search`) still exist
+> as engine API surface; they are no longer on the keyboard candidate
+> path. Retained for historical/Tab3 context.
 
 ---
 
@@ -73,8 +84,8 @@ Index 2: candidate 2 (e.g., 瓜)
 | Lexicon search | Rust `engine/lexicon::search` (fst lookup + DictionaryReader) |
 | Candidate dedup / score / sort | Rust `engine/ranking::process_candidates` |
 | Per-suggestion case transform | Rust `engine/phonetics::case_transform::transform_suggestion` |
-| Platform service (iOS) | `Autocomplete/Services/AutocompleteService.swift` (orchestrator) + `AutocompleteInputClassifier.swift` (thin shell over Rust) |
-| Platform service (Android) | `ime/text/composing/TaigiAutocompleteService.kt` + `AutocompleteInputClassifier.kt` |
+| Platform service (iOS) | `Autocomplete/Services/AutocompleteService.swift` (engine-only after Item 13; `AutocompleteInputClassifier.swift` deleted) |
+| Platform service (Android) | `ime/text/composing/TaigiAutocompleteService.kt` (engine-only after Item 13; `AutocompleteInputClassifier.kt` deleted) |
 | Trigger (iOS) | `autocompleteText` KeyboardKit property |
 | Trigger (Android) | `SmartbarManager.getSuggestions()` direct call |
 

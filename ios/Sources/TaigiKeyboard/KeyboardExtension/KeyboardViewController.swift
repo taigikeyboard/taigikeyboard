@@ -65,8 +65,8 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // Install the shared-core logging backend so engine candidates
-        // (CandidateProcessor / InputNormalizer) route logs through DebugLogger.
+        // Install the shared-core logging backend so engine-layer code
+        // routes logs through DebugLogger.
         LoggerFactory.install { DebugLogger(category: $0) }
 
         // Wire the Rust engine logger sink so Rust `log::warn!` lines reach

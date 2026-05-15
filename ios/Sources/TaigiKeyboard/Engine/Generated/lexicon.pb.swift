@@ -528,12 +528,12 @@ public struct Taigi_Engine_AssocLookupRequest: Sendable {
 }
 
 /// `ClassifyInputRequest` is the IME autocomplete classifier entry. The engine
-/// resolves `(InputType, search_key)` in a single FFI call — replaces iOS
-/// `AutocompleteInputClassifier.classify(rawInput:)` and Android
-/// `AutocompleteInputClassifier.determineInputType` per-keystroke ladder.
+/// resolves `(InputType, search_key)` in a single FFI call. The platform-side
+/// per-keystroke classifier shells it superseded were retired in v3.5.8 Item 13
+/// together with the platform lexicon fallback (the Continuous engine dispatch
+/// now owns classification end-to-end).
 ///
-/// `mode` is intentionally absent: classification is mode-independent. Both
-/// platforms compute identically today (audit § 4.3 / D-3).
+/// `mode` is intentionally absent: classification is mode-independent.
 public struct Taigi_Engine_ClassifyInputRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
