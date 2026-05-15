@@ -106,9 +106,12 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
     /// slot-0 model) + §10.3 commit contract: in Continuous mode the strip has
     /// NO composing-text cell. `candidate[0]` is the engine ranker top and
-    /// Tap-0 commits `candidate[0].display_text` via `commitContinuous(...)`
-    /// (clarification γ: canonical `display_text`, NOT a roman-with-spaces
-    /// visual form). The inline pre-edit (`markedText`) is the only
+    /// Tap routes through `commitContinuous(displayText:canonicalText:)`.
+    /// Per §10.3 clarification γ (REVISED, Bug 1): the **document** string is
+    /// the swap/TPS/both-scripts form `ActionHandler` derives from `c.roman`
+    /// / `c.hanji` via the legacy `parseRomanAndHanzi`+`formatOutputText`
+    /// helpers — NOT the canonical `display_text` and NOT the segmented
+    /// visual form. The inline pre-edit (`markedText`) is the only
     /// composing-text surface; Enter commits the pending tail via Item 3's
     /// `Phase::Continuous` `Intent::CommitRaw` arm.
     ///
@@ -117,20 +120,22 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// dual-line on HANT/MIXED and single-line on TAILO.
     ///
     /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal
-    /// strings) plus `displayText` (engine-supplied raw value = `hanji ??
-    /// roman` per `record_to_candidate`) so
+    /// strings) plus `displayText` (engine-supplied canonical value = `hanji
+    /// ?? roman` per `record_to_candidate`) so
     /// `ActionHandler.handleSuggestionSelection` can route the tap to
     /// `composingManager.commitContinuous(...)` with the engine byte offsets
-    /// AND the canonical commit string. `suggestion.text` (= roman) may
-    /// diverge from `additionalInfo["displayText"]` (= hanji ?? roman) on
-    /// HANT/MIXED — Tap-0 must commit the sidechannel value, not the visual
-    /// roman form (clarification γ). All three keys are strict-required at
-    /// the consumer; a missing sidechannel drops the tap (Item 4 fork F2=A —
-    /// no `?? suggestion.text` fallback that would commit the visual roman
-    /// form). The sidechannel also defends against TPS layout's
-    /// `CandidateCellHelper.suggestionToHandle` rewriting `suggestion.text`
-    /// via `tlNumericToTPS` when the subtitle is nil/empty (Codex PR #257
-    /// r3214912627). NextWord uses the same `displayText` key convention.
+    /// AND the canonical key. Post-Bug-1 the `displayText` sidechannel is the
+    /// **canonical key** forwarded as `commitContinuous(canonicalText:)` for
+    /// `user_frequency.db` + NextWord (mode-independent learning, decision
+    /// b) — it is no longer the document commit string. All three keys are
+    /// strict-required at the consumer; a missing sidechannel drops the tap
+    /// (Item 4 fork F2=A). The sidechannel also still defends against TPS
+    /// layout's `CandidateCellHelper.suggestionToHandle` rewriting
+    /// `suggestion.text` via `tlNumericToTPS` when the subtitle is nil/empty
+    /// (Codex PR #257 r3214912627): `parseRomanAndHanzi` consumes the
+    /// (possibly pre-swapped/rewritten) `Suggestion` exactly as the legacy
+    /// branch does, so document parity holds while the canonical key stays
+    /// clean on the sidechannel.
     ///
     /// `subtitle` collapses present-empty `c.hanji == ""` to `nil` so a wire
     /// defect (producer emitted `Some("")` instead of `None` for a TAILO
@@ -141,7 +146,8 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.
     // 中文: text/title 用 c.roman、subtitle 用 c.hanji,候選列 dual-line render;
-    // 中文: displayText sidechannel 嚴格必須(commit 走它,不走 visual 化的 roman)。
+    // 中文: Bug 1 後 displayText sidechannel = canonical key,走 canonicalText
+    // 中文: (freq/NextWord);文件 commit 字串由 roman/hanji 經 legacy formatter 產生。
     internal func buildContinuousSuggestions(
         from candidates: [RustEngineBridge.ContinuousCandidate],
     ) -> [Autocomplete.Suggestion] {

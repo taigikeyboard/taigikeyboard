@@ -1042,6 +1042,7 @@ object RustEngineBridge {
     @JvmStatic
     fun composingCommitContinuous(
         displayText: String,
+        canonicalText: String,
         consumedBytes: Int,
         syllableCount: Int,
         mode: NormalizeMode,
@@ -1051,6 +1052,7 @@ object RustEngineBridge {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
             .newBuilder()
             .setDisplayText(displayText)
+            .setCanonicalText(canonicalText)
             .setConsumedBytes(consumedBytes)
             .setSyllableCount(syllableCount)
             .build()

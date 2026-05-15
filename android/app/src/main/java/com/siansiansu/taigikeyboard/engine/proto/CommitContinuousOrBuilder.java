@@ -10,11 +10,25 @@ public interface CommitContinuousOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @return The displayText.
    */
   java.lang.String getDisplayText();
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @return The bytes for displayText.
    */
@@ -32,4 +46,36 @@ public interface CommitContinuousOrBuilder extends
    * @return The syllableCount.
    */
   int getSyllableCount();
+
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @return The canonicalText.
+   */
+  java.lang.String getCanonicalText();
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @return The bytes for canonicalText.
+   */
+  com.google.protobuf.ByteString
+      getCanonicalTextBytes();
 }

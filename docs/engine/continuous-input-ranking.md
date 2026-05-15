@@ -486,8 +486,8 @@ Three commit paths, three contracts (refined per Codex clarifications β + γ, 2
 | Trigger | Commits to host app |
 |---|---|
 | **Enter** | The **`rawInput` value currently displayed in the composing buffer** — i.e., the derived display of the pending raw tail (`Phase::raw_input` output: hyphen-delimited chunks normalized and tone-marked where convertible, no engine syllabification, no word spaces). After mid-commit has nailed earlier segments, only the remaining pending tail is committed; already-nailed text is unaffected. |
-| **Tap candidate index 0** | `candidate[0].display_text` — the canonical commit string (`hanji.unwrap_or(roman)` per §4 of [`continuous-candidate-display.md`](continuous-candidate-display.md)). **Not** the roman-with-spaces visual form rendered in §10.2. |
-| **Tap candidate index N (N ≥ 1)** | `candidate[N].display_text` — existing ranker contract, unchanged. |
+| **Tap candidate index 0** | The **swap/TPS/both-scripts-formatted output** derived from the candidate's `roman` / `hanji` and the active display settings — i.e. exactly what the legacy lexicon path commits for the same candidate. **Not** the roman-with-spaces visual form rendered in §10.2, and **not** unconditionally the canonical `display_text`. The canonical key (`hanji.unwrap_or(roman)`) is forwarded separately as `CommitContinuous.canonical_text` for frequency / NextWord. (v3.5.8 Phase 9 Bug 1, clarification γ.) |
+| **Tap candidate index N (N ≥ 1)** | Same as Tap-0 — swap-aware document output; canonical key carried on `canonical_text`. Matches the legacy ranker/lexicon contract. |
 
 **Clarification β — `rawInput` is pending-tail display form, not literal keystrokes**
 
@@ -495,21 +495,31 @@ After segments are nailed via `commit_continuous`, the engine's `Phase::Continuo
 
 Pressing Enter at that moment commits only the pending tail, mirroring what the user sees inline. The existing platform `CommitRaw` path (which routes through `SelectSuggestion(raw)` and commits literal keystrokes) is a **real implementation gap** vs. §10; the gap is tracked as Item 3 in the v3.5.8 Phase 9 fix plan (Codex co-review 2026-05-13).
 
-**Clarification γ — Tap-0 commits `display_text`, not the segmented visual form**
+**Clarification γ — Tap commits the swap-aware document string; `display_text` is the canonical key (v3.5.8 Phase 9 Bug 1, REVISED)**
 
-The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. The committed string is `display_text` (= `hanji.unwrap_or(roman)`), identical to what the lexicon path commits. This preserves:
+> The original γ (2026-05-13) said Tap-0 commits the canonical `display_text`
+> verbatim. v3.5.8 dogfood proved that wrong: in swapped / TPS / both-scripts
+> modes the continuous tap then committed hanji while the legacy lexicon path
+> committed roman (or the bracket form) for the same candidate — a
+> user-visible divergence. γ is **rewritten** (not carved out): the prior
+> sentence is false under the accepted behavior.
 
-- Frequency-recording keys (per [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt))
+The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. On tap, the platform formats the candidate's `roman` / `hanji` through the **same swap/TPS/both-scripts formatter the legacy lexicon path uses** and commits that string to the document — so Continuous and lexicon commits are identical for the same candidate under the same settings. The canonical key (`hanji.unwrap_or(roman)`) is sent **separately** on `CommitContinuous.canonical_text`; the engine writes the formatted string to the document and to `CommittedSegment.display_text` (so backspace/pop delete-length stays aligned with the document), and uses `canonical_text` for the NextWord effects. This preserves:
+
+- Frequency-recording keys (platform records on the canonical sidechannel — `ActionHandler.handleSuggestionSelection` continuous branch / `CandidateClickHandler.handleContinuousCandidateClick`)
+- NextWord association keys (engine routes `canonical_text` to `NextWordWordSelected` / `NextWordUpdateLastSelectedWord`, including the backspace-pop correction)
 - Canonical word boundary of dictionary vocabulary tokens
-- Wire-level identity between Continuous-path and lexicon-path commits
+- Mode-independent learning: frequency / NextWord do not fork by display mode
+
+Empty `canonical_text` (legacy callers, the other 12 composing methods) falls back to `display_text` — pre-Bug-1 behavior, unchanged.
 
 Design intent:
 
 - Enter preserves "what you see is what you typed" — on partial commits, commits only the pending tail (clarification β).
-- Tap-0 = explicit user choice to accept the smart segmentation; commits the canonical dictionary string, **not** a UI-visual rewrite (clarification γ).
-- Tap-N (N ≥ 1) = existing lexicon-path semantics; unchanged.
+- Tap = explicit user choice to accept the smart segmentation; commits the **swap-aware document form** of the canonical dictionary token (clarification γ, revised). Document fidelity and learning-key canonicality are decoupled via `canonical_text`.
+- Tap-N (N ≥ 1) = same contract as Tap-0; matches legacy lexicon semantics.
 
-**Commit side effects (Codex B1 item 4, 2026-05-13)** — frequency recording (`user_frequency.db`) and NextWord triggering are **payload-orthogonal**. This section pins which string each path commits; whether each path also fires `user_frequency.db` write and `NextWordWordSelected` is decided in fix-plan item 3 (Enter implementation). Default proposal: Enter and Tap-0 both record frequency on `display_text` and trigger NextWord — same contract as a regular candidate commit today. Tap-N already does this. Final wording lands in §10.3 when fix-plan item 3 is implemented.
+**Commit side effects (Codex B1 item 4, 2026-05-13; Bug 1 2026-05-15)** — frequency recording (`user_frequency.db`) and NextWord triggering are **payload-orthogonal** to the document string and key off `canonical_text` (canonical), not the formatted document string. Enter and Tap both record frequency on the canonical key and trigger NextWord — same contract as a regular lexicon candidate commit. Tap-N already does this.
 
 ### 10.4 Data-Flow Invariant
 
@@ -531,7 +541,7 @@ Invariants (all five edge cases in §10.7 fall out from these — no per-case br
 | **I1** | Composing-buffer content = `rawInput`, where `rawInput` = **derived display of `Phase::Continuous.raw`** via `Phase::raw_input` (NFC + tone-mark conversion across user-typed `-` boundaries; unhyphenated input passes through verbatim; no engine syllabification). `Phase::Continuous.raw` is the bytes after the last nailed commit, **not** the original full keystroke history. Backspace, keystroke append, and mid-commit all mutate `Phase::Continuous.raw`; I1 re-establishes from the new tail. |
 | **I2** | `candidate[0]` display content = ranker top output rendered with segmentation. |
 | **I3** | Any mutation of input (insert / backspace) re-runs syllabifier → segmenter → ranker; I1 and I2 re-establish automatically. |
-| **I4** | Platform performs no re-ranking, no display rewriting, no exact-match injection — preserves G3 (§7.1). |
+| **I4** | Platform performs no re-ranking, no candidate-order rewriting, no exact-match injection — preserves G3 (§7.1). Output-mode formatting at *commit time* (swap / TPS / both-scripts → document string, with the canonical key carried on `canonical_text`) is **not** a violation: it does not reorder or re-rank candidates, only formats the chosen one for the document exactly as the legacy lexicon path does (clarification γ, Bug 1). |
 
 ### 10.5 Mode Gating
 
@@ -550,10 +560,12 @@ The split is bound to the engine-side dispatch branch in [`engine/composing/src/
 | Slot-0 render | `CandidateButtonView.swift` — **remove dashed border** | `CandidatesView` / `CandidateButtonView.kt` — **remove `composingDashedBorder`** |
 | Enter commit dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` (or IME keyboard view) |
 | Tap-0 / Tap-N dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
+| Swap/TPS/both-scripts commit formatting (γ, Bug 1) | `parseRomanAndHanzi` + `formatOutputText` (shared with legacy branch) → `commitContinuous(displayText:canonicalText:)` | legacy `bracketRoman` + when-expr → `commitContinuous(displayText, canonicalText, …)` | 
+| Canonical key wire | `CommitContinuous.canonical_text` (= sidechannel `displayText`) | `CommitContinuous.canonical_text` (= `TaigiWord.MetadataKeys.DISPLAY_TEXT`) |
 
 `rules/cross-platform-alignment.md` §3a applies: I1–I4 must hold identically on both platforms. Any divergence requires an explicit note per `rules/cross-platform-alignment.md`.
 
-**Engine-side coupling — separate decision**: the `subtitle=nil` symptom in the dogfood finding is a `CandidateMessage` proto / builder issue (continuous path does not currently emit roman + hanji as distinct fields). Fixing it cleanly may want a proto enhancement (cf. §9 Q6 `mode` field). That fix is **related but out of scope for this section's normative rule** — §10.2/10.3/10.4 hold regardless of whether the proto carries one field or two. The proto question is pending Codex consult.
+**Engine-side coupling — resolved**: the `subtitle=nil` symptom was closed by fix-plan Item 5 (`CandidateMessage` now emits `roman` + optional `hanji` as distinct fields) and Item 6 (dual-line render). v3.5.8 Phase 9 Bug 1 then added `CommitContinuous.canonical_text` so the document string (swap-aware) and the canonical freq/NextWord key are decoupled on the wire. §10.2/10.3/10.4 hold under the two-field shape.
 
 ### 10.7 Edge Cases (fall out from §10.4 invariants)
 

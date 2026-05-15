@@ -101,6 +101,7 @@ mod tests {
             raw: "li2".to_string(),
             committed: vec![CommittedSegment {
                 display_text: "紙".to_string(),
+                canonical_text: "紙".to_string(),
                 raw_text: "tsua".to_string(),
                 raw_span: (0, 4),
                 syllable_count: 1,
@@ -115,6 +116,7 @@ mod tests {
             raw: String::new(),
             committed: vec![CommittedSegment {
                 display_text: "紙".to_string(),
+                canonical_text: "紙".to_string(),
                 raw_text: "tsua".to_string(),
                 raw_span: (0, 4),
                 syllable_count: 1,

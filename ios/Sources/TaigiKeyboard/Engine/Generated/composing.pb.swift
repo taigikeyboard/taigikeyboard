@@ -533,11 +533,24 @@ public struct Taigi_Engine_CommitContinuous: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+  /// swap/TPS/both-scripts-formatted output the platform tap handler
+  /// produces (mirrors the legacy lexicon-path formatter), NOT the
+  /// canonical dictionary key.
   public var displayText: String = String()
 
   public var consumedBytes: UInt32 = 0
 
   public var syllableCount: UInt32 = 0
+
+  /// v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+  /// (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+  /// association so learning stays mode-independent. Wire-absent / empty
+  /// (legacy callers, the other 12 methods) decodes as "" → engine falls
+  /// back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+  /// (not `optional`): the empty-default IS the fallback signal, no
+  /// presence distinction needed.
+  public var canonicalText: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1668,7 +1681,7 @@ extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitContinuous"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1679,6 +1692,7 @@ extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._M
       case 1: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.consumedBytes) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.canonicalText) }()
       default: break
       }
     }
@@ -1694,6 +1708,9 @@ extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._M
     if self.syllableCount != 0 {
       try visitor.visitSingularUInt32Field(value: self.syllableCount, fieldNumber: 3)
     }
+    if !self.canonicalText.isEmpty {
+      try visitor.visitSingularStringField(value: self.canonicalText, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1701,6 +1718,7 @@ extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._M
     if lhs.displayText != rhs.displayText {return false}
     if lhs.consumedBytes != rhs.consumedBytes {return false}
     if lhs.syllableCount != rhs.syllableCount {return false}
+    if lhs.canonicalText != rhs.canonicalText {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

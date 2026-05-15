@@ -18,28 +18,30 @@ extension ActionHandler {
             return
         }
 
-        // v3.5.8 Phase 9 Item 4 — Continuous-input commit branch.
-        // Per `docs/engine/continuous-input-ranking.md` §10.3 (Tap-0/Tap-N
-        // commit contract + clarification γ): both slot-0 and slot-N taps
-        // commit `candidate[N].display_text` — the canonical dictionary
-        // string (`hanji.unwrap_or(roman)`), NOT the visual roman form that
-        // Item 6 renders in the cell title. The sidechannel `displayText` is
-        // the wire to the canonical form; `suggestion.text` carries the
-        // post-Item-6 visual roman and may be further view-rewritten (TPS
-        // layout via `CandidateCellHelper.suggestionToHandle`), so it must
-        // never be used as the commit string.
+        // v3.5.8 Phase 9 Item 4 + Bug 1 — Continuous-input commit branch.
+        // Per `docs/engine/continuous-input-ranking.md` §10.3 clarification γ
+        // (REVISED, Bug 1): the tap commits the **swap/TPS/both-scripts-
+        // formatted document string** — formatted from the candidate's
+        // roman/hanji by the SAME `parseRomanAndHanzi` + `formatOutputText`
+        // helpers the legacy lexicon branch uses, so Continuous and lexicon
+        // commits are identical for the same candidate under the same
+        // settings. The sidechannel `displayText` (= engine canonical
+        // `hanji ?? roman`) is NOT the document string anymore; it is
+        // forwarded as `commitContinuous(canonicalText:)` so the engine keys
+        // `user_frequency.db` + NextWord on the canonical token regardless of
+        // display mode (user decision b).
         //
         // Strict-required keys (Item 4 fork F2=A): `consumedBytes`,
         // `syllableCount`, and `displayText` all come from
         // `AutocompleteService.buildContinuousSuggestions`. Missing or
         // unparseable → drop the tap silently. Falling back to
         // `selectSuggestion(text:)` would lose `consumedBytes`, corrupting
-        // the engine's `Phase::Continuous { raw }` byte alignment; falling
-        // back to `suggestion.text` would γ-violate the commit contract.
+        // the engine's `Phase::Continuous { raw }` byte alignment.
         //
-        // Frequency recording / NextWord handshake happen via the engine
-        // effects on the mid/final commit
-        // (`engine/composing/src/transition.rs:649-674`).
+        // Frequency recording stays on the canonical sidechannel below;
+        // NextWord handshake fires via the engine effects (now keyed on
+        // `canonical_text`) on the mid/final commit
+        // (`engine/composing/src/transition.rs` `commit_continuous`).
         if suggestion.additionalInfo["isContinuous"] == "true" {
             guard let displayText = suggestion.additionalInfo["displayText"],
                   let consumedBytesStr = suggestion.additionalInfo["consumedBytes"],
@@ -65,13 +67,39 @@ extension ActionHandler {
             // 中文: 用 transition.effects 是否含 commitTextReplacingPreedit 取代
             // 中文: wasComposing→!nowComposing 推導,徹底關掉 generation mismatch silent
             // 中文: reset 造成的假 commit。Invariant: didFinalCommit => didCommit。
+            // v3.5.8 Phase 9 Bug 1 (Option A): the continuous tap must commit
+            // the SAME swap/TPS/both-scripts-formatted string the legacy
+            // lexicon path commits — reuse `parseRomanAndHanzi` +
+            // `formatOutputText` verbatim so parity is by construction
+            // (`parseRomanAndHanzi` already compensates for
+            // `CandidateCellHelper.suggestionToHandle`'s text↔subtitle
+            // pre-swap / TPS rewrite). The canonical sidechannel `displayText`
+            // (= engine `hanji ?? roman`) is forwarded as `canonicalText` so
+            // `user_frequency.db` + NextWord keys stay mode-independent
+            // (user decision b). Frequency recording below already keys on
+            // the canonical sidechannel and is unchanged.
+            let isTPSLayout = settings.keyboardLayoutType == .tps
+            let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
+            let (roman, hanzi) = parseRomanAndHanzi(
+                from: suggestion,
+                isNextWord: false,
+                effectiveSwapped: effectiveSwapped,
+            )
+            let docText = formatOutputText(
+                roman: roman,
+                hanzi: hanzi,
+                isTPSLayout: isTPSLayout,
+                effectiveSwapped: effectiveSwapped,
+            )
             logger.debug(
-                "[BUG3] tap-enter continuous displayLen=\(displayText.count) "
+                "[BUG3] tap-enter continuous docLen=\(docText.count) "
+                    + "canonicalLen=\(displayText.count) "
                     + "consumedBytes=\(consumedBytes) syll=\(syllableCount) "
                     + "docBefore=\(bug3Tail(keyboardContext.textDocumentProxy.documentContextBeforeInput))",
             )
             let (didCommit, didFinalCommit) = composingManager.commitContinuous(
-                displayText: displayText,
+                displayText: docText,
+                canonicalText: displayText,
                 consumedBytes: consumedBytes,
                 syllableCount: syllableCount,
             )
@@ -94,12 +122,15 @@ extension ActionHandler {
             // exits Continuous → Idle). Mid-commits keep composing more
             // syllables and must NOT insert a space.
             // 中文: 只有 final-commit 才補空白(整個 buffer 被消化、engine 退到 Idle)。
-            if didFinalCommit, settings.isAutoSpaceEnabled {
-                let isTPSLayout = settings.keyboardLayoutType == .tps
-                let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
-                if !effectiveSwapped || settings.isOutputBothScripts {
-                    keyboardContext.textDocumentProxy.insertText(" ")
-                }
+            // Reuses the branch-hoisted `effectiveSwapped`. Suffix check is on
+            // the actual committed document string (`docText`) so a trailing
+            // hyphen continuation suppresses the space — mirrors the legacy
+            // lexicon path (Codex post-impl: auto-space suffix check must use
+            // the document string, not the canonical key).
+            if didFinalCommit, settings.isAutoSpaceEnabled,
+               !effectiveSwapped || settings.isOutputBothScripts,
+               !docText.hasSuffix("-") {
+                keyboardContext.textDocumentProxy.insertText(" ")
             }
             return
         }

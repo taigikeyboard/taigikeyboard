@@ -32,10 +32,18 @@ public  final class CommitContinuous extends
     CommitContinuousOrBuilder {
   private CommitContinuous() {
     displayText_ = "";
+    canonicalText_ = "";
   }
   public static final int DISPLAY_TEXT_FIELD_NUMBER = 1;
   private java.lang.String displayText_;
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @return The displayText.
    */
@@ -44,6 +52,13 @@ public  final class CommitContinuous extends
     return displayText_;
   }
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @return The bytes for displayText.
    */
@@ -53,6 +68,13 @@ public  final class CommitContinuous extends
     return com.google.protobuf.ByteString.copyFromUtf8(displayText_);
   }
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @param value The displayText to set.
    */
@@ -63,6 +85,13 @@ public  final class CommitContinuous extends
     displayText_ = value;
   }
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    */
   private void clearDisplayText() {
@@ -70,6 +99,13 @@ public  final class CommitContinuous extends
     displayText_ = getDefaultInstance().getDisplayText();
   }
   /**
+   * <pre>
+   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+   * swap/TPS/both-scripts-formatted output the platform tap handler
+   * produces (mirrors the legacy lexicon-path formatter), NOT the
+   * canonical dictionary key.
+   * </pre>
+   *
    * <code>string display_text = 1;</code>
    * @param value The bytes for displayText to set.
    */
@@ -130,6 +166,103 @@ public  final class CommitContinuous extends
   private void clearSyllableCount() {
 
     syllableCount_ = 0;
+  }
+
+  public static final int CANONICAL_TEXT_FIELD_NUMBER = 4;
+  private java.lang.String canonicalText_;
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @return The canonicalText.
+   */
+  @java.lang.Override
+  public java.lang.String getCanonicalText() {
+    return canonicalText_;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @return The bytes for canonicalText.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getCanonicalTextBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(canonicalText_);
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @param value The canonicalText to set.
+   */
+  private void setCanonicalText(
+      java.lang.String value) {
+    java.lang.Class<?> valueClass = value.getClass();
+
+    canonicalText_ = value;
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   */
+  private void clearCanonicalText() {
+
+    canonicalText_ = getDefaultInstance().getCanonicalText();
+  }
+  /**
+   * <pre>
+   * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+   * association so learning stays mode-independent. Wire-absent / empty
+   * (legacy callers, the other 12 methods) decodes as "" → engine falls
+   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+   * (not `optional`): the empty-default IS the fallback signal, no
+   * presence distinction needed.
+   * </pre>
+   *
+   * <code>string canonical_text = 4;</code>
+   * @param value The bytes for canonicalText to set.
+   */
+  private void setCanonicalTextBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    canonicalText_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CommitContinuous parseFrom(
@@ -247,6 +380,13 @@ public  final class CommitContinuous extends
 
 
     /**
+     * <pre>
+     * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+     * swap/TPS/both-scripts-formatted output the platform tap handler
+     * produces (mirrors the legacy lexicon-path formatter), NOT the
+     * canonical dictionary key.
+     * </pre>
+     *
      * <code>string display_text = 1;</code>
      * @return The displayText.
      */
@@ -255,6 +395,13 @@ public  final class CommitContinuous extends
       return instance.getDisplayText();
     }
     /**
+     * <pre>
+     * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+     * swap/TPS/both-scripts-formatted output the platform tap handler
+     * produces (mirrors the legacy lexicon-path formatter), NOT the
+     * canonical dictionary key.
+     * </pre>
+     *
      * <code>string display_text = 1;</code>
      * @return The bytes for displayText.
      */
@@ -264,6 +411,13 @@ public  final class CommitContinuous extends
       return instance.getDisplayTextBytes();
     }
     /**
+     * <pre>
+     * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+     * swap/TPS/both-scripts-formatted output the platform tap handler
+     * produces (mirrors the legacy lexicon-path formatter), NOT the
+     * canonical dictionary key.
+     * </pre>
+     *
      * <code>string display_text = 1;</code>
      * @param value The displayText to set.
      * @return This builder for chaining.
@@ -275,6 +429,13 @@ public  final class CommitContinuous extends
       return this;
     }
     /**
+     * <pre>
+     * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+     * swap/TPS/both-scripts-formatted output the platform tap handler
+     * produces (mirrors the legacy lexicon-path formatter), NOT the
+     * canonical dictionary key.
+     * </pre>
+     *
      * <code>string display_text = 1;</code>
      * @return This builder for chaining.
      */
@@ -284,6 +445,13 @@ public  final class CommitContinuous extends
       return this;
     }
     /**
+     * <pre>
+     * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+     * swap/TPS/both-scripts-formatted output the platform tap handler
+     * produces (mirrors the legacy lexicon-path formatter), NOT the
+     * canonical dictionary key.
+     * </pre>
+     *
      * <code>string display_text = 1;</code>
      * @param value The bytes for displayText to set.
      * @return This builder for chaining.
@@ -351,6 +519,105 @@ public  final class CommitContinuous extends
       return this;
     }
 
+    /**
+     * <pre>
+     * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+     * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+     * association so learning stays mode-independent. Wire-absent / empty
+     * (legacy callers, the other 12 methods) decodes as "" → engine falls
+     * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+     * (not `optional`): the empty-default IS the fallback signal, no
+     * presence distinction needed.
+     * </pre>
+     *
+     * <code>string canonical_text = 4;</code>
+     * @return The canonicalText.
+     */
+    @java.lang.Override
+    public java.lang.String getCanonicalText() {
+      return instance.getCanonicalText();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+     * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+     * association so learning stays mode-independent. Wire-absent / empty
+     * (legacy callers, the other 12 methods) decodes as "" → engine falls
+     * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+     * (not `optional`): the empty-default IS the fallback signal, no
+     * presence distinction needed.
+     * </pre>
+     *
+     * <code>string canonical_text = 4;</code>
+     * @return The bytes for canonicalText.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getCanonicalTextBytes() {
+      return instance.getCanonicalTextBytes();
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+     * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+     * association so learning stays mode-independent. Wire-absent / empty
+     * (legacy callers, the other 12 methods) decodes as "" → engine falls
+     * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+     * (not `optional`): the empty-default IS the fallback signal, no
+     * presence distinction needed.
+     * </pre>
+     *
+     * <code>string canonical_text = 4;</code>
+     * @param value The canonicalText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalText(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setCanonicalText(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+     * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+     * association so learning stays mode-independent. Wire-absent / empty
+     * (legacy callers, the other 12 methods) decodes as "" → engine falls
+     * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+     * (not `optional`): the empty-default IS the fallback signal, no
+     * presence distinction needed.
+     * </pre>
+     *
+     * <code>string canonical_text = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearCanonicalText() {
+      copyOnWrite();
+      instance.clearCanonicalText();
+      return this;
+    }
+    /**
+     * <pre>
+     * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+     * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+     * association so learning stays mode-independent. Wire-absent / empty
+     * (legacy callers, the other 12 methods) decodes as "" → engine falls
+     * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+     * (not `optional`): the empty-default IS the fallback signal, no
+     * presence distinction needed.
+     * </pre>
+     *
+     * <code>string canonical_text = 4;</code>
+     * @param value The bytes for canonicalText to set.
+     * @return This builder for chaining.
+     */
+    public Builder setCanonicalTextBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setCanonicalTextBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitContinuous)
   }
   @java.lang.Override
@@ -370,10 +637,11 @@ public  final class CommitContinuous extends
             "displayText_",
             "consumedBytes_",
             "syllableCount_",
+            "canonicalText_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

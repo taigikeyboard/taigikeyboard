@@ -89,9 +89,17 @@ pub(crate) fn apply(
         Intent::FetchAtPos { .. } => snapshot(state, config),
         Intent::CommitContinuous {
             display_text,
+            canonical_text,
             consumed_bytes,
             syllable_count,
-        } => commit_continuous(state, display_text, consumed_bytes, syllable_count, config),
+        } => commit_continuous(
+            state,
+            display_text,
+            canonical_text,
+            consumed_bytes,
+            syllable_count,
+            config,
+        ),
         Intent::ResetContinuous => reset_continuous(state, config),
     }
 }
@@ -284,9 +292,14 @@ fn delete_backward_continuous(
     // Codex post-impl finding #1: roll the popped segment back out of
     // nextword's `last_selected_word` so the next final commit can't record
     // a false association from a word no longer in the document.
+    // v3.5.8 Phase 9 Bug 1 (Option A): NextWord last-selected correction must
+    // use the canonical key, not the (possibly swap-formatted) document
+    // string — keeps association learning mode-independent (decision b).
+    // `restore_chars` above stays on `display_text` because the document
+    // holds the formatted string and that is what we delete-backward.
     let nextword_correction = match new_committed.last() {
         Some(prev) => {
-            next_word_update_last_selected_word(prev.display_text.clone(), prev.raw_text.clone())
+            next_word_update_last_selected_word(prev.canonical_text.clone(), prev.raw_text.clone())
         }
         None => next_word_clear_for_new_composing(),
     };
@@ -663,9 +676,18 @@ fn commit_preedit_then_insert_external_under_continuous(
 /// `consumed_bytes`) collapse to `noop` rather than panicking.
 // 中文: Continuous 下的 commit;consumed_bytes >= pending.len() 為 final commit。
 // 中文: 邊界錯誤 (超界 / 非 UTF-8 邊界) 一律降為 noop,不 panic。
+// v3.5.8 Phase 9 Bug 1 (Option A): `display_text` is the swap/TPS/both-
+// scripts-formatted DOCUMENT string (what the platform tap handler produced,
+// mirroring the legacy lexicon formatter). `canonical_text` is the canonical
+// dictionary key (`hanji.unwrap_or(roman)`) used for NextWord association so
+// learning stays mode-independent (user decision b). Empty `canonical_text`
+// (legacy callers) falls back to `display_text` — pre-Bug-1 behavior. The
+// document write, `CommittedSegment.display_text`, and backspace/pop delete
+// length all use `display_text`; only the NextWord effects use `canonical`.
 fn commit_continuous(
     state: &mut EngineState,
     display_text: String,
+    canonical_text: String,
     consumed_bytes: usize,
     syllable_count: u8,
     config: &AppConfig,
@@ -680,6 +702,11 @@ fn commit_continuous(
     {
         return noop(state, config);
     }
+    let canonical = if canonical_text.is_empty() {
+        display_text.clone()
+    } else {
+        canonical_text
+    };
     let pending = raw.clone();
     let mut new_committed = committed.clone();
     let raw_text = pending[..consumed_bytes].to_string();
@@ -688,6 +715,7 @@ fn commit_continuous(
     let new_pending = pending[consumed_bytes..].to_string();
     let segment = CommittedSegment {
         display_text: display_text.clone(),
+        canonical_text: canonical.clone(),
         raw_text: raw_text.clone(),
         raw_span,
         syllable_count,
@@ -702,7 +730,7 @@ fn commit_continuous(
                 commit_text_replacing_preedit(display_text.clone()),
                 reset_autocomplete(),
                 reset_autocomplete_context(),
-                next_word_word_selected(display_text, raw_text, true),
+                next_word_word_selected(canonical, raw_text, true),
             ],
         );
     }
@@ -722,7 +750,7 @@ fn commit_continuous(
         effect: vec![
             commit_text_replacing_preedit(display_text.clone()),
             update_preedit(pending_display),
-            next_word_update_last_selected_word(display_text, raw_text),
+            next_word_update_last_selected_word(canonical, raw_text),
             perform_autocomplete(),
         ],
         selected_candidate_index: 0,

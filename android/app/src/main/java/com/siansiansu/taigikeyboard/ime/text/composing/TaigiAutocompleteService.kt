@@ -70,8 +70,9 @@ class TaigiAutocompleteService(
  * Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
  * slot-0 model) + §10.3 commit contract, Continuous mode has NO
  * composing-text cell at slot 0. `candidate[0]` is the engine ranker top
- * and tap-0 commits `candidate[0].display_text` via `commitContinuous`
- * (clarification γ). The inline pre-edit (`setComposingText`) is the only
+ * and the tap commits the swap/TPS/both-scripts-formatted document string
+ * built from `roman` / `hanzi` by the legacy formatter (clarification γ,
+ * REVISED — Bug 1). The inline pre-edit (`setComposingText`) is the only
  * composing-text surface; Enter commits the pending tail via Item 3.
  *
  * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (TL
@@ -82,10 +83,13 @@ class TaigiAutocompleteService(
  *
  * `TaigiWord.roman` (= TL romanization) may diverge from
  * `additionalInfo[DISPLAY_TEXT]` (= `hanji ?? roman` per
- * `record_to_candidate`) on HANT/MIXED candidates. Tap-0 routes through
- * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
- * which commits the sidechannel value (clarification γ — canonical commit
- * string, NOT visual roman form).
+ * `record_to_candidate`) on HANT/MIXED candidates. The tap routes through
+ * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler],
+ * which formats the document string from `roman`/`hanzi` (legacy parity)
+ * and forwards the `DISPLAY_TEXT` sidechannel as
+ * `commitContinuous(canonicalText = …)` — the canonical key for
+ * `user_frequency.db` + NextWord, NOT the document commit string
+ * (clarification γ, REVISED — Bug 1).
  *
  * `hanzi` collapses present-empty `candidate.hanji == ""` to `null` via
  * `takeIf { it.isNotEmpty() }` so a wire defect (producer emitted
@@ -101,7 +105,8 @@ class TaigiAutocompleteService(
  * collaborators.
  */
 // 中文: Item 6 — roman 用 c.roman、hanzi 用 c.hanji,候選列 dual-line render;
-// 中文: DISPLAY_TEXT sidechannel 嚴格必須(commit 走它,不走 visual 化的 roman)。
+// 中文: Bug 1 後 DISPLAY_TEXT sidechannel = canonical key,走 canonicalText
+// 中文: (freq/NextWord);文件 commit 字串由 roman/hanzi 經 legacy formatter 產生。
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
 ): List<TaigiWord> =

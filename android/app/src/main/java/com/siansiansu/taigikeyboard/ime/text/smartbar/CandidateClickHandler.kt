@@ -299,11 +299,16 @@ class CandidateClickHandler(
     /**
      * Continuous-input candidate tap (slot 0 and slot N, identical contract).
      *
-     * Per `docs/engine/continuous-input-ranking.md` §10.3 + clarification γ:
-     * commits `candidate[N].display_text` — the canonical dictionary string
-     * (`hanji.unwrap_or(roman)`) — NOT the visual roman form that Item 6
-     * renders in the cell title. Sidechannel `DISPLAY_TEXT` is the wire to
-     * that canonical form.
+     * Per `docs/engine/continuous-input-ranking.md` §10.3 clarification γ
+     * (REVISED, Bug 1): commits the **swap/TPS/both-scripts-formatted
+     * document string** built from the raw [TaigiWord.roman] / [TaigiWord.hanzi]
+     * via the same `bracketRoman` + when-expr the legacy lexicon path uses —
+     * so Continuous and lexicon commits match for the same candidate under
+     * the same settings. The `DISPLAY_TEXT` sidechannel (engine canonical
+     * `hanji.unwrap_or(roman)`) is NOT the document string; it is forwarded
+     * as `commitContinuous(canonicalText = …)` so `user_frequency.db` +
+     * NextWord key on the canonical token regardless of display mode
+     * (decision b).
      *
      * Decodes the [TaigiWord.additionalInfo] sidechannel, dispatches
      * `commitContinuous`, and gates per-segment frequency learning +
@@ -314,10 +319,11 @@ class CandidateClickHandler(
      *
      * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are all
      * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
-     * tap. No fallback to [TaigiWord.roman] — after Item 6, `roman` carries
-     * the visual TL form and γ would be violated. No fallback to
-     * `selectSuggestion(text)` either — would lose `consumedBytes` and
-     * corrupt `Phase::Continuous { raw }` byte alignment.
+     * tap. The document string IS derived from [TaigiWord.roman] /
+     * [TaigiWord.hanzi] (that is the legacy-parity contract); only the
+     * canonical key rides the sidechannel. No fallback to
+     * `selectSuggestion(text)` — would lose `consumedBytes` and corrupt
+     * `Phase::Continuous { raw }` byte alignment.
      */
     private fun handleContinuousCandidateClick(
         selectedWord: TaigiWord,
@@ -338,16 +344,55 @@ class CandidateClickHandler(
             return
         }
 
+        // v3.5.8 Phase 9 Bug 1 (Option A): commit the SAME swap/TPS/both-
+        // scripts-formatted string the legacy lexicon path commits (mirror
+        // of handleCandidateClick's bracketRoman + when-expr, minus the
+        // english arm — continuous candidates are never english). Built from
+        // the RAW TaigiWord.roman/.hanzi (Android does not view-rewrite the
+        // word before click handling, unlike iOS Suggestion). The canonical
+        // DISPLAY_TEXT sidechannel is forwarded as canonicalText so
+        // user_frequency.db + NextWord keys stay mode-independent (decision b).
+        val cachedIsTranslateSwapped = getIsTranslateSwapped()
+        val cachedOutputBothScripts = getOutputBothScripts()
+        val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
+        val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
+        val bracketRoman =
+            if (isTPSLayout) {
+                RustEngineBridge.tlDisplayToTps(selectedWord.roman, prefs.tpsOrMapsToER)
+            } else {
+                selectedWord.roman
+            }
+        val textToCommit =
+            when {
+                cachedOutputBothScripts && !selectedWord.hanzi.isNullOrEmpty() -> {
+                    if (effectiveSwapped) {
+                        "${selectedWord.hanzi} ($bracketRoman)"
+                    } else {
+                        "$bracketRoman (${selectedWord.hanzi})"
+                    }
+                }
+
+                effectiveSwapped && !selectedWord.hanzi.isNullOrEmpty() -> {
+                    selectedWord.hanzi!!
+                }
+
+                else -> {
+                    selectedWord.roman
+                }
+            }
+
         if (BuildConfig.DEBUG) {
             Log.d(
                 TAG,
-                "[BUG3] tap-enter continuous displayLen=${displayText.length} " +
+                "[BUG3] tap-enter continuous docLen=${textToCommit.length} " +
+                    "canonicalLen=${displayText.length} " +
                     "consumedBytes=$consumedBytes syll=$syllableCount docBefore=${ic.bug3Tail()}",
             )
         }
 
         val result = composingManager.commitContinuous(
-            displayText = displayText,
+            displayText = textToCommit,
+            canonicalText = displayText,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             ic = ic,
@@ -396,11 +441,11 @@ class CandidateClickHandler(
         // Mid-commits leave the buffer non-empty so a stray space would split
         // the word mid-syllable.
         if (result.didFinalCommit) {
-            val cachedIsTranslateSwapped = getIsTranslateSwapped()
-            val cachedOutputBothScripts = getOutputBothScripts()
-            val isTPSLayout = prefs.keyboardLayoutType == "tps" || prefs.inputMode == "tps"
-            val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
-            appendAutoSpaceIfApplicable(ic, displayText, effectiveSwapped, cachedOutputBothScripts)
+            // Reuse the hoisted swap/output flags. Suffix check runs on the
+            // actual committed document string (`textToCommit`), not the
+            // canonical key (Codex post-impl: auto-space suffix check must use
+            // the document string).
+            appendAutoSpaceIfApplicable(ic, textToCommit, effectiveSwapped, cachedOutputBothScripts)
         }
     }
 

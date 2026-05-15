@@ -642,18 +642,24 @@ class ComposingManager(
      * ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
      * and exits Continuous.
      */
+    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
+    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
+    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
+    // routed to NextWord so association learning stays mode-independent.
     fun commitContinuous(
         displayText: String,
+        canonicalText: String,
         consumedBytes: Int,
         syllableCount: Int,
         ic: InputConnection,
     ): RustEngineBridge.CommitContinuousResult {
         logger.tdebug(TAG) {
-            "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
+            "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} canonicalLen=${canonicalText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
         }
         val settings = settingsProvider.current
         val transition = RustEngineBridge.composingCommitContinuous(
             displayText = displayText,
+            canonicalText = canonicalText,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             mode = resolveMode(settings.inputMode),

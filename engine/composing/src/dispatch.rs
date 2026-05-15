@@ -73,6 +73,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
+            canonical_text: m.canonical_text,
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },

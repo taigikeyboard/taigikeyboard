@@ -119,6 +119,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -164,6 +165,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -172,6 +174,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "仔".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -194,6 +197,7 @@ fn final_commit_exits_to_idle_emits_word_selected() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -228,6 +232,7 @@ fn commit_continuous_out_of_range_is_noop() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "X".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 99,
             syllable_count: 1,
         },
@@ -255,6 +260,7 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "X".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 1, // mid-codepoint
             syllable_count: 1,
         },
@@ -269,6 +275,7 @@ fn commit_continuous_zero_bytes_is_noop() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: "X".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 0,
             syllable_count: 1,
         },
@@ -283,6 +290,7 @@ fn commit_continuous_empty_display_is_noop() {
     let resp = e.apply(
         Intent::CommitContinuous {
             display_text: String::new(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -299,6 +307,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -348,6 +357,7 @@ fn append_under_continuous_extends_pending_only() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -359,6 +369,7 @@ fn append_under_continuous_extends_pending_only() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -397,6 +408,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -436,6 +448,7 @@ fn delete_backward_under_continuous_pops_committed_when_pending_empty() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -479,6 +492,7 @@ fn delete_backward_pop_with_remaining_committed_emits_nextword_update() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -487,6 +501,7 @@ fn delete_backward_pop_with_remaining_committed_emits_nextword_update() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "仔".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -531,6 +546,7 @@ fn delete_backward_pops_multi_char_display_emits_n_deletes() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠仔".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 4,
             syllable_count: 2,
         },
@@ -601,6 +617,7 @@ fn query_state_under_continuous_returns_pending_only_preedit() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "珠".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -707,6 +724,7 @@ fn commit_raw_under_continuous_after_mid_commit_only_commits_pending_tail() {
     e.apply(
         Intent::CommitContinuous {
             display_text: "紙".to_string(),
+            canonical_text: String::new(),
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -923,12 +941,141 @@ fn replace_last_to_empty_pending_no_committed_exits_to_idle() {
 fn committed_segment_public_fields_round_trip() {
     let seg = CommittedSegment {
         display_text: "珠仔".to_string(),
+        canonical_text: "珠仔".to_string(),
         raw_text: "tsua".to_string(),
         raw_span: (0, 4),
         syllable_count: 2,
     };
     assert_eq!(seg.display_text, "珠仔");
+    assert_eq!(seg.canonical_text, "珠仔");
     assert_eq!(seg.raw_text, "tsua");
     assert_eq!(seg.raw_span, (0, 4));
     assert_eq!(seg.syllable_count, 2);
+}
+
+// ---- v3.5.8 Phase 9 Bug 1 (Option A) — swap-aware document commit ----
+// `display_text` = swap/TPS/both-scripts DOCUMENT string; `canonical_text`
+// = canonical key for NextWord. Empty canonical → falls back to display
+// (legacy callers). These pin: document write + CommittedSegment.display_text
+// + backspace delete length use `display_text`; NextWord uses `canonical`.
+
+#[test]
+fn bug1_mid_commit_documents_display_but_nextword_uses_canonical() {
+    let mut e = engine_in_continuous("tsua");
+    let resp = e.apply(
+        Intent::CommitContinuous {
+            display_text: "tāi-uân".to_string(), // swapped roman → document
+            canonical_text: "臺灣".to_string(),  // canonical → NextWord/freq
+            consumed_bytes: 3,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "tāi-uân");
+    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[2].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.text, "臺灣");
+    assert_eq!(nw.roman, "tsu");
+
+    let Phase::Continuous { committed, .. } = e.snapshot_state().phase else {
+        panic!("still Continuous");
+    };
+    assert_eq!(committed[0].display_text, "tāi-uân");
+    assert_eq!(committed[0].canonical_text, "臺灣");
+}
+
+#[test]
+fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
+    let mut e = engine_in_continuous("tsu");
+    let resp = e.apply(
+        Intent::CommitContinuous {
+            display_text: "tāi-uân".to_string(),
+            canonical_text: "臺灣".to_string(),
+            consumed_bytes: 3,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(commit.text, "tāi-uân");
+    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.text, "臺灣");
+    assert!(nw.trigger_prediction);
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+#[test]
+fn bug1_backspace_pop_correction_uses_canonical_and_display_delete_len() {
+    // seg0 multi-char swapped display so the delete count proves it uses
+    // display_text length, while the NextWord correction proves canonical.
+    let mut e = engine_in_continuous("tsuagua");
+    e.apply(
+        Intent::CommitContinuous {
+            display_text: "tāi-uân".to_string(), // 7 chars
+            canonical_text: "臺灣".to_string(),
+            consumed_bytes: 3,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    e.apply(
+        Intent::CommitContinuous {
+            display_text: "gí".to_string(), // 2 chars
+            canonical_text: "語".to_string(),
+            consumed_bytes: 1,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    // Drain pending "gua" so the next backspace pops seg1 ("gí").
+    e.apply(Intent::DeleteBackward, &config_tl());
+    e.apply(Intent::DeleteBackward, &config_tl());
+    e.apply(Intent::DeleteBackward, &config_tl());
+
+    let resp = e.apply(Intent::DeleteBackward, &config_tl());
+    // seg1.display_text "gí" = 2 chars → 2 DeleteBackwardFromDocument.
+    assert_kinds(
+        &resp.effect,
+        [
+            "DeleteBackwardFromDocument",
+            "DeleteBackwardFromDocument",
+            "NextWordUpdateLastSelectedWord",
+            "UpdatePreedit",
+            "PerformAutocomplete",
+        ],
+    );
+    // Correction targets seg0 — canonical, not the swapped document string.
+    let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[2].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.text, "臺灣");
+    assert_eq!(nw.roman, "tsu");
+}
+
+#[test]
+fn bug1_empty_canonical_falls_back_to_display_text() {
+    // Backward-compat: legacy callers send no canonical_text → engine uses
+    // display_text for both document AND NextWord (pre-Bug-1 behavior).
+    let mut e = engine_in_continuous("tsu");
+    let resp = e.apply(
+        Intent::CommitContinuous {
+            display_text: "珠".to_string(),
+            canonical_text: String::new(),
+            consumed_bytes: 3,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
+        unreachable!();
+    };
+    assert_eq!(nw.text, "珠");
 }

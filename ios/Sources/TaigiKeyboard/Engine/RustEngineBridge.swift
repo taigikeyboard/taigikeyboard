@@ -844,6 +844,7 @@ public enum RustEngineBridge {
     // 中文: 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
     public static func composingCommitContinuous(
         displayText: String,
+        canonicalText: String,
         consumedBytes: UInt32,
         syllableCount: UInt32,
         mode: InputMode,
@@ -852,6 +853,7 @@ public enum RustEngineBridge {
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitContinuous()
         payload.displayText = displayText
+        payload.canonicalText = canonicalText
         payload.consumedBytes = consumedBytes
         payload.syllableCount = syllableCount
         return composingDispatch(

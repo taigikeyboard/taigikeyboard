@@ -69,8 +69,13 @@ impl Phase {
 // 中文: syllable_count 給 Phase 5 區分同 toneless key 不同音節數的候選。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommittedSegment {
-    // 中文: 上屏顯示文字 (e.g., "紙")。
+    // 中文: 上屏顯示文字 (e.g., "紙")。v3.5.8 Phase 9 Bug 1: 這是實際寫進文件的
+    // 中文: swap/TPS/both-scripts 格式化字串;backspace/pop 的刪除長度依它計算。
     pub display_text: String,
+    // 中文: 規範字典鍵 (`hanji.unwrap_or(roman)`)。v3.5.8 Phase 9 Bug 1 (Option A):
+    // 中文: backspace pop 時的 NextWord last-selected 修正用它,確保關聯學習
+    // 中文: 與顯示模式無關 (decision b)。非 swap 時等同 display_text。
+    pub canonical_text: String,
     // 中文: 對應消耗的原始輸入 (e.g., "tsua")。
     pub raw_text: String,
     // 中文: 在原 raw 輸入中的 byte 偏移 (start, end);用於 Phase 5 span-local 查詢。
@@ -189,6 +194,9 @@ pub enum Intent {
     // 中文: 連續輸入下挑選候選 segment;consumed_bytes >= pending.len() 為 final commit。
     CommitContinuous {
         display_text: String,
+        // v3.5.8 Phase 9 Bug 1 (Option A): canonical key for freq/NextWord.
+        // Empty → engine falls back to `display_text` (legacy callers).
+        canonical_text: String,
         consumed_bytes: usize,
         syllable_count: u8,
     },

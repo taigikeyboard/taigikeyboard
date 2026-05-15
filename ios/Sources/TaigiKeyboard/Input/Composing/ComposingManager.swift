@@ -428,18 +428,25 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     // 中文: 送出一個 Continuous 候選詞段;回傳 effect-backed (didCommit, didFinalCommit) 旗標,
     // 中文: 讓 caller 用真實 commit signal 過濾 frequency / auto-space side-effects,
     // 中文: 而不是 isComposing mirror — 後者在 generation 不對齊 silent reset 時會誤報。
+    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
+    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
+    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
+    // routed to NextWord so association learning stays mode-independent.
     public func commitContinuous(
         displayText: String,
+        canonicalText: String,
         consumedBytes: UInt32,
         syllableCount: UInt32,
     ) -> (didCommit: Bool, didFinalCommit: Bool) {
         logger.debug(
             "[COMPOSE] fn=commitContinuous displayLen=\(displayText.count) "
+                + "canonicalLen=\(canonicalText.count) "
                 + "consumedBytes=\(consumedBytes) syllCount=\(syllableCount)",
         )
         let settings = settingsProvider.current
         let transition = RustEngineBridge.composingCommitContinuous(
             displayText: displayText,
+            canonicalText: canonicalText,
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
             mode: settings.inputMode,

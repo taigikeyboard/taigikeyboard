@@ -195,9 +195,21 @@ message CustomDictEntry {
 // values will mis-align the committed segment with the candidate the
 // user saw.
 message CommitContinuous {
+  // Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
+  // swap/TPS/both-scripts-formatted output the platform tap handler
+  // produces (mirrors the legacy lexicon-path formatter), NOT the
+  // canonical dictionary key.
   string display_text   = 1;
   uint32 consumed_bytes = 2;
   uint32 syllable_count = 3;
+  // v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
+  // (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
+  // association so learning stays mode-independent. Wire-absent / empty
+  // (legacy callers, the other 12 methods) decodes as "" → engine falls
+  // back to `display_text`, preserving pre-Bug-1 behavior. Plain string
+  // (not `optional`): the empty-default IS the fallback signal, no
+  // presence distinction needed.
+  string canonical_text = 4;
 }
 
 // v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
