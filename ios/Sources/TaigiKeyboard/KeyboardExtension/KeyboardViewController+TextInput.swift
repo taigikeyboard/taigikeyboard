@@ -84,13 +84,49 @@ extension KeyboardViewController {
     // 中文: 設定組字中的 marked text,游標放在尾端。供 updatePreedit / textDidChange 使用。
     func setMarkedText(_ text: String) {
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
+        // Length-only, no document read — avoids the synchronous proxy query
+        // perturbing the mid→final timing race (Codex post-impl observer-effect
+        // must-fix). Natural host callbacks below carry the doc-tail signal.
+        logger.debug("[BUG3] setMarkedText len=\(text.count)")
     }
 
     /// Clear marked text + unmark (two steps required by UITextInput).
     /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
     // 中文: 清掉 marked text 並 unmark — UITextInput 需要分兩步,缺一不可。
     func clearMarkedText() {
+        // Split markers (no document read) so a host callback that finalizes
+        // the region can be attributed to setMarkedText("") vs unmarkText()
+        // by interleaving with the natural-callback [BUG3] doc snapshots —
+        // without injecting a perturbing synchronous proxy query here
+        // (Codex post-impl observer-effect + attribution must-fix).
+        logger.debug("[BUG3] clearMarkedText pre-setEmpty")
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
+        logger.debug("[BUG3] clearMarkedText post-setEmpty pre-unmark")
         textDocumentProxy.unmarkText()
+        logger.debug("[BUG3] clearMarkedText post-unmark")
+    }
+}
+
+extension RustEngineBridge.ComposingTransition.Effect {
+    /// v3.5.8 Phase 9 Bug 3 instrumentation (PR1, instrumentation-only —
+    /// removed in the Bug 3 fix PR). Compact effect token for the `[BUG3]`
+    /// effect-order log; single-sourced so the ordered effect list in
+    /// `ComposingManager.commitContinuous` reads a stable vocabulary. Left
+    /// unconditional (not `#if DEBUG`) because it is referenced inside a
+    /// `DebugLogger.debug` `@autoclosure`, whose body must still type-check
+    /// in release even though it is never evaluated there.
+    var bug3Kind: String {
+        switch self {
+        case .updatePreedit: "preedit"
+        case .clearPreeditWithoutCommit: "clearPreedit"
+        case .commitTextReplacingPreedit: "commit"
+        case .deleteBackwardFromDocument: "delBack"
+        case .resetAutocomplete: "resetAC"
+        case .performAutocomplete: "perfAC"
+        case .resetAutocompleteContext: "resetCtx"
+        case .nextWordUpdateLastSelectedWord: "nwUpd"
+        case .nextWordWordSelected: "nwSel"
+        case .nextWordClearForNewComposing: "nwClear"
+        }
     }
 }

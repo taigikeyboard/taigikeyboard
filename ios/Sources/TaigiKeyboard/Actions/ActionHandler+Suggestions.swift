@@ -65,10 +65,20 @@ extension ActionHandler {
             // 中文: 用 transition.effects 是否含 commitTextReplacingPreedit 取代
             // 中文: wasComposing→!nowComposing 推導,徹底關掉 generation mismatch silent
             // 中文: reset 造成的假 commit。Invariant: didFinalCommit => didCommit。
+            logger.debug(
+                "[BUG3] tap-enter continuous displayLen=\(displayText.count) "
+                    + "consumedBytes=\(consumedBytes) syll=\(syllableCount) "
+                    + "docBefore=\(bug3Tail(keyboardContext.textDocumentProxy.documentContextBeforeInput))",
+            )
             let (didCommit, didFinalCommit) = composingManager.commitContinuous(
                 displayText: displayText,
                 consumedBytes: consumedBytes,
                 syllableCount: syllableCount,
+            )
+            logger.debug(
+                "[BUG3] tap-after commitContinuous didCommit=\(didCommit) "
+                    + "didFinal=\(didFinalCommit) "
+                    + "docAfter=\(bug3Tail(keyboardContext.textDocumentProxy.documentContextBeforeInput))",
             )
             // Per-segment frequency learning mirrors the lexicon path: every
             // successful commit records, mid OR final. Engine effects don't

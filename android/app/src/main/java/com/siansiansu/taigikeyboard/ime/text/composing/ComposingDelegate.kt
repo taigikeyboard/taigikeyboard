@@ -5,7 +5,9 @@
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
+import android.util.Log
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 
 /**
@@ -43,6 +45,12 @@ object DefaultComposingDelegate : ComposingDelegate {
             RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> {
                 // INVARIANT_composing_clear_preedit_does_not_commit:
                 // finishComposingText alone commits the active region; zero first.
+                // [BUG3] cheap marker (NO document read) — surfaces the
+                // finishComposingText finalize primitive that was otherwise
+                // invisible (Codex post-impl coverage must-fix).
+                if (BuildConfig.DEBUG) {
+                    Log.d("ComposingDelegate", "[BUG3] effect=ClearPreeditWithoutCommit setComposing(\"\")+finishComposingText")
+                }
                 ic.setComposingText("", 1)
                 ic.finishComposingText()
             }

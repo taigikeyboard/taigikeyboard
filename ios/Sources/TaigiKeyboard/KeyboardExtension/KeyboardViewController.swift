@@ -166,6 +166,11 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
 
+        logger.debug(
+            "[BUG3] textDidChange selfCommit=\(actionHandler?.composingManager.selfCommitInProgress ?? false) "
+                + "isComposing=\(actionHandler?.composingManager.isComposing ?? false) "
+                + "docTail=\(bug3Tail(textDocumentProxy.documentContextBeforeInput))",
+        )
         actionHandler?.nextWordController.resetAndClearUI()
     }
 
@@ -182,6 +187,11 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // 中文: 自我 commit / 同欄位 textWillChange 不算切換,維持組字 buffer 不被誤清。
     override func textWillChange(_ textInput: UITextInput?) {
         super.textWillChange(textInput)
+        logger.debug(
+            "[BUG3] textWillChange selfCommit=\(actionHandler?.composingManager.selfCommitInProgress ?? false) "
+                + "isComposing=\(actionHandler?.composingManager.isComposing ?? false) "
+                + "docTail=\(bug3Tail(textDocumentProxy.documentContextBeforeInput))",
+        )
         guard let manager = actionHandler?.composingManager else { return }
         if manager.selfCommitInProgress { return }
         let id = textInput.map { ObjectIdentifier($0 as AnyObject) }
@@ -201,6 +211,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     override func textDidChangeAsync(_ textInput: UITextInput?) {
         let isAutoCap = state.keyboardContext.settings.isAutocapitalizationEnabled
         logger.debug("[CASE][textDidChangeAsync] isAutoCap=\(isAutoCap) keyboardCase=\(String(describing: state.keyboardContext.keyboardCase))")
+        logger.debug(
+            "[BUG3] textDidChangeAsync branch=\(isAutoCap ? "super" : "performAutocomplete") "
+                + "selfCommit=\(actionHandler?.composingManager.selfCommitInProgress ?? false) "
+                + "isComposing=\(actionHandler?.composingManager.isComposing ?? false) "
+                + "docTail=\(bug3Tail(textDocumentProxy.documentContextBeforeInput))",
+        )
 
         if isAutoCap {
             super.textDidChangeAsync(textInput)

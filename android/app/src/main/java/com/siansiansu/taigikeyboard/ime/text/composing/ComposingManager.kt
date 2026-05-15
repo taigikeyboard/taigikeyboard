@@ -6,6 +6,7 @@
 package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
@@ -666,6 +667,15 @@ class ComposingManager(
             effect is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit
         }
         val didFinalCommit = didCommit && !transition.isComposing
+        // Effect-order + flags only — NO document read here. The tap-boundary
+        // doc snapshots live in CandidateClickHandler (Codex post-impl
+        // observer-effect must-fix: don't bracket the effect dispatch with a
+        // synchronous getTextBeforeCursor that could flush host callbacks).
+        logger.tdebug(TAG) {
+            "[BUG3] commitContinuous effects=[${transition.effects.joinToString { it.describeKind() }}] " +
+                "cachedComposing=$cachedIsComposing willCompose=${transition.isComposing} " +
+                "didCommit=$didCommit didFinal=$didFinalCommit selfCommit=$selfCommitInProgress"
+        }
         selfCommitInProgress = true
         try {
             applyTransition(transition, ic)
@@ -819,8 +829,31 @@ internal fun hostReportsNoComposingRegion(
  * null or the keyboard mode bypasses composing).
  */
 internal fun clearHostComposingRegion(ic: InputConnection?) {
+    // [BUG3] cheap marker (NO document read) — `finishComposingText()` is the
+    // obvious composing-finalize primitive and was otherwise invisible in the
+    // trace (Codex post-impl coverage must-fix). Observer-effect-safe: emits a
+    // log only, issues no extra host query.
+    if (BuildConfig.DEBUG) {
+        android.util.Log.d("ComposingManager", "[BUG3] clearHostComposingRegion setComposing(\"\")+finishComposingText")
+    }
     ic?.setComposingText("", 1)
     ic?.finishComposingText()
+}
+
+/**
+ * v3.5.8 Phase 9 Bug 3 instrumentation (PR1, instrumentation-only — zero
+ * behavior change; removed in the Bug 3 fix PR). Debug-only bounded snapshot
+ * of the document text just before the cursor, used to pinpoint which call
+ * finalizes a stale composing region between a mid-commit and the next
+ * final-commit (`taiuantaigi` → tap 臺灣 → tap 台語 yields the spurious
+ * "臺灣taigi台語"). Returns "" in release builds via the `BuildConfig.DEBUG`
+ * guard and reads at most 16 chars so no aggregate user text is ever logged
+ * (`rules/security-rules.md` §Logging).
+ */
+internal fun InputConnection.bug3Tail(): String {
+    if (!BuildConfig.DEBUG) return ""
+    val before = getTextBeforeCursor(16, 0)?.toString() ?: ""
+    return "len=${before.length} tail='$before'"
 }
 
 /**
