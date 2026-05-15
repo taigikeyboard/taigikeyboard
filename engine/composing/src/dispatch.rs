@@ -20,8 +20,8 @@
 use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::syllabifier::{tl as tl_syll, tps as tps_syll};
 use lexicon::{
-    fetch_candidates_for_keys, fetch_partial_prefix_candidates, ConsumedSpan,
-    EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
+    classification::is_hanzi, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
+    ConsumedSpan, EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
 };
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
@@ -138,6 +138,20 @@ fn handle_fetch_at_pos(
     let Phase::Continuous { raw, .. } = &state.phase else {
         return snapshot;
     };
+    // v3.5.8 Phase 9 Item 11 — hanzi guard (§15.3.E). The only input
+    // modes are TL/POJ/TPS romanization; CJK never legitimately enters
+    // the composing buffer. When it leaks in (paste, stale selection
+    // residue) short-circuit to an empty candidate carrier instead of
+    // letting the syllabifier / lexicon scan garbage. Ports the platform
+    // D-8 guard (`LexiconService` Hanzi classification) into the engine
+    // so the behavior survives the Item 13 platform-fallback retire.
+    // Runs ahead of the reserved-position check because contaminated
+    // `raw` is dead regardless of `position`.
+    // 中文: Item 11 — 漢字誤入 composing buffer 時短路回空候選(carrier present),
+    // 中文:   把平台 D-8 兜底搬進 engine,Item 13 retire 平台 fallback 後行為不流失。
+    if is_hanzi(raw) {
+        return with_continuous(snapshot, ContinuousResponse::default());
+    }
     if position != 0 {
         // Position field is reserved (always 0 in v3.5.8); non-zero
         // returns an empty candidate carrier so the caller can still

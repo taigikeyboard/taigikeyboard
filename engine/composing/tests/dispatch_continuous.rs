@@ -158,6 +158,113 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
     );
 }
 
+// v3.5.8 Phase 9 Item 11 — hanzi guard ported into the engine.
+// Spec: `continuous-candidate-display.md` §15.3.E + §15.6
+// (`hanzi_guard_in_engine`) + `continuous-input-ranking.md` §10.7.
+// §15.6 nominally places this in the `dispatch.rs` mod test, but that
+// module doc routes Engine-dependent / degraded-path checks here next
+// to the sibling `decode_fetch_at_pos_*_returns_empty_carrier` tests.
+//
+// Attribution caveat (intentional): this file is lexicon-free by
+// charter, so the empty carrier below is also what the
+// lexicon-unavailable degrade path yields — these pin the §15.6
+// contract but cannot, alone, attribute emptiness to the guard.
+// Guard attribution (mixed `"a好b"` where a real inventory would
+// otherwise surface `a`→阿, suppressed only by the guard) needs a
+// hermetic installed `EngineHandle` and belongs to the lexicon-backed
+// layer. This note keeps a guard removal from passing silently.
+#[test]
+fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
+    // CJK accidentally in the composing buffer (paste / stale
+    // selection residue). The only legitimate input modes are
+    // TL/POJ/TPS romanization, so the engine must short-circuit to
+    // an empty candidate carrier rather than syllabify garbage —
+    // mirroring the platform D-8 guard this round ports inward.
+    let mut engine = Engine::new();
+    dispatch::handle(
+        &req(Method::Start(protos::engine::Start {
+            text: "我好".into(),
+        })),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+    dispatch::handle(
+        &req(Method::EnterContinuous(EnterContinuous {})),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+    assert!(matches!(
+        engine.snapshot_state().phase,
+        Phase::Continuous { .. }
+    ));
+
+    let resp = dispatch::handle(
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 0,
+            frequency_entries: vec![],
+            now_ms: 0,
+        })),
+        &mut engine,
+        &config(),
+    )
+    .expect("dispatch ok");
+    let cont = resp
+        .continuous
+        .expect("continuous carrier present (guard returns empty, not None)");
+    assert!(
+        cont.candidates.is_empty(),
+        "hanzi in composing buffer must yield empty candidates, got {:?}",
+        cont.candidates
+    );
+}
+
+// `is_hanzi` is `.any()`, so a single stray CJK char anywhere in an
+// otherwise-romanized buffer also fails closed (matches platform D-8
+// `classify_input` Hanzi precedence). Spec §15.3.E.
+#[test]
+fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
+    let mut engine = Engine::new();
+    dispatch::handle(
+        &req(Method::Start(protos::engine::Start {
+            text: "a好b".into(),
+        })),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+    dispatch::handle(
+        &req(Method::EnterContinuous(EnterContinuous {})),
+        &mut engine,
+        &config(),
+    )
+    .unwrap();
+    assert!(matches!(
+        engine.snapshot_state().phase,
+        Phase::Continuous { .. }
+    ));
+
+    let resp = dispatch::handle(
+        &req(Method::FetchAtPos(FetchAtPos {
+            position: 0,
+            frequency_entries: vec![],
+            now_ms: 0,
+        })),
+        &mut engine,
+        &config(),
+    )
+    .expect("dispatch ok");
+    let cont = resp
+        .continuous
+        .expect("continuous carrier present (guard returns empty, not None)");
+    assert!(
+        cont.candidates.is_empty(),
+        "stray hanzi in mixed buffer must yield empty candidates, got {:?}",
+        cont.candidates
+    );
+}
+
 #[test]
 fn decode_commit_continuous_mid_commit() {
     let mut engine = Engine::new();
