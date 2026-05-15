@@ -35,6 +35,22 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
  * (clock skew) by falling through to `recency_rank = 1` for every
  * candidate — see `engine/ranking/src/score.rs::recency_rank`.
+ *
+ * v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
+ * `custom_dictionary.db` matches for the current raw buffer. The DB
+ * stays native (platform queries via the existing
+ * `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
+ * .search` parameterized-SQL path); only the stored `(roman, hanji)`
+ * columns are marshalled — NOT the legacy display-capitalized form,
+ * so the engine's `(roman, hanji)` dedupe collides correctly against
+ * `dict.bin` entries. The engine synthesizes a full-buffer
+ * `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
+ * `is_custom = true` → `source_tier_rank` rank 0), merges them with
+ * the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
+ * `source_tier_rank` (custom wins). Empty list = no custom matches /
+ * feature disabled — fully backward-compatible (older builds simply
+ * never set field 4). See `docs/engine/continuous-input-ranking.md`
+ * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -46,6 +62,7 @@ public  final class FetchAtPos extends
     FetchAtPosOrBuilder {
   private FetchAtPos() {
     frequencyEntries_ = emptyProtobufList();
+    customEntries_ = emptyProtobufList();
   }
   public static final int POSITION_FIELD_NUMBER = 1;
   private int position_;
@@ -193,6 +210,100 @@ public  final class FetchAtPos extends
     nowMs_ = 0L;
   }
 
+  public static final int CUSTOM_ENTRIES_FIELD_NUMBER = 4;
+  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> customEntries_;
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> getCustomEntriesList() {
+    return customEntries_;
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntryOrBuilder>
+      getCustomEntriesOrBuilderList() {
+    return customEntries_;
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  @java.lang.Override
+  public int getCustomEntriesCount() {
+    return customEntries_.size();
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index) {
+    return customEntries_.get(index);
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntryOrBuilder getCustomEntriesOrBuilder(
+      int index) {
+    return customEntries_.get(index);
+  }
+  private void ensureCustomEntriesIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> tmp = customEntries_;
+    if (!tmp.isModifiable()) {
+      customEntries_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void setCustomEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+    value.getClass();
+  ensureCustomEntriesIsMutable();
+    customEntries_.set(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void addCustomEntries(com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+    value.getClass();
+  ensureCustomEntriesIsMutable();
+    customEntries_.add(value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void addCustomEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+    value.getClass();
+  ensureCustomEntriesIsMutable();
+    customEntries_.add(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void addAllCustomEntries(
+      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> values) {
+    ensureCustomEntriesIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, customEntries_);
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void clearCustomEntries() {
+    customEntries_ = emptyProtobufList();
+  }
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  private void removeCustomEntries(int index) {
+    ensureCustomEntriesIsMutable();
+    customEntries_.remove(index);
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -306,6 +417,22 @@ public  final class FetchAtPos extends
    * `now_ms &lt;= 0`, `last_used_ms &lt;= 0`, and `now_ms &lt; last_used_ms`
    * (clock skew) by falling through to `recency_rank = 1` for every
    * candidate — see `engine/ranking/src/score.rs::recency_rank`.
+   *
+   * v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
+   * `custom_dictionary.db` matches for the current raw buffer. The DB
+   * stays native (platform queries via the existing
+   * `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
+   * .search` parameterized-SQL path); only the stored `(roman, hanji)`
+   * columns are marshalled — NOT the legacy display-capitalized form,
+   * so the engine's `(roman, hanji)` dedupe collides correctly against
+   * `dict.bin` entries. The engine synthesizes a full-buffer
+   * `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
+   * `is_custom = true` → `source_tier_rank` rank 0), merges them with
+   * the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
+   * `source_tier_rank` (custom wins). Empty list = no custom matches /
+   * feature disabled — fully backward-compatible (older builds simply
+   * never set field 4). See `docs/engine/continuous-input-ranking.md`
+   * §10.10 + `docs/engine/continuous-candidate-display.md` §15.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.FetchAtPos}
@@ -479,6 +606,108 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    @java.lang.Override
+    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> getCustomEntriesList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getCustomEntriesList());
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    @java.lang.Override
+    public int getCustomEntriesCount() {
+      return instance.getCustomEntriesCount();
+    }/**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index) {
+      return instance.getCustomEntries(index);
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder setCustomEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+      copyOnWrite();
+      instance.setCustomEntries(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder setCustomEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCustomEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder addCustomEntries(com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+      copyOnWrite();
+      instance.addCustomEntries(value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder addCustomEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry value) {
+      copyOnWrite();
+      instance.addCustomEntries(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder addCustomEntries(
+        com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addCustomEntries(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder addCustomEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addCustomEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder addAllCustomEntries(
+        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry> values) {
+      copyOnWrite();
+      instance.addAllCustomEntries(values);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder clearCustomEntries() {
+      copyOnWrite();
+      instance.clearCustomEntries();
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+     */
+    public Builder removeCustomEntries(int index) {
+      copyOnWrite();
+      instance.removeCustomEntries(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -499,10 +728,12 @@ public  final class FetchAtPos extends
             "frequencyEntries_",
             com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry.class,
             "nowMs_",
+            "customEntries_",
+            com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.class,
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u000b\u0002\u001b" +
-              "\u0003\u0002";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
+              "\u0003\u0002\u0004\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

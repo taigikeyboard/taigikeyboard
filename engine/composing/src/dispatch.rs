@@ -21,12 +21,12 @@ use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::syllabifier::{tl as tl_syll, tps as tps_syll};
 use lexicon::{
     classification::is_hanzi, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
-    ConsumedSpan, EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
+    ConsumedSpan, CustomEntry, EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
 };
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, ComposingRequest, ComposingResponse,
-    ContinuousResponse, FrequencyEntry,
+    ContinuousResponse, CustomDictEntry, FrequencyEntry,
 };
 use ranking::{build_frequency_map, FrequencyMap};
 use unicode_normalization::UnicodeNormalization;
@@ -69,6 +69,7 @@ pub(crate) fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingE
             position: m.position,
             frequency_entries: m.frequency_entries,
             now_ms: m.now_ms,
+            custom_entries: m.custom_entries,
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -100,11 +101,13 @@ pub fn handle(
             position,
             frequency_entries,
             now_ms,
+            custom_entries,
         } => Ok(handle_fetch_at_pos(
             engine,
             position,
             &frequency_entries,
             now_ms,
+            &custom_entries,
             config,
         )),
         intent => Ok(engine.apply(intent, config)),
@@ -126,11 +129,13 @@ pub fn handle(
 /// `FetchAtPos.position` proto comment).
 // 中文: Phase 6 — 連續輸入候選讀取入口;短路處理,不經過 transition.rs。
 // 中文: Phase 9.3a — 帶平台 FrequencyEntry[] + now_ms;dispatch 端建立 FrequencyMap 後送進 lexicon。
+// 中文: Phase 9 Item 12 — 加帶平台 CustomDictEntry[];dispatch hoist 成 CustomEntry domain 後送進 lexicon 合成 + 去重。
 fn handle_fetch_at_pos(
     engine: &Engine,
     position: u32,
     frequency_entries: &[FrequencyEntry],
     now_ms: i64,
+    custom_entries: &[CustomDictEntry],
     config: &AppConfig,
 ) -> ComposingResponse {
     let snapshot = engine.snapshot(config);
@@ -178,6 +183,15 @@ fn handle_fetch_at_pos(
     // -compatible with PR-9.2 platform builds that have not wired
     // user-frequency plumbing yet).
     let freq_map = build_frequency_map(frequency_entries);
+    // v3.5.8 Phase 9 Item 12: hoist proto-shaped `CustomDictEntry[]`
+    // into the domain-typed `CustomEntry` list once per fetch (mirror
+    // of `build_frequency_map` above); `lexicon` consumes
+    // `&[CustomEntry]` and stays proto-agnostic. Empty list = no
+    // custom matches / feature disabled → zero synthesized candidates
+    // and the `(roman, hanji)` dedupe is a no-op (backward-compatible
+    // with builds that never set `FetchAtPos.custom_entries`).
+    // 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry,空 list = 無 custom,合成 0 筆、去重 no-op。
+    let custom = build_custom_entries(custom_entries);
     let candidates = if keys.is_empty() {
         // v3.5.8 Phase 9 Item 10 — partial-prefix fallthrough. The
         // syllabifier produced no valid ending (e.g. `raw = "gu"`,
@@ -193,10 +207,10 @@ fn handle_fetch_at_pos(
         if is_tps {
             Vec::new()
         } else {
-            fetch_via_lexicon_partial(raw, &freq_map, now_ms)
+            fetch_via_lexicon_partial(raw, &freq_map, now_ms, &custom)
         }
     } else {
-        fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms)
+        fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms, &custom)
     };
     with_continuous(
         snapshot,
@@ -674,6 +688,28 @@ fn strip_trailing_tone_digit(s: &str) -> &str {
     }
 }
 
+/// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`
+/// into the domain-typed [`CustomEntry`] list. Mirror of
+/// `ranking::build_frequency_map`'s proto→domain boundary, kept here
+/// so `lexicon` stays proto-agnostic. `roman` / `hanji` are the raw
+/// stored `custom_dictionary.db` columns the platform marshalled
+/// verbatim (NOT the legacy display-capitalized form) so the
+/// `(roman, hanji)` dedupe key collides correctly against
+/// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. proto3 `optional
+/// hanji` absent → `None` (romanization-only entry); present (even
+/// empty) → `Some`.
+// 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry;roman/hanji 是 custom_dictionary.db 原始欄位,
+// 中文:   不是 legacy 顯示大寫化形式,確保 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
+fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
+    entries
+        .iter()
+        .map(|e| CustomEntry {
+            roman: e.roman.clone(),
+            hanji: e.hanji.clone(),
+        })
+        .collect()
+}
+
 /// Acquire lexicon state and run the span-local fetch. Empty result on
 /// any state-availability failure (mirrors `build_keys_tl` policy).
 ///
@@ -703,6 +739,7 @@ fn fetch_via_lexicon(
     raw_len: u32,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    custom: &[CustomEntry],
 ) -> Vec<RawCandidate> {
     LexiconHandle::with_state(|state| {
         let Some(prefix) = state.prefix_index.as_ref() else {
@@ -717,6 +754,7 @@ fn fetch_via_lexicon(
             u32::MAX,
             freq_map,
             now_ms,
+            custom,
             prefix,
             dict,
         ))
@@ -762,7 +800,13 @@ fn build_partial_prefix_key_tl(raw: &str) -> Option<(ConsumedSpan, String)> {
 /// path's behaviour; PR-9.6 will plumb the platform dictionary
 /// toggles uniformly to both paths.
 // 中文: Item 10 — partial-prefix 入口的 lexicon glue;同 fetch_via_lexicon 的 state-availability 降級政策。
-fn fetch_via_lexicon_partial(raw: &str, freq_map: &FrequencyMap, now_ms: i64) -> Vec<RawCandidate> {
+// 中文: Item 12 — custom 命中也併進 partial-prefix 路徑(標 COVERAGE_KIND_PARTIAL_PREFIX),legacy custom dict prefix-visible 行為對齊。
+fn fetch_via_lexicon_partial(
+    raw: &str,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    custom: &[CustomEntry],
+) -> Vec<RawCandidate> {
     let Some(key) = build_partial_prefix_key_tl(raw) else {
         return Vec::new();
     };
@@ -780,6 +824,7 @@ fn fetch_via_lexicon_partial(raw: &str, freq_map: &FrequencyMap, now_ms: i64) ->
             u32::MAX,
             freq_map,
             now_ms,
+            custom,
             prefix,
             dict,
         ))
@@ -1214,6 +1259,7 @@ mod tests {
             mode: lexicon::CandidateMode::Hant,
             recency_rank: 1,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
+            is_custom: false,
         };
         let proto = raw_to_proto_candidate(raw);
         assert_eq!(proto.roman, "tâi-uân");
@@ -1288,6 +1334,7 @@ mod tests {
             mode: lexicon::CandidateMode::Tailo,
             recency_rank: 1,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
+            is_custom: false,
         };
         let proto = raw_to_proto_candidate(raw);
         assert_eq!(proto.roman, "tāi");

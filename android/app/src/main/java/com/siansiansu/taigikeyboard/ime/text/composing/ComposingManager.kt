@@ -9,11 +9,14 @@ import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
+import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -54,6 +57,19 @@ class ComposingManager(
      * `userFrequencyService` default-arg shape.
      */
     private val userFrequencyService: UserFrequencyService? = null,
+    /**
+     * v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` access for the
+     * Continuous fetch. Same service the legacy lexicon path uses
+     * (`LexiconService.lookupCustomDictionary`). `null` keeps unit-test
+     * + Preview construction compiling unchanged (custom merge simply
+     * yields no entries, identical to the feature-disabled branch).
+     * The runtime call site passes the shared service. DB stays native
+     * (`feedback_user_data_sqlite_stays_native`). Mirrors iOS
+     * `ComposingManager.swift` `customDictionaryRepository`.
+     */
+    // 中文: Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 service;
+    // 中文: null 保持測試/Preview 可構造 (等同 feature 關閉,無 custom)。DB 留 native。
+    private val customDictionaryService: CustomDictionaryService? = null,
 ) {
     @Volatile
     private var cachedRawInput: String = ""
@@ -421,6 +437,20 @@ class ComposingManager(
         val settings = settingsProvider.current
         val mode = resolveMode(settings.inputMode)
         val toggles = carrier(settings.toneToggles)
+
+        // v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` once
+        // for the current raw buffer; the same `customEntries` feeds
+        // both fetch phases (the result depends only on the raw
+        // buffer, stable across the two FFI calls). `buildCustomEntries`
+        // suspends on `Dispatchers.IO`; it self-guards against a
+        // keystroke racing during that await by re-checking
+        // `cachedRawInput` after `service.search` resumes (the
+        // generation guard CANNOT cover this — `generation` only bumps
+        // on a new input context, never per keystroke; Codex post-impl
+        // 2026-05-15 P2).
+        // 中文: Item 12 — 查 custom_dictionary.db 一次,兩 phase 共用;buildCustomEntries 內部
+        // 中文: await 後 re-check cachedRawInput 自防 keystroke race(generation 不因 keystroke bump,guard 蓋不到)。
+        val customEntries = buildCustomEntries(cachedRawInput, settings)
         val generation = currentGeneration
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
@@ -428,6 +458,7 @@ class ComposingManager(
             mode = mode,
             toggles = toggles,
             generation = generation,
+            customEntries = customEntries,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -466,6 +497,7 @@ class ComposingManager(
             generation = generation,
             frequencyEntries = entries,
             nowMs = nowMs,
+            customEntries = customEntries,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -512,6 +544,79 @@ class ComposingManager(
         val uniqueKeys = candidates.map { it.displayText }.distinct()
         val snapshot = userFreq.frequencyDataBatch(uniqueKeys)
         return RustEngineBridge.frequencyDataToProtoEntries(snapshot)
+    }
+
+    /**
+     * v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` for the
+     * current raw buffer and marshal matches into the proto
+     * `CustomDictEntry` list carried by `FetchAtPos`. The engine owns
+     * the merge + `(roman, hanji)` dedupe + ranking (spec G3 —
+     * platform never re-ranks); this only fetches + marshals.
+     *
+     * Reuses the SAME derivation + query the legacy lexicon path uses
+     * (`LexiconService.lookupCustomDictionary` — inline tone-aware /
+     * `CustomDictionaryDerivation.generateNotone` key + parameterized
+     * `CustomDictionaryService.search`). **Marshals the RAW stored
+     * `(roman, hanzi)` columns** — NOT a display-massaged form — so the
+     * engine's `(roman, hanji)` dedupe key collides correctly against
+     * `dict.bin`'s `DictionaryRecord.tl` / `.hanzi` (Codex pre-impl
+     * 2026-05-15). Empty stored hanzi → proto-absent `hanji`
+     * (romanization-only entry → engine derives `CandidateMode.Tailo`).
+     *
+     * CROSS-PLATFORM INVARIANT — the search-key derivation mirrors iOS
+     * `CustomDictionaryDerivation.searchPrefix` (and Android
+     * `LexiconService.lookupCustomDictionary:117-122`). Drift in the
+     * tone-aware / notone branch causes silent custom-match divergence
+     * between platforms (rules/cross-platform-alignment.md §3a).
+     *
+     * `null` service (tests / Preview) or disabled feature → empty
+     * list, identical to the no-custom engine path. Runs its SQLite
+     * hop inside `CustomDictionaryService.search`'s own
+     * `Dispatchers.IO`; resumes on the caller context before the FFI.
+     */
+    // 中文: Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry;
+    // 中文: 與 legacy lexicon path 共用同一 derivation+query,送原始 (roman,hanzi),不送顯示massaged 形式;
+    // 中文: 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);搜尋鍵衍生與 iOS searchPrefix 為跨平台不變式。
+    private suspend fun buildCustomEntries(
+        rawInput: String,
+        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
+    ): List<CustomDictEntry> {
+        val service = customDictionaryService ?: return emptyList()
+        if (!settings.isCustomDictEnabled || rawInput.isEmpty()) return emptyList()
+        val isToneAware = rawInput.any { it.isDigit() }
+        val searchPrefix =
+            if (isToneAware) {
+                rawInput.lowercase().replace("-", "").replace(" ", "")
+            } else {
+                CustomDictionaryDerivation.generateNotone(rawInput)
+            }
+        return try {
+            val rows = service.search(prefix = searchPrefix, isToneAware = isToneAware, limit = 20)
+            // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
+            // 2026-05-15 P2). `service.search` suspends on `Dispatchers
+            // .IO`; a keystroke landing during that await mutates
+            // `cachedRawInput` WITHOUT bumping `generation` (generation
+            // only bumps on a new input context, not per keystroke), so
+            // the generation guard cannot catch this. If the buffer
+            // moved under us these rows belong to a stale prefix —
+            // inject nothing rather than wrong candidates; the racing
+            // keystroke's own fetch produces the correct custom set.
+            // 中文: Item 12 — await race guard:search suspend 期間若 keystroke 改了 cachedRawInput,
+            // 中文:   generation 不會因 keystroke bump,guard 抓不到 → 這批 rows 是 stale prefix,丟空不注入錯候選。
+            if (cachedRawInput != rawInput) {
+                return emptyList()
+            }
+            rows.map { entry ->
+                val builder = CustomDictEntry.newBuilder().setRoman(entry.roman)
+                if (entry.hanzi.isNotEmpty()) {
+                    builder.setHanji(entry.hanzi)
+                }
+                builder.build()
+            }
+        } catch (e: Exception) {
+            logger.w(TAG, "[CONTINUOUS] custom dict query failed: ${e.message}", e)
+            emptyList()
+        }
     }
 
     /**

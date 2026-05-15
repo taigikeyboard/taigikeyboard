@@ -161,12 +161,23 @@ pub enum Intent {
     /// is the backward-compatible "no user-freq plumbing yet" mode
     /// that reproduces PR-9.2 behavior (neutral 1.0 boost, rank 1
     /// everywhere).
+    ///
+    /// v3.5.8 Phase 9 Item 12 — `custom_entries` carries the
+    /// platform's `custom_dictionary.db` matches for the current raw
+    /// buffer (raw stored `(roman, hanji)` columns; DB stays native).
+    /// Decoded verbatim from `FetchAtPos.custom_entries` and threaded
+    /// to `handle_fetch_at_pos`, which synthesizes a full-buffer
+    /// `RawCandidate` per entry and dedupes `(roman, hanji)` against
+    /// the FST hits. Empty list = no custom matches / feature
+    /// disabled — backward-compatible no-op.
     // 中文: Phase 6 新增 — 純讀取 Phase::Continuous 的 span-local 候選列表 (position 目前固定為 0)。
     // 中文: Phase 9.3a — 加帶平台 user_frequency.db 快照與 wall clock,供 SortKey recency + user_freq_boost 計算。
+    // 中文: Phase 9 Item 12 — 加帶平台 custom_dictionary.db 命中 (raw roman/hanji),供 engine 合成 + (roman,hanji) 去重。
     FetchAtPos {
         position: u32,
         frequency_entries: Vec<protos::engine::FrequencyEntry>,
         now_ms: i64,
+        custom_entries: Vec<protos::engine::CustomDictEntry>,
     },
     /// Commit a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the committed segment's raw text and

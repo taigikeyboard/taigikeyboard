@@ -492,10 +492,10 @@ public enum RustEngineBridge {
         // 中文: 由 proto wire 整數解碼;未知值 fall back 到 .unspecified,避免 binding mismatch crash。
         static func decode(_ wire: Int) -> CandidateMode {
             switch wire {
-            case 1: return .hant
-            case 2: return .tailo
-            case 3: return .mixed
-            default: return .unspecified
+            case 1: .hant
+            case 2: .tailo
+            case 3: .mixed
+            default: .unspecified
             }
         }
     }
@@ -803,17 +803,28 @@ public enum RustEngineBridge {
     // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
     // 中文: frequencyEntries + nowMs 為 Phase 9.3a/9.3b 的 user_freq_boost / recency_rank 來源,
     // 中文: 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
+    //
+    /// v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
+    /// `custom_dictionary.db` matches (raw stored `(roman, hanji)`
+    /// columns; DB stays native). Default `[]` = no custom matches /
+    /// feature off — backward-compatible no-op. The engine synthesizes
+    /// a full-buffer candidate per entry and dedupes `(roman, hanji)`
+    /// against the FST hits (custom wins the collision).
+    // 中文: Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op,
+    // 中文: 引擎合成 full-buffer 候選並對 (roman,hanji) 去重 (custom 必勝碰撞)。
     public static func composingFetchAtPos(
         mode: InputMode,
         toggles: ToneToggles,
         generation: UInt64,
         frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
         nowMs: Int64 = 0,
+        customEntries: [Taigi_Engine_CustomDictEntry] = [],
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.position = 0
         payload.frequencyEntries = frequencyEntries
         payload.nowMs = nowMs
+        payload.customEntries = customEntries
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",

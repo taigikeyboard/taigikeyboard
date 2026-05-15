@@ -145,10 +145,39 @@ message EnterContinuous {}
 // `now_ms <= 0`, `last_used_ms <= 0`, and `now_ms < last_used_ms`
 // (clock skew) by falling through to `recency_rank = 1` for every
 // candidate — see `engine/ranking/src/score.rs::recency_rank`.
+//
+// v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
+// `custom_dictionary.db` matches for the current raw buffer. The DB
+// stays native (platform queries via the existing
+// `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
+// .search` parameterized-SQL path); only the stored `(roman, hanji)`
+// columns are marshalled — NOT the legacy display-capitalized form,
+// so the engine's `(roman, hanji)` dedupe collides correctly against
+// `dict.bin` entries. The engine synthesizes a full-buffer
+// `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
+// `is_custom = true` → `source_tier_rank` rank 0), merges them with
+// the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
+// `source_tier_rank` (custom wins). Empty list = no custom matches /
+// feature disabled — fully backward-compatible (older builds simply
+// never set field 4). See `docs/engine/continuous-input-ranking.md`
+// §10.10 + `docs/engine/continuous-candidate-display.md` §15.
 message FetchAtPos {
   uint32 position                          = 1;
   repeated FrequencyEntry frequency_entries = 2;
   int64 now_ms                             = 3;
+  repeated CustomDictEntry custom_entries  = 4;
+}
+
+// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled
+// for the Continuous candidate merge. `roman` / `hanji` are the raw
+// stored columns (no platform capitalization / tone re-display) so
+// the engine's `(roman, hanji)` dedupe key matches `dict.bin`'s
+// `DictionaryRecord.tl` / `.hanzi`. `hanji` uses proto3 `optional` so
+// a romanization-only custom entry (no hanji) is distinguishable from
+// an empty string, mirroring `CandidateMessage.hanji`.
+message CustomDictEntry {
+  string roman          = 1;
+  optional string hanji = 2;
 }
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The

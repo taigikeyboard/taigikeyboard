@@ -65,6 +65,16 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
 
     private let settingsProvider: EngineSettingsProvider
     private let userFrequencyService: UserFrequencyService
+    // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` access for the
+    // Continuous fetch. Same repository the legacy lexicon path uses
+    // (`LexiconService.lookupCustomDictionary`); `searchSync` is the
+    // eager-empty synchronous path (returns `[]` until the DB is
+    // open) so the existing synchronous `fetchContinuousCandidates`
+    // contract is unchanged. DB stays native (`feedback_user_data_
+    // sqlite_stays_native`).
+    // 中文: Item 12 — Continuous 路徑查 custom_dictionary.db,與 legacy lexicon path 共用同一 repository;
+    // 中文: searchSync 為 eager-empty 同步查詢,DB 未開回 [],不破既有同步 fetch 契約。
+    private let customDictionaryRepository: CustomDictionaryRepository
     private let logger = DebugLogger(category: "ComposingManager")
 
     // MARK: - Init
@@ -72,9 +82,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     init(
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
         userFrequencyService: UserFrequencyService = CompositionRoot.userFrequencyService,
+        customDictionaryRepository: CustomDictionaryRepository = CompositionRoot
+            .customDictionaryRepository,
     ) {
         self.settingsProvider = settingsProvider
         self.userFrequencyService = userFrequencyService
+        self.customDictionaryRepository = customDictionaryRepository
     }
 
     func setContextSink(_ sink: ComposingContextSink) {
@@ -233,11 +246,21 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         let settings = settingsProvider.current
         let generation = currentGeneration
 
+        // v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` once
+        // for the current raw buffer and pass the same `customEntries`
+        // to both fetch phases (the result depends only on `rawInput`,
+        // which is stable for this synchronous fetch). The engine
+        // synthesizes a full-buffer candidate per entry and dedupes
+        // `(roman, hanji)` against the FST hits.
+        // 中文: Item 12 — 用當前 rawInput 查 custom_dictionary.db 一次,兩個 phase 共用同一 customEntries。
+        let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
+
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
             generation: generation,
+            customEntries: customEntries,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -273,6 +296,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             generation: generation,
             frequencyEntries: entries,
             nowMs: nowMs,
+            customEntries: customEntries,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -321,6 +345,54 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             entry.displayTextKey = word
             entry.count = UInt32(max(0, data.count))
             entry.lastUsedMs = data.lastUsedMillis
+            return entry
+        }
+    }
+
+    /// v3.5.8 Phase 9 Item 12 — query `custom_dictionary.db` for the
+    /// current raw buffer and marshal matches into the proto
+    /// `CustomDictEntry[]` carried by `FetchAtPos`. The engine owns the
+    /// merge + `(roman, hanji)` dedupe + ranking (spec G3 — platform
+    /// never re-ranks); this method only fetches + marshals.
+    ///
+    /// Reuses the SAME derivation + query path the legacy lexicon path
+    /// uses (`LexiconService.lookupCustomDictionary` →
+    /// `CustomDictionaryDerivation.searchPrefix` →
+    /// `CustomDictionaryRepository.searchSync`, parameterized SQL).
+    /// **Marshals the RAW stored `(roman, hanzi)` columns** — NOT the
+    /// `CandidateProcessor.capitalize`-massaged form the legacy path
+    /// builds — so the engine's `(roman, hanji)` dedupe key collides
+    /// correctly against `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`
+    /// (Codex pre-impl 2026-05-15). An empty stored hanzi maps to
+    /// proto-absent `hanji` (romanization-only entry → engine derives
+    /// `CandidateMode::Tailo`), mirroring `record_to_candidate`.
+    ///
+    /// `searchSync` is the eager-empty synchronous path (returns `[]`
+    /// until the DB connection is open), so the synchronous
+    /// `fetchContinuousCandidates` contract is preserved with no extra
+    /// await — same cold-start tolerance as
+    /// `userFrequencyService.isConnected()`.
+    // 中文: Item 12 — 查 custom_dictionary.db 並 marshal 成 proto CustomDictEntry[];
+    // 中文: 與 legacy lexicon path 共用同一 derivation+query,但送「原始儲存的 (roman,hanzi)」,
+    // 中文: 不送大寫化後的形式,讓引擎 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞。
+    // 中文: 空 hanzi → proto-absent hanji (純羅馬字 → 引擎判 TAILO);searchSync eager-empty 保同步契約。
+    private func buildCustomEntries(
+        rawInput: String,
+        settings: EngineSettings,
+    ) -> [Taigi_Engine_CustomDictEntry] {
+        guard settings.isCustomDictEnabled, !rawInput.isEmpty else { return [] }
+        let (searchPrefix, isToneAware) = CustomDictionaryDerivation.searchPrefix(for: rawInput)
+        let rows = customDictionaryRepository.searchSync(
+            prefix: searchPrefix,
+            isToneAware: isToneAware,
+            limit: 20,
+        )
+        return rows.map { row in
+            var entry = Taigi_Engine_CustomDictEntry()
+            entry.roman = row.roman
+            if !row.hanzi.isEmpty {
+                entry.hanji = row.hanzi
+            }
             return entry
         }
     }

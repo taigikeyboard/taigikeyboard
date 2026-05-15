@@ -277,6 +277,39 @@ pub struct RawCandidate {
     // 中文: Item 10 — 覆蓋類型旗標;COVERAGE_KIND_FULL=0 走 lookup_exact,COVERAGE_KIND_PARTIAL_PREFIX=1 走 lookup_prefix。
     // 中文: 不上 wire,僅供 SortKey 排序使用 — partial-prefix 永遠被排在 full-syllable 之後,不論其他維度。
     pub coverage_kind: u8,
+    /// v3.5.8 Phase 9 Item 12 — `true` for candidates synthesized from
+    /// a `custom_dictionary.db` entry ([`custom_entry_to_candidate`]),
+    /// `false` for `dict.bin` FST hits ([`record_to_candidate`]). Read
+    /// by [`SortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
+    /// returns rank `0` when `true`, ahead of every `dict.bin` source
+    /// tier) and by the `(roman, hanji)` dedupe winner policy
+    /// (`docs/engine/continuous-input-ranking.md` §10.10): on a
+    /// duplicate `(roman, hanji)` pair the lowest `source_tier_rank`
+    /// survivor wins, so a custom entry always beats a `dict.bin`
+    /// duplicate. Internal axis only — NOT emitted on
+    /// `CandidateMessage` (same pattern as [`coverage_kind`] /
+    /// `recency_rank`).
+    // 中文: Item 12 — true=custom_dictionary.db 合成候選 (source rank 0,(roman,hanji) 去重必勝),false=dict.bin FST 命中。
+    // 中文: 不上 wire,僅供 SortKey 與去重勝負政策使用。
+    pub is_custom: bool,
+}
+
+/// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row hoisted
+/// from `protos::engine::CustomDictEntry` (proto→domain boundary in
+/// `composing/src/dispatch.rs::build_custom_entries`). `roman` /
+/// `hanji` are the raw stored columns the platform marshalled
+/// verbatim (no display capitalization) so the engine's
+/// `(roman, hanji)` dedupe key collides correctly against
+/// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. `hanji = None`
+/// is a romanization-only custom entry (mirrors
+/// `DictionaryRecord.hanzi` / `RawCandidate.hanji` `Option` semantics
+/// — drives [`derive_mode`] → `CandidateMode::Tailo`).
+// 中文: Item 12 — 一筆 custom_dictionary.db 命中的 domain 形;roman/hanji 為原始欄位 (未顯示大寫化),
+// 中文:   讓 (roman,hanji) 去重鍵能與 dict.bin 正確碰撞;hanji=None 為純羅馬字 custom 條目。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CustomEntry {
+    pub roman: String,
+    pub hanji: Option<String>,
 }
 
 /// Fetch every dictionary candidate whose toneless TL key matches
@@ -356,12 +389,21 @@ pub fn fetch_candidates_for_endings(
     // Even when `pos != 0`, candidates whose `consumed_span_end`
     // reaches the full input length still qualify for Tier 0 — Tier 1
     // is full-buffer coverage, not `input.len() - pos`.
+    // Item 12: this legacy TL/POJ test/Phase-5 entry never carries
+    // custom-dict matches — the production dispatch path goes through
+    // `composing::dispatch::fetch_via_lexicon` →
+    // `fetch_candidates_for_keys` directly with the platform's
+    // `custom_entries`. Pass an empty slice so this fn's public
+    // signature stays stable (no test-call-site churn).
+    // 中文: Item 12 — 此 legacy 入口不帶 custom;production 走 fetch_via_lexicon 直呼 fetch_candidates_for_keys,
+    // 中文:   這裡傳空 slice 保持簽名穩定,不動既有測試 call site。
     fetch_candidates_for_keys(
         &keys,
         input.len() as u32,
         enabled_sources_bitmask,
         freq_map,
         now_ms,
+        &[],
         prefix_index,
         dict,
     )
@@ -414,6 +456,7 @@ pub type ConsumedSpan = (u32, u32);
 // 中文: Phase 6 新增 — 模式無關的 span-local 候選查詢;接受 (consumed_span, "tl:<key>") pair list,讓 dispatch 端集中處理 TL vs TPS key 構造。
 // 中文: Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 七維 lexicographic。
 // 中文: Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
+// 中文: Phase 9 Item 12 改:接 custom 命中,合成 full-buffer 候選併入 out 後做 (roman,hanji) 去重 (排序前)。
 #[allow(clippy::too_many_arguments)]
 pub fn fetch_candidates_for_keys(
     keys: &[(ConsumedSpan, String)],
@@ -421,10 +464,18 @@ pub fn fetch_candidates_for_keys(
     enabled_sources_bitmask: u32,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    custom: &[CustomEntry],
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> Vec<RawCandidate> {
-    if keys.is_empty() {
+    // Item 12: custom entries can still surface even when the
+    // syllabifier produced no `keys` for the FST path (e.g. the
+    // dispatcher only reaches `fetch_partial_prefix_candidates` when
+    // `keys` is empty, so this fn's `keys.is_empty()` branch is dead
+    // for production callers — but a future caller passing empty
+    // `keys` + non-empty `custom` must still get the custom merge).
+    // 中文: Item 12 — keys 空但 custom 非空時仍需合成 custom 候選 (不再 early-return)。
+    if keys.is_empty() && custom.is_empty() {
         return Vec::new();
     }
 
@@ -455,17 +506,42 @@ pub fn fetch_candidates_for_keys(
         }
     }
 
-    // TODO(Item 12): introduce a `(roman, hanji)` dedupe pass here
-    // when `custom_dictionary.db` merges into the Continuous pipeline.
-    // Today the default `dict.bin` builder already collapses
-    // duplicates via `dictionary/build/merge_csv.py:107`'s
-    // `groupby(["hanzi", "_tl_key"])`, so no realistic input ever
-    // surfaces a duplicate `(roman, hanji)` pair into `out`. Item 12
-    // is the first slice that can emit cross-source duplicates
-    // (custom_dictionary.db lives outside merge_csv.py); the dedupe
-    // rule + winner policy (lowest `source_tier_rank` vs SortKey
-    // winner) is intentionally NOT locked here — Item 12 will pick
-    // it with real custom-dict plumb context.
+    // v3.5.8 Phase 9 Item 12 — merge `custom_dictionary.db` hits.
+    // Each custom entry is synthesized as a full-buffer candidate
+    // (`consumed_span = (0, raw_len)`, `coverage_kind =
+    // COVERAGE_KIND_FULL`, `is_custom = true` → `source_tier_rank`
+    // rank 0) and appended AFTER the FST hits so a `(roman, hanji)`
+    // duplicate keeps the earlier-inserted `dict.bin` candidate only
+    // when source ranks tie (they never do — custom rank 0 < every
+    // `dict.bin` rank ≥ 1, so the custom entry always wins its
+    // collision). Mirrors the legacy lexicon path's whole-input-block
+    // treatment of custom dict. See
+    // `docs/engine/continuous-input-ranking.md` §10.10.
+    // 中文: Item 12 — custom 命中合成 full-buffer 候選 (is_custom→rank 0),append 在 dict.bin 之後;
+    // 中文:   (roman,hanji) 碰撞時 custom rank 0 必勝 (見下方 dedupe)。
+    for entry in custom {
+        out.push(custom_entry_to_candidate(
+            entry,
+            raw_len,
+            freq_map,
+            now_ms,
+            COVERAGE_KIND_FULL,
+        ));
+    }
+
+    // v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe. `dict.bin` is
+    // already collapsed by `dictionary/build/merge_csv.py:107`'s
+    // `groupby(["hanzi", "_tl_key"])`, so the only realistic duplicate
+    // is custom-vs-`dict.bin` sharing a `(roman, hanji)` pair. MUST run
+    // BEFORE the `SortKey` sort: the winner is the lowest
+    // `source_tier_rank` survivor (custom rank 0 beats any `dict.bin`
+    // tier), which is NOT what the full 8-dim sort would pick (it
+    // weighs `score`/`freq` ahead of `source_rank`, so a high-freq
+    // `dict.bin` duplicate could otherwise mask the user's custom
+    // entry). `(roman, hanji)` is the dual key (Codex pre-impl D1) so
+    // romanization variants of the same hanji are preserved.
+    // 中文: Item 12 — (roman,hanji) 雙鍵去重;排序前執行,勝者 = source_tier_rank 最小者 (custom rank 0 勝)。
+    dedupe_by_roman_hanji(&mut out);
 
     // Phase 9.1 lexicographic sort. `stable_idx` is stamped from
     // pre-sort element position via `enumerate()` BEFORE any sorting
@@ -536,6 +612,8 @@ pub fn fetch_candidates_for_keys(
 // 中文: rowid pre-cap = PARTIAL_PREFIX_CAP (對齊 legacy LexiconService);hydrate 後 record_to_candidate 標 COVERAGE_KIND_PARTIAL_PREFIX。
 // 中文: 全部候選共用 8 維 SortKey,coverage_kind 在最前面;沒有混合 full + partial 的 caller (dispatch 走互斥 branch)。
 // 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu");bare namespace "tl:" 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆,生產路徑由 build_partial_prefix_key_tl 保證不會傳 bare namespace。
+// 中文: Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
+// 中文:   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
 #[allow(clippy::too_many_arguments)]
 pub fn fetch_partial_prefix_candidates(
     key: &(ConsumedSpan, String),
@@ -543,11 +621,12 @@ pub fn fetch_partial_prefix_candidates(
     enabled_sources_bitmask: u32,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    custom: &[CustomEntry],
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> Vec<RawCandidate> {
     let (span, fst_key) = key;
-    if fst_key.is_empty() {
+    if fst_key.is_empty() && custom.is_empty() {
         return Vec::new();
     }
     let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
@@ -560,25 +639,52 @@ pub fn fetch_partial_prefix_candidates(
     // worst-case work, not maximizing hits past the cap.
     // 中文: 用 take(PARTIAL_PREFIX_CAP) 把 dict.record hydration 上限套在 rowid 流上,
     // 中文:   即使 tl:t 這種短前綴對到上千筆 FST entry 也只查前 30 筆;對齊 legacy LexiconService 限制。
-    for rowid in prefix_index
-        .lookup_prefix(fst_key)
-        .into_iter()
-        .take(PARTIAL_PREFIX_CAP)
-    {
-        let Some(record) = dict.record(rowid) else {
-            continue;
-        };
-        if !DictionaryReader::passes_filter(record.bitmask, &filter) {
-            continue;
+    // Item 12: guard the unbounded `lookup_prefix("")` scan — with the
+    // early-return now gated on `fst_key.is_empty() && custom.is_empty()`,
+    // an empty `fst_key` + non-empty `custom` reaches here and must NOT
+    // trigger a whole-FST scan.
+    // 中文: Item 12 — fst_key 空 + custom 非空時會走到這裡,須擋掉 lookup_prefix("") 全表掃描。
+    if !fst_key.is_empty() {
+        for rowid in prefix_index
+            .lookup_prefix(fst_key)
+            .into_iter()
+            .take(PARTIAL_PREFIX_CAP)
+        {
+            let Some(record) = dict.record(rowid) else {
+                continue;
+            };
+            if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+                continue;
+            }
+            out.push(record_to_candidate(
+                record,
+                *span,
+                freq_map,
+                now_ms,
+                COVERAGE_KIND_PARTIAL_PREFIX,
+            ));
         }
-        out.push(record_to_candidate(
-            record,
-            *span,
+    }
+
+    // v3.5.8 Phase 9 Item 12 — merge `custom_dictionary.db` hits into
+    // the partial-prefix path too (legacy custom dict is prefix-visible,
+    // so Continuous must not hide the user's custom word while they are
+    // still typing toward the first syllable boundary). Tagged
+    // `COVERAGE_KIND_PARTIAL_PREFIX` — NOT `COVERAGE_KIND_FULL` — so
+    // §15.5's "partial-prefix ranks strictly below full-syllable" rule
+    // is preserved (Codex pre-impl D6). The `(roman, hanji)` dedupe
+    // then runs before the sort, identical to `fetch_candidates_for_keys`.
+    // 中文: Item 12 — custom 命中併入 partial-prefix,標 PARTIAL_PREFIX 不標 FULL,保 §15.5 排序不變式。
+    for entry in custom {
+        out.push(custom_entry_to_candidate(
+            entry,
+            raw_len,
             freq_map,
             now_ms,
             COVERAGE_KIND_PARTIAL_PREFIX,
         ));
     }
+    dedupe_by_roman_hanji(&mut out);
 
     // Same `enumerate()`-pre-sort-stamping pattern as
     // `fetch_candidates_for_keys` to keep `stable_idx` deterministic
@@ -644,7 +750,132 @@ fn record_to_candidate(
         mode,
         recency_rank: recency,
         coverage_kind,
+        // dict.bin FST hit — `source_tier_rank` derives the rank from
+        // `bitmask`; `is_custom = false` keeps the kautian/taigitv/…
+        // ordering. Only `custom_entry_to_candidate` sets `true`.
+        // 中文: dict.bin 命中,rank 由 bitmask 推導;custom 才設 true。
+        is_custom: false,
     }
+}
+
+/// v3.5.8 Phase 9 Item 12 — synthesize a [`RawCandidate`] from a
+/// platform-supplied [`CustomEntry`] (`custom_dictionary.db` row).
+///
+/// Shape decisions (Codex pre-impl 2026-05-15, D3 / D4):
+///
+/// - `consumed_span = (0, raw_len)` — custom entries are outside the
+///   FST/syllabifier span model, so they commit the whole buffer as
+///   one block (final-commit), mirroring the legacy lexicon path's
+///   treatment of custom dict and Item 10 partial-prefix Q15.4. With
+///   `consumed_span_end == raw_len` the downstream `SortKey.tier` is
+///   `0` (full-buffer) — NO forced Tier-1 promotion
+///   (`docs/roadmap.md` § Phase 9: "無強制 Tier 1 promotion").
+/// - `frequency = 0`, `syllable_count = 1` — `custom_dictionary.db`
+///   carries no `dict.bin`-comparable frequency. `is_custom = true`
+///   gives `source_tier_rank` rank `0`, which is what governs the
+///   `(roman, hanji)` dedupe winner and prior-axis ties; it does NOT
+///   globally float custom above `dict.bin` because `SortKey` weighs
+///   `score`/`freq` ahead of `source_rank`. This is intentional —
+///   Item 12's job is duplicate elimination + custom-wins-collision,
+///   not a global custom-priority tier
+///   (`docs/engine/continuous-input-ranking.md` §10.10).
+/// - `display_text = hanji.unwrap_or(roman)` — identical contract to
+///   [`record_to_candidate`] so commit + `user_frequency.db` write
+///   keys stay wire-identical between custom and `dict.bin` commits.
+/// - `mode = derive_mode(hanji)` — TAILO when `hanji` is `None`.
+/// - user-frequency boost / recency are applied identically to
+///   `dict.bin` candidates (custom entries can also be user-selected).
+// 中文: Item 12 — custom_dictionary.db 一筆 → RawCandidate;full-buffer span (final-commit)、
+// 中文:   freq=0 syll=1、is_custom=true (source rank 0,主管去重勝負與前維 tie,不全域置頂)、
+// 中文:   display_text/mode/boost/recency 與 record_to_candidate 同契約。
+fn custom_entry_to_candidate(
+    entry: &CustomEntry,
+    raw_len: u32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    coverage_kind: u8,
+) -> RawCandidate {
+    let roman = entry.roman.clone();
+    let hanji = entry.hanji.clone();
+    let mode = derive_mode(hanji.as_deref());
+    let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
+    let freq_data = freq_map.get(&display_text).copied().unwrap_or_default();
+    let count_u32 = u32::try_from(freq_data.count).unwrap_or(0);
+    let boost = user_freq_boost(count_u32);
+    // `frequency = 0` (D4) → `calculate_continuous_score` reduces to
+    // the boost-only term; the candidate floats on `source_rank` /
+    // dedupe, not raw freq.
+    let score = calculate_continuous_score(0, 1, boost);
+    let recency = recency_rank(now_ms, freq_data.last_used_ms);
+    RawCandidate {
+        consumed_span: (0, raw_len),
+        syllable_count: 1,
+        display_text,
+        roman,
+        hanji,
+        score,
+        form: FORM_NOTONE,
+        frequency: 0,
+        // No `dict.bin` source bits; rank is forced to 0 via
+        // `is_custom = true` in `SortKey::new` /
+        // `dedupe_by_roman_hanji` (`source_tier_rank` short-circuits).
+        // 中文: 無 dict.bin source bit;rank 由 is_custom=true 強制為 0。
+        bitmask: 0,
+        mode,
+        recency_rank: recency,
+        coverage_kind,
+        is_custom: true,
+    }
+}
+
+/// v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe (Codex pre-impl
+/// D1 + D2, 2026-05-15). Runs on the merged `dict.bin` + custom
+/// candidate vector BEFORE the `SortKey` sort.
+///
+/// - **Key** (D1): the dual `(roman, hanji)` pair, NOT single
+///   `display_text` — romanization variants of the same hanji stay
+///   distinct.
+/// - **Winner** (D2): the survivor with the lowest
+///   `source_tier_rank(bitmask, is_custom)` (custom = rank 0 beats
+///   every `dict.bin` tier ≥ 1). On a rank tie the earlier-inserted
+///   candidate wins (deterministic; `dict.bin` hits are inserted
+///   before custom, so a `dict.bin`-vs-`dict.bin` tie — which
+///   `merge_csv.py` already precludes in production — keeps the first
+///   FST hit).
+/// - Survivor **insertion order is preserved** so the downstream
+///   `SortKey.stable_idx` stays deterministic.
+// 中文: Item 12 — (roman,hanji) 雙鍵去重,排序前執行;勝者 = source_tier_rank 最小 (custom rank 0 必勝),
+// 中文:   同 rank 取較早插入者;倖存者保持插入順序,讓 SortKey.stable_idx 維持 deterministic。
+fn dedupe_by_roman_hanji(out: &mut Vec<RawCandidate>) {
+    use std::collections::HashMap;
+    // key → (winning source rank, index of winner in `out`).
+    let mut best: HashMap<(String, Option<String>), (u8, usize)> =
+        HashMap::with_capacity(out.len());
+    for (i, c) in out.iter().enumerate() {
+        let rank = source_tier_rank(c.bitmask, c.is_custom);
+        let key = (c.roman.clone(), c.hanji.clone());
+        match best.get(&key) {
+            // Strictly lower rank replaces; equal rank keeps the
+            // earlier index (no replace) → deterministic tie-break.
+            Some(&(best_rank, _)) if rank < best_rank => {
+                best.insert(key, (rank, i));
+            }
+            None => {
+                best.insert(key, (rank, i));
+            }
+            _ => {}
+        }
+    }
+    if best.len() == out.len() {
+        return; // no duplicates — common production path, skip rebuild.
+    }
+    let winners: std::collections::HashSet<usize> = best.values().map(|&(_, idx)| idx).collect();
+    let mut idx = 0usize;
+    out.retain(|_| {
+        let keep = winners.contains(&idx);
+        idx += 1;
+        keep
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -712,10 +943,13 @@ impl SortKey {
         let (start, end) = candidate.consumed_span;
         let coverage_bytes = end.saturating_sub(start);
         let tier: u8 = if end == raw_len { 0 } else { 1 };
-        // PR-9.1 always sees dict.bin records (is_custom=false). PR-9.6
-        // will introduce platform-side custom dict merge; that merge
-        // point is responsible for tagging the custom rank, not this fn.
-        let source_rank = source_tier_rank(candidate.bitmask, false);
+        // v3.5.8 Phase 9 Item 12 — `is_custom` is now carried on the
+        // candidate (`record_to_candidate` → false, dict.bin source
+        // bits; `custom_entry_to_candidate` → true, forces rank 0).
+        // Before Item 12 this was hardcoded `false` because no caller
+        // could produce a custom candidate yet.
+        // 中文: Item 12 — is_custom 改由候選帶 (custom=true→rank 0);此前無 caller 能產 custom 故硬編 false。
+        let source_rank = source_tier_rank(candidate.bitmask, candidate.is_custom);
         Self {
             coverage_kind: candidate.coverage_kind,
             tier,
@@ -811,6 +1045,7 @@ mod sort_key_tests {
             mode: CandidateMode::Hant,
             recency_rank,
             coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
         }
     }
 
@@ -1188,5 +1423,183 @@ mod record_to_candidate_carrier_tests {
         assert_eq!(cand.hanji.as_deref(), Some("hip相"));
         assert_eq!(cand.display_text, "hip相");
         assert_eq!(cand.mode, CandidateMode::Mixed);
+    }
+}
+
+#[cfg(test)]
+mod item12_custom_dedupe_tests {
+    //! v3.5.8 Phase 9 Item 12 — `custom_dictionary.db` synthesis +
+    //! `(roman, hanji)` dedupe. Pins Codex pre-impl decisions D1
+    //! (dual `(roman, hanji)` key), D2 (lowest `source_tier_rank`
+    //! winner, rank-tie → earlier insertion), D3 (full-buffer span),
+    //! D4 (`frequency = 0`, `syllable_count = 1`, `is_custom` drives
+    //! rank 0). Spec: `docs/engine/continuous-input-ranking.md`
+    //! §10.10.
+    // 中文: Item 12 — custom 合成 + (roman,hanji) 去重 hermetic 測試;鎖 D1-D4 決議。
+    use super::*;
+
+    /// Minimal non-custom `dict.bin`-shaped candidate. `bitmask` picks
+    /// the source rank; all sort-noise dims are neutralized so a test
+    /// isolates the dedupe / source-rank axis.
+    fn dict_cand(roman: &str, hanji: Option<&str>, bitmask: u16) -> RawCandidate {
+        RawCandidate {
+            consumed_span: (0, 6),
+            syllable_count: 1,
+            display_text: hanji.unwrap_or(roman).to_owned(),
+            roman: roman.to_owned(),
+            hanji: hanji.map(str::to_owned),
+            score: 1.0,
+            form: FORM_NOTONE,
+            frequency: 100,
+            bitmask,
+            mode: derive_mode(hanji),
+            recency_rank: 1,
+            coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
+        }
+    }
+
+    #[test]
+    fn custom_entry_to_candidate_hant_shape() {
+        // D3 + D4: full-buffer span, freq 0, syll 1, is_custom true,
+        // coverage_kind passed through, display = hanji, mode HANT.
+        let c = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "tâi-gí".to_owned(),
+                hanji: Some("台語".to_owned()),
+            },
+            9,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+        );
+        assert!(c.is_custom);
+        assert_eq!(c.consumed_span, (0, 9));
+        assert_eq!(c.frequency, 0);
+        assert_eq!(c.syllable_count, 1);
+        assert_eq!(c.roman, "tâi-gí");
+        assert_eq!(c.hanji.as_deref(), Some("台語"));
+        assert_eq!(c.display_text, "台語");
+        assert_eq!(c.mode, CandidateMode::Hant);
+        assert_eq!(c.coverage_kind, COVERAGE_KIND_FULL);
+    }
+
+    #[test]
+    fn custom_entry_to_candidate_tailo_when_no_hanji() {
+        // hanji None → display falls back to roman, mode TAILO; and
+        // the partial-prefix coverage kind is honored (D6).
+        let c = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "góa".to_owned(),
+                hanji: None,
+            },
+            3,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_PARTIAL_PREFIX,
+        );
+        assert_eq!(c.display_text, "góa");
+        assert_eq!(c.hanji, None);
+        assert_eq!(c.mode, CandidateMode::Tailo);
+        assert_eq!(c.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
+        assert!(c.is_custom);
+    }
+
+    #[test]
+    fn dedupe_custom_wins_over_dict_collision() {
+        // D2: same `(roman, hanji)` from a high-freq `dict.bin` entry
+        // (kautian, rank 1) and a custom entry (rank 0). The custom
+        // survivor wins regardless of the dict entry's higher freq /
+        // earlier insertion.
+        let mut out = vec![
+            dict_cand("tâi-gí", Some("台語"), 1 << 0), // kautian, rank 1
+            custom_entry_to_candidate(
+                &CustomEntry {
+                    roman: "tâi-gí".to_owned(),
+                    hanji: Some("台語".to_owned()),
+                },
+                6,
+                &FrequencyMap::new(),
+                0,
+                COVERAGE_KIND_FULL,
+            ),
+        ];
+        dedupe_by_roman_hanji(&mut out);
+        assert_eq!(out.len(), 1, "collision must collapse to one");
+        assert!(out[0].is_custom, "custom (rank 0) must win the collision");
+    }
+
+    #[test]
+    fn dedupe_dual_key_preserves_roman_variants() {
+        // D1: same hanji, different roman → distinct `(roman, hanji)`
+        // keys, both survive (single `display_text` key would wrongly
+        // collapse them).
+        let mut out = vec![
+            dict_cand("tâi-gí", Some("台語"), 1 << 0),
+            dict_cand("tâi-gír", Some("台語"), 1 << 0),
+        ];
+        dedupe_by_roman_hanji(&mut out);
+        assert_eq!(
+            out.len(),
+            2,
+            "roman variants of same hanji must both survive"
+        );
+    }
+
+    #[test]
+    fn dedupe_rank_tie_keeps_earlier_insertion_and_order() {
+        // D2 tie-break: two same-rank non-custom collisions keep the
+        // earlier-inserted one; unrelated entries keep insertion order
+        // so the downstream `SortKey.stable_idx` stays deterministic.
+        let mut first = dict_cand("a", Some("甲"), 1 << 0);
+        first.frequency = 10; // earlier insertion, lower freq
+        let mut second = dict_cand("a", Some("甲"), 1 << 0);
+        second.frequency = 999; // later insertion, higher freq — must lose
+        let other = dict_cand("b", Some("乙"), 1 << 0);
+        let mut out = vec![first, other.clone(), second];
+        dedupe_by_roman_hanji(&mut out);
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0].frequency, 10, "rank tie keeps earlier insertion");
+        assert_eq!(out[1].roman, "b", "non-duplicate keeps its position");
+    }
+
+    #[test]
+    fn dedupe_noop_when_no_duplicates() {
+        let mut out = vec![
+            dict_cand("a", Some("甲"), 1 << 0),
+            dict_cand("b", Some("乙"), 1 << 0),
+        ];
+        dedupe_by_roman_hanji(&mut out);
+        assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn is_custom_forces_source_rank_zero_in_sortkey() {
+        // The `is_custom` axis must reach `SortKey` via
+        // `source_tier_rank(bitmask, is_custom)` — a custom candidate
+        // (no source bits) sorts ahead of a default-source dict
+        // candidate when every prior dim is equal.
+        let custom = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "x".to_owned(),
+                hanji: Some("某".to_owned()),
+            },
+            3,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+        );
+        // Default-source dict candidate: same span (tier 0), same
+        // score/freq/recency so only `source_rank` differs.
+        let mut dict = dict_cand("y", Some("乙"), 0); // no known source bit → rank 5
+        dict.consumed_span = (0, 3);
+        dict.frequency = 0;
+        dict.score = custom.score;
+        let k_custom = SortKey::new(&custom, 3, 0);
+        let k_dict = SortKey::new(&dict, 3, 1);
+        assert!(
+            k_custom < k_dict,
+            "is_custom → source_rank 0 must outrank default source rank"
+        );
     }
 }

@@ -33,9 +33,9 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
-    fetch_candidates_for_endings, fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan,
-    RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    PARTIAL_PREFIX_CAP,
+    fetch_candidates_for_endings, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
+    CandidateMode, ConsumedSpan, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
+    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
 };
 use ranking::FrequencyMap;
 
@@ -1089,6 +1089,7 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
         u32::MAX,
         &FrequencyMap::new(),
         0,
+        &[], // Item 12: no custom-dict entries in this fixture
         &prefix_index,
         &dict,
     );
@@ -1142,6 +1143,7 @@ fn partial_prefix_returns_empty_when_no_dict_hits() {
         u32::MAX,
         &FrequencyMap::new(),
         0,
+        &[], // Item 12: no custom-dict entries in this fixture
         &prefix_index,
         &dict,
     );
@@ -1182,6 +1184,7 @@ fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
         u32::MAX,
         &FrequencyMap::new(),
         0,
+        &[], // Item 12: no custom-dict entries in this fixture
         &prefix_index,
         &dict,
     );
@@ -1220,6 +1223,7 @@ fn partial_prefix_empty_key_returns_empty() {
         u32::MAX,
         &FrequencyMap::new(),
         0,
+        &[], // Item 12: no custom-dict entries in this fixture
         &prefix_index,
         &dict,
     );
@@ -1256,4 +1260,197 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
     );
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].coverage_kind, COVERAGE_KIND_FULL);
+}
+
+// ---------------------------------------------------------------------------
+// v3.5.8 Phase 9 Item 12 — custom_dictionary.db merge + (roman, hanji)
+// dedupe end-to-end through `fetch_candidates_for_keys`. Spec
+// `docs/engine/continuous-input-ranking.md` §10.10 +
+// `docs/engine/continuous-candidate-display.md` §15.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn item12_custom_only_entry_surfaces_full_buffer() {
+    // No dict.bin hit for the span; a custom entry must still surface
+    // as a full-buffer candidate (span = (0, raw_len), is_custom).
+    let (prefix_index, dict) = build_fixture(
+        "item12-custom-only",
+        &[Row {
+            toneless_key: "kah",
+            hanzi: "甲",
+            tl: "kah",
+            syll: 1,
+            freq: 100,
+        }],
+    );
+    let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taigi".to_owned())];
+    let custom = vec![CustomEntry {
+        roman: "tâi-gí".to_owned(),
+        hanji: Some("台語".to_owned()),
+    }];
+    let out = fetch_candidates_for_keys(
+        &keys,
+        6,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &custom,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(out.len(), 1, "custom entry must surface, got {out:#?}");
+    assert_eq!(out[0].display_text, "台語");
+    assert_eq!(out[0].consumed_span, (0, 6));
+    assert!(out[0].is_custom);
+    assert_eq!(out[0].coverage_kind, COVERAGE_KIND_FULL);
+}
+
+#[test]
+fn item12_custom_dedupes_and_wins_dict_collision() {
+    // dict.bin and custom share `(tâi-gí, 台語)`. After the merge the
+    // `(roman, hanji)` dedupe collapses them to one survivor — the
+    // custom entry (source_tier_rank 0 beats the dict source tier),
+    // even though the dict entry has a much higher raw frequency.
+    let (prefix_index, dict) = build_fixture(
+        "item12-collision",
+        &[Row {
+            toneless_key: "taigi",
+            hanzi: "台語",
+            tl: "tâi-gí",
+            syll: 2,
+            freq: 99999,
+        }],
+    );
+    let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taigi".to_owned())];
+    let custom = vec![CustomEntry {
+        roman: "tâi-gí".to_owned(),
+        hanji: Some("台語".to_owned()),
+    }];
+    let out = fetch_candidates_for_keys(
+        &keys,
+        6,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &custom,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(
+        out.len(),
+        1,
+        "duplicate (roman, hanji) must collapse to one, got {out:#?}"
+    );
+    assert!(
+        out[0].is_custom,
+        "custom (rank 0) must win the collision over the high-freq dict entry"
+    );
+    assert_eq!(out[0].display_text, "台語");
+}
+
+#[test]
+fn item12_custom_roman_variant_not_deduped() {
+    // Same hanji, different roman → distinct `(roman, hanji)` keys.
+    // Both the dict entry and the custom entry survive (D1 dual-key).
+    let (prefix_index, dict) = build_fixture(
+        "item12-roman-variant",
+        &[Row {
+            toneless_key: "taigi",
+            hanzi: "台語",
+            tl: "tâi-gí",
+            syll: 2,
+            freq: 100,
+        }],
+    );
+    let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taigi".to_owned())];
+    let custom = vec![CustomEntry {
+        roman: "tai5-gi2".to_owned(), // numeric-tone variant of same hanji
+        hanji: Some("台語".to_owned()),
+    }];
+    let out = fetch_candidates_for_keys(
+        &keys,
+        6,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &custom,
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(
+        out.len(),
+        2,
+        "roman variants must both survive, got {out:#?}"
+    );
+}
+
+#[test]
+fn item12_custom_merges_into_partial_prefix_path() {
+    // D6: custom entries also surface in the partial-prefix path,
+    // tagged COVERAGE_KIND_PARTIAL_PREFIX (NOT FULL) so §15.5's
+    // "partial ranks below full" invariant is preserved.
+    let (prefix_index, dict) = build_fixture(
+        "item12-partial-custom",
+        &[Row {
+            toneless_key: "gua",
+            hanzi: "我",
+            tl: "guá",
+            syll: 1,
+            freq: 100,
+        }],
+    );
+    let key: (ConsumedSpan, String) = ((0, 2), "tl:gu".to_owned());
+    let custom = vec![CustomEntry {
+        roman: "gún".to_owned(),
+        hanji: Some("阮".to_owned()),
+    }];
+    let out = fetch_partial_prefix_candidates(
+        &key,
+        2,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &custom,
+        &prefix_index,
+        &dict,
+    );
+    let custom_hit = out
+        .iter()
+        .find(|c| c.is_custom)
+        .expect("custom entry must surface in partial-prefix path");
+    assert_eq!(custom_hit.display_text, "阮");
+    assert_eq!(
+        custom_hit.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX,
+        "custom in partial path must be PARTIAL_PREFIX, not FULL"
+    );
+}
+
+#[test]
+fn item12_empty_custom_is_noop() {
+    // Backward-compat: empty custom slice reproduces pre-Item-12
+    // behavior exactly (no synthesized candidates, dedupe no-op).
+    let (prefix_index, dict) = build_fixture(
+        "item12-empty-custom",
+        &[Row {
+            toneless_key: "taigi",
+            hanzi: "台語",
+            tl: "tâi-gí",
+            syll: 2,
+            freq: 100,
+        }],
+    );
+    let keys: Vec<(ConsumedSpan, String)> = vec![((0, 6), "tl:taigi".to_owned())];
+    let out = fetch_candidates_for_keys(
+        &keys,
+        6,
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &[],
+        &prefix_index,
+        &dict,
+    );
+    assert_eq!(out.len(), 1);
+    assert!(!out[0].is_custom);
+    assert_eq!(out[0].display_text, "台語");
 }

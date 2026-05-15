@@ -450,6 +450,22 @@ public struct Taigi_Engine_EnterContinuous: Sendable {
 /// `now_ms <= 0`, `last_used_ms <= 0`, and `now_ms < last_used_ms`
 /// (clock skew) by falling through to `recency_rank = 1` for every
 /// candidate — see `engine/ranking/src/score.rs::recency_rank`.
+///
+/// v3.5.8 Phase 9 Item 12 — `custom_entries` carries the platform's
+/// `custom_dictionary.db` matches for the current raw buffer. The DB
+/// stays native (platform queries via the existing
+/// `CustomDictionaryRepository.searchSync` / `CustomDictionaryService
+/// .search` parameterized-SQL path); only the stored `(roman, hanji)`
+/// columns are marshalled — NOT the legacy display-capitalized form,
+/// so the engine's `(roman, hanji)` dedupe collides correctly against
+/// `dict.bin` entries. The engine synthesizes a full-buffer
+/// `RawCandidate` per entry (`consumed_span = (0, raw.len())`,
+/// `is_custom = true` → `source_tier_rank` rank 0), merges them with
+/// the FST hits, then dedupes by `(roman, hanji)` keeping the lowest
+/// `source_tier_rank` (custom wins). Empty list = no custom matches /
+/// feature disabled — fully backward-compatible (older builds simply
+/// never set field 4). See `docs/engine/continuous-input-ranking.md`
+/// §10.10 + `docs/engine/continuous-candidate-display.md` §15.
 public struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -461,9 +477,41 @@ public struct Taigi_Engine_FetchAtPos: Sendable {
 
   public var nowMs: Int64 = 0
 
+  public var customEntries: [Taigi_Engine_CustomDictEntry] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+/// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled
+/// for the Continuous candidate merge. `roman` / `hanji` are the raw
+/// stored columns (no platform capitalization / tone re-display) so
+/// the engine's `(roman, hanji)` dedupe key matches `dict.bin`'s
+/// `DictionaryRecord.tl` / `.hanzi`. `hanji` uses proto3 `optional` so
+/// a romanization-only custom entry (no hanji) is distinguishable from
+/// an empty string, mirroring `CandidateMessage.hanji`.
+public struct Taigi_Engine_CustomDictEntry: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var roman: String = String()
+
+  public var hanji: String {
+    get {_hanji ?? String()}
+    set {_hanji = newValue}
+  }
+  /// Returns true if `hanji` has been explicitly set.
+  public var hasHanji: Bool {self._hanji != nil}
+  /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
+  public mutating func clearHanji() {self._hanji = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _hanji: String? = nil
 }
 
 /// v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The
@@ -1536,7 +1584,7 @@ extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._Me
 
 extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1547,6 +1595,7 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
       case 1: try { try decoder.decodeSingularUInt32Field(value: &self.position) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.frequencyEntries) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.nowMs) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.customEntries) }()
       default: break
       }
     }
@@ -1562,6 +1611,9 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
     if self.nowMs != 0 {
       try visitor.visitSingularInt64Field(value: self.nowMs, fieldNumber: 3)
     }
+    if !self.customEntries.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.customEntries, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1569,6 +1621,46 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
     if lhs.position != rhs.position {return false}
     if lhs.frequencyEntries != rhs.frequencyEntries {return false}
     if lhs.nowMs != rhs.nowMs {return false}
+    if lhs.customEntries != rhs.customEntries {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CustomDictEntry"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}roman\0\u{1}hanji\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 1)
+    }
+    try { if let v = self._hanji {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CustomDictEntry, rhs: Taigi_Engine_CustomDictEntry) -> Bool {
+    if lhs.roman != rhs.roman {return false}
+    if lhs._hanji != rhs._hanji {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

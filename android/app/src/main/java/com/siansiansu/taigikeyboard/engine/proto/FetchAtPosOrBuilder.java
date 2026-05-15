@@ -34,4 +34,18 @@ public interface FetchAtPosOrBuilder extends
    * @return The nowMs.
    */
   long getNowMs();
+
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry>
+      getCustomEntriesList();
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry getCustomEntries(int index);
+  /**
+   * <code>repeated .taigi.engine.CustomDictEntry custom_entries = 4;</code>
+   */
+  int getCustomEntriesCount();
 }

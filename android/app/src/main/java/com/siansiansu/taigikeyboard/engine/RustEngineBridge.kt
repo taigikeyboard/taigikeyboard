@@ -11,6 +11,7 @@ import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
 import com.siansiansu.taigikeyboard.engine.proto.ContainsTps
 import com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev
+import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.DeriveNotone
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
@@ -994,6 +995,17 @@ object RustEngineBridge {
     // 中文: generation 必須沿用當前 composing session — 不可 bump,否則會在 fetch 前重置狀態。
     // 中文: frequencyEntries + nowMs 為 Phase 9.3a/9.3c 的 user_freq_boost / recency_rank 來源,
     // 中文: 預設空陣列 + 0 維持中性 boost,實際填充由 ComposingManager two-phase fetch 負責。
+    //
+    /**
+     * v3.5.8 Phase 9 Item 12 — `customEntries` carries the platform's
+     * `custom_dictionary.db` matches (raw stored `(roman, hanji)`
+     * columns; DB stays native). Default `emptyList()` = no custom
+     * matches / feature off — backward-compatible no-op. The engine
+     * synthesizes a full-buffer candidate per entry and dedupes
+     * `(roman, hanji)` against the FST hits (custom wins the
+     * collision). Mirrors iOS `RustEngineBridge.composingFetchAtPos`.
+     */
+    // 中文: Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op。
     @JvmStatic
     fun composingFetchAtPos(
         mode: NormalizeMode,
@@ -1001,12 +1013,14 @@ object RustEngineBridge {
         generation: Long,
         frequencyEntries: List<FrequencyEntry> = emptyList(),
         nowMs: Long = 0L,
+        customEntries: List<CustomDictEntry> = emptyList(),
     ): ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
             .setPosition(0)
             .addAllFrequencyEntries(frequencyEntries)
             .setNowMs(nowMs)
+            .addAllCustomEntries(customEntries)
             .build()
         return composingFetchDispatch(
             methodSetter = { it.fetchAtPos = payload },

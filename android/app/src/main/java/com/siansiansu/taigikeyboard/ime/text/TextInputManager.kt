@@ -402,6 +402,12 @@ class TextInputManager(
                         // `ComposingManager(userFrequencyService:
                         // CompositionRoot.userFrequencyService)`.
                         userFrequencyService = taigikeyboard.compositionRoot.userFreq,
+                        // v3.5.8 Phase 9 Item 12 — `custom_dictionary.db`
+                        // source for the Continuous fetch. Same shared
+                        // instance the legacy lexicon path uses. Mirrors
+                        // iOS `ComposingManager(customDictionaryRepository:
+                        // CompositionRoot.customDictionaryRepository)`.
+                        customDictionaryService = taigikeyboard.compositionRoot.customDict,
                     )
                 } else {
                     null
