@@ -11,11 +11,21 @@ use thiserror::Error;
 
 /// Composition phase. `Idle` means no preedit; `Composing { raw }` carries
 /// the numeric-tone ASCII raw input that the platform-side state used to
-/// shadow; `Continuous { raw, committed }` is the v3.5.8 multi-segment
-/// state where part of the buffer has already been committed (via mid-commit
-/// candidate selection) and `raw` holds the still-pending tail.
-// 中文: 組字階段。Idle 表示無預編輯;Composing 攜帶單段數字調 raw;
-// 中文: Continuous 是 v3.5.8 連續輸入的多段狀態 (committed 已上屏的段落 + raw 尚未確定的尾段)。
+/// shadow; `Continuous { raw, nailed }` is the v3.5.8 multi-segment state.
+///
+/// **Model B (mainstream-aligned, see `docs/engine/continuous-input-ranking.md`
+/// §10):** `nailed` segments are **NOT** in the host document. The whole
+/// composition — `Σ nailed[i].display_text` followed by the derived display
+/// of the pending `raw` tail — lives in **one** marked / composing region
+/// until a hard finalize (Enter / final-commit / external-suggestion commit).
+/// A candidate tap *nails* a segment inside the composition; only a hard
+/// finalize writes literal text to the document. Reset/abort clears the
+/// whole region and drops all `nailed` (nothing was written).
+// 中文: 組字階段。Idle 無預編輯;Composing 單段數字調 raw;
+// 中文: Continuous 是 v3.5.8 連續輸入多段狀態。
+// 中文: Model B(對齊主流,§10):nailed 段**未**寫入文件;整段組字
+// 中文: (Σ nailed.display_text + pending raw 衍生形)留在單一 marked region,
+// 中文: 直到 hard finalize 才一次寫字面字。abort 清整段並丟棄所有 nailed。
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
     // 中文: 閒置狀態,無預編輯內容。
@@ -24,33 +34,35 @@ pub enum Phase {
     Composing {
         raw: String,
     },
-    // 中文: 連續輸入中,committed 為已選定 segments,raw 為 pending 尾段。
+    // 中文: 連續輸入中,nailed 為組字區內已釘的 segments(未寫入文件),raw 為 pending 尾段。
     Continuous {
         raw: String,
-        committed: Vec<CommittedSegment>,
+        nailed: Vec<NailedSegment>,
     },
 }
 
 impl Phase {
-    /// `rawInput` per `docs/engine/continuous-input-ranking.md` §10.2 / §10.3
-    /// clarification β — the pending-tail display form rendered through the
-    /// derived-display chain (POJ doubletap → tone marks → nasal-case adjust;
-    /// TPS pass-through). For `Phase::Continuous` this is strictly the pending
-    /// tail (`raw` field), not the original keystroke history; for
+    /// Pending-tail display form rendered through the derived-display chain
+    /// (POJ doubletap → tone marks → nasal-case adjust; TPS pass-through).
+    /// For `Phase::Continuous` this is strictly the pending `raw` tail, not
+    /// the original keystroke history nor the nailed prefix; for
     /// `Phase::Composing` it is the single-segment raw; for `Phase::Idle` it
     /// is the empty string.
     ///
-    /// Item 3 (Enter-raw commit in Continuous) commits exactly this string,
-    /// closing the gap clarification β names where the current `Intent::CommitRaw`
-    /// emits literal keystrokes instead. Item 2 ships only the accessor +
-    /// invariant tests; the commit-side rewrite ships in Item 3.
+    /// **Model B (§10):** this is **no longer the composing-buffer surface** —
+    /// it is one internal *component* of it. The composing buffer the host
+    /// renders is [`Phase::composing_display`] (`Σ nailed.display_text` +
+    /// this pending-tail form). `raw_input` remains the still-editable raw
+    /// tail used by span-local candidate fetch and by callers that need the
+    /// pending-only form.
     ///
     /// User-typed hyphens are preserved as conversion boundaries (the
     /// derived-display chain splits on `-` for tone-mark application); the
     /// engine does NOT validate whether each chunk is a real syllable, and
     /// does NOT auto-insert hyphens. See §10.2 amendment 2026-05-13.
-    // 中文: §10.2 rawInput — Phase 對應的 pending-tail 顯示字串 (TPS 原樣 / POJ-TL 走 derived chain)。
-    // 中文: Continuous 只回 pending 尾,Idle 回空字串。Item 3 Enter commit 將提交此字串。
+    // 中文: pending-tail 衍生顯示字串 (TPS 原樣 / POJ-TL 走 derived chain)。
+    // 中文: Model B:這已**不是**組字緩衝區本體,只是其一個內部組件;
+    // 中文: 組字緩衝區是 Phase::composing_display(Σ nailed.display_text + 本字串)。
     pub fn raw_input(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
@@ -59,18 +71,49 @@ impl Phase {
             }
         }
     }
+
+    /// The composing-buffer surface the host renders in its single
+    /// marked / composing region (`docs/engine/continuous-input-ranking.md`
+    /// §10.2 / §10.4 invariant I1, Model B).
+    ///
+    /// - `Idle` → empty string.
+    /// - `Composing { raw }` → derived display of `raw` (identity with
+    ///   [`Phase::raw_input`]; no nailed segments exist).
+    /// - `Continuous { raw, nailed }` → `Σ nailed[i].display_text`
+    ///   concatenated with the derived display of the pending `raw` tail.
+    ///   Nailed segments are **not** in the document; they are part of the
+    ///   marked region until a hard finalize.
+    ///
+    /// No inter-segment spaces (the hanji line is logographic; the roman
+    /// pending tail keeps user-typed hyphens). This is the string a hard
+    /// finalize (Enter / final-commit) writes to the document verbatim.
+    // 中文: §10.2 / I1 — host 在單一 marked region 渲染的組字緩衝區本體。
+    // 中文: Continuous = Σ nailed.display_text + pending raw 衍生形,無段間空格;
+    // 中文: nailed 未在文件,hard finalize 才把此字串一次寫入文件。
+    pub fn composing_display(&self, config: &AppConfig) -> String {
+        match self {
+            Phase::Idle => String::new(),
+            Phase::Composing { raw } => crate::derived::derived_display(raw, config),
+            Phase::Continuous { raw, nailed } => combined_display(nailed, raw, config),
+        }
+    }
 }
 
-/// One committed segment inside `Phase::Continuous`. `raw_span` records the
-/// byte offsets in the original raw input the user typed (start = end of the
+/// One **nailed** segment inside `Phase::Continuous`. "Nailed" means the
+/// user accepted a candidate for this part of the buffer, but — under
+/// Model B (`docs/engine/continuous-input-ranking.md` §10) — it is **NOT**
+/// yet written to the host document; it lives inside the active marked /
+/// composing region until a hard finalize. `raw_span` records the byte
+/// offsets in the original raw input the user typed (start = end of the
 /// previous segment, end = start + raw_text.len()). `syllable_count` lets
-/// span-local fetch in Phase 5 distinguish e.g. `tsua` → 紙(1) vs 珠仔(2).
-// 中文: Continuous 階段已上屏的單一 segment;raw_span 是原始 raw 輸入中的 byte 區間,
-// 中文: syllable_count 給 Phase 5 區分同 toneless key 不同音節數的候選。
+/// span-local fetch distinguish e.g. `tsua` → 紙(1) vs 珠仔(2).
+// 中文: Continuous 階段「已釘」的單一 segment。Model B(§10):**未**寫入文件,
+// 中文: 留在 active marked region 內直到 hard finalize。raw_span 為原始 raw byte 區間,
+// 中文: syllable_count 區分同 toneless key 不同音節數的候選。
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CommittedSegment {
-    // 中文: 上屏顯示文字 (e.g., "紙")。v3.5.8 Phase 9 Bug 1: 這是實際寫進文件的
-    // 中文: swap/TPS/both-scripts 格式化字串;backspace/pop 的刪除長度依它計算。
+pub struct NailedSegment {
+    // 中文: 此段在組字區內的顯示文字 (e.g., "紙")。v3.5.8 Phase 9 Bug 1:
+    // 中文: swap/TPS/both-scripts 格式化字串;hard finalize 時併入整段一次寫入文件。
     pub display_text: String,
     // 中文: 規範字典鍵 (`hanji.unwrap_or(roman)`)。v3.5.8 Phase 9 Bug 1 (Option A):
     // 中文: backspace pop 時的 NextWord last-selected 修正用它,確保關聯學習
@@ -82,6 +125,36 @@ pub struct CommittedSegment {
     pub raw_span: (usize, usize),
     // 中文: 此 segment 包含的音節數,1 為單音節、2+ 為複合詞。
     pub syllable_count: u8,
+}
+
+/// `Σ nailed[i].display_text` — the nailed-prefix string (already
+/// swap/TPS/both-scripts-formatted at nail time). **Single source of truth**
+/// for the nailed-prefix concatenation; do not re-inline this loop.
+// 中文: Σ nailed.display_text;nailed 前綴串接的唯一真相來源,勿再內聯。
+pub(crate) fn nailed_prefix(nailed: &[NailedSegment]) -> String {
+    let mut s = String::new();
+    for seg in nailed {
+        s.push_str(&seg.display_text);
+    }
+    s
+}
+
+/// The Model B composing-buffer surface for a `(nailed, raw)` pair:
+/// `Σ nailed[i].display_text` followed by the derived display of the
+/// pending `raw` tail. **Single source of truth** — both
+/// [`Phase::composing_display`] and the `transition.rs` Continuous paths
+/// route through this so the rendered preedit and the hard-finalize commit
+/// can never diverge (Codex post-impl review point).
+// 中文: Model B 組字緩衝區本體 (nailed 前綴 + pending raw 衍生形) 的唯一真相來源;
+// 中文: Phase::composing_display 與 transition.rs 各 Continuous path 全走此,確保不漂移。
+pub(crate) fn combined_display(
+    nailed: &[NailedSegment],
+    raw: &str,
+    config: &AppConfig,
+) -> String {
+    let mut s = nailed_prefix(nailed);
+    s.push_str(&crate::derived::derived_display(raw, config));
+    s
 }
 
 /// Engine state — the platform no longer shadows this.
@@ -146,7 +219,7 @@ pub enum Intent {
     },
     // 中文: 純讀取目前狀態,不變更狀態也不發出 Effect。
     QueryState,
-    // 中文: 從 Composing 進入 Continuous (連續輸入) 模式;committed 起始為空。
+    // 中文: 從 Composing 進入 Continuous (連續輸入) 模式;nailed 起始為空。
     EnterContinuous,
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input
     /// candidates for the current `Phase::Continuous { raw }` starting
@@ -184,8 +257,8 @@ pub enum Intent {
         now_ms: i64,
         custom_entries: Vec<protos::engine::CustomDictEntry>,
     },
-    /// Commit a candidate segment in `Phase::Continuous`. The engine takes
-    /// `pending[..consumed_bytes]` as the committed segment's raw text and
+    /// Nail a candidate segment in `Phase::Continuous`. The engine takes
+    /// `pending[..consumed_bytes]` as the nailed segment's raw text and
     /// keeps `pending[consumed_bytes..]` as the new pending tail. When
     /// `consumed_bytes >= pending.len()`, this becomes a final commit and
     /// exits to Idle. Caller (Phase 6+ proto layer) is responsible for
@@ -200,7 +273,7 @@ pub enum Intent {
         consumed_bytes: usize,
         syllable_count: u8,
     },
-    // 中文: 中途 abort 連續輸入,清空 committed + pending,退回 Idle。
+    // 中文: 中途 abort 連續輸入,清掉整段組字 (nailed + pending),退回 Idle。
     ResetContinuous,
 }
 
@@ -245,7 +318,7 @@ impl Engine {
     /// Pure-Rust observability of the engine's `EngineState`. Returns a
     /// clone so callers cannot mutate internal state. Phase 4 adds this so
     /// `tests/continuous_phase.rs` can assert `Phase::Continuous`'s
-    /// `committed` / `raw` fields without a corresponding proto carrier
+    /// `nailed` / `raw` fields without a corresponding proto carrier
     /// (the proto-side response shape lands in Phase 6). `#[doc(hidden)]`
     /// because this is a Phase-4-internal escape hatch — production
     /// callers should reach state through `apply` / `snapshot`'s

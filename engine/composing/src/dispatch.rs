@@ -868,7 +868,7 @@ fn with_continuous(
 /// caps at 4 (`engine/lexicon/src/continuous.rs:91-93`); the proto
 /// field is u32 so callers could in principle send larger values.
 /// Saturate to `u8::MAX` so Continuous transition.rs sees a typed
-/// value matching `CommittedSegment.syllable_count: u8`.
+/// value matching `NailedSegment.syllable_count: u8`.
 // 中文: 把 wire 上的 u32 壓回 u8,避免錯誤值 panic。
 fn clamp_syllable_count(value: u32) -> u8 {
     value.min(u8::MAX as u32) as u8

@@ -79,30 +79,21 @@ extension KeyboardViewController {
     }
 
     /// Set marked (composing) text with the caret placed at the end.
-    /// Used by `.updatePreedit(_)` effect and by the explicit preedit
-    /// clears in the textDidChange handler.
-    // 中文: 設定組字中的 marked text,游標放在尾端。供 updatePreedit / textDidChange 使用。
+    /// Used by `.updatePreedit(_)`. **Model B**: `text` is the whole
+    /// composition (`Σ nailed.display_text` + derived pending tail); the
+    /// host renders it as one marked region until a hard finalize. The
+    /// caret sits at the end of the combined string.
+    // 中文: 設定組字中的 marked text(Model B:整段組字),游標放在尾端。
     func setMarkedText(_ text: String) {
-        // Bug 3: a confirmed-leaked prior mid-commit tail is now literal
-        // document text — delete it before re-marking so the new composing
-        // region is clean (no-op when nothing leaked).
-        compensateLeakedContinuousMidCommitTail()
-        if !text.isEmpty, actionHandler?.composingManager.selfCommitInProgress == true {
-            // Re-marked inside a self-driven continuous mid-commit: the host
-            // may confirm this tail into literal text before the next commit.
-            armContinuousMidCommitTail(text)
-        }
         textDocumentProxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
     }
 
     /// Clear marked text + unmark (two steps required by UITextInput).
     /// Used by `.clearPreeditWithoutCommit` and `.commitTextReplacingPreedit`.
-    // 中文: 清掉 marked text 並 unmark — UITextInput 需要分兩步,缺一不可。
+    /// **Model B**: this clears the **whole** composition region (nailed +
+    /// pending) — nailed segments were never literal document text.
+    // 中文: 清掉 marked text 並 unmark(Model B:清掉整段組字,nailed 從未在文件)。
     func clearMarkedText() {
-        // Bug 3: if the prior mid-commit tail leaked into literal text the
-        // marked region is gone and `setMarkedText("")` is a no-op — delete
-        // the leaked characters first so the following commit replaces them.
-        compensateLeakedContinuousMidCommitTail()
         textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         textDocumentProxy.unmarkText()
     }

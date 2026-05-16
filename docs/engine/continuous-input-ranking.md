@@ -217,7 +217,7 @@ The full JNI surface ([`TailoJNI.java`](../../references/moe_taigi_apk/decompile
 
 | Concept | API | Our equivalent |
 |---|---|---|
-| Buffer ownership | C++ stateful `tutgInputLine` (opaque handle) | Rust `Phase::Continuous { raw, committed }` |
+| Buffer ownership | C++ stateful `tutgInputLine` (opaque handle) | Rust `Phase::Continuous { raw, nailed }` |
 | Per-keystroke entry | `InsertKey(InputLine, char)` (single char per call; 11 calls for `taiuantaigi`) | `Intent::Append { ch: String }` (batch-friendly) |
 | Caret cursor (edit position) | `MoveBack` / `MoveForward` / `MoveTo` / `GetCaretPosition` | None — buffer-end-only |
 | Nail cursor (commit anchor) | `GetNailPosition` / `NailCandidate(VocType, id)` / `DoneNailing` | `commit_continuous(consumed_bytes)` advances implicitly |
@@ -255,7 +255,7 @@ Implication: MOE's flow is **eager-segment-internal / lazy-segment-exposed**. En
 | Component | Behavior |
 |---|---|
 | Segmenter | `khiin/src/data/segmenter.rs:122` uses `cost = ln(1/p) / word_len_bias × syllable_bias` — **segmentation cost**, not candidate UI ordering. |
-| Buffer manager | `BufferMgr` (`buffer_mgr.rs:44-66, 1096-1129`) — committed segments + raw_char_count (mirrored by our `Phase::Continuous { raw, committed }`). |
+| Buffer manager | `BufferMgr` (`buffer_mgr.rs:44-66, 1096-1129`) — nailed segments + raw_char_count (mirrored by our `Phase::Continuous { raw, nailed }`). |
 | Translation | Khiin-rs's pipeline goes Segmentation → Conversion → Buffer, with frequency-driven scoring at each stage. |
 
 Khiin-rs has the same flat-frequency limitation we have. Its segmentation cost formula is a useful reference for the segmentation half of the problem but does **not** answer how to rank cross-span candidates on the candidate strip.
@@ -383,9 +383,9 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 
 ## 10. Commit Behavior & Display Split
 
-> **Status**: Open — design spec, awaiting Codex co-confirm (quota recovery). Recorded 2026-05-13.
-> **Scope**: v3.5.8 Phase 9 sub-slice (tentative `PR-9.X commit-display-split`). UI / IME layer; engine proto change is **possible but separate** (see §10.6).
-> **Replaces / supersedes**: dogfood backlog items in `memory/project_v358_dogfood_findings.md` (position-0 dashed border + lexicon-vs-continuous subtitle conflict).
+> **Status**: **Model B — normative, implemented (engine P1).** Rewritten 2026-05-16 (v3.5.8 Phase 9 Bug 3 closeout). Codex design co-review PASS.
+> **Scope**: v3.5.8 Phase 9. The commit/display contract is an **engine effect-model** decision (`engine/composing/src/transition.rs`), not a UI-layer one; bindings are thin effect translators.
+> **Replaces / supersedes**: the pre-2026-05-16 "nailed segments are literal document text; composing buffer = pending tail only" model (clarification β). Under **Model B** the whole composition (nailed segments + pending tail) lives in **one** marked / composing region until a hard finalize; nailed segments are **not** in the host document. This is the mainstream-IME-unanimous model (librime / khiin-rs / MOE / azooKey — see §10.1.1) and it eliminates the iOS mid-commit tail-leak (former Bug 3) by construction rather than by compensation.
 
 ### 10.1 Motivation
 
@@ -396,35 +396,27 @@ These are noted to prevent re-discovery in future sessions. Not committed to any
 
 This section establishes a single normative contract for **display split + commit dispatch** in Continuous mode.
 
-### 10.1.1 Mainstream IME source — MOE Tâi-gí
+### 10.1.1 Mainstream IME source — Model B is unanimous
 
-The display-vs-commit split prescribed in §10.2–§10.4 is **the behavior of MOE Tâi-gí**, the de-facto reference Taigi IME on Android. User-observed dogfood (primary maintainer, 2026-05-13):
+The contract in §10.2–§10.4 is **Model B**: during continuous input the whole composition — already-**nailed** segments **plus** the pending raw tail — stays inside **one** preedit / marked / composing region until a hard finalize (Enter / final-commit / external-suggestion commit). Nailed segments are **never** written to the host document mid-composition; a candidate tap *nails* a segment inside the composition, and only a hard finalize writes literal text. This is the **unanimous** behavior of every mainstream IME surveyed (research 2026-05-16) — no surveyed IME does immediate partial literal commit mid-composition:
 
-- MOE's inline pre-edit (`InputConnection.setComposingText`) shows the user's raw input verbatim — syllable by syllable, no word-boundary inference.
-- MOE's candidate strip slot 0 shows the **segmented** version when segmentation is available.
-- Pressing **Enter** in MOE commits the raw composing buffer (what is shown inline), **not** the candidate.
-
-Decompiled-code corroboration (`references/moe_taigi_apk/`):
-
-| MOE artifact | What it shows | Maps to our §10 |
+| IME | Evidence (file:line) | Mechanism |
 |---|---|---|
-| `KeySectionsModel { composedCharacters; composingCharacters }` ([`decompiled/sources/.../KeySectionsModel.java`](../../references/moe_taigi_apk/decompiled/sources/android/moe/taiwanese/taigi/data/local/model/KeySectionsModel.java), via `docs/references/moe-taigi-reference.md:118-123`) | Two-field model: `composedCharacters` = already-nailed text; `composingCharacters` = pending raw input (e.g., `aitaigi` before any candidate selected) | Composing-buffer surface = `rawInput` (I1) |
-| `CandidateModel.spanUnits` ([`docs/references/moe-taigi-reference.md:135-150`](../references/moe-taigi-reference.md)) | Each candidate ties to a specific input segmentation (`tai+gi` → spanUnits=2 → `台語`; `tai` → spanUnits=1 → `台`) | Per-candidate segmentation; the slot-0 candidate is the highest-`spanUnits` match — our §10.2 "segmented version" |
-| `Tailo.InsertKey` per-keystroke ([`TailoJNI.java`](../../references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java)) | Each keystroke flows into composing, not into a committed surface, until `NailCandidate` fires | Mirrors I3 — input mutation re-runs syllabifier + segmenter without committing |
+| librime / RIME | `references/librime/src/rime/context.h:48-61`, `composition.cc:24-119` | One `Context::GetPreedit()` over the whole `Composition`; selecting a candidate only raises segment `status >= kSelected`; literal text leaves only via `GetCommitText()` on hard `Commit()`. |
+| khiin-rs | `references/khiin-rs/swift/osx/src/controller/InputController.swift:103-275`, `IMKTextInputExtensions.swift:14-33` | One `client.mark(currentDisplayText())` over all segments; `client.insert()` only at hard commit; **re-marks the remainder** after a partial commit rather than leaving a bare tail. |
+| MOE Tâi-gí | `decompiled/.../KeySectionsModel.java` (via `docs/references/moe-taigi-reference.md:68-124`) | `KeySectionsModel { composedCharacters; composingCharacters }` — **both** fields live inside the Android composing region (`setComposingText`); `composedCharacters` = nailed text, `composingCharacters` = pending raw. Literal text reaches the document only via the explicit `PopFront` / `GetConfirmedCandidates` commit API. |
+| azooKey | `references/azooKey-Desktop/Core/Sources/Core/InputUtils/SegmentsManager.swift:1009-1062`, `azooKeyMacInputController.swift:753-792` | One `setMarkedText` whose attributed string carries `.focused` (nailed prefix) + `.unfocused` (pending tail) runs; `insertText` only at hard finalize. |
 
-The Enter-key handler in MOE is behind obfuscated UI code paths and was not isolated in our existing decompile pass. The maintainer's direct observation is the authoritative source for the Enter-commits-raw contract (§10.3); isolating the decompiled trace is a future research item, not a blocker for this spec.
+**MOE re-interpretation (corrects the pre-2026-05-16 reading).** The earlier spec read MOE's `composedCharacters` as text already committed to the document and treated the composing buffer as the pending tail only. The decompile evidence is the opposite: `composedCharacters` + `composingCharacters` **both** sit in MOE's composing region (`setComposingText`), exactly Model B. The `CandidateModel.spanUnits` per-candidate segmentation still maps to slot-0's "segmented version" (§10.2, unchanged). Adopting Model B therefore strengthens — not weakens — alignment with the de-facto Taigi baseline.
 
-**Codex co-review clarification δ (2026-05-13)**: The decompile evidence (`KeySectionsModel` + `spanUnits` + `TailoJNI` candidate-nailing surface) **corroborates** display-state separation in MOE's design, but it does **not by itself prove** the Enter→raw commit behavior. The §10.3 Enter contract relies on maintainer black-box observation. Stronger proof methods (recorded as future research, not v3.5.8 blockers):
+**The iOS / macOS technique (the crux).** azooKey (iOS/macOS) and every RIME front-end keep the whole composition in a **single** `setMarkedText(_, selectedRange:)` call; nailed-vs-pending is encoded as attribute runs *within* that one string. The host never confirms a sub-region into literal text because the document is never told a sub-region is final. Our former approach — `insertText(nailed_prefix)` then `setMarkedText(tail)` per mid-commit — is the inverse and has **zero precedent** in any surveyed IME; it is the root cause of the iOS tail-leak (former Bug 3, §10.6).
 
-- Isolate the decompiled call path from the keyboard Enter / IME `EditorAction` handler showing it commits `KeySectionsModel.composingCharacters` without calling `NailCandidate`.
-- Black-box logcat / accessibility / `InputConnection` trace showing Enter's committed payload equals composing text while Tap-0 commits a candidate.
+**Why this is the right call:**
 
-**Why aligning with MOE here is the right call:**
-
-- **Convention familiarity** for Taiwanese users — MOE is the baseline IME many users already know (per `docs/references/mainstream-ime-comparison.md` line 98 "Reference for what Taiwanese users see as default").
-- **Decouples "what I typed" from "what the engine guessed"** — preserves user agency under uncertain segmentation; satisfies `rules/cross-platform-alignment.md` invariant that platform reflects engine without semantic re-interpretation (G3 in §7).
-- **Maps cleanly onto existing engine surface** — `rawInput` is just the syllabifier output; candidate[0] is just the ranker top output. No new engine APIs, no proto schema break.
-- Honors `rules/CLAUDE.md` rule 16 (mainstream-IME comparison-driven design) — the `KeySectionsModel` field split is the kind of "Project X already does Y" cite required before adding a normative UI rule.
+- **Convention familiarity** — matches the IME many Taiwanese users already know (MOE) and the cross-IME consensus; satisfies CLAUDE.md rule 16 (mainstream-comparison-driven design) with a four-IME "Project X already does Y" cite.
+- **Decouples "what I typed" from "what the engine guessed"** — preserves user agency under uncertain segmentation (`rules/cross-platform-alignment.md`; G3 in §7).
+- **Eliminates the iOS leak by construction** — nothing is literal-committed mid-flow, so there is no sub-region for the host to confirm; the iOS arm/detect/compensate workaround is deleted, not extended.
+- **Maps onto the existing engine** — no proto / wire change; `Phase::Continuous` already retains every nailed segment's `display_text`, so the engine simply emits one combined `UpdatePreedit` instead of an eager per-segment `CommitTextReplacingPreedit`.
 
 ### 10.1.2 Supersedes — slot-0 model unification (Codex co-review clarification α, 2026-05-13)
 
@@ -433,7 +425,7 @@ Prior to §10, [`continuous-candidate-display.md`](continuous-candidate-display.
 - `continuous-candidate-display.md` §4.6 "Slot-0 stays single-line. Pending preedit has no hanji. **This is intentional**."
 - `continuous-candidate-display.md` §15.4 "`buildContinuousSuggestions` already always insert slot-0 composing-text cell — so the 'no candidates' UX is automatically preserved (strip shows slot-0 only)."
 
-**§10 supersedes both for Continuous mode**: slot 0 is the **engine ranker's top candidate rendered with segmentation** (§10.2). There is no separate composing-text cell in the strip; the only composing-text surface is the inline host-app pre-edit (`markedText` / `setComposingText`) carrying `rawInput`.
+**§10 supersedes both for Continuous mode**: slot 0 is the **engine ranker's top candidate rendered with segmentation** (§10.2). There is no separate composing-text cell in the strip; the only composing-text surface is the inline host-app pre-edit (`markedText` / `setComposingText`), which under **Model B** carries the **whole composition** — `Σ nailed[i].display_text` + the pending-tail derived form ([`Phase::composing_display`](../../engine/composing/src/api.rs)) — **not** `rawInput` (pending-tail only). `rawInput` ([`Phase::raw_input`](../../engine/composing/src/api.rs)) is demoted to an internal *component* of that surface.
 
 | Aspect | Pre-§10 legacy model | §10 (current spec for Continuous mode) |
 |---|---|---|
@@ -450,13 +442,15 @@ Implementation status: visual unification shipped in `224a8aa3` (Item 14, slot-0
 
 | Element | Content | Source |
 |---|---|---|
-| **Composing buffer** (inline pre-edit in the host app — iOS `markedText` / Android `InputConnection.setComposingText`) | **`rawInput`** — derived display of the pending raw tail: hyphen-delimited chunks are NFC-normalized and tone-marked where convertible; unhyphenated input is passed through verbatim. **No** inter-word spaces. **No** engine syllabification. | [`Phase::raw_input`](../../engine/composing/src/api.rs) → [`derived::derived_display`](../../engine/composing/src/derived.rs) (Item 2, 2026-05-13) |
+| **Composing buffer** (inline pre-edit in the host app — iOS `markedText` / Android `InputConnection.setComposingText`) | **The whole composition** (Model B): `Σ nailed[i].display_text` concatenated with the pending-tail **`rawInput`**. The nailed prefix is the accepted candidates' `display_text` (already swap/TPS/both-scripts-formatted); the tail is the derived display of the pending raw — hyphen-delimited chunks NFC-normalized and tone-marked where convertible, unhyphenated input passed through verbatim. **No** inter-segment spaces. **No** engine syllabification of the tail. | [`Phase::composing_display`](../../engine/composing/src/api.rs) (= Σ nailed `display_text` + [`Phase::raw_input`](../../engine/composing/src/api.rs) → [`derived::derived_display`](../../engine/composing/src/derived.rs)) |
 | **Candidate strip, index 0** | **Segmented version** — segmenter + ranker top candidate over the same raw input bytes, with word boundaries inserted by the segmenter (**roman line gets word-boundary spaces; hanji line rendered as-is** — see segmented-rendering rule below). Independent of the inline-preedit `rawInput` contract above; produced from dictionary records, not from the `Phase::raw_input` derived string. | Segmenter + ranker top candidate |
 | **Candidate strip, index N ≥ 1** | As defined by §1–§7 (existing ranker output). | Existing path; unchanged |
 
-**Precise `rawInput` definition** (option (c) of the three considered, amended 2026-05-13 to match actual engine behavior):
+**Composing-buffer surface (Model B):** the host's single marked / composing region renders [`Phase::composing_display`](../../engine/composing/src/api.rs) = the nailed prefix (`Σ nailed[i].display_text`, verbatim — already formatted at nail time) followed by the pending-tail `rawInput` defined below. The nailed prefix is **not** in the host document; it is part of the marked region until a hard finalize (§10.3). The platform caret/`selectedRange` sits at the **end** of this combined string.
 
-- Source: [`Phase::raw_input(&self, &AppConfig)`](../../engine/composing/src/api.rs) — delegates to [`derived::derived_display`](../../engine/composing/src/derived.rs) which runs the same POJ doubletap → tone-mark → nasal-case chain that builds `Preedit.display_text` today.
+**Precise pending-tail `rawInput` definition** (the tail component of the surface above; option (c) of the three considered, amended 2026-05-13 to match actual engine behavior):
+
+- Source: [`Phase::raw_input(&self, &AppConfig)`](../../engine/composing/src/api.rs) — delegates to [`derived::derived_display`](../../engine/composing/src/derived.rs) which runs the same POJ doubletap → tone-mark → nasal-case chain that builds `Preedit.display_text` today. Operates on `Phase::Continuous.raw` (the still-editable pending tail), not the nailed prefix.
 - Transformations applied: tone-marker rendering, NFC normalization, POJ doubletap pre-processing, nasal-marker case adjustment.
 - Transformations **NOT** applied: word-boundary inference (no spaces), candidate matching, ranking, **engine-driven syllable segmentation** (user-typed `-` is the only syllable boundary signal).
 
@@ -481,67 +475,68 @@ When `candidate[0]` is single-line (TAILO — roman only, no hanji): roman line 
 
 ### 10.3 Commit Contract
 
-Three commit paths, three contracts (refined per Codex clarifications β + γ, 2026-05-13):
+Under **Model B** there is exactly **one** literal document write per continuous session — at a hard finalize. Mid-composition candidate taps *nail* segments **inside** the marked region (no document write).
 
-| Trigger | Commits to host app |
+| Trigger | Effect |
 |---|---|
-| **Enter** | The **`rawInput` value currently displayed in the composing buffer** — i.e., the derived display of the pending raw tail (`Phase::raw_input` output: hyphen-delimited chunks normalized and tone-marked where convertible, no engine syllabification, no word spaces). After mid-commit has nailed earlier segments, only the remaining pending tail is committed; already-nailed text is unaffected. |
-| **Tap candidate index 0** | The **swap/TPS/both-scripts-formatted output** derived from the candidate's `roman` / `hanji` and the active display settings — i.e. exactly what the legacy lexicon path commits for the same candidate. **Not** the roman-with-spaces visual form rendered in §10.2, and **not** unconditionally the canonical `display_text`. The canonical key (`hanji.unwrap_or(roman)`) is forwarded separately as `CommitContinuous.canonical_text` for frequency / NextWord. (v3.5.8 Phase 9 Bug 1, clarification γ.) |
-| **Tap candidate index N (N ≥ 1)** | Same as Tap-0 — swap-aware document output; canonical key carried on `canonical_text`. Matches the legacy ranker/lexicon contract. |
+| **Tap candidate, pending tail remains** (mid-commit / *nail*) | **No document write.** The candidate's swap/TPS/both-scripts-formatted string (exactly what the legacy lexicon path would commit — clarification γ) becomes the new segment's `NailedSegment.display_text` and is appended to the marked region; the canonical key (`hanji.unwrap_or(roman)`) is carried on `CommitContinuous.canonical_text` and fires `NextWordUpdateLastSelectedWord` (learning at nail time). The host sees one re-rendered `UpdatePreedit` of the **whole composition** — never `CommitTextReplacingPreedit`. |
+| **Tap candidate, consumes the rest** (final-commit) | One `CommitTextReplacingPreedit` of the **whole composition** = `Σ nailed[i].display_text` (including this final segment), then exit. Single terminal `NextWordWordSelected(canonical, raw_text, true)` for the final segment (earlier nails already fired `NextWordUpdateLastSelectedWord`; not replayed). |
+| **Enter** | One `CommitTextReplacingPreedit` of the **whole composition** = `Σ nailed[i].display_text` + the derived display of the pending raw tail (`Phase::composing_display`). This is exactly what the user saw inline — the entire marked region becomes literal text. Terminal `NextWordWordSelected` for the last "word": the pending tail when one exists, else the last nailed segment (canonical key). |
 
-**Clarification β — `rawInput` is pending-tail display form, not literal keystrokes**
+**Clarification β — REWRITTEN (Model B, 2026-05-16): Enter commits the whole composition, not the pending tail**
 
-After segments are nailed via `commit_continuous`, the engine's `Phase::Continuous { raw, committed }` tracks `raw` as the **pending tail** (bytes after the last nailed commit). `rawInput` in §10.2 refers to *this current pending tail* rendered through `Phase::raw_input` (NFC + tone-mark conversion across user-typed `-` boundaries; no engine syllabification) — **not** the original full keystroke history.
+> The pre-2026-05-16 β said Enter commits only the pending tail because
+> nailed segments were already literal document text. **Under Model B that
+> premise is false**: nailed segments are inside the marked region, never in
+> the document. Enter therefore commits `Σ nailed[i].display_text +
+> derived(pending tail)` — the whole `Phase::composing_display`. "What you
+> see is what you typed" still holds, because the marked region *is* the
+> whole composition (§10.2). There is no `CommitRaw`-commits-literal-
+> keystrokes gap anymore: `commit_raw_continuous` builds the combined string.
 
-Pressing Enter at that moment commits only the pending tail, mirroring what the user sees inline. The existing platform `CommitRaw` path (which routes through `SelectSuggestion(raw)` and commits literal keystrokes) is a **real implementation gap** vs. §10; the gap is tracked as Item 3 in the v3.5.8 Phase 9 fix plan (Codex co-review 2026-05-13).
+**Clarification γ — Tap formats the segment as the swap-aware string; `canonical_text` is the canonical key (v3.5.8 Phase 9 Bug 1; Model-B-adjusted)**
 
-**Clarification γ — Tap commits the swap-aware document string; `display_text` is the canonical key (v3.5.8 Phase 9 Bug 1, REVISED)**
-
-> The original γ (2026-05-13) said Tap-0 commits the canonical `display_text`
-> verbatim. v3.5.8 dogfood proved that wrong: in swapped / TPS / both-scripts
-> modes the continuous tap then committed hanji while the legacy lexicon path
-> committed roman (or the bracket form) for the same candidate — a
-> user-visible divergence. γ is **rewritten** (not carved out): the prior
-> sentence is false under the accepted behavior.
-
-The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. On tap, the platform formats the candidate's `roman` / `hanji` through the **same swap/TPS/both-scripts formatter the legacy lexicon path uses** and commits that string to the document — so Continuous and lexicon commits are identical for the same candidate under the same settings. The canonical key (`hanji.unwrap_or(roman)`) is sent **separately** on `CommitContinuous.canonical_text`; the engine writes the formatted string to the document and to `CommittedSegment.display_text` (so backspace/pop delete-length stays aligned with the document), and uses `canonical_text` for the NextWord effects. This preserves:
+The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. On tap, the platform formats the candidate's `roman` / `hanji` through the **same swap/TPS/both-scripts formatter the legacy lexicon path uses**; that formatted string becomes the segment's `NailedSegment.display_text` and (Model B) joins the marked region immediately and the single combined `CommitTextReplacingPreedit` at hard finalize — so Continuous and lexicon produce identical document text for the same candidate under the same settings. The canonical key (`hanji.unwrap_or(roman)`) is sent **separately** on `CommitContinuous.canonical_text` and used only for the NextWord/frequency effects. This preserves:
 
 - Frequency-recording keys (platform records on the canonical sidechannel — `ActionHandler.handleSuggestionSelection` continuous branch / `CandidateClickHandler.handleContinuousCandidateClick`)
-- NextWord association keys (engine routes `canonical_text` to `NextWordWordSelected` / `NextWordUpdateLastSelectedWord`, including the backspace-pop correction)
+- NextWord association keys (engine routes `canonical_text` to `NextWordWordSelected` / `NextWordUpdateLastSelectedWord`, including the backspace **unnail** correction — §10.7)
 - Canonical word boundary of dictionary vocabulary tokens
 - Mode-independent learning: frequency / NextWord do not fork by display mode
 
-Empty `canonical_text` (legacy callers, the other 12 composing methods) falls back to `display_text` — pre-Bug-1 behavior, unchanged.
+Empty `canonical_text` (legacy callers) falls back to `display_text` — unchanged.
 
 Design intent:
 
-- Enter preserves "what you see is what you typed" — on partial commits, commits only the pending tail (clarification β).
-- Tap = explicit user choice to accept the smart segmentation; commits the **swap-aware document form** of the canonical dictionary token (clarification γ, revised). Document fidelity and learning-key canonicality are decoupled via `canonical_text`.
-- Tap-N (N ≥ 1) = same contract as Tap-0; matches legacy lexicon semantics.
+- A tap = accept the engine's segmentation for that span; the segment is *nailed* into the composition (visible, editable via backspace-unnail) but **not** committed to the document until the user finishes.
+- Enter / final-commit = the single hard finalize; the whole composition becomes literal text in one write. The underline disappears **only** here — matching every mainstream IME (§10.1.1) and the maintainer requirement.
 
-**Commit side effects (Codex B1 item 4, 2026-05-13; Bug 1 2026-05-15)** — frequency recording (`user_frequency.db`) and NextWord triggering are **payload-orthogonal** to the document string and key off `canonical_text` (canonical), not the formatted document string. Enter and Tap both record frequency on the canonical key and trigger NextWord — same contract as a regular lexicon candidate commit. Tap-N already does this.
+**Commit side effects (Codex B1 item 4; Bug 1 2026-05-15; Model B 2026-05-16)** — frequency recording (`user_frequency.db`) and NextWord are **payload-orthogonal** to the document write and key off `canonical_text`. They fire **at nail time** (`NextWordUpdateLastSelectedWord` per nailed segment) and once at hard finalize (`NextWordWordSelected`), independent of when/whether literal text is written. No double-count: already-nailed segments are not replayed at final commit (Codex risk (i)).
 
 ### 10.4 Data-Flow Invariant
 
 ```
 keystrokes
   → syllabifier (Rust)
-    → rawInput  ───────────────────────► composing buffer (display)
-                                         ▲ Enter commits this
+    → Phase::Continuous { nailed[], raw }
+        composing_display = Σ nailed[i].display_text + derived(raw)
+          ───────────────────────────────► ONE marked / composing region
+                                            ▲ hard finalize (Enter / final-
+                                              commit / external) commits THIS
+                                              whole string, once
       → segmenter + ranker (Rust)
         → candidates[]
-            [0]  ──────────────────────► strip slot 0 (display) — Tap-0 commits this
-            [N≥1] ─────────────────────► strip slot N (display) — Tap-N commits this
+            [0]   ─────────────────────────► strip slot 0 (display)  — tap nails / finalizes
+            [N≥1] ─────────────────────────► strip slot N (display)  — tap nails / finalizes
 ```
 
-Invariants (all five edge cases in §10.7 fall out from these — no per-case branching required):
+Invariants (every edge case in §10.7 falls out from these — no per-case branching):
 
 | ID | Invariant |
 |---|---|
-| **I1** | Composing-buffer content = `rawInput`, where `rawInput` = **derived display of `Phase::Continuous.raw`** via `Phase::raw_input` (NFC + tone-mark conversion across user-typed `-` boundaries; unhyphenated input passes through verbatim; no engine syllabification). `Phase::Continuous.raw` is the bytes after the last nailed commit, **not** the original full keystroke history. Backspace, keystroke append, and mid-commit all mutate `Phase::Continuous.raw`; I1 re-establishes from the new tail. |
-| **I2** | `candidate[0]` display content = ranker top output rendered with segmentation. |
-| **I3** | Any mutation of input (insert / backspace) re-runs syllabifier → segmenter → ranker; I1 and I2 re-establish automatically. |
-| **I4** | Platform performs no re-ranking, no candidate-order rewriting, no exact-match injection — preserves G3 (§7.1). Output-mode formatting at *commit time* (swap / TPS / both-scripts → document string, with the canonical key carried on `canonical_text`) is **not** a violation: it does not reorder or re-rank candidates, only formats the chosen one for the document exactly as the legacy lexicon path does (clarification γ, Bug 1). |
+| **I1** | Composing-buffer content = `Phase::composing_display` = `Σ nailed[i].display_text` (verbatim, formatted at nail time) **followed by** the derived display of `Phase::Continuous.raw` (NFC + tone-mark across user-typed `-`; unhyphenated passes through verbatim; no engine syllabification of the tail). Nailed segments are part of this single marked region, **not** the host document. `raw` is the still-editable pending tail (bytes after the last nail), not the original keystroke history. Backspace, append, nail, and unnail all mutate `Phase::Continuous`; I1 re-establishes the whole combined string. |
+| **I2** | `candidate[0]` display content = ranker top output rendered with segmentation. (Unchanged.) |
+| **I3** | Any mutation of input (insert / backspace / nail / unnail) re-runs syllabifier → segmenter → ranker for the pending tail and re-renders the combined composition; nailed segments are preserved or unnailed per the §10.7 boundary rules. I1 and I2 re-establish automatically. |
+| **I4** | Platform performs no re-ranking, no candidate-order rewriting, no exact-match injection — preserves G3 (§7.1). Output-mode formatting of the *chosen* candidate at nail/commit time (swap / TPS / both-scripts → the segment's `display_text`, canonical key on `canonical_text`) is **not** a violation — it formats one chosen candidate exactly as the legacy lexicon path does (clarification γ). **Additionally (Model B): a platform MUST NOT split a mid-composition candidate tap into `commitText(prefix)` / `insertText(prefix)` + a new preedit.** A nailed prefix is rendered inside the single marked region via one `UpdatePreedit`; literal document text is written only by the engine's single hard-finalize `CommitTextReplacingPreedit`. This is the invariant whose violation caused the iOS tail-leak (§10.6). |
 
 ### 10.5 Mode Gating
 
@@ -560,22 +555,18 @@ The split is bound to the engine-side dispatch branch in [`engine/composing/src/
 | Slot-0 render | `CandidateButtonView.swift` — **remove dashed border** | `CandidatesView` / `CandidateButtonView.kt` — **remove `composingDashedBorder`** |
 | Enter commit dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` (or IME keyboard view) |
 | Tap-0 / Tap-N dispatch | `ActionHandler+Suggestions.swift` | `CandidateClickHandler.kt` |
-| Swap/TPS/both-scripts commit formatting (γ, Bug 1) | `parseRomanAndHanzi` + `formatOutputText` (shared with legacy branch) → `commitContinuous(displayText:canonicalText:)` | legacy `bracketRoman` + when-expr → `commitContinuous(displayText, canonicalText, …)` | 
+| Swap/TPS/both-scripts segment formatting (γ, Bug 1) | `parseRomanAndHanzi` + `formatOutputText` (shared with legacy branch) → `commitContinuous(displayText:canonicalText:)` | legacy `bracketRoman` + when-expr → `commitContinuous(displayText, canonicalText, …)` |
 | Canonical key wire | `CommitContinuous.canonical_text` (= sidechannel `displayText`) | `CommitContinuous.canonical_text` (= `TaigiWord.MetadataKeys.DISPLAY_TEXT`) |
-| Mid-commit pending-tail re-mark (Bug 3) | **iOS-specific tail-leak compensation** — see divergence note below | No workaround needed (structurally immune) |
+| Mid-commit (nail) | One `UpdatePreedit(whole composition)` → `setMarkedText(combined, caret=end)`. **No `insertText`.** | One `UpdatePreedit(whole composition)` → `setComposingText(combined, 1)`. **No `commitText`.** |
+| Hard finalize (Enter / final-commit / external) | One `CommitTextReplacingPreedit(whole composition)` → `clearMarkedText()` + `insertText` | One `CommitTextReplacingPreedit(whole composition)` → `commitText(combined, 1)` |
 
-`rules/cross-platform-alignment.md` §3a applies: I1–I4 must hold identically on both platforms. Any divergence requires an explicit note per `rules/cross-platform-alignment.md`.
+`rules/cross-platform-alignment.md` §3a applies: I1–I4 hold identically on both platforms.
 
-**Divergence — continuous mid-commit pending-tail re-mark (v3.5.8 Phase 9 Bug 3, intentional, platform-specific, keep)**
+**Convergence — Model B removes the former Bug-3 divergence (2026-05-16).** Under the pre-2026-05-16 model a mid-commit emitted `commit_text_replacing_preedit(segment)` + `update_preedit(tail)`; iOS hosts confirmed the small re-marked tail into literal text during their `textWillChange→textDidChange` settle (real-device trace), losing the underline mid-composition. iOS carried an arm/detect/compensate workaround that hit a 3-strike circuit-breaker. **Model B eliminates this by construction**: a mid-commit emits **no** `CommitTextReplacingPreedit` — only one `UpdatePreedit` of the whole composition — so there is no sub-region for the host to confirm. The iOS `armContinuousMidCommitTail` / `detectContinuousMidCommitTailLeak` / `compensateLeakedContinuousMidCommitTail` layer is **deleted** (P2), not kept. There is no longer any platform-specific divergence here; both platforms run the identical effect sequence and `behavioral-invariants.md` needs no entry.
 
-A continuous mid-commit emits `commit_text_replacing_preedit(segment)` then `update_preedit(pending_tail)`. Observable contract (both platforms): the chosen segment is committed and the pending raw tail remains an inline composing region so the next candidate tap/Enter replaces it. The platforms reach this identical behavior with different code because the host text-region primitives differ:
+**External-composing-region clear (field/app switch, host clears mid-composition).** Policy (single, documented per Codex risk (iii)): treat it as a **hard abort** — drop all nailed + pending, exit Idle, no document write (mirrors `reset_continuous`). Not a compensation attempt. iOS field-switch path + Android `onUpdateSelection → onExternalComposingRegionCleared` both route to this abort.
 
-- **Android** — `commitText(segment, 1)` is atomic and the following `setComposingText(tail, 1)` opens a fresh composing region the host tracks via `candidatesStart/End` (`onUpdateSelection` → `hostReportsNoComposingRegion` → `onExternalComposingRegionCleared`). The region survives until the next commit; no extra code.
-- **iOS** — `insertText(segment)` then `setMarkedText(tail)` in one synchronous turn: the host app deterministically *confirms* the marked `tail` into literal document text during its `textWillChange`→`textDidChange` settle (real-device trace, 2026-05-16). `UITextDocumentProxy` exposes no API to detect or prevent this. The iOS binding therefore arms the re-marked tail when it is set inside a self-driven mid-commit, detects the confirmation in `textDidChange` via a document-suffix match, and deletes the leaked literal characters before the next preedit clear / re-mark (`KeyboardViewController` `armContinuousMidCommitTail` / `detectContinuousMidCommitTailLeak` / `compensateLeakedContinuousMidCommitTail`). The compensation fires *only* when the suffix match confirms the leak, so hosts that keep the region alive are unaffected.
-
-This is a host-API capability gap, not a behavioral invariant difference: I1–I4 hold identically on both platforms. No `behavioral-invariants.md` change. Classified **intentional / keep** per `rules/cross-platform-alignment.md` §3.
-
-**Engine-side coupling — resolved**: the `subtitle=nil` symptom was closed by fix-plan Item 5 (`CandidateMessage` now emits `roman` + optional `hanji` as distinct fields) and Item 6 (dual-line render). v3.5.8 Phase 9 Bug 1 then added `CommitContinuous.canonical_text` so the document string (swap-aware) and the canonical freq/NextWord key are decoupled on the wire. §10.2/10.3/10.4 hold under the two-field shape.
+**Engine-side coupling — resolved**: the `subtitle=nil` symptom was closed by fix-plan Item 5/6 (`CandidateMessage` `roman` + optional `hanji`; dual-line render). v3.5.8 Phase 9 Bug 1 added `CommitContinuous.canonical_text` so the segment's formatted display and the canonical freq/NextWord key are decoupled on the wire. §10.2/10.3/10.4 hold under Model B with no proto change.
 
 ### 10.7 Edge Cases (fall out from §10.4 invariants)
 
@@ -583,29 +574,32 @@ This is a host-API capability gap, not a behavioral invariant difference: I1–I
 |---|---|---|
 | Single syllable | composing == `candidate[0]` | Segmenter inserts zero word boundaries → identity |
 | Continuous disabled | Split inactive | §10.5 mode gating |
-| Backspace mid-composition | `rawInput` shrinks; `candidate[0]` recomputes | I3 |
+| Backspace, pending tail non-empty | Last char of pending tail drops; the combined composition (`Σ nailed.display_text` + shrunk tail) re-renders; `candidate[0]` recomputes. **No** `DeleteBackwardFromDocument` (nothing is in the document). | I3 |
+| Backspace, pending tail empty, ≥1 nailed (**unnail**) | The last nailed segment is popped; its `raw_text` becomes the new pending tail; combined composition re-renders. NextWord last-selected rolls back to the prior nailed segment (or clears). **No** `DeleteBackwardFromDocument` — authority is `raw_text`, never a display-char count (swap/TPS/both-scripts display can desync from raw). | I3 + Codex risk (v) |
 | Empty buffer | No composing display, no candidates | Pre-Phase-9 behavior; unchanged |
 | Syllabifier partial-parse failure | `rawInput` shows partial parse + raw tail; candidates may be empty | Existing syllabifier error path; this section does not modify it |
 | **Partial prefix below first syllable ending** (e.g., `raw = "gu"`, no completed syllable) | Composing buffer shows `gu` literally. Slot 0 is **not** the "segmented version" rule:<br/>• **Pre-§15.3.D state** (current code, before fix-plan item 10): strip is empty.<br/>• **Post-§15.3.D state** (after fix-plan item 10 lands): strip shows engine-prefix candidates per `continuous-candidate-display.md` §15.3.D, ranked below full-syllable candidates via `coverage_kind` (§15.5).<br/>In both states, Enter commits literal `gu`. | Segmenter has no word boundaries to insert when `raw` is sub-syllable; the "candidate[0] = segmented version" rule is **undefined** below first valid syllable ending. Codex co-review clarification (B3, 2026-05-13). |
-| **Enter after segments already nailed** | Commits **only the remaining pending tail** (current `Phase::Continuous.raw`), not the full original input. Already-nailed text is untouched. | Clarification β: `rawInput` is pending-tail form, not literal full keystrokes. |
-| **Hanji accidentally in composing buffer** | Composing shows the hanji literals; engine returns no candidates (per §15.3.E of `continuous-candidate-display.md`); Enter commits the hanji literals. | Engine hanzi guard short-circuits to empty `ContinuousResponse`; composing surface is unaffected. Fix-plan item 11. |
+| **Enter after segments already nailed** | Commits the **whole composition** = `Σ nailed[i].display_text` + derived(pending tail), in one `CommitTextReplacingPreedit`. The marked region (which *was* the whole composition) becomes literal text and the underline clears. | Clarification β REWRITTEN (Model B): nailed segments were in the marked region, not the document. |
+| **Abort / reset mid-composition** | The whole marked region is cleared and all nailed segments dropped; nothing reaches the document (mirrors `reset_continuous`). Not "keep nailed, drop pending". | Codex risk (ii): nailed were never in the document. |
+| **Hanji accidentally in composing buffer** | Composing shows the hanji literals; engine returns no candidates (per §15.3.E of `continuous-candidate-display.md`); Enter commits the hanji literals (as the pending tail of the combined string). | Engine hanzi guard short-circuits to empty `ContinuousResponse`; composing surface unaffected. Fix-plan item 11. |
 
 ### 10.8 Regression Test Hooks
 
-Minimum coverage to declare §10 closed (Phase 9 acceptance criterion):
+Minimum coverage to declare §10 closed (Model B acceptance criterion):
 
 1. **Single syllable** — type `goa` → assert composing == `candidate[0].display_text`.
-2. **Three-syllable two-word** — type a phrase whose segmenter splits into 2 words → assert composing shows `a-b-c` (no spaces), `candidate[0]` roman line shows `a b-c` or `a-b c` per segmenter, hanji line shows the hanzi **without** added spaces.
-3. **Tone-marker spanning syllables** — verify NFC + tone rendering apply to composing without affecting segmentation.
-4. **Enter vs Tap-0 divergence** — same input, two commit paths produce distinct committed text per §10.3. Enter commits the syllabified pending tail; Tap-0 commits `display_text` (= `hanji.unwrap_or(roman)`).
-5. **Backspace re-segment** — type 3 syllables, backspace once → `candidate[0]` recomputes; no stale segmentation surfaces.
-6. **Continuous-off fallback** — toggle off → composing == `candidate[0]` (legacy lexicon-path display).
-7. **Partial prefix below syllable ending** — type `gu` → composing shows `gu`; slot 0 either empty or shows prefix candidates per §15.3.D; Enter commits `gu` literally (clarification β + B3).
-8. **Enter after partial commit** — type 3 syllables, nail first segment, type 2 more, Enter → commits only the 2-syllable pending tail; first segment unaffected (clarification β).
-9. **Tap-0 commits `display_text`, not visual** — assert the committed string equals `display_text`, NOT the roman-with-spaces visual form (clarification γ).
-10. **Hanji line no added spaces** — for a HANT/MIXED multi-word `candidate[0]`, assert roman line contains word-boundary spaces while hanji line contains exactly the dictionary hanzi string (no added whitespace) (clarification γ).
+2. **Three-syllable two-word** — `candidate[0]` roman line shows word-boundary spaces, hanji line shows the hanzi **without** added spaces (clarification γ; unchanged).
+3. **Tone-marker spanning syllables** — NFC + tone rendering apply to the pending-tail component without affecting segmentation.
+4. **Mid-commit emits no document write** — type ≥2 syllables, tap `candidate[0]` for a prefix (pending tail remains) → assert effects are `[UpdatePreedit(combined), NextWordUpdateLastSelectedWord, PerformAutocomplete]`; assert **no `CommitTextReplacingPreedit`**; assert composing buffer == `Σ nailed.display_text + derived(pending)` (still one marked region / underlined).
+5. **Primary Bug-3 acceptance** — type `taiuantaigi`, tap 「臺灣」 (nails `taiuan`, `taigi` pending) → composing shows `臺灣` + derived(`taigi`), **still underlined**, no `CommitTextReplacingPreedit`. Then Enter → one `CommitTextReplacingPreedit("臺灣" + derived("taigi"))`, exit Idle, underline clears **only here**. (Never commits just `taigi`.)
+6. **Final-commit commits whole composition** — nail "tsu"→珠 (pending "a"), then tap final candidate consuming "a"→仔 → one `CommitTextReplacingPreedit("珠仔")` (not "仔"), exit; single terminal `NextWordWordSelected`.
+7. **Backspace never writes/deletes document** — across pending-shrink, unnail (pop), and empty-out: assert **no `DeleteBackwardFromDocument`** is ever emitted in Continuous; unnail restores the popped segment's `raw_text` as pending and re-renders combined.
+8. **Abort / reset clears whole region** — with ≥1 nailed segment, `Reset` / `ResetContinuous` → `[ClearPreeditWithoutCommit, …]`, exit Idle, **no `CommitTextReplacingPreedit`**, all nailed dropped.
+9. **`select_suggestion` / `commit_preedit_then_insert_external` under Continuous** — committed string = `Σ nailed.display_text` + (text | derived(raw)+external); with zero nailed, unchanged from legacy.
+10. **No-nailed parity** — pure Composing→EnterContinuous→Enter (no tap) commits `derived(raw)` exactly as before (combined == derived(raw) when nailed empty); translate-swapped / TPS pass-through unchanged.
+11. **Hanji line no added spaces** — HANT/MIXED multi-word `candidate[0]`: roman line has word spaces, hanji line is the exact dictionary hanzi (clarification γ; unchanged).
 
-Cross-platform: every case must pass identically on iOS and Android per `rules/cross-platform-alignment.md`.
+Cross-platform: every case must pass identically on iOS and Android per `rules/cross-platform-alignment.md` — including the I4 "no `commitText(prefix)` / `insertText(prefix)` mid-composition" assertion.
 
 ### 10.9 Relationship to §1–§9
 
@@ -613,7 +607,7 @@ Cross-platform: every case must pass identically on iOS and Android per `rules/c
 |---|---|
 | §1–§3 (ranking gap) | Orthogonal. Ranking determines candidate **order**; §10 determines **display and commit**. Both ship in Phase 9. |
 | §4 (Codex co-confirm) | Separate co-confirm pass required for §10 after quota recovery. |
-| §5 (mainstream IME) | The §10.2–§10.4 behavior is **the observed MOE Tâi-gí pattern** — see §10.1.1 for evidence (`KeySectionsModel { composedCharacters, composingCharacters }` split + `CandidateModel.spanUnits` per-candidate segmentation + maintainer-observed Enter→raw commit). MOE is the primary Taigi reference per `docs/references/mainstream-ime-comparison.md` line 98; aligning here closes a parity gap with the de-facto baseline. |
+| §5 (mainstream IME) | §10.2–§10.4 is **Model B**, the unanimous pattern across librime / khiin-rs / MOE / azooKey — see §10.1.1 for the four-IME cite-and-trace. Our former eager partial-literal-commit had zero precedent and caused the iOS leak; Model B closes that parity gap and the bug together. |
 | §6 (architectural classification) | §10 adds no new Gap; it is a normative UI/IME contract. |
 | §7 (long-term goals) | Reinforces G3 (engine is ranking authority). Compatible with G1/G2/G4 trajectory. |
 | §8 (v3.5.8 decision) | §10 is part of the expanded Phase 9 scope per the 2026-05-11 revision. |
@@ -632,13 +626,17 @@ Codex spec co-review pass against §10 + [`continuous-candidate-display.md`](con
 | C1: MOE Enter evidence weaker than spec claims | §10.1.1 clarification δ |
 | D fix plan (14 items, ordered) | **ALL 14 items shipped.** Items 1–6 + 14 = spec foundation + dual-line carrier; Items 7–12 closed every engine syllabification gap; **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. v3.5.8 feature-complete after Item 13. |
 
-**4 clarifications recorded inline**:
-- **α (slot-0 supersedes)** → §10.1.2
-- **β (`rawInput` = pending-tail display form, not literal keystrokes)** → §10.3 + §10.4 I1 + §10.7
-- **γ (segmentation render: roman gets spaces, hanji does not; Tap-0 commits `display_text` not visual)** → §10.2 + §10.3
-- **δ (MOE Enter evidence corroborates, does not prove; stronger methods listed)** → §10.1.1
+**Clarifications recorded inline** (β/δ superseded by the Model B rewrite, 2026-05-16 — see §10.10a):
+- **α (slot-0 supersedes)** → §10.1.2 (still valid)
+- **β** — REWRITTEN: Enter commits the **whole composition** (`Phase::composing_display`), not the pending tail → §10.3 + §10.4 I1 + §10.7
+- **γ (tap formats the segment as the swap-aware string; `canonical_text` is the canonical key, `display_text` is the formatted marked-region/document string)** → §10.2 + §10.3 (Model-B-adjusted: the formatted string is the segment's display inside the marked region, joined into the single hard-finalize commit; the canonical key rides `CommitContinuous.canonical_text`)
+- **δ** — SUPERSEDED: the "MOE Enter→raw" black-box claim is no longer load-bearing; Model B rests on the four-IME source cite-and-trace (§10.1.1), not on MOE Enter behavior
 
-Fix-plan ordering: item 14 (visual unification) shipped 2026-05-13. Item 1 (doc reconcile) + Item 2 (`Phase::raw_input` accessor + invariant tests + §10.2 amendment for actual engine behavior) shipped on branch `v358-continuous-display-spec`. Item 3 (`Intent::CommitRaw` in `Phase::Continuous` commits `derived_display(pending)`, mid-commit preserves nailed segments) shipped 2026-05-14. Item 4 (Tap-0/Tap-N commit semantics — slot-0 cell removed from Continuous path, strict-required `displayText` sidechannel) shipped 2026-05-14. Item 5 (`CandidateMessage` `roman` + `hanji` proto fields + bridge decode + defensive `roman.isEmpty → displayText` fallback) shipped 2026-05-14. Item 6 (pin segmented dual-line rendering at platform UI — iOS `buildContinuousSuggestions` + Android `buildContinuousSuggestionsForCandidates` swap `text/title` ← `c.roman`, `subtitle/hanzi` ← `c.hanji`, present-empty hanji collapses to nil) shipped in PR #271. Multi-word chain segmentation (§10.7 #2 case) is **out of scope** — each `RawCandidate` today maps to exactly one dictionary record, so chain segmentation requires a future lattice/chain-producer slice. Items 7–12 (engine syllabification gaps) shipped PR #272–#278; **Item 13 (capstone) retired the platform lexicon fallback** (`continuous-candidate-display.md` §15.4) — v3.5.8 feature-complete.
+### 10.10a Model B rewrite (2026-05-16, Bug 3 closeout)
+
+Codex design co-review PASS (auto-mode batched consult). The pre-2026-05-16 model (nailed = literal document text; composing buffer = pending tail; mid-commit emits `CommitTextReplacingPreedit`) was the root cause of the iOS mid-commit tail-leak (former Bug 3) and had no mainstream precedent. Model B (whole composition in one marked region; single literal write at hard finalize) is mainstream-unanimous and removes the bug by construction. Codex-surfaced design points landed: (i) per-segment learning fires at nail, single terminal `NextWordWordSelected`, no replay; (ii) `reset_continuous` clears the whole region + drops all nailed; (iii) external-region-clear = single hard-abort policy (§10.6); (iv) caret at end of combined marked text; (v) backspace unnails via `raw_text`, never display-char count, never `DeleteBackwardFromDocument`; (vi) Model B eases the future lattice/walker (§ "整句 lattice + walker" — orthogonal). Engine landed in P1 (`engine/composing/`); iOS converges + deletes the Bug-3 workaround in P2; Android converges in P3. The former §10.6 platform divergence is **deleted** (convergence).
+
+Fix-plan ordering **(historical log — the Item 3 Enter/commit semantics below are SUPERSEDED by §10.10a Model B 2026-05-16: `Intent::CommitRaw` in `Phase::Continuous` now commits `Phase::composing_display` (the whole composition), NOT `derived_display(pending)`; mid-commit emits no `CommitTextReplacingPreedit`)**: item 14 (visual unification) shipped 2026-05-13. Item 1 (doc reconcile) + Item 2 (`Phase::raw_input` accessor + invariant tests + §10.2 amendment for actual engine behavior) shipped on branch `v358-continuous-display-spec`. Item 3 (`Intent::CommitRaw` in `Phase::Continuous` commits `derived_display(pending)`, mid-commit preserves nailed segments) shipped 2026-05-14 **(Enter/commit semantics later superseded by Model B — see §10.10a)**. Item 4 (Tap-0/Tap-N commit semantics — slot-0 cell removed from Continuous path, strict-required `displayText` sidechannel) shipped 2026-05-14. Item 5 (`CandidateMessage` `roman` + `hanji` proto fields + bridge decode + defensive `roman.isEmpty → displayText` fallback) shipped 2026-05-14. Item 6 (pin segmented dual-line rendering at platform UI — iOS `buildContinuousSuggestions` + Android `buildContinuousSuggestionsForCandidates` swap `text/title` ← `c.roman`, `subtitle/hanzi` ← `c.hanji`, present-empty hanji collapses to nil) shipped in PR #271. Multi-word chain segmentation (§10.7 #2 case) is **out of scope** — each `RawCandidate` today maps to exactly one dictionary record, so chain segmentation requires a future lattice/chain-producer slice. Items 7–12 (engine syllabification gaps) shipped PR #272–#278; **Item 13 (capstone) retired the platform lexicon fallback** (`continuous-candidate-display.md` §15.4) — v3.5.8 feature-complete.
 
 `(roman, hanji)` ranker dedupe is **deferred to Item 12** (custom-dict integration) — the first slice that can emit cross-source duplicates. Today the default `dict.bin` builder collapses duplicates via `dictionary/build/merge_csv.py`'s `groupby(["hanzi", "_tl_key"])`, so no realistic input surfaces a duplicate `(roman, hanji)` pair into the Continuous ranker. Locking the winner policy (lowest `source_tier_rank` vs SortKey winner) without real custom-dict plumb context would be premature; Item 12 picks it then.
 

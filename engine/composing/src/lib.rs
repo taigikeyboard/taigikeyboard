@@ -20,7 +20,7 @@ pub mod syllabifier;
 mod derived;
 mod transition;
 
-pub use api::{CommittedSegment, ComposingError, Engine, EngineState, Intent, Phase};
+pub use api::{ComposingError, Engine, EngineState, Intent, NailedSegment, Phase};
 pub use handle::EngineHandle;
 
 // Compile-time guarantee: `Engine` must remain `Send` so the static

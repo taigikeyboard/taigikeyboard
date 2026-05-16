@@ -413,16 +413,22 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     /// Without an effect-backed gate, callers would record frequency for
     /// uncommitted text and append a stray space.
     ///
-    /// - Returns:
-    ///   - `didCommit`: `true` iff the engine actually wrote text to the
-    ///     document (`transition.effects` contains `.commitTextReplacingPreedit`).
-    ///     Mid-commits and final-commits both emit this effect; noops do not.
-    ///   - `didFinalCommit`: `didCommit && transition` exited Continuous.
-    ///     Implies `didCommit` — invariant `didFinalCommit => didCommit`.
+    /// - Returns (**Model B**, §10):
+    ///   - `didCommit`: a continuous selection succeeded — a **nail**
+    ///     (mid-commit) OR a final commit. Under Model B a mid-commit nail
+    ///     does NOT write the document (emits no `.commitTextReplacingPreedit`)
+    ///     so it is detected by `.nextWordUpdateLastSelectedWord` (the
+    ///     per-segment learning signal emitted exactly on a successful nail
+    ///     in this path); a final commit is detected by
+    ///     `.commitTextReplacingPreedit`. A noop emits neither.
+    ///   - `didFinalCommit`: `.commitTextReplacingPreedit` present AND
+    ///     `transition` exited Continuous — only the hard finalize writes
+    ///     literal text. Implies `didCommit`.
     ///
-    /// Mid-commit emits `[CommitTextReplacingPreedit, UpdatePreedit,
-    /// NextWordUpdateLastSelectedWord, PerformAutocomplete]`; final-commit
-    /// (`consumedBytes >= pending.utf8.count`) emits `[CommitTextReplacingPreedit,
+    /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
+    /// NextWordUpdateLastSelectedWord, PerformAutocomplete]` and stays
+    /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
+    /// emits `[CommitTextReplacingPreedit(whole composition),
     /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
     /// and exits Continuous.
     // 中文: 送出一個 Continuous 候選詞段;回傳 effect-backed (didCommit, didFinalCommit) 旗標,
@@ -456,23 +462,33 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         // Inspect transition BEFORE dispatching effects so we can return an
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
         // for the same reason — semantics identical to the helper.
-        let didCommit = transition.effects.contains { effect in
+        let hasCommitText = transition.effects.contains { effect in
             if case .commitTextReplacingPreedit = effect { return true }
             return false
         }
-        let didFinalCommit = didCommit && !transition.isComposing
+        let hasNail = transition.effects.contains { effect in
+            if case .nextWordUpdateLastSelectedWord = effect { return true }
+            return false
+        }
+        // Model B: nail (mid-commit) emits no commit-text; the learning
+        // effect is its success signal. Final-commit emits commit-text +
+        // exits. noop emits neither → both flags false (closes the
+        // generation-mismatch race, unchanged guarantee).
+        let didCommit = hasCommitText || hasNail
+        let didFinalCommit = hasCommitText && !transition.isComposing
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
         apply(transition)
         return (didCommit: didCommit, didFinalCommit: didFinalCommit)
     }
 
-    /// Abort Continuous-input. Drops `Phase::Continuous`'s pending + committed
+    /// Abort Continuous-input. Drops `Phase::Continuous`'s pending + nailed
     /// list, exits to Idle, emits the standard abort effect trio
     /// (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-    /// `NextWordClearForNewComposing`). Committed segments stay in the
-    /// document — earlier `CommitTextReplacingPreedit` effects already wrote
-    /// them.
+    /// `NextWordClearForNewComposing`). **Model B** (§10.6): nailed segments
+    /// were never literal document text — `ClearPreeditWithoutCommit` clears
+    /// the WHOLE marked composition; abort discards it entirely (no document
+    /// write, no `DeleteBackwardFromDocument`).
     /// Used by `KeyboardViewController+Setup.syncSettings` on input-mode swap
     /// (TL ↔ POJ ↔ TPS) so stale Continuous state can't leak across modes.
     // 中文: 中止 Continuous;committed segments 不回退(已在 document)。Settings inputMode
@@ -496,19 +512,25 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     // 中文: 把目前 derived 顯示文字送出(commit derived) — 結束組字。
     public func commitComposition() {
         logger.debug("[COMPOSE] fn=commitComposition")
-        // v3.5.8 Phase 7B (Codex post-impl P1, 2026-05-10):
-        // `Intent::CommitDerived` is a no-op in `Phase::Continuous`
-        // (`engine/composing/tests/continuous_phase.rs:656`). Phase 7B
-        // auto-promotes every active composition into Continuous, so the
-        // straight CommitDerived would silently drop the user's commit. Reroute
-        // through `SelectSuggestion(text: composingText)` — engine handles all
-        // three phases (Idle / Composing / Continuous) by committing the text
-        // and exiting to Idle. Empty preedit → fall through to the canonical
-        // CommitDerived which is correctly a no-op on Idle.
-        // 中文: Continuous 下 CommitDerived 引擎 noop;改走 SelectSuggestion 統一三 phase。
-        let derived = composingText
-        guard !derived.isEmpty else {
-            let settings = settingsProvider.current
+        // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
+        // current composition. Route through `CommitRaw` — under Continuous
+        // the engine commits `Σ nailed.display_text + derived(pending)` (the
+        // whole composition) and fires the terminal NextWord; it builds the
+        // string from engine state, so there is no prefix duplication. The
+        // old `SelectSuggestion(composingText)` reroute double-counted the
+        // nailed prefix once the composing buffer became the whole
+        // composition (`select_suggestion_under_continuous` prepends
+        // `nailed_prefix`). `selectSuggestion(candidate)` still uses
+        // SelectSuggestion (bare candidate → engine prepends the nailed
+        // prefix correctly). Empty preedit → CommitDerived (a no-op on
+        // Idle). Bare `Phase::Composing` reaching here would violate the
+        // Phase 7B invariant (every active composition is auto-promoted to
+        // Continuous first); we deliberately do NOT branch on phase — the
+        // binding has no safe phase signal (Codex pre-impl point 3).
+        // 中文: Model B — commitComposition 走 CommitRaw 提交整段組字,無前綴重複;
+        // 中文: 空 preedit 走 CommitDerived(Idle noop);不在 binding branch phase。
+        let settings = settingsProvider.current
+        guard !composingText.isEmpty else {
             applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
                 mode: settings.inputMode,
                 toggles: settings.toneToggles,
@@ -516,21 +538,26 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             ))
             return
         }
-        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(derived, generation: currentGeneration))
+        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            generation: currentGeneration,
+        ))
     }
 
     // 中文: 把 raw input 直接送出。Composing 階段送字面 keystrokes;Continuous 階段送
-    // 中文: derived_display(pending) (= inline pre-edit 字串),由引擎依 phase 自動分派。
+    // 中文: 整段組字 (Σ nailed.display_text + derived(pending)),由引擎依 phase 自動分派。
     public func commitRawInput() {
         logger.debug("[COMPOSE] fn=commitRawInput")
-        // v3.5.8 Phase 9 Item 3 (2026-05-13):
-        // `Intent::CommitRaw` now handles `Phase::Continuous` natively in
-        // engine — commits `derived_display(pending, config)` and fires the
-        // same NextWord effect as a final-commit candidate tap (see
+        // v3.5.8 Phase 9 Item 3 + Model B (§10.3):
+        // `Intent::CommitRaw` handles `Phase::Continuous` natively in the
+        // engine — under Model B it commits the WHOLE composition
+        // (`Σ nailed.display_text + derived(pending)`) and fires the same
+        // terminal NextWord effect as a final-commit candidate tap (see
         // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
         // The Phase 7B SelectSuggestion bypass is no longer needed; the
         // engine owns the per-phase routing.
-        // 中文: Phase 9 Item 3 — engine 在 Continuous 下走 derived_display + NextWord;
+        // 中文: Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
         // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎決定行為。
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(

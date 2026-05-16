@@ -13,19 +13,18 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt-kotlin fmt-check-kotlin lint-kotlin
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
-# + Android jniLibs, run tests. The only build entry point.
+# + Android jniLibs. Build ONLY — does NOT run tests (use `make test`).
+# The only build entry point.
 # Requires `brew install protobuf swift-protobuf` for the proto step.
 build:
-	@echo "==> [1/5] Regenerating platform proto (Swift + Java)"
+	@echo "==> [1/4] Regenerating platform proto (Swift + Java)"
 	bash $(ENGINE)/scripts/gen-platform-protos.sh
-	@echo "==> [2/5] Cleaning protos build cache"
+	@echo "==> [2/4] Cleaning protos build cache"
 	cd $(ENGINE) && cargo clean -p protos
-	@echo "==> [3/5] Building iOS xcframework"
+	@echo "==> [3/4] Building iOS xcframework"
 	cd $(ENGINE) && bash scripts/build-xcframework.sh
-	@echo "==> [4/5] Building Android jniLibs"
+	@echo "==> [4/4] Building Android jniLibs"
 	cd $(ENGINE) && bash scripts/build-android-libs.sh
-	@echo "==> [5/5] cargo test --workspace"
-	cd $(ENGINE) && cargo test --workspace
 	@echo ""
 	@echo "✓ build complete — Xcode: Clean Build Folder ⇧⌘K → Build"
 
@@ -93,7 +92,7 @@ fmt-check-kotlin:
 lint-kotlin: fmt-check-kotlin
 
 help:
-	@echo "  make build       Full Rust rebuild: proto regen + iOS + Android + tests"
+	@echo "  make build       Full Rust rebuild: proto regen + iOS + Android (no tests)"
 	@echo "  make test        cargo test --workspace"
 	@echo "  make doc         Build rustdoc HTML for engine workspace and open in browser"
 	@echo "  make dict        Full dictionary regen + deploy to Android/iOS"

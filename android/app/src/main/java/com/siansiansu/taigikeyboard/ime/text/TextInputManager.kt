@@ -684,9 +684,23 @@ class TextInputManager(
 
         if (composingManager?.isComposing() == true) {
             val committedText = composingManager?.getComposingText() ?: ""
-            val capturedRawInput = composingManager?.getRawInput() ?: ""
-            composingManager?.commitComposition(ic)
+            // Model B §10.3: clear the candidate strip + NextWord state
+            // BEFORE the commit so the engine's terminal NextWordWordSelected
+            // (fired by commitComposition→CommitRaw) SURVIVES. clearCandidates()
+            // bumps the NextWord generation; running it AFTER the commit (the
+            // old order) stale-drops the engine's in-flight prediction query
+            // (= Enter regression). The engine effect is the SOLE
+            // association/prediction source — the old manual
+            // handleNextWordPrediction double-recorded the association and
+            // wasted the engine's prediction. Enter KEEPS the engine
+            // prediction (nothing clears between this commit and the async
+            // render). clearCandidates() only touches the smartbar strip +
+            // NextWord state, never the IC composing region (owned by
+            // ComposingManager), so running it pre-commit is safe.
+            // 中文: Model B — clearCandidates 移到 commit 之前,讓引擎終端 NextWord
+            // 中文: 預測存活(Enter 保留預測);引擎 effect 為關聯唯一來源。
             smartbarManager.clearCandidates()
+            composingManager?.commitComposition(ic)
 
             val imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0
             val maskedAction = imeOptions and EditorInfo.IME_MASK_ACTION
@@ -718,15 +732,12 @@ class TextInputManager(
                     ic.commitText(" ", 1)
                 }
             }
-
-            if (!taigikeyboard.prefs.isTranslateSwapped && committedText.isNotEmpty()) {
-                smartbarManager.handleNextWordPrediction(
-                    displayText = committedText,
-                    committedText = committedText,
-                    roman = committedText,
-                    rawInput = capturedRawInput,
-                )
-            }
+            // Model B §10.3: NO manual handleNextWordPrediction. The engine's
+            // terminal NextWordWordSelected (from commitComposition→CommitRaw
+            // above, dispatched via dispatchComposingNextWordEffect) is the
+            // SOLE association/prediction source; clearCandidates() was moved
+            // before the commit so that engine prediction survives → Enter
+            // keeps showing next-word predictions.
             return
         }
 
@@ -798,20 +809,19 @@ class TextInputManager(
         }
 
         if (composingManager?.isComposing() == true) {
-            val committedText = composingManager?.getComposingText() ?: ""
-            val capturedRawInput = composingManager?.getRawInput() ?: ""
+            // Model B §10.3: the engine commit (commitComposition→CommitRaw)
+            // fires the terminal NextWordWordSelected → records the
+            // association (the SOLE source; the old manual
+            // handleNextWordPrediction double-recorded it AND re-showed the
+            // prediction — the Model-B Space regression). Space SUPPRESSES the
+            // next-word *display*: clearCandidates() runs AFTER the commit
+            // (kept order) → bumps the NextWord generation so the engine's
+            // in-flight prediction query is dropped stale.
+            // 中文: Model B — 引擎 commit 已記關聯(唯一來源);Space 維持 commit 後
+            // 中文: clearCandidates 抑制下詞顯示(舊手動呼叫會雙記並重新顯示)。
             composingManager?.commitComposition(ic)
             ic.commitText(" ", 1)
             smartbarManager.clearCandidates()
-
-            if (committedText.isNotEmpty()) {
-                smartbarManager.handleNextWordPrediction(
-                    displayText = committedText,
-                    committedText = committedText,
-                    roman = committedText,
-                    rawInput = capturedRawInput,
-                )
-            }
             return
         }
 

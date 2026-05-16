@@ -223,46 +223,58 @@ class ComposingManager(
     /**
      * Delete one grapheme. Returns `true` if the wrapper consumed the key.
      *
-     * Android divergence (plan §5b.1): the 1-char-empty-after-delete path
-     * routes through [RustEngineBridge.composingReset] rather than
-     * [RustEngineBridge.composingDeleteBackward]. Reason: Android's
-     * in-document composing region is removed by `ClearPreeditWithoutCommit`
-     * already; an additional `DeleteBackwardFromDocument` would delete a
-     * pre-existing document char. iOS's floating marked-text model has the
-     * opposite need.
+     * **Model B** (v3.5.8 Phase 9, Codex pre-impl point 5): route ALL
+     * composing backspace to the engine. The old Android divergence —
+     * routing the 1-char / empty-raw case through
+     * [RustEngineBridge.composingReset] to stop a stray
+     * `DeleteBackwardFromDocument` deleting a pre-existing document char —
+     * no longer applies: under Model B `delete_backward_continuous` never
+     * emits `DeleteBackwardFromDocument` (nailed segments are not in the
+     * document), and `Continuous { raw: "", nailed: [...] }` is a valid
+     * live state where the next backspace must **unnail** the last segment.
+     * The old `cachedRawInput.isEmpty()` early-return wrongly let that key
+     * fall through to the host (deleting a real document char); the
+     * `length == 1` reset shortcut would wrongly abort the whole
+     * composition when a nailed prefix exists. Bare `Phase::Composing`
+     * reaching here would violate the Phase 7B invariant; we deliberately
+     * do not branch on phase (no safe phase signal in the mirror).
      *
-     * Reads the buffer length from the local cache (kept in sync via
-     * [applyTransition] on every prior dispatch) — saves one FFI round-trip
-     * per backspace vs. issuing `composingQueryState` first.
+     * The engine owns every sub-case (pending shrink / unnail / exit).
      */
     fun deleteBackward(ic: InputConnection): Boolean {
         logger.tdebug(TAG) { "[COMPOSE] fn=deleteBackward" }
-        if (!cachedIsComposing || cachedRawInput.isEmpty()) return false
-        val transition = if (cachedRawInput.length == 1) {
-            RustEngineBridge.composingReset(currentGeneration)
-        } else {
-            val settings = settingsProvider.current
+        if (!cachedIsComposing) return false
+        val settings = settingsProvider.current
+        applyTransition(
             RustEngineBridge.composingDeleteBackward(
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
                 currentGeneration,
-            )
-        }
-        applyTransition(transition, ic)
+            ),
+            ic,
+        )
         return true
     }
 
     fun commitComposition(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitComposition" }
         if (!cachedIsComposing) return
-        // `Intent::CommitDerived` is a no-op in `Phase::Continuous`
-        // (engine/composing/tests/continuous_phase.rs:656), and the auto-
-        // promote tail puts every active composition into Continuous. Route
-        // through SelectSuggestion which commits across all three phases.
-        // Empty preedit → canonical CommitDerived (no-op on Idle).
-        val derived = getComposingText().orEmpty()
-        if (derived.isEmpty()) {
-            val settings = settingsProvider.current
+        // Model B (§10.3 + v3.5.8 Phase 9 Finding 2): finalize the WHOLE
+        // current composition via CommitRaw — under Continuous the engine
+        // commits `Σ nailed.display_text + derived(pending)` (the whole
+        // composition) and fires the terminal NextWord, building the string
+        // from engine state so there is no prefix duplication. The old
+        // `SelectSuggestion(getComposingText())` reroute double-counted the
+        // nailed prefix once the composing buffer became the whole
+        // composition (`select_suggestion_under_continuous` prepends
+        // `nailed_prefix`). `selectSuggestion(candidate)` still uses
+        // SelectSuggestion (bare candidate → engine prepends correctly).
+        // Empty preedit → CommitDerived (a no-op on Idle). Bare
+        // `Phase::Composing` reaching here would violate the Phase 7B
+        // invariant; we deliberately do not branch on phase (Codex pre-impl
+        // point 3).
+        val settings = settingsProvider.current
+        if (getComposingText().orEmpty().isEmpty()) {
             applyAsSelfCommit(
                 RustEngineBridge.composingCommitDerived(
                     resolveMode(settings.inputMode),
@@ -274,20 +286,26 @@ class ComposingManager(
             return
         }
         applyAsSelfCommit(
-            RustEngineBridge.composingSelectSuggestion(derived, currentGeneration),
+            RustEngineBridge.composingCommitRaw(
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+            ),
             ic,
         )
     }
 
     fun commitRawInput(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitRawInput" }
-        // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles `Phase::Continuous`
-        // CommitRaw natively now — commits `derived_display(pending, config)`
-        // and fires NextWordWordSelected (matches commit_continuous final-
-        // commit shape). The Phase 7B SelectSuggestion bypass is gone; the
-        // engine owns per-phase routing. See
+        // v3.5.8 Phase 9 Item 3 + Model B (§10.3): engine handles
+        // `Phase::Continuous` CommitRaw natively — under Model B it commits
+        // the WHOLE composition (`Σ nailed.display_text + derived(pending)`)
+        // and fires the terminal NextWordWordSelected (matches
+        // commit_continuous final-commit shape). The Phase 7B
+        // SelectSuggestion bypass is gone; the engine owns per-phase
+        // routing. See
         // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
-        // 中文: Phase 9 Item 3 — engine 在 Continuous 下走 derived_display + NextWord;
+        // 中文: Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
         // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎依 phase 決定行為。
         val settings = settingsProvider.current
         applyAsSelfCommit(
@@ -635,11 +653,15 @@ class ComposingManager(
      * the effect-backed gate, callers would record frequency for uncommitted
      * text and append a stray space.
      *
-     * Mid-commit emits `[CommitTextReplacingPreedit, UpdatePreedit,
-     * NextWordUpdateLastSelectedWord, PerformAutocomplete]`; final-commit
-     * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit,
-     * ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
-     * and exits Continuous.
+     * **Model B** (§10): mid-commit (nail) emits `[UpdatePreedit(whole
+     * composition), NextWordUpdateLastSelectedWord, PerformAutocomplete]`
+     * and stays Continuous — NO `CommitTextReplacingPreedit`; final-commit
+     * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
+     * (whole composition), ResetAutocomplete, ResetAutocompleteContext,
+     * NextWordWordSelected]` and exits Continuous. `didCommit` therefore
+     * keys on `CommitTextReplacingPreedit` (final) OR
+     * `NextWordUpdateLastSelectedWord` (the per-segment nail signal); a
+     * noop emits neither.
      */
     // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
     // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
@@ -668,10 +690,18 @@ class ComposingManager(
         // Inspect transition BEFORE dispatching effects so we return an
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
         // for the same reason — semantics identical to the helper.
-        val didCommit = transition.effects.any { effect ->
+        val hasCommitText = transition.effects.any { effect ->
             effect is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit
         }
-        val didFinalCommit = didCommit && !transition.isComposing
+        val hasNail = transition.effects.any { effect ->
+            effect is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord
+        }
+        // Model B: nail (mid-commit) emits no commit-text; the learning
+        // effect is its success signal. Final-commit emits commit-text +
+        // exits. noop emits neither → both flags false (closes the
+        // generation-mismatch race, unchanged guarantee).
+        val didCommit = hasCommitText || hasNail
+        val didFinalCommit = hasCommitText && !transition.isComposing
         selfCommitInProgress = true
         try {
             applyTransition(transition, ic)
@@ -685,13 +715,15 @@ class ComposingManager(
     }
 
     /**
-     * Abort Continuous-input. Drops `Phase::Continuous`'s pending + committed
+     * Abort Continuous-input. Drops `Phase::Continuous`'s pending + nailed
      * list, exits to Idle, emits the standard abort effect trio
      * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-     * `NextWordClearForNewComposing`). Committed segments stay in the
-     * document — earlier `CommitTextReplacingPreedit` effects already wrote
-     * them. Used by `TextInputManager.onInputModeChanged` so stale Continuous
-     * state can't leak across TL ↔ POJ ↔ TPS swaps.
+     * `NextWordClearForNewComposing`). **Model B** (§10.6): nailed segments
+     * were never literal document text — `ClearPreeditWithoutCommit` clears
+     * the WHOLE marked composition; abort discards it entirely (no document
+     * write, no `DeleteBackwardFromDocument`). Used by
+     * `TextInputManager.onInputModeChanged` so stale Continuous state can't
+     * leak across TL ↔ POJ ↔ TPS swaps.
      */
     fun resetContinuous(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=resetContinuous" }

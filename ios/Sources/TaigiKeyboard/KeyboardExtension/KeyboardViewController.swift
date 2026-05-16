@@ -43,29 +43,6 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // 中文: 避開 iOS 26 SDK 損壞的 documentIdentifier UUID bridge。
     private var lastTextInputID: ObjectIdentifier?
 
-    /// Bug 3 (v3.5.8 Phase 9) — iOS-only continuous mid-commit tail-leak
-    /// workaround. A continuous mid-commit commits the chosen segment via
-    /// `insertText` and re-marks the pending raw tail via `setMarkedText`
-    /// in one synchronous turn; the host then confirms that marked tail
-    /// into literal document text during its textWillChange→textDidChange
-    /// settle (deterministic — `continuous-input-ranking.md` §10.6 iOS
-    /// divergence). `armed…` holds the re-marked tail from the moment it
-    /// is set inside a self-driven mid-commit; `leaked…` is the frozen
-    /// confirmed-leaked string awaiting deletion on the next preedit clear
-    /// / re-mark. `armedTailPresentBeforeHostSettle` is the pre-settle
-    /// baseline captured at `textWillChange`: the leak is real only when
-    /// the tail becomes a document suffix that was NOT already one before
-    /// the host's settle — this rejects the false positive where a
-    /// committed segment (e.g. a roman-output form) coincidentally ends
-    /// with the pending raw tail. Android is structurally immune (atomic
-    /// `commitText` + host-tracked composing region) — see §10.6.
-    // 中文: Bug 3 iOS-only — 連續 mid-commit 重設的 marked tail 被 host 在
-    // 中文: textDidChange 前確認成字面文字;用 textWillChange 前的後綴基準
-    // 中文: 排除「commit 字串本身剛好以 tail 結尾」的假陽性,再補刪掉。
-    private var armedContinuousMidCommitTail: String = ""
-    private var leakedContinuousMidCommitTail: String = ""
-    private var armedTailPresentBeforeHostSettle = false
-
     // 中文: emoji 服務的 lazy 取出口 — 第一次存取時建立並把自己設為 delegate。
     var emojiService: EmojiService {
         if emojiServiceStorage == nil {
@@ -188,101 +165,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
 
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
-        detectContinuousMidCommitTailLeak()
         actionHandler?.nextWordController.resetAndClearUI()
-    }
-
-    /// Bug 3: snapshot, at the pre-settle `textWillChange` boundary,
-    /// whether the armed tail is ALREADY a document suffix. Runs before
-    /// the field-switch guards (the mid-commit's own `textWillChange`
-    /// early-returns on same-field identity) so the baseline is always
-    /// captured. A natural-callback read — not a perturbing mid-dispatch
-    /// probe.
-    // 中文: 在 host settle 前(textWillChange)記錄 armed tail 是否已是後綴,作為基準。
-    private func captureMidCommitTailPreConfirmBaseline() {
-        guard !armedContinuousMidCommitTail.isEmpty, leakedContinuousMidCommitTail.isEmpty else { return }
-        let context = textDocumentProxy.documentContextBeforeInput ?? ""
-        armedTailPresentBeforeHostSettle = context.hasSuffix(armedContinuousMidCommitTail)
-    }
-
-    /// Bug 3: detect the host confirming a continuous mid-commit's
-    /// re-marked tail into literal document text. `textDidChange` is the
-    /// proven finalize boundary (real-device trace). The leak is real only
-    /// when the tail is the live document suffix AND was NOT a suffix at
-    /// the pre-settle baseline — i.e. it was *newly appended* by the host
-    /// confirming the marked region, not a commit string that already
-    /// ended with the same characters (Codex post-impl must-fix #1). A
-    /// host that keeps the region alive never triggers the compensation
-    /// delete (the marked region is still there for `setMarkedText("")` to
-    /// clear normally). Single-shot: the leak materializes within the one
-    /// text-change transaction the mid-commit triggers, so the arm is
-    /// consumed at the next `textDidChange` regardless of outcome.
-    // 中文: 在 textDidChange(已證實的 finalize 邊界)偵測 — tail 必須是
-    // 中文: 「新被附加」的後綴(基準時不是後綴、settle 後才是)才算 leak。
-    private func detectContinuousMidCommitTailLeak() {
-        guard !armedContinuousMidCommitTail.isEmpty,
-              leakedContinuousMidCommitTail.isEmpty,
-              actionHandler?.composingManager.selfCommitInProgress == false,
-              actionHandler?.composingManager.isComposing == true
-        else { return }
-        let tail = armedContinuousMidCommitTail
-        let wasPresentBeforeSettle = armedTailPresentBeforeHostSettle
-        armedContinuousMidCommitTail = ""
-        armedTailPresentBeforeHostSettle = false
-        guard !wasPresentBeforeSettle else { return }
-        if let context = textDocumentProxy.documentContextBeforeInput, context.hasSuffix(tail) {
-            leakedContinuousMidCommitTail = tail
-        }
-    }
-
-    /// Bug 3: a confirmed-leaked tail is now literal document text (the
-    /// marked region is gone, so `setMarkedText("")` is a no-op). Delete
-    /// the leaked characters before the next preedit clear / re-mark so
-    /// the following commit replaces them. Grapheme-count `deleteBackward`
-    /// is correct for NFC tone-marked tails. Called from `setMarkedText` /
-    /// `clearMarkedText` (`KeyboardViewController+TextInput.swift`).
-    ///
-    /// Cursor-side re-validation (Codex PR #282 r3249647910, P1): the leak
-    /// state only resets on a real field switch, so the caret may have
-    /// moved within the same field since the leak was recorded. Clear the
-    /// state first, then delete ONLY when the leaked tail is still the
-    /// immediate document suffix — otherwise abandon (leaving the stray
-    /// tail is far better than deleting unrelated text at the moved caret).
-    // 中文: 補償 — 先清狀態,只有當 leaked tail 仍是游標前文件後綴才刪;
-    // 中文: 游標已移走(同欄位不觸發 reset)就放棄,絕不刪到無關文字。
-    func compensateLeakedContinuousMidCommitTail() {
-        let leaked = leakedContinuousMidCommitTail
-        guard !leaked.isEmpty else { return }
-        leakedContinuousMidCommitTail = ""
-        armedContinuousMidCommitTail = ""
-        armedTailPresentBeforeHostSettle = false
-        guard textDocumentProxy.documentContextBeforeInput?.hasSuffix(leaked) == true else { return }
-        for _ in 0 ..< leaked.count {
-            textDocumentProxy.deleteBackward()
-        }
-    }
-
-    /// Bug 3: arm the re-marked tail. Only called when `setMarkedText` runs
-    /// inside a self-driven continuous mid-commit (`selfCommitInProgress`).
-    /// A frozen leak is never overwritten — compensation clears it first.
-    // 中文: 武裝 — 只在自我送出的連續 mid-commit 內呼叫,凍結中的 leak 不被覆寫。
-    func armContinuousMidCommitTail(_ tail: String) {
-        guard leakedContinuousMidCommitTail.isEmpty else { return }
-        armedContinuousMidCommitTail = tail
-        // Fresh per mid-commit: textWillChange sets the real baseline; if
-        // it never fires, a false baseline lets detect treat a newly
-        // appended suffix as the leak (the proven host behaviour).
-        armedTailPresentBeforeHostSettle = false
-    }
-
-    /// Bug 3: drop all workaround state without deleting — used on a real
-    /// input-field switch. The leak (if any) lives in the field we are
-    /// leaving; deleting backward in the new field would corrupt it.
-    // 中文: 真正切換欄位時只丟棄狀態、不刪字(leak 在舊欄位,刪新欄位會壞)。
-    private func resetContinuousMidCommitTailState() {
-        armedContinuousMidCommitTail = ""
-        leakedContinuousMidCommitTail = ""
-        armedTailPresentBeforeHostSettle = false
     }
 
     /// v3.5.4 lifecycle (plan §4.2): bump the composing engine's
@@ -298,18 +181,15 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // 中文: 自我 commit / 同欄位 textWillChange 不算切換,維持組字 buffer 不被誤清。
     override func textWillChange(_ textInput: UITextInput?) {
         super.textWillChange(textInput)
-        // Bug 3: capture the pre-settle suffix baseline before the
-        // field-switch guards (the mid-commit's textWillChange same-field
-        // early-returns below, so this must run first).
-        captureMidCommitTailPreConfirmBaseline()
         guard let manager = actionHandler?.composingManager else { return }
         if manager.selfCommitInProgress { return }
         let id = textInput.map { ObjectIdentifier($0 as AnyObject) }
         if lastTextInputID == id { return }
         lastTextInputID = id
-        // Real input-field switch — the Bug 3 tail-leak workaround is
-        // scoped to one composing session; drop it (without deleting).
-        resetContinuousMidCommitTailState()
+        // Real input-field switch — hard-abort the continuous composition
+        // (Model B: nailed segments were never in the document, so the
+        // generation bump cleanly discards them; `continuous-input-
+        // ranking.md` §10.6 external-region-clear = hard abort).
         manager.bumpGeneration()
         // Mirror the composing-slice IME-session bump for the NextWord
         // engine handle so cross-field state (lastSelectedWord / is_showing /

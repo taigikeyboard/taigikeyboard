@@ -670,12 +670,38 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 
 下列項目 v3.5.8 **不做**,等 v3.5.8 dogfood 結果決定優先序後再開新 round:
 
+### 整句 lattice + walker (策略已採納,排程未定)
+
+**Decision**: 2026-05-15 user 採納。**Status**: 策略已採納;**排程未定、不掛版本號**(per `feedback_no_future_planning.md`);前置 = v3.5.8 release prep / dogfood 完成後才啟動(避免與當前 sole focus 衝突)。**Source-of-truth**:本節 + [`docs/engine/continuous-input-ranking.md`](engine/continuous-input-ranking.md) §1–§9 (gap 證據鏈) + §7 G1/G2/G3 (goal axes)。
+
+**Phase-3 立場修訂(誠實標註)**:`§Phase 3` line 203 當初把 "global lattice (librime 做法)" 列為「過度設計」,選 span-local 多 endings 中庸路線。Phase 9 dogfood (`continuous-input-ranking.md` §1 `taiuantaigi`、§3 "architecturally wrong for full-buffer phrase";Codex 共識 §4) 證明 span-local 左錨前綴 + 扁平 `freq × syllable_bias` 無法浮上整句片語。本節**刻意修訂**該立場:lattice 不再是過度設計,而是 G1/G2 收斂的必要架構。span-local 仍是 lattice 的退化特例,非廢棄。
+
+**Grounded 現況**(file:line):切音節 `engine/composing/src/syllabifier/tl.rs:49-84`(BFS 回傳 ending **集合**,非路徑);建 key `engine/composing/src/dispatch.rs build_keys_tl`(只發 **`(0,end)`** 左錨 fused key,無內部 segment);取候選 `engine/lexicon/src/continuous.rs:461`(span-local `lookup_exact`);排序 `engine/ranking/src/score.rs`(`freq×(1+0.1·max(0,syll−1))×user_freq_boost`,`user_freq_boost` Continuous 寫死 1.0 = Gap B);無 `walker/`/`lattice/` 目錄。
+
+**目標架構**:引擎內「切分 lattice + 全句最佳路徑 walker」。形狀照 McBopomofo Gramambular(topological-sort + relaxation,非完整 Viterbi,手機預算友善),cost 家族照 khiin,user-dict 動態權重照 librime `formula_d`。
+
+**增量切片(各自獨立 PR、無 toggle per `feedback_no_slice_toggles.md`、200-500 LOC):**
+
+| Slice | 範圍 | 依賴 |
+|---|---|---|
+| **S1** | Lattice builder:`build_keys_tl` 改發**所有內部切點** segment + DAG + 拓樸序。純引擎、可單測,行為先不變(候選超集) | — |
+| **S2** | 全句 walker:unigram log-prob + 長度正規化 relaxation walker,輸出單一全 buffer 最佳路徑候選置 slot 0。**此片即收斂 G1 + 吞掉暫停中的 Bug 2(`taiuantai`→`tai uan tai`)與 §1 `taiuantaigi`→臺灣台語** | S1 |
+| **S3** | 關 Gap B:`user_frequency.db` 動態權重(librime `formula_d` 時間衰減)接進 walker edge cost,取代寫死 `user_freq_boost=1.0`;加 McBopomofo epsilon-boost 防單字壓句。收斂 G2 | S2 |
+| **S4 (stretch)** | bigram edge cost 從既有 `nextword` association 表抽出(= 下方原「Continuous-input nextword bigram 整合」條目)。YAGNI:手機 1–3 詞,unigram+長度多半夠,**先不做** | S3 |
+
+**最佳實踐對齊(cite-and-trace,per `feedback_plan_cite_best_practices.md`)**:McBopomofo `Source/Engine/gramambular2/reading_grid.cpp:51/134/166/216` (insertReading/Relax/TopologicalSort/walk) + `McBopomofoLM.cpp:120` (epsilon-boost);khiin `khiin/src/data/segmenter.rs` (DP cost `ln(1/p^FREQ)/word_len^LET·n_syls^SYL`);librime `src/rime/dict/user_dictionary.cc` `formula_d=d+da·exp((ta−t)/200)`;MOE `references/moe_taigi_apk/.../CandidateModel.java`(`spanUnits` 多切點、UserVoc/LearnedVoc 分離);規則 `rules/rust-best-practices.md`(純函式 syllabifier 不破、domain↔proto 邊界)、`rules/cross-platform-alignment.md`(walker 在引擎、平台零再切 → iOS/Android 自動對齊)。`moe-taigi-reference.md:370-395` 既有結論已定:採 khiin 式 DP,**不採 MOE Nail UX**。
+
+**YAGNI / non-goal(明確排除)**:MOE Nail 逐段確認 UX(2026-03 已否決)、caret/nail dual-cursor、RIME YAML 組態系統、神經 LM(離線/隱私約束)、stateful `inputLine`(維持 stateless 重算 per fetch,直到 lattice learning 真的需要 — 見 `project_moe_segmentation_audit_pending` / MOE audit §6 留 Phase 10+)。
+
+**與暫停中 3 bug 的關係**:Bug 2 + §1 `taiuantaigi` 由 **S2 吞掉**(lattice 自然產出全 buffer 最佳路徑,Bug 2 合成羅馬字成為 walker 在無漢字路徑時的 roman 最佳路徑,**非特例 fallback**,符合 `feedback_no_redundant_fallback.md`)。**Bug 1(swap commit)、Bug 3(preedit 生命週期)與斷詞正交**,仍需各自獨立修,本策略不取代。
+
 ### Borrow librime spelling-algebra (full pipeline)
 **Source**: 2026-05-05 librime architecture comparison
 **Status**: §Phase 1b 確認 N/A — fused toneless key 早就由上游 `dictionary/common/notone.py::remove_tone()` 在 CSV 階段提供。完整 librime pipeline (declarative `spelling_rules.toml` + Rust rule engine + FST trailer `derivation_type_u8` / `form_u8` 兩位元組 + ranking credibility multiplier) 留作後續候選。詳見 git 歷史 `docs/roadmap.md` 在 commit `52e15d83` 之前的 Item 2 內容。
 
 ### Continuous-input nextword bigram 整合
 連續輸入中段排序加 nextword bigram boost (給 buffer-driven candidate × 1.3 if 同時在 nextword top-K)。本 phase 已預埋 state sync,可無痛上。
+**→ 已併入「整句 lattice + walker」S4**(見本節最上方);屆時 bigram 不是 ×1.3 boost,而是 walker 的 edge cost。
 
 ### Back-edit / undo / cursor 任意位置編輯
 v3.5.8 只支援 forward-only commit;backspace 限「pop committed segment」。未來若 dogfood 顯示需求再加。

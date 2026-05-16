@@ -33,7 +33,7 @@ pub(crate) fn derived_display(raw: &str, config: &AppConfig) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::{CommittedSegment, Phase};
+    use crate::api::{NailedSegment, Phase};
 
     fn config_tl() -> AppConfig {
         AppConfig {
@@ -99,7 +99,7 @@ mod tests {
         // Mid-commit state: "tsua" already nailed, "li2" still pending.
         let phase = Phase::Continuous {
             raw: "li2".to_string(),
-            committed: vec![CommittedSegment {
+            nailed: vec![NailedSegment {
                 display_text: "紙".to_string(),
                 canonical_text: "紙".to_string(),
                 raw_text: "tsua".to_string(),
@@ -114,7 +114,7 @@ mod tests {
     fn raw_input_continuous_empty_pending_is_empty() {
         let phase = Phase::Continuous {
             raw: String::new(),
-            committed: vec![CommittedSegment {
+            nailed: vec![NailedSegment {
                 display_text: "紙".to_string(),
                 canonical_text: "紙".to_string(),
                 raw_text: "tsua".to_string(),

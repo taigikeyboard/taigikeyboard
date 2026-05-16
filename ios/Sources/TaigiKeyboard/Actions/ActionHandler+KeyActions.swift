@@ -97,6 +97,19 @@ extension ActionHandler {
             if composingManager.isComposing {
                 composingManager.commitComposition()
             }
+            // Model B §10.3: the engine commit (commitComposition→CommitRaw)
+            // already fires the terminal NextWordWordSelected (records the
+            // association). Punctuation SUPPRESSES the next-word *display*
+            // (converges with Space; resolves the iOS/Android Model-B
+            // divergence). Unconditional on this path — mirrors Android's
+            // unconditional `clearCandidates()` on the punctuation path so a
+            // stale strip is also cleared when NextWord was showing and we
+            // were NOT composing (Codex pre-impl P1). clearDisplay() bumps the
+            // NextWord generation so the in-flight prediction query is dropped
+            // stale; it is a cheap no-op when nothing is showing.
+            // 中文: Model B — 標點抑制下詞顯示(與 Space 一致);無條件呼叫對齊
+            // 中文: Android,連非組字時的殘留 strip 也一併清掉。
+            nextWordController.clearDisplay()
             keyboardContext.textDocumentProxy.insertText(finalChar)
             return true
         }
@@ -144,14 +157,18 @@ extension ActionHandler {
 
         // Taigi mode (POJ/TL)
         if composingManager.isComposing {
-            let committedText = composingManager.composingText
-
-            // Commit composing + insert space (no candidate selection)
+            // Model B §10.3: the engine commit (commitComposition→CommitRaw)
+            // fires the terminal NextWordWordSelected → records the
+            // association (the SOLE association source; the old manual
+            // `process(triggerPrediction:false)` double-recorded it). Space
+            // SUPPRESSES the next-word *display*: clearDisplay() AFTER the
+            // commit bumps the NextWord generation so the engine's in-flight
+            // prediction query is dropped stale.
+            // 中文: Model B — 引擎 commit 已記關聯(唯一來源);Space 用 clearDisplay()
+            // 中文: 在 commit 後抑制下詞顯示(舊手動 process 會雙記關聯)。
             composingManager.commitComposition()
             keyboardContext.textDocumentProxy.insertText(" ")
-
-            // Record committed text for future associations (space doesn't trigger NextWord prediction)
-            nextWordController.process(text: committedText, roman: committedText, triggerPrediction: false)
+            nextWordController.clearDisplay()
         } else {
             keyboardContext.textDocumentProxy.insertText(" ")
         }
@@ -223,8 +240,22 @@ extension ActionHandler {
                 // Enter at index 0: commit raw input (literal keystrokes)
                 // This allows English words to pass through without tone conversion
                 // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
+                //
+                // Model B §10.3: `commitRawInput()`→CommitRaw → the engine's
+                // Continuous final-commit emits the terminal
+                // NextWordWordSelected(trigger:true), routed to
+                // `nextWordController.process` → records the association +
+                // predicts. Enter KEEPS the engine prediction (nothing clears
+                // after; only auto-space inserts a literal). The old manual
+                // `process(requireRomanMode:true)` was redundant — in swapped
+                // mode it no-op'd (so the engine effect already drove
+                // behavior since Phase 9 Item 3), in non-swapped mode it
+                // double-recorded the association. Removing it is
+                // behavior-preserving and makes the engine effect the SOLE
+                // source (§10.3).
+                // 中文: Model B — commitRawInput 由引擎發終端 NextWord;Enter 保留引擎
+                // 中文: 預測;移除冗餘手動 process(swapped 時本就 no-op,否則雙記關聯)。
                 composingManager.commitRawInput()
-                nextWordController.process(text: capturedRawInput, roman: capturedRawInput, requireRomanMode: true)
             } else {
                 // Non-zero index: confirm selected candidate.
                 // Strip KK type at the boundary; ComposingManager is engine-pure.
