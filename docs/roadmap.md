@@ -670,13 +670,13 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 
 下列項目 v3.5.8 **不做**,等 v3.5.8 dogfood 結果決定優先序後再開新 round:
 
-### 整句 lattice + walker (策略已採納,排程未定)
+### 整句 lattice + walker (v3.5.8 must-solve,實作中)
 
-**Decision**: 2026-05-15 user 採納。**Status**: 策略已採納;**排程未定、不掛版本號**(per `feedback_no_future_planning.md`);前置 = v3.5.8 release prep / dogfood 完成後才啟動(避免與當前 sole focus 衝突)。**Source-of-truth**:本節 + [`docs/engine/continuous-input-ranking.md`](engine/continuous-input-ranking.md) §1–§9 (gap 證據鏈) + §7 G1/G2/G3 (goal axes)。
+**Decision**: 2026-05-15 user 採納策略。**2026-05-16 USER DIRECTIVE**:主流對齊斷詞 = **v3.5.8 must-solve**(覆寫先前「排程未定/不掛版本號/前置=release prep 後」)。**Status**: 切片實作中 — **S1 = DONE**(branch `lattice-s1-builder`,嚴格行為中性 lattice builder,Codex pre+post sandwich PASS);S2/S3 pending。**Source-of-truth**:本節 + [`docs/engine/continuous-input-ranking.md`](engine/continuous-input-ranking.md) §1–§9 (gap 證據鏈) + §7 G1/G2/G3 (goal axes)。release scope/timing 由 user 明示(`feedback_no_unilateral_release_scope`)。
 
 **Phase-3 立場修訂(誠實標註)**:`§Phase 3` line 203 當初把 "global lattice (librime 做法)" 列為「過度設計」,選 span-local 多 endings 中庸路線。Phase 9 dogfood (`continuous-input-ranking.md` §1 `taiuantaigi`、§3 "architecturally wrong for full-buffer phrase";Codex 共識 §4) 證明 span-local 左錨前綴 + 扁平 `freq × syllable_bias` 無法浮上整句片語。本節**刻意修訂**該立場:lattice 不再是過度設計,而是 G1/G2 收斂的必要架構。span-local 仍是 lattice 的退化特例,非廢棄。
 
-**Grounded 現況**(file:line):切音節 `engine/composing/src/syllabifier/tl.rs:49-84`(BFS 回傳 ending **集合**,非路徑);建 key `engine/composing/src/dispatch.rs build_keys_tl`(只發 **`(0,end)`** 左錨 fused key,無內部 segment);取候選 `engine/lexicon/src/continuous.rs:461`(span-local `lookup_exact`);排序 `engine/ranking/src/score.rs`(`freq×(1+0.1·max(0,syll−1))×user_freq_boost`,`user_freq_boost` Continuous 寫死 1.0 = Gap B);無 `walker/`/`lattice/` 目錄。
+**Grounded 現況**(file:line,**S1 後更新**):切音節 `engine/composing/src/syllabifier/tl.rs:49-84`(BFS 回傳 ending **集合**,純函式,S1 未改);**S1 新增** `engine/composing/src/lattice/{mod,builder}.rs`(`build_lattice` 多起點完整 DAG);建 key `engine/composing/src/dispatch.rs build_keys_tl_with_inventory`(改 call `build_lattice`,但仍只發 **`(0,end)`** 左錨投影 = 行為中性);取候選 `engine/lexicon/src/continuous.rs:461`(span-local `lookup_exact`,S1 未動);排序 `engine/ranking/src/score.rs`(`freq×(1+0.1·max(0,syll−1))×user_freq_boost`,`user_freq_boost` Continuous 寫死 1.0 = Gap B,待 S3);**尚無 walker**(S2)。
 
 **目標架構**:引擎內「切分 lattice + 全句最佳路徑 walker」。形狀照 McBopomofo Gramambular(topological-sort + relaxation,非完整 Viterbi,手機預算友善),cost 家族照 khiin,user-dict 動態權重照 librime `formula_d`。
 
@@ -684,8 +684,8 @@ Round-A/B/C dogfood:9.6 merge 後,iPhone + Android 實機 S1/S2/S3 + 上述 10 �
 
 | Slice | 範圍 | 依賴 |
 |---|---|---|
-| **S1** | Lattice builder:`build_keys_tl` 改發**所有內部切點** segment + DAG + 拓樸序。純引擎、可單測,行為先不變(候選超集) | — |
-| **S2** | 全句 walker:unigram log-prob + 長度正規化 relaxation walker,輸出單一全 buffer 最佳路徑候選置 slot 0。**此片即收斂 G1 + 吞掉暫停中的 Bug 2(`taiuantai`→`tai uan tai`)與 §1 `taiuantaigi`→臺灣台語** | S1 |
+| **S1 ✅DONE** | Lattice builder:`build_keys_tl` 改 call 引擎內新 `composing/src/lattice/` 建**完整多起點 DAG**(原子+片語邊、拓樸序),但對外**只發左錨投影**(`start==0`)→ **嚴格行為中性**(byte-identical 於 S1 前,原 pinning tests 原封通過)。內段(`start>0`)留 DAG 內供 S2。純引擎、in-crate 單測。**設計修正**:原「候選超集」會讓內段候選可被點選但 `CommitContinuous` 只帶 `consumed_bytes` → 誤 commit + dedupe 非 span-aware(Codex post-impl P1#1/#2)→ 內段 surfacing + Finding 3 + start-aware commit + span-aware dedupe **全移 S2** | — |
+| **S2** | 全句 walker:unigram log-prob + 長度正規化 relaxation walker,輸出單一全 buffer 最佳路徑候選置 slot 0;**含 start-aware `CommitContinuous`(帶 span start)+ span-aware `(roman,hanji)` dedupe + 內段候選 surfacing + Finding 3**(S1 設計修正移入)。**此片即收斂 G1 + 吞掉暫停中的 Bug 2(`taiuantai`→`tai uan tai`)與 §1 `taiuantaigi`→臺灣台語** | S1 |
 | **S3** | 關 Gap B:`user_frequency.db` 動態權重(librime `formula_d` 時間衰減)接進 walker edge cost,取代寫死 `user_freq_boost=1.0`;加 McBopomofo epsilon-boost 防單字壓句。收斂 G2 | S2 |
 | **S4 (stretch)** | bigram edge cost 從既有 `nextword` association 表抽出(= 下方原「Continuous-input nextword bigram 整合」條目)。YAGNI:手機 1–3 詞,unigram+長度多半夠,**先不做** | S3 |
 

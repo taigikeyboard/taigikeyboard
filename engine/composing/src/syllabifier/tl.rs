@@ -52,11 +52,38 @@ pub fn valid_span_endings(
     inv: &SyllableInventory,
     max_syllables: usize,
 ) -> Vec<usize> {
+    // Guard on the raw `input` before allocating the lowercased copy
+    // (`to_ascii_lowercase` is byte-length + UTF-8-boundary
+    // preserving, so the guard is equivalent either side, but
+    // checking first skips the alloc on the early-out paths).
     if max_syllables == 0 || pos >= input.len() || !input.is_char_boundary(pos) {
         return Vec::new();
     }
+    valid_span_endings_lowered(&input.to_ascii_lowercase(), pos, inv, max_syllables)
+}
 
-    let lowered = input.to_ascii_lowercase();
+/// Pre-lowered variant of [`valid_span_endings`]: the caller has
+/// already ASCII-lowercased `lowered`, so this skips the per-call
+/// `to_ascii_lowercase()` allocation. The lattice builder calls this
+/// once per reachable BFS start against a single lowercased shadow
+/// (the public wrapper would otherwise re-lower the whole buffer for
+/// every start — Codex PR #284 P1, `r3252344518`). Behavior is
+/// identical to [`valid_span_endings`] on already-lowercase ASCII
+/// input; the same early guard is repeated here because this is a
+/// `pub(crate)` entry point (BFS callers pass `pos == lowered.len()`
+/// at chain ends and rely on the guard to terminate).
+// 中文: valid_span_endings 的「已小寫」變體 — 呼叫端先 to_ascii_lowercase 一次,
+// 中文:   避免 lattice BFS 每個 start 都重抄整個 buffer (Codex PR #284 P1)。
+pub(crate) fn valid_span_endings_lowered(
+    lowered: &str,
+    pos: usize,
+    inv: &SyllableInventory,
+    max_syllables: usize,
+) -> Vec<usize> {
+    if max_syllables == 0 || pos >= lowered.len() || !lowered.is_char_boundary(pos) {
+        return Vec::new();
+    }
+
     let bytes = lowered.as_bytes();
     let mut endings: BTreeSet<usize> = BTreeSet::new();
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();

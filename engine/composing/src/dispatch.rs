@@ -18,7 +18,7 @@
 // 中文: Phase 6 新增 — FetchAtPos 在 dispatch 短路處理 (需要 lexicon state + 模式相關 key 構造)。
 
 use crate::api::{ComposingError, Engine, Intent, Phase};
-use crate::syllabifier::{tl as tl_syll, tps as tps_syll};
+use crate::syllabifier::tps as tps_syll;
 use lexicon::{
     classification::is_hanzi, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
     ConsumedSpan, CustomEntry, EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
@@ -271,7 +271,8 @@ fn build_keys_tl(raw: &str) -> Vec<(ConsumedSpan, String)> {
 /// 4. The two byte-offset maps compose into a single
 ///    `shadow_to_raw_end` so downstream `consumed_span_end` lines up
 ///    with what platform UI slices on commit.
-/// 5. [`tl_syll::valid_span_endings`] walks the shadow against the
+/// 5. The lattice builder (`crate::lattice::build_lattice`) walks the
+///    shadow via `valid_span_endings` against the
 ///    inventory (which has no hyphenated entries and no POJ-display
 ///    keys — both transforms run upstream).
 /// 6. For each shadow ending, build the fused toneless `tl:<key>` from
@@ -298,12 +299,36 @@ pub fn build_keys_tl_with_inventory(
         .iter()
         .map(|&c| canonical_to_raw_end[c])
         .collect();
-    let endings = tl_syll::valid_span_endings(&shadow, 0, inv, MAX_SYLLABLES);
-    if endings.is_empty() {
-        return Vec::new();
-    }
-    let mut out = Vec::with_capacity(endings.len());
-    for end in endings {
+    // v3.5.8 S1 — build the segmentation lattice (the multi-start DAG
+    // that S2's whole-sentence walker will traverse) and emit ONLY its
+    // left-anchored (`start == 0`) projection as keys. That projection
+    // is byte-identical to the pre-S1 single-start
+    // `valid_span_endings(shadow, 0, …)` output (`build_lattice` sorts
+    // edges so the `start == 0` ones come first in ascending-`end`
+    // order), so S1 is genuinely behavior-neutral at the candidate /
+    // commit / UI layer.
+    //
+    // Interior (`start > 0`) edges are deliberately NOT emitted here:
+    // `CommitContinuous` carries only `consumed_bytes` (the end), so a
+    // tappable interior candidate would commit the whole prefix with
+    // the wrong display, and the `(roman, hanji)` dedupe is not
+    // span-aware (Codex post-impl 2026-05-16 P1 #1/#2). Surfacing
+    // interior candidates therefore belongs to S2, together with the
+    // walker's best-path output and start-aware commit. The full DAG
+    // is still constructed here so S2 wires onto it with no churn, and
+    // so this slice proves span-local is the lattice's degenerate
+    // left-anchored special case (`docs/roadmap.md` §整句 lattice).
+    // 中文: S1 — 建完整 lattice (S2 walker 用的多起點 DAG),但只發左錨投影為 key,
+    // 中文:   與 S1 前單起點輸出逐 byte 相同 → 行為中性。內段 (start>0) 留給 S2
+    // 中文:   (commit 僅帶 consumed_bytes、dedupe 非 span-aware,Codex post-impl P1)。
+    let lattice = crate::lattice::build_lattice(&shadow, inv, MAX_SYLLABLES);
+    let mut out = Vec::with_capacity(lattice.edges().len());
+    for &(start, end) in lattice.edges() {
+        if start != 0 {
+            continue;
+        }
+        // Guards mirror the pre-S1 single-start loop exactly (`start`
+        // is 0 here, so the slice / offset map is identical).
         if end == 0 || end > shadow.len() || !shadow.is_char_boundary(end) {
             continue;
         }
