@@ -129,6 +129,8 @@ This is a **secondary concern** — the formula gap is the dominant problem, and
 
 #### Gap B — `user_freq_boost` is hardcoded to `1.0`
 
+> **CLOSED by S3 (branch `lattice-s3-userfreq`, 2026-05-16)** for the whole-sentence walker path. The walker's `Σ edge_score` objective now folds in `ranking::decayed_user_weight_delta` (librime `formula_d` wall-clock adaptation, cap-before-decay) multiplicatively, with a McBopomofo epsilon-boost and syllable-aware damping. See the §STATUS 2026-05-16 callout near §7 for the full mechanism and rationale. The literal-`1.0` description below documents the pre-S3 span-local state and the gap evidence chain; it is retained for the audit trail.
+
 `fetch_via_lexicon` calls `fetch_candidates_for_keys` with `user_freq_boost = 1.0` literal:
 
 ```rust
@@ -324,8 +326,8 @@ To prevent goal-creep:
 
 | Goal | Closes which Gap (§3.2) |
 |---|---|
-| G1 | Gap A (formula) — primary. Possibly Gap C (dict data) as enabler. |
-| G2 | Gap B (boost wiring) — primary. |
+| G1 | Gap A (formula) — primary. Possibly Gap C (dict data) as enabler. **Closed by S2** (whole-sentence walker). |
+| G2 | Gap B (boost wiring) — primary. **Closed by S3** (`decayed_user_weight_delta` + epsilon-boost into walker edge cost; see §STATUS 2026-05-16). |
 | G3 | Already met by current architecture. Goal is to **preserve** through G1 + G2 changes. |
 | G4 | Independent of A/B/C — proto schema extension. Tracked at §9 question #6. |
 | G5 (stretch) | Independent of A/B/C — input-state-machine extension. Tracked at §9 question #7. |
@@ -336,7 +338,7 @@ A future plan that **closes G1 + G2 + G4** while preserving G3 is the success cr
 
 ## 8. Decision for v3.5.8
 
-> **STATUS 2026-05-16 (整句 lattice + walker 進度)**: Gap A (§3.2 — no phrase-priority signal, the §1 `taiuantaigi` motivation) is now **closed by the whole-sentence walker**: `docs/roadmap.md` §整句 lattice + walker **S1 DONE & MERGED** (main `4caa0c24` #284, behavior-neutral lattice builder) + **S2 DONE** (branch `lattice-s2-walker`, engine-only `walk_best` relaxation walker emitting one synthesized full-buffer best path at slot 0 — `taiuantaigi`→臺灣台語, no-hanji path→synthesized roman, subsuming paused Bug 2). G1 converges at S2. **Gap B (§3.2 — `user_freq_boost` hardcoded 1.0) remains open**, closing at **S3** (librime `formula_d` + McBopomofo epsilon-boost into walker edge cost → G2). G4/G5 unchanged. Engine-only; forward-only Model B commit preserved (Codex pre-impl S2 Q1c = option ii). The pre-2026-05-11 "ship with limitation documented" path below is fully superseded.
+> **STATUS 2026-05-16 (整句 lattice + walker 進度)**: Gap A (§3.2 — no phrase-priority signal, the §1 `taiuantaigi` motivation) is now **closed by the whole-sentence walker**: `docs/roadmap.md` §整句 lattice + walker **S1 DONE & MERGED** (main `4caa0c24` #284, behavior-neutral lattice builder) + **S2 DONE** (branch `lattice-s2-walker`, engine-only `walk_best` relaxation walker emitting one synthesized full-buffer best path at slot 0 — `taiuantaigi`→臺灣台語, no-hanji path→synthesized roman, subsuming paused Bug 2). G1 converges at S2. **Gap B (§3.2 — `user_freq_boost` hardcoded `1.0` in the walker path objective) is now closed by S3** (branch `lattice-s3-userfreq`): `ranking::decayed_user_weight_delta` is a librime `formula_d` wall-clock adaptation (`delta = (user_freq_boost(count) − 1) × exp(−age_ms / τ)`, **cap applied before decay** so a huge stale count is not pinned high — Codex pre-impl S3 Q4a/Q4c BLOCK condition; τ = `USER_WEIGHT_DECAY_TAU_MS` = 30 days, dogfood-tunable 14–90 days), folded multiplicatively into `composing::lattice::cost::edge_score` together with a McBopomofo-style additive epsilon-boost on multi-syllable edges (`WALKER_PHRASE_EPSILON` = 0.001) and **syllable-aware damping** (`WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` = 0.0) so a hot single character cannot ride the boost to sweep the whole sentence. Seam (Codex S3 Q4d): `EdgeChoice.user_weight_delta` computed in `dispatch::fetch_walker_slot0`; `lexicon::best_candidate_for_key` / `record_to_candidate` untouched (record selection and path objective are orthogonal — no double counting). The S2 no-dict tie lever is preserved (no-dict edge → `user_weight_delta = 0.0` → `edge_score` still exactly `1.0`). **G2 converges at S3.** G4/G5 unchanged. Engine-only; forward-only Model B commit preserved (Codex pre-impl S2 Q1c = option ii). The pre-2026-05-11 "ship with limitation documented" path below is fully superseded.
 
 > **REVISED 2026-05-11 (evening)**: Original decision was "ship with limitation documented." User pivot: **v3.5.8 will not ship until Continuous-input ranking is fixed.** Phase 9 scope expanded from "dogfood + cleanup" (~100 LOC) to "ranking 修復 + 主流 IME 對齊" (TBD;Goal axes G1+G2+G4 base, G5 stretch). See `docs/roadmap.md` § Phase 9 (revised) and `memory/project_v358_continuous_input.md`.
 >

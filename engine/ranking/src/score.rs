@@ -237,6 +237,82 @@ pub fn recency_rank(now_ms: i64, last_used_ms: i64) -> u8 {
     }
 }
 
+/// v3.5.8 S3 — exponential **time constant** (τ) for the
+/// Continuous-input whole-sentence walker's user-frequency edge
+/// weight. librime `formula_d`
+/// (`references/librime/src/rime/algo/dynamics.h` —
+/// `d + da·exp((ta − t) / 200)`) decays over an integer per-commit
+/// *tick*; we have no tick model, only the platform wall clock, so the
+/// walker decays over `now_ms − last_used_ms` epoch-ms instead.
+///
+/// This is the time constant of `exp(−age / τ)`, NOT the 50% point:
+/// the weight decays to `1/e ≈ 0.37` after τ and to `0.5` after
+/// `τ · ln 2 ≈ 20.8 days` for the τ = 30-day default. Named for the
+/// mathematical role rather than "half-life" to keep the formula
+/// honest (`rules/ai-friendly-code.md` naming). 30 days is the right
+/// initial shape for an IME: strong over days, meaningful over weeks,
+/// noticeably stale over months. **Dogfood-tunable in 14..=90 days**
+/// (Codex pre-impl S3 Q4a, 2026-05-16) — kept a named constant, not a
+/// magic literal, so retuning is a one-line change.
+// 中文: S3 — walker user-freq 邊權重的指數時間常數 τ;librime formula_d 用 commit tick,
+// 中文:   我們無 tick model,改用 now_ms − last_used_ms 牆鐘衰減。weight 在 τ 後降到 1/e,
+// 中文:   在 τ·ln2 ≈ 20.8 天降到 0.5(τ=30 天)。dogfood 可調 14..=90 天。
+pub const USER_WEIGHT_DECAY_TAU_MS: i64 = 30 * 24 * 60 * 60 * 1000;
+
+/// v3.5.8 S3 — time-decayed user-frequency boost **delta** for one
+/// whole-sentence-walker lattice edge (librime `formula_d` adapted to
+/// wall-clock; closes Continuous-input Gap B → goal G2,
+/// `docs/engine/continuous-input-ranking.md` §3.2 / §7). Returns the
+/// amount **above** the neutral `1.0` that the edge's chosen candidate
+/// has earned from past user selections, exponentially decayed by
+/// recency:
+///
+/// ```text
+/// decay = exp(−age_ms / USER_WEIGHT_DECAY_TAU_MS)
+/// delta = (user_freq_boost(count) − 1.0) × decay
+/// ```
+///
+/// The `(user_freq_boost(count) − 1.0)` base is the **already
+/// saturated** delta — the [`MAX_BOOST`] cap is applied **before** the
+/// time decay. Decaying the raw `count` first and capping afterwards
+/// would keep a `count = 1000` entry pinned at `MAX_BOOST` for months
+/// (it would have to decay below an *effective* count of 40 before the
+/// cap released), which is exactly the stale single-entry dominance
+/// this slice must avoid (Codex pre-impl S3 Q4a/Q4c BLOCK condition,
+/// 2026-05-16).
+///
+/// Caller-injected `now_ms` / `last_used_ms` keep this pure +
+/// stateless (same cross-platform-invariant contract as
+/// [`user_freq_boost`] / [`recency_rank`] — engine is the single
+/// source of truth, platforms MUST NOT redefine). Returns `0.0`
+/// (→ neutral weight `1.0` at the call site) for the **same three
+/// bad-clock classes [`recency_rank`] rejects**: `now_ms <= 0` (no
+/// wall clock injected), `last_used_ms <= 0` (never selected), and
+/// `now_ms < last_used_ms` (clock skew). The walker turns this
+/// per-edge delta into a syllable-aware weight (single-syllable edges
+/// are damped so a hot single character cannot ride the boost to
+/// sweep the whole sentence — see
+/// `composing::lattice::cost::edge_score`).
+// 中文: S3 — 單條 walker lattice edge 的時間衰減 user-freq boost「delta」(librime formula_d 牆鐘版,收斂 Gap B → G2)。
+// 中文: 回傳超過中性 1.0 的量:decay = exp(−age/τ);delta = (user_freq_boost(count) − 1.0) × decay。
+// 中文: 關鍵:cap 在衰減「之前」套用(用已飽和的 boost delta 再衰減);先衰減 raw count 再 cap 會讓
+// 中文:   count=1000 的 entry 卡在 MAX_BOOST 數月 → 正是本片要消除的 stale 單一 entry dominance(Codex S3 Q4a/Q4c BLOCK)。
+// 中文: now_ms/last_used_ms 由 caller 注入(pure/stateless,與 user_freq_boost/recency_rank 同跨平台不可重定義契約);
+// 中文:   三類壞時鐘(now<=0 / last<=0 / skew)回 0.0 = 中性,與 recency_rank guard 一致。
+pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> f64 {
+    // Same bad-clock guard policy as `recency_rank` — single source of
+    // truth for "is this user-frequency timestamp usable".
+    if now_ms <= 0 || last_used_ms <= 0 || now_ms < last_used_ms {
+        return 0.0;
+    }
+    let age_ms = now_ms - last_used_ms; // >= 0 by the guard above
+    let decay = (-(age_ms as f64) / USER_WEIGHT_DECAY_TAU_MS as f64).exp();
+    // Cap BEFORE decay: `user_freq_boost` already saturates at
+    // `MAX_BOOST` (count >= 40), so `base_delta` is in `0.0..=4.0`.
+    let base_delta = f64::from(user_freq_boost(count)) - 1.0;
+    base_delta * decay
+}
+
 /// Build a [`FrequencyMap`] from the proto-wire `FrequencyEntry[]`.
 /// Single source of truth for both the legacy
 /// [`process::process_candidates`] path and the Continuous-input
@@ -901,6 +977,108 @@ mod tests {
         assert_eq!(
             source_tier_rank(1 << 10, false),
             CONTINUOUS_DEFAULT_SOURCE_RANK
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // v3.5.8 S3 — decayed_user_weight_delta (Gap B → G2)
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn decayed_delta_zero_when_never_selected_or_count_zero() {
+        let now = 1_000_000_000_000_i64;
+        // last_used_ms <= 0 → never selected → neutral (0.0 delta).
+        assert_eq!(decayed_user_weight_delta(50, now, 0), 0.0);
+        assert_eq!(decayed_user_weight_delta(50, now, -1), 0.0);
+        // count 0 → user_freq_boost(0) = 1.0 → base_delta 0 → 0.0 even
+        // when freshly used.
+        assert_eq!(decayed_user_weight_delta(0, now, now), 0.0);
+    }
+
+    #[test]
+    fn decayed_delta_bad_clock_classes_match_recency_rank_policy() {
+        let last = 1_000_000_000_000_i64;
+        // now_ms <= 0 (no wall clock injected).
+        assert_eq!(decayed_user_weight_delta(40, 0, last), 0.0);
+        assert_eq!(decayed_user_weight_delta(40, -5, last), 0.0);
+        // Clock skew: now strictly before the recorded selection.
+        assert_eq!(decayed_user_weight_delta(40, last - 1, last), 0.0);
+    }
+
+    #[test]
+    fn decayed_delta_is_full_saturated_delta_at_zero_age() {
+        // age 0 → decay = exp(0) = 1.0. count >= 40 saturates
+        // user_freq_boost at MAX_BOOST (5.0) → base_delta = 4.0.
+        let t = 1_000_000_000_000_i64;
+        let d = decayed_user_weight_delta(40, t, t);
+        assert!((d - 4.0).abs() < 1e-9, "{d}");
+        // count 1000 (well past saturation) is the SAME 4.0 — the cap
+        // is applied before decay, so a huge historic count is NOT
+        // pinned high (the Q4a/Q4c stale-dominance BLOCK condition).
+        let d_huge = decayed_user_weight_delta(1000, t, t);
+        assert!((d_huge - 4.0).abs() < 1e-9, "{d_huge}");
+        assert_eq!(d, d_huge);
+    }
+
+    #[test]
+    fn decayed_delta_caps_before_decay_not_after() {
+        // Codex post-impl P2: the zero-age test above cannot tell the
+        // correct formula apart from the BLOCKED "decay raw count THEN
+        // cap" alternative — both saturate to 4.0 at age 0. Pin the
+        // distinction at NONZERO age with a saturated historic count.
+        //
+        // count = 1000 (far past the count=40 saturation point).
+        //   CORRECT (cap before decay): base_delta = 4.0, then × e^-1
+        //     at one τ → ≈ 4/e ≈ 1.4715.
+        //   BLOCKED  (decay raw count, cap after): effective_count =
+        //     1000 × e^-1 ≈ 368 → still saturates user_freq_boost → 5.0
+        //     → delta ≈ 4.0 (stale single-entry dominance for months).
+        // So the value at one τ MUST be ~4/e, never ~4.0.
+        let last = 1_000_000_000_000_i64;
+        let at_one_tau = decayed_user_weight_delta(1000, last + USER_WEIGHT_DECAY_TAU_MS, last);
+        assert!(
+            (at_one_tau - 4.0 / std::f64::consts::E).abs() < 1e-9,
+            "saturated count must decay (cap-before-decay): got {at_one_tau}, \
+             want ~{} (the blocked formula would give ~4.0)",
+            4.0 / std::f64::consts::E
+        );
+        // And it is identical to count=40 at the same age — the cap
+        // collapses both to the same pre-decay base_delta of 4.0.
+        let count40_one_tau = decayed_user_weight_delta(40, last + USER_WEIGHT_DECAY_TAU_MS, last);
+        assert_eq!(at_one_tau, count40_one_tau);
+    }
+
+    #[test]
+    fn decayed_delta_decays_toward_zero_with_age() {
+        let last = 1_000_000_000_000_i64;
+        let fresh = decayed_user_weight_delta(40, last, last);
+        let one_tau = decayed_user_weight_delta(40, last + USER_WEIGHT_DECAY_TAU_MS, last);
+        let ten_tau = decayed_user_weight_delta(40, last + 10 * USER_WEIGHT_DECAY_TAU_MS, last);
+        // Monotonically non-increasing with age, strictly decreasing here.
+        assert!(fresh > one_tau, "fresh={fresh} one_tau={one_tau}");
+        assert!(one_tau > ten_tau, "one_tau={one_tau} ten_tau={ten_tau}");
+        // At one τ the delta is base_delta / e (≈ 4.0 × 0.3679).
+        assert!(
+            (one_tau - 4.0 / std::f64::consts::E).abs() < 1e-9,
+            "{one_tau}"
+        );
+        // Far future → effectively neutral (never negative, never NaN).
+        assert!(
+            ten_tau >= 0.0 && ten_tau.is_finite() && ten_tau < 1e-3,
+            "{ten_tau}"
+        );
+    }
+
+    #[test]
+    fn decayed_delta_half_point_is_tau_times_ln2() {
+        // The constant is the τ of exp(−age/τ); the 50% point is
+        // τ·ln2 (documented contract — guards the naming rationale).
+        let last = 1_000_000_000_000_i64;
+        let half_age = (USER_WEIGHT_DECAY_TAU_MS as f64 * std::f64::consts::LN_2) as i64;
+        let d = decayed_user_weight_delta(40, last + half_age, last);
+        assert!(
+            (d - 2.0).abs() < 1e-3,
+            "delta at τ·ln2 should be ~half of 4.0, got {d}"
         );
     }
 }

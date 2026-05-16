@@ -29,7 +29,7 @@ use protos::engine::{
     composing_request, AppConfig, CandidateMessage, ComposingRequest, ComposingResponse,
     ContinuousResponse, CustomDictEntry, FrequencyEntry,
 };
-use ranking::{build_frequency_map, recency_rank, FrequencyMap};
+use ranking::{build_frequency_map, decayed_user_weight_delta, recency_rank, FrequencyMap};
 use unicode_normalization::UnicodeNormalization;
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
@@ -505,21 +505,57 @@ fn fetch_walker_slot0(
             );
             let key = format!("tl:{toneless}");
             match best_candidate_for_key(&key, raw_span, freq_map, now_ms, prefix, dict) {
-                Some(c) => Some(crate::lattice::EdgeChoice {
-                    roman: c.roman,
-                    hanji: c.hanji,
-                    frequency: c.frequency,
-                    syllable_count: c.syllable_count,
-                }),
+                Some(c) => {
+                    // v3.5.8 S3 (Codex pre-impl Q4d seam, 2026-05-16):
+                    // fold this edge's time-decayed user-frequency
+                    // weight into the walker path objective (closes
+                    // Continuous-input Gap B → G2). `c.display_text`
+                    // is the exact key the platform writes to
+                    // `user_frequency.db` on commit (set by
+                    // `lexicon::record_to_candidate`), so the same
+                    // snapshot the span-local path consults applies
+                    // here. Looked up BEFORE the field moves below.
+                    // `best_candidate_for_key` / `record_to_candidate`
+                    // are deliberately UNTOUCHED — their internal
+                    // `user_freq_boost` answers "which record wins
+                    // inside this edge" (homophone disambiguation);
+                    // this answers "which segmentation path wins".
+                    // Same user signal, two orthogonal decision
+                    // levels, no double counting.
+                    // 中文: S3 — 把本 edge 的時間衰減 user-freq 權重接進 walker 路徑目標
+                    // 中文:   (收斂 Gap B → G2)。display_text = 平台 commit 寫 user_frequency.db
+                    // 中文:   的同一 key;best_candidate_for_key/record_to_candidate 不動
+                    // 中文:   (其 boost 管 edge 內選 record,此管選哪條切分路徑,正交不重複計)。
+                    let fd = freq_map.get(&c.display_text).copied().unwrap_or_default();
+                    // `FrequencyData.count` is i32 (legacy cap domain);
+                    // re-widen to u32 the same way
+                    // `record_to_candidate` does (negative → 0).
+                    let count = u32::try_from(fd.count).unwrap_or(0);
+                    let user_weight_delta =
+                        decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
+                    Some(crate::lattice::EdgeChoice {
+                        roman: c.roman,
+                        hanji: c.hanji,
+                        frequency: c.frequency,
+                        syllable_count: c.syllable_count,
+                        user_weight_delta,
+                    })
+                }
                 // No dict hit: the edge's own toneless roman. This is
                 // the SAME code path as a dict edge — the no-hanji
                 // best path is the walker's natural output, not a
                 // special fallback (`feedback_no_redundant_fallback`).
+                // A synthesized roman edge has no `user_frequency.db`
+                // history key, so its walker user weight stays neutral
+                // (`user_weight_delta = 0.0`), preserving the S2
+                // no-dict tie lever (`cost::edge_score` S3 neutrality
+                // contract).
                 None => Some(crate::lattice::EdgeChoice {
                     roman: toneless,
                     hanji: None,
                     frequency: 0,
                     syllable_count: 1,
+                    user_weight_delta: 0.0,
                 }),
             }
         });

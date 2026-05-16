@@ -50,6 +50,15 @@ pub(crate) struct EdgeChoice {
     /// Syllable count of the chosen dict candidate (`>= 1`; `1` for a
     /// synthesized pure-roman edge).
     pub syllable_count: u8,
+    /// v3.5.8 S3 — time-decayed user-frequency boost delta for this
+    /// edge's chosen candidate (`ranking::decayed_user_weight_delta`,
+    /// `0.0..=4.0`). `0.0` for a no-dict edge or one with no user
+    /// history (the S3 neutrality contract — see `cost::edge_score`).
+    /// Computed caller-side in `dispatch::fetch_walker_slot0` (which
+    /// holds the `FrequencyMap` + `now_ms`) so the walker stays pure
+    /// and shadow-space native (Codex pre-impl S3 Q4d seam,
+    /// 2026-05-16). Closes Continuous-input Gap B → goal G2.
+    pub user_weight_delta: f64,
 }
 
 /// The walker's best full-buffer path. `choices[i]` is the resolved
@@ -83,6 +92,9 @@ pub(crate) struct BestPath {
 /// the (vanishingly unlikely with real `ln(freq)` sums) exact tie
 /// deterministically toward the finer split, matching the documented
 /// `tai uan tai` expectation (`docs/roadmap.md` §整句 lattice + walker).
+/// S3 does NOT perturb this lever: a no-dict edge carries
+/// `user_weight_delta = 0.0` so it stays exactly `1.0` (the
+/// `cost::edge_score` S3 neutrality contract).
 // 中文: 對 lattice 跑單趟鬆弛求 0→shadow_len 的最大 Σ edge_score 路徑;
 // 中文:   無法整段覆蓋時回 None (sub-syllable partial-prefix) → caller 不合成 slot 0,維持 pre-S2 行為。
 // 中文: tie 契約:同分取 edge 較多者;全零頻時每 edge 恰為 1.0 → 細分總分嚴格較高,
@@ -134,7 +146,12 @@ pub(crate) fn walk_best(
         let Some(choice) = edge_choice(start, end) else {
             continue; // caller dropped this edge.
         };
-        let cand_score = start_score + edge_score(choice.frequency, choice.syllable_count);
+        let cand_score = start_score
+            + edge_score(
+                choice.frequency,
+                choice.syllable_count,
+                choice.user_weight_delta,
+            );
         let cand_edges = start_edges + 1;
         let replace = match best.get(&end) {
             None => true,
@@ -187,11 +204,16 @@ mod tests {
     use super::*;
 
     fn dict(roman: &str, hanji: &str, freq: u32, syll: u8) -> EdgeChoice {
+        dict_u(roman, hanji, freq, syll, 0.0)
+    }
+    /// `dict` with an explicit S3 decayed user-weight delta.
+    fn dict_u(roman: &str, hanji: &str, freq: u32, syll: u8, delta: f64) -> EdgeChoice {
         EdgeChoice {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             frequency: freq,
             syllable_count: syll,
+            user_weight_delta: delta,
         }
     }
     fn roman(r: &str) -> EdgeChoice {
@@ -200,6 +222,7 @@ mod tests {
             hanji: None,
             frequency: 0,
             syllable_count: 1,
+            user_weight_delta: 0.0,
         }
     }
 
@@ -266,6 +289,44 @@ mod tests {
         assert_eq!(path.edges, vec![(0, 3), (3, 6), (6, 9)]);
         let romans: Vec<&str> = path.choices.iter().map(|c| c.roman.as_str()).collect();
         assert_eq!(romans.join(" "), "tai uan tai");
+    }
+
+    #[test]
+    fn user_preference_flips_the_chosen_segmentation_path() {
+        // v3.5.8 S3 — Gap B → G2. Same buffer (shadow len 6), two
+        // covering segmentations:
+        //   A: one 2-syllable phrase edge (0,6), LOW dict freq.
+        //   B: two hot 1-syllable edges (0,3)+(3,6), HIGH dict freq.
+        // Without user history, the hot single chars (B) win — exactly
+        // the architecturally-wrong span-local behavior S3 must fix.
+        // After the user has repeatedly selected the phrase (fresh max
+        // decayed delta), the phrase path (A) must win, and the hot
+        // single chars get NO path-objective amplification from their
+        // own user delta (single-syllable damping, SCALE = 0.0).
+        let lat = lattice(vec![(0, 3), (0, 6), (3, 6)]);
+        let edges = |s, e, phrase_delta: f64| match (s, e) {
+            (0, 6) => Some(dict_u("tâi-gí", "臺語", 100, 2, phrase_delta)),
+            // Hot single chars carry a huge delta too — it must be
+            // ignored in the path objective (Q4c BLOCK guard).
+            (0, 3) => Some(dict_u("tâi", "台", 5000, 1, 4.0)),
+            (3, 6) => Some(dict_u("gí", "語", 5000, 1, 4.0)),
+            _ => None,
+        };
+
+        // Cold start (no user history on the phrase) → hot singles win.
+        let cold = walk_best(&lat, 6, |s, e| edges(s, e, 0.0)).expect("full path");
+        assert_eq!(cold.edges, vec![(0, 3), (3, 6)]);
+
+        // After repeated user selection (fresh, fully saturated decayed
+        // delta = 4.0 on the phrase edge) → the phrase path wins.
+        let warm = walk_best(&lat, 6, |s, e| edges(s, e, 4.0)).expect("full path");
+        assert_eq!(warm.edges, vec![(0, 6)]);
+        let hanji: String = warm
+            .choices
+            .iter()
+            .filter_map(|c| c.hanji.clone())
+            .collect();
+        assert_eq!(hanji, "臺語");
     }
 
     #[test]
