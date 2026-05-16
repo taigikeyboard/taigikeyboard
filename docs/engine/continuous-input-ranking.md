@@ -336,6 +336,8 @@ A future plan that **closes G1 + G2 + G4** while preserving G3 is the success cr
 
 ## 8. Decision for v3.5.8
 
+> **STATUS 2026-05-16 (整句 lattice + walker 進度)**: Gap A (§3.2 — no phrase-priority signal, the §1 `taiuantaigi` motivation) is now **closed by the whole-sentence walker**: `docs/roadmap.md` §整句 lattice + walker **S1 DONE & MERGED** (main `4caa0c24` #284, behavior-neutral lattice builder) + **S2 DONE** (branch `lattice-s2-walker`, engine-only `walk_best` relaxation walker emitting one synthesized full-buffer best path at slot 0 — `taiuantaigi`→臺灣台語, no-hanji path→synthesized roman, subsuming paused Bug 2). G1 converges at S2. **Gap B (§3.2 — `user_freq_boost` hardcoded 1.0) remains open**, closing at **S3** (librime `formula_d` + McBopomofo epsilon-boost into walker edge cost → G2). G4/G5 unchanged. Engine-only; forward-only Model B commit preserved (Codex pre-impl S2 Q1c = option ii). The pre-2026-05-11 "ship with limitation documented" path below is fully superseded.
+
 > **REVISED 2026-05-11 (evening)**: Original decision was "ship with limitation documented." User pivot: **v3.5.8 will not ship until Continuous-input ranking is fixed.** Phase 9 scope expanded from "dogfood + cleanup" (~100 LOC) to "ranking 修復 + 主流 IME 對齊" (TBD;Goal axes G1+G2+G4 base, G5 stretch). See `docs/roadmap.md` § Phase 9 (revised) and `memory/project_v358_continuous_input.md`.
 >
 > **Original §8 text preserved below for hand-off recovery.** It describes the deferred path that was rejected by the 2026-05-11 pivot.

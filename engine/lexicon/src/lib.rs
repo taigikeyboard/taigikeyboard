@@ -34,9 +34,9 @@ const _: fn() = || {
 };
 
 pub use continuous::{
-    fetch_candidates_for_endings, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
-    CandidateMode, ConsumedSpan, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
-    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
+    best_candidate_for_key, derive_mode, fetch_candidates_for_endings, fetch_candidates_for_keys,
+    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, CustomEntry, RawCandidate,
+    COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
 };
 pub use error::LexiconError;
 pub use handle::EngineHandle;

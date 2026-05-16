@@ -20,15 +20,16 @@
 use crate::api::{ComposingError, Engine, Intent, Phase};
 use crate::syllabifier::tps as tps_syll;
 use lexicon::{
-    classification::is_hanzi, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
-    ConsumedSpan, CustomEntry, EngineHandle as LexiconHandle, RawCandidate, SyllableInventory,
+    best_candidate_for_key, classification::is_hanzi, derive_mode, fetch_candidates_for_keys,
+    fetch_partial_prefix_candidates, ConsumedSpan, CustomEntry, EngineHandle as LexiconHandle,
+    RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::{contains_tps, tps_to_tl};
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, ComposingRequest, ComposingResponse,
     ContinuousResponse, CustomDictEntry, FrequencyEntry,
 };
-use ranking::{build_frequency_map, FrequencyMap};
+use ranking::{build_frequency_map, recency_rank, FrequencyMap};
 use unicode_normalization::UnicodeNormalization;
 
 /// Cap on syllabifier BFS depth for Phase 6 fetches. Matches the
@@ -211,7 +212,32 @@ fn handle_fetch_at_pos(
             fetch_via_lexicon_partial(raw, &freq_map, now_ms, &custom)
         }
     } else {
-        fetch_via_lexicon(&keys, raw.len() as u32, &freq_map, now_ms, &custom)
+        let raw_len = raw.len() as u32;
+        let mut c = fetch_via_lexicon(&keys, raw_len, &freq_map, now_ms, &custom);
+        // v3.5.8 S2 — whole-sentence walker. TPS excluded (S1 Codex Q5
+        // deferred TPS multi-start; the lattice builder is TL/POJ
+        // only). The synthesized full-buffer best path is explicitly
+        // prepended at slot 0 (Codex pre-impl S2 Q1 — the 8-dim
+        // `SortKey` cannot guarantee slot 0 on its own). Span-aware
+        // de-dup against the synth (Codex pre-impl S2 Q1d): drop any
+        // span-local candidate identical on
+        // `(roman, hanji, consumed_span)` so slot 0 is unique (e.g. a
+        // real left-anchored full-buffer dict word equal to the walker
+        // path — keep the walker's at slot 0, not a duplicate slot N).
+        // 中文: S2 — 全句 walker (TPS 排除,S1 Q5 deferred)。合成全 buffer 最佳路徑
+        // 中文:   explicit prepend slot 0 (Codex S2 Q1);與 synth 同 (roman,hanji,span)
+        // 中文:   的 span-local 候選去掉,保 slot 0 唯一 (Codex S2 Q1d)。
+        if !is_tps {
+            if let Some(slot0) = fetch_walker_slot0(raw, raw_len, &freq_map, now_ms) {
+                c.retain(|x| {
+                    !(x.roman == slot0.roman
+                        && x.hanji == slot0.hanji
+                        && x.consumed_span == slot0.consumed_span)
+                });
+                c.insert(0, slot0);
+            }
+        }
+        c
     };
     with_continuous(
         snapshot,
@@ -292,36 +318,31 @@ pub fn build_keys_tl_with_inventory(
     raw: &str,
     inv: &SyllableInventory,
 ) -> Vec<(ConsumedSpan, String)> {
-    let lower = raw.to_ascii_lowercase();
-    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower);
-    let (shadow, shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
-    let shadow_to_raw_end: Vec<usize> = shadow_to_canonical_end
-        .iter()
-        .map(|&c| canonical_to_raw_end[c])
-        .collect();
-    // v3.5.8 S1 — build the segmentation lattice (the multi-start DAG
-    // that S2's whole-sentence walker will traverse) and emit ONLY its
-    // left-anchored (`start == 0`) projection as keys. That projection
-    // is byte-identical to the pre-S1 single-start
-    // `valid_span_endings(shadow, 0, …)` output (`build_lattice` sorts
-    // edges so the `start == 0` ones come first in ascending-`end`
-    // order), so S1 is genuinely behavior-neutral at the candidate /
-    // commit / UI layer.
+    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv);
+    // Emit ONLY the lattice's left-anchored (`start == 0`) projection
+    // as keys. That projection is byte-identical to the pre-S1
+    // single-start `valid_span_endings(shadow, 0, …)` output
+    // (`build_lattice` sorts edges so the `start == 0` ones come first
+    // in ascending-`end` order), so the span-local candidate / commit
+    // path is unchanged from S1.
     //
-    // Interior (`start > 0`) edges are deliberately NOT emitted here:
-    // `CommitContinuous` carries only `consumed_bytes` (the end), so a
-    // tappable interior candidate would commit the whole prefix with
-    // the wrong display, and the `(roman, hanji)` dedupe is not
-    // span-aware (Codex post-impl 2026-05-16 P1 #1/#2). Surfacing
-    // interior candidates therefore belongs to S2, together with the
-    // walker's best-path output and start-aware commit. The full DAG
-    // is still constructed here so S2 wires onto it with no churn, and
-    // so this slice proves span-local is the lattice's degenerate
-    // left-anchored special case (`docs/roadmap.md` §整句 lattice).
-    // 中文: S1 — 建完整 lattice (S2 walker 用的多起點 DAG),但只發左錨投影為 key,
-    // 中文:   與 S1 前單起點輸出逐 byte 相同 → 行為中性。內段 (start>0) 留給 S2
-    // 中文:   (commit 僅帶 consumed_bytes、dedupe 非 span-aware,Codex post-impl P1)。
-    let lattice = crate::lattice::build_lattice(&shadow, inv, MAX_SYLLABLES);
+    // Interior (`start > 0`) edges are NOT emitted as user-facing
+    // keys: under Model B (`docs/engine/continuous-input-ranking.md`
+    // §10.3/§10.4) commit is forward-only `pending[..consumed_bytes]`,
+    // so an independently tappable interior candidate has no
+    // Model-B-consistent commit. S2's whole-sentence walker consumes
+    // the interior edges INTERNALLY (via `build_shadow_lattice` →
+    // `lattice::walk_best` in `fetch_walker_slot0`) and emits one
+    // synthesized full-buffer best path explicitly prepended at slot 0
+    // by `handle_fetch_at_pos`; the user-facing commit span stays
+    // `(0, end)`. Interior `台語`-style words remain reachable as the
+    // next path-step after the prefix is nailed (Codex pre-impl S2
+    // Q1c = option ii, 2026-05-16; `docs/roadmap.md` §整句 lattice).
+    // 中文: 只發左錨投影 (start==0) 為 key,與 S1 前逐 byte 相同 → span-local 不變。
+    // 中文: 內段 (start>0) 不發為可點 key:Model B forward-only commit 無對應語意;
+    // 中文:   S2 walker 內部吃內段邊、合成單一全 buffer 最佳路徑由 handle_fetch_at_pos
+    // 中文:   explicit prepend 到 slot 0,commit span 維持 (0,end)。內段詞於 nail 前綴後
+    // 中文:   以下一步 path-step 可達 (Codex S2 Q1c = ii)。
     let mut out = Vec::with_capacity(lattice.edges().len());
     for &(start, end) in lattice.edges() {
         if start != 0 {
@@ -340,6 +361,231 @@ pub fn build_keys_tl_with_inventory(
         out.push(((0u32, raw_end as u32), format!("tl:{toneless}")));
     }
     out
+}
+
+/// Run the v3.5.8 Items 8 + 9 canonicalize → hyphen-shadow pipeline
+/// and build the segmentation lattice over the resulting shadow.
+/// Returns `(shadow, shadow_to_raw_end, lattice)`. Shared by
+/// [`build_keys_tl_with_inventory`] (left-anchored projection — its
+/// output is byte-identical to pre-S1, the S1 pinning tests guard
+/// this) and [`fetch_walker_slot0`] (S2 whole-sentence walker) so the
+/// shadow + offset map + DAG are constructed exactly once per fetch
+/// and the two consumers cannot drift.
+// 中文: 跑 Item 8/9 canonicalize → hyphen-shadow 並建 lattice;回 (shadow, shadow→raw map, lattice)。
+// 中文: build_keys (左錨投影,byte-identical 於 pre-S1,S1 pinning test 保證) 與 fetch_walker_slot0 (S2 walker) 共用。
+fn build_shadow_lattice(
+    raw: &str,
+    inv: &SyllableInventory,
+) -> (String, Vec<usize>, crate::lattice::Lattice) {
+    let lower = raw.to_ascii_lowercase();
+    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower);
+    let (shadow, shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
+    let shadow_to_raw_end: Vec<usize> = shadow_to_canonical_end
+        .iter()
+        .map(|&c| canonical_to_raw_end[c])
+        .collect();
+    let lattice = crate::lattice::build_lattice(&shadow, inv, MAX_SYLLABLES);
+    (shadow, shadow_to_raw_end, lattice)
+}
+
+/// v3.5.8 S2 (Codex post-impl P1, 2026-05-16) — `consumed_span` for
+/// the synthesized slot-0 candidate, or `None` to suppress the synth.
+///
+/// The walker spans the **shadow** (`0..shadow_len`); its slot-0
+/// candidate commits in **raw** byte space under forward-only Model B.
+/// They line up only when the shadow's end maps back to the full raw
+/// buffer. A **trailing** hyphen (`tai-`, `tai-bak-`) is stripped from
+/// the shadow and the S1 `build_hyphen_shadow` contract keeps it in
+/// the pending raw buffer, so `shadow_to_raw_end[shadow_len] <
+/// raw_len`. Emitting a `(0, raw_len)` full-buffer synth there would
+/// wrongly consume / drop that pending `-`, violating the S1
+/// trailing-hyphen contract — so suppress the synth and leave the
+/// span-local list untouched (pre-S2 behavior). Leading / internal
+/// hyphens fold INTO the consumed prefix
+/// (`shadow_to_raw_end[shadow_len] == raw_len`) and still synth.
+// 中文: S2 (Codex post-impl P1) — walker 跨 shadow,slot-0 在 raw 空間 commit。
+// 中文:   尾端 `-` 被 shadow 剝掉且 S1 契約留在 pending → shadow_to_raw_end[len] < raw_len;
+// 中文:   此時發 (0,raw_len) 會誤吃 pending `-`,故抑制 synth(維持 pre-S2)。leading/internal `-` 已併入前綴仍 synth。
+fn synth_consumed_span(
+    shadow_to_raw_end: &[usize],
+    shadow_len: usize,
+    raw_len: u32,
+) -> Option<(u32, u32)> {
+    // `shadow_to_raw_end` always has length `shadow_len + 1`
+    // (`build_hyphen_shadow` / `canonicalize_poj_shadow` contract),
+    // so indexing `[shadow_len]` is in bounds.
+    (shadow_to_raw_end[shadow_len] as u32 == raw_len).then_some((0, raw_len))
+}
+
+/// v3.5.8 S2 — the whole-sentence walker's single synthesized
+/// full-buffer best-path candidate, or `None` when no edge chain
+/// spans the buffer (sub-syllable partial-prefix input — leaves the
+/// existing span-local list untouched, pre-S2 behavior preserved).
+///
+/// The caller ([`handle_fetch_at_pos`]) **explicitly prepends** this
+/// at candidate slot 0 (Codex pre-impl S2 Q1: the 8-dim `SortKey`
+/// alone cannot guarantee slot 0 — a high-`frequency` left-anchored
+/// full-buffer dict hit would tie on coverage then beat the synth on
+/// score). The walker stays pure + shadow-space native; this fn is
+/// the composing↔lexicon seam (Codex pre-impl S2 Q1b): it holds
+/// `LexiconHandle` state and injects an edge-content provider that
+/// reuses `lexicon::best_candidate_for_key` (NOT a duplicated
+/// `record_to_candidate`).
+///
+/// Synthesis (Codex pre-impl S2 Q1-roman: existing columns suffice):
+/// - `roman` = each edge's roman joined with one ASCII space
+///   (`docs/engine/continuous-input-ranking.md` §10.2 segmented rule:
+///   roman line gets word-boundary spaces).
+/// - `hanji` = `Some(edge hanji joined with NO space)` iff **every**
+///   edge had a dict hanji, else `None` (a no-hanji path → the
+///   synthesized roman best-path; subsumes paused Bug 2 / §1 — NOT a
+///   special-case fallback, `feedback_no_redundant_fallback`).
+/// - `display_text` = `hanji.unwrap_or(roman)` (mirrors
+///   `record_to_candidate` at the path level — same commit /
+///   `user_frequency.db` write-key contract).
+/// - `consumed_span = (0, raw_len)` (via [`synth_consumed_span`] —
+///   suppressed entirely on a trailing-hyphen buffer so the pending
+///   `-` is not mis-committed, Codex post-impl S2 P1), `coverage_kind
+///   = FULL`, `is_custom = false`, `frequency = 0` (synthesized — not
+///   a dict freq; irrelevant since slot 0 is an explicit prepend).
+///
+/// TPS is excluded (S1 Codex Q5 deferred TPS multi-start; the lattice
+/// builder is TL/POJ only) — caller gates on `!is_tps`.
+// 中文: S2 — 全句 walker 的單一合成全 buffer 最佳路徑候選 (無法整段覆蓋時 None,維持 pre-S2)。
+// 中文: 由 handle_fetch_at_pos explicit prepend 到 slot 0 (Codex S2 Q1:SortKey 無法保證 slot 0)。
+// 中文: walker 純 shadow-space;此函式 = composing↔lexicon seam (Q1b),持 LexiconHandle state、
+// 中文:   注入重用 best_candidate_for_key 的 edge provider (不複製 record_to_candidate)。
+// 中文: roman = 各 edge roman 以單空格 join (§10.2);hanji = 全 edge 皆有 hanji 才 Some(無空格 join),
+// 中文:   否則 None → 合成羅馬字最佳路徑 (吞 Bug2/§1,非 fallback)。TPS 排除 (S1 Q5 deferred)。
+fn fetch_walker_slot0(
+    raw: &str,
+    raw_len: u32,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+) -> Option<RawCandidate> {
+    LexiconHandle::with_state(|state| {
+        let Some(inv) = state.syllable_inventory.as_ref() else {
+            return Ok(None);
+        };
+        let Some(prefix) = state.prefix_index.as_ref() else {
+            return Ok(None);
+        };
+        let Some(dict) = state.dictionary.as_ref() else {
+            return Ok(None);
+        };
+        let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv);
+        // Codex post-impl S2 P1: suppress the synth when a trailing
+        // hyphen leaves the shadow short of the raw buffer (a
+        // `(0, raw_len)` synth would mis-commit the pending `-`).
+        // Cheap early-out before walking.
+        let Some(consumed_span) = synth_consumed_span(&shadow_to_raw_end, shadow.len(), raw_len)
+        else {
+            return Ok(None);
+        };
+
+        let path = crate::lattice::walk_best(&lattice, shadow.len(), |start, end| {
+            // Edges come from the syllabifier-built lattice so they are
+            // well-formed by construction; the guard is defensive
+            // (mirrors the `build_keys_tl_with_inventory` projection
+            // guard) and also drops a digit-only / empty toneless span.
+            if start >= end
+                || end > shadow.len()
+                || !shadow.is_char_boundary(start)
+                || !shadow.is_char_boundary(end)
+            {
+                return None;
+            }
+            let toneless = strip_ascii_tone_digits(&shadow[start..end]);
+            if toneless.is_empty() {
+                return None;
+            }
+            let raw_span = (
+                shadow_to_raw_end[start] as u32,
+                shadow_to_raw_end[end] as u32,
+            );
+            let key = format!("tl:{toneless}");
+            match best_candidate_for_key(&key, raw_span, freq_map, now_ms, prefix, dict) {
+                Some(c) => Some(crate::lattice::EdgeChoice {
+                    roman: c.roman,
+                    hanji: c.hanji,
+                    frequency: c.frequency,
+                    syllable_count: c.syllable_count,
+                }),
+                // No dict hit: the edge's own toneless roman. This is
+                // the SAME code path as a dict edge — the no-hanji
+                // best path is the walker's natural output, not a
+                // special fallback (`feedback_no_redundant_fallback`).
+                None => Some(crate::lattice::EdgeChoice {
+                    roman: toneless,
+                    hanji: None,
+                    frequency: 0,
+                    syllable_count: 1,
+                }),
+            }
+        });
+
+        let Some(path) = path else {
+            return Ok(None);
+        };
+        if path.choices.is_empty() {
+            return Ok(None);
+        }
+
+        let roman = path
+            .choices
+            .iter()
+            .map(|c| c.roman.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        let all_hanji = path.choices.iter().all(|c| c.hanji.is_some());
+        let hanji: Option<String> = if all_hanji {
+            Some(
+                path.choices
+                    .iter()
+                    .filter_map(|c| c.hanji.as_deref())
+                    .collect::<String>(),
+            )
+        } else {
+            None
+        };
+        let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
+        let syllable_count = path
+            .choices
+            .iter()
+            .map(|c| u32::from(c.syllable_count))
+            .sum::<u32>()
+            .min(u32::from(u8::MAX)) as u8;
+        let last_used_ms = freq_map
+            .get(&display_text)
+            .map(|d| d.last_used_ms)
+            .unwrap_or(0);
+        // Classify via the lexicon single-source-of-truth so the
+        // synth's `CandidateMessage.mode` matches span-local / custom
+        // candidates exactly — including MIXED when the concatenated
+        // hanji contains a Latin letter (e.g. a path through `…hip相`).
+        // Codex PR #285 P2: the earlier `hanji.is_some()` binary
+        // mis-emitted HANT for mixed-script full-buffer paths, breaking
+        // platform dual-line render parity with regular candidates.
+        // 中文: 用 lexicon 單一真相 derive_mode 分類,synth mode 與 span-local/custom 一致
+        // 中文:   (hanji 內含 Latin → MIXED);Codex PR #285 P2 修正 binary 漏 MIXED。
+        let mode = derive_mode(hanji.as_deref());
+        Ok(Some(RawCandidate {
+            consumed_span,
+            syllable_count,
+            display_text,
+            roman,
+            hanji,
+            score: path.score as f32,
+            form: FORM_NOTONE,
+            frequency: 0,
+            bitmask: 0,
+            mode,
+            recency_rank: recency_rank(now_ms, last_used_ms),
+            coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
+        }))
+    })
+    .unwrap_or_default()
 }
 
 /// Build a hyphenless shadow of `raw` paired with a byte-indexed map
@@ -1103,6 +1349,45 @@ mod tests {
         let (shadow, map) = build_hyphen_shadow("tai-bak-");
         assert_eq!(shadow, "taibak");
         assert_eq!(map, vec![0, 1, 2, 3, 5, 6, 7]);
+    }
+
+    // ----- v3.5.8 S2 — synth_consumed_span trailing-hyphen guard -----
+    // (Codex post-impl S2 P1 regression). Production runs
+    // `canonicalize_poj_shadow` then `build_hyphen_shadow`; for the
+    // pure-ASCII inputs here canonicalize is identity (see
+    // `canonicalize_poj_shadow_pure_ascii_is_identity_fast_path`), so
+    // `build_hyphen_shadow(raw)` yields the same `shadow_to_raw_end`
+    // the walker path computes.
+
+    #[test]
+    fn synth_consumed_span_trailing_hyphen_suppresses_synth() {
+        // `tai-` / `tai-bak-`: the trailing `-` stays in the pending
+        // raw buffer (S1 contract) so the shadow is short of raw_len —
+        // the full-buffer synth MUST be suppressed (returns None)
+        // rather than mis-commit / drop the pending `-`.
+        for raw in ["tai-", "tai-bak-"] {
+            let (shadow, map) = build_hyphen_shadow(raw);
+            assert!(
+                synth_consumed_span(&map, shadow.len(), raw.len() as u32).is_none(),
+                "trailing-hyphen {raw:?} must suppress slot-0 synth"
+            );
+        }
+    }
+
+    #[test]
+    fn synth_consumed_span_full_coverage_emits_zero_to_raw_len() {
+        // No trailing hyphen → shadow maps to the whole raw buffer.
+        // Leading (`-tai`) and internal (`tai-bak`) hyphens fold INTO
+        // the consumed prefix, so those still get a `(0, raw_len)`
+        // full-buffer synth.
+        for raw in ["taibak", "tai-bak", "-tai"] {
+            let (shadow, map) = build_hyphen_shadow(raw);
+            assert_eq!(
+                synth_consumed_span(&map, shadow.len(), raw.len() as u32),
+                Some((0, raw.len() as u32)),
+                "{raw:?} fully covered → (0, raw_len) synth"
+            );
+        }
     }
 
     // ----- v3.5.8 Phase 9 Item 9 — canonicalize_poj_shadow contract pins -----

@@ -33,9 +33,9 @@ use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
-    fetch_candidates_for_endings, fetch_candidates_for_keys, fetch_partial_prefix_candidates,
-    CandidateMode, ConsumedSpan, CustomEntry, RawCandidate, COVERAGE_KIND_FULL,
-    COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
+    best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
+    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, CustomEntry, RawCandidate,
+    COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
 };
 use ranking::FrequencyMap;
 
@@ -1453,4 +1453,79 @@ fn item12_empty_custom_is_noop() {
     assert_eq!(out.len(), 1);
     assert!(!out[0].is_custom);
     assert_eq!(out[0].display_text, "台語");
+}
+
+// ----- v3.5.8 S2 — best_candidate_for_key (whole-sentence walker seam) -----
+
+#[test]
+fn best_candidate_for_key_returns_highest_score_on_collision() {
+    // Two dict rows share the toneless key `tl:taiuan`. The walker's
+    // edge provider must get the highest-`calculate_continuous_score`
+    // one (freq-driven here) — `臺灣` (freq 5000), not `台灣`
+    // (freq 100).
+    let (prefix_index, dict) = build_fixture(
+        "s2-best-collision",
+        &[
+            Row {
+                toneless_key: "taiuan",
+                hanzi: "台灣",
+                tl: "tai5-uan5",
+                syll: 2,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "taiuan",
+                hanzi: "臺灣",
+                tl: "tâi-uân",
+                syll: 2,
+                freq: 5000,
+            },
+        ],
+    );
+    let best = best_candidate_for_key(
+        "tl:taiuan",
+        (0, 6),
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    )
+    .expect("key has dict hits");
+    assert_eq!(best.display_text, "臺灣", "highest-score row must win");
+    assert_eq!(best.hanji.as_deref(), Some("臺灣"));
+    assert_eq!(best.roman, "tâi-uân");
+    assert_eq!(best.syllable_count, 2);
+    // consumed_span is stamped verbatim (the walker only reads
+    // roman/hanji/freq/syll off it).
+    assert_eq!(best.consumed_span, (0, 6));
+    assert_eq!(best.coverage_kind, COVERAGE_KIND_FULL);
+}
+
+#[test]
+fn best_candidate_for_key_none_when_key_absent() {
+    // No dict hit → `None`, so the walker's edge provider falls back
+    // to the synthesized toneless roman for that edge (the no-hanji
+    // path is the walker's natural output, not a special fallback).
+    let (prefix_index, dict) = build_fixture(
+        "s2-best-absent",
+        &[Row {
+            toneless_key: "taigi",
+            hanzi: "台語",
+            tl: "tâi-gí",
+            syll: 2,
+            freq: 100,
+        }],
+    );
+    assert!(
+        best_candidate_for_key(
+            "tl:zzz",
+            (0, 3),
+            &FrequencyMap::new(),
+            0,
+            &prefix_index,
+            &dict,
+        )
+        .is_none(),
+        "absent key must return None"
+    );
 }

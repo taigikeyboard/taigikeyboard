@@ -172,9 +172,20 @@ impl CandidateMode {
 /// Digits / punctuation / kana / private-use glyphs alone do NOT flip
 /// MIXED — the intent is "Roman letters inside the hanji display",
 /// matching MOE `VT_MIXED` for entries like `台BAR`.
+///
+/// **Single source of truth for `CandidateMode`.** `record_to_candidate`,
+/// `custom_entry_to_candidate`, and the v3.5.8 S2 whole-sentence
+/// walker's slot-0 synthesis (`composing::dispatch::fetch_walker_slot0`)
+/// all derive `mode` through this fn so `CandidateMessage.mode` is
+/// classified identically for span-local, custom, and synthesized
+/// full-buffer candidates (Codex PR #285 P2, 2026-05-16 — a hand-rolled
+/// `hanji.is_some()` binary in the synth path mis-emitted HANT for
+/// mixed-script paths like `…hip相`). `pub` so `composing` reuses the
+/// wire-visible classification instead of duplicating the NFKD rule.
 // 中文: Phase 9.2 mode 推導 — hanzi=None → TAILO;NFKD 規範後若含 ASCII 字母 → MIXED;否則 HANT。
 // 中文:   數字 / 標點 / 假名 / PUA 不算 MIXED — MIXED 限定「漢字顯示內含羅馬字母」。
-fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
+// 中文: CandidateMode 唯一真相來源;record/custom/S2 walker synth 全走此(Codex PR #285 P2)。
+pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
     match hanzi {
         None => CandidateMode::Tailo,
         Some(text) if text.nfkd().any(|c| c.is_ascii_alphabetic()) => CandidateMode::Mixed,
@@ -539,9 +550,13 @@ pub fn fetch_candidates_for_keys(
     // weighs `score`/`freq` ahead of `source_rank`, so a high-freq
     // `dict.bin` duplicate could otherwise mask the user's custom
     // entry). `(roman, hanji)` is the dual key (Codex pre-impl D1) so
-    // romanization variants of the same hanji are preserved.
-    // 中文: Item 12 — (roman,hanji) 雙鍵去重;排序前執行,勝者 = source_tier_rank 最小者 (custom rank 0 勝)。
-    dedupe_by_roman_hanji(&mut out);
+    // romanization variants of the same hanji are preserved; S2
+    // extends it with `consumed_span` (Codex pre-impl S2 Q1d) — both
+    // the custom synth and its `dict.bin` duplicate are emitted at the
+    // same `(0, raw_len)` span so the collapse still fires.
+    // 中文: Item 12 + S2 — (roman,hanji,consumed_span) 去重;排序前;勝者 = source_tier_rank 最小 (custom rank 0 勝);
+    // 中文:   custom 與 dict.bin 重複者皆在 (0,raw_len) 同 span,仍碰撞。
+    dedupe_by_roman_hanji_span(&mut out);
 
     // Phase 9.1 lexicographic sort. `stable_idx` is stamped from
     // pre-sort element position via `enumerate()` BEFORE any sorting
@@ -672,8 +687,8 @@ pub fn fetch_partial_prefix_candidates(
     // still typing toward the first syllable boundary). Tagged
     // `COVERAGE_KIND_PARTIAL_PREFIX` — NOT `COVERAGE_KIND_FULL` — so
     // §15.5's "partial-prefix ranks strictly below full-syllable" rule
-    // is preserved (Codex pre-impl D6). The `(roman, hanji)` dedupe
-    // then runs before the sort, identical to `fetch_candidates_for_keys`.
+    // is preserved (Codex pre-impl D6). The span-aware dedupe then runs
+    // before the sort, identical to `fetch_candidates_for_keys`.
     // 中文: Item 12 — custom 命中併入 partial-prefix,標 PARTIAL_PREFIX 不標 FULL,保 §15.5 排序不變式。
     for entry in custom {
         out.push(custom_entry_to_candidate(
@@ -684,7 +699,7 @@ pub fn fetch_partial_prefix_candidates(
             COVERAGE_KIND_PARTIAL_PREFIX,
         ));
     }
-    dedupe_by_roman_hanji(&mut out);
+    dedupe_by_roman_hanji_span(&mut out);
 
     // Same `enumerate()`-pre-sort-stamping pattern as
     // `fetch_candidates_for_keys` to keep `stable_idx` deterministic
@@ -697,6 +712,54 @@ pub fn fetch_partial_prefix_candidates(
         .collect();
     indexed.sort_by_key(|(key, _)| *key);
     indexed.into_iter().map(|(_, c)| c).collect()
+}
+
+/// v3.5.8 S2 — single best dictionary candidate for one exact FST
+/// key. Returns the highest-`score` [`record_to_candidate`] over
+/// `prefix_index.lookup_exact(key)` (NaN coerced low via
+/// [`NonNanF32`]; ties keep the first FST rowid for determinism), or
+/// `None` when the key has no dict hit. Filter parity with the
+/// production span-local path (`enabled_sources_bitmask = u32::MAX`,
+/// `composing::dispatch::fetch_via_lexicon`).
+///
+/// The whole-sentence walker (`composing::lattice::walker`) calls
+/// this once per lattice edge through a dispatch-injected edge
+/// provider so the walker stays pure + shadow-space native and the
+/// lexicon candidate construction is **reused, not duplicated**
+/// (Codex pre-impl S2 Q1b, 2026-05-16). `consumed_span` is stamped
+/// onto the returned candidate verbatim; the walker only reads
+/// `roman` / `hanji` / `frequency` / `syllable_count` /
+/// `display_text` off it.
+// 中文: S2 — 單一 exact FST key 的最佳字典候選 (score 最大,NaN coerce 低,平手取首 rowid)。
+// 中文: walker 每條 lattice edge 經 dispatch 注入的 provider 呼叫此函式 → walker 純 + shadow-space,
+// 中文:   重用 (非複製) lexicon 候選構造 (Codex S2 Q1b)。consumed_span 原樣戳上,walker 只讀內容欄。
+pub fn best_candidate_for_key(
+    key: &str,
+    consumed_span: ConsumedSpan,
+    freq_map: &FrequencyMap,
+    now_ms: i64,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+) -> Option<RawCandidate> {
+    let filter = Filter::from_enabled_bitmask(u32::MAX);
+    let mut best: Option<RawCandidate> = None;
+    for rowid in prefix_index.lookup_exact(key) {
+        let Some(record) = dict.record(rowid) else {
+            continue;
+        };
+        if !DictionaryReader::passes_filter(record.bitmask, &filter) {
+            continue;
+        }
+        let cand = record_to_candidate(record, consumed_span, freq_map, now_ms, COVERAGE_KIND_FULL);
+        let better = match &best {
+            None => true,
+            Some(b) => NonNanF32::new(cand.score) > NonNanF32::new(b.score),
+        };
+        if better {
+            best = Some(cand);
+        }
+    }
+    best
 }
 
 fn record_to_candidate(
@@ -818,7 +881,7 @@ fn custom_entry_to_candidate(
         frequency: 0,
         // No `dict.bin` source bits; rank is forced to 0 via
         // `is_custom = true` in `SortKey::new` /
-        // `dedupe_by_roman_hanji` (`source_tier_rank` short-circuits).
+        // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
         // 中文: 無 dict.bin source bit;rank 由 is_custom=true 強制為 0。
         bitmask: 0,
         mode,
@@ -829,12 +892,24 @@ fn custom_entry_to_candidate(
 }
 
 /// v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe (Codex pre-impl
-/// D1 + D2, 2026-05-15). Runs on the merged `dict.bin` + custom
-/// candidate vector BEFORE the `SortKey` sort.
+/// D1 + D2, 2026-05-15). **v3.5.8 S2: key extended to
+/// `(roman, hanji, consumed_span)`** (Codex pre-impl S2 Q1d,
+/// 2026-05-16). Runs on the merged `dict.bin` + custom candidate
+/// vector BEFORE the `SortKey` sort.
 ///
-/// - **Key** (D1): the dual `(roman, hanji)` pair, NOT single
-///   `display_text` — romanization variants of the same hanji stay
-///   distinct.
+/// - **Key**: the triple `(roman, hanji, consumed_span)`. The
+///   `(roman, hanji)` pair (D1) keeps romanization variants of the
+///   same hanji distinct; adding `consumed_span` keeps the **same
+///   word at different spans** distinct — once the whole-sentence
+///   walker / path-step candidates exist (S2) the same `(roman,
+///   hanji)` legitimately recurs at different spans and must NOT be
+///   collapsed (which the pre-S2 `(roman, hanji)`-only key would
+///   wrongly do). The Item-12 custom-vs-`dict.bin` collapse is
+///   preserved: both the custom synth and its `dict.bin` duplicate
+///   are emitted at the **same** full-buffer span `(0, raw_len)`
+///   (see the `custom_entry_to_candidate` call sites above), so the
+///   span-augmented key still collides and custom still wins by
+///   source rank.
 /// - **Winner** (D2): the survivor with the lowest
 ///   `source_tier_rank(bitmask, is_custom)` (custom = rank 0 beats
 ///   every `dict.bin` tier ≥ 1). On a rank tie the earlier-inserted
@@ -844,16 +919,17 @@ fn custom_entry_to_candidate(
 ///   FST hit).
 /// - Survivor **insertion order is preserved** so the downstream
 ///   `SortKey.stable_idx` stays deterministic.
-// 中文: Item 12 — (roman,hanji) 雙鍵去重,排序前執行;勝者 = source_tier_rank 最小 (custom rank 0 必勝),
-// 中文:   同 rank 取較早插入者;倖存者保持插入順序,讓 SortKey.stable_idx 維持 deterministic。
-fn dedupe_by_roman_hanji(out: &mut Vec<RawCandidate>) {
+// 中文: Item 12 + S2 — (roman,hanji,consumed_span) 三鍵去重,排序前執行;
+// 中文:   加 span 讓「同詞不同 span」(walker / path-step) 不被誤併;custom-vs-dict.bin
+// 中文:   仍同 (0,raw_len) span 碰撞,custom rank 0 必勝。同 rank 取較早插入者;倖存者保插入序。
+fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
     use std::collections::HashMap;
     // key → (winning source rank, index of winner in `out`).
-    let mut best: HashMap<(String, Option<String>), (u8, usize)> =
+    let mut best: HashMap<(String, Option<String>, ConsumedSpan), (u8, usize)> =
         HashMap::with_capacity(out.len());
     for (i, c) in out.iter().enumerate() {
         let rank = source_tier_rank(c.bitmask, c.is_custom);
-        let key = (c.roman.clone(), c.hanji.clone());
+        let key = (c.roman.clone(), c.hanji.clone(), c.consumed_span);
         match best.get(&key) {
             // Strictly lower rank replaces; equal rank keeps the
             // earlier index (no replace) → deterministic tie-break.
@@ -1274,6 +1350,20 @@ mod mode_derive_tests {
     }
 
     #[test]
+    fn s2_synth_concatenated_hanji_is_mixed_when_any_edge_has_latin() {
+        // v3.5.8 S2 (Codex PR #285 P2): the whole-sentence walker
+        // synthesizes the slot-0 hanji by concatenating each edge's
+        // hanji and classifies the WHOLE joined string through this
+        // fn (`composing::dispatch::fetch_walker_slot0`). A Latin
+        // letter in a NON-first segment (e.g. path `臺灣` + `hip相`)
+        // must still flip MIXED — equivalent to the per-edge OR and
+        // matching how a single multi-syllable record would classify.
+        assert_eq!(derive_mode(Some("臺灣hip相")), CandidateMode::Mixed);
+        // All-CJK concatenation stays HANT (the common phrase path).
+        assert_eq!(derive_mode(Some("臺灣台語")), CandidateMode::Hant);
+    }
+
+    #[test]
     fn composed_latin_in_hanzi_is_mixed_via_nfkd() {
         // Real entries `ê早` (line 22953 of dictionary.csv), `ē得`
         // (22960), `屎î` (42037). The Latin codepoint is NFC-composed
@@ -1524,7 +1614,7 @@ mod item12_custom_dedupe_tests {
                 COVERAGE_KIND_FULL,
             ),
         ];
-        dedupe_by_roman_hanji(&mut out);
+        dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 1, "collision must collapse to one");
         assert!(out[0].is_custom, "custom (rank 0) must win the collision");
     }
@@ -1538,7 +1628,7 @@ mod item12_custom_dedupe_tests {
             dict_cand("tâi-gí", Some("台語"), 1 << 0),
             dict_cand("tâi-gír", Some("台語"), 1 << 0),
         ];
-        dedupe_by_roman_hanji(&mut out);
+        dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(
             out.len(),
             2,
@@ -1557,7 +1647,7 @@ mod item12_custom_dedupe_tests {
         second.frequency = 999; // later insertion, higher freq — must lose
         let other = dict_cand("b", Some("乙"), 1 << 0);
         let mut out = vec![first, other.clone(), second];
-        dedupe_by_roman_hanji(&mut out);
+        dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 2);
         assert_eq!(out[0].frequency, 10, "rank tie keeps earlier insertion");
         assert_eq!(out[1].roman, "b", "non-duplicate keeps its position");
@@ -1569,8 +1659,53 @@ mod item12_custom_dedupe_tests {
             dict_cand("a", Some("甲"), 1 << 0),
             dict_cand("b", Some("乙"), 1 << 0),
         ];
-        dedupe_by_roman_hanji(&mut out);
+        dedupe_by_roman_hanji_span(&mut out);
         assert_eq!(out.len(), 2);
+    }
+
+    #[test]
+    fn dedupe_span_aware_keeps_same_word_at_different_spans() {
+        // v3.5.8 S2 (Codex pre-impl Q1d): the same `(roman, hanji)` at
+        // DIFFERENT `consumed_span`s must both survive — once the
+        // whole-sentence walker / path-step candidates exist the same
+        // word legitimately recurs at different spans. The pre-S2
+        // `(roman, hanji)`-only key would have wrongly collapsed these.
+        let mut a = dict_cand("tâi", Some("台"), 1 << 0);
+        a.consumed_span = (0, 3);
+        let mut b = dict_cand("tâi", Some("台"), 1 << 0);
+        b.consumed_span = (6, 9);
+        let mut out = vec![a, b];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(
+            out.len(),
+            2,
+            "same (roman,hanji) at different spans must both survive"
+        );
+    }
+
+    #[test]
+    fn dedupe_span_aware_still_collapses_custom_vs_dict_at_full_buffer() {
+        // Regression guard for Codex Q1d: the Item-12 custom-vs-`dict.bin`
+        // collapse must NOT regress under the span-augmented key. Both
+        // are emitted at the SAME full-buffer span `(0, raw_len)` in
+        // production (`fetch_candidates_for_keys`), so the triple key
+        // still collides and custom (rank 0) still wins.
+        let mut dict = dict_cand("tâi-gí", Some("台語"), 1 << 0);
+        dict.consumed_span = (0, 6);
+        let custom = custom_entry_to_candidate(
+            &CustomEntry {
+                roman: "tâi-gí".to_owned(),
+                hanji: Some("台語".to_owned()),
+            },
+            6,
+            &FrequencyMap::new(),
+            0,
+            COVERAGE_KIND_FULL,
+        );
+        let mut out = vec![dict, custom];
+        dedupe_by_roman_hanji_span(&mut out);
+        assert_eq!(out.len(), 1, "same-span custom/dict collision collapses");
+        assert!(out[0].is_custom, "custom (rank 0) still wins the collision");
     }
 
     #[test]
