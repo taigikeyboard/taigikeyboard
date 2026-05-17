@@ -11,5 +11,11 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "ask": [
+      "Bash(git stash)",
+      "Bash(git stash:*)"
+    ]
   }
 }
