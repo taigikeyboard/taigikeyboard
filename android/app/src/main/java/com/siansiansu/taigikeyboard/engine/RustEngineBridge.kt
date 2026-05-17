@@ -842,11 +842,22 @@ object RustEngineBridge {
     // 中文: Continuous 階段送 derived_display(pending) (e.g. "hó")。引擎依 phase 自動分派,
     // 中文: 故 Continuous 端需要 AppConfig (input mode + tone toggles) 才能正確 render derived。
     // 中文: Phase 9 Item 3 (2026-05-13) 起加入 mode/toggles 參數。
+    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
+    // routes to `commit_raw_continuous` which renders the whole
+    // composition via `combined_display(nailed, raw, config)` — so the
+    // continuous spacing flags ride here. Composing-arm `CommitRaw`
+    // ignores them. Defaults = v3.5.7 roman-first so contract tests stay
+    // behavior-identical; EVERY production Continuous call site MUST pass
+    // explicit live values via `ComposingManager.continuousSpacingFlags`
+    // (the sole production caller does — verified) or hanji-first
+    // silently regresses.
     @JvmStatic
     fun composingCommitRaw(
         mode: NormalizeMode,
         toggles: ToneTogglesCarrier,
         generation: Long,
+        effectiveSwapped: Boolean = false,
+        outputBothScripts: Boolean = false,
     ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
             .newBuilder()
@@ -855,15 +866,28 @@ object RustEngineBridge {
             methodSetter = { it.commitRaw = payload },
             op = "composingCommitRaw",
             generation = generation,
-            config = appConfig(mode, toggles),
+            config = continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
         )
     }
 
     // 中文: 從候選列表選定一筆 suggestion — commit 該 suggestion 並重置 composing。
+    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
+    // `SelectSuggestion` routes to `select_suggestion_under_continuous`
+    // which prepends `nailed_prefix(nailed, config)` — so the continuous
+    // spacing flags must ride here (previously `config = null` →
+    // `AppConfig::default()` → spacing always ON → hanji-first spurious
+    // spaces). The composing-arm `select_suggestion` ignores `config`
+    // entirely (commits `text` verbatim), so this is a no-op there.
+    // Defaults = v3.5.7 roman-first; the sole production caller
+    // (`ComposingManager.selectSuggestion`) passes explicit live values.
     @JvmStatic
     fun composingSelectSuggestion(
         text: String,
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
         generation: Long,
+        effectiveSwapped: Boolean = false,
+        outputBothScripts: Boolean = false,
     ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion
             .newBuilder()
@@ -873,17 +897,29 @@ object RustEngineBridge {
             methodSetter = { it.selectSuggestion = payload },
             op = "composingSelectSuggestion",
             generation = generation,
-            config = null,
+            config = continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
         )
     }
 
     // 中文: 先 commit 當前 preedit、再插入外部字串(空白 / Enter / 標點等),原子操作避免閃爍。
+    // v3.5.8 §10.2 platform pass: under `Phase::Continuous` (e.g. emoji
+    // tap mid-continuous) this routes to
+    // `commit_preedit_then_insert_external_under_continuous` which
+    // renders the nailed prefix via `combined_display(nailed, raw,
+    // config)` — so the continuous spacing flags ride here too. (Not in
+    // the 2026-05-18 enumerated 4 ops, but the same class of Continuous
+    // nailed-rendering path: excluding it would re-create the exact
+    // hanji-first spurious-space regression the narrowed plumb
+    // minimizes — see continuous-input-ranking.md §10.2.) Defaults =
+    // v3.5.7 roman-first; production callers pass explicit live values.
     @JvmStatic
     fun composingCommitPreeditThenInsertExternal(
         text: String,
         mode: NormalizeMode,
         toggles: ToneTogglesCarrier,
         generation: Long,
+        effectiveSwapped: Boolean = false,
+        outputBothScripts: Boolean = false,
     ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto
             .CommitPreeditThenInsertExternal
@@ -894,7 +930,7 @@ object RustEngineBridge {
             methodSetter = { it.commitPreeditThenInsertExternal = payload },
             op = "composingCommitPreeditThenInsertExternal",
             generation = generation,
-            config = appConfig(mode, toggles),
+            config = continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
         )
     }
 
@@ -1005,6 +1041,11 @@ object RustEngineBridge {
      * collision). Mirrors iOS `RustEngineBridge.composingFetchAtPos`.
      */
     // 中文: Item 12 — customEntries 帶平台 custom_dictionary.db 原始 (roman,hanji);預設空 = no-op。
+    // v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
+    // combined marked region (`combined_display`) and per-segment recased
+    // candidates, so it needs the continuous spacing flags to match the
+    // commit-time rendering. Defaults = v3.5.7 roman-first; production
+    // callers pass explicit live values via continuousSpacingFlags.
     @JvmStatic
     fun composingFetchAtPos(
         mode: NormalizeMode,
@@ -1013,6 +1054,8 @@ object RustEngineBridge {
         frequencyEntries: List<FrequencyEntry> = emptyList(),
         nowMs: Long = 0L,
         customEntries: List<CustomDictEntry> = emptyList(),
+        effectiveSwapped: Boolean = false,
+        outputBothScripts: Boolean = false,
     ): ContinuousFetchResult {
         val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
             .newBuilder()
@@ -1025,7 +1068,7 @@ object RustEngineBridge {
             methodSetter = { it.fetchAtPos = payload },
             op = "composingFetchAtPos",
             generation = generation,
-            config = appConfig(mode, toggles),
+            config = continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
         )
     }
 
@@ -1039,6 +1082,12 @@ object RustEngineBridge {
      */
     // 中文: 連續輸入提交候選段。displayText / consumedBytes / syllableCount 必須與
     // 中文: 上一個 composingFetchAtPos 回傳的 ContinuousCandidate 對齊。
+    // v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
+    // `combined_display(nailed, pending, config)`; final-commit renders
+    // `nailed_prefix(nailed, config)` — both need the spacing flags so
+    // segments join with the right (roman: space / hanji-first: none /
+    // both-scripts: space) word boundary. Defaults = v3.5.7 roman-first;
+    // production callers pass explicit live values.
     @JvmStatic
     fun composingCommitContinuous(
         displayText: String,
@@ -1048,6 +1097,8 @@ object RustEngineBridge {
         mode: NormalizeMode,
         toggles: ToneTogglesCarrier,
         generation: Long,
+        effectiveSwapped: Boolean = false,
+        outputBothScripts: Boolean = false,
     ): ComposingTransition {
         val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
             .newBuilder()
@@ -1060,7 +1111,7 @@ object RustEngineBridge {
             methodSetter = { it.commitContinuous = payload },
             op = "composingCommitContinuous",
             generation = generation,
-            config = appConfig(mode, toggles),
+            config = continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts),
         )
     }
 
@@ -1990,6 +2041,47 @@ object RustEngineBridge {
                 },
             ).setOoDoubletapEnabled(toggles.isDoubleTapOoEnabled)
             .setNnDoubletapEnabled(toggles.isDoubleTapNnEnabled)
+            .build()
+
+    /**
+     * Continuous-rendering [AppConfig]: base [appConfig] plus the two
+     * v3.5.8 §10.2 word-boundary-spacing flags the engine's
+     * `continuous_word_space` predicate consumes.
+     *
+     * `effectiveSwapped` (= translate-swap OR TPS layout, combined
+     * platform-side because [NormalizeMode] has no TPS and TPS resolves
+     * to `"tl"`/`"poj"` `input_mode`, so the engine's own
+     * `input_mode == "tps"` branch never fires) rides
+     * `is_translate_swapped`. `outputBothScripts` distinguishes
+     * hanji-first (no inter-segment space) from both-scripts
+     * (`hit (彼)` — space wanted); `is_translate_swapped` is `true` for
+     * both, so the second flag is required.
+     *
+     * Applied ONLY at the Continuous-phase entry points that render the
+     * nailed prefix — `commit_continuous`, `commit_raw_continuous`,
+     * `select_suggestion_under_continuous`,
+     * `commit_preedit_then_insert_external_under_continuous`, and the
+     * FetchAtPos snapshot — so the hanji-first regression surface stays
+     * minimal (continuous-input-ranking.md §10.2; platform pass decided
+     * 2026-05-18). All other composing methods keep the flag-free base
+     * [appConfig].
+     */
+    // 中文: 連續輸入渲染用 AppConfig — base appConfig + §10.2 字界空格兩旗標。
+    // 中文: effectiveSwapped(翻譯反轉 OR TPS,平台端合併,因 NormalizeMode 無 TPS 且 TPS→"tl"
+    // 中文: 故引擎 input_mode=="tps" 永不觸發)走 is_translate_swapped;outputBothScripts
+    // 中文: 區分漢字優先(無空格)vs 雙腳本(要空格)。只用在會渲染 nailed prefix 的進入點。
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift continuousAppConfig.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+    private fun continuousAppConfig(
+        mode: NormalizeMode,
+        toggles: ToneTogglesCarrier,
+        effectiveSwapped: Boolean,
+        outputBothScripts: Boolean,
+    ): AppConfig =
+        appConfig(mode, toggles)
+            .toBuilder()
+            .setIsTranslateSwapped(effectiveSwapped)
+            .setOutputBothScripts(outputBothScripts)
             .build()
 
     private inline fun dispatch(

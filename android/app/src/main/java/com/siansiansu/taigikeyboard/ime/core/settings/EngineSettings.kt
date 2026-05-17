@@ -42,6 +42,17 @@ interface EngineSettings {
     val isAutoCap: Boolean
 
     val isTranslateSwapped: Boolean
+
+    /**
+     * Output both hanji + roman ("both-scripts"). The continuous-input
+     * §10.2 word-boundary-spacing predicate needs this to tell
+     * hanji-first (no inter-segment space) from both-scripts (`hit (彼)`
+     * — space wanted); [isTranslateSwapped] is `true` for both.
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isOutputBothScripts.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+    val isOutputBothScripts: Boolean
+
     val isAssociationRecordingEnabled: Boolean
 
     /**

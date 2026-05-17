@@ -30,7 +30,7 @@ fn config_tl() -> AppConfig {
         is_translate_swapped: false,
         is_association_recording_enabled: false,
         platform_id: 0,
-    }
+        output_both_scripts: false,    }
 }
 
 fn engine_in_continuous(raw: &str) -> Engine {
@@ -152,12 +152,12 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
     // Model B: effect[0] is UpdatePreedit carrying the whole composition —
     // the just-nailed "珠" + derived pending "a" = "珠a".
     let preedit = resp.preedit.as_ref().expect("preedit");
-    assert_eq!(preedit.display_text, "珠a");
+    assert_eq!(preedit.display_text, "珠 a");
     assert_eq!(preedit.raw_input, "a");
     let Kind::UpdatePreedit(up) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
     };
-    assert_eq!(up.display, "珠a");
+    assert_eq!(up.display, "珠 a");
     let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[1].kind.as_ref().unwrap() else {
         unreachable!();
     };
@@ -400,7 +400,7 @@ fn append_under_continuous_extends_pending_only() {
     // pending tail only.
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "aguah");
-    assert_eq!(preedit.display_text, "珠aguah");
+    assert_eq!(preedit.display_text, "珠 aguah");
 }
 
 #[test]
@@ -442,7 +442,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
     // Model B: combined preedit = 珠 + derived("agui") = "珠agui".
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "agui");
-    assert_eq!(preedit.display_text, "珠agui");
+    assert_eq!(preedit.display_text, "珠 agui");
 }
 
 // ---- DeleteBackward (folded backspace) under Continuous -----------
@@ -561,7 +561,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
     // Combined = 珠 + derived("a") = "珠a".
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "a");
-    assert_eq!(preedit.display_text, "珠a");
+    assert_eq!(preedit.display_text, "珠 a");
 }
 
 #[test]
@@ -658,7 +658,7 @@ fn query_state_under_continuous_raw_input_pending_only_display_text_whole_compos
     // pending), but display_text is the whole composition: nailed "珠" +
     // derived("agua").
     assert_eq!(preedit.raw_input, "agua");
-    assert_eq!(preedit.display_text, "珠agua");
+    assert_eq!(preedit.display_text, "珠 agua");
     assert!(resp.is_composing);
 }
 
@@ -786,7 +786,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
     };
     // Model B: whole composition — nailed "紙" + pending tail "li2" → "lí".
     // 中文: 整段組字「紙」+ pending「lí」=「紙lí」一次寫入文件。
-    assert_eq!(commit.text, "紙lí");
+    assert_eq!(commit.text, "紙 lí");
     // Terminal NextWordWordSelected is for the pending tail "word".
     let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
         unreachable!();
@@ -993,7 +993,7 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
     };
     // Model B: Σ nailed.display_text ("珠") + derived(pending "a" → "a")
     // + external ("!") = "珠a!".
-    assert_eq!(commit.text, "珠a!");
+    assert_eq!(commit.text, "珠 a!");
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
@@ -1142,7 +1142,7 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
         unreachable!();
     };
     // Combined = swapped "tāi-uân" + derived("a") = "tāi-uâna".
-    assert_eq!(up.display, "tāi-uâna");
+    assert_eq!(up.display, "tāi-uân a");
     let Kind::NextWordUpdateLastSelectedWord(nw) = resp.effect[1].kind.as_ref().unwrap() else {
         unreachable!();
     };
@@ -1231,7 +1231,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
     // + derived("a") = "tāi-uâna".
     let preedit = resp.preedit.as_ref().expect("preedit");
     assert_eq!(preedit.raw_input, "a");
-    assert_eq!(preedit.display_text, "tāi-uâna");
+    assert_eq!(preedit.display_text, "tāi-uân a");
 }
 
 #[test]

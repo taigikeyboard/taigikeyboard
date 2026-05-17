@@ -22,6 +22,15 @@ protocol EngineSettings {
     var isAutoCap: Bool { get }
     // 中文: 翻譯方向是否反轉 (台↔英 切換)。
     var isTranslateSwapped: Bool { get }
+    // 中文: 是否同時輸出漢字 + 羅馬字 (雙腳本)。連續輸入 §10.2 字界空格判斷需要它
+    // 中文: 區分「漢字優先」(無空格) 與「雙腳本」(`hit (彼)` 要空格) — 兩者 isTranslateSwapped 都為 true。
+    /// Output both hanji + roman ("both-scripts"). The continuous-input
+    /// §10.2 word-boundary-spacing predicate needs this to tell
+    /// hanji-first (no space) from both-scripts (`hit (彼)` — space
+    /// wanted); `isTranslateSwapped` is `true` for both.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isOutputBothScripts.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+    var isOutputBothScripts: Bool { get }
     // 中文: 是否記錄使用者選字的關聯資料,供 NextWord 推薦使用。
     var isAssociationRecordingEnabled: Bool { get }
 

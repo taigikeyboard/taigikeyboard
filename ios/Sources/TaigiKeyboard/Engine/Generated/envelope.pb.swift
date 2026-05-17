@@ -170,6 +170,15 @@ public enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
 /// + `platform_id` for NextWord engine — platform_id branches divergences
 /// §5 #1 (compound split separator) and §5 #2 (noise punct set).
+///
+/// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
+/// composing-buffer join (`composing::api::nailed_prefix` /
+/// `combined_display`) inserts a word-boundary space between nailed
+/// segments only when the rendered script is roman-ish. `is_translate_swapped`
+/// alone cannot distinguish "hanji-first" (no space) from "both-scripts"
+/// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+/// the separator predicate needs this second flag (continuous-input-ranking
+/// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
 public struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -188,6 +197,8 @@ public struct Taigi_Engine_AppConfig: Sendable {
   public var isAssociationRecordingEnabled: Bool = false
 
   public var platformID: Taigi_Engine_Platform = .unspecified
+
+  public var outputBothScripts: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -400,7 +411,7 @@ extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
 
 extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0\u{3}output_both_scripts\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -415,6 +426,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
       case 5: try { try decoder.decodeSingularBoolField(value: &self.isTranslateSwapped) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.isAssociationRecordingEnabled) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
+      case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
       default: break
       }
     }
@@ -442,6 +454,9 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if self.platformID != .unspecified {
       try visitor.visitSingularEnumField(value: self.platformID, fieldNumber: 7)
     }
+    if self.outputBothScripts != false {
+      try visitor.visitSingularBoolField(value: self.outputBothScripts, fieldNumber: 8)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -453,6 +468,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
     if lhs.isTranslateSwapped != rhs.isTranslateSwapped {return false}
     if lhs.isAssociationRecordingEnabled != rhs.isAssociationRecordingEnabled {return false}
     if lhs.platformID != rhs.platformID {return false}
+    if lhs.outputBothScripts != rhs.outputBothScripts {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

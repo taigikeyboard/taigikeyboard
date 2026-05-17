@@ -1,78 +1,71 @@
 # CLAUDE.md
 
-Guidelines for **Claude Code (claude.ai/code)** when working with this codebase.
+Guidelines for **Claude Code** in this repo. Generic agent discipline — incremental progress, confirm-before-acting, YAGNI, reasoning depth, subagent use, Codex usage, commit authorship — lives in global `~/.claude/CLAUDE.md` and is **not duplicated here**. This file holds only what is specific to Taigi Keyboard.
 
 ## Project Overview
 
-**Taigi Keyboard** — Cross-platform Taiwanese input method (iOS: Swift + KeyboardKit, Android: Kotlin + FlorisBoard). Supports POJ/TL romanization, Hanji (漢字), tone variation, and autocomplete.
+**Taigi Keyboard** — cross-platform Taiwanese input method. iOS (Swift + KeyboardKit) and Android (Kotlin + FlorisBoard) over a shared Rust engine. Supports POJ/TL romanization, Hanji (漢字), tone variation, autocomplete, and continuous input.
 
 ## Project Structure
 
 ```
 taigikeyboard/
-├── android/           # Android (Kotlin + FlorisBoard)
-├── ios/               # iOS (Swift + KeyboardKit)
-├── docs/              # Specs: engine/, architecture/, ui/, references/, reports/, README.md
-├── knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)
-├── taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
-├── rules/             # Mandatory rules (must read before relevant changes)
-│   ├── ui-style-guide.md   # Cross-platform UI styling spec
-│   ├── security-rules.md   # Logging, SQL, network, data storage rules
-│   ├── ios-guidelines.md   # Day-to-day iOS: SourceKit, KeyboardKit, memory, naming, tests
-│   ├── ios-architecture.md # Structural iOS: layers, KK isolation, shared-core, settings injection
-│   ├── android-guidelines.md # Kotlin/Android: shared-core candidate rules, DI, coroutines, Compose, IME
-│   ├── ai-friendly-code.md # Naming, comments, function design for AI readability
-│   ├── code-review-rules.md # Code review checklist (best practices, regression, scope)
-│   ├── claude-workflow.md  # Reasoning depth, subagent use, clarification batching (Opus 4.7)
-│   ├── cross-platform-alignment.md # Refactor-freeze, divergence docs, Phase II end gate
-│   └── rust-best-practices.md # Workspace layout, FFI safety, crate choices (active Phase IV-A+)
-├── dictionary/        # Dictionary data files
-├── scripts/           # Build and utility scripts
-└── references/        # External repos (gitignored — don't place tracked content here)
+├── android/          # Android app (Kotlin + FlorisBoard)
+├── ios/              # iOS app (Swift + KeyboardKit)
+├── engine/           # Shared Rust engine — Cargo workspace, FFI to both platforms
+├── docs/             # Specs: engine/, architecture/, ui/, references/, reports/, roadmap.md
+├── knowledge/        # Taiwanese phonetics reference (TL/POJ/TPS)
+├── taigi-converter/  # Canonical TL↔POJ↔TPS converter (git submodule)
+├── rules/            # Mandatory rules — see "Mandatory Rules" table
+├── dictionary/       # Dictionary data files
+├── changelog/        # Per-release changelogs — edit only at release time
+├── content/          # In-app content (FAQ / feature JSON)
+└── references/       # Cloned external IME repos (gitignored — no tracked content)
 ```
 
-## Core Development Principles
+## Core Principles (project-specific)
 
-1. **No unsolicited implementation** — Confirm with user before any feature or file changes
-2. **No arbitrary removal** — Confirm with user before removing any functionality
-3. **Follow YAGNI** — Only implement what's currently needed, keep it simple
-4. **No project config modification** — `.xcodeproj`, `.pbxproj`, `build.gradle` etc. must be modified manually by the user. AI must never edit these files
-5. **Cross-platform alignment** — Align on **intended behavior**, not API calls. Define expected behavior first, verify each platform independently, document when same behavior requires different implementation
-6. **Phonetic conversion** — When working on TL/POJ/TPS conversion, **must** read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` before changes
-7. **UI Style Guide** — Before modifying app UI, **must** read `rules/ui-style-guide.md`
-8. **Security Rules** — Before adding logging, SQL, network, or storage code, **must** read `rules/security-rules.md`
-9. **iOS Guidelines** — Before modifying iOS code, **must** read `rules/ios-guidelines.md`; for structural changes also read `rules/ios-architecture.md`
-10. **Android Guidelines** — Before modifying Android code, **must** read `rules/android-guidelines.md` — shared-core candidate rules, DI patterns, Kotlin/Android best practices, coroutines, Compose, IME-specific rules
-11. **AI-Friendly Code** — All new/modified code **must** follow `rules/ai-friendly-code.md` — self-documenting names, strategic comments, no token waste
-12. **Code Review Rules** — All code reviews **must** follow `rules/code-review-rules.md` — best practices, regression risk, efficient review scope
-13. **Claude Workflow** — Before non-trivial tasks, **must** read `rules/claude-workflow.md` — reasoning depth, subagent use, clarification batching (Opus 4.7 tuning)
-14. **Cross-Platform Alignment** — Before any code change that could affect iOS/Android parity (refactor, bug fix, new feature), **must** read `rules/cross-platform-alignment.md` — refactor-phase behavior freeze + emergency exception tier, Android-mirrors-iOS through Phase II, divergence documentation, Phase II end hybrid decision gate
-15. **Rust Best Practices** — Before authoring Phase II.5 docs (`docs/engine/ffi-safety.md`, `docs/engine/rust-core-proto.md`), the Phase III D9 FFI POC, or any Phase IV-A+ Rust code, **must** read `rules/rust-best-practices.md` — workspace layout, FFI safety discipline, `thiserror`/`prost`/`fst`/`jni`/`swift-bridge` crate choices, opaque handle pattern, MSRV policy, non-goals
-16. **Mainstream IME comparison** — Before writing a `最佳實踐對齊` / `Best practices alignment` section, citing "Project X already does Y" about any mainstream IME, or designing an engine slice that touches segmentation / lattice / candidate ranking / user-freq / syllabifier / predictive / next-word / continuous input, **must** start from `docs/references/mainstream-ime-comparison.md` — read its TL;DR matrix + topic index first to pick which repos to cite, then drill into the per-repo cards or linked deep-dives (`azookey-reference.md`, `khiin-reference.md`, `rime-reference.md`, `moe-taigi-reference.md`) only for the dimensions you need. Do not re-explore `references/` from scratch
+1. **No project-config modification by AI** — `.xcodeproj` / `.pbxproj` are **user-only** (manual Xcode edits; new iOS files need the user to add the Xcode target). Android Gradle (`build.gradle`, `*.gradle.kts`) **is** editable by Claude.
+2. **Cross-platform alignment** — align on **intended behavior**, not API calls: define expected behavior, verify each platform independently, document when the same behavior needs different implementations.
+3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules (or "dead" phonetic tables from test/dictionary absence); read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` first.
+
+## Mandatory Rules
+
+Read the listed file **before** the matching work — these override defaults.
+
+| Before… | Read |
+|---|---|
+| any non-trivial task | `rules/claude-workflow.md` |
+| writing/modifying any code | `rules/ai-friendly-code.md` |
+| reviewing code | `rules/code-review-rules.md` |
+| a change affecting iOS/Android parity | `rules/cross-platform-alignment.md` |
+| modifying iOS code (structural → also architecture) | `rules/ios-guidelines.md` (+ `ios-architecture.md`) |
+| modifying Android code | `rules/android-guidelines.md` |
+| modifying app UI | `rules/ui-style-guide.md` |
+| adding logging / SQL / network / storage | `rules/security-rules.md` |
+| Rust engine code or FFI/proto docs | `rules/rust-best-practices.md` |
+| writing a 最佳實踐對齊 section, claiming "Project X does Y", or designing a segmentation / lattice / ranking / user-freq / syllabifier / predictive / next-word / continuous-input slice | `docs/references/mainstream-ime-comparison.md` first (TL;DR matrix + topic index → drill into per-repo cards; do **not** re-explore `references/` from scratch) |
 
 ## Build & Test
 
+The **user runs all builds/tests manually** — never invoke these or add build hooks/reminders. Reference only:
+
 | Platform | Build | Test |
-|----------|-------|------|
-| iOS | Open `ios/` in Xcode, build keyboard extension | `xcodebuild test` or Xcode |
-| Android | `cd android && ./gradlew assembleDebug` | `cd android && ./gradlew test` |
-| taigi-converter | — | `cd taigi-converter && node --test tests/` |
+|---|---|---|
+| iOS | Xcode → keyboard extension | Xcode / `xcodebuild test` |
+| Android | `./gradlew assembleDebug` | `./gradlew test` |
+| engine | `cargo build` (workspace) | `cargo test --workspace` |
+| taigi-converter | — | `node --test tests/` |
 
 ## Communication
 
-- Reply in **Taiwanese Mandarin** (台灣華語)
-- Concise, bullet-point, key points only — no filler words, minimize token usage
-- Documentation and code comments remain in **English**
-- Analyze problems first, provide solution options for user to choose
-- Explain scope of impact before making changes
-- **Batch clarifying questions in the first turn** — ask everything upfront, avoid piecemeal multi-turn Q&A
-- **Match response length to task** — short for simple lookups, detailed for cross-platform analysis. Honor explicit length requests from the user
+- Reply in **Taiwanese Mandarin (台灣華語)**; documentation and code comments stay in **English**.
+- Concise, bullet-point, key points only — no filler.
+- Analyze first and present options; explain scope of impact before changing code.
 
 ## Key References
 
-- `docs/README.md` — Full documentation index (engine, UI, keywords, references)
-- `docs/references/mainstream-ime-comparison.md` — **One-stop index** of every IME repo under `references/` + topic→repo map (segmentation / ranking / user-freq / syllabifier / predictive / UI / schema). **Read this before** writing a 最佳實踐對齊 section or asserting "Project X already does Y" — saves re-exploring `references/` from scratch
-- `references/` — Cloned external repos (azooKey, librime, khiin-rs, McBopomofo, florisboard, moe_taigi_apk, aiongtaigi-sushi, rime-moetaigi, KeyboardKit-Documentation, …) — start from the comparison doc above, not directly here
-- `knowledge/taigi-phonetics-reference.md` — TL/POJ/TPS cross-reference
-- iOS: New files require manual Xcode target addition by user
-- Android: Follow [Creating Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) guidelines
+- `docs/README.md` — full documentation index
+- `docs/roadmap.md` + `memory/project_*.md` — live multi-PR plan & round hand-off (this project uses these, **not** `IMPLEMENTATION_PLAN.md`)
+- `references/` — cloned IMEs (azooKey, librime, khiin-rs, McBopomofo, florisboard, …); enter via the comparison doc above, not directly
+- Android IME: follow [Creating an Input Method](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method)

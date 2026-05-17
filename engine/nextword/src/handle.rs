@@ -99,7 +99,7 @@ mod tests {
             is_translate_swapped: false,
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
-        }
+            output_both_scripts: false,        }
     }
 
     /// Regression guard for PR #198 r3171677157: preserve-only would let an

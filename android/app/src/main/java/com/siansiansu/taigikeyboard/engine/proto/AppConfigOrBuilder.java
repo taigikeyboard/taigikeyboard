@@ -67,4 +67,10 @@ public interface AppConfigOrBuilder extends
    * @return The platformId.
    */
   com.siansiansu.taigikeyboard.engine.proto.Platform getPlatformId();
+
+  /**
+   * <code>bool output_both_scripts = 8;</code>
+   * @return The outputBothScripts.
+   */
+  boolean getOutputBothScripts();
 }

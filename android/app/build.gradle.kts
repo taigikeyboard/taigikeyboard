@@ -42,7 +42,7 @@ android {
         // (3_050_704) and well under Play's 2_100_000_000 hard cap
         // (~5970 years headroom). versionName stays SemVer, managed manually.
         versionCode = (System.currentTimeMillis() / 60_000L).toInt()
-        versionName = "3.5.7"
+        versionName = "3.5.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

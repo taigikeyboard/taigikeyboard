@@ -214,6 +214,25 @@ fn handle_fetch_at_pos(
     } else {
         let raw_len = raw.len() as u32;
         let mut c = fetch_via_lexicon(&keys, raw_len, &freq_map, now_ms, &custom);
+        // v3.5.8 (Codex pre-impl 2A locus = candidate construction):
+        // case each span-local candidate's roman to mirror the user's
+        // raw input for its consumed span, so the displayed candidate
+        // already shows `Hit` / `tui` and tap commits it verbatim
+        // (display == commit). The legacy platform
+        // `SuggestionCaseTransformer` is bypassed for continuous, so
+        // this is the single casing source. Only the presentation
+        // `roman` is touched — `display_text` (canonical freq/NextWord
+        // key) and `hanji` are deliberately left intact.
+        // 中文: 連續候選 roman 依該段 raw 還原大小寫(display==commit);
+        // 中文:   平台 SuggestionCaseTransformer 對連續 bypass,此為唯一源;
+        // 中文:   只改呈現 roman,canonical display_text / hanji 不動。
+        let mode = phonetics::api::parse_input_mode(&config.input_mode);
+        for cand in &mut c {
+            let (cs, ce) = cand.consumed_span;
+            if let Some(seg) = raw.get(cs as usize..ce as usize) {
+                cand.roman = recase_roman(&cand.roman, seg, mode);
+            }
+        }
         // v3.5.8 S2 — whole-sentence walker. TPS excluded (S1 Codex Q5
         // deferred TPS multi-start; the lattice builder is TL/POJ
         // only). The synthesized full-buffer best path is explicitly
@@ -228,7 +247,7 @@ fn handle_fetch_at_pos(
         // 中文:   explicit prepend slot 0 (Codex S2 Q1);與 synth 同 (roman,hanji,span)
         // 中文:   的 span-local 候選去掉,保 slot 0 唯一 (Codex S2 Q1d)。
         if !is_tps {
-            if let Some(slot0) = fetch_walker_slot0(raw, raw_len, &freq_map, now_ms) {
+            if let Some(slot0) = fetch_walker_slot0(raw, raw_len, &freq_map, now_ms, mode) {
                 c.retain(|x| {
                     !(x.roman == slot0.roman
                         && x.hanji == slot0.hanji
@@ -457,11 +476,51 @@ fn synth_consumed_span(
 // 中文:   注入重用 best_candidate_for_key 的 edge provider (不複製 record_to_candidate)。
 // 中文: roman = 各 edge roman 以單空格 join (§10.2);hanji = 全 edge 皆有 hanji 才 Some(無空格 join),
 // 中文:   否則 None → 合成羅馬字最佳路徑 (吞 Bug2/§1,非 fallback)。TPS 排除 (S1 Q5 deferred)。
+/// v3.5.8 — derive the keyboard `LetterCase` intent from a user raw
+/// input segment so a continuous candidate's roman mirrors the case the
+/// user actually typed for *that* span (`Hittui` → segment `Hit`
+/// Uppercased, segment `tui` Lowercased). Only alphabetic chars count
+/// (tone digits / hyphens ignored); no alpha → `Lowercased`. This is
+/// the engine-owned continuous casing of Codex pre-impl 2A locus =
+/// candidate construction; the legacy platform `SuggestionCaseTransformer`
+/// is bypassed for continuous candidates so this is the single source.
+// 中文: 由使用者該段 raw 推導 LetterCase,讓連續候選 roman 跟著使用者實際打的大小寫
+// 中文:   (Hittui → Hit 大寫、tui 小寫)。只看英文字母;無字母 → Lowercased。
+// 中文:   2A locus = 候選構造;平台 SuggestionCaseTransformer 對連續候選 bypass,此為唯一源。
+fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCase {
+    use phonetics::case_transform::LetterCase;
+    let mut alphas = raw_seg.chars().filter(|c| c.is_alphabetic());
+    let Some(first) = alphas.next() else {
+        return LetterCase::Lowercased;
+    };
+    let rest_all_upper = alphas.all(|c| c.is_uppercase());
+    if first.is_uppercase() && rest_all_upper {
+        LetterCase::CapsLocked
+    } else if first.is_uppercase() {
+        LetterCase::Uppercased
+    } else {
+        LetterCase::Lowercased
+    }
+}
+
+/// Apply [`raw_segment_letter_case`] of `raw_seg` to `roman` via the
+/// tone-letter-aware `phonetics::case_transform::transform_input_case`
+/// (handles POJ/TL diacritic letters; the raw span is used only to
+/// derive the case intent, never sliced against the roman, so a
+/// toneless-ASCII raw vs tone-diacritic roman length mismatch is a
+/// non-issue — Codex pre-impl 2026-05-18).
+// 中文: 用 raw_seg 推得的 case 經 transform_input_case(tone-aware)套到 roman;
+// 中文:   raw 只用來決定 case 意圖,不與 roman 對齊切片,故長度不一致無妨。
+fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> String {
+    phonetics::case_transform::transform_input_case(roman, raw_segment_letter_case(raw_seg), mode)
+}
+
 fn fetch_walker_slot0(
     raw: &str,
     raw_len: u32,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    mode: phonetics::InputMode,
 ) -> Option<RawCandidate> {
     LexiconHandle::with_state(|state| {
         let Some(inv) = state.syllable_inventory.as_ref() else {
@@ -567,10 +626,22 @@ fn fetch_walker_slot0(
             return Ok(None);
         }
 
+        // v3.5.8 — case each edge's roman to mirror the user's raw
+        // input for that edge's own byte span (per-edge, NOT whole
+        // buffer: `hitTUI` must keep segment 2 uppercase). `path.edges`
+        // are shadow offsets; `shadow_to_raw_end` maps them back to the
+        // raw buffer. Then join with the §10.2 slot-0 word space.
+        // 中文: 逐 edge 依該 edge 自己的 raw 區間還原大小寫(逐段,非整 buffer)。
         let roman = path
-            .choices
+            .edges
             .iter()
-            .map(|c| c.roman.as_str())
+            .zip(path.choices.iter())
+            .map(
+                |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
+                    Some(seg) => recase_roman(&c.roman, seg, mode),
+                    None => c.roman.clone(),
+                },
+            )
             .collect::<Vec<_>>()
             .join(" ");
         let all_hanji = path.choices.iter().all(|c| c.hanji.is_some());
@@ -1716,5 +1787,39 @@ mod tests {
         assert_eq!(proto.roman, "tāi");
         assert!(proto.hanji.is_none());
         assert_eq!(proto.display_text, "tāi");
+    }
+
+    // ----- v3.5.8 2A — per-segment case-from-raw -----
+
+    #[test]
+    fn raw_segment_letter_case_maps_typed_intent() {
+        use phonetics::case_transform::LetterCase;
+        // Titlecase raw (the `Hittui → Hit` segment): first alpha upper,
+        // rest not all upper → Uppercased (capitalize-first).
+        assert_eq!(raw_segment_letter_case("Hit"), LetterCase::Uppercased);
+        // Lowercase raw (the `tui` segment) → Lowercased.
+        assert_eq!(raw_segment_letter_case("tui"), LetterCase::Lowercased);
+        // All-caps → CapsLocked (full upper).
+        assert_eq!(raw_segment_letter_case("HIT"), LetterCase::CapsLocked);
+        // Tone digits / hyphens are not alphabetic → ignored.
+        assert_eq!(raw_segment_letter_case("Tai5"), LetterCase::Uppercased);
+        assert_eq!(raw_segment_letter_case("tai-uan"), LetterCase::Lowercased);
+        // No alphabetic char → defaults to Lowercased (never panics).
+        assert_eq!(raw_segment_letter_case("123"), LetterCase::Lowercased);
+        assert_eq!(raw_segment_letter_case(""), LetterCase::Lowercased);
+    }
+
+    #[test]
+    fn recase_roman_mirrors_raw_segment_case_tone_aware() {
+        let tl = phonetics::InputMode::Tl;
+        // The motivating bug: dict roman is canonical lowercase; the
+        // user's raw for each span drives the displayed case so a
+        // continuous segment reads `Hit` / `tui`, not `Tui`.
+        assert_eq!(recase_roman("hit", "Hit", tl), "Hit");
+        assert_eq!(recase_roman("tui", "tui", tl), "tui");
+        // Tone-diacritic roman, toneless ASCII raw (length mismatch is a
+        // non-issue — raw only derives the case intent).
+        assert_eq!(recase_roman("tâi", "Tai", tl), "Tâi");
+        assert_eq!(recase_roman("tâi", "tai", tl), "tâi");
     }
 }

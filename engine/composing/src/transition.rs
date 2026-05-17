@@ -429,11 +429,9 @@ fn commit_raw_continuous(
         // final word. `nailed` is non-empty here (combined non-empty with
         // empty raw implies a nailed segment exists).
         match nailed.last() {
-            Some(last) => next_word_word_selected(
-                last.canonical_text.clone(),
-                last.raw_text.clone(),
-                true,
-            ),
+            Some(last) => {
+                next_word_word_selected(last.canonical_text.clone(), last.raw_text.clone(), true)
+            }
             None => next_word_clear_for_new_composing(),
         }
     };
@@ -674,7 +672,7 @@ fn select_suggestion_under_continuous(
     let Phase::Continuous { nailed, .. } = &state.phase else {
         return noop(state, config);
     };
-    let mut combined = nailed_prefix(nailed);
+    let mut combined = nailed_prefix(nailed, config);
     combined.push_str(&text);
     exit_to_idle(
         state,
@@ -782,7 +780,7 @@ fn commit_continuous(
         // risk (i)).
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
-        let combined = nailed_prefix(&new_nailed);
+        let combined = nailed_prefix(&new_nailed, config);
         return exit_to_idle(
             state,
             vec![

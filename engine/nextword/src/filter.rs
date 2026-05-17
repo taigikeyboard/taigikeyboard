@@ -144,7 +144,7 @@ mod tests {
             is_translate_swapped: swapped,
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
-        }
+            output_both_scripts: false,        }
     }
 
     fn config_poj_mode() -> AppConfig {
@@ -156,7 +156,7 @@ mod tests {
             is_translate_swapped: false,
             is_association_recording_enabled: true,
             platform_id: Platform::Ios as i32,
-        }
+            output_both_scripts: false,        }
     }
 
     fn dict_row(hanzi: &str, tl: &str, count: i64) -> RawNextWordPrediction {

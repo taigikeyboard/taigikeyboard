@@ -541,6 +541,13 @@ class PrefHelper(
     override val isAutoCap: Boolean
         get() = autoCapitalizationEnabled
 
+    // v3.5.8 §10.2: engine-facing alias for the Android `outputBothScripts`
+    // pref (kept un-renamed because the settings UI / smartbar read it
+    // directly). The continuous word-boundary-spacing predicate consumes
+    // this via EngineSettings.
+    override val isOutputBothScripts: Boolean
+        get() = outputBothScripts
+
     override val isAssociationRecordingEnabled: Boolean
         get() = associationRecordingEnabled
 

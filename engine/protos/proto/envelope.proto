@@ -54,6 +54,15 @@ enum Platform {
 // v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
 // + `platform_id` for NextWord engine — platform_id branches divergences
 // §5 #1 (compound split separator) and §5 #2 (noise punct set).
+//
+// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
+// composing-buffer join (`composing::api::nailed_prefix` /
+// `combined_display`) inserts a word-boundary space between nailed
+// segments only when the rendered script is roman-ish. `is_translate_swapped`
+// alone cannot distinguish "hanji-first" (no space) from "both-scripts"
+// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+// the separator predicate needs this second flag (continuous-input-ranking
+// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
 message AppConfig {
   string tone_mode = 1;
   string input_mode = 2;
@@ -62,6 +71,7 @@ message AppConfig {
   bool is_translate_swapped = 5;
   bool is_association_recording_enabled = 6;
   Platform platform_id = 7;
+  bool output_both_scripts = 8;
 }
 
 message Request {

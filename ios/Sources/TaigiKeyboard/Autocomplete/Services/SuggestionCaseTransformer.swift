@@ -45,6 +45,19 @@ enum SuggestionCaseTransformer {
         if suggestion.additionalInfo["isNextWord"] == "true" {
             return suggestion
         }
+        // v3.5.8 §10.2 Opt 2A: Continuous candidates are already cased
+        // per-segment from the user's own raw input by the engine
+        // (`dispatch::recase_roman`, Model B). The legacy global-caps /
+        // typed-prefix transform is invalid under Model B and would
+        // clobber that, so bypass it for Continuous-flagged suggestions
+        // (flagged at AutocompleteService.swift `buildContinuousSuggestions`).
+        // 中文: §10.2 Opt 2A — Continuous 候選已由引擎依使用者 raw 逐段 case,
+        // 中文: legacy 全域大寫轉換在 Model B 下無效,故跳過不再覆寫。
+        // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/SuggestionCaseTransformer.kt IS_CONTINUOUS skip.
+        // Drift causes silent divergence (continuous candidate re-cased away from raw).
+        if suggestion.additionalInfo["isContinuous"] == "true" {
+            return suggestion
+        }
 
         let transformedText = RustEngineBridge.transformSuggestionCase(
             original: suggestion.text,

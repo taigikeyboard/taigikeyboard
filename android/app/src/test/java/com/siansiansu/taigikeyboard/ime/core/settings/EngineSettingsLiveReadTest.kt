@@ -68,6 +68,7 @@ class EngineSettingsLiveReadTest {
         var inputMode: String = "tl",
         var isAutoCap: Boolean = false,
         var isTranslateSwapped: Boolean = false,
+        var isOutputBothScripts: Boolean = false,
         var isAssociationRecordingEnabled: Boolean = false,
         var toneToggles: ToneToggles =
             ToneToggles(isDoubleTapOOEnabled = false, isDoubleTapNNEnabled = false),
@@ -98,6 +99,7 @@ class EngineSettingsLiveReadTest {
         override val inputMode: String get() = backing.inputMode
         override val isAutoCap: Boolean get() = backing.isAutoCap
         override val isTranslateSwapped: Boolean get() = backing.isTranslateSwapped
+        override val isOutputBothScripts: Boolean get() = backing.isOutputBothScripts
         override val isAssociationRecordingEnabled: Boolean get() = backing.isAssociationRecordingEnabled
         override val toneToggles: ToneToggles get() = backing.toneToggles
         override val isCustomDictEnabled: Boolean get() = backing.isCustomDictEnabled

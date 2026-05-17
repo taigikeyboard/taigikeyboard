@@ -158,6 +158,27 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
 
     // MARK: - v3.5.8 Phase 7B — Continuous-input adapters
 
+    /// The v3.5.8 §10.2 word-boundary-spacing flags the engine's
+    /// `continuous_word_space` predicate needs, derived from live
+    /// settings. Single source of the platform-side `effectiveSwapped`
+    /// combine so all Continuous entry points agree (mis-set → silent
+    /// hanji-first spurious spaces). `effectiveSwapped` folds TPS into
+    /// the swap signal because the engine receives TPS as `"tl"`/`"poj"`
+    /// `input_mode` (its own `input_mode == "tps"` branch never fires
+    /// from the platform).
+    // 中文: §10.2 字界空格旗標的唯一來源 — effectiveSwapped = 翻譯反轉 OR TPS。
+    // 中文: TPS 在引擎端是 "tl"/"poj" input_mode,故 TPS 必須在平台端折進 swap 訊號。
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/ComposingManager.kt continuousSpacingFlags.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+    private static func continuousSpacingFlags(
+        _ settings: EngineSettings,
+    ) -> (effectiveSwapped: Bool, outputBothScripts: Bool) {
+        (
+            effectiveSwapped: settings.isTranslateSwapped || settings.inputMode == .tps,
+            outputBothScripts: settings.isOutputBothScripts
+        )
+    }
+
     /// Synchronous Continuous-mode promotion fired immediately after each
     /// raw-input mutation (`startComposing` / `appendCharacter` / `appendHyphen`
     /// / `replaceLastCharacter`). Per Codex 2026-05-10 ANALYSIS-ONLY consult
@@ -253,11 +274,14 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         // `(roman, hanji)` against the FST hits.
         // 中文: Item 12 — 用當前 rawInput 查 custom_dictionary.db 一次,兩個 phase 共用同一 customEntries。
         let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
+        let spacing = Self.continuousSpacingFlags(settings)
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: generation,
             customEntries: customEntries,
         )
@@ -292,6 +316,8 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         let boosted = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: generation,
             frequencyEntries: entries,
             nowMs: nowMs,
@@ -450,6 +476,7 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
                 + "consumedBytes=\(consumedBytes) syllCount=\(syllableCount)",
         )
         let settings = settingsProvider.current
+        let spacing = Self.continuousSpacingFlags(settings)
         let transition = RustEngineBridge.composingCommitContinuous(
             displayText: displayText,
             canonicalText: canonicalText,
@@ -457,6 +484,8 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             syllableCount: syllableCount,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: currentGeneration,
         )
         // Inspect transition BEFORE dispatching effects so we can return an
@@ -538,9 +567,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
             ))
             return
         }
+        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: currentGeneration,
         ))
     }
@@ -560,9 +592,12 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
         // 中文: Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
         // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎決定行為。
         let settings = settingsProvider.current
+        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: currentGeneration,
         ))
     }
@@ -570,17 +605,32 @@ public class ComposingManager: ObservableObject, ComposingStateProvider, Continu
     // 中文: 使用者點選候選詞時呼叫,送出 text 並結束組字。
     public func selectSuggestion(text: String) {
         logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
-        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(text, generation: currentGeneration))
+        // §10.2 platform pass: under Continuous this routes to
+        // `select_suggestion_under_continuous` (prepends `nailed_prefix`),
+        // so pass the live spacing flags instead of the old nil config.
+        let settings = settingsProvider.current
+        let spacing = Self.continuousSpacingFlags(settings)
+        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(
+            text,
+            mode: settings.inputMode,
+            toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
+            generation: currentGeneration,
+        ))
     }
 
     // 中文: 先把 preedit 送出再插入外部 text — 例如剪貼或 NextWord 觸發時用。
     public func commitPreeditThenInsertExternal(_ text: String) {
         logger.debug("[COMPOSE] fn=commitPreeditThenInsertExternal len=\(text.count)")
         let settings = settingsProvider.current
+        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             text,
             mode: settings.inputMode,
             toggles: settings.toneToggles,
+            effectiveSwapped: spacing.effectiveSwapped,
+            outputBothScripts: spacing.outputBothScripts,
             generation: currentGeneration,
         ))
     }

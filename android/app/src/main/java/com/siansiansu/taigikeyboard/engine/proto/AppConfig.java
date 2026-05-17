@@ -19,6 +19,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
  * + `platform_id` for NextWord engine — platform_id branches divergences
  * §5 #1 (compound split separator) and §5 #2 (noise punct set).
+ *
+ * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
+ * composing-buffer join (`composing::api::nailed_prefix` /
+ * `combined_display`) inserts a word-boundary space between nailed
+ * segments only when the rendered script is roman-ish. `is_translate_swapped`
+ * alone cannot distinguish "hanji-first" (no space) from "both-scripts"
+ * (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+ * the separator predicate needs this second flag (continuous-input-ranking
+ * §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -272,6 +281,32 @@ public  final class AppConfig extends
     platformId_ = 0;
   }
 
+  public static final int OUTPUT_BOTH_SCRIPTS_FIELD_NUMBER = 8;
+  private boolean outputBothScripts_;
+  /**
+   * <code>bool output_both_scripts = 8;</code>
+   * @return The outputBothScripts.
+   */
+  @java.lang.Override
+  public boolean getOutputBothScripts() {
+    return outputBothScripts_;
+  }
+  /**
+   * <code>bool output_both_scripts = 8;</code>
+   * @param value The outputBothScripts to set.
+   */
+  private void setOutputBothScripts(boolean value) {
+
+    outputBothScripts_ = value;
+  }
+  /**
+   * <code>bool output_both_scripts = 8;</code>
+   */
+  private void clearOutputBothScripts() {
+
+    outputBothScripts_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -369,6 +404,15 @@ public  final class AppConfig extends
    * v3.5.5 added `is_translate_swapped` + `is_association_recording_enabled`
    * + `platform_id` for NextWord engine — platform_id branches divergences
    * §5 #1 (compound split separator) and §5 #2 (noise punct set).
+   *
+   * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
+   * composing-buffer join (`composing::api::nailed_prefix` /
+   * `combined_display`) inserts a word-boundary space between nailed
+   * segments only when the rendered script is roman-ish. `is_translate_swapped`
+   * alone cannot distinguish "hanji-first" (no space) from "both-scripts"
+   * (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+   * the separator predicate needs this second flag (continuous-input-ranking
+   * §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -640,6 +684,34 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <code>bool output_both_scripts = 8;</code>
+     * @return The outputBothScripts.
+     */
+    @java.lang.Override
+    public boolean getOutputBothScripts() {
+      return instance.getOutputBothScripts();
+    }
+    /**
+     * <code>bool output_both_scripts = 8;</code>
+     * @param value The outputBothScripts to set.
+     * @return This builder for chaining.
+     */
+    public Builder setOutputBothScripts(boolean value) {
+      copyOnWrite();
+      instance.setOutputBothScripts(value);
+      return this;
+    }
+    /**
+     * <code>bool output_both_scripts = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearOutputBothScripts() {
+      copyOnWrite();
+      instance.clearOutputBothScripts();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -663,10 +735,11 @@ public  final class AppConfig extends
             "isTranslateSwapped_",
             "isAssociationRecordingEnabled_",
             "platformId_",
+            "outputBothScripts_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f";
+              "\u0000\b\u0000\u0000\u0001\b\b\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0007" +
+              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f\b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       // fall through

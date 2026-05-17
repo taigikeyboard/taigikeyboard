@@ -84,12 +84,16 @@ impl Phase {
     ///   Nailed segments are **not** in the document; they are part of the
     ///   marked region until a hard finalize.
     ///
-    /// No inter-segment spaces (the hanji line is logographic; the roman
-    /// pending tail keeps user-typed hyphens). This is the string a hard
-    /// finalize (Enter / final-commit) writes to the document verbatim.
+    /// v3.5.8 §10.2 segmented-spacing contract: adjacent segments (and
+    /// the nailed prefix ↔ pending tail) are joined by a single space
+    /// when the rendered script is roman-ish (roman-first / both-scripts);
+    /// hanji-first / TPS render as-is with no separator. See
+    /// [`continuous_word_space`] / [`nailed_prefix`]. This is the exact
+    /// string a hard finalize (Enter / final-commit) writes to the
+    /// document, so the separator policy applies identically there.
     // 中文: §10.2 / I1 — host 在單一 marked region 渲染的組字緩衝區本體。
-    // 中文: Continuous = Σ nailed.display_text + pending raw 衍生形,無段間空格;
-    // 中文: nailed 未在文件,hard finalize 才把此字串一次寫入文件。
+    // 中文: Continuous = nailed_prefix(§10.2 詞界分隔)+ pending raw 衍生形;
+    // 中文: roman-ish 才加空格,漢字優先/TPS 不加;hard finalize 寫入文件的就是此字串。
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
@@ -127,13 +131,52 @@ pub struct NailedSegment {
     pub syllable_count: u8,
 }
 
-/// `Σ nailed[i].display_text` — the nailed-prefix string (already
-/// swap/TPS/both-scripts-formatted at nail time). **Single source of truth**
-/// for the nailed-prefix concatenation; do not re-inline this loop.
-// 中文: Σ nailed.display_text;nailed 前綴串接的唯一真相來源,勿再內聯。
-pub(crate) fn nailed_prefix(nailed: &[NailedSegment]) -> String {
+/// v3.5.8 — word-boundary separator policy for the Model B continuous
+/// composing buffer (`docs/engine/continuous-input-ranking.md` §10.2
+/// segmented-spacing contract). A single ASCII space joins adjacent
+/// nailed segments (and the nailed prefix ↔ pending tail) **only when
+/// the rendered script is roman-ish**: roman-first, or both-scripts
+/// (`hit (彼)`). Hanji-first (`is_translate_swapped` without
+/// `output_both_scripts`) and TPS render the hanji/bopomofo as-is with
+/// no inter-segment space. This mirrors the platform
+/// `appendAutoSpaceIfApplicable` predicate so the marked region and the
+/// final-commit auto-space stay consistent. `is_translate_swapped`
+/// alone cannot distinguish hanji-first from both-scripts (both set it
+/// `true`) — hence the `output_both_scripts` AppConfig field
+/// (Codex pre-impl 2026-05-18).
+// 中文: §10.2 連續組字緩衝區的詞界空格策略 — 僅 roman-ish(羅馬字優先或雙腳本)
+// 中文:   才在 nailed 段間 / nailed↔pending 加單一 ASCII 空格;漢字優先 / TPS 不加。
+// 中文:   is_translate_swapped 無法區分漢字優先 vs 雙腳本(都為 true),故需 output_both_scripts。
+fn continuous_word_space(config: &AppConfig) -> bool {
+    let effective_swapped = config.is_translate_swapped || config.input_mode == "tps";
+    // De Morgan of the platform `appendAutoSpaceIfApplicable` guard
+    // `if (effectiveSwapped && !outputBothScripts) return`: roman-ish =
+    // not swapped, OR both-scripts is on.
+    !effective_swapped || config.output_both_scripts
+}
+
+/// `Σ nailed[i].display_text` joined with the §10.2 word-boundary
+/// separator (see [`continuous_word_space`]). **Single source of truth**
+/// for the nailed-prefix concatenation; do not re-inline this loop. The
+/// separator is a pure presentation/commit-render concern and is NEVER
+/// stored in `NailedSegment.display_text` — backspace-pop restores the
+/// editable tail from `NailedSegment.raw_text`, so the segment data
+/// must stay separator-free.
+// 中文: Σ nailed.display_text 以 §10.2 詞界分隔符串接;唯一真相來源,勿內聯。
+// 中文: 分隔符屬 render/commit 呈現層,絕不寫入 NailedSegment.display_text
+// 中文:   (backspace pop 由 raw_text 還原,segment 資料須保持無分隔符)。
+pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
+    let space = continuous_word_space(config);
     let mut s = String::new();
-    for seg in nailed {
+    for (i, seg) in nailed.iter().enumerate() {
+        // Suppress the separator after a hyphen-continuation segment
+        // (mid-word `tai-`) — mirrors the platform
+        // `appendAutoSpaceIfApplicable` `endsWith("-")` rule. `s`
+        // currently ends with segment `i-1`'s content, so this tests
+        // the LEFT side of the boundary.
+        if i > 0 && space && !s.ends_with('-') {
+            s.push(' ');
+        }
         s.push_str(&seg.display_text);
     }
     s
@@ -147,13 +190,16 @@ pub(crate) fn nailed_prefix(nailed: &[NailedSegment]) -> String {
 /// can never diverge (Codex post-impl review point).
 // 中文: Model B 組字緩衝區本體 (nailed 前綴 + pending raw 衍生形) 的唯一真相來源;
 // 中文: Phase::composing_display 與 transition.rs 各 Continuous path 全走此,確保不漂移。
-pub(crate) fn combined_display(
-    nailed: &[NailedSegment],
-    raw: &str,
-    config: &AppConfig,
-) -> String {
-    let mut s = nailed_prefix(nailed);
-    s.push_str(&crate::derived::derived_display(raw, config));
+pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &AppConfig) -> String {
+    let mut s = nailed_prefix(nailed, config);
+    let derived = crate::derived::derived_display(raw, config);
+    // §10.2 word boundary between the nailed prefix and the pending
+    // tail (the tail is the next word). Same predicate + trailing-`-`
+    // suppression as the inter-segment join.
+    if !s.is_empty() && !derived.is_empty() && continuous_word_space(config) && !s.ends_with('-') {
+        s.push(' ');
+    }
+    s.push_str(&derived);
     s
 }
 
@@ -340,5 +386,102 @@ impl Engine {
     // 中文: 靜默重設 (無 Effect),僅供 generation 不一致時的內部丟棄路徑使用。
     pub(crate) fn reset(&mut self) {
         self.state = EngineState::default();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! v3.5.8 §10.2 segmented-spacing contract pins for the Model B
+    //! composing-buffer join (`nailed_prefix` / `combined_display`).
+    //! Behavioral mid/final-commit coverage lives in
+    //! `tests/continuous_phase.rs` + `tests/raw_input_pending_tail.rs`;
+    //! these unit-pin the predicate matrix directly.
+
+    use super::{combined_display, nailed_prefix, AppConfig, NailedSegment};
+
+    fn seg(display: &str) -> NailedSegment {
+        NailedSegment {
+            display_text: display.to_owned(),
+            canonical_text: display.to_owned(),
+            raw_text: display.to_owned(),
+            raw_span: (0, display.len()),
+            syllable_count: 1,
+        }
+    }
+
+    /// `input_mode` + the two swap flags are the only fields the
+    /// separator predicate reads; the rest stay at proto defaults.
+    fn cfg(input_mode: &str, swapped: bool, both: bool) -> AppConfig {
+        AppConfig {
+            tone_mode: String::new(),
+            input_mode: input_mode.to_owned(),
+            oo_doubletap_enabled: false,
+            nn_doubletap_enabled: false,
+            is_translate_swapped: swapped,
+            is_association_recording_enabled: false,
+            platform_id: 0,
+            output_both_scripts: both,
+        }
+    }
+
+    #[test]
+    fn roman_first_inserts_word_boundary_space_between_segments() {
+        let n = [seg("hit"), seg("tui")];
+        assert_eq!(nailed_prefix(&n, &cfg("tl", false, false)), "hit tui");
+    }
+
+    #[test]
+    fn hanji_first_has_no_inter_segment_space() {
+        let n = [seg("彼"), seg("隻")];
+        // is_translate_swapped without output_both_scripts → hanji-first.
+        assert_eq!(nailed_prefix(&n, &cfg("tl", true, false)), "彼隻");
+    }
+
+    #[test]
+    fn both_scripts_is_roman_ish_and_spaced_even_when_swapped() {
+        let n = [seg("hit (彼)"), seg("tui (隻)")];
+        assert_eq!(
+            nailed_prefix(&n, &cfg("tl", true, true)),
+            "hit (彼) tui (隻)"
+        );
+    }
+
+    #[test]
+    fn tps_renders_as_is_no_space() {
+        let n = [seg("ㄏㄧㆵ"), seg("ㄉㄨㄧ")];
+        // input_mode == "tps" → effective_swapped regardless of flag.
+        assert_eq!(nailed_prefix(&n, &cfg("tps", false, false)), "ㄏㄧㆵㄉㄨㄧ");
+    }
+
+    #[test]
+    fn trailing_hyphen_segment_suppresses_the_following_space() {
+        // A hyphen-continuation segment (`tai-`) is mid-word; no space
+        // after it even in roman-first (mirrors the platform
+        // `appendAutoSpaceIfApplicable` `endsWith("-")` rule).
+        let n = [seg("tai-"), seg("uan")];
+        assert_eq!(nailed_prefix(&n, &cfg("tl", false, false)), "tai-uan");
+    }
+
+    #[test]
+    fn empty_and_single_segment_have_no_leading_or_trailing_space() {
+        assert_eq!(nailed_prefix(&[], &cfg("tl", false, false)), "");
+        assert_eq!(
+            nailed_prefix(&[seg("hit")], &cfg("tl", false, false)),
+            "hit"
+        );
+    }
+
+    #[test]
+    fn combined_display_spaces_nailed_prefix_against_pending_tail() {
+        let n = [seg("珠")];
+        // derived_display("a", tl) == "a" (verbatim, no tone digit) →
+        // roman-first inserts the §10.2 boundary space.
+        assert_eq!(combined_display(&n, "a", &cfg("tl", false, false)), "珠 a");
+        // hanji-first: no boundary space.
+        assert_eq!(combined_display(&n, "a", &cfg("tl", true, false)), "珠a");
+        // No pending tail → no dangling separator.
+        assert_eq!(combined_display(&n, "", &cfg("tl", false, false)), "珠");
+        // No nailed prefix → tail only, no leading separator.
+        assert_eq!(combined_display(&[], "a", &cfg("tl", false, false)), "a");
     }
 }

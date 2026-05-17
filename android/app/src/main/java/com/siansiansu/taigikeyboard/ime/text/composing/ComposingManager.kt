@@ -285,11 +285,14 @@ class ComposingManager(
             )
             return
         }
+        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
                 currentGeneration,
+                effectiveSwapped = spacing.effectiveSwapped,
+                outputBothScripts = spacing.outputBothScripts,
             ),
             ic,
         )
@@ -308,11 +311,14 @@ class ComposingManager(
         // 中文: Phase 9 Item 3 + Model B — engine 在 Continuous 下提交整段組字 + 終端 NextWord;
         // 中文: 平台不再 SelectSuggestion 繞路,直接送 CommitRaw 由引擎依 phase 決定行為。
         val settings = settingsProvider.current
+        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
                 currentGeneration,
+                effectiveSwapped = spacing.effectiveSwapped,
+                outputBothScripts = spacing.outputBothScripts,
             ),
             ic,
         )
@@ -323,8 +329,20 @@ class ComposingManager(
         ic: InputConnection,
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=selectSuggestion len=${suggestion.length}" }
+        // §10.2 platform pass: under Continuous this routes to
+        // `select_suggestion_under_continuous` (prepends `nailed_prefix`),
+        // so pass the live spacing flags instead of the old null config.
+        val settings = settingsProvider.current
+        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
-            RustEngineBridge.composingSelectSuggestion(suggestion, currentGeneration),
+            RustEngineBridge.composingSelectSuggestion(
+                suggestion,
+                resolveMode(settings.inputMode),
+                carrier(settings.toneToggles),
+                currentGeneration,
+                effectiveSwapped = spacing.effectiveSwapped,
+                outputBothScripts = spacing.outputBothScripts,
+            ),
             ic,
         )
     }
@@ -335,12 +353,15 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitPreeditThenInsertExternal len=${text.length}" }
         val settings = settingsProvider.current
+        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitPreeditThenInsertExternal(
                 text,
                 resolveMode(settings.inputMode),
                 carrier(settings.toneToggles),
                 currentGeneration,
+                effectiveSwapped = spacing.effectiveSwapped,
+                outputBothScripts = spacing.outputBothScripts,
             ),
             ic,
         )
@@ -470,6 +491,7 @@ class ComposingManager(
         // 中文: await 後 re-check cachedRawInput 自防 keystroke race(generation 不因 keystroke bump,guard 蓋不到)。
         val customEntries = buildCustomEntries(cachedRawInput, settings)
         val generation = currentGeneration
+        val spacing = continuousSpacingFlags(settings)
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
@@ -477,6 +499,8 @@ class ComposingManager(
             toggles = toggles,
             generation = generation,
             customEntries = customEntries,
+            effectiveSwapped = spacing.effectiveSwapped,
+            outputBothScripts = spacing.outputBothScripts,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `NOOP` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -516,6 +540,8 @@ class ComposingManager(
             frequencyEntries = entries,
             nowMs = nowMs,
             customEntries = customEntries,
+            effectiveSwapped = spacing.effectiveSwapped,
+            outputBothScripts = spacing.outputBothScripts,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -678,6 +704,7 @@ class ComposingManager(
             "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} canonicalLen=${canonicalText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
         }
         val settings = settingsProvider.current
+        val spacing = continuousSpacingFlags(settings)
         val transition = RustEngineBridge.composingCommitContinuous(
             displayText = displayText,
             canonicalText = canonicalText,
@@ -686,6 +713,8 @@ class ComposingManager(
             mode = resolveMode(settings.inputMode),
             toggles = carrier(settings.toneToggles),
             generation = currentGeneration,
+            effectiveSwapped = spacing.effectiveSwapped,
+            outputBothScripts = spacing.outputBothScripts,
         )
         // Inspect transition BEFORE dispatching effects so we return an
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
@@ -814,6 +843,34 @@ class ComposingManager(
             isDoubleTapOoEnabled = toggles.isDoubleTapOOEnabled,
             isDoubleTapNnEnabled = toggles.isDoubleTapNNEnabled,
         )
+
+    /**
+     * The v3.5.8 §10.2 word-boundary-spacing flags the engine's
+     * `continuous_word_space` predicate needs, derived from live
+     * settings. Single source of the platform-side `effectiveSwapped`
+     * combine so all Continuous entry points agree (mis-set → silent
+     * hanji-first spurious spaces). `effectiveSwapped` folds TPS into the
+     * swap signal because the engine receives TPS as `"tl"`/`"poj"`
+     * `input_mode` (its own `input_mode == "tps"` branch never fires
+     * from the platform). [EngineSettings.inputMode] is the raw string
+     * (`"tps"` representable) per the documented Android divergence.
+     */
+    // 中文: §10.2 字界空格旗標的唯一來源 — effectiveSwapped = 翻譯反轉 OR TPS。
+    // 中文: TPS 在引擎端是 "tl"/"poj" input_mode,故 TPS 必須在平台端折進 swap 訊號。
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Input/Composing/ComposingManager.swift continuousSpacingFlags.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+    private fun continuousSpacingFlags(
+        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
+    ): ContinuousSpacingFlags =
+        ContinuousSpacingFlags(
+            effectiveSwapped = settings.isTranslateSwapped || settings.inputMode == "tps",
+            outputBothScripts = settings.isOutputBothScripts,
+        )
+
+    private data class ContinuousSpacingFlags(
+        val effectiveSwapped: Boolean,
+        val outputBothScripts: Boolean,
+    )
 }
 
 /**
