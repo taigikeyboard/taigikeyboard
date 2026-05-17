@@ -1,4 +1,4 @@
-//! v3.5.8 S2 — whole-sentence best-path walker.
+//! v3.5.8 S2/S5 — whole-sentence best-path walker (min-cost).
 //!
 //! Single-pass relaxation over the S1 segmentation lattice
 //! (`super::Lattice`). McBopomofo Gramambular shape
@@ -9,24 +9,31 @@
 //! valid relaxation (every edge into offset `S` has `end == S` and
 //! `start < S`, so it is processed before any edge whose `start == S`).
 //! No separate topological sort, no full Viterbi: O(V + E), mobile
-//! budget friendly (plan `/Users/alexsu/.claude/plans/greedy-questing-cake.md`
-//! §最佳實踐對齊).
+//! budget friendly. This stays valid under min-cost — the graph is
+//! still a forward-only DAG (Codex pre-impl S5 Q1, 2026-05-17).
+//!
+//! **S5**: the objective is now `min Σ edge_cost`
+//! (`super::cost::edge_cost`), a faithful port of the khiin word-level
+//! DP segmenter (`references/khiin-rs/khiin/src/data/segmenter.rs`
+//! `segment_min_cost`) — the same optimum as McBopomofo's
+//! `max Σ log P` relaxation. The S2/S3 `max Σ edge_score` objective
+//! structurally rewarded over-segmentation (`taiuan` → `乾伊有俺`);
+//! see `cost.rs` and `docs/roadmap.md` §整句 lattice + walker S5.
 //!
 //! The walker is **pure and shadow-space native**. It never looks at
 //! the dictionary, the raw byte space, or proto types: the caller
-//! (`dispatch::handle_fetch_at_pos`, which holds `LexiconHandle`
+//! (`dispatch::fetch_walker_slot0`, which holds `LexiconHandle`
 //! state) injects an `edge_choice` provider that maps a shadow edge
 //! `(start, end)` to its best content. This keeps the
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
-//! construction instead of duplicating it (Codex pre-impl S2 Q1b,
-//! 2026-05-16).
+//! construction instead of duplicating it (Codex pre-impl S2 Q1b).
 
-// 中文: S2 — 全句最佳路徑 walker。McBopomofo 形狀:byte offset 天然拓樸序,
-// 中文:   單趟 relaxation (edges 已按 (start,end) 排序 → 一趟前向掃描即合法鬆弛)。
-// 中文: walker 純函式、shadow-space;不碰字典/raw/proto。每條 edge 的內容由 caller
-// 中文:   (dispatch,持 LexiconHandle state) 注入 edge_choice provider 提供 (Codex S2 Q1b)。
+// 中文: S2/S5 — 全句最佳路徑 walker(min Σ edge_cost,khiin segment_min_cost 忠實移植 = McBopomofo max Σ log P)。
+// 中文: McBopomofo 形狀:byte offset 天然拓樸序 → 單趟前向 relaxation 即合法(min-cost 下圖仍 forward-only DAG)。
+// 中文: S2/S3 的 max Σ edge_score 結構性獎勵過度切分(taiuan→乾伊有俺)→ S5 改 min-cost(見 cost.rs / roadmap S5)。
+// 中文: walker 純函式、shadow-space;每條 edge 內容由 caller(dispatch,持 LexiconHandle)注入 (Codex S2 Q1b)。
 
-use super::{cost::edge_score, Lattice};
+use super::{cost::edge_cost, Lattice};
 
 /// Content the caller resolved for one lattice edge `(start, end)`.
 /// Built by the dispatch-injected provider from the best dictionary
@@ -34,8 +41,7 @@ use super::{cost::edge_score, Lattice};
 /// dict hit — synthesized from the edge's own toneless roman so the
 /// no-hanji roman path is the walker's natural best path (Bug 2 / §1
 /// subsumed, not a fallback).
-// 中文: caller 為單條 edge 解出的內容;有字典命中用最佳候選,無命中用該段 toneless 羅馬字
-// 中文:   → 無漢字 roman 路徑為 walker 自然最佳路徑 (吞 Bug 2/§1,非 fallback)。
+// 中文: caller 為單條 edge 解出的內容;有字典命中用最佳候選,無命中用該段 toneless 羅馬字。
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct EdgeChoice {
     /// Romanization for this edge. The synthesized candidate's roman
@@ -45,60 +51,70 @@ pub(crate) struct EdgeChoice {
     /// Hanji for this edge if the chosen dict candidate had one;
     /// `None` for a pure-roman (no dict hit) edge.
     pub hanji: Option<String>,
+    /// `true` iff this edge resolved to an actual dictionary record
+    /// (the provider's `Some(c)` branch). The no-dict carve-out keys
+    /// off this — **never** off `hanji.is_none()` or `frequency == 0`:
+    /// a dictionary record may be roman-only and a zero frequency is
+    /// representable, so those would misclassify (Codex pre-impl S5 Q2,
+    /// 2026-05-17, BLOCK).
+    pub dict_hit: bool,
     /// Frequency of the chosen dict candidate (`0` = no dict hit).
     pub frequency: u32,
     /// Syllable count of the chosen dict candidate (`>= 1`; `1` for a
     /// synthesized pure-roman edge).
     pub syllable_count: u8,
+    /// Toneless-key char count for this edge (khiin's `word_len`). The
+    /// khiin length normalization in [`edge_cost`] is not faithful
+    /// without it, so it is carried explicitly rather than re-derived
+    /// (Codex pre-impl S5 Q1, 2026-05-17, BLOCK).
+    pub toneless_len: usize,
     /// v3.5.8 S3 — time-decayed user-frequency boost delta for this
     /// edge's chosen candidate (`ranking::decayed_user_weight_delta`,
     /// `0.0..=4.0`). `0.0` for a no-dict edge or one with no user
-    /// history (the S3 neutrality contract — see `cost::edge_score`).
-    /// Computed caller-side in `dispatch::fetch_walker_slot0` (which
-    /// holds the `FrequencyMap` + `now_ms`) so the walker stays pure
-    /// and shadow-space native (Codex pre-impl S3 Q4d seam,
-    /// 2026-05-16). Closes Continuous-input Gap B → goal G2.
+    /// history. Computed caller-side in `dispatch::fetch_walker_slot0`
+    /// so the walker stays pure and shadow-space native (Codex pre-impl
+    /// S3 Q4d seam). Applied as a log-space cost discount in
+    /// [`edge_cost`] (Codex pre-impl S5 Q3). Closes Continuous-input
+    /// Gap B → goal G2.
     pub user_weight_delta: f64,
 }
 
 /// The walker's best full-buffer path. `choices[i]` is the resolved
 /// content of `edges[i]`; `edges` is contiguous and covers
-/// `0..shadow_len`. `score` is the accumulated `Σ edge_score`.
-// 中文: walker 的全 buffer 最佳路徑;edges 連續覆蓋 0..shadow_len,score = Σ edge_score。
+/// `0..shadow_len`. `cost` is the accumulated `Σ edge_cost`
+/// (**lower = better**).
+// 中文: walker 的全 buffer 最佳路徑;edges 連續覆蓋 0..shadow_len,cost = Σ edge_cost(越小越好)。
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct BestPath {
     pub edges: Vec<(usize, usize)>,
     pub choices: Vec<EdgeChoice>,
-    pub score: f64,
+    pub cost: f64,
 }
 
-/// Relax `lattice` to the maximum-`Σ edge_score` path from offset `0`
-/// to `shadow_len`. Returns `None` when no edge chain spans the whole
-/// buffer (e.g. a sub-syllable partial-prefix buffer) — the caller
-/// then leaves the existing span-local list untouched (no slot-0
-/// synthesis), preserving pre-S2 behavior.
+/// Relax `lattice` to the **minimum-`Σ edge_cost`** path from offset
+/// `0` to `shadow_len`. Returns `None` when no edge chain spans the
+/// whole buffer (e.g. a sub-syllable partial-prefix buffer) — the
+/// caller then leaves the existing span-local list untouched (no
+/// slot-0 synthesis), preserving pre-S2 behavior.
 ///
 /// `edge_choice(start, end)` returns the resolved content for that
 /// shadow edge, or `None` to drop the edge from consideration (e.g.
 /// an empty toneless key). An edge dropped here simply does not relax;
 /// the buffer can still be spanned via other edges.
 ///
-/// Tie contract: among paths of equal accumulated `score`, the one
-/// with **more edges** wins. With every frequency `0` (no dict hit at
-/// all — the `taiuantai` roman case) every `edge_score` is exactly
-/// the unit `1.0` (see `cost::edge_score`), so a finer segmentation
-/// accumulates a strictly higher total and the all-atomic
-/// per-syllable path wins outright — the comparison below resolves
-/// the (vanishingly unlikely with real `ln(freq)` sums) exact tie
-/// deterministically toward the finer split, matching the documented
-/// `tai uan tai` expectation (`docs/roadmap.md` §整句 lattice + walker).
-/// S3 does NOT perturb this lever: a no-dict edge carries
-/// `user_weight_delta = 0.0` so it stays exactly `1.0` (the
-/// `cost::edge_score` S3 neutrality contract).
-// 中文: 對 lattice 跑單趟鬆弛求 0→shadow_len 的最大 Σ edge_score 路徑;
-// 中文:   無法整段覆蓋時回 None (sub-syllable partial-prefix) → caller 不合成 slot 0,維持 pre-S2 行為。
-// 中文: tie 契約:同分取 edge 較多者;全零頻時每 edge 恰為 1.0 → 細分總分嚴格較高,
-// 中文:   逐音節 (tai uan tai) 路徑勝出。
+/// Tie handling: among paths of equal accumulated cost the first one
+/// reached in the ascending-`(start, end)` edge order wins
+/// (`replace` only on a *strictly* lower cost). `lattice.edges()` is
+/// sorted, so this is deterministic. No edge-count tiebreak: the S2
+/// "more edges wins" lever existed only to force the no-dict
+/// per-syllable split, which S5 moves to the explicit
+/// `dispatch::fetch_walker_slot0` carve-out — keeping it here would
+/// re-introduce the over-segmentation pressure min-cost exists to
+/// remove (Codex pre-impl S5 Q5, 2026-05-17).
+// 中文: 對 lattice 跑單趟鬆弛求 0→shadow_len 的最小 Σ edge_cost 路徑;
+// 中文:   無法整段覆蓋時回 None(sub-syllable partial-prefix)→ caller 不合成 slot 0,維持 pre-S2。
+// 中文: 同分取 ascending edge order 先到者(strict < 才取代);無 edge-count tiebreak
+// 中文:   (S2 "more edges wins" 只為逼出 no-dict 逐音節,S5 移到 fetch_walker_slot0 carve-out;留著會重新引入過度切分壓力)。
 pub(crate) fn walk_best(
     lattice: &Lattice,
     shadow_len: usize,
@@ -108,13 +124,14 @@ pub(crate) fn walk_best(
         return None;
     }
 
-    // best[offset] = (accumulated score, edge count, prev offset,
-    // chosen content of the edge that arrived here). `0` is seeded;
-    // every other offset is unreached until relaxed.
+    // best[offset] = (accumulated cost, prev offset, chosen content of
+    // the edge that arrived here). `0` is seeded at cost 0.0; an absent
+    // entry means "unreached", which is `+∞` for the relaxation
+    // comparison (Codex pre-impl S5 Q5: no need to physically seed
+    // every offset for a BTreeMap DP).
     use std::collections::BTreeMap;
     struct Node {
-        score: f64,
-        edges: usize,
+        cost: f64,
         prev: usize,
         choice: Option<EdgeChoice>,
     }
@@ -122,8 +139,7 @@ pub(crate) fn walk_best(
     best.insert(
         0,
         Node {
-            score: 0.0,
-            edges: 0,
+            cost: 0.0,
             prev: 0,
             choice: None,
         },
@@ -133,12 +149,12 @@ pub(crate) fn walk_best(
     // edges are forward-only (`start < end`), every edge feeding
     // offset `S` has `end == S` with `start < S` and therefore sorts
     // before any edge whose `start == S` — so a single forward pass is
-    // a valid relaxation without a separate topological sort.
+    // a valid relaxation without a separate topological sort. This
+    // holds for min-cost just as for the prior max objective: the
+    // graph is unchanged, only the comparison flips.
     for &(start, end) in lattice.edges() {
         let Some(&Node {
-            score: start_score,
-            edges: start_edges,
-            ..
+            cost: start_cost, ..
         }) = best.get(&start)
         else {
             continue; // `start` not yet reachable from 0.
@@ -146,27 +162,25 @@ pub(crate) fn walk_best(
         let Some(choice) = edge_choice(start, end) else {
             continue; // caller dropped this edge.
         };
-        let cand_score = start_score
-            + edge_score(
+        let cand_cost = start_cost
+            + edge_cost(
                 choice.frequency,
                 choice.syllable_count,
+                choice.toneless_len,
                 choice.user_weight_delta,
             );
-        let cand_edges = start_edges + 1;
+        // Replace only on a strictly lower cost. On an exact tie the
+        // first-reached (lower `(start, end)`) path is kept — no
+        // edge-count semantics (Codex pre-impl S5 Q5).
         let replace = match best.get(&end) {
             None => true,
-            // Higher score wins; on an exact score tie prefer the
-            // finer (more-edge) segmentation.
-            Some(cur) => {
-                cand_score > cur.score || (cand_score == cur.score && cand_edges > cur.edges)
-            }
+            Some(cur) => cand_cost < cur.cost,
         };
         if replace {
             best.insert(
                 end,
                 Node {
-                    score: cand_score,
-                    edges: cand_edges,
+                    cost: cand_cost,
                     prev: start,
                     choice: Some(choice),
                 },
@@ -176,7 +190,7 @@ pub(crate) fn walk_best(
 
     // No edge chain reached the buffer end → no full-buffer path.
     let sink = best.get(&shadow_len)?;
-    let total = sink.score;
+    let total = sink.cost;
 
     // Reconstruct back to 0 via `prev` pointers.
     let mut edges_rev: Vec<(usize, usize)> = Vec::new();
@@ -195,7 +209,7 @@ pub(crate) fn walk_best(
     Some(BestPath {
         edges: edges_rev,
         choices: choices_rev,
-        score: total,
+        cost: total,
     })
 }
 
@@ -203,16 +217,18 @@ pub(crate) fn walk_best(
 mod tests {
     use super::*;
 
-    fn dict(roman: &str, hanji: &str, freq: u32, syll: u8) -> EdgeChoice {
-        dict_u(roman, hanji, freq, syll, 0.0)
+    fn dict(roman: &str, hanji: &str, freq: u32, syll: u8, len: usize) -> EdgeChoice {
+        dict_u(roman, hanji, freq, syll, len, 0.0)
     }
     /// `dict` with an explicit S3 decayed user-weight delta.
-    fn dict_u(roman: &str, hanji: &str, freq: u32, syll: u8, delta: f64) -> EdgeChoice {
+    fn dict_u(roman: &str, hanji: &str, freq: u32, syll: u8, len: usize, delta: f64) -> EdgeChoice {
         EdgeChoice {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
+            dict_hit: true,
             frequency: freq,
             syllable_count: syll,
+            toneless_len: len,
             user_weight_delta: delta,
         }
     }
@@ -220,27 +236,48 @@ mod tests {
         EdgeChoice {
             roman: r.to_owned(),
             hanji: None,
+            dict_hit: false,
             frequency: 0,
             syllable_count: 1,
+            toneless_len: r.chars().count(),
             user_weight_delta: 0.0,
         }
     }
 
     // `walker` is a submodule of `lattice`, so `Lattice`'s private
     // `edges` field is in scope here — construct directly, same as the
-    // `builder.rs` unit tests do. `walk_best` only reads `.edges()`
-    // (ascending sort is the builder's contract, mirrored here).
+    // `builder.rs` unit tests do.
     fn lattice(mut edges: Vec<(usize, usize)>) -> Lattice {
         edges.sort_unstable();
         Lattice { edges }
     }
 
     #[test]
-    fn picks_high_frequency_phrase_path_over_single_chars() {
-        // `taiuantaigi`-shape: shadow len 11. Phrase path
-        // (0,6)臺灣 + (6,11)台語 vs the all-atomic single-char path.
-        // Phrase edges carry real dictionary frequency; the atomic
-        // chars are low-freq — the walker must pick the phrase path.
+    fn picks_real_phrase_path_over_high_frequency_single_chars() {
+        // The motivating bug with real dictionary frequencies.
+        // `taiuan` shadow len 6. Phrase path (0,6) 台灣 (freq 1379,
+        // 2 syll) vs the all-atomic single-char path 乾(2145) 伊(63255)
+        // 有(53685) 俺(10635) — the path the broken S2/S3 max-Σ
+        // objective produced. Min-cost must pick the phrase.
+        let lat = lattice(vec![(0, 2), (0, 6), (2, 3), (3, 4), (4, 6)]);
+        let path = walk_best(&lat, 6, |s, e| match (s, e) {
+            (0, 6) => Some(dict("tâi-uân", "台灣", 1379, 2, 6)),
+            (0, 2) => Some(dict("ta", "乾", 2145, 1, 2)),
+            (2, 3) => Some(dict("i", "伊", 63255, 1, 1)),
+            (3, 4) => Some(dict("ū", "有", 53685, 1, 1)),
+            (4, 6) => Some(dict("án", "俺", 10635, 1, 2)),
+            _ => None,
+        })
+        .expect("full path");
+        assert_eq!(path.edges, vec![(0, 6)]);
+        assert_eq!(path.choices[0].hanji.as_deref(), Some("台灣"));
+    }
+
+    #[test]
+    fn picks_two_phrase_path_for_taiuantaigi() {
+        // `taiuantaigi` shadow len 11. Two-phrase path
+        // (0,6) 台灣 + (6,11) 台語 must beat both the single
+        // (0,11) blob and the all-atomic single-char path.
         let lat = lattice(vec![
             (0, 3),
             (0, 6),
@@ -251,13 +288,13 @@ mod tests {
             (0, 11),
         ]);
         let path = walk_best(&lat, 11, |s, e| match (s, e) {
-            (0, 6) => Some(dict("tâi-uân", "臺灣", 5000, 2)),
-            (6, 11) => Some(dict("tâi-gí", "台語", 4000, 2)),
-            (0, 3) => Some(dict("tâi", "臺", 30, 1)),
-            (3, 6) => Some(dict("uân", "灣", 20, 1)),
-            (6, 9) => Some(dict("tâi", "台", 30, 1)),
-            (9, 11) => Some(dict("gí", "語", 20, 1)),
-            (0, 11) => None, // no single dict word covers the buffer
+            (0, 6) => Some(dict("tâi-uân", "台灣", 1379, 2, 6)),
+            (6, 11) => Some(dict("tâi-gí", "台語", 300, 2, 5)),
+            (0, 3) => Some(dict("tâi", "台", 2145, 1, 3)),
+            (3, 6) => Some(dict("uân", "灣", 200, 1, 3)),
+            (6, 9) => Some(dict("tâi", "台", 2145, 1, 3)),
+            (9, 11) => Some(dict("gí", "語", 4000, 1, 2)),
+            (0, 11) => None,
             _ => None,
         })
         .expect("full path");
@@ -267,14 +304,17 @@ mod tests {
             .iter()
             .filter_map(|c| c.hanji.clone())
             .collect();
-        assert_eq!(hanji, "臺灣台語");
+        assert_eq!(hanji, "台灣台語");
     }
 
     #[test]
-    fn no_dict_path_is_per_syllable_roman() {
-        // `taiuantai` — no dict hits anywhere; every edge_score is the
-        // unit 1.0, so the finest (most-edge) segmentation wins → the
-        // per-syllable atomic path `tai uan tai`.
+    fn no_dict_path_collapses_to_fewest_edges_under_min_cost() {
+        // `taiuantai` — no dict hits anywhere. Every edge pays the same
+        // ~ln(CORPUS) toll, so min-cost prefers the FEWEST edges → the
+        // single (0,9) blob. The user-facing per-syllable romanization
+        // is NOT produced here; it is the explicit
+        // `dispatch::fetch_walker_slot0` no-dict carve-out (Codex
+        // pre-impl S5 Q2). This test pins the walker-level behavior.
         let lat = lattice(vec![(0, 3), (0, 6), (0, 9), (3, 6), (3, 9), (6, 9)]);
         let path = walk_best(&lat, 9, |s, e| match (s, e) {
             (0, 3) => Some(roman("tai")),
@@ -286,30 +326,28 @@ mod tests {
             _ => None,
         })
         .expect("full path");
-        assert_eq!(path.edges, vec![(0, 3), (3, 6), (6, 9)]);
-        let romans: Vec<&str> = path.choices.iter().map(|c| c.roman.as_str()).collect();
-        assert_eq!(romans.join(" "), "tai uan tai");
+        assert_eq!(path.edges, vec![(0, 9)]);
+        assert!(path.choices.iter().all(|c| !c.dict_hit));
     }
 
     #[test]
     fn user_preference_flips_the_chosen_segmentation_path() {
-        // v3.5.8 S3 — Gap B → G2. Same buffer (shadow len 6), two
+        // v3.5.8 S3/S5 — Gap B → G2. Same buffer (shadow len 6), two
         // covering segmentations:
         //   A: one 2-syllable phrase edge (0,6), LOW dict freq.
         //   B: two hot 1-syllable edges (0,3)+(3,6), HIGH dict freq.
-        // Without user history, the hot single chars (B) win — exactly
-        // the architecturally-wrong span-local behavior S3 must fix.
-        // After the user has repeatedly selected the phrase (fresh max
-        // decayed delta), the phrase path (A) must win, and the hot
-        // single chars get NO path-objective amplification from their
-        // own user delta (single-syllable damping, SCALE = 0.0).
+        // Without user history the hot single chars (B) are cheaper.
+        // After the user repeatedly selects the phrase (fresh max
+        // decayed delta) the phrase edge gets a log-space discount and
+        // path A wins; the hot single chars get NO discount
+        // (single-syllable damping, SCALE = 0.0).
         let lat = lattice(vec![(0, 3), (0, 6), (3, 6)]);
         let edges = |s, e, phrase_delta: f64| match (s, e) {
-            (0, 6) => Some(dict_u("tâi-gí", "臺語", 100, 2, phrase_delta)),
+            (0, 6) => Some(dict_u("tâi-gí", "臺語", 100, 2, 6, phrase_delta)),
             // Hot single chars carry a huge delta too — it must be
             // ignored in the path objective (Q4c BLOCK guard).
-            (0, 3) => Some(dict_u("tâi", "台", 5000, 1, 4.0)),
-            (3, 6) => Some(dict_u("gí", "語", 5000, 1, 4.0)),
+            (0, 3) => Some(dict_u("tâi", "台", 60_000, 1, 3, 4.0)),
+            (3, 6) => Some(dict_u("gí", "語", 60_000, 1, 3, 4.0)),
             _ => None,
         };
 

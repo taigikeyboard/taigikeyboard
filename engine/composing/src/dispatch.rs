@@ -407,6 +407,50 @@ fn build_shadow_lattice(
     (shadow, shadow_to_raw_end, lattice)
 }
 
+/// v3.5.8 S5 (Codex pre-impl Q2, 2026-05-17) — greedy longest-syllable
+/// segmentation of `shadow`, the no-dict carve-out's user-facing
+/// romanization reading.
+///
+/// From each offset, take the **longest** valid single syllable
+/// (`valid_span_endings_lowered(.., max_syllables = 1)` → max ending)
+/// and advance. This is the canonical romanization reading (khiin
+/// longest-match family, `references/khiin-rs/khiin/src/data/segmenter.rs`):
+/// `taiuantai → [tai, uan, tai]`. Literal *maximal-syllable-count*
+/// would instead over-split into sub-syllables (`ta i u an …`),
+/// reproducing the very over-segmentation S5 removes — so greedy-LONGEST
+/// is deliberate, not max-segment.
+///
+/// Returns `None` when some offset has no valid syllable (the buffer
+/// cannot be cleanly read syllable-by-syllable) — the caller then
+/// suppresses the slot-0 synth and leaves the span-local list
+/// untouched (pre-S2 behavior, same contract as
+/// [`synth_consumed_span`]'s trailing-hyphen suppression). `shadow` is
+/// ASCII-lowercased here; lowercasing is byte-length and
+/// char-boundary preserving, so the returned offsets index `shadow`
+/// identically.
+// 中文: S5 — greedy 最長音節切分,no-dict carve-out 的羅馬字讀法。
+// 中文:   每步取最長合法單音節(valid_span_endings_lowered max_syllables=1 的 max)→ taiuantai=[tai,uan,tai]。
+// 中文:   刻意取 greedy-LONGEST 非 max-segment(後者會切到子音節 ta i u an,重現 S5 要消除的過度切分)。
+// 中文:   某 offset 無合法音節 → None,caller 抑制 slot-0 synth、維持 span-local(pre-S2,同 synth_consumed_span 契約)。
+fn greedy_longest_syllabification(
+    shadow: &str,
+    inv: &SyllableInventory,
+) -> Option<Vec<(usize, usize)>> {
+    let lowered = shadow.to_ascii_lowercase();
+    let mut segs: Vec<(usize, usize)> = Vec::new();
+    let mut pos = 0usize;
+    while pos < lowered.len() {
+        let end = crate::syllabifier::tl::valid_span_endings_lowered(&lowered, pos, inv, 1)
+            .into_iter()
+            .max()?;
+        segs.push((pos, end));
+        pos = end;
+    }
+    // Forward-only single-syllable steps land exactly on `len`; the
+    // guard is belt-and-suspenders.
+    (pos == lowered.len()).then_some(segs)
+}
+
 /// v3.5.8 S2 (Codex post-impl P1, 2026-05-16) — `consumed_span` for
 /// the synthesized slot-0 candidate, or `None` to suppress the synth.
 ///
@@ -595,27 +639,42 @@ fn fetch_walker_slot0(
                     Some(crate::lattice::EdgeChoice {
                         roman: c.roman,
                         hanji: c.hanji,
+                        // S5 (Codex pre-impl Q2 BLOCK): explicit
+                        // dict-hit flag — the `Some(c)` branch IS a
+                        // dictionary record. The no-dict carve-out must
+                        // key off this, never `hanji.is_none()` /
+                        // `frequency == 0`.
+                        dict_hit: true,
                         frequency: c.frequency,
                         syllable_count: c.syllable_count,
+                        // khiin `word_len` for the S5 length
+                        // normalization (Codex pre-impl Q1 BLOCK).
+                        toneless_len: toneless.chars().count(),
                         user_weight_delta,
                     })
                 }
-                // No dict hit: the edge's own toneless roman. This is
-                // the SAME code path as a dict edge — the no-hanji
-                // best path is the walker's natural output, not a
-                // special fallback (`feedback_no_redundant_fallback`).
-                // A synthesized roman edge has no `user_frequency.db`
-                // history key, so its walker user weight stays neutral
-                // (`user_weight_delta = 0.0`), preserving the S2
-                // no-dict tie lever (`cost::edge_score` S3 neutrality
-                // contract).
-                None => Some(crate::lattice::EdgeChoice {
-                    roman: toneless,
-                    hanji: None,
-                    frequency: 0,
-                    syllable_count: 1,
-                    user_weight_delta: 0.0,
-                }),
+                // No dict hit: the edge's own toneless roman, SAME code
+                // path as a dict edge (`feedback_no_redundant_fallback`)
+                // but flagged `dict_hit: false`. A synthesized roman
+                // edge has no `user_frequency.db` history key so its
+                // walker user weight stays neutral
+                // (`user_weight_delta = 0.0`). Under S5 min-cost a
+                // wholly no-dict buffer collapses to the fewest-edge
+                // blob; the user-facing per-syllable romanization is
+                // produced by the explicit no-dict carve-out below
+                // (keyed off `dict_hit`), NOT by an edge-cost tie lever.
+                None => {
+                    let toneless_len = toneless.chars().count();
+                    Some(crate::lattice::EdgeChoice {
+                        roman: toneless,
+                        hanji: None,
+                        dict_hit: false,
+                        frequency: 0,
+                        syllable_count: 1,
+                        toneless_len,
+                        user_weight_delta: 0.0,
+                    })
+                }
             }
         });
 
@@ -626,24 +685,74 @@ fn fetch_walker_slot0(
             return Ok(None);
         }
 
-        // v3.5.8 — case each edge's roman to mirror the user's raw
-        // input for that edge's own byte span (per-edge, NOT whole
-        // buffer: `hitTUI` must keep segment 2 uppercase). `path.edges`
-        // are shadow offsets; `shadow_to_raw_end` maps them back to the
-        // raw buffer. Then join with the §10.2 slot-0 word space.
-        // 中文: 逐 edge 依該 edge 自己的 raw 區間還原大小寫(逐段,非整 buffer)。
-        let roman = path
-            .edges
-            .iter()
-            .zip(path.choices.iter())
-            .map(
-                |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
-                    Some(seg) => recase_roman(&c.roman, seg, mode),
-                    None => c.roman.clone(),
-                },
-            )
-            .collect::<Vec<_>>()
-            .join(" ");
+        // v3.5.8 S5 (Codex pre-impl Q2, 2026-05-17) — no-dict carve-out.
+        // "No dictionary hit anywhere" is detected via the explicit
+        // `dict_hit` flag, NOT `hanji.is_none()` / `frequency == 0` (a
+        // dict record may be roman-only; zero frequency is
+        // representable — Codex BLOCK). Under the S5 min-cost objective
+        // an all-OOV buffer collapses to the fewest-edge blob
+        // (`taiuantai`), wrong for a romanization the user wants to
+        // read. Re-derive the user-facing roman as the greedy
+        // longest-syllable syllabification (`tai uan tai`) — an
+        // explicit rule OUTSIDE `edge_cost`, not an OOV cost tuned to
+        // fight the corpus normalization. Greedy-longest (the canonical
+        // romanization reading) is used rather than literal
+        // max-syllable-count: the latter would over-split into
+        // sub-syllables (`ta i u an …`), reproducing the very
+        // over-segmentation S5 removes, and contradicts the documented
+        // `taiuantai → tai uan tai` expectation.
+        //
+        // v3.5.8 #288 (per-segment case-from-raw) composes with the
+        // dict-hit branch: each chosen edge's canonical roman is recased
+        // to mirror the user's raw input for that edge's own byte span
+        // (per-edge, NOT whole buffer: `hitTUI` keeps segment 2 upper).
+        // `path.edges` are shadow offsets; `shadow_to_raw_end` maps them
+        // back to the raw buffer, then join with the §10.2 slot-0 word
+        // space. The all-OOV carve-out stays unrecased — it is a
+        // synthesized reading, not an edge the user typed a case intent
+        // for; greedy-longest segments are independent of `path.edges`.
+        // 中文: S5 no-dict carve-out — 用 dict_hit 旗標判定(非 hanji/freq,Codex BLOCK)。
+        // 中文:   全 OOV 在 min-cost 會塌成最少段 blob → 改 greedy-longest 音節切分羅馬字
+        // 中文:   (canonical 讀法,對齊文件 taiuantai→tai uan tai;literal max-segment 會重現過度切分)。
+        // 中文: #288 逐 edge case-from-raw 與 dict-hit 分支組合;OOV carve-out 為合成讀法,不還原大小寫。
+        let any_dict = path.choices.iter().any(|c| c.dict_hit);
+        let (roman, syllable_count) = if any_dict {
+            let r = path
+                .edges
+                .iter()
+                .zip(path.choices.iter())
+                .map(
+                    |(&(s, e), c)| match raw.get(shadow_to_raw_end[s]..shadow_to_raw_end[e]) {
+                        Some(seg) => recase_roman(&c.roman, seg, mode),
+                        None => c.roman.clone(),
+                    },
+                )
+                .collect::<Vec<_>>()
+                .join(" ");
+            let s = path
+                .choices
+                .iter()
+                .map(|c| u32::from(c.syllable_count))
+                .sum::<u32>()
+                .min(u32::from(u8::MAX)) as u8;
+            (r, s)
+        } else {
+            match greedy_longest_syllabification(&shadow, inv) {
+                Some(segs) if !segs.is_empty() => {
+                    let r = segs
+                        .iter()
+                        .map(|&(s, e)| strip_ascii_tone_digits(&shadow[s..e]))
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let s = segs.len().min(u8::MAX as usize) as u8;
+                    (r, s)
+                }
+                // Cannot cleanly syllabify the buffer → leave the
+                // span-local list untouched (pre-S2 behavior, mirrors
+                // the synth_consumed_span trailing-hyphen suppression).
+                _ => return Ok(None),
+            }
+        };
         let all_hanji = path.choices.iter().all(|c| c.hanji.is_some());
         let hanji: Option<String> = if all_hanji {
             Some(
@@ -656,12 +765,6 @@ fn fetch_walker_slot0(
             None
         };
         let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
-        let syllable_count = path
-            .choices
-            .iter()
-            .map(|c| u32::from(c.syllable_count))
-            .sum::<u32>()
-            .min(u32::from(u8::MAX)) as u8;
         let last_used_ms = freq_map
             .get(&display_text)
             .map(|d| d.last_used_ms)
@@ -682,7 +785,13 @@ fn fetch_walker_slot0(
             display_text,
             roman,
             hanji,
-            score: path.score as f32,
+            // S5: `path.cost` is a min-cost (lower = better) total;
+            // `RawCandidate.score` is higher-better elsewhere. Slot 0
+            // is an explicit prepend so this is informational only
+            // (same rationale as `frequency = 0` below) — negate to
+            // keep the higher-better monotonic ordering if anything
+            // ever does read it.
+            score: -(path.cost as f32),
             form: FORM_NOTONE,
             frequency: 0,
             bitmask: 0,
@@ -1787,6 +1896,76 @@ mod tests {
         assert_eq!(proto.roman, "tāi");
         assert!(proto.hanji.is_none());
         assert_eq!(proto.display_text, "tāi");
+    }
+
+    // ----- v3.5.8 S5 — no-dict carve-out (`greedy_longest_syllabification`) -----
+
+    // Hermetic `SyllableInventory` builder — same inline pattern as the
+    // `lattice::builder` unit tests (inline duplication preferred over a
+    // shared test-utils crate). Pins the carve-out helper without the
+    // `LexiconHandle` singleton (Codex post-impl S5 P3, 2026-05-17).
+    fn build_inventory(samples: &[&str]) -> SyllableInventory {
+        use std::path::PathBuf;
+
+        use fst::SetBuilder;
+        use phonetics::canonicalize_syllable;
+
+        let mut keys: Vec<String> = Vec::new();
+        for s in samples {
+            let (canonical, tone) = canonicalize_syllable(s)
+                .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"));
+            if tone.is_empty() {
+                keys.push(canonical);
+            } else {
+                keys.push(format!("{canonical}{tone}"));
+                keys.push(canonical);
+            }
+        }
+        keys.sort();
+        keys.dedup();
+
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let path: PathBuf = std::env::temp_dir().join(format!(
+            "taigi_dispatch_carveout_{}_{n}.fst",
+            std::process::id()
+        ));
+        let file = std::fs::File::create(&path).expect("create fst");
+        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
+        for key in &keys {
+            builder.insert(key.as_bytes()).expect("insert");
+        }
+        builder.finish().expect("finish");
+        SyllableInventory::open(&path).expect("open inventory")
+    }
+
+    #[test]
+    fn greedy_longest_syllabification_taiuantai_reads_tai_uan_tai() {
+        // The documented no-dict carve-out expectation: `taiuantai`
+        // (no dict hit anywhere) must read as the canonical
+        // longest-syllable segmentation `tai uan tai`, NOT the
+        // sub-syllable over-split `ta i u an ta i` (literal
+        // max-syllable-count) and NOT the min-cost fewest-edge blob.
+        let inv = build_inventory(&["tai1", "uan1", "ta1", "i1", "u1", "an1"]);
+        let segs = greedy_longest_syllabification("taiuantai", &inv)
+            .expect("buffer is fully syllabifiable");
+        assert_eq!(segs, vec![(0, 3), (3, 6), (6, 9)]);
+        let roman = segs
+            .iter()
+            .map(|&(s, e)| strip_ascii_tone_digits(&"taiuantai"[s..e]))
+            .collect::<Vec<_>>()
+            .join(" ");
+        assert_eq!(roman, "tai uan tai");
+    }
+
+    #[test]
+    fn greedy_longest_syllabification_returns_none_when_unsegmentable() {
+        // A trailing byte with no valid syllable → `None`, so the
+        // caller suppresses the slot-0 synth and leaves the span-local
+        // list untouched (pre-S2 behavior).
+        let inv = build_inventory(&["tai1"]);
+        assert!(greedy_longest_syllabification("taix", &inv).is_none());
     }
 
     // ----- v3.5.8 2A — per-segment case-from-raw -----

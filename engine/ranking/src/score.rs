@@ -289,10 +289,10 @@ pub const USER_WEIGHT_DECAY_TAU_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 /// bad-clock classes [`recency_rank`] rejects**: `now_ms <= 0` (no
 /// wall clock injected), `last_used_ms <= 0` (never selected), and
 /// `now_ms < last_used_ms` (clock skew). The walker turns this
-/// per-edge delta into a syllable-aware weight (single-syllable edges
-/// are damped so a hot single character cannot ride the boost to
-/// sweep the whole sentence — see
-/// `composing::lattice::cost::edge_score`).
+/// per-edge delta into a syllable-aware log-space cost discount
+/// (single-syllable edges are damped so a hot single character cannot
+/// ride the discount to sweep the whole sentence — see
+/// `composing::lattice::cost::edge_cost`).
 // 中文: S3 — 單條 walker lattice edge 的時間衰減 user-freq boost「delta」(librime formula_d 牆鐘版,收斂 Gap B → G2)。
 // 中文: 回傳超過中性 1.0 的量:decay = exp(−age/τ);delta = (user_freq_boost(count) − 1.0) × decay。
 // 中文: 關鍵:cap 在衰減「之前」套用(用已飽和的 boost delta 再衰減);先衰減 raw count 再 cap 會讓

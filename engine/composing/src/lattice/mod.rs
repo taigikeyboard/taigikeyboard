@@ -31,11 +31,15 @@
 //! pass is needed for the walker.
 //!
 //! v3.5.8 S2 added the `walker` module (`walk_best`, single-pass
-//! relaxation) and the `cost` module (`edge_score`, khiin-family
-//! log-prob). The walker is pure and shadow-space native;
-//! `dispatch::handle_fetch_at_pos` injects the per-edge content
-//! provider and explicitly prepends the synthesized full-buffer best
-//! path at candidate slot 0 (Codex pre-impl S2 Q1/Q1c, 2026-05-16).
+//! relaxation) and the `cost` module. **S5** corrected the objective
+//! to `min Σ edge_cost` — a faithful khiin `segment_min_cost` port
+//! (the S2/S3 `max Σ edge_score` structurally rewarded
+//! over-segmentation; see `cost.rs` and the `docs/roadmap.md`
+//! §整句 lattice + walker S5 section). The walker is pure and
+//! shadow-space native; `dispatch::handle_fetch_at_pos` injects the
+//! per-edge content provider and explicitly prepends the synthesized
+//! full-buffer best path at candidate slot 0 (Codex pre-impl S2
+//! Q1/Q1c, 2026-05-16).
 
 // 中文: S1 — TL/POJ shadow 上的切分 lattice;建完整多起點 DAG 供 S2 全句 walker。
 // 中文: S1 嚴格行為中性:對外只發左錨投影 (start==0),逐 byte 等同 S1 前。
