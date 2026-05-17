@@ -44,6 +44,7 @@ Read the listed file **before** the matching work — these override defaults.
 | modifying app UI | `rules/ui-style-guide.md` |
 | adding logging / SQL / network / storage | `rules/security-rules.md` |
 | Rust engine code or FFI/proto docs | `rules/rust-best-practices.md` |
+| adding or changing a call to / contract with a framework/OS API (KeyboardKit, `UIInputViewController`/`UITextDocumentProxy`, `InputMethodService`/`InputConnection`/`EditorInfo`, Jetpack Compose, DataStore) — not trivial edits to framework-adjacent code | `rules/doc-lookup.md` — verify the current API via `find-docs`/`ctx7` (or local `references/KeyboardKit-Documentation/`) **before** coding; never from model memory |
 | writing a 最佳實踐對齊 section, claiming "Project X does Y", or designing a segmentation / lattice / ranking / user-freq / syllabifier / predictive / next-word / continuous-input slice | `docs/references/mainstream-ime-comparison.md` first (TL;DR matrix + topic index → drill into per-repo cards; do **not** re-explore `references/` from scratch) |
 
 ## Build & Test
