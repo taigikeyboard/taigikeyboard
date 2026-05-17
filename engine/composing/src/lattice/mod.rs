@@ -52,6 +52,7 @@ mod cost;
 mod walker;
 
 pub(crate) use builder::build_lattice;
+pub(crate) use cost::CUSTOM_EFFECTIVE_FREQ;
 pub(crate) use walker::{walk_best, EdgeChoice};
 
 /// A segmentation lattice over shadow byte offsets. Nodes are byte

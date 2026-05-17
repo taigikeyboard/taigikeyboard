@@ -127,6 +127,33 @@ const _: () = assert!(LETTER_COUNT_BIAS > 0.0 && SYLLABLE_COUNT_BIAS > 0.0);
 // 中文:   其 user 偏好已由 best_candidate_for_key 選 record 時體現。多音節 edge 拿滿。dogfood 可調 0.0..=0.25。
 pub(crate) const WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0;
 
+/// v3.5.8 S6 (Codex pre-impl S6 Q1, 2026-05-17, BLOCK condition) —
+/// the **effective corpus frequency** a `custom_dictionary.db` edge is
+/// scored with in the S5 min-cost model.
+///
+/// A custom entry carries no corpus frequency. Rather than an explicit
+/// cost floor / discount — which would bypass the "every edge pays the
+/// `ln(CORPUS_TOTAL_FREQ)` normalization toll" invariant that S5 added
+/// to kill over-segmentation (Codex S6 Q1 **BLOCK**ed a floor) — a
+/// custom edge enters [`edge_cost`] with this *effective* frequency, so
+/// it competes inside the same probability-shaped objective as a
+/// dictionary phrase (librime user-dict-as-frequency semantics,
+/// `references/librime/src/rime/dict/user_dictionary.cc`).
+///
+/// **Value provenance** (Codex pre-impl S6 Q1 gate, measured on the
+/// 2026-05-17 `dictionary/output/dictionary.csv`): multi-syllable max
+/// frequency ≈ 1_562, single-syllable p95 ≈ 1_461, single-syllable
+/// p99 ≈ 7_721. `2_000` makes a custom entry a strong **multi-syllable
+/// phrase** competitor (beats a top single-character split) without
+/// elevating it to a top-frequency single character (a single-syllable
+/// custom edge still loses badly to a real phrase path — pinned by
+/// [`tests`]). **Dogfood-tunable**; a named cited constant, not a
+/// runtime tunable nor a magic literal.
+// 中文: S6 — custom_dictionary.db edge 在 S5 min-cost 模型用的「等效語料頻率」(Codex Q1 BLOCK:用 proxy 不用 cost floor,
+// 中文:   floor 會繞過「每 edge 付 ln(CORPUS) 正規化稅」不變式)。2_000 = dictionary.csv 多音節 max≈1562 / 單音節 p95≈1461 / p99≈7721
+// 中文:   之間 → custom 是強多音節片語競爭者(勝單字拆分)但非頂頻單字(單音節 custom 仍輸真實片語,測試 pin)。dogfood 可調。
+pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
+
 /// Min-cost for one lattice edge (**lower = better**).
 ///
 /// - `frequency` — the chosen dictionary candidate's raw
@@ -188,7 +215,8 @@ pub(crate) fn edge_cost(
 #[cfg(test)]
 mod tests {
     use super::{
-        edge_cost, CORPUS_TOTAL_FREQ, LETTER_COUNT_BIAS, WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
+        edge_cost, CORPUS_TOTAL_FREQ, CUSTOM_EFFECTIVE_FREQ, LETTER_COUNT_BIAS,
+        WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
     };
 
     /// Neutral-user-weight edge cost — no user history
@@ -249,6 +277,40 @@ mod tests {
         assert!(
             phrase < four_singles,
             "phrase={phrase} four_singles={four_singles}"
+        );
+    }
+
+    #[test]
+    fn custom_two_syllable_beats_top_single_char_split() {
+        // S6 Codex pre-impl Q1 regression guard #1: a 2-syllable custom
+        // entry scored at CUSTOM_EFFECTIVE_FREQ with a short toneless
+        // roman must out-compete the path through the two highest-
+        // frequency single characters that cover the same span. Real
+        // dictionary singles for the motivating `taigi` case:
+        // 台(31281,len3) + 語(21976,len2). The custom 2-syll edge
+        // (effective freq 2000, toneless "taigi" len 5) must cost less.
+        let custom = edge_cost(CUSTOM_EFFECTIVE_FREQ, 2, 5, 0.0);
+        let top_single_split = edge_cost(31_281, 1, 3, 0.0) + edge_cost(21_976, 1, 2, 0.0);
+        assert!(
+            custom < top_single_split,
+            "custom={custom} top_single_split={top_single_split}"
+        );
+    }
+
+    #[test]
+    fn two_single_syllable_custom_lose_to_a_real_phrase_path() {
+        // S6 Codex pre-impl Q1 regression guard #2: CUSTOM_EFFECTIVE_FREQ
+        // must NOT elevate custom to a top-frequency single character —
+        // a path of two single-syllable custom edges still loses badly
+        // to one real multi-syllable dictionary phrase covering the same
+        // buffer. 台灣 (freq 1379, 2 syll, toneless "taiuan" len 6) as
+        // ONE edge must cost strictly less than two atomic custom edges.
+        let two_single_custom = edge_cost(CUSTOM_EFFECTIVE_FREQ, 1, 3, 0.0)
+            + edge_cost(CUSTOM_EFFECTIVE_FREQ, 1, 3, 0.0);
+        let real_phrase = edge_cost(1_379, 2, 6, 0.0);
+        assert!(
+            real_phrase < two_single_custom,
+            "real_phrase={real_phrase} two_single_custom={two_single_custom}"
         );
     }
 

@@ -247,7 +247,8 @@ fn handle_fetch_at_pos(
         // 中文:   explicit prepend slot 0 (Codex S2 Q1);與 synth 同 (roman,hanji,span)
         // 中文:   的 span-local 候選去掉,保 slot 0 唯一 (Codex S2 Q1d)。
         if !is_tps {
-            if let Some(slot0) = fetch_walker_slot0(raw, raw_len, &freq_map, now_ms, mode) {
+            if let Some(slot0) = fetch_walker_slot0(raw, raw_len, &freq_map, now_ms, mode, &custom)
+            {
                 c.retain(|x| {
                     !(x.roman == slot0.roman
                         && x.hanji == slot0.hanji
@@ -565,6 +566,7 @@ fn fetch_walker_slot0(
     freq_map: &FrequencyMap,
     now_ms: i64,
     mode: phonetics::InputMode,
+    custom: &[CustomEntry],
 ) -> Option<RawCandidate> {
     LexiconHandle::with_state(|state| {
         let Some(inv) = state.syllable_inventory.as_ref() else {
@@ -577,6 +579,24 @@ fn fetch_walker_slot0(
             return Ok(None);
         };
         let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv);
+        // v3.5.8 S6 (Codex pre-impl S6 Q2/Q6, 2026-05-17) — per-fetch
+        // map from a custom entry's normalized toneless key to the
+        // entry. `custom_toneless_key` reuses the SAME shadow pipeline
+        // the edge keys use, so a hit here is byte-identical to a
+        // lattice edge's `tl:{toneless}` (Q2 BLOCK: a plain
+        // tone-digit-strip would not fold a POJ/diacritic custom roman
+        // like `tâi-uân`). `or_insert` = **first-wins** on a duplicate
+        // key (Codex Q6: explicit, not `HashMap` overwrite/iteration).
+        // 中文: S6 — per-fetch「custom toneless key → entry」表;custom_toneless_key 重用同一 shadow pipeline
+        // 中文:   → 命中與 lattice edge key byte-identical(Q2 BLOCK:POJ/diacritic 須先 canonicalize);
+        // 中文:   同 key 重複 = or_insert first-wins(Codex Q6,非 HashMap 覆寫)。
+        let mut custom_map: std::collections::HashMap<String, &CustomEntry> =
+            std::collections::HashMap::with_capacity(custom.len());
+        for entry in custom {
+            if let Some(k) = custom_toneless_key(&entry.roman) {
+                custom_map.entry(k).or_insert(entry);
+            }
+        }
         // Codex post-impl S2 P1: suppress the synth when a trailing
         // hyphen leaves the shadow short of the raw buffer (a
         // `(0, raw_len)` synth would mis-commit the pending `-`).
@@ -607,6 +627,62 @@ fn fetch_walker_slot0(
                 shadow_to_raw_end[end] as u32,
             );
             let key = format!("tl:{toneless}");
+            // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
+            // `custom_dictionary.db` entry whose normalized toneless
+            // roman equals this edge's key OVERRIDES the `dict.bin`
+            // best candidate for the edge (checked BEFORE
+            // `best_candidate_for_key`). Same source-rank-0 precedence
+            // custom has in the span-local `(roman,hanji,consumed_span)`
+            // dedupe — an unconditional edge-content override, NOT a
+            // cost competition (segmentation safety comes from the
+            // `CUSTOM_EFFECTIVE_FREQ` proxy + existing single-syllable
+            // user-delta damping, not from out-scoring dict here).
+            // 中文: S6 — custom 命中該 edge key → 覆寫 dict.bin 最佳候選(在 best_candidate_for_key 之前查);
+            // 中文:   = span-local source-rank-0 同語意,無條件 override 非 cost 競爭
+            // 中文:   (切分安全靠 CUSTOM_EFFECTIVE_FREQ proxy + 既有單音節阻尼,不靠在此贏分)。
+            if let Some(entry) = custom_map.get(key.as_str()) {
+                // `display_text` = the exact key the platform writes to
+                // `user_frequency.db` on commit, mirroring
+                // `lexicon::custom_entry_to_candidate` (hanji else
+                // roman) so a user-selected custom entry's decayed
+                // weight folds into the path objective identically to a
+                // dict edge (S3 Q4d seam). Single-syllable custom is
+                // damped by `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`
+                // in `edge_cost`, same as dict.
+                let display_text = entry.hanji.clone().unwrap_or_else(|| entry.roman.clone());
+                let fd = freq_map.get(&display_text).copied().unwrap_or_default();
+                let count = u32::try_from(fd.count).unwrap_or(0);
+                let user_weight_delta = decayed_user_weight_delta(count, now_ms, fd.last_used_ms);
+                // Syllable count = greedy-longest segment count of the
+                // edge's shadow span (the edge came from the
+                // syllabifier-built lattice so it segments cleanly;
+                // clamp ≥ 1 defends a leaked empty). `CustomEntry`
+                // carries no syllable model — this mirrors what the
+                // dict path reads off `DictionaryRecord.syllable_count`
+                // for the same span and feeds the khiin `n_syls` bias.
+                let syllable_count = greedy_longest_syllabification(&shadow[start..end], inv)
+                    .map(|segs| segs.len())
+                    .unwrap_or(1)
+                    .clamp(1, u8::MAX as usize) as u8;
+                return Some(crate::lattice::EdgeChoice {
+                    roman: entry.roman.clone(),
+                    hanji: entry.hanji.clone(),
+                    // S6 Q7 (Codex BLOCK guard): a custom entry IS a
+                    // lexicon-backed hit (not OOV roman synthesis) —
+                    // keeps the all-OOV carve-out from firing on a
+                    // custom-only path. NEVER infer no-dict from
+                    // hanji/freq/is_custom.
+                    dict_hit: true,
+                    is_custom: true,
+                    // S6 Q1 (Codex BLOCK): effective-frequency proxy —
+                    // custom still pays the same ln(CORPUS)
+                    // normalization toll, NOT a cost floor/discount.
+                    frequency: crate::lattice::CUSTOM_EFFECTIVE_FREQ,
+                    syllable_count,
+                    toneless_len: toneless.chars().count(),
+                    user_weight_delta,
+                });
+            }
             match best_candidate_for_key(&key, raw_span, freq_map, now_ms, prefix, dict) {
                 Some(c) => {
                     // v3.5.8 S3 (Codex pre-impl Q4d seam, 2026-05-16):
@@ -645,6 +721,8 @@ fn fetch_walker_slot0(
                         // key off this, never `hanji.is_none()` /
                         // `frequency == 0`.
                         dict_hit: true,
+                        // S6: a `dict.bin` record is not custom.
+                        is_custom: false,
                         frequency: c.frequency,
                         syllable_count: c.syllable_count,
                         // khiin `word_len` for the S5 length
@@ -669,6 +747,8 @@ fn fetch_walker_slot0(
                         roman: toneless,
                         hanji: None,
                         dict_hit: false,
+                        // S6: a synthesized OOV roman edge is not custom.
+                        is_custom: false,
                         frequency: 0,
                         syllable_count: 1,
                         toneless_len,
@@ -798,7 +878,13 @@ fn fetch_walker_slot0(
             mode,
             recency_rank: recency_rank(now_ms, last_used_ms),
             coverage_kind: COVERAGE_KIND_FULL,
-            is_custom: false,
+            // v3.5.8 S6 (Codex pre-impl S6 Q4): provenance truth — a
+            // synthesized full-buffer path containing ≥1 custom edge is
+            // custom-influenced. Informational at slot 0 (explicit
+            // prepend, not sorted; the dispatch.rs dedupe keys on
+            // `(roman,hanji,consumed_span)` not `is_custom`), but a
+            // truthful flag keeps future ranking/dedupe changes sound.
+            is_custom: path.choices.iter().any(|c| c.is_custom),
         }))
     })
     .unwrap_or_default()
@@ -860,6 +946,48 @@ fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
 // 中文: 對應 notone.py [\d\-] 中的 \d (ASCII contract 等價);hyphen 半邊由 build_hyphen_shadow 上一層處理 (Phase 9 Item 8)。
 fn strip_ascii_tone_digits(s: &str) -> String {
     s.chars().filter(|c| !c.is_ascii_digit()).collect()
+}
+
+/// v3.5.8 S6 (Codex pre-impl S6 Q2, 2026-05-17, BLOCK condition) —
+/// derive the walker lattice-edge match key for a
+/// `custom_dictionary.db` entry's romanization, or `None` when it is
+/// not TL-shaped.
+///
+/// MUST produce a key byte-identical to the one
+/// [`fetch_walker_slot0`]'s edge provider builds for a syllable span
+/// (`tl:{toneless}`, where `toneless` is the hyphen-stripped,
+/// POJ-canonicalized, tone-digit-stripped shadow slice). It therefore
+/// reuses the **same three shadow helpers in the same order** —
+/// [`canonicalize_poj_shadow`] → [`build_hyphen_shadow`] →
+/// [`strip_ascii_tone_digits`] — as the single normalization source.
+/// Codex pre-impl S6 Q2 **BLOCK**ed a plain `strip_ascii_tone_digits`:
+/// it cannot fold a POJ/diacritic custom roman (`tâi-uân`, `tâi-gí`)
+/// into `taiuan` / `taigi`; the canonicalize pass is load-bearing. The
+/// offset maps the helpers also return are irrelevant here (the custom
+/// roman is keyed whole, never sliced against raw), so they are
+/// discarded.
+///
+/// **Roman-only** (Codex pre-impl S6 Q2): `hanji` is edge *payload*
+/// resolved after the edge is chosen, never an edge key — the lattice
+/// is keyed by toneless romanization spans. Returns `None` for an
+/// empty result or any residue outside ASCII `a..=z`: punctuation /
+/// CJK / digit-only / non-TL custom roman can never equal a
+/// syllabifier-built lattice edge key, so it simply stays a span-local
+/// candidate and never enters the walker.
+// 中文: S6 — 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(非 TL-shaped → None)。
+// 中文: 必須與 edge provider 的 tl:{toneless} byte-identical → 重用同一組 shadow helper 同順序
+// 中文:   (canonicalize_poj_shadow → build_hyphen_shadow → strip_ascii_tone_digits);
+// 中文:   Codex Q2 BLOCK:純 strip_ascii_tone_digits 無法把 POJ/diacritic（tâi-uân）摺成 taiuan。
+// 中文: roman-only(hanji 是 edge payload 非 key);空 / 非 a..=z residue → None(配不到 syllabifier edge,留 span-local)。
+fn custom_toneless_key(roman: &str) -> Option<String> {
+    let lower = roman.to_ascii_lowercase();
+    let (canonical, _) = canonicalize_poj_shadow(&lower);
+    let (shadow, _) = build_hyphen_shadow(&canonical);
+    let toneless = strip_ascii_tone_digits(&shadow);
+    if toneless.is_empty() || !toneless.bytes().all(|b| b.is_ascii_lowercase()) {
+        return None;
+    }
+    Some(format!("tl:{toneless}"))
 }
 
 /// Canonicalize POJ-display input (`pe̍h-ōe-jī`, `chóa`, `peⁿ`, `so͘`)
@@ -1486,6 +1614,50 @@ mod tests {
         // as a behavioural pin so a refactor cannot quietly fold the
         // hyphen strip into both layers.
         assert_eq!(strip_ascii_tone_digits("tai-bak"), "tai-bak");
+    }
+
+    // ----- v3.5.8 S6 — custom_toneless_key (缺口 1) -----
+
+    #[test]
+    fn custom_toneless_key_numeric_tl_strips_tone_digits() {
+        assert_eq!(custom_toneless_key("tai5gi2").as_deref(), Some("tl:taigi"));
+    }
+
+    #[test]
+    fn custom_toneless_key_numeric_with_hyphen_strips_both() {
+        // Same `tl:taigi` key the edge provider builds for the `taigi`
+        // span — proves the byte-identical-match contract.
+        assert_eq!(custom_toneless_key("tai5-gi2").as_deref(), Some("tl:taigi"));
+    }
+
+    #[test]
+    fn custom_toneless_key_poj_diacritic_is_canonicalized_first() {
+        // Codex pre-impl S6 Q2 BLOCK: a POJ/diacritic custom roman must
+        // fold to the same toneless key a numeric/typed `taigi` span
+        // produces. A plain tone-digit strip would NOT do this — the
+        // `canonicalize_poj_shadow` pass is load-bearing.
+        assert_eq!(
+            custom_toneless_key("tâi-gí").as_deref(),
+            Some("tl:taigi"),
+            "POJ diacritic must canonicalize → same key as numeric tai5gi2"
+        );
+        // POJ `oa`/`ou`-style display also canonicalizes (Item 9 chain).
+        assert_eq!(
+            custom_toneless_key("tâi-oân").as_deref(),
+            custom_toneless_key("tai5uan5").as_deref(),
+        );
+    }
+
+    #[test]
+    fn custom_toneless_key_rejects_empty_and_non_tl_residue() {
+        // Empty / whitespace / punctuation / CJK / digit-only custom
+        // roman can never equal a syllabifier-built lattice edge key,
+        // so it returns None and stays a span-local-only candidate.
+        assert_eq!(custom_toneless_key(""), None);
+        assert_eq!(custom_toneless_key("   "), None);
+        assert_eq!(custom_toneless_key("!!!"), None);
+        assert_eq!(custom_toneless_key("123"), None);
+        assert_eq!(custom_toneless_key("台語"), None);
     }
 
     // ----- v3.5.8 Phase 9 Item 8 — hyphen-shadow contract pins -----

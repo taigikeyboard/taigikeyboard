@@ -51,17 +51,34 @@ pub(crate) struct EdgeChoice {
     /// Hanji for this edge if the chosen dict candidate had one;
     /// `None` for a pure-roman (no dict hit) edge.
     pub hanji: Option<String>,
-    /// `true` iff this edge resolved to an actual dictionary record
-    /// (the provider's `Some(c)` branch). The no-dict carve-out keys
-    /// off this — **never** off `hanji.is_none()` or `frequency == 0`:
-    /// a dictionary record may be roman-only and a zero frequency is
-    /// representable, so those would misclassify (Codex pre-impl S5 Q2,
-    /// 2026-05-17, BLOCK).
+    /// `true` iff this edge resolved to a **lexicon-backed hit**: a
+    /// `dict.bin` record (provider `Some(c)` branch) or a
+    /// `custom_dictionary.db` entry (v3.5.8 S6 custom-precedence
+    /// branch). It is `false` ONLY for a synthesized pure-roman OOV
+    /// edge. The no-dict carve-out keys off this flag and must never
+    /// be re-derived from `hanji.is_none()`, `frequency == 0`, or
+    /// `is_custom`, because a record (or custom entry) may be
+    /// roman-only and a zero frequency is representable, so those
+    /// would misclassify (Codex pre-impl S5 Q2 + S6 Q7, BLOCK). A
+    /// custom edge stays `true`; reverting it to `false` would
+    /// re-enable the all-OOV carve-out on a custom-only path.
     pub dict_hit: bool,
-    /// Frequency of the chosen dict candidate (`0` = no dict hit).
+    /// v3.5.8 S6 (Codex pre-impl S6 Q4) — `true` iff this edge resolved
+    /// to a `custom_dictionary.db` entry (the S6 custom-precedence
+    /// branch in `dispatch::fetch_walker_slot0`). Provenance only:
+    /// propagated to the synthesized slot-0 `RawCandidate.is_custom`
+    /// when ANY winning edge is custom; the walker cost objective does
+    /// NOT read this (a custom edge competes via [`Self::frequency`] =
+    /// `CUSTOM_EFFECTIVE_FREQ`, Codex S6 Q1 — NOT a cost special-case).
+    pub is_custom: bool,
+    /// Frequency the edge is scored with in [`super::cost::edge_cost`]:
+    /// the chosen `dict.bin` candidate's raw frequency, `0` for a
+    /// synthesized OOV edge, or `super::cost::CUSTOM_EFFECTIVE_FREQ`
+    /// for a custom edge (S6 effective-frequency proxy).
     pub frequency: u32,
-    /// Syllable count of the chosen dict candidate (`>= 1`; `1` for a
-    /// synthesized pure-roman edge).
+    /// Syllable count of the chosen candidate (`>= 1`; `1` for a
+    /// synthesized pure-roman edge; greedy-longest segment count of the
+    /// edge span for a custom edge).
     pub syllable_count: u8,
     /// Toneless-key char count for this edge (khiin's `word_len`). The
     /// khiin length normalization in [`edge_cost`] is not faithful
@@ -226,6 +243,7 @@ mod tests {
             roman: roman.to_owned(),
             hanji: Some(hanji.to_owned()),
             dict_hit: true,
+            is_custom: false,
             frequency: freq,
             syllable_count: syll,
             toneless_len: len,
@@ -237,9 +255,25 @@ mod tests {
             roman: r.to_owned(),
             hanji: None,
             dict_hit: false,
+            is_custom: false,
             frequency: 0,
             syllable_count: 1,
             toneless_len: r.chars().count(),
+            user_weight_delta: 0.0,
+        }
+    }
+    /// v3.5.8 S6 — a `custom_dictionary.db` edge as the dispatch
+    /// provider builds it: `dict_hit:true` (lexicon-backed),
+    /// `is_custom:true`, scored at the `CUSTOM_EFFECTIVE_FREQ` proxy.
+    fn custom(roman: &str, hanji: &str, freq: u32, syll: u8, len: usize) -> EdgeChoice {
+        EdgeChoice {
+            roman: roman.to_owned(),
+            hanji: Some(hanji.to_owned()),
+            dict_hit: true,
+            is_custom: true,
+            frequency: freq,
+            syllable_count: syll,
+            toneless_len: len,
             user_weight_delta: 0.0,
         }
     }
@@ -365,6 +399,32 @@ mod tests {
             .filter_map(|c| c.hanji.clone())
             .collect();
         assert_eq!(hanji, "臺語");
+    }
+
+    #[test]
+    fn custom_edge_wins_path_and_carries_is_custom() {
+        // v3.5.8 S6 — `taigi` (shadow len 5). A custom_dictionary.db
+        // entry covering (0,5) scored at CUSTOM_EFFECTIVE_FREQ (2-syll)
+        // must beat the high-frequency single-char split
+        // 台(31281)+語(21976) — same arithmetic as
+        // `cost::tests::custom_two_syllable_beats_top_single_char_split`.
+        // The winning slot-0 path's choice must carry `is_custom`.
+        let cef = super::super::cost::CUSTOM_EFFECTIVE_FREQ;
+        let lat = lattice(vec![(0, 3), (0, 5), (3, 5)]);
+        let path = walk_best(&lat, 5, |s, e| match (s, e) {
+            (0, 5) => Some(custom("tâi-gí", "台語", cef, 2, 5)),
+            (0, 3) => Some(dict("tâi", "台", 31_281, 1, 3)),
+            (3, 5) => Some(dict("gí", "語", 21_976, 1, 2)),
+            _ => None,
+        })
+        .expect("full path");
+        assert_eq!(path.edges, vec![(0, 5)]);
+        assert!(path.choices[0].is_custom, "custom edge must flag is_custom");
+        assert!(
+            path.choices[0].dict_hit,
+            "custom edge is a lexicon-backed hit (no-dict carve-out must not fire)"
+        );
+        assert_eq!(path.choices[0].hanji.as_deref(), Some("台語"));
     }
 
     #[test]
