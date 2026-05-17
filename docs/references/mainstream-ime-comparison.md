@@ -2,7 +2,7 @@
 
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
-> **Status**: Authoritative as of 2026-05-12. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Status**: Authoritative as of 2026-05-17. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -42,6 +42,7 @@
 | 13 | `moe_taigi_apk/` (decompiled) | Java (decompiled from C++) | Android (IME) | Full IME (Taigi, MOE official) | "Nail"-based segment-by-segment commit; `InputLine` + `Segmentation` | Closed-source C++ via SWIG JNI | `UserVoc` + `LearnedVoc` separated; `RIPE_*_APPROVALS` maturity thresholds | TL only; binary `tailo.tab` syllable trie | Closed-source binaries; AGPL-equivalent terms unclear | **Reference Taigi UX baseline**. Nail commit flow, span-units, Han-lo mixed candidates (`VT_MIXED`). **Deep-dive**: `moe-taigi-reference.md` |
 | 14 | `aiongtaigi-sushi/` (decompiled) | Kotlin + Compose (decompiled) | Android (IME) | Full IME (Taigi) | Unknown (closed source; class names obfuscated `p001a0` etc.) | Unknown | Has on-device `hanji_corrections.csv` orthography map | TL primary | Closed-source | **Hanji-correction CSV** at `resources/assets/hanji_corrections.csv` — direct reference for an orthography normalisation pass (`beh,欲,卜` style mapping from preferred → deprecated form) |
 | 15 | `lexical-models/` (Keyman) | TypeScript | Cross (Keyman) | Predictive model registry | Trie-based wordlist + frequency | Keyman's prediction algorithm | Not in scope | n/a (per-locale) | MIT | **Folder convention** (`release/<author>/<bcp47>.<uniq>/`) for shipping pluggable predictive models. Worth borrowing if we ever externalise dictionary distribution |
+| 16 | `trime/` | Kotlin/Java + JNI (C++) | Android (IME) | RIME wrapper | Delegates to librime | librime's Spelling Algebra | librime user dict (LevelDB) | librime syllabifier (per-schema YAML) | **GPL-3.0-or-later** | **Android counterpart to Hamster** — only open-source, actively-maintained reference for embedding a native engine into an Android IME via JNI. Async `RimeDispatcher`/`RimeDaemon`/`RimeSession` pattern + 3 candidate-UI modes + on-device RIME data deployment |
 
 ---
 
@@ -81,17 +82,25 @@ If you are working on… → read these in order.
 1. **`librime-predict/src/predictor.cc`** — full plugin, ~7 source files, easiest to read end-to-end.
 2. **`lexical-models/`** — Keyman's external predictive-model registry; relevant if we ever want pluggable dictionaries.
 
+### Native-engine embedding / FFI threading (mobile)
+
+1. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android: engine on one dedicated thread, `suspend` `RimeApi` + `SharedFlow` events, lifecycle ready-gating, ref-counted sessions. Closest open-source model for our Android↔Rust FFI threading.
+2. **`Hamster/`** — iOS: how to build & embed librime as an iOS framework (the iOS-side counterpart; see card #7).
+3. **External: fcitx5-android** — the dispatcher/daemon pattern Trime is adapted from; clone on demand if the abstraction itself needs scrutiny.
+
 ### Custom keyboard layout / UI
 
 1. **`azooKey/KeyboardViews/Custard/`** — declarative grid-fit layout from JSON. See `azookey-reference.md`.
 2. **`CustardKit/json/howToMake.md`** — the JSON schema spec itself (Japanese-only doc).
 3. **`florisboard/lib/snygg/`** — Compose-based theming DSL for IME. Closest to what we'd want for Android theming.
 4. **`KeyboardKit-Documentation/`** — vendor SDK we run on; always consult before suspecting a KK bug.
+5. **`trime/app/src/main/java/com/osfans/trime/ime/candidates/`** — three Android candidate-render modes (popup / compact / unrolled); `unrolled/CandidatesPagingSource` pages a large candidate list via AndroidX Paging3.
 
 ### Schema / config-driven IME
 
 1. **`librime/`** — gold standard. YAML schemas with `__include`, `__patch`, `__append`, `__merge`. We do **not** want this level of flexibility, but the YAML shape is the reference if we externalise anything.
 2. **`rime-moetaigi/moetaigi.schema.yaml`** — minimal Taigi-shaped RIME schema.
+3. **`trime/app/src/main/java/com/osfans/trime/provider/RimeDataProvider.kt` + `app/data/rime/`** — how a RIME schema/dict bundle is *deployed and exposed* on Android (submodule-vendored data + `DocumentsProvider`).
 
 ### Taigi-specific UX / data
 
@@ -279,6 +288,22 @@ If you are working on… → read these in order.
   - `docs/externally-hosted-models.md` — how third parties publish their own
 - **Inspiration takeaways**: out-of-tree dictionary distribution pattern. Probably YAGNI for us until v4.x.
 
+### 16. Trime (Android) — `references/trime/`
+
+- **What**: `osfans/trime` — "Trime / 同文输入法", the **RIME IME for Android**. Kotlin/Java front-end + JNI bridge over `librime` (vendored as a submodule, alongside OpenCC / librime-predict / librime-octagram / librime-lua). ~25k LOC Kotlin/Java + ~1.3k LOC JNI C++. Nightly checkout `277b8ea2` (2026-05-17 clone). License **GPL-3.0-or-later** — the most restrictive among our refs; read for **architecture only**, never copy code.
+- **Why we care**: This is the **Android counterpart to Hamster** (which embeds librime on iOS). Hamster + Trime together are the two source-available references for "wrap a native engine in a mobile IME". Trime fills two gaps in our corpus: `florisboard` (our Android architecture mirror) has its NLP module **gutted**, and `moe_taigi_apk` (Android Taigi IME) is **decompiled/closed** — Trime is a full, readable Android IME *with a real engine wired in via a clean async daemon*. Directly relevant to how our Android side calls the **Rust** engine over FFI.
+- **Where to look**:
+  - `app/src/main/java/com/osfans/trime/core/` — JNI surface as Kotlin: `RimeApi` (suspend interface), `RimeDispatcher` (single-threaded executor exposed as a `CoroutineDispatcher`), `RimeLifecycle` (ready-gating), `RimeMessage`/`messageFlow: SharedFlow` (engine→UI events). `RimeDispatcher`/`RimeDaemon` are explicitly *adapted from fcitx5-android* (see External pointers → fcitx5).
+  - `app/src/main/java/com/osfans/trime/daemon/` — `RimeDaemon` (singleton engine, ref-counted `RimeSession`s, `Rime.finalize()` when no clients) + `RimeSession` (`run` / `runOnReady` / `runIfReady` ready-state contract).
+  - `app/src/main/java/com/osfans/trime/ime/candidates/` — three render modes: `popup/`, `compact/`, `unrolled/` (the last paged via AndroidX **Paging3** `CandidatesPagingSource` over `getCandidates(offset, limit)`).
+  - `app/src/main/jni/librime_jni/` — the FFI marshalling layer (`rime_jni.cc`, `session.h`, `frontend.cc`, `levers.cc`; ~1.3k LOC).
+  - `app/src/main/java/com/osfans/trime/provider/RimeDataProvider.kt` — `DocumentsProvider` exposing the on-device RIME user dir; schema data vendored via git submodules under `app/data/rime/`.
+- **Inspiration takeaways for us**:
+  - **Async engine-daemon pattern**: marshal every FFI call onto one dedicated engine thread; expose a `suspend` API + a `SharedFlow` of engine events; gate calls behind a lifecycle "ready" state; ref-count sessions so the engine finalizes when no IME/host is attached. This is the model for our Android↔Rust FFI threading.
+  - **Paged candidate UI**: `CandidatesPagingSource` shows how to lazily page a large candidate list out of the engine instead of materialising it all — useful if our Android candidate bar ever needs an "unrolled" full-list view.
+  - **Engine data deployment on Android**: submodule-vendored schema/dict + a `DocumentsProvider` for user access — reference if we ever let users inspect/edit on-device dictionary files.
+- **Caveat**: librime engine internals (segmentation / Spelling Algebra / user-dict math) are **already covered** by `librime` (#8) + `rime-reference.md`; do not re-derive them from Trime. Trime's value is the **Android integration layer**, not the engine.
+
 ---
 
 ## External pointers (NOT cloned under `references/`)
@@ -327,13 +352,15 @@ When designing a Phase IV+ engine slice, read in this order:
 For Phase II+ (cross-platform alignment), read:
 
 1. **`azookey-reference.md`** — iOS UI patterns.
-2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI.
-3. **`rules/cross-platform-alignment.md`** — refactor-freeze + Phase II end gate.
+2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI (engine *not* wired in).
+3. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android IME *with* a native engine wired in via an async daemon; the FFI-threading model for our Android↔Rust boundary.
+4. **`rules/cross-platform-alignment.md`** — refactor-freeze + Phase II end gate.
 
 ---
 
 ## Maintenance log
 
 - **2026-05-12** — Initial version. Indexed 13 repos under `references/` + 4 external pointers (Mozc, libchewing, Gboard, OpenVanilla). Built on top of existing deep-dives (azookey/khiin/rime/moe-taigi).
+- **2026-05-17** — Added repo #16 `trime/` (osfans/trime, RIME IME for Android, GPL-3.0, nightly `277b8ea2`). Matrix row + per-repo card + new "Native-engine embedding / FFI threading" topic section + Custom-UI / Schema-deploy / Phase II+ pointers. Index-only (no deep-dive): Trime's engine internals are already covered by `librime` (#8) + `rime-reference.md`; its value is the Android integration layer. Deep-dive deferred until an Android FFI/daemon slice needs it.
 
 When adding a new repo under `references/`, append a card here and a row in the TL;DR matrix; if the repo is deep enough to warrant its own deep-dive (>500 LOC of read-through), create `docs/references/<repo>-reference.md` and link both ways.
