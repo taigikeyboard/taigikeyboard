@@ -452,6 +452,75 @@ fn greedy_longest_syllabification(
     (pos == lowered.len()).then_some(segs)
 }
 
+/// v3.5.8 OOV-cost fix (Codex PR #290 P1 `r3255035136`, 2026-05-18) —
+/// the **guaranteed** syllable count of `shadow_span`: the minimum
+/// number of single-syllable hops to cover it. Each hop is one valid
+/// syllable from `valid_span_endings_lowered(.., max_syllables = 1)` —
+/// the same per-syllable step `lattice::builder::build_lattice` relies
+/// on (it calls `valid_span_endings_lowered(.., max_syllables = 8)`,
+/// whose internal BFS itself advances exactly one valid syllable per
+/// depth level, so an emitted edge is a chain of these single hops).
+///
+/// Replaces `greedy_longest_syllabification(span).len()` for the
+/// no-dict edge's `syllable_count`. Greedy-longest is not a global
+/// segmentation guarantee — it can dead-end (`None`) on a span that is
+/// still lattice-syllabifiable via a *non-greedy* split — and the old
+/// `unwrap_or(1)` then mispriced a multi-syllable OOV edge as one
+/// syllable, recreating the cheap-blob underpricing the OOV-cost fix
+/// removes (`UNKNOWN_SYLLABLE_DECAY^1` ≪ `^n`). A min-hop BFS over the
+/// builder's own single-syllable steps cannot dead-end on a real
+/// lattice edge: `build_lattice` emits `(start, end)` only by chaining
+/// exactly those hops, so a hop-path `0 → len` provably exists and the
+/// BFS returns `Some(>= 1)`. Min-hop (not greedy / not max) is the
+/// fewest-syllable valid reading — it is `1` only when the whole span
+/// is itself one valid syllable (correct), never collapsing a
+/// genuinely multi-syllable span to `1`.
+///
+/// `None` only if `len` is not single-syllable-reachable at all —
+/// impossible for an edge this same `build_lattice` produced over the
+/// same `shadow`/`inv` (Codex pre-impl Q1/Q2 OK); the caller treats
+/// `None` as a broken edge/provider invariant and fail-closed **drops
+/// the edge** rather than mispricing it (the buffer is still spanned
+/// via finer edges).
+// 中文: OOV-cost fix(Codex PR #290 P1)— shadow_span 的「保證」音節數 =
+// 中文:   覆蓋它所需的最少單音節 hop 數,走 build_lattice 同一 valid_span_endings_lowered(..,1) step。
+// 中文:   取代 greedy_longest_syllabification(span).len():greedy 非全域保證、會 dead-end,
+// 中文:   舊 unwrap_or(1) 把多音節 OOV edge 誤計 1 音節 → 重現 cheap-blob 低估(本 P1)。
+// 中文:   lattice edge 存在 ⇔ build_lattice 以單音節 hop 串到 end → 真實 edge 必 Some(≥1)。
+// 中文:   min-hop(非 greedy/max):只有整段本身=單一合法音節才回 1,不把多音節塌成 1。
+// 中文:   None 僅當整段非單音節可達(真實 edge 不可能)→ caller fail-closed 丟棄該 edge。
+fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory) -> Option<usize> {
+    let lowered = shadow_span.to_ascii_lowercase();
+    let end = lowered.len();
+    if end == 0 {
+        return None;
+    }
+    // Unweighted shortest path (in #hops) from offset 0 to `end`. Each
+    // hop is one valid syllable from
+    // `valid_span_endings_lowered(.., pos, inv, 1)` (the single-hop
+    // primitive the lattice builder chains). FIFO BFS + a visited
+    // distance map = min hops; only strictly-forward steps are
+    // enqueued so it terminates in <= `end` iterations.
+    use std::collections::{BTreeMap, VecDeque};
+    let mut dist: BTreeMap<usize, usize> = BTreeMap::new();
+    dist.insert(0, 0);
+    let mut queue: VecDeque<usize> = VecDeque::new();
+    queue.push_back(0);
+    while let Some(pos) = queue.pop_front() {
+        let hops = dist[&pos];
+        if pos == end {
+            return Some(hops);
+        }
+        for nxt in crate::syllabifier::tl::valid_span_endings_lowered(&lowered, pos, inv, 1) {
+            if nxt > pos && nxt <= end && !dist.contains_key(&nxt) {
+                dist.insert(nxt, hops + 1);
+                queue.push_back(nxt);
+            }
+        }
+    }
+    None
+}
+
 /// v3.5.8 S2 (Codex post-impl P1, 2026-05-16) — `consumed_span` for
 /// the synthesized slot-0 candidate, or `None` to suppress the synth.
 ///
@@ -736,13 +805,36 @@ fn fetch_walker_slot0(
                 // but flagged `dict_hit: false`. A synthesized roman
                 // edge has no `user_frequency.db` history key so its
                 // walker user weight stays neutral
-                // (`user_weight_delta = 0.0`). Under S5 min-cost a
-                // wholly no-dict buffer collapses to the fewest-edge
-                // blob; the user-facing per-syllable romanization is
-                // produced by the explicit no-dict carve-out below
+                // (`user_weight_delta = 0.0`). The user-facing
+                // per-syllable romanization for a wholly no-dict buffer
+                // is produced by the explicit no-dict carve-out below
                 // (keyed off `dict_hit`), NOT by an edge-cost tie lever.
+                //
+                // v3.5.8 OOV-cost fix (Codex pre-impl Q3 +
+                // PR #290 P1 r3255035136, 2026-05-18): `syllable_count`
+                // is the edge's REAL span syllable count — NOT a
+                // hardcoded `1`. `edge_cost`'s OOV branch divides the
+                // unknown-word probability by
+                // `UNKNOWN_SYLLABLE_DECAY^syllable_count`, so an honest
+                // count is what stops a multi-syllable OOV blob from
+                // undercutting a dict-covering path. It is derived from
+                // a **guaranteed-reachable** min-syllable-hop walk over
+                // the lattice's own single-syllable step primitive
+                // ([`span_min_syllable_count`]) — NOT
+                // `greedy_longest_syllabification(...).unwrap_or(1)`,
+                // which can dead-end on a span that is still
+                // lattice-syllabifiable via a non-greedy split and then
+                // misprice a multi-syllable OOV edge as one syllable
+                // (the exact cheap-blob underpricing this fix removes,
+                // Codex PR #290 P1). `None` is unreachable for a real
+                // lattice edge (Codex pre-impl Q1/Q2 OK); if the
+                // edge/provider invariant is ever broken, fail-closed
+                // by dropping the edge rather than mispricing it — the
+                // buffer is still spanned via finer edges.
                 None => {
                     let toneless_len = toneless.chars().count();
+                    let syllable_count = span_min_syllable_count(&shadow[start..end], inv)?
+                        .clamp(1, u8::MAX as usize) as u8;
                     Some(crate::lattice::EdgeChoice {
                         roman: toneless,
                         hanji: None,
@@ -750,7 +842,7 @@ fn fetch_walker_slot0(
                         // S6: a synthesized OOV roman edge is not custom.
                         is_custom: false,
                         frequency: 0,
-                        syllable_count: 1,
+                        syllable_count,
                         toneless_len,
                         user_weight_delta: 0.0,
                     })
@@ -2138,6 +2230,43 @@ mod tests {
         // list untouched (pre-S2 behavior).
         let inv = build_inventory(&["tai1"]);
         assert!(greedy_longest_syllabification("taix", &inv).is_none());
+    }
+
+    // ----- v3.5.8 OOV-cost fix — span_min_syllable_count
+    //       (Codex PR #290 P1 r3255035136) -----
+
+    #[test]
+    fn span_min_syllable_count_simple_spans() {
+        let inv = build_inventory(&["tai1", "uan1", "ta1"]);
+        // Whole span is itself one valid syllable → 1 (correct, not a
+        // collapse).
+        assert_eq!(span_min_syllable_count("tai", &inv), Some(1));
+        // `taiuanta` = tai|uan|ta → 3 (the count the OOV decay needs).
+        assert_eq!(span_min_syllable_count("taiuanta", &inv), Some(3));
+        // Not single-syllable-reachable → None (caller fail-closes).
+        assert_eq!(span_min_syllable_count("taix", &inv), None);
+        assert_eq!(span_min_syllable_count("", &inv), None);
+    }
+
+    #[test]
+    fn span_min_syllable_count_recovers_a_greedy_dead_end() {
+        // The exact P1: greedy-longest dead-ends but the span IS
+        // lattice-syllabifiable via a non-greedy split, so the old
+        // `greedy…unwrap_or(1)` mispriced this 2-syllable OOV blob as
+        // ONE syllable. Inventory = {ta, tan, nia}; input `tania`:
+        //   greedy from 0 takes the LONGEST prefix `tan` → tail `ia`
+        //   has no valid syllable → greedy = None → old code = 1.
+        //   non-greedy `ta` then `nia` spans it → real count = 2.
+        let inv = build_inventory(&["ta1", "tan1", "nia1"]);
+        assert!(
+            greedy_longest_syllabification("tania", &inv).is_none(),
+            "precondition: greedy-longest must dead-end on this span"
+        );
+        assert_eq!(
+            span_min_syllable_count("tania", &inv),
+            Some(2),
+            "min-hop walk must recover the real 2-syllable count, not collapse to 1"
+        );
     }
 
     // ----- v3.5.8 2A — per-segment case-from-raw -----
