@@ -461,18 +461,23 @@ fn greedy_longest_syllabification(
 /// whose internal BFS itself advances exactly one valid syllable per
 /// depth level, so an emitted edge is a chain of these single hops).
 ///
-/// Replaces `greedy_longest_syllabification(span).len()` for the
-/// no-dict edge's `syllable_count`. Greedy-longest is not a global
-/// segmentation guarantee — it can dead-end (`None`) on a span that is
-/// still lattice-syllabifiable via a *non-greedy* split — and the old
-/// `unwrap_or(1)` then mispriced a multi-syllable OOV edge as one
-/// syllable, recreating the cheap-blob underpricing the OOV-cost fix
-/// removes (`UNKNOWN_SYLLABLE_DECAY^1` ≪ `^n`). A min-hop BFS over the
-/// builder's own single-syllable steps cannot dead-end on a real
-/// lattice edge: `build_lattice` emits `(start, end)` only by chaining
-/// exactly those hops, so a hop-path `0 → len` provably exists and the
-/// BFS returns `Some(>= 1)`. Min-hop (not greedy / not max) is the
-/// fewest-syllable valid reading — it is `1` only when the whole span
+/// Sets the no-dict edge's `syllable_count`. **v3.5.8 RC0**: the OOV
+/// edge *cost* is now `OOV_PER_CHAR_PENALTY * toneless_len`
+/// (char-keyed, khiin's per-char `BIG`), so `syllable_count` no longer
+/// feeds OOV pricing — it is metadata that flows into the synthesized
+/// slot-0 candidate's syllable sum. Kept honest (not a hardcoded `1`)
+/// anyway so that sum stays correct and the dispatch invariant is not
+/// weakened (Codex pre-impl RC0 Q3). Replaces
+/// `greedy_longest_syllabification(span).len()`: greedy-longest is not
+/// a global segmentation guarantee — it can dead-end (`None`) on a
+/// span still lattice-syllabifiable via a *non-greedy* split, and the
+/// old `unwrap_or(1)` then under-counted a multi-syllable OOV span. A
+/// min-hop BFS over the builder's own single-syllable steps cannot
+/// dead-end on a real lattice edge: `build_lattice` emits
+/// `(start, end)` only by chaining exactly those hops, so a hop-path
+/// `0 → len` provably exists and the BFS returns `Some(>= 1)`. Min-hop
+/// (not greedy / not max) is the fewest-syllable valid reading — it is
+/// `1` only when the whole span
 /// is itself one valid syllable (correct), never collapsing a
 /// genuinely multi-syllable span to `1`.
 ///
@@ -810,27 +815,26 @@ fn fetch_walker_slot0(
                 // is produced by the explicit no-dict carve-out below
                 // (keyed off `dict_hit`), NOT by an edge-cost tie lever.
                 //
-                // v3.5.8 OOV-cost fix (Codex pre-impl Q3 +
-                // PR #290 P1 r3255035136, 2026-05-18): `syllable_count`
-                // is the edge's REAL span syllable count — NOT a
-                // hardcoded `1`. `edge_cost`'s OOV branch divides the
-                // unknown-word probability by
-                // `UNKNOWN_SYLLABLE_DECAY^syllable_count`, so an honest
-                // count is what stops a multi-syllable OOV blob from
-                // undercutting a dict-covering path. It is derived from
-                // a **guaranteed-reachable** min-syllable-hop walk over
-                // the lattice's own single-syllable step primitive
+                // v3.5.8 RC0: what stops a multi-syllable OOV blob
+                // from undercutting a dict-covering path is now
+                // `edge_cost`'s char-keyed per-char `BIG` penalty
+                // (`OOV_PER_CHAR_PENALTY * toneless_len`), NOT the
+                // syllable count. `syllable_count` here is metadata
+                // only — it flows into the synthesized slot-0
+                // candidate's syllable sum, so it is still kept honest
+                // (not a hardcoded `1`) via a **guaranteed-reachable**
+                // min-syllable-hop walk over the lattice's own
+                // single-syllable step primitive
                 // ([`span_min_syllable_count`]) — NOT
                 // `greedy_longest_syllabification(...).unwrap_or(1)`,
-                // which can dead-end on a span that is still
-                // lattice-syllabifiable via a non-greedy split and then
-                // misprice a multi-syllable OOV edge as one syllable
-                // (the exact cheap-blob underpricing this fix removes,
-                // Codex PR #290 P1). `None` is unreachable for a real
-                // lattice edge (Codex pre-impl Q1/Q2 OK); if the
-                // edge/provider invariant is ever broken, fail-closed
-                // by dropping the edge rather than mispricing it — the
-                // buffer is still spanned via finer edges.
+                // which can dead-end on a span still lattice-
+                // syllabifiable via a non-greedy split and then
+                // under-count the synth syllable sum (Codex pre-impl
+                // RC0 Q3; PR #290 P1 r3255035136). `None` is
+                // unreachable for a real lattice edge (Codex pre-impl
+                // Q1/Q2 OK); if the edge/provider invariant is ever
+                // broken, fail-closed by dropping the edge — the buffer
+                // is still spanned via finer edges.
                 None => {
                     let toneless_len = toneless.chars().count();
                     let syllable_count = span_min_syllable_count(&shadow[start..end], inv)?
@@ -2241,7 +2245,7 @@ mod tests {
         // Whole span is itself one valid syllable → 1 (correct, not a
         // collapse).
         assert_eq!(span_min_syllable_count("tai", &inv), Some(1));
-        // `taiuanta` = tai|uan|ta → 3 (the count the OOV decay needs).
+        // `taiuanta` = tai|uan|ta → 3 (the synth syllable-sum metadata).
         assert_eq!(span_min_syllable_count("taiuanta", &inv), Some(3));
         // Not single-syllable-reachable → None (caller fail-closes).
         assert_eq!(span_min_syllable_count("taix", &inv), None);

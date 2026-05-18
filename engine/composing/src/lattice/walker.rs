@@ -71,14 +71,18 @@ pub(crate) struct EdgeChoice {
     /// NOT read this (a custom edge competes via [`Self::frequency`] =
     /// `CUSTOM_EFFECTIVE_FREQ`, Codex S6 Q1 — NOT a cost special-case).
     pub is_custom: bool,
-    /// Frequency the edge is scored with in [`super::cost::edge_cost`]:
-    /// the chosen `dict.bin` candidate's raw frequency, `0` for a
-    /// synthesized OOV edge, or `super::cost::CUSTOM_EFFECTIVE_FREQ`
-    /// for a custom edge (S6 effective-frequency proxy).
+    /// Frequency the edge is scored with on the **dict** branch of
+    /// [`super::cost::edge_cost`]: the chosen `dict.bin` candidate's
+    /// raw frequency, or `super::cost::CUSTOM_EFFECTIVE_FREQ` for a
+    /// custom edge (S6 proxy). `0` and **unused** for a synthesized OOV
+    /// edge (RC0: OOV cost is char-keyed, never frequency-based).
     pub frequency: u32,
-    /// Syllable count of the chosen candidate (`>= 1`; `1` for a
-    /// synthesized pure-roman edge; greedy-longest segment count of the
-    /// edge span for a custom edge).
+    /// Syllable count of the chosen candidate (`>= 1`). Dict/custom:
+    /// the record's / greedy-longest span syllable count, drives the
+    /// khiin `n_syls^0.2` bias. OOV: the real min-syllable-hop count of
+    /// the span (`dispatch::span_min_syllable_count`, NOT a hardcoded
+    /// `1`) — RC0 metadata only (it feeds the synthesized candidate's
+    /// syllable sum; the OOV *cost* ignores it).
     pub syllable_count: u8,
     /// Toneless-key char count for this edge (khiin's `word_len`). The
     /// khiin length normalization in [`edge_cost`] is not faithful
@@ -258,12 +262,10 @@ mod tests {
     fn roman(r: &str) -> EdgeChoice {
         roman_n(r, 1)
     }
-    /// A multi-syllable OOV edge. v3.5.8 OOV-cost fix: the dispatch
-    /// no-dict branch now sets `syllable_count` to the span's REAL
-    /// syllable count (mirroring the custom branch), and `edge_cost`'s
-    /// OOV pricing divides the unknown-word probability by
-    /// `UNKNOWN_SYLLABLE_DECAY^syllable_count` — so tests must supply a
-    /// realistic count, not a hardcoded 1.
+    /// A multi-syllable OOV edge. v3.5.8 RC0: OOV cost is now
+    /// `OOV_PER_CHAR_PENALTY * toneless_len` (char-keyed); `syll` here
+    /// is synth syllable-sum metadata and does NOT affect the edge
+    /// cost. `toneless_len` (= `r.chars().count()`) is the cost driver.
     fn roman_n(r: &str, syll: u8) -> EdgeChoice {
         EdgeChoice {
             roman: r.to_owned(),
@@ -357,19 +359,19 @@ mod tests {
 
     #[test]
     fn no_dict_path_collapses_to_fewest_edges_under_min_cost() {
-        // `taiuantai` — no dict hits anywhere. v3.5.8 OOV-cost fix:
-        // each OOV edge is now priced from the length-scaled
-        // unknown-word probability keyed on its REAL syllable count, so
-        // a 3-syllable blob is far costlier than under the old
-        // length-independent pricing — but for a WHOLLY-OOV buffer the
-        // single (0,9) blob is still the min-Σ path (one decayed-prob
-        // toll beats three separate per-syllable tolls). The
-        // user-facing per-syllable romanization is NOT produced here;
-        // it is the explicit `dispatch::fetch_walker_slot0` carve-out
-        // (Codex pre-impl S5 Q2). This pins that the OOV pricing only
-        // governs *path selection*, and an all-OOV buffer still
-        // collapses to the fewest-edge blob (which the carve-out then
-        // renders per-syllable).
+        // `taiuantai` — no dict hits anywhere. v3.5.8 RC0: every OOV
+        // edge costs `OOV_PER_CHAR_PENALTY * toneless_len`, so ALL
+        // OOV-only segmentations covering the same buffer have the
+        // SAME total (Σ char counts = buffer length, constant). The
+        // walker replaces only on a strictly-lower cost, so the
+        // first-reached path at offset 9 — the single (0,9) blob,
+        // reached directly from 0 before the (6,9) relaxation — is
+        // kept. The user-facing per-syllable romanization is NOT
+        // produced here; it is the explicit
+        // `dispatch::fetch_walker_slot0` carve-out (Codex pre-impl S5
+        // Q2). This pins that an all-OOV buffer still resolves to the
+        // fewest-edge blob (which the carve-out then renders
+        // per-syllable) under the RC0 BIG-per-char model.
         let lat = lattice(vec![(0, 3), (0, 6), (0, 9), (3, 6), (3, 9), (6, 9)]);
         let path = walk_best(&lat, 9, |s, e| match (s, e) {
             (0, 3) => Some(roman("tai")),
@@ -387,16 +389,14 @@ mod tests {
 
     #[test]
     fn oov_blob_loses_to_dict_covering_path() {
-        // v3.5.8 OOV-cost fix — the motivating dogfood bug at the
-        // walker level. `taiuanta` (shadow len 8, 3 syllables): a
+        // RC0 at the walker level. `taiuanta` (shadow len 8): a
         // whole-buffer OOV blob edge (0,8) competes with the
         // dict-covering path 台灣(0,6, freq 1379, 2 syll) +
-        // 焦(6,8, freq 2145, 1 syll). Pre-fix the length-independent
-        // OOV pricing made the blob (~10.8) cheaper than the dict path
-        // (~14.9), so the walker chose it, `any dict_hit` was false and
-        // `dispatch::fetch_walker_slot0` rendered bare `"tai uan ta"`.
-        // The walker must now pick the dict path so the slot-0 synth is
-        // hanji.
+        // 焦(6,8, freq 2145, 1 syll). Under RC0 the blob costs
+        // `8 * OOV_PER_CHAR_PENALTY ≈ 8e10`, dwarfing the `ln`-scale
+        // dict path, so the walker picks the dict path → `any dict_hit`
+        // true → `dispatch::fetch_walker_slot0` renders hanji, never
+        // bare `"tai uan ta"`.
         let lat = lattice(vec![(0, 6), (0, 8), (6, 8)]);
         let path = walk_best(&lat, 8, |s, e| match (s, e) {
             (0, 6) => Some(dict("tâi-uân", "台灣", 1379, 2, 6)),
@@ -416,6 +416,51 @@ mod tests {
             .filter_map(|c| c.hanji.clone())
             .collect();
         assert_eq!(hanji, "台灣焦");
+    }
+
+    #[test]
+    fn rc0_long_dict_path_beats_whole_buffer_oov_blob() {
+        // RC0 at the walker level — the reproduced bug shape.
+        // `ginalangtsiahpngbesai` (= 囡仔人食飯袂使): a 7-edge
+        // dict-covering path vs a single whole-buffer OOV blob edge.
+        // Pre-RC0 the smooth OOV pricing made the 1-edge blob cheaper
+        // than the 7-edge dict path (each dict edge paid a per-edge
+        // `ln(CORPUS/freq)` toll, the blob paid one discounted toll) →
+        // bare roman. RC0: the blob costs `21 * OOV_PER_CHAR_PENALTY`,
+        // so the dict path wins regardless of how many edges it needs.
+        let lat = lattice(vec![
+            (0, 3),
+            (3, 6),
+            (6, 9),
+            (9, 12),
+            (12, 15),
+            (15, 18),
+            (18, 21),
+            (0, 21),
+        ]);
+        let path = walk_best(&lat, 21, |s, e| match (s, e) {
+            (0, 3) => Some(dict("gín", "囡", 8068, 1, 3)),
+            (3, 6) => Some(dict("á", "仔", 1148, 1, 3)),
+            (6, 9) => Some(dict("lâng", "人", 52526, 1, 3)),
+            (9, 12) => Some(dict("tsia̍h", "食", 15378, 1, 3)),
+            (12, 15) => Some(dict("pn̄g", "飯", 9000, 1, 3)),
+            (15, 18) => Some(dict("bē", "袂", 8000, 1, 3)),
+            (18, 21) => Some(dict("sái", "使", 7000, 1, 3)),
+            (0, 21) => Some(roman_n("ginalangtsiahpngbesai", 7)),
+            _ => None,
+        })
+        .expect("full path");
+        assert_eq!(path.edges.len(), 7, "must take the 7-edge dict path");
+        assert!(
+            path.choices.iter().all(|c| c.dict_hit),
+            "RC0: a dict-coverable buffer never collapses to an OOV blob"
+        );
+        let hanji: String = path
+            .choices
+            .iter()
+            .filter_map(|c| c.hanji.clone())
+            .collect();
+        assert_eq!(hanji, "囡仔人食飯袂使");
     }
 
     #[test]

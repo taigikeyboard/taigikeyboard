@@ -37,47 +37,65 @@
 //! ```
 //!
 //! `CORPUS_TOTAL_FREQ > 1 + max(freq)`, so `p ∈ (0, 1)` and
-//! `ln(1/p) > 0` for every edge — including an OOV (`freq = 0`) edge,
-//! which stays finite via Laplace smoothing instead of needing a
-//! special-case fallback (`feedback_no_redundant_fallback`). The
-//! decisive structural property the old model lacked: **every edge
-//! pays the ~`ln(CORPUS_TOTAL_FREQ)` corpus-normalization toll**, so a
-//! finer segmentation accumulates strictly more cost and a real phrase
-//! out-competes its single-character decomposition.
+//! `ln(1/p) > 0` for every **dict** edge (a freq-0 dict record is
+//! still dict-priced — the branch is gated on `dict_hit`, never
+//! `frequency == 0`). The decisive structural property the old
+//! max-Σ model lacked: **every dict edge pays the
+//! ~`ln(CORPUS_TOTAL_FREQ)` corpus-normalization toll**, so a finer
+//! segmentation accumulates strictly more cost and a real phrase
+//! out-competes its single-character decomposition. An OOV
+//! (no-dict-hit) edge does NOT take this probability path at all —
+//! RC0 prices it as khiin's per-char `BIG` (`OOV_PER_CHAR_PENALTY *
+//! toneless_len`); see the OOV section below.
 //!
-//! ## OOV (no-dict-hit) edges — the v3.5.8 OOV-cost fix
+//! ## OOV (no-dict-hit) edges — the v3.5.8 RC0 fix
 //!
-//! An OOV edge is priced from a **length-scaled unknown-word
-//! probability** (the `dict_hit == false` branch of `edge_cost`, khiin
-//! `segmenter.rs:83` corpus-normalized — see `UNKNOWN_SYLLABLE_DECAY`)
-//! keyed on its real syllable count, so it does not undercut the
-//! *intended best* dict-covering path for the same span (pinned by
-//! hermetic `cost`/`walker` tests — NOT a global "OOV beats any dict
-//! path" guarantee; a pathologically expensive dict decomposition can
-//! still exceed an OOV blob, which is a cost property, not a
-//! lexicographic `dict_hit` rule — Codex pre-impl Q1 BLOCK). S5
-//! originally priced
-//! OOV with the **length-independent** `1/CORPUS_TOTAL_FREQ`; that only
-//! reasoned about a *wholly*-OOV buffer (the carve-out renders it) and
-//! missed the **mixed** case — a cheap single OOV blob edge winning
-//! even though a dict-covering path existed, so `any_dict` went false
-//! and the user saw bare roman instead of hanji (dogfood `taiuanta` →
-//! `"tai uan ta"`, `taiuantai`, reproduced 2026-05-18).
+//! khiin has TWO distinct mechanisms; S5/S7 conflated them. (1) A
+//! **known dictionary word** whose corpus probability is `<= 0` is
+//! floored at `p = 1e-5 / 10^word_len` and priced on the `ln(1/p)`
+//! curve (`segmenter.rs:75-92`) — a corpus-gap floor for an *indexed*
+//! word. (2) A span with **no dictionary word** is not priced by any
+//! probability at all: `segment_min_cost:198-206` advances one char
+//! paying `BIG = 1e10`, so a contiguous uncovered region accumulates
+//! `BIG` **per char**. Real words are `ln`-scale (~5-30), so in khiin
+//! a single OOV char dominates any dict-coverable segmentation at any
+//! length.
 //!
-//! For a buffer with **no dictionary hit anywhere** the min-cost path
-//! is still all-OOV; the user-facing per-syllable romanization is
-//! produced by an explicit carve-out in `dispatch::fetch_walker_slot0`,
-//! **outside** this cost function (Codex pre-impl S5 Q2, 2026-05-17) —
-//! the OOV pricing here only governs *path selection* (dict path vs OOV
-//! blob), never the rendered string.
+//! S5 priced a genuine OOV span with mechanism (1)'s smooth
+//! corpus-normalized probability (`ln`-scale). A whole-buffer OOV blob
+//! is ONE edge, so it paid khiin's `÷ word_len^0.2` discount once over
+//! the full buffer and undercut a dict-covering path that accumulates a
+//! per-edge `ln(CORPUS/freq)` toll **linearly in edge count**. Past ~6
+//! dict edges the blob won → `any_dict == false` → the carve-out
+//! rendered bare roman (`ginalangtsiahpngbesai → "gin a lang tsiah png
+//! be sai"` instead of 囡仔人食飯袂使; threshold exactly 6 syllables,
+//! reproduced against the real dictionary 2026-05-18). S7's
+//! `UNKNOWN_SYLLABLE_DECAY` only softened the slope; it did not
+//! de-conflate the two mechanisms (`taiuanta`/`taiuantai` only happened
+//! to fall below the 6-edge threshold).
+//!
+//! RC0 de-conflates them: an OOV edge is khiin's mechanism (2) —
+//! `OOV_PER_CHAR_PENALTY * toneless_len` (per-char `BIG`), unbiased and
+//! with no user discount. So "OOV loses to any dict-coverable path"
+//! holds at **every length** — a *cost property* (khiin's own `BIG`
+//! constant), NOT a lexicographic `dict_hit` short-circuit (Codex
+//! pre-impl S7 Q1 / RC0 Q2). For a buffer with **no dictionary hit
+//! anywhere** the min-cost path is still all-OOV; the user-facing
+//! per-syllable romanization is produced by an explicit carve-out in
+//! `dispatch::fetch_walker_slot0`, **outside** this cost function
+//! (Codex pre-impl S5 Q2) — the OOV pricing here only governs *path
+//! selection* (dict path vs OOV blob), never the rendered string.
 
-// 中文: S5 — 全句 walker 的單條 edge 成本(越小越好;min Σ cost = khiin segment_min_cost = McBopomofo max Σ log P)。
-// 中文: 忠實移植 khiin segmenter.rs:82-92:p=(1+freq)/CORPUS、cost=ln(1/p)/len^0.2·syll^0.2、user 偏好 log-space 折減。
-// 中文: S2/S3 把 khiin 的 ln(1/p) 正規化 + minimize 拿掉 → 全正、無正規化、maximize → 結構性獎勵過度切分
-// 中文:   (真實 freq 下 taiuan 吐 乾伊有俺,dogfood 2026-05-17)。每條 edge 付 ~ln(CORPUS) 正規化稅 → 細分嚴格更貴。
-// 中文: 無字典 OOV 的逐音節羅馬字由 dispatch::fetch_walker_slot0 顯式 carve-out 產生(不進本成本函式,Codex S5 Q2)。
-// 中文: v3.5.8 OOV-cost fix:OOV edge 改用「每音節衰減」未知詞機率(khiin segmenter.rs:83 語料正規化版),
-// 中文:   S5 原本長度無關的 1/CORPUS 只顧全 OOV、漏了 mixed case(便宜 OOV blob 蓋過存在的字典路徑 → bare roman)。
+// 中文: 全句 walker 單條 edge 成本(越小越好;min Σ cost = khiin segment_min_cost = McBopomofo max Σ log P)。
+// 中文: 字典分支忠實移植 khiin segmenter.rs:82-92:p=(1+freq)/CORPUS、cost=ln(1/p)/len^0.2·syll^0.2、user log-space 折減。
+// 中文: S2/S3 把 khiin 的 ln(1/p) 正規化 + minimize 拿掉 → maximize 結構性獎勵過度切分(taiuan→乾伊有俺,2026-05-17)。
+// 中文: RC0 — khiin 兩機制被 S5/S7 混淆:(1) 已索引詞 p<=0 下限 1e-5/10^word_len(ln 尺度);
+// 中文:   (2) segment_min_cost:198-206 真・未覆蓋 span 每字元付 BIG=1e10。S5 用 (1) 平滑機率定價真・OOV
+// 中文:   → 整段 blob 一次吃 ÷word_len^0.2 折扣贏過逐邊累 toll 的字典路徑(>6 邊翻車 → carve-out 吐純羅馬字;
+// 中文:   ginalangtsiahpngbesai 門檻恰 6 音節,2026-05-18 真實字典重現);S7 只調斜率沒解混淆。
+// 中文: RC0 解混淆:OOV edge = OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG),無 bias/折減
+// 中文:   →「OOV 輸給任何字典可覆蓋路徑」任何長度恆成立 = 成本性質非 dict_hit lexicographic 短路。
+// 中文: 無字典命中 buffer 的逐音節羅馬字由 dispatch::fetch_walker_slot0 顯式 carve-out 產生(不進本函式,Codex S5 Q2)。
 
 /// Total corpus frequency mass — the denominator that turns a raw
 /// `DictionaryRecord.frequency` into a corpus probability
@@ -128,54 +146,69 @@ pub(crate) const SYLLABLE_COUNT_BIAS: f64 = 0.2;
 /// the model penalize over-segmentation.
 const _: () = assert!(LETTER_COUNT_BIAS > 0.0 && SYLLABLE_COUNT_BIAS > 0.0);
 
-/// v3.5.8 OOV-cost fix (Codex pre-impl Q1, 2026-05-18, BLOCK
-/// condition) — the per-syllable decay base for an **OOV (no-dict-hit)**
-/// edge's unknown-word probability.
+/// v3.5.8 RC0 fix — the per-char penalty an **OOV (no-dict-hit)** span
+/// pays. khiin's literal `BIG` (`segmenter.rs:29` `const BIG: f64 =
+/// 1e10`).
 ///
-/// khiin's segmenter prices an unknown / zero-probability word as
-/// `p = 1e-5 / 10^word_len` (`references/khiin-rs/khiin/src/data/
-/// segmenter.rs:83`): the unknown probability **decays with span
-/// length**, so `ln(1/p)` *grows* with the span. S5 ported the
-/// dictionary-word branch (`p = (1 + freq) / CORPUS_TOTAL_FREQ`) but
-/// substituted a **length-independent** `1/CORPUS_TOTAL_FREQ` for the
-/// OOV (`freq = 0`) case. That made a single OOV edge spanning the
-/// whole multi-syllable buffer *cheaper* than a correct dictionary
-/// decomposition (it paid one ~`ln(CORPUS)` toll for the whole span and
-/// still took the `÷ toneless_len^0.2` length discount), so the walker
-/// chose the all-OOV blob even when a dict-covering path existed →
-/// `any_dict == false` → the `dispatch::fetch_walker_slot0` carve-out
-/// rendered bare roman and the user never saw hanji (dogfood
-/// `taiuanta → "tai uan ta"`, `taiuantai → "tai uan tai"`, reproduced
-/// against the real dictionary 2026-05-18).
+/// khiin has TWO distinct mechanisms that S5/S7 conflated:
 ///
-/// The corpus-normalized analogue of khiin's `/ 10^word_len`, keyed on
-/// the edge's **real syllable count** (not its toneless char length —
-/// syllables are the segmentation unit here):
-/// `p_oov = (1 / CORPUS_TOTAL_FREQ) / 10^syllable_count`. Each extra
-/// syllable an OOV edge spans divides its probability by another
-/// decade, so a multi-syllable OOV blob loses to the *intended best*
-/// dict-covering path (pinned by hermetic `cost`/`walker` tests — NOT a
-/// global "OOV beats any dict path" guarantee, which would be a
-/// lexicographic `dict_hit` rule, not a cost constant; Codex Q1 BLOCK).
-/// A cited constant, not a runtime tunable (same rationale as the khiin
-/// bias exponents).
-// 中文: OOV-cost fix(Codex Q1 BLOCK)— OOV(無字典命中)edge 未知詞機率的「每音節」衰減基數。
-// 中文: khiin segmenter.rs:83 把未知詞定為 p=1e-5/10^word_len(機率隨長度衰減 → ln(1/p) 隨 span 變大);
-// 中文:   S5 移植字典分支卻把 OOV 換成長度無關的 1/CORPUS → 整段 OOV blob 比正確字典切分還便宜
-// 中文:   (一次 ln(CORPUS) 稅 + 仍吃 ÷len^0.2 折扣)→ walker 選 blob、any_dict=false、carve-out 吐純羅馬字
-// 中文:   (dogfood taiuanta→"tai uan ta",2026-05-18 真實字典重現)。
-// 中文: 語料正規化版的 khiin /10^word_len,改 key 在「實際音節數」(音節才是切分單位):
-// 中文:   p_oov=(1/CORPUS)/10^syllable_count;多音節 OOV blob 輸給「預期最佳」字典路徑(hermetic 測試 pin,
-// 中文:   非全域「OOV 永遠輸任何字典路徑」保證,後者是 dict_hit lexicographic 規則非成本常數,Codex Q1 BLOCK)。
-pub(crate) const UNKNOWN_SYLLABLE_DECAY: f64 = 10.0;
+/// 1. `segmenter.rs:75-92` (`Segmenter::new`) — a **known dictionary
+///    word** whose corpus probability is `<= 0.0` is floored at
+///    `p = 1e-5 / 10^word_len` and priced on the `ln(1/p)` curve. This
+///    is a corpus-gap floor for an *indexed* word, NOT the price of a
+///    genuinely uncovered span.
+/// 2. `segment_min_cost:198-206` — a span with **no dictionary word**
+///    is not priced by any probability at all: the DP advances one
+///    char paying `costs[i-1] + BIG` (`BIG = 1e10`), so a contiguous
+///    uncovered region accumulates `BIG` **once per char**. Real words
+///    are `ln`-scale (~5-30); a single OOV char (`1e10`) therefore
+///    dominates any dict-coverable segmentation at any length — khiin
+///    essentially never emits an OOV blob when a dict path exists.
+///
+/// S5 priced a genuine OOV span with mechanism (1)'s smooth
+/// corpus-normalized probability (`ln`-scale), so a whole-buffer OOV
+/// blob — one edge paying khiin's `÷ word_len^0.2` discount once over
+/// the full buffer — undercut a dict-covering path that accumulates a
+/// per-edge `ln(CORPUS/freq)` toll linearly in edge count. Past ~6
+/// dict edges the blob won → `any_dict == false` → the
+/// `dispatch::fetch_walker_slot0` carve-out rendered bare roman
+/// (`ginalangtsiahpngbesai → "gin a lang tsiah png be sai"` instead of
+/// 囡仔人食飯袂使; threshold exactly 6 syllables, reproduced against the
+/// real dictionary 2026-05-18). S7's `UNKNOWN_SYLLABLE_DECAY` only
+/// softened the slope; it did not de-conflate the two mechanisms.
+///
+/// RC0 de-conflates them: an OOV edge costs `OOV_PER_CHAR_PENALTY *
+/// toneless_len` (khiin's per-char `BIG`; `toneless_len` = the edge's
+/// char count = khiin `word_len`), unbiased and with no user discount
+/// (khiin's `BIG` is raw; an OOV edge always carries
+/// `user_weight_delta = 0`). The dictionary branch keeps the full
+/// khiin cost-map formula. This makes "OOV loses to any dict-coverable
+/// path" hold at every length — as a **cost property** (khiin's own
+/// `BIG` constant), NOT a lexicographic `dict_hit` short-circuit
+/// (Codex pre-impl S7 Q1 / RC0 Q2). A cited constant, not a runtime
+/// tunable (same rationale as the khiin bias exponents).
+// 中文: RC0 修 — OOV(無字典命中)span 的「每字元」懲罰 = khiin 字面 BIG(segmenter.rs:29 `1e10`)。
+// 中文: khiin 兩個被 S5/S7 混淆的機制:(1) segmenter.rs:75-92 已索引詞 p<=0 的語料缺口下限
+// 中文:   p=1e-5/10^word_len(ln 尺度);(2) segment_min_cost:198-206 真・未覆蓋 span 不用任何機率,
+// 中文:   DP 每前進一字元付 costs[i-1]+BIG(1e10),整段累加 BIG/字元 → 單一 OOV 字元(1e10)
+// 中文:   壓過任何 ln 尺度(~5-30)字典切分,任何長度皆然(khiin 有字典路徑就幾乎不吐 OOV blob)。
+// 中文: S5 用機制(1)的平滑機率定價真・OOV span → 整段 blob 一次吃 ÷word_len^0.2 折扣、贏過逐邊累 toll
+// 中文:   的字典路徑(>6 邊翻車 → any_dict=false → carve-out 吐純羅馬字;ginalangtsiahpngbesai→純羅馬字,
+// 中文:   門檻恰 6 音節,2026-05-18 真實字典重現)。S7 只調斜率沒解混淆。
+// 中文: RC0 解混淆:OOV edge = OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG;toneless_len=khiin word_len),
+// 中文:   無 bias、無 user 折減(khiin BIG 是 raw;OOV edge user_weight_delta 恆 0);字典分支維持完整 khiin 公式。
+// 中文:   「OOV 輸給任何字典可覆蓋路徑」恆成立 = 成本性質(khiin 自己的 BIG 常數)非 dict_hit lexicographic 短路。
+pub(crate) const OOV_PER_CHAR_PENALTY: f64 = 1e10;
 
-/// Compile-time invariant: the OOV per-syllable decay must strictly
-/// shrink the probability (`> 1.0`); `<= 1.0` would make a longer OOV
-/// span *cheaper* — the exact S5 defect this constant fixes. The OOV
-/// base probability `1 / CORPUS_TOTAL_FREQ` is already in `(0, 1)` via
-/// the `CORPUS_TOTAL_FREQ > 184_694.0` guard above, and dividing by
-/// `10^syllable_count >= 1` keeps it there.
-const _: () = assert!(UNKNOWN_SYLLABLE_DECAY > 1.0);
+/// Compile-time invariant: the OOV per-char penalty must dominate any
+/// realistic dict-coverable path sum. A single dict edge's `ln(1/p)`
+/// is at most `ln(CORPUS_TOTAL_FREQ) ≈ 16.4`, scaled by the khiin
+/// biases to `O(50)`; even a thousand-edge sentence stays `O(1e5)`.
+/// `1e10` per OOV char is `>= 1e5` orders clear of that, so a
+/// dict-coverable buffer can never collapse to an OOV blob (RC0). The
+/// guard also keeps the penalty strictly positive (finite f64 at the
+/// `u8::MAX` toneless-length extreme: `1e10 * 255 = 2.55e12`).
+const _: () = assert!(OOV_PER_CHAR_PENALTY >= 1e5);
 
 /// v3.5.8 S3/S5 — fraction of the decayed user-frequency delta a
 /// **single-syllable** (`syllable_count <= 1`) walker edge receives.
@@ -227,56 +260,59 @@ pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
 /// Min-cost for one lattice edge (**lower = better**).
 ///
 /// - `frequency` — the chosen dictionary candidate's raw
-///   `DictionaryRecord.frequency`; ignored when `dict_hit == false`.
+///   `DictionaryRecord.frequency`; **unused when `dict_hit == false`**.
 ///   Raw frequency, never a ranked `score` (Codex pre-impl S5 Q3:
 ///   `c.score` must not feed the walker cost — that double-counts the
 ///   record-selection signal).
-/// - `syllable_count` — that candidate's syllable count (`>= 1`;
-///   clamped, defends against a leaked `0`). For an OOV edge this is
-///   the **real** span syllable count (set by
-///   `dispatch::fetch_walker_slot0`, mirroring the custom branch), not
-///   a hardcoded `1` — it drives the per-syllable OOV decay below.
+/// - `syllable_count` — the dict candidate's syllable count (`>= 1`;
+///   clamped, defends against a leaked `0`); drives the khiin
+///   `n_syls^0.2` bias. For an OOV edge it is **metadata only** (the
+///   synthesized candidate's syllable sum) and does NOT enter the cost
+///   (RC0 — the OOV penalty is char-length-keyed, not syllable-keyed;
+///   Codex pre-impl RC0 Q3).
 /// - `toneless_len` — the edge's toneless-key char count (khiin's
-///   `word_len`). Carried on `EdgeChoice` because the khiin length
-///   normalization is not faithful without it (Codex pre-impl S5 Q1
-///   BLOCK).
+///   `word_len`). Both the dict `÷ word_len^0.2` bias and the OOV
+///   per-char penalty multiplier (Codex pre-impl S5 Q1 BLOCK; RC0).
 /// - `user_weight_delta` — the time-decayed user-frequency boost delta
 ///   for this edge's chosen candidate
 ///   (`ranking::decayed_user_weight_delta`, in `0.0..=4.0`; `0.0` =
 ///   no user history / never selected / bad clock = neutral). Computed
-///   caller-side (`dispatch::fetch_walker_slot0`).
+///   caller-side (`dispatch::fetch_walker_slot0`). OOV edges always
+///   carry `0.0` and take no discount.
 /// - `dict_hit` — `true` iff this edge is a lexicon-backed hit
 ///   (`dict.bin` record OR a `custom_dictionary.db` entry). The OOV
-///   pricing is selected solely from this flag, **never** inferred from
+///   branch is selected solely from this flag, **never** inferred from
 ///   `frequency == 0`: a real dictionary record may legitimately have
 ///   frequency 0, and a custom edge is scored at the
 ///   `CUSTOM_EFFECTIVE_FREQ` proxy — both must use the dictionary
-///   probability, not the unknown-word one (Codex pre-impl Q2; S5/S6
-///   "never infer no-dict from freq" invariant, `cost.rs` head +
-///   `dispatch.rs` no-dict branch).
+///   formula, not the OOV penalty (Codex pre-impl Q2; "never infer
+///   no-dict from freq" invariant, `cost.rs` head + `dispatch.rs`
+///   no-dict branch).
 ///
-/// `cost = ln(1 / p) / toneless_len^0.2 × syllable_count^0.2
-///         − ln(1 + applied_delta)` where
-/// `p = dict_hit ? (1 + frequency) / CORPUS_TOTAL_FREQ
-///               : (1 / CORPUS_TOTAL_FREQ) /
-///                 UNKNOWN_SYLLABLE_DECAY^syllable_count`
-/// (khiin `segmenter.rs:83-92`: the dict branch is the corpus
-/// probability; the OOV branch is the corpus-normalized analogue of
-/// khiin's length-scaled unknown-word probability — see
-/// [`UNKNOWN_SYLLABLE_DECAY`]). Always finite and `> 0` before the
-/// user discount: `CORPUS_TOTAL_FREQ > 1 + max(freq)` keeps the dict
-/// `ln(1/p) > 0`; the OOV `p` is `(1/CORPUS) / 10^syll ∈ (0, 1)` so its
-/// `ln(1/p) > 0` too, and lengths/syllables clamp to `>= 1`. The user
-/// discount is a `ln(1 + δ) >= 0` subtraction (δ clamped `>= 0`), so
-/// user preference only ever *lowers* an edge's cost, never raises it
-/// (Codex pre-impl S5 Q3 — log-space sign). An OOV edge always carries
-/// `user_weight_delta = 0.0` (no `user_frequency.db` history key), so
-/// its discount is `ln(1) = 0`.
-// 中文: 單 edge 最小化成本(越小越好)= ln(1/p)/len^0.2·syll^0.2 − ln(1+applied_δ)。
-// 中文: dict_hit → p=(1+freq)/CORPUS;否則 p=(1/CORPUS)/UNKNOWN_SYLLABLE_DECAY^syll(khiin /10^word_len 語料正規化版)。
-// 中文: OOV 分支「只」由 dict_hit 旗標選,絕不從 freq==0 推(真實字典詞可 freq 0、custom 用 proxy freq);
-// 中文:   dict ln(1/p)>0 靠 CORPUS>1+max(freq);OOV p=(1/CORPUS)/10^syll∈(0,1) 故 ln(1/p)>0;len/syll clamp≥1。
-// 中文: user 折減 ln(1+δ)≥0(δ clamp≥0)只降本不升本;OOV edge δ 恆 0 → 折減 ln(1)=0。
+/// Two khiin mechanisms, de-conflated by RC0 (see
+/// [`OOV_PER_CHAR_PENALTY`]):
+/// - **dict** (`dict_hit`): khiin `segmenter.rs:82-92` —
+///   `cost = ln(1 / p) / toneless_len^0.2 × syllable_count^0.2
+///   − ln(1 + applied_delta)`, `p = (1 + frequency) /
+///   CORPUS_TOTAL_FREQ`. `> 0` before the discount
+///   (`CORPUS_TOTAL_FREQ > 1 + max(freq)`); the `ln(1 + δ) >= 0`
+///   subtraction (δ clamped `>= 0`) only ever *lowers* cost (Codex
+///   pre-impl S5 Q3 — log-space sign).
+/// - **OOV** (`!dict_hit`): khiin `segment_min_cost:198-206` —
+///   `cost = OOV_PER_CHAR_PENALTY × toneless_len` (khiin's `BIG` per
+///   advanced char), unbiased, no user discount. `>= 1e10` per char
+///   dominates every `ln`-scale dict-coverable path, so a
+///   dict-coverable buffer never collapses to an OOV blob at any
+///   length (RC0) — a **cost property**, not a lexicographic
+///   `dict_hit` rule (Codex pre-impl S7 Q1 / RC0 Q2).
+///
+/// Always finite and `> 0`.
+// 中文: 單 edge 最小化成本(越小越好),RC0 de-conflate khiin 兩機制:
+// 中文: dict_hit → khiin segmenter.rs:82-92:ln(1/p)/len^0.2·syll^0.2 − ln(1+δ),p=(1+freq)/CORPUS;
+// 中文:   分支只由 dict_hit 選,絕不從 freq==0 推(真實字典詞可 freq 0、custom 用 proxy freq)。
+// 中文: !dict_hit → khiin segment_min_cost:198-206:OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG),
+// 中文:   無 bias、無 user 折減;每字元 ≥1e10 壓過任何 ln 尺度字典可覆蓋路徑 → 字典可覆蓋 buffer 任何長度
+// 中文:   都不會塌成 OOV blob(RC0)= 成本性質非 dict_hit lexicographic 規則。OOV 的 syllable_count/frequency 僅 metadata。
 pub(crate) fn edge_cost(
     frequency: u32,
     syllable_count: u8,
@@ -284,23 +320,22 @@ pub(crate) fn edge_cost(
     user_weight_delta: f64,
     dict_hit: bool,
 ) -> f64 {
-    let syllables = i32::from(syllable_count.max(1));
-    let p = if dict_hit {
-        // khiin segmenter.rs:82-89 — Laplace-smoothed corpus
-        // probability. A dict record with frequency 0 is still a
-        // dict-priced edge (Codex pre-impl Q2): the unknown-word
-        // branch is gated on `dict_hit`, not `frequency`.
-        (1.0 + f64::from(frequency)) / CORPUS_TOTAL_FREQ
-    } else {
-        // khiin segmenter.rs:83 corpus-normalized analogue — the OOV
-        // unknown-word probability decays one decade per syllable so a
-        // multi-syllable OOV blob cannot undercut a dict-covering path
-        // (the S5 length-independent `1/CORPUS` defect). `1/CORPUS ∈
-        // (0,1)` and `UNKNOWN_SYLLABLE_DECAY^syll >= 1` keep `p ∈
-        // (0,1)` ⇒ `ln(1/p) > 0`; both invariants are compile-time
-        // guarded next to the constants.
-        (1.0 / CORPUS_TOTAL_FREQ) / UNKNOWN_SYLLABLE_DECAY.powi(syllables)
-    };
+    if !dict_hit {
+        // khiin `segment_min_cost:198-206`: a span with no dictionary
+        // word is not priced by any probability — the DP pays `BIG`
+        // per advanced char. `toneless_len` = the span's char count =
+        // khiin `word_len`. Unbiased, no user discount (khiin's `BIG`
+        // is raw; an OOV edge always carries `user_weight_delta = 0`).
+        // `frequency` / `syllable_count` are intentionally unused here:
+        // they are OOV metadata for the synthesized candidate, not cost
+        // inputs (Codex pre-impl RC0 Q3).
+        return OOV_PER_CHAR_PENALTY * toneless_len.max(1) as f64;
+    }
+    // khiin segmenter.rs:82-89 — Laplace-smoothed corpus probability.
+    // A dict record with frequency 0 is still dict-priced (Codex
+    // pre-impl Q2): the OOV branch is gated on `dict_hit`, never
+    // `frequency == 0`.
+    let p = (1.0 + f64::from(frequency)) / CORPUS_TOTAL_FREQ;
     let mut cost = (1.0 / p).ln();
     // khiin segmenter.rs:90-92 — `cost / word_len^0.2 * n_syls^0.2`.
     let len_bias = (toneless_len.max(1) as f64).powf(LETTER_COUNT_BIAS);
@@ -325,7 +360,7 @@ pub(crate) fn edge_cost(
 mod tests {
     use super::{
         edge_cost, CORPUS_TOTAL_FREQ, CUSTOM_EFFECTIVE_FREQ, LETTER_COUNT_BIAS,
-        SYLLABLE_COUNT_BIAS, UNKNOWN_SYLLABLE_DECAY, WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
+        OOV_PER_CHAR_PENALTY, SYLLABLE_COUNT_BIAS, WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE,
     };
 
     /// Neutral-user-weight **dict-hit** edge cost — no user history
@@ -337,9 +372,10 @@ mod tests {
         edge_cost(freq, syll, len, 0.0, true)
     }
 
-    /// Neutral-user-weight **OOV** (no-dict-hit) edge cost. `frequency`
-    /// is irrelevant in this branch (always priced from the khiin
-    /// length-scaled unknown-word probability), so it is fixed at 0.
+    /// Neutral-user-weight **OOV** (no-dict-hit) edge cost. RC0:
+    /// `frequency` AND `syll` are both irrelevant in this branch — an
+    /// OOV edge is priced solely `OOV_PER_CHAR_PENALTY * len` (khiin's
+    /// per-char `BIG`), so `freq` is fixed at 0 and `syll` is metadata.
     fn oov(syll: u8, len: usize) -> f64 {
         edge_cost(0, syll, len, 0.0, false)
     }
@@ -367,15 +403,12 @@ mod tests {
 
     #[test]
     fn oov_edge_is_finite_and_strictly_positive() {
-        // An OOV edge must stay finite & positive so the DP never sees
-        // a `-inf`/`NaN`. v3.5.8 OOV-cost fix: priced from the
-        // length-scaled unknown-word probability
-        // `p = (1/CORPUS) / 10^syll`, so `ln(1/p) = ln(CORPUS) +
-        // syll·ln(10)`.
+        // RC0: an OOV edge must stay finite & positive so the DP never
+        // sees a `-inf`/`NaN`. Priced as khiin's per-char `BIG`:
+        // `OOV_PER_CHAR_PENALTY * toneless_len`, unbiased.
         let c = oov(1, 3);
         assert!(c.is_finite() && c > 0.0, "{c}");
-        let expected =
-            (CORPUS_TOTAL_FREQ.ln() + UNKNOWN_SYLLABLE_DECAY.ln()) / 3f64.powf(LETTER_COUNT_BIAS);
+        let expected = OOV_PER_CHAR_PENALTY * 3.0;
         assert!((c - expected).abs() < 1e-9, "{c} vs {expected}");
     }
 
@@ -383,8 +416,8 @@ mod tests {
     fn freq_zero_dict_record_uses_dict_pricing_not_oov() {
         // Codex pre-impl Q2 BLOCK guard: a real `dict.bin` record may
         // legitimately have frequency 0. It must be priced on the
-        // dictionary branch (`ln(CORPUS/1)`), NEVER the unknown-word
-        // branch — the OOV pricing is gated on `dict_hit`, not
+        // dictionary branch (`ln(CORPUS/1)`), NEVER the OOV per-char
+        // penalty — the OOV branch is gated on `dict_hit`, not
         // `frequency == 0`.
         let dict_freq0 = ec(0, 2, 6); // dict_hit = true
         let expected =
@@ -462,10 +495,10 @@ mod tests {
     #[test]
     fn syllable_zero_clamps_to_one() {
         // syllable_count is a u8 from a record; a leaked 0 must clamp
-        // to 1 (no powf(0)=… surprise, takes the single-syllable
-        // user-scale branch identical to syll = 1). Holds on both
-        // pricing branches — the OOV branch's `10^syll` decay also
-        // clamps `syll >= 1` so a leaked 0 does not divide by `10^0`.
+        // to 1 on the dict branch (no powf(0)=… surprise, takes the
+        // single-syllable user-scale branch identical to syll = 1).
+        // The OOV branch ignores syllable_count entirely (RC0:
+        // char-keyed penalty), so 0 vs 1 is trivially equal there.
         assert_eq!(edge_cost(0, 0, 3, 3.5, true), edge_cost(0, 1, 3, 3.5, true));
         assert_eq!(
             edge_cost(0, 0, 3, 0.0, false),
@@ -475,18 +508,16 @@ mod tests {
 
     #[test]
     fn oov_blob_loses_to_intended_best_dict_path() {
-        // The motivating dogfood bug, real dictionary frequencies.
-        // `taiuanta` (shadow len 8, 3 syllables) with no whole-buffer
-        // dict word: the single OOV blob edge (0,8) must cost strictly
-        // MORE than the intended dict-covering path 台灣(0,6, freq 1379,
-        // 2 syll, "taiuan" len 6) + 焦(6,8, freq 2145, 1 syll, "ta"
-        // len 2). Pre-fix the blob was ~10.8 vs ~14.9 and won, so
-        // `any_dict` went false and the user saw bare `"tai uan ta"`.
-        // NOTE: this pins "OOV loses to the *intended best* dict path",
-        // NOT a global "OOV beats any dict path" (Codex pre-impl Q1
-        // BLOCK — a pathologically expensive dict decomposition could
-        // still exceed an OOV blob; that is a cost property, not a
-        // lexicographic `dict_hit` rule).
+        // Earlier dogfood bug (`taiuanta`), real frequencies.
+        // `taiuanta` (len 8) with no whole-buffer dict word: the single
+        // OOV blob edge (0,8) must cost strictly MORE than the
+        // dict-covering path 台灣(0,6, freq 1379, "taiuan" len 6) +
+        // 焦(6,8, freq 2145, "ta" len 2). RC0: the blob is now khiin's
+        // `BIG`-per-char (`8 * OOV_PER_CHAR_PENALTY ≈ 8e10`) so it
+        // dominates the `ln`-scale dict path by ~9 orders — it is a
+        // **cost property** (khiin's `BIG` constant), not a
+        // lexicographic `dict_hit` rule (Codex pre-impl S7 Q1 / RC0
+        // Q2).
         let oov_blob = oov(3, 8);
         let dict_path = ec(1379, 2, 6) + ec(2145, 1, 2);
         assert!(
@@ -497,28 +528,57 @@ mod tests {
 
     #[test]
     fn oov_costs_more_than_freq_zero_dict_for_multi_syllable() {
-        // The exact S5 defect, pinned: a multi-syllable OOV span must
-        // cost strictly more than the OLD length-independent freq-0
-        // pricing (= today's freq-0 *dict* pricing). This is the gap
-        // that let the OOV blob undercut a dict path.
+        // A multi-char OOV span must cost strictly more than a freq-0
+        // *dict* edge of the same shape — `dict_hit` selects the
+        // branch, never `frequency == 0` (Codex pre-impl Q2). RC0: the
+        // OOV side is `8 * OOV_PER_CHAR_PENALTY`, the dict side is
+        // `ln`-scale.
         assert!(
             oov(3, 8) > ec(0, 3, 8),
-            "OOV {} must exceed old freq-0 pricing {}",
+            "OOV {} must exceed freq-0 dict pricing {}",
             oov(3, 8),
             ec(0, 3, 8)
         );
     }
 
     #[test]
-    fn oov_cost_increases_with_syllable_count_at_fixed_len() {
-        // khiin `segmenter.rs:83` length-scaled unknown probability,
-        // corpus-normalized: each extra syllable divides `p` by another
-        // decade, so `ln(1/p)` (and the `·n_syls^0.2` bias) both rise →
-        // OOV cost is strictly increasing in syllable count at fixed
-        // toneless length. This is what stops a multi-syllable OOV blob
-        // from being the cheap fewest-edge winner.
-        assert!(oov(1, 8) < oov(2, 8), "{} !< {}", oov(1, 8), oov(2, 8));
-        assert!(oov(2, 8) < oov(3, 8), "{} !< {}", oov(2, 8), oov(3, 8));
+    fn oov_cost_is_per_char_and_length_independent_of_syllables() {
+        // RC0: khiin `segment_min_cost:198-206` prices an uncovered
+        // span as `BIG` per advanced char. So OOV cost is exactly
+        // `OOV_PER_CHAR_PENALTY * toneless_len`, strictly increasing in
+        // char length and INDEPENDENT of syllable count (the S7
+        // `10^syllable_count` decay is gone — syllable_count is OOV
+        // metadata only). This is what structurally stops a long OOV
+        // blob from ever undercutting a dict-coverable path (RC0).
+        assert_eq!(oov(1, 6), OOV_PER_CHAR_PENALTY * 6.0);
+        assert_eq!(oov(1, 8), oov(2, 8));
+        assert_eq!(oov(2, 8), oov(3, 8));
+        assert!(oov(1, 6) < oov(1, 7), "OOV cost must rise per char");
+    }
+
+    #[test]
+    fn rc0_long_dict_path_beats_whole_buffer_oov_blob_any_length() {
+        // RC0 core invariant at the cost level: a dict-covering path
+        // of MANY edges (here 7 single-char dict words, the
+        // `ginalangtsiahpngbesai`→囡仔人食飯袂使 shape) must stay
+        // cheaper than a single whole-buffer OOV blob spanning the same
+        // chars — length-independently. The pre-RC0 smooth OOV pricing
+        // let the blob win past ~6 edges (the reproduced bug).
+        let blob_chars = 21usize; // ≈ "ginalangtsiahpngbesai"
+        let oov_blob = oov(7, blob_chars);
+        // 7 modest-frequency dict edges (~3 chars each).
+        let dict_path: f64 = (0..7).map(|_| ec(500, 1, 3)).sum();
+        assert!(
+            dict_path < oov_blob,
+            "dict_path={dict_path} must stay < oov_blob={oov_blob}"
+        );
+        // …and a 20-edge sentence still loses to one OOV char.
+        let huge_dict: f64 = (0..20).map(|_| ec(50, 1, 3)).sum();
+        assert!(
+            huge_dict < oov(1, 1),
+            "even a 20-edge dict path ({huge_dict}) < one OOV char ({})",
+            oov(1, 1)
+        );
     }
 
     #[test]
@@ -574,9 +634,8 @@ mod tests {
             (u32::MAX, u8::MAX, 64),
         ] {
             // Both pricing branches must stay finite at the extremes.
-            // The OOV branch divides by `10^(u8::MAX)` ≈ `1e255`
-            // (finite in f64; `p` underflows toward but not to 0, so
-            // `ln(1/p)` stays large-but-finite).
+            // The OOV branch is `OOV_PER_CHAR_PENALTY * len`; at
+            // `len = 64` that is `6.4e11`, far below f64's range.
             for dict_hit in [true, false] {
                 let c = edge_cost(f, s, l, 4.0, dict_hit);
                 assert!(c.is_finite(), "f={f} s={s} l={l} dict_hit={dict_hit} → {c}");
