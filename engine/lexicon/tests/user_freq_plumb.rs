@@ -342,10 +342,16 @@ fn recent_candidate_outranks_stale_within_same_tier_and_coverage() {
 #[test]
 fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
     // The motivating Phase 9 case: `taiuantaigi`. PR-9.1 ranks
-    // 「臺灣台語」 first via the Tier 1 rule even without user-frequency
-    // plumbing. PR-9.3a must preserve that ordering byte-identically
-    // when no user-frequency entries flow in — guaranteeing PR-9.3b/c
-    // can land without an inter-version surprise.
+    // 「臺灣台語」 first via the Tier 0 rule even without user-frequency
+    // plumbing. This test's real intent is cold-start parity: an empty
+    // `FrequencyMap` + `now_ms = 0` must produce a deterministic order
+    // with every recency rank stale.
+    //
+    // v3.5.8 整句 lattice + walker S8: the headline (Tier 0 phrase #1,
+    // all recency = 1) is unchanged. Only the within-Tier-1 sub-order
+    // flipped — coverage was demoted below freq, so the higher-freq
+    // short 「台」 (31281) now precedes the lower-freq longer 「台灣」
+    // (1379). Cold-start parity itself is intact (no user-freq effect).
     let (prefix_index, dict) = build_fixture(
         "cold-start-parity",
         &[
@@ -385,8 +391,9 @@ fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
     let displays: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
     assert_eq!(
         displays,
-        vec!["臺灣台語", "台灣", "台"],
-        "cold-start ordering must match PR-9.1 / 9.2 (Tier 1 phrase first)"
+        vec!["臺灣台語", "台", "台灣"],
+        "cold-start ordering: Tier 0 phrase first; within Tier 1, \
+         post-S8 higher-freq short 「台」 precedes lower-freq longer 「台灣」"
     );
     // All recency ranks should be `1` (stale/never) since `now_ms = 0`.
     assert!(

@@ -445,9 +445,20 @@ pub type ConsumedSpan = (u32, u32);
 /// `docs/roadmap.md` § Phase 9 sort_key formula:
 ///
 /// ```text
-/// (tier, -coverage_bytes, recency_rank, -adjusted_score,
-///  -freq, source_tier_rank, stable_idx)
+/// (coverage_kind, tier, recency_rank, -adjusted_score,
+///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
 /// ```
+///
+/// v3.5.8 整句 lattice + walker S8: `-coverage_bytes` was relocated
+/// from dim 3 to dim 6 (below `-adjusted_score` / `-freq`). With the
+/// slot-0 whole-sentence walker owning phrase priority, a graded
+/// longest-coverage-first rule inside a tier only buried the short
+/// single-syllable first-segment candidate the user wants for
+/// segment-by-segment selection. Coverage is now a weak tiebreak that
+/// fires only when score AND freq are equal — matching librime's
+/// per-segment menu, which keeps multi-length candidates but never lets
+/// a longer code-length bury a shorter strict match
+/// (`script_translator.cc` `kNumExactMatchOnTop`).
 ///
 /// # v3.5.8 Phase 9.3a — user-frequency plumb
 ///
@@ -465,7 +476,7 @@ pub type ConsumedSpan = (u32, u32);
 /// public contract) are coerced to `f32::MIN` at `SortKey`
 /// construction so the descending-order invariant holds.
 // 中文: Phase 6 新增 — 模式無關的 span-local 候選查詢;接受 (consumed_span, "tl:<key>") pair list,讓 dispatch 端集中處理 TL vs TPS key 構造。
-// 中文: Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 七維 lexicographic。
+// 中文: Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 8 維 lexicographic(S8:coverage 已降為 score/freq 之後弱 tiebreak)。
 // 中文: Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
 // 中文: Phase 9 Item 12 改:接 custom 命中,合成 full-buffer 候選併入 out 後做 (roman,hanji) 去重 (排序前)。
 #[allow(clippy::too_many_arguments)]
@@ -997,12 +1008,19 @@ fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
 // ---------------------------------------------------------------------------
 // v3.5.8 Phase 9.1 — SortKey
 //
-// Encodes the seven-dimension lexicographic sort policy pinned in
-// `docs/roadmap.md` § Phase 9. Field order in this struct matches
-// `#[derive(Ord)]`'s lexicographic comparison; `Reverse<T>` flips
-// individual dimensions whose policy is descending. NaN-safe
-// because scores are wrapped in `NonNanF32` which coerces NaN to
-// `f32::MIN` at construction.
+// Encodes the eight-dimension lexicographic sort policy pinned in
+// `docs/roadmap.md` § Phase 9 (+ 整句 lattice + walker S8). Field
+// order in this struct matches `#[derive(Ord)]`'s lexicographic
+// comparison; `Reverse<T>` flips individual dimensions whose policy
+// is descending. NaN-safe because scores are wrapped in `NonNanF32`
+// which coerces NaN to `f32::MIN` at construction.
+//
+// Order: coverage_kind, tier, recency_rank, -score, -freq,
+// -coverage, source_rank, stable_idx. S8 moved `-coverage` from
+// dim 3 (above score) down to dim 6 (a weak tiebreak below
+// score/freq): the slot-0 whole-sentence walker now owns phrase
+// priority, so longest-coverage-first inside a tier only buried the
+// short single-syllable first-segment candidate.
 // ---------------------------------------------------------------------------
 
 // 中文: Phase 9.1 / Phase 9 Item 10 排序鍵 — 8 維 lexicographic,asc/desc 由 Reverse<T> 控;NaN 在 NonNanF32 內 coerce 成 f32::MIN。
@@ -1027,9 +1045,6 @@ struct SortKey {
     /// ranking.md` §1.1).
     // 中文: tier — 0 為 Tier 0 (consumed_span_end == raw_len),1 為 Tier 1 (部分覆蓋)。
     tier: u8,
-    /// Descending: longer coverage wins within tier.
-    // 中文: coverage 長度 desc,同 tier 內長覆蓋優先。
-    neg_coverage: Reverse<u32>,
     /// `0` = recent (`last_used_ms` within
     /// `ranking::RECENCY_WINDOW_MS`), `1` = stale, never used, or
     /// clock-skew. Populated by `record_to_candidate` from the
@@ -1044,6 +1059,23 @@ struct SortKey {
     /// adjusted_score (only differs when boost ≠ 1.0 once 9.3a lands).
     // 中文: freq desc 作為 adjusted_score 之外的二次 tie-break (9.3a boost 不為 1.0 後才會分歧)。
     neg_freq: Reverse<u32>,
+    /// Descending: longer coverage wins — but only as a weak tiebreak
+    /// AFTER `neg_score` / `neg_freq`. v3.5.8 整句 lattice + walker S8
+    /// relocated this from dim 3 to here. The slot-0 whole-sentence
+    /// walker owns phrase priority, so a graded longest-coverage-first
+    /// rule inside a tier only buried the short single-syllable
+    /// first-segment candidate the user wants for segment-by-segment
+    /// selection. Coverage now separates two candidates only when their
+    /// score AND freq are equal — aligned with librime's per-segment
+    /// menu, which keeps multi-length candidates but never lets a
+    /// longer code-length bury a shorter strict match
+    /// (`references/librime/src/rime/gear/script_translator.cc`
+    /// `kNumExactMatchOnTop`).
+    // 中文: coverage 長度 desc,但已降為 score/freq 之後的弱 tiebreak(S8,原 dim 3)。
+    // 中文:   整句優先由 slot-0 walker 負責;長覆蓋優先在 tier 內只會埋葬使用者要逐段點選的
+    // 中文:   單音節首段。現只在 score+freq 同分時才分 — 對齊 librime per-segment menu
+    // 中文:   (保留多長度但不讓長碼蓋短嚴格匹配,kNumExactMatchOnTop)。
+    neg_coverage: Reverse<u32>,
     /// Ascending: `custom=0, kautian=1, taigitv=2, stti=3, kungge=4,
     /// default=5` per `ranking::source_tier_rank`.
     // 中文: source 來源 rank asc;ranking::source_tier_rank 為單一 source-of-truth。
@@ -1069,10 +1101,10 @@ impl SortKey {
         Self {
             coverage_kind: candidate.coverage_kind,
             tier,
-            neg_coverage: Reverse(coverage_bytes),
             recency_rank: candidate.recency_rank,
             neg_score: Reverse(NonNanF32::new(candidate.score)),
             neg_freq: Reverse(candidate.frequency),
+            neg_coverage: Reverse(coverage_bytes),
             source_rank,
             stable_idx,
         }
@@ -1200,13 +1232,47 @@ mod sort_key_tests {
     }
 
     #[test]
-    fn within_tier_longer_coverage_beats_shorter() {
-        // Per Codex R2 Q2.c — `-coverage_bytes` precedes `-adjusted_score`
-        // inside the tier. A 6-byte coverage with score 100 still wins
-        // over a 3-byte coverage with score 1000 when both are Tier 1.
+    fn within_tier_higher_score_beats_longer_coverage() {
+        // v3.5.8 整句 lattice + walker S8 (was
+        // `within_tier_longer_coverage_beats_shorter`, which pinned the
+        // pre-S8 policy that caused the `guaikingkahuekhoo` dogfood
+        // bug). `-coverage_bytes` is now dim 6, BELOW `-adjusted_score`
+        // / `-freq`. A 3-byte coverage with score 1000 must now win
+        // over a 6-byte coverage with score 100 when both are Tier 1.
         let raw_len: u32 = 9; // neither span hits full buffer
         let longer = cand(0, 6, 100.0, 100, 0);
         let shorter = cand(0, 3, 1000.0, 1000, 0);
+
+        assert!(SortKey::new(&shorter, raw_len, 0) < SortKey::new(&longer, raw_len, 1));
+    }
+
+    #[test]
+    fn single_syllable_first_segment_not_buried_by_longer_prefix() {
+        // Dogfood bug pin (`guaikingkahuekhoo` → 「我」/Guá buried).
+        // When no span-local candidate covers the full buffer (the
+        // whole-sentence path is the slot-0 walker, prepended
+        // separately), a high-freq single-syllable first-segment
+        // candidate must rank ABOVE a longer left-anchored prefix
+        // candidate of lower freq — so segment-by-segment selection is
+        // fast. Both Tier 1; only score/freq vs coverage differ.
+        let raw_len: u32 = 17; // guaikingkahuekhoo; no span hits it
+        let single = cand(0, 3, 31281.0, 31281, 0); // gua → 我
+        let longer_prefix = cand(0, 6, 1379.0, 1379, 0); // a 2-syll prefix
+        assert!(
+            SortKey::new(&single, raw_len, 0) < SortKey::new(&longer_prefix, raw_len, 1),
+            "high-freq single-syllable first segment must not be buried \
+             below a lower-freq longer prefix"
+        );
+    }
+
+    #[test]
+    fn coverage_breaks_tie_only_when_score_and_freq_equal() {
+        // S8: `-coverage_bytes` survives as a weak deterministic
+        // tiebreak — when score AND freq are identical, the longer
+        // coverage still precedes the shorter one (same Tier 1).
+        let raw_len: u32 = 9;
+        let longer = cand(0, 6, 100.0, 100, 0);
+        let shorter = cand(0, 3, 100.0, 100, 0);
 
         assert!(SortKey::new(&longer, raw_len, 0) < SortKey::new(&shorter, raw_len, 1));
     }
@@ -1272,12 +1338,12 @@ mod sort_key_tests {
 
     #[test]
     fn recency_rank_zero_beats_one_when_tier_coverage_equal() {
-        // Phase 9.3a headline behaviour: within the same (tier,
-        // -coverage) bucket, a recently-used candidate must precede a
-        // stale one even if scores otherwise tie. This is the only
-        // dimension between -coverage and -score in the lexicographic
-        // key, so it triggers reliably with equal score / freq /
-        // bitmask.
+        // Phase 9.3a headline behaviour: within the same `(tier)`
+        // bucket, a recently-used candidate must precede a stale one
+        // even if scores otherwise tie. Post-S8, `recency_rank`
+        // (dim 3) sits directly above `-adjusted_score` (dim 4), so
+        // it triggers reliably here with equal score / freq / coverage
+        // / bitmask (coverage is now the weak dim 6 tiebreak).
         let raw_len: u32 = 3;
         let recent = cand_with_recency(0, 3, 100.0, 100, 0, 0);
         let stale = cand_with_recency(0, 3, 100.0, 100, 0, 1);
@@ -1327,10 +1393,10 @@ mod sort_key_tests {
 
     #[test]
     fn within_partial_prefix_inner_dims_still_apply() {
-        // Inside the `coverage_kind = 1` bucket the existing
-        // `(tier, -coverage, recency, -score, -freq, source, stable_idx)`
-        // policy still drives ordering — verify with two partials
-        // where only `-score` differs.
+        // Inside the `coverage_kind = 1` bucket the
+        // `(tier, recency, -score, -freq, -coverage, source, stable_idx)`
+        // policy (post-S8 order) still drives ordering — verify with
+        // two partials where only `-score` differs.
         let raw_len: u32 = 4;
         let high = cand_partial(0, 4, 100.0, 100, 0);
         let low = cand_partial(0, 4, 1.0, 1, 0);

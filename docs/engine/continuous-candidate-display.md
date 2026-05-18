@@ -543,7 +543,7 @@ Per [`feedback_no_future_planning.md`](../../knowledge/feedback) and [`rules/rus
 - **No** `CandidateMode`-based rendering rules — Phase 9.2 mode is metadata-only; cell shape is decided by `hanji` presence (mirrors lexicon path)
 - **No** new `display_strategy` / `display_hints` proto field — single roman + hanji pair is sufficient
 - **No** changes to `commitContinuous` wire (display_text/consumed_bytes/syllable_count stays exactly as is)
-- **No** changes to `engine/ranking` SortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the existing 7-dim SortKey
+- **No** changes to `engine/ranking` SortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the 8-dim SortKey (S8 demoted `-coverage` to a weak tiebreak below score/freq)
 - **No** changes to `user_frequency.db` schema (commit key remains `display_text`)
 - **No** custom_dictionary integration (still scheduled for Phase 9.6 — wire fields will naturally flow once custom path emits `RawCandidate`)
 - **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — Taigi Keyboard's `isTranslateSwapped` axis is the deliberate UX differentiator (§11 + §15.1)
@@ -708,7 +708,9 @@ Partial-prefix candidates (§15.3.D, `consumed_span = (0, raw.len())` where raw 
 | `0` | Full-syllable match (existing — `valid_span_endings` produced an ending) |
 | `1` | Partial-prefix match (new — syllabifier returned empty, `prefix_index.lookup_prefix` produced hits) |
 
-This pushes ALL partial candidates strictly below ALL full-syllable candidates regardless of frequency. Inside `coverage_kind == 1`, existing `(tier, -coverage_bytes, recency_rank, ...)` lexicographic policy still applies (Tier 0 = "consumed full buffer" is rare here since partial-prefix `consumed_span = (0, raw.len())` may or may not equal full buffer — `raw_len` comparison still valid).
+This pushes ALL partial candidates strictly below ALL full-syllable candidates regardless of frequency. Inside `coverage_kind == 1`, the `(tier, recency_rank, -score, -freq, -coverage_bytes, ...)` lexicographic policy applies (Tier 0 = "consumed full buffer" is rare here since partial-prefix `consumed_span = (0, raw.len())` may or may not equal full buffer — `raw_len` comparison still valid).
+
+> **v3.5.8 整句 lattice + walker S8 — `-coverage_bytes` demoted (dim 3 → dim 6).** Pre-S8 a graded longest-coverage-first rule sat directly above `-score`/`-freq` inside a tier (the original pre-walker Gap-A surfacing of phrases). With the slot-0 whole-sentence walker now owning phrase priority (§7.3 "G1 closed by S2"), that rule only buried the short single-syllable first-segment candidate the user wants for segment-by-segment selection (dogfood: typing `guaikingkahuekhoo`, 「我」/Guá ranked behind even 2-syllable candidates). `-coverage_bytes` is now a weak tiebreak below `-score`/`-freq` — it separates two candidates only when score AND freq are equal. This matches librime's per-segment menu (`references/librime/src/rime/gear/script_translator.cc` `kNumExactMatchOnTop`): keep multi-length candidates visible, but never let a longer code-length bury a shorter strict match. Engine-only, no wire/proto/Model-B change.
 
 **Wire impact**: `coverage_kind` stays internal to `RawCandidate` (does NOT enter `CandidateMessage`); same pattern as `recency_rank` ([`continuous.rs:195-206`](../../engine/lexicon/src/continuous.rs)).
 
@@ -716,18 +718,18 @@ This pushes ALL partial candidates strictly below ALL full-syllable candidates r
 
 ```rust
 struct SortKey {
-    coverage_kind: u8,             // NEW — 0 = full-syllable, 1 = partial-prefix
-    tier: u8,                      // unchanged
-    neg_coverage: Reverse<u32>,    // unchanged
-    recency_rank: u8,              // unchanged
-    neg_score: Reverse<NonNanF32>, // unchanged
-    neg_freq: Reverse<u32>,        // unchanged
-    source_rank: u8,               // unchanged
-    stable_idx: u32,               // unchanged
+    coverage_kind: u8,             // Item 10 — 0 = full-syllable, 1 = partial-prefix
+    tier: u8,                      // 0 = consumed_span_end == raw_len, else 1
+    recency_rank: u8,              // 0 = recent, 1 = stale
+    neg_score: Reverse<NonNanF32>, // freq × syll_bias × boost, desc
+    neg_freq: Reverse<u32>,        // raw freq, desc
+    neg_coverage: Reverse<u32>,    // S8 — DEMOTED here (was dim 3); weak tiebreak
+    source_rank: u8,               // custom=0 … default=5
+    stable_idx: u32,               // insertion order
 }
 ```
 
-(8 dimensions, was 7 in PR-9.1.)
+(8 dimensions. PR-9.1 = 7; Item 10 prepended `coverage_kind`; S8 relocated `neg_coverage` from dim 3 to dim 6.)
 
 ### 15.6 Test matrix for fallback retire — DONE
 

@@ -205,9 +205,10 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert!((zhuah.score - 88.0).abs() < 1e-4);
     assert!((zhu.score - 90.0).abs() < 1e-4);
 
-    // v3.5.8 Phase 9.1 SortKey expected order (per
+    // v3.5.8 SortKey expected order (post-S8; per
     // `docs/roadmap.md` § Phase 9 sort_key formula):
-    //   (tier, -coverage_bytes, recency_rank, -adjusted_score, …)
+    //   (coverage_kind, tier, recency_rank, -adjusted_score, -freq,
+    //    -coverage_bytes, source_rank, stable_idx)
     //
     // - Tier 0 (full-buffer): 紙 + 珠仔, sorted by score desc → 紙 then 珠仔.
     // - Tier 1: 珠.
@@ -581,6 +582,15 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
     // 「臺灣台語」 (score=12×1.3=15.6) by ~2000x → user sees 「台」 at slot #1.
     // Phase 9.1 SortKey: 「臺灣台語」 is Tier 0 (consumed_span_end == raw_len),
     // 「台灣」 and 「台」 are Tier 1 → 「臺灣台語」 surfaces at #1.
+    //
+    // v3.5.8 整句 lattice + walker S8: the headline (Tier 0 phrase #1)
+    // is unchanged — `tier` stays above score. Only the WITHIN-Tier-1
+    // sub-order flipped: pre-S8 `-coverage_bytes` (dim 3) put the
+    // 2-syllable 「台灣」 above the 1-syllable 「台」; post-S8 coverage is
+    // the weak dim-6 tiebreak, so the higher-freq short 「台」 (31281)
+    // now precedes the lower-freq longer 「台灣」 (1379). This is the
+    // exact `guaikingkahuekhoo` dogfood fix — a high-freq single
+    // syllable must not be buried below a longer lower-freq prefix.
     let (prefix_index, dict) = build_fixture(
         "taiuantaigi",
         &[
@@ -622,9 +632,11 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
     let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
     assert_eq!(
         display_order,
-        vec!["臺灣台語", "台灣", "台"],
-        "Tier 1 (full-buffer) 「臺灣台語」 must outrank Tier 2 partials \
-         even though its score (15.6) is ~2000x lower than 「台」 (31281)"
+        vec!["臺灣台語", "台", "台灣"],
+        "Tier 0 (full-buffer) 「臺灣台語」 must outrank Tier 1 partials \
+         even though its score (15.6) is ~2000x lower than 「台」 (31281); \
+         within Tier 1, post-S8 the higher-freq short 「台」 precedes the \
+         lower-freq longer 「台灣」 (coverage demoted below freq)"
     );
 }
 
@@ -743,8 +755,9 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
 #[test]
 fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
     // Three candidates under the SAME toneless key "tai" with identical
-    // SortKey dimensions 0-5 (tier, coverage, recency_rank, adjusted_
-    // score, raw freq, source_rank). Only `stable_idx` differentiates.
+    // SortKey dimensions 0..7 (coverage_kind, tier, recency_rank,
+    // -score, -freq, -coverage, source_rank). Only `stable_idx`
+    // (the last dim) differentiates.
     // The sort MUST keep them in pre-sort fetch order — which is FST
     // byte-sort over the encoded `tl:tai\xFF<rowid_le_u32>` suffix
     // (the `lookup_exact` enumeration order). For this fixture the
