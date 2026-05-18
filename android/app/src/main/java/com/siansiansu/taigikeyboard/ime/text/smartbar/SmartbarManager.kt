@@ -225,8 +225,12 @@ class SmartbarManager(
             else -> {
                 // Router contract: ComposingManager.applyTransition only
                 // forwards the three NextWord-shaped Effects. Reaching this
-                // branch means a routing-layer bug. Loud in debug, logged in
-                // release — never silently masked.
+                // branch means a routing-layer bug. Debug: crash loudly to
+                // surface it. Release: the stray effect is dropped so the
+                // user's keyboard never crashes; the Log.e below is a
+                // best-effort diagnostic that R8 strips under the
+                // zero-logs-in-release privacy policy (rules/security-rules.md),
+                // so in production this is intentionally swallowed, not surfaced.
                 val msg = "NextWordEffectRouter received non-NextWord effect: $effect"
                 if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {
                     throw IllegalStateException(msg)

@@ -3,7 +3,9 @@
 // LoggerBackend.kt) is the shared-core contract.
 
 // 中文: Android 平台 logger adapter — 將 LoggerBackend 介面接到 android.util.Log。
-// 中文: d/i/w 受 BuildConfig.DEBUG 控制(release build dead-code 消除),e 永遠輸出。
+// 中文: d/i/w/e 全部受 BuildConfig.DEBUG 控制 — release build 一律無 logcat 輸出
+// 中文: (security-rules.md「Release builds must have zero logs」隱私契約;
+// 中文:  ProGuard -assumenosideeffects 僅為 secondary 防線)。
 
 package com.siansiansu.taigikeyboard.ime.core.logging
 
@@ -12,9 +14,19 @@ import com.siansiansu.taigikeyboard.BuildConfig
 
 /**
  * Platform-side `LoggerBackend` that forwards to `android.util.Log`.
- * Debug / info / warning messages are gated on `BuildConfig.DEBUG` to
- * preserve the original `if (BuildConfig.DEBUG) Log.x(...)` semantics
- * every caller used before this class existed. Errors always log.
+ * **All** levels (d / i / w / e) are gated on `BuildConfig.DEBUG`, so
+ * release builds emit zero logcat output — `rules/security-rules.md`
+ * "Release builds must have zero logs" (IME error paths can carry
+ * user-typed text through exception context). The `BuildConfig.DEBUG`
+ * guard is the PRIMARY defense; the ProGuard `-assumenosideeffects`
+ * strip is only the secondary one. This mirrors the iOS `DebugLogger`
+ * release no-op. Production error visibility comes from the
+ * user-initiated `DiagnosticService`, never logcat.
+ *
+ * Note: the guard suppresses logcat output, not message construction —
+ * `e(TAG, "...", throwable)` callers still build the string and capture
+ * the `Throwable` before the call (unlike the lazy `debug { ... }`
+ * overload). Acceptable for error paths, which are not hot.
  *
  * [isDebugEnabled] is exposed so inline-extension callers (e.g. the
  * `d { ... }` lazy overload in `LoggerBackend.kt`) can skip string
@@ -52,6 +64,8 @@ class AndroidLoggerBackend : LoggerBackend {
         msg: String,
         t: Throwable?,
     ) {
-        if (t != null) Log.e(tag, msg, t) else Log.e(tag, msg)
+        if (BuildConfig.DEBUG) {
+            if (t != null) Log.e(tag, msg, t) else Log.e(tag, msg)
+        }
     }
 }
