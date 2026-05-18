@@ -75,13 +75,15 @@ class TaigiAutocompleteService(
  * REVISED — Bug 1). The inline pre-edit (`setComposingText`) is the only
  * composing-text surface; Enter commits the pending tail via Item 3.
  *
- * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (TL
- * romanization) and `hanzi` carries `candidate.hanji` so [com.siansiansu
+ * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (the
+ * engine-rendered display romanization — TL, or POJ-display when the
+ * input mode is POJ; this builder stays mode-agnostic per Item 13)
+ * and `hanzi` carries `candidate.hanji` so [com.siansiansu
  * .taigikeyboard.ime.text.smartbar.SmartbarCandidateStrip] renders
  * dual-line cells (roman + hanji) on HANT/MIXED and single-line (roman
  * only) on TAILO.
  *
- * `TaigiWord.roman` (= TL romanization) may diverge from
+ * `TaigiWord.roman` (the display romanization) may diverge from
  * `additionalInfo[DISPLAY_TEXT]` (= `hanji ?? roman` per
  * `record_to_candidate`) on HANT/MIXED candidates. The tap routes through
  * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler],

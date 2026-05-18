@@ -519,12 +519,13 @@ public enum RustEngineBridge {
         public let score: Float
         public let form: UInt32
         public let mode: CandidateMode
-        /// v3.5.8 Phase 9 Item 5 — TL romanization sidechannel for
+        /// v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
         /// dual-line cell render. Always non-empty for dictionary-
-        /// sourced candidates (mirrors `DictionaryRecord.tl`); UI
-        /// reads `displayText` for commit / `user_frequency.db`
-        /// writes and `roman` only for cell-title display.
-        // 中文: Item 5 — 羅馬字 sidechannel,dual-line 候選列 render 用。
+        /// sourced candidates; the engine renders it for the active
+        /// input mode (TL, or POJ-display in POJ mode). UI reads
+        /// `displayText` for commit / `user_frequency.db` writes and
+        /// `roman` only for cell-title display.
+        // 中文: Item 5 — 顯示羅馬字 sidechannel(引擎依 input mode 渲染:TL 或 POJ),dual-line 候選列 render 用。
         public let roman: String
         /// v3.5.8 Phase 9 Item 5 — hanji display sidechannel. `nil`
         /// iff the proto3 `optional string hanji` was absent on the

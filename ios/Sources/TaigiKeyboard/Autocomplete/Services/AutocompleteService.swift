@@ -115,8 +115,10 @@ class AutocompleteService: KeyboardKit.AutocompleteService {
     /// composing-text surface; Enter commits the pending tail via Item 3's
     /// `Phase::Continuous` `Intent::CommitRaw` arm.
     ///
-    /// Item 6 dual-line render: `text` / `title` carry `c.roman` (TL
-    /// romanization) and `subtitle` carries `c.hanji`, so the cell renders
+    /// Item 6 dual-line render: `text` / `title` carry `c.roman` (the
+    /// engine-rendered display romanization — TL, or POJ-display when
+    /// the input mode is POJ; the builder stays mode-agnostic per
+    /// Item 13) and `subtitle` carries `c.hanji`, so the cell renders
     /// dual-line on HANT/MIXED and single-line on TAILO.
     ///
     /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal

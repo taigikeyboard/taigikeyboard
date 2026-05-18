@@ -294,8 +294,11 @@ enum CandidateMode {
 // engine continues to authority-stamp commit semantics and
 // `user_frequency.db` write keys via `display_text`
 // (= `hanji.unwrap_or(roman)`); `roman` and `hanji` are NEVER read
-// for commit. `roman` always equals the underlying
-// `DictionaryRecord.tl`; `hanji` mirrors `DictionaryRecord.hanzi`
+// for commit. `roman` is the display romanization for the active
+// input mode — the underlying `DictionaryRecord.tl` by default, or
+// POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
+// `AppConfig.input_mode = poj` (engine-rendered, mirroring the
+// dictionary-search path); `hanji` mirrors `DictionaryRecord.hanzi`
 // (proto3 `optional` distinguishes "TAILO candidate — no hanji
 // exists" from "wire-frame defect"). See
 // `docs/engine/continuous-candidate-display.md` §4 for the full

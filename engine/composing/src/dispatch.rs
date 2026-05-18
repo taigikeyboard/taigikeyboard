@@ -194,7 +194,13 @@ fn handle_fetch_at_pos(
     // with builds that never set `FetchAtPos.custom_entries`).
     // 中文: Item 12 — proto CustomDictEntry[] → domain CustomEntry,空 list = 無 custom,合成 0 筆、去重 no-op。
     let custom = build_custom_entries(custom_entries);
-    let candidates = if keys.is_empty() {
+    // Input mode drives two presentation steps below: per-segment
+    // recasing (else branch) and, for POJ, the TL→POJ-display render of
+    // the assembled candidate list. Hoisted above the branch so the
+    // partial-prefix branch's candidates are covered by the POJ pass too.
+    // 中文: input mode 同時驅動下方 recase 與 POJ render;hoist 到分支外讓 partial-prefix 候選也吃到 POJ pass。
+    let mode = phonetics::api::parse_input_mode(&config.input_mode);
+    let mut candidates = if keys.is_empty() {
         // v3.5.8 Phase 9 Item 10 — partial-prefix fallthrough. The
         // syllabifier produced no valid ending (e.g. `raw = "gu"`,
         // `"t"`), so the lookup-exact path is dead. Try a TL/POJ
@@ -226,7 +232,6 @@ fn handle_fetch_at_pos(
         // 中文: 連續候選 roman 依該段 raw 還原大小寫(display==commit);
         // 中文:   平台 SuggestionCaseTransformer 對連續 bypass,此為唯一源;
         // 中文:   只改呈現 roman,canonical display_text / hanji 不動。
-        let mode = phonetics::api::parse_input_mode(&config.input_mode);
         for cand in &mut c {
             let (cs, ce) = cand.consumed_span;
             if let Some(seg) = raw.get(cs as usize..ce as usize) {
@@ -259,6 +264,28 @@ fn handle_fetch_at_pos(
         }
         c
     };
+    // v3.5.8 — POJ-display render. The Continuous platform builders are
+    // mode-agnostic by design (Item 13: "the engine owns input-mode
+    // handling"); mirror the engine-side NextWord POJ render
+    // (`engine/nextword/src/filter.rs`). Rewrite the presentation
+    // `roman` TL→POJ (`oo`→`o͘`, `nn`→`ⁿ`, …) for EVERY emitted
+    // candidate — span-local (recased above), the walker slot-0 best
+    // candidate inserted at index 0, and the partial-prefix branch — so
+    // display AND the platform-formatted commit (both derive from
+    // `roman`) are POJ. `display_text` / `hanji` (the canonical commit +
+    // `user_frequency.db` key) are deliberately untouched. No-op for
+    // TL / English / (legacy-mapped) TPS.
+    // 中文: POJ 顯示渲染。平台 Continuous builder 刻意 mode-agnostic(Item 13:engine 管 input mode);
+    // 中文:   對齊引擎端 NextWord POJ render。對「每一筆」候選(span-local / walker slot-0 最佳候選 /
+    // 中文:   partial-prefix)把呈現 roman TL→POJ,讓顯示與平台 commit(皆源自 roman)一致為 POJ;
+    // 中文:   canonical display_text / hanji 不動。TL/English/(legacy 映射)TPS 為 no-op。
+    // 中文:   render 可能讓 custom POJ 與 dict TL 兩筆變相同 → dedupe_rendered_continuous 收尾去重。
+    if mode == phonetics::InputMode::Poj {
+        for cand in &mut candidates {
+            cand.roman = render_roman_for_mode(&cand.roman, mode);
+        }
+        dedupe_rendered_continuous(&mut candidates);
+    }
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -632,6 +659,73 @@ fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCa
 // 中文:   raw 只用來決定 case 意圖,不與 roman 對齊切片,故長度不一致無妨。
 fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> String {
     phonetics::case_transform::transform_input_case(roman, raw_segment_letter_case(raw_seg), mode)
+}
+
+/// v3.5.8 — render a continuous candidate's presentation `roman` for the
+/// active input mode. POJ: rewrite TL-display → POJ-display
+/// (`oo`→`o͘`, `nn`→`ⁿ`, `ua`→`oa`, …) via
+/// [`phonetics::api::tl_display_to_poj_display`], then re-impose the
+/// roman's own letter-case POJ-grapheme-aware. The TL→POJ rewriter only
+/// title-cases (it checks `first.is_uppercase()` then stops), so a
+/// CapsLocked candidate (`HOO`) would otherwise collapse to title case
+/// (`Ho͘`); `transform_input_case` with the detected `LetterCase` and
+/// `InputMode::Poj` restores it (`HO͘`) — the same helper `recase_roman`
+/// already trusts for POJ diacritics (Codex pre-impl 2026-05-19 BLOCK).
+/// Case detection reads the (already-recased) roman's own alpha chars
+/// via [`raw_segment_letter_case`]: span-local candidates carry one
+/// uniform case so this is exact. A multi-segment walker path with
+/// heterogeneous casing collapses to one bucket derived from the whole
+/// string — first alpha lowercase ⇒ all-lowercase; first upper but not
+/// all remaining uppercase ⇒ leading-cap only; uniformly upper ⇒
+/// all-caps — a bounded POJ-only edge far outside normal use, not the
+/// reported `oo`/`nn` defect. TL / English / (legacy-mapped) TPS:
+/// identity. Presentation only — never feed `display_text` (the
+/// canonical commit / `user_frequency.db` key) here.
+// 中文: 依 input mode 渲染連續候選呈現 roman。POJ:TL→POJ-display 後,
+// 中文:   以候選自身字母 case 經 transform_input_case(POJ-grapheme-aware)還原大小寫
+// 中文:   — TL→POJ rewriter 只 title-case,CapsLock(HOO)會塌成 Ho͘,此處還原成 HO͘
+// 中文:   (Codex pre-impl 2026-05-19 BLOCK)。span-local 單段 case 均勻故精確;
+// 中文:   walker 多段異質大小寫依整串首字母塌成單一桶(首小寫⇒全小寫;
+// 中文:   首大寫但其餘非全大寫⇒僅首字大寫;全大寫⇒全大寫)— POJ-only 邊角,非回報 bug。
+// 中文:   TL/English/(legacy 映射)TPS = identity。只處理呈現 roman,勿傳 display_text。
+fn render_roman_for_mode(roman: &str, mode: phonetics::InputMode) -> String {
+    if mode != phonetics::InputMode::Poj {
+        return roman.to_string();
+    }
+    let case = raw_segment_letter_case(roman);
+    let poj = phonetics::api::tl_display_to_poj_display(roman);
+    phonetics::case_transform::transform_input_case(&poj, case, phonetics::InputMode::Poj)
+}
+
+/// v3.5.8 — collapse continuous candidates that became identical only
+/// after the POJ render. The pre-render `(roman, hanji, consumed_span)`
+/// dedupe (`lexicon::dedupe_by_roman_hanji_span`) runs on TL spellings,
+/// so a custom entry stored in POJ display form (`gô͘`) and a `dict.bin`
+/// entry in TL (`gôo`) sharing one hanji + span both survive it, then
+/// [`render_roman_for_mode`] renders both to `gô͘` → a visible
+/// duplicate. First-wins keeps the earlier row, so the prepended
+/// whole-sentence best candidate at index 0 is never dropped. It is
+/// behavior-neutral whenever `hanji` is `Some`: the collision key pins
+/// the same hanji and `display_text` (the commit / `user_frequency.db`
+/// key) is that hanji for BOTH the custom and the `dict.bin` candidate,
+/// so which row survives cannot change what commits. The only bounded
+/// asymmetry is a romanization-only (`hanji == None`) custom-after-dict
+/// collision: the survivor's `display_text` is the earlier (dict TL)
+/// form — a frequency-key granularity nuance only; the committed
+/// document text is the rendered `roman`, identical for both. Called
+/// in the POJ branch only — for TL/English/TPS the render is identity
+/// so the pre-render dedupe already settled every key.
+// 中文: POJ render 後才相等的候選去重(custom 存 POJ `gô͘` vs dict TL `gôo`,
+// 中文:   同 hanji+span 過不了 TL 拼寫的 pre-render 去重,render 後皆 `gô͘`)。
+// 中文:   first-wins → index 0 整句最佳候選不被丟。hanji 存在時行為中性
+// 中文:   (碰撞鍵鎖同一 hanji,custom/dict 的 display_text 都是該 hanji,commit 不變);
+// 中文:   唯 hanji==None 的 custom-after-dict 留下 dict TL 形 display_text(僅 freq-key 粒度,
+// 中文:   commit 的文件字串是 render 後 roman,兩者相同)。只在 POJ 分支呼叫。
+fn dedupe_rendered_continuous(candidates: &mut Vec<RawCandidate>) {
+    use std::collections::HashSet;
+    let mut seen: HashSet<(String, Option<String>, ConsumedSpan)> =
+        HashSet::with_capacity(candidates.len());
+    candidates.retain(|c| seen.insert((c.roman.clone(), c.hanji.clone(), c.consumed_span)));
 }
 
 fn fetch_walker_slot0(
@@ -1552,13 +1646,14 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         form: c.form as u32,
         mode: c.mode.to_proto_i32(),
         // v3.5.8 Phase 9 Item 5 — `roman` is always non-empty for a
-        // dictionary-sourced candidate (mirrors `DictionaryRecord.tl`);
-        // `hanji` is a proto3 `optional string` so prost serializes
-        // `None` as wire-absent (distinguishes TAILO from defective
-        // empty-string emission). See
-        // `docs/engine/continuous-candidate-display.md` §4.2.
-        // 中文: Item 5 — roman 永有值(對應 DictionaryRecord.tl);hanji 為 proto optional,
-        // 中文:   TAILO 候選送 None,wire 上是「absent」而非空字串。
+        // dictionary-sourced candidate; it is the display romanization
+        // for the active input mode (TL, or POJ-display after the
+        // `handle_fetch_at_pos` POJ pass). `hanji` is a proto3
+        // `optional string` so prost serializes `None` as wire-absent
+        // (distinguishes TAILO from defective empty-string emission).
+        // See `docs/engine/continuous-candidate-display.md` §4.2.
+        // 中文: Item 5 — roman 永有值,為當前 input mode 的顯示羅馬字(TL,或經 POJ pass 後的 POJ);
+        // 中文:   hanji 為 proto optional,TAILO 候選送 None,wire 上是「absent」而非空字串。
         roman: c.roman,
         hanji: c.hanji,
     }
@@ -2291,6 +2386,116 @@ mod tests {
         // No alphabetic char → defaults to Lowercased (never panics).
         assert_eq!(raw_segment_letter_case("123"), LetterCase::Lowercased);
         assert_eq!(raw_segment_letter_case(""), LetterCase::Lowercased);
+    }
+
+    // ----- v3.5.8 — POJ-display render of the continuous candidate roman -----
+
+    #[test]
+    fn render_roman_for_mode_poj_rewrites_oo_and_nn() {
+        let poj = phonetics::InputMode::Poj;
+        // The reported bug: in POJ mode the continuous best candidate
+        // must show `oo`→`o͘` (o + U+0358) and `nn`→`ⁿ` (U+207F),
+        // not raw TL.
+        assert_eq!(render_roman_for_mode("oo", poj), "o\u{0358}");
+        assert_eq!(render_roman_for_mode("goo", poj), "go\u{0358}");
+        assert_eq!(render_roman_for_mode("sann", poj), "sa\u{207f}");
+        // Whole-sentence walker path: space-joined multi-syllable roman
+        // (`tl_display_to_poj_display` splits on ` `/`-` per token).
+        assert_eq!(
+            render_roman_for_mode("goo sann", poj),
+            "go\u{0358} sa\u{207f}"
+        );
+        assert_eq!(render_roman_for_mode("tai-oo", poj), "tai-o\u{0358}");
+        // Tone-marked TL → POJ: the tone sits between `o` and the
+        // U+0358 dot (`kòo` 顧 → `kò͘`). Exact, not just "contains".
+        assert_eq!(render_roman_for_mode("kòo", poj), "k\u{f2}\u{0358}");
+    }
+
+    #[test]
+    fn render_roman_for_mode_poj_preserves_letter_case() {
+        let poj = phonetics::InputMode::Poj;
+        // Lowercase (normal typing) stays lowercase.
+        assert_eq!(render_roman_for_mode("goo", poj), "go\u{0358}");
+        // Sentence-start capital (the `Hittui → Hit` segment class).
+        assert_eq!(render_roman_for_mode("Goo", poj), "Go\u{0358}");
+        // CapsLock — the Codex pre-impl BLOCK: `tl_display_to_poj_display`
+        // only title-cases, so without the `transform_input_case`
+        // restore an all-caps candidate would collapse to `Go͘`. Pin
+        // the all-caps form survives.
+        assert_eq!(render_roman_for_mode("OO", poj), "O\u{0358}");
+        // `nn` under CapsLock: the base letters go all-caps while the
+        // POJ nasal `ⁿ` (U+207F) is preserved as-is (correct POJ — no
+        // uppercase nasal hook). Without the case restore this would
+        // collapse to title case `Sa\u{207f}`, the exact BLOCK
+        // regression; pin the all-caps form survives.
+        assert_eq!(render_roman_for_mode("SANN", poj), "SA\u{207f}");
+    }
+
+    #[test]
+    fn render_roman_for_mode_non_poj_is_identity() {
+        // TL / English keep raw TL (asymmetry is POJ-only, matching the
+        // dictionary-search path `inputMode == .poj ? tlToPoj : raw`).
+        // (legacy-mapped) TPS resolves to `Tl` upstream, so it is
+        // covered by the Tl identity here.
+        assert_eq!(render_roman_for_mode("oo", phonetics::InputMode::Tl), "oo");
+        assert_eq!(
+            render_roman_for_mode("sann", phonetics::InputMode::Tl),
+            "sann"
+        );
+        assert_eq!(
+            render_roman_for_mode("Goo", phonetics::InputMode::Tl),
+            "Goo"
+        );
+        assert_eq!(
+            render_roman_for_mode("oo", phonetics::InputMode::English),
+            "oo"
+        );
+    }
+
+    #[test]
+    fn dedupe_rendered_continuous_drops_post_render_collision_keeping_first() {
+        fn mk(roman: &str, hanji: Option<&str>, span: (u32, u32), is_custom: bool) -> RawCandidate {
+            RawCandidate {
+                consumed_span: span,
+                syllable_count: 1,
+                display_text: hanji.map(String::from).unwrap_or_else(|| roman.to_string()),
+                roman: roman.to_string(),
+                hanji: hanji.map(String::from),
+                score: 0.0,
+                form: FORM_NOTONE,
+                frequency: 0,
+                bitmask: 0,
+                mode: lexicon::CandidateMode::Tailo,
+                recency_rank: 1,
+                coverage_kind: COVERAGE_KIND_FULL,
+                is_custom,
+            }
+        }
+        // Post-render: a custom entry stored `gô͘` and a dict.bin entry
+        // stored `gôo`; both already rendered to `gô͘` here, same hanji
+        // + span ⇒ a visible duplicate. First-wins keeps index 0 so the
+        // prepended whole-sentence best candidate is never dropped.
+        let mut collide = vec![
+            mk("gô\u{0358}", Some("鵝"), (0, 6), false), // dict, rendered
+            mk("gô\u{0358}", Some("鵝"), (0, 6), true),  // custom, rendered
+        ];
+        dedupe_rendered_continuous(&mut collide);
+        assert_eq!(collide.len(), 1);
+        assert!(
+            !collide[0].is_custom,
+            "first-wins must keep the earlier (index-0) row"
+        );
+        // Distinct on ANY of (roman, hanji, consumed_span) ⇒ untouched
+        // (the S2 same-word-different-span invariant survives).
+        let mut keep = vec![
+            mk("go\u{0358}", Some("鵝"), (0, 6), false),
+            mk("go\u{0358}", Some("吳"), (0, 6), false), // different hanji
+            mk("go\u{0358}", Some("鵝"), (0, 3), false), // different span
+            mk("sa\u{207f}", None, (0, 6), false),       // different roman
+        ];
+        let before = keep.len();
+        dedupe_rendered_continuous(&mut keep);
+        assert_eq!(keep.len(), before, "distinct keys must all survive");
     }
 
     #[test]

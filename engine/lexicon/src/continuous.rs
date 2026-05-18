@@ -213,14 +213,20 @@ pub struct RawCandidate {
     /// commit key + `user_frequency.db` write key on both platforms.
     // 中文: 上屏顯示文字 — 有漢字用漢字,否則回退到 TL 羅馬字。
     pub display_text: String,
-    /// v3.5.8 Phase 9 Item 5 — TL romanization carried alongside
+    /// v3.5.8 Phase 9 Item 5 — display romanization carried alongside
     /// `display_text` so platform UI can render dual-line cells
     /// (roman line + hanji line) the same way the legacy lexicon
-    /// path does. Always equals the underlying `DictionaryRecord.tl`;
-    /// NEVER consulted for commit (engine commit goes through
-    /// `display_text`).
-    // 中文: Phase 9 Item 5 — TL 羅馬字顯示用 sidechannel;dual-line 候選列 render 來源。
-    // 中文: 永等於 DictionaryRecord.tl;commit 仍走 display_text,不查 roman。
+    /// path does. At this lexicon layer it equals the underlying
+    /// `DictionaryRecord.tl`; `dispatch::handle_fetch_at_pos` then
+    /// applies the presentation transforms — per-segment recasing and,
+    /// in POJ input mode, a TL→POJ-display rewrite (`oo`→`o͘`,
+    /// `nn`→`ⁿ`, …) — before emission. NEVER consulted for the engine
+    /// commit (which goes through `display_text`); the platform formats
+    /// its document string from this presentation roman.
+    // 中文: Phase 9 Item 5 — 顯示羅馬字 sidechannel;dual-line 候選列 render 來源。
+    // 中文: 在 lexicon 層等於 DictionaryRecord.tl;dispatch::handle_fetch_at_pos 再做呈現轉換
+    // 中文: (逐段 recase + POJ 模式下 TL→POJ-display)後才送出。引擎 commit 仍走 display_text,
+    // 中文: 不查 roman;平台則由此呈現 roman 產生文件字串。
     pub roman: String,
     /// v3.5.8 Phase 9 Item 5 — hanji display carried alongside
     /// `display_text`. `None` iff `DictionaryRecord.hanzi.is_none()`

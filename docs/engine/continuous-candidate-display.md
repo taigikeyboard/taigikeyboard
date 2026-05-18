@@ -192,7 +192,7 @@ message CandidateMessage {
   uint32         form                = 6;
   CandidateMode  mode                = 7;
   // v3.5.8 dogfood follow-up — separate display fields for dual-line render.
-  string         roman               = 8;   // TL romanization (always present)
+  string         roman               = 8;   // display romanization, always present (TL, or POJ-display in POJ mode — engine-rendered in handle_fetch_at_pos)
   optional string hanji              = 9;   // hanji display (None for TAILO)
 }
 ```
@@ -214,7 +214,7 @@ The new fields are **display-only** sidechannels. The engine remains authoritati
 pub struct RawCandidate {
     // ... existing fields
     pub display_text: String,
-    pub roman: String,            // ← new: always = DictionaryRecord.tl
+    pub roman: String,            // ← new: = DictionaryRecord.tl at this layer; handle_fetch_at_pos renders it for the input mode (TL, or POJ-display in POJ)
     pub hanji: Option<String>,    // ← new: always = DictionaryRecord.hanzi
     // ... existing fields
 }
