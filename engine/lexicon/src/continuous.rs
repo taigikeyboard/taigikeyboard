@@ -512,6 +512,12 @@ pub fn fetch_candidates_for_keys(
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
                 continue;
             }
+            // v3.5.8 — drop `tl_abbrev` acronym collisions: continuous
+            // input is phonetic-syllable, not acronym (normal-mode
+            // `lexicon::search` keeps acronym matching).
+            if !matches_continuous_tl_toneless_key(key, &record.tl) {
+                continue;
+            }
             // Full-syllable path always emits `COVERAGE_KIND_FULL` — by
             // definition `valid_span_endings` produced an ending that
             // led to this `lookup_exact`. Partial-prefix hits flow
@@ -761,6 +767,12 @@ pub fn best_candidate_for_key(
         if !DictionaryReader::passes_filter(record.bitmask, &filter) {
             continue;
         }
+        // v3.5.8 — same `tl_abbrev` collision guard as the span-local
+        // path so the whole-sentence walker never picks an acronym
+        // record as an edge representative.
+        if !matches_continuous_tl_toneless_key(key, &record.tl) {
+            continue;
+        }
         let cand = record_to_candidate(record, consumed_span, freq_map, now_ms, COVERAGE_KIND_FULL);
         let better = match &best {
             None => true,
@@ -811,6 +823,50 @@ pub fn compound_hanji_exists(
         }
     }
     false
+}
+
+/// v3.5.8 — continuous-input abbreviation-collision guard. Returns
+/// `true` iff `record_tl` genuinely matched the queried `key` via its
+/// toneless spelling (`tl_notone`), not via its acronym (`tl_abbrev`).
+///
+/// `dictionary/build/create_fst.py` indexes `tl:<tl_notone>`,
+/// `tl:<tl_num>` AND `tl:<tl_abbrev>` under one shared `tl:` FST
+/// prefix. For NORMAL IME autocomplete (`lexicon::search::search`)
+/// acronym matching is intentional — typing `gi` should surface 外夷
+/// (`guā-î`, `tl_abbrev == "gi"`). For whole-sentence CONTINUOUS input
+/// the user types phonetic syllables, so the first-syllable key `tl:gi`
+/// also returning 外夷 is letter-mismatched noise: the candidate shares
+/// no spelling with what was typed.
+///
+/// Keep a record only when its real TL display reduces to the queried
+/// toneless body. `normalize_input` yields a per-syllable numeric-tone
+/// form (e.g. `gín-á-lâng` → `gin2a2lang5`), so every ASCII tone digit
+/// is dropped to reach the stored fused `tl_notone` surface
+/// (`remove_tone(to_numeric_tone(tl)) == tl_notone` holds for every
+/// `dictionary.csv` row — verified pre-impl).
+///
+/// Scope: only the `tl:` family is guarded — continuous only ever
+/// builds `tl:` keys; `poj:` / `hanzi:` pass through untouched. A `tl:`
+/// key whose body still carries an ASCII digit is a numeric-tone
+/// (`tl:<tl_num>`) key, NOT a continuous toneless key, so the guard is
+/// skipped rather than silently filtering a non-continuous caller.
+// 中文: 連續輸入 abbrev 撞 key 守門 — 只有當 record 的去調拼寫真的等於查詢的 toneless key body
+// 中文:   (即經 tl_notone 命中,而非 tl_abbrev 縮寫命中)才保留。
+// 中文: 正常 IME 搜尋的 acronym 比對是刻意的(打 gi → 外夷),連續輸入是逐音節注音故為雜訊。
+// 中文: normalize_input 產生數字調形,去掉尾端 ASCII 數字即還原成 FST 儲存的 tl_notone 面。
+// 中文: 只守 tl: 族群;body 仍帶數字 = tl:<tl_num> 數字調 key,非連續 toneless,直接放行不誤殺。
+fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
+    let Some(body) = key.strip_prefix("tl:") else {
+        return true;
+    };
+    if body.bytes().any(|b| b.is_ascii_digit()) {
+        return true;
+    }
+    let toneless: String = phonetics::normalize_input(record_tl)
+        .chars()
+        .filter(|c| !c.is_ascii_digit())
+        .collect();
+    toneless == body
 }
 
 fn record_to_candidate(
@@ -1842,5 +1898,57 @@ mod item12_custom_dedupe_tests {
             k_custom < k_dict,
             "is_custom → source_rank 0 must outrank default source rank"
         );
+    }
+}
+
+#[cfg(test)]
+mod abbrev_collision_guard_tests {
+    //! v3.5.8 — `matches_continuous_tl_toneless_key`: continuous input
+    //! must reject `tl_abbrev` acronym collisions that share the `tl:`
+    //! FST namespace with a different word's real toneless key. The
+    //! motivating bug: typing `ginalangtsiahpngbesai` surfaced 外夷
+    //! (`guā-î`, `tl_abbrev == "gi"`) because the first-syllable key
+    //! `tl:gi` also indexes the acronym.
+    use super::matches_continuous_tl_toneless_key as guard;
+
+    #[test]
+    fn genuine_single_syllable_toneless_match_is_kept() {
+        // 語 `gí` → normalize "gi2" → toneless "gi" == key body.
+        assert!(guard("tl:gi", "gí"));
+    }
+
+    #[test]
+    fn abbrev_collision_is_rejected() {
+        // 外夷 `guā-î` (`tl_abbrev == "gi"`) → toneless "guai" != "gi".
+        assert!(!guard("tl:gi", "guā-î"));
+        assert!(!guard("tl:gi", "guā-i")); // 外衣, same collision
+    }
+
+    #[test]
+    fn genuine_multi_syllable_left_anchored_key_is_kept() {
+        // 囡仔人 `gín-á-lâng` → toneless "ginalang" == key body.
+        assert!(guard("tl:ginalang", "gín-á-lâng"));
+    }
+
+    #[test]
+    fn no_diacritic_checked_syllable_is_kept() {
+        // 鴨 `ah` (tone 4, no diacritic): both sides digitless "ah".
+        assert!(guard("tl:ah", "ah"));
+    }
+
+    #[test]
+    fn numeric_tone_key_skips_guard() {
+        // Codex pre-impl BLOCK: a `tl:<tl_num>` key body carries an
+        // ASCII digit and is NOT a continuous toneless key — the guard
+        // must pass it through so a non-continuous caller is never
+        // silently filtered.
+        assert!(guard("tl:gua2", "guā-î"));
+    }
+
+    #[test]
+    fn non_tl_family_passes_through() {
+        // `poj:` / `hanzi:` keys are not continuous toneless keys.
+        assert!(guard("poj:goa", "goá"));
+        assert!(guard("hanzi:外夷", "guā-î"));
     }
 }

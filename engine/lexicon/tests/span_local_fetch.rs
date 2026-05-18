@@ -776,24 +776,30 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
     let (prefix_index, dict) = build_fixture(
         "stable-idx-insertion-order",
         &[
+            // Distinct tones, all reducing to toneless "tai" so the
+            // v3.5.8 abbrev-collision guard keeps them (a real dict
+            // row's `tl` always normalizes back to its `tl_notone`);
+            // they still tie on every SortKey dimension (freq / syll /
+            // coverage / source / recency) so only `stable_idx`
+            // separates them — the property under test.
             Row {
                 toneless_key: "tai",
                 hanzi: "一",
-                tl: "tai-a",
+                tl: "tâi",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tai",
                 hanzi: "二",
-                tl: "tai-b",
+                tl: "tài",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tai",
                 hanzi: "三",
-                tl: "tai-c",
+                tl: "tāi",
                 syll: 1,
                 freq: 100,
             },
@@ -1540,5 +1546,77 @@ fn best_candidate_for_key_none_when_key_absent() {
         )
         .is_none(),
         "absent key must return None"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// v3.5.8 RC1 — `tl_abbrev` acronym collision must not surface in
+// continuous span-local / walker fetch. Motivating bug: typing
+// `ginalangtsiahpngbesai` surfaced 外夷 (`guā-î`) because its
+// `tl_abbrev == "gi"` shares the `tl:gi` FST key with 語 (`gí`,
+// real toneless "gi"). Normal-mode `lexicon::search` keeps acronym
+// matching; continuous must not.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
+    // Both rowids are indexed under `tl:gi`. 語 via real toneless;
+    // 外夷 via its `tl_abbrev` ("gi") even though its toneless is
+    // "guai". 外夷 is given a much higher freq so the pre-guard bug
+    // (it dominating the strip and `best_candidate_for_key`) would be
+    // obvious if the guard regressed.
+    let (prefix_index, dict) = build_fixture(
+        "rc1-abbrev",
+        &[
+            Row {
+                toneless_key: "gi",
+                hanzi: "語",
+                tl: "gí",
+                syll: 1,
+                freq: 100,
+            },
+            Row {
+                toneless_key: "gi",
+                hanzi: "外夷",
+                tl: "guā-î",
+                syll: 2,
+                freq: 5000,
+            },
+        ],
+    );
+
+    let out = fetch_candidates_for_endings(
+        "gi",
+        0,
+        &[2],
+        u32::MAX,
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    );
+    assert!(
+        out.iter().any(|c| c.display_text == "語"),
+        "genuine toneless 語 must be kept; got {out:#?}"
+    );
+    assert!(
+        !out.iter().any(|c| c.display_text == "外夷"),
+        "tl_abbrev collision 外夷 must be dropped; got {out:#?}"
+    );
+
+    // Walker edge provider: must pick the genuine record, never the
+    // higher-freq acronym collision.
+    let best = best_candidate_for_key(
+        "tl:gi",
+        (0, 2),
+        &FrequencyMap::new(),
+        0,
+        &prefix_index,
+        &dict,
+    )
+    .expect("genuine toneless candidate exists");
+    assert_eq!(
+        best.display_text, "語",
+        "best_candidate_for_key must skip the tl_abbrev collision"
     );
 }
