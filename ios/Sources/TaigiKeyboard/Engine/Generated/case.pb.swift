@@ -15,7 +15,7 @@ import SwiftProtobuf
 // incompatible with the version of SwiftProtobuf to which you are linking.
 // Please ensure that you are building against the same version of the API
 // that was used to generate this file.
-fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
+fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
   struct _2: SwiftProtobuf.ProtobufAPIVersion_2 {}
   typealias Version = _2
 }
@@ -23,7 +23,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 /// Three-state shift / case indicator used by the engine layer.
 /// Mirrors iOS `LetterCase` enum + Android (`caps` + `capsLock` boolean
 /// pair adapted at the bridge call site).
-public enum Taigi_Engine_LetterCase: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_LetterCase: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case lowercased // = 1
@@ -69,7 +69,7 @@ public enum Taigi_Engine_LetterCase: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-public struct Taigi_Engine_CaseRequest: Sendable {
+public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -128,7 +128,7 @@ public struct Taigi_Engine_CaseRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Method: Equatable, Sendable {
+  public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// --- Per-char (single grapheme cluster) helpers ---
     case uppercaseToneChar(Taigi_Engine_UppercaseToneChar)
     case fullUppercaseToneString(Taigi_Engine_FullUppercaseToneString)
@@ -147,7 +147,7 @@ public struct Taigi_Engine_CaseRequest: Sendable {
 /// tone tables. For multi-character inputs (e.g. "tsh") only the first
 /// letter is uppercased. Matches Android `ToneUtilities.uppercaseToneLetter`
 /// (`replaceFirstChar`) semantics.
-public struct Taigi_Engine_UppercaseToneChar: Sendable {
+public nonisolated struct Taigi_Engine_UppercaseToneChar: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -163,7 +163,7 @@ public struct Taigi_Engine_UppercaseToneChar: Sendable {
 /// mode-aware tone tables. Matches Android
 /// `ToneUtilities.fullUppercaseToneLetter` (`uppercase()` per char) semantics.
 /// Used by Caps Lock paths.
-public struct Taigi_Engine_FullUppercaseToneString: Sendable {
+public nonisolated struct Taigi_Engine_FullUppercaseToneString: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -177,7 +177,7 @@ public struct Taigi_Engine_FullUppercaseToneString: Sendable {
 
 /// `LowercaseToneChar` lowercases a single char/grapheme using mode-aware
 /// tone tables. Matches Android `ToneUtilities.lowercaseToneLetter`.
-public struct Taigi_Engine_LowercaseToneChar: Sendable {
+public nonisolated struct Taigi_Engine_LowercaseToneChar: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -194,7 +194,7 @@ public struct Taigi_Engine_LowercaseToneChar: Sendable {
 /// - LOWERCASED: lowercase per `LowercaseToneChar`
 /// - UPPERCASED: first letter upper (`UppercaseToneChar` on first), rest lower
 /// - CAPS_LOCKED: full upper per `FullUppercaseToneString`
-public struct Taigi_Engine_TransformInputCase: Sendable {
+public nonisolated struct Taigi_Engine_TransformInputCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -211,7 +211,7 @@ public struct Taigi_Engine_TransformInputCase: Sendable {
 /// `CapitalizeCandidate` gates on `auto_cap_enabled` + `input` first char's
 /// case. If both true, the candidate's first letter is uppercased via tone
 /// tables; otherwise returned as-is. Matches `CaseTransformer.capitalizeCandidate`.
-public struct Taigi_Engine_CapitalizeCandidate: Sendable {
+public nonisolated struct Taigi_Engine_CapitalizeCandidate: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -238,7 +238,7 @@ public struct Taigi_Engine_CapitalizeCandidate: Sendable {
 /// returns the final-form string ready for display. Suggestion skip rules
 /// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
 /// — only transform-eligible items reach this op.
-public struct Taigi_Engine_TransformSuggestion: Sendable {
+public nonisolated struct Taigi_Engine_TransformSuggestion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -254,7 +254,7 @@ public struct Taigi_Engine_TransformSuggestion: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_CaseResponse: Sendable {
+public nonisolated struct Taigi_Engine_CaseResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -271,7 +271,7 @@ public struct Taigi_Engine_CaseResponse: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Result: Equatable, Sendable {
+  public nonisolated enum OneOf_Result: Equatable, Sendable {
     case stringResult(Taigi_Engine_CaseStringResult)
 
   }
@@ -281,7 +281,7 @@ public struct Taigi_Engine_CaseResponse: Sendable {
 
 /// Locally defined (not re-exported from phonetics.proto) to keep case.proto
 /// independent of phonetics.proto — avoids cross-module proto coupling.
-public struct Taigi_Engine_CaseStringResult: Sendable {
+public nonisolated struct Taigi_Engine_CaseStringResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -295,13 +295,13 @@ public struct Taigi_Engine_CaseStringResult: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate let _protobuf_package = "taigi.engine"
+fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
-extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0LETTER_CASE_UNSPECIFIED\0\u{1}LETTER_CASE_LOWERCASED\0\u{1}LETTER_CASE_UPPERCASED\0\u{1}LETTER_CASE_CAPS_LOCKED\0")
 }
 
-extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{3}capitalize_candidate\0\u{3}transform_suggestion\0")
 
@@ -436,7 +436,7 @@ extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
-extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UppercaseToneChar"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -466,7 +466,7 @@ extension Taigi_Engine_UppercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_FullUppercaseToneString: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_FullUppercaseToneString: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FullUppercaseToneString"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -496,7 +496,7 @@ extension Taigi_Engine_FullUppercaseToneString: SwiftProtobuf.Message, SwiftProt
   }
 }
 
-extension Taigi_Engine_LowercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_LowercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LowercaseToneChar"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -526,7 +526,7 @@ extension Taigi_Engine_LowercaseToneChar: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_TransformInputCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TransformInputCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TransformInputCase"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}letter_case\0")
 
@@ -561,7 +561,7 @@ extension Taigi_Engine_TransformInputCase: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Taigi_Engine_CapitalizeCandidate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CapitalizeCandidate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CapitalizeCandidate"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}input\0\u{3}auto_cap_enabled\0")
 
@@ -601,7 +601,7 @@ extension Taigi_Engine_CapitalizeCandidate: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-extension Taigi_Engine_TransformSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TransformSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TransformSuggestion"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}original_text\0\u{3}composing_text\0\u{3}letter_case\0")
 
@@ -641,7 +641,7 @@ extension Taigi_Engine_TransformSuggestion: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-extension Taigi_Engine_CaseResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CaseResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0")
 
@@ -687,7 +687,7 @@ extension Taigi_Engine_CaseResponse: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
-extension Taigi_Engine_CaseStringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CaseStringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseStringResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}output\0")
 

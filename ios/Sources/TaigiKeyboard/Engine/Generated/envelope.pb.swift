@@ -15,12 +15,12 @@ import SwiftProtobuf
 // incompatible with the version of SwiftProtobuf to which you are linking.
 // Please ensure that you are building against the same version of the API
 // that was used to generate this file.
-fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
+fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
   struct _2: SwiftProtobuf.ProtobufAPIVersion_2 {}
   typealias Version = _2
 }
 
-public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case cmdUnspecified // = 0
   case cmdPhonetics // = 1
@@ -70,7 +70,7 @@ public enum Taigi_Engine_CommandType: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-public enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case ok // = 0
   case failParse // = 1
@@ -120,7 +120,7 @@ public enum Taigi_Engine_ErrorCode: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// platform divergences (NextWord splitCompound separator + noise punct
 /// set per nextword-engine-boundary.md §5 #1, #2). PLATFORM_UNSPECIFIED
 /// returns FAIL_INVARIANT — bridges MUST populate this field.
-public enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case ios // = 1
@@ -179,7 +179,7 @@ public enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
 /// the separator predicate needs this second flag (continuous-input-ranking
 /// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
-public struct Taigi_Engine_AppConfig: Sendable {
+public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -205,7 +205,7 @@ public struct Taigi_Engine_AppConfig: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_Request: @unchecked Sendable {
+public nonisolated struct Taigi_Engine_Request: @unchecked Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -281,7 +281,7 @@ public struct Taigi_Engine_Request: @unchecked Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Payload: Equatable, Sendable {
+  public nonisolated enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsRequest)
     case composing(Taigi_Engine_ComposingRequest)
     case lexicon(Taigi_Engine_LexiconRequest)
@@ -295,7 +295,7 @@ public struct Taigi_Engine_Request: @unchecked Sendable {
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-public struct Taigi_Engine_Response: Sendable {
+public nonisolated struct Taigi_Engine_Response: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -350,7 +350,7 @@ public struct Taigi_Engine_Response: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Payload: Equatable, Sendable {
+  public nonisolated enum OneOf_Payload: Equatable, Sendable {
     case phonetics(Taigi_Engine_PhoneticsResponse)
     case composing(Taigi_Engine_ComposingResponse)
     case lexicon(Taigi_Engine_LexiconResponse)
@@ -362,7 +362,7 @@ public struct Taigi_Engine_Response: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_Command: Sendable {
+public nonisolated struct Taigi_Engine_Command: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -395,21 +395,21 @@ public struct Taigi_Engine_Command: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate let _protobuf_package = "taigi.engine"
+fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
-extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommandType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CMD_UNSPECIFIED\0\u{1}CMD_PHONETICS\0\u{1}CMD_COMPOSING\0\u{1}CMD_LEXICON\0\u{1}CMD_NEXTWORD\0\u{1}CMD_CASE\0")
 }
 
-extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ErrorCode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0OK\0\u{1}FAIL_PARSE\0\u{1}FAIL_INTERNAL\0\u{1}FAIL_IO\0\u{1}FAIL_INVARIANT\0")
 }
 
-extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Platform: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0PLATFORM_UNSPECIFIED\0\u{1}PLATFORM_IOS\0\u{1}PLATFORM_ANDROID\0")
 }
 
-extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{3}is_association_recording_enabled\0\u{3}platform_id\0\u{3}output_both_scripts\0")
 
@@ -474,7 +474,7 @@ extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   }
 }
 
-extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Request"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}type\0\u{3}config_snapshot\0\u{1}generation\0\u{2}\u{6}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
 
@@ -656,7 +656,7 @@ extension Taigi_Engine_Request: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
   }
 }
 
-extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Response"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}error\0\u{1}generation\0\u{2}\u{7}phonetics\0\u{1}composing\0\u{1}lexicon\0\u{1}nextword\0\u{3}case_transform\0")
 
@@ -789,7 +789,7 @@ extension Taigi_Engine_Response: SwiftProtobuf.Message, SwiftProtobuf._MessageIm
   }
 }
 
-extension Taigi_Engine_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Command: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Command"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}request\0\u{1}response\0")
 

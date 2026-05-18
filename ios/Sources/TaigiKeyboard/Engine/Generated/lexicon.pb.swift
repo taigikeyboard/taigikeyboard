@@ -15,7 +15,7 @@ import SwiftProtobuf
 // incompatible with the version of SwiftProtobuf to which you are linking.
 // Please ensure that you are building against the same version of the API
 // that was used to generate this file.
-fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
+fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
   struct _2: SwiftProtobuf.ProtobufAPIVersion_2 {}
   typealias Version = _2
 }
@@ -23,7 +23,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 /// `InputType` is lexicon-local — only `SearchRequest` consumes it. Not
 /// promoted to `envelope.proto` because no other module needs to classify
 /// input by hanzi/roman/tone.
-public enum Taigi_Engine_InputType: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_InputType: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case romanNoTone // = 1
@@ -70,7 +70,7 @@ public enum Taigi_Engine_InputType: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// a string today; we re-encode here as enum so the lexicon bridge surface
 /// stays type-safe at the FFI boundary. Values map: "tl"→TL, "poj"→POJ,
 /// "tps"→TPS; anything else → UNSPECIFIED (engine treats as TL).
-public enum Taigi_Engine_InputMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_InputMode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case tl // = 1
@@ -119,7 +119,7 @@ public enum Taigi_Engine_InputMode: SwiftProtobuf.Enum, Swift.CaseIterable {
 /// via explicit switch/map.
 ///
 /// DO NOT renumber: this is wire format. New sources append at the end.
-public enum Taigi_Engine_DictionarySourceCode: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_DictionarySourceCode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case dictSourceUnspecified // = 0
   case dictSourceKautian // = 1
@@ -205,7 +205,7 @@ public enum Taigi_Engine_DictionarySourceCode: SwiftProtobuf.Enum, Swift.CaseIte
 
 }
 
-public struct Taigi_Engine_LexiconRequest: Sendable {
+public nonisolated struct Taigi_Engine_LexiconRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -295,7 +295,7 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Method: Equatable, Sendable {
+  public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// ranking
     case processCandidates(Taigi_Engine_ProcessCandidatesRequest)
     /// lexicon read-path
@@ -337,7 +337,7 @@ public struct Taigi_Engine_LexiconRequest: Sendable {
 /// per-call serialization overhead.
 ///
 /// `now_ms` is caller-supplied to keep ranking deterministic in tests.
-public struct Taigi_Engine_ProcessCandidatesRequest: Sendable {
+public nonisolated struct Taigi_Engine_ProcessCandidatesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -381,7 +381,7 @@ public struct Taigi_Engine_ProcessCandidatesRequest: Sendable {
 /// Path validation: any NUL byte (`\0`) or non-absolute path is rejected
 /// with `LexiconError::InvalidPath` / `PathNotAbsolute` via the proto error
 /// envelope. Engine NEVER panics on user-supplied paths.
-public struct Taigi_Engine_InstallRequest: Sendable {
+public nonisolated struct Taigi_Engine_InstallRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -426,7 +426,7 @@ public struct Taigi_Engine_InstallRequest: Sendable {
 /// `enabled_sources_bitmask` is the platform's source-toggle state encoded
 /// as a 12-bit bitmask (mirrors `bitToSource` map; see audit §4 `D-13`
 /// invariant). 0 = no sources enabled (engine returns empty).
-public struct Taigi_Engine_SearchRequest: Sendable {
+public nonisolated struct Taigi_Engine_SearchRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -452,7 +452,7 @@ public struct Taigi_Engine_SearchRequest: Sendable {
 /// the input may be either romanized or hanji; the engine internally classifies
 /// and dispatches to the matching prefix family. Mirrors iOS
 /// `DictionaryRepository.searchWithSources`.
-public struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
+public nonisolated struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -477,7 +477,7 @@ public struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
 
 /// `SearchByHanziRequest` is Tab3's hanzi-prefix-only lookup. Mirrors iOS
 /// `DictionaryRepository.searchByHanzi`.
-public struct Taigi_Engine_SearchByHanziRequest: Sendable {
+public nonisolated struct Taigi_Engine_SearchByHanziRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -505,7 +505,7 @@ public struct Taigi_Engine_SearchByHanziRequest: Sendable {
 /// independent of `engine/lexicon`. NextWord never imports or calls into
 /// lexicon directly — the platform owns the cross-domain wiring (audit
 /// goal-1 cross-module isolation).
-public struct Taigi_Engine_AssocLookupRequest: Sendable {
+public nonisolated struct Taigi_Engine_AssocLookupRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -534,7 +534,7 @@ public struct Taigi_Engine_AssocLookupRequest: Sendable {
 /// now owns classification end-to-end).
 ///
 /// `mode` is intentionally absent: classification is mode-independent.
-public struct Taigi_Engine_ClassifyInputRequest: Sendable {
+public nonisolated struct Taigi_Engine_ClassifyInputRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -549,7 +549,7 @@ public struct Taigi_Engine_ClassifyInputRequest: Sendable {
 /// `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
 /// short-circuit hanzi queries. Tab3 needs the predicate without paying the
 /// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
-public struct Taigi_Engine_IsHanziRequest: Sendable {
+public nonisolated struct Taigi_Engine_IsHanziRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -571,7 +571,7 @@ public struct Taigi_Engine_IsHanziRequest: Sendable {
 ///
 /// `toggles` may be absent on the wire (prost `Option<DictionaryToggles>`);
 /// the engine treats absence as `DictionaryToggles::default()` (all false).
-public struct Taigi_Engine_DictionaryFiltersRequest: Sendable {
+public nonisolated struct Taigi_Engine_DictionaryFiltersRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -608,7 +608,7 @@ public struct Taigi_Engine_DictionaryFiltersRequest: Sendable {
 ///   (non-toggleable). Platforms decode via explicit switch/map into their
 ///   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
 ///   `ordinal` since the platform enums lack stable numeric values.
-public struct Taigi_Engine_DictionaryFiltersResponse: Sendable {
+public nonisolated struct Taigi_Engine_DictionaryFiltersResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -624,7 +624,7 @@ public struct Taigi_Engine_DictionaryFiltersResponse: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_LexiconResponse: Sendable {
+public nonisolated struct Taigi_Engine_LexiconResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -705,7 +705,7 @@ public struct Taigi_Engine_LexiconResponse: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Result: Equatable, Sendable {
+  public nonisolated enum OneOf_Result: Equatable, Sendable {
     case processCandidatesResult(Taigi_Engine_ProcessCandidatesResponse)
     case installResult(Taigi_Engine_InstallResponse)
     case searchResult(Taigi_Engine_SearchResponse)
@@ -727,7 +727,7 @@ public struct Taigi_Engine_LexiconResponse: Sendable {
 /// `breakdown` is populated only when the request had
 /// `include_breakdown = true`; when populated, `breakdown[i]` corresponds
 /// to `ranked[i]` so platform-side debug formatters can pair them.
-public struct Taigi_Engine_ProcessCandidatesResponse: Sendable {
+public nonisolated struct Taigi_Engine_ProcessCandidatesResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -743,7 +743,7 @@ public struct Taigi_Engine_ProcessCandidatesResponse: Sendable {
 
 /// `InstallResponse` carries diagnostic counts. Platform diagnostic surfaces
 /// log these to confirm install success.
-public struct Taigi_Engine_InstallResponse: Sendable {
+public nonisolated struct Taigi_Engine_InstallResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -760,7 +760,7 @@ public struct Taigi_Engine_InstallResponse: Sendable {
 /// `SearchResponse.rows` reuses `TaigiWord` (same shape — id / roman / hanji /
 /// length_score / source_bitmask). Platforms convert to `TaigiWord` (Swift /
 /// Kotlin) at the bridge layer, mirroring the existing ranking-slice pattern.
-public struct Taigi_Engine_SearchResponse: Sendable {
+public nonisolated struct Taigi_Engine_SearchResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -772,7 +772,7 @@ public struct Taigi_Engine_SearchResponse: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_SearchWithSourcesResponse: Sendable {
+public nonisolated struct Taigi_Engine_SearchWithSourcesResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -784,7 +784,7 @@ public struct Taigi_Engine_SearchWithSourcesResponse: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_SearchByHanziResponse: Sendable {
+public nonisolated struct Taigi_Engine_SearchByHanziResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -799,7 +799,7 @@ public struct Taigi_Engine_SearchByHanziResponse: Sendable {
 /// `AssocLookupResponse.entries` is a vector of bundled bigram entries. The
 /// platform NextWord services rank/filter further; the engine just emits
 /// the raw matches.
-public struct Taigi_Engine_AssocLookupResponse: Sendable {
+public nonisolated struct Taigi_Engine_AssocLookupResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -817,7 +817,7 @@ public struct Taigi_Engine_AssocLookupResponse: Sendable {
 /// never sees raw TPS in lexicon search keys. See
 /// INVARIANT_LEX_INPUT_CLASSIFICATION_PRECEDENCE +
 /// INVARIANT_LEX_INPUT_CLASSIFICATION_SEARCH_KEY.
-public struct Taigi_Engine_ClassifyInputResponse: Sendable {
+public nonisolated struct Taigi_Engine_ClassifyInputResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -831,7 +831,7 @@ public struct Taigi_Engine_ClassifyInputResponse: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_IsHanziResponse: Sendable {
+public nonisolated struct Taigi_Engine_IsHanziResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -853,7 +853,7 @@ public struct Taigi_Engine_IsHanziResponse: Sendable {
 /// Optional fields use proto3 `optional` so platforms can distinguish
 /// "field absent" from "scalar default" — important for `length_score`
 /// where 0 is a meaningful zero-score signal vs absent (use default tier).
-public struct Taigi_Engine_TaigiWord: Sendable {
+public nonisolated struct Taigi_Engine_TaigiWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -902,7 +902,7 @@ public struct Taigi_Engine_TaigiWord: Sendable {
 /// pre-filters to candidate-relevant keys to keep the request small.
 /// `display_text_key` matches `TaigiWord.displayText` (= hanji ?? roman)
 /// so the engine can `find` matching entries during scoring.
-public struct Taigi_Engine_FrequencyEntry: Sendable {
+public nonisolated struct Taigi_Engine_FrequencyEntry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -923,7 +923,7 @@ public struct Taigi_Engine_FrequencyEntry: Sendable {
 /// `CandidateProcessor.ScoreBreakdown` and Android
 /// `CandidateProcessor.ScoreBreakdown` mirrors are gone (Android deleted
 /// PR #192; iOS retains only an unrelated 4-LOC residual).
-public struct Taigi_Engine_ScoreBreakdown: Sendable {
+public nonisolated struct Taigi_Engine_ScoreBreakdown: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -953,7 +953,7 @@ public struct Taigi_Engine_ScoreBreakdown: Sendable {
 /// `candidate_tl` carries the TL string per entry from the bundled
 /// association.bin wire format (next_tl). Without it, the platform NextWord
 /// pipeline cannot reconstruct the romanized form for predictions.
-public struct Taigi_Engine_LexiconAssocEntry: Sendable {
+public nonisolated struct Taigi_Engine_LexiconAssocEntry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -978,7 +978,7 @@ public struct Taigi_Engine_LexiconAssocEntry: Sendable {
 ///
 /// Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
 /// surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
-public struct Taigi_Engine_DictionaryToggles: Sendable {
+public nonisolated struct Taigi_Engine_DictionaryToggles: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1026,21 +1026,21 @@ public struct Taigi_Engine_DictionaryToggles: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate let _protobuf_package = "taigi.engine"
+fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
-extension Taigi_Engine_InputType: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_InputType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0INPUT_TYPE_UNSPECIFIED\0\u{1}INPUT_TYPE_ROMAN_NO_TONE\0\u{1}INPUT_TYPE_ROMAN_WITH_TONE\0\u{1}INPUT_TYPE_HANZI\0")
 }
 
-extension Taigi_Engine_InputMode: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_InputMode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0INPUT_MODE_UNSPECIFIED\0\u{1}INPUT_MODE_TL\0\u{1}INPUT_MODE_POJ\0\u{1}INPUT_MODE_TPS\0")
 }
 
-extension Taigi_Engine_DictionarySourceCode: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DictionarySourceCode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0DICT_SOURCE_UNSPECIFIED\0\u{1}DICT_SOURCE_KAUTIAN\0\u{1}DICT_SOURCE_TAIGITV\0\u{1}DICT_SOURCE_ITAIGI\0\u{1}DICT_SOURCE_SITBUT\0\u{1}DICT_SOURCE_TAIHOA\0\u{1}DICT_SOURCE_TAIJIT\0\u{1}DICT_SOURCE_KUNGGE\0\u{1}DICT_SOURCE_STTI\0\u{1}DICT_SOURCE_KHPOO\0\u{1}DICT_SOURCE_KHIIN\0\u{1}DICT_SOURCE_LKK\0\u{1}DICT_SOURCE_DEV\0\u{1}DICT_SOURCE_CUSTOM\0")
 }
 
-extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates\0\u{1}install\0\u{1}search\0\u{3}search_with_sources\0\u{3}search_by_hanzi\0\u{3}assoc_lookup\0\u{3}classify_input\0\u{3}is_hanzi\0\u{3}dictionary_filters\0")
 
@@ -1226,7 +1226,7 @@ extension Taigi_Engine_LexiconRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProcessCandidatesRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0\u{3}normalized_input\0\u{4}\u{2}tps_dedup_enabled\0\u{1}freq\0\u{3}now_ms\0\u{3}include_breakdown\0\u{3}merge_order_only\0")
 
@@ -1286,7 +1286,7 @@ extension Taigi_Engine_ProcessCandidatesRequest: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".InstallRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}trie_path\0\u{3}dictionary_bin_path\0\u{3}association_bin_path\0\u{3}dictionary_version\0\u{3}syllable_inventory_path\0")
 
@@ -1336,7 +1336,7 @@ extension Taigi_Engine_InstallRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_SearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}input_type\0\u{3}input_mode\0\u{1}limit\0\u{3}tps_or_mapped_to_er\0\u{3}enabled_sources_bitmask\0")
 
@@ -1391,7 +1391,7 @@ extension Taigi_Engine_SearchRequest: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_SearchWithSourcesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchWithSourcesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchWithSourcesRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}input_mode\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
 
@@ -1436,7 +1436,7 @@ extension Taigi_Engine_SearchWithSourcesRequest: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Taigi_Engine_SearchByHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchByHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchByHanziRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}query\0\u{3}input_mode\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
 
@@ -1481,7 +1481,7 @@ extension Taigi_Engine_SearchByHanziRequest: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AssocLookupRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
 
@@ -1521,7 +1521,7 @@ extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Taigi_Engine_ClassifyInputRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ClassifyInputRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassifyInputRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}raw\0")
 
@@ -1551,7 +1551,7 @@ extension Taigi_Engine_ClassifyInputRequest: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Taigi_Engine_IsHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_IsHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".IsHanziRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1581,7 +1581,7 @@ extension Taigi_Engine_IsHanziRequest: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_DictionaryFiltersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DictionaryFiltersRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DictionaryFiltersRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}toggles\0")
 
@@ -1615,7 +1615,7 @@ extension Taigi_Engine_DictionaryFiltersRequest: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Taigi_Engine_DictionaryFiltersResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DictionaryFiltersResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DictionaryFiltersResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}dictionary_filter_bitmask\0\u{3}assoc_lookup_bitmask\0\u{3}enabled_source_codes\0")
 
@@ -1655,7 +1655,7 @@ extension Taigi_Engine_DictionaryFiltersResponse: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}process_candidates_result\0\u{3}install_result\0\u{3}search_result\0\u{3}search_with_sources_result\0\u{3}search_by_hanzi_result\0\u{3}assoc_lookup_result\0\u{3}classify_input_result\0\u{3}is_hanzi_result\0\u{3}dictionary_filters_result\0")
 
@@ -1841,7 +1841,7 @@ extension Taigi_Engine_LexiconResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_ProcessCandidatesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ProcessCandidatesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProcessCandidatesResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}ranked\0\u{1}breakdown\0")
 
@@ -1876,7 +1876,7 @@ extension Taigi_Engine_ProcessCandidatesResponse: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_InstallResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_InstallResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".InstallResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}dictionary_record_count\0\u{3}prefix_index_entry_count\0")
 
@@ -1911,7 +1911,7 @@ extension Taigi_Engine_InstallResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_SearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
 
@@ -1941,7 +1941,7 @@ extension Taigi_Engine_SearchResponse: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_SearchWithSourcesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchWithSourcesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchWithSourcesResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
 
@@ -1971,7 +1971,7 @@ extension Taigi_Engine_SearchWithSourcesResponse: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_SearchByHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SearchByHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SearchByHanziResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
 
@@ -2001,7 +2001,7 @@ extension Taigi_Engine_SearchByHanziResponse: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-extension Taigi_Engine_AssocLookupResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_AssocLookupResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AssocLookupResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entries\0")
 
@@ -2031,7 +2031,7 @@ extension Taigi_Engine_AssocLookupResponse: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-extension Taigi_Engine_ClassifyInputResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ClassifyInputResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClassifyInputResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}input_type\0\u{3}search_key\0")
 
@@ -2066,7 +2066,7 @@ extension Taigi_Engine_ClassifyInputResponse: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-extension Taigi_Engine_IsHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_IsHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".IsHanziResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}is_hanzi\0")
 
@@ -2096,7 +2096,7 @@ extension Taigi_Engine_IsHanziResponse: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TaigiWord"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanji\0\u{3}length_score\0\u{3}source_bitmask\0")
 
@@ -2150,7 +2150,7 @@ extension Taigi_Engine_TaigiWord: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   }
 }
 
-extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FrequencyEntry"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text_key\0\u{1}count\0\u{3}last_used_ms\0")
 
@@ -2190,7 +2190,7 @@ extension Taigi_Engine_FrequencyEntry: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_ScoreBreakdown: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ScoreBreakdown: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ScoreBreakdown"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_freq_score\0\u{3}recency_bonus\0\u{3}exact_bonus\0\u{3}completion_penalty\0\u{3}closeness_bonus\0\u{3}base_freq_score\0")
 
@@ -2245,7 +2245,7 @@ extension Taigi_Engine_ScoreBreakdown: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LexiconAssocEntry"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{3}candidate_word\0\u{1}count\0\u{3}candidate_tl\0")
 
@@ -2290,7 +2290,7 @@ extension Taigi_Engine_LexiconAssocEntry: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DictionaryToggles: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DictionaryToggles"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kautian\0\u{1}taigitv\0\u{1}itaigi\0\u{1}sitbut\0\u{1}taihoa\0\u{1}taijit\0\u{1}kungge\0\u{1}stti\0\u{1}khpoo\0\u{1}variant\0\u{1}khiin\0\u{1}lkk\0")
 

@@ -762,6 +762,46 @@ pub fn best_candidate_for_key(
     best
 }
 
+/// v3.5.8 §10.2 Option A — does the exact hanzi `hanji` resolve to a
+/// dictionary entry that is **exactly two TL syllables**? Used by the
+/// composing render/commit join ([`crate`] consumer
+/// `composing::api::nailed_prefix`) to decide whether two adjacent
+/// manually-nailed single-syllable segments reconstruct a known
+/// 2-syllable compound (`查某` / `tsa-bóo`) and therefore render their
+/// word boundary as an internal hyphen instead of a space.
+///
+/// Scans **all** `prefix_index.lookup_exact("hanzi:<hanji>")` rowids —
+/// NOT [`best_candidate_for_key`], which returns a single ranking
+/// winner and would make a presentation separator depend on score
+/// (Codex pre-impl Q2 2026-05-18) — and returns `true` iff some record
+/// has `syllable_count == 2` **and** `hanzi == Some(hanji)`. The
+/// `syllable_count == 2` gate is load-bearing: many two-CJK-codepoint
+/// dictionary entries are NOT two TL syllables (e.g. `先生 / sin-senn`,
+/// `新婦 / sim-pū`); existence alone would over-hyphenate them (Codex
+/// pre-impl N2 2026-05-18). The explicit `hanzi` re-check guards
+/// against wrong rowids / future index drift; it cannot bridge
+/// byte-different but visually-equivalent variant forms (an accepted
+/// data-level limitation, identical to the toneless-key path).
+// 中文: §10.2 Option A — 漢字 exact-key 查詢:hanji 是否為「恰好 2 音節」的詞庫詞。
+// 中文: 掃全部 lookup_exact rowids(非 best_candidate_for_key — 分隔符不可依賴排序),
+// 中文:   syllable_count==2 為必要閘:很多雙漢字條目非 2 音節(先生 / 新婦),
+// 中文:   僅判存在會誤連;hanzi 再驗防 rowid 漂移(無法橋接位元不同的異體字)。
+pub fn compound_hanji_exists(
+    hanji: &str,
+    prefix_index: &PrefixIndex,
+    dict: &DictionaryReader,
+) -> bool {
+    let key = format!("hanzi:{hanji}");
+    for rowid in prefix_index.lookup_exact(&key) {
+        if let Some(record) = dict.record(rowid) {
+            if record.syllable_count == 2 && record.hanzi.as_deref() == Some(hanji) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn record_to_candidate(
     record: DictionaryRecord,
     consumed_span: ConsumedSpan,

@@ -6,6 +6,7 @@
 // 中文: 組字 crate 的對外 API:Engine、EngineState、Phase、Intent、ComposingError。
 // 中文: 真正的狀態轉移實作在 transition.rs,本檔案只定義穩定的型別介面。
 
+use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
 use thiserror::Error;
 
@@ -155,31 +156,110 @@ fn continuous_word_space(config: &AppConfig) -> bool {
     !effective_swapped || config.output_both_scripts
 }
 
-/// `Σ nailed[i].display_text` joined with the §10.2 word-boundary
-/// separator (see [`continuous_word_space`]). **Single source of truth**
-/// for the nailed-prefix concatenation; do not re-inline this loop. The
-/// separator is a pure presentation/commit-render concern and is NEVER
-/// stored in `NailedSegment.display_text` — backspace-pop restores the
-/// editable tail from `NailedSegment.raw_text`, so the segment data
-/// must stay separator-free.
-// 中文: Σ nailed.display_text 以 §10.2 詞界分隔符串接;唯一真相來源,勿內聯。
-// 中文: 分隔符屬 render/commit 呈現層,絕不寫入 NailedSegment.display_text
-// 中文:   (backspace pop 由 raw_text 還原,segment 資料須保持無分隔符)。
-pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
-    let space = continuous_word_space(config);
+/// Pure `Σ nailed[i].display_text` join, parameterized by the
+/// roman-ish `space` predicate and a `is_compound` oracle. **Single
+/// source of truth** for the nailed-prefix concatenation; do not
+/// re-inline this loop.
+///
+/// Inter-segment boundary policy (only when `space`, i.e. roman-ish —
+/// hanji-first / TPS have no separator at all):
+/// - boundary after a hyphen-continuation segment (`tai-`, `s` ends
+///   with `-`): emit **nothing** (existing mid-word rule, mirrors the
+///   platform `appendAutoSpaceIfApplicable` `endsWith("-")` guard) and
+///   treat the boundary as already hyphenated for chain-prevention;
+/// - else a `-` (instead of the word-boundary space) iff the previous
+///   boundary was NOT a hyphen (left-to-right non-overlapping bigram,
+///   blocks `A-B-C` over-gluing while still allowing `A B-C`), both
+///   adjacent segments are single-syllable, and
+///   `is_compound(prev.canonical_text + seg.canonical_text)` — i.e.
+///   the pair reconstructs a known 2-syllable dictionary compound
+///   (查某 → `tsa-bóo`); otherwise a single space.
+///
+/// The separator is a render/commit join concern, **dictionary-informed**
+/// for known two-syllable compounds (Codex pre-impl 2026-05-18), and is
+/// NEVER stored in `NailedSegment.display_text` / `raw_text` —
+/// backspace-pop restores the editable tail from `raw_text`, so segment
+/// data stays separator-free; the hyphen is derived fresh on every
+/// render from the segments' own `canonical_text` + `syllable_count`.
+// 中文: 純串接迴圈;唯一真相來源,勿內聯。分隔符屬 render/commit 呈現層,
+// 中文:   但對「詞庫已知 2 音節複合詞」用連字號(查某→tsa-bóo);絕不寫入
+// 中文:   NailedSegment(backspace 由 raw_text 還原,連字號每次 render 由
+// 中文:   canonical_text + syllable_count 即時推導)。左→右不重疊 bigram
+// 中文:   (prev_hyphen 防 A-B-C 過度黏連);trailing-`-` 視為已連字號。
+fn nailed_prefix_with_oracle(
+    nailed: &[NailedSegment],
+    space: bool,
+    is_compound: impl Fn(&str) -> bool,
+) -> String {
     let mut s = String::new();
+    // The previous emitted inter-segment boundary rendered as a hyphen
+    // (an auto-compound `-` OR a user-typed trailing `-` that
+    // suppressed the separator). Blocks `A-B-C` over-gluing (Codex
+    // pre-impl R4 2026-05-18).
+    let mut prev_hyphen = false;
     for (i, seg) in nailed.iter().enumerate() {
-        // Suppress the separator after a hyphen-continuation segment
-        // (mid-word `tai-`) — mirrors the platform
-        // `appendAutoSpaceIfApplicable` `endsWith("-")` rule. `s`
-        // currently ends with segment `i-1`'s content, so this tests
-        // the LEFT side of the boundary.
-        if i > 0 && space && !s.ends_with('-') {
-            s.push(' ');
+        if i > 0 && space {
+            if s.ends_with('-') {
+                // Mid-word hyphen-continuation: emit nothing; the
+                // boundary is already hyphenated.
+                prev_hyphen = true;
+            } else {
+                let prev = &nailed[i - 1];
+                let compound = !prev_hyphen
+                    && prev.syllable_count == 1
+                    && seg.syllable_count == 1
+                    && is_compound(&format!("{}{}", prev.canonical_text, seg.canonical_text));
+                if compound {
+                    s.push('-');
+                    prev_hyphen = true;
+                } else {
+                    s.push(' ');
+                    prev_hyphen = false;
+                }
+            }
         }
         s.push_str(&seg.display_text);
     }
     s
+}
+
+/// `Σ nailed[i].display_text` joined with the §10.2 word-boundary
+/// separator (see [`continuous_word_space`]), with two adjacent
+/// single-syllable segments that reconstruct a **known 2-syllable
+/// dictionary compound** joined by an internal hyphen instead
+/// (查某 → `tsa-bóo`, v3.5.8 §10.2 Option A — manual single-syllable
+/// tap path).
+///
+/// One lexicon lock for the whole join (Codex pre-impl R2 2026-05-18).
+/// Cheap pre-gate first: a compound hyphen can only fire when the
+/// render is roman-ish AND there is at least one adjacent
+/// single-syllable pair — otherwise the lexicon is never touched. When
+/// no dictionary is installed (`with_state` → `Err`, e.g. unit tests)
+/// the join degrades to the pure space-join: byte-identical to the
+/// pre-Option-A behaviour.
+// 中文: §10.2 詞界分隔;相鄰兩單音節段若還原成詞庫已知 2 音節複合詞改用連字號。
+// 中文: 整段 join 只鎖一次 lexicon(R2);cheap 前置閘擋掉非 roman-ish / 無單音節對;
+// 中文: 未安裝詞庫(with_state Err,如單元測試)→ 退化為純空格 join(行為不變)。
+pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
+    let space = continuous_word_space(config);
+    let eligible = space
+        && nailed.len() >= 2
+        && nailed
+            .windows(2)
+            .any(|w| w[0].syllable_count == 1 && w[1].syllable_count == 1);
+    if !eligible {
+        return nailed_prefix_with_oracle(nailed, space, |_| false);
+    }
+    LexiconHandle::with_state(|state| {
+        let (Some(prefix), Some(dict)) = (state.prefix_index.as_ref(), state.dictionary.as_ref())
+        else {
+            return Ok(nailed_prefix_with_oracle(nailed, space, |_| false));
+        };
+        Ok(nailed_prefix_with_oracle(nailed, space, |h| {
+            compound_hanji_exists(h, prefix, dict)
+        }))
+    })
+    .unwrap_or_else(|_| nailed_prefix_with_oracle(nailed, space, |_| false))
 }
 
 /// The Model B composing-buffer surface for a `(nailed, raw)` pair:
@@ -397,7 +477,9 @@ mod tests {
     //! `tests/continuous_phase.rs` + `tests/raw_input_pending_tail.rs`;
     //! these unit-pin the predicate matrix directly.
 
-    use super::{combined_display, nailed_prefix, AppConfig, NailedSegment};
+    use super::{
+        combined_display, nailed_prefix, nailed_prefix_with_oracle, AppConfig, NailedSegment,
+    };
 
     fn seg(display: &str) -> NailedSegment {
         NailedSegment {
@@ -406,6 +488,19 @@ mod tests {
             raw_text: display.to_owned(),
             raw_span: (0, display.len()),
             syllable_count: 1,
+        }
+    }
+
+    /// Distinct `display_text` vs `canonical_text` (roman-display,
+    /// hanji-canonical) + explicit syllable count — the §10.2 Option A
+    /// compound-hyphen tests key the oracle off `canonical_text`.
+    fn seg_dc(display: &str, canonical: &str, syllable_count: u8) -> NailedSegment {
+        NailedSegment {
+            display_text: display.to_owned(),
+            canonical_text: canonical.to_owned(),
+            raw_text: display.to_owned(),
+            raw_span: (0, display.len()),
+            syllable_count,
         }
     }
 
@@ -483,5 +578,92 @@ mod tests {
         assert_eq!(combined_display(&n, "", &cfg("tl", false, false)), "珠");
         // No nailed prefix → tail only, no leading separator.
         assert_eq!(combined_display(&[], "a", &cfg("tl", false, false)), "a");
+    }
+
+    // ---- v3.5.8 §10.2 Option A — dictionary-compound hyphen join ----
+    // `nailed_prefix_with_oracle` is the pure join; these pin the
+    // separator policy against a hermetic compound oracle (the live
+    // lexicon-backed path is locked in `engine/lexicon/tests/
+    // compound_hanji.rs` + the graceful no-lexicon path by the §10.2
+    // predicate-matrix tests above, which now route through this fn).
+
+    #[test]
+    fn oracle_false_everywhere_is_byte_identical_to_plain_space_join() {
+        // Regression pin: with no compound ever, the roman-ish join is
+        // exactly the pre-Option-A behaviour.
+        let n = [seg("hit"), seg("tui")];
+        assert_eq!(nailed_prefix_with_oracle(&n, true, |_| false), "hit tui");
+        // Hanji-first / TPS (space = false) → no separator at all,
+        // oracle irrelevant.
+        let h = [seg("彼"), seg("隻")];
+        assert_eq!(nailed_prefix_with_oracle(&h, false, |_| true), "彼隻");
+    }
+
+    #[test]
+    fn known_two_syllable_compound_renders_internal_hyphen() {
+        // hit ê tsa bóo → hit ê tsa-bóo (查某 is the only 2-syll
+        // compound; "彼个" / others are not in the oracle).
+        let n = [
+            seg_dc("hit", "彼", 1),
+            seg_dc("ê", "个", 1),
+            seg_dc("tsa", "查", 1),
+            seg_dc("bóo", "某", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h| h == "查某"),
+            "hit ê tsa-bóo"
+        );
+    }
+
+    #[test]
+    fn left_to_right_non_overlapping_bigram_blocks_a_b_c_overgluing() {
+        // Oracle says both 查某 and 某人 are 2-syll compounds. Strict
+        // non-overlapping left-to-right pairing hyphens (查,某) then
+        // blocks (某,人) — "查-某 人", never "查-某-人".
+        let n = [
+            seg_dc("tsa", "查", 1),
+            seg_dc("bóo", "某", 1),
+            seg_dc("lâng", "人", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h| h == "查某" || h == "某人"),
+            "tsa-bóo lâng"
+        );
+    }
+
+    #[test]
+    fn multi_syllable_segment_is_not_a_compound_bigram_member() {
+        // A 2-syllable nailed segment (e.g. the compound was tapped
+        // whole) is never re-hyphenated against a neighbour even if the
+        // oracle would match the canonical concatenation.
+        let n = [seg_dc("tsa-bóo", "查某", 2), seg_dc("lâng", "人", 1)];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |_| true),
+            "tsa-bóo lâng"
+        );
+    }
+
+    #[test]
+    fn user_typed_trailing_hyphen_suppresses_then_blocks_next_compound() {
+        // "tai-" is a user hyphen-continuation: boundary emits nothing
+        // and counts as already-hyphenated, so the following (uan, X)
+        // boundary cannot also auto-compound (gets a plain space).
+        let n = [
+            seg_dc("tai-", "台", 1),
+            seg_dc("uan", "灣", 1),
+            seg_dc("X", "國", 1),
+        ];
+        assert_eq!(
+            nailed_prefix_with_oracle(&n, true, |h| h == "灣國"),
+            "tai-uan X"
+        );
+    }
+
+    #[test]
+    fn no_lexicon_installed_keeps_compound_pairs_space_joined() {
+        // `nailed_prefix` (lexicon-wired) with no dictionary installed
+        // in the unit-test process → graceful pure space-join.
+        let n = [seg_dc("tsa", "查", 1), seg_dc("bóo", "某", 1)];
+        assert_eq!(nailed_prefix(&n, &cfg("tl", false, false)), "tsa bóo");
     }
 }

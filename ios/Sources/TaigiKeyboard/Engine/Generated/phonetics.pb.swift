@@ -15,12 +15,12 @@ import SwiftProtobuf
 // incompatible with the version of SwiftProtobuf to which you are linking.
 // Please ensure that you are building against the same version of the API
 // that was used to generate this file.
-fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
+fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
   struct _2: SwiftProtobuf.ProtobufAPIVersion_2 {}
   typealias Version = _2
 }
 
-public struct Taigi_Engine_PhoneticsRequest: Sendable {
+public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -160,7 +160,7 @@ public struct Taigi_Engine_PhoneticsRequest: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Method: Equatable, Sendable {
+  public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// --- Phonetics core (8 ops) ---
     case normalizeTone(Taigi_Engine_NormalizeTone)
     case stripTone(Taigi_Engine_StripTone)
@@ -189,7 +189,7 @@ public struct Taigi_Engine_PhoneticsRequest: Sendable {
 /// `NormalizeTone` reads `AppConfig.input_mode` (POJ / TL) and
 /// `AppConfig.oo_doubletap_enabled` / `nn_doubletap_enabled` from envelope's
 /// per-request `config_snapshot`. Engine never caches settings.
-public struct Taigi_Engine_NormalizeTone: Sendable {
+public nonisolated struct Taigi_Engine_NormalizeTone: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -201,7 +201,7 @@ public struct Taigi_Engine_NormalizeTone: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_StripTone: Sendable {
+public nonisolated struct Taigi_Engine_StripTone: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -213,7 +213,7 @@ public struct Taigi_Engine_StripTone: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_PojToTl: Sendable {
+public nonisolated struct Taigi_Engine_PojToTl: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -225,7 +225,7 @@ public struct Taigi_Engine_PojToTl: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_TlToPoj: Sendable {
+public nonisolated struct Taigi_Engine_TlToPoj: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -237,7 +237,7 @@ public struct Taigi_Engine_TlToPoj: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_NormalizeToTl: Sendable {
+public nonisolated struct Taigi_Engine_NormalizeToTl: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -253,7 +253,7 @@ public struct Taigi_Engine_NormalizeToTl: Sendable {
 /// TPS preprocess (if input contains TPS) → per-syllable diacritic→digit →
 /// checked-ending heuristic for default tone (1 vs 4). Replaces both
 /// platforms' `InputNormalizer.normalize`.
-public struct Taigi_Engine_NormalizeInput: Sendable {
+public nonisolated struct Taigi_Engine_NormalizeInput: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -268,7 +268,7 @@ public struct Taigi_Engine_NormalizeInput: Sendable {
 /// `RestoreTone` removes the LAST combining tone mark from `text` and NFC
 /// recomposes. Returns absent if no tone mark found. Replaces both
 /// platforms' `ToneRestoration.restore`.
-public struct Taigi_Engine_RestoreTone: Sendable {
+public nonisolated struct Taigi_Engine_RestoreTone: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -283,7 +283,7 @@ public struct Taigi_Engine_RestoreTone: Sendable {
 /// `GetToneVariations` is the init-bulk-pull op for callout tone variation
 /// tables. Returns POJ + TL maps in one response. Caller caches once at
 /// engine init (lazy / idempotent on platform side).
-public struct Taigi_Engine_GetToneVariations: Sendable {
+public nonisolated struct Taigi_Engine_GetToneVariations: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -305,7 +305,7 @@ public struct Taigi_Engine_GetToneVariations: Sendable {
 /// + adds default tones + splits syllables) — see
 /// `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
 /// for the algorithm contrast against `trie_key_unicode_form`.
-public struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
+public nonisolated struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -320,7 +320,7 @@ public struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
 /// `DeriveNotone` strips tone diacritics + digits + hyphens + spaces,
 /// after lowercase + nasal marker conversion. Replaces
 /// `CustomDictionaryDerivation.generateNotone`.
-public struct Taigi_Engine_DeriveNotone: Sendable {
+public nonisolated struct Taigi_Engine_DeriveNotone: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -336,7 +336,7 @@ public struct Taigi_Engine_DeriveNotone: Sendable {
 /// whitespace `[ \t\n\x0B\f\r-]+`), diacritics stripped. Returns "" when
 /// fewer than 2 syllables. Whitespace canonical = ASCII only (matches
 /// Android JVM `Regex("[\\s-]+")` semantics; preserves NBSP as non-delimiter).
-public struct Taigi_Engine_DeriveAbbrev: Sendable {
+public nonisolated struct Taigi_Engine_DeriveAbbrev: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -348,7 +348,7 @@ public struct Taigi_Engine_DeriveAbbrev: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ContainsTps: Sendable {
+public nonisolated struct Taigi_Engine_ContainsTps: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -362,7 +362,7 @@ public struct Taigi_Engine_ContainsTps: Sendable {
 
 /// `TlNumericToTps` input is numeric tone form (e.g. "hoo2"). Replaces
 /// iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
-public struct Taigi_Engine_TlNumericToTps: Sendable {
+public nonisolated struct Taigi_Engine_TlNumericToTps: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -378,7 +378,7 @@ public struct Taigi_Engine_TlNumericToTps: Sendable {
 
 /// `TlDisplayToTps` input is display form with diacritics (e.g. "hóo").
 /// Replaces iOS `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.
-public struct Taigi_Engine_TlDisplayToTps: Sendable {
+public nonisolated struct Taigi_Engine_TlDisplayToTps: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -394,7 +394,7 @@ public struct Taigi_Engine_TlDisplayToTps: Sendable {
 
 /// `IsTpsToneMark` checks if a single Unicode scalar is a TPS tone mark.
 /// `char` MUST be a single grapheme; engine returns false for empty / multi.
-public struct Taigi_Engine_IsTpsToneMark: Sendable {
+public nonisolated struct Taigi_Engine_IsTpsToneMark: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -410,7 +410,7 @@ public struct Taigi_Engine_IsTpsToneMark: Sendable {
 /// runs adjustInitialKey → adjustNasalizedVowelKey → syllabicNasalReplacement
 /// ?: palatalizationReplacement. Caller MUST gate by TPS layout; engine
 /// does not gate (TPS is a layout, not a mode, on Android).
-public struct Taigi_Engine_TpsInputAdjust: Sendable {
+public nonisolated struct Taigi_Engine_TpsInputAdjust: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -424,7 +424,7 @@ public struct Taigi_Engine_TpsInputAdjust: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_PhoneticsResponse: Sendable {
+public nonisolated struct Taigi_Engine_PhoneticsResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -481,7 +481,7 @@ public struct Taigi_Engine_PhoneticsResponse: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Result: Equatable, Sendable {
+  public nonisolated enum OneOf_Result: Equatable, Sendable {
     case stringResult(Taigi_Engine_StringResult)
     case stripToneResult(Taigi_Engine_StripToneResult)
     case optionalStringResult(Taigi_Engine_OptionalStringResult)
@@ -494,7 +494,7 @@ public struct Taigi_Engine_PhoneticsResponse: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_StringResult: Sendable {
+public nonisolated struct Taigi_Engine_StringResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -508,7 +508,7 @@ public struct Taigi_Engine_StringResult: Sendable {
 
 /// `StripToneResult` returns the bare syllable + extracted tone digit.
 /// `tone` is "" when no tone mark was present.
-public struct Taigi_Engine_StripToneResult: Sendable {
+public nonisolated struct Taigi_Engine_StripToneResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -525,7 +525,7 @@ public struct Taigi_Engine_StripToneResult: Sendable {
 /// `OptionalStringResult` is a String? equivalent. `present` indicates
 /// whether `output` is meaningful (proto3 has no native optional for
 /// non-message scalar fields without the `optional` keyword).
-public struct Taigi_Engine_OptionalStringResult: Sendable {
+public nonisolated struct Taigi_Engine_OptionalStringResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -539,7 +539,7 @@ public struct Taigi_Engine_OptionalStringResult: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_BoolResult: Sendable {
+public nonisolated struct Taigi_Engine_BoolResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -553,7 +553,7 @@ public struct Taigi_Engine_BoolResult: Sendable {
 
 /// `ToneVariationsResult` is the callout init-pull payload. Maps the base
 /// char (e.g. "a") to its toned variations list (e.g. ["á", "à", "â", ...]).
-public struct Taigi_Engine_ToneVariationsResult: Sendable {
+public nonisolated struct Taigi_Engine_ToneVariationsResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -567,7 +567,7 @@ public struct Taigi_Engine_ToneVariationsResult: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ToneVariationList: Sendable {
+public nonisolated struct Taigi_Engine_ToneVariationList: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -582,7 +582,7 @@ public struct Taigi_Engine_ToneVariationList: Sendable {
 /// `TpsAdjustResult` carries the adjusted incoming char + an optional
 /// retroactive `replace_last` instruction for the platform to issue
 /// `replaceLastCharacter`.
-public struct Taigi_Engine_TpsAdjustResult: Sendable {
+public nonisolated struct Taigi_Engine_TpsAdjustResult: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -607,9 +607,9 @@ public struct Taigi_Engine_TpsAdjustResult: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate let _protobuf_package = "taigi.engine"
+fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
-extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}normalize_tone\0\u{3}strip_tone\0\u{3}poj_to_tl\0\u{3}tl_to_poj\0\u{3}normalize_to_tl\0\u{3}normalize_input\0\u{3}restore_tone\0\u{4}\u{2}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{3}derive_notone\0\u{3}derive_abbrev\0\u{4}\u{9}contains_tps\0\u{4}\u{2}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0")
 
@@ -914,7 +914,7 @@ extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Taigi_Engine_NormalizeTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NormalizeTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NormalizeTone"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -944,7 +944,7 @@ extension Taigi_Engine_NormalizeTone: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_StripTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_StripTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".StripTone"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -974,7 +974,7 @@ extension Taigi_Engine_StripTone: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   }
 }
 
-extension Taigi_Engine_PojToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_PojToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PojToTl"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -1004,7 +1004,7 @@ extension Taigi_Engine_PojToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
   }
 }
 
-extension Taigi_Engine_TlToPoj: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TlToPoj: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TlToPoj"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -1034,7 +1034,7 @@ extension Taigi_Engine_TlToPoj: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
   }
 }
 
-extension Taigi_Engine_NormalizeToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NormalizeToTl: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NormalizeToTl"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -1064,7 +1064,7 @@ extension Taigi_Engine_NormalizeToTl: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_NormalizeInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NormalizeInput: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NormalizeInput"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -1094,7 +1094,7 @@ extension Taigi_Engine_NormalizeInput: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_RestoreTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_RestoreTone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RestoreTone"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1124,7 +1124,7 @@ extension Taigi_Engine_RestoreTone: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
-extension Taigi_Engine_GetToneVariations: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_GetToneVariations: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetToneVariations"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1143,7 +1143,7 @@ extension Taigi_Engine_GetToneVariations: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_NfdPreprocessForLookup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NfdPreprocessForLookup: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NfdPreprocessForLookup"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
@@ -1173,7 +1173,7 @@ extension Taigi_Engine_NfdPreprocessForLookup: SwiftProtobuf.Message, SwiftProto
   }
 }
 
-extension Taigi_Engine_DeriveNotone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DeriveNotone: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeriveNotone"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}roman\0")
 
@@ -1203,7 +1203,7 @@ extension Taigi_Engine_DeriveNotone: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
-extension Taigi_Engine_DeriveAbbrev: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DeriveAbbrev: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeriveAbbrev"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}roman\0")
 
@@ -1233,7 +1233,7 @@ extension Taigi_Engine_DeriveAbbrev: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
-extension Taigi_Engine_ContainsTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ContainsTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ContainsTps"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1263,7 +1263,7 @@ extension Taigi_Engine_ContainsTps: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
-extension Taigi_Engine_TlNumericToTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TlNumericToTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TlNumericToTps"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}or_maps_to_er\0")
 
@@ -1298,7 +1298,7 @@ extension Taigi_Engine_TlNumericToTps: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_TlDisplayToTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TlDisplayToTps: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TlDisplayToTps"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}or_maps_to_er\0")
 
@@ -1333,7 +1333,7 @@ extension Taigi_Engine_TlDisplayToTps: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_IsTpsToneMark: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_IsTpsToneMark: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".IsTpsToneMark"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}char\0")
 
@@ -1363,7 +1363,7 @@ extension Taigi_Engine_IsTpsToneMark: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TpsInputAdjust"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}incoming\0\u{3}raw_input\0")
 
@@ -1398,7 +1398,7 @@ extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{3}optional_string_result\0\u{3}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0")
 
@@ -1533,7 +1533,7 @@ extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_StringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_StringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".StringResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}output\0")
 
@@ -1563,7 +1563,7 @@ extension Taigi_Engine_StringResult: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
-extension Taigi_Engine_StripToneResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_StripToneResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".StripToneResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}bare\0\u{1}tone\0")
 
@@ -1598,7 +1598,7 @@ extension Taigi_Engine_StripToneResult: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_OptionalStringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_OptionalStringResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OptionalStringResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}output\0\u{1}present\0")
 
@@ -1633,7 +1633,7 @@ extension Taigi_Engine_OptionalStringResult: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Taigi_Engine_BoolResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_BoolResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".BoolResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}value\0")
 
@@ -1663,7 +1663,7 @@ extension Taigi_Engine_BoolResult: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
-extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ToneVariationsResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}poj_variations\0\u{3}tl_variations\0")
 
@@ -1698,7 +1698,7 @@ extension Taigi_Engine_ToneVariationsResult: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Taigi_Engine_ToneVariationList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ToneVariationList: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ToneVariationList"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}variations\0")
 
@@ -1728,7 +1728,7 @@ extension Taigi_Engine_ToneVariationList: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_TpsAdjustResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_TpsAdjustResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TpsAdjustResult"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}adjusted\0\u{3}replace_last\0")
 

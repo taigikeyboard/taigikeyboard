@@ -15,7 +15,7 @@ import SwiftProtobuf
 // incompatible with the version of SwiftProtobuf to which you are linking.
 // Please ensure that you are building against the same version of the API
 // that was used to generate this file.
-fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
+fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAPIVersionCheck {
   struct _2: SwiftProtobuf.ProtobufAPIVersion_2 {}
   typealias Version = _2
 }
@@ -33,7 +33,7 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
 /// `UNSPECIFIED = 0` is the proto3 default and never emitted by Rust;
 /// platforms must treat `UNSPECIFIED` as "unknown carrier — fall back
 /// to display-text sniff" rather than as HANT.
-public enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case hant // = 1
@@ -75,7 +75,7 @@ public enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-public struct Taigi_Engine_ComposingRequest: Sendable {
+public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -221,7 +221,7 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
   /// Tag layout: text-input mutators in 10s, UI-driven ops (index update + pure
   /// read) in 20s, v3.5.8 continuous-input ops in 30s. Spacing leaves room for
   /// future families without renumbering existing variants.
-  public enum OneOf_Method: Equatable, Sendable {
+  public nonisolated enum OneOf_Method: Equatable, Sendable {
     /// --- Text-input mutators (10s) ---
     case start(Taigi_Engine_Start)
     case append(Taigi_Engine_Append)
@@ -249,7 +249,7 @@ public struct Taigi_Engine_ComposingRequest: Sendable {
 
 /// Begin a fresh composition buffer with `text`. Caret resets;
 /// `selected_candidate_index` set to 0.
-public struct Taigi_Engine_Start: Sendable {
+public nonisolated struct Taigi_Engine_Start: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -262,7 +262,7 @@ public struct Taigi_Engine_Start: Sendable {
 }
 
 /// Append a single character to the buffer. Idle → behaves as Start.
-public struct Taigi_Engine_Append: Sendable {
+public nonisolated struct Taigi_Engine_Append: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -276,7 +276,7 @@ public struct Taigi_Engine_Append: Sendable {
 
 /// Convenience alias for `Append("-")`. Kept distinct so call sites do not
 /// synthesize hyphen strings on the wire.
-public struct Taigi_Engine_AppendHyphen: Sendable {
+public nonisolated struct Taigi_Engine_AppendHyphen: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -289,7 +289,7 @@ public struct Taigi_Engine_AppendHyphen: Sendable {
 /// TPS auto-correct: replace the last raw-input character. Intentionally
 /// preserves `selected_candidate_index` (correction on top of an in-progress
 /// selection, not a fresh composition step).
-public struct Taigi_Engine_ReplaceLast: Sendable {
+public nonisolated struct Taigi_Engine_ReplaceLast: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -304,7 +304,7 @@ public struct Taigi_Engine_ReplaceLast: Sendable {
 /// Delete one grapheme. Empties → Idle. iOS emits
 /// `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
 /// `Reset` instead (`composing-slice-plan.md §5b.1`).
-public struct Taigi_Engine_DeleteBackward: Sendable {
+public nonisolated struct Taigi_Engine_DeleteBackward: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -315,7 +315,7 @@ public struct Taigi_Engine_DeleteBackward: Sendable {
 }
 
 /// Commit the tone-marked derived form to the document.
-public struct Taigi_Engine_CommitDerived: Sendable {
+public nonisolated struct Taigi_Engine_CommitDerived: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -327,7 +327,7 @@ public struct Taigi_Engine_CommitDerived: Sendable {
 
 /// Commit the literal raw input (bypass tone conversion). Used for
 /// Enter-at-index-0 / English passthrough.
-public struct Taigi_Engine_CommitRaw: Sendable {
+public nonisolated struct Taigi_Engine_CommitRaw: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -339,7 +339,7 @@ public struct Taigi_Engine_CommitRaw: Sendable {
 
 /// Commit the supplied platform-resolved suggestion text, atomically
 /// replacing the current preedit.
-public struct Taigi_Engine_SelectSuggestion: Sendable {
+public nonisolated struct Taigi_Engine_SelectSuggestion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -354,7 +354,7 @@ public struct Taigi_Engine_SelectSuggestion: Sendable {
 /// Commit the current preedit (if any) and atomically insert externally
 /// supplied text in one document write. Non-Taigi input surfaces (emoji
 /// palette, clipboard paste). Idle → behaves as plain insert.
-public struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable {
+public nonisolated struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -369,7 +369,7 @@ public struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable {
 /// Clear all state (mode switch, teardown). User-initiated; emits
 /// `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
 /// `[]` if was Idle.
-public struct Taigi_Engine_Reset: Sendable {
+public nonisolated struct Taigi_Engine_Reset: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -381,7 +381,7 @@ public struct Taigi_Engine_Reset: Sendable {
 
 /// Externally override `selected_candidate_index` (candidate-bar tap,
 /// keyboard-arrow gesture). Pure index mutation; emits no effects.
-public struct Taigi_Engine_SetSelectedCandidateIndex: Sendable {
+public nonisolated struct Taigi_Engine_SetSelectedCandidateIndex: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -396,7 +396,7 @@ public struct Taigi_Engine_SetSelectedCandidateIndex: Sendable {
 /// Pure read — replaces platform `manager.isComposingText` getter without
 /// shadowing engine state on the platform side. Returns current preedit +
 /// is_composing + selected_candidate_index. Emits no effects.
-public struct Taigi_Engine_QueryState: Sendable {
+public nonisolated struct Taigi_Engine_QueryState: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -412,7 +412,7 @@ public struct Taigi_Engine_QueryState: Sendable {
 /// when the existing `Composing.raw` is empty (matches Phase-4 strict
 /// precondition pinned at `engine/composing/src/transition.rs:484-490`).
 /// Mode comes from `Request.config_snapshot.input_mode`.
-public struct Taigi_Engine_EnterContinuous: Sendable {
+public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -466,7 +466,7 @@ public struct Taigi_Engine_EnterContinuous: Sendable {
 /// feature disabled — fully backward-compatible (older builds simply
 /// never set field 4). See `docs/engine/continuous-input-ranking.md`
 /// §10.10 + `docs/engine/continuous-candidate-display.md` §15.
-public struct Taigi_Engine_FetchAtPos: Sendable {
+public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -491,7 +491,7 @@ public struct Taigi_Engine_FetchAtPos: Sendable {
 /// `DictionaryRecord.tl` / `.hanzi`. `hanji` uses proto3 `optional` so
 /// a romanization-only custom entry (no hanji) is distinguishable from
 /// an empty string, mirroring `CandidateMessage.hanji`.
-public struct Taigi_Engine_CustomDictEntry: Sendable {
+public nonisolated struct Taigi_Engine_CustomDictEntry: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -528,7 +528,7 @@ public struct Taigi_Engine_CustomDictEntry: Sendable {
 /// the chosen `CandidateMessage.syllable_count`. Sending different
 /// values will mis-align the committed segment with the candidate the
 /// user saw.
-public struct Taigi_Engine_CommitContinuous: Sendable {
+public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -563,7 +563,7 @@ public struct Taigi_Engine_CommitContinuous: Sendable {
 /// `NextWordClearForNewComposing`). Committed segments stay in the
 /// document (already inserted via earlier `CommitTextReplacingPreedit`
 /// effects).
-public struct Taigi_Engine_ResetContinuous: Sendable {
+public nonisolated struct Taigi_Engine_ResetContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -573,7 +573,7 @@ public struct Taigi_Engine_ResetContinuous: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ComposingResponse: Sendable {
+public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -614,7 +614,7 @@ public struct Taigi_Engine_ComposingResponse: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public struct Preedit: Sendable {
+  public nonisolated struct Preedit: Sendable {
     // SwiftProtobuf.Message conformance is added in an extension below. See the
     // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
     // methods supported on all messages.
@@ -639,7 +639,7 @@ public struct Taigi_Engine_ComposingResponse: Sendable {
 /// v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
 /// span-local candidates that `lexicon::fetch_candidates_for_endings`
 /// produced for the current `Phase::Continuous { raw }`.
-public struct Taigi_Engine_ContinuousResponse: Sendable {
+public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -684,7 +684,7 @@ public struct Taigi_Engine_ContinuousResponse: Sendable {
 /// `docs/engine/continuous-candidate-display.md` §4 for the full
 /// rationale and `docs/engine/continuous-input-ranking.md` §10.11
 /// for the companion ranker dedupe rule.
-public struct Taigi_Engine_CandidateMessage: Sendable {
+public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -736,7 +736,7 @@ public struct Taigi_Engine_CandidateMessage: Sendable {
 /// no clock and emits effects without timestamps). This preserves the
 /// `composing/handle.rs:54-58` lock-order rule — composing's `Mutex<Engine>`
 /// is released before the platform makes the nextword call.
-public struct Taigi_Engine_Effect: Sendable {
+public nonisolated struct Taigi_Engine_Effect: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -825,7 +825,7 @@ public struct Taigi_Engine_Effect: Sendable {
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  public enum OneOf_Kind: Equatable, Sendable {
+  public nonisolated enum OneOf_Kind: Equatable, Sendable {
     case updatePreedit(Taigi_Engine_UpdatePreedit)
     case clearPreeditWithoutCommit_p(Taigi_Engine_ClearPreeditWithoutCommit)
     case commitTextReplacingPreedit(Taigi_Engine_CommitTextReplacingPreedit)
@@ -842,7 +842,7 @@ public struct Taigi_Engine_Effect: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_UpdatePreedit: Sendable {
+public nonisolated struct Taigi_Engine_UpdatePreedit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -854,7 +854,7 @@ public struct Taigi_Engine_UpdatePreedit: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ClearPreeditWithoutCommit: Sendable {
+public nonisolated struct Taigi_Engine_ClearPreeditWithoutCommit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -864,7 +864,7 @@ public struct Taigi_Engine_ClearPreeditWithoutCommit: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_CommitTextReplacingPreedit: Sendable {
+public nonisolated struct Taigi_Engine_CommitTextReplacingPreedit: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -876,7 +876,7 @@ public struct Taigi_Engine_CommitTextReplacingPreedit: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_DeleteBackwardFromDocument: Sendable {
+public nonisolated struct Taigi_Engine_DeleteBackwardFromDocument: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -886,7 +886,7 @@ public struct Taigi_Engine_DeleteBackwardFromDocument: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ResetAutocomplete: Sendable {
+public nonisolated struct Taigi_Engine_ResetAutocomplete: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -896,7 +896,7 @@ public struct Taigi_Engine_ResetAutocomplete: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_PerformAutocomplete: Sendable {
+public nonisolated struct Taigi_Engine_PerformAutocomplete: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -906,7 +906,7 @@ public struct Taigi_Engine_PerformAutocomplete: Sendable {
   public init() {}
 }
 
-public struct Taigi_Engine_ResetAutocompleteContext: Sendable {
+public nonisolated struct Taigi_Engine_ResetAutocompleteContext: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -921,7 +921,7 @@ public struct Taigi_Engine_ResetAutocompleteContext: Sendable {
 /// platform side. `text` is the committed segment's display (e.g., "紙"),
 /// `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
 /// `Phase::Continuous` mid-commit branches.
-public struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
+public nonisolated struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -939,7 +939,7 @@ public struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
 /// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
 /// trigger_prediction, now_ms)`. Emitted when `Phase::Continuous` exits to
 /// Idle through commit (pending consumed in full).
-public struct Taigi_Engine_NextWordWordSelected: Sendable {
+public nonisolated struct Taigi_Engine_NextWordWordSelected: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -959,7 +959,7 @@ public struct Taigi_Engine_NextWordWordSelected: Sendable {
 /// `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
 /// `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
 /// `Phase::Continuous` without committing.
-public struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
+public nonisolated struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -971,13 +971,13 @@ public struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
-fileprivate let _protobuf_package = "taigi.engine"
+fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
-extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_MODE_UNSPECIFIED\0\u{1}CANDIDATE_MODE_HANT\0\u{1}CANDIDATE_MODE_TAILO\0\u{1}CANDIDATE_MODE_MIXED\0")
 }
 
-extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{3}commit_derived\0\u{3}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{3}set_selected_candidate_index\0\u{3}query_state\0\u{4}\u{9}enter_continuous\0\u{3}fetch_at_pos\0\u{3}commit_continuous\0\u{3}reset_continuous\0")
 
@@ -1282,7 +1282,7 @@ extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Taigi_Engine_Start: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Start: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Start"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1312,7 +1312,7 @@ extension Taigi_Engine_Start: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
   }
 }
 
-extension Taigi_Engine_Append: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Append: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Append"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}char\0")
 
@@ -1342,7 +1342,7 @@ extension Taigi_Engine_Append: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
   }
 }
 
-extension Taigi_Engine_AppendHyphen: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_AppendHyphen: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppendHyphen"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1361,7 +1361,7 @@ extension Taigi_Engine_AppendHyphen: SwiftProtobuf.Message, SwiftProtobuf._Messa
   }
 }
 
-extension Taigi_Engine_ReplaceLast: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ReplaceLast: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ReplaceLast"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}replacement\0")
 
@@ -1391,7 +1391,7 @@ extension Taigi_Engine_ReplaceLast: SwiftProtobuf.Message, SwiftProtobuf._Messag
   }
 }
 
-extension Taigi_Engine_DeleteBackward: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DeleteBackward: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteBackward"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1410,7 +1410,7 @@ extension Taigi_Engine_DeleteBackward: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
-extension Taigi_Engine_CommitDerived: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommitDerived: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitDerived"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1429,7 +1429,7 @@ extension Taigi_Engine_CommitDerived: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_CommitRaw: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommitRaw: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitRaw"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1448,7 +1448,7 @@ extension Taigi_Engine_CommitRaw: SwiftProtobuf.Message, SwiftProtobuf._MessageI
   }
 }
 
-extension Taigi_Engine_SelectSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SelectSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SelectSuggestion"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1478,7 +1478,7 @@ extension Taigi_Engine_SelectSuggestion: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Taigi_Engine_CommitPreeditThenInsertExternal: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommitPreeditThenInsertExternal: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitPreeditThenInsertExternal"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -1508,7 +1508,7 @@ extension Taigi_Engine_CommitPreeditThenInsertExternal: SwiftProtobuf.Message, S
   }
 }
 
-extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Reset"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1527,7 +1527,7 @@ extension Taigi_Engine_Reset: SwiftProtobuf.Message, SwiftProtobuf._MessageImple
   }
 }
 
-extension Taigi_Engine_SetSelectedCandidateIndex: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_SetSelectedCandidateIndex: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetSelectedCandidateIndex"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}index\0")
 
@@ -1557,7 +1557,7 @@ extension Taigi_Engine_SetSelectedCandidateIndex: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_QueryState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_QueryState: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".QueryState"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1576,7 +1576,7 @@ extension Taigi_Engine_QueryState: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
-extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnterContinuous"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1595,7 +1595,7 @@ extension Taigi_Engine_EnterContinuous: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".FetchAtPos"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}position\0\u{3}frequency_entries\0\u{3}now_ms\0\u{3}custom_entries\0")
 
@@ -1640,7 +1640,7 @@ extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProtobuf._Message
   }
 }
 
-extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CustomDictEntry"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}roman\0\u{1}hanji\0")
 
@@ -1679,7 +1679,7 @@ extension Taigi_Engine_CustomDictEntry: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitContinuous"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0")
 
@@ -1724,7 +1724,7 @@ extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Taigi_Engine_ResetContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ResetContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ResetContinuous"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -1743,7 +1743,7 @@ extension Taigi_Engine_ResetContinuous: SwiftProtobuf.Message, SwiftProtobuf._Me
   }
 }
 
-extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}preedit\0\u{1}effect\0\u{3}selected_candidate_index\0\u{3}is_composing\0\u{1}continuous\0")
 
@@ -1797,7 +1797,7 @@ extension Taigi_Engine_ComposingResponse: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = Taigi_Engine_ComposingResponse.protoMessageName + ".Preedit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}raw_input\0\u{3}display_text\0")
 
@@ -1832,7 +1832,7 @@ extension Taigi_Engine_ComposingResponse.Preedit: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ContinuousResponse"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}candidates\0")
 
@@ -1862,7 +1862,7 @@ extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, SwiftProtobuf.
   }
 }
 
-extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0\u{1}roman\0\u{1}hanji\0")
 
@@ -1936,7 +1936,7 @@ extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._M
   }
 }
 
-extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Effect"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{3}delete_backward_from_document\0\u{3}reset_autocomplete\0\u{3}perform_autocomplete\0\u{3}reset_autocomplete_context\0\u{3}next_word_update_last_selected_word\0\u{3}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0")
 
@@ -2139,7 +2139,7 @@ extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImpl
   }
 }
 
-extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdatePreedit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}display\0")
 
@@ -2169,7 +2169,7 @@ extension Taigi_Engine_UpdatePreedit: SwiftProtobuf.Message, SwiftProtobuf._Mess
   }
 }
 
-extension Taigi_Engine_ClearPreeditWithoutCommit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ClearPreeditWithoutCommit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClearPreeditWithoutCommit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -2188,7 +2188,7 @@ extension Taigi_Engine_ClearPreeditWithoutCommit: SwiftProtobuf.Message, SwiftPr
   }
 }
 
-extension Taigi_Engine_CommitTextReplacingPreedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_CommitTextReplacingPreedit: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitTextReplacingPreedit"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
@@ -2218,7 +2218,7 @@ extension Taigi_Engine_CommitTextReplacingPreedit: SwiftProtobuf.Message, SwiftP
   }
 }
 
-extension Taigi_Engine_DeleteBackwardFromDocument: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_DeleteBackwardFromDocument: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DeleteBackwardFromDocument"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -2237,7 +2237,7 @@ extension Taigi_Engine_DeleteBackwardFromDocument: SwiftProtobuf.Message, SwiftP
   }
 }
 
-extension Taigi_Engine_ResetAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ResetAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ResetAutocomplete"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -2256,7 +2256,7 @@ extension Taigi_Engine_ResetAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._
   }
 }
 
-extension Taigi_Engine_PerformAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_PerformAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PerformAutocomplete"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -2275,7 +2275,7 @@ extension Taigi_Engine_PerformAutocomplete: SwiftProtobuf.Message, SwiftProtobuf
   }
 }
 
-extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ResetAutocompleteContext"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
@@ -2294,7 +2294,7 @@ extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Message, SwiftPro
   }
 }
 
-extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordUpdateLastSelectedWord"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0")
 
@@ -2329,7 +2329,7 @@ extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf.Message, Sw
   }
 }
 
-extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordWordSelected"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}trigger_prediction\0")
 
@@ -2369,7 +2369,7 @@ extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Taigi_Engine_NextWordClearForNewComposing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+nonisolated extension Taigi_Engine_NextWordClearForNewComposing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordClearForNewComposing"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
