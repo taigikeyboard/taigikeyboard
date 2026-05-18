@@ -320,6 +320,115 @@ Phonetics unit tests + S0's POJ-diacritic case (`tâi-uân`, exercises
 
 ---
 
+## 3A. A3 — cost/ranking constants (⚠️ REFRAMED vs plan draft)
+
+**Behavior-neutral only as a same-crate grouping. The plan's "consolidate into one
+module" is mis-framed — first-hand correction below, parallel to D3.**
+
+### 3A.1 First-hand correction to plan draft §4 A3 / §6
+
+The plan draft says constants "straddle `score.rs` + `cost.rs`, SoT in doc comment
+only" and proposes consolidating them "into one module". First-hand reading shows
+there are **two independent single-source clusters with different, incompatible
+contracts** — they must **not** be merged:
+
+- **Cluster 1 — ranking, cross-platform invariant, `f32`, `pub`**
+  (`engine/ranking/src/score.rs`): `BOOST_ALPHA: f32 = 0.1`, `MAX_BOOST: f32 = 5.0`,
+  `CONTINUOUS_SOURCE_BITS` (table), `CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5`,
+  `RECENCY_WINDOW_MS`, `USER_FREQ_CAP`. These are **already** the documented
+  single-source-of-truth and are an explicit **cross-platform invariant**: the
+  doc-comments state "Platforms MUST NOT redefine — single source of truth per
+  `rules/cross-platform-alignment.md` §3a". They are mirrored platform-side. So
+  "SoT in doc comment only" is **wrong** — they are `pub` API + a contract.
+  **Moving them out of `ranking` or narrowing `pub`→`pub(crate)` is NOT
+  behavior-neutral — it breaks the platform-mirror contract.** They stay put.
+- **Cluster 2 — composing/lattice walker model, engine-only, `f64`,
+  `pub(crate)`** (`engine/composing/src/lattice/cost.rs`):
+  `CORPUS_TOTAL_FREQ: f64`, `LETTER_COUNT_BIAS: f64 = 0.2`,
+  `SYLLABLE_COUNT_BIAS: f64 = 0.2`, `UNKNOWN_SYLLABLE_DECAY: f64 = 10.0`,
+  `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE: f64 = 0.0`,
+  `CUSTOM_EFFECTIVE_FREQ: u32 = 2_000`, each with an adjacent compile-time
+  `const _: () = assert!(…)` invariant. These are **already a co-located cluster**
+  at the head of `cost.rs` — not "straddling". They are NOT cross-platform
+  invariants (the walker is engine-only; no platform mirror).
+
+The f32↔f64 boundary the plan flags is not a "watch out" — it is a **hard reason
+the two clusters cannot be one module**: they are different numeric domains,
+different crates, different visibility, different cross-platform status.
+
+### 3A.2 Safe A3 scope (small, or no-op)
+
+A3 is therefore **not** "merge ranking + cost constants". Behavior-neutral options,
+in order of preference:
+
+1. **Doc-only**: add a one-paragraph header to each cluster stating its
+   single-source contract explicitly (Cluster 1 = cross-platform invariant, do not
+   mirror-redefine; Cluster 2 = engine-only walker model, dogfood-tunable named
+   constants). Zero code change. This is the genuinely useful, fully safe A3.
+2. **Optional same-crate grouping** of Cluster 2 into a named submodule
+   `engine/composing/src/lattice/cost/params.rs` (or `cost::params`), moving the 6
+   constants **and their `const _: () = assert!` invariants together**,
+   `pub(crate)` and values/types **byte-identical**, re-exported so `edge_cost`'s
+   call sites are unchanged. Pure intra-crate relocation; golden-diff-empty;
+   `cargo test --workspace` green. Only do this if it demonstrably improves
+   cohesion — Cluster 2 is already co-located, so the win is marginal (YAGNI check).
+3. **Do not touch Cluster 1's location/visibility at all.**
+
+A3 runs **last** in Tier-A (it is adjacent to `cost.rs`, the v3.5.8-hottest file)
+and may legitimately collapse to option 1 (doc-only) after the re-spot.
+
+## 3B. A4 — build-time `CORPUS_TOTAL_FREQ` guard
+
+**Behavior-neutral iff it only fails builds/tests — must NOT recompute or alter the
+runtime constant.**
+
+### 3B.1 Current state (first-hand)
+
+`CORPUS_TOTAL_FREQ: f64 = 12_910_574.0` is a baked literal (`cost.rs`), with:
+
+- A compile-time `const _: () = assert!(CORPUS_TOTAL_FREQ > 184_694.0)` — asserts
+  only the **lower bound** (keeps every `ln(1/p) > 0`), **not** that it equals the
+  real dictionary sum.
+- A test-side regeneration guard `assert_eq!(CORPUS_TOTAL_FREQ, MEASURED_SUM, …)`
+  where `MEASURED_SUM` is **itself a hand-typed literal** in the test — so the
+  current "guard" is a constant-equals-constant **arithmetic self-check**, exactly
+  as the plan states. The doc says provenance = `Σ frequency` over
+  `dictionary/output/dictionary.csv` (159 034 entries) = 12 910 574, measured
+  2026-05-17, "recompute and update whenever the dictionary is rebuilt", and the
+  bake-constant-not-runtime-scan decision is Codex S5 Q4 = option a.
+
+### 3B.2 A4 design
+
+Strengthen the regeneration guard from "hand-typed `MEASURED_SUM`" to "computed
+from the actual dictionary the build produces", so a dictionary rebuild that
+changes `Σ frequency` **fails the dict pipeline / a workspace test**, not silently
+drifts. Hard constraints:
+
+- A4 **only** adds a verifier. `CORPUS_TOTAL_FREQ` stays a baked literal consumed
+  by `edge_cost`. A4 must **never** make the runtime cost model read a
+  freshly-summed value — that would change the cost model = behavior change, out
+  of scope (and re-opens the Codex S5 Q4 = option a decision).
+- **Authoritative locus = the dictionary build pipeline** (where
+  `dictionary/output/dictionary.csv` is canonically produced —
+  `dictionary/build/*`, per the doc `create_dictionary_bin.py` neighbourhood):
+  compute `Σ frequency` there and emit it into a small generated artifact (e.g.
+  `dictionary/output/corpus_total_freq.txt`).
+- A Rust cross-check (a `#[test]` in the `composing`/`lattice` cost tests, or a
+  `build.rs`) reads that generated artifact **when present** and
+  `assert_eq!(CORPUS_TOTAL_FREQ as u64, parsed_sum)`; **degrades gracefully**
+  (skip with a clear message) when the artifact/csv is absent (minimal build
+  contexts without the dictionary submodule). This makes the SoT the *pipeline*,
+  not a hand-typed literal — the McBopomofo "build-time corpus computation"
+  alignment the plan cites.
+- Replace the hand-typed `MEASURED_SUM` literal with the parsed artifact value so
+  there is exactly one computed source.
+
+### 3B.3 Behavior-neutrality
+
+`edge_cost` output is unchanged (same `CORPUS_TOTAL_FREQ` literal). S0 golden diff
+empty. The only new failure mode is a **build/test failure** when the dictionary
+and the constant disagree — which is the intended safety, not a behavior change.
+
 ## 4. Behavior-neutrality verification protocol (every slice)
 
 1. S0 golden frozen on post-v3.5.8-freeze `main` is the baseline.
@@ -348,6 +457,16 @@ Phonetics unit tests + S0's POJ-diacritic case (`tâi-uân`, exercises
 - **S0**: confirm `LexiconPaths::validated` arity + the syllables-FST builder
   signature haven't changed; ensure the matrix's syllables are all in the fixture
   inventory (TPS case included, TL-mapped).
+- **A3**: re-confirm Cluster 1 is still `pub` + still doc-stamped as the
+  `rules/cross-platform-alignment.md` §3a cross-platform invariant (do not relocate
+  it); re-confirm Cluster 2 is still co-located + each constant still has its
+  adjacent `const _: () = assert!` (move constant+invariant together or not at all).
+  Decide option 1 (doc-only) vs option 2 (same-crate grouping) by a YAGNI/cohesion
+  check at that point.
+- **A4**: re-confirm the dictionary pipeline entry point that produces
+  `dictionary/output/dictionary.csv` and whether a generated-artifact handshake is
+  feasible; confirm the test/`build.rs` degrades gracefully when the dict submodule
+  is absent. Never let A4 feed a runtime-summed value into `edge_cost`.
 - Re-read `docs/references/mainstream-ime-comparison.md` before re-asserting any
   "mainstream keeps one pipeline" framing in slice PR bodies.
 
