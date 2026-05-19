@@ -62,6 +62,12 @@ enum HomeTexts {
     // 中文: 版本歷史資料來源。每筆 tuple = (版本號, 釋出日期, 變更條目)。
     // 中文: 釋出時手動更新一筆,英文 changes 由 update-changelog skill 與 changelog/<v>.md 同步。
     static let versionHistoryEntries: [(version: String, date: String, changes: [String])] = [
+        ("3.5.8", "2026/05/20", [
+            "New: 連續輸入 — type a whole romanized phrase without committing each syllable; the keyboard segments the sentence and offers candidates per position. Tap to commit a segment, Enter to commit the raw text. Works with POJ / TL, the custom dictionary, user-frequency learning, and next-word prediction.",
+            "Continuous-input candidates now show romanization and 漢字 on two lines.",
+            "Replaced the 寄付支持 tab with a 關於開發者 page linking to the official website.",
+            "Updated dictionary data.",
+        ]),
         ("3.5.7", "2026/05/09", [
             "Fixed: LKK 漢羅文 mixed-script suggestions now correctly stay enabled after a settings reset.",
             "Renamed font display name 源樣黑體 → 源樣烏體 (matches official ButTaiwan naming).",

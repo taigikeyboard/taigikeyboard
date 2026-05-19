@@ -69,6 +69,18 @@ object HomeTexts {
     val versionHistoryEntries =
         listOf(
             VersionEntry(
+                "3.5.8",
+                "2026/05/20",
+                listOf(
+                    "New: 連續輸入 — type a whole romanized phrase without committing each syllable; the keyboard segments the sentence and offers candidates per position. Tap to commit a segment, Enter to commit the raw text. Works with POJ / TL, the custom dictionary, user-frequency learning, and next-word prediction.",
+                    "Continuous-input candidates now show romanization and 漢字 on two lines.",
+                    "Replaced the 寄付支持 tab with a 關於開發者 page linking to the official website.",
+                    "Fixed: feature/FAQ icons and slideshow images were missing on release builds.",
+                    "Fixed: the keyboard preview in Settings now renders the key shapes.",
+                    "Updated dictionary data.",
+                ),
+            ),
+            VersionEntry(
                 "3.5.7",
                 "2026/05/09",
                 listOf(
