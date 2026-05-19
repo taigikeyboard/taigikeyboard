@@ -28,6 +28,7 @@ taigikeyboard/
 1. **No project-config modification by AI** — `.xcodeproj` / `.pbxproj` are **user-only** (manual Xcode edits; new iOS files need the user to add the Xcode target). Android Gradle (`build.gradle`, `*.gradle.kts`) **is** editable by Claude.
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls: define expected behavior, verify each platform independently, document when the same behavior needs different implementations.
 3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules (or "dead" phonetic tables from test/dictionary absence); read `knowledge/taigi-phonetics-reference.md` and consult `taigi-converter/` first.
+4. **Bugfix = confirm root cause before fixing** — for any bug fix, first carefully trace and verify the root cause (cite `file:line`, evidence), present it to the user, and **wait for explicit approval**. Do NOT create a branch, edit code, or implement until the user agrees the root cause is correct. Diagnosis and fixing are separate, sequential, user-gated steps.
 
 ## Mandatory Rules
 
