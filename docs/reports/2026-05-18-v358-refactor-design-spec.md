@@ -1,4 +1,156 @@
-# v3.5.8-folded Refactor — Implementation Design Spec (S0 / A2 / A1)
+# v3.5.9 Refactor — Implementation Design Spec (S0 / A2 / A1)
+
+---
+
+## ⭐ 2026-05-20 Post-v3.5.8 Review Amendments (AUTHORITATIVE — read before everything below)
+
+> This block supersedes the conflicting parts of §0–§7. The original sections
+> stay as the historical first-hand trace. Produced from a pre-impl design
+> review (first-hand re-verify against current `main` `61df3028` + Codex
+> ANALYSIS-ONLY sandwich). The spec was written against `87489fd1`; v3.5.8 then
+> **shipped as its own tag `61df3028`** (NOT folded) and dogfood PRs
+> #295/#288/#297/#298/#299/#300 landed after it. `dispatch.rs` 2176→2674 LOC.
+> Review verdict: **SAFE-TO-IMPLEMENT-AFTER-THESE-AMENDMENTS**, not a structural
+> redesign. The 5-stage thesis, D1/D2/D3 findings, and A3 reframe all survive
+> the drift; the A2 seam contract, the D1 proof, and the S0 matrix do not and
+> are corrected here. **This round's scope = S0 only** (maintainer 2026-05-20).
+
+### B1 (BLOCK) — A2 seam contract is materially stale, not line-drift
+Current `handle_fetch_at_pos` runs a **POJ-only presentation pass after the
+slot-0 prepend** (added by #299): for each candidate `cand.roman =
+render_roman_for_mode(&cand.roman, mode)` then `dedupe_rendered_continuous(&mut
+candidates)`, *then* `with_continuous`. Anchors `61df3028`:
+`render_roman_for_mode` `dispatch.rs:710`, `dedupe_rendered_continuous`
+`dispatch.rs:743`, the pass itself ~`dispatch.rs:282`/`:298`.
+**Amendment to §2.1 / §2.5**: the seam is a **6-step** contract, byte-preserved
+in this order:
+1. `keys.is_empty()` → `is_tps` empty / else `fetch_via_lexicon_partial(raw,
+   &freq_map, now_ms, &custom, is_poj)`.
+2. else `c = fetch_via_lexicon(&keys, raw_len, &freq_map, now_ms, &custom)`.
+3. per-candidate recase loop (`recase_roman` over `consumed_span`; presentation
+   `roman` only).
+4. if `!is_tps` and `fetch_walker_slot0(..)` → `Some(slot0)`: span-aware
+   `retain` on `(roman,hanji,consumed_span)` then `insert(0, slot0)`.
+5. **POJ presentation pass** (new): if `mode == POJ`, `for cand in &mut
+   candidates { cand.roman = render_roman_for_mode(&cand.roman, mode) }` then
+   `dedupe_rendered_continuous(&mut candidates)`.
+6. `with_continuous(snapshot, ContinuousResponse { candidates:
+   candidates.into_iter().map(raw_to_proto_candidate).collect() })` (the
+   variable is `candidates` after step 5, not `c`).
+`render_roman_for_mode` + `dedupe_rendered_continuous` move into
+`composing::continuous` as a named **"post-assembly POJ presentation pass"** —
+NOT into `composing::shadow` (they operate on assembled `RawCandidate.roman`,
+incl. partial-prefix + walker slot 0). `dedupe_rendered_continuous` is
+*first-wins* and runs **after** the step-4 span-aware retain-dedupe — both must
+be preserved; do not collapse them.
+
+### B2 (BLOCK) — D1 fold proof not discharged under concurrency
+`build_shadow_lattice(raw, inv, is_poj)` is pure and called at
+`dispatch.rs:386` (`build_keys_tl_with_inventory`) and `dispatch.rs:776`
+(`fetch_walker_slot0`) — the double-build finding holds. But the byte-identical
+proof in §2.2 ("no state mutation between the two `with_state` scopes") is **not
+discharged**: there are multiple independent `LexiconHandle::with_state` scopes
+(`dispatch.rs:337/:758/:1604/:1675`); `EngineHandle::install` can atomically
+replace the singleton between them (`handle.rs:69,92`), and `with_state` holds
+the mutex for only one closure (`handle.rs:101`). S0 (single-threaded hermetic)
+cannot catch this.
+**Amendment to §2.2**: state the proof obligation explicitly — on a mobile IME
+`EngineHandle::install` runs only at keyboard/app startup, never concurrently
+with a composing `FetchAtPos`; the D1 fold is byte-identical **under that
+lifecycle invariant**, and additionally *strengthens* snapshot consistency
+(one snapshot instead of two potentially-different ones under a hypothetical
+concurrent reinstall). The implementer MUST re-grep for any
+`EngineHandle::install` reachable concurrently with `handle_fetch_at_pos` and
+record the result in the S0/A2 PR body; it is a stated invariant, not a
+hand-wave "pure fn = identical".
+
+### B3 (BLOCK) — S0 golden matrix must expand before freeze
+§1.5's matrix has POJ-diacritic but **not** the behaviors #298/#299/#300 added:
+POJ-mode ASCII toneless canonicalize (`is_poj`, `dispatch.rs:177,1302`),
+POJ-mode continuous render `oo/nn`→`o͘/ⁿ` (`dispatch.rs:710`), post-render
+dedupe (`dispatch.rs:743`), ≥6-syllable OOV-vs-dict (`OOV_PER_CHAR_PENALTY`
+`cost.rs:201`). Without these, A1/A2 extraction can silently regress
+#298/#299/#300 with an empty golden diff — defeating S0's purpose.
+**Amendment to §1.5**: add golden cases, each grounded in an existing in-tree
+test (same convention as the rest of §1.5 — derive the exact raw/custom/dict
+fixture rows from the cited test at implementation time, do not invent
+dictionary content):
+- **POJ-ASCII toneless** — `chiah` and `goa`; fixture/raw pattern from
+  `dispatch.rs::tests::canonicalize_poj_shadow_poj_ascii_chiah_folds_ch_to_ts`
+  (and the `chhia`/`oa`/`oe`/`eng`/`ek` sibling test) (`dispatch.rs:2149+`).
+- **POJ render `oo/nn`→`o͘/ⁿ`** — raw + dict row from
+  `dispatch.rs::tests::render_roman_for_mode_poj_rewrites_oo_and_nn`
+  (`dispatch.rs:2554`); the golden pins the rendered `roman`, confirming the
+  #299 post-assembly pass survives extraction.
+- **POJ post-render dedupe collision** — the custom-vs-dict shape from
+  `dispatch.rs::tests::dedupe_rendered_continuous_drops_post_render_collision_keeping_first`
+  (`dispatch.rs:2616`): a custom-POJ and a dict-TL row that render equal after
+  the POJ pass, exercising the first-wins `dedupe_rendered_continuous`.
+- **≥6-syllable long-OOV-vs-dict** — `ginalangtsiahpngbesai` (RC0 repro;
+  equivalent dict-coverable ≥6-syllable input acceptable) for the
+  `OOV_PER_CHAR_PENALTY` path.
+
+POJ-mode cases set the input mode in the per-case `AppConfig` (mirror how
+`is_poj` is derived: `parse_input_mode(config.input_mode) == Poj`).
+
+### S4 (SHOULD) — A1 shadow boundary: `is_poj` + `build_partial_prefix_key_tl`
+The shadow pipeline now threads `is_poj`: `build_keys_tl` `dispatch.rs:336`,
+`build_keys_tl_with_inventory` `:381`, `build_shadow_lattice` `:441`,
+`custom_toneless_key` `:1205`, `fetch_via_lexicon_partial` `:1664`.
+**Correction to the pre-impl review's own draft**: `fetch_via_lexicon`
+(`dispatch.rs:1597`) did **not** gain `is_poj`. **Amendment to §3.1**: `is_poj`
+is part of the `composing::shadow` API contract; also move
+`build_partial_prefix_key_tl` (`dispatch.rs:1640`, same
+canonicalize/hyphen/tone pipeline) into the shadow module.
+
+### S5 (SHOULD) — D2 rule-list export scope
+`phonetics::normalize_to_tl` is the 9-rule body at `syllable.rs:56`;
+`apply_normalize_to_tl_with_offsets` is the split 10-pass mirror at
+`dispatch.rs:1388` (order verified identical, byte-identical proof in §3.2
+holds). The separate `.replace("nn","")` at `syllable.rs:71` is in
+`is_stop_tone`, a different helper. **Amendment to §3.2**:
+`NORMALIZE_TO_TL_RULES` export scopes to `normalize_to_tl` **only** — it must
+not absorb the `is_stop_tone` replace.
+
+### S6 (SHOULD) — A3 constant inventory stale; conclusion strengthened
+`UNKNOWN_SYLLABLE_DECAY` was removed by #298; `OOV_PER_CHAR_PENALTY: f64 = 1e10`
+is now a Cluster 2 constant (`cost.rs:201`, `const _: () = assert!(>= 1e5)`
+`:211`). **Correction**: §3A.1's "each with an adjacent `const _: () =
+assert!`" overstates — current asserts cover only `CORPUS_TOTAL_FREQ` (`:125`),
+the length biases (`:147`), and `OOV_PER_CHAR_PENALTY` (`:211`);
+`CUSTOM_EFFECTIVE_FREQ` and `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` have **no**
+adjacent assert. The "two clusters, do NOT merge" conclusion is **strengthened**
+(Cluster 2 still co-located after dogfood churn). Cluster 1 stays in `ranking`,
+`pub`/re-exported as today (`score.rs:58,122`, `lib.rs:31`) — do not relocate
+or narrow.
+
+### S7 (SHOULD) — A2 sequencing: pure-move first, defer D7/D8
+The A2 surface is now larger (POJ render/dedupe + `is_poj`) and adjacent to the
+abbrev-collision guard (`continuous.rs:521,834`). **Amendment to §2.4 / §5**:
+A2's first PR is a **pure relocation only** (the 6-step seam + D1 fold + D3
+honest type). D7 (`ContinuousFetchCtx`) and D8 (`fetch_candidates_for_endings`
+demotion) become a **follow-up PR after the A2 golden diff is empty**, not
+bundled into the first cut.
+
+### N1 (NIT) — banner/title corrected
+v3.5.8 shipped at tag `61df3028` as its own release; v3.5.9 is the next
+version. The "v3.5.8-folded / no separate version" framing (old title, §0
+"Scope folded") is overtaken; S0-first sequencing is unaffected. The §0
+precondition ("v3.5.8 fully merged incl. OOV edge-cost fix") is **satisfied**.
+
+### Confirmed still-true (no amendment)
+D3: `score` is wire field 5 on `CandidateMessage` (`composing.proto`:
+`CandidateMessage` starts at `:307`, `score = 5` at `:312`);
+slot-0 still emits `score: -(path.cost as f32)`, `frequency:0`, `bitmask:0`
+(`dispatch.rs:1091`) — honest type must preserve the exact negated-cost bridge.
+S0 structural facts: `engine_install_lock` `parity.rs:35`, `EngineHandle::
+install` `parity.rs:249`, `LexiconPaths::validated(..,"",1)`
+`parity.rs:241/296/303`, `build_minimal_install_fixture` `parity.rs:418`,
+`build_inventory_from_pairs` `syllables_fst.rs:186`. §7's anchor table is the
+`87489fd1` snapshot — the `61df3028` anchors in B1–S6 above are the current
+re-spot; still re-grep any symbol not listed here before coding.
+
+---
 
 > **Type**: Implementation design spec (first-hand, structural). Companion to
 > `docs/reports/2026-05-18-v3.5.9-refactor-plan-draft.md` (the *what/why*); this is the
@@ -13,9 +165,11 @@
 > proofs* below are structural and survive the drift; the line table in §7 must be
 > re-spotted (re-`grep` the function names) before any slice is implemented. Trust the
 > function/contract, never the number.
-> **Scope folded**: v3.5.9 refactor is folded into v3.5.8 (one release, no separate
-> version) per the 2026-05-18 maintainer directive. Internal §5 sequencing of the plan
-> draft is unchanged — gate is "v3.5.8 behavior frozen on `main`", not "v3.5.8 tagged".
+> **Scope (corrected — see ⭐ amendment N1)**: v3.5.8 SHIPPED as its own tag
+> `61df3028` (2026-05-20), WITHOUT the refactor. v3.5.9 is the next, separate
+> version. The §0 precondition is satisfied. The old "folded into v3.5.8 / no
+> separate version" framing below is overtaken; S0-first sequencing is
+> unaffected. **This round's scope = S0 only** (maintainer 2026-05-20).
 
 ---
 
@@ -37,7 +191,8 @@
    no-dict carve-out + per-edge recase.
 5. **Splice + encode** — recase span-local → `synth_consumed_span` gate →
    span-aware `retain`-dedupe slot0 vs list on `(roman,hanji,consumed_span)` →
-   `insert(0, slot0)` → `raw_to_proto_candidate`.
+   `insert(0, slot0)` → **[⭐ B1: + POJ render + post-render dedupe pass when
+   `mode==POJ`, `dispatch.rs:282-303`]** → `raw_to_proto_candidate`.
 
 Confirmed first-hand: the walker is **layered on top of** the span-local primitives
 (`fetch_walker_slot0`'s provider reuses `best_candidate_for_key` →
@@ -123,6 +278,10 @@ which case drifted.
 
 ### 1.5 Representative matrix (each `raw` already exercised by an existing test)
 
+> ⚠️ **Superseded by ⭐ amendment B3** — this matrix MUST be expanded with POJ
+> ASCII (`chiah`/`goa`), POJ render (`o͘`/`ⁿ`), POJ post-render dedupe
+> collision, and a ≥6-syllable OOV input before freeze.
+
 TL toneless multi-syll (`tsua`), TL toneless long-reach (`taigikhipuann`), TL
 numeric single (`tsua7`), TL numeric multi (`tai1bak4`), POJ-diacritic (`tâi-uân`),
 TPS walker-excluded (`ㄉㄧㄠˊㄨㄢˊ` — must fully syllabify; TPS partial-prefix
@@ -150,6 +309,10 @@ destroying the ability to distinguish refactor-breakage from bug-fix.
 **Highest "A breaks B" risk slice. Extract-only. Acceptance = empty S0 golden diff.**
 
 ### 2.1 The seam's exact behavior contract (must be byte-preserved)
+
+> ⚠️ **Superseded by ⭐ amendment B1** — the seam is a **6-step** contract on
+> current main (the 3-step version below omits the #299 POJ render +
+> post-render dedupe pass). Use B1's step list, not this one.
 
 `assemble_candidates` = the `let candidates = if keys.is_empty() { … } else { … }`
 block of `handle_fetch_at_pos`. Inputs: `raw`, `keys`, `raw_len`, `freq_map`,
@@ -204,6 +367,12 @@ is provably behavior-neutral; S0 golden mechanically confirms it. **Proof
 obligation at impl**: assert no lexicon-state mutation can occur between the two
 former `with_state` scopes (re-grep for any `EngineHandle::install` / state-write
 reachable from a `FetchAtPos` — there is none today; re-verify post-freeze).
+**[⭐ B2 — superseded: this is NOT discharged by "pure fn". Multiple
+independent `with_state` scopes exist and `EngineHandle::install` can atomically
+swap the singleton between them; the fold is byte-identical only under the
+stated mobile-IME lifecycle invariant (install at startup only, never
+concurrent with a composing `FetchAtPos`) and additionally strengthens snapshot
+consistency. Record the re-grep result in the PR body. See ⭐ B2.]**
 
 ### 2.3 D3 — honest slot-0 type (REFINED — narrower than the plan draft)
 
@@ -225,6 +394,11 @@ type-name* clarification, **not** a value change. Do not "fix" the sign bridge �
 it is the wire contract.
 
 ### 2.4 D6 / D7 / D8 fold-ins (behavior-neutral, while the seam is extracted)
+
+> ⚠️ **Amended by ⭐ S7** — only **D6** (one-line doc fix) folds into A2's
+> first PR. **D7** (`ContinuousFetchCtx`) and **D8** (`fetch_candidates_for_endings`
+> demotion) are deferred to a **follow-up PR after the A2 golden diff is
+> empty** — NOT bundled "while the seam is extracted".
 
 - **D6** — `SortKey` self-doc: one comment says "seven-dimension", another
   "eight-dimension"; the struct has 8 fields (Item-10 `coverage_kind` prepended).
@@ -263,6 +437,10 @@ casing).**
 
 ### 3.1 Module boundary
 
+> ⚠️ **Amended by ⭐ S4** — add `is_poj` to the shadow API contract and move
+> `build_partial_prefix_key_tl` into the module; `fetch_via_lexicon` did NOT
+> gain `is_poj`.
+
 Move the pure shadow pipeline into new `engine/composing/src/shadow.rs`:
 `build_shadow_lattice`, `canonicalize_poj_shadow`, `build_hyphen_shadow`,
 `strip_ascii_tone_digits`, `apply_normalize_to_tl_with_offsets`,
@@ -274,6 +452,10 @@ S0's trailing-hyphen + POJ-diacritic + case-sensitive cases cover the off-by-one
 risk on relocation.
 
 ### 3.2 D2 — single-source the normalize-to-TL rule chain
+
+> ⚠️ **Amended by ⭐ S5** — `NORMALIZE_TO_TL_RULES` scopes to `normalize_to_tl`
+> only; exclude the `is_stop_tone` `.replace("nn","")` (`syllable.rs:71`). Proof
+> below still holds on current main.
 
 **Current hand-mirror (verified first-hand, exact)**:
 
@@ -327,6 +509,11 @@ module" is mis-framed — first-hand correction below, parallel to D3.**
 
 ### 3A.1 First-hand correction to plan draft §4 A3 / §6
 
+> ⚠️ **Amended by ⭐ S6** — Cluster 2 inventory: drop `UNKNOWN_SYLLABLE_DECAY`
+> (removed by #298), add `OOV_PER_CHAR_PENALTY` (`cost.rs:201`). "Each with an
+> adjacent `const _: () = assert!`" overstates (only corpus/biases/OOV have
+> one). "Do not merge" conclusion strengthened.
+
 The plan draft says constants "straddle `score.rs` + `cost.rs`, SoT in doc comment
 only" and proposes consolidating them "into one module". First-hand reading shows
 there are **two independent single-source clusters with different, incompatible
@@ -366,8 +553,12 @@ in order of preference:
    mirror-redefine; Cluster 2 = engine-only walker model, dogfood-tunable named
    constants). Zero code change. This is the genuinely useful, fully safe A3.
 2. **Optional same-crate grouping** of Cluster 2 into a named submodule
-   `engine/composing/src/lattice/cost/params.rs` (or `cost::params`), moving the 6
-   constants **and their `const _: () = assert!` invariants together**,
+   `engine/composing/src/lattice/cost/params.rs` (or `cost::params`), moving the
+   current Cluster 2 constants **with each constant's adjacent `const _: () =
+   assert!` where one exists** (per ⭐ S6: only `CORPUS_TOTAL_FREQ` /
+   length-biases / `OOV_PER_CHAR_PENALTY` have one;
+   `CUSTOM_EFFECTIVE_FREQ` / `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` do not —
+   "6 constants, each with an assert" is stale),
    `pub(crate)` and values/types **byte-identical**, re-exported so `edge_cost`'s
    call sites are unchanged. Pure intra-crate relocation; golden-diff-empty;
    `cargo test --workspace` green. Only do this if it demonstrably improves
@@ -448,7 +639,9 @@ and the constant disagree — which is the intended safety, not a behavior chang
 - **§7 line table re-spot** — re-`grep` every function name; the numbers below are
   2026-05-18/`87489fd1` and will have drifted.
 - **D1**: confirm no lexicon-state mutation is reachable between the two former
-  `with_state` scopes within one `FetchAtPos` (true today; re-verify).
+  `with_state` scopes within one `FetchAtPos` **[⭐ B2 — not "true today" by
+  purity; it holds only under the mobile-IME install-at-startup lifecycle
+  invariant. Record the re-grep + invariant in the PR body, not a hand-wave]**.
 - **D3**: confirm `score` is still wire field 5 on `CandidateMessage` and slot-0
   still flows through `raw_to_proto_candidate` (don't let the "honest type" drop
   the `-(cost as f32)` wire value).
@@ -459,8 +652,10 @@ and the constant disagree — which is the intended safety, not a behavior chang
   inventory (TPS case included, TL-mapped).
 - **A3**: re-confirm Cluster 1 is still `pub` + still doc-stamped as the
   `rules/cross-platform-alignment.md` §3a cross-platform invariant (do not relocate
-  it); re-confirm Cluster 2 is still co-located + each constant still has its
-  adjacent `const _: () = assert!` (move constant+invariant together or not at all).
+  it); re-confirm Cluster 2 is still co-located + move each constant **with its
+  adjacent `const _: () = assert!` where one exists** (⭐ S6: not every Cluster 2
+  constant has an assert — `CUSTOM_EFFECTIVE_FREQ` /
+  `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE` do not).
   Decide option 1 (doc-only) vs option 2 (same-crate grouping) by a YAGNI/cohesion
   check at that point.
 - **A4**: re-confirm the dictionary pipeline entry point that produces
