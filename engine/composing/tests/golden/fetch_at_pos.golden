@@ -1,0 +1,58 @@
+## tl_toneless_multi :: tsua
+0|4|1|1|1|紙|tsuá|紙|-8.9112|0xc10e9464
+0|4|2|1|1|珠仔|tsu-á|珠仔|88.0000|0x42b00000
+0|3|1|1|1|珠|tsu|珠|90.0000|0x42b40000
+## tl_toneless_long_reach :: taigikhipuann
+0|13|4|1|1|台語齒盤|tâi-gí-khí-puânn|台語齒盤|-11.5195|0xc1384ff5
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
+## tl_numeric_single :: tsua7
+0|5|1|1|1|紙|tsuá|紙|-8.9112|0xc10e9464
+0|5|2|1|1|珠仔|tsu-á|珠仔|88.0000|0x42b00000
+0|3|1|1|1|珠|tsu|珠|90.0000|0x42b40000
+## tl_numeric_multi :: tai1bak4
+0|8|2|1|1|代墨|tâi-ba̍k|代墨|-9.9875|0xc11fccc8
+0|4|1|1|1|台|tâi|台|31281.0000|0x46f46200
+## poj_diacritic :: tâi-uân
+0|9|2|1|1|台灣|tâi-uân|台灣|-7.3400|0xc0eae1a1
+0|4|1|1|1|台|tâi|台|31281.0000|0x46f46200
+## tps_walker_excluded :: ㄉㄧㄠˊㄨㄢˊ
+(no candidates)
+## custom_dict :: taigi
+0|5|2|1|1|台語|tâi-gí|台語|-7.3033|0xc0e9b484
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+## mixed :: iausi
+0|5|2|1|3|iáu是|iáu-sī|iáu是|-10.7729|0xc12c5db8
+## tailo_no_hanji :: li
+0|2|1|1|2|lí|lí|⌀|-10.8312|0xc12d4c6b
+## user_freq_boosted :: tai
+0|3|1|1|1|台|tâi|台|-4.8347|0xc09ab605
+## all_oov_partial_prefix :: g
+0|1|1|1|1|我|guá|我|200.0000|0x43480000
+## trailing_hyphen :: tai-
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+## case_sensitive :: TaiUan
+0|6|2|1|1|台灣|Tâi-uân|台灣|-7.3400|0xc0eae1a1
+0|3|1|1|1|台|Tâi|台|31281.0000|0x46f46200
+## headline_ranking :: taiuantaigi
+0|11|4|1|1|臺灣台語|tâi-uân-tâi-gí|臺灣台語|-11.2793|0xc1347824
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+0|6|2|1|1|台灣|tâi-uân|台灣|1516.9000|0x44bd9ccd
+## poj_ascii_choa :: choa
+0|4|1|1|1|紙|chóa|紙|-8.9112|0xc10e9464
+0|4|2|1|1|珠仔|chu-á|珠仔|88.0000|0x42b00000
+0|3|1|1|1|珠|chu|珠|90.0000|0x42b40000
+## poj_ascii_goa :: goa
+0|3|1|1|1|我|góa|我|-8.8866|0xc10e2f51
+## poj_render_nn :: taigikhipuann
+0|13|4|1|1|台語齒盤|tâi-gí-khí-pôaⁿ|台語齒盤|-11.5195|0xc1384ff5
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
+## poj_post_render_dedupe :: taigikhipuann
+0|13|4|1|1|台語齒盤|tâi-gí-khí-pôaⁿ|台語齒盤|-6.9299|0xc0ddc216
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
+## long_oov_vs_dict :: taigilangkangtanlai
+0|19|6|1|2|tâi-gí langkangtanlai|tâi-gí langkangtanlai|⌀|-140000002048.0000|0xd202629a
+0|3|1|1|1|台|tâi|台|31281.0000|0x46f46200
+0|5|2|1|1|台語|tâi-gí|台語|165.0000|0x43250000
