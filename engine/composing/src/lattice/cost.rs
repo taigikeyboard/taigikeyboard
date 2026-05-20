@@ -97,6 +97,35 @@
 // 中文:   →「OOV 輸給任何字典可覆蓋路徑」任何長度恆成立 = 成本性質非 dict_hit lexicographic 短路。
 // 中文: 無字典命中 buffer 的逐音節羅馬字由 continuous::fetch_walker_slot0_inner 顯式 carve-out 產生(不進本函式,Codex S5 Q2)。
 
+// ===========================================================================
+// Walker model parameters — engine-only, no platform mirror.
+//
+// The `pub(crate) const` below (`CORPUS_TOTAL_FREQ`, `LETTER_COUNT_BIAS`,
+// `SYLLABLE_COUNT_BIAS`, `OOV_PER_CHAR_PENALTY`,
+// `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE`, `CUSTOM_EFFECTIVE_FREQ`)
+// parameterize `edge_cost` (dictionary branch + OOV pricing branch). All are
+// named, cited constants — not runtime tunables nor magic literals.
+//
+// **Do not consolidate with the Cluster 1 ranking constants** in
+// `engine/ranking/src/score.rs` (`BOOST_ALPHA`, `MAX_BOOST`,
+// `RECENCY_WINDOW_MS`, `CONTINUOUS_DEFAULT_SOURCE_RANK`,
+// `USER_WEIGHT_DECAY_TAU_MS`). Those are `pub` cross-platform invariants per
+// `rules/cross-platform-alignment.md` §3a — platforms mirror them and the
+// `pub` surface is part of the contract. The walker constants here are
+// `pub(crate)`, engine-only (no platform sees them), and stay with the cost
+// model they parameterize. v3.5.9 A3 reframe locks this in (see
+// `docs/reports/2026-05-18-v358-refactor-design-spec.md` §3A.1).
+// ===========================================================================
+
+// 中文: walker 模型參數 — engine-only,無平台 mirror。
+// 中文:   pub(crate) const(CORPUS_TOTAL_FREQ / 兩 length-bias / OOV_PER_CHAR_PENALTY /
+// 中文:   WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE / CUSTOM_EFFECTIVE_FREQ)參數化
+// 中文:   edge_cost(字典分支 + OOV pricing 分支),皆 cited 命名常數 / 非 runtime tunable 非 magic literal。
+// 中文: 勿與 ranking::score.rs Cluster 1(BOOST_ALPHA / MAX_BOOST / RECENCY_WINDOW_MS /
+// 中文:   CONTINUOUS_DEFAULT_SOURCE_RANK / USER_WEIGHT_DECAY_TAU_MS;pub / 跨平台不變式
+// 中文:   per rules/cross-platform-alignment.md §3a)合併 — 本群 pub(crate)、engine-only,
+// 中文:   與自身 cost 模型同住(v3.5.9 A3 reframe / 設計稿 §3A.1)。
+
 /// Total corpus frequency mass — the denominator that turns a raw
 /// `DictionaryRecord.frequency` into a corpus probability
 /// (khiin `segmenter.rs:82-86`, where `p = occurrences / total`).
