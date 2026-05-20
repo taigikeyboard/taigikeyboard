@@ -1,43 +1,48 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Build the v3.5.8 Phase 2 TL syllable inventory FST (`syllables.fst`).
+"""Build the v3.5.9 B-1 tagged-single-FST syllable inventory (`syllables.fst`).
 
 Input:  output/dictionary.csv  (canonical dictionary records)
-Output: output/syllables.fst   (~9 KB fst::Set of valid TL syllables)
+Output: output/syllables.fst   (~tens of KB fst::Set of TL + POJ syllables)
 
 Pipeline
 --------
 1. Load filtered dictionary records via `dictionary_records.load_dictionary_records`.
-2. Pipe each record's raw `tl_num` (one per line) into the Rust binary
-   `engine/build-helpers/fst-builder build-syllables`.
-3. The binary splits each line on ASCII tone digits 1..=9, canonicalizes
-   each syllable through `phonetics::canonicalize_syllable` (POJ→TL
-   spelling normalization + `ⁿ`→`nn` + `o͘`→`oo`), validates phonotactically,
-   and emits BOTH canonical numeric (`tsua7`) AND canonical toneless
-   (`tsua`) keys to `fst::Set`.
+2. Stage the non-empty `tl_num` lines and the non-empty `poj_num` lines into
+   two temp files.
+3. Invoke `engine/build-helpers/fst-builder build-syllables <out>
+   --tl-input <tl-path> --poj-input <poj-path>` once. The Rust binary:
+     - splits each line on ASCII tone digits 1..=9,
+     - canonicalizes TL tokens via `phonetics::canonicalize_syllable`
+       (POJ→TL spelling fold + `o͘`→`oo` + `ⁿ`→`nn`) — emitted with
+       `tl:` prefix;
+     - canonicalizes POJ tokens via `phonetics::canonicalize_poj_syllable`
+       (encoding-only fold; POJ ASCII spelling preserved) — emitted
+       with `poj:` prefix;
+     - validates phonotactically through the shared TL initials × finals
+       table; sample-logs invalid syllables to stderr but keeps building;
+     - emits BOTH canonical numeric (`tl:tsua7` / `poj:choa7`) AND
+       canonical toneless (`tl:tsua` / `poj:choa`) keys per family.
 
-Why this split between Python and Rust
---------------------------------------
-Python only collects raw `tl_num` strings; the full splitter +
-canonicalizer lives in Rust so the inventory contains canonical TL keys
-even when the source row carries POJ-shaped fragments (`choa7` → `tsua7`)
-or non-ASCII forms (`peⁿ5` → `penn5`, `so͘3` → `soo3`). This avoids
-duplicating phonetics tables between Python and Rust and pins the
-canonicalization invariant to a single code path. Pre-impl review by
-Codex (v3.5.8 Phase 2) flagged the alternative — Python regex
-pre-splitting — as lossy for the 197 non-ASCII rows currently in
-`dictionary.csv`.
-
-POJ has no separate inventory: POJ input is normalized to TL via
-`phonetics::poj::to_tl` at runtime in Phase 3+. See `docs/roadmap.md`
-§Phase 2 line 193.
+Why the tagged-single-FST split (v3.5.9 B-1, from v3.5.8 single-family)
+----------------------------------------------------------------------
+~80,000 of 159,000 dictionary rows have `tl_num != poj_num` (POJ-shaped
+forms like `chit8`/`tsit8`, `goa2`/`gua2`, `toa7`/`tua7`). Folding the
+POJ source rows into the TL inventory (the v3.5.8 behavior) loses the
+POJ-side syllable boundaries, so a continuous POJ buffer like `chiah`
+cannot be recognised as one valid syllable. Tagging the two families
+into `tl:` / `poj:` key prefixes in a single FST keeps the storage
+shared (POJ + TL syllable inventories overlap heavily by prefix tree)
+while letting `lexicon::SyllableInventory::contains_in(mode, syllable)`
+serve the right family at runtime. Rationale + design alternatives in
+`docs/reports/2026-05-20-v359-b-plan.md` §B-1.
 
 Consumers
 ---------
 The output FST is loaded by `engine/lexicon::SyllableInventory::open`
-and consumed by the Phase 3 syllabifier (composing crate, future slice).
-This script is invoked manually as part of the dictionary rebuild flow;
-it is not yet wired into a master build orchestrator.
+and consumed by the Phase 3 syllabifier (composing crate). This script
+is invoked manually as part of the dictionary rebuild flow; it is not
+yet wired into a master build orchestrator.
 """
 
 from __future__ import annotations
@@ -45,6 +50,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from build.common import LOG_DIR, OUTPUT_DIR
@@ -88,35 +94,78 @@ def resolve_builder_bin() -> Path:
     return BUILDER_RELEASE
 
 
-def collect_tl_num_lines(logger) -> list[str]:
-    """Yield the non-empty `tl_num` field from every dictionary record."""
+def collect_family_lines(logger) -> tuple[list[str], list[str]]:
+    """Yield the non-empty `tl_num` and `poj_num` fields from every record."""
     if not CSV_FILE.exists():
         raise RuntimeError(f"CSV not found: {CSV_FILE}")
 
     records = load_dictionary_records(CSV_FILE)
     logger.info(f"Loaded {len(records)} records from {CSV_FILE.name}")
 
-    lines = [record.tl_num for record in records if record.tl_num]
-    skipped = len(records) - len(lines)
-    logger.info(f"tl_num lines emitted: {len(lines)} (skipped {skipped} with empty tl_num)")
-    return lines
-
-
-def emit_to_builder(lines: list[str], builder_bin: Path) -> None:
-    """Pipe one `tl_num` per line into `fst-builder build-syllables`."""
-    payload = ("\n".join(lines) + "\n").encode("utf-8")
-    proc = subprocess.run(
-        [str(builder_bin), "build-syllables", str(OUTPUT_FILE)],
-        input=payload,
-        capture_output=True,
-        check=False,
+    tl_lines = [record.tl_num for record in records if record.tl_num]
+    poj_lines = [record.poj_num for record in records if record.poj_num]
+    tl_skipped = len(records) - len(tl_lines)
+    poj_skipped = len(records) - len(poj_lines)
+    logger.info(
+        f"tl_num lines emitted: {len(tl_lines)} (skipped {tl_skipped} empty); "
+        f"poj_num lines emitted: {len(poj_lines)} (skipped {poj_skipped} empty)"
     )
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"fst-builder build-syllables failed (exit {proc.returncode}): "
-            f"{proc.stderr.decode('utf-8', errors='replace')}"
+    return tl_lines, poj_lines
+
+
+def invoke_builder(
+    tl_lines: list[str],
+    poj_lines: list[str],
+    builder_bin: Path,
+) -> None:
+    """Stage each family to a temp file, invoke `build-syllables` once.
+
+    The builder takes both `--tl-input` and `--poj-input` so the
+    tagged-single-FST is produced in one pass (avoiding fst::Set merge
+    after the fact). Temp files are deleted in the `finally` block even
+    on builder failure — they hold dictionary source rows, no secrets,
+    but staying tidy keeps repeated invocations from leaking through
+    `/tmp`.
+    """
+    tl_path: Path | None = None
+    poj_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".tl-num.txt", delete=False
+        ) as tl_f:
+            tl_f.write("\n".join(tl_lines))
+            tl_f.write("\n")
+            tl_path = Path(tl_f.name)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", suffix=".poj-num.txt", delete=False
+        ) as poj_f:
+            poj_f.write("\n".join(poj_lines))
+            poj_f.write("\n")
+            poj_path = Path(poj_f.name)
+
+        proc = subprocess.run(
+            [
+                str(builder_bin),
+                "build-syllables",
+                str(OUTPUT_FILE),
+                "--tl-input",
+                str(tl_path),
+                "--poj-input",
+                str(poj_path),
+            ],
+            capture_output=True,
+            check=False,
         )
-    sys.stderr.write(proc.stderr.decode("utf-8", errors="replace"))
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"fst-builder build-syllables failed (exit {proc.returncode}): "
+                f"{proc.stderr.decode('utf-8', errors='replace')}"
+            )
+        sys.stderr.write(proc.stderr.decode("utf-8", errors="replace"))
+    finally:
+        for staged in (tl_path, poj_path):
+            if staged is not None and staged.exists():
+                staged.unlink()
 
 
 def main() -> None:
@@ -126,8 +175,8 @@ def main() -> None:
     builder_bin = resolve_builder_bin()
     logger.info(f"fst-builder: {builder_bin}")
 
-    lines = collect_tl_num_lines(logger)
-    emit_to_builder(lines, builder_bin)
+    tl_lines, poj_lines = collect_family_lines(logger)
+    invoke_builder(tl_lines, poj_lines, builder_bin)
 
     file_size = OUTPUT_FILE.stat().st_size
     logger.info("\n  [output]")

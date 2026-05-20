@@ -124,7 +124,11 @@ pub(crate) fn greedy_longest_syllabification(
     let mut segs: Vec<(usize, usize)> = Vec::new();
     let mut pos = 0usize;
     while pos < lowered.len() {
-        let end = tl_syll::valid_span_endings_lowered(&lowered, pos, inv, 1)
+        // v3.5.9 B-1: query the TL family. The shadow is already in TL
+        // form (`canonicalize_poj_shadow` upstream); B-2 will reshape
+        // that helper to preserve POJ ASCII and thread `mode` through
+        // here, at which point the literal becomes the caller's mode.
+        let end = tl_syll::valid_span_endings_lowered(&lowered, pos, inv, InputMode::Tl, 1)
             .into_iter()
             .max()?;
         segs.push((pos, end));
@@ -178,10 +182,11 @@ pub(crate) fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory
     }
     // Unweighted shortest path (in #hops) from offset 0 to `end`. Each
     // hop is one valid syllable from
-    // `valid_span_endings_lowered(.., pos, inv, 1)` (the single-hop
-    // primitive the lattice builder chains). FIFO BFS + a visited
-    // distance map = min hops; only strictly-forward steps are
-    // enqueued so it terminates in <= `end` iterations.
+    // `valid_span_endings_lowered(.., pos, inv, InputMode::Tl, 1)` —
+    // the single-hop primitive the lattice builder chains. v3.5.9 B-1
+    // pins the inventory family to TL here for the same reason as
+    // [`greedy_longest_syllabification`]: the shadow upstream is in TL
+    // form; B-2 will thread `mode` through this seam.
     use std::collections::{BTreeMap, VecDeque};
     let mut dist: BTreeMap<usize, usize> = BTreeMap::new();
     dist.insert(0, 0);
@@ -192,7 +197,7 @@ pub(crate) fn span_min_syllable_count(shadow_span: &str, inv: &SyllableInventory
         if pos == end {
             return Some(hops);
         }
-        for nxt in tl_syll::valid_span_endings_lowered(&lowered, pos, inv, 1) {
+        for nxt in tl_syll::valid_span_endings_lowered(&lowered, pos, inv, InputMode::Tl, 1) {
             if nxt > pos && nxt <= end && !dist.contains_key(&nxt) {
                 dist.insert(nxt, hops + 1);
                 queue.push_back(nxt);
@@ -1077,10 +1082,10 @@ mod tests {
             let (canonical, tone) = canonicalize_syllable(s)
                 .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"));
             if tone.is_empty() {
-                keys.push(canonical);
+                keys.push(format!("tl:{canonical}"));
             } else {
-                keys.push(format!("{canonical}{tone}"));
-                keys.push(canonical);
+                keys.push(format!("tl:{canonical}{tone}"));
+                keys.push(format!("tl:{canonical}"));
             }
         }
         keys.sort();

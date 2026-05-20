@@ -176,15 +176,17 @@ fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
 /// `.expect()` (not silent skip) so a wrong grounding assumption fails
 /// loudly here rather than degrading a matrix case (Codex pre-impl BLOCK).
 fn build_syllables_fst(samples: &[&str]) -> PathBuf {
+    // v3.5.9 B-1: tagged-single-FST — emit keys with `tl:` prefix so
+    // production lookups via `contains_in(InputMode::Tl, …)` hit.
     let mut keys: Vec<String> = Vec::new();
     for s in samples {
         let (canonical, tone) = canonicalize_syllable(s)
             .unwrap_or_else(|| panic!("syllable sample {s:?} failed canonicalize_syllable"));
         if tone.is_empty() {
-            keys.push(canonical);
+            keys.push(format!("tl:{canonical}"));
         } else {
-            keys.push(format!("{canonical}{tone}"));
-            keys.push(canonical);
+            keys.push(format!("tl:{canonical}{tone}"));
+            keys.push(format!("tl:{canonical}"));
         }
     }
     keys.sort();

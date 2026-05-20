@@ -183,13 +183,16 @@ fn build_inventory(samples: &[&str]) -> SyllableInventory {
         })
         .collect();
 
+    // v3.5.9 B-1: tagged-single-FST format — emit keys with the
+    // `tl:` prefix so the production syllabifier's
+    // `contains_in(InputMode::Tl, …)` probes hit the test inventory.
     let mut keys: Vec<String> = Vec::new();
     for (canonical, tone) in &pairs {
         if tone.is_empty() {
-            keys.push(canonical.clone());
+            keys.push(format!("tl:{canonical}"));
         } else {
-            keys.push(format!("{canonical}{tone}"));
-            keys.push(canonical.clone());
+            keys.push(format!("tl:{canonical}{tone}"));
+            keys.push(format!("tl:{canonical}"));
         }
     }
     keys.sort();

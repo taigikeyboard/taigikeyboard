@@ -15,19 +15,31 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use lexicon::SyllableInventory;
+use phonetics::InputMode;
 
 use super::Lattice;
 use crate::syllabifier::tl::valid_span_endings_lowered;
+
+/// v3.5.9 B-1: the lattice builder always queries the **TL** family of
+/// the tagged-single-FST syllable inventory because `build_shadow_lattice`
+/// canonicalizes its input to TL form via `canonicalize_poj_shadow`
+/// before reaching here. v3.5.9 B-2 will reshape `canonicalize_poj_shadow`
+/// to preserve POJ ASCII when `mode == InputMode::Poj` and thread a
+/// `mode: InputMode` parameter through this seam; until then, hardcoding
+/// `Tl` here keeps B-1 behavior-neutral against the pre-B golden suite.
+// 中文: B-1 階段 lattice 一律查 tl: 家族 — build_shadow_lattice 在上游已將輸入
+// 中文:   canonicalize 為 TL 形式;B-2 重塑 canonicalize_poj_shadow + 加 mode 參數後解除。
+const LATTICE_INVENTORY_FAMILY: InputMode = InputMode::Tl;
 
 /// Build the segmentation lattice for `shadow` (the hyphen-stripped,
 /// POJ-canonicalized TL buffer).
 ///
 /// BFS over syllable-boundary offsets: from each reachable offset
 /// `start`, `valid_span_endings_lowered(&lowered, start, inv,
-/// max_syllables)` returns every ending reachable by
-/// `1..=max_syllables` syllable chains — i.e. BOTH the immediate
-/// single-syllable (atomic) ending
-/// AND the multi-syllable phrase endings. Both kinds are kept as
+/// LATTICE_INVENTORY_FAMILY, max_syllables)` returns every ending
+/// reachable by `1..=max_syllables` syllable chains — i.e. BOTH the
+/// immediate single-syllable (atomic) ending AND the multi-syllable
+/// phrase endings. Both kinds are kept as
 /// edges: dropping the multi-syllable phrase edges would remove the
 /// pre-S1 left-anchored `(0, multi-syllable)` keys, so the flattened
 /// output would no longer be a superset of today's (Codex pre-impl
@@ -60,7 +72,13 @@ pub(crate) fn build_lattice(
     queue.push_back(0);
 
     while let Some(start) = queue.pop_front() {
-        for end in valid_span_endings_lowered(&lowered, start, inv, max_syllables) {
+        for end in valid_span_endings_lowered(
+            &lowered,
+            start,
+            inv,
+            LATTICE_INVENTORY_FAMILY,
+            max_syllables,
+        ) {
             edges.push((start, end));
             if visited.insert(end) {
                 queue.push_back(end);
@@ -94,17 +112,19 @@ mod tests {
 
     // Hermetic inventory builder — same pattern as the integration
     // tests (`composing/tests/build_keys_tl_hyphen.rs`); inline
-    // duplication preferred over a shared test-utils crate.
+    // duplication preferred over a shared test-utils crate. v3.5.9 B-1:
+    // keys carry the `tl:` family prefix so the inventory matches the
+    // tagged-single-FST format `SyllableInventory::contains_in` expects.
     fn build_inventory(samples: &[&str]) -> SyllableInventory {
         let mut keys: Vec<String> = Vec::new();
         for s in samples {
             let (canonical, tone) = canonicalize_syllable(s)
                 .unwrap_or_else(|| panic!("sample {s:?} failed canonicalize_syllable"));
             if tone.is_empty() {
-                keys.push(canonical);
+                keys.push(format!("tl:{canonical}"));
             } else {
-                keys.push(format!("{canonical}{tone}"));
-                keys.push(canonical);
+                keys.push(format!("tl:{canonical}{tone}"));
+                keys.push(format!("tl:{canonical}"));
             }
         }
         keys.sort();

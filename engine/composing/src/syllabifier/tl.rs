@@ -16,6 +16,7 @@
 use std::collections::{BTreeSet, VecDeque};
 
 use lexicon::SyllableInventory;
+use phonetics::InputMode;
 
 /// Upper bound on a single TL syllable's byte length: max initial
 /// `tsh` (3) + max final `uainnh` / `iaunnh` (6) + optional ASCII tone
@@ -27,17 +28,20 @@ const MAX_SYLLABLE_BYTES: usize = 10;
 
 /// Return every byte offset `e > pos` reachable from `pos` by a chain
 /// of 1..=`max_syllables` syllables, where each chain link
-/// `input[cur..end]` (after ASCII lowercasing) is a member of `inv`.
+/// `input[cur..end]` (after ASCII lowercasing) is a member of the
+/// `mode`-family branch of the v3.5.9 B-1 tagged-single-FST syllable
+/// inventory (`tl:` for `InputMode::Tl` / `InputMode::English`,
+/// `poj:` for `InputMode::Poj`).
 ///
 /// Contract:
 /// - Returns ascending, deduplicated byte offsets.
 /// - Returns empty `Vec` when `pos > input.len()`, `pos == input.len()`,
 ///   `max_syllables == 0`, or `pos` is not on a UTF-8 char boundary.
-/// - Caller must pass canonicalized TL input (lowercase or mixed-case
-///   ASCII; POJ→TL spelling already applied via
-///   `phonetics::canonicalize_syllable`). Non-ASCII bytes won't match
-///   the inventory and will silently produce no endings, but the
-///   function will not panic.
+/// - Caller must pass input canonicalized for the chosen `mode`
+///   (TL: lowercase ASCII, POJ→TL fold already applied via
+///   `phonetics::canonicalize_syllable`; POJ: POJ ASCII via
+///   `phonetics::canonicalize_poj_syllable`). Non-matching bytes won't
+///   land in the inventory and silently produce no endings — no panic.
 ///
 /// Algorithm: FIFO BFS using `endings` itself as the visited set —
 /// `BTreeSet::insert` returns `true` only on first arrival, which under
@@ -45,11 +49,13 @@ const MAX_SYLLABLE_BYTES: usize = 10;
 /// FST lookups, each O(syllable_len). Allocation: one
 /// `to_ascii_lowercase` pass on `input`.
 // 中文: 從 pos 出發,以 1..=max_syllables 條音節鏈走訪,回傳所有可達 byte 位移 (遞增去重)。
-// 中文: 不在 UTF-8 邊界、超界、深度為 0 時都安全回傳空 Vec;呼叫端負責先把 POJ canonicalize 成 TL。
+// 中文: v3.5.9 B-1 起 mode-aware — Tl/English 走 `tl:` 家族,Poj 走 `poj:` 家族。
+// 中文: 不在 UTF-8 邊界、超界、深度為 0 時都安全回傳空 Vec。
 pub fn valid_span_endings(
     input: &str,
     pos: usize,
     inv: &SyllableInventory,
+    mode: InputMode,
     max_syllables: usize,
 ) -> Vec<usize> {
     // Guard on the raw `input` before allocating the lowercased copy
@@ -59,7 +65,7 @@ pub fn valid_span_endings(
     if max_syllables == 0 || pos >= input.len() || !input.is_char_boundary(pos) {
         return Vec::new();
     }
-    valid_span_endings_lowered(&input.to_ascii_lowercase(), pos, inv, max_syllables)
+    valid_span_endings_lowered(&input.to_ascii_lowercase(), pos, inv, mode, max_syllables)
 }
 
 /// Pre-lowered variant of [`valid_span_endings`]: the caller has
@@ -74,10 +80,12 @@ pub fn valid_span_endings(
 /// at chain ends and rely on the guard to terminate).
 // 中文: valid_span_endings 的「已小寫」變體 — 呼叫端先 to_ascii_lowercase 一次,
 // 中文:   避免 lattice BFS 每個 start 都重抄整個 buffer (Codex PR #284 P1)。
+// 中文: v3.5.9 B-1 起新增 mode 參數,內部以 inv.contains_in(mode, …) 查家族對應的音節集合。
 pub(crate) fn valid_span_endings_lowered(
     lowered: &str,
     pos: usize,
     inv: &SyllableInventory,
+    mode: InputMode,
     max_syllables: usize,
 ) -> Vec<usize> {
     if max_syllables == 0 || pos >= lowered.len() || !lowered.is_char_boundary(pos) {
@@ -98,7 +106,7 @@ pub(crate) fn valid_span_endings_lowered(
             if !lowered.is_char_boundary(end) {
                 continue;
             }
-            if inv.contains(&lowered[cur..end])
+            if inv.contains_in(mode, &lowered[cur..end])
                 && !is_false_toneless_boundary(bytes, end)
                 && endings.insert(end)
             {

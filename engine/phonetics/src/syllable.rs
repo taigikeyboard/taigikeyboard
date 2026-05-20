@@ -88,6 +88,48 @@ pub fn normalize_to_tl(text: &str) -> String {
         })
 }
 
+/// Encoding-only POJ normalization rules — fold the non-ASCII POJ glyphs
+/// (`o͘`, `ⁿ`, `ᴺ`) to their ASCII spellings (`oo`, `nn`), plus the
+/// legacy `ou` → `oo` alias shared with [`NORMALIZE_TO_TL_RULES`]
+/// (Codex pre-impl B-1 SHOULD, 2026-05-20: an unaudited dirty source
+/// row like `sou2` must not leak as a literal `poj:sou` key while
+/// validating phonotactically through TL's `soo` fold). Crucially we
+/// **do not** run the POJ→TL spelling chain (`ch→ts`, `oa→ua`,
+/// `oe→ue`, `eng→ing`, `ek→ik`). Consumed by
+/// [`canonicalize_poj_syllable`] for the v3.5.9 B-1 POJ syllable
+/// inventory (`poj:` family in tagged-single-FST `syllables.fst`). The
+/// design rationale lives in `docs/reports/2026-05-20-v359-b-plan.md`
+/// §B-2 line 100 — POJ keys must stay POJ-shaped so that the lattice
+/// can recognise `chiah` / `goa` / `toa` as their own syllable
+/// boundaries rather than collapsing onto the TL forms.
+// 中文: B-1 POJ inventory 專用 — fold POJ 非-ASCII 字形 (o͘/ⁿ/ᴺ) 與 ou 別名為 ASCII (oo/nn),
+// 中文:   不跑 POJ→TL 拼寫鏈 (ch→ts 等)。Codex SHOULD:`ou→oo` 是 encoding 同義字,
+// 中文:   不加會讓未來髒資料 (`sou2`) 在 TL fold 通過驗證後寫成字面 `poj:sou`。
+// 中文:   B-2 線下 plan §B-2 line 100 — 鎖死 `poj:` 家族維持 POJ ASCII shape。
+pub const NORMALIZE_TO_POJ_RULES: &[(&str, &str)] = &[
+    ("ou", "oo"),
+    ("o\u{0358}", "oo"),
+    ("\u{207f}", "nn"),
+    ("\u{1d3a}", "nn"),
+];
+
+/// Apply [`NORMALIZE_TO_POJ_RULES`] in order. The non-ASCII rules
+/// (`o͘`/`ⁿ`/`ᴺ` → ASCII pairs) are no-ops on already-ASCII input. The
+/// legacy `ou → oo` alias does fire on ASCII input — `kou` → `koo`,
+/// `sou` → `soo` — so already-ASCII POJ is **not** strictly idempotent.
+/// POJ-shaped spelling is otherwise preserved: `ch`, `oa`, `oe`,
+/// `eng`, `ek` chain rules belong to `NORMALIZE_TO_TL_RULES`, not this
+/// list.
+// 中文: 依 NORMALIZE_TO_POJ_RULES 順序套用;非-ASCII 規則對 ASCII POJ 是 no-op,
+// 中文:   但 `ou→oo` 在 ASCII 上會觸發 — 因此非嚴格 idempotent,只保證 POJ 拼寫不退到 TL。
+pub fn normalize_to_poj(text: &str) -> String {
+    NORMALIZE_TO_POJ_RULES
+        .iter()
+        .fold(text.to_string(), |acc, (find, repl)| {
+            acc.replace(find, repl)
+        })
+}
+
 /// True when the final ends with a stop consonant (p, t, k, h), ignoring trailing
 /// nasal `nn`. `kah4` → true; `kann2` → false.
 // 中文: 判斷韻母是否以入聲子音 (p/t/k/h) 結尾;結尾的鼻化 `nn` 不計入。
@@ -149,6 +191,35 @@ pub fn canonicalize_syllable(token: &str) -> Option<(String, String)> {
 // 中文: 判斷音節 token 是否 phonotactically 合法 (POJ 形式會先正規化成 TL)。
 pub fn is_valid_syllable(token: &str) -> bool {
     canonicalize_syllable(token).is_some()
+}
+
+/// Canonicalize one POJ-shaped syllable token into its **POJ ASCII** form
+/// (no POJ→TL spelling fold), returning `(canonical_toneless, tone_digit)`
+/// on phonotactic success.
+///
+/// Pipeline: `strip_tone_mark` (extract tone, fold NFD → NFC bare),
+/// `to_lowercase`, [`normalize_to_poj`] (encoding-only `o͘`→`oo` /
+/// `ⁿ`→`nn` / `ᴺ`→`nn`). Phonotactic validity is checked by routing
+/// through [`normalize_to_tl`] + `split_initial_final` against the TL
+/// initials × finals table — POJ source rows that pass TL validation
+/// after fold are accepted, but the emitted key is the **POJ ASCII**
+/// shape (e.g. `chit`, `goa`, `toa`, `che`), distinct from the TL forms
+/// (`tsit`, `gua`, `tua`, `tse`).
+///
+/// Used by `engine/build-helpers/fst-builder` `build-syllables` to emit
+/// the `poj:` family of the v3.5.9 B-1 tagged-single-FST syllable
+/// inventory (`syllables.fst`). See
+/// `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
+// 中文: 把單一 POJ 音節 token 正規化為 POJ ASCII 形式 (而非 TL),回傳 (去聲調 canonical, 聲調數字)。
+// 中文:   Phonotactic 驗證仍走 TL 表 (避免複製 initials/finals 表),但 emit 的 key 保留 POJ ASCII。
+// 中文:   供 v3.5.9 B-1 syllables.fst `poj:` 家族使用。
+pub fn canonicalize_poj_syllable(token: &str) -> Option<(String, String)> {
+    let (bare, tone) = strip_tone_mark(token);
+    let lowered = bare.to_lowercase();
+    // Phonotactic gate via TL tables (shared with TL path) — POJ rows
+    // that fail TL phonotactics after fold are dictionary anomalies.
+    split_initial_final(&normalize_to_tl(&lowered))?;
+    Some((normalize_to_poj(&lowered), tone))
 }
 
 /// Parse a syllable into `(initial, final, tone)`. Returns `None` when the
@@ -378,6 +449,138 @@ mod tests {
                 canonicalize_syllable(input).is_some(),
                 "is_valid_syllable / canonicalize_syllable disagree on {input:?}",
             );
+        }
+    }
+
+    // MARK: - canonicalize_poj_syllable / normalize_to_poj. SOURCE:
+    // dictionary.csv poj_num samples — POJ rows like `chit8`, `goa2`,
+    // `toa7`, `che1` must stay POJ-shaped in the inventory (not folded
+    // to TL `tsit`, `gua`, `tua`, `tse`). Non-ASCII POJ `peⁿ5` / `so͘3`
+    // collapse to ASCII `penn` / `soo` per encoding-only rules.
+
+    #[test]
+    fn normalize_to_poj_encoding_only() {
+        // Encoding fixes apply, but POJ→TL spelling rules do NOT.
+        assert_eq!(normalize_to_poj("so\u{0358}"), "soo");
+        assert_eq!(normalize_to_poj("pe\u{207f}"), "penn");
+        assert_eq!(normalize_to_poj("a\u{1d3a}"), "ann");
+        // POJ-shaped spellings preserved (would fold to TL via NORMALIZE_TO_TL_RULES).
+        assert_eq!(normalize_to_poj("chiah"), "chiah");
+        assert_eq!(normalize_to_poj("goa"), "goa");
+        assert_eq!(normalize_to_poj("koe"), "koe");
+        assert_eq!(normalize_to_poj("peng"), "peng");
+        assert_eq!(normalize_to_poj("pek"), "pek");
+    }
+
+    #[test]
+    fn normalize_to_poj_legacy_ou_alias_fires_on_ascii() {
+        // Codex pre-impl B-1 SHOULD (2026-05-20): `ou → oo` is the legacy
+        // alias shared with NORMALIZE_TO_TL_RULES — a forward guard so a
+        // future dirty `sou*` / `kou*` source row cannot leak as a
+        // literal `poj:sou` while validating phonotactically via TL's
+        // `soo` fold. Current `dictionary.csv` has zero `poj_num` rows
+        // containing `ou`, so this is no-op against today's data; the
+        // pin captures the contract so a later asset audit catches
+        // accidental drift.
+        assert_eq!(normalize_to_poj("sou"), "soo");
+        assert_eq!(normalize_to_poj("kou"), "koo");
+        // The phonotactic gate then accepts these as valid via TL's
+        // `soo` / `koo` finals → emit POJ ASCII forms.
+        let (poj, tone) = canonicalize_poj_syllable("sou2").expect("sou2 must canonicalize");
+        assert_eq!(poj, "soo");
+        assert_eq!(tone, "2");
+    }
+
+    #[test]
+    fn canonicalize_poj_syllable_preserves_poj_shape() {
+        let cases = [
+            ("chit8", "chit", "8"),
+            ("goa2", "goa", "2"),
+            ("toa7", "toa", "7"),
+            ("che1", "che", "1"),
+            ("koe1", "koe", "1"),
+            ("peng5", "peng", "5"),
+            ("pek4", "pek", "4"),
+            ("chiau2", "chiau", "2"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_poj_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_poj_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_poj_syllable_non_ascii_inputs() {
+        // Encoding-only rules collapse `o͘` / `ⁿ` to ASCII; POJ spelling
+        // is preserved otherwise.
+        let cases = [
+            ("peⁿ5", "penn", "5"),
+            ("so͘3", "soo", "3"),
+            ("tsiuⁿ7", "tsiunn", "7"),
+            ("pho͘5", "phoo", "5"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_poj_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_poj_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_poj_syllable_pure_tl_inputs_passthrough() {
+        // Pure-TL spellings (`tai`, `bak`, `tsh*`) round-trip unchanged
+        // — POJ inventory accepts them when the source row's poj_num
+        // mirrors tl_num (≈ half of dictionary.csv rows).
+        let cases = [
+            ("tai5", "tai", "5"),
+            ("bak4", "bak", "4"),
+            ("tshiu7", "tshiu", "7"),
+        ];
+        for (input, expected_canonical, expected_tone) in cases {
+            let (canonical, tone) = canonicalize_poj_syllable(input)
+                .unwrap_or_else(|| panic!("canonicalize_poj_syllable({input}) returned None"));
+            assert_eq!(canonical, expected_canonical, "canonical of {input}");
+            assert_eq!(tone, expected_tone, "tone of {input}");
+        }
+    }
+
+    #[test]
+    fn canonicalize_poj_syllable_invalid_returns_none() {
+        // Same phonotactic gate as TL (shared TL initials × finals
+        // table) — initial-without-final, unknown letters, malformed
+        // dual-marked all reject.
+        let cases = ["", "tsh", "kh", "xyz", "tj", "qq", "bx", "tn̄g6", "123"];
+        for input in cases {
+            assert!(
+                canonicalize_poj_syllable(input).is_none(),
+                "canonicalize_poj_syllable({input:?}) should be None"
+            );
+        }
+    }
+
+    #[test]
+    fn canonicalize_poj_syllable_differs_from_tl_on_divergent_rows() {
+        // Pin the contract: POJ-shaped inputs whose TL form differs MUST
+        // keep their POJ shape under canonicalize_poj_syllable, while
+        // canonicalize_syllable folds to TL.
+        let divergent_pairs = [
+            ("chit8", "chit", "tsit"),
+            ("goa2", "goa", "gua"),
+            ("toa7", "toa", "tua"),
+            ("che1", "che", "tse"),
+            ("koe1", "koe", "kue"),
+            ("peng5", "peng", "ping"),
+            ("pek4", "pek", "pik"),
+        ];
+        for (input, expected_poj, expected_tl) in divergent_pairs {
+            let (poj_form, _) = canonicalize_poj_syllable(input).unwrap();
+            let (tl_form, _) = canonicalize_syllable(input).unwrap();
+            assert_eq!(poj_form, expected_poj, "POJ canonical of {input}");
+            assert_eq!(tl_form, expected_tl, "TL canonical of {input}");
+            assert_ne!(poj_form, tl_form, "POJ/TL must differ for {input}");
         }
     }
 }

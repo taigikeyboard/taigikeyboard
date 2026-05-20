@@ -51,7 +51,11 @@ fn nfc_peh_oe_ji_surfaces_full_fused_key() {
     // the live dictionary's `tl_notone` for 白話字
     // (`dictionary/output/dictionary.csv:3181`).
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("pe\u{030d}h-\u{014d}e-j\u{012b}", &inv, phonetics::InputMode::Tl);
+    let keys = build_keys_tl_with_inventory(
+        "pe\u{030d}h-\u{014d}e-j\u{012b}",
+        &inv,
+        phonetics::InputMode::Tl,
+    );
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -398,13 +402,14 @@ fn build_inventory(samples: &[&str]) -> SyllableInventory {
         })
         .collect();
 
+    // v3.5.9 B-1: tagged-single-FST — emit keys with `tl:` prefix.
     let mut keys: Vec<String> = Vec::new();
     for (canonical, tone) in &pairs {
         if tone.is_empty() {
-            keys.push(canonical.clone());
+            keys.push(format!("tl:{canonical}"));
         } else {
-            keys.push(format!("{canonical}{tone}"));
-            keys.push(canonical.clone());
+            keys.push(format!("tl:{canonical}{tone}"));
+            keys.push(format!("tl:{canonical}"));
         }
     }
     keys.sort();

@@ -30,8 +30,8 @@ pub use api::{contains_tps, to_tone_marks, to_tone_number, InputMode, PhoneticsE
 pub use normalization::{has_tone_marks, normalize_input, taigi_unicode_base_form};
 pub use poj::to_poj;
 pub use syllable::{
-    canonicalize_syllable, is_valid_syllable, normalize_to_tl, strip_tone_mark,
-    NORMALIZE_TO_TL_RULES,
+    canonicalize_poj_syllable, canonicalize_syllable, is_valid_syllable, normalize_to_poj,
+    normalize_to_tl, strip_tone_mark, NORMALIZE_TO_POJ_RULES, NORMALIZE_TO_TL_RULES,
 };
 pub use tl::to_tl;
 pub use tps::{from_zhuyin as tps_to_tl, is_tps_char, is_tps_initial};
