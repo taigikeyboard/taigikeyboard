@@ -329,9 +329,57 @@ pub struct CustomEntry {
     pub hanji: Option<String>,
 }
 
-/// Fetch every dictionary candidate whose toneless TL key matches
-/// `input[pos..end]` for some `end` in `endings`. TL/POJ entry for
-/// span-local lookup; see module docs for the full contract.
+/// v3.5.9 D7 — shared context for the continuous-input fetch entry
+/// points ([`fetch_candidates_for_keys`],
+/// [`fetch_partial_prefix_candidates`]). Each one previously took
+/// eight positional arguments and tripped
+/// `clippy::too_many_arguments`; bundling the six shared concerns
+/// (filter / freq-map / clock / custom / readers) into one borrowed
+/// struct collapses every call site to three or four args without
+/// changing any behavior.
+///
+/// Field order matches the legacy `fetch_candidates_for_keys` arg
+/// order so a reader scanning a git blame can map old positional args
+/// onto the new fields without renaming work.
+///
+/// All fields are `pub` — construction is always a stack-local struct
+/// literal at the call site (production builds it inside the composing
+/// seam; integration tests build it once per test). No constructor is
+/// needed.
+// 中文: D7 — 連續輸入 fetch 入口共用的 context;把原本 8 個位置參數中重複的 6 個 (filter/freq_map/clock/custom/readers)
+// 中文:   收進一個借用 struct,call site 縮到 3-4 args、移除 clippy::too_many_arguments allow。欄位順序對齊舊
+// 中文:   fetch_candidates_for_keys 參數順序,讓 git blame 可逐欄對應;欄位全 pub,call site 用 struct literal 直接建。
+pub struct ContinuousFetchCtx<'a> {
+    /// `Filter::from_enabled_bitmask` input. Production passes
+    /// `u32::MAX` (all sources enabled); tests narrow it to verify
+    /// filter behaviour.
+    pub enabled_sources_bitmask: u32,
+    /// Per-`display_text` user-selection snapshot. Empty map +
+    /// `now_ms = 0` is the cold-start neutral.
+    pub freq_map: &'a FrequencyMap,
+    /// Platform epoch-ms wall clock at fetch time.
+    pub now_ms: i64,
+    /// `custom_dictionary.db` hits to merge into the candidate list.
+    /// Empty slice = no custom merge (the production wiring's
+    /// cold-start default; also the hard-coded value inside the
+    /// hidden test-only legacy endings wrapper).
+    pub custom: &'a [CustomEntry],
+    /// FST prefix index reader.
+    pub prefix_index: &'a PrefixIndex,
+    /// Dictionary record reader (mmap-backed).
+    pub dict: &'a DictionaryReader,
+}
+
+/// v3.5.9 D8 — test-only entry: fetch every dictionary candidate
+/// whose toneless TL key matches `input[pos..end]` for some `end` in
+/// `endings`. Production code path goes through
+/// `composing::continuous::fetch_via_lexicon_inner` →
+/// [`fetch_candidates_for_keys`] directly with the platform's
+/// `custom_entries`; the only callers reaching this entry are the
+/// `engine/lexicon/tests/` integration tests, which explicitly never
+/// carry custom-dict matches (the ctx wrapper below forces
+/// `custom = &[]` before delegating). Marked `#[doc(hidden)]` so the
+/// rustdoc public surface no longer advertises it.
 ///
 /// Internally a thin wrapper around [`fetch_candidates_for_keys`]: it
 /// maps each `end` to a `(consumed_span, "tl:<lowered>")` pair. TPS
@@ -339,31 +387,23 @@ pub struct CustomEntry {
 /// dispatcher path that builds keys via `phonetics::tps_to_tl` and
 /// calls [`fetch_candidates_for_keys`] directly.
 ///
-/// **v3.5.8 Phase 9.3a**: `freq_map` carries the per-display-text user
-/// selection snapshot keyed by `RawCandidate::display_text`
-/// (= `hanji ?? tl`); `now_ms` is the platform's epoch-ms wall
+/// **v3.5.8 Phase 9.3a**: `ctx.freq_map` carries the per-display-text
+/// user selection snapshot keyed by `RawCandidate::display_text`
+/// (= `hanji ?? tl`); `ctx.now_ms` is the platform's epoch-ms wall
 /// clock. Pass `&FrequencyMap::new()` + `now_ms = 0` for cold-start
 /// neutral behaviour (boost = 1.0, recency_rank = 1 everywhere) —
 /// `recency_rank()`'s guards (`now_ms <= 0`, `last_used_ms <= 0`,
 /// clock skew) make this a safe default.
-// 中文: TL/POJ 連續輸入入口 — 把 endings 轉成 (consumed_span, "tl:<lowered>") pairs 後委派給 fetch_candidates_for_keys。
+// 中文: D8 — test-only TL/POJ 連續輸入入口;production 走 composing::continuous::fetch_via_lexicon_inner 直呼
+// 中文:   fetch_candidates_for_keys 帶平台 custom,只剩 lexicon 整合測試會落到這裡。doc(hidden) 隱藏 rustdoc 公開面。
 // 中文: TPS 路徑請走 Phase 6 dispatcher,先用 phonetics::tps_to_tl 轉出 toneless TL key 再呼叫 fetch_candidates_for_keys。
-// 中文: Phase 9.3a — 接受 FrequencyMap + now_ms;空 map + now_ms=0 = cold-start neutral。
-// Argument count (8) exceeds clippy::too_many_arguments threshold (7);
-// each argument is a distinct concern (input + pos + endings + filter +
-// freq + clock + two readers) and bundling them would just shift
-// boilerplate to every call site (dispatch.rs + 5 test files). Allow
-// the lint and revisit if a builder pattern lands in PR-9.5+.
-#[allow(clippy::too_many_arguments)]
+// 中文: Phase 9.3a — ctx 中 freq_map+now_ms;空 map + now_ms=0 = cold-start neutral。
+#[doc(hidden)]
 pub fn fetch_candidates_for_endings(
     input: &str,
     pos: usize,
     endings: &[usize],
-    enabled_sources_bitmask: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
     if endings.is_empty() || pos >= input.len() || !input.is_char_boundary(pos) {
         return Vec::new();
@@ -406,24 +446,25 @@ pub fn fetch_candidates_for_endings(
     // Even when `pos != 0`, candidates whose `consumed_span_end`
     // reaches the full input length still qualify for Tier 0 — Tier 1
     // is full-buffer coverage, not `input.len() - pos`.
-    // Item 12: this legacy TL/POJ test/Phase-5 entry never carries
-    // custom-dict matches — the production dispatch path goes through
-    // `composing::continuous::fetch_via_lexicon_inner` →
+    // Item 12 + D7: this legacy test-only entry never carries custom-
+    // dict matches. Rebuild an inner ctx with every field listed
+    // explicitly (not `..*ctx`) so the forced-empty-custom contract
+    // stays loud and survives any future ctx field that is not
+    // `Copy` (Codex pre-impl SHOULD #2). Production dispatch goes
+    // through `composing::continuous::fetch_via_lexicon_inner` →
     // `fetch_candidates_for_keys` directly with the platform's
-    // `custom_entries`. Pass an empty slice so this fn's public
-    // signature stays stable (no test-call-site churn).
-    // 中文: Item 12 — 此 legacy 入口不帶 custom;production 走 fetch_via_lexicon 直呼 fetch_candidates_for_keys,
-    // 中文:   這裡傳空 slice 保持簽名穩定,不動既有測試 call site。
-    fetch_candidates_for_keys(
-        &keys,
-        input.len() as u32,
-        enabled_sources_bitmask,
-        freq_map,
-        now_ms,
-        &[],
-        prefix_index,
-        dict,
-    )
+    // `custom_entries`.
+    // 中文: Item 12 + D7 — 此 test-only 入口不帶 custom;明確逐欄重建 inner ctx (不用 ..*ctx),
+    // 中文:   讓「強制空 custom」契約清楚、且未來若加非-Copy 欄位也不會破。
+    let inner = ContinuousFetchCtx {
+        enabled_sources_bitmask: ctx.enabled_sources_bitmask,
+        freq_map: ctx.freq_map,
+        now_ms: ctx.now_ms,
+        custom: &[],
+        prefix_index: ctx.prefix_index,
+        dict: ctx.dict,
+    };
+    fetch_candidates_for_keys(&keys, input.len() as u32, &inner)
 }
 
 /// Span aliases for [`fetch_candidates_for_keys`]: `(start_byte, end_byte)`
@@ -485,16 +526,11 @@ pub type ConsumedSpan = (u32, u32);
 // 中文: Phase 9.1 改:接 raw_len (= pending buffer 長度) 用於 Tier 1 判定;排序用 SortKey 8 維 lexicographic(S8:coverage 已降為 score/freq 之後弱 tiebreak)。
 // 中文: Phase 9.3a 改:把 user_freq_boost f32 換成 (FrequencyMap + now_ms),record_to_candidate 內查表算 boost 與 recency。
 // 中文: Phase 9 Item 12 改:接 custom 命中,合成 full-buffer 候選併入 out 後做 (roman,hanji) 去重 (排序前)。
-#[allow(clippy::too_many_arguments)]
+// 中文: D7 改:其餘 6 個共用 arg (filter/freq_map/clock/custom/readers) 收進 ContinuousFetchCtx。
 pub fn fetch_candidates_for_keys(
     keys: &[(ConsumedSpan, String)],
     raw_len: u32,
-    enabled_sources_bitmask: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    custom: &[CustomEntry],
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
     // Item 12: custom entries can still surface even when the
     // syllabifier produced no `keys` for the FST path (e.g. the
@@ -503,16 +539,16 @@ pub fn fetch_candidates_for_keys(
     // for production callers — but a future caller passing empty
     // `keys` + non-empty `custom` must still get the custom merge).
     // 中文: Item 12 — keys 空但 custom 非空時仍需合成 custom 候選 (不再 early-return)。
-    if keys.is_empty() && custom.is_empty() {
+    if keys.is_empty() && ctx.custom.is_empty() {
         return Vec::new();
     }
 
-    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
+    let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
     let mut out: Vec<RawCandidate> = Vec::new();
 
     for (span, key) in keys {
-        for rowid in prefix_index.lookup_exact(key) {
-            let Some(record) = dict.record(rowid) else {
+        for rowid in ctx.prefix_index.lookup_exact(key) {
+            let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
@@ -533,8 +569,8 @@ pub fn fetch_candidates_for_keys(
             out.push(record_to_candidate(
                 record,
                 *span,
-                freq_map,
-                now_ms,
+                ctx.freq_map,
+                ctx.now_ms,
                 COVERAGE_KIND_FULL,
             ));
         }
@@ -553,12 +589,12 @@ pub fn fetch_candidates_for_keys(
     // `docs/engine/continuous-input-ranking.md` §10.10.
     // 中文: Item 12 — custom 命中合成 full-buffer 候選 (is_custom→rank 0),append 在 dict.bin 之後;
     // 中文:   (roman,hanji) 碰撞時 custom rank 0 必勝 (見下方 dedupe)。
-    for entry in custom {
+    for entry in ctx.custom {
         out.push(custom_entry_to_candidate(
             entry,
             raw_len,
-            freq_map,
-            now_ms,
+            ctx.freq_map,
+            ctx.now_ms,
             COVERAGE_KIND_FULL,
         ));
     }
@@ -652,22 +688,17 @@ pub fn fetch_candidates_for_keys(
 // 中文: 呼叫端責任 — key.1 須帶 namespace + 非空 body (例如 "tl:gu");bare namespace "tl:" 不會被擋,但會回前 PARTIAL_PREFIX_CAP 筆,生產路徑由 build_partial_prefix_key_tl 保證不會傳 bare namespace。
 // 中文: Item 12 — custom 命中也併進 partial-prefix 路徑,標 COVERAGE_KIND_PARTIAL_PREFIX
 // 中文:   (NOT FULL — 否則繞過 §15.5「partial 永遠排在 full 之下」),legacy custom dict prefix-visible 行為對齊。
-#[allow(clippy::too_many_arguments)]
+// 中文: D7 改:其餘 6 個共用 arg 收進 ContinuousFetchCtx。
 pub fn fetch_partial_prefix_candidates(
     key: &(ConsumedSpan, String),
     raw_len: u32,
-    enabled_sources_bitmask: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    custom: &[CustomEntry],
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
     let (span, fst_key) = key;
-    if fst_key.is_empty() && custom.is_empty() {
+    if fst_key.is_empty() && ctx.custom.is_empty() {
         return Vec::new();
     }
-    let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
+    let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
     let mut out: Vec<RawCandidate> = Vec::new();
     // Cap by `take(PARTIAL_PREFIX_CAP)` on the rowid stream so the
     // dict-hydration step is bounded even for single-char prefixes
@@ -683,12 +714,13 @@ pub fn fetch_partial_prefix_candidates(
     // trigger a whole-FST scan.
     // 中文: Item 12 — fst_key 空 + custom 非空時會走到這裡,須擋掉 lookup_prefix("") 全表掃描。
     if !fst_key.is_empty() {
-        for rowid in prefix_index
+        for rowid in ctx
+            .prefix_index
             .lookup_prefix(fst_key)
             .into_iter()
             .take(PARTIAL_PREFIX_CAP)
         {
-            let Some(record) = dict.record(rowid) else {
+            let Some(record) = ctx.dict.record(rowid) else {
                 continue;
             };
             if !DictionaryReader::passes_filter(record.bitmask, &filter) {
@@ -697,8 +729,8 @@ pub fn fetch_partial_prefix_candidates(
             out.push(record_to_candidate(
                 record,
                 *span,
-                freq_map,
-                now_ms,
+                ctx.freq_map,
+                ctx.now_ms,
                 COVERAGE_KIND_PARTIAL_PREFIX,
             ));
         }
@@ -713,12 +745,12 @@ pub fn fetch_partial_prefix_candidates(
     // is preserved (Codex pre-impl D6). The span-aware dedupe then runs
     // before the sort, identical to `fetch_candidates_for_keys`.
     // 中文: Item 12 — custom 命中併入 partial-prefix,標 PARTIAL_PREFIX 不標 FULL,保 §15.5 排序不變式。
-    for entry in custom {
+    for entry in ctx.custom {
         out.push(custom_entry_to_candidate(
             entry,
             raw_len,
-            freq_map,
-            now_ms,
+            ctx.freq_map,
+            ctx.now_ms,
             COVERAGE_KIND_PARTIAL_PREFIX,
         ));
     }

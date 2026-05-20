@@ -29,10 +29,33 @@ use std::path::PathBuf;
 
 use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
-use lexicon::fetch_candidates_for_endings;
 use lexicon::prefix_index::PrefixIndex;
+use lexicon::{fetch_candidates_for_endings, ContinuousFetchCtx};
 use protos::engine::FrequencyEntry;
 use ranking::{build_frequency_map, FrequencyMap, MAX_BOOST, RECENCY_WINDOW_MS};
+
+/// v3.5.9 D7 — collapse the six-arg ctx into one literal per test
+/// site. `fetch_candidates_for_endings` is the test-only entry per D8;
+/// it always forces `custom = &[]` internally, so this helper omits
+/// the custom field. `enabled_sources_bitmask = u32::MAX` matches
+/// every other 9.3a test (filter narrowing is covered in
+/// `span_local_fetch.rs`).
+// 中文: D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 4 個 + 1 個 ctx 引用。
+fn ctx<'a>(
+    freq_map: &'a FrequencyMap,
+    now_ms: i64,
+    prefix_index: &'a PrefixIndex,
+    dict: &'a DictionaryReader,
+) -> ContinuousFetchCtx<'a> {
+    ContinuousFetchCtx {
+        enabled_sources_bitmask: u32::MAX,
+        freq_map,
+        now_ms,
+        custom: &[],
+        prefix_index,
+        dict,
+    }
+}
 
 mod common;
 use common::{build_tkdb_v2, write_temp};
@@ -108,11 +131,7 @@ fn user_freq_boost_amplifies_score_for_matched_candidate() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &prefix_index, &dict),
     );
     assert!((cold[0].score - 100.0).abs() < 1e-4);
 
@@ -126,11 +145,7 @@ fn user_freq_boost_amplifies_score_for_matched_candidate() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &map_ten,
-        1_000_000_000_000,
-        &prefix_index,
-        &dict,
+        &ctx(&map_ten, 1_000_000_000_000, &prefix_index, &dict),
     );
     assert!((warm[0].score - 200.0).abs() < 1e-4);
 }
@@ -158,11 +173,7 @@ fn user_freq_boost_saturates_at_max_boost_when_count_high() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &map,
-        1_000_000_000_000,
-        &prefix_index,
-        &dict,
+        &ctx(&map, 1_000_000_000_000, &prefix_index, &dict),
     );
     let expected = 100.0_f32 * MAX_BOOST; // 500.0
     assert!(
@@ -196,7 +207,7 @@ fn recency_rank_zero_when_last_used_is_within_window() {
         last_used_ms,
     }]);
     let out =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, &map, now_ms, &prefix_index, &dict);
+        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].recency_rank, 0);
 }
@@ -222,7 +233,7 @@ fn recency_rank_one_when_last_used_is_outside_window() {
         last_used_ms,
     }]);
     let out =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, &map, now_ms, &prefix_index, &dict);
+        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -248,7 +259,7 @@ fn recency_rank_one_when_clock_skew_now_before_last_used() {
         last_used_ms,
     }]);
     let out =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, &map, now_ms, &prefix_index, &dict);
+        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -273,16 +284,8 @@ fn recency_rank_one_when_now_ms_is_zero() {
         count: 1,
         last_used_ms: 1_700_000_000_000,
     }]);
-    let out = fetch_candidates_for_endings(
-        "tai",
-        0,
-        &[3],
-        u32::MAX,
-        &map,
-        0, // platform shim has not injected a clock yet
-        &prefix_index,
-        &dict,
-    );
+    // platform shim has not injected a clock yet → now_ms = 0
+    let out = fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, 0, &prefix_index, &dict));
     assert_eq!(out[0].recency_rank, 1);
 }
 
@@ -322,7 +325,7 @@ fn recent_candidate_outranks_stale_within_same_tier_and_coverage() {
         last_used_ms: now_ms - 5 * 60 * 1_000,
     }]);
     let out =
-        fetch_candidates_for_endings("tai", 0, &[3], u32::MAX, &map, now_ms, &prefix_index, &dict);
+        fetch_candidates_for_endings("tai", 0, &[3], &ctx(&map, now_ms, &prefix_index, &dict));
     assert_eq!(out.len(), 2);
     let displays: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
     assert_eq!(
@@ -382,11 +385,7 @@ fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
         "taiuantaigi",
         0,
         &[3, 6, 11],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &prefix_index, &dict),
     );
     let displays: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
     assert_eq!(
@@ -435,11 +434,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &map,
-        1_700_000_000_500,
-        &prefix_index,
-        &dict,
+        &ctx(&map, 1_700_000_000_500, &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
     // boost = 1.0 → score == freq.
@@ -481,11 +476,7 @@ fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &map,
-        1_700_000_001_000,
-        &prefix_index,
-        &dict,
+        &ctx(&map, 1_700_000_001_000, &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
     let expected = 100.0_f32 * (1.0 + 7.0 * 0.1);
@@ -539,11 +530,7 @@ fn taiuantaigi_phrase_keeps_slot_one_when_boosted() {
         "taiuantaigi",
         0,
         &[3, 6, 11],
-        u32::MAX,
-        &map,
-        now_ms,
-        &prefix_index,
-        &dict,
+        &ctx(&map, now_ms, &prefix_index, &dict),
     );
     assert_eq!(out[0].display_text, "臺灣台語");
     // 4-syll bias 1.3 × freq 12 × user_freq_boost(3) = 1.3 × 1.3 × 12 = 20.28.

@@ -65,7 +65,7 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key, derive_mode, fetch_candidates_for_keys,
-    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, CustomEntry,
+    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
     EngineHandle as LexiconHandle, RawCandidate, SyllableInventory, COVERAGE_KIND_FULL,
     FORM_NOTONE,
 };
@@ -333,58 +333,39 @@ fn build_keys_tps(raw: &str) -> Vec<(ConsumedSpan, String)> {
 /// `enabled_sources_bitmask = u32::MAX` (PR-9.6 will plumb platform
 /// toggles uniformly to both paths). Caller is responsible for the empty
 /// `Vec::new()` return when state is unavailable.
-// 中文: A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取;
-// 中文:   bitmask 仍 u32::MAX,等 PR-9.6 兩條路徑同步 plumb。
+///
+/// v3.5.9 D7 — takes [`ContinuousFetchCtx`] for the six shared lexicon
+/// args; `enabled_sources_bitmask` is pinned to `u32::MAX` at the seam
+/// construction site (`assemble_candidates`), not here.
+// 中文: A2 — fetch_via_lexicon 純內層;D1 fold 後 prefix/dict 由 seam 提取;bitmask 仍 u32::MAX,等 PR-9.6 兩條路徑同步 plumb。
+// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx,seam 端建一次傳兩個 inner。
 fn fetch_via_lexicon_inner(
     keys: &[(ConsumedSpan, String)],
     raw_len: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    custom: &[CustomEntry],
-    prefix: &PrefixIndex,
-    dict: &DictionaryReader,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    fetch_candidates_for_keys(
-        keys,
-        raw_len,
-        u32::MAX,
-        freq_map,
-        now_ms,
-        custom,
-        prefix,
-        dict,
-    )
+    fetch_candidates_for_keys(keys, raw_len, ctx)
 }
 
 /// v3.5.9 A2 — partial-prefix fetch inner. Pre-A2 `fetch_via_lexicon_partial`'s
 /// body minus the `LexiconHandle::with_state` opener. `build_partial_prefix_key_tl`
 /// is pure (shadow primitives only) and runs ahead of any state borrow.
-// 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key_tl 純函式先跑,
-// 中文:   prefix/dict 由 seam 提取。
-#[allow(clippy::too_many_arguments)]
+///
+/// v3.5.9 D7 — takes [`ContinuousFetchCtx`]; `is_poj` is kept as a
+/// separate arg because it is shadow-key construction input, not part
+/// of the shared lexicon ctx.
+// 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key_tl 純函式先跑,prefix/dict 由 seam 提取。
+// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx;is_poj 為 shadow key 構造輸入,留 separate arg。
 fn fetch_via_lexicon_partial_inner(
     raw: &str,
     raw_len: u32,
-    freq_map: &FrequencyMap,
-    now_ms: i64,
-    custom: &[CustomEntry],
     is_poj: bool,
-    prefix: &PrefixIndex,
-    dict: &DictionaryReader,
+    ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
     let Some(key) = build_partial_prefix_key_tl(raw, is_poj) else {
         return Vec::new();
     };
-    fetch_partial_prefix_candidates(
-        &key,
-        raw_len,
-        u32::MAX,
-        freq_map,
-        now_ms,
-        custom,
-        prefix,
-        dict,
-    )
+    fetch_partial_prefix_candidates(&key, raw_len, ctx)
 }
 
 /// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
@@ -792,6 +773,25 @@ pub(crate) fn assemble_candidates(
         let prefix = state.prefix_index.as_ref();
         let dict = state.dictionary.as_ref();
 
+        // v3.5.9 D7 — build the shared lexicon-fetch context once per
+        // seam invocation. `Some` only when BOTH `prefix_index` and
+        // `dictionary` resolved; either inner fetcher (span-local or
+        // partial-prefix) needs both. `enabled_sources_bitmask =
+        // u32::MAX` is the production wiring (Item: PR-9.6 will plumb
+        // platform toggles uniformly).
+        // 中文: D7 — 此次 seam 共用的 lexicon-fetch ctx 只建一次;只有 prefix+dict 兩個都解到時才 Some
+        // 中文:   (兩個內層 fetcher 都需要);bitmask=u32::MAX 為當前 production 對齊 (待 PR-9.6 統一平台 plumb)。
+        let lex_ctx = prefix
+            .zip(dict)
+            .map(|(prefix_index, dict)| ContinuousFetchCtx {
+                enabled_sources_bitmask: u32::MAX,
+                freq_map,
+                now_ms,
+                custom,
+                prefix_index,
+                dict,
+            });
+
         // ---- Step 1: build keys + shadow/lattice (D1 fold).
         // TPS: pure key build, no shadow_lattice. TL/POJ: build the
         // shadow + lattice ONCE here and project the left-anchored
@@ -832,17 +832,15 @@ pub(crate) fn assemble_candidates(
             // 中文: Item 10 — syllabifier 切不出邊界時改走 TL/POJ partial-prefix;TPS 無對應 partial map,跳過。
             if is_tps {
                 Vec::new()
-            } else if let (Some(prefix), Some(dict)) = (prefix, dict) {
-                fetch_via_lexicon_partial_inner(
-                    raw, raw_len, freq_map, now_ms, custom, is_poj, prefix, dict,
-                )
+            } else if let Some(ctx) = lex_ctx.as_ref() {
+                fetch_via_lexicon_partial_inner(raw, raw_len, is_poj, ctx)
             } else {
                 Vec::new()
             }
         } else {
             // ---- Step 2b: span-local fetch.
-            let mut c = if let (Some(prefix), Some(dict)) = (prefix, dict) {
-                fetch_via_lexicon_inner(&keys, raw_len, freq_map, now_ms, custom, prefix, dict)
+            let mut c = if let Some(ctx) = lex_ctx.as_ref() {
+                fetch_via_lexicon_inner(&keys, raw_len, ctx)
             } else {
                 Vec::new()
             };

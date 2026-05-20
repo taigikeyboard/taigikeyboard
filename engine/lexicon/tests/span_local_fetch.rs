@@ -34,10 +34,47 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
     best_candidate_for_key, fetch_candidates_for_endings, fetch_candidates_for_keys,
-    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, CustomEntry, RawCandidate,
-    COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE, PARTIAL_PREFIX_CAP,
+    fetch_partial_prefix_candidates, CandidateMode, ConsumedSpan, ContinuousFetchCtx, CustomEntry,
+    RawCandidate, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
+    PARTIAL_PREFIX_CAP,
 };
 use ranking::FrequencyMap;
+
+/// v3.5.9 D7 — build the shared `ContinuousFetchCtx` at a test site
+/// with explicit `freq_map` / `now_ms` / `custom`. Pins
+/// `enabled_sources_bitmask = u32::MAX` (matches every test in this
+/// file — filter-narrowing cases live alongside their own ctx
+/// construction). Use [`ctx_neutral`] for the cold-start
+/// no-custom shorthand most cases need.
+// 中文: D7 — 把 ContinuousFetchCtx 收進 helper,call site 由 8 個位置參數縮到 3 個 + 1 個 ctx 引用。
+fn ctx<'a>(
+    freq_map: &'a FrequencyMap,
+    now_ms: i64,
+    custom: &'a [CustomEntry],
+    prefix_index: &'a PrefixIndex,
+    dict: &'a DictionaryReader,
+) -> ContinuousFetchCtx<'a> {
+    ContinuousFetchCtx {
+        enabled_sources_bitmask: u32::MAX,
+        freq_map,
+        now_ms,
+        custom,
+        prefix_index,
+        dict,
+    }
+}
+
+/// Cold-start shorthand: empty `freq_map`, `now_ms = 0`, `custom = &[]`.
+/// Most Phase 5/9.1 regression cases need exactly this — the
+/// frequency / recency / custom axes are pinned by dedicated tests.
+// 中文: cold-start 簡寫 — 空 freq_map / now_ms=0 / 無 custom;絕大多數回歸測試用這個。
+fn ctx_neutral<'a>(
+    freq_map: &'a FrequencyMap,
+    prefix_index: &'a PrefixIndex,
+    dict: &'a DictionaryReader,
+) -> ContinuousFetchCtx<'a> {
+    ctx(freq_map, 0, &[], prefix_index, dict)
+}
 
 mod common;
 use common::{build_tkdb_v2, write_temp};
@@ -168,12 +205,8 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     let out = fetch_candidates_for_endings(
         "tsua",
         0,
-        &[3, 4],              // syllabifier emits span=3 (`tsu`) and span=4 (`tsua`).
-        u32::MAX,             // all sources enabled
-        &FrequencyMap::new(), // empty user-freq snapshot
-        0,                    // now_ms = 0 → recency_rank = 1 everywhere (cold-start)
-        &prefix_index,
-        &dict,
+        &[3, 4], // syllabifier emits span=3 (`tsu`) and span=4 (`tsua`).
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     assert!(
@@ -272,11 +305,7 @@ fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
         "taigikhipuann",
         0,
         &[3, 5, 13],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     let tai = find(&out, "台", (0, 3), 1);
@@ -329,11 +358,7 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
         "taixyz",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     assert!(!out.is_empty(), "expected at least the 台 candidate");
@@ -372,11 +397,7 @@ fn empty_endings_yields_empty() {
         "tai",
         0,
         &[],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(out.is_empty(), "no endings → no candidates");
 }
@@ -400,11 +421,7 @@ fn pos_at_or_past_input_end_yields_empty() {
         "tai",
         3,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(out.is_empty());
 }
@@ -427,11 +444,7 @@ fn out_of_range_endings_silently_skipped() {
         "tai",
         0,
         &[3, 99, 100],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1, "only ending=3 valid: {out:#?}");
     assert_eq!(out[0].display_text, "台");
@@ -466,11 +479,7 @@ fn numeric_tone_input_strips_to_fused_toneless_key() {
         "tsua7",
         0,
         &[5], // syllabifier emits one ending at end-of-input.
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1, "numeric-tone input must surface entry");
     assert_eq!(out[0].display_text, "紙");
@@ -496,11 +505,7 @@ fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
         "tai1bak4",
         0,
         &[4, 8],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     let multi = out
         .iter()
@@ -536,11 +541,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
         "tai-bak",
         0,
         &[7], // hypothetical full-span ending (real syllabifier never emits this)
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(
         out.is_empty(),
@@ -622,11 +623,7 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
         "taiuantaigi",
         0,
         &[3, 6, 11], // syllabifier endings
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     let display_order: Vec<&str> = out.iter().map(|c| c.display_text.as_str()).collect();
@@ -674,11 +671,7 @@ fn single_char_input_e_still_surfaces_de_at_slot_1() {
         "e",
         0,
         &[1],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     assert_eq!(out.len(), 2);
@@ -727,11 +720,7 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
         "taixyz",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     assert!(!out.is_empty(), "Tier 1 partials must still surface");
@@ -810,11 +799,7 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
 
     assert_eq!(out.len(), 3);
@@ -848,11 +833,7 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
     assert_eq!(
@@ -910,11 +891,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(hant.len(), 1);
     assert_eq!(hant[0].mode, CandidateMode::Hant);
@@ -924,11 +901,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "li",
         0,
         &[2],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(tailo.len(), 1);
     assert_eq!(
@@ -942,11 +915,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
         "iausi",
         0,
         &[5],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(mixed.len(), 1);
     assert_eq!(
@@ -998,11 +967,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(hant.len(), 1);
     assert_eq!(hant[0].roman, "tâi");
@@ -1012,11 +977,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "li",
         0,
         &[2],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(tailo.len(), 1);
     assert_eq!(tailo[0].roman, "lí");
@@ -1029,11 +990,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
         "iausi",
         0,
         &[5],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(mixed.len(), 1);
     assert_eq!(mixed[0].roman, "iáu-sī");
@@ -1105,12 +1062,7 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
     let out = fetch_partial_prefix_candidates(
         &key,
         1, // raw_len = "g".len()
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &[], // Item 12: no custom-dict entries in this fixture
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );
 
     // Two `tl:g*` hits; `tl:lin` excluded by FST prefix range.
@@ -1159,12 +1111,7 @@ fn partial_prefix_returns_empty_when_no_dict_hits() {
     let out = fetch_partial_prefix_candidates(
         &key,
         2,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &[], // Item 12: no custom-dict entries in this fixture
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );
     assert!(
         out.is_empty(),
@@ -1200,12 +1147,7 @@ fn partial_prefix_caps_at_partial_prefix_cap_rowids() {
     let out = fetch_partial_prefix_candidates(
         &key,
         1,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &[], // Item 12: no custom-dict entries in this fixture
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );
     assert_eq!(
         out.len(),
@@ -1239,12 +1181,7 @@ fn partial_prefix_empty_key_returns_empty() {
     let out = fetch_partial_prefix_candidates(
         &key,
         0,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &[], // Item 12: no custom-dict entries in this fixture
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );
     assert!(out.is_empty());
 }
@@ -1271,11 +1208,7 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
         "tai",
         0,
         &[3],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].coverage_kind, COVERAGE_KIND_FULL);
@@ -1310,12 +1243,7 @@ fn item12_custom_only_entry_surfaces_full_buffer() {
     let out = fetch_candidates_for_keys(
         &keys,
         6,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &custom,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1, "custom entry must surface, got {out:#?}");
     assert_eq!(out[0].display_text, "台語");
@@ -1348,12 +1276,7 @@ fn item12_custom_dedupes_and_wins_dict_collision() {
     let out = fetch_candidates_for_keys(
         &keys,
         6,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &custom,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
     assert_eq!(
         out.len(),
@@ -1389,12 +1312,7 @@ fn item12_custom_roman_variant_not_deduped() {
     let out = fetch_candidates_for_keys(
         &keys,
         6,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &custom,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
     assert_eq!(
         out.len(),
@@ -1426,12 +1344,7 @@ fn item12_custom_merges_into_partial_prefix_path() {
     let out = fetch_partial_prefix_candidates(
         &key,
         2,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &custom,
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &custom, &prefix_index, &dict),
     );
     let custom_hit = out
         .iter()
@@ -1462,12 +1375,7 @@ fn item12_empty_custom_is_noop() {
     let out = fetch_candidates_for_keys(
         &keys,
         6,
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &[],
-        &prefix_index,
-        &dict,
+        &ctx(&FrequencyMap::new(), 0, &[], &prefix_index, &dict),
     );
     assert_eq!(out.len(), 1);
     assert!(!out[0].is_custom);
@@ -1589,11 +1497,7 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
         "gi",
         0,
         &[2],
-        u32::MAX,
-        &FrequencyMap::new(),
-        0,
-        &prefix_index,
-        &dict,
+        &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     );
     assert!(
         out.iter().any(|c| c.display_text == "語"),
