@@ -1,6 +1,7 @@
 // Pure shadow pipeline — POJ→TL canonicalize, hyphen strip, lattice build, and derived span / partial-prefix / custom-key helpers.
 
 use lexicon::{ConsumedSpan, SyllableInventory};
+use phonetics::InputMode;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::lattice::{build_lattice, Lattice};
@@ -30,10 +31,10 @@ pub(crate) const MAX_SYLLABLES: usize = 8;
 pub(crate) fn build_shadow_lattice(
     raw: &str,
     inv: &SyllableInventory,
-    is_poj: bool,
+    mode: InputMode,
 ) -> (String, Vec<usize>, Lattice) {
     let lower = raw.to_ascii_lowercase();
-    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, is_poj);
+    let (canonical, canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
     let shadow_to_raw_end: Vec<usize> = shadow_to_canonical_end
         .iter()
@@ -286,17 +287,17 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// syllabifier-built lattice edge key, so it simply stays a span-local
 /// candidate and never enters the walker.
 ///
-/// `is_poj` MUST be the same value `continuous::fetch_walker_slot0_inner`
+/// `mode` MUST be the same value `continuous::fetch_walker_slot0_inner`
 /// passes to [`build_shadow_lattice`] for this fetch: the
 /// canonicalize step is mode-gated (toneless ASCII POJ folds `ch→ts`
-/// only when `is_poj`), so a mismatch would make a custom roman key
-/// `tl:chiah` while the lattice edge keys `tl:tsiah`, silently
-/// breaking the S6 byte-identity match.
+/// only when `mode == InputMode::Poj`), so a mismatch would make a
+/// custom roman key `tl:chiah` while the lattice edge keys `tl:tsiah`,
+/// silently breaking the S6 byte-identity match.
 // 中文: 由 custom_dictionary.db entry 的羅馬字推導 walker lattice-edge 比對 key(非 TL-shaped → None)。
 // 中文: 必須與 edge provider 的 tl:{toneless} byte-identical → 重用同一組 shadow helper 同順序。
-pub(crate) fn custom_toneless_key(roman: &str, is_poj: bool) -> Option<String> {
+pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String> {
     let lower = roman.to_ascii_lowercase();
-    let (canonical, _) = canonicalize_poj_shadow(&lower, is_poj);
+    let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _) = build_hyphen_shadow(&canonical);
     let toneless = strip_ascii_tone_digits(&shadow);
     if toneless.is_empty() || !toneless.bytes().all(|b| b.is_ascii_lowercase()) {
@@ -310,16 +311,16 @@ pub(crate) fn custom_toneless_key(roman: &str, is_poj: bool) -> Option<String> {
 /// byte offsets back to original `input` byte offsets. v3.5.8 Phase 9
 /// Item 9.
 ///
-/// Pure-ASCII handling is **mode-gated** on `is_poj`:
-/// - `is_poj == false` (TL / non-POJ): passed through unchanged with an
-///   identity offset map — the F3C gate from the pre-impl Codex consult
-///   (2026-05-15), preserving every Item 8 hyphen-shadow contract pin.
-///   Without it, `phonetics::normalize_to_tl`'s ASCII substitutions
-///   (`ou→oo`, `oa→ua`, ...) would mis-rewrite real dictionary entries
-///   like `tó-uī` (`dictionary/output/dictionary.csv:1984`,
-///   `tl_notone=toui`) into `tooi` once the hyphen collapses the two
-///   syllables together.
-/// - `is_poj == true` (POJ mode): toneless ASCII POJ never carries the
+/// Pure-ASCII handling is **mode-gated** on `mode`:
+/// - `mode != InputMode::Poj` (TL / TPS / English): passed through
+///   unchanged with an identity offset map — the F3C gate from the
+///   pre-impl Codex consult (2026-05-15), preserving every Item 8
+///   hyphen-shadow contract pin. Without it, `phonetics::normalize_to_tl`'s
+///   ASCII substitutions (`ou→oo`, `oa→ua`, ...) would mis-rewrite real
+///   dictionary entries like `tó-uī`
+///   (`dictionary/output/dictionary.csv:1984`, `tl_notone=toui`) into
+///   `tooi` once the hyphen collapses the two syllables together.
+/// - `mode == InputMode::Poj` (POJ mode): toneless ASCII POJ never carries the
 ///   non-ASCII tone diacritics that would otherwise route it through the
 ///   Phase 2 chain, so the identity fast-path would leave `chiah` /
 ///   `goa` / `che` keyed as `tl:chiah` (zero FST hits — the dictionary
@@ -382,13 +383,13 @@ pub(crate) fn custom_toneless_key(roman: &str, is_poj: bool) -> Option<String> {
 ///   pending; the user's deliberate tap on the shorter candidate
 ///   opted into that.
 // 中文: POJ-display 輸入 → 純 ASCII 標準 TL 拼寫,並建立 canonical byte → raw byte 對照表。
-pub(crate) fn canonicalize_poj_shadow(input: &str, is_poj: bool) -> (String, Vec<usize>) {
+pub(crate) fn canonicalize_poj_shadow(input: &str, mode: InputMode) -> (String, Vec<usize>) {
     if input.is_ascii() {
         // Identity offset map: Phase 1's NFD walk is a no-op for ASCII,
         // so every canonical byte maps straight back to its own raw
         // offset regardless of which branch we take below.
         let map: Vec<usize> = (0..=input.len()).collect();
-        if is_poj {
+        if matches!(mode, InputMode::Poj) {
             // POJ mode: fold POJ→TL spelling even for toneless ASCII so
             // `chiah`→`tsiah`, `goa`→`gua`, … reach the TL-keyed FST.
             return apply_normalize_to_tl_with_offsets(input.to_owned(), map);
@@ -573,13 +574,13 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 // 中文:   consumed_span 固定 (0, raw.len()),配合 Q15.4 partial-prefix 一律 final-commit。
 pub(crate) fn build_partial_prefix_key_tl(
     raw: &str,
-    is_poj: bool,
+    mode: InputMode,
 ) -> Option<(ConsumedSpan, String)> {
     if raw.is_empty() {
         return None;
     }
     let lower = raw.to_ascii_lowercase();
-    let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, is_poj);
+    let (canonical, _canonical_to_raw_end) = canonicalize_poj_shadow(&lower, mode);
     let (shadow, _shadow_to_canonical_end) = build_hyphen_shadow(&canonical);
     let toneless = strip_ascii_tone_digits(&shadow);
     if toneless.is_empty() {
@@ -621,7 +622,7 @@ mod tests {
     #[test]
     fn custom_toneless_key_numeric_tl_strips_tone_digits() {
         assert_eq!(
-            custom_toneless_key("tai5gi2", false).as_deref(),
+            custom_toneless_key("tai5gi2", InputMode::Tl).as_deref(),
             Some("tl:taigi")
         );
     }
@@ -631,7 +632,7 @@ mod tests {
         // Same `tl:taigi` key the edge provider builds for the `taigi`
         // span — proves the byte-identical-match contract.
         assert_eq!(
-            custom_toneless_key("tai5-gi2", false).as_deref(),
+            custom_toneless_key("tai5-gi2", InputMode::Tl).as_deref(),
             Some("tl:taigi")
         );
     }
@@ -643,14 +644,14 @@ mod tests {
         // produces. A plain tone-digit strip would NOT do this — the
         // `canonicalize_poj_shadow` pass is load-bearing.
         assert_eq!(
-            custom_toneless_key("tâi-gí", false).as_deref(),
+            custom_toneless_key("tâi-gí", InputMode::Tl).as_deref(),
             Some("tl:taigi"),
             "POJ diacritic must canonicalize → same key as numeric tai5gi2"
         );
         // POJ `oa`/`ou`-style display also canonicalizes (Item 9 chain).
         assert_eq!(
-            custom_toneless_key("tâi-oân", false).as_deref(),
-            custom_toneless_key("tai5uan5", false).as_deref(),
+            custom_toneless_key("tâi-oân", InputMode::Tl).as_deref(),
+            custom_toneless_key("tai5uan5", InputMode::Tl).as_deref(),
         );
     }
 
@@ -659,26 +660,26 @@ mod tests {
         // Empty / whitespace / punctuation / CJK / digit-only custom
         // roman can never equal a syllabifier-built lattice edge key,
         // so it returns None and stays a span-local-only candidate.
-        assert_eq!(custom_toneless_key("", false), None);
-        assert_eq!(custom_toneless_key("   ", false), None);
-        assert_eq!(custom_toneless_key("!!!", false), None);
-        assert_eq!(custom_toneless_key("123", false), None);
-        assert_eq!(custom_toneless_key("台語", false), None);
+        assert_eq!(custom_toneless_key("", InputMode::Tl), None);
+        assert_eq!(custom_toneless_key("   ", InputMode::Tl), None);
+        assert_eq!(custom_toneless_key("!!!", InputMode::Tl), None);
+        assert_eq!(custom_toneless_key("123", InputMode::Tl), None);
+        assert_eq!(custom_toneless_key("台語", InputMode::Tl), None);
     }
 
     #[test]
     fn custom_toneless_key_poj_ascii_matches_walker_edge_key() {
         // S6 byte-identity: a custom-dict roman `chiah` keyed under the
-        // SAME is_poj the walker edge provider uses must equal the
+        // SAME `mode` the walker edge provider uses must equal the
         // lattice edge key `tl:tsiah` (split-brain would drop the
         // custom match in POJ mode).
         assert_eq!(
-            custom_toneless_key("chiah", true).as_deref(),
+            custom_toneless_key("chiah", InputMode::Poj).as_deref(),
             Some("tl:tsiah"),
         );
         // TL mode keeps the F3C identity (un-canonicalized).
         assert_eq!(
-            custom_toneless_key("chiah", false).as_deref(),
+            custom_toneless_key("chiah", InputMode::Tl).as_deref(),
             Some("tl:chiah"),
         );
     }
@@ -766,14 +767,14 @@ mod tests {
         // The F3C gate: pure-ASCII TL input MUST pass through with an
         // identity offset map, otherwise downstream Item 8 contract pins
         // (offset map = vec![0, 1, 2, ...]) regress.
-        let (canonical, map) = canonicalize_poj_shadow("tai-bak", false);
+        let (canonical, map) = canonicalize_poj_shadow("tai-bak", InputMode::Tl);
         assert_eq!(canonical, "tai-bak");
         assert_eq!(map, vec![0, 1, 2, 3, 4, 5, 6, 7]);
     }
 
     #[test]
     fn canonicalize_poj_shadow_empty_ascii_is_identity() {
-        let (canonical, map) = canonicalize_poj_shadow("", false);
+        let (canonical, map) = canonicalize_poj_shadow("", InputMode::Tl);
         assert_eq!(canonical, "");
         assert_eq!(map, vec![0]);
     }
@@ -783,7 +784,7 @@ mod tests {
         // `pe\u{030d}h` (POJ `pe̍h` for 白): combining tone-8 mark on
         // `e`; canonical drops it and `e`'s raw_end inherits the 2
         // bytes the mark would have consumed.
-        let (canonical, map) = canonicalize_poj_shadow("pe\u{030d}h", false);
+        let (canonical, map) = canonicalize_poj_shadow("pe\u{030d}h", InputMode::Tl);
         assert_eq!(canonical, "peh");
         // `p` stays at raw_end 1; `e` jumps to 4 (skipping the
         // 2-byte `\u{030d}`); `h` lands at 5.
@@ -795,7 +796,7 @@ mod tests {
         // `so\u{0358}` (POJ `so͘` for 嫂): combining dot-above-right is
         // NOT a tone mark per is_tone_combining_mark; it survives
         // Phase 1 and Phase 2 collapses `o\u{0358}` → `oo`.
-        let (canonical, map) = canonicalize_poj_shadow("so\u{0358}", false);
+        let (canonical, map) = canonicalize_poj_shadow("so\u{0358}", InputMode::Tl);
         assert_eq!(canonical, "soo");
         // Both new `o` bytes anchor at raw_end 4 (after the full
         // `o\u{0358}` source spelling). Codex post-impl P1: partial-
@@ -810,7 +811,7 @@ mod tests {
         // into): Codex post-impl P3 — baseline map[0] = 0 stays, the
         // next emitted char accounts for the dropped mark's bytes via
         // its own raw_idx + len_utf8.
-        let (canonical, map) = canonicalize_poj_shadow("\u{030d}h", false);
+        let (canonical, map) = canonicalize_poj_shadow("\u{030d}h", InputMode::Tl);
         assert_eq!(canonical, "h");
         assert_eq!(map, vec![0, 3]);
     }
@@ -818,7 +819,7 @@ mod tests {
     #[test]
     fn canonicalize_poj_shadow_superscript_nasal_marker_emits_nn() {
         // `pe\u{207f}` (POJ `peⁿ`): superscript-n collapses to `nn`.
-        let (canonical, map) = canonicalize_poj_shadow("pe\u{207f}", false);
+        let (canonical, map) = canonicalize_poj_shadow("pe\u{207f}", InputMode::Tl);
         assert_eq!(canonical, "penn");
         // `p` → 1, `e` → 2, both new `n` bytes anchor at raw_end 5
         // (after `\u{207f}`).
@@ -829,7 +830,7 @@ mod tests {
     fn canonicalize_poj_shadow_poj_ch_initial_substitutes_to_ts() {
         // Non-ASCII path with `ch` initial: `chóa` (POJ `tsuá`) →
         // canonical `tsua` with the tone-2 acute dropped.
-        let (canonical, _map) = canonicalize_poj_shadow("ch\u{f3}a", false);
+        let (canonical, _map) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Tl);
         assert_eq!(canonical, "tsua");
     }
 
@@ -840,7 +841,7 @@ mod tests {
         // makes it `o`. This pins the ordering: NFD walk must come
         // BEFORE the lowercase pass, otherwise uppercase precomposed
         // diacritic chars would survive into Phase 2 substitutions.
-        let (out, _map) = canonicalize_poj_shadow("\u{00d3}a", false);
+        let (out, _map) = canonicalize_poj_shadow("\u{00d3}a", InputMode::Tl);
         assert_eq!(out, "ua", "{out:?}");
     }
 
@@ -851,7 +852,7 @@ mod tests {
         // is the only 4→3 shrinking rule and must drain exactly one
         // map entry. Input `o\u{0358}\u{207f}` itself: `o` (1) +
         // `\u{0358}` (2) + `\u{207f}` (3) = 6 bytes.
-        let (out, map) = canonicalize_poj_shadow("o\u{0358}\u{207f}", false);
+        let (out, map) = canonicalize_poj_shadow("o\u{0358}\u{207f}", InputMode::Tl);
         assert_eq!(out, "onn", "{out:?}");
         // After `oonn→onn` collapse, the final byte's raw_end must
         // equal the full input length (6).
@@ -863,19 +864,19 @@ mod tests {
         // PR #300 root cause: in POJ mode, toneless ASCII POJ must run
         // Phase 2 — `chiah` → `tsiah` so the FST `tl:tsiah` lookup hits.
         // TL mode keeps the F3C identity (`chiah` → `chiah`).
-        let (poj, map) = canonicalize_poj_shadow("chiah", true);
+        let (poj, map) = canonicalize_poj_shadow("chiah", InputMode::Poj);
         assert_eq!(poj, "tsiah");
         // ASCII identity map (Phase 1 NFD is identity for ASCII;
         // `ch→ts` is byte-length-preserving so the map is invariant).
         assert_eq!(map, vec![0, 1, 2, 3, 4, 5]);
-        let (tl, _) = canonicalize_poj_shadow("chiah", false);
+        let (tl, _) = canonicalize_poj_shadow("chiah", InputMode::Tl);
         assert_eq!(tl, "chiah");
     }
 
     #[test]
     fn canonicalize_poj_shadow_poj_ascii_chhia_oa_oe_eng_ek_fold() {
         // All the equal-length POJ→TL ASCII substitutions fire under
-        // is_poj: chh→tsh, oa→ua, oe→ue, eng→ing, ek→ik.
+        // POJ mode: chh→tsh, oa→ua, oe→ue, eng→ing, ek→ik.
         for (input, expected) in [
             ("chhia", "tshia"), // 車
             ("goa", "gua"),     // 我  oa→ua
@@ -883,8 +884,8 @@ mod tests {
             ("peng", "ping"),   // eng→ing
             ("tek", "tik"),     // ek→ik
         ] {
-            let (out, _) = canonicalize_poj_shadow(input, true);
-            assert_eq!(out, expected, "is_poj `{input}` → `{expected}`");
+            let (out, _) = canonicalize_poj_shadow(input, InputMode::Poj);
+            assert_eq!(out, expected, "POJ `{input}` → `{expected}`");
         }
     }
 
@@ -892,7 +893,7 @@ mod tests {
     fn canonicalize_poj_shadow_poj_ascii_oonn_shrinks_with_offset_drain() {
         // The only ASCII-reachable shrinking rule (`oonn→onn`) must
         // still drain exactly one map entry under the POJ ASCII path.
-        let (out, map) = canonicalize_poj_shadow("oonn", true);
+        let (out, map) = canonicalize_poj_shadow("oonn", InputMode::Poj);
         assert_eq!(out, "onn", "{out:?}");
         assert_eq!(
             *map.last().unwrap(),
@@ -904,13 +905,13 @@ mod tests {
     #[test]
     fn canonicalize_poj_shadow_tl_ascii_chiah_stays_identity_f3c_guard() {
         // Regression guard for the F3C gate: the SAME ASCII input in TL
-        // mode (is_poj = false) must NOT be rewritten, so the `tó-uī`
+        // mode (`mode = InputMode::Tl`) must NOT be rewritten, so the `tó-uī`
         // (`toui`) class of real TL entries is never garbled.
-        let (out, map) = canonicalize_poj_shadow("chiah", false);
+        let (out, map) = canonicalize_poj_shadow("chiah", InputMode::Tl);
         assert_eq!(out, "chiah", "TL-mode ASCII must stay identity");
         assert_eq!(map, (0..="chiah".len()).collect::<Vec<_>>());
         // `toui` (佗位) must survive — `ou→oo` must NOT fire in TL mode.
-        let (toui, _) = canonicalize_poj_shadow("toui", false);
+        let (toui, _) = canonicalize_poj_shadow("toui", InputMode::Tl);
         assert_eq!(toui, "toui", "F3C: TL-mode `toui` must not become `tooi`");
     }
 
@@ -919,10 +920,10 @@ mod tests {
         // Non-ASCII POJ-display input has always run Phase 2; mode
         // gating only changes the ASCII path. `chóa` canonicalizes to
         // `tsua` in BOTH modes (Phase 1 strips tone-2, then Phase 2
-        // runs `ch→ts`, `oa→ua` regardless of is_poj for non-ASCII
+        // runs `ch→ts`, `oa→ua` regardless of `mode` for non-ASCII
         // inputs).
-        let (poj, _) = canonicalize_poj_shadow("ch\u{f3}a", true);
-        let (tl, _) = canonicalize_poj_shadow("ch\u{f3}a", false);
+        let (poj, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Poj);
+        let (tl, _) = canonicalize_poj_shadow("ch\u{f3}a", InputMode::Tl);
         assert_eq!(poj, "tsua");
         assert_eq!(tl, "tsua");
     }
@@ -1000,7 +1001,7 @@ mod tests {
 
     #[test]
     fn build_partial_prefix_key_tl_passes_ascii_through() {
-        let (span, key) = build_partial_prefix_key_tl("gu", false).unwrap();
+        let (span, key) = build_partial_prefix_key_tl("gu", InputMode::Tl).unwrap();
         // partial-prefix candidates always final-commit (Q15.4) →
         // consumed_span covers the whole pending tail.
         assert_eq!(span, (0u32, 2u32));
@@ -1012,7 +1013,7 @@ mod tests {
         // The digit half of `notone.py::remove_tone` still applies on
         // the partial-prefix path so `gu5` and `gu` produce the same
         // FST prefix key.
-        let (_, key) = build_partial_prefix_key_tl("GU5", false).unwrap();
+        let (_, key) = build_partial_prefix_key_tl("GU5", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:gu");
     }
 
@@ -1022,9 +1023,9 @@ mod tests {
         // too — `tai-` collapses to `tai` (trailing `-` stays in the
         // pending raw buffer per build_hyphen_shadow contract), and
         // `-tai` collapses to `tai`.
-        let (_, key) = build_partial_prefix_key_tl("tai-", false).unwrap();
+        let (_, key) = build_partial_prefix_key_tl("tai-", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:tai");
-        let (_, key) = build_partial_prefix_key_tl("-tai", false).unwrap();
+        let (_, key) = build_partial_prefix_key_tl("-tai", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:tai");
     }
 
@@ -1033,7 +1034,7 @@ mod tests {
         // Item 9's canonicalize chain runs on partial-prefix input too
         // — `pe\u{030d}` (POJ `pe̍h` minus the trailing `h`) folds to
         // `pe` after the tone-mark drop, giving FST key `tl:pe`.
-        let (_, key) = build_partial_prefix_key_tl("pe\u{030d}", false).unwrap();
+        let (_, key) = build_partial_prefix_key_tl("pe\u{030d}", InputMode::Tl).unwrap();
         assert_eq!(key, "tl:pe");
     }
 
@@ -1041,11 +1042,11 @@ mod tests {
     fn build_partial_prefix_key_tl_returns_none_for_empty_after_strip() {
         // Hyphen-only or digit-only raw produces an empty toneless
         // key — return None so the caller skips the FST scan.
-        assert!(build_partial_prefix_key_tl("", false).is_none());
-        assert!(build_partial_prefix_key_tl("-", false).is_none());
-        assert!(build_partial_prefix_key_tl("--", false).is_none());
-        assert!(build_partial_prefix_key_tl("5", false).is_none());
-        assert!(build_partial_prefix_key_tl("-5-", false).is_none());
+        assert!(build_partial_prefix_key_tl("", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key_tl("-", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key_tl("--", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key_tl("5", InputMode::Tl).is_none());
+        assert!(build_partial_prefix_key_tl("-5-", InputMode::Tl).is_none());
     }
 
     #[test]
@@ -1053,9 +1054,9 @@ mod tests {
         // Partial-prefix path (syllabifier yielded no ending) must also
         // fold POJ ASCII so a half-typed `chi` keys `tl:tsi`, not the
         // dead `tl:chi`.
-        let (_, key) = build_partial_prefix_key_tl("chi", true).unwrap();
+        let (_, key) = build_partial_prefix_key_tl("chi", InputMode::Poj).unwrap();
         assert_eq!(key, "tl:tsi");
-        let (_, tl_key) = build_partial_prefix_key_tl("chi", false).unwrap();
+        let (_, tl_key) = build_partial_prefix_key_tl("chi", InputMode::Tl).unwrap();
         assert_eq!(tl_key, "tl:chi", "TL mode keeps F3C identity");
     }
 

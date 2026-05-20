@@ -35,7 +35,7 @@ fn hyphenless_input_matches_pre_item8_consumed_span() {
     // pre-Item 8. With the shadow pipeline in place those values must
     // not shift even though no hyphen is involved.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("taibak", &inv, false);
+    let keys = build_keys_tl_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -54,7 +54,7 @@ fn internal_hyphen_consumed_into_full_buffer_span() {
     // shadow_end=6 → raw_end=7 (after `k`). Full-buffer Tier-1 candidate
     // therefore reports consumed_span_end == raw_len == 7.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai-bak", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai-bak", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -71,7 +71,7 @@ fn numeric_tone_with_hyphen_strips_both_in_key_only() {
     // up-front by `build_hyphen_shadow`. Final keys equal the hyphenless
     // case.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai5-bak4", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai5-bak4", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -88,7 +88,7 @@ fn double_hyphen_collapses_into_consumed_prefix() {
     // the offset math is identical regardless of which syllables the
     // hyphens sit between.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai--bak", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai--bak", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -102,7 +102,7 @@ fn leading_hyphen_consumed_into_first_span() {
     // span so the user sees the leading garbage swept along with the
     // commit (rather than being silently abandoned).
     let inv = build_inventory(&["tai5"]);
-    let keys = build_keys_tl_with_inventory("-tai", &inv, false);
+    let keys = build_keys_tl_with_inventory("-tai", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -116,7 +116,7 @@ fn trailing_hyphen_left_in_pending_buffer() {
     // consumed_span ends at the `i`, leaving `-` in the pending raw
     // buffer so the host app shows it after commit.
     let inv = build_inventory(&["tai5"]);
-    let keys = build_keys_tl_with_inventory("tai-", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai-", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -131,7 +131,7 @@ fn internal_hyphen_consumed_trailing_hyphen_excluded() {
     // outer trailing `-` is dropped from consumed_span. Combined: the
     // full match reports `(0, 7)`, not `(0, 8)`.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai-bak-", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai-bak-", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -144,7 +144,7 @@ fn all_hyphen_input_yields_no_keys() {
     // `---` → shadow empty → syllabifier returns no endings →
     // `build_keys_tl_with_inventory` short-circuits before allocating.
     let inv = build_inventory(&["tai5"]);
-    let keys = build_keys_tl_with_inventory("---", &inv, false);
+    let keys = build_keys_tl_with_inventory("---", &inv, phonetics::InputMode::Tl);
     assert!(keys.is_empty(), "expected no keys, got {keys:?}");
 }
 
@@ -160,7 +160,7 @@ fn multi_byte_chars_preserve_byte_correct_offset_map() {
     // per trailing-hyphen semantics, and the multi-byte `ō` does not
     // skew the map. Codex post-impl P3 #3 regression guard.
     let inv = build_inventory(&["tai5"]);
-    let keys = build_keys_tl_with_inventory("tai-ōe-", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai-ōe-", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))

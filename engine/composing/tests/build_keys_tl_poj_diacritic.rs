@@ -51,7 +51,7 @@ fn nfc_peh_oe_ji_surfaces_full_fused_key() {
     // the live dictionary's `tl_notone` for 白話字
     // (`dictionary/output/dictionary.csv:3181`).
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("pe\u{030d}h-\u{014d}e-j\u{012b}", &inv, false);
+    let keys = build_keys_tl_with_inventory("pe\u{030d}h-\u{014d}e-j\u{012b}", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -82,7 +82,7 @@ fn nfd_peh_oe_ji_matches_nfc_canary() {
     let nfd: String = nfc.nfd().collect();
     assert!(nfd.len() > nfc.len(), "NFD canary assumption violated");
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory(&nfd, &inv, false);
+    let keys = build_keys_tl_with_inventory(&nfd, &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:pehueji"),
@@ -104,7 +104,7 @@ fn poj_initial_ch_substitution_canonicalizes_to_ts() {
     // normalize_to_tl (`ch→ts`, then `oa→ua`) → `tsua`. The dictionary
     // already keys `紙` etc. as `tl_notone=tsua`.
     let inv = build_inventory(&["tsua7"]);
-    let keys = build_keys_tl_with_inventory("ch\u{00f3}a", &inv, false);
+    let keys = build_keys_tl_with_inventory("ch\u{00f3}a", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tsua"),
@@ -118,7 +118,7 @@ fn poj_superscript_nasal_marker_becomes_nn() {
     // Phase 2 `\u{207f}→nn` → `penn` → matches dict canonical for
     // 平 (`pee` + nasal) etc.
     let inv = build_inventory(&["penn1"]);
-    let keys = build_keys_tl_with_inventory("pe\u{207f}", &inv, false);
+    let keys = build_keys_tl_with_inventory("pe\u{207f}", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:penn"),
@@ -139,7 +139,7 @@ fn poj_o_with_dot_above_right_becomes_oo() {
     // `so\u{0358}` (4 bytes) → Phase 1 keeps `\u{0358}` → Phase 2
     // `o\u{0358}→oo` → `soo` → matches dict canonical for 數 etc.
     let inv = build_inventory(&["soo3"]);
-    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, false);
+    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:soo"),
@@ -158,7 +158,7 @@ fn poj_o_dot_atomic_substitution_no_prefix_dangling_mark() {
     // consume the whole `so\u{0358}` source spelling so the user
     // never sees a stranded combining mark.
     let inv = build_inventory(&["soo3", "so7"]);
-    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, false);
+    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -188,7 +188,7 @@ fn mixed_combining_with_hyphen_chains_to_full_fused_key() {
     // canonicalize + Item 8 hyphen-shadow) must compose without
     // shifting the offset map.
     let inv = build_inventory(&["tai5", "ue7"]);
-    let keys = build_keys_tl_with_inventory("t\u{00e2}i-\u{014d}e", &inv, false);
+    let keys = build_keys_tl_with_inventory("t\u{00e2}i-\u{014d}e", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tai"),
@@ -208,7 +208,7 @@ fn dual_marker_combining_and_trailing_digit_canonicalizes() {
     // is dropped during Phase 1 → `tai5-ban3` → hyphen-strip →
     // `tai5ban3` → digit-strip → `taiban`).
     let inv = build_inventory(&["tai5", "ban3"]);
-    let keys = build_keys_tl_with_inventory("t\u{00e2}i5-ban3", &inv, false);
+    let keys = build_keys_tl_with_inventory("t\u{00e2}i5-ban3", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:taiban"),
@@ -219,14 +219,14 @@ fn dual_marker_combining_and_trailing_digit_canonicalizes() {
 #[test]
 fn pure_ascii_input_takes_identity_fast_path() {
     // `taibak` — F3C pure-ASCII identity guard, **TL mode**
-    // (`is_poj = false`). Output must be byte-identical to the Item 8
+    // (`mode = InputMode::Tl`). Output must be byte-identical to the Item 8
     // pipeline (consumed_span values unchanged). Any drift here means
     // `canonicalize_poj_shadow` is running the substitution chain on
     // ASCII TL input, which would risk garbling the `tó-uī` class of
     // real dictionary entries. (POJ mode deliberately DOES run the
     // chain on ASCII — see `poj_mode_ascii_*` tests below.)
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("taibak", &inv, false);
+    let keys = build_keys_tl_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -240,7 +240,7 @@ fn pure_ascii_input_takes_identity_fast_path() {
 
 #[test]
 fn ascii_only_poj_spellings_skip_canonicalize() {
-    // F3C guard end-to-end, **TL mode** (`is_poj = false`): `oe-ji` is
+    // F3C guard end-to-end, **TL mode** (`mode = InputMode::Tl`): `oe-ji` is
     // pure ASCII so canonicalize is a no-op; the `oe→ue` substitution
     // does NOT fire, and the FST lookup against `oeji` misses. Without
     // this guard, ASCII-only dictionary entries whose `tl_notone`
@@ -250,7 +250,7 @@ fn ascii_only_poj_spellings_skip_canonicalize() {
     // ASCII in TL mode. (POJ mode is the opposite — see
     // `poj_mode_ascii_oe_substitution_fires`.)
     let inv = build_inventory(&["ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("oe-ji", &inv, false);
+    let keys = build_keys_tl_with_inventory("oe-ji", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.iter().any(|k| k.contains("ue")),
@@ -264,7 +264,7 @@ fn ascii_only_poj_spellings_skip_canonicalize() {
 // identity fast-path, so `ch→ts` etc. never ran and the lattice keyed
 // `tl:chiah` — zero FST hits (the dictionary stores `tl:tsiah`), i.e.
 // every ch-/chh-/oa-/oe- POJ word returned no continuous candidates.
-// `is_poj = true` must run the POJ→TL spelling chain on ASCII too.
+// `mode = InputMode::Poj` must run the POJ→TL spelling chain on ASCII too.
 
 #[test]
 fn poj_mode_ascii_chiah_canonicalizes_to_tsiah() {
@@ -272,7 +272,7 @@ fn poj_mode_ascii_chiah_canonicalizes_to_tsiah() {
     // `ch→ts` so the key is `tl:tsiah` (the form the dictionary FST
     // actually stores), not the dead `tl:chiah`.
     let inv = build_inventory(&["tsiah8"]);
-    let keys = build_keys_tl_with_inventory("chiah", &inv, true);
+    let keys = build_keys_tl_with_inventory("chiah", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tsiah"),
@@ -288,7 +288,7 @@ fn poj_mode_ascii_chiah_canonicalizes_to_tsiah() {
 fn poj_mode_ascii_chhia_canonicalizes_to_tshia() {
     // 車 — POJ `chhia`, toneless ASCII `chhia` → TL `tshia`.
     let inv = build_inventory(&["tshia1"]);
-    let keys = build_keys_tl_with_inventory("chhia", &inv, true);
+    let keys = build_keys_tl_with_inventory("chhia", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tshia"),
@@ -300,7 +300,7 @@ fn poj_mode_ascii_chhia_canonicalizes_to_tshia() {
 fn poj_mode_ascii_goa_canonicalizes_to_gua() {
     // 我 — POJ `góa`, toneless ASCII `goa` → TL `gua` (`oa→ua`).
     let inv = build_inventory(&["gua2"]);
-    let keys = build_keys_tl_with_inventory("goa", &inv, true);
+    let keys = build_keys_tl_with_inventory("goa", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:gua"),
@@ -311,9 +311,9 @@ fn poj_mode_ascii_goa_canonicalizes_to_gua() {
 #[test]
 fn poj_mode_ascii_oe_substitution_fires() {
     // Opposite of `ascii_only_poj_spellings_skip_canonicalize`: with
-    // `is_poj = true`, ASCII `oe-ji` DOES fold `oe→ue` → `tl:ueji`.
+    // `mode = InputMode::Poj`, ASCII `oe-ji` DOES fold `oe→ue` → `tl:ueji`.
     let inv = build_inventory(&["ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("oe-ji", &inv, true);
+    let keys = build_keys_tl_with_inventory("oe-ji", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.iter().any(|k| k.contains("ue")),
@@ -324,11 +324,11 @@ fn poj_mode_ascii_oe_substitution_fires() {
 #[test]
 fn tl_mode_ascii_chiah_stays_identity() {
     // Regression guard for the F3C gate: the SAME ASCII `chiah`, in TL
-    // mode (`is_poj = false`), must NOT be rewritten — it stays
+    // mode (`mode = InputMode::Tl`), must NOT be rewritten — it stays
     // `tl:chiah` (no `tl:tsiah`), so a real TL entry whose toneless
     // form legitimately contains `ch`/`oa`/`oe`/`ou` is never garbled.
     let inv = build_inventory(&["tsiah8"]);
-    let keys = build_keys_tl_with_inventory("chiah", &inv, false);
+    let keys = build_keys_tl_with_inventory("chiah", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.contains(&"tl:tsiah"),
@@ -337,26 +337,31 @@ fn tl_mode_ascii_chiah_stays_identity() {
 }
 
 #[test]
-fn config_input_mode_string_drives_is_poj_through_key_construction() {
+fn config_input_mode_string_drives_mode_through_key_construction() {
     // Codex post-impl P3 — close the production-plumbing gap: prove the
     // raw `AppConfig.input_mode` STRING ("poj" / "tl") → the same
-    // `parse_input_mode → == InputMode::Poj` derivation `handle_fetch_at_pos`
-    // does → the `is_poj` boolean that gates key construction. This is
-    // the exact two-line chain at the dispatch entry point, reproduced
-    // here against the real `phonetics` parser (a full lexicon-installed
+    // `parse_input_mode` derivation `handle_fetch_at_pos` does → the
+    // `mode: InputMode` value that gates key construction. This is the
+    // exact chain at the dispatch entry point, reproduced here against
+    // the real `phonetics` parser (a full lexicon-installed
     // `FetchAtPos` integration harness does not exist on the composing
     // side, and the bug locus is the key construction, not dict-row
     // resolution).
+    //
+    // v3.5.9 B-0c: `is_poj: bool` parameter retired in favor of
+    // `mode: phonetics::InputMode`; this test now threads `mode`
+    // directly (was: `parse_input_mode(...) == InputMode::Poj`).
     let inv = build_inventory(&["tsiah8"]);
 
-    // Mirror of `handle_fetch_at_pos`: parse the config string, derive
-    // `is_poj`, thread it into the production key builder.
-    let poj_is_poj = phonetics::api::parse_input_mode("poj") == phonetics::InputMode::Poj;
-    assert!(
-        poj_is_poj,
-        "config `input_mode=\"poj\"` must derive is_poj=true"
+    // Mirror of `handle_fetch_at_pos`: parse the config string, thread
+    // the resulting `mode` into the production key builder.
+    let poj_mode = phonetics::api::parse_input_mode("poj");
+    assert_eq!(
+        poj_mode,
+        phonetics::InputMode::Poj,
+        "config `input_mode=\"poj\"` must parse to InputMode::Poj"
     );
-    let poj_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, poj_is_poj)
+    let poj_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, poj_mode)
         .into_iter()
         .map(|(_, k)| k)
         .collect();
@@ -365,12 +370,13 @@ fn config_input_mode_string_drives_is_poj_through_key_construction() {
         "config `poj` must thread through to `tl:tsiah`, got {poj_keys:?}",
     );
 
-    let tl_is_poj = phonetics::api::parse_input_mode("tl") == phonetics::InputMode::Poj;
-    assert!(
-        !tl_is_poj,
-        "config `input_mode=\"tl\"` must derive is_poj=false"
+    let tl_mode = phonetics::api::parse_input_mode("tl");
+    assert_eq!(
+        tl_mode,
+        phonetics::InputMode::Tl,
+        "config `input_mode=\"tl\"` must parse to InputMode::Tl"
     );
-    let tl_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, tl_is_poj)
+    let tl_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, tl_mode)
         .into_iter()
         .map(|(_, k)| k)
         .collect();

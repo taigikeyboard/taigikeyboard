@@ -34,7 +34,7 @@
 //! built twice per non-TPS `FetchAtPos` — once in `build_keys_tl_with_inventory`,
 //! once at the head of `fetch_walker_slot0`. A2 hoists ONE `LexiconHandle::
 //! with_state` scope into [`assemble_candidates`] and calls
-//! `build_shadow_lattice(raw, inv, is_poj)` exactly once. Byte-identical
+//! `build_shadow_lattice(raw, inv, mode)` exactly once. Byte-identical
 //! under the mobile-IME lifecycle invariant — `EngineHandle::install` is
 //! reachable only from `lexicon::api::install_engine` (mobile bridge
 //! startup) plus the two test fixtures (`lexicon/tests/parity.rs`,
@@ -351,18 +351,24 @@ fn fetch_via_lexicon_inner(
 /// body minus the `LexiconHandle::with_state` opener. `build_partial_prefix_key_tl`
 /// is pure (shadow primitives only) and runs ahead of any state borrow.
 ///
-/// v3.5.9 D7 — takes [`ContinuousFetchCtx`]; `is_poj` is kept as a
+/// v3.5.9 D7 — takes [`ContinuousFetchCtx`]; `mode` is kept as a
 /// separate arg because it is shadow-key construction input, not part
 /// of the shared lexicon ctx.
+///
+/// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
+/// `is_poj: bool` (`mode == InputMode::Poj` preserves the old gate).
+/// `mode` flows untouched through to [`build_partial_prefix_key_tl`],
+/// keeping the seam's single-source-of-truth invariant.
 // 中文: A2 — fetch_via_lexicon_partial 純內層;build_partial_prefix_key_tl 純函式先跑,prefix/dict 由 seam 提取。
-// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx;is_poj 為 shadow key 構造輸入,留 separate arg。
+// 中文: D7 改:六個共用 arg 收進 ContinuousFetchCtx;mode 為 shadow key 構造輸入,留 separate arg。
+// 中文: B-0c 改:`mode: phonetics::InputMode` 取代 `is_poj: bool`,語意對齊(POJ 等價 mode == Poj)。
 fn fetch_via_lexicon_partial_inner(
     raw: &str,
     raw_len: u32,
-    is_poj: bool,
+    mode: phonetics::InputMode,
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Vec<RawCandidate> {
-    let Some(key) = build_partial_prefix_key_tl(raw, is_poj) else {
+    let Some(key) = build_partial_prefix_key_tl(raw, mode) else {
         return Vec::new();
     };
     fetch_partial_prefix_candidates(&key, raw_len, ctx)
@@ -375,9 +381,10 @@ fn fetch_via_lexicon_partial_inner(
 /// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
 /// the seam converts to wire via `score = -(cost as f32)`.
 ///
-/// `is_poj` is taken as a parameter (Codex pre-impl SHOULD, 2026-05-21)
-/// rather than re-derived from `mode == Poj` inside, so the
-/// single-source-of-truth invariant — same `is_poj` feeds
+/// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
+/// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
+/// sweep). `mode` is taken as a parameter rather than re-derived
+/// here so the single-source-of-truth invariant — same `mode` feeds
 /// `build_shadow_lattice` (seam) and `custom_toneless_key` (here) —
 /// cannot be silently broken by a future seam refactor.
 ///
@@ -386,8 +393,8 @@ fn fetch_via_lexicon_partial_inner(
 /// leaves the span-local list untouched (pre-S2 behavior preserved).
 // 中文: A2 — fetch_walker_slot0 純內層;D1 fold 後 (shadow, shadow_to_raw_end, lattice, inv,
 // 中文:   prefix, dict) 由 seam 預建傳入,內層只走 walker + tail。
-// 中文: is_poj 由 seam 顯式傳入 (Codex SHOULD) — 確保 build_shadow_lattice 與 custom_toneless_key
-// 中文:   單一源,不可未來 refactor 漂移。
+// 中文: B-0c — mode 由 seam 顯式傳入(取代 is_poj bool);確保 build_shadow_lattice 與
+// 中文:   custom_toneless_key 同一 mode,不可未來 refactor 漂移。
 // 中文: 回傳 WalkerSlot0 (D3),seam 轉 wire 時 score = -(cost as f32);trailing-hyphen 抑制仍 None。
 #[allow(clippy::too_many_arguments)]
 fn fetch_walker_slot0_inner(
@@ -396,7 +403,6 @@ fn fetch_walker_slot0_inner(
     freq_map: &FrequencyMap,
     now_ms: i64,
     mode: phonetics::InputMode,
-    is_poj: bool,
     custom: &[CustomEntry],
     shadow: &str,
     shadow_to_raw_end: &[usize],
@@ -414,21 +420,22 @@ fn fetch_walker_slot0_inner(
     // like `tâi-uân`). `or_insert` = **first-wins** on a duplicate
     // key (Codex Q6: explicit, not `HashMap` overwrite/iteration).
     //
-    // S6 byte-identity invariant: the SAME `is_poj` feeds
+    // S6 byte-identity invariant: the SAME `mode` feeds
     // `build_shadow_lattice` (caller) and `custom_toneless_key` (here);
-    // taking it as a parameter (Codex pre-impl SHOULD 2026-05-21)
+    // taking it as a parameter (B-0c: enum sweep — replaces the
+    // pre-B-0c `is_poj: bool` from Codex pre-impl SHOULD 2026-05-21)
     // makes the contract local — a split-brain (POJ-aware edges,
     // mode-blind custom keys) would silently drop custom matches in
     // POJ mode.
     // 中文: S6 — per-fetch「custom toneless key → entry」表;custom_toneless_key 重用同一 shadow pipeline
     // 中文:   → 命中與 lattice edge key byte-identical(Q2 BLOCK:POJ/diacritic 須先 canonicalize);
     // 中文:   同 key 重複 = or_insert first-wins(Codex Q6,非 HashMap 覆寫)。
-    // 中文: S6 byte-identity — 同一 is_poj 餵 build_shadow_lattice 與 custom_toneless_key;
-    // 中文:   參數傳入(Codex SHOULD)而非 from-mode 內部推導,split-brain 不可能。
+    // 中文: S6 byte-identity — 同一 mode 餵 build_shadow_lattice 與 custom_toneless_key;
+    // 中文:   參數傳入(B-0c enum sweep)而非 from-mode 內部推導,split-brain 不可能。
     let mut custom_map: std::collections::HashMap<String, &CustomEntry> =
         std::collections::HashMap::with_capacity(custom.len());
     for entry in custom {
-        if let Some(k) = custom_toneless_key(&entry.roman, is_poj) {
+        if let Some(k) = custom_toneless_key(&entry.roman, mode) {
             custom_map.entry(k).or_insert(entry);
         }
     }
@@ -751,11 +758,17 @@ fn fetch_walker_slot0_inner(
 /// Inputs are the proto→domain hoists from `handle_fetch_at_pos`
 /// (`mode` from `parse_input_mode`; `freq_map` from
 /// `ranking::build_frequency_map`; `custom` from `build_custom_entries`;
-/// `is_tps` from `phonetics::contains_tps`; `is_poj` from `mode == Poj`).
+/// `is_tps` from `phonetics::contains_tps`). `mode == Poj` derives the
+/// POJ branch internally — v3.5.9 B-0c retired the prior `is_poj: bool`
+/// arg in favor of the `mode` enum sweep. TPS is still represented as
+/// a bool here because v3.5.9 B does NOT alter TPS lattice routing
+/// (`phonetics::InputMode` has no `Tps` variant yet; that lands with
+/// the future C round when TPS becomes first-class).
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
 // 中文: A2 seam — 6-step assemble_candidates。取代 A2 前 handle_fetch_at_pos 內 inline 區塊。
 // 中文: 入參皆為 dispatch hoist 過的 domain 型別,出參為 wire 前 RawCandidate vector。
+// 中文: B-0c — `mode: InputMode` 取代 `is_poj: bool` 內部 derive;`is_tps` 仍為 bool(B 不動 TPS)。
 // 中文: 單一 LexiconHandle::with_state 範圍包住 step 1–4;D1 fold = build_shadow_lattice 單建;
 // 中文:   POJ render/dedupe (step 5) 在 walker prepend 之後。
 pub(crate) fn assemble_candidates(
@@ -765,7 +778,6 @@ pub(crate) fn assemble_candidates(
     custom: &[CustomEntry],
     mode: phonetics::InputMode,
     is_tps: bool,
-    is_poj: bool,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
     LexiconHandle::with_state(|state| {
@@ -806,7 +818,7 @@ pub(crate) fn assemble_candidates(
             match inv {
                 Some(inv) => {
                     let (shadow, shadow_to_raw_end, lattice) =
-                        build_shadow_lattice(raw, inv, is_poj);
+                        build_shadow_lattice(raw, inv, mode);
                     let keys =
                         left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice);
                     (keys, Some((shadow, shadow_to_raw_end, lattice, inv)))
@@ -833,7 +845,7 @@ pub(crate) fn assemble_candidates(
             if is_tps {
                 Vec::new()
             } else if let Some(ctx) = lex_ctx.as_ref() {
-                fetch_via_lexicon_partial_inner(raw, raw_len, is_poj, ctx)
+                fetch_via_lexicon_partial_inner(raw, raw_len, mode, ctx)
             } else {
                 Vec::new()
             }
@@ -899,7 +911,6 @@ pub(crate) fn assemble_candidates(
                         freq_map,
                         now_ms,
                         mode,
-                        is_poj,
                         custom,
                         shadow,
                         shadow_to_raw_end,

@@ -45,7 +45,7 @@ fn output_is_left_anchored_only_no_interior_spans() {
         ("taiuantaigi", &["tai1", "uan1", "gi1"][..]),
     ] {
         let inv = build_inventory(inv_samples);
-        let keys = build_keys_tl_with_inventory(input, &inv, false);
+        let keys = build_keys_tl_with_inventory(input, &inv, phonetics::InputMode::Tl);
         for (span, key) in &keys {
             assert_eq!(
                 span.0, 0,
@@ -61,7 +61,7 @@ fn hyphenless_output_is_byte_identical_to_pre_s1() {
     // `[(0,3) tl:tai, (0,6) tl:taibak]`; the lattice's left-anchored
     // projection must reproduce that verbatim (no interior `(3,6)`).
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("taibak", &inv, false);
+    let keys = build_keys_tl_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai"), ((0, 6), "tl:taibak")],
@@ -75,7 +75,7 @@ fn internal_hyphen_output_is_byte_identical_to_pre_s1() {
     // (hyphen folded into the full-buffer span). The interior
     // `(3,7) tl:bak` edge exists in the lattice but is NOT emitted.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai-bak", &inv, false);
+    let keys = build_keys_tl_with_inventory("tai-bak", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai"), ((0, 7), "tl:taibak")],

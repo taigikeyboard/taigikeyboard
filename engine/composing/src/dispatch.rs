@@ -188,11 +188,15 @@ fn handle_fetch_at_pos(
     // `config.input_mode` cannot make because platform builders
     // legacy-map TPS→`"tl"`), POJ-vs-TL IS reliable from config
     // (builders map POJ→`"poj"`). TPS routes through `build_keys_tps`
-    // in the seam so `is_poj` never reaches it.
+    // in the seam so the POJ-gated paths never reach it.
     // 中文: input mode 提前 parse — shadow canonicalize 與 POJ render 都需 mode-gate;
     // 中文:   無調號純 ASCII POJ 須摺成 TL,否則 ch-/oa-/oe- 連續候選全空;TL ASCII 維持 identity(F3C gate)。
+    // v3.5.9 B-0c — `mode` flows directly into `assemble_candidates`;
+    // the seam derives the POJ-vs-TL branch via `mode == InputMode::Poj`
+    // internally (was a separate `is_poj: bool` arg pre-B-0c).
+    // 中文: B-0c — mode 直接傳入 seam,POJ-vs-TL 分支由 seam 內部 mode == Poj 推導
+    // 中文:   (B-0c 前是獨立的 is_poj: bool 參數)。
     let mode = phonetics::api::parse_input_mode(&config.input_mode);
-    let is_poj = mode == phonetics::InputMode::Poj;
     // Phase 9.3a: hoist proto-shaped `FrequencyEntry[]` into the
     // domain-typed `FrequencyMap` once per fetch; `lexicon` consumes
     // `&FrequencyMap` and stays proto-agnostic. Empty list → empty
@@ -213,7 +217,7 @@ fn handle_fetch_at_pos(
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
     // happens below via `raw_to_proto_candidate` + `with_continuous`.
-    let candidates = assemble_candidates(raw, &freq_map, now_ms, &custom, mode, is_tps, is_poj);
+    let candidates = assemble_candidates(raw, &freq_map, now_ms, &custom, mode, is_tps);
     with_continuous(
         snapshot,
         ContinuousResponse {
@@ -260,9 +264,9 @@ fn handle_fetch_at_pos(
 pub fn build_keys_tl_with_inventory(
     raw: &str,
     inv: &SyllableInventory,
-    is_poj: bool,
+    mode: phonetics::InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
-    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, is_poj);
+    let (shadow, shadow_to_raw_end, lattice) = build_shadow_lattice(raw, inv, mode);
     left_anchored_keys_from_lattice(&shadow, &shadow_to_raw_end, &lattice)
 }
 
