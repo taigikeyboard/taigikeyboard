@@ -49,20 +49,43 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
     (text.nfc().collect(), String::new())
 }
 
-/// Lowercase, then map POJ-style spellings into TL spellings.
-/// Order is meaningful: `oonn` collapses into `onn` only after `oo` substitutions
-/// have already happened, mirroring the JS source.
-// 中文: 小寫後把 POJ 寫法替換成 TL 寫法;替換順序有意義,跟 JS 來源一致。
+/// Ordered POJ→TL substitution rules consumed by [`normalize_to_tl`]. v3.5.9 A1
+/// D2 export — the offset-aware mirror `composing::shadow::apply_normalize_to_tl_with_offsets`
+/// iterates this same list, so the two implementations cannot drift. Order is
+/// meaningful: `oonn` collapses into `onn` only after `oo` substitutions have
+/// already happened, mirroring the JS source. Scoped to `normalize_to_tl` only
+/// — `is_stop_tone`'s own `.replace("nn", "")` is a separate helper and is
+/// intentionally NOT folded in.
+// 中文: D2 — POJ→TL 取代規則的單一順序表;composing::shadow 的 offset-aware 版本同步
+// 中文:   消費此 list,兩端不會漂移。順序有意義(oonn 必須在 oo 之後);is_stop_tone
+// 中文:   的 .replace("nn","") 是另一個 helper,刻意不併入。
+pub const NORMALIZE_TO_TL_RULES: &[(&str, &str)] = &[
+    ("ch", "ts"),
+    ("ou", "oo"),
+    ("o\u{0358}", "oo"),
+    // Char-class `['\u{207f}','\u{1d3a}']` split into two single-pattern
+    // entries. Equivalent because the two source chars are disjoint
+    // single scalars and the replacement `"nn"` contains neither, so
+    // sequential replace-all calls cannot re-introduce a match.
+    ("\u{207f}", "nn"),
+    ("\u{1d3a}", "nn"),
+    ("oa", "ua"),
+    ("oe", "ue"),
+    ("eng", "ing"),
+    ("ek", "ik"),
+    ("oonn", "onn"),
+];
+
+/// Apply the [`NORMALIZE_TO_TL_RULES`] chain in order, returning the POJ→TL
+/// normalized string. The byte-identical proof for the split-nn form lives in
+/// the const's doc-comment above.
+// 中文: 依 NORMALIZE_TO_TL_RULES 順序套用代換鏈;與舊版鏈式 .replace 行為位元相同。
 pub fn normalize_to_tl(text: &str) -> String {
-    text.replace("ch", "ts")
-        .replace("ou", "oo")
-        .replace("o\u{0358}", "oo")
-        .replace(['\u{207f}', '\u{1d3a}'], "nn")
-        .replace("oa", "ua")
-        .replace("oe", "ue")
-        .replace("eng", "ing")
-        .replace("ek", "ik")
-        .replace("oonn", "onn")
+    NORMALIZE_TO_TL_RULES
+        .iter()
+        .fold(text.to_string(), |acc, (find, repl)| {
+            acc.replace(find, repl)
+        })
 }
 
 /// True when the final ends with a stop consonant (p, t, k, h), ignoring trailing

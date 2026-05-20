@@ -19,6 +19,7 @@ pub mod syllabifier;
 
 mod derived;
 mod lattice;
+mod shadow;
 mod transition;
 
 pub use api::{ComposingError, Engine, EngineState, Intent, NailedSegment, Phase};
