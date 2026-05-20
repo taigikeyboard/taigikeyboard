@@ -106,15 +106,24 @@
 /// `12_910_574`, measured 2026-05-17. `dict.bin` v2 carries only
 /// per-record frequency, no corpus-total metadata
 /// (`dictionary/build/create_dictionary_bin.py`), so this is baked as a
-/// constant with a regeneration guard rather than summed at lexicon
-/// init (Codex pre-impl S5 Q4 = option a, 2026-05-17): the exact value
-/// is not highly sensitive (khiin itself notes "experiment with
-/// different models") and a checked-in artifact + checked const is
-/// simpler and audit-friendlier than new lexicon plumbing + a startup
-/// scan. **Recompute and update this (and the `cost::tests`
-/// regeneration guard) whenever the dictionary is rebuilt.**
+/// constant rather than summed at lexicon init (Codex pre-impl S5 Q4 =
+/// option a, 2026-05-17): the exact value is not highly sensitive
+/// (khiin itself notes "experiment with different models") and a
+/// checked-in artifact + checked const is simpler and audit-friendlier
+/// than new lexicon plumbing + a startup scan.
+///
+/// **Regeneration guard (v3.5.9 A4)**: the dictionary build pipeline
+/// emits `dictionary/output/corpus_total_freq.txt` (a small key=value
+/// artifact, see
+/// `dictionary/build/create_dictionary_bin.py::write_corpus_stats`)
+/// and the `corpus_total_freq_matches_dictionary_csv` test below reads
+/// it and asserts `CORPUS_TOTAL_FREQ == Σ frequency`. A dictionary
+/// rebuild that changes the sum and forgets to update this constant
+/// fails `cargo test --workspace`, not silent drift. **Recompute and
+/// update this constant whenever the dictionary is rebuilt** — the
+/// artifact will print the expected value in the failure message.
 // 中文: 語料總頻 = dictionary.csv 全列 frequency 加總(159034 列,12_910_574,2026-05-17 量測)。
-// 中文: dict.bin v2 無語料總計 metadata → bake 成常數 + regeneration guard(Codex S5 Q4=a);字典重建須同步更新此值與守門測試。
+// 中文: dict.bin v2 無語料總計 metadata → bake 成常數 + pipeline-emitted artifact 守門(Codex S5 Q4=a / v3.5.9 A4);字典重建須同步更新此值,失敗訊息會列實測值。
 pub(crate) const CORPUS_TOTAL_FREQ: f64 = 12_910_574.0;
 
 /// Compile-time invariant: `CORPUS_TOTAL_FREQ` must exceed
@@ -380,22 +389,164 @@ mod tests {
         edge_cost(0, syll, len, 0.0, false)
     }
 
+    /// Resolve `dictionary/output/corpus_total_freq.txt` relative to
+    /// this crate's manifest, regardless of test CWD. The path is
+    /// `<repo>/engine/composing/../../dictionary/output/...`.
+    fn corpus_total_freq_artifact_path() -> std::path::PathBuf {
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join("dictionary")
+            .join("output")
+            .join("corpus_total_freq.txt")
+    }
+
+    /// Parse the v3.5.9 A4 regeneration-guard artifact. Format:
+    /// ```text
+    /// total_frequency=<u64>
+    /// entries=<u32>
+    /// ```
+    /// Order-insensitive; blank lines tolerated; both keys required.
+    fn parse_corpus_stats(contents: &str) -> (u64, u32) {
+        let mut total: Option<u64> = None;
+        let mut entries: Option<u32> = None;
+        for (lineno, raw) in contents.lines().enumerate() {
+            let line = raw.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let (key, value) = line.split_once('=').unwrap_or_else(|| {
+                panic!(
+                    "corpus_total_freq.txt line {}: missing '=': {raw:?}",
+                    lineno + 1
+                )
+            });
+            match key.trim() {
+                "total_frequency" => {
+                    if total.is_some() {
+                        panic!(
+                            "corpus_total_freq.txt line {}: duplicate `total_frequency=`",
+                            lineno + 1
+                        );
+                    }
+                    total = Some(value.trim().parse().unwrap_or_else(|e| {
+                        panic!(
+                            "corpus_total_freq.txt line {}: bad u64 {value:?}: {e}",
+                            lineno + 1
+                        )
+                    }));
+                }
+                "entries" => {
+                    if entries.is_some() {
+                        panic!(
+                            "corpus_total_freq.txt line {}: duplicate `entries=`",
+                            lineno + 1
+                        );
+                    }
+                    entries = Some(value.trim().parse().unwrap_or_else(|e| {
+                        panic!(
+                            "corpus_total_freq.txt line {}: bad u32 {value:?}: {e}",
+                            lineno + 1
+                        )
+                    }));
+                }
+                other => {
+                    panic!(
+                        "corpus_total_freq.txt line {}: unknown key {other:?}",
+                        lineno + 1
+                    )
+                }
+            }
+        }
+        let total = total.expect("corpus_total_freq.txt missing `total_frequency=`");
+        let entries = entries.expect("corpus_total_freq.txt missing `entries=`");
+        (total, entries)
+    }
+
     #[test]
     fn corpus_total_freq_matches_dictionary_csv() {
-        // Codex pre-impl S5 Q4 regeneration guard. `CORPUS_TOTAL_FREQ`
-        // is `Σ frequency` over `dictionary/output/dictionary.csv`. If
-        // the dictionary is rebuilt this asserts the const was updated
-        // alongside it. Pure arithmetic pin (no file IO in a unit
-        // test): the measured sum and entry count are recorded so a
-        // drifted const fails loudly with the expected value.
-        const MEASURED_SUM: f64 = 12_910_574.0;
-        const MEASURED_ENTRIES: u32 = 159_034;
+        // v3.5.9 A4 regeneration guard. `CORPUS_TOTAL_FREQ` is the
+        // baked literal consumed by `edge_cost`; this test cross-checks
+        // it against `Σ frequency` over `dictionary/output/dictionary.csv`
+        // as emitted by `create_dictionary_bin.py::write_corpus_stats`.
+        // A4 only adds the verifier — `edge_cost` still reads the
+        // literal at runtime (Codex pre-impl S5 Q4 = option a).
+        //
+        // Skip semantics (Codex pre-impl A4 B2): artifact-NotFound +
+        // dictionary.csv-NotFound = minimal checkout (no dictionary
+        // submodule), skip with clear message. Artifact-NotFound while
+        // dictionary.csv is present = pipeline failed to emit; FAIL
+        // loudly, never silent. Any other IO/parse error also FAILs.
+        //
+        // Entries assertion is secondary (Codex Q4 SHOULD): catches
+        // "same Σ, different record universe" drift. Hand-typed
+        // `EXPECTED_DICT_ENTRIES` matches the constant doc-comment
+        // (159 034 @ 2026-05-17); update alongside the constant on
+        // dictionary rebuild.
+        const EXPECTED_DICT_ENTRIES: u32 = 159_034;
+
+        let artifact = corpus_total_freq_artifact_path();
+        let csv = artifact.parent().unwrap().join("dictionary.csv");
+
+        let contents = match std::fs::read_to_string(&artifact) {
+            Ok(s) => s,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Use `metadata()` not `exists()` so a non-NotFound CSV
+                // error (permissions, …) is NOT collapsed to "absent"
+                // and silently routed into the skip branch (Codex post-
+                // impl A4 nit).
+                match std::fs::metadata(&csv) {
+                    Ok(_) => panic!(
+                        "{} is missing but {} exists — the dictionary pipeline \
+                         did not emit the regeneration guard. Re-run \
+                         `bash dictionary/build.sh` (or `make dict`).",
+                        artifact.display(),
+                        csv.display(),
+                    ),
+                    Err(csv_err) if csv_err.kind() == std::io::ErrorKind::NotFound => {
+                        eprintln!(
+                            "skip corpus_total_freq_matches_dictionary_csv: {} and {} \
+                             both absent (minimal build context without the dictionary \
+                             submodule). Run `make dict` to enable the \
+                             CORPUS_TOTAL_FREQ regeneration guard.",
+                            artifact.display(),
+                            csv.display(),
+                        );
+                        return;
+                    }
+                    Err(csv_err) => panic!(
+                        "{} is missing and probing {} failed: {csv_err}",
+                        artifact.display(),
+                        csv.display(),
+                    ),
+                }
+            }
+            Err(e) => panic!("failed to read {}: {e}", artifact.display()),
+        };
+
+        let (measured_sum, measured_entries) = parse_corpus_stats(&contents);
+
+        // Compare in f64 — `measured_sum as f64` is exact for sums far
+        // below 2^53 (current corpus ≈ 1.29e7). NEVER cast the const
+        // down to u64; a mistyped `12_910_574.5` would truncate and
+        // pass silently (Codex pre-impl A4 B1).
         assert_eq!(
-            CORPUS_TOTAL_FREQ, MEASURED_SUM,
-            "CORPUS_TOTAL_FREQ drifted from the 2026-05-17 dictionary.csv \
-             Σfrequency={MEASURED_SUM} over {MEASURED_ENTRIES} entries; \
-             recompute after a dictionary rebuild"
+            CORPUS_TOTAL_FREQ, measured_sum as f64,
+            "CORPUS_TOTAL_FREQ ({CORPUS_TOTAL_FREQ}) drifted from \
+             dictionary/output/dictionary.csv Σfrequency={measured_sum} \
+             over {measured_entries} entries — update the constant in \
+             engine/composing/src/lattice/cost.rs."
         );
+
+        assert_eq!(
+            measured_entries, EXPECTED_DICT_ENTRIES,
+            "dictionary.csv entry count drifted: artifact reports \
+             {measured_entries}, EXPECTED_DICT_ENTRIES (test-local) is \
+             {EXPECTED_DICT_ENTRIES}. Update EXPECTED_DICT_ENTRIES and the \
+             CORPUS_TOTAL_FREQ doc comment (provenance line) alongside \
+             the constant after a dictionary rebuild."
+        );
+
         // The `> 1 + max(freq)` strict-positivity invariant is a
         // compile-time guard (`const _: () = assert!(…)` next to the
         // constant), not a runtime assertion here.

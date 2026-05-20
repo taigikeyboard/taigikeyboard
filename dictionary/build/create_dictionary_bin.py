@@ -42,6 +42,7 @@ Binary 格式（version 2,little-endian）：
 
 import struct
 import sys
+from pathlib import Path
 
 from build.common import LOG_DIR, OUTPUT_DIR, start_new_build_timestamp
 from build.dictionary_records import DictionaryRecord, load_dictionary_records
@@ -50,6 +51,7 @@ from common.source_bits import DICT_BIN_COLUMNS
 
 CSV_FILE = OUTPUT_DIR / "dictionary.csv"
 OUTPUT_FILE = OUTPUT_DIR / "dictionary.bin"
+CORPUS_STATS_FILE = OUTPUT_DIR / "corpus_total_freq.txt"
 SCRIPT_NAME = "create_dictionary_bin"
 
 MAGIC = b"TKDB"
@@ -73,10 +75,68 @@ def encode_bitmask(record: DictionaryRecord) -> int:
     return mask
 
 
+def encoded_frequency(record: DictionaryRecord) -> int:
+    """Convention for emitting `record.frequency` to `dictionary.bin`.
+
+    `DictionaryRecord.frequency` is `int | None` so the parity counter in
+    `compare_baseline.py` can reproduce `WHERE frequency IS NULL`. The
+    binary writer coerces `None → 0` through this single helper so the
+    on-disk convention cannot drift between encode + verify call sites.
+
+    NOTE: this is the per-record bin-encoding convention over the
+    **filtered** universe (`load_dictionary_records()` drops empty /
+    oversized `tl` and dedups `(tl, hanzi)`). It is intentionally
+    distinct from `compute_corpus_stats`'s **CSV-raw** sum — see that
+    docstring for the rationale.
+    """
+    return record.frequency or 0
+
+
+def compute_corpus_stats(csv_path: Path) -> tuple[int, int]:
+    """Return `(total_frequency, entries)` for the v3.5.9 A4 regeneration
+    guard — Σ frequency + row count over the **raw** `dictionary.csv`.
+
+    Why raw, not the `load_dictionary_records()` filtered universe:
+    `CORPUS_TOTAL_FREQ` is intentionally documented as "Σ frequency over
+    every row of dictionary.csv (159 034 entries)" — Codex pre-impl
+    S5 Q4 = option a (2026-05-17): a checked-in constant + documented
+    provenance, not a runtime-summed denominator. A4 only verifies the
+    constant matches its documented semantic; it does not change which
+    universe is summed (= behavior change, out of scope). The filtered
+    Σ written into `dictionary.bin` differs by a small per-rebuild delta
+    (currently 2,321 / 236 rows) and is NOT what the const tracks.
+
+    `frequency` cells that are blank/NaN coerce to 0 (matches the
+    `encoded_frequency` per-record convention).
+    """
+    from common import read_dictionary_csv
+    df = read_dictionary_csv(csv_path)
+    total = int(df["frequency"].fillna(0).sum())
+    return total, len(df)
+
+
+def write_corpus_stats(total_frequency: int, entries: int) -> None:
+    """Emit the v3.5.9 A4 regeneration-guard artifact.
+
+    Self-describing two-line `key=value` text:
+        total_frequency=<u64>
+        entries=<u32>
+
+    Path is canonically `dictionary/output/corpus_total_freq.txt`. The
+    Rust cost-test reads this via `env!("CARGO_MANIFEST_DIR")` and asserts
+    `CORPUS_TOTAL_FREQ == total_frequency as f64`. Format MUST stay
+    `key=value` per line — order-insensitive parser on the Rust side, but
+    we always write `total_frequency` first for human readability.
+    """
+    with open(CORPUS_STATS_FILE, "w", encoding="utf-8") as f:
+        f.write(f"total_frequency={total_frequency}\n")
+        f.write(f"entries={entries}\n")
+
+
 def encode_record(record: DictionaryRecord) -> bytes:
     """Encode a single dictionary record into binary bytes."""
     bitmask = encode_bitmask(record)
-    frequency = record.frequency or 0
+    frequency = encoded_frequency(record)
 
     hanzi_bytes = record.hanzi.encode("utf-8") if record.hanzi else b""
     tl_bytes = record.tl.encode("utf-8")
@@ -146,6 +206,19 @@ def build(logger):
     logger.info(f"    Offsets: {offset_table_size} bytes")
     logger.info(f"    Data:    {current_offset - data_start} bytes")
 
+    # v3.5.9 A4 regeneration guard: emit Σfrequency + row count over the
+    # raw `dictionary.csv` (NOT the filtered `records` we just wrote into
+    # `dictionary.bin`; see `compute_corpus_stats` docstring for why).
+    # Writes after the .bin is on disk so a successful build always
+    # produces the guard artifact; `--verify` (which re-loads records
+    # below) cannot abort before this.
+    total_frequency, entries = compute_corpus_stats(CSV_FILE)
+    write_corpus_stats(total_frequency, entries)
+    logger.info("\n  [corpus stats]")
+    logger.info(f"    File:    {CORPUS_STATS_FILE}")
+    logger.info(f"    Σfreq:   {total_frequency}  (raw CSV, CORPUS_TOTAL_FREQ universe)")
+    logger.info(f"    Entries: {entries}")
+
     return count, build_ts
 
 
@@ -195,7 +268,7 @@ def verify(logger):
 
         expected_hanzi = rec.hanzi
         expected_tl = rec.tl
-        expected_freq = rec.frequency or 0
+        expected_freq = encoded_frequency(rec)
         expected_bitmask = encode_bitmask(rec)
         expected_syllables = rec.syllable_count
 
