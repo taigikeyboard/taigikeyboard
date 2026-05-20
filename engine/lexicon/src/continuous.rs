@@ -175,7 +175,7 @@ impl CandidateMode {
 ///
 /// **Single source of truth for `CandidateMode`.** `record_to_candidate`,
 /// `custom_entry_to_candidate`, and the v3.5.8 S2 whole-sentence
-/// walker's slot-0 synthesis (`composing::dispatch::fetch_walker_slot0`)
+/// walker's slot-0 synthesis (`composing::continuous::fetch_walker_slot0_inner`)
 /// all derive `mode` through this fn so `CandidateMessage.mode` is
 /// classified identically for span-local, custom, and synthesized
 /// full-buffer candidates (Codex PR #285 P2, 2026-05-16 — a hand-rolled
@@ -385,7 +385,7 @@ pub fn fetch_candidates_for_endings(
         // forms; stripping here lets numeric-tone input still hit the
         // fused toneless FST key. The hyphen half of the regex is NOT
         // applied at this layer because hyphenated TL input is folded
-        // upstream by `composing::dispatch::build_hyphen_shadow` (Phase
+        // upstream by `composing::shadow::build_hyphen_shadow` (Phase
         // 9 Item 8): callers feed already-hyphenless segments here.
         // Preserving the no-strip invariant at this layer protects the
         // separation of concerns — if hyphens ever appear in a segment
@@ -408,7 +408,7 @@ pub fn fetch_candidates_for_endings(
     // is full-buffer coverage, not `input.len() - pos`.
     // Item 12: this legacy TL/POJ test/Phase-5 entry never carries
     // custom-dict matches — the production dispatch path goes through
-    // `composing::dispatch::fetch_via_lexicon` →
+    // `composing::continuous::fetch_via_lexicon_inner` →
     // `fetch_candidates_for_keys` directly with the platform's
     // `custom_entries`. Pass an empty slice so this fn's public
     // signature stays stable (no test-call-site churn).
@@ -743,7 +743,7 @@ pub fn fetch_partial_prefix_candidates(
 /// [`NonNanF32`]; ties keep the first FST rowid for determinism), or
 /// `None` when the key has no dict hit. Filter parity with the
 /// production span-local path (`enabled_sources_bitmask = u32::MAX`,
-/// `composing::dispatch::fetch_via_lexicon`).
+/// `composing::continuous::fetch_via_lexicon_inner`).
 ///
 /// The whole-sentence walker (`composing::lattice::walker`) calls
 /// this once per lattice edge through a dispatch-injected edge
@@ -1522,7 +1522,7 @@ mod mode_derive_tests {
         // v3.5.8 S2 (Codex PR #285 P2): the whole-sentence walker
         // synthesizes the slot-0 hanji by concatenating each edge's
         // hanji and classifies the WHOLE joined string through this
-        // fn (`composing::dispatch::fetch_walker_slot0`). A Latin
+        // fn (`composing::continuous::fetch_walker_slot0_inner`). A Latin
         // letter in a NON-first segment (e.g. path `臺灣` + `hip相`)
         // must still flip MIXED — equivalent to the per-edge OR and
         // matching how a single multi-syllable record would classify.

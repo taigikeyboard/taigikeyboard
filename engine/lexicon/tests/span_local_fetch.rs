@@ -514,7 +514,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
     // Phase-6 Codex PR review (post-impl HIGH finding): the lexicon
     // toneless-key strip rule is intentionally `\d`-only, not `[\d\-]`.
     // Hyphenated TL input is folded upstream by
-    // `composing::dispatch::build_hyphen_shadow` (Phase 9 Item 8) so
+    // `composing::shadow::build_hyphen_shadow` (Phase 9 Item 8) so
     // segments arriving here are already hyphenless under the normal
     // dispatch path. This test pins the lower-layer invariant: if a
     // hyphenated segment somehow does reach `fetch_candidates_for_endings`

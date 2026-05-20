@@ -10,11 +10,11 @@ use crate::syllabifier::tl as tl_syll;
 /// `max_syllables=8` budget called out in `docs/roadmap.md:231` and
 /// keeps the worst-case lookup at O(n × 3 × 8) FST hits. Shared by
 /// [`build_shadow_lattice`] (lattice BFS budget) and
-/// `dispatch::build_keys_tps` (TPS cumulative-key cap) — they must
+/// `continuous::build_keys_tps` (TPS cumulative-key cap) — they must
 /// agree to keep per-keystroke FST lookup and candidate scoring
 /// complexity bounded across modes.
 // 中文: TL syllabifier BFS 深度上限,對應 roadmap §Phase 3 的 8 syllable 估算。
-// 中文: build_shadow_lattice 與 dispatch::build_keys_tps 共用,確保各模式每鍵 FST 查詢複雜度有界。
+// 中文: build_shadow_lattice 與 continuous::build_keys_tps 共用,確保各模式每鍵 FST 查詢複雜度有界。
 pub(crate) const MAX_SYLLABLES: usize = 8;
 
 /// Run the v3.5.8 Items 8 + 9 canonicalize → hyphen-shadow pipeline
@@ -22,7 +22,7 @@ pub(crate) const MAX_SYLLABLES: usize = 8;
 /// Returns `(shadow, shadow_to_raw_end, lattice)`. Shared by
 /// `dispatch::build_keys_tl_with_inventory` (left-anchored projection —
 /// its output is byte-identical to pre-S1, the S1 pinning tests guard
-/// this) and `dispatch::fetch_walker_slot0` (S2 whole-sentence walker)
+/// this) and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker)
 /// so the shadow + offset map + DAG are constructed exactly once per
 /// fetch and the two consumers cannot drift.
 // 中文: 跑 Item 8/9 canonicalize → hyphen-shadow 並建 lattice;回 (shadow, shadow→raw map, lattice)。
@@ -109,7 +109,7 @@ pub(crate) fn left_anchored_keys_from_lattice(
 /// cannot be cleanly read syllable-by-syllable) — the caller then
 /// suppresses the slot-0 synth and leaves the span-local list
 /// untouched (pre-S2 behavior, same contract as
-/// `dispatch::synth_consumed_span`'s trailing-hyphen suppression).
+/// `continuous::synth_consumed_span`'s trailing-hyphen suppression).
 /// `shadow` is ASCII-lowercased here; lowercasing is byte-length and
 /// char-boundary preserving, so the returned offsets index `shadow`
 /// identically.
@@ -265,7 +265,7 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// not TL-shaped.
 ///
 /// MUST produce a key byte-identical to the one
-/// `dispatch::fetch_walker_slot0`'s edge provider builds for a
+/// `continuous::fetch_walker_slot0_inner`'s edge provider builds for a
 /// syllable span (`tl:{toneless}`, where `toneless` is the
 /// hyphen-stripped, POJ-canonicalized, tone-digit-stripped shadow
 /// slice). It therefore reuses the **same three shadow helpers in the
@@ -286,7 +286,7 @@ pub(crate) fn strip_ascii_tone_digits(s: &str) -> String {
 /// syllabifier-built lattice edge key, so it simply stays a span-local
 /// candidate and never enters the walker.
 ///
-/// `is_poj` MUST be the same value `dispatch::fetch_walker_slot0`
+/// `is_poj` MUST be the same value `continuous::fetch_walker_slot0_inner`
 /// passes to [`build_shadow_lattice`] for this fetch: the
 /// canonicalize step is mode-gated (toneless ASCII POJ folds `ch→ts`
 /// only when `is_poj`), so a mismatch would make a custom roman key

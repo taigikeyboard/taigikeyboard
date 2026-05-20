@@ -22,7 +22,7 @@
 //!
 //! The walker is **pure and shadow-space native**. It never looks at
 //! the dictionary, the raw byte space, or proto types: the caller
-//! (`dispatch::fetch_walker_slot0`, which holds `LexiconHandle`
+//! (`continuous::fetch_walker_slot0_inner`, which holds `LexiconHandle`
 //! state) injects an `edge_choice` provider that maps a shadow edge
 //! `(start, end)` to its best content. This keeps the
 //! composing↔lexicon boundary clean and reuses the lexicon candidate
@@ -65,7 +65,7 @@ pub(crate) struct EdgeChoice {
     pub dict_hit: bool,
     /// v3.5.8 S6 (Codex pre-impl S6 Q4) — `true` iff this edge resolved
     /// to a `custom_dictionary.db` entry (the S6 custom-precedence
-    /// branch in `dispatch::fetch_walker_slot0`). Provenance only:
+    /// branch in `continuous::fetch_walker_slot0_inner`). Provenance only:
     /// propagated to the synthesized slot-0 `RawCandidate.is_custom`
     /// when ANY winning edge is custom; the walker cost objective does
     /// NOT read this (a custom edge competes via [`Self::frequency`] =
@@ -80,7 +80,7 @@ pub(crate) struct EdgeChoice {
     /// Syllable count of the chosen candidate (`>= 1`). Dict/custom:
     /// the record's / greedy-longest span syllable count, drives the
     /// khiin `n_syls^0.2` bias. OOV: the real min-syllable-hop count of
-    /// the span (`dispatch::span_min_syllable_count`, NOT a hardcoded
+    /// the span (`shadow::span_min_syllable_count`, NOT a hardcoded
     /// `1`) — RC0 metadata only (it feeds the synthesized candidate's
     /// syllable sum; the OOV *cost* ignores it).
     pub syllable_count: u8,
@@ -92,7 +92,7 @@ pub(crate) struct EdgeChoice {
     /// v3.5.8 S3 — time-decayed user-frequency boost delta for this
     /// edge's chosen candidate (`ranking::decayed_user_weight_delta`,
     /// `0.0..=4.0`). `0.0` for a no-dict edge or one with no user
-    /// history. Computed caller-side in `dispatch::fetch_walker_slot0`
+    /// history. Computed caller-side in `continuous::fetch_walker_slot0_inner`
     /// so the walker stays pure and shadow-space native (Codex pre-impl
     /// S3 Q4d seam). Applied as a log-space cost discount in
     /// [`edge_cost`] (Codex pre-impl S5 Q3). Closes Continuous-input
@@ -129,7 +129,7 @@ pub(crate) struct BestPath {
 /// sorted, so this is deterministic. No edge-count tiebreak: the S2
 /// "more edges wins" lever existed only to force the no-dict
 /// per-syllable split, which S5 moves to the explicit
-/// `dispatch::fetch_walker_slot0` carve-out — keeping it here would
+/// `continuous::fetch_walker_slot0_inner` carve-out — keeping it here would
 /// re-introduce the over-segmentation pressure min-cost exists to
 /// remove (Codex pre-impl S5 Q5, 2026-05-17).
 // 中文: 對 lattice 跑單趟鬆弛求 0→shadow_len 的最小 Σ edge_cost 路徑;
@@ -368,7 +368,7 @@ mod tests {
         // reached directly from 0 before the (6,9) relaxation — is
         // kept. The user-facing per-syllable romanization is NOT
         // produced here; it is the explicit
-        // `dispatch::fetch_walker_slot0` carve-out (Codex pre-impl S5
+        // `continuous::fetch_walker_slot0_inner` carve-out (Codex pre-impl S5
         // Q2). This pins that an all-OOV buffer still resolves to the
         // fewest-edge blob (which the carve-out then renders
         // per-syllable) under the RC0 BIG-per-char model.
@@ -395,7 +395,7 @@ mod tests {
         // 焦(6,8, freq 2145, 1 syll). Under RC0 the blob costs
         // `8 * OOV_PER_CHAR_PENALTY ≈ 8e10`, dwarfing the `ln`-scale
         // dict path, so the walker picks the dict path → `any dict_hit`
-        // true → `dispatch::fetch_walker_slot0` renders hanji, never
+        // true → `continuous::fetch_walker_slot0_inner` renders hanji, never
         // bare `"tai uan ta"`.
         let lat = lattice(vec![(0, 6), (0, 8), (6, 8)]);
         let path = walk_best(&lat, 8, |s, e| match (s, e) {

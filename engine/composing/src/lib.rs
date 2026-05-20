@@ -17,6 +17,7 @@ pub mod dispatch;
 pub mod handle;
 pub mod syllabifier;
 
+mod continuous;
 mod derived;
 mod lattice;
 mod shadow;

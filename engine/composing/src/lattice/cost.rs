@@ -82,7 +82,7 @@
 //! pre-impl S7 Q1 / RC0 Q2). For a buffer with **no dictionary hit
 //! anywhere** the min-cost path is still all-OOV; the user-facing
 //! per-syllable romanization is produced by an explicit carve-out in
-//! `dispatch::fetch_walker_slot0`, **outside** this cost function
+//! `continuous::fetch_walker_slot0_inner`, **outside** this cost function
 //! (Codex pre-impl S5 Q2) — the OOV pricing here only governs *path
 //! selection* (dict path vs OOV blob), never the rendered string.
 
@@ -95,7 +95,7 @@
 // 中文:   ginalangtsiahpngbesai 門檻恰 6 音節,2026-05-18 真實字典重現);S7 只調斜率沒解混淆。
 // 中文: RC0 解混淆:OOV edge = OOV_PER_CHAR_PENALTY × toneless_len(khiin 每字元 BIG),無 bias/折減
 // 中文:   →「OOV 輸給任何字典可覆蓋路徑」任何長度恆成立 = 成本性質非 dict_hit lexicographic 短路。
-// 中文: 無字典命中 buffer 的逐音節羅馬字由 dispatch::fetch_walker_slot0 顯式 carve-out 產生(不進本函式,Codex S5 Q2)。
+// 中文: 無字典命中 buffer 的逐音節羅馬字由 continuous::fetch_walker_slot0_inner 顯式 carve-out 產生(不進本函式,Codex S5 Q2)。
 
 /// Total corpus frequency mass — the denominator that turns a raw
 /// `DictionaryRecord.frequency` into a corpus probability
@@ -171,7 +171,7 @@ const _: () = assert!(LETTER_COUNT_BIAS > 0.0 && SYLLABLE_COUNT_BIAS > 0.0);
 /// the full buffer — undercut a dict-covering path that accumulates a
 /// per-edge `ln(CORPUS/freq)` toll linearly in edge count. Past ~6
 /// dict edges the blob won → `any_dict == false` → the
-/// `dispatch::fetch_walker_slot0` carve-out rendered bare roman
+/// `continuous::fetch_walker_slot0_inner` carve-out rendered bare roman
 /// (`ginalangtsiahpngbesai → "gin a lang tsiah png be sai"` instead of
 /// 囡仔人食飯袂使; threshold exactly 6 syllables, reproduced against the
 /// real dictionary 2026-05-18). S7's `UNKNOWN_SYLLABLE_DECAY` only
@@ -277,7 +277,7 @@ pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
 ///   for this edge's chosen candidate
 ///   (`ranking::decayed_user_weight_delta`, in `0.0..=4.0`; `0.0` =
 ///   no user history / never selected / bad clock = neutral). Computed
-///   caller-side (`dispatch::fetch_walker_slot0`). OOV edges always
+///   caller-side (`continuous::fetch_walker_slot0_inner`). OOV edges always
 ///   carry `0.0` and take no discount.
 /// - `dict_hit` — `true` iff this edge is a lexicon-backed hit
 ///   (`dict.bin` record OR a `custom_dictionary.db` entry). The OOV
