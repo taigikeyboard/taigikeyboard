@@ -163,7 +163,7 @@ Type-shape preferences that cross FFI:
 
 ## 9. Pre-commit gate + supply chain `[A]`
 
-This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `feedback_manual_build_test.md` for `./gradlew` / `xcodebuild`: the author runs build/test, AI does not. The author invokes the four-command gate before committing each PR (canonical bare-`cargo` form; `cargo-make` is optional via `engine/Makefile.toml`).
+This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `rules/round-workflow.md` "Build & changelog" for `./gradlew` / `xcodebuild`: the user runs build/test, AI does not. The author invokes the four-command gate before committing each PR (canonical bare-`cargo` form; `cargo-make` is optional via `engine/Makefile.toml`).
 
 - Per-PR gate: `cargo fmt --all -- --check` + `cargo check --workspace --locked` + `cargo clippy --workspace --all-targets -- -D warnings` + `cargo test --workspace`.
 - **`cargo-audit`** scans against the RustSec advisory DB before each PR — optional, install via `cargo install cargo-audit --locked`.

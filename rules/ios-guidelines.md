@@ -40,3 +40,47 @@ Mandatory rules for iOS development. Read before modifying iOS code.
 - Assertion messages must be descriptive enough to copy-paste for debugging
 - Framework: XCTest; pattern: parametric arrays `[(input, expected)]` with loops + `XCTAssertEqual`
 - Naming: `test{Component}_{scenario}`
+
+## Xcode / pbxproj — user-only, with synced-group exceptions
+
+`*.xcodeproj`, `*.xcworkspace`, and `*.pbxproj` are **user-only**. AI never edits them. The hook at `.claude/hooks/block-project-config.sh` enforces this. Do not work around with code-level hacks; list any Xcode-side step as an action item for the user.
+
+### Synchronized groups auto-include new files
+
+`ios/TaigiKeyboard.xcodeproj/project.pbxproj` uses Xcode 16's `PBXFileSystemSynchronizedRootGroup` for nearly all `Sources/TaigiKeyboard/*` subdirectories (`App/`, `Actions/`, `Autocomplete/`, `Callouts/`, `Composition/`, `Emojis/`, `Engine/`, `Input/`, `KeyboardExtension/`, `Layout/`, `Lexicon/`, `Logging/`, `NextWord/`, `Overlays/`, `Settings/`, `Strings/`, `Styling/`). Files dropped under any of these paths are **auto-included** on next build. Do NOT add "user adds X to target" steps when X lives under a synced group. The list above can drift — when in doubt, audit pbxproj live (see "Folder renames" below).
+
+### File DELETION within a synced group is auto-handled — no reminder
+
+Refactors that delete Swift files under a synced-group directory: Xcode auto-removes them on next open/build. Do NOT list "user removes deleted files in Xcode" as a release blocker. (User directive 2026-05-15.)
+
+### When manual action IS still required
+
+- New file at `Sources/TaigiKeyboard/` ROOT level (siblings to synced groups need manual add).
+- New top-level directory under `Sources/TaigiKeyboard/` — Xcode does NOT auto-promote a new dir to a synced group; user must "Add Files…" or "Convert to Synchronized Group".
+- Binary references (e.g. `ios/RustEngine/RustTaigi.xcframework`) — not synced.
+- `Info.plist`, entitlements, signing, build settings, scheme — always pbxproj-level, always user.
+- Adding the same file to a SECOND target — synced group governs the primary target only.
+
+### Folder renames break synced-group registration — audit drift
+
+When a refactor renames an iOS source folder (`git mv ios/Sources/TaigiKeyboard/Common ios/Sources/TaigiKeyboard/Logging`) or moves files across folders, the synced-group registration in pbxproj does NOT auto-update. The build silently breaks for files that move into the new path.
+
+Before approving any iOS folder-level refactor, audit:
+
+```bash
+# Orphan groups (registered path no longer exists on disk)
+for path in $(grep -E 'PBXFileSystemSynchronizedRootGroup;' -A4 \
+  ios/TaigiKeyboard.xcodeproj/project.pbxproj \
+  | grep -oE 'Sources/TaigiKeyboard/[A-Za-z]+' | sort -u); do
+  [ ! -d "ios/$path" ] && echo "ORPHAN: $path"
+done
+# Missing registrations (on-disk dir not in pbxproj)
+for d in ios/Sources/TaigiKeyboard/*/; do
+  name="${d#ios/Sources/TaigiKeyboard/}"; name="${name%/}"
+  grep -qE "Sources/TaigiKeyboard/$name\b" \
+    ios/TaigiKeyboard.xcodeproj/project.pbxproj \
+    || echo "MISSING: $name"
+done
+```
+
+If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. (Incident: PR #213 renamed `Common/ → Logging/` on disk without updating pbxproj; build silently broke at `Engine/RustEngineBridge.swift:281` "Cannot find 'LoggerFactory' in scope".)

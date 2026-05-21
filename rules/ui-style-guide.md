@@ -125,3 +125,22 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 7. **New settings rows**: Reuse existing row components (Android) or Form patterns (iOS). Don't create one-off row layouts.
 8. **Cross-platform alignment**: When adding a feature to one platform, check this guide to ensure the other platform's equivalent uses matching values.
 9. **Updating this guide**: If a new tier or pattern is genuinely needed, add it to the centralized style file first, update this guide, then implement on both platforms.
+
+## External Link Icons
+
+`arrow.up.forward.square` (iOS) and `Icons.Outlined.OpenInNew` (Android) are the project's standard "external link" icons. Use them for any action that leaves the app to an external resource:
+
+- Web URLs (User Guide, Privacy Policy, dictionary links)
+- Share sheet (share diagnostic info)
+- Email client (email bug report)
+
+Never replace these icons with action-specific alternatives (don't use a "Share" icon for share, don't use an "Email" icon for email). All external-resource actions use the same link icon for consistency. Only non-link actions (e.g. Copy, which stays in-app) get distinct icons.
+
+## Feature Grouping by Usage Frequency
+
+Separate features by **usage frequency**, not by data relationship. Frequently-edited content goes on its own page; less-frequently-accessed management features group into a separate management page.
+
+- 自訂詞庫 (custom dictionary editing) = frequent edit → own page.
+- 詞頻 / 詞關聯 / 備份 (frequency / association / backup) = rare access → grouped management page.
+
+Mixing them creates confusion about a page's purpose. When reorganizing settings or management UIs, group by how often the user interacts with each feature, not by which data table they live in.

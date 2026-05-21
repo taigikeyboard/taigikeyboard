@@ -77,7 +77,7 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
   1. **App-tab graph** — `Application` scope, consumed by `Activity` / Compose UI.
   2. **IME service graph** — `TaigiKeyboard : LifecycleInputMethodService` scope.
   3. **Per-input-session state** — `onStartInput` / `onFinishInput`.
-- Manual DI via `CompositionRoot` holder in Phase II. Hilt is **not** in scope until Phase IV at earliest — avoid annotation-based runtime magic that complicates Rust boundary design.
+- Manual DI via `CompositionRoot` holder. Hilt is **not** currently in scope — avoid annotation-based runtime magic that complicates Rust boundary design.
 - Constructor injection preferred. No `.INSTANCE` global reach-ins inside engine or ViewModel code.
 - `object` is acceptable only for **stateless** utilities (pure functions / constants). If it holds DB handles, Context, cached state, or reads the clock, convert to `class` with constructor DI.
 - Never store an `Activity` Context inside an `object` or a long-lived `class` — memory leak. Use `Application` Context (`applicationContext`) for process-lifetime references.
@@ -158,7 +158,25 @@ Durable checklist for every Android refactor PR:
 
 During the v3.5.0 release bug-fix window, every Android PR touching a shared-core-candidate file additionally honors the §1c constraint in `rules/cross-platform-alignment.md` — immutable inputs, no new platform-singleton reads, mirror constants with `CROSS-PLATFORM INVARIANT` comments, Codex + `/simplify` pre-impl review if a new stateful dependency enters a candidate file.
 
-## 12. References
+## 12. Kotlin extension shadowing rule `[B]`
+
+When a receiver class already exposes a member function `fun X(...)`, a top-level extension `fun Receiver.X(...)` with the **same name** is unreachable — Kotlin resolution always picks the member first, regardless of argument-type compatibility.
+
+- Lazy-logging helpers on a class with existing `d/i/w/e` members must use distinct names: `debug`, `info`, `warn`, `error`.
+- More generally: when adding an inline extension with lazy evaluation semantics alongside an eager member, the extension needs a different name. A compile check after definition is faster than guessing.
+- Same caveat applies to extension properties shadowing member properties.
+
+Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: () -> String)` shadowed member `fun d(tag, msg: String)`; build failed across 33 call-sites with `Function0<String> but String was expected`. Renaming to `debug` fixed it.
+
+## 13. Gradle files editable by Claude `[B]`
+
+`android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** (lifted 2026-05-09 — CLAUDE.md rule 4 previously grouped gradle with pbxproj, but gradle edits are routine: plugin wiring, dep bumps, lint config).
+
+- ✅ Edit gradle files directly.
+- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `rules/ios-guidelines.md`).
+- After gradle edits, surface what changed in plain text and remind the user that an Android Studio Gradle sync is needed.
+
+## 14. References
 
 - Companion documents on the iOS side: `rules/ios-guidelines.md` (day-to-day), `rules/ios-architecture.md` (structural).
 - Cross-platform behavior contract: `rules/cross-platform-alignment.md`.

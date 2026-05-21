@@ -1,6 +1,6 @@
 # Cross-Platform Alignment Rules
 
-Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) extraction harder. Applies to every code change until Phase IV-B completes. Phase II code-close (2026-04-22) did not relax this rule — the v3.5.0 release window operates under the shared-core-candidate bug-fix constraint in §1c plus the emergency (§1a) and parity-correction (§1b) tiers.
+Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) maintenance harder. Phase II (Android align) closed 2026-04-22 and Phase IV-B (shared-core extraction) closed 2026-05-05 — every pure-logic candidate now lives in Rust. The cross-platform-invariant and divergence-discipline rules below still govern every PR: invariants must stay aligned across iOS / Android / engine, and intentional divergence must be documented.
 
 References: Claude auto-memory `project_shared_core_roadmap.md` (session-persistent state) for current phase status · `docs/engine/migration-inventory.csv` for the live Rust / native ownership inventory · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `rules/ios-guidelines.md` / `rules/android-guidelines.md` for platform idioms.
 
@@ -74,6 +74,19 @@ Behavior that MUST match between iOS and Android is captured in `docs/architectu
 - Modifying any invariant constant requires **iOS source + Android source + `behavioral-invariants.md` + invariant test** all updated in the **same PR**. A diff that updates only one side is rejected at review.
 
 Platform-specific comment syntax (Swift `// MARK:` vs Kotlin `// region`) lives in the per-platform guides. The cross-platform policy lives here.
+
+### 3b. Verify alleged divergence before asserting it
+
+Before writing any "iOS does X, Android does Y" sentence in an audit / invariant spec / divergence report, **grep the actual source files for inline alignment comments**:
+
+- `// matches iOS`
+- `// matches Android`
+- `// CROSS-PLATFORM INVARIANT`
+- `// mirrors iOS` / `// mirrors Android`
+
+Treat matching comments as authoritative signal that the original author intended parity — divergence in observable behavior is then a **bug**, not a design decision. When using an Explore agent for a summary read, explicitly ask the agent to report any `// matches …` comments in the flagged files.
+
+Incident: G10 (PR #141) — I wrote that `DictionaryBinaryReader.kt` treated both `hanzi` and `tl` as required, a claim that would have driven a phantom Phase IV-A decision. The Android file had explicit `// matches iOS` comments on lines 81 and 88 right next to the relevant code. Two prior passes (Explore agent + my own pre-review code read) both missed them; the Codex PR-bot caught it by reading the diff line-by-line.
 
 ## 4. Phase II end — hybrid decision gate
 

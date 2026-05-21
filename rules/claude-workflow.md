@@ -25,7 +25,7 @@ Prompt cues: `think carefully / step-by-step` → go deeper; `respond quickly / 
 - Reading the iOS and Android counterparts of the same feature simultaneously
 - Searching multiple independent areas (e.g., `engine/`, `ui/`, `dictionary/`) for the same pattern
 - Research + plan agents running together before implementation
-- Codex review + simplify review running together (per `feedback_review_before_impl.md`)
+- Codex review + simplify review running together (per `rules/code-review-rules.md` §8)
 
 **Do not spawn subagents for:**
 - A task completable in a single response
@@ -46,7 +46,7 @@ If multiple ambiguities exist, list them together and let the user answer in one
 ## Response Length
 
 - **Simple questions** — one sentence or a few bullets
-- **Status updates** — terse; the diff speaks for itself (per `feedback_review_before_impl.md`)
+- **Status updates** — terse; the diff speaks for itself (per `rules/code-review-rules.md` §8)
 - **Cross-platform analysis / plans** — bullet-point breakdown, per-platform sections
 - **Code explanation for the user** — match the complexity of the code; no filler
 
@@ -59,4 +59,4 @@ Trivial fixes → go straight to the edit.
 
 ## Review Before Implementation
 
-For significant changes, run Codex + simplify review **before** implementing. Address all findings including low-priority ones (per `feedback_review_before_impl.md`).
+For significant changes, run Codex + simplify review **before** implementing. Address all findings including low-priority ones (per `rules/code-review-rules.md` §8).
